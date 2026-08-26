@@ -1,0 +1,66 @@
+# Trazabilidad
+
+## Cadena
+
+```text
+Necesidad / hallazgo
+  → RF o RNF
+  → RN y CU
+  → UI / contrato / entidad
+  → CP y prueba automatizada/manual
+  → evidencia de ejecución
+```
+
+## Fuentes de verdad
+
+- SRS v0.1: RF-001..075, RNF-001..036, RN-001..034, PV-01..20.
+- Modelado funcional: CU-01..18 y modelo de dominio.
+- Prototipos: UI/DOC/COR/ADM.
+- Plan maestro: CP-F01..35, CP-N01..16, IA-NEG-01..09.
+- Código/pruebas: implementación y evidencia derivada.
+
+Esta documentación no renumera los IDs formales.
+
+## Matriz por feature
+
+Mantén una fila por relación relevante:
+
+| Feature                                     | RF/RNF                                                                        | RN                       | CU           | UI                                | CP                                                         | Código                                                                                                                   | Prueba                                                                                                        | Estado                                                                                                                |
+| ------------------------------------------- | ----------------------------------------------------------------------------- | ------------------------ | ------------ | --------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Plataforma verificable                      | RNF-001..008, RNF-024, RNF-029..034                                           | —                        | CU-01        | UI-01                             | CP-N seguridad/despliegue                                  | `bootstrap/app.php`, `PlatformSmokeJob`, conexión PostgreSQL UTC, seeder, `compose.yaml`                                 | `HealthAndSecurityTest`, `DatabaseBootstrapTest`, `JobDispatchTest`, `RedisConnectionTest`                    | Verificado local                                                                                                      |
+| Consistencia de módulos autenticados        | RNF-001..036 como cobertura agregada de I-10                                  | —                        | CU-01..18    | UI-02..04, DOC, COR, ADM          | CP-N individuales pendientes de enunciado                  | `PageFrame`, 29 páginas operativas y layout de Configuración                                                             | `ManagementCreationUiTest`, `composer verify`                                                                | Verificado automatizado / accesibilidad y dispositivos reales pendientes en PV-19                                    |
+| Rol efectivo                                | RF-001..007                                                                   | RN-001..004              | CU-01, CU-02 | UI-02                             | CP-F identidad/alcance                                     | `ActiveRole`, `SelectActiveRole`, elegibilidad por coordinación vigente                                         | `ActiveRoleTest`                                                                                             | Verificado local                                                                                                      |
+| Usuarios, roles y vigencias                 | RF-003..006                                                                   | RN-001..004              | CU-02        | UI-04, ADM-02, ADM-03             | CP-F identidad/permiso/historial                           | `CreateManagedUser`, `AssignRole`, `SetUserStatus`, `RequirePasswordChange`, contraseña temporal generada, perfil sin autoeliminación | `ManagedUserTest`, `TemporaryPasswordTest`, `ProfileUpdateTest`, `ManagementCreationUiTest`, `GeneratedTemporaryPasswordTest`, `TemporaryPasswordDialogTest` | Verificado local                                                                                                      |
+| Plazos, prórroga y relevo de docente        | RF-003..006, RF-017..028                                                      | RN-001..004              | CU-02, CU-03, CU-05 | COR-01, COR-12                    | CP-F plazo/relevo/coordinación encargada                   | `ConvocationSchedule`, `ExtendConvocationDeadline`, `TransferSyllabusTeacher`, coordinación encargada con sustento | `ConvocationScheduleTest`, `TeacherTransferTest`, `AcademicStructureTest`, `ScheduleAndTransferTest` | Verificado local |
+| Gobierno y estructura académica por carrera | RF-008..016                                                                   | RN-005..008              | CU-03        | ADM-04, COR-13..15                | CP-F estructura/alcance                                    | `AcademicGovernanceController`, `UpdateAcademicRecord`, `CareerAcademicStructureController`, `CatalogSection`, submenús, jerarquía normalizada y migraciones `000002`/`000003` | `AcademicStructureTest`, `CoordinatorAssignmentConstraintTest`, `ActiveRoleTest`, `ManagementCreationUiTest` | Verificado automatizado                                                                                               |
+| Plantillas versionadas                      | RF-017..026                                                                   | RN-009..012              | CU-04        | ADM-05..07                        | CP-F plantilla/inmutabilidad                               | módulo `Configuration`, `PublishTemplateVersion`                                                                         | `TemplateAndSourceTest`, `ManagementCreationUiTest`                                                           | Verificado automatizado / PV-01, PV-07, PV-08                                                                         |
+| Fuentes y contradicciones                   | RF-027..033                                                                   | RN-013..016              | CU-05        | COR-11                            | CP-F fuente/evidencia                                      | `ActivateSourceVersion`, `ResolveSourceConflict`                                                                         | `TemplateAndSourceTest`, `ManagementCreationUiTest`                                                           | Verificado automatizado / PV-02                                                                                       |
+| Convocatorias y generación                       | RF-034..036                                                                   | RN-017..019              | CU-06        | COR-01..04                        | CP-F convocatoria/alcance/atomicidad                            | módulo `Syllabus`, `CreateCampaign`, `OpenCampaign`                                                                      | `CampaignAndDraftTest`, `ManagementCreationUiTest`                                                            | Verificado automatizado / PV-05, PV-06                                                                                |
+| Borrador y validación                       | RF-037..044                                                                   | RN-020..024              | CU-07        | DOC-01..05                        | CP-F herencia/concurrencia/validación                      | `UpdateDraftField`, `ValidateDraft`, editor Vue                                                                          | `CampaignAndDraftTest`                                                                                        | Verificado automatizado / PV-08, DT-06; UX manual pendiente                                                           |
+| Asistencia de IA explicable                 | RF-046..054, RNF-013, RNF-016..017, RNF-035..036                              | RN-015..016, RN-028..030 | CU-08        | DOC-06                            | IA-NEG-01..09                                              | migración `000008`, módulo `AiAssistance`, `AiAnalysisGateway`, `AnalyzeSyllabusFieldJob`, DOC-06                        | `AiAssistanceTest`                                                                                            | Verificado automatizado con simulador / PV-02, PV-13, PV-14, PV-18 y evaluación experta pendientes                    |
+| Revisión, aprobación y reapertura           | RF-045, RF-055..065                                                           | RN-019, RN-025..027      | CU-09..14    | DOC-07..09, COR-05..10            | CP-F flujo/alcance/idempotencia/inmutabilidad              | migración `000006`, `SubmitSyllabus`, acciones de revisión, `RevisionDiff`                                               | `ReviewWorkflowTest`, `ManagementCreationUiTest`                                                              | Verificado automatizado / PV-16, DT-07 y UX manual pendientes                                                         |
+| Documentos y operación                      | RF-066..074                                                                   | RN-031..034              | CU-15..17    | UI-03, DOC-10, COR-12, ADM-09..10 | CP-F documento/alcance/retry/outbox/informe/auditoría      | migración `000007`, módulos `Documents` y `Operations`, `DocumentRenderer`, `FilterToolbar`, `TablePagination`, `TableActionsMenu` y pantallas operativas | `DocumentOperationsTest`, `ReviewWorkflowTest`, `ManagementCreationUiTest`                                    | Verificado automatizado / PV-07, PV-11, PV-12, PV-15 y validación visual/manual pendientes                            |
+| Importación institucional simulada          | RF-016, RF-075, RNF-006, RNF-008, RNF-013, RNF-017, RNF-024, RNF-027, RNF-034 | RN-005..008, RN-031..034 | CU-18        | ADM-08, ADM-09, UI-03             | CP-F importación/idempotencia/alcance/conflicto            | migración `000009`, módulo `Integrations`, `InstitutionalDataReader`, `SimulateInstitutionalImportJob`, ADM-08           | `InstitutionalImportTest`                                                                                     | Verificado automatizado con fixture / identidad confirmada en I-11; conector, aplicación y retención bloqueados por PV-12 |
+| Alineación con la fuente institucional      | RF-008..016, RF-016, RF-075                                                   | RN-005..008              | CU-03, CU-18 | ADM-04, ADM-08                    | CP-F estructura/importación                                | migración `000010`, `School`, `InstitutionalAlias`, `SianetAcademicRecordMapper`, `SianetIdentityReconciler`, `anonymized-fixture-v2` | `InstitutionalSchemaAlignmentTest`, `InstitutionalImportTest`                                                 | Verificado automatizado                                                                                                |
+| Rol activo, panel e interfaz                | RF-001..007, RF-066..075                                                      | RN-001..004              | CU-01, CU-02, CU-15 | UI-02, ADM-04, DOC-10             | CP-F identidad/panel                                       | `ActiveRole`, `DashboardController`, `StatTile`, `NavMain`, `AppearanceToggle`, tokens de superficie y sombra | `DashboardMetricsTest`, `ActiveRoleTest`, `PersistentLayoutReactivityTest`, `HeaderAppearanceControlTest`, `SheetReopeningTest` | Verificado automatizado / revisión manual pendiente en PV-19                                                           |
+| Release y candidato técnico                 | RNF-001..036                                                                  | RN-001..034              | CU-01..18    | UI/DOC/COR/ADM                    | CP-F01..35 y CP-N01..16 pendientes de enunciado individual | workflows fijados, scripts `security`, `restore` y `benchmark`, headers y runbooks                                       | `composer verify`, `HealthAndSecurityTest`, `JobDispatchTest`, smoke Redis/restore/readiness                  | Carril técnico verificado; aceptación humana/institucional pendiente en `acceptance-status.md`                        |
+
+Estados: `No iniciado`, `En desarrollo`, `Verificado`, `Bloqueado PV`, `Reemplazado`.
+
+## Cambio de requisito
+
+1. registrar origen y autoridad del cambio;
+2. actualizar la SRS/decisión formal;
+3. analizar impacto en RN, CU, UI, datos, arquitectura y CP;
+4. crear plan de cambio/migración;
+5. actualizar implementación y pruebas;
+6. conservar historial de la decisión;
+7. volver a validar criterios afectados.
+
+No cambies primero el test para acomodar código y luego reescribas el requisito.
+
+## Evidencia
+
+Puede ser: resultado CI, reporte de test, captura, documento renderizado, log anonimizado,
+acta/validación o métrica reproducible. Debe incluir versión/commit, ambiente, fecha y
+responsable cuando corresponda.

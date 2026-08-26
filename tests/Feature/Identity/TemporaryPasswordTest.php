@@ -1,0 +1,174 @@
+<?php
+
+namespace Tests\Feature\Identity;
+
+use App\Models\User;
+use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
+use App\Modules\Identity\Domain\Enums\RoleCode;
+use App\Modules\Operations\Infrastructure\Persistence\Models\AuditEvent;
+use Database\Seeders\DatabaseSeeder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
+use Tests\TestCase;
+
+/**
+ * La contraseña con la que un administrador crea una cuenta la conoce quien la generó.
+ * Mientras siga vigente, la sesión no puede operar: el bloqueo es del servidor, porque
+ * un diálogo que solo vive en el navegador se esquiva escribiendo la URL a mano.
+ */
+class TemporaryPasswordTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private User $administrator;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->seed(DatabaseSeeder::class);
+        $this->administrator = User::query()->where('email', 'admin@silabos.test')->firstOrFail();
+    }
+
+    public function test_an_account_created_by_an_administrator_is_born_with_a_temporary_password(): void
+    {
+        $career = Career::query()->where('codigo_institucional', 'SOFTWARE')->firstOrFail();
+        $context = $this->administrator->roleAssignments()->firstOrFail();
+
+        $this->actingAs($this->administrator)
+            ->withSession(['active_role_assignment_id' => $context->id])
+            ->post(route('admin.users.store'), [
+                'name' => 'Docente Nueva',
+                'email' => 'docente.nueva@silabos.test',
+                'password' => 'Temporal-2026!',
+                'role_code' => RoleCode::Teacher->value,
+                'career_id' => $career->id,
+            ])
+            ->assertRedirect();
+
+        $this->assertTrue(
+            User::query()->where('email', 'docente.nueva@silabos.test')->firstOrFail()->must_change_password,
+        );
+    }
+
+    public function test_the_seeded_administrator_is_not_locked_out_of_a_fresh_installation(): void
+    {
+        // Si la instalación naciera bloqueada no habría por dónde crear la primera cuenta.
+        $this->assertFalse($this->administrator->must_change_password);
+    }
+
+    public function test_a_temporary_password_blocks_every_other_route(): void
+    {
+        $user = $this->userWithTemporaryPassword();
+
+        foreach ([
+            route('admin.users.index'),
+            route('profile.edit'),
+            route('security.edit'),
+            route('notifications.index'),
+            route('role.index'),
+            route('home'),
+        ] as $url) {
+            $this->actingAs($user)
+                ->get($url)
+                ->assertRedirect(route('dashboard'));
+        }
+
+        $this->actingAs($user)
+            ->post(route('role.store'), ['assignment_id' => $user->roleAssignments()->firstOrFail()->id])
+            ->assertRedirect(route('dashboard'));
+    }
+
+    public function test_the_dashboard_the_change_and_the_logout_stay_reachable(): void
+    {
+        $user = $this->userWithTemporaryPassword();
+
+        // El panel es la superficie sobre la que aparece el diálogo, así que debe renderizar.
+        $this->actingAs($user)->get(route('dashboard'))->assertOk();
+        $this->actingAs($user)->post(route('logout'))->assertRedirect();
+    }
+
+    public function test_an_api_client_receives_a_refusal_instead_of_a_redirect(): void
+    {
+        $user = $this->userWithTemporaryPassword();
+
+        $this->actingAs($user)
+            ->getJson(route('admin.users.index'))
+            ->assertForbidden();
+    }
+
+    public function test_changing_the_password_unlocks_the_session_and_records_the_event(): void
+    {
+        $user = $this->userWithTemporaryPassword();
+
+        $this->actingAs($user)
+            ->put(route('user-password.update'), [
+                'current_password' => 'Temporal-2026!',
+                'password' => 'Definitiva-2026!',
+                'password_confirmation' => 'Definitiva-2026!',
+            ])
+            ->assertRedirect();
+
+        $user->refresh();
+
+        $this->assertFalse($user->must_change_password);
+        $this->assertTrue(Hash::check('Definitiva-2026!', $user->password));
+        $this->assertDatabaseHas('eventos_auditoria', [
+            'actor_usuario_id' => $user->id,
+            'accion' => 'user.temporary_password_changed',
+            'recurso_id' => $user->id,
+            'resultado' => 'success',
+        ]);
+
+        // Con la marca apagada, la sesión vuelve a operar donde antes rebotaba.
+        $this->actingAs($user)->get(route('notifications.index'))->assertOk();
+    }
+
+    public function test_a_rejected_change_keeps_the_session_blocked(): void
+    {
+        $user = $this->userWithTemporaryPassword();
+
+        $this->actingAs($user)
+            ->put(route('user-password.update'), [
+                'current_password' => 'la-que-no-es',
+                'password' => 'Definitiva-2026!',
+                'password_confirmation' => 'Definitiva-2026!',
+            ])
+            ->assertSessionHasErrors('current_password');
+
+        $this->assertTrue($user->refresh()->must_change_password);
+        $this->actingAs($user)->get(route('notifications.index'))->assertRedirect(route('dashboard'));
+    }
+
+    public function test_the_audit_event_never_carries_the_password(): void
+    {
+        $user = $this->userWithTemporaryPassword();
+
+        $this->actingAs($user)->put(route('user-password.update'), [
+            'current_password' => 'Temporal-2026!',
+            'password' => 'Definitiva-2026!',
+            'password_confirmation' => 'Definitiva-2026!',
+        ]);
+
+        $metadata = json_encode(
+            AuditEvent::query()
+                ->where('accion', 'user.temporary_password_changed')
+                ->firstOrFail()
+                ->metadatos,
+        );
+
+        $this->assertStringNotContainsString('Temporal-2026!', (string) $metadata);
+        $this->assertStringNotContainsString('Definitiva-2026!', (string) $metadata);
+    }
+
+    private function userWithTemporaryPassword(): User
+    {
+        $teacher = User::query()->where('email', 'docente@silabos.test')->firstOrFail();
+        $teacher->forceFill([
+            'password' => Hash::make('Temporal-2026!'),
+            'must_change_password' => true,
+        ])->save();
+
+        return $teacher;
+    }
+}

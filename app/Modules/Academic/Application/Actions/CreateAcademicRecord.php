@@ -1,0 +1,268 @@
+<?php
+
+namespace App\Modules\Academic\Application\Actions;
+
+use App\Models\User;
+use App\Modules\Academic\Domain\AcademicStructurePermissions;
+use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
+use App\Modules\Academic\Infrastructure\Persistence\Models\Campus;
+use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
+use App\Modules\Academic\Infrastructure\Persistence\Models\CoordinatorAssignment;
+use App\Modules\Academic\Infrastructure\Persistence\Models\CourseOffering;
+use App\Modules\Academic\Infrastructure\Persistence\Models\CurriculumVersion;
+use App\Modules\Academic\Infrastructure\Persistence\Models\Faculty;
+use App\Modules\Academic\Infrastructure\Persistence\Models\Modality;
+use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
+use App\Modules\Academic\Infrastructure\Persistence\Models\Subject;
+use App\Modules\Academic\Infrastructure\Persistence\Models\TeacherAssignment;
+use App\Modules\Identity\Application\ActiveRole;
+use App\Modules\Identity\Domain\Enums\RoleCode;
+use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
+use App\Modules\Operations\Application\Actions\RecordAuditEvent;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
+
+class CreateAcademicRecord
+{
+    public function __construct(
+        private readonly ActiveRole $roles,
+        private readonly RecordAuditEvent $audit,
+    ) {}
+
+    /** @param array<string, mixed> $data */
+    public function execute(string $entity, array $data, User $actor, Request $request): Model
+    {
+        $activeRole = $this->roles->resolve($request);
+
+        if (! $activeRole instanceof RoleAssignment || ! AcademicStructurePermissions::mayCreate($activeRole, $entity)) {
+            throw new AuthorizationException('No puede gestionar este tipo de registro con el rol activo.');
+        }
+
+        return DB::transaction(function () use ($actor, $activeRole, $data, $entity, $request): Model {
+            $record = $this->create($entity, $data, $activeRole);
+
+            $this->audit->execute(
+                actorId: $actor->id,
+                roleAssignmentId: $activeRole->id,
+                action: "academic.{$entity}.created",
+                resourceType: $entity,
+                resourceId: (string) $record->getKey(),
+                result: 'success',
+                correlationId: $request->attributes->getString('correlation_id') ?: null,
+            );
+
+            return $record;
+        });
+    }
+
+    /** @param array<string, mixed> $data */
+    private function create(string $entity, array $data, RoleAssignment $activeRole): Model
+    {
+        return match ($entity) {
+            'faculty' => Faculty::query()->create([
+                'codigo_institucional' => $data['code'] ?? null,
+                'nombre' => $data['name'],
+                'activo' => true,
+            ]),
+            'career' => Career::query()->create([
+                'facultad_id' => $data['faculty_id'],
+                'codigo_institucional' => $data['code'] ?? null,
+                'nombre' => $data['name'],
+                'activo' => true,
+            ]),
+            'campus' => Campus::query()->create([
+                'codigo_institucional' => $data['code'] ?? null,
+                'nombre' => $data['name'],
+                'activo' => true,
+            ]),
+            'modality' => Modality::query()->create([
+                'codigo' => $data['code'],
+                'nombre' => $data['name'],
+                'activo' => true,
+            ]),
+            'period' => AcademicPeriod::query()->create([
+                'codigo' => $data['code'],
+                'nombre' => $data['name'],
+                'fecha_inicio' => $data['starts_on'],
+                'fecha_fin' => $data['ends_on'],
+                'activo' => true,
+            ]),
+            'curriculum' => CurriculumVersion::query()->create([
+                'carrera_id' => $this->careerId($activeRole),
+                'codigo' => $data['code'],
+                'numero_version' => $data['version_number'],
+                'estado' => 'draft',
+            ]),
+            'subject' => $this->createSubject($data, $this->careerId($activeRole)),
+            'offering' => $this->createOffering($data, $this->careerId($activeRole)),
+            'parallel' => $this->createParallel($data, $this->careerId($activeRole)),
+            'coordinator_assignment' => $this->createCoordinatorAssignment($data),
+            'teacher_assignment' => $this->createTeacherAssignment($data, $this->careerId($activeRole)),
+            default => throw ValidationException::withMessages([
+                'entity' => 'El tipo de registro académico no es válido.',
+            ]),
+        };
+    }
+
+    /** @param array<string, mixed> $data */
+    private function createSubject(array $data, string $careerId): Subject
+    {
+        $curriculum = CurriculumVersion::query()
+            ->whereKey($this->stringValue($data, 'curriculum_id'))
+            ->where('carrera_id', $careerId)
+            ->lockForUpdate()
+            ->firstOrFail();
+
+        if ($curriculum->estado !== 'draft') {
+            throw ValidationException::withMessages([
+                'curriculum_id' => 'Solo una malla en borrador admite nuevas materias.',
+            ]);
+        }
+
+        return Subject::query()->create([
+            'version_malla_id' => $curriculum->id,
+            'codigo_institucional' => $data['code'],
+            'nombre' => $data['name'],
+            'ciclo' => $data['cycle'] ?? null,
+            'creditos' => $data['credits'] ?? null,
+            'horas_totales' => $data['total_hours'] ?? null,
+            'activo' => true,
+        ]);
+    }
+
+    /** @param array<string, mixed> $data */
+    private function createOffering(array $data, string $careerId): CourseOffering
+    {
+        $subject = Subject::query()
+            ->with('curriculumVersion:id,estado,carrera_id')
+            ->whereKey($this->stringValue($data, 'subject_id'))
+            ->whereHas('curriculumVersion', fn ($query) => $query->where('carrera_id', $careerId))
+            ->lockForUpdate()
+            ->firstOrFail();
+
+        if ($subject->curriculumVersion->estado !== 'published') {
+            throw ValidationException::withMessages([
+                'subject_id' => 'La oferta requiere una materia de una malla publicada.',
+            ]);
+        }
+
+        return CourseOffering::query()->create([
+            'periodo_academico_id' => $data['period_id'],
+            'asignatura_id' => $subject->id,
+            'campus_id' => $data['campus_id'],
+            'modalidad_id' => $data['modality_id'],
+            'activo' => true,
+        ]);
+    }
+
+    /** @param array<string, mixed> $data */
+    private function createParallel(array $data, string $careerId): Parallel
+    {
+        $offering = CourseOffering::query()
+            ->whereKey($this->stringValue($data, 'offering_id'))
+            ->whereHas(
+                'subject.curriculumVersion',
+                fn ($query) => $query->where('carrera_id', $careerId),
+            )
+            ->lockForUpdate()
+            ->firstOrFail();
+
+        return Parallel::query()->create([
+            'oferta_academica_id' => $offering->id,
+            'codigo' => $data['code'],
+            'activo' => true,
+        ]);
+    }
+
+    /** @param array<string, mixed> $data */
+    private function createCoordinatorAssignment(array $data): CoordinatorAssignment
+    {
+        $userId = $this->stringValue($data, 'user_id');
+        $careerId = $this->stringValue($data, 'career_id');
+        $this->ensureScopedRole($userId, $careerId, RoleCode::Coordinator);
+
+        // `quality` es opcional: sin él la asignación es titular, que es el caso normal.
+        $quality = is_string($data['quality'] ?? null) && $data['quality'] !== ''
+            ? $data['quality']
+            : 'titular';
+
+        return CoordinatorAssignment::query()->create([
+            'usuario_id' => $userId,
+            'carrera_id' => $careerId,
+            'vigente_desde' => $data['valid_from'],
+            'vigente_hasta' => $data['valid_until'] ?? null,
+            'activo' => true,
+            // Las atribuciones del encargado son las mismas que las del titular: sus
+            // aprobaciones siguen valiendo cuando este vuelve. La distinción es de
+            // nombramiento, no de permisos.
+            'calidad' => $quality,
+            'sustento_tipo' => $data['backing_type'] ?? null,
+            'sustento_numero' => $data['backing_number'] ?? null,
+            'sustento_fecha' => $data['backing_date'] ?? null,
+        ]);
+    }
+
+    /** @param array<string, mixed> $data */
+    private function createTeacherAssignment(array $data, string $careerId): TeacherAssignment
+    {
+        $parallel = Parallel::query()
+            ->with('offering.subject.curriculumVersion:id,carrera_id')
+            ->whereKey($this->stringValue($data, 'parallel_id'))
+            ->whereHas(
+                'offering.subject.curriculumVersion',
+                fn ($query) => $query->where('carrera_id', $careerId),
+            )
+            ->lockForUpdate()
+            ->firstOrFail();
+        $userId = $this->stringValue($data, 'user_id');
+        $this->ensureScopedRole($userId, $careerId, RoleCode::Teacher);
+
+        return TeacherAssignment::query()->create([
+            'usuario_id' => $userId,
+            'paralelo_id' => $parallel->id,
+            'vigente_desde' => $data['valid_from'],
+            'vigente_hasta' => $data['valid_until'] ?? null,
+            'activo' => true,
+        ]);
+    }
+
+    private function careerId(RoleAssignment $activeRole): string
+    {
+        if (! AcademicStructurePermissions::isCareerContext($activeRole) || $activeRole->carrera_id === null) {
+            throw new AuthorizationException('Seleccione una coordinación vigente con carrera.');
+        }
+
+        return $activeRole->carrera_id;
+    }
+
+    private function ensureScopedRole(string $userId, string $careerId, RoleCode $role): void
+    {
+        $hasRole = RoleAssignment::query()
+            ->effective()
+            ->where('usuario_id', $userId)
+            ->where('carrera_id', $careerId)
+            ->whereHas('role', fn ($query) => $query->where('codigo', $role->value))
+            ->exists();
+
+        if (! $hasRole) {
+            throw ValidationException::withMessages([
+                'user_id' => 'La persona no tiene el rol vigente requerido en esta carrera.',
+            ]);
+        }
+    }
+
+    /** @param array<string, mixed> $data */
+    private function stringValue(array $data, string $key): string
+    {
+        $value = $data[$key] ?? null;
+
+        if (! is_string($value)) {
+            throw ValidationException::withMessages([$key => 'El identificador recibido no es válido.']);
+        }
+
+        return $value;
+    }
+}

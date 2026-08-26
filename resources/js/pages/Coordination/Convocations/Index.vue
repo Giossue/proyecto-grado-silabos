@@ -1,0 +1,160 @@
+<script setup lang="ts">
+import { Head, Link } from '@inertiajs/vue3';
+import { CalendarRange, ChevronRight } from '@lucide/vue';
+import ConvocationController from '@/actions/App/Modules/Syllabus/Presentation/Http/Controllers/ConvocationController';
+import PageFrame from '@/components/domain/PageFrame.vue';
+import ConvocationCreationSheet from '@/components/domain/syllabus/ConvocationCreationSheet.vue';
+import TablePagination from '@/components/domain/TablePagination.vue';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableEmpty,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
+import { index as convocationsIndex } from '@/routes/convocations';
+import type { Paginated } from '@/types/pagination';
+
+type ConvocationRow = {
+    id: string;
+    name: string;
+    state: string;
+    grouping_mode: string;
+    period: string;
+    template: string;
+    syllabi_count: number;
+};
+
+defineProps<{
+    convocations: Paginated<ConvocationRow>;
+    periods: { id: string; nombre: string }[];
+    templates: { id: string; label: string }[];
+    sources: { id: string; label: string }[];
+}>();
+
+defineOptions({
+    layout: {
+        breadcrumbs: [{ title: 'Convocatorias', href: convocationsIndex() }],
+    },
+});
+
+const stateLabel = (state: string): string =>
+    ({ preparation: 'En preparación', open: 'Abierta', closed: 'Cerrada' })[
+        state
+    ] ?? state;
+</script>
+
+<template>
+    <Head title="Convocatorias" />
+    <PageFrame
+        :icon="CalendarRange"
+        title="Convocatorias de sílabos"
+        description="Fije periodo, plantilla, fuentes y alcance antes de generar expedientes."
+    >
+        <template #actions>
+            <ConvocationCreationSheet
+                :periods="periods"
+                :templates="templates"
+                :sources="sources"
+            />
+        </template>
+
+        <Alert>
+            <AlertTitle
+                >Política de paralelos pendiente de validación</AlertTitle
+            >
+            <AlertDescription>
+                PV-06 sigue abierta. Por eso cada convocatoria exige una
+                elección explícita y auditada; ninguna opción se presenta como
+                política institucional definitiva.
+            </AlertDescription>
+        </Alert>
+
+        <Card>
+            <CardContent class="flex flex-col gap-4">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Convocatoria</TableHead>
+                            <TableHead>Periodo</TableHead>
+                            <TableHead>Configuración</TableHead>
+                            <TableHead>Estado</TableHead>
+                            <TableHead class="text-right"
+                                >Expedientes</TableHead
+                            >
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        <TableEmpty
+                            v-if="convocations.data.length === 0"
+                            :colspan="5"
+                        >
+                            No existen convocatorias con este rol.
+                        </TableEmpty>
+                        <TableRow
+                            v-for="convocation in convocations.data"
+                            v-else
+                            :key="convocation.id"
+                        >
+                            <TableCell>
+                                <Button
+                                    as-child
+                                    variant="link"
+                                    class="h-auto px-0"
+                                >
+                                    <Link
+                                        :href="
+                                            ConvocationController.show(
+                                                convocation.id,
+                                            )
+                                        "
+                                    >
+                                        {{ convocation.name }}
+                                        <ChevronRight aria-hidden="true" />
+                                    </Link>
+                                </Button>
+                            </TableCell>
+                            <TableCell>{{ convocation.period }}</TableCell>
+                            <TableCell>
+                                <div>{{ convocation.template }}</div>
+                                <div class="text-sm text-muted-foreground">
+                                    {{
+                                        convocation.grouping_mode ===
+                                        'per_parallel'
+                                            ? 'Por paralelo'
+                                            : 'Por oferta'
+                                    }}
+                                </div>
+                            </TableCell>
+                            <TableCell>
+                                <Badge
+                                    :variant="
+                                        convocation.state === 'open'
+                                            ? 'secondary'
+                                            : 'outline'
+                                    "
+                                >
+                                    {{ stateLabel(convocation.state) }}
+                                </Badge>
+                            </TableCell>
+                            <TableCell class="text-right">
+                                {{ convocation.syllabi_count }}
+                            </TableCell>
+                        </TableRow>
+                    </TableBody>
+                </Table>
+
+                <TablePagination
+                    :meta="convocations"
+                    label="Paginación de convocatorias"
+                />
+            </CardContent>
+        </Card>
+    </PageFrame>
+</template>

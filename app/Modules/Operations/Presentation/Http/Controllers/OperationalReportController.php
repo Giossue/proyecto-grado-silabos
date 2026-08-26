@@ -1,0 +1,133 @@
+<?php
+
+namespace App\Modules\Operations\Presentation\Http\Controllers;
+
+use App\Http\Controllers\Controller;
+use App\Modules\Identity\Application\ActiveRole;
+use App\Modules\Operations\Presentation\Http\Requests\ViewOperationalReportsRequest;
+use App\Modules\Syllabus\Infrastructure\Persistence\Models\Convocation;
+use App\Modules\Syllabus\Infrastructure\Persistence\Models\Syllabus;
+use Illuminate\Database\Eloquent\Builder;
+use Inertia\Inertia;
+use Inertia\Response;
+
+class OperationalReportController extends Controller
+{
+    /** @var list<string> */
+    private const STATES = ['not_started', 'draft', 'in_review', 'correction_requested', 'approved'];
+
+    public function index(ViewOperationalReportsRequest $request, ActiveRole $roles): Response
+    {
+        $careerId = $roles->resolve($request)?->carrera_id;
+        abort_unless(is_string($careerId), 403);
+        $convocationId = $request->string('convocation')->toString();
+        $state = $request->string('state')->toString();
+        $search = trim($request->string('search')->toString());
+        $query = $this->scopedQuery($careerId, $convocationId, $state, $search);
+
+        $counts = array_fill_keys(self::STATES, 0);
+        foreach ((clone $query)->selectRaw('estado, COUNT(*) AS total')->groupBy('estado')->get() as $row) {
+            if (array_key_exists($row->estado, $counts)) {
+                $counts[$row->estado] = (int) $row->getAttribute('total');
+            }
+        }
+        $total = array_sum($counts);
+        $averageCompletion = (float) ((clone $query)->avg('porcentaje_completitud') ?? 0);
+        $convocations = Convocation::query()
+            ->where('carrera_id', $careerId)
+            ->with('academicPeriod:id,nombre')
+            ->latest('created_at')
+            ->get(['id', 'periodo_academico_id', 'nombre', 'estado']);
+        $convocationBreakdown = (clone $query)
+            ->join('convocatorias', 'convocatorias.id', '=', 'silabos.convocatoria_id')
+            ->selectRaw(<<<'SQL'
+                convocatorias.id,
+                convocatorias.nombre,
+                COUNT(*) AS total,
+                COUNT(*) FILTER (WHERE silabos.estado = 'not_started') AS not_started,
+                COUNT(*) FILTER (WHERE silabos.estado = 'draft') AS draft,
+                COUNT(*) FILTER (WHERE silabos.estado = 'in_review') AS in_review,
+                COUNT(*) FILTER (WHERE silabos.estado = 'correction_requested') AS correction_requested,
+                COUNT(*) FILTER (WHERE silabos.estado = 'approved') AS approved
+                SQL)
+            ->groupBy('convocatorias.id', 'convocatorias.nombre')
+            ->orderBy('convocatorias.nombre')
+            ->get()
+            ->map(fn (Syllabus $row): array => [
+                'id' => $row->getAttribute('id'),
+                'name' => $row->getAttribute('nombre'),
+                'total' => (int) $row->getAttribute('total'),
+                'not_started' => (int) $row->getAttribute('not_started'),
+                'draft' => (int) $row->getAttribute('draft'),
+                'in_review' => (int) $row->getAttribute('in_review'),
+                'correction_requested' => (int) $row->getAttribute('correction_requested'),
+                'approved' => (int) $row->getAttribute('approved'),
+            ]);
+        $detail = (clone $query)
+            ->with([
+                'convocation.academicPeriod:id,nombre',
+                'subject:id,nombre,codigo_institucional',
+                'teachers:id,name',
+                'revisions' => fn ($revision) => $revision->orderByDesc('numero_revision')->limit(1),
+            ])
+            ->withCount(['reviewObservations as unresolved_observations_count' => fn ($observation) => $observation
+                ->where('estado', '!=', 'verified')])
+            ->orderByDesc('updated_at')
+            ->paginate(20)
+            ->withQueryString()
+            ->through(fn (Syllabus $syllabus): array => [
+                'id' => $syllabus->id,
+                'subject' => $syllabus->subject->nombre,
+                'code' => $syllabus->subject->codigo_institucional,
+                'convocation' => $syllabus->convocation->nombre,
+                'period' => $syllabus->convocation->academicPeriod->nombre,
+                'state' => $syllabus->estado,
+                'completion' => (float) $syllabus->porcentaje_completitud,
+                'teachers' => $syllabus->teachers->pluck('name')->values(),
+                'unresolved_observations' => (int) $syllabus->unresolved_observations_count,
+                'updated_at' => $syllabus->updated_at?->toIso8601String(),
+                'latest_revision_id' => $syllabus->revisions->first()?->id,
+            ]);
+
+        return Inertia::render('Coordination/Reports/Index', [
+            'filters' => ['convocation' => $convocationId, 'state' => $state, 'search' => $search],
+            'convocations' => $convocations->map(fn (Convocation $convocation): array => [
+                'id' => $convocation->id,
+                'name' => $convocation->nombre,
+                'period' => $convocation->academicPeriod->nombre,
+                'state' => $convocation->estado,
+            ]),
+            'indicators' => [
+                'total' => $total,
+                'teacher_action' => $counts['not_started'] + $counts['draft'] + $counts['correction_requested'],
+                'coordination_action' => $counts['in_review'],
+                'approved' => $counts['approved'],
+                'average_completion' => round($averageCompletion, 1),
+                'states' => $counts,
+            ],
+            'convocation_breakdown' => $convocationBreakdown,
+            'syllabi' => $detail,
+        ]);
+    }
+
+    /** @return Builder<Syllabus> */
+    private function scopedQuery(string $careerId, string $convocationId, string $state, string $search): Builder
+    {
+        $query = Syllabus::query()
+            ->whereHas('convocation', fn ($convocation) => $convocation->where('carrera_id', $careerId));
+        if ($convocationId !== '') {
+            $query->where('convocatoria_id', $convocationId);
+        }
+        if ($state !== '') {
+            $query->where('estado', $state);
+        }
+        if ($search !== '') {
+            $escaped = addcslashes($search, '%_\\');
+            $query->whereHas('subject', fn ($subject) => $subject
+                ->where('nombre', 'ilike', "%{$escaped}%")
+                ->orWhere('codigo_institucional', 'ilike', "%{$escaped}%"));
+        }
+
+        return $query;
+    }
+}
