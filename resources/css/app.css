@@ -215,6 +215,129 @@
 
 @layer components {
     /*
+     * Tablas como tarjetas en pantalla estrecha.
+     *
+     * Una tabla de siete columnas en un móvil deja fuera cinco: hay que arrastrar de lado
+     * para leer una fila y, al llegar al final, ya no se ve de quién se hablaba. Aquí cada
+     * fila pasa a ser un bloque con las dos columnas que identifican el registro; el resto
+     * se consulta en un panel. El nombre de cada dato lo copian las filas del encabezado,
+     * que ya lo tiene escrito.
+     */
+    @media (width < 40rem) {
+        table[data-cards='true'],
+        table[data-cards='true'] > tbody,
+        table[data-cards='true'] > tbody > tr > td {
+            display: block;
+        }
+
+        /* Los nombres de columna viajan a cada celda: la cabecera sobra. */
+        table[data-cards='true'] > thead {
+            display: none;
+        }
+
+        table[data-cards='true'] > tbody {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        table[data-cards='true'] > tbody > tr {
+            display: grid;
+            /* Los datos ocupan el ancho; las acciones, lo justo, a su derecha. */
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 0.125rem 0.5rem;
+            border: 1px solid var(--color-surface-ring);
+            border-radius: var(--radius-lg);
+            background-color: var(--color-card);
+            padding: 0.75rem;
+        }
+
+        table[data-cards='true'] > tbody > tr > td {
+            grid-column: 1;
+            padding: 0;
+            /* Sin esto un nombre largo estira la tarjeta y vuelve el arrastre lateral. */
+            white-space: normal;
+        }
+
+        /* Primer dato: encabeza la tarjeta, sin rótulo, porque es de quien se habla. */
+        table[data-cards='true'] > tbody > tr > td[data-card-index='0'] {
+            grid-row: 1;
+            font-weight: 500;
+        }
+
+        table[data-cards='true']
+            > tbody
+            > tr
+            > td[data-card-index]:not([data-card-index='0'])::before {
+            content: attr(data-label) ': ';
+            color: var(--color-muted-foreground);
+        }
+
+        table[data-cards='true'] > tbody > tr > td[data-card-hidden='true'] {
+            display: none;
+        }
+
+        table[data-cards='true'] > tbody > tr > td[data-card-role='actions'] {
+            grid-column: 2;
+            grid-row: 1;
+            justify-self: end;
+        }
+
+        table[data-cards='true'] > tbody > tr > td[data-card-more] {
+            grid-column: 1 / -1;
+            margin-top: 0.25rem;
+            border-top: 1px solid var(--color-surface-ring);
+        }
+
+        /*
+         * «No hay resultados» no describe un registro: ni tarjeta ni rótulos, solo el
+         * aviso centrado donde estaría la lista.
+         */
+        table[data-cards='true'] > tbody > tr:has(> td[colspan]) {
+            display: block;
+            border: 0;
+            background-color: transparent;
+            padding: 0;
+        }
+    }
+
+    /*
+     * Panel de detalle: las mismas celdas de la fila, una debajo de otra y con su nombre
+     * delante. Las celdas se dibujan fuera de una tabla, así que hay que devolverles un
+     * reparto propio.
+     */
+    [data-card-detail] > td {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 1rem;
+        border-bottom: 1px solid var(--color-surface-ring);
+        padding-block: 0.625rem;
+        text-align: right;
+        white-space: normal;
+    }
+
+    [data-card-detail] > td:last-child {
+        border-bottom: 0;
+    }
+
+    [data-card-detail] > td::before {
+        content: attr(data-label);
+        flex: none;
+        color: var(--color-muted-foreground);
+        text-align: left;
+    }
+
+    /* El menú de acciones no es un dato: no lleva rótulo y se alinea con el resto. */
+    [data-card-detail] > td[data-card-role='actions'] {
+        justify-content: flex-end;
+    }
+
+    [data-card-detail] > td[data-card-role='actions']::before {
+        content: none;
+    }
+
+    /*
      * Columna de acciones fija al desplazar la tabla en horizontal.
      *
      * En un móvil la tabla se sale de la pantalla y el menú de tres puntos queda fuera de

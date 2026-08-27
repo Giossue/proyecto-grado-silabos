@@ -4,11 +4,22 @@ import { computed, useTemplateRef } from 'vue';
 import { useHorizontalOverflow } from '@/composables/useHorizontalOverflow';
 import { cn } from '@/lib/utils';
 
-const props = defineProps<{
-    class?: HTMLAttributes['class'];
-    /** Describe la tabla para quien la recorra con teclado o lector de pantalla. */
-    label?: string;
-}>();
+const props = withDefaults(
+    defineProps<{
+        class?: HTMLAttributes['class'];
+        /** Describe la tabla para quien la recorra con teclado o lector de pantalla. */
+        label?: string;
+        /**
+         * En pantalla estrecha cada fila se dibuja como una tarjeta. Se puede apagar en
+         * una tabla de dos o tres columnas cortas, que ya cabe entera y se lee mejor
+         * como tabla.
+         */
+        cards?: boolean;
+    }>(),
+    {
+        cards: true,
+    },
+);
 
 const container = useTemplateRef<HTMLElement>('container');
 const { canScrollLeft, canScrollRight, overflows } =
@@ -42,6 +53,7 @@ const region = computed(
             <table
                 data-slot="table"
                 :data-overflows="overflows ? 'true' : 'false'"
+                :data-cards="props.cards ? 'true' : 'false'"
                 :class="cn('w-full caption-bottom text-sm', props.class)"
             >
                 <slot />
