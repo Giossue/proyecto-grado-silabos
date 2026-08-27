@@ -118,9 +118,11 @@ const clear = (): void => {
     <div ref="root" data-slot="date-picker">
         <!--
             El valor viaja en un campo oculto porque los formularios de la aplicación se
-            envían con los nombres de sus campos, no con un objeto en memoria.
+            envían con los nombres de sus campos, no con un objeto en memoria. Sin nombre
+            —los filtros, que llevan el valor por su cuenta— el campo sigue estando: es
+            de donde el botón de filtros del móvil saca cuántos hay puestos.
         -->
-        <input v-if="name" type="hidden" :name="name" :value="model" />
+        <input type="hidden" :name="name" :value="model" />
 
         <Popover v-model:open="open">
             <PopoverTrigger as-child>

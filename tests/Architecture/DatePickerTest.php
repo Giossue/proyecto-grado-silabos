@@ -30,7 +30,7 @@ it('elige fechas con el calendario compartido y no con el campo nativo', functio
     // Los formularios se envian con los nombres de sus campos: sin el campo oculto, la
     // fecha elegida no llegaria al servidor.
     $this->assertStringContainsString(
-        '<input v-if="name" type="hidden" :name="name" :value="model" />',
+        '<input type="hidden" :name="name" :value="model" />',
         $picker,
         'La fecha elegida dejo de viajar en el envio del formulario.',
     );

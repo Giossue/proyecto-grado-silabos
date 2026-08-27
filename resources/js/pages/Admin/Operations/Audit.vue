@@ -170,29 +170,45 @@ const detailValue = (value: Detail['value']): string => {
                                 </Select>
                             </Field>
                             <!--
-                                Estos dos rótulos sí se ven. Los desplegables se explican
-                                solos con su texto —«Todas las acciones»—, pero un campo de
-                                fecha vacío solo muestra «dd/mm/aaaa»: dos iguales seguidos
-                                no dicen cuál abre el intervalo y cuál lo cierra.
+                                Las dos fechas van juntas: son un intervalo, no dos
+                                filtros sueltos, y en el panel del móvil una debajo de
+                                otra parecían cosas distintas. `contents` las devuelve al
+                                reparto de siempre en cuanto hay ancho, así que en
+                                escritorio nada cambia. Solo en un teléfono muy estrecho
+                                —por debajo de 340 píxeles— vuelven a apilarse, que es
+                                donde «Elegir fecha» ya no cabe al lado de la otra.
                             -->
-                            <Field>
-                                <FieldLabel
-                                    for="audit-from"
-                                    class="text-xs text-muted-foreground"
-                                >
-                                    Fecha inicial
-                                </FieldLabel>
-                                <DatePicker id="audit-from" v-model="from" />
-                            </Field>
-                            <Field>
-                                <FieldLabel
-                                    for="audit-to"
-                                    class="text-xs text-muted-foreground"
-                                >
-                                    Fecha final
-                                </FieldLabel>
-                                <DatePicker id="audit-to" v-model="to" />
-                            </Field>
+                            <div
+                                class="grid grid-cols-2 gap-3 max-[340px]:grid-cols-1 sm:contents"
+                            >
+                                <!--
+                                    Estos dos rótulos sí se ven. Los desplegables se
+                                    explican solos con su texto —«Todas las acciones»—,
+                                    pero dos botones que dicen «Elegir fecha» no dicen
+                                    cuál abre el intervalo y cuál lo cierra.
+                                -->
+                                <Field class="min-w-0 lg:w-44">
+                                    <FieldLabel
+                                        for="audit-from"
+                                        class="text-xs text-muted-foreground"
+                                    >
+                                        Fecha inicial
+                                    </FieldLabel>
+                                    <DatePicker
+                                        id="audit-from"
+                                        v-model="from"
+                                    />
+                                </Field>
+                                <Field class="min-w-0 lg:w-44">
+                                    <FieldLabel
+                                        for="audit-to"
+                                        class="text-xs text-muted-foreground"
+                                    >
+                                        Fecha final
+                                    </FieldLabel>
+                                    <DatePicker id="audit-to" v-model="to" />
+                                </Field>
+                            </div>
                         </template>
                     </FilterToolbar>
                 </form>
