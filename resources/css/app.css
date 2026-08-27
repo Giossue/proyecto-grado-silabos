@@ -235,6 +235,34 @@
         table[data-cards='true'] > :is(thead, tbody) > tr > :is(th, td) {
             white-space: normal;
         }
+
+        /*
+         * «Ver más» acompaña siempre a su fila. La regla de más abajo solo fija la
+         * última columna en las tablas que tienen menú de acciones, y siete de las
+         * dieciocho no lo tienen: allí la puerta al detalle se iba de la pantalla al
+         * arrastrar, justo cuando ya no se veía de qué fila era.
+         */
+        table[data-cards='true'][data-overflows='true']
+            > tbody
+            > tr
+            > td[data-card-more] {
+            position: sticky;
+            right: 0;
+            /* Sin fondo propio, las celdas que pasan por debajo se transparentarían. */
+            background-color: var(--color-card);
+            border-left: 1px solid var(--color-surface-ring);
+        }
+
+        table[data-cards='true'][data-overflows='true']
+            > tbody
+            > tr:hover
+            > td[data-card-more] {
+            background-color: color-mix(
+                in oklab,
+                var(--color-muted) 50%,
+                var(--color-card)
+            );
+        }
     }
 
     /*

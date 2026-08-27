@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ChevronDown } from '@lucide/vue';
+import { Eye } from '@lucide/vue';
 import { useMediaQuery } from '@vueuse/core';
 import type { HTMLAttributes } from 'vue';
 import { computed, inject, nextTick, onMounted, onUpdated, ref, useTemplateRef, watch } from 'vue';
@@ -188,7 +188,7 @@ watch(open, (isOpen) => {
                 @click="open = true"
             >
                 Ver más
-                <ChevronDown aria-hidden="true" />
+                <Eye aria-hidden="true" />
             </Button>
         </td>
     </tr>
