@@ -54,6 +54,8 @@
 
 - `runbooks/demo.md`: recorrido reproducible de CU-01 a CU-18 con los tres roles.
 - `runbooks/release-verification.md`: puerta, audits, salud, colas, restore y baseline.
+- `runbooks/deploy-dokploy.md`: despliegue de la imagen en Dokploy contra el PostgreSQL
+  y el Redis existentes del servidor.
 
 ## Regla de mantenimiento
 
