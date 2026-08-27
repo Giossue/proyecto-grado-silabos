@@ -201,7 +201,7 @@ watch(open, (isOpen) => {
     <Sheet v-if="isCard && expandable" v-model:open="open">
         <SheetContent
             side="bottom"
-            class="max-h-[85vh] gap-0 overflow-y-auto rounded-t-xl px-5 pt-5 pb-8"
+            class="max-h-[85vh] gap-0 overflow-y-auto rounded-t-xl px-5 pt-5 pb-[calc(2rem+env(safe-area-inset-bottom))]"
         >
             <SheetHeader class="p-0 pr-8 pb-1">
                 <SheetTitle class="text-left">{{ title }}</SheetTitle>

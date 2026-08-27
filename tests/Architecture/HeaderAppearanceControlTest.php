@@ -84,3 +84,23 @@ it('mantiene el encabezado a la vista y sin repetir el nombre de la pantalla', f
         ->toContain('<h1')
         ->toContain('aria-current="page"');
 });
+
+it('aparta de las franjas del sistema todo lo que se pega a un borde', function (string $archivo, string $regla): void {
+    // El telefono reserva una franja para la barra de estado arriba y para la de gestos
+    // abajo. Hoy la pagina no se dibuja debajo de ellas —falta `viewport-fit=cover` en la
+    // plantilla— asi que estas medidas valen cero. Estan puestas para que el dia que
+    // alguien pida el borde a borde no haya que descubrir uno por uno que quedo tapado.
+    $contenido = (string) file_get_contents(dirname(__DIR__, 2).'/'.$archivo);
+
+    expect($contenido)->toContain($regla);
+})->with([
+    // Boton flotante de acciones y el hueco que reserva bajo la tabla.
+    ['resources/js/components/domain/PageFrame.vue', 'env(safe-area-inset-bottom)'],
+    ['resources/js/components/domain/PageFrame.vue', 'env(safe-area-inset-right)'],
+    // Panel de detalle de una fila, que sube desde abajo.
+    ['resources/js/components/ui/table/TableRow.vue', 'env(safe-area-inset-bottom)'],
+    // Hoja de filtros, que baja desde arriba.
+    ['resources/js/components/domain/MobileFilterSheet.vue', 'env(safe-area-inset-top)'],
+    // Encabezado fijo.
+    ['resources/js/components/AppSidebarHeader.vue', 'env(safe-area-inset-top)'],
+]);
