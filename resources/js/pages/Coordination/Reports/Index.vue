@@ -126,7 +126,7 @@ const stateLabel = (value: string): string =>
     <PageFrame
         :icon="ChartNoAxesCombined"
         title="Informes de avance"
-        description="Indicadores operativos calculados únicamente dentro de la carrera del rol activo."
+        description="Cómo va su carrera: cuántos sílabos faltan, cuántos están en revisión y cuántos aprobados."
     >
         <Card>
             <CardHeader>

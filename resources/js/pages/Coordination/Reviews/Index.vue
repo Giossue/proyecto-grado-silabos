@@ -79,7 +79,7 @@ const stateLabel = (value: string): string =>
     <PageFrame
         :icon="ClipboardCheck"
         title="Cola de revisión"
-        description="Expedientes enviados, devueltos o aprobados dentro de la carrera activa."
+        description="Sílabos que los docentes ya enviaron y esperan revisión."
     >
         <Card>
             <CardContent class="flex flex-col gap-4">

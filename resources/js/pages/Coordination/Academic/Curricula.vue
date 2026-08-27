@@ -27,7 +27,7 @@ defineProps<
     <PageFrame
         :icon="BookOpenCheck"
         title="Mallas y materias"
-        :description="`Gestione ciclos y materias únicamente para la carrera ${career.name}. Publicar una malla vuelve inmutable su contenido.`"
+        :description="`Ciclos y materias de ${career.name}. Una malla publicada ya no se puede cambiar.`"
     >
         <template #actions>
             <CurriculumRecordSheet :options="options" />

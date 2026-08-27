@@ -61,7 +61,7 @@ const paginationLabel = (value: string): string =>
     <PageFrame
         :icon="Bell"
         title="Notificaciones"
-        description="Avisos internos durables del flujo académico y de sus documentos."
+        description="Avisos de lo que va pasando con sus sílabos y sus documentos."
     >
         <template #actions>
             <Form

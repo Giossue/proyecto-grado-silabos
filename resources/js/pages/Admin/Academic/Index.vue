@@ -35,31 +35,29 @@ const sectionContents: Record<
     faculties: {
         title: 'Facultades',
         description:
-            'Administre las unidades académicas y consulte cuántas carreras dependen de cada una.',
+            'Las facultades de la universidad y cuántas carreras tiene cada una.',
         entity: 'faculty',
     },
     careers: {
         title: 'Carreras',
-        description:
-            'Administre las carreras y su pertenencia obligatoria a una facultad.',
+        description: 'Las carreras y a qué facultad pertenece cada una.',
         entity: 'career',
     },
     campuses: {
         title: 'Campus',
-        description:
-            'Administre las sedes institucionales sin mezclarlas con facultades o carreras.',
+        description: 'Las sedes donde se dictan clases.',
         entity: 'campus',
     },
     modalities: {
         title: 'Modalidades',
         description:
-            'Administre las formas de impartición disponibles en la oferta académica.',
+            'Las formas de dictar clase: presencial, en línea y las demás que use la universidad.',
         entity: 'modality',
     },
     'academic-periods': {
         title: 'Periodos académicos',
         description:
-            'Administre ventanas temporales institucionales; el ciclo pertenece a la malla.',
+            'Los periodos lectivos y sus fechas. El ciclo de una materia no va aquí, va en la malla.',
         entity: 'period',
     },
 };

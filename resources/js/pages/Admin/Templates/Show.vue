@@ -89,7 +89,7 @@ const blockOptions = computed(() =>
     <PageFrame
         :icon="FilePenLine"
         :title="`${templateVersion.template.name} · v${templateVersion.number}`"
-        :description="`${templateVersion.template.career_name ?? 'Alcance general'} · Configure la estructura y el ciclo de esta versión.`"
+        :description="`${templateVersion.template.career_name ?? 'Alcance general'} · Añada los campos de esta versión y ordénelos.`"
     >
         <template #eyebrow>
             <Button as-child variant="link" class="h-auto px-0">

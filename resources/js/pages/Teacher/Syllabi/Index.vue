@@ -73,7 +73,7 @@ const formatSavedAt = (value: string | null): string =>
     <PageFrame
         :icon="BookOpenCheck"
         title="Mis sílabos"
-        description="Expedientes donde su asignación docente continúa vigente."
+        description="Los sílabos de las materias que usted dicta."
     >
         <Card>
             <CardContent class="flex flex-col gap-4">

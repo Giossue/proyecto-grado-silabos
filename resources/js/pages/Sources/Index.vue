@@ -82,7 +82,7 @@ defineOptions({
     <PageFrame
         :icon="LibraryBig"
         title="Fuentes académicas"
-        description="Versione evidencia con autoridad, vigencia, fragmentos y huellas verificables."
+        description="Los documentos oficiales en los que se apoyan los sílabos: de quién son, desde cuándo rigen y qué dicen."
     >
         <template #actions>
             <AcademicSourceCreationSheet

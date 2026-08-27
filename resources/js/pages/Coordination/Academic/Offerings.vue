@@ -27,7 +27,7 @@ defineProps<
     <PageFrame
         :icon="Building2"
         title="Oferta académica y paralelos"
-        :description="`Abra materias publicadas por periodo, campus y modalidad para la carrera ${career.name}.`"
+        :description="`Qué materias se dictan cada periodo en ${career.name}, en qué campus y con qué modalidad.`"
     >
         <template #actions>
             <OfferingRecordSheet :options="options" />

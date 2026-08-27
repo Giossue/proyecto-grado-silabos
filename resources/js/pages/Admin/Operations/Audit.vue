@@ -100,7 +100,7 @@ const detailValue = (value: Detail['value']): string => {
     <PageFrame
         :icon="ScrollText"
         title="Auditoría"
-        description="Registro append-only de acciones críticas, sin contenido de sílabos, secretos ni identificadores internos visibles."
+        description="Quién hizo qué y cuándo. Se escribe solo, no se puede cambiar ni borrar, y no guarda lo que dicen los sílabos."
     >
         <Card>
             <CardContent class="flex flex-col gap-4">

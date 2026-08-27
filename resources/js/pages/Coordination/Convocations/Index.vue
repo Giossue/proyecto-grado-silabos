@@ -66,7 +66,7 @@ const stateLabel = (state: string): string =>
     <PageFrame
         :icon="CalendarRange"
         title="Convocatorias de sílabos"
-        description="Fije periodo, plantilla, fuentes y alcance antes de generar expedientes."
+        description="Cada convocatoria abre los sílabos de un periodo y fija con qué formato se llenan."
     >
         <template #actions>
             <ConvocationCreationSheet

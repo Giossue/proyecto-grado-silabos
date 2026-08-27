@@ -85,9 +85,14 @@ const icons: Record<string, Component> = {
             </AlertDescription>
         </Alert>
 
+        <!--
+            Dos por fila desde el móvil: son cifras cortas y una sola por fila obligaba a
+            desplazarse para ver cuatro números. Cuando sobra una, ocupa la fila entera en
+            vez de dejar un hueco al lado.
+        -->
         <div
             v-else-if="metrics.length > 0"
-            class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+            class="grid grid-cols-2 gap-4 xl:grid-cols-4 [&>*:last-child:nth-child(odd)]:col-span-2 xl:[&>*:last-child:nth-child(odd)]:col-span-1"
         >
             <StatTile
                 v-for="metric in metrics"

@@ -29,7 +29,7 @@ defineProps<
     <PageFrame
         :icon="UsersRound"
         title="Asignación docente"
-        :description="`Asigne docentes vigentes a los paralelos de ${career.name} sin mezclar alcances de otras carreras.`"
+        :description="`Quién dicta cada paralelo en ${career.name}.`"
     >
         <template #actions>
             <TeacherAssignmentSheet :options="options" />

@@ -25,7 +25,7 @@ const page = usePage();
     <PageFrame
         :icon="Building2"
         title="Seleccione con qué rol va a trabajar"
-        description="El rol y la carrera elegidos determinan las acciones y datos disponibles durante esta sesión."
+        description="Lo que puede ver y hacer depende del rol con el que entre. Puede cambiarlo cuando quiera."
         size="narrow"
     >
         <Alert v-if="page.props.auth.roles.length === 0">

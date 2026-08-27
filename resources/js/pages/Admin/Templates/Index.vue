@@ -72,7 +72,7 @@ defineOptions({
     <PageFrame
         :icon="FileStack"
         title="Plantillas de sílabo"
-        description="Diseñe versiones tipadas y publíquelas sin alterar las ya usadas."
+        description="El formato del sílabo: qué campos tiene y en qué orden. Publicar una versión nueva no toca las que ya se están usando."
     >
         <template #actions>
             <TemplateCreationSheet :careers="careers" />

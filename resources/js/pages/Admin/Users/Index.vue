@@ -99,7 +99,7 @@ defineProps<{
     <PageFrame
         :icon="UsersRound"
         title="Usuarios y roles"
-        description="Cree cuentas de Coordinador o Docente, asigne su carrera y vigencia, y revoque sesiones al desactivar."
+        description="Cuentas de coordinación y docencia: crearlas, decir de qué carrera son y hasta cuándo. Al desactivar una, su sesión se cierra."
     >
         <template #actions>
             <ManagedUserSheet :roles="roles" :careers="careers" />
