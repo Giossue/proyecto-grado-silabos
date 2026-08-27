@@ -38,13 +38,6 @@ class AcademicGovernanceController extends Controller
         ]);
     }
 
-    public function coordinations(
-        ManageAcademicGovernanceRequest $request,
-        AcademicStructureViewData $viewData,
-    ): Response {
-        return Inertia::render('Admin/Coordinations/Index', $viewData->coordinations());
-    }
-
     public function store(
         string $entity,
         StoreAcademicRecordRequest $request,

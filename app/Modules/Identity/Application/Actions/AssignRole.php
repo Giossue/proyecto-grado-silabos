@@ -4,6 +4,7 @@ namespace App\Modules\Identity\Application\Actions;
 
 use App\Models\User;
 use App\Modules\Identity\Application\ActiveRole;
+use App\Modules\Identity\Application\CoordinationMandate;
 use App\Modules\Identity\Domain\Enums\RoleCode;
 use App\Modules\Identity\Infrastructure\Persistence\Models\Role;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
@@ -15,6 +16,7 @@ class AssignRole
 {
     public function __construct(
         private readonly ActiveRole $roles,
+        private readonly CoordinationMandate $mandate,
         private readonly RecordAuditEvent $audit,
     ) {}
 
@@ -41,6 +43,16 @@ class AssignRole
                 ],
             );
 
+            // Conceder la coordinación es concederla de verdad: sin nombramiento el rol
+            // queda decorativo y la persona no puede activarlo.
+            $mandate = $this->mandate->open(
+                $target->id,
+                $data['role_code'],
+                $careerId,
+                $data['valid_from'],
+                $data['valid_until'] ?? null,
+            );
+
             $this->audit->execute(
                 actorId: $actor->id,
                 roleAssignmentId: $activeRole?->id,
@@ -48,7 +60,10 @@ class AssignRole
                 resourceType: 'user',
                 resourceId: $target->id,
                 result: 'success',
-                metadata: ['role' => $data['role_code']],
+                metadata: [
+                    'role' => $data['role_code'],
+                    'coordination_id' => $mandate?->id,
+                ],
                 correlationId: $request->attributes->getString('correlation_id') ?: null,
             );
 

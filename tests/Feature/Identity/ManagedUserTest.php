@@ -201,11 +201,63 @@ class ManagedUserTest extends TestCase
         $this->assertDatabaseMissing('usuarios', ['email' => 'sin.carrera@silabos.test']);
     }
 
+    public function test_granting_a_coordination_opens_its_mandate(): void
+    {
+        $teacher = User::query()->where('email', 'docente@silabos.test')->firstOrFail();
+        $career = Career::query()->where('codigo_institucional', 'SOFTWARE')->firstOrFail();
+
+        // Con la carrera ya coordinada, la concesión se rechaza y lo dice.
+        $this->actingAsAdministrator()
+            ->post(route('admin.users.roles.store', $teacher), [
+                'role_code' => RoleCode::Coordinator->value,
+                'career_id' => $career->id,
+                'valid_from' => now()->toDateString(),
+            ])
+            ->assertSessionHasErrors('role_code');
+
+        $this->actingAsAdministrator()
+            ->patch(route('admin.users.status.update', $this->coordinatorHolder()), ['active' => false])
+            ->assertRedirect();
+
+        // Al retirarse quien la ejercía, el nombramiento anterior queda cerrado.
+        $this->assertDatabaseHas('asignaciones_coordinador', [
+            'usuario_id' => $this->coordinatorHolder()->id,
+            'activo' => false,
+        ]);
+
+        $this->actingAsAdministrator()
+            ->post(route('admin.users.roles.store', $teacher), [
+                'role_code' => RoleCode::Coordinator->value,
+                'career_id' => $career->id,
+                'valid_from' => now()->toDateString(),
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        // El rol por sí solo no basta: sin nombramiento no se puede activar.
+        $this->assertDatabaseHas('asignaciones_coordinador', [
+            'usuario_id' => $teacher->id,
+            'carrera_id' => $career->id,
+            'activo' => true,
+        ]);
+    }
+
+    private function coordinatorHolder(): User
+    {
+        return User::query()->where('email', 'coordinador@silabos.test')->firstOrFail();
+    }
+
     public function test_administrator_assigns_an_additional_role_without_overwriting_history(): void
     {
         $teacher = User::query()->where('email', 'docente@silabos.test')->firstOrFail();
         $career = Career::query()->where('codigo_institucional', 'SOFTWARE')->firstOrFail();
         $previousAssignmentId = $teacher->roleAssignments()->firstOrFail()->id;
+
+        // Conceder la coordinación abre el nombramiento, y la base no admite dos vigentes
+        // en la misma carrera: primero se retira a quien la ejerce.
+        $this->actingAsAdministrator()
+            ->patch(route('admin.users.status.update', $this->coordinatorHolder()), ['active' => false])
+            ->assertRedirect();
 
         $this->actingAsAdministrator()
             ->post(route('admin.users.roles.store', $teacher), [

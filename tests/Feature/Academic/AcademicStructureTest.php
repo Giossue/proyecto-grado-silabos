@@ -50,7 +50,7 @@ class AcademicStructureTest extends TestCase
         $this->coordinatorContext = $this->coordinator->roleAssignments()->firstOrFail();
     }
 
-    public function test_administrator_sees_global_governance_and_coordinations_as_separate_screens(): void
+    public function test_administrator_sees_global_governance_split_by_catalog(): void
     {
         $faculty = Faculty::query()
             ->where('codigo_institucional', 'FICAYA')
@@ -88,13 +88,11 @@ class AcademicStructureTest extends TestCase
             ->get('/admin/facultades-carreras')
             ->assertRedirect('/admin/estructura-academica/facultades');
 
+        // La coordinación dejó de tener pantalla propia: se concede con el rol desde
+        // «Usuarios y roles», que es donde vive quien la ejerce.
         $this->actingAsAdministrator()
-            ->get(route('admin.coordinations.index'))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('Admin/Coordinations/Index')
-                ->has('coordinatorAssignments', 1)
-                ->has('options.coordinatorUsers', 1));
+            ->get('/admin/coordinaciones')
+            ->assertNotFound();
     }
 
     public function test_postgresql_preserves_the_normalized_faculty_career_hierarchy(): void

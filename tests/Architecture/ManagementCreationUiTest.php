@@ -21,12 +21,6 @@ it('mantiene todas las altas de gestion dentro del sheet derecho compartido', fu
             'component_file' => 'resources/js/components/domain/academic/CatalogRecordSheet.vue',
             'action' => 'AcademicGovernanceController.store.form',
         ],
-        'Administrador · coordinaciones' => [
-            'page' => 'resources/js/pages/Admin/Coordinations/Index.vue',
-            'component' => 'CoordinatorAssignmentSheet',
-            'component_file' => 'resources/js/components/domain/academic/CoordinatorAssignmentSheet.vue',
-            'action' => 'AcademicGovernanceController.store.form',
-        ],
         'Administrador · plantillas' => [
             'page' => 'resources/js/pages/Admin/Templates/Index.vue',
             'component' => 'TemplateCreationSheet',
@@ -354,7 +348,6 @@ it('normaliza los encabezados de todos los modulos autenticados', function (): v
     $root = dirname(__DIR__, 2);
     $pages = [
         'resources/js/pages/Admin/Academic/Index.vue',
-        'resources/js/pages/Admin/Coordinations/Index.vue',
         'resources/js/pages/Admin/Integrations/Index.vue',
         'resources/js/pages/Admin/Operations/Audit.vue',
         'resources/js/pages/Admin/Operations/Jobs.vue',
@@ -477,8 +470,8 @@ it('normaliza los encabezados de todos los modulos autenticados', function (): v
         );
     }
 
-    $this->assertCount(29, $declaredPages);
-    $this->assertCount(30, $pages);
+    $this->assertCount(28, $declaredPages);
+    $this->assertCount(29, $pages);
 });
 
 it('mantiene explicitamente clasificadas las mutaciones store que permanecen en paginas completas', function (): void {

@@ -4,6 +4,7 @@ namespace App\Modules\Identity\Application\Actions;
 
 use App\Models\User;
 use App\Modules\Identity\Application\ActiveRole;
+use App\Modules\Identity\Application\CoordinationMandate;
 use App\Modules\Identity\Domain\Enums\RoleCode;
 use App\Modules\Identity\Infrastructure\Mail\ManagedUserCredentialsMail;
 use App\Modules\Identity\Infrastructure\Persistence\Models\Role;
@@ -17,6 +18,7 @@ class CreateManagedUser
 {
     public function __construct(
         private readonly ActiveRole $roles,
+        private readonly CoordinationMandate $mandate,
         private readonly RecordAuditEvent $audit,
     ) {}
 
@@ -47,6 +49,13 @@ class CreateManagedUser
                 'vigente_desde' => now(),
                 'activo' => true,
             ]);
+
+            $this->mandate->open(
+                $user->id,
+                $data['role_code'],
+                $careerId,
+                now()->toDateTimeString(),
+            );
 
             $this->audit->execute(
                 actorId: $actor->id,

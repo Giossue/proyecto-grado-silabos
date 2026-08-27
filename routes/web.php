@@ -129,7 +129,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('estructura-academica/{section?}', [AcademicGovernanceController::class, 'index'])
             ->whereIn('section', ['facultades', 'carreras', 'campus', 'modalidades', 'periodos-academicos'])
             ->name('academic.index');
-        Route::get('coordinaciones', [AcademicGovernanceController::class, 'coordinations'])->name('coordinations.index');
         Route::post('gobierno-academico/{entity}', [AcademicGovernanceController::class, 'store'])->name('academic.store');
         Route::patch('gobierno-academico/{entity}/{record}', [AcademicGovernanceController::class, 'update'])
             ->whereUuid('record')

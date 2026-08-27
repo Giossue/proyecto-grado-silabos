@@ -60,16 +60,16 @@ class TemporaryPasswordTest extends TestCase
         $this->actingAs($this->administrator)
             ->withSession(['active_role_assignment_id' => $context->id])
             ->post(route('admin.users.store'), [
-                'name' => 'Coordinadora Nueva',
-                'email' => 'coordinadora.nueva@silabos.test',
+                'name' => 'Docente Nuevo Sin Estrenar',
+                'email' => 'nuevo.sin.estrenar@silabos.test',
                 'password' => 'Temporal-2026!',
-                'role_code' => RoleCode::Coordinator->value,
+                'role_code' => RoleCode::Teacher->value,
                 'career_id' => $career->id,
             ])->assertRedirect();
 
         $this->actingAs($this->administrator)
             ->withSession(['active_role_assignment_id' => $context->id])
-            ->get(route('admin.users.index', ['q' => 'Coordinadora Nueva']))
+            ->get(route('admin.users.index', ['q' => 'Docente Nuevo Sin Estrenar']))
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->has('users.data', 1)

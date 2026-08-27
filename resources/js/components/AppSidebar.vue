@@ -35,7 +35,6 @@ import { useCurrentUrl } from '@/composables/useCurrentUrl';
 import { dashboard } from '@/routes';
 import { index as academicIndex } from '@/routes/admin/academic';
 import { index as auditIndex } from '@/routes/admin/audit';
-import { index as coordinationsIndex } from '@/routes/admin/coordinations';
 import { index as integrationsIndex } from '@/routes/admin/integrations';
 import { index as jobsIndex } from '@/routes/admin/jobs';
 import { index as templatesIndex } from '@/routes/admin/templates';
@@ -98,11 +97,6 @@ const mainNavItems = computed<NavItem[]>(() => [
                           href: academicIndex('periodos-academicos'),
                       },
                   ],
-              },
-              {
-                  title: 'Coordinaciones',
-                  href: coordinationsIndex(),
-                  icon: ClipboardCheck,
               },
               {
                   title: 'Plantillas',
