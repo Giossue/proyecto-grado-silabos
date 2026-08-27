@@ -18,6 +18,7 @@ use App\Modules\Operations\Presentation\Http\Controllers\OperationalReportContro
 use App\Modules\Syllabus\Presentation\Http\Controllers\ConvocationController;
 use App\Modules\Syllabus\Presentation\Http\Controllers\ReviewController;
 use App\Modules\Syllabus\Presentation\Http\Controllers\SyllabusController;
+use App\Support\RoleArea;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Facades\Route;
@@ -34,25 +35,57 @@ Route::get('/health/ready', ReadinessController::class)
     ->name('health.ready');
 
 Route::middleware(['auth', 'verified'])->group(function () {
+    /*
+     * Fuera de toda área: aquí se elige el rol, así que todavía no hay uno desde el que
+     * mirar. Es la única pantalla de trabajo sin `admin/`, `coordinacion/` ni `docente/`.
+     */
     Route::get('rol', [ActiveRoleController::class, 'index'])->name('role.index');
     Route::post('rol', [ActiveRoleController::class, 'store'])->name('role.store');
-    Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
+    /*
+     * Direcciones canónicas de las pantallas que sirven a más de un rol. Son las que usan
+     * los enlaces, y llevan a la copia del área correspondiente. Escribir el enlace una
+     * sola vez evita que cada botón tenga que preguntarse con qué rol se está entrando.
+     */
+    Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('notificaciones', fn () => RoleArea::redirect('notifications.index'))
+        ->name('notifications.index');
+    Route::get('fuentes', fn () => RoleArea::redirect('sources.index'))->name('sources.index');
+    Route::get('fuentes/{source}', fn (string $source) => RoleArea::redirect('sources.show', ['source' => $source]))
+        ->name('sources.show');
+    Route::get('revisiones/{revision}/documentos', fn (string $revision) => RoleArea::redirect('documents.show', ['revision' => $revision]))
+        ->name('documents.show');
+
+    /*
+     * Sin pantalla propia: destinos de formulario y descargas. No aparecen en la barra de
+     * direcciones, así que no dicen desde qué rol se entró.
+     */
     Route::middleware('active-role')->group(function () {
-        Route::get('notificaciones', [NotificationController::class, 'index'])->name('notifications.index');
         Route::post('notificaciones/leer-todas', [NotificationController::class, 'markAllRead'])->name('notifications.read-all');
         Route::post('notificaciones/{notification}/leer', [NotificationController::class, 'markRead'])->name('notifications.read');
-        Route::get('informes', [OperationalReportController::class, 'index'])->name('reports.index');
-        Route::get('convocatorias', [ConvocationController::class, 'index'])->name('convocations.index');
-        Route::post('convocatorias', [ConvocationController::class, 'store'])->name('convocations.store');
-        Route::get('convocatorias/{convocation}', [ConvocationController::class, 'show'])->name('convocations.show');
-        Route::post('convocatorias/{convocation}/abrir', [ConvocationController::class, 'open'])->name('convocations.open');
-        Route::post('convocatorias/{convocation}/prorroga', [ConvocationController::class, 'extendDeadline'])->name('convocations.deadline.extend');
-        // Fuera del prefijo de administración: la corrección de nombre y correo la hace
-        // también la coordinación sobre los docentes de su carrera, y la política decide
-        // el alcance de cada rol.
+        // La corrección de nombre y correo la hace la administración sobre cualquiera y la
+        // coordinación sobre los docentes de su carrera; la política decide el alcance.
         Route::patch('usuarios/{user}/datos', [ManagedUserController::class, 'updateProfile'])
             ->name('users.profile.update');
+        Route::get('exportaciones/{artifact}/{format}', [DocumentController::class, 'download'])
+            ->whereIn('format', ['docx', 'pdf'])
+            ->name('exports.download');
+        Route::post('revisiones/{revision}/documentos', [DocumentController::class, 'store'])->name('documents.store');
+        Route::post('fuentes', [AcademicSourceController::class, 'store'])->name('sources.store');
+        Route::post('fuentes/versiones/{version}/fragmentos', [AcademicSourceController::class, 'addFragment'])->name('sources.fragments.store');
+        Route::post('fuentes/versiones/{version}/activar', [AcademicSourceController::class, 'activate'])->name('sources.versions.activate');
+        Route::post('fuentes/versiones/{version}/clonar', [AcademicSourceController::class, 'clone'])->name('sources.versions.clone');
+        Route::post('fuentes/conflictos/{conflict}/resolver', [AcademicSourceController::class, 'resolveConflict'])->name('sources.conflicts.resolve');
+    });
+
+    // --- Docencia ----------------------------------------------------------------
+    Route::prefix('docente')->middleware('active-role')->group(function () {
+        // Copias de las pantallas compartidas: mismo controlador, nombre propio del área.
+        Route::name('teacher.')->group(function () {
+            Route::get('panel', [DashboardController::class, 'index'])->name('dashboard');
+            Route::get('notificaciones', [NotificationController::class, 'index'])->name('notifications.index');
+            Route::get('revisiones/{revision}/documentos', [DocumentController::class, 'show'])->name('documents.show');
+        });
         Route::get('mis-silabos', [SyllabusController::class, 'index'])->name('syllabi.index');
         Route::get('mis-silabos/{syllabus}', [SyllabusController::class, 'show'])->name('syllabi.show');
         Route::post('mis-silabos/{syllabus}/iniciar', [SyllabusController::class, 'start'])->name('syllabi.start');
@@ -69,10 +102,25 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('mis-silabos/{syllabus}/enviar', [SyllabusController::class, 'submit'])->name('syllabi.submit.store');
         Route::post('mis-silabos/{syllabus}/observaciones/{observation}/responder', [SyllabusController::class, 'respondObservation'])
             ->name('syllabi.observations.respond');
+    });
+
+    // --- Coordinación ------------------------------------------------------------
+    Route::prefix('coordinacion')->middleware('active-role')->group(function () {
+        Route::name('coordination.')->group(function () {
+            Route::get('panel', [DashboardController::class, 'index'])->name('dashboard');
+            Route::get('notificaciones', [NotificationController::class, 'index'])->name('notifications.index');
+            Route::get('fuentes', [AcademicSourceController::class, 'index'])->name('sources.index');
+            Route::get('fuentes/{source}', [AcademicSourceController::class, 'show'])->name('sources.show');
+            Route::get('revisiones/{revision}/documentos', [DocumentController::class, 'show'])->name('documents.show');
+        });
+        Route::get('informes', [OperationalReportController::class, 'index'])->name('reports.index');
+        Route::get('convocatorias', [ConvocationController::class, 'index'])->name('convocations.index');
+        Route::post('convocatorias', [ConvocationController::class, 'store'])->name('convocations.store');
+        Route::get('convocatorias/{convocation}', [ConvocationController::class, 'show'])->name('convocations.show');
+        Route::post('convocatorias/{convocation}/abrir', [ConvocationController::class, 'open'])->name('convocations.open');
+        Route::post('convocatorias/{convocation}/prorroga', [ConvocationController::class, 'extendDeadline'])->name('convocations.deadline.extend');
         Route::get('revisiones', [ReviewController::class, 'index'])->name('reviews.index');
         Route::get('revisiones/{before}/comparar/{after}', [ReviewController::class, 'compare'])->name('reviews.compare');
-        Route::get('revisiones/{revision}/documentos', [DocumentController::class, 'show'])->name('documents.show');
-        Route::post('revisiones/{revision}/documentos', [DocumentController::class, 'store'])->name('documents.store');
         Route::get('revisiones/{revision}', [ReviewController::class, 'show'])->name('reviews.show');
         Route::post('revisiones/{revision}/observaciones', [ReviewController::class, 'storeObservation'])->name('reviews.observations.store');
         Route::post('revisiones/{revision}/solicitar-correccion', [ReviewController::class, 'requestCorrection'])->name('reviews.correction.store');
@@ -80,36 +128,28 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('revisiones/{revision}/aprobar', [ReviewController::class, 'approve'])->name('reviews.approve');
         Route::post('silabos/{syllabus}/reabrir', [ReviewController::class, 'reopen'])->name('reviews.reopen');
         Route::post('silabos/{syllabus}/relevo-docente', [ReviewController::class, 'transferTeacher'])->name('reviews.teacher.transfer');
-        Route::get('exportaciones/{artifact}/{format}', [DocumentController::class, 'download'])
-            ->whereIn('format', ['docx', 'pdf'])
-            ->name('exports.download');
-        Route::get('fuentes', [AcademicSourceController::class, 'index'])->name('sources.index');
-        Route::post('fuentes', [AcademicSourceController::class, 'store'])->name('sources.store');
-        Route::get('fuentes/{source}', [AcademicSourceController::class, 'show'])->name('sources.show');
-        Route::post('fuentes/versiones/{version}/fragmentos', [AcademicSourceController::class, 'addFragment'])->name('sources.fragments.store');
-        Route::post('fuentes/versiones/{version}/activar', [AcademicSourceController::class, 'activate'])->name('sources.versions.activate');
-        Route::post('fuentes/versiones/{version}/clonar', [AcademicSourceController::class, 'clone'])->name('sources.versions.clone');
-        Route::post('fuentes/conflictos/{conflict}/resolver', [AcademicSourceController::class, 'resolveConflict'])->name('sources.conflicts.resolve');
-    });
-
-    Route::prefix('coordinacion')->middleware('active-role')->name('coordination.')->group(function () {
         Route::get('mallas-materias', [CareerAcademicStructureController::class, 'curricula'])
-            ->name('academic.curricula.index');
+            ->name('coordination.academic.curricula.index');
         Route::get('oferta-paralelos', [CareerAcademicStructureController::class, 'offerings'])
-            ->name('academic.offerings.index');
+            ->name('coordination.academic.offerings.index');
         Route::get('asignaciones-docentes', [CareerAcademicStructureController::class, 'teacherAssignments'])
-            ->name('academic.teacher-assignments.index');
+            ->name('coordination.academic.teacher-assignments.index');
         Route::post('estructura-academica/{entity}', [CareerAcademicStructureController::class, 'store'])
-            ->name('academic.store');
+            ->name('coordination.academic.store');
         Route::patch('estructura-academica/{entity}/{record}/estado', [CareerAcademicStructureController::class, 'setStatus'])
             ->whereUuid('record')
-            ->name('academic.status.update');
+            ->name('coordination.academic.status.update');
         Route::post('mallas/{curriculum}/publicar', [CareerAcademicStructureController::class, 'publishCurriculum'])
             ->whereUuid('curriculum')
-            ->name('academic.curricula.publish');
+            ->name('coordination.academic.curricula.publish');
     });
 
+    // --- Administración ----------------------------------------------------------
     Route::prefix('admin')->middleware('active-role')->name('admin.')->group(function () {
+        Route::get('panel', [DashboardController::class, 'index'])->name('dashboard');
+        Route::get('notificaciones', [NotificationController::class, 'index'])->name('notifications.index');
+        Route::get('fuentes', [AcademicSourceController::class, 'index'])->name('sources.index');
+        Route::get('fuentes/{source}', [AcademicSourceController::class, 'show'])->name('sources.show');
         Route::get('procesos', [JobExecutionController::class, 'index'])->name('jobs.index');
         Route::post('procesos/{execution}/reintentar', [JobExecutionController::class, 'retry'])->name('jobs.retry');
         Route::get('auditoria', [AuditEventController::class, 'index'])->name('audit.index');

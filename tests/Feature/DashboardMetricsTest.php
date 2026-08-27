@@ -40,6 +40,7 @@ class DashboardMetricsTest extends TestCase
             $user = User::query()->where('email', $correo)->firstOrFail();
 
             $this->actingAs($user)
+                ->followingRedirects()
                 ->get(route('dashboard'))
                 ->assertOk()
                 ->assertInertia(fn (Assert $page) => $page
@@ -59,6 +60,7 @@ class DashboardMetricsTest extends TestCase
         $this->abrirConvocatoria($this->otraCarrera()->id, 'Convocatoria ajena');
 
         $this->actingAs($coordinator)
+            ->followingRedirects()
             ->get(route('dashboard'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
@@ -82,6 +84,7 @@ class DashboardMetricsTest extends TestCase
         ]);
 
         $this->actingAs($teacher)
+            ->followingRedirects()
             ->get(route('dashboard'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page

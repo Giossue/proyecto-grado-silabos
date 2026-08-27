@@ -10,7 +10,9 @@ use App\Modules\Identity\Domain\Enums\RoleCode;
 use App\Modules\Operations\Infrastructure\Persistence\Models\JobExecution;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\Convocation;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\Syllabus;
+use App\Support\RoleArea;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -21,10 +23,21 @@ use Inertia\Response;
  */
 class DashboardController extends Controller
 {
-    public function index(Request $request, ActiveRole $roles): Response
+    public function index(Request $request, ActiveRole $roles): Response|RedirectResponse
     {
         $activeRole = $roles->resolve($request);
         $user = $request->user();
+
+        /*
+         * El panel es la misma pantalla para los tres roles, pero cada uno tiene la suya
+         * en su área. La dirección corta lleva a la que toca. Quien todavía no ha elegido
+         * rol se queda aquí: mandarlo a elegir lo dejaría sin panel al que volver.
+         */
+        $area = $activeRole === null ? null : RoleArea::routePrefix();
+
+        if ($area !== null && $request->route()?->getName() === 'dashboard') {
+            return redirect()->route("{$area}.dashboard");
+        }
 
         $metrics = match (true) {
             $activeRole === null || ! $user instanceof User => [],

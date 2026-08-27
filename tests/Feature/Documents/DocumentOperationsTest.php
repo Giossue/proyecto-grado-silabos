@@ -81,6 +81,7 @@ class DocumentOperationsTest extends TestCase
         $key = (string) Str::uuid();
 
         $this->actingAsTeacher()
+            ->followingRedirects()
             ->get(route('documents.show', $revision))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
@@ -111,6 +112,7 @@ class DocumentOperationsTest extends TestCase
         ]);
         $this->actingAs($outsider)
             ->withSession(['active_role_assignment_id' => $outsiderContext->id])
+            ->followingRedirects()
             ->get(route('documents.show', $revision))
             ->assertForbidden();
         $this->actingAsAdministrator()->get(route('documents.show', $revision))->assertForbidden();
@@ -309,6 +311,7 @@ class DocumentOperationsTest extends TestCase
         $this->assertSame($this->coordinator->id, $notification->usuario_id);
         $this->assertSame('processed', $first->fresh()->estado);
         $this->actingAsCoordinator()
+            ->followingRedirects()
             ->get(route('notifications.index'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page

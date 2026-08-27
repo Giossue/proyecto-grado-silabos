@@ -18,6 +18,10 @@ class RequirePasswordChange
      */
     private const ALLOWED_ROUTES = [
         'dashboard',
+        // El panel de cada área es el mismo panel: la dirección corta redirige a él.
+        'admin.dashboard',
+        'coordination.dashboard',
+        'teacher.dashboard',
         'user-password.update',
         'logout',
     ];

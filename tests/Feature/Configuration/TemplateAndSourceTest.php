@@ -216,6 +216,7 @@ class TemplateAndSourceTest extends TestCase
         ]);
 
         $this->actingAsCoordinator()
+            ->followingRedirects()
             ->get(route('sources.show', $source))
             ->assertForbidden();
     }

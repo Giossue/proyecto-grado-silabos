@@ -49,6 +49,7 @@ class ActiveRoleTest extends TestCase
         $assignment = $teacher->roleAssignments()->firstOrFail();
 
         $this->actingAs($teacher)
+            ->followingRedirects()
             ->get(route('dashboard'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
@@ -67,6 +68,7 @@ class ActiveRoleTest extends TestCase
         $this->alsoCoordinates($teacher);
 
         $this->actingAs($teacher)
+            ->followingRedirects()
             ->get(route('dashboard'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page

@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
 import { LibraryBig } from '@lucide/vue';
-import AcademicSourceController from '@/actions/App/Modules/Configuration/Presentation/Http/Controllers/AcademicSourceController';
 import ClientFilterBar from '@/components/domain/ClientFilterBar.vue';
 import AcademicSourceCreationSheet from '@/components/domain/configuration/AcademicSourceCreationSheet.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
@@ -27,7 +26,7 @@ import {
 } from '@/components/ui/table';
 import { useClientFilter } from '@/composables/useClientFilter';
 import { useClientPagination } from '@/composables/useClientPagination';
-import { index as sourcesIndex } from '@/routes/sources';
+import { index as sourcesIndex, show as sourceShow } from '@/routes/sources';
 
 const props = defineProps<{
     sources: {
@@ -148,9 +147,7 @@ defineOptions({
                             :key="source.id"
                             ><TableCell
                                 ><Link
-                                    :href="
-                                        AcademicSourceController.show(source.id)
-                                    "
+                                    :href="sourceShow(source.id)"
                                     class="font-medium underline-offset-4 hover:underline"
                                     >{{ source.name }}</Link
                                 >

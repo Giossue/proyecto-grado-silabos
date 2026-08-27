@@ -30,7 +30,7 @@ import {
 } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
-import { index as sourcesIndex } from '@/routes/sources';
+import { index as sourcesIndex, show as sourceShow } from '@/routes/sources';
 
 defineProps<{
     source: {
@@ -134,7 +134,7 @@ defineOptions({
             >
                 <Link
                     :href="
-                        AcademicSourceController.show(source.id, {
+                        sourceShow(source.id, {
                             query: { version: version.id },
                         })
                     "

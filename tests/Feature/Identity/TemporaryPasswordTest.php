@@ -110,7 +110,7 @@ class TemporaryPasswordTest extends TestCase
         $user = $this->userWithTemporaryPassword();
 
         // El panel es la superficie sobre la que aparece el diálogo, así que debe renderizar.
-        $this->actingAs($user)->get(route('dashboard'))->assertOk();
+        $this->actingAs($user)->followingRedirects()->get(route('dashboard'))->assertOk();
         $this->actingAs($user)->post(route('logout'))->assertRedirect();
     }
 
@@ -147,7 +147,7 @@ class TemporaryPasswordTest extends TestCase
         ]);
 
         // Con la marca apagada, la sesión vuelve a operar donde antes rebotaba.
-        $this->actingAs($user)->get(route('notifications.index'))->assertOk();
+        $this->actingAs($user)->followingRedirects()->get(route('notifications.index'))->assertOk();
     }
 
     public function test_a_rejected_change_keeps_the_session_blocked(): void
