@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import MobileFilterSheet from '@/components/domain/MobileFilterSheet.vue';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 
@@ -33,11 +34,11 @@ const search = defineModel<string>({ default: '' });
                 />
             </Field>
         </div>
-        <div
+        <MobileFilterSheet
             v-if="$slots.filters"
             class="grid min-w-0 gap-3 sm:grid-cols-2 lg:flex lg:flex-none lg:items-end [&_[data-slot=select-trigger]]:w-full [&>[data-slot=field]]:min-w-0 lg:[&>[data-slot=field]]:w-44"
         >
             <slot name="filters" />
-        </div>
+        </MobileFilterSheet>
     </FieldGroup>
 </template>

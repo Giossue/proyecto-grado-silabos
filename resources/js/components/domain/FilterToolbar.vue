@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onBeforeUnmount } from 'vue';
+import MobileFilterSheet from '@/components/domain/MobileFilterSheet.vue';
 import { FieldGroup } from '@/components/ui/field';
 
 const props = withDefaults(
@@ -68,11 +69,11 @@ onBeforeUnmount(cancel);
         <div class="min-w-0 lg:flex-1">
             <slot name="search" />
         </div>
-        <div
+        <MobileFilterSheet
             class="grid min-w-0 gap-3 sm:grid-cols-2 lg:flex lg:flex-none lg:items-end [&_[data-slot=select-trigger]]:w-full [&>[data-slot=field]]:min-w-0 lg:[&>[data-slot=field]]:w-44"
         >
             <slot name="filters" />
-        </div>
+        </MobileFilterSheet>
 
         <!--
             Sin botón visible, pero el formulario conserva uno: sin ningún `submit`, el

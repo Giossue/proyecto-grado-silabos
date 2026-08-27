@@ -317,7 +317,20 @@ it('ordena busqueda filtros y accion mediante una barra compartida', function ()
         // en un formulario con varios campos.
         ->toContain('type="submit"')
         ->toContain('sr-only')
-        ->not->toContain('Aplicar filtros');
+        ->not->toContain('Aplicar filtros')
+        // En móvil los filtros se agrupan tras un botón; la búsqueda se queda fuera.
+        ->toContain('MobileFilterSheet');
+
+    $sheet = file_get_contents(
+        dirname(__DIR__, 2).'/resources/js/components/domain/MobileFilterSheet.vue',
+    );
+    expect($sheet)
+        ->toBeString()
+        // El panel de la librería lleva su contenido al `body` con un portal, y unos
+        // campos fuera del formulario dejarían de enviarse.
+        ->not->toContain('SheetContent')
+        ->not->toContain('DialogPortal')
+        ->toContain('max-sm:fixed');
 });
 
 it('diferencia el fondo de las superficies en claro y oscuro', function (): void {
