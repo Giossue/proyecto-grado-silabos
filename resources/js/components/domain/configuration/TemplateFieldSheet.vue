@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3';
+import { Check } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import TemplateController from '@/actions/App/Modules/Configuration/Presentation/Http/Controllers/TemplateController';
 import FormSheet from '@/components/domain/FormSheet.vue';
-import { Button } from '@/components/ui/button';
+import FormSheetActions from '@/components/domain/FormSheetActions.vue';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
     Field,
@@ -22,7 +23,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 
 type TemplateField = {
@@ -328,24 +328,14 @@ defineExpose({ edit });
                         </FieldGroup>
                     </FieldSet>
 
-                    <Field orientation="horizontal">
-                        <Button type="submit" :disabled="processing">
-                            <Spinner v-if="processing" />
-                            {{
-                                selectedField
-                                    ? 'Guardar campo'
-                                    : 'Agregar campo'
-                            }}
-                        </Button>
-                        <Button
-                            v-if="selectedField"
-                            type="button"
-                            variant="outline"
-                            @click="close"
-                        >
-                            Cancelar
-                        </Button>
-                    </Field>
+                    <FormSheetActions
+                        :close="close"
+                        :processing="processing"
+                        :icon="Check"
+                        :label="
+                            selectedField ? 'Guardar campo' : 'Agregar campo'
+                        "
+                    />
                     <FieldError :errors="[errors.field]" />
                 </FieldGroup>
             </Form>

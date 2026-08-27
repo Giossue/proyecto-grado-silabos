@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3';
+import { Plus } from '@lucide/vue';
 import TemplateController from '@/actions/App/Modules/Configuration/Presentation/Http/Controllers/TemplateController';
 import FormSheet from '@/components/domain/FormSheet.vue';
-import { Button } from '@/components/ui/button';
+import FormSheetActions from '@/components/domain/FormSheetActions.vue';
 import {
     Field,
     FieldError,
@@ -18,7 +19,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 
 defineProps<{
@@ -89,12 +89,12 @@ defineProps<{
                         <FieldError :errors="[errors.description]" />
                     </Field>
 
-                    <Field orientation="horizontal">
-                        <Button type="submit" :disabled="processing">
-                            <Spinner v-if="processing" />
-                            Crear y abrir constructor
-                        </Button>
-                    </Field>
+                    <FormSheetActions
+                        :close="close"
+                        :processing="processing"
+                        :icon="Plus"
+                        label="Crear y abrir constructor"
+                    />
                 </FieldGroup>
             </Form>
         </template>

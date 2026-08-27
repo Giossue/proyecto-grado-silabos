@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3';
+import { Plus } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import CareerAcademicStructureController from '@/actions/App/Modules/Academic/Presentation/Http/Controllers/CareerAcademicStructureController';
 import FormSheet from '@/components/domain/FormSheet.vue';
-import { Button } from '@/components/ui/button';
+import FormSheetActions from '@/components/domain/FormSheetActions.vue';
 import {
     Field,
     FieldError,
@@ -19,7 +20,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Spinner } from '@/components/ui/spinner';
 import type { AcademicStructureProps } from '@/types/academic';
 
 type CurriculumEntity = 'curriculum' | 'subject';
@@ -204,12 +204,12 @@ const submitLabel = computed(() =>
                             </Field>
                         </template>
 
-                        <Field orientation="horizontal">
-                            <Button type="submit" :disabled="processing">
-                                <Spinner v-if="processing" />
-                                {{ submitLabel }}
-                            </Button>
-                        </Field>
+                        <FormSheetActions
+                            :close="close"
+                            :processing="processing"
+                            :icon="Plus"
+                            :label="submitLabel"
+                        />
                     </FieldGroup>
                 </Form>
             </div>

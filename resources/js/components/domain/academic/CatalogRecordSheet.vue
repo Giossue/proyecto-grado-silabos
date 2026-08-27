@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3';
+import { Plus } from '@lucide/vue';
 import { computed } from 'vue';
 import AcademicGovernanceController from '@/actions/App/Modules/Academic/Presentation/Http/Controllers/AcademicGovernanceController';
 import FormSheet from '@/components/domain/FormSheet.vue';
-import { Button } from '@/components/ui/button';
+import FormSheetActions from '@/components/domain/FormSheetActions.vue';
 import {
     Field,
     FieldDescription,
@@ -20,7 +21,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Spinner } from '@/components/ui/spinner';
 import type {
     AcademicStructureProps,
     GovernanceCatalogEntity,
@@ -196,12 +196,12 @@ const codeLabel = computed(() =>
                             <FieldError :errors="[errors.ends_on]" />
                         </Field>
 
-                        <Field orientation="horizontal">
-                            <Button type="submit" :disabled="processing">
-                                <Spinner v-if="processing" />
-                                {{ submitLabel }}
-                            </Button>
-                        </Field>
+                        <FormSheetActions
+                            :close="close"
+                            :processing="processing"
+                            :icon="Plus"
+                            :label="submitLabel"
+                        />
                     </FieldGroup>
                 </Form>
             </div>

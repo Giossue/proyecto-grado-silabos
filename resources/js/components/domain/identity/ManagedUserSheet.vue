@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3';
-import { Check, Copy, RefreshCw } from '@lucide/vue';
+import { Check, Copy, RefreshCw, UserPlus } from '@lucide/vue';
 import { ref, watch } from 'vue';
 import ManagedUserController from '@/actions/App/Modules/Identity/Presentation/Http/Controllers/ManagedUserController';
 import FormSheet from '@/components/domain/FormSheet.vue';
+import FormSheetActions from '@/components/domain/FormSheetActions.vue';
 import { Button } from '@/components/ui/button';
 import {
     Field,
@@ -20,7 +21,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Spinner } from '@/components/ui/spinner';
 import { generateTemporaryPassword } from '@/lib/temporaryPassword';
 
 defineProps<{
@@ -198,12 +198,12 @@ watch(open, (isOpen) => {
                         </Select>
                         <FieldError :errors="[errors.career_id]" />
                     </Field>
-                    <Field orientation="horizontal">
-                        <Button type="submit" :disabled="processing">
-                            <Spinner v-if="processing" />
-                            Crear cuenta
-                        </Button>
-                    </Field>
+                    <FormSheetActions
+                        :close="close"
+                        :processing="processing"
+                        :icon="UserPlus"
+                        label="Crear cuenta"
+                    />
                 </FieldGroup>
             </Form>
         </template>

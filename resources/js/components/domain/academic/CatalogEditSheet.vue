@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3';
-import { Pencil } from '@lucide/vue';
+import { Check } from '@lucide/vue';
 import { computed } from 'vue';
 import AcademicGovernanceController from '@/actions/App/Modules/Academic/Presentation/Http/Controllers/AcademicGovernanceController';
 import FormSheet from '@/components/domain/FormSheet.vue';
+import FormSheetActions from '@/components/domain/FormSheetActions.vue';
 import { Button } from '@/components/ui/button';
 import {
     Field,
@@ -21,7 +22,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Spinner } from '@/components/ui/spinner';
 import type { CatalogRecord, GovernanceCatalogEntity } from '@/types/academic';
 
 const props = withDefaults(
@@ -76,10 +76,7 @@ const facultyOptions = computed(() =>
         :show-trigger="showTrigger"
     >
         <template #trigger>
-            <Button type="button" size="sm" variant="outline">
-                <Pencil data-icon="inline-start" />
-                Editar
-            </Button>
+            <Button type="button" size="sm" variant="outline">Editar</Button>
         </template>
 
         <template #default="{ close }">
@@ -201,15 +198,12 @@ const facultyOptions = computed(() =>
                         <FieldError :errors="[errors.ends_on]" />
                     </Field>
 
-                    <Field orientation="horizontal">
-                        <Button type="submit" :disabled="processing">
-                            <Spinner
-                                v-if="processing"
-                                data-icon="inline-start"
-                            />
-                            Guardar cambios
-                        </Button>
-                    </Field>
+                    <FormSheetActions
+                        :close="close"
+                        :processing="processing"
+                        :icon="Check"
+                        label="Guardar cambios"
+                    />
                 </FieldGroup>
             </Form>
         </template>

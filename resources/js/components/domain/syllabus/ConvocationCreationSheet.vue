@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3';
+import { CalendarPlus } from '@lucide/vue';
 import { ref } from 'vue';
 import ConvocationController from '@/actions/App/Modules/Syllabus/Presentation/Http/Controllers/ConvocationController';
 import FormSheet from '@/components/domain/FormSheet.vue';
-import { Button } from '@/components/ui/button';
+import FormSheetActions from '@/components/domain/FormSheetActions.vue';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
     Field,
@@ -23,7 +24,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Spinner } from '@/components/ui/spinner';
 
 defineProps<{
     periods: { id: string; nombre: string }[];
@@ -204,12 +204,12 @@ const groupingMode = ref('per_parallel');
                         </div>
                     </FieldSet>
 
-                    <Field orientation="horizontal">
-                        <Button type="submit" :disabled="processing">
-                            <Spinner v-if="processing" />
-                            Preparar convocatoria
-                        </Button>
-                    </Field>
+                    <FormSheetActions
+                        :close="close"
+                        :processing="processing"
+                        :icon="CalendarPlus"
+                        label="Preparar convocatoria"
+                    />
                 </FieldGroup>
             </Form>
         </template>

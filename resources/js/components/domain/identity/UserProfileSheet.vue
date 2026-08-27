@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3';
-import { Pencil } from '@lucide/vue';
+import { Check, Pencil } from '@lucide/vue';
 import ManagedUserController from '@/actions/App/Modules/Identity/Presentation/Http/Controllers/ManagedUserController';
 import FormSheet from '@/components/domain/FormSheet.vue';
+import FormSheetActions from '@/components/domain/FormSheetActions.vue';
 import { Button } from '@/components/ui/button';
 import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import {
@@ -13,7 +14,6 @@ import {
     FieldLabel,
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { Spinner } from '@/components/ui/spinner';
 
 const props = defineProps<{
     userId: string;
@@ -35,10 +35,7 @@ const open = defineModel<boolean>('open', { default: false });
         :show-trigger="props.display !== 'menu'"
     >
         <template #trigger>
-            <Button variant="outline">
-                <Pencil data-icon="inline-start" aria-hidden="true" />
-                Editar datos
-            </Button>
+            <Button variant="outline">Editar datos</Button>
         </template>
         <template #default="{ close }">
             <Form
@@ -80,12 +77,12 @@ const open = defineModel<boolean>('open', { default: false });
                         <FieldError :errors="[errors.email]" />
                     </Field>
 
-                    <Field orientation="horizontal">
-                        <Button type="submit" :disabled="processing">
-                            <Spinner v-if="processing" />
-                            Guardar cambios
-                        </Button>
-                    </Field>
+                    <FormSheetActions
+                        :close="close"
+                        :processing="processing"
+                        :icon="Check"
+                        label="Guardar cambios"
+                    />
                 </FieldGroup>
             </Form>
         </template>

@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3';
+import { UserPlus } from '@lucide/vue';
 import CareerAcademicStructureController from '@/actions/App/Modules/Academic/Presentation/Http/Controllers/CareerAcademicStructureController';
 import FormSheet from '@/components/domain/FormSheet.vue';
-import { Button } from '@/components/ui/button';
+import FormSheetActions from '@/components/domain/FormSheetActions.vue';
 import {
     Field,
     FieldError,
@@ -18,7 +19,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Spinner } from '@/components/ui/spinner';
 import type { AcademicStructureProps } from '@/types/academic';
 
 defineProps<Pick<AcademicStructureProps, 'options'>>();
@@ -119,12 +119,12 @@ defineProps<Pick<AcademicStructureProps, 'options'>>();
                         />
                         <FieldError :errors="[errors.valid_until]" />
                     </Field>
-                    <Field orientation="horizontal">
-                        <Button type="submit" :disabled="processing">
-                            <Spinner v-if="processing" />
-                            Asignar docencia
-                        </Button>
-                    </Field>
+                    <FormSheetActions
+                        :close="close"
+                        :processing="processing"
+                        :icon="UserPlus"
+                        label="Asignar docencia"
+                    />
                 </FieldGroup>
             </Form>
         </template>

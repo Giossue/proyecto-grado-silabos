@@ -4,6 +4,7 @@ import { UserRoundCog } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import ReviewController from '@/actions/App/Modules/Syllabus/Presentation/Http/Controllers/ReviewController';
 import FormSheet from '@/components/domain/FormSheet.vue';
+import FormSheetActions from '@/components/domain/FormSheetActions.vue';
 import { Button } from '@/components/ui/button';
 import {
     Field,
@@ -21,7 +22,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Spinner } from '@/components/ui/spinner';
 
 type Teacher = { id: string; name: string };
 
@@ -54,8 +54,8 @@ const idempotencyKey = `transfer-${props.syllabusId}-${Math.trunc(performance.no
         description="Cierra la vigencia de quien sale y abre la de quien entra sobre los mismos paralelos, en una sola operación."
     >
         <template #trigger>
-            <Button variant="outline">
-                <UserRoundCog data-icon="inline-start" />
+            <Button>
+                <UserRoundCog data-icon="inline-start" aria-hidden="true" />
                 Relevar docente
             </Button>
         </template>
@@ -195,12 +195,12 @@ const idempotencyKey = `transfer-${props.syllabusId}-${Math.trunc(performance.no
                         auditoría.
                     </FieldDescription>
 
-                    <Field orientation="horizontal">
-                        <Button type="submit" :disabled="processing">
-                            <Spinner v-if="processing" />
-                            Registrar relevo
-                        </Button>
-                    </Field>
+                    <FormSheetActions
+                        :close="close"
+                        :processing="processing"
+                        :icon="UserRoundCog"
+                        label="Registrar relevo"
+                    />
                 </FieldGroup>
             </Form>
         </template>

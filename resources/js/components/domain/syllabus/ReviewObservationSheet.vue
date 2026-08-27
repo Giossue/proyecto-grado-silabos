@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3';
+import { MessageSquarePlus } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import ReviewController from '@/actions/App/Modules/Syllabus/Presentation/Http/Controllers/ReviewController';
 import FormSheet from '@/components/domain/FormSheet.vue';
-import { Button } from '@/components/ui/button';
+import FormSheetActions from '@/components/domain/FormSheetActions.vue';
 import {
     Field,
     FieldError,
@@ -18,7 +19,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 
 type ReviewSection = {
@@ -179,12 +179,12 @@ watch(open, (isOpen) => {
                         <FieldError :errors="[errors.content]" />
                     </Field>
 
-                    <Field orientation="horizontal">
-                        <Button type="submit" :disabled="processing">
-                            <Spinner v-if="processing" />
-                            Registrar observación
-                        </Button>
-                    </Field>
+                    <FormSheetActions
+                        :close="close"
+                        :processing="processing"
+                        :icon="MessageSquarePlus"
+                        label="Registrar observación"
+                    />
                 </FieldGroup>
             </Form>
         </template>

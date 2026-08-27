@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3';
+import { ShieldCheck } from '@lucide/vue';
 import { ref } from 'vue';
 import ManagedUserController from '@/actions/App/Modules/Identity/Presentation/Http/Controllers/ManagedUserController';
 import FormSheet from '@/components/domain/FormSheet.vue';
-import { Button } from '@/components/ui/button';
+import FormSheetActions from '@/components/domain/FormSheetActions.vue';
 import {
     Field,
     FieldError,
@@ -19,7 +20,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Spinner } from '@/components/ui/spinner';
 
 defineProps<{
     managedUserId: string;
@@ -126,12 +126,12 @@ const selectedRole = ref('teacher');
                         />
                         <FieldError :errors="[errors.valid_until]" />
                     </Field>
-                    <Field orientation="horizontal">
-                        <Button type="submit" :disabled="processing">
-                            <Spinner v-if="processing" />
-                            Asignar rol
-                        </Button>
-                    </Field>
+                    <FormSheetActions
+                        :close="close"
+                        :processing="processing"
+                        :icon="ShieldCheck"
+                        label="Asignar rol"
+                    />
                 </FieldGroup>
             </Form>
         </template>

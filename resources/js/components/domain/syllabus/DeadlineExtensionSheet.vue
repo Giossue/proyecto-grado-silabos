@@ -3,6 +3,7 @@ import { Form } from '@inertiajs/vue3';
 import { CalendarClock } from '@lucide/vue';
 import ConvocationController from '@/actions/App/Modules/Syllabus/Presentation/Http/Controllers/ConvocationController';
 import FormSheet from '@/components/domain/FormSheet.vue';
+import FormSheetActions from '@/components/domain/FormSheetActions.vue';
 import { Button } from '@/components/ui/button';
 import {
     Field,
@@ -20,7 +21,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 
 defineProps<{
@@ -35,10 +35,7 @@ defineProps<{
         description="La prórroga es una excepción: solo se puede mover la fecha hacia adelante y el motivo queda registrado en auditoría junto con la fecha anterior."
     >
         <template #trigger>
-            <Button variant="outline">
-                <CalendarClock data-icon="inline-start" />
-                Prorrogar plazo
-            </Button>
+            <Button variant="outline">Prorrogar plazo</Button>
         </template>
         <template #default="{ close }">
             <Form
@@ -104,12 +101,12 @@ defineProps<{
                         />
                     </Field>
 
-                    <Field orientation="horizontal">
-                        <Button type="submit" :disabled="processing">
-                            <Spinner v-if="processing" />
-                            Prorrogar
-                        </Button>
-                    </Field>
+                    <FormSheetActions
+                        :close="close"
+                        :processing="processing"
+                        :icon="CalendarClock"
+                        label="Prorrogar"
+                    />
                 </FieldGroup>
             </Form>
         </template>
