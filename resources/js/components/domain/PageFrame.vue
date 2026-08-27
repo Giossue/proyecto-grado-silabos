@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Plus, X } from '@lucide/vue';
-import type { Component, VNode } from 'vue';
+import type { VNode } from 'vue';
 import {
     computed,
     Fragment,
@@ -18,7 +18,6 @@ import { cn } from '@/lib/utils';
 
 const props = withDefaults(
     defineProps<{
-        icon: Component;
         title: string;
         description: string;
         size?: 'full' | 'wide' | 'narrow';
@@ -113,25 +112,14 @@ const floatingHidden = computed(() => hidden.value && !expanded.value);
                     <slot name="eyebrow" />
                 </div>
 
-                <div class="flex min-w-0 items-start gap-3">
-                    <div
-                        class="flex size-10 shrink-0 items-center justify-center rounded-lg border bg-card text-card-foreground shadow-control"
-                        aria-hidden="true"
-                    >
-                        <component :is="icon" class="size-5" />
-                    </div>
-
-                    <div class="flex min-w-0 flex-col gap-1">
-                        <p class="max-w-3xl text-muted-foreground">
-                            {{ description }}
-                        </p>
-                        <div
-                            v-if="$slots.meta"
-                            class="flex flex-wrap items-center gap-2 pt-1"
-                        >
-                            <slot name="meta" />
-                        </div>
-                    </div>
+                <p class="max-w-3xl text-muted-foreground">
+                    {{ description }}
+                </p>
+                <div
+                    v-if="$slots.meta"
+                    class="flex flex-wrap items-center gap-2 pt-1"
+                >
+                    <slot name="meta" />
                 </div>
             </div>
 

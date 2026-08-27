@@ -104,3 +104,20 @@ it('aparta de las franjas del sistema todo lo que se pega a un borde', function 
     // Encabezado fijo.
     ['resources/js/components/AppSidebarHeader.vue', 'env(safe-area-inset-top)'],
 ]);
+
+it('explica el boton que abre y cierra el menu', function (): void {
+    $raiz = dirname(__DIR__, 2);
+    $boton = (string) file_get_contents($raiz.'/resources/js/components/ui/sidebar/SidebarTrigger.vue');
+
+    // Un boton que es solo un dibujo necesita decir en algun sitio lo que hace.
+    expect($boton)
+        ->toContain('TooltipContent')
+        ->toContain("'Mostrar menú'")
+        ->toContain("'Ocultar menú'")
+        ->toContain(':aria-label="label"');
+
+    // El menu flotante de la barra reducida sale pegado a su icono: repetir el titulo
+    // dentro hacia que la primera opcion pareciera un encabezado.
+    $nav = (string) file_get_contents($raiz.'/resources/js/components/NavMain.vue');
+    expect($nav)->not->toContain('DropdownMenuLabel');
+});

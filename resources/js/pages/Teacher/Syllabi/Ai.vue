@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { Form, Head, Link, router } from '@inertiajs/vue3';
 import {
-    Bot,
     Check,
     CircleAlert,
     Clock3,
@@ -162,7 +161,6 @@ onBeforeUnmount(() => {
 <template>
     <Head :title="`Asistencia de IA · ${field.label}`" />
     <PageFrame
-        :icon="Bot"
         title="Asistencia de IA"
         :description="`${syllabus.subject} · ${field.label}`"
         size="wide"

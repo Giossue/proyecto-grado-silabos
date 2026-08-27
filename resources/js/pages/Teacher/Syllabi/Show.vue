@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { Form, Head, Link } from '@inertiajs/vue3';
 import {
-    BookOpenCheck,
     FileDiff,
     FileDown,
     FilePenLine,
@@ -97,7 +96,6 @@ const observationState = (state: string): string =>
 <template>
     <Head :title="syllabus.subject" />
     <PageFrame
-        :icon="BookOpenCheck"
         :title="syllabus.subject"
         :description="`${syllabus.code} · ${syllabus.period}`"
     >

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Form, Head, Link } from '@inertiajs/vue3';
-import { BookOpenCheck, ChevronRight } from '@lucide/vue';
+import { ChevronRight } from '@lucide/vue';
 import SyllabusController from '@/actions/App/Modules/Syllabus/Presentation/Http/Controllers/SyllabusController';
 import FilterToolbar from '@/components/domain/FilterToolbar.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
@@ -71,7 +71,6 @@ const formatSavedAt = (value: string | null): string =>
 <template>
     <Head title="Mis sílabos" />
     <PageFrame
-        :icon="BookOpenCheck"
         title="Mis sílabos"
         description="Los sílabos de las materias que usted dicta."
     >

@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
-import { ScrollText } from '@lucide/vue';
 import { ref } from 'vue';
 import AuditEventController from '@/actions/App/Modules/Operations/Presentation/Http/Controllers/AuditEventController';
 import DatePicker from '@/components/DatePicker.vue';
@@ -98,7 +97,6 @@ const detailValue = (value: Detail['value']): string => {
 <template>
     <Head title="Auditoría" />
     <PageFrame
-        :icon="ScrollText"
         title="Auditoría"
         description="Quién hizo qué y cuándo. Se escribe solo, no se puede cambiar ni borrar, y no guarda lo que dicen los sílabos."
     >

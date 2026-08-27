@@ -12,7 +12,6 @@ import {
     DropdownMenuContent,
     DropdownMenuGroup,
     DropdownMenuItem,
-    DropdownMenuLabel,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
@@ -84,7 +83,11 @@ const isItemActive = (item: NavItem): boolean =>
                         align="start"
                         class="w-56"
                     >
-                        <DropdownMenuLabel>{{ item.title }}</DropdownMenuLabel>
+                        <!--
+                            Sin título: el menú sale pegado al icono que se acaba de
+                            pulsar, así que repetirlo dentro solo estorba y hace que la
+                            primera opción parezca un encabezado.
+                        -->
                         <DropdownMenuGroup>
                             <DropdownMenuItem
                                 v-for="child in item.items"

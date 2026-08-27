@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import { Building2 } from '@lucide/vue';
 import { computed } from 'vue';
 import CatalogRecordSheet from '@/components/domain/academic/CatalogRecordSheet.vue';
 import CatalogSection from '@/components/domain/academic/CatalogSection.vue';
@@ -69,7 +68,6 @@ const sectionContent = computed(() => sectionContents[props.section]);
     <Head :title="sectionContent.title" />
 
     <PageFrame
-        :icon="Building2"
         :title="sectionContent.title"
         :description="sectionContent.description"
     >

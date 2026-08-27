@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import { FileStack } from '@lucide/vue';
 import TemplateController from '@/actions/App/Modules/Configuration/Presentation/Http/Controllers/TemplateController';
 import ClientFilterBar from '@/components/domain/ClientFilterBar.vue';
 import TemplateCreationSheet from '@/components/domain/configuration/TemplateCreationSheet.vue';
@@ -70,7 +69,6 @@ defineOptions({
 <template>
     <Head title="Plantillas" />
     <PageFrame
-        :icon="FileStack"
         title="Plantillas de sílabo"
         description="El formato del sílabo: qué campos tiene y en qué orden. Publicar una versión nueva no toca las que ya se están usando."
     >

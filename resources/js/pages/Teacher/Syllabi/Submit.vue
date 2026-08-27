@@ -61,7 +61,6 @@ const nextRevision = props.syllabus.revisions.length + 1;
 <template>
     <Head :title="`Enviar ${syllabus.subject}`" />
     <PageFrame
-        :icon="FileCheck2"
         title="Confirmar envío"
         :description="`${syllabus.subject} · ${syllabus.code} · ${syllabus.period}`"
         size="narrow"

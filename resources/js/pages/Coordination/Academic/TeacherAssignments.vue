@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import { UsersRound } from '@lucide/vue';
 import TeacherAssignmentSheet from '@/components/domain/academic/TeacherAssignmentSheet.vue';
 import TeacherAssignmentsPanel from '@/components/domain/academic/TeacherAssignmentsPanel.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
@@ -27,7 +26,6 @@ defineProps<
     <Head title="Asignación docente" />
 
     <PageFrame
-        :icon="UsersRound"
         title="Asignación docente"
         :description="`Quién dicta cada paralelo en ${career.name}.`"
     >

@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Form, Head, Link } from '@inertiajs/vue3';
-import { LibraryBig } from '@lucide/vue';
 import AcademicSourceController from '@/actions/App/Modules/Configuration/Presentation/Http/Controllers/AcademicSourceController';
 import AcademicSourceFragmentSheet from '@/components/domain/configuration/AcademicSourceFragmentSheet.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
@@ -80,7 +79,6 @@ defineOptions({
     <Head :title="source.name" />
 
     <PageFrame
-        :icon="LibraryBig"
         :title="source.name"
         :description="`${source.authority} · ${source.career_name}`"
     >

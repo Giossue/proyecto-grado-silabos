@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import { BookOpenCheck } from '@lucide/vue';
 import CurriculaTab from '@/components/domain/academic/CurriculaTab.vue';
 import CurriculumRecordSheet from '@/components/domain/academic/CurriculumRecordSheet.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
@@ -25,7 +24,6 @@ defineProps<
     <Head title="Mallas y materias" />
 
     <PageFrame
-        :icon="BookOpenCheck"
         title="Mallas y materias"
         :description="`Ciclos y materias de ${career.name}. Una malla publicada ya no se puede cambiar.`"
     >

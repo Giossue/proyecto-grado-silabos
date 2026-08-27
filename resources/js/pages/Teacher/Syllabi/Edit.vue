@@ -3,7 +3,6 @@ import { Form, Head, Link, router } from '@inertiajs/vue3';
 import {
     AlertTriangle,
     CheckCircle2,
-    FilePenLine,
     Plus,
     RotateCcw,
     Save,
@@ -552,7 +551,6 @@ onBeforeUnmount(() => {
 <template>
     <Head :title="`Editar ${syllabus.subject}`" />
     <PageFrame
-        :icon="FilePenLine"
         :title="syllabus.subject"
         :description="`${syllabus.code} · ${syllabus.convocation} · Paralelo(s) ${syllabus.parallels.join(', ')}`"
     >

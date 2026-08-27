@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Form, Head, Link } from '@inertiajs/vue3';
-import { CalendarRange, ChevronRight } from '@lucide/vue';
+import { ChevronRight } from '@lucide/vue';
 import ConvocationController from '@/actions/App/Modules/Syllabus/Presentation/Http/Controllers/ConvocationController';
 import FilterToolbar from '@/components/domain/FilterToolbar.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
@@ -64,7 +64,6 @@ const stateLabel = (state: string): string =>
 <template>
     <Head title="Convocatorias" />
     <PageFrame
-        :icon="CalendarRange"
         title="Convocatorias de sílabos"
         description="Cada convocatoria abre los sílabos de un periodo y fija con qué formato se llenan."
     >

@@ -2,7 +2,6 @@
 import { Form, Head, Link } from '@inertiajs/vue3';
 import {
     CheckCheck,
-    ClipboardCheck,
     FileDiff,
     FileDown,
     LockKeyhole,
@@ -194,7 +193,6 @@ const observationState = (value: string): string =>
 <template>
     <Head :title="`Revisión ${revision.number} · ${syllabus.subject}`" />
     <PageFrame
-        :icon="ClipboardCheck"
         :title="syllabus.subject"
         :description="`${syllabus.code} · ${syllabus.period} · ${syllabus.teachers.join(', ')}`"
     >

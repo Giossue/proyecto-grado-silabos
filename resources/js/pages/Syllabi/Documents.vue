@@ -180,7 +180,6 @@ onUnmounted(() => {
 <template>
     <Head :title="`Documentos · ${syllabus.subject}`" />
     <PageFrame
-        :icon="FileArchive"
         title="Documentos aprobados"
         :description="`${syllabus.subject} · ${syllabus.code} · revisión ${revision.number}`"
     >

@@ -23,7 +23,6 @@ const page = usePage();
     <Head title="Seleccionar rol" />
 
     <PageFrame
-        :icon="Building2"
         title="Seleccione con qué rol va a trabajar"
         description="Lo que puede ver y hacer depende del rol con el que entre. Puede cambiarlo cuando quiera."
         size="narrow"

@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import { LibraryBig } from '@lucide/vue';
 import ClientFilterBar from '@/components/domain/ClientFilterBar.vue';
 import AcademicSourceCreationSheet from '@/components/domain/configuration/AcademicSourceCreationSheet.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
@@ -80,7 +79,6 @@ defineOptions({
 <template>
     <Head title="Fuentes académicas" />
     <PageFrame
-        :icon="LibraryBig"
         title="Fuentes académicas"
         description="Los documentos oficiales en los que se apoyan los sílabos: de quién son, desde cuándo rigen y qué dicen."
     >

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Form, Head, Link } from '@inertiajs/vue3';
-import { UserCheck, UsersRound, UserX } from '@lucide/vue';
+import { UserCheck, UserX } from '@lucide/vue';
 import ManagedUserController from '@/actions/App/Modules/Identity/Presentation/Http/Controllers/ManagedUserController';
 import FilterToolbar from '@/components/domain/FilterToolbar.vue';
 import ManagedUserSheet from '@/components/domain/identity/ManagedUserSheet.vue';
@@ -97,7 +97,6 @@ defineProps<{
     <Head title="Usuarios y roles" />
 
     <PageFrame
-        :icon="UsersRound"
         title="Usuarios y roles"
         description="Cuentas de coordinación y docencia: crearlas, decir de qué carrera son y hasta cuándo. Al desactivar una, su sesión se cierra."
     >

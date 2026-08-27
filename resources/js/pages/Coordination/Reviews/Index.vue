@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { ClipboardCheck, Eye } from '@lucide/vue';
+import { Eye } from '@lucide/vue';
 import { ref } from 'vue';
 import ReviewController from '@/actions/App/Modules/Syllabus/Presentation/Http/Controllers/ReviewController';
 import FilterToolbar from '@/components/domain/FilterToolbar.vue';
@@ -77,7 +77,6 @@ const stateLabel = (value: string): string =>
 <template>
     <Head title="Cola de revisión" />
     <PageFrame
-        :icon="ClipboardCheck"
         title="Cola de revisión"
         description="Sílabos que los docentes ya enviaron y esperan revisión."
     >

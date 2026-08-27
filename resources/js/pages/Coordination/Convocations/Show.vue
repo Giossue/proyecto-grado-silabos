@@ -1,12 +1,6 @@
 <script setup lang="ts">
 import { Form, Head, Link } from '@inertiajs/vue3';
-import {
-    CalendarRange,
-    CheckCircle2,
-    CircleDashed,
-    FilePenLine,
-    Files,
-} from '@lucide/vue';
+import { CheckCircle2, CircleDashed, FilePenLine, Files } from '@lucide/vue';
 import ConvocationController from '@/actions/App/Modules/Syllabus/Presentation/Http/Controllers/ConvocationController';
 import ClientFilterBar from '@/components/domain/ClientFilterBar.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
@@ -122,7 +116,6 @@ const {
 <template>
     <Head :title="convocation.name" />
     <PageFrame
-        :icon="CalendarRange"
         :title="convocation.name"
         :description="`${convocation.period} · ${convocation.template}`"
     >

@@ -396,10 +396,12 @@ it('normaliza los encabezados de todos los modulos autenticados', function (): v
             substr_count($source, '<PageFrame'),
             $page.' no monta exactamente un encabezado compartido.',
         );
-        $this->assertMatchesRegularExpression(
+        // Sin icono de modulo: el nombre de la pantalla ya esta en el encabezado y el
+        // dibujo repetia lo que decia la frase de debajo.
+        $this->assertDoesNotMatchRegularExpression(
             '/<PageFrame\b[^>]*:icon=/s',
             $source,
-            $page.' no declara el icono del módulo.',
+            $page.' vuelve a declarar un icono de modulo.',
         );
         $this->assertMatchesRegularExpression(
             '/<PageFrame\b[^>]*(?::)?title=/s',
@@ -422,8 +424,9 @@ it('normaliza los encabezados de todos los modulos autenticados', function (): v
         ->toBeString()
         ->toContain("size?: 'full' | 'wide' | 'narrow'")
         ->toContain('gap-6 overflow-x-hidden p-4 sm:p-6')
-        ->toContain('bg-card text-card-foreground')
-        ->toContain('<component :is="icon" class="size-5"')
+        // Sin icono: el nombre de la pantalla ya esta arriba y el dibujo no anadia nada
+        // que no dijera la propia frase.
+        ->not->toContain('<component :is="icon"')
         // El nombre de la pantalla vive en el encabezado, no aqui.
         ->toContain('usePageTitle')
         ->toContain('<slot name="eyebrow"')

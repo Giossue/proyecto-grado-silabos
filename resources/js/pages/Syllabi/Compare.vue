@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import { ArrowLeft, FileDiff } from '@lucide/vue';
+import { ArrowLeft } from '@lucide/vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -78,7 +78,6 @@ const goBack = (): void => window.history.back();
 <template>
     <Head :title="`Comparar revisiones · ${syllabus.subject}`" />
     <PageFrame
-        :icon="FileDiff"
         title="Comparar revisiones"
         :description="`${syllabus.subject} · ${syllabus.code} · ${syllabus.period}`"
     >

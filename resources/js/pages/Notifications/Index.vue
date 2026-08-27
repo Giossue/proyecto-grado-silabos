@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Form, Head, Link } from '@inertiajs/vue3';
-import { Bell, Check, CheckCheck, ExternalLink } from '@lucide/vue';
+import { Check, CheckCheck, ExternalLink } from '@lucide/vue';
 import NotificationController from '@/actions/App/Modules/Operations/Presentation/Http/Controllers/NotificationController';
 import PageFrame from '@/components/domain/PageFrame.vue';
 import { Badge } from '@/components/ui/badge';
@@ -59,7 +59,6 @@ const paginationLabel = (value: string): string =>
 <template>
     <Head title="Notificaciones" />
     <PageFrame
-        :icon="Bell"
         title="Notificaciones"
         description="Avisos de lo que va pasando con sus sílabos y sus documentos."
     >

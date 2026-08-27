@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { ChartNoAxesCombined, Eye } from '@lucide/vue';
+import { Eye } from '@lucide/vue';
 import { ref } from 'vue';
 import OperationalReportController from '@/actions/App/Modules/Operations/Presentation/Http/Controllers/OperationalReportController';
 import FilterToolbar from '@/components/domain/FilterToolbar.vue';
@@ -124,7 +124,6 @@ const stateLabel = (value: string): string =>
 <template>
     <Head title="Informes de avance" />
     <PageFrame
-        :icon="ChartNoAxesCombined"
         title="Informes de avance"
         description="Cómo va su carrera: cuántos sílabos faltan, cuántos están en revisión y cuántos aprobados."
     >

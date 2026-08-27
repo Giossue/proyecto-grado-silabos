@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Form, Head, Link } from '@inertiajs/vue3';
-import { FilePenLine } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import TemplateController from '@/actions/App/Modules/Configuration/Presentation/Http/Controllers/TemplateController';
 import TemplateFieldSheet from '@/components/domain/configuration/TemplateFieldSheet.vue';
@@ -87,7 +86,6 @@ const blockOptions = computed(() =>
     />
 
     <PageFrame
-        :icon="FilePenLine"
         :title="`${templateVersion.template.name} · v${templateVersion.number}`"
         :description="`${templateVersion.template.career_name ?? 'Alcance general'} · Añada los campos de esta versión y ordénelos.`"
     >

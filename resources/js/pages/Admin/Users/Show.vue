@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Form, Head, Link, usePage } from '@inertiajs/vue3';
-import { UserRoundCog } from '@lucide/vue';
 import ManagedUserController from '@/actions/App/Modules/Identity/Presentation/Http/Controllers/ManagedUserController';
 import ClientFilterBar from '@/components/domain/ClientFilterBar.vue';
 import RoleAssignmentSheet from '@/components/domain/identity/RoleAssignmentSheet.vue';
@@ -88,11 +87,7 @@ const page = usePage();
 <template>
     <Head :title="managedUser.name" />
 
-    <PageFrame
-        :icon="UserRoundCog"
-        :title="managedUser.name"
-        :description="managedUser.email"
-    >
+    <PageFrame :title="managedUser.name" :description="managedUser.email">
         <template #eyebrow>
             <Button as-child variant="link" class="h-auto px-0">
                 <Link :href="usersIndex()">← Volver a usuarios</Link>

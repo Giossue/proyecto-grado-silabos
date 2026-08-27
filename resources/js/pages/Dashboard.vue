@@ -8,7 +8,6 @@ import {
     CircleAlert,
     ClipboardCheck,
     FileStack,
-    LayoutDashboard,
     ListRestart,
     PencilLine,
     UsersRound,
@@ -61,7 +60,6 @@ const icons: Record<string, Component> = {
 
     <PageFrame
         class="h-full flex-1"
-        :icon="LayoutDashboard"
         title="Panel de trabajo"
         :description="
             activeRole?.career_name ?? 'Gestión institucional de Sílabos UEB'

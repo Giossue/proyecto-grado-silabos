@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import { Palette, Settings, ShieldCheck, UserRound } from '@lucide/vue';
+import { Palette, ShieldCheck, UserRound } from '@lucide/vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -34,7 +34,6 @@ const { isCurrentOrParentUrl } = useCurrentUrl();
 
 <template>
     <PageFrame
-        :icon="Settings"
         title="Configuración"
         description="Administre su perfil, seguridad y preferencias visuales."
     >

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
-import { ListRestart, RotateCw } from '@lucide/vue';
+import { RotateCw } from '@lucide/vue';
 import { ref } from 'vue';
 import FilterToolbar from '@/components/domain/FilterToolbar.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
@@ -123,7 +123,6 @@ const formatDate = (value: string | null): string =>
 <template>
     <Head title="Procesos" />
     <PageFrame
-        :icon="ListRestart"
         title="Procesos"
         description="Lo que el sistema hace por detrás: correos, documentos y análisis. Aquí se ve qué terminó y qué falló."
     >
