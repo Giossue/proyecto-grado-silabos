@@ -169,14 +169,19 @@ onUnmounted(() => {
             </Button>
         </template>
         <template #actions>
-            <Button :disabled="form.processing" @click="requestExport">
+            <Button
+                class="max-sm:size-14 max-sm:rounded-full max-sm:p-0"
+                :disabled="form.processing"
+                aria-label="Generar DOCX y PDF"
+                @click="requestExport"
+            >
                 <Spinner v-if="form.processing" data-icon="inline-start" />
                 <FileArchive
                     v-else
                     data-icon="inline-start"
                     aria-hidden="true"
                 />
-                Generar DOCX y PDF
+                <span class="max-sm:hidden">Generar DOCX y PDF</span>
             </Button>
         </template>
 

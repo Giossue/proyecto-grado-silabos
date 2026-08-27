@@ -122,26 +122,26 @@ const {
                 }}
             </Badge>
         </template>
+        <!-- Sin envoltorio: PageFrame cuenta las acciones para decidir si en móvil hacen
+             falta un disparador y un desplegable. Un contenedor las escondería como una. -->
         <template #actions>
-            <div class="flex flex-wrap items-start gap-2">
-                <DeadlineExtensionSheet
-                    v-if="convocation.state !== 'closed'"
-                    :convocation-id="convocation.id"
-                />
-                <Form
-                    v-if="convocation.state === 'preparation'"
-                    v-bind="ConvocationController.open.form(convocation.id)"
-                    v-slot="{ errors, processing }"
-                >
-                    <div class="flex flex-col items-start gap-2">
-                        <FieldError :errors="[errors.convocation]" />
-                        <Button type="submit" :disabled="processing">
-                            <Spinner v-if="processing" />
-                            Abrir y generar expedientes
-                        </Button>
-                    </div>
-                </Form>
-            </div>
+            <DeadlineExtensionSheet
+                v-if="convocation.state !== 'closed'"
+                :convocation-id="convocation.id"
+            />
+            <Form
+                v-if="convocation.state === 'preparation'"
+                v-bind="ConvocationController.open.form(convocation.id)"
+                v-slot="{ errors, processing }"
+            >
+                <div class="flex flex-col items-start gap-2">
+                    <FieldError :errors="[errors.convocation]" />
+                    <Button type="submit" :disabled="processing">
+                        <Spinner v-if="processing" />
+                        Abrir y generar expedientes
+                    </Button>
+                </div>
+            </Form>
         </template>
 
         <Alert v-if="convocation.state === 'preparation'">

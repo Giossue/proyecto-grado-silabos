@@ -39,9 +39,18 @@ const close = (): void => {
     <Sheet v-model:open="open">
         <SheetTrigger v-if="showTrigger" :as-child="true">
             <slot name="trigger">
-                <Button class="w-full sm:w-auto">
-                    <Plus data-icon="inline-start" />
-                    {{ triggerLabel }}
+                <!--
+                    En móvil el disparador flota sobre el contenido, así que se reduce al
+                    icono y se vuelve circular: una píldora con texto taparía media
+                    pantalla. La etiqueta sigue disponible para lectores mediante
+                    `aria-label`.
+                -->
+                <Button
+                    class="w-full max-sm:size-14 max-sm:rounded-full max-sm:p-0 sm:w-auto"
+                    :aria-label="triggerLabel"
+                >
+                    <Plus data-icon="inline-start" aria-hidden="true" />
+                    <span class="max-sm:hidden">{{ triggerLabel }}</span>
                 </Button>
             </slot>
         </SheetTrigger>

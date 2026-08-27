@@ -208,33 +208,27 @@ const observationState = (value: string): string =>
             <Badge variant="outline">
                 {{ stateLabel(syllabus.state) }}
             </Badge>
+            <!-- Datos de la revisión, no acciones: en móvil el bloque de acciones flota
+                 sobre el contenido y este texto no tiene por qué acompañarlo. -->
+            <span class="text-sm text-muted-foreground">
+                Enviada por {{ revision.submitted_by }} ·
+                {{ new Date(revision.submitted_at).toLocaleString('es-EC') }}
+            </span>
+            <span
+                class="text-sm text-muted-foreground"
+                title="Huella SHA-256 completa disponible en auditoría"
+            >
+                Huella: {{ revision.fingerprint.slice(0, 12) }}…
+            </span>
         </template>
         <template #actions>
-            <div class="flex flex-col items-start gap-3 sm:items-end">
-                <div class="text-sm text-muted-foreground sm:text-right">
-                    <div>
-                        Enviada por {{ revision.submitted_by }} ·
-                        {{
-                            new Date(revision.submitted_at).toLocaleString(
-                                'es-EC',
-                            )
-                        }}
-                    </div>
-                    <div
-                        title="Huella SHA-256 completa disponible en auditoría"
-                    >
-                        Huella de integridad:
-                        {{ revision.fingerprint.slice(0, 12) }}…
-                    </div>
-                </div>
-                <TeacherTransferSheet
-                    v-if="transfer.allowed && transfer.current.length > 0"
-                    :syllabus-id="syllabus.id"
-                    :state="syllabus.state"
-                    :current="transfer.current"
-                    :candidates="transfer.candidates"
-                />
-            </div>
+            <TeacherTransferSheet
+                v-if="transfer.allowed && transfer.current.length > 0"
+                :syllabus-id="syllabus.id"
+                :state="syllabus.state"
+                :current="transfer.current"
+                :candidates="transfer.candidates"
+            />
         </template>
 
         <Alert v-if="!revision.is_current">

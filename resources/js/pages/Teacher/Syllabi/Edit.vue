@@ -565,9 +565,10 @@ onBeforeUnmount(() => {
         </template>
         <template #meta>
             <Badge variant="secondary">{{ stateLabel }}</Badge>
-        </template>
-        <template #actions>
-            <div class="flex flex-wrap items-center gap-3" aria-live="polite">
+            <!-- El estado de guardado informa, no acciona. Vive aquí para que no flote
+                 junto a los botones en móvil; conserva `aria-live` para que el lector
+                 anuncie los cambios. -->
+            <span aria-live="polite">
                 <Badge :variant="conflict ? 'destructive' : 'outline'">
                     <Spinner v-if="globalSaving" />
                     <CheckCircle2
@@ -576,30 +577,32 @@ onBeforeUnmount(() => {
                     />
                     {{ saveLabel }}
                 </Badge>
-                <Button
-                    type="button"
-                    variant="outline"
-                    :disabled="globalSaving || validating || conflict"
-                    @click="runValidation"
-                >
-                    <Spinner v-if="validating" />
-                    Validar borrador
-                </Button>
-                <Button
-                    type="button"
-                    :disabled="
-                        globalSaving ||
-                        validating ||
-                        preparingSubmission ||
-                        conflict
-                    "
-                    @click="goToSubmission"
-                >
-                    <Spinner v-if="preparingSubmission" />
-                    <Send v-else aria-hidden="true" />
-                    Revisar y enviar
-                </Button>
-            </div>
+            </span>
+        </template>
+        <template #actions>
+            <Button
+                type="button"
+                variant="outline"
+                :disabled="globalSaving || validating || conflict"
+                @click="runValidation"
+            >
+                <Spinner v-if="validating" />
+                Validar borrador
+            </Button>
+            <Button
+                type="button"
+                :disabled="
+                    globalSaving ||
+                    validating ||
+                    preparingSubmission ||
+                    conflict
+                "
+                @click="goToSubmission"
+            >
+                <Spinner v-if="preparingSubmission" />
+                <Send v-else aria-hidden="true" />
+                Revisar y enviar
+            </Button>
         </template>
 
         <Alert v-if="syllabus.state === 'correction_requested'">
