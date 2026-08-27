@@ -64,6 +64,36 @@ AI_DRIVER=disabled
 INSTITUTIONAL_IMPORT_DRIVER=disabled
 ```
 
+### Correo
+
+El envío de credenciales usa el sistema de correo de Laravel, así que el proveedor se
+cambia con variables y no tocando código.
+
+Mientras `PV-15` —correo institucional y contenido de avisos— siga abierta, se deja en
+`log`: los mensajes se escriben en los registros de Dokploy tal como se enviarían, sin
+salir del sistema.
+
+```
+MAIL_MAILER=log
+```
+
+Para enviar de verdad con Resend, cuyo transporte ya está instalado:
+
+```
+MAIL_MAILER=resend
+RESEND_API_KEY=re_...
+MAIL_FROM_ADDRESS="no-responder@devs-ueb.tech"
+MAIL_FROM_NAME="${APP_NAME}"
+```
+
+Antes hay que verificar el dominio en el panel de Resend añadiendo los registros DNS que
+indique. Sin eso los mensajes se rechazan o acaban en spam, y el fallo no se ve desde la
+aplicación: hay que mirarlo en el panel del proveedor.
+
+Enviar desde un dominio propio hacia buzones `@ueb.edu.ec` puede resultar sospechoso para
+el servidor institucional. El destino a largo plazo es su propio SMTP, que es lo que
+`PV-15` debe resolver; para eso basta con cambiar `MAIL_MAILER=smtp` y sus credenciales.
+
 `SESSION_SECURE_COOKIE=true` requiere HTTPS. Actívalo solo cuando el dominio tenga
 certificado, o nadie podrá iniciar sesión.
 

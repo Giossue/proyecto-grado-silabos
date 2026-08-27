@@ -49,6 +49,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('convocatorias/{convocation}', [ConvocationController::class, 'show'])->name('convocations.show');
         Route::post('convocatorias/{convocation}/abrir', [ConvocationController::class, 'open'])->name('convocations.open');
         Route::post('convocatorias/{convocation}/prorroga', [ConvocationController::class, 'extendDeadline'])->name('convocations.deadline.extend');
+        // Fuera del prefijo de administración: la corrección de nombre y correo la hace
+        // también la coordinación sobre los docentes de su carrera, y la política decide
+        // el alcance de cada rol.
+        Route::patch('usuarios/{user}/datos', [ManagedUserController::class, 'updateProfile'])
+            ->name('users.profile.update');
         Route::get('mis-silabos', [SyllabusController::class, 'index'])->name('syllabi.index');
         Route::get('mis-silabos/{syllabus}', [SyllabusController::class, 'show'])->name('syllabi.show');
         Route::post('mis-silabos/{syllabus}/iniciar', [SyllabusController::class, 'start'])->name('syllabi.start');

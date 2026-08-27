@@ -8,12 +8,14 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
 use App\Modules\Identity\Application\Actions\AssignRole;
 use App\Modules\Identity\Application\Actions\CreateManagedUser;
 use App\Modules\Identity\Application\Actions\SetUserStatus;
+use App\Modules\Identity\Application\Actions\UpdateManagedUserProfile;
 use App\Modules\Identity\Infrastructure\Persistence\Models\Role;
 use App\Modules\Identity\Presentation\Http\Requests\AssignRoleRequest;
 use App\Modules\Identity\Presentation\Http\Requests\CreateManagedUserRequest;
 use App\Modules\Identity\Presentation\Http\Requests\IndexUsersRequest;
 use App\Modules\Identity\Presentation\Http\Requests\SetUserStatusRequest;
 use App\Modules\Identity\Presentation\Http\Requests\ShowManagedUserRequest;
+use App\Modules\Identity\Presentation\Http\Requests\UpdateManagedUserProfileRequest;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Gate;
@@ -130,5 +132,17 @@ class ManagedUserController extends Controller
         $action->execute($user, $request->boolean('active'), $actor, $request);
 
         return back()->with('success', $user->active ? 'Cuenta activada.' : 'Cuenta desactivada y sesiones revocadas.');
+    }
+
+    public function updateProfile(
+        User $user,
+        UpdateManagedUserProfileRequest $request,
+        UpdateManagedUserProfile $action,
+    ): RedirectResponse {
+        $actor = $request->user();
+        abort_unless($actor instanceof User, 401);
+        $action->execute($user, $request->profileData(), $actor, $request);
+
+        return back()->with('success', 'Datos de la cuenta actualizados.');
     }
 }

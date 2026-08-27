@@ -27,8 +27,11 @@ defineSlots<{
 <template>
     <DropdownMenu>
         <DropdownMenuTrigger as-child>
+            <!-- La marca permite que la hoja de estilos fije esta columna al desplazar
+                 la tabla en horizontal, sin que cada tabla tenga que declararlo. -->
             <Button
                 type="button"
+                data-slot="table-actions"
                 variant="ghost"
                 size="icon-sm"
                 :aria-label="label"

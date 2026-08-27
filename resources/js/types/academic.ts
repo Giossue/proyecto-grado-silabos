@@ -93,7 +93,9 @@ export type AcademicStructureProps = {
     }[];
     teacherAssignments: {
         id: string;
+        user_id: string;
         user_name: string;
+        user_email: string;
         parallel_code: string;
         subject_name: string;
         period_name: string;

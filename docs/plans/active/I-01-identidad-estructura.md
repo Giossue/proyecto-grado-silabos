@@ -27,6 +27,13 @@ operación académica dentro de su carrera.
 - La contraseña temporal la genera la interfaz con `crypto.getRandomValues` cumpliendo la
   política del servidor, se muestra en claro para entregarla y no se confirma: nadie la
   escribe. No se guarda en auditoría ni en logs.
+- Las credenciales se envían por correo al crear la cuenta, en cola y después del commit:
+  crear una cuenta no espera al servidor de correo ni falla si está caído. El transporte
+  sigue en `log` mientras `PV-15` esté abierta, así que nada sale del sistema todavía.
+- Corregir el nombre y el correo de una cuenta es `updateProfileData`, distinto de
+  `update`, que gobierna estado y roles. La administración alcanza a cualquiera; una
+  coordinación, solo a los docentes con rol vigente en su carrera. El valor anterior del
+  correo queda en auditoría porque es la identidad con la que se inicia sesión.
 - Esa contraseña es de un solo uso. La cuenta nace marcada y `RequirePasswordChange`
   rechaza toda ruta salvo el panel, el propio cambio y el cierre de sesión; sobre el
   panel aparece un diálogo que no se descarta. El bloqueo es del servidor: un diálogo que

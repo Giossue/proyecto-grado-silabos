@@ -212,3 +212,54 @@
         cursor: not-allowed;
     }
 }
+
+@layer components {
+    /*
+     * Columna de acciones fija al desplazar la tabla en horizontal.
+     *
+     * En un móvil la tabla se sale de la pantalla y el menú de tres puntos queda fuera de
+     * vista: hay que arrastrar hasta el final para actuar sobre una fila, y al llegar ya
+     * no se ve de qué fila se trata. Anclada a la derecha, la acción acompaña siempre a
+     * su fila.
+     *
+     * Se aplica sola en las tablas que tienen menú de acciones, detectado con `:has()`.
+     * Así una tabla nueva lo hereda sin declarar nada, y una sin acciones no fija una
+     * columna de datos por error.
+     */
+    table:has([data-slot='table-actions']) :is(th, td):last-child {
+        position: sticky;
+        right: 0;
+        /* Sin fondo propio, las celdas que pasan por debajo se transparentarían. */
+        background-color: var(--color-card);
+    }
+
+    /*
+     * El contenido pasa por debajo de la columna fija, así que su borde izquierdo se
+     * dibuja como un degradado y no como una línea: se lee como profundidad, que es lo
+     * que ocurre de verdad, en vez de como el final de la tabla.
+     */
+    table:has([data-slot='table-actions']) :is(th, td):last-child::before {
+        content: '';
+        position: absolute;
+        inset-block: 0;
+        left: 0;
+        width: 0.75rem;
+        transform: translateX(-100%);
+        background-image: linear-gradient(
+            to left,
+            var(--surface-ring),
+            transparent
+        );
+    }
+
+    /*
+     * El degradado del borde derecho sobra cuando esa esquina la ocupa la columna fija:
+     * se pintaría encima y la dejaría apagada. El del borde izquierdo se conserva.
+     */
+    div:has(> * > table:has([data-slot='table-actions']))
+        > [data-table-edge='right'],
+    div:has(> table:has([data-slot='table-actions']))
+        > [data-table-edge='right'] {
+        display: none;
+    }
+}

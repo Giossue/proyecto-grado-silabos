@@ -235,7 +235,9 @@ class AcademicStructureViewData
                 ->get()
                 ->map(fn (TeacherAssignment $assignment) => [
                     'id' => $assignment->id,
+                    'user_id' => $assignment->user->id,
                     'user_name' => $assignment->user->name,
+                    'user_email' => $assignment->user->email,
                     'parallel_code' => $assignment->parallel->codigo,
                     'subject_name' => $assignment->parallel->offering->subject->nombre,
                     'period_name' => $assignment->parallel->offering->academicPeriod->nombre,

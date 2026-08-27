@@ -50,11 +50,13 @@ const region = computed(
         -->
         <div
             v-show="canScrollLeft"
+            data-table-edge="left"
             class="pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-card to-transparent"
             aria-hidden="true"
         />
         <div
             v-show="canScrollRight"
+            data-table-edge="right"
             class="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-card to-transparent"
             aria-hidden="true"
         />

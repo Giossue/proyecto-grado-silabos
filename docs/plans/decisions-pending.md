@@ -18,7 +18,7 @@
 | PV-12 | Base legal, finalidad y aviso de privacidad | UEB/datos | P0 datos sensibles, P2 producción |
 | PV-13 | Hardware disponible para IA local | Personal técnico/autores | P0 selección IA |
 | PV-14 | Modelos locales de embeddings y generación | Autores/evaluación experta | P0 implementación IA final |
-| PV-15 | Correo institucional y contenido de avisos | Técnico/coordinación | P1 notificación externa |
+| PV-15 | Correo institucional y contenido de avisos | Técnico/coordinación | P1 notificación externa; mecanismo listo, transporte en `log` |
 | PV-16 | Edición excepcional de contenido por coordinador | Coordinación | P0 permisos I-04 |
 | PV-17 | Instrumento/población para medir proceso actual | Dirección/autores | P1 línea base |
 | PV-18 | Umbrales de utilidad y precisión de IA | Coordinación/docentes expertos | P1 aceptación IA |

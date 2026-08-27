@@ -5,11 +5,13 @@ namespace App\Modules\Identity\Application\Actions;
 use App\Models\User;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Identity\Domain\Enums\RoleCode;
+use App\Modules\Identity\Infrastructure\Mail\ManagedUserCredentialsMail;
 use App\Modules\Identity\Infrastructure\Persistence\Models\Role;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
 use App\Modules\Operations\Application\Actions\RecordAuditEvent;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 
 class CreateManagedUser
 {
@@ -56,6 +58,18 @@ class CreateManagedUser
                 metadata: ['initial_role' => $data['role_code']],
                 correlationId: $request->attributes->getString('correlation_id') ?: null,
             );
+
+            // Después del commit: si la transacción se deshace, nadie recibe las
+            // credenciales de una cuenta que no llegó a existir.
+            DB::afterCommit(function () use ($data, $role, $user): void {
+                Mail::to($user->email)->send(new ManagedUserCredentialsMail(
+                    name: $user->name,
+                    email: $user->email,
+                    temporaryPassword: $data['password'],
+                    roleName: $role->nombre,
+                    loginUrl: route('login'),
+                ));
+            });
 
             return $user;
         });

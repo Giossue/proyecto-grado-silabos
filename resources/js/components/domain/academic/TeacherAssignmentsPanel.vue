@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import RecordStatusForm from '@/components/domain/academic/RecordStatusForm.vue';
+import UserProfileSheet from '@/components/domain/identity/UserProfileSheet.vue';
 import TableActionsMenu from '@/components/domain/TableActionsMenu.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
 import { Badge } from '@/components/ui/badge';
@@ -75,6 +76,12 @@ const {
                                 <TableActionsMenu
                                     :label="`Acciones para la asignación de ${item.user_name}`"
                                 >
+                                    <UserProfileSheet
+                                        display="menu"
+                                        :user-id="item.user_id"
+                                        :name="item.user_name"
+                                        :email="item.user_email"
+                                    />
                                     <RecordStatusForm
                                         display="menu"
                                         scope="career"
