@@ -169,8 +169,17 @@ const detailValue = (value: Detail['value']): string => {
                                     </SelectContent>
                                 </Select>
                             </Field>
+                            <!--
+                                Estos dos rótulos sí se ven. Los desplegables se explican
+                                solos con su texto —«Todas las acciones»—, pero un campo de
+                                fecha vacío solo muestra «dd/mm/aaaa»: dos iguales seguidos
+                                no dicen cuál abre el intervalo y cuál lo cierra.
+                            -->
                             <Field>
-                                <FieldLabel for="audit-from" class="sr-only">
+                                <FieldLabel
+                                    for="audit-from"
+                                    class="text-xs text-muted-foreground"
+                                >
                                     Fecha inicial
                                 </FieldLabel>
                                 <Input
@@ -180,7 +189,10 @@ const detailValue = (value: Detail['value']): string => {
                                 />
                             </Field>
                             <Field>
-                                <FieldLabel for="audit-to" class="sr-only">
+                                <FieldLabel
+                                    for="audit-to"
+                                    class="text-xs text-muted-foreground"
+                                >
                                     Fecha final
                                 </FieldLabel>
                                 <Input id="audit-to" v-model="to" type="date" />
