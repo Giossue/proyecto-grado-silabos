@@ -102,7 +102,7 @@ const mainNavItems = computed<NavItem[]>(() => [
                   icon: FileStack,
               },
               {
-                  title: 'Trabajos asíncronos',
+                  title: 'Procesos',
                   href: jobsIndex(),
                   icon: ListRestart,
               },

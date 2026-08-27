@@ -84,11 +84,10 @@ class JobExecutionController extends Controller
     {
         return match ($type) {
             'ai.analysis' => 'Asistencia de IA',
-            'import.simulation' => 'Simulación institucional',
             'document.export' => 'Generación documental',
             'notification.internal' => 'Notificación interna',
             'platform.smoke' => 'Comprobación de plataforma',
-            default => 'Trabajo de plataforma',
+            default => 'Proceso del sistema',
         };
     }
 

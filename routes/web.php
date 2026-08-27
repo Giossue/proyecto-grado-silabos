@@ -110,8 +110,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     Route::prefix('admin')->middleware('active-role')->name('admin.')->group(function () {
-        Route::get('trabajos', [JobExecutionController::class, 'index'])->name('jobs.index');
-        Route::post('trabajos/{execution}/reintentar', [JobExecutionController::class, 'retry'])->name('jobs.retry');
+        Route::get('procesos', [JobExecutionController::class, 'index'])->name('jobs.index');
+        Route::post('procesos/{execution}/reintentar', [JobExecutionController::class, 'retry'])->name('jobs.retry');
         Route::get('auditoria', [AuditEventController::class, 'index'])->name('audit.index');
         Route::get('usuarios', [ManagedUserController::class, 'index'])->name('users.index');
         Route::post('usuarios', [ManagedUserController::class, 'store'])->name('users.store');

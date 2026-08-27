@@ -15,7 +15,8 @@
 - La descarga reautoriza y no expone almacenamiento público.
 - Informes definen indicador y respetan filtros/alcance.
 - Auditoría apend-only reconstruye transiciones y acciones críticas.
-- Trabajos asíncronos muestran estado, intentos y causa sin duplicar efectos.
+- ADM-09 muestra estado, intentos y causa de cada proceso, sin duplicar efectos. Se
+  titula «Procesos»: nombra para qué sirve, no la máquina que hay debajo.
 
 ## Criterios críticos
 

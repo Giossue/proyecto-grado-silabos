@@ -56,7 +56,7 @@ const props = defineProps<{
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: 'Trabajos asíncronos', href: jobsIndex() }],
+        breadcrumbs: [{ title: 'Procesos', href: jobsIndex() }],
     },
 });
 
@@ -121,11 +121,11 @@ const formatDate = (value: string | null): string =>
 </script>
 
 <template>
-    <Head title="Trabajos asíncronos" />
+    <Head title="Procesos" />
     <PageFrame
         :icon="ListRestart"
-        title="Trabajos asíncronos"
-        description="Diagnóstico seguro del estado de negocio, sin payloads de cola, rutas privadas ni contenido académico."
+        title="Procesos"
+        description="Lo que el sistema hace por detrás: correos, documentos y análisis. Aquí se ve qué terminó y qué falló."
     >
         <Card>
             <CardContent class="flex flex-col gap-4">
@@ -134,13 +134,13 @@ const formatDate = (value: string | null): string =>
                         <template #search>
                             <Field>
                                 <FieldLabel for="jobs-search" class="sr-only">
-                                    Buscar trabajos
+                                    Buscar procesos
                                 </FieldLabel>
                                 <Input
                                     id="jobs-search"
                                     v-model="search"
                                     type="search"
-                                    placeholder="Buscar por tipo o cola"
+                                    placeholder="Buscar por proceso o cola"
                                 />
                             </Field>
                         </template>
@@ -202,7 +202,7 @@ const formatDate = (value: string | null): string =>
                             </Field>
                             <Field>
                                 <FieldLabel for="jobs-queue" class="sr-only">
-                                    Cola funcional
+                                    Cola
                                 </FieldLabel>
                                 <Select v-model="queue">
                                     <SelectTrigger id="jobs-queue">
@@ -232,12 +232,12 @@ const formatDate = (value: string | null): string =>
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Trabajo</TableHead>
+                            <TableHead>Proceso</TableHead>
                             <TableHead>Cola</TableHead>
                             <TableHead>Estado</TableHead>
                             <TableHead>Intentos</TableHead>
                             <TableHead>Inicio / fin</TableHead>
-                            <TableHead>Causa segura</TableHead>
+                            <TableHead>Motivo del fallo</TableHead>
                             <TableHead class="text-right">Acciones</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -304,7 +304,7 @@ const formatDate = (value: string | null): string =>
                                             v-if="retryingId === execution.id"
                                         />
                                         <RotateCw v-else aria-hidden="true" />
-                                        Reintentar trabajo
+                                        Reintentar
                                     </DropdownMenuItem>
                                     <DropdownMenuItem v-else disabled>
                                         No hay acciones disponibles
@@ -317,14 +317,14 @@ const formatDate = (value: string | null): string =>
                                 colspan="7"
                                 class="py-10 text-center text-muted-foreground"
                             >
-                                No hay trabajos para los filtros actuales.
+                                No hay procesos para los filtros actuales.
                             </TableCell>
                         </TableRow>
                     </TableBody>
                 </Table>
                 <TablePagination
                     :meta="executions"
-                    label="Paginación de trabajos asíncronos"
+                    label="Paginación de procesos"
                 />
             </CardContent>
         </Card>

@@ -84,7 +84,7 @@ php artisan queue:work redis --queue=critical --stop-when-empty \
   --timeout=130 --tries=3
 ```
 
-Confirme **Completado**, progreso 100 % e intento 1 en **Administración → Trabajos**.
+Confirme **Completado**, progreso 100 % e intento 1 en **Administración → Procesos**.
 En ejecución continua, supervise procesos separados o un worker que escuche:
 
 ```text

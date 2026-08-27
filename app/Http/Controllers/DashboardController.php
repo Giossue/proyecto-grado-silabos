@@ -61,9 +61,9 @@ class DashboardController extends Controller
             ],
             [
                 'key' => 'failed_jobs',
-                'label' => 'Trabajos fallidos',
+                'label' => 'Procesos fallidos',
                 'value' => JobExecution::query()->where('status', 'failed')->count(),
-                'hint' => 'Ejecuciones asíncronas que terminaron en error',
+                'hint' => 'Correos, documentos y análisis que terminaron en error',
             ],
         ];
     }

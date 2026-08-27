@@ -153,7 +153,7 @@ Las cuentas creadas por el seeder usan exclusivamente datos sintéticos:
    **Corrección solicitada** (`CU-14`).
 3. Como Coordinador, abra **Informes**, filtre la convocatoria y contraste totales con su
    detalle. Ningún registro de otra carrera debe ser visible (`CU-16`).
-4. Como Administrador, abra **Trabajos** y **Auditoría**. Compruebe progreso, intentos,
+4. Como Administrador, abra **Procesos** y **Auditoría**. Compruebe progreso, intentos,
    correlación y eventos del recorrido, sin contenido académico completo (`CU-17`).
 5. Cierre sesión para completar `CU-01`.
 
