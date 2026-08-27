@@ -55,7 +55,7 @@ const cellsOf = (node: HTMLElement): HTMLTableCellElement[] =>
     ).filter((cell) => !('cardMore' in cell.dataset));
 
 /**
- * Copia a cada celda el nombre de su columna y decide cuáles caben en la tarjeta.
+ * Copia a cada celda el nombre de su columna y decide cuáles se quedan en la tabla.
  *
  * El nombre ya está escrito una vez en el encabezado; repetirlo en cada celda de las
  * dieciocho tablas sería copiar cien veces algo que puede leerse de donde ya está, y
@@ -78,30 +78,45 @@ const annotate = (): void => {
         return;
     }
 
-    let hidden = 0;
+    // Las dos primeras columnas se quedan: la primera identifica la fila y la segunda es
+    // la que suele decidir si esa fila interesa. El resto cabe de sobra en el panel.
+    const KEPT = 2;
+    const hidden = cells.filter(
+        (cell, index) =>
+            index >= KEPT &&
+            cell.querySelector('[data-slot="table-actions"]') === null,
+    ).length;
+
+    /*
+     * El menú de acciones se va al panel solo si ya hay algo que ir a ver. En una tabla
+     * corta, esconderlo obligaría a abrir el panel para llegar a lo único que había.
+     */
+    const foldActions = hidden > 0;
 
     cells.forEach((cell, index) => {
         cell.dataset.cardIndex = String(index);
 
         if (cell.querySelector('[data-slot="table-actions"]') !== null) {
             cell.dataset.cardRole = 'actions';
-            delete cell.dataset.cardHidden;
+            cell.dataset.cardHidden = foldActions ? 'true' : 'false';
 
             return;
         }
 
         cell.dataset.label = names[index] ?? '';
+        cell.dataset.cardHidden = index >= KEPT ? 'true' : 'false';
+    });
 
-        // Las dos primeras columnas quedan a la vista: la primera identifica la fila y
-        // la segunda es la que suele decidir si esa fila interesa.
-        if (index > 1) {
-            cell.dataset.cardHidden = 'true';
-            hidden += 1;
-
-            return;
-        }
-
-        delete cell.dataset.cardHidden;
+    // El encabezado esconde las mismas columnas: una cabecera sin celdas debajo dejaría
+    // la tabla descuadrada.
+    Array.from(
+        node
+            .closest('table')
+            ?.querySelectorAll<HTMLElement>(
+                ':scope > thead > tr:last-child > th',
+            ) ?? [],
+    ).forEach((head, index) => {
+        head.dataset.cardHidden = cells[index]?.dataset.cardHidden ?? 'false';
     });
 
     expandable.value = hidden > 0;
@@ -120,7 +135,7 @@ const annotateDetail = (): void => {
 
     cellsOf(node).forEach((cell, index) => {
         cell.dataset.cardIndex = String(index);
-        delete cell.dataset.cardHidden;
+        cell.dataset.cardHidden = 'false';
 
         if (cell.querySelector('[data-slot="table-actions"]') !== null) {
             cell.dataset.cardRole = 'actions';
@@ -161,15 +176,15 @@ watch(open, (isOpen) => {
         <slot />
 
         <!--
-            Celda añadida, no una columna: solo existe en pantalla estrecha, donde la
-            tabla ya no se dibuja como tabla y una celda de más no descuadra nada.
+            Columna que solo existe en pantalla estrecha, al final de la fila y sin
+            encabezado propio: no es un dato, es la puerta al resto de la fila.
         -->
-        <td v-if="isCard && expandable" data-card-more class="p-0">
+        <td v-if="isCard && expandable" data-card-more class="p-1">
             <Button
                 type="button"
                 variant="ghost"
                 size="sm"
-                class="w-full justify-center"
+                class="whitespace-nowrap"
                 @click="open = true"
             >
                 Ver más
@@ -186,15 +201,20 @@ watch(open, (isOpen) => {
     <Sheet v-if="isCard && expandable" v-model:open="open">
         <SheetContent
             side="bottom"
-            class="max-h-[85vh] gap-0 overflow-y-auto rounded-t-xl p-4"
+            class="max-h-[85vh] gap-0 overflow-y-auto rounded-t-xl px-5 pt-5 pb-8"
         >
-            <SheetHeader class="p-0 pr-8">
+            <SheetHeader class="p-0 pr-8 pb-1">
                 <SheetTitle class="text-left">{{ title }}</SheetTitle>
                 <SheetDescription class="sr-only">
                     Todos los datos de la fila y sus acciones.
                 </SheetDescription>
             </SheetHeader>
-            <div ref="detail" data-card-detail>
+            <!--
+                Fuera de la tabla las celdas pierden el tamaño de letra que les daba la
+                tabla y cada dato se dibujaba más grande que en la lista. Aquí se les
+                devuelve, para que el panel y la fila se lean igual.
+            -->
+            <div ref="detail" data-card-detail class="text-sm">
                 <slot />
             </div>
         </SheetContent>
