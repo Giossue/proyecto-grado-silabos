@@ -32,7 +32,7 @@ class ManagedUserController extends Controller
             ? $filters['status']
             : null;
         $users = User::query()
-            ->select(['id', 'name', 'email', 'active', 'created_at'])
+            ->select(['id', 'name', 'email', 'active', 'must_change_password', 'created_at'])
             ->when($search, fn (Builder $query, string $term) => $query->where(
                 fn (Builder $searchQuery) => $searchQuery
                     ->whereRaw('name ILIKE ?', ["%{$term}%"])
@@ -50,6 +50,10 @@ class ManagedUserController extends Controller
                 'name' => $user->name,
                 'email' => $user->email,
                 'active' => $user->active,
+                // Una cuenta con la contraseña temporal todavía puesta no ha entrado
+                // nunca. Sin esto se ve igual que una en uso y nadie sabe a quién
+                // recordarle que revise su correo.
+                'pending_first_login' => $user->must_change_password,
                 'roles' => $user->roleAssignments->map(fn ($assignment) => [
                     'name' => $assignment->role->nombre,
                     'career_name' => $assignment->career?->nombre,

@@ -40,6 +40,9 @@ class ManagedUserTest extends TestCase
                 ->component('Admin/Users/Index')
                 ->has('users.data', 1)
                 ->where('users.data.0.email', 'docente@silabos.test')
+                // Las cuentas sembradas ya tienen contraseña propia; una recién creada
+                // no, y la lista tiene que distinguirlas.
+                ->where('users.data.0.pending_first_login', false)
                 ->where('filters.q', 'Docente')
                 ->where('filters.status', null));
     }

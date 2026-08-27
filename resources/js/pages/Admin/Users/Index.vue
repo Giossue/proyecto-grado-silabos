@@ -44,7 +44,39 @@ type ListedUser = {
     name: string;
     email: string;
     active: boolean;
+    /** Sigue con la contraseña temporal: la cuenta se creó y nadie la ha estrenado. */
+    pending_first_login: boolean;
     roles: { name: string; career_name: string | null }[];
+};
+
+type UserStatus = {
+    label: string;
+    variant: 'secondary' | 'outline' | 'default';
+    hint: string;
+};
+
+const statusOf = (user: ListedUser): UserStatus => {
+    if (!user.active) {
+        return {
+            label: 'Inactivo',
+            variant: 'outline',
+            hint: 'La cuenta está desactivada y no puede iniciar sesión.',
+        };
+    }
+
+    if (user.pending_first_login) {
+        return {
+            label: 'Sin estrenar',
+            variant: 'default',
+            hint: 'La cuenta se creó y todavía nadie ha iniciado sesión con ella. Conserva su contraseña temporal.',
+        };
+    }
+
+    return {
+        label: 'Activo',
+        variant: 'secondary',
+        hint: 'La cuenta está en uso y su titular ya definió su contraseña.',
+    };
 };
 
 defineProps<{
@@ -178,12 +210,16 @@ defineProps<{
                                 </div>
                             </TableCell>
                             <TableCell>
+                                <!--
+                                    Tres estados, no dos. Una cuenta recién creada está
+                                    activa pero nadie ha entrado con ella todavía, y eso
+                                    cambia a quién hay que recordarle que mire su correo.
+                                -->
                                 <Badge
-                                    :variant="
-                                        user.active ? 'secondary' : 'outline'
-                                    "
+                                    :variant="statusOf(user).variant"
+                                    :title="statusOf(user).hint"
                                 >
-                                    {{ user.active ? 'Activo' : 'Inactivo' }}
+                                    {{ statusOf(user).label }}
                                 </Badge>
                             </TableCell>
                             <TableCell class="text-right">

@@ -51,6 +51,32 @@ class TemporaryPasswordTest extends TestCase
         );
     }
 
+    public function test_the_user_list_shows_which_accounts_have_never_been_used(): void
+    {
+        $career = Career::query()
+            ->where('codigo_institucional', 'SOFTWARE')->firstOrFail();
+        $context = $this->administrator->roleAssignments()->firstOrFail();
+
+        $this->actingAs($this->administrator)
+            ->withSession(['active_role_assignment_id' => $context->id])
+            ->post(route('admin.users.store'), [
+                'name' => 'Coordinadora Nueva',
+                'email' => 'coordinadora.nueva@silabos.test',
+                'password' => 'Temporal-2026!',
+                'role_code' => RoleCode::Coordinator->value,
+                'career_id' => $career->id,
+            ])->assertRedirect();
+
+        $this->actingAs($this->administrator)
+            ->withSession(['active_role_assignment_id' => $context->id])
+            ->get(route('admin.users.index', ['q' => 'Coordinadora Nueva']))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->has('users.data', 1)
+                ->where('users.data.0.pending_first_login', true)
+                ->where('users.data.0.active', true));
+    }
+
     public function test_the_seeded_administrator_is_not_locked_out_of_a_fresh_installation(): void
     {
         // Si la instalación naciera bloqueada no habría por dónde crear la primera cuenta.
