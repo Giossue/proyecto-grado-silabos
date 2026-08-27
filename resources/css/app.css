@@ -106,7 +106,8 @@
     --card-foreground: hsl(0 0% 3.9%);
     --popover: hsl(0 0% 100%);
     --popover-foreground: hsl(0 0% 3.9%);
-    --primary: hsl(0 0% 9%);
+    /* Azul institucional #002341. En HSL porque la prueba de contraste lee estos pares. */
+    --primary: hsl(207.7 100% 12.7%);
     --primary-foreground: hsl(0 0% 98%);
     --secondary: hsl(0 0% 92.1%);
     --secondary-foreground: hsl(0 0% 9%);
@@ -149,8 +150,12 @@
     --card-foreground: hsl(0 0% 98%);
     --popover: hsl(0 0% 11%);
     --popover-foreground: hsl(0 0% 98%);
-    --primary: hsl(0 0% 98%);
-    --primary-foreground: hsl(0 0% 9%);
+    /*
+     * El mismo azul, aclarado. Sobre un fondo casi negro, #002341 se confunde con el
+     * fondo: el texto se leería, pero el botón no se vería como botón.
+     */
+    --primary: hsl(207.7 100% 35%);
+    --primary-foreground: hsl(0 0% 98%);
     --secondary: hsl(0 0% 14.9%);
     --secondary-foreground: hsl(0 0% 98%);
     --muted: hsl(0 0% 16.08%);
