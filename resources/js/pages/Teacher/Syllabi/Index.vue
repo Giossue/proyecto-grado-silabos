@@ -1,12 +1,23 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
+import { Form, Head, Link } from '@inertiajs/vue3';
 import { BookOpenCheck, ChevronRight } from '@lucide/vue';
 import SyllabusController from '@/actions/App/Modules/Syllabus/Presentation/Http/Controllers/SyllabusController';
+import FilterToolbar from '@/components/domain/FilterToolbar.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Field, FieldLabel } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import {
+    Select,
+    SelectContent,
+    SelectGroup,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import {
     Table,
     TableBody,
@@ -33,6 +44,7 @@ type SyllabusRow = {
 
 defineProps<{
     syllabi: Paginated<SyllabusRow>;
+    filters: { q: string | null; state: string | null };
 }>();
 
 defineOptions({
@@ -66,6 +78,74 @@ const formatSavedAt = (value: string | null): string =>
     >
         <Card>
             <CardContent class="flex flex-col gap-4">
+                <!-- Paginado en servidor: solo llega la página actual, así que el filtro
+                     se resuelve allá, donde está el resto de los expedientes. -->
+                <Form
+                    v-bind="SyllabusController.index.form()"
+                    :options="{
+                        preserveState: true,
+                        preserveScroll: true,
+                        replace: true,
+                    }"
+                >
+                    <FilterToolbar>
+                        <template #search>
+                            <Field>
+                                <FieldLabel for="syllabi-search" class="sr-only"
+                                    >Buscar sílabo</FieldLabel
+                                >
+                                <Input
+                                    id="syllabi-search"
+                                    name="q"
+                                    type="search"
+                                    :default-value="filters.q ?? ''"
+                                    placeholder="Buscar por asignatura, código o convocatoria"
+                                />
+                            </Field>
+                        </template>
+                        <template #filters>
+                            <Field>
+                                <FieldLabel for="syllabi-state" class="sr-only"
+                                    >Estado</FieldLabel
+                                >
+                                <Select
+                                    name="state"
+                                    :default-value="filters.state ?? 'all'"
+                                >
+                                    <SelectTrigger id="syllabi-state">
+                                        <SelectValue
+                                            placeholder="Todos los estados"
+                                        />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectGroup>
+                                            <SelectItem value="all"
+                                                >Todos los estados</SelectItem
+                                            >
+                                            <SelectItem value="not_started"
+                                                >Sin iniciar</SelectItem
+                                            >
+                                            <SelectItem value="draft"
+                                                >Borrador</SelectItem
+                                            >
+                                            <SelectItem value="in_review"
+                                                >En revisión</SelectItem
+                                            >
+                                            <SelectItem
+                                                value="correction_requested"
+                                                >Corrección
+                                                solicitada</SelectItem
+                                            >
+                                            <SelectItem value="approved"
+                                                >Aprobado</SelectItem
+                                            >
+                                        </SelectGroup>
+                                    </SelectContent>
+                                </Select>
+                            </Field>
+                        </template>
+                    </FilterToolbar>
+                </Form>
                 <Table>
                     <TableHeader>
                         <TableRow>

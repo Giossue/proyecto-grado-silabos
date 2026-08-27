@@ -1,9 +1,19 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import CatalogActions from '@/components/domain/academic/CatalogActions.vue';
+import ClientFilterBar from '@/components/domain/ClientFilterBar.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { Field, FieldLabel } from '@/components/ui/field';
+import {
+    Select,
+    SelectContent,
+    SelectGroup,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import {
     Table,
     TableBody,
@@ -13,6 +23,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { useClientFilter } from '@/composables/useClientFilter';
 import { useClientPagination } from '@/composables/useClientPagination';
 import type {
     AcademicStructureProps,
@@ -42,36 +53,118 @@ const careerCount = (facultyId: string): number =>
 const facultyName = (facultyId: string): string =>
     facultyNames.value.get(facultyId) ?? 'Facultad no disponible';
 
+const facultyFilter = useClientFilter(
+    () => props.catalogs.faculties,
+    (item) => [item.nombre, item.codigo_institucional, item.codigo],
+    {
+        estado: {
+            matches: (item, value) => item.activo === (value === 'active'),
+        },
+    },
+);
+
 const {
     items: facultyPage,
     meta: facultyMeta,
     setPage: setFacultyPage,
-} = useClientPagination(() => props.catalogs.faculties);
+} = useClientPagination(() => facultyFilter.items.value);
+const careerFilter = useClientFilter(
+    () => props.catalogs.careers,
+    (item) => [item.name, item.code],
+    {
+        estado: {
+            matches: (item, value) => item.active === (value === 'active'),
+        },
+    },
+);
+
 const {
     items: careerPage,
     meta: careerMeta,
     setPage: setCareerPage,
-} = useClientPagination(() => props.catalogs.careers);
+} = useClientPagination(() => careerFilter.items.value);
+const campusFilter = useClientFilter(
+    () => props.catalogs.campuses,
+    (item) => [item.nombre, item.codigo_institucional, item.codigo],
+    {
+        estado: {
+            matches: (item, value) => item.activo === (value === 'active'),
+        },
+    },
+);
+
 const {
     items: campusPage,
     meta: campusMeta,
     setPage: setCampusPage,
-} = useClientPagination(() => props.catalogs.campuses);
+} = useClientPagination(() => campusFilter.items.value);
+const modalityFilter = useClientFilter(
+    () => props.catalogs.modalities,
+    (item) => [item.nombre, item.codigo_institucional, item.codigo],
+    {
+        estado: {
+            matches: (item, value) => item.activo === (value === 'active'),
+        },
+    },
+);
+
 const {
     items: modalityPage,
     meta: modalityMeta,
     setPage: setModalityPage,
-} = useClientPagination(() => props.catalogs.modalities);
+} = useClientPagination(() => modalityFilter.items.value);
+const periodFilter = useClientFilter(
+    () => props.catalogs.periods,
+    (item) => [item.name, item.code],
+    {
+        estado: {
+            matches: (item, value) => item.active === (value === 'active'),
+        },
+    },
+);
+
 const {
     items: periodPage,
     meta: periodMeta,
     setPage: setPeriodPage,
-} = useClientPagination(() => props.catalogs.periods);
+} = useClientPagination(() => periodFilter.items.value);
 </script>
 
 <template>
     <Card v-if="section === 'faculties'">
         <CardContent class="flex flex-col gap-4">
+            <ClientFilterBar
+                v-model="facultyFilter.search.value"
+                input-id="faculties-search"
+                label="Buscar facultad"
+                placeholder="Buscar por nombre o código"
+            >
+                <template #filters>
+                    <Field>
+                        <FieldLabel for="faculties-search-state" class="sr-only"
+                            >Estado</FieldLabel
+                        >
+                        <Select v-model="facultyFilter.values.estado.value">
+                            <SelectTrigger id="faculties-search-state">
+                                <SelectValue placeholder="Todos los estados" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectGroup>
+                                    <SelectItem value="all"
+                                        >Todos los estados</SelectItem
+                                    >
+                                    <SelectItem value="active"
+                                        >Activos</SelectItem
+                                    >
+                                    <SelectItem value="inactive"
+                                        >Archivados</SelectItem
+                                    >
+                                </SelectGroup>
+                            </SelectContent>
+                        </Select>
+                    </Field>
+                </template>
+            </ClientFilterBar>
             <Table>
                 <TableHeader>
                     <TableRow>
@@ -141,6 +234,38 @@ const {
 
     <Card v-else-if="section === 'careers'">
         <CardContent class="flex flex-col gap-4">
+            <ClientFilterBar
+                v-model="careerFilter.search.value"
+                input-id="careers-search"
+                label="Buscar carrera"
+                placeholder="Buscar por nombre o código"
+            >
+                <template #filters>
+                    <Field>
+                        <FieldLabel for="careers-search-state" class="sr-only"
+                            >Estado</FieldLabel
+                        >
+                        <Select v-model="careerFilter.values.estado.value">
+                            <SelectTrigger id="careers-search-state">
+                                <SelectValue placeholder="Todos los estados" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectGroup>
+                                    <SelectItem value="all"
+                                        >Todos los estados</SelectItem
+                                    >
+                                    <SelectItem value="active"
+                                        >Activos</SelectItem
+                                    >
+                                    <SelectItem value="inactive"
+                                        >Archivados</SelectItem
+                                    >
+                                </SelectGroup>
+                            </SelectContent>
+                        </Select>
+                    </Field>
+                </template>
+            </ClientFilterBar>
             <Table>
                 <TableHeader>
                     <TableRow>
@@ -206,6 +331,38 @@ const {
 
     <Card v-else-if="section === 'campuses'">
         <CardContent class="flex flex-col gap-4">
+            <ClientFilterBar
+                v-model="campusFilter.search.value"
+                input-id="campuses-search"
+                label="Buscar campus"
+                placeholder="Buscar por nombre o código"
+            >
+                <template #filters>
+                    <Field>
+                        <FieldLabel for="campuses-search-state" class="sr-only"
+                            >Estado</FieldLabel
+                        >
+                        <Select v-model="campusFilter.values.estado.value">
+                            <SelectTrigger id="campuses-search-state">
+                                <SelectValue placeholder="Todos los estados" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectGroup>
+                                    <SelectItem value="all"
+                                        >Todos los estados</SelectItem
+                                    >
+                                    <SelectItem value="active"
+                                        >Activos</SelectItem
+                                    >
+                                    <SelectItem value="inactive"
+                                        >Archivados</SelectItem
+                                    >
+                                </SelectGroup>
+                            </SelectContent>
+                        </Select>
+                    </Field>
+                </template>
+            </ClientFilterBar>
             <Table>
                 <TableHeader>
                     <TableRow>
@@ -271,6 +428,40 @@ const {
 
     <Card v-else-if="section === 'modalities'">
         <CardContent class="flex flex-col gap-4">
+            <ClientFilterBar
+                v-model="modalityFilter.search.value"
+                input-id="modalities-search"
+                label="Buscar modalidad"
+                placeholder="Buscar por nombre o código"
+            >
+                <template #filters>
+                    <Field>
+                        <FieldLabel
+                            for="modalities-search-state"
+                            class="sr-only"
+                            >Estado</FieldLabel
+                        >
+                        <Select v-model="modalityFilter.values.estado.value">
+                            <SelectTrigger id="modalities-search-state">
+                                <SelectValue placeholder="Todos los estados" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectGroup>
+                                    <SelectItem value="all"
+                                        >Todos los estados</SelectItem
+                                    >
+                                    <SelectItem value="active"
+                                        >Activos</SelectItem
+                                    >
+                                    <SelectItem value="inactive"
+                                        >Archivados</SelectItem
+                                    >
+                                </SelectGroup>
+                            </SelectContent>
+                        </Select>
+                    </Field>
+                </template>
+            </ClientFilterBar>
             <Table>
                 <TableHeader>
                     <TableRow>
@@ -331,6 +522,38 @@ const {
 
     <Card v-else>
         <CardContent class="flex flex-col gap-4">
+            <ClientFilterBar
+                v-model="periodFilter.search.value"
+                input-id="periods-search"
+                label="Buscar periodo"
+                placeholder="Buscar por nombre o código"
+            >
+                <template #filters>
+                    <Field>
+                        <FieldLabel for="periods-search-state" class="sr-only"
+                            >Estado</FieldLabel
+                        >
+                        <Select v-model="periodFilter.values.estado.value">
+                            <SelectTrigger id="periods-search-state">
+                                <SelectValue placeholder="Todos los estados" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectGroup>
+                                    <SelectItem value="all"
+                                        >Todos los estados</SelectItem
+                                    >
+                                    <SelectItem value="active"
+                                        >Activos</SelectItem
+                                    >
+                                    <SelectItem value="inactive"
+                                        >Archivados</SelectItem
+                                    >
+                                </SelectGroup>
+                            </SelectContent>
+                        </Select>
+                    </Field>
+                </template>
+            </ClientFilterBar>
             <Table>
                 <TableHeader>
                     <TableRow>

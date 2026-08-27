@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import RecordStatusForm from '@/components/domain/academic/RecordStatusForm.vue';
+import ClientFilterBar from '@/components/domain/ClientFilterBar.vue';
 import TableActionsMenu from '@/components/domain/TableActionsMenu.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
 import { Badge } from '@/components/ui/badge';
@@ -10,6 +11,15 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
+import { Field, FieldLabel } from '@/components/ui/field';
+import {
+    Select,
+    SelectContent,
+    SelectGroup,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import {
     Table,
     TableBody,
@@ -19,21 +29,47 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { useClientFilter } from '@/composables/useClientFilter';
 import { useClientPagination } from '@/composables/useClientPagination';
 import type { AcademicStructureProps } from '@/types/academic';
 
 const props =
     defineProps<Pick<AcademicStructureProps, 'offerings' | 'parallels'>>();
+const offeringFilter = useClientFilter(
+    () => props.offerings,
+    (item) => [
+        item.label,
+        item.period_name,
+        item.campus_name,
+        item.modality_name,
+    ],
+    {
+        estado: {
+            matches: (item, value) => item.active === (value === 'active'),
+        },
+    },
+);
+
 const {
     items: offeringPage,
     meta: offeringMeta,
     setPage: setOfferingPage,
-} = useClientPagination(() => props.offerings);
+} = useClientPagination(() => offeringFilter.items.value);
+const parallelFilter = useClientFilter(
+    () => props.parallels,
+    (item) => [item.code, item.offering_label],
+    {
+        estado: {
+            matches: (item, value) => item.active === (value === 'active'),
+        },
+    },
+);
+
 const {
     items: parallelPage,
     meta: parallelMeta,
     setPage: setParallelPage,
-} = useClientPagination(() => props.parallels);
+} = useClientPagination(() => parallelFilter.items.value);
 </script>
 
 <template>
@@ -46,8 +82,46 @@ const {
                     duplicarse.</CardDescription
                 ></CardHeader
             >
-            <CardContent class="flex flex-col gap-4"
-                ><Table
+            <CardContent class="flex flex-col gap-4">
+                <ClientFilterBar
+                    v-model="offeringFilter.search.value"
+                    input-id="offerings-search"
+                    label="Buscar oferta"
+                    placeholder="Buscar por asignatura, periodo, campus o modalidad"
+                >
+                    <template #filters>
+                        <Field>
+                            <FieldLabel
+                                for="offerings-search-state"
+                                class="sr-only"
+                                >Estado</FieldLabel
+                            >
+                            <Select
+                                v-model="offeringFilter.values.estado.value"
+                            >
+                                <SelectTrigger id="offerings-search-state">
+                                    <SelectValue
+                                        placeholder="Todos los estados"
+                                    />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectGroup>
+                                        <SelectItem value="all"
+                                            >Todos los estados</SelectItem
+                                        >
+                                        <SelectItem value="active"
+                                            >Activas</SelectItem
+                                        >
+                                        <SelectItem value="inactive"
+                                            >Archivadas</SelectItem
+                                        >
+                                    </SelectGroup>
+                                </SelectContent>
+                            </Select>
+                        </Field>
+                    </template>
+                </ClientFilterBar>
+                <Table
                     ><TableHeader
                         ><TableRow
                             ><TableHead>Materia</TableHead
@@ -112,8 +186,46 @@ const {
                     archivada.</CardDescription
                 ></CardHeader
             >
-            <CardContent class="flex flex-col gap-4"
-                ><Table
+            <CardContent class="flex flex-col gap-4">
+                <ClientFilterBar
+                    v-model="parallelFilter.search.value"
+                    input-id="parallels-search"
+                    label="Buscar paralelo"
+                    placeholder="Buscar por código u oferta"
+                >
+                    <template #filters>
+                        <Field>
+                            <FieldLabel
+                                for="parallels-search-state"
+                                class="sr-only"
+                                >Estado</FieldLabel
+                            >
+                            <Select
+                                v-model="parallelFilter.values.estado.value"
+                            >
+                                <SelectTrigger id="parallels-search-state">
+                                    <SelectValue
+                                        placeholder="Todos los estados"
+                                    />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectGroup>
+                                        <SelectItem value="all"
+                                            >Todos los estados</SelectItem
+                                        >
+                                        <SelectItem value="active"
+                                            >Activos</SelectItem
+                                        >
+                                        <SelectItem value="inactive"
+                                            >Archivados</SelectItem
+                                        >
+                                    </SelectGroup>
+                                </SelectContent>
+                            </Select>
+                        </Field>
+                    </template>
+                </ClientFilterBar>
+                <Table
                     ><TableHeader
                         ><TableRow
                             ><TableHead>Oferta</TableHead

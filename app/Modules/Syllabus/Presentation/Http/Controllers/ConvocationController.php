@@ -27,10 +27,24 @@ class ConvocationController extends Controller
     public function index(ViewConvocationsRequest $request, ActiveRole $roles): Response
     {
         $careerId = $roles->resolve($request)?->carrera_id;
+        $filters = $request->validated();
+        $search = is_string($filters['q'] ?? null) ? trim($filters['q']) : null;
+        $state = in_array($filters['state'] ?? null, ['preparation', 'open', 'closed'], true)
+            ? $filters['state']
+            : null;
 
         return Inertia::render('Coordination/Convocations/Index', [
+            'filters' => ['q' => $search ?: null, 'state' => $state],
             'convocations' => Convocation::query()
                 ->where('carrera_id', $careerId)
+                // Una convocatoria se recuerda por su nombre o por el periodo que abarca.
+                ->when($search, fn ($query, string $term) => $query->where(
+                    fn ($outer) => $outer
+                        ->whereRaw('nombre ILIKE ?', ["%{$term}%"])
+                        ->orWhereHas('academicPeriod', fn ($period) => $period
+                            ->whereRaw('nombre ILIKE ?', ["%{$term}%"])),
+                ))
+                ->when($state, fn ($query, string $value) => $query->where('estado', $value))
                 ->with(['academicPeriod:id,nombre', 'templateVersion.template:id,nombre'])
                 ->withCount('syllabi')
                 ->orderByDesc('created_at')

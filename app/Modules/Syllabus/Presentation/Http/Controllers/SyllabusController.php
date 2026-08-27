@@ -39,13 +39,32 @@ class SyllabusController extends Controller
         $user = $request->user();
         abort_unless($user instanceof User, 401);
 
+        $filters = $request->validated();
+        $search = is_string($filters['q'] ?? null) ? trim($filters['q']) : null;
+        $state = in_array($filters['state'] ?? null, [
+            'not_started', 'draft', 'in_review', 'correction_requested', 'approved',
+        ], true) ? $filters['state'] : null;
+
         return Inertia::render('Teacher/Syllabi/Index', [
+            'filters' => ['q' => $search ?: null, 'state' => $state],
             'syllabi' => Syllabus::query()
                 ->whereHas('convocation', fn ($query) => $query->where('carrera_id', $activeRole?->carrera_id))
                 ->whereHas('collaborators', fn ($query) => $query->where('usuario_id', $user->id))
+                // La búsqueda mira la asignatura y la convocatoria, que es como se
+                // recuerda un expediente: por la materia y por el periodo en que se pidió.
+                ->when($search, fn ($query, string $term) => $query->where(
+                    fn ($outer) => $outer
+                        ->whereHas('subject', fn ($subject) => $subject
+                            ->whereRaw('nombre ILIKE ?', ["%{$term}%"])
+                            ->orWhereRaw('codigo_institucional ILIKE ?', ["%{$term}%"]))
+                        ->orWhereHas('convocation', fn ($convocation) => $convocation
+                            ->whereRaw('nombre ILIKE ?', ["%{$term}%"])),
+                ))
+                ->when($state, fn ($query, string $value) => $query->where('estado', $value))
                 ->with(['convocation:id,nombre,periodo_academico_id', 'convocation.academicPeriod:id,nombre', 'subject:id,nombre,codigo_institucional', 'scopes.parallel:id,codigo'])
                 ->orderByDesc('updated_at')
                 ->paginate(15)
+                ->withQueryString()
                 ->through(fn (Syllabus $syllabus) => [
                     'id' => $syllabus->id,
                     'subject' => $syllabus->subject->nombre,

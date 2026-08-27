@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
+import { Form, Head, Link } from '@inertiajs/vue3';
 import { CalendarRange, ChevronRight } from '@lucide/vue';
 import ConvocationController from '@/actions/App/Modules/Syllabus/Presentation/Http/Controllers/ConvocationController';
+import FilterToolbar from '@/components/domain/FilterToolbar.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
 import ConvocationCreationSheet from '@/components/domain/syllabus/ConvocationCreationSheet.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
@@ -9,6 +10,16 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Field, FieldLabel } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import {
+    Select,
+    SelectContent,
+    SelectGroup,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import {
     Table,
     TableBody,
@@ -33,6 +44,7 @@ type ConvocationRow = {
 
 defineProps<{
     convocations: Paginated<ConvocationRow>;
+    filters: { q: string | null; state: string | null };
     periods: { id: string; nombre: string }[];
     templates: { id: string; label: string }[];
     sources: { id: string; label: string }[];
@@ -78,6 +90,68 @@ const stateLabel = (state: string): string =>
 
         <Card>
             <CardContent class="flex flex-col gap-4">
+                <Form
+                    v-bind="ConvocationController.index.form()"
+                    :options="{
+                        preserveState: true,
+                        preserveScroll: true,
+                        replace: true,
+                    }"
+                >
+                    <FilterToolbar>
+                        <template #search>
+                            <Field>
+                                <FieldLabel
+                                    for="convocations-search"
+                                    class="sr-only"
+                                    >Buscar convocatoria</FieldLabel
+                                >
+                                <Input
+                                    id="convocations-search"
+                                    name="q"
+                                    type="search"
+                                    :default-value="filters.q ?? ''"
+                                    placeholder="Buscar por nombre o periodo"
+                                />
+                            </Field>
+                        </template>
+                        <template #filters>
+                            <Field>
+                                <FieldLabel
+                                    for="convocations-state"
+                                    class="sr-only"
+                                    >Estado</FieldLabel
+                                >
+                                <Select
+                                    name="state"
+                                    :default-value="filters.state ?? 'all'"
+                                >
+                                    <SelectTrigger id="convocations-state">
+                                        <SelectValue
+                                            placeholder="Todos los estados"
+                                        />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectGroup>
+                                            <SelectItem value="all"
+                                                >Todos los estados</SelectItem
+                                            >
+                                            <SelectItem value="preparation"
+                                                >En preparación</SelectItem
+                                            >
+                                            <SelectItem value="open"
+                                                >Abiertas</SelectItem
+                                            >
+                                            <SelectItem value="closed"
+                                                >Cerradas</SelectItem
+                                            >
+                                        </SelectGroup>
+                                    </SelectContent>
+                                </Select>
+                            </Field>
+                        </template>
+                    </FilterToolbar>
+                </Form>
                 <Table>
                     <TableHeader>
                         <TableRow>

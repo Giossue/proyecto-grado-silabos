@@ -4,6 +4,7 @@ namespace App\Modules\Syllabus\Presentation\Http\Requests;
 
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\Syllabus;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class ViewSyllabiRequest extends FormRequest
 {
@@ -12,9 +13,15 @@ class ViewSyllabiRequest extends FormRequest
         return $this->user()?->can('viewAny', Syllabus::class) === true;
     }
 
-    /** @return array<string, list<string>> */
+    /** @return array<string, list<mixed>> */
     public function rules(): array
     {
-        return [];
+        return [
+            'q' => ['nullable', 'string', 'max:120'],
+            'state' => ['nullable', Rule::in([
+                'all', 'not_started', 'draft', 'in_review', 'correction_requested', 'approved',
+            ])],
+            'page' => ['nullable', 'integer', 'min:1'],
+        ];
     }
 }

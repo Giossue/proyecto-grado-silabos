@@ -8,6 +8,7 @@ import {
     Files,
 } from '@lucide/vue';
 import ConvocationController from '@/actions/App/Modules/Syllabus/Presentation/Http/Controllers/ConvocationController';
+import ClientFilterBar from '@/components/domain/ClientFilterBar.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
 import DeadlineExtensionSheet from '@/components/domain/syllabus/DeadlineExtensionSheet.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
@@ -21,7 +22,16 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
+import { Field, FieldLabel } from '@/components/ui/field';
 import { FieldError } from '@/components/ui/field';
+import {
+    Select,
+    SelectContent,
+    SelectGroup,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
 import {
     Table,
@@ -32,6 +42,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { useClientFilter } from '@/composables/useClientFilter';
 import { useClientPagination } from '@/composables/useClientPagination';
 import { index as convocationsIndex } from '@/routes/convocations';
 
@@ -90,11 +101,22 @@ const formatDate = (value: string | null): string =>
 
 const formattedStart = formatDate(props.convocation.start_date);
 const formattedDeadline = formatDate(props.convocation.draft_deadline);
+const syllabusFilter = useClientFilter(
+    () => props.convocation.syllabi,
+    (item) => [item.subject, item.code, item.state],
+    {
+        // Un expediente no se archiva: recorre los estados de su ciclo.
+        estado: {
+            matches: (item, value) => item.state === value,
+        },
+    },
+);
+
 const {
     items: syllabusPage,
     meta: syllabusMeta,
     setPage: setSyllabusPage,
-} = useClientPagination(() => props.convocation.syllabi);
+} = useClientPagination(() => syllabusFilter.items.value);
 </script>
 
 <template>
@@ -223,6 +245,52 @@ const {
                     </CardDescription>
                 </CardHeader>
                 <CardContent class="flex flex-col gap-4">
+                    <ClientFilterBar
+                        v-model="syllabusFilter.search.value"
+                        input-id="convocation-syllabi-search"
+                        label="Buscar expediente"
+                        placeholder="Buscar por asignatura o código"
+                    >
+                        <template #filters>
+                            <Field>
+                                <FieldLabel
+                                    for="convocation-syllabi-search-state"
+                                    class="sr-only"
+                                    >Estado</FieldLabel
+                                >
+                                <Select
+                                    v-model="syllabusFilter.values.estado.value"
+                                >
+                                    <SelectTrigger
+                                        id="convocation-syllabi-search-state"
+                                    >
+                                        <SelectValue
+                                            placeholder="Todos los estados"
+                                        />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectGroup>
+                                            <SelectItem value="all"
+                                                >Todos los estados</SelectItem
+                                            >
+                                            <SelectItem value="not_started"
+                                                >Sin iniciar</SelectItem
+                                            >
+                                            <SelectItem value="draft"
+                                                >Borrador</SelectItem
+                                            >
+                                            <SelectItem value="in_review"
+                                                >En revisión</SelectItem
+                                            >
+                                            <SelectItem value="approved"
+                                                >Aprobado</SelectItem
+                                            >
+                                        </SelectGroup>
+                                    </SelectContent>
+                                </Select>
+                            </Field>
+                        </template>
+                    </ClientFilterBar>
                     <Table>
                         <TableHeader>
                             <TableRow>
