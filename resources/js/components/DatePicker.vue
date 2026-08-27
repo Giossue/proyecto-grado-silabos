@@ -3,10 +3,12 @@ import {
     DateFormatter,
     getLocalTimeZone,
     parseDate,
+    today,
 } from '@internationalized/date';
 import { CalendarDays, X } from '@lucide/vue';
 import type { DateValue } from 'reka-ui';
-import { computed, useTemplateRef } from 'vue';
+import { createYearRange } from 'reka-ui/date';
+import { computed, ref, useTemplateRef } from 'vue';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import {
@@ -52,6 +54,17 @@ if (model.value === undefined) {
 }
 
 const root = useTemplateRef<HTMLElement>('root');
+const open = ref(false);
+
+/*
+ * Cinco años atrás y diez adelante. El calendario ofrece por su cuenta un siglo entero,
+ * y aquí ninguna fecha —un periodo lectivo, una asignación, el documento que la sustenta—
+ * cae tan lejos: buscar 2026 entre ciento once años es peor que no tener la lista.
+ */
+const yearRange = createYearRange({
+    start: today(getLocalTimeZone()).cycle('year', -5),
+    end: today(getLocalTimeZone()).cycle('year', 10),
+});
 
 // Fechas cortas y en español: «27 ago 2026». La forma larga desbordaba el botón en un
 // móvil, y la numérica se confunde entre día y mes.
@@ -74,6 +87,10 @@ const selected = computed<DateValue | undefined>({
     get: () => parse(model.value),
     set: (value) => {
         model.value = value?.toString() ?? '';
+
+        // Elegir el día termina la tarea: dejarlo abierto tapaba el formulario y obligaba
+        // a tocar fuera para seguir.
+        open.value = false;
 
         /*
          * Las barras de filtros consultan solas al cambiar un campo, y escuchan el evento
@@ -105,7 +122,7 @@ const clear = (): void => {
         -->
         <input v-if="name" type="hidden" :name="name" :value="model" />
 
-        <Popover>
+        <Popover v-model:open="open">
             <PopoverTrigger as-child>
                 <Button
                     :id="id"
@@ -125,8 +142,12 @@ const clear = (): void => {
                 </Button>
             </PopoverTrigger>
             <PopoverContent class="w-auto p-0" align="start">
+                <!-- Mes y año como listas: sin ellas, ponerse en agosto del año que
+                     viene son doce toques en la flecha. -->
                 <Calendar
                     v-model="selected"
+                    layout="month-and-year"
+                    :year-range="yearRange"
                     locale="es-EC"
                     initial-focus
                     class="p-3"
