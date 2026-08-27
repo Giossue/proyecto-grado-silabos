@@ -7,7 +7,6 @@ import ManagedUserSheet from '@/components/domain/identity/ManagedUserSheet.vue'
 import PageFrame from '@/components/domain/PageFrame.vue';
 import TableActionsMenu from '@/components/domain/TableActionsMenu.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Field, FieldLabel } from '@/components/ui/field';
@@ -268,13 +267,11 @@ defineProps<{
                             -->
                             <TableCell>
                                 <div class="flex flex-col items-start gap-1">
-                                    <Badge
+                                    <span
                                         v-for="(role, index) in user.roles"
                                         :key="`rol-${index}`"
-                                        variant="outline"
+                                        >{{ role.name }}</span
                                     >
-                                        {{ role.name }}
-                                    </Badge>
                                     <span
                                         v-if="user.roles.length === 0"
                                         class="text-sm text-muted-foreground"
@@ -312,12 +309,9 @@ defineProps<{
                                     activa pero nadie ha entrado con ella todavía, y eso
                                     cambia a quién hay que recordarle que mire su correo.
                                 -->
-                                <Badge
-                                    :variant="statusOf(user).variant"
-                                    :title="statusOf(user).hint"
-                                >
-                                    {{ statusOf(user).label }}
-                                </Badge>
+                                <span :title="statusOf(user).hint">{{
+                                    statusOf(user).label
+                                }}</span>
                             </TableCell>
                             <TableCell class="text-right">
                                 <TableActionsMenu

@@ -14,7 +14,6 @@ import PageFrame from '@/components/domain/PageFrame.vue';
 import TableActionsMenu from '@/components/domain/TableActionsMenu.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -361,18 +360,19 @@ const formatDate = (value: string | null): string =>
                                         </div>
                                     </TableCell>
                                     <TableCell>
-                                        <Badge
-                                            :variant="
+                                        <span
+                                            :class="
                                                 execution.status === 'failed'
-                                                    ? 'destructive'
+                                                    ? 'text-destructive'
                                                     : execution.status ===
                                                         'completed'
-                                                      ? 'outline'
-                                                      : 'secondary'
+                                                      ? ''
+                                                      : ''
                                             "
+                                            >{{
+                                                statusLabel(execution.status)
+                                            }}</span
                                         >
-                                            {{ statusLabel(execution.status) }}
-                                        </Badge>
                                     </TableCell>
                                     <TableCell class="text-sm">
                                         {{ execution.total_items }} fila(s),
@@ -580,21 +580,20 @@ const formatDate = (value: string | null): string =>
                                     </div>
                                 </TableCell>
                                 <TableCell>
-                                    <Badge
-                                        :variant="
+                                    <span
+                                        :class="
                                             item.result === 'rejected'
-                                                ? 'destructive'
-                                                : 'secondary'
+                                                ? 'text-destructive'
+                                                : ''
                                         "
-                                    >
-                                        {{
+                                        >{{
                                             item.result === 'rejected'
                                                 ? 'Rechazada'
                                                 : actionLabel(
                                                       item.proposed_action,
                                                   )
-                                        }}
-                                    </Badge>
+                                        }}</span
+                                    >
                                 </TableCell>
                                 <TableCell class="max-w-md text-sm">{{
                                     item.reason
@@ -606,9 +605,7 @@ const formatDate = (value: string | null): string =>
                                         "
                                         class="flex flex-col gap-1 text-sm"
                                     >
-                                        <Badge variant="outline"
-                                            >Excluida</Badge
-                                        >
+                                        Excluida
                                         <p class="text-muted-foreground">
                                             {{ item.justification }}
                                         </p>

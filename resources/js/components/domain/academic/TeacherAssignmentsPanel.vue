@@ -4,7 +4,6 @@ import ClientFilterBar from '@/components/domain/ClientFilterBar.vue';
 import UserProfileSheet from '@/components/domain/identity/UserProfileSheet.vue';
 import TableActionsMenu from '@/components/domain/TableActionsMenu.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Field, FieldLabel } from '@/components/ui/field';
 import {
@@ -133,13 +132,7 @@ const {
                                 {{ item.valid_until ?? 'Sin fecha de fin' }}
                             </TableCell>
                             <TableCell>
-                                <Badge
-                                    :variant="
-                                        item.active ? 'secondary' : 'outline'
-                                    "
-                                >
-                                    {{ item.active ? 'Activa' : 'Archivada' }}
-                                </Badge>
+                                {{ item.active ? 'Activa' : 'Archivada' }}
                             </TableCell>
                             <TableCell class="text-right">
                                 <TableActionsMenu

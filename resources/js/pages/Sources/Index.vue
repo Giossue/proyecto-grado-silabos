@@ -6,7 +6,6 @@ import ClientFilterBar from '@/components/domain/ClientFilterBar.vue';
 import AcademicSourceCreationSheet from '@/components/domain/configuration/AcademicSourceCreationSheet.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Field, FieldLabel } from '@/components/ui/field';
 import {
@@ -165,15 +164,15 @@ defineOptions({
                                 </div></TableCell
                             ><TableCell>{{ source.career_name }}</TableCell
                             ><TableCell
-                                ><div class="flex flex-wrap gap-2">
-                                    <Badge
+                                ><!--
+                                    Una versión por línea. En fila, sin la caja que las
+                                    separaba, «v1 · Activa v2 · Borrador» se leía como una
+                                    sola frase.
+                                -->
+                                <div class="flex flex-col gap-1">
+                                    <span
                                         v-for="version in source.versions"
                                         :key="version.id"
-                                        :variant="
-                                            version.state === 'active'
-                                                ? 'secondary'
-                                                : 'outline'
-                                        "
                                         >v{{ version.number }} ·
                                         {{
                                             version.state === 'active'
@@ -181,7 +180,7 @@ defineOptions({
                                                 : version.state === 'draft'
                                                   ? 'Borrador'
                                                   : 'Reemplazada'
-                                        }}</Badge
+                                        }}</span
                                     >
                                 </div></TableCell
                             ></TableRow

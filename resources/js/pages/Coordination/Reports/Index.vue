@@ -7,7 +7,6 @@ import FilterToolbar from '@/components/domain/FilterToolbar.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
 import TableActionsMenu from '@/components/domain/TableActionsMenu.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
-import { Badge } from '@/components/ui/badge';
 import {
     Card,
     CardContent,
@@ -379,9 +378,7 @@ const stateLabel = (value: string): string =>
                                 item.teachers.join(', ') || 'Sin asignación'
                             }}</TableCell>
                             <TableCell>
-                                <Badge variant="outline">{{
-                                    stateLabel(item.state)
-                                }}</Badge>
+                                {{ stateLabel(item.state) }}
                             </TableCell>
                             <TableCell
                                 >{{ item.completion.toFixed(0) }} %</TableCell

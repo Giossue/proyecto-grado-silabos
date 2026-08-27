@@ -3,7 +3,6 @@ import { computed } from 'vue';
 import CatalogActions from '@/components/domain/academic/CatalogActions.vue';
 import ClientFilterBar from '@/components/domain/ClientFilterBar.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Field, FieldLabel } from '@/components/ui/field';
 import {
@@ -200,13 +199,7 @@ const {
                             {{ careerCount(faculty.id) }}
                         </TableCell>
                         <TableCell>
-                            <Badge
-                                :variant="
-                                    faculty.activo ? 'secondary' : 'outline'
-                                "
-                            >
-                                {{ faculty.activo ? 'Activa' : 'Archivada' }}
-                            </Badge>
+                            {{ faculty.activo ? 'Activa' : 'Archivada' }}
                         </TableCell>
                         <TableCell class="text-right">
                             <CatalogActions
@@ -298,13 +291,7 @@ const {
                             {{ career.code || 'Sin código institucional' }}
                         </TableCell>
                         <TableCell>
-                            <Badge
-                                :variant="
-                                    career.active ? 'secondary' : 'outline'
-                                "
-                            >
-                                {{ career.active ? 'Activa' : 'Archivada' }}
-                            </Badge>
+                            {{ career.active ? 'Activa' : 'Archivada' }}
                         </TableCell>
                         <TableCell class="text-right">
                             <CatalogActions
@@ -394,13 +381,7 @@ const {
                             }}
                         </TableCell>
                         <TableCell>
-                            <Badge
-                                :variant="
-                                    campus.activo ? 'secondary' : 'outline'
-                                "
-                            >
-                                {{ campus.activo ? 'Activo' : 'Archivado' }}
-                            </Badge>
+                            {{ campus.activo ? 'Activo' : 'Archivado' }}
                         </TableCell>
                         <TableCell class="text-right">
                             <CatalogActions
@@ -490,13 +471,7 @@ const {
                             {{ modality.codigo || 'Sin código' }}
                         </TableCell>
                         <TableCell>
-                            <Badge
-                                :variant="
-                                    modality.activo ? 'secondary' : 'outline'
-                                "
-                            >
-                                {{ modality.activo ? 'Activa' : 'Archivada' }}
-                            </Badge>
+                            {{ modality.activo ? 'Activa' : 'Archivada' }}
                         </TableCell>
                         <TableCell class="text-right">
                             <CatalogActions
@@ -590,13 +565,7 @@ const {
                             </time>
                         </TableCell>
                         <TableCell>
-                            <Badge
-                                :variant="
-                                    period.active ? 'secondary' : 'outline'
-                                "
-                            >
-                                {{ period.active ? 'Activo' : 'Archivado' }}
-                            </Badge>
+                            {{ period.active ? 'Activo' : 'Archivado' }}
                         </TableCell>
                         <TableCell class="text-right">
                             <CatalogActions

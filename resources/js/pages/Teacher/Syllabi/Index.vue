@@ -5,7 +5,6 @@ import SyllabusController from '@/actions/App/Modules/Syllabus/Presentation/Http
 import FilterToolbar from '@/components/domain/FilterToolbar.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Field, FieldLabel } from '@/components/ui/field';
@@ -195,15 +194,7 @@ const formatSavedAt = (value: string | null): string =>
                                 </div>
                             </TableCell>
                             <TableCell>
-                                <Badge
-                                    :variant="
-                                        syllabus.state === 'draft'
-                                            ? 'secondary'
-                                            : 'outline'
-                                    "
-                                >
-                                    {{ stateLabel(syllabus.state) }}
-                                </Badge>
+                                {{ stateLabel(syllabus.state) }}
                             </TableCell>
                             <TableCell>{{
                                 formatSavedAt(syllabus.saved_at)

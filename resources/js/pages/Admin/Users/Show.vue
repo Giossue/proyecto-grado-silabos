@@ -208,22 +208,13 @@ const page = usePage();
                                 {{
                                     assignment.valid_until ?? 'Sin fecha de fin'
                                 }}</TableCell
-                            ><TableCell
-                                ><Badge
-                                    :variant="
-                                        assignment.effective
-                                            ? 'secondary'
-                                            : 'outline'
-                                    "
-                                    >{{
-                                        assignment.effective
-                                            ? 'Vigente'
-                                            : assignment.active
-                                              ? 'Fuera de fecha'
-                                              : 'Archivada'
-                                    }}</Badge
-                                ></TableCell
-                            ></TableRow
+                            ><TableCell>{{
+                                assignment.effective
+                                    ? 'Vigente'
+                                    : assignment.active
+                                      ? 'Fuera de fecha'
+                                      : 'Archivada'
+                            }}</TableCell></TableRow
                         >
                     </TableBody></Table
                 >

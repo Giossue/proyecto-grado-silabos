@@ -6,7 +6,6 @@ import ClientFilterBar from '@/components/domain/ClientFilterBar.vue';
 import TemplateCreationSheet from '@/components/domain/configuration/TemplateCreationSheet.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Field, FieldLabel } from '@/components/ui/field';
@@ -169,18 +168,9 @@ defineOptions({
                                         ></Button
                                     >
                                 </div></TableCell
-                            ><TableCell
-                                ><Badge
-                                    :variant="
-                                        template.active
-                                            ? 'secondary'
-                                            : 'outline'
-                                    "
-                                    >{{
-                                        template.active ? 'Activa' : 'Archivada'
-                                    }}</Badge
-                                ></TableCell
-                            ></TableRow
+                            ><TableCell>{{
+                                template.active ? 'Activa' : 'Archivada'
+                            }}</TableCell></TableRow
                         >
                     </TableBody></Table
                 ><TablePagination

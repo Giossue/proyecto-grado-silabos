@@ -7,7 +7,6 @@ import PageFrame from '@/components/domain/PageFrame.vue';
 import ConvocationCreationSheet from '@/components/domain/syllabus/ConvocationCreationSheet.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Field, FieldLabel } from '@/components/ui/field';
@@ -207,15 +206,7 @@ const stateLabel = (state: string): string =>
                                 </div>
                             </TableCell>
                             <TableCell>
-                                <Badge
-                                    :variant="
-                                        convocation.state === 'open'
-                                            ? 'secondary'
-                                            : 'outline'
-                                    "
-                                >
-                                    {{ stateLabel(convocation.state) }}
-                                </Badge>
+                                {{ stateLabel(convocation.state) }}
                             </TableCell>
                             <TableCell class="text-right">
                                 {{ convocation.syllabi_count }}

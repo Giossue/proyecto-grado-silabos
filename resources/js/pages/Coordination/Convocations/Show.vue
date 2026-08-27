@@ -333,9 +333,7 @@ const {
                                     </div>
                                 </TableCell>
                                 <TableCell>
-                                    <Badge variant="outline">
-                                        {{ stateLabel(syllabus.state) }}
-                                    </Badge>
+                                    {{ stateLabel(syllabus.state) }}
                                 </TableCell>
                                 <TableCell class="text-right">
                                     {{ syllabus.completion.toFixed(0) }} %

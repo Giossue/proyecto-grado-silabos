@@ -6,7 +6,6 @@ import FilterToolbar from '@/components/domain/FilterToolbar.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
 import TableActionsMenu from '@/components/domain/TableActionsMenu.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Field, FieldLabel } from '@/components/ui/field';
@@ -252,17 +251,16 @@ const formatDate = (value: string | null): string =>
                             }}</TableCell>
                             <TableCell>{{ execution.queue }}</TableCell>
                             <TableCell>
-                                <Badge
-                                    :variant="
+                                <span
+                                    :class="
                                         execution.status === 'failed'
-                                            ? 'destructive'
+                                            ? 'text-destructive'
                                             : execution.status === 'completed'
-                                              ? 'outline'
-                                              : 'secondary'
+                                              ? ''
+                                              : ''
                                     "
+                                    >{{ statusLabel(execution.status) }}</span
                                 >
-                                    {{ statusLabel(execution.status) }}
-                                </Badge>
                                 <div
                                     v-if="
                                         ['pending', 'running'].includes(

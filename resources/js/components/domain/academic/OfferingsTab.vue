@@ -3,7 +3,6 @@ import RecordStatusForm from '@/components/domain/academic/RecordStatusForm.vue'
 import ClientFilterBar from '@/components/domain/ClientFilterBar.vue';
 import TableActionsMenu from '@/components/domain/TableActionsMenu.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
-import { Badge } from '@/components/ui/badge';
 import {
     Card,
     CardContent,
@@ -149,15 +148,9 @@ const {
                                 >{{ item.campus_name }} ·
                                 {{ item.modality_name }}</TableCell
                             ><TableCell>{{ item.parallel_count }}</TableCell
-                            ><TableCell
-                                ><Badge
-                                    :variant="
-                                        item.active ? 'secondary' : 'outline'
-                                    "
-                                    >{{
-                                        item.active ? 'Activa' : 'Archivada'
-                                    }}</Badge
-                                ></TableCell
+                            ><TableCell>{{
+                                item.active ? 'Activa' : 'Archivada'
+                            }}</TableCell
                             ><TableCell class="text-right"
                                 ><TableActionsMenu
                                     :label="`Acciones para ${item.label}`"
@@ -247,15 +240,9 @@ const {
                             ><TableCell class="font-medium">{{
                                 item.code
                             }}</TableCell
-                            ><TableCell
-                                ><Badge
-                                    :variant="
-                                        item.active ? 'secondary' : 'outline'
-                                    "
-                                    >{{
-                                        item.active ? 'Activo' : 'Archivado'
-                                    }}</Badge
-                                ></TableCell
+                            ><TableCell>{{
+                                item.active ? 'Activo' : 'Archivado'
+                            }}</TableCell
                             ><TableCell class="text-right"
                                 ><TableActionsMenu
                                     :label="`Acciones para el paralelo ${item.code}`"

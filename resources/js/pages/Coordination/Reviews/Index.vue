@@ -7,7 +7,6 @@ import FilterToolbar from '@/components/domain/FilterToolbar.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
 import TableActionsMenu from '@/components/domain/TableActionsMenu.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Field, FieldLabel } from '@/components/ui/field';
@@ -161,20 +160,17 @@ const stateLabel = (value: string): string =>
                                 N.º {{ item.revision_number }}
                             </TableCell>
                             <TableCell>
-                                <Badge variant="outline">
-                                    {{ stateLabel(item.state) }}
-                                </Badge>
+                                {{ stateLabel(item.state) }}
                             </TableCell>
                             <TableCell>
-                                <Badge
-                                    :variant="
+                                <span
+                                    :class="
                                         item.unresolved_observations > 0
-                                            ? 'destructive'
-                                            : 'secondary'
+                                            ? 'text-destructive'
+                                            : ''
                                     "
+                                    >{{ item.unresolved_observations }}</span
                                 >
-                                    {{ item.unresolved_observations }}
-                                </Badge>
                             </TableCell>
                             <TableCell class="text-right">
                                 <TableActionsMenu

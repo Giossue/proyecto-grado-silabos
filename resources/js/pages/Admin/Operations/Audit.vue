@@ -6,7 +6,6 @@ import AuditEventController from '@/actions/App/Modules/Operations/Presentation/
 import FilterToolbar from '@/components/domain/FilterToolbar.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Field, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -232,19 +231,18 @@ const detailValue = (value: Detail['value']): string => {
                             }}</TableCell>
                             <TableCell>{{ event.resource }}</TableCell>
                             <TableCell>
-                                <Badge
-                                    :variant="
+                                <span
+                                    :class="
                                         event.result === 'failed'
-                                            ? 'destructive'
-                                            : 'outline'
+                                            ? 'text-destructive'
+                                            : ''
                                     "
-                                >
-                                    {{
+                                    >{{
                                         event.result === 'failed'
                                             ? 'Fallido'
                                             : 'Correcto'
-                                    }}
-                                </Badge>
+                                    }}</span
+                                >
                             </TableCell>
                             <TableCell class="max-w-md">
                                 <dl

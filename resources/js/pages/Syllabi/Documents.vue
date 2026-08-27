@@ -13,7 +13,6 @@ import PageFrame from '@/components/domain/PageFrame.vue';
 import TableActionsMenu from '@/components/domain/TableActionsMenu.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
@@ -309,18 +308,19 @@ onUnmounted(() => {
                                     </p>
                                 </TableCell>
                                 <TableCell>
-                                    <Badge
-                                        :variant="
+                                    <span
+                                        :class="
                                             artifact.status === 'failed'
-                                                ? 'destructive'
+                                                ? 'text-destructive'
                                                 : artifact.status ===
                                                     'completed'
-                                                  ? 'outline'
-                                                  : 'secondary'
+                                                  ? ''
+                                                  : ''
                                         "
+                                        >{{
+                                            statusLabel(artifact.status)
+                                        }}</span
                                     >
-                                        {{ statusLabel(artifact.status) }}
-                                    </Badge>
                                     <p
                                         v-if="
                                             artifact.execution &&

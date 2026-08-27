@@ -6,7 +6,6 @@ import RecordStatusForm from '@/components/domain/academic/RecordStatusForm.vue'
 import ClientFilterBar from '@/components/domain/ClientFilterBar.vue';
 import TableActionsMenu from '@/components/domain/TableActionsMenu.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
-import { Badge } from '@/components/ui/badge';
 import {
     Card,
     CardContent,
@@ -163,17 +162,9 @@ const stateLabel: Record<string, string> = {
                                 </div></TableCell
                             ><TableCell>{{ item.career_name }}</TableCell
                             ><TableCell>{{ item.subject_count }}</TableCell
-                            ><TableCell
-                                ><Badge
-                                    :variant="
-                                        item.state === 'published'
-                                            ? 'secondary'
-                                            : 'outline'
-                                    "
-                                    >{{
-                                        stateLabel[item.state] ?? item.state
-                                    }}</Badge
-                                ></TableCell
+                            ><TableCell>{{
+                                stateLabel[item.state] ?? item.state
+                            }}</TableCell
                             ><TableCell class="text-right"
                                 ><TableActionsMenu
                                     :label="`Acciones para la malla ${item.code}`"
@@ -298,15 +289,9 @@ const stateLabel: Record<string, string> = {
                             ><TableCell
                                 >{{ item.credits ?? '—' }} créditos ·
                                 {{ item.total_hours ?? '—' }} h</TableCell
-                            ><TableCell
-                                ><Badge
-                                    :variant="
-                                        item.active ? 'secondary' : 'outline'
-                                    "
-                                    >{{
-                                        item.active ? 'Activa' : 'Archivada'
-                                    }}</Badge
-                                ></TableCell
+                            ><TableCell>{{
+                                item.active ? 'Activa' : 'Archivada'
+                            }}</TableCell
                             ><TableCell class="text-right"
                                 ><TableActionsMenu
                                     :label="`Acciones para ${item.name}`"
