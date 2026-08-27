@@ -1,0 +1,43 @@
+<script setup lang="ts">
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+
+defineProps<{
+    /** Identifica el campo para su etiqueta; debe ser único en la pantalla. */
+    inputId: string;
+    placeholder: string;
+    /** Rótulo para lectores de pantalla; no se dibuja. */
+    label: string;
+}>();
+
+const search = defineModel<string>({ default: '' });
+</script>
+
+<template>
+    <!--
+        Mismo reparto que la barra de las tablas paginadas en servidor, para que las dos
+        se lean igual. Aquí no hay formulario: los datos ya están en la página y el filtro
+        aplica al escribir, sin consultar nada.
+    -->
+    <FieldGroup class="gap-3 lg:flex-row lg:items-end">
+        <div class="min-w-0 lg:flex-1">
+            <Field>
+                <FieldLabel :for="inputId" class="sr-only">
+                    {{ label }}
+                </FieldLabel>
+                <Input
+                    :id="inputId"
+                    v-model="search"
+                    type="search"
+                    :placeholder="placeholder"
+                />
+            </Field>
+        </div>
+        <div
+            v-if="$slots.filters"
+            class="grid min-w-0 gap-3 sm:grid-cols-2 lg:flex lg:flex-none lg:items-end [&_[data-slot=select-trigger]]:w-full [&>[data-slot=field]]:min-w-0 lg:[&>[data-slot=field]]:w-44"
+        >
+            <slot name="filters" />
+        </div>
+    </FieldGroup>
+</template>

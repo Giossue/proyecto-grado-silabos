@@ -1,9 +1,19 @@
 <script setup lang="ts">
 import RecordStatusForm from '@/components/domain/academic/RecordStatusForm.vue';
+import ClientFilterBar from '@/components/domain/ClientFilterBar.vue';
 import TableActionsMenu from '@/components/domain/TableActionsMenu.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { Field, FieldLabel } from '@/components/ui/field';
+import {
+    Select,
+    SelectContent,
+    SelectGroup,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import {
     Table,
     TableBody,
@@ -13,22 +23,72 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { useClientFilter } from '@/composables/useClientFilter';
 import { useClientPagination } from '@/composables/useClientPagination';
 import type { AcademicStructureProps } from '@/types/academic';
 
 const props =
     defineProps<Pick<AcademicStructureProps, 'coordinatorAssignments'>>();
+const filter = useClientFilter(
+    () => props.coordinatorAssignments,
+    (item) => [item.user_name, item.career_name],
+    {
+        estado: {
+            matches: (item, value) => item.active === (value === 'active'),
+        },
+    },
+);
+
 const {
     items: assignmentPage,
     meta: assignmentMeta,
     setPage: setAssignmentPage,
-} = useClientPagination(() => props.coordinatorAssignments);
+} = useClientPagination(() => filter.items.value);
 </script>
 
 <template>
     <div class="flex flex-col gap-6">
         <Card>
             <CardContent class="flex flex-col gap-4">
+                <ClientFilterBar
+                    v-model="filter.search.value"
+                    input-id="coordinator-assignments-search"
+                    label="Buscar coordinación"
+                    placeholder="Buscar por persona o carrera"
+                >
+                    <template #filters>
+                        <Field>
+                            <FieldLabel
+                                for="coordinator-assignments-search-state"
+                                class="sr-only"
+                            >
+                                Estado
+                            </FieldLabel>
+                            <Select v-model="filter.values.estado.value">
+                                <SelectTrigger
+                                    id="coordinator-assignments-search-state"
+                                >
+                                    <SelectValue
+                                        placeholder="Todos los estados"
+                                    />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectGroup>
+                                        <SelectItem value="all"
+                                            >Todos los estados</SelectItem
+                                        >
+                                        <SelectItem value="active"
+                                            >Activas</SelectItem
+                                        >
+                                        <SelectItem value="inactive"
+                                            >Archivadas</SelectItem
+                                        >
+                                    </SelectGroup>
+                                </SelectContent>
+                            </Select>
+                        </Field>
+                    </template>
+                </ClientFilterBar>
                 <Table>
                     <TableHeader>
                         <TableRow>

@@ -8,6 +8,7 @@ import {
     ShieldCheck,
 } from '@lucide/vue';
 import { computed, onMounted, onUnmounted } from 'vue';
+import ClientFilterBar from '@/components/domain/ClientFilterBar.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
 import TableActionsMenu from '@/components/domain/TableActionsMenu.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
@@ -16,6 +17,15 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
+import { Field, FieldLabel } from '@/components/ui/field';
+import {
+    Select,
+    SelectContent,
+    SelectGroup,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
 import {
     Table,
@@ -25,6 +35,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { useClientFilter } from '@/composables/useClientFilter';
 import { useClientPagination } from '@/composables/useClientPagination';
 import {
     show as documentShow,
@@ -89,11 +100,25 @@ const hasPending = computed(() =>
         ['pending', 'running'].includes(artifact.status),
     ),
 );
+const filter = useClientFilter(
+    () => props.artifacts,
+    (item) => [item.status, item.renderer_label],
+    {
+        // Un artefacto no se archiva: o está listo para descargar o sigue en proceso.
+        estado: {
+            matches: (item, value) =>
+                value === 'ready'
+                    ? item.status === 'completed'
+                    : item.status !== 'completed',
+        },
+    },
+);
+
 const {
     items: artifactPage,
     meta: artifactMeta,
     setPage: setArtifactPage,
-} = useClientPagination(() => props.artifacts);
+} = useClientPagination(() => filter.items.value);
 const form = useForm({ idempotency_key: crypto.randomUUID() });
 let refreshTimer: number | undefined;
 
@@ -209,6 +234,43 @@ onUnmounted(() => {
         <Card>
             <CardContent class="flex flex-col gap-4">
                 <div class="overflow-x-auto" aria-live="polite">
+                    <ClientFilterBar
+                        v-model="filter.search.value"
+                        input-id="documents-search"
+                        label="Buscar documento"
+                        placeholder="Buscar por asignatura, formato o estado"
+                    >
+                        <template #filters>
+                            <Field>
+                                <FieldLabel
+                                    for="documents-search-state"
+                                    class="sr-only"
+                                >
+                                    Estado
+                                </FieldLabel>
+                                <Select v-model="filter.values.estado.value">
+                                    <SelectTrigger id="documents-search-state">
+                                        <SelectValue
+                                            placeholder="Todos los estados"
+                                        />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectGroup>
+                                            <SelectItem value="all"
+                                                >Todos los estados</SelectItem
+                                            >
+                                            <SelectItem value="ready"
+                                                >Listos</SelectItem
+                                            >
+                                            <SelectItem value="pending"
+                                                >En proceso</SelectItem
+                                            >
+                                        </SelectGroup>
+                                    </SelectContent>
+                                </Select>
+                            </Field>
+                        </template>
+                    </ClientFilterBar>
                     <Table>
                         <TableHeader>
                             <TableRow>

@@ -2,11 +2,21 @@
 import { Head, Link } from '@inertiajs/vue3';
 import { LibraryBig } from '@lucide/vue';
 import AcademicSourceController from '@/actions/App/Modules/Configuration/Presentation/Http/Controllers/AcademicSourceController';
+import ClientFilterBar from '@/components/domain/ClientFilterBar.vue';
 import AcademicSourceCreationSheet from '@/components/domain/configuration/AcademicSourceCreationSheet.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { Field, FieldLabel } from '@/components/ui/field';
+import {
+    Select,
+    SelectContent,
+    SelectGroup,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import {
     Table,
     TableBody,
@@ -16,6 +26,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { useClientFilter } from '@/composables/useClientFilter';
 import { useClientPagination } from '@/composables/useClientPagination';
 import { index as sourcesIndex } from '@/routes/sources';
 
@@ -39,11 +50,27 @@ const props = defineProps<{
     careers: { id: string; nombre: string }[];
     isAdministrator: boolean;
 }>();
+const filter = useClientFilter(
+    () => props.sources,
+    (item) => [
+        item.name,
+        item.type,
+        item.authority,
+        item.responsible,
+        item.career_name,
+    ],
+    {
+        estado: {
+            matches: (item, value) => item.active === (value === 'active'),
+        },
+    },
+);
+
 const {
     items: sourcePage,
     meta: sourceMeta,
     setPage: setSourcePage,
-} = useClientPagination(() => props.sources);
+} = useClientPagination(() => filter.items.value);
 
 defineOptions({
     layout: {
@@ -66,8 +93,45 @@ defineOptions({
             />
         </template>
         <Card>
-            <CardContent class="flex flex-col gap-4"
-                ><Table
+            <CardContent class="flex flex-col gap-4">
+                <ClientFilterBar
+                    v-model="filter.search.value"
+                    input-id="sources-search"
+                    label="Buscar fuente"
+                    placeholder="Buscar por nombre, tipo, autoridad o responsable"
+                >
+                    <template #filters>
+                        <Field>
+                            <FieldLabel
+                                for="sources-search-state"
+                                class="sr-only"
+                            >
+                                Estado
+                            </FieldLabel>
+                            <Select v-model="filter.values.estado.value">
+                                <SelectTrigger id="sources-search-state">
+                                    <SelectValue
+                                        placeholder="Todos los estados"
+                                    />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectGroup>
+                                        <SelectItem value="all"
+                                            >Todos los estados</SelectItem
+                                        >
+                                        <SelectItem value="active"
+                                            >Activas</SelectItem
+                                        >
+                                        <SelectItem value="inactive"
+                                            >Archivadas</SelectItem
+                                        >
+                                    </SelectGroup>
+                                </SelectContent>
+                            </Select>
+                        </Field>
+                    </template>
+                </ClientFilterBar>
+                <Table
                     ><TableHeader
                         ><TableRow
                             ><TableHead>Fuente</TableHead
@@ -76,7 +140,7 @@ defineOptions({
                             ><TableHead>Versiones</TableHead></TableRow
                         ></TableHeader
                     ><TableBody>
-                        <TableEmpty v-if="sources.length === 0" :colspan="4"
+                        <TableEmpty v-if="sourcePage.length === 0" :colspan="4"
                             >No existen fuentes.</TableEmpty
                         >
                         <TableRow
