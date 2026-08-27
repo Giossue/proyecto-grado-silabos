@@ -16,7 +16,7 @@ import {
     ScrollText,
     UsersRound,
 } from '@lucide/vue';
-import { computed } from 'vue';
+import { computed, watch } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
@@ -29,7 +29,9 @@ import {
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
+    useSidebar,
 } from '@/components/ui/sidebar';
+import { useCurrentUrl } from '@/composables/useCurrentUrl';
 import { dashboard } from '@/routes';
 import { index as academicIndex } from '@/routes/admin/academic';
 import { index as auditIndex } from '@/routes/admin/audit';
@@ -204,6 +206,18 @@ const mainNavItems = computed<NavItem[]>(() => [
 ]);
 
 const footerNavItems: NavItem[] = [];
+
+// En móvil la barra lateral es un panel superpuesto: al elegir una opción tapa la página
+// a la que se acaba de llegar. Se cierra al cambiar de ruta, y no en el clic de cada
+// enlace, para que valga también para el pie, el logotipo y cualquier enlace futuro.
+const { isMobile, setOpenMobile } = useSidebar();
+const { currentUrl } = useCurrentUrl();
+
+watch(currentUrl, () => {
+    if (isMobile.value) {
+        setOpenMobile(false);
+    }
+});
 </script>
 
 <template>
