@@ -34,8 +34,14 @@ const region = computed(
             :role="overflows ? 'region' : undefined"
             :aria-label="overflows ? region : undefined"
         >
+            <!--
+                La marca de desbordamiento la lee la hoja de estilos para fijar la columna
+                de acciones. Sin ella, una tabla que cabe entera mostraba igual el
+                separador y parecía cortada sin estarlo.
+            -->
             <table
                 data-slot="table"
+                :data-overflows="overflows ? 'true' : 'false'"
                 :class="cn('w-full caption-bottom text-sm', props.class)"
             >
                 <slot />

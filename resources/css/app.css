@@ -226,29 +226,31 @@
      * Así una tabla nueva lo hereda sin declarar nada, y una sin acciones no fija una
      * columna de datos por error.
      */
-    table:has([data-slot='table-actions']) :is(th, td):last-child {
+    table[data-overflows='true']:has([data-slot='table-actions'])
+        :is(th, td):last-child {
         position: sticky;
         right: 0;
         /* Sin fondo propio, las celdas que pasan por debajo se transparentarían. */
         background-color: var(--color-card);
+        /*
+         * Separación de un píxel con el mismo anillo que usan las demás superficies. Un
+         * degradado ancho se leía como una mancha clara en tema oscuro: aquí se separa
+         * por color y anillo, no por sombra.
+         */
+        border-left: 1px solid var(--color-surface-ring);
     }
 
     /*
-     * El contenido pasa por debajo de la columna fija, así que su borde izquierdo se
-     * dibuja como un degradado y no como una línea: se lee como profundidad, que es lo
-     * que ocurre de verdad, en vez de como el final de la tabla.
+     * La fila resaltada al pasar el puntero se resalta entera, columna fija incluida, o
+     * el ancla se vería despegada de su propia fila. Mismo 50 % que usa `TableRow`.
      */
-    table:has([data-slot='table-actions']) :is(th, td):last-child::before {
-        content: '';
-        position: absolute;
-        inset-block: 0;
-        left: 0;
-        width: 0.75rem;
-        transform: translateX(-100%);
-        background-image: linear-gradient(
-            to left,
-            var(--surface-ring),
-            transparent
+    table[data-overflows='true']:has([data-slot='table-actions'])
+        tr:hover
+        :is(th, td):last-child {
+        background-color: color-mix(
+            in oklab,
+            var(--color-muted) 50%,
+            var(--color-card)
         );
     }
 
@@ -256,9 +258,7 @@
      * El degradado del borde derecho sobra cuando esa esquina la ocupa la columna fija:
      * se pintaría encima y la dejaría apagada. El del borde izquierdo se conserva.
      */
-    div:has(> * > table:has([data-slot='table-actions']))
-        > [data-table-edge='right'],
-    div:has(> table:has([data-slot='table-actions']))
+    div:has(> * > table[data-overflows='true']:has([data-slot='table-actions']))
         > [data-table-edge='right'] {
         display: none;
     }
