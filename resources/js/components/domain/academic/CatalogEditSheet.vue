@@ -3,6 +3,7 @@ import { Form } from '@inertiajs/vue3';
 import { Check } from '@lucide/vue';
 import { computed } from 'vue';
 import AcademicGovernanceController from '@/actions/App/Modules/Academic/Presentation/Http/Controllers/AcademicGovernanceController';
+import DatePicker from '@/components/DatePicker.vue';
 import FormSheet from '@/components/domain/FormSheet.vue';
 import FormSheetActions from '@/components/domain/FormSheetActions.vue';
 import { Button } from '@/components/ui/button';
@@ -169,10 +170,9 @@ const facultyOptions = computed(() =>
                         <FieldLabel :for="`edit-starts-on-${recordId}`">
                             Fecha de inicio
                         </FieldLabel>
-                        <Input
+                        <DatePicker
                             :id="`edit-starts-on-${recordId}`"
                             name="starts_on"
-                            type="date"
                             :default-value="startsOn ?? ''"
                             required
                             :aria-invalid="Boolean(errors.starts_on)"
@@ -187,10 +187,9 @@ const facultyOptions = computed(() =>
                         <FieldLabel :for="`edit-ends-on-${recordId}`">
                             Fecha de fin
                         </FieldLabel>
-                        <Input
+                        <DatePicker
                             :id="`edit-ends-on-${recordId}`"
                             name="ends_on"
-                            type="date"
                             :default-value="endsOn ?? ''"
                             required
                             :aria-invalid="Boolean(errors.ends_on)"

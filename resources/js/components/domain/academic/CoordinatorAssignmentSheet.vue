@@ -2,6 +2,7 @@
 import { Form } from '@inertiajs/vue3';
 import { UserPlus } from '@lucide/vue';
 import AcademicGovernanceController from '@/actions/App/Modules/Academic/Presentation/Http/Controllers/AcademicGovernanceController';
+import DatePicker from '@/components/DatePicker.vue';
 import FormSheet from '@/components/domain/FormSheet.vue';
 import FormSheetActions from '@/components/domain/FormSheetActions.vue';
 import {
@@ -10,7 +11,6 @@ import {
     FieldGroup,
     FieldLabel,
 } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
 import {
     Select,
     SelectContent,
@@ -100,10 +100,9 @@ defineProps<Pick<AcademicStructureProps, 'options'>>();
                         <FieldLabel for="coordinator-valid-from">
                             Vigente desde
                         </FieldLabel>
-                        <Input
+                        <DatePicker
                             id="coordinator-valid-from"
                             name="valid_from"
-                            type="date"
                             required
                             :aria-invalid="Boolean(errors.valid_from)"
                         />
@@ -113,10 +112,9 @@ defineProps<Pick<AcademicStructureProps, 'options'>>();
                         <FieldLabel for="coordinator-valid-until">
                             Vigente hasta
                         </FieldLabel>
-                        <Input
+                        <DatePicker
                             id="coordinator-valid-until"
                             name="valid_until"
-                            type="date"
                             :aria-invalid="Boolean(errors.valid_until)"
                         />
                         <FieldError :errors="[errors.valid_until]" />

@@ -2,6 +2,7 @@
 import { Form } from '@inertiajs/vue3';
 import { Plus } from '@lucide/vue';
 import AcademicSourceController from '@/actions/App/Modules/Configuration/Presentation/Http/Controllers/AcademicSourceController';
+import DatePicker from '@/components/DatePicker.vue';
 import FormSheet from '@/components/domain/FormSheet.vue';
 import FormSheetActions from '@/components/domain/FormSheetActions.vue';
 import {
@@ -136,10 +137,9 @@ defineProps<{
                             <FieldLabel for="source-valid-from">
                                 Vigente desde
                             </FieldLabel>
-                            <Input
+                            <DatePicker
                                 id="source-valid-from"
                                 name="valid_from"
-                                type="date"
                                 :aria-invalid="Boolean(errors.valid_from)"
                             />
                             <FieldError :errors="[errors.valid_from]" />
@@ -148,10 +148,9 @@ defineProps<{
                             <FieldLabel for="source-valid-until">
                                 Vigente hasta
                             </FieldLabel>
-                            <Input
+                            <DatePicker
                                 id="source-valid-until"
                                 name="valid_until"
-                                type="date"
                                 :aria-invalid="Boolean(errors.valid_until)"
                             />
                             <FieldError :errors="[errors.valid_until]" />

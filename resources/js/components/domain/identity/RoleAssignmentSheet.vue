@@ -3,6 +3,7 @@ import { Form } from '@inertiajs/vue3';
 import { ShieldCheck } from '@lucide/vue';
 import { ref } from 'vue';
 import ManagedUserController from '@/actions/App/Modules/Identity/Presentation/Http/Controllers/ManagedUserController';
+import DatePicker from '@/components/DatePicker.vue';
 import FormSheet from '@/components/domain/FormSheet.vue';
 import FormSheetActions from '@/components/domain/FormSheetActions.vue';
 import {
@@ -11,7 +12,6 @@ import {
     FieldGroup,
     FieldLabel,
 } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
 import {
     Select,
     SelectContent,
@@ -104,10 +104,9 @@ const selectedRole = ref('teacher');
                         <FieldLabel for="role-assignment-valid-from">
                             Vigente desde
                         </FieldLabel>
-                        <Input
+                        <DatePicker
                             id="role-assignment-valid-from"
                             name="valid_from"
-                            type="date"
                             :default-value="today"
                             required
                             :aria-invalid="Boolean(errors.valid_from)"
@@ -118,10 +117,9 @@ const selectedRole = ref('teacher');
                         <FieldLabel for="role-assignment-valid-until">
                             Vigente hasta (opcional)
                         </FieldLabel>
-                        <Input
+                        <DatePicker
                             id="role-assignment-valid-until"
                             name="valid_until"
-                            type="date"
                             :aria-invalid="Boolean(errors.valid_until)"
                         />
                         <FieldError :errors="[errors.valid_until]" />

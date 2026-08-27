@@ -3,6 +3,7 @@ import { Head, router } from '@inertiajs/vue3';
 import { ScrollText } from '@lucide/vue';
 import { ref } from 'vue';
 import AuditEventController from '@/actions/App/Modules/Operations/Presentation/Http/Controllers/AuditEventController';
+import DatePicker from '@/components/DatePicker.vue';
 import FilterToolbar from '@/components/domain/FilterToolbar.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
@@ -181,11 +182,7 @@ const detailValue = (value: Detail['value']): string => {
                                 >
                                     Fecha inicial
                                 </FieldLabel>
-                                <Input
-                                    id="audit-from"
-                                    v-model="from"
-                                    type="date"
-                                />
+                                <DatePicker id="audit-from" v-model="from" />
                             </Field>
                             <Field>
                                 <FieldLabel
@@ -194,7 +191,7 @@ const detailValue = (value: Detail['value']): string => {
                                 >
                                     Fecha final
                                 </FieldLabel>
-                                <Input id="audit-to" v-model="to" type="date" />
+                                <DatePicker id="audit-to" v-model="to" />
                             </Field>
                         </template>
                     </FilterToolbar>

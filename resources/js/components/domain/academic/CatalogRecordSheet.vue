@@ -3,6 +3,7 @@ import { Form } from '@inertiajs/vue3';
 import { Plus } from '@lucide/vue';
 import { computed } from 'vue';
 import AcademicGovernanceController from '@/actions/App/Modules/Academic/Presentation/Http/Controllers/AcademicGovernanceController';
+import DatePicker from '@/components/DatePicker.vue';
 import FormSheet from '@/components/domain/FormSheet.vue';
 import FormSheetActions from '@/components/domain/FormSheetActions.vue';
 import {
@@ -169,10 +170,9 @@ const codeLabel = computed(() =>
                             <FieldLabel for="catalog-starts-on">
                                 Fecha de inicio
                             </FieldLabel>
-                            <Input
+                            <DatePicker
                                 id="catalog-starts-on"
                                 name="starts_on"
-                                type="date"
                                 required
                                 :aria-invalid="Boolean(errors.starts_on)"
                             />
@@ -186,10 +186,9 @@ const codeLabel = computed(() =>
                             <FieldLabel for="catalog-ends-on">
                                 Fecha de fin
                             </FieldLabel>
-                            <Input
+                            <DatePicker
                                 id="catalog-ends-on"
                                 name="ends_on"
-                                type="date"
                                 required
                                 :aria-invalid="Boolean(errors.ends_on)"
                             />

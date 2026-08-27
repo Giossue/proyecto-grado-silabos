@@ -3,6 +3,7 @@ import { Form } from '@inertiajs/vue3';
 import { UserRoundCog } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import ReviewController from '@/actions/App/Modules/Syllabus/Presentation/Http/Controllers/ReviewController';
+import DatePicker from '@/components/DatePicker.vue';
 import FormSheet from '@/components/domain/FormSheet.vue';
 import FormSheetActions from '@/components/domain/FormSheetActions.vue';
 import { Button } from '@/components/ui/button';
@@ -176,10 +177,9 @@ const idempotencyKey = `transfer-${props.syllabusId}-${Math.trunc(performance.no
                         <FieldLabel for="transfer-backing-date">
                             Fecha del documento
                         </FieldLabel>
-                        <Input
+                        <DatePicker
                             id="transfer-backing-date"
                             name="backing_date"
-                            type="date"
                             :aria-invalid="Boolean(errors.backing_date)"
                             required
                         />
