@@ -85,6 +85,14 @@ jobs:
           DB_DATABASE: silabos_ueb_test
         run: php artisan migrate:fresh --seed --force
 
+      # Wayfinder genera `resources/js/actions` y `resources/js/routes`, que no se
+      # versionan. Sin ellos eslint no resuelve esos imports y los ordena distinto que en
+      # local, con 64 falsos errores de `import/order`.
+      - name: Generar helpers de rutas
+        env:
+          DB_DATABASE: silabos_ueb_test
+        run: php artisan wayfinder:generate --with-form
+
       - name: Verificar aplicación
         env:
           DB_DATABASE: silabos_ueb_test
