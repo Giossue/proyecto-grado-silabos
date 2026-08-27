@@ -1,9 +1,18 @@
 <script setup lang="ts">
 import { Plus, X } from '@lucide/vue';
 import type { Component, VNode } from 'vue';
-import { computed, Fragment, ref, useSlots, watch } from 'vue';
+import {
+    computed,
+    Fragment,
+    onUnmounted,
+    ref,
+    useSlots,
+    watch,
+    watchEffect,
+} from 'vue';
 import { Button } from '@/components/ui/button';
 import { useCurrentUrl } from '@/composables/useCurrentUrl';
+import { usePageTitle } from '@/composables/usePageBreadcrumbs';
 import { useScrollDirection } from '@/composables/useScrollDirection';
 import { cn } from '@/lib/utils';
 
@@ -27,6 +36,21 @@ const widthClass = computed(
             narrow: 'mx-auto w-full max-w-4xl',
         })[props.size],
 );
+
+/*
+ * El nombre de la pantalla se entrega al encabezado, que es quien lo dibuja. Aquí no se
+ * pinta: decirlo en la miga y otra vez como título era decirlo dos veces seguidas.
+ */
+const pageTitle = usePageTitle();
+
+watchEffect(() => {
+    pageTitle.value = props.title;
+});
+
+// Al salir de la pantalla, el encabezado no debe seguir anunciándola.
+onUnmounted(() => {
+    pageTitle.value = '';
+});
 
 const slots = useSlots();
 
@@ -97,9 +121,6 @@ const floatingHidden = computed(() => hidden.value && !expanded.value);
                     </div>
 
                     <div class="flex min-w-0 flex-col gap-1">
-                        <h1 class="text-2xl font-semibold tracking-tight">
-                            {{ title }}
-                        </h1>
                         <p class="max-w-3xl text-muted-foreground">
                             {{ description }}
                         </p>

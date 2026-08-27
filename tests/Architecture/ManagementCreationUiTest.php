@@ -424,7 +424,8 @@ it('normaliza los encabezados de todos los modulos autenticados', function (): v
         ->toContain('gap-6 overflow-x-hidden p-4 sm:p-6')
         ->toContain('bg-card text-card-foreground')
         ->toContain('<component :is="icon" class="size-5"')
-        ->toContain('<h1 class="text-2xl font-semibold tracking-tight"')
+        // El nombre de la pantalla vive en el encabezado, no aqui.
+        ->toContain('usePageTitle')
         ->toContain('<slot name="eyebrow"')
         ->toContain('<slot name="meta"')
         ->toContain('<slot name="actions"');

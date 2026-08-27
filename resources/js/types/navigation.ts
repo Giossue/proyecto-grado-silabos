@@ -3,7 +3,8 @@ import type { LucideIcon } from '@lucide/vue';
 
 export type BreadcrumbItem = {
     title: string;
-    href: NonNullable<InertiaLinkProps['href']>;
+    /** Sin destino cuando la miga es la pantalla actual: no se enlaza a sí misma. */
+    href?: NonNullable<InertiaLinkProps['href']>;
 };
 
 export type NavItem = {

@@ -53,3 +53,34 @@ it('recorre los temas con una pulsacion en vez de abrir un menu', function (): v
         ->toContain('% options.length')
         ->not->toContain('DropdownMenu');
 });
+
+it('mantiene el encabezado a la vista y sin repetir el nombre de la pantalla', function (): void {
+    $raiz = dirname(__DIR__, 2);
+
+    $encabezado = (string) file_get_contents($raiz.'/resources/js/components/AppSidebarHeader.vue');
+
+    // Fijo arriba y con fondo propio: sin fondo, el contenido se leeria por debajo.
+    expect($encabezado)
+        ->toContain('sticky top-0')
+        ->toContain('bg-background');
+
+    // El layout comparte las migas para que la pantalla sepa que dice el encabezado.
+    $layout = (string) file_get_contents($raiz.'/resources/js/layouts/app/AppSidebarLayout.vue');
+    expect($layout)->toContain('provide(breadcrumbsKey');
+
+    $marco = (string) file_get_contents($raiz.'/resources/js/components/domain/PageFrame.vue');
+
+    // El titulo se esconde cuando repite, pero sigue siendo un `h1` para el lector de
+    // pantalla: quitarlo dejaria la pagina sin encabezado de nivel uno.
+    // La pantalla entrega su nombre al encabezado y no lo dibuja. Nada oculto: el
+    // nombre que se ve arriba es el encabezado de nivel uno de la pagina.
+    expect($marco)
+        ->toContain('usePageTitle')
+        ->toContain('pageTitle.value = props.title')
+        ->not->toContain('<h1');
+
+    $migas = (string) file_get_contents($raiz.'/resources/js/components/Breadcrumbs.vue');
+    expect($migas)
+        ->toContain('<h1')
+        ->toContain('aria-current="page"');
+});
