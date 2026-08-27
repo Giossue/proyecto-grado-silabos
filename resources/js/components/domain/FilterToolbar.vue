@@ -1,20 +1,67 @@
 <script setup lang="ts">
-import { Search } from '@lucide/vue';
-import { Button } from '@/components/ui/button';
-import { Field, FieldGroup } from '@/components/ui/field';
+import { onBeforeUnmount } from 'vue';
+import { FieldGroup } from '@/components/ui/field';
 
-withDefaults(
+const props = withDefaults(
     defineProps<{
-        submitLabel?: string;
+        /**
+         * Espera tras la última tecla antes de consultar. Cuatrocientos milisegundos es
+         * el punto donde la lista parece reaccionar sola sin lanzar una petición por
+         * letra: escribir «coordinador» dispararía once.
+         */
+        delay?: number;
     }>(),
     {
-        submitLabel: 'Aplicar filtros',
+        delay: 400,
     },
 );
+
+let timer: ReturnType<typeof setTimeout> | null = null;
+
+const cancel = (): void => {
+    if (timer !== null) {
+        clearTimeout(timer);
+        timer = null;
+    }
+};
+
+const submit = (target: EventTarget | null): void => {
+    cancel();
+    (target as HTMLElement | null)?.closest('form')?.requestSubmit();
+};
+
+// Texto: se espera. Cada pulsación reinicia la cuenta, así que solo consulta quien deja
+// de escribir.
+const onInput = (event: Event): void => {
+    cancel();
+    const target = event.target;
+    timer = setTimeout(() => submit(target), props.delay);
+};
+
+/**
+ * Elegir en un desplegable es una decisión terminada, no una a medias: consulta en el
+ * acto. Se descarta el `change` de los campos de texto, que salta al perder el foco y
+ * duplicaría lo que ya tiene turno.
+ */
+const onChange = (event: Event): void => {
+    const target = event.target as HTMLElement | null;
+
+    if (target instanceof HTMLInputElement && target.type !== 'checkbox') {
+        return;
+    }
+
+    submit(event.target);
+};
+
+onBeforeUnmount(cancel);
 </script>
 
 <template>
-    <FieldGroup class="gap-3 lg:flex-row lg:items-end">
+    <FieldGroup
+        class="gap-3 lg:flex-row lg:items-end"
+        @input="onInput"
+        @change="onChange"
+    >
         <!-- La búsqueda se queda con el espacio libre: su contenido es texto abierto.
              Los filtros ofrecen opciones cortas y conocidas, así que van a un ancho
              contenido y solo crecen si no caben. -->
@@ -26,11 +73,12 @@ withDefaults(
         >
             <slot name="filters" />
         </div>
-        <Field class="lg:w-auto">
-            <Button type="submit" class="w-full lg:min-w-36">
-                <Search data-icon="inline-start" aria-hidden="true" />
-                {{ submitLabel }}
-            </Button>
-        </Field>
+
+        <!--
+            Sin botón visible, pero el formulario conserva uno: sin ningún `submit`, el
+            navegador deja de enviar al pulsar Intro cuando hay más de un campo, y quien
+            navegue con teclado se quedaría sin forma de buscar.
+        -->
+        <button type="submit" class="sr-only" tabindex="-1">Buscar</button>
     </FieldGroup>
 </template>

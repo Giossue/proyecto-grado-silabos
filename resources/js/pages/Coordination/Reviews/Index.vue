@@ -63,7 +63,7 @@ const applyFilters = (): void => {
             search: search.value || undefined,
             state: state.value === 'all' ? undefined : state.value,
         },
-        { preserveState: true, replace: true },
+        { preserveState: true, preserveScroll: true, replace: true },
     );
 };
 

@@ -76,7 +76,7 @@ const applyFilters = (): void => {
             type: type.value === 'all' ? undefined : type.value,
             queue: queue.value === 'all' ? undefined : queue.value,
         },
-        { preserveState: true, replace: true },
+        { preserveState: true, preserveScroll: true, replace: true },
     );
 };
 

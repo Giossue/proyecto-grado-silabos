@@ -108,7 +108,7 @@ const applyFilters = (): void => {
             state: state.value === 'all' ? undefined : state.value,
             search: search.value || undefined,
         },
-        { preserveState: true, replace: true },
+        { preserveState: true, preserveScroll: true, replace: true },
     );
 };
 

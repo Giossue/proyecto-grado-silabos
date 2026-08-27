@@ -76,7 +76,7 @@ const applyFilters = (): void => {
             from: from.value || undefined,
             to: to.value || undefined,
         },
-        { preserveState: true, replace: true },
+        { preserveState: true, preserveScroll: true, replace: true },
     );
 };
 

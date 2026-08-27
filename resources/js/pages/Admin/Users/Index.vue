@@ -69,7 +69,14 @@ defineProps<{
 
         <Card>
             <CardContent class="flex flex-col gap-4">
-                <Form v-bind="ManagedUserController.index.form()">
+                <Form
+                    v-bind="ManagedUserController.index.form()"
+                    :options="{
+                        preserveState: true,
+                        preserveScroll: true,
+                        replace: true,
+                    }"
+                >
                     <FilterToolbar>
                         <template #search>
                             <Field>

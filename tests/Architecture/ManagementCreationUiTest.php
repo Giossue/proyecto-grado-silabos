@@ -315,7 +315,15 @@ it('ordena busqueda filtros y accion mediante una barra compartida', function ()
         ->toBeString()
         ->toContain('<slot name="search"')
         ->toContain('<slot name="filters"')
-        ->toContain('type="submit"');
+        // La consulta sale sola al escribir, con espera, y en el acto al elegir un
+        // filtro. Si alguien devuelve el botón de aplicar, esta regla lo delata.
+        ->toContain('setTimeout')
+        ->toContain('requestSubmit')
+        // Queda un envío accesible aunque no se vea: sin él, Intro deja de funcionar
+        // en un formulario con varios campos.
+        ->toContain('type="submit"')
+        ->toContain('sr-only')
+        ->not->toContain('Aplicar filtros');
 });
 
 it('diferencia el fondo de las superficies en claro y oscuro', function (): void {

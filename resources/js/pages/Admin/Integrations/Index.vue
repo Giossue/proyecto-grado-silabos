@@ -147,7 +147,7 @@ const applyFilters = (): void => {
             result: result.value === 'all' ? undefined : result.value,
             run: props.selected_execution?.id,
         },
-        { preserveState: true, replace: true },
+        { preserveState: true, preserveScroll: true, replace: true },
     );
 };
 
