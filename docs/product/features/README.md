@@ -4,7 +4,7 @@
 - `templates-sources/specification.md`: configuración versionada.
 - `syllabus-workflow/specification.md`: convocatoria, edición, revisión y aprobación.
 - `ai-assistance/specification.md`: ayuda explicable y degradación segura.
-- `documents-operations/specification.md`: documentos, auditoría, informes e importación.
+- `documents-operations/specification.md`: documentos, auditoría, informes y operación.
 - `_template/`: base para una nueva capacidad.
 
 Una especificación responde **qué comportamiento debe observarse**. Los detalles de

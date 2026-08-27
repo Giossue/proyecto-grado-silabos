@@ -213,7 +213,6 @@ it('agrupa las acciones de tabla en menus accesibles de tres puntos', function (
         'resources/js/components/domain/academic/CurriculaTab.vue' => 2,
         'resources/js/components/domain/academic/OfferingsTab.vue' => 2,
         'resources/js/components/domain/academic/TeacherAssignmentsPanel.vue' => 1,
-        'resources/js/pages/Admin/Integrations/Index.vue' => 1,
         'resources/js/pages/Admin/Operations/Jobs.vue' => 1,
         'resources/js/pages/Admin/Users/Index.vue' => 1,
         'resources/js/pages/Coordination/Reports/Index.vue' => 1,
@@ -238,7 +237,7 @@ it('agrupa las acciones de tabla en menus accesibles de tres puntos', function (
     );
     $this->assertIsString($catalogs);
     $this->assertSame(5, substr_count($catalogs, '<CatalogActions'));
-    $this->assertSame(13, $checked);
+    $this->assertSame(12, $checked);
 });
 
 it('usa el mismo paginador en todas las superficies tabulares', function (): void {
@@ -273,13 +272,12 @@ it('usa el mismo paginador en todas las superficies tabulares', function (): voi
         $checked += $tableCount;
     }
 
-    $this->assertSame(26, $checked);
+    $this->assertSame(24, $checked);
 });
 
 it('ordena busqueda filtros y accion mediante una barra compartida', function (): void {
     $root = dirname(__DIR__, 2);
     $pages = [
-        'resources/js/pages/Admin/Integrations/Index.vue',
         'resources/js/pages/Admin/Operations/Audit.vue',
         'resources/js/pages/Admin/Operations/Jobs.vue',
         'resources/js/pages/Admin/Users/Index.vue',
@@ -361,7 +359,6 @@ it('normaliza los encabezados de todos los modulos autenticados', function (): v
     $root = dirname(__DIR__, 2);
     $pages = [
         'resources/js/pages/Admin/Academic/Index.vue',
-        'resources/js/pages/Admin/Integrations/Index.vue',
         'resources/js/pages/Admin/Operations/Audit.vue',
         'resources/js/pages/Admin/Operations/Jobs.vue',
         'resources/js/pages/Admin/Templates/Index.vue',
@@ -483,8 +480,8 @@ it('normaliza los encabezados de todos los modulos autenticados', function (): v
         );
     }
 
-    $this->assertCount(28, $declaredPages);
-    $this->assertCount(29, $pages);
+    $this->assertCount(27, $declaredPages);
+    $this->assertCount(28, $pages);
 });
 
 it('mantiene explicitamente clasificadas las mutaciones store que permanecen en paginas completas', function (): void {

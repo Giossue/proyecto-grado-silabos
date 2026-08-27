@@ -6,7 +6,7 @@
 - `product/domain-model.md`: agregados, entidades e invariantes.
 - `product/syllabus-lifecycle.md`: estados y transiciones.
 - `product/roles-and-permissions.md`: actores, alcance y autorización.
-- `product/use-cases.md`: CU-01 a CU-18 y requisitos relacionados.
+- `product/use-cases.md`: CU-01 a CU-17 y requisitos relacionados.
 - `product/screens.md`: UI-01 a UI-04, DOC-01 a DOC-10, COR-01 a COR-12 y
   ADM-01 a ADM-11.
 - `product/syllabus-sections.md`: contenido funcional de las doce secciones.
@@ -52,7 +52,7 @@
 
 ## Operación
 
-- `runbooks/demo.md`: recorrido reproducible de CU-01 a CU-18 con los tres roles.
+- `runbooks/demo.md`: recorrido reproducible de CU-01 a CU-17 con los tres roles.
 - `runbooks/release-verification.md`: puerta, audits, salud, colas, restore y baseline.
 - `runbooks/deploy-dokploy.md`: despliegue de la imagen en Dokploy contra el PostgreSQL
   y el Redis existentes del servidor.

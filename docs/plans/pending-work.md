@@ -81,7 +81,7 @@ Done»*, y la Definition of Done incluye la revisión manual de interfaz del pun
 | I-04 | completa | revisión manual, `DT-07` y `PV-16` |
 | I-05 | completa | fidelidad del DOCX y `PV-07`, `PV-11`, `PV-12`, `PV-15` |
 | I-06 | completa | evaluación experta y `PV-02`, `PV-13`, `PV-14`, `PV-18` |
-| I-07 | completa | conector real y `PV-12` |
+| I-07 | retirada el 2026-08-27 | ninguna; el módulo se eliminó |
 | I-08 | completa | pruebas con participantes y dispositivos reales |
 | I-09, I-10 | completas | revisión manual de interfaz |
 | I-11 | completa | ninguna; cerró `PV-09` y `PV-10` |

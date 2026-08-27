@@ -38,7 +38,6 @@ el permiso, pero no lo sustituyen.
 | Exportar | Según permiso | Sí en alcance | Sí, propio/autorizado |
 | Ver informes | Operación global autorizada | Sí en alcance | Resumen propio |
 | Consultar auditoría | Sí, permiso explícito | Vista limitada | No por defecto |
-| Ejecutar importación | Sí | No | No |
 
 `PV-16` decide si el coordinador puede editar excepcionalmente contenido docente. Hasta
 resolverlo, la implementación debe negar esa edición. Si se autoriza, exigirá motivo,

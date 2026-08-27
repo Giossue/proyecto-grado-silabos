@@ -18,8 +18,7 @@
 3. Laravel/worker ↔ Redis;
 4. aplicación ↔ almacenamiento privado;
 5. worker ↔ servicio local de IA;
-6. importador ↔ fuente institucional;
-7. operadores ↔ despliegue/backups.
+6. operadores ↔ despliegue/backups.
 
 ## Amenazas prioritarias
 
@@ -29,7 +28,7 @@
 | Elevación de rol | El frontend concede capacidad | permiso servidor, vigencia, auditoría |
 | CSRF/session fixation | Mutación con sesión robada/fijada | Fortify, CSRF, cookies seguras, rotación, revocación |
 | XSS/Markdown | Fuente o sílabo ejecuta script | escape, sanitización allowlist, CSP evaluada |
-| Inyección | filtros/importación alteran consulta | Query Builder, allowlists, validación |
+| Inyección | los filtros alteran la consulta | Query Builder, allowlists, validación |
 | Mass assignment | petición cambia estado/rol no permitido | DTO/validated, fillable estricto, casos de uso |
 | Upload malicioso | DOCX/archivo activo o enorme | tipo real, límites, privado, cuarentena/escaneo |
 | URL de descarga filtrada | enlace entrega documento después | expiración corta y reautorización |
@@ -41,9 +40,8 @@
 | SSRF/proveedor externo | URL de IA sale del host autorizado | cliente solo HTTP loopback, sin credenciales ni redirecciones |
 | Decisión encubierta de IA | respuesta intenta aprobar, calificar o cambiar estado | claves prohibidas, tipos allowlist y aplicación humana separada |
 | Exfiltración por logs | prompts/documentos aparecen en logs | minimización, redacción, acceso/retención |
-| Importación corrupta | claves fusionan personas/asignaturas | fixture aislado, contrato estricto, staging atómico, simulación, conflicto humano, sin aplicador |
 | Ransomware/pérdida | base/archivos destruidos | backups aislados, restore probado, mínimo privilegio |
-| DoS | IA/exportación/importación agota workers | colas separadas, rate limit por actor/recurso, límites de entrada y timeout |
+| DoS | IA y exportación agotan los workers | colas separadas, rate limit por actor/recurso, límites de entrada y timeout |
 
 ## Casos de abuso obligatorios
 
@@ -55,7 +53,6 @@
 - archivo con extensión permitida y contenido distinto;
 - misma petición se envía en paralelo;
 - worker procesa después de que cambió la versión esperada;
-- importación repite lote o cambia clave externa;
 - auditor intenta modificar evento desde interfaz/API.
 
 Actualiza este documento al agregar una frontera o dato sensible.

@@ -1,5 +1,12 @@
 # I-11: Alineación del esquema con la fuente institucional
 
+
+> **Nota del 2026-08-27.** El módulo de importación que motivaba este incremento se
+> retiró. Lo que aquí se decidió sobre la estructura académica —escuelas, periodo por
+> carrera, ciclo en la malla, identidad del docente— se conserva: describe cómo se
+> organiza la universidad y no dependía de leer SIANET. Las partes que hablan de
+> importación, mapper y reconciliador quedan como registro histórico.
+
 ## Estado
 
 Implementado y verificado el 2026-08-18. Migraciones aplicadas sobre PostgreSQL 18.6 y

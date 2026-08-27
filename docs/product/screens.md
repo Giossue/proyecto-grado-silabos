@@ -55,7 +55,6 @@
 | ADM-05 | Plantillas                                                |
 | ADM-06 | Constructor de plantilla                                  |
 | ADM-07 | Previsualizar y publicar                                  |
-| ADM-08 | Integraciones/importaciones                               |
 | ADM-09 | Trabajos asíncronos                                       |
 | ADM-10 | Auditoría                                                 |
 | ADM-11 | Configuración                                             |

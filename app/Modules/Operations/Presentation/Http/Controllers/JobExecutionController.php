@@ -111,7 +111,6 @@ class JobExecutionController extends Controller
             'ai' => 'IA local',
             'documents' => 'Documentos',
             'notifications' => 'Notificaciones',
-            'integrations' => 'Integraciones',
             'critical' => 'Crítica',
             default => 'General',
         };

@@ -12,7 +12,6 @@ import {
     ListRestart,
     ChartNoAxesCombined,
     Repeat2,
-    RefreshCcwDot,
     ScrollText,
     UsersRound,
 } from '@lucide/vue';
@@ -35,7 +34,6 @@ import { useCurrentUrl } from '@/composables/useCurrentUrl';
 import { dashboard } from '@/routes';
 import { index as academicIndex } from '@/routes/admin/academic';
 import { index as auditIndex } from '@/routes/admin/audit';
-import { index as integrationsIndex } from '@/routes/admin/integrations';
 import { index as jobsIndex } from '@/routes/admin/jobs';
 import { index as templatesIndex } from '@/routes/admin/templates';
 import { index as usersIndex } from '@/routes/admin/users';
@@ -107,11 +105,6 @@ const mainNavItems = computed<NavItem[]>(() => [
                   title: 'Trabajos asíncronos',
                   href: jobsIndex(),
                   icon: ListRestart,
-              },
-              {
-                  title: 'Integración institucional',
-                  href: integrationsIndex(),
-                  icon: RefreshCcwDot,
               },
               {
                   title: 'Auditoría',

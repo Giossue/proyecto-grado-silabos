@@ -55,7 +55,8 @@ lector de pantalla y dispositivos reales permanece dentro de I-08 y `PV-19`.
   visuales.
 - `AcademicStructureTest` comprueba las cinco rutas hijas de Estructura académica y la
   redirección compatible desde la ruta anterior.
-- `DocumentOperationsTest` e `InstitutionalImportTest` comprueban las búsquedas nuevas y
+- `DocumentOperationsTest` e `InstitutionalImportTest` —esta última retirada con el módulo
+  de importación el 2026-08-27— comprueban las búsquedas nuevas y
   que los filtros continúen paginados en servidor.
 - `composer verify`: 145 pruebas y 1.765 aserciones; escaneo de secretos, ESLint,
   Prettier, TypeScript, Pint, Larastan nivel 7 y build Vite aprobados el 2026-08-14.

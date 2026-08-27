@@ -8,9 +8,6 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\CurriculumVersion;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Faculty;
 use App\Modules\Academic\Infrastructure\Persistence\Models\School;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Subject;
-use App\Modules\Integrations\Application\SianetAcademicRecordMapper;
-use App\Modules\Integrations\Application\SianetIdentityReconciler;
-use App\Modules\Integrations\Domain\Data\InstitutionalRecord;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -128,90 +125,5 @@ class InstitutionalSchemaAlignmentTest extends TestCase
             'creditos' => 3,
             'activo' => true,
         ]);
-    }
-
-    public function test_el_mapper_acepta_parentesis_y_ciclo_ausente(): void
-    {
-        // 332 de 4939 códigos de la fuente traen paréntesis y 21 asignaturas no
-        // tienen fila en `detalles_malla`, así que llegan sin ciclo.
-        $resultado = (new SianetAcademicRecordMapper)->map(
-            new InstitutionalRecord(1, 'ref-parentesis', 'subject', [
-                'career_code' => 'SW-1',
-                'curriculum_code' => 'MALLA-63',
-                'institutional_code' => 'PLCE(MF)H-UB-207',
-                'hidden_code' => 2874,
-                'name' => '  Administración  ',
-                'cycle' => null,
-                'credits' => 3,
-                'active' => true,
-            ]),
-        );
-
-        $this->assertTrue($resultado->valid);
-        $this->assertSame('mapped', $resultado->reasonCode);
-        $this->assertSame('PLCE(MF)H-UB-207', $resultado->normalized['institutional_code']);
-        $this->assertSame('Administración', $resultado->normalized['name']);
-        $this->assertNull($resultado->normalized['cycle']);
-    }
-
-    public function test_el_mapper_rechaza_un_registro_sin_identidad_institucional(): void
-    {
-        $resultado = (new SianetAcademicRecordMapper)->map(
-            new InstitutionalRecord(1, 'ref-sin-identidad', 'subject', [
-                'career_code' => 'SW-1',
-                'curriculum_code' => 'MALLA-63',
-                'institutional_code' => 'SFT-P-614',
-                'hidden_code' => 0,
-                'name' => 'Administración',
-                'cycle' => 6,
-                'credits' => 3,
-                'active' => true,
-            ]),
-        );
-
-        $this->assertFalse($resultado->valid);
-        $this->assertSame('invalid_hidden_code', $resultado->reasonCode);
-    }
-
-    public function test_el_reconciliador_resuelve_por_identidad_oculta(): void
-    {
-        $malla = CurriculumVersion::query()->firstOrFail();
-        $asignatura = Subject::query()->create([
-            'version_malla_id' => $malla->id,
-            'codigo_institucional' => 'SW-950',
-            'codigo_oculto_institucional' => 9950,
-            'nombre' => 'Materia conciliable',
-            'ciclo' => 5,
-            'creditos' => 4,
-            'activo' => true,
-        ]);
-        $reconciliador = new SianetIdentityReconciler;
-        $base = [
-            'career_code' => 'SW-1',
-            'curriculum_code' => 'MALLA-63',
-            'institutional_code' => 'SW-950',
-            'name' => 'Materia conciliable',
-            'cycle' => 5,
-            'credits' => 4.0,
-            'active' => true,
-        ];
-
-        $ausente = $reconciliador->propose('subject', $base + ['hidden_code' => 9999]);
-        $this->assertSame('new', $ausente->result);
-        $this->assertSame('create', $ausente->proposedAction);
-        $this->assertSame('institutional_identity_absent', $ausente->reasonCode);
-
-        $igual = $reconciliador->propose('subject', $base + ['hidden_code' => 9950]);
-        $this->assertSame('unchanged', $igual->result);
-        $this->assertSame('none', $igual->proposedAction);
-        $this->assertSame($asignatura->id, $igual->candidateId);
-
-        $distinto = $reconciliador->propose('subject', array_merge($base, [
-            'hidden_code' => 9950,
-            'name' => 'Materia conciliable renombrada',
-        ]));
-        $this->assertSame('change', $distinto->result);
-        $this->assertSame('update', $distinto->proposedAction);
-        $this->assertSame('institutional_attributes_differ', $distinto->reasonCode);
     }
 }

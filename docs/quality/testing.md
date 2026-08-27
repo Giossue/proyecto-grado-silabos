@@ -13,7 +13,6 @@ cantidad de tests no sustituye cobertura de riesgos.
 - permisos/invariantes puras;
 - cálculos y reglas de plantilla;
 - claves de idempotencia y huellas;
-- reconciliación de importación;
 - mapeo de contratos externos.
 
 No necesitan Laravel completo si la regla puede probarse aisladamente.
@@ -126,26 +125,6 @@ La suite principal debe aprobar con IA desactivada.
 La suite automatizada valida el contrato con `contract-simulator-v1`; no sustituye la
 evaluación experta del modelo/corpus, pruebas de carga del servicio local ni revisión
 manual de accesibilidad, previstas para I-08.
-
-## Cobertura automatizada I-07
-
-`InstitutionalImportTest` usa PostgreSQL real, cola falsa y lectores controlados para
-cubrir CU-18 y ADM-08:
-
-- permiso exclusivo de administrador con rol activo, rate limit e idempotencia de
-  solicitud/dispatch;
-- clasificación del fixture en coincidencia, posible alta, duplicados y rechazo, con
-  huellas y contadores coherentes;
-- comparación antes/después de todas las tablas académicas para demostrar cero mutación;
-- lote sobredimensionado y lector indisponible con fallo cerrado, sin staging parcial ni
-  filtración del error técnico;
-- HTML hostil tratado como dato rechazado y ausencia del payload/referencia en ADM-08;
-- exclusión humana justificada, repetición idempotente, inmutabilidad y rechazo de staging
-  tardío mediante triggers PostgreSQL.
-
-La suite usa `anonymized-fixture-v1`; no sustituye pruebas del esquema, red, credenciales,
-calidad, rendimiento o retención de una fuente real, bloqueadas por `PV-09`, `PV-10` y
-`PV-12` hasta I-08 o una decisión institucional posterior.
 
 ## Cobertura automatizada I-05
 

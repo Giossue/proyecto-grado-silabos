@@ -23,12 +23,10 @@ php artisan migrate:fresh --seed --force
 npm run build
 ```
 
-Para demostrar la IA contractual y la importación sintética, cambie solo en el ambiente
-local:
+Para demostrar la IA contractual, cambie solo en el ambiente local:
 
 ```text
 AI_DRIVER=baseline
-INSTITUTIONAL_IMPORT_DRIVER=fixture
 ```
 
 Después limpie la configuración y levante los procesos en terminales separadas:
@@ -145,7 +143,7 @@ Las cuentas creadas por el seeder usan exclusivamente datos sintéticos:
 5. Compruebe que el aprobado no admite edición. No lo reabra todavía: conserve ese estado
    para generar los documentos en el paso siguiente.
 
-### 5. Documentos, informes, operación e importación
+### 5. Documentos, informes y operación
 
 1. Desde la revisión aprobada abra **Documentos** y
    solicite DOCX/PDF. El worker de `documents` debe dejar ambos disponibles como archivos
@@ -157,13 +155,7 @@ Las cuentas creadas por el seeder usan exclusivamente datos sintéticos:
    detalle. Ningún registro de otra carrera debe ser visible (`CU-16`).
 4. Como Administrador, abra **Trabajos** y **Auditoría**. Compruebe progreso, intentos,
    correlación y eventos del recorrido, sin contenido académico completo (`CU-17`).
-5. En **Integraciones**, ejecute el perfil visible **Escenario académico sintético**
-   (`baseline`) una vez. Debe
-   terminar con filas aceptadas/rechazadas y conflictos, sin cambiar asignaturas, mallas,
-   ofertas ni asignaciones. Excluya un conflicto con justificación y repita la misma clave
-   solo mediante la prueba automatizada de idempotencia. No existe acción **Aplicar**
-   mientras `PV-09`, `PV-10` y `PV-12` estén abiertas (`CU-18`).
-6. Cierre sesión para completar `CU-01`.
+5. Cierre sesión para completar `CU-01`.
 
 ## Resultado esperado y registro
 
@@ -173,7 +165,6 @@ La demostración es satisfactoria técnicamente cuando:
 
 - los tres roles solo ven su rol y alcance;
 - el envío, corrección, aprobación y reapertura conservan todas las revisiones;
-- IA, exportación, notificaciones e importación terminan en sus colas observables;
+- IA, exportación y notificaciones terminan en sus colas observables;
 - apagar `AI_DRIVER` no impide guardar, validar, enviar, revisar ni aprobar;
-- la importación no altera catálogos académicos;
 - cualquier hallazgo manual se registra en la matriz de aceptación, sin cambiar un `PV`.

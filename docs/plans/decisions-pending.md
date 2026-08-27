@@ -12,8 +12,8 @@
 | PV-06 | Excepciones de sílabo separado por paralelo | Coordinación | Cerrada el 2026-08-26 |
 | PV-07 | DOCX oficial y reglas de exportación | Autoridad de plantilla | P0 motor final I-02/I-05 |
 | PV-08 | Fórmula/redondeo oficial de horas, créditos y totales | Coordinación/fuente | P0 cálculos I-02/I-03 |
-| PV-09 | Acceso, esquema y calidad de base institucional | Personal técnico | Cerrada en I-11 el 2026-08-18 |
-| PV-10 | Identificadores institucionales únicos | Personal técnico | Cerrada en I-11 el 2026-08-18 |
+| PV-09 | Acceso, esquema y calidad de base institucional | Personal técnico | Cerrada en I-11 el 2026-08-18; sin objeto desde el 2026-08-27 |
+| PV-10 | Identificadores institucionales únicos | Personal técnico | Cerrada en I-11 el 2026-08-18; sin objeto desde el 2026-08-27 |
 | PV-11 | Conservación, backup, RPO y RTO | Técnico/autoridad | P2 producción |
 | PV-12 | Base legal, finalidad y aviso de privacidad | UEB/datos | P0 datos sensibles, P2 producción |
 | PV-13 | Hardware disponible para IA local | Personal técnico/autores | P0 selección IA |
@@ -73,7 +73,7 @@ del 23 de junio de 2025. El esquema quedó verificado sobre datos: 190 tablas, 5
 La calidad quedó caracterizada y no es buena: `contenido`, `unidad` y `tema` no tienen
 ninguna clave ajena; `asignatura_docente.centro` y `.modalidad` son texto libre que no
 respeta el catálogo `centro`; `malla.vigencia` incluye un valor `1 ` fuera de dominio; y
-332 de 4939 códigos de asignatura contienen paréntesis. La importación asume datos sucios
+332 de 4939 códigos de asignatura contienen paréntesis. La importación asumía datos sucios
 y valida en el mapper.
 
 Queda fuera de esta puerta la frecuencia de actualización y el acceso de red productivo:
@@ -87,7 +87,7 @@ destino de todas las claves ajenas de la fuente. `cod_asig` es solo el código v
 sirve para reconciliar. La identidad del docente es `docente.ci_doc`, y
 `asignatura_docente.cod_asig_doc` la deriva con el formato `{cédula}-{secuencial}`.
 
-`SianetIdentityReconciler` implementa esa regla y ya propone alta, cambio o sin cambio.
+El reconciliador que implementaba esa regla se retiró con el módulo el 2026-08-27.
 El conflicto queda reservado a la referencia externa duplicada y a la ambigüedad real.
 
 ### PV-06 — Excepciones de sílabo separado por paralelo
@@ -100,9 +100,13 @@ o se conserva como excepción autorizada.
 
 ### Riesgo asumido
 
-PV-09 y PV-10 se cierran sobre evidencia técnica directa, no sobre confirmación escrita de
-la UEB. Si la institución modifica SIANET o niega el acceso formal, la base de estas
-decisiones queda expuesta y hay que reabrirlas.
+PV-09 y PV-10 se cerraron sobre evidencia técnica directa —un respaldo del 23 de junio de
+2025—, no sobre confirmación escrita de la UEB ni sobre la base viva. Esa exposición es la
+razón por la que el 2026-08-27 se retiró el módulo de importación: sin garantía de que la
+estructura de hoy sea esa, y sin base legal escrita para tratar datos de personas
+(`PV-12`), no había forma de encenderlo. Ambas quedan sin objeto mientras el sistema no
+vuelva a plantearse leer de SIANET. La estructura académica que se alineó en I-11 se
+conserva: describe cómo se organiza la universidad, y eso no dependía de la importación.
 
 PV-06 se cierra sobre la respuesta del tutor del proyecto, no de una autoridad académica de
 la UEB. Cierra alcance para el proyecto de grado; no constituye normativa institucional.

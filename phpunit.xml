@@ -27,7 +27,6 @@
         <env name="APP_ENV" value="testing"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="AI_DRIVER" value="baseline"/>
-        <env name="INSTITUTIONAL_IMPORT_DRIVER" value="fixture"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>
         <env name="CACHE_STORE" value="array"/>

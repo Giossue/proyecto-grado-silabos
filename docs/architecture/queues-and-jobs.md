@@ -4,7 +4,6 @@
 
 - análisis de IA;
 - generación DOCX/PDF;
-- importaciones y reconciliación;
 - notificaciones externas;
 - tareas de mantenimiento y reportes pesados.
 
@@ -67,14 +66,3 @@ timeout del gateway usa los reintentos del worker y, al agotarlos, guarda
 `ai_service_unavailable` sin copiar el mensaje técnico. Conflicto, evidencia vacía o
 exceso de fragmentos son resultados no concluyentes, no fallos de la cola.
 
-## Trabajo `import.simulation`
-
-I-07 registra `ImportExecution` y `JobExecution` antes de despachar
-`SimulateInstitutionalImportJob` a `integrations`. El payload de cola contiene solo el
-UUID de la ejecución; el input fijado, huellas, clasificación, métricas e intentos viven
-en PostgreSQL. Tiene tres intentos, timeout de 120 segundos y backoff 5/30/120.
-
-El lote completo se valida antes del staging y se inserta en una sola transacción. Un
-contrato inválido termina como `import_contract_invalid`; indisponibilidad agota los
-reintentos y persiste `institutional_reader_unavailable`. Ambos mensajes son seguros y
-declaran que ningún catálogo cambió. Reprocesar una ejecución terminal no agrega filas.

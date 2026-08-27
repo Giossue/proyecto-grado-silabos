@@ -28,7 +28,7 @@ fragmentos sensibles o stack trace en respuestas públicas.
 - latencia y tasa de error HTTP por ruta/clase;
 - consultas lentas y conexiones;
 - profundidad/espera/fallos/reintentos de colas;
-- duración y resultado de exportación/importación/IA;
+- duración y resultado de exportación e IA;
 - disponibilidad de dependencias;
 - eventos funcionales agregados sin datos personales innecesarios.
 
@@ -36,7 +36,7 @@ fragmentos sensibles o stack trace en respuestas públicas.
 
 Inicio/cierre/revocación sensible, cambios de rol, publicación de plantilla, activación o
 resolución de fuente, apertura de convocatoria, envío/reenviado, observación/corrección,
-aprobación, reapertura, descarga/exportación sensible e importación.
+aprobación, reapertura y descarga/exportación sensible.
 
 Registra actor, rol y alcance, acción, tipo/ID de recurso, revisión/versión, fecha, resultado,
 motivo cuando aplique y correlación. Evita duplicar contenido completo; usa diferencias o

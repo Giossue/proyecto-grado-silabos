@@ -11,7 +11,6 @@ use App\Modules\Configuration\Presentation\Http\Controllers\TemplateController;
 use App\Modules\Documents\Presentation\Http\Controllers\DocumentController;
 use App\Modules\Identity\Presentation\Http\Controllers\ActiveRoleController;
 use App\Modules\Identity\Presentation\Http\Controllers\ManagedUserController;
-use App\Modules\Integrations\Presentation\Http\Controllers\InstitutionalImportController;
 use App\Modules\Operations\Presentation\Http\Controllers\AuditEventController;
 use App\Modules\Operations\Presentation\Http\Controllers\JobExecutionController;
 use App\Modules\Operations\Presentation\Http\Controllers\NotificationController;
@@ -114,12 +113,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('trabajos', [JobExecutionController::class, 'index'])->name('jobs.index');
         Route::post('trabajos/{execution}/reintentar', [JobExecutionController::class, 'retry'])->name('jobs.retry');
         Route::get('auditoria', [AuditEventController::class, 'index'])->name('audit.index');
-        Route::get('integraciones', [InstitutionalImportController::class, 'index'])->name('integrations.index');
-        Route::post('integraciones', [InstitutionalImportController::class, 'store'])
-            ->middleware('throttle:institutional-import')
-            ->name('integrations.store');
-        Route::post('integraciones/conflictos/{conflict}/excluir', [InstitutionalImportController::class, 'exclude'])
-            ->name('integrations.conflicts.exclude');
         Route::get('usuarios', [ManagedUserController::class, 'index'])->name('users.index');
         Route::post('usuarios', [ManagedUserController::class, 'store'])->name('users.store');
         Route::get('usuarios/{user}', [ManagedUserController::class, 'show'])->name('users.show');

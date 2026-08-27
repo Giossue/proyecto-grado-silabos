@@ -73,14 +73,19 @@ degradación segura.
 - PV P0/P1: PV-02, PV-13, PV-14, PV-18.
 - El flujo completo de I-04 debe pasar con el servicio apagado.
 
-## I-07 — Importación institucional
+## I-07 — Importación institucional (retirada el 2026-08-27)
 
-**Resultado:** simulación y ejecución trazable de importación, con reconciliación y sin
-escritura en la fuente.
+**Resultado original:** simulación y ejecución trazable de importación, con reconciliación
+y sin escritura en la fuente. Nunca aplicó un cambio: no existió aplicador.
 
-- RF-016, RF-075; CU-18; ADM-08.
-- PV P0: PV-09 y PV-10.
-- Empieza por fixture/simulador; conecta al origen solo con autorización.
+**Retirada** por decisión del responsable del producto. El módulo se apoyaba en un
+respaldo de SIANET del 23 de junio de 2025, no en la base viva; nadie confirmó que la
+estructura de hoy sea esa, y traer datos de personas seguía sin base legal escrita
+(`PV-12`). Se eliminó el módulo, su pantalla, sus tablas y sus pruebas en lugar de
+sostener una simulación que no podía encenderse.
+
+- Cubría RF-016, RF-075; CU-18; ADM-08. Esos requisitos quedan sin implementación.
+- `PV-09` y `PV-10` se cerraron en I-11 y quedan sin objeto para el sistema.
 
 ## I-08 — Validación, endurecimiento y piloto
 

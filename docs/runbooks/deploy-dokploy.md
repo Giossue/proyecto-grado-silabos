@@ -61,7 +61,6 @@ LOG_CHANNEL=stderr
 LOG_LEVEL=warning
 
 AI_DRIVER=disabled
-INSTITUTIONAL_IMPORT_DRIVER=disabled
 ```
 
 ### Correo
@@ -134,6 +133,5 @@ redespliegue los pierde. En Dokploy, añade un **volume mount** hacia
 
 ## Fuera de alcance
 
-El servicio local de IA y el conector institucional quedan desactivados
-(`AI_DRIVER=disabled`, `INSTITUTIONAL_IMPORT_DRIVER=disabled`). Dependen de `PV-13`,
-`PV-14` y del acceso de red productivo a la fuente, que siguen abiertos.
+El servicio local de IA queda desactivado (`AI_DRIVER=disabled`). Depende de `PV-13` y
+`PV-14`, que siguen abiertas.

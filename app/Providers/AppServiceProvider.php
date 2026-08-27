@@ -18,13 +18,6 @@ use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Identity\Application\Contracts\RoleEligibility;
 use App\Modules\Identity\Domain\Enums\RoleCode;
 use App\Modules\Identity\Domain\Policies\UserPolicy;
-use App\Modules\Integrations\Application\SianetAcademicRecordMapper;
-use App\Modules\Integrations\Application\SianetIdentityReconciler;
-use App\Modules\Integrations\Domain\Contracts\AcademicRecordMapper;
-use App\Modules\Integrations\Domain\Contracts\ImportReconciler;
-use App\Modules\Integrations\Domain\Contracts\InstitutionalDataReader;
-use App\Modules\Integrations\Infrastructure\Readers\AnonymizedFixtureInstitutionalDataReader;
-use App\Modules\Integrations\Infrastructure\Readers\DisabledInstitutionalDataReader;
 use App\Modules\Syllabus\Domain\Policies\ConvocationPolicy;
 use App\Modules\Syllabus\Domain\Policies\SyllabusPolicy;
 use App\Modules\Syllabus\Domain\Policies\SyllabusRevisionPolicy;
@@ -57,14 +50,6 @@ class AppServiceProvider extends ServiceProvider
                 default => app(DisabledAiAnalysisGateway::class),
             };
         });
-        $this->app->bind(InstitutionalDataReader::class, function (): InstitutionalDataReader {
-            return match ((string) config('integrations.institutional_import.driver')) {
-                'fixture' => app(AnonymizedFixtureInstitutionalDataReader::class),
-                default => app(DisabledInstitutionalDataReader::class),
-            };
-        });
-        $this->app->bind(AcademicRecordMapper::class, SianetAcademicRecordMapper::class);
-        $this->app->bind(ImportReconciler::class, SianetIdentityReconciler::class);
     }
 
     /**
@@ -109,11 +94,6 @@ class AppServiceProvider extends ServiceProvider
             fn (User $user): bool => $user->active
                 && app(ActiveRole::class)->hasRole(request(), RoleCode::Administrator),
         );
-        Gate::define(
-            'operate-imports',
-            fn (User $user): bool => $user->active
-                && app(ActiveRole::class)->hasRole(request(), RoleCode::Administrator),
-        );
         Gate::define('view-sources', function (User $user): bool {
             $activeRole = app(ActiveRole::class)->resolve(request());
 
@@ -140,13 +120,6 @@ class AppServiceProvider extends ServiceProvider
 
             return Limit::perMinute((int) config('ai.limits.requests_per_minute'))
                 ->by("ai-analysis:{$actorKey}:{$syllabusKey}");
-        });
-        RateLimiter::for('institutional-import', function (Request $request): Limit {
-            $user = $request->user();
-            $actorKey = $user instanceof User ? $user->id : (string) $request->ip();
-
-            return Limit::perMinute((int) config('integrations.institutional_import.limits.requests_per_minute'))
-                ->by("institutional-import:{$actorKey}");
         });
 
         DB::prohibitDestructiveCommands(

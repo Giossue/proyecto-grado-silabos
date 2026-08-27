@@ -5,13 +5,13 @@
 | Capacidad | RF | CU |
 |---|---|---|
 | Identidad y acceso | RF-001 a RF-007 | CU-01, CU-02 |
-| Estructura académica | RF-008 a RF-016 | CU-03, CU-18 |
+| Estructura académica | RF-008 a RF-016 | CU-03 |
 | Plantillas | RF-017 a RF-026 | CU-04 |
 | Fuentes | RF-027 a RF-033 | CU-05 |
 | Convocatorias y elaboración | RF-034 a RF-045 | CU-06, CU-07, CU-09 |
 | IA | RF-046 a RF-054 | CU-08 |
 | Revisión y aprobación | RF-055 a RF-065 | CU-10 a CU-14 |
-| Documentos, informes y operación | RF-066 a RF-075 | CU-15 a CU-18 |
+| Documentos, informes y operación | RF-066 a RF-074 | CU-15 a CU-17 |
 
 ## Requisitos no funcionales
 

@@ -2,11 +2,11 @@
 
 ## Trazabilidad
 
-- RF-066 a RF-075; CU-15 a CU-18.
+- RF-066 a RF-074; CU-15 a CU-17.
 - RN-031 a RN-034.
 - RNF-006, RNF-008, RNF-013, RNF-017, RNF-024 a RNF-028 y RNF-034.
-- DOC-10, COR-12 y ADM-08 a ADM-10.
-- PV-07, PV-09, PV-11 y PV-15.
+- DOC-10, COR-12, ADM-09 y ADM-10.
+- PV-07, PV-11 y PV-15.
 
 ## Comportamiento
 
@@ -16,7 +16,6 @@
 - Informes definen indicador y respetan filtros/alcance.
 - Auditoría apend-only reconstruye transiciones y acciones críticas.
 - Trabajos asíncronos muestran estado, intentos y causa sin duplicar efectos.
-- Importaciones son trazables, conciliables y de solo lectura sobre la fuente.
 
 ## Criterios críticos
 
@@ -44,17 +43,3 @@
   UUID de recursos en la interfaz.
 - No existe borrado ni purga hasta resolver `PV-11` y `PV-12`.
 
-## Estado de implementación I-07
-
-- ADM-08 permite al administrador ejecutar y consultar una simulación asíncrona con un
-  fixture sintético versionado. La solicitud y el trabajo son idempotentes y observables
-  en ADM-09 y UI-03.
-- Cada fila conserva payload privado, normalización y huellas; la interfaz solo muestra
-  valores académicos normalizados, clasificación, motivo y métricas.
-- El reconciliador señala posibles altas, cambios o coincidencias, pero toda fila válida
-  queda en conflicto porque `PV-10` no confirma aún la identidad institucional.
-- Excluir una fila exige justificación y crea una decisión humana auditada e inmutable.
-  No existe botón, endpoint, caso de uso ni contrato implementado para aplicar cambios.
-- `anonymized-fixture-v1` no contiene personas ni realiza I/O. Conector real, esquema,
-  credenciales, red, reglas de enlace, tratamiento/retención y aplicación siguen
-  bloqueados por `PV-09`, `PV-10` y `PV-12`.

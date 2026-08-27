@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Modules\AiAssistance\Infrastructure\Persistence\Models\AiExecution;
 use App\Modules\Documents\Infrastructure\Persistence\Models\ExportArtifact;
-use App\Modules\Integrations\Infrastructure\Persistence\Models\ImportExecution;
 use App\Modules\Operations\Infrastructure\Persistence\Models\InternalNotification;
 use App\Modules\Operations\Presentation\Http\Requests\MarkAllNotificationsReadRequest;
 use App\Modules\Operations\Presentation\Http\Requests\MarkNotificationReadRequest;
@@ -96,14 +95,6 @@ class NotificationController extends Controller
             return $execution !== null && $actor->can('edit', $execution->syllabus)
                 ? route('syllabi.ai.show', [$execution->syllabus, $execution->field])
                 : null;
-        }
-        if ($notification->tipo_recurso === 'import_execution'
-            && $actor->can('operate-imports')) {
-            $execution = ImportExecution::query()->find($notification->recurso_id);
-
-            return $execution === null
-                ? null
-                : route('admin.integrations.index', ['run' => $execution->id]);
         }
 
         return null;

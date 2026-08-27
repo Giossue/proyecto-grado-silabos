@@ -2,7 +2,7 @@
 
 ## Trazabilidad
 
-- RF-001 a RF-016; CU-01 a CU-03 y CU-18.
+- RF-001 a RF-016; CU-01 a CU-03.
 - RN-001 a RN-008.
 - UI-01 a UI-04; ADM-02 a ADM-04.
 - PV-05, PV-06, PV-09, PV-10, PV-12 y PV-15.
@@ -36,8 +36,6 @@
 - ADM-02..04 y COR-13..15 priorizan sus tablas; una única acción principal abre desde la
   derecha el formulario de alta correspondiente, sin mostrarlo permanentemente.
 - La asignación académica decide qué sílabos puede ver y editar un docente.
-- La importación identifica origen, altas, cambios, rechazos y conflictos sin escribir en
-  la fuente institucional.
 
 ## Criterios críticos
 
@@ -49,12 +47,4 @@
   solicitud fuera de la interfaz.
 - Archivar no elimina referencias históricas; reactivar vuelve a habilitar usos futuros.
 - Una nueva malla no altera expedientes de mallas anteriores.
-- Repetir una importación con la misma entrada no duplica registros.
-- Un conflicto de identificador se presenta para resolución y no se fusiona en silencio.
 
-## Estado de la importación en I-07
-
-La simulación ya demuestra origen/versión fijados, clasificación, idempotencia, conflicto
-humano y cero mutación académica con un fixture sintético. No confirma que los códigos
-usados por el fixture sean identificadores reales ni únicos: `PV-09` y `PV-10` mantienen
-bloqueados el conector productivo, el enlace y la aplicación.

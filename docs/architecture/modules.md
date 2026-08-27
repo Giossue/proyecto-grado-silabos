@@ -44,7 +44,6 @@ real.
 | IA | sílabos, configuración/fuentes mediante contratos |
 | Documentos | sílabos, configuración mediante snapshots/contratos |
 | Operaciones | eventos/DTO públicos de módulos |
-| Integraciones | puertos de académico/identidad; no tablas internas directas |
 
 Evita ciclos. Si dos módulos se necesitan mutuamente, extrae un contrato público, un
 evento o revisa el límite.

@@ -56,13 +56,6 @@
 - Límites de tokens/tamaño/tiempo/concurrencia.
 - Redacción/minimización de prompts y logs.
 
-## Integración institucional
-
-- Credencial de solo lectura y mínimo privilegio.
-- Staging/dry-run, validación y conflictos antes de aplicar.
-- No almacenar credenciales o dumps en artefactos/CI.
-- Registrar origen, lote, huellas y resultado.
-
 ## Cabeceras y transporte
 
 - HTTPS y redirección segura en ambientes expuestos.

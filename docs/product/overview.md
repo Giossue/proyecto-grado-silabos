@@ -32,7 +32,7 @@ genera Word/PDF desde la revisión aprobada.
 |---|---|
 | Docente | Elaborar, corregir, justificar y enviar el sílabo asignado sin perder trabajo. |
 | Coordinador | Gestionar mallas, materias, oferta y docentes de su carrera; preparar convocatorias, revisar, aprobar y vigilar el avance. |
-| Administrador | Mantener usuarios, facultades, carreras, coordinaciones, plantillas, integraciones y operación. |
+| Administrador | Mantener usuarios, facultades, carreras, coordinaciones, plantillas y operación. |
 
 Una persona puede acumular roles. El permiso efectivo depende además de alcance,
 asignación, vigencia y estado.
@@ -52,7 +52,7 @@ El ciclo cubre:
 9. comparación y aprobación;
 10. reapertura controlada;
 11. generación de Word/PDF;
-12. notificaciones, informes, auditoría e importación trazable.
+12. notificaciones, informes y auditoría.
 
 ## Fuera de alcance
 

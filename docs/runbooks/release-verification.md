@@ -46,7 +46,6 @@ Antes de almacenar cachés, verifique al menos:
 - `QUEUE_CONNECTION=redis` y `REDIS_QUEUE_RETRY_AFTER` mayor que 120 s;
 - almacenamiento privado persistente; ningún volumen funcional bajo `public/`;
 - `AI_DRIVER=disabled` si no existe servicio local aprobado;
-- `INSTITUTIONAL_IMPORT_DRIVER=disabled` mientras no exista conector autorizado;
 - correo, backup, retención y observabilidad resueltos antes de producción.
 
 Después:

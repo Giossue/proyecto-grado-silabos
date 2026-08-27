@@ -98,7 +98,6 @@ establece; una recomendación de IA nunca bloquea por sí sola.
 
 - `ObjetoAlmacenado` y `ArtefactoExportacion`.
 - `Notificacion`, `EventoAuditoria`, `EventoOutbox`, `EjecucionTrabajo`.
-- `EjecucionImportacion`, `ItemImportacion`, `ConflictoImportacion`.
 
 ## Invariantes
 
