@@ -25,6 +25,15 @@ return Application::configure(basePath: dirname(__DIR__))
             'active-role' => RequireActiveRole::class,
         ]);
 
+        // Traefik descifra el TLS y entrega la petición por HTTP dentro de la red de
+        // Docker. Sin esto Laravel cree que la conexión es insegura y genera todas las
+        // direcciones con «http://»: el navegador bloquea esos archivos por contenido
+        // mixto y la página queda en blanco.
+        //
+        // Se confía en cualquier proxy porque la aplicación solo es alcanzable a través
+        // del suyo: el puerto 8080 del contenedor no está expuesto fuera de esa red.
+        $middleware->trustProxies(at: '*');
+
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
         $middleware->web(append: [
