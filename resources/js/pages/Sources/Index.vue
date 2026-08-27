@@ -93,7 +93,7 @@ defineOptions({
         <Card>
             <CardContent class="flex flex-col gap-4">
                 <ClientFilterBar
-                    v-model="filter.search.value"
+                    :filter="filter"
                     input-id="sources-search"
                     label="Buscar fuente"
                     placeholder="Buscar por nombre, tipo, autoridad o responsable"

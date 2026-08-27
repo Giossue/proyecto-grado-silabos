@@ -1,6 +1,9 @@
 <script setup lang="ts">
-import { onBeforeUnmount } from 'vue';
+import { router, usePage } from '@inertiajs/vue3';
+import { FilterX } from '@lucide/vue';
+import { computed, onBeforeUnmount } from 'vue';
 import MobileFilterSheet from '@/components/domain/MobileFilterSheet.vue';
+import { Button } from '@/components/ui/button';
 import { FieldGroup } from '@/components/ui/field';
 
 const props = withDefaults(
@@ -54,6 +57,39 @@ const onChange = (event: Event): void => {
     submit(event.target);
 };
 
+/*
+ * Aquí los filtros viven en la dirección, así que la dirección dice si hay alguno puesto.
+ * Se descarta `page`, que no filtra nada: es en qué página de resultados se está.
+ */
+const page = usePage();
+
+const query = computed(() => new URL(page.url, window.location.origin));
+
+const active = computed(() => {
+    const params = new URLSearchParams(query.value.search);
+
+    params.delete('page');
+
+    return [...params.values()].some(
+        (value) => value !== '' && value !== 'all',
+    );
+});
+
+/*
+ * Quitar los filtros es volver a la dirección sin nada detrás. `preserveState: false`
+ * rehace la pantalla: los campos toman su valor de lo que llega del servidor una sola
+ * vez, así que conservando el estado la lista saldría limpia y los campos seguirían
+ * mostrando lo que ya no se aplica.
+ */
+const clear = (): void => {
+    cancel();
+    router.get(
+        query.value.pathname,
+        {},
+        { preserveState: false, preserveScroll: true },
+    );
+};
+
 onBeforeUnmount(cancel);
 </script>
 
@@ -73,6 +109,21 @@ onBeforeUnmount(cancel);
             class="grid min-w-0 gap-3 sm:grid-cols-2 lg:flex lg:flex-none lg:items-end [&_[data-slot=select-trigger]]:w-full [&>[data-slot=field]]:min-w-0 lg:[&>[data-slot=field]]:w-44"
         >
             <slot name="filters" />
+
+            <!--
+                Solo cuando hay algo que quitar. Un botón permanente para deshacer algo que
+                no se ha hecho ocupa sitio y hace dudar de si estaba filtrando sin querer.
+            -->
+            <Button
+                v-if="active"
+                type="button"
+                variant="ghost"
+                class="max-sm:w-full"
+                @click="clear"
+            >
+                <FilterX data-icon="inline-start" aria-hidden="true" />
+                Quitar filtros
+            </Button>
         </MobileFilterSheet>
 
         <!--

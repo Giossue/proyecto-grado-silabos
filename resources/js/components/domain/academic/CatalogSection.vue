@@ -133,7 +133,7 @@ const {
     <Card v-if="section === 'faculties'">
         <CardContent class="flex flex-col gap-4">
             <ClientFilterBar
-                v-model="facultyFilter.search.value"
+                :filter="facultyFilter"
                 input-id="faculties-search"
                 label="Buscar facultad"
                 placeholder="Buscar por nombre o código"
@@ -228,7 +228,7 @@ const {
     <Card v-else-if="section === 'careers'">
         <CardContent class="flex flex-col gap-4">
             <ClientFilterBar
-                v-model="careerFilter.search.value"
+                :filter="careerFilter"
                 input-id="careers-search"
                 label="Buscar carrera"
                 placeholder="Buscar por nombre o código"
@@ -319,7 +319,7 @@ const {
     <Card v-else-if="section === 'campuses'">
         <CardContent class="flex flex-col gap-4">
             <ClientFilterBar
-                v-model="campusFilter.search.value"
+                :filter="campusFilter"
                 input-id="campuses-search"
                 label="Buscar campus"
                 placeholder="Buscar por nombre o código"
@@ -410,7 +410,7 @@ const {
     <Card v-else-if="section === 'modalities'">
         <CardContent class="flex flex-col gap-4">
             <ClientFilterBar
-                v-model="modalityFilter.search.value"
+                :filter="modalityFilter"
                 input-id="modalities-search"
                 label="Buscar modalidad"
                 placeholder="Buscar por nombre o código"
@@ -498,7 +498,7 @@ const {
     <Card v-else>
         <CardContent class="flex flex-col gap-4">
             <ClientFilterBar
-                v-model="periodFilter.search.value"
+                :filter="periodFilter"
                 input-id="periods-search"
                 label="Buscar periodo"
                 placeholder="Buscar por nombre o código"

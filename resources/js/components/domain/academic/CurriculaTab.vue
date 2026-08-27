@@ -90,7 +90,7 @@ const stateLabel: Record<string, string> = {
             >
             <CardContent class="flex flex-col gap-4">
                 <ClientFilterBar
-                    v-model="curriculumFilter.search.value"
+                    :filter="curriculumFilter"
                     input-id="curricula-search"
                     label="Buscar malla"
                     placeholder="Buscar por código o carrera"
@@ -222,7 +222,7 @@ const stateLabel: Record<string, string> = {
             >
             <CardContent class="flex flex-col gap-4">
                 <ClientFilterBar
-                    v-model="subjectFilter.search.value"
+                    :filter="subjectFilter"
                     input-id="subjects-search"
                     label="Buscar asignatura"
                     placeholder="Buscar por código, nombre o malla"

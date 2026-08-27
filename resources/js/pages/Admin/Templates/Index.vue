@@ -81,7 +81,7 @@ defineOptions({
         <Card>
             <CardContent class="flex flex-col gap-4">
                 <ClientFilterBar
-                    v-model="filter.search.value"
+                    :filter="filter"
                     input-id="templates-search"
                     label="Buscar plantilla"
                     placeholder="Buscar por nombre, descripción o carrera"

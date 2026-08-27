@@ -246,7 +246,7 @@ const {
                 </CardHeader>
                 <CardContent class="flex flex-col gap-4">
                     <ClientFilterBar
-                        v-model="syllabusFilter.search.value"
+                        :filter="syllabusFilter"
                         input-id="convocation-syllabi-search"
                         label="Buscar expediente"
                         placeholder="Buscar por asignatura o código"

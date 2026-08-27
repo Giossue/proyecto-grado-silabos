@@ -140,7 +140,7 @@ const page = usePage();
             >
             <CardContent class="flex flex-col gap-4">
                 <ClientFilterBar
-                    v-model="assignmentFilter.search.value"
+                    :filter="assignmentFilter"
                     input-id="user-assignments-search"
                     label="Buscar asignación de rol"
                     placeholder="Buscar por rol o carrera"

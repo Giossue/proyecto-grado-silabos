@@ -57,7 +57,7 @@ const {
         <Card>
             <CardContent class="flex flex-col gap-4">
                 <ClientFilterBar
-                    v-model="filter.search.value"
+                    :filter="filter"
                     input-id="teacher-assignments-search"
                     label="Buscar asignación docente"
                     placeholder="Buscar por docente, correo, materia o paralelo"

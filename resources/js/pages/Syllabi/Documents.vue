@@ -234,7 +234,7 @@ onUnmounted(() => {
             <CardContent class="flex flex-col gap-4">
                 <div class="overflow-x-auto" aria-live="polite">
                     <ClientFilterBar
-                        v-model="filter.search.value"
+                        :filter="filter"
                         input-id="documents-search"
                         label="Buscar documento"
                         placeholder="Buscar por asignatura, formato o estado"

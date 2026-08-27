@@ -83,7 +83,7 @@ const {
             >
             <CardContent class="flex flex-col gap-4">
                 <ClientFilterBar
-                    v-model="offeringFilter.search.value"
+                    :filter="offeringFilter"
                     input-id="offerings-search"
                     label="Buscar oferta"
                     placeholder="Buscar por asignatura, periodo, campus o modalidad"
@@ -181,7 +181,7 @@ const {
             >
             <CardContent class="flex flex-col gap-4">
                 <ClientFilterBar
-                    v-model="parallelFilter.search.value"
+                    :filter="parallelFilter"
                     input-id="parallels-search"
                     label="Buscar paralelo"
                     placeholder="Buscar por código u oferta"

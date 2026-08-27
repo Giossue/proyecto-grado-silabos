@@ -50,7 +50,7 @@ const {
         <Card>
             <CardContent class="flex flex-col gap-4">
                 <ClientFilterBar
-                    v-model="filter.search.value"
+                    :filter="filter"
                     input-id="coordinator-assignments-search"
                     label="Buscar coordinación"
                     placeholder="Buscar por persona o carrera"

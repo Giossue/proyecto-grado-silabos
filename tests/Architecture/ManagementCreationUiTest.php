@@ -522,3 +522,32 @@ it('mantiene explicitamente clasificadas las mutaciones store que permanecen en 
         'resources/js/pages/Teacher/Syllabi/Ai.vue:AiAssistanceController.store.form',
     ]);
 });
+
+it('ofrece quitar los filtros en las dos barras y solo cuando hay alguno puesto', function (): void {
+    $root = dirname(__DIR__, 2);
+
+    foreach ([
+        'resources/js/components/domain/FilterToolbar.vue',
+        'resources/js/components/domain/ClientFilterBar.vue',
+    ] as $bar) {
+        $source = file_get_contents($root.'/'.$bar);
+        $this->assertIsString($source);
+
+        // Dentro del panel: en pantalla estrecha el boton acompana a los filtros que
+        // deshace, no a la busqueda, que se queda fuera.
+        $this->assertStringContainsString('Quitar filtros', $source, $bar);
+        $this->assertStringContainsString('FilterX', $source, $bar);
+        $this->assertMatchesRegularExpression(
+            '/v-if="(active|filter\.active\.value)"/',
+            $source,
+            $bar.' muestra el boton aunque no haya filtros puestos.',
+        );
+    }
+
+    // La barra de servidor lee la direccion, que es donde viven sus filtros, y rehace la
+    // pantalla al limpiar: conservando el estado los campos seguirian mostrando lo que ya
+    // no se aplica.
+    $toolbar = file_get_contents($root.'/resources/js/components/domain/FilterToolbar.vue');
+    $this->assertIsString($toolbar);
+    $this->assertStringContainsString('preserveState: false', $toolbar);
+});
