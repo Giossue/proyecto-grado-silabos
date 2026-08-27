@@ -47,6 +47,8 @@ type ListedUser = {
     /** Sigue con la contraseña temporal: la cuenta se creó y nadie la ha estrenado. */
     pending_first_login: boolean;
     roles: { name: string; career_name: string | null }[];
+    /** Carreras en el mismo orden que los roles, para que ambas columnas casen fila a fila. */
+    careers: (string | null)[];
 };
 
 type UserStatus = {
@@ -81,7 +83,12 @@ const statusOf = (user: ListedUser): UserStatus => {
 
 defineProps<{
     users: Paginated<ListedUser>;
-    filters: { q: string | null; status: string | null };
+    filters: {
+        q: string | null;
+        status: string | null;
+        role: string | null;
+        career: string | null;
+    };
     roles: { codigo: string; nombre: string }[];
     careers: { id: string; nombre: string }[];
 }>();
@@ -126,6 +133,66 @@ defineProps<{
                         </template>
                         <template #filters>
                             <Field>
+                                <FieldLabel for="users-role" class="sr-only">
+                                    Rol
+                                </FieldLabel>
+                                <Select
+                                    name="role"
+                                    :default-value="filters.role ?? 'all'"
+                                >
+                                    <SelectTrigger id="users-role">
+                                        <SelectValue
+                                            placeholder="Todos los roles"
+                                        />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectGroup>
+                                            <SelectItem value="all">
+                                                Todos los roles
+                                            </SelectItem>
+                                            <SelectItem
+                                                v-for="role in roles"
+                                                :key="role.codigo"
+                                                :value="role.codigo"
+                                            >
+                                                {{ role.nombre }}
+                                            </SelectItem>
+                                        </SelectGroup>
+                                    </SelectContent>
+                                </Select>
+                            </Field>
+
+                            <Field>
+                                <FieldLabel for="users-career" class="sr-only">
+                                    Carrera
+                                </FieldLabel>
+                                <Select
+                                    name="career"
+                                    :default-value="filters.career ?? 'all'"
+                                >
+                                    <SelectTrigger id="users-career">
+                                        <SelectValue
+                                            placeholder="Todas las carreras"
+                                        />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectGroup>
+                                            <SelectItem value="all">
+                                                Todas las carreras
+                                            </SelectItem>
+                                            <SelectItem
+                                                v-for="career in careers"
+                                                :key="career.id"
+                                                :value="career.id"
+                                            >
+                                                {{ career.nombre }}
+                                            </SelectItem>
+                                        </SelectGroup>
+                                    </SelectContent>
+                                </Select>
+                            </Field>
+
+                            <Field>
                                 <FieldLabel for="users-status" class="sr-only">
                                     Estado
                                 </FieldLabel>
@@ -146,6 +213,9 @@ defineProps<{
                                             <SelectItem value="active">
                                                 Activos
                                             </SelectItem>
+                                            <SelectItem value="pending">
+                                                Sin estrenar
+                                            </SelectItem>
                                             <SelectItem value="inactive">
                                                 Inactivos
                                             </SelectItem>
@@ -161,13 +231,14 @@ defineProps<{
                     <TableHeader>
                         <TableRow>
                             <TableHead>Persona</TableHead>
-                            <TableHead>Roles vigentes</TableHead>
+                            <TableHead>Rol vigente</TableHead>
+                            <TableHead>Carrera</TableHead>
                             <TableHead>Estado</TableHead>
                             <TableHead class="text-right">Acciones</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        <TableEmpty v-if="users.data.length === 0" :colspan="4">
+                        <TableEmpty v-if="users.data.length === 0" :colspan="5">
                             No se encontraron cuentas con estos filtros.
                         </TableEmpty>
                         <TableRow
@@ -190,22 +261,48 @@ defineProps<{
                                     >
                                 </div>
                             </TableCell>
+                            <!--
+                                Rol y carrera en columnas distintas, apiladas en el mismo
+                                orden: quien tenga dos roles ve cada uno frente a su
+                                carrera, y ambas columnas se pueden filtrar por separado.
+                            -->
                             <TableCell>
-                                <div class="flex flex-wrap gap-2">
+                                <div class="flex flex-col items-start gap-1">
                                     <Badge
-                                        v-for="role in user.roles"
-                                        :key="`${role.name}-${role.career_name}`"
+                                        v-for="(role, index) in user.roles"
+                                        :key="`rol-${index}`"
                                         variant="outline"
                                     >
-                                        {{ role.name
-                                        }}<span v-if="role.career_name">
-                                            · {{ role.career_name }}</span
-                                        >
+                                        {{ role.name }}
                                     </Badge>
                                     <span
                                         v-if="user.roles.length === 0"
                                         class="text-sm text-muted-foreground"
                                         >Sin rol vigente</span
+                                    >
+                                </div>
+                            </TableCell>
+                            <TableCell>
+                                <div
+                                    class="flex flex-col items-start gap-1 text-sm"
+                                >
+                                    <span
+                                        v-for="(career, index) in user.careers"
+                                        :key="`carrera-${index}`"
+                                        :class="
+                                            career
+                                                ? ''
+                                                : 'text-muted-foreground'
+                                        "
+                                    >
+                                        <!-- La administración gobierna todo el sistema,
+                                             así que su rol no cuelga de una carrera. -->
+                                        {{ career ?? 'Todas las carreras' }}
+                                    </span>
+                                    <span
+                                        v-if="user.careers.length === 0"
+                                        class="text-muted-foreground"
+                                        >—</span
                                     >
                                 </div>
                             </TableCell>

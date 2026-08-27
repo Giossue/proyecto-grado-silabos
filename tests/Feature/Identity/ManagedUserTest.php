@@ -84,6 +84,65 @@ class ManagedUserTest extends TestCase
                 ->where('managedUser.assignments.1.effective', false));
     }
 
+    public function test_the_list_filters_by_role_career_and_state(): void
+    {
+        $career = Career::query()->where('codigo_institucional', 'SOFTWARE')->firstOrFail();
+
+        // Por rol: solo quien lo tenga vigente.
+        $this->actingAsAdministrator()
+            ->get(route('admin.users.index', ['role' => RoleCode::Coordinator->value]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('users.data', 1)
+                ->where('users.data.0.email', 'coordinador@silabos.test')
+                ->where('filters.role', RoleCode::Coordinator->value));
+
+        // Por carrera: la administración no cuelga de ninguna, así que queda fuera.
+        $this->actingAsAdministrator()
+            ->get(route('admin.users.index', ['career' => $career->id]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->has('users.data', 2));
+
+        // «Sin estrenar» es distinto de «activo»: las cuentas sembradas ya se usaron.
+        $this->actingAsAdministrator()
+            ->get(route('admin.users.index', ['status' => 'pending']))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->has('users.data', 0));
+
+        $this->actingAsAdministrator()
+            ->post(route('admin.users.store'), [
+                'name' => 'Docente Sin Estrenar',
+                'email' => 'sin.estrenar@silabos.test',
+                'password' => 'Temporal-2026!',
+                'role_code' => RoleCode::Teacher->value,
+                'career_id' => $career->id,
+            ])->assertRedirect();
+
+        $this->actingAsAdministrator()
+            ->get(route('admin.users.index', ['status' => 'pending']))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('users.data', 1)
+                ->where('users.data.0.email', 'sin.estrenar@silabos.test'));
+
+        // Y deja de contarse entre las activas, que es lo que dice su insignia.
+        $this->actingAsAdministrator()
+            ->get(route('admin.users.index', ['status' => 'active']))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->has('users.data', 3));
+    }
+
+    public function test_the_list_separates_the_role_from_its_career(): void
+    {
+        $this->actingAsAdministrator()
+            ->get(route('admin.users.index', ['q' => 'Administrador']))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('users.data.0.roles.0.name', 'Administrador')
+                // La administración gobierna el sistema entero: su rol no tiene carrera.
+                ->where('users.data.0.careers.0', null));
+    }
+
     public function test_teacher_cannot_access_user_management_even_with_a_valid_context(): void
     {
         $teacher = User::query()->where('email', 'docente@silabos.test')->firstOrFail();

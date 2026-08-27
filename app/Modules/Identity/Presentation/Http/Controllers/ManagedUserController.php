@@ -9,7 +9,9 @@ use App\Modules\Identity\Application\Actions\AssignRole;
 use App\Modules\Identity\Application\Actions\CreateManagedUser;
 use App\Modules\Identity\Application\Actions\SetUserStatus;
 use App\Modules\Identity\Application\Actions\UpdateManagedUserProfile;
+use App\Modules\Identity\Domain\Enums\RoleCode;
 use App\Modules\Identity\Infrastructure\Persistence\Models\Role;
+use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
 use App\Modules\Identity\Presentation\Http\Requests\AssignRoleRequest;
 use App\Modules\Identity\Presentation\Http\Requests\CreateManagedUserRequest;
 use App\Modules\Identity\Presentation\Http\Requests\IndexUsersRequest;
@@ -19,6 +21,7 @@ use App\Modules\Identity\Presentation\Http\Requests\UpdateManagedUserProfileRequ
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -28,8 +31,14 @@ class ManagedUserController extends Controller
     {
         $filters = $request->validated();
         $search = is_string($filters['q'] ?? null) ? trim($filters['q']) : null;
-        $status = in_array($filters['status'] ?? null, ['active', 'inactive'], true)
+        $status = in_array($filters['status'] ?? null, ['active', 'pending', 'inactive'], true)
             ? $filters['status']
+            : null;
+        $role = in_array($filters['role'] ?? null, array_column(RoleCode::cases(), 'value'), true)
+            ? $filters['role']
+            : null;
+        $career = is_string($filters['career'] ?? null) && Str::isUuid($filters['career'])
+            ? $filters['career']
             : null;
         $users = User::query()
             ->select(['id', 'name', 'email', 'active', 'must_change_password', 'created_at'])
@@ -38,7 +47,29 @@ class ManagedUserController extends Controller
                     ->whereRaw('name ILIKE ?', ["%{$term}%"])
                     ->orWhereRaw('email ILIKE ?', ["%{$term}%"]),
             ))
-            ->when($status, fn (Builder $query, string $value) => $query->where('active', $value === 'active'))
+            // Los tres estados de la lista, y cada uno significa lo mismo que su insignia:
+            // «activo» es una cuenta en uso, no una recién creada que nadie ha estrenado.
+            ->when($status === 'active', fn (Builder $query) => $query
+                ->where('active', true)->where('must_change_password', false))
+            ->when($status === 'pending', fn (Builder $query) => $query
+                ->where('active', true)->where('must_change_password', true))
+            ->when($status === 'inactive', fn (Builder $query) => $query->where('active', false))
+            // El alcance de vigencia vive en `RoleAssignment`, así que se resuelve allí y
+            // aquí solo se compara con la lista de identidades que devuelve.
+            ->when($role, fn (Builder $query, string $code) => $query->whereIn(
+                'id',
+                RoleAssignment::query()
+                    ->effective()
+                    ->whereHas('role', fn ($model) => $model->where('codigo', $code))
+                    ->select('usuario_id'),
+            ))
+            ->when($career, fn (Builder $query, string $careerId) => $query->whereIn(
+                'id',
+                RoleAssignment::query()
+                    ->effective()
+                    ->where('carrera_id', $careerId)
+                    ->select('usuario_id'),
+            ))
             ->with(['roleAssignments' => fn ($query) => $query
                 ->effective()
                 ->with(['role:id,codigo,nombre', 'career:id,nombre'])])
@@ -58,11 +89,19 @@ class ManagedUserController extends Controller
                     'name' => $assignment->role->nombre,
                     'career_name' => $assignment->career?->nombre,
                 ])->values(),
+                'careers' => $user->roleAssignments
+                    ->map(fn ($assignment) => $assignment->career?->nombre)
+                    ->values(),
             ]);
 
         return Inertia::render('Admin/Users/Index', [
             'users' => $users,
-            'filters' => ['q' => $search, 'status' => $status],
+            'filters' => [
+                'q' => $search,
+                'status' => $status,
+                'role' => $role,
+                'career' => $career,
+            ],
             'roles' => Role::query()->orderBy('nombre')->get(['codigo', 'nombre']),
             'careers' => Career::query()->where('activo', true)->orderBy('nombre')->get(['id', 'nombre']),
             'today' => now()->setTimezone(config('app.display_timezone'))->toDateString(),
