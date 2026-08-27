@@ -30,9 +30,11 @@ cierre de casi todos los planes, porque la Definition of Done lo exige.
 | Claro y oscuro en dispositivos reales | Toda la interfaz | `PV-19` fija la matriz de navegadores |
 | Prueba con usuarios `DT-07` | Revisión y aprobación (I-04) | Necesita docentes reales |
 | Fidelidad del DOCX contra el documento oficial | Documentos (I-05) | Depende de `PV-07` |
-| Ejecución de CI en remoto | Plataforma (I-00) | Solo se ha ejecutado en local |
 
 El guion paso a paso está en `docs/quality/manual-review-script.md`.
+
+La ejecución de CI en remoto dejó de estar pendiente el 2026-08-26: el flujo
+`Verificación` corre en GitHub Actions sobre cada push a `main` y pasa en verde.
 
 ## 3. Depende de la UEB: 17 puertas abiertas
 
