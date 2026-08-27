@@ -37,7 +37,10 @@ defineSlots<{
                 <MoreHorizontal data-icon="inline-start" aria-hidden="true" />
             </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" class="w-48">
+        <!-- Sin ancho fijo: el menú se ajusta a sus opciones. `w-48` reservaba 12rem
+             aunque la acción más larga fuera «Archivar», y dejaba media caja vacía. El
+             mínimo de 8rem lo pone el propio DropdownMenuContent. -->
+        <DropdownMenuContent align="end">
             <DropdownMenuGroup>
                 <slot />
             </DropdownMenuGroup>
