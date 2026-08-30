@@ -17,6 +17,9 @@
 - Auditoría apend-only reconstruye transiciones y acciones críticas.
 - ADM-09 muestra estado, intentos y causa de cada proceso, sin duplicar efectos. Se
   titula «Procesos»: nombra para qué sirve, no la máquina que hay debajo.
+- La navegación administrativa agrupa ADM-09 como «Procesos» y ADM-10 como «Registro de
+  actividad» dentro del submenú «Auditoría»; sus responsabilidades y datos permanecen
+  separados.
 
 ## Criterios críticos
 
@@ -43,4 +46,3 @@
   la evidencia anterior en auditoría. ADM-10 no entrega payloads, rutas, contenido ni
   UUID de recursos en la interfaz.
 - No existe borrado ni purga hasta resolver `PV-11` y `PV-12`.
-

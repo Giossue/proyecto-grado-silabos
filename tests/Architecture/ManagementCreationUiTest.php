@@ -156,6 +156,20 @@ it('presenta la jerarquia academica en submenus y rutas sin mezclar catalogos', 
         ->toContain('<SidebarMenuSubButton');
 });
 
+it('agrupa procesos y registro de actividad bajo auditoria', function (): void {
+    $sidebar = file_get_contents(
+        dirname(__DIR__, 2).'/resources/js/components/AppSidebar.vue',
+    );
+
+    expect($sidebar)
+        ->toBeString()
+        ->toContain("title: 'Auditoría'")
+        ->toContain("title: 'Procesos'")
+        ->toContain('href: jobsIndex()')
+        ->toContain("title: 'Registro de actividad'")
+        ->toContain('href: auditIndex()');
+});
+
 it('ofrece edicion y ciclo de vida en cada catalogo institucional', function (): void {
     $root = dirname(__DIR__, 2);
     $catalogs = file_get_contents(

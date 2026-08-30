@@ -19,6 +19,23 @@ it('ofrece el control de tema en el encabezado autenticado', function (): void {
     expect($layout)->toContain('AppSidebarHeader');
 });
 
+it('ofrece las notificaciones en el encabezado y no en el menu lateral', function (): void {
+    $raiz = dirname(__DIR__, 2);
+    $encabezado = (string) file_get_contents($raiz.'/resources/js/components/AppSidebarHeader.vue');
+    $menu = (string) file_get_contents($raiz.'/resources/js/components/AppSidebar.vue');
+
+    expect($encabezado)
+        ->toContain('notificationsIndex')
+        ->toContain('page.props.notifications.unread_count')
+        ->toContain("page.component === 'Notifications/Index'")
+        ->toContain('notificationsLabel')
+        ->toContain('<Badge')
+        ->toContain('<AppearanceToggle />');
+    expect($menu)
+        ->not->toContain("title: 'Notificaciones'")
+        ->not->toContain('notificationsIndex');
+});
+
 it('ofrece el control de tema tambien sin haber entrado', function (string $archivo): void {
     // Quien todavía no inició sesión también necesita poder cambiar de tema.
     $contenido = (string) file_get_contents(dirname(__DIR__, 2).'/'.$archivo);

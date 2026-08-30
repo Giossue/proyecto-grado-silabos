@@ -61,6 +61,28 @@ class ActiveRoleTest extends TestCase
             ->assertRedirect(route('dashboard'));
     }
 
+    public function test_teacher_with_one_role_reaches_its_area_after_signing_in(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+        $teacher = User::query()->where('email', 'docente@silabos.test')->firstOrFail();
+        $assignment = $teacher->roleAssignments()->firstOrFail();
+
+        $this->post(route('login.store'), [
+            'email' => $teacher->email,
+            'password' => 'Demo-2026!',
+        ])->assertRedirect(route('dashboard', absolute: false));
+
+        $this->get(route('dashboard'))
+            ->assertRedirect(route('teacher.dashboard'))
+            ->assertSessionHas('active_role_assignment_id', $assignment->id);
+
+        $this->get(route('teacher.dashboard'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Dashboard')
+                ->where('auth.active_role_id', $assignment->id));
+    }
+
     public function test_several_eligible_roles_are_never_activated_on_their_own(): void
     {
         $this->seed(DatabaseSeeder::class);
@@ -68,10 +90,33 @@ class ActiveRoleTest extends TestCase
         $this->alsoCoordinates($teacher);
 
         $this->actingAs($teacher)
-            ->followingRedirects()
             ->get(route('dashboard'))
+            ->assertRedirect(route('role.index'))
+            ->assertSessionMissing('active_role_assignment_id');
+
+        $this->get(route('role.index'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
+                ->component('Role/Select')
+                ->has('auth.roles', 2)
+                ->where('auth.active_role_id', null));
+    }
+
+    public function test_user_without_eligible_roles_is_sent_to_the_explanation_instead_of_an_empty_dashboard(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+        $teacher = User::query()->where('email', 'docente@silabos.test')->firstOrFail();
+        $teacher->roleAssignments()->update(['activo' => false]);
+
+        $this->actingAs($teacher)
+            ->get(route('dashboard'))
+            ->assertRedirect(route('role.index'));
+
+        $this->get(route('role.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Role/Select')
+                ->has('auth.roles', 0)
                 ->where('auth.active_role_id', null));
     }
 

@@ -47,7 +47,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
      * los enlaces, y llevan a la copia del área correspondiente. Escribir el enlace una
      * sola vez evita que cada botón tenga que preguntarse con qué rol se está entrando.
      */
-    Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('dashboard', [DashboardController::class, 'index'])
+        ->middleware('active-role')
+        ->name('dashboard');
     Route::get('notificaciones', fn () => RoleArea::redirect('notifications.index'))
         ->name('notifications.index');
     Route::get('fuentes', fn () => RoleArea::redirect('sources.index'))->name('sources.index');

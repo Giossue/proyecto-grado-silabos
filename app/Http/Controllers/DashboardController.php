@@ -30,8 +30,8 @@ class DashboardController extends Controller
 
         /*
          * El panel es la misma pantalla para los tres roles, pero cada uno tiene la suya
-         * en su área. La dirección corta lleva a la que toca. Quien todavía no ha elegido
-         * rol se queda aquí: mandarlo a elegir lo dejaría sin panel al que volver.
+         * en su área. La dirección corta, protegida por `active-role`, llega con el rol
+         * resuelto y lleva a la copia que corresponde.
          */
         $area = $activeRole === null ? null : RoleArea::routePrefix();
 

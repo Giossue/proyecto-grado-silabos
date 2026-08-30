@@ -36,6 +36,8 @@ Recorre cada página de la muestra usando **solo el teclado**.
 - [ ] `Tab` avanza en el orden visual, sin saltos hacia atrás ni trampas.
 - [ ] **Siempre se ve dónde está el foco**: ningún elemento lo recibe de forma invisible.
 - [ ] El menú lateral es alcanzable y sus submenús se abren con `Enter` o `Espacio`.
+- [ ] El acceso de notificaciones del encabezado es alcanzable, anuncia los pendientes y
+      abre UI-03 con cualquiera de los tres roles.
 - [ ] En una tabla, el menú de tres puntos se abre con teclado y sus opciones se
       recorren con flechas.
 - [ ] Al abrir un panel lateral el foco entra en él y **no se escapa** al fondo.

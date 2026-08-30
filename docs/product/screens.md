@@ -62,6 +62,9 @@
 ## Patrones comunes
 
 - El menú depende del rol activo y de las capacidades efectivas.
+- UI-03 se abre desde el acceso de **Notificaciones** situado junto al selector de tema en
+  el encabezado autenticado común. El acceso conserva el contador de pendientes para los
+  tres roles y no ocupa una entrada del menú lateral.
 - Todo módulo autenticado presenta el mismo encabezado mediante `PageFrame`: icono,
   título principal único, descripción y espaciado responsive. Regreso, estado y acciones
   ocupan posiciones estables; Configuración comparte el encabezado en su layout y trata
@@ -87,6 +90,9 @@
   Carreras, Campus, Modalidades y Periodos académicos. Carreras muestra su Facultad y
   Facultades muestra la cantidad relacionada; los catálogos no se mezclan ni se ocultan
   en pestañas.
+- **Auditoría** agrupa las rutas administrativas **Procesos** (ADM-09) y **Registro de
+  actividad** (ADM-10). La primera permite diagnosticar y reintentar trabajos; la segunda
+  reconstruye quién hizo qué y cuándo.
 - El menú de acciones de ADM-04 distingue edición y ciclo de vida: **Editar** abre un
   `Sheet` precargado; **Archivar/Reactivar** cambia disponibilidad sin borrar historia.
 - El fondo de página y las superficies de trabajo usan tokens distintos en claro y

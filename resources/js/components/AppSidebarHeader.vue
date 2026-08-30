@@ -1,9 +1,19 @@
 <script setup lang="ts">
+import { Link, usePage } from '@inertiajs/vue3';
+import { Bell } from '@lucide/vue';
 import { computed } from 'vue';
 import AppearanceToggle from '@/components/AppearanceToggle.vue';
 import Breadcrumbs from '@/components/Breadcrumbs.vue';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { SidebarTrigger } from '@/components/ui/sidebar';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { saysTheSame } from '@/composables/usePageBreadcrumbs';
+import { index as notificationsIndex } from '@/routes/notifications';
 import type { BreadcrumbItem } from '@/types';
 
 const props = withDefaults(
@@ -34,6 +44,21 @@ const trail = computed<BreadcrumbItem[]>(() => {
 
     return [...crumbs, { title: props.pageTitle }];
 });
+
+const page = usePage();
+const unreadCount = computed(() => page.props.notifications.unread_count);
+const isNotificationsPage = computed(
+    () => page.component === 'Notifications/Index',
+);
+const notificationsLabel = computed(() => {
+    if (unreadCount.value === 0) {
+        return 'Notificaciones';
+    }
+
+    return unreadCount.value === 1
+        ? 'Notificaciones: 1 sin leer'
+        : `Notificaciones: ${unreadCount.value} sin leer`;
+});
 </script>
 
 <template>
@@ -51,6 +76,31 @@ const trail = computed<BreadcrumbItem[]>(() => {
             </template>
         </div>
         <div class="ml-auto flex items-center gap-2">
+            <Tooltip>
+                <TooltipTrigger as-child>
+                    <Button
+                        as-child
+                        :variant="isNotificationsPage ? 'secondary' : 'ghost'"
+                        size="icon-sm"
+                        class="relative"
+                        :aria-label="notificationsLabel"
+                        :aria-current="isNotificationsPage ? 'page' : undefined"
+                    >
+                        <Link :href="notificationsIndex()">
+                            <Bell data-icon="inline-start" aria-hidden="true" />
+                            <Badge
+                                v-if="unreadCount > 0"
+                                as="span"
+                                class="absolute -top-1 -right-1 min-w-5 px-1"
+                                aria-hidden="true"
+                            >
+                                {{ unreadCount > 99 ? '99+' : unreadCount }}
+                            </Badge>
+                        </Link>
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent>{{ notificationsLabel }}</TooltipContent>
+            </Tooltip>
             <AppearanceToggle />
         </div>
     </header>

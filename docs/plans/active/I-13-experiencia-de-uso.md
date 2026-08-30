@@ -2,12 +2,17 @@
 
 ## Estado
 
-Implementado y verificado el 2026-08-26. `composer verify` en verde: 204 pruebas y
-2148 aserciones. El cierre depende de la revisión manual descrita en
-`docs/plans/pending-work.md`.
+Implementado y verificado el 2026-08-26. Verificado nuevamente el 2026-08-30 con
+`composer verify` en verde: 246 pruebas y 2220 aserciones. El cierre depende de la
+revisión manual descrita en `docs/plans/pending-work.md`.
 
 El 2026-08-26 el control de tema dejó de ser un menú desplegable y pasó a recorrer las
 tres opciones con una sola pulsación, sin perder ninguna.
+
+El 2026-08-30 se endureció la entrada al Panel: la ruta canónica exige que `ActiveRole`
+resuelva primero el rol. Una sola asignación elegible entra directamente al área de esa
+persona; dos o más llevan al selector; ninguna lleva a la explicación de falta de
+asignaciones. El Panel ya no presenta una acción redundante para seleccionar rol.
 
 ## Trazabilidad
 
@@ -78,7 +83,8 @@ tres opciones con una sola pulsación, sin perder ninguna.
 - `DashboardMetricsTest`: cada rol recibe sus indicadores y ninguno cuenta datos fuera de
   su alcance.
 - `ActiveRoleTest`: activación del rol único, ausencia de activación con varios roles y
-  rechazo del rol ajeno.
+  rechazo del rol ajeno. Incluye el inicio de sesión completo de Docente y la redirección
+  de Panel para varios o ningún rol elegible.
 - `HeaderAppearanceControlTest`, `PersistentLayoutReactivityTest` y
   `SheetReopeningTest` como reglas de arquitectura.
 - `ManagementCreationUiTest` deja de fijar valores de color y comprueba la relación entre

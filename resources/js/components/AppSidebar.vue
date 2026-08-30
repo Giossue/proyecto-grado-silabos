@@ -2,14 +2,12 @@
 import { Link, usePage } from '@inertiajs/vue3';
 import {
     BookOpenCheck,
-    Bell,
     Building2,
     CalendarRange,
     ClipboardCheck,
     FileStack,
     LayoutGrid,
     LibraryBig,
-    ListRestart,
     ChartNoAxesCombined,
     Repeat2,
     ScrollText,
@@ -41,7 +39,6 @@ import { index as convocationsIndex } from '@/routes/convocations';
 import { index as curriculaIndex } from '@/routes/coordination/academic/curricula';
 import { index as offeringsIndex } from '@/routes/coordination/academic/offerings';
 import { index as teacherAssignmentsIndex } from '@/routes/coordination/academic/teacher-assignments';
-import { index as notificationsIndex } from '@/routes/notifications';
 import { index as reportsIndex } from '@/routes/reports';
 import { index as reviewsIndex } from '@/routes/reviews';
 import { index as roleIndex } from '@/routes/role';
@@ -102,14 +99,19 @@ const mainNavItems = computed<NavItem[]>(() => [
                   icon: FileStack,
               },
               {
-                  title: 'Procesos',
-                  href: jobsIndex(),
-                  icon: ListRestart,
-              },
-              {
                   title: 'Auditoría',
                   href: auditIndex(),
                   icon: ScrollText,
+                  items: [
+                      {
+                          title: 'Procesos',
+                          href: jobsIndex(),
+                      },
+                      {
+                          title: 'Registro de actividad',
+                          href: auditIndex(),
+                      },
+                  ],
               },
           ]
         : []),
@@ -167,16 +169,6 @@ const mainNavItems = computed<NavItem[]>(() => [
                   title: 'Mis sílabos',
                   href: syllabiIndex(),
                   icon: BookOpenCheck,
-              },
-          ]
-        : []),
-    ...(activeRole.value
-        ? [
-              {
-                  title: 'Notificaciones',
-                  href: notificationsIndex(),
-                  icon: Bell,
-                  badge: page.props.notifications.unread_count,
               },
           ]
         : []),
