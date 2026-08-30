@@ -63,6 +63,8 @@ No crees una variante visual por módulo si el significado es el mismo.
 - `TableActionsMenu` reduce cada celda operativa a un botón de tres puntos con nombre
   accesible; sus enlaces y mutaciones permanecen dentro de `DropdownMenuGroup` y no
   cambian la autorización que decide el servidor.
+- La primitiva `Table` diferencia los encabezados y alterna el fondo de filas impares y
+  pares mediante tokens semánticos comunes para tema claro y oscuro.
 - Los paneles destacan trabajo que requiere acción; no repiten todos los conteos como cards.
 - CRUD corto puede usar diálogo; editor, revisión, convocatoria y publicación usan página completa.
 - La navegación visible no supera dos niveles y cambia según el rol efectivo.

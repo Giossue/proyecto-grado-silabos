@@ -6,13 +6,7 @@ import RecordStatusForm from '@/components/domain/academic/RecordStatusForm.vue'
 import ClientFilterBar from '@/components/domain/ClientFilterBar.vue';
 import TableActionsMenu from '@/components/domain/TableActionsMenu.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Field, FieldLabel } from '@/components/ui/field';
 import {
@@ -84,13 +78,6 @@ const stateLabel: Record<string, string> = {
 <template>
     <div class="flex flex-col gap-6">
         <Card v-if="section === 'curricula'">
-            <CardHeader
-                ><CardTitle>Versiones de malla</CardTitle
-                ><CardDescription
-                    >Publicar fija la versión y sus materias para usos
-                    históricos.</CardDescription
-                ></CardHeader
-            >
             <CardContent class="flex flex-col gap-4">
                 <ClientFilterBar
                     :filter="curriculumFilter"
@@ -216,13 +203,6 @@ const stateLabel: Record<string, string> = {
         </Card>
 
         <Card v-if="section === 'subjects'">
-            <CardHeader
-                ><CardTitle>Materias por malla</CardTitle
-                ><CardDescription
-                    >Los códigos se interpretan dentro de su
-                    malla.</CardDescription
-                ></CardHeader
-            >
             <CardContent class="flex flex-col gap-4">
                 <ClientFilterBar
                     :filter="subjectFilter"

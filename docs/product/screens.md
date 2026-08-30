@@ -75,6 +75,8 @@
   en móvil se apilan sin distribuir campos en extremos inconexos.
 - Toda tabla muestra el mismo pie con rango, total, página actual y navegación, incluso
   cuando el resultado ocupa una sola página.
+- Toda tabla diferencia visualmente el encabezado y alterna el fondo de sus registros;
+  el primer registro usa la superficie base y el segundo el tono alterno.
 - Las celdas **Acciones** muestran un único botón de tres puntos. El menú nombra el
   registro para tecnologías asistivas, agrupa todas las opciones aplicables y explica
   mediante una opción deshabilitada cuando no existe una acción disponible.
@@ -92,7 +94,8 @@
   en pestañas.
 - COR-13 y COR-14 usan los submenús **Mallas y materias** y **Ofertas y paralelos**.
   Cada colección tiene una ruta, tabla y formulario de alta propios; no se mezclan dos
-  colecciones en la misma pantalla.
+  colecciones en la misma pantalla. La tarjeta de la tabla comienza directamente con los
+  filtros y no repite el título ni la descripción ya presentes en el encabezado de página.
 - **Auditoría** agrupa las rutas administrativas **Procesos** (ADM-09) y **Registro de
   actividad** (ADM-10). La primera permite diagnosticar y reintentar trabajos; la segunda
   reconstruye quién hizo qué y cuándo.

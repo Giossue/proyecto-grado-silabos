@@ -68,3 +68,22 @@ it('no repite los nombres de columna dentro de las celdas de las paginas', funct
 
     expect($offenders)->toBe([]);
 });
+
+it('diferencia encabezados y registros alternos desde la tabla compartida', function (): void {
+    $root = dirname(__DIR__, 2);
+    $header = (string) file_get_contents($root.'/resources/js/components/ui/table/TableHeader.vue');
+    $row = (string) file_get_contents($root.'/resources/js/components/ui/table/TableRow.vue');
+    $css = (string) file_get_contents($root.'/resources/css/app.css');
+
+    expect($header)->toContain('bg-table-header')
+        ->and($row)->toContain('odd:bg-card')
+        ->and($row)->toContain('even:bg-table-row-alternate')
+        ->and($row)->toContain('hover:bg-table-row-hover');
+
+    foreach (['table-header', 'table-row-alternate', 'table-row-hover'] as $token) {
+        expect(substr_count($css, '--'.$token.': hsl('))->toBe(2);
+    }
+
+    expect($css)->toContain('> tr:nth-child(even)')
+        ->and($css)->toContain('background-color: var(--color-table-row-alternate);');
+});

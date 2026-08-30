@@ -202,6 +202,27 @@ it('separa la gestion academica del coordinador en submenus y pantallas', functi
     expect($parallels)->toBeString()->toContain('entity="parallel"');
 });
 
+it('evita repetir el encabezado de pagina dentro de las tablas academicas', function (): void {
+    $root = dirname(__DIR__, 2);
+    $curricula = file_get_contents(
+        $root.'/resources/js/components/domain/academic/CurriculaTab.vue',
+    );
+    $offerings = file_get_contents(
+        $root.'/resources/js/components/domain/academic/OfferingsTab.vue',
+    );
+
+    expect($curricula)
+        ->toBeString()
+        ->not->toContain('<CardHeader')
+        ->not->toContain('<CardTitle')
+        ->not->toContain('<CardDescription');
+    expect($offerings)
+        ->toBeString()
+        ->not->toContain('<CardHeader')
+        ->not->toContain('<CardTitle')
+        ->not->toContain('<CardDescription');
+});
+
 it('agrupa procesos y registro de actividad bajo auditoria', function (): void {
     $sidebar = file_get_contents(
         dirname(__DIR__, 2).'/resources/js/components/AppSidebar.vue',

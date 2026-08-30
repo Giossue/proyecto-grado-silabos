@@ -30,6 +30,16 @@ const narrow = useMediaQuery('(max-width: 639px)');
 
 const isCard = computed(() => section === 'body' && narrow.value);
 
+const rowClasses = computed(() =>
+    cn(
+        'border-b transition-colors',
+        section === 'body'
+            ? 'odd:bg-card even:bg-table-row-alternate hover:bg-table-row-hover data-[state=selected]:bg-muted'
+            : 'data-[state=selected]:bg-muted',
+        props.class,
+    ),
+);
+
 const row = useTemplateRef<HTMLTableRowElement>('row');
 const detail = useTemplateRef<HTMLElement>('detail');
 
@@ -166,12 +176,7 @@ watch(open, (isOpen) => {
         ref="row"
         v-bind="$attrs"
         data-slot="table-row"
-        :class="
-            cn(
-                'hover:bg-muted/50 data-[state=selected]:bg-muted border-b transition-colors',
-                props.class,
-            )
-        "
+        :class="rowClasses"
     >
         <slot />
 

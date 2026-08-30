@@ -130,12 +130,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('revisiones/{revision}/aprobar', [ReviewController::class, 'approve'])->name('reviews.approve');
         Route::post('silabos/{syllabus}/reabrir', [ReviewController::class, 'reopen'])->name('reviews.reopen');
         Route::post('silabos/{syllabus}/relevo-docente', [ReviewController::class, 'transferTeacher'])->name('reviews.teacher.transfer');
-        Route::redirect('mallas-materias', 'mallas');
+        Route::redirect('mallas-materias', '/coordinacion/mallas');
         Route::get('mallas', [CareerAcademicStructureController::class, 'curricula'])
             ->name('coordination.academic.curricula.index');
         Route::get('materias', [CareerAcademicStructureController::class, 'subjects'])
             ->name('coordination.academic.subjects.index');
-        Route::redirect('oferta-paralelos', 'ofertas');
+        Route::redirect('oferta-paralelos', '/coordinacion/ofertas');
         Route::get('ofertas', [CareerAcademicStructureController::class, 'offerings'])
             ->name('coordination.academic.offerings.index');
         Route::get('paralelos', [CareerAcademicStructureController::class, 'parallels'])

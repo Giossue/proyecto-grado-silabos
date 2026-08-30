@@ -56,6 +56,7 @@ registro ofrece Editar y Archivar/Reactivar sin exponer borrado físico.
 - [x] Aplicar alcance por carrera a consultas, creación, publicación y archivo.
 - [x] Reorganizar rutas, navegación y pantallas con componentes compartidos.
 - [x] Separar Mallas, Materias, Ofertas y Paralelos en rutas hijas del sidebar.
+- [x] Evitar encabezados duplicados entre las páginas y sus tablas académicas.
 - [x] Usar “ciclo” en materias sin confundirlo con periodo académico.
 - [x] Cubrir permisos, alcance lateral, auditoría e invariantes con pruebas PostgreSQL.
 - [x] Sustituir la tabla plana de ADM-04 por Facultad → Carreras y catálogos separados.

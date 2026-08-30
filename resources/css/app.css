@@ -60,6 +60,11 @@
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-ring: var(--sidebar-ring);
 
+    /* Jerarquía visual común de todas las tablas. */
+    --color-table-header: var(--table-header);
+    --color-table-row-alternate: var(--table-row-alternate);
+    --color-table-row-hover: var(--table-row-hover);
+
     /* Contorno de las superficies: cada tema decide su intensidad. */
     --color-surface-ring: var(--surface-ring);
 
@@ -144,6 +149,9 @@
     --sidebar-border: hsl(0 0% 91%);
     --sidebar-ring: hsl(217.2 91.2% 59.8%);
     --sidebar: hsl(0 0% 94%);
+    --table-header: hsl(208 24% 92%);
+    --table-row-alternate: hsl(210 20% 96%);
+    --table-row-hover: hsl(208 22% 89%);
 }
 
 .dark {
@@ -191,6 +199,9 @@
     --sidebar-border: hsl(0 0% 15.9%);
     --sidebar-ring: hsl(217.2 91.2% 59.8%);
     --sidebar: hsl(0 0% 9%);
+    --table-header: hsl(208 18% 17%);
+    --table-row-alternate: hsl(208 13% 13%);
+    --table-row-hover: hsl(208 18% 21%);
 }
 
 @layer base {
@@ -263,13 +274,23 @@
 
         table[data-cards='true'][data-overflows='true']
             > tbody
+            > tr:nth-child(even)
+            > td[data-card-more] {
+            background-color: var(--color-table-row-alternate);
+        }
+
+        table[data-cards='true'][data-overflows='true']
+            > tbody
+            > tr[data-state='selected']
+            > td[data-card-more] {
+            background-color: var(--color-muted);
+        }
+
+        table[data-cards='true'][data-overflows='true']
+            > tbody
             > tr:hover
             > td[data-card-more] {
-            background-color: color-mix(
-                in oklab,
-                var(--color-muted) 50%,
-                var(--color-card)
-            );
+            background-color: var(--color-table-row-hover);
         }
     }
 
@@ -334,8 +355,6 @@
         :is(th, td):last-child {
         position: sticky;
         right: 0;
-        /* Sin fondo propio, las celdas que pasan por debajo se transparentarían. */
-        background-color: var(--color-card);
         /*
          * Separación de un píxel con el mismo anillo que usan las demás superficies. Un
          * degradado ancho se leía como una mancha clara en tema oscuro: aquí se separa
@@ -344,18 +363,43 @@
         border-left: 1px solid var(--color-surface-ring);
     }
 
+    table[data-overflows='true']:has([data-slot='table-actions'])
+        > thead
+        > tr
+        > th:last-child {
+        background-color: var(--color-table-header);
+    }
+
+    table[data-overflows='true']:has([data-slot='table-actions'])
+        > tbody
+        > tr:nth-child(odd)
+        > td:last-child {
+        background-color: var(--color-card);
+    }
+
+    table[data-overflows='true']:has([data-slot='table-actions'])
+        > tbody
+        > tr:nth-child(even)
+        > td:last-child {
+        background-color: var(--color-table-row-alternate);
+    }
+
+    table[data-overflows='true']:has([data-slot='table-actions'])
+        > tbody
+        > tr[data-state='selected']
+        > td:last-child {
+        background-color: var(--color-muted);
+    }
+
     /*
      * La fila resaltada al pasar el puntero se resalta entera, columna fija incluida, o
-     * el ancla se vería despegada de su propia fila. Mismo 50 % que usa `TableRow`.
+     * el ancla se vería despegada de su propia fila.
      */
     table[data-overflows='true']:has([data-slot='table-actions'])
-        tr:hover
-        :is(th, td):last-child {
-        background-color: color-mix(
-            in oklab,
-            var(--color-muted) 50%,
-            var(--color-card)
-        );
+        > tbody
+        > tr:hover
+        > td:last-child {
+        background-color: var(--color-table-row-hover);
     }
 
     /*

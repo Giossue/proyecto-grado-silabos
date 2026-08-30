@@ -3,13 +3,7 @@ import RecordStatusForm from '@/components/domain/academic/RecordStatusForm.vue'
 import ClientFilterBar from '@/components/domain/ClientFilterBar.vue';
 import TableActionsMenu from '@/components/domain/TableActionsMenu.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Field, FieldLabel } from '@/components/ui/field';
 import {
     Select,
@@ -77,13 +71,6 @@ const {
 <template>
     <div class="flex flex-col gap-6">
         <Card v-if="section === 'offerings'">
-            <CardHeader
-                ><CardTitle>Ofertas académicas</CardTitle
-                ><CardDescription
-                    >Una combinación idéntica no puede
-                    duplicarse.</CardDescription
-                ></CardHeader
-            >
             <CardContent class="flex flex-col gap-4">
                 <ClientFilterBar
                     :filter="offeringFilter"
@@ -175,13 +162,6 @@ const {
         </Card>
 
         <Card v-if="section === 'parallels'">
-            <CardHeader
-                ><CardTitle>Paralelos</CardTitle
-                ><CardDescription
-                    >Se conservan aunque su oferta quede
-                    archivada.</CardDescription
-                ></CardHeader
-            >
             <CardContent class="flex flex-col gap-4">
                 <ClientFilterBar
                     :filter="parallelFilter"

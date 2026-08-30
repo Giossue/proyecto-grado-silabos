@@ -5,6 +5,8 @@
 Implementación y verificación automatizada concluidas el 2026-08-14 por decisión
 explícita del responsable del producto. La validación manual de contraste, teclado,
 lector de pantalla y dispositivos reales permanece dentro de I-08 y `PV-19`.
+El 2026-08-30 se incorporó el patrón global de encabezado y filas alternas solicitado
+para distinguir registros consecutivos.
 
 ## Trazabilidad
 
@@ -29,6 +31,9 @@ lector de pantalla y dispositivos reales permanece dentro de I-08 y `PV-19`.
 - Todo listado tabular usa el mismo pie de paginación. Los paginadores de Laravel
   continúan en servidor; las colecciones acotadas de una vista de detalle usan el mismo
   control sobre paginación local.
+- Toda tabla diferencia el encabezado mediante un tono semántico y alterna el fondo de
+  sus registros: la primera fila conserva la superficie base y la segunda usa el tono
+  alterno. El patrón se repite y conserva su correspondencia en columnas fijas y hover.
 - Todo módulo autenticado usa `PageFrame` como contrato de encabezado: icono de Lucide
   dentro de una superficie semántica, un único `h1`, descripción, separación responsive
   y espacios opcionales para regreso, estado y acciones. Configuración aplica el patrón
@@ -41,6 +46,7 @@ lector de pantalla y dispositivos reales permanece dentro de I-08 y `PV-19`.
 - [x] Reemplazar las pestañas de ADM-04 por submenús y rutas propias.
 - [x] Unificar orden y distribución de búsqueda, filtros y acción.
 - [x] Aplicar una paginación compartida a todos los listados tabulares.
+- [x] Diferenciar encabezados y registros consecutivos con colores alternos compartidos.
 - [x] Agrupar las acciones de tabla en un menú compartido de tres puntos.
 - [x] Normalizar icono, título, descripción y espaciado de todos los módulos autenticados.
 - [x] Cubrir el patrón con pruebas de arquitectura y pruebas funcionales de consulta.
@@ -53,6 +59,12 @@ lector de pantalla y dispositivos reales permanece dentro de I-08 y `PV-19`.
   → aplicar, 17 superficies de acciones agrupadas, 29 páginas operativas y el layout de
   Configuración con `PageFrame`, los submenús de ADM-04 y la separación de tokens
   visuales.
+- `ResponsiveTableTest` protege los tokens del encabezado, las filas impares/pares y la
+  continuidad del color en las celdas fijas de acciones y detalle móvil.
+- La prueba focalizada de tablas, ESLint, Prettier, TypeScript y el build Vite aprobaron
+  el ajuste del 2026-08-30. `composer verify` aprobó sus controles previos y no pudo
+  completar la suite dependiente de PostgreSQL/Redis porque esos servicios no estaban
+  disponibles en el entorno local.
 - `AcademicStructureTest` comprueba las cinco rutas hijas de Estructura académica y la
   redirección compatible desde la ruta anterior.
 - `DocumentOperationsTest` e `InstitutionalImportTest` —esta última retirada con el módulo
