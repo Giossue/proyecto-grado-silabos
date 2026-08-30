@@ -45,5 +45,5 @@ académica con la administración de cuentas.
 - Arquitectura: 78 pruebas, 722 aserciones.
 - Identidad, perfil, estructura académica y apertura de convocatoria: 45 pruebas, 403
   aserciones, sobre PostgreSQL efímero UTF-8.
-- Suite: 253 de 254 pruebas y 2342 aserciones; solo `RedisConnectionTest` quedó sin
-  ejecutar por ausencia del servicio Redis local.
+- `composer verify`: correcto con PostgreSQL y Redis levantados mediante Podman; 254
+  pruebas, 2344 aserciones y compilación de producción completada.

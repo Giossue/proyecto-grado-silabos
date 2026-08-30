@@ -6,9 +6,9 @@ depende, porque son cosas de naturaleza distinta y no se resuelven igual.
 ## 1. Código: sin deuda funcional conocida
 
 No hay `TODO` ni `FIXME` nuevos en I-16. Formato, análisis estático, tipos, compilación,
-las 78 pruebas de arquitectura y las 45 pruebas funcionales afectadas pasan. La suite
-completa alcanzó **253 de 254 pruebas y 2342 aserciones**; solo `RedisConnectionTest` no
-pudo ejecutarse porque el servicio Redis de pruebas no está instalado en este entorno.
+las 78 pruebas de arquitectura y las 45 pruebas funcionales afectadas pasan. La puerta
+canónica `composer verify` pasó con PostgreSQL y Redis levantados mediante Podman:
+**254 pruebas y 2344 aserciones**.
 
 Los incrementos anteriores conservan su estado. I-16 implementa y verifica la edición
 académica por alcance y la identidad administrada; permanece activo solo por la revisión
