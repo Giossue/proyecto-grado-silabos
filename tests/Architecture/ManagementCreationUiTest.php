@@ -132,7 +132,8 @@ it('protege la direccion y accesibilidad del sheet compartido', function (): voi
     expect($source)->toBeString();
     expect($source)
         ->toContain('defineModel<boolean>')
-        ->toContain('<SheetContent side="right"')
+        ->toContain('<SheetContent')
+        ->toContain('side="right"')
         ->toContain('<SheetTitle>')
         ->toContain('<SheetDescription>');
 });
@@ -251,6 +252,9 @@ it('ofrece desglose y constructor visual sobre el mismo contrato de malla', func
     $form = file_get_contents(
         $root.'/resources/js/components/domain/academic/curriculum/CurriculumFormView.vue',
     );
+    $configuration = file_get_contents(
+        $root.'/resources/js/components/domain/academic/curriculum/CurriculumConfigurationSheet.vue',
+    );
 
     expect($page)
         ->toBeString()
@@ -272,6 +276,10 @@ it('ofrece desglose y constructor visual sobre el mismo contrato de malla', func
         ->toContain('storeSubjectRequirement.form')
         ->toContain('destroySubjectRequirement.form')
         ->toContain('@click="emit(\'edit\', subject)"');
+    expect($configuration)
+        ->toBeString()
+        ->toContain('<FormSheet')
+        ->toContain('full-screen');
 });
 
 it('evita repetir el encabezado de pagina dentro de las tablas academicas', function (): void {

@@ -84,6 +84,8 @@ por separado.
 - `composer verify`: 261 pruebas, 2.482 aserciones, sin fallos.
 - ESLint, Prettier, Vue TypeScript, Pint y PHPStan nivel 7: correctos.
 - Build Vite de producción: correcto; el constructor se genera como chunk propio.
+- La configuración de ciclos y campos usa la variante de pantalla completa del Sheet;
+  lint, tipos, build y 20 pruebas de arquitectura (595 aserciones) correctos.
 - Revisión manual pendiente: teclado, lector de pantalla, zoom, móvil y temas sobre un
   navegador/dispositivo real; `PV-08` continúa abierta.
 

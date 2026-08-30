@@ -10,6 +10,7 @@ import {
     SheetTitle,
     SheetTrigger,
 } from '@/components/ui/sheet';
+import { cn } from '@/lib/utils';
 
 withDefaults(
     defineProps<{
@@ -17,9 +18,11 @@ withDefaults(
         title: string;
         description: string;
         showTrigger?: boolean;
+        fullScreen?: boolean;
     }>(),
     {
         showTrigger: true,
+        fullScreen: false,
     },
 );
 
@@ -54,7 +57,15 @@ const close = (): void => {
                 </Button>
             </slot>
         </SheetTrigger>
-        <SheetContent side="right" class="w-full sm:max-w-lg">
+        <SheetContent
+            side="right"
+            :class="
+                cn('w-full', {
+                    'h-dvh max-w-none border-0 sm:max-w-none': fullScreen,
+                    'sm:max-w-lg': !fullScreen,
+                })
+            "
+        >
             <SheetHeader>
                 <SheetTitle>{{ title }}</SheetTitle>
                 <SheetDescription>{{ description }}</SheetDescription>

@@ -49,6 +49,7 @@ const nextPosition = computed(
         title="Configurar esta versión de malla"
         description="Los ciclos y campos pertenecen solo a esta versión; otras carreras pueden usar otra estructura."
         :show-trigger="false"
+        full-screen
     >
         <Card>
             <CardHeader>
