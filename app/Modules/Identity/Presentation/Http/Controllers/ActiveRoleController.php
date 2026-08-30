@@ -18,10 +18,11 @@ class ActiveRoleController extends Controller
     {
         $user = $request->user();
 
-        // Con un único rol elegible no hay nada que decidir: ya quedó activo al
-        // resolverlo. Con ninguno sí se muestra la pantalla, que explica la situación.
-        if ($user instanceof User && $roles->eligible($user)->count() === 1) {
-            return to_route('dashboard');
+        if ($user instanceof User) {
+            $eligible = $roles->eligible($user);
+            if ($eligible->count() === 1 && ! $roles->requiresExplicitSelection($eligible->firstOrFail())) {
+                return to_route('dashboard');
+            }
         }
 
         return Inertia::render('Role/Select');
@@ -34,6 +35,6 @@ class ActiveRoleController extends Controller
         abort_unless($user instanceof User, 401);
         $action->execute($user, $request->string('role_assignment_id')->toString(), $request);
 
-        return to_route('dashboard')->with('success', 'Rol seleccionado.');
+        return to_route('dashboard')->with('success', 'Ámbito de trabajo seleccionado.');
     }
 }

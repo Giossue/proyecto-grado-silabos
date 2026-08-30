@@ -28,9 +28,8 @@ class ActiveRole
             return null;
         }
 
-        // Elegir entre una sola opción no es una elección. Cuando la persona tiene un
-        // único rol elegible se activa solo: la separación de responsabilidades solo
-        // está en juego cuando hay más de uno entre los que decidir.
+        // Administración y Docencia pueden activarse si son la única opción. Coordinación
+        // siempre exige elegir la carrera al iniciar la sesión, aunque hoy solo haya una.
         if (! is_string($assignmentId)) {
             return $this->activateSoleRole($user, $request);
         }
@@ -70,6 +69,8 @@ class ActiveRole
             ->effective()
             ->where('usuario_id', $user->id)
             ->with(['role:id,codigo,nombre', 'career:id,nombre,activo'])
+            ->orderBy('created_at')
+            ->orderBy('id')
             ->get()
             ->filter(fn (RoleAssignment $assignment): bool => $this->isEligible($assignment))
             ->values();
@@ -84,10 +85,19 @@ class ActiveRole
         }
 
         $assignment = $eligible->firstOrFail();
+        if ($this->requiresExplicitSelection($assignment)) {
+            return null;
+        }
+
         $request->session()->put('active_role_assignment_id', $assignment->id);
         $request->attributes->set('active_role', $assignment);
 
         return $assignment;
+    }
+
+    public function requiresExplicitSelection(RoleAssignment $assignment): bool
+    {
+        return $assignment->role->codigo === RoleCode::Coordinator->value;
     }
 
     public function isEligible(RoleAssignment $assignment): bool

@@ -9,7 +9,6 @@ import {
     LayoutGrid,
     LibraryBig,
     ChartNoAxesCombined,
-    Repeat2,
     ScrollText,
     UsersRound,
 } from '@lucide/vue';
@@ -39,11 +38,9 @@ import { index as convocationsIndex } from '@/routes/convocations';
 import { index as curriculaIndex } from '@/routes/coordination/academic/curricula';
 import { index as offeringsIndex } from '@/routes/coordination/academic/offerings';
 import { index as parallelsIndex } from '@/routes/coordination/academic/parallels';
-import { index as subjectsIndex } from '@/routes/coordination/academic/subjects';
 import { index as teacherAssignmentsIndex } from '@/routes/coordination/academic/teacher-assignments';
 import { index as reportsIndex } from '@/routes/reports';
 import { index as reviewsIndex } from '@/routes/reviews';
-import { index as roleIndex } from '@/routes/role';
 import { index as sourcesIndex } from '@/routes/sources';
 import { index as syllabiIndex } from '@/routes/syllabi';
 import type { NavItem } from '@/types';
@@ -129,19 +126,9 @@ const mainNavItems = computed<NavItem[]>(() => [
     ...(activeRole.value?.role === 'coordinator'
         ? [
               {
-                  title: 'Mallas y materias',
+                  title: 'Mallas',
                   href: curriculaIndex(),
                   icon: BookOpenCheck,
-                  items: [
-                      {
-                          title: 'Mallas',
-                          href: curriculaIndex(),
-                      },
-                      {
-                          title: 'Materias',
-                          href: subjectsIndex(),
-                      },
-                  ],
               },
               {
                   title: 'Ofertas y paralelos',
@@ -191,16 +178,6 @@ const mainNavItems = computed<NavItem[]>(() => [
                   title: 'Mis sílabos',
                   href: syllabiIndex(),
                   icon: BookOpenCheck,
-              },
-          ]
-        : []),
-    // Solo tiene sentido para quien acumula roles; con uno solo no hay nada que elegir.
-    ...(page.props.auth.roles.length > 1
-        ? [
-              {
-                  title: 'Cambiar rol',
-                  href: roleIndex(),
-                  icon: Repeat2,
               },
           ]
         : []),

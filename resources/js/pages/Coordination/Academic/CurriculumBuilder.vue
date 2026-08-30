@@ -21,7 +21,7 @@ defineOptions({
     layout: {
         breadcrumbs: [
             { title: 'Mallas', href: curriculaIndex() },
-            { title: 'Constructor' },
+            { title: 'Detalle de malla' },
         ],
     },
 });
@@ -43,11 +43,11 @@ const openSubject = (subject: CurriculumBuilderSubject): void => {
 </script>
 
 <template>
-    <Head :title="`Constructor · ${curriculum.code}`" />
+    <Head :title="`Malla · ${curriculum.code}`" />
 
     <PageFrame
-        :title="`Constructor · ${curriculum.code}`"
-        :description="`Malla de ${career.name}, versión ${curriculum.version_number}. La vista visual y el formulario comparten una sola fuente de verdad.`"
+        :title="`Malla · ${curriculum.code}`"
+        :description="`Versión ${curriculum.version_number} de ${career.name}. Consulte el desglose completo o trabaje sobre la misma información en el constructor visual.`"
     >
         <template #meta>
             <Badge :variant="curriculum.editable ? 'secondary' : 'outline'">
@@ -80,51 +80,52 @@ const openSubject = (subject: CurriculumBuilderSubject): void => {
             <Workflow aria-hidden="true" />
             <AlertTitle>Malla publicada e inmutable</AlertTitle>
             <AlertDescription>
-                Puede explorar el diagrama y consultar el formulario. Para
-                cambiar contenido debe crear otra versión.
+                Puede explorar el diagrama y consultar el desglose. Para cambiar
+                contenido debe crear otra versión.
             </AlertDescription>
         </Alert>
 
-        <dl
-            v-if="fieldTotals.length > 0"
-            class="grid gap-3 sm:grid-cols-2 lg:grid-cols-5"
-            aria-label="Totales de la malla"
-        >
-            <div
-                v-for="field in fieldTotals"
-                :key="field.id"
-                class="rounded-lg border bg-card px-4 py-3 shadow-surface"
-            >
-                <dt
-                    class="text-xs font-medium tracking-wide text-muted-foreground uppercase"
-                >
-                    Total {{ field.label }}
-                </dt>
-                <dd class="mt-1 text-xl font-semibold">{{ field.value }}</dd>
-            </div>
-        </dl>
-
-        <Tabs default-value="visual" class="flex flex-col gap-4">
+        <Tabs default-value="breakdown" class="flex flex-col gap-4">
             <TabsList aria-label="Modo de trabajo de la malla">
-                <TabsTrigger value="visual">
+                <TabsTrigger value="breakdown">
+                    <ListTree aria-hidden="true" />
+                    Desglose académico
+                </TabsTrigger>
+                <TabsTrigger value="builder">
                     <Workflow aria-hidden="true" />
                     Constructor visual
                 </TabsTrigger>
-                <TabsTrigger value="form">
-                    <ListTree aria-hidden="true" />
-                    Formulario y tablas
-                </TabsTrigger>
             </TabsList>
-            <TabsContent value="visual">
+            <TabsContent value="breakdown" class="flex flex-col gap-6">
+                <dl
+                    v-if="fieldTotals.length > 0"
+                    class="grid gap-3 sm:grid-cols-2 lg:grid-cols-5"
+                    aria-label="Totales de la malla"
+                >
+                    <div
+                        v-for="field in fieldTotals"
+                        :key="field.id"
+                        class="rounded-lg border bg-card px-4 py-3 shadow-surface"
+                    >
+                        <dt
+                            class="text-xs font-medium tracking-wide text-muted-foreground uppercase"
+                        >
+                            Total {{ field.label }}
+                        </dt>
+                        <dd class="mt-1 text-xl font-semibold">
+                            {{ field.value }}
+                        </dd>
+                    </div>
+                </dl>
+                <CurriculumFormView v-bind="props" @edit="openSubject" />
+            </TabsContent>
+            <TabsContent value="builder">
                 <CurriculumCanvas
                     :curriculum="curriculum"
                     :subjects="subjects"
                     :requirements="requirements"
                     @edit="openSubject"
                 />
-            </TabsContent>
-            <TabsContent value="form">
-                <CurriculumFormView v-bind="props" @edit="openSubject" />
             </TabsContent>
         </Tabs>
     </PageFrame>

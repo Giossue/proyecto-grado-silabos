@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Form, Head, usePage } from '@inertiajs/vue3';
-import { Building2, CheckCircle2 } from '@lucide/vue';
+import { ArrowRight, Building2, CheckCircle2 } from '@lucide/vue';
+import { computed } from 'vue';
 import ActiveRoleController from '@/actions/App/Modules/Identity/Presentation/Http/Controllers/ActiveRoleController';
 import PageFrame from '@/components/domain/PageFrame.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -8,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Card,
+    CardAction,
     CardContent,
     CardDescription,
     CardFooter,
@@ -17,15 +19,33 @@ import {
 import { Spinner } from '@/components/ui/spinner';
 
 const page = usePage();
+const hasCoordinatorScope = computed(() =>
+    page.props.auth.roles.some((role) => role.role === 'coordinator'),
+);
+const selectionDescription = computed(() =>
+    hasCoordinatorScope.value
+        ? 'Seleccione la carrera y el ámbito con el que trabajará en esta sesión.'
+        : 'Seleccione el ámbito con el que trabajará en esta sesión.',
+);
+
+const actionLabel = (role: (typeof page.props.auth.roles)[number]): string => {
+    if (page.props.auth.active_role_id === role.id) {
+        return 'Continuar aquí';
+    }
+
+    return role.role === 'coordinator'
+        ? 'Entrar a esta carrera'
+        : `Entrar como ${role.role_name}`;
+};
 </script>
 
 <template>
-    <Head title="Seleccionar rol" />
+    <Head title="Seleccionar ámbito de trabajo" />
 
     <PageFrame
-        title="Seleccione con qué rol va a trabajar"
-        description=""
-        size="narrow"
+        :title="`Bienvenida, ${page.props.auth.user.name}`"
+        :description="selectionDescription"
+        size="wide"
     >
         <Alert v-if="page.props.auth.roles.length === 0">
             <AlertTitle>No tiene asignaciones vigentes</AlertTitle>
@@ -34,18 +54,26 @@ const page = usePage();
             </AlertDescription>
         </Alert>
 
-        <div v-else class="grid gap-4 md:grid-cols-2">
-            <Card v-for="role in page.props.auth.roles" :key="role.id">
+        <div v-else class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <Card
+                v-for="role in page.props.auth.roles"
+                :key="role.id"
+                class="transition-shadow hover:shadow-menu"
+            >
                 <CardHeader>
-                    <div class="flex items-start justify-between gap-3">
-                        <div class="flex flex-col gap-1">
-                            <CardTitle>{{ role.role_name }}</CardTitle>
-                            <CardDescription>
-                                {{
-                                    role.career_name ?? 'Alcance institucional'
-                                }}
-                            </CardDescription>
-                        </div>
+                    <CardTitle>
+                        {{ role.career_name ?? role.role_name }}
+                    </CardTitle>
+                    <CardDescription>
+                        {{
+                            role.role === 'coordinator'
+                                ? `Coordinación de ${role.career_name}`
+                                : role.career_name
+                                  ? `${role.role_name} · ${role.career_name}`
+                                  : 'Administración general del sistema'
+                        }}
+                    </CardDescription>
+                    <CardAction>
                         <Badge
                             v-if="page.props.auth.active_role_id === role.id"
                             variant="secondary"
@@ -53,7 +81,10 @@ const page = usePage();
                             <CheckCircle2 aria-hidden="true" />
                             Activo
                         </Badge>
-                    </div>
+                        <Badge v-else variant="outline">
+                            {{ role.role_name }}
+                        </Badge>
+                    </CardAction>
                 </CardHeader>
                 <CardContent>
                     <div
@@ -62,7 +93,7 @@ const page = usePage();
                         <Building2 aria-hidden="true" />
                         <span>{{
                             role.career_name ??
-                            'Administración general del sistema'
+                            'Ámbito institucional sin carrera específica'
                         }}</span>
                     </div>
                 </CardContent>
@@ -82,12 +113,16 @@ const page = usePage();
                             type="submit"
                             :disabled="processing"
                         >
-                            <Spinner v-if="processing" />
-                            {{
-                                page.props.auth.active_role_id === role.id
-                                    ? 'Continuar con este rol'
-                                    : 'Usar este rol'
-                            }}
+                            <Spinner
+                                v-if="processing"
+                                data-icon="inline-start"
+                            />
+                            <ArrowRight
+                                v-else
+                                data-icon="inline-start"
+                                aria-hidden="true"
+                            />
+                            {{ actionLabel(role) }}
                         </Button>
                     </Form>
                 </CardFooter>

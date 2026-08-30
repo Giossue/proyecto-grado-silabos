@@ -83,6 +83,32 @@ class ActiveRoleTest extends TestCase
                 ->where('auth.active_role_id', $assignment->id));
     }
 
+    public function test_coordinator_must_choose_their_career_after_signing_in_even_when_only_one_is_available(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+        $coordinator = User::query()->where('email', 'coordinador@silabos.test')->firstOrFail();
+        $assignment = $coordinator->roleAssignments()->firstOrFail();
+
+        $this->post(route('login.store'), [
+            'email' => $coordinator->email,
+            'password' => 'Demo-2026!',
+        ])->assertRedirect(route('dashboard', absolute: false));
+
+        $this->get(route('dashboard'))
+            ->assertRedirect(route('role.index'))
+            ->assertSessionMissing('active_role_assignment_id');
+
+        $this->get(route('role.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Role/Select')
+                ->has('auth.roles', 1)
+                ->where('auth.roles.0.id', $assignment->id)
+                ->where('auth.roles.0.career_id', $assignment->carrera_id)
+                ->where('auth.roles.0.career_name', 'Software')
+                ->where('auth.active_role_id', null));
+    }
+
     public function test_several_eligible_roles_are_never_activated_on_their_own(): void
     {
         $this->seed(DatabaseSeeder::class);
@@ -137,6 +163,38 @@ class ActiveRoleTest extends TestCase
             'accion' => 'active_role.selected',
             'resultado' => 'success',
         ]);
+    }
+
+    public function test_coordinator_can_switch_between_multiple_career_scopes(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+        $coordinator = User::query()->where('email', 'coordinador@silabos.test')->firstOrFail();
+        $originalAssignment = $coordinator->roleAssignments()->firstOrFail();
+        $this->alsoCoordinates($coordinator);
+        $secondAssignment = $coordinator->roleAssignments()
+            ->whereKeyNot($originalAssignment->id)
+            ->firstOrFail();
+
+        $this->actingAs($coordinator)
+            ->get(route('role.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Role/Select')
+                ->has('auth.roles', 2)
+                ->where('auth.roles.1.career_id', $secondAssignment->carrera_id));
+
+        $this->post(route('role.store'), [
+            'role_assignment_id' => $secondAssignment->id,
+        ])
+            ->assertRedirect(route('dashboard'))
+            ->assertSessionHas('active_role_assignment_id', $secondAssignment->id);
+
+        $this->get(route('coordination.academic.curricula.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Coordination/Academic/Curricula')
+                ->where('career.name', 'Carrera para segundo rol')
+                ->missing('subjects'));
     }
 
     public function test_coordinator_role_requires_an_effective_academic_coordination(): void

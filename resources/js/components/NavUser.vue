@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { usePage } from '@inertiajs/vue3';
 import { ChevronsUpDown } from '@lucide/vue';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
+import WorkScopeSwitcherSheet from '@/components/domain/identity/WorkScopeSwitcherSheet.vue';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -18,6 +19,13 @@ import UserMenuContent from '@/components/UserMenuContent.vue';
 
 const page = usePage();
 const user = computed(() => page.props.auth.user);
+const activeRole = computed(() =>
+    page.props.auth.roles.find(
+        (role) => role.id === page.props.auth.active_role_id,
+    ),
+);
+const canSwitchScope = computed(() => page.props.auth.roles.length > 1);
+const switcherOpen = ref(false);
 const { isMobile, state } = useSidebar();
 </script>
 
@@ -31,8 +39,13 @@ const { isMobile, state } = useSidebar();
                         class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                         data-test="sidebar-menu-button"
                     >
-                        <UserInfo :user="user" />
-                        <ChevronsUpDown class="ml-auto size-4" />
+                        <UserInfo
+                            :user="user"
+                            :subtitle="
+                                activeRole?.career_name ?? activeRole?.role_name
+                            "
+                        />
+                        <ChevronsUpDown class="ml-auto" />
                     </SidebarMenuButton>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
@@ -47,9 +60,14 @@ const { isMobile, state } = useSidebar();
                     align="end"
                     :side-offset="4"
                 >
-                    <UserMenuContent :user="user" />
+                    <UserMenuContent
+                        :user="user"
+                        :can-switch-scope="canSwitchScope"
+                        @switch-scope="switcherOpen = true"
+                    />
                 </DropdownMenuContent>
             </DropdownMenu>
+            <WorkScopeSwitcherSheet v-model:open="switcherOpen" />
         </SidebarMenuItem>
     </SidebarMenu>
 </template>

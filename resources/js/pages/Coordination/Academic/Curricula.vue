@@ -12,12 +12,7 @@ defineOptions({
     },
 });
 
-defineProps<
-    Pick<
-        AcademicStructureProps,
-        'career' | 'curricula' | 'subjects' | 'options'
-    >
->();
+defineProps<Pick<AcademicStructureProps, 'career' | 'curricula' | 'options'>>();
 </script>
 
 <template>
@@ -25,17 +20,12 @@ defineProps<
 
     <PageFrame
         title="Mallas"
-        :description="`Versiones de malla de ${career.name}. Una malla publicada ya no se puede cambiar.`"
+        :description="`Elija una malla de ${career.name} para revisar su desglose académico o abrir el constructor visual.`"
     >
         <template #actions>
             <CurriculumRecordSheet entity="curriculum" :options="options" />
         </template>
 
-        <CurriculaTab
-            section="curricula"
-            :curricula="curricula"
-            :subjects="subjects"
-            :options="options"
-        />
+        <CurriculaTab :curricula="curricula" :options="options" />
     </PageFrame>
 </template>

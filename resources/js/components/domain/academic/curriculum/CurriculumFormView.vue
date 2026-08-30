@@ -187,10 +187,10 @@ const {
 
         <Card>
             <CardHeader>
-                <CardTitle>Materias por formulario</CardTitle>
+                <CardTitle>Materias de la malla</CardTitle>
                 <CardDescription>
-                    Los mismos campos de las tarjetas, disponibles sin zoom ni
-                    arrastre.
+                    Desglose completo de materias, ciclos, unidades de
+                    organización y campos configurados para esta versión.
                 </CardDescription>
             </CardHeader>
             <CardContent class="flex flex-col gap-4">

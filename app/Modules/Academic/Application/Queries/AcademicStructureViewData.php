@@ -127,24 +127,6 @@ class AcademicStructureViewData
                     'published_at' => $curriculum->publicado_en?->toIso8601String(),
                     'editable' => $curriculum->estado === 'draft',
                 ]),
-            'subjects' => Subject::query()
-                ->whereHas('curriculumVersion', fn ($query) => $query->where('carrera_id', $careerId))
-                ->with('curriculumVersion.career:id,nombre')
-                ->orderBy('nombre')
-                ->get()
-                ->map(fn (Subject $subject) => [
-                    'id' => $subject->id,
-                    'code' => $subject->codigo_institucional,
-                    'name' => $subject->nombre,
-                    'cycle' => $subject->ciclo,
-                    'credits' => $subject->creditos,
-                    'total_hours' => $subject->horas_totales,
-                    'active' => $subject->activo,
-                    'curriculum_code' => $subject->curriculumVersion->codigo,
-                    'curriculum_id' => $subject->version_malla_id,
-                    'career_name' => $subject->curriculumVersion->career->nombre,
-                    'editable' => $subject->curriculumVersion->estado === 'draft',
-                ]),
             'options' => [
                 ...$this->emptyOptions(),
                 'draftCurricula' => CurriculumVersion::query()

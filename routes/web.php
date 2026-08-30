@@ -136,7 +136,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('mallas/{curriculum}', [CareerAcademicStructureController::class, 'curriculumBuilder'])
             ->whereUuid('curriculum')
             ->name('coordination.academic.curricula.show');
-        Route::get('materias', [CareerAcademicStructureController::class, 'subjects'])
+        Route::redirect('materias', '/coordinacion/mallas')
             ->name('coordination.academic.subjects.index');
         Route::redirect('oferta-paralelos', '/coordinacion/ofertas');
         Route::get('ofertas', [CareerAcademicStructureController::class, 'offerings'])

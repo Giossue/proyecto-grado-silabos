@@ -121,7 +121,7 @@ class AcademicStructureTest extends TestCase
         ]);
     }
 
-    public function test_coordinator_sees_only_their_career_with_cycle_terminology(): void
+    public function test_coordinator_sees_only_their_career_and_subjects_live_inside_each_curriculum(): void
     {
         $this->actingAsCoordinator()
             ->get(route('coordination.academic.curricula.index'))
@@ -129,16 +129,13 @@ class AcademicStructureTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Coordination/Academic/Curricula')
                 ->where('career.name', 'Software')
-                ->where('subjects.0.code', 'SW-601')
-                ->where('subjects.0.cycle', 6));
+                ->has('curricula', 1)
+                ->where('curricula.0.subject_count', 1)
+                ->missing('subjects'));
 
         $this->actingAsCoordinator()
             ->get(route('coordination.academic.subjects.index'))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('Coordination/Academic/Subjects')
-                ->where('career.name', 'Software')
-                ->where('subjects.0.code', 'SW-601'));
+            ->assertRedirect('/coordinacion/mallas');
 
         $this->actingAsCoordinator()
             ->get(route('coordination.academic.offerings.index'))

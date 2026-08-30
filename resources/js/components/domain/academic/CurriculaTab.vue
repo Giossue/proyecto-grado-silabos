@@ -1,12 +1,29 @@
 <script setup lang="ts">
 import { Form, Link } from '@inertiajs/vue3';
-import { Send, Workflow } from '@lucide/vue';
+import { ArrowRight, BookOpenCheck, Send } from '@lucide/vue';
 import CareerAcademicStructureController from '@/actions/App/Modules/Academic/Presentation/Http/Controllers/CareerAcademicStructureController';
 import CareerAcademicActions from '@/components/domain/academic/CareerAcademicActions.vue';
 import ClientFilterBar from '@/components/domain/ClientFilterBar.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
-import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+    Card,
+    CardAction,
+    CardContent,
+    CardDescription,
+    CardFooter,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
 import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
+import {
+    Empty,
+    EmptyDescription,
+    EmptyHeader,
+    EmptyMedia,
+    EmptyTitle,
+} from '@/components/ui/empty';
 import { Field, FieldLabel } from '@/components/ui/field';
 import {
     Select,
@@ -17,30 +34,18 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableEmpty,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table';
 import { useClientFilter } from '@/composables/useClientFilter';
 import { useClientPagination } from '@/composables/useClientPagination';
 import { show as curriculumShow } from '@/routes/coordination/academic/curricula';
 import type { AcademicStructureProps } from '@/types/academic';
 
-const props = defineProps<
-    Pick<AcademicStructureProps, 'curricula' | 'subjects' | 'options'> & {
-        section: 'curricula' | 'subjects';
-    }
->();
+const props =
+    defineProps<Pick<AcademicStructureProps, 'curricula' | 'options'>>();
+
 const curriculumFilter = useClientFilter(
     () => props.curricula,
     (item) => [item.code, item.career_name, item.state],
     {
-        // Una malla no se archiva: recorre borrador, publicada e inactiva.
         estado: {
             matches: (item, value) => item.state === value,
         },
@@ -52,256 +57,177 @@ const {
     meta: curriculumMeta,
     setPage: setCurriculumPage,
 } = useClientPagination(() => curriculumFilter.items.value);
-const subjectFilter = useClientFilter(
-    () => props.subjects,
-    (item) => [item.code, item.name, item.curriculum_code, item.career_name],
-    {
-        estado: {
-            matches: (item, value) => item.active === (value === 'active'),
-        },
-    },
-);
-
-const {
-    items: subjectPage,
-    meta: subjectMeta,
-    setPage: setSubjectPage,
-} = useClientPagination(() => subjectFilter.items.value);
 
 const stateLabel: Record<string, string> = {
     draft: 'Borrador',
     published: 'Publicada',
     inactive: 'Inactiva',
 };
+
+const stateVariant = (state: string): 'default' | 'outline' | 'secondary' =>
+    state === 'published'
+        ? 'default'
+        : state === 'draft'
+          ? 'secondary'
+          : 'outline';
+
+const formatDate = (value: string | null): string =>
+    value
+        ? new Intl.DateTimeFormat('es-EC', { dateStyle: 'medium' }).format(
+              new Date(value),
+          )
+        : 'Aún no publicada';
 </script>
 
 <template>
     <div class="flex flex-col gap-6">
-        <Card v-if="section === 'curricula'">
-            <CardContent class="flex flex-col gap-4">
-                <ClientFilterBar
-                    :filter="curriculumFilter"
-                    input-id="curricula-search"
-                    label="Buscar malla"
-                    placeholder="Buscar por código o carrera"
-                >
-                    <template #filters>
-                        <Field>
-                            <FieldLabel
-                                for="curricula-search-state"
-                                class="sr-only"
-                                >Estado</FieldLabel
-                            >
-                            <Select
-                                v-model="curriculumFilter.values.estado.value"
-                            >
-                                <SelectTrigger id="curricula-search-state">
-                                    <SelectValue
-                                        placeholder="Todos los estados"
-                                    />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectGroup>
-                                        <SelectItem value="all"
-                                            >Todos los estados</SelectItem
-                                        >
-                                        <SelectItem value="draft"
-                                            >Borrador</SelectItem
-                                        >
-                                        <SelectItem value="published"
-                                            >Publicada</SelectItem
-                                        >
-                                        <SelectItem value="inactive"
-                                            >Inactiva</SelectItem
-                                        >
-                                    </SelectGroup>
-                                </SelectContent>
-                            </Select>
-                        </Field>
-                    </template>
-                </ClientFilterBar>
-                <Table
-                    ><TableHeader
-                        ><TableRow
-                            ><TableHead>Malla</TableHead
-                            ><TableHead>Carrera</TableHead
-                            ><TableHead>Materias</TableHead
-                            ><TableHead>Estado</TableHead
-                            ><TableHead class="text-right"
-                                >Acciones</TableHead
-                            ></TableRow
-                        ></TableHeader
-                    ><TableBody>
-                        <TableEmpty
-                            v-if="curricula.length === 0"
-                            :colspan="5"
-                            >{{
-                                curriculumFilter.active.value
-                                    ? 'Ninguna malla coincide con la búsqueda.'
-                                    : 'No existen mallas.'
-                            }}</TableEmpty
-                        >
-                        <TableRow
-                            v-for="item in curriculumPage"
-                            v-else
-                            :key="item.id"
-                            ><TableCell
-                                ><div class="font-medium">{{ item.code }}</div>
-                                <div class="text-sm text-muted-foreground">
-                                    Versión {{ item.version_number }}
-                                </div></TableCell
-                            ><TableCell>{{ item.career_name }}</TableCell
-                            ><TableCell>{{ item.subject_count }}</TableCell
-                            ><TableCell>{{
-                                stateLabel[item.state] ?? item.state
-                            }}</TableCell
-                            ><TableCell class="text-right"
-                                ><CareerAcademicActions
-                                    entity="curriculum"
-                                    :record="item"
-                                    :record-label="`la malla ${item.code}`"
-                                    :editable="item.editable"
-                                    :status-supported="false"
-                                    locked-label="Malla publicada e inmutable"
-                                    :options="options"
-                                    ><DropdownMenuItem as-child
-                                        ><Link :href="curriculumShow(item.id)"
-                                            ><Workflow
-                                                aria-hidden="true"
-                                            />Abrir constructor</Link
-                                        ></DropdownMenuItem
-                                    ><Form
-                                        v-if="item.state === 'draft'"
-                                        v-bind="
-                                            CareerAcademicStructureController.publishCurriculum.form(
-                                                item.id,
-                                            )
-                                        "
-                                        v-slot="{ errors, processing, submit }"
-                                        ><DropdownMenuItem
-                                            :disabled="
-                                                processing ||
-                                                item.subject_count === 0
-                                            "
-                                            @select="submit()"
-                                            ><Spinner v-if="processing" /><Send
-                                                v-else
-                                                aria-hidden="true"
-                                            />Publicar malla</DropdownMenuItem
-                                        ><DropdownMenuItem
-                                            v-if="errors.curriculum"
-                                            disabled
-                                            variant="destructive"
-                                            >{{
-                                                errors.curriculum
-                                            }}</DropdownMenuItem
-                                        ></Form
-                                    ></CareerAcademicActions
-                                ></TableCell
-                            ></TableRow
-                        >
-                    </TableBody></Table
-                >
-                <TablePagination
-                    :meta="curriculumMeta"
-                    mode="client"
-                    label="Paginación de versiones de malla"
-                    @update:page="setCurriculumPage"
-                />
-            </CardContent>
-        </Card>
+        <ClientFilterBar
+            :filter="curriculumFilter"
+            input-id="curricula-search"
+            label="Buscar malla"
+            placeholder="Buscar por código o carrera"
+        >
+            <template #filters>
+                <Field>
+                    <FieldLabel for="curricula-search-state" class="sr-only">
+                        Estado
+                    </FieldLabel>
+                    <Select v-model="curriculumFilter.values.estado.value">
+                        <SelectTrigger id="curricula-search-state">
+                            <SelectValue placeholder="Todos los estados" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectGroup>
+                                <SelectItem value="all">
+                                    Todos los estados
+                                </SelectItem>
+                                <SelectItem value="draft">Borrador</SelectItem>
+                                <SelectItem value="published">
+                                    Publicada
+                                </SelectItem>
+                                <SelectItem value="inactive">
+                                    Inactiva
+                                </SelectItem>
+                            </SelectGroup>
+                        </SelectContent>
+                    </Select>
+                </Field>
+            </template>
+        </ClientFilterBar>
 
-        <Card v-if="section === 'subjects'">
-            <CardContent class="flex flex-col gap-4">
-                <ClientFilterBar
-                    :filter="subjectFilter"
-                    input-id="subjects-search"
-                    label="Buscar asignatura"
-                    placeholder="Buscar por código, nombre o malla"
-                >
-                    <template #filters>
-                        <Field>
-                            <FieldLabel
-                                for="subjects-search-state"
-                                class="sr-only"
-                                >Estado</FieldLabel
-                            >
-                            <Select v-model="subjectFilter.values.estado.value">
-                                <SelectTrigger id="subjects-search-state">
-                                    <SelectValue
-                                        placeholder="Todos los estados"
-                                    />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectGroup>
-                                        <SelectItem value="all"
-                                            >Todos los estados</SelectItem
-                                        >
-                                        <SelectItem value="active"
-                                            >Activos</SelectItem
-                                        >
-                                        <SelectItem value="inactive"
-                                            >Archivados</SelectItem
-                                        >
-                                    </SelectGroup>
-                                </SelectContent>
-                            </Select>
-                        </Field>
-                    </template>
-                </ClientFilterBar>
-                <Table
-                    ><TableHeader
-                        ><TableRow
-                            ><TableHead>Materia</TableHead
-                            ><TableHead>Malla</TableHead
-                            ><TableHead>Ciclo</TableHead
-                            ><TableHead>Carga</TableHead
-                            ><TableHead>Estado</TableHead
-                            ><TableHead class="text-right"
-                                >Acciones</TableHead
-                            ></TableRow
-                        ></TableHeader
-                    ><TableBody>
-                        <TableEmpty v-if="subjects.length === 0" :colspan="6"
-                            >No existen materias.</TableEmpty
+        <Empty v-if="curriculumPage.length === 0" class="min-h-72 border">
+            <EmptyHeader>
+                <EmptyMedia variant="icon">
+                    <BookOpenCheck aria-hidden="true" />
+                </EmptyMedia>
+                <EmptyTitle>
+                    {{
+                        curriculumFilter.active.value
+                            ? 'No hay mallas que coincidan'
+                            : 'Todavía no hay mallas'
+                    }}
+                </EmptyTitle>
+                <EmptyDescription>
+                    {{
+                        curriculumFilter.active.value
+                            ? 'Cambie o limpie los filtros para volver a ver las mallas de esta carrera.'
+                            : 'Cree la primera versión de malla para agregar sus materias, campos y relaciones.'
+                    }}
+                </EmptyDescription>
+            </EmptyHeader>
+        </Empty>
+
+        <div v-else class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <Card v-for="item in curriculumPage" :key="item.id">
+                <CardHeader>
+                    <CardTitle>{{ item.code }}</CardTitle>
+                    <CardDescription>
+                        {{ item.career_name }} · Versión
+                        {{ item.version_number }}
+                    </CardDescription>
+                    <CardAction>
+                        <CareerAcademicActions
+                            entity="curriculum"
+                            :record="item"
+                            :record-label="`la malla ${item.code}`"
+                            :editable="item.editable"
+                            :status-supported="false"
+                            locked-label="Malla publicada e inmutable"
+                            :options="options"
                         >
-                        <TableRow
-                            v-for="item in subjectPage"
-                            v-else
-                            :key="item.id"
-                            ><TableCell
-                                ><div class="font-medium">{{ item.name }}</div>
-                                <div class="text-sm text-muted-foreground">
-                                    {{ item.code }}
-                                </div></TableCell
-                            ><TableCell
-                                >{{ item.curriculum_code }} ·
-                                {{ item.career_name }}</TableCell
-                            ><TableCell>{{ item.cycle ?? '—' }}</TableCell
-                            ><TableCell
-                                >{{ item.credits ?? '—' }} créditos ·
-                                {{ item.total_hours ?? '—' }} h</TableCell
-                            ><TableCell>{{
-                                item.active ? 'Activa' : 'Archivada'
-                            }}</TableCell
-                            ><TableCell class="text-right"
-                                ><CareerAcademicActions
-                                    entity="subject"
-                                    :record="item"
-                                    :record-label="item.name"
-                                    :editable="item.editable"
-                                    :active="item.active"
-                                    locked-label="La malla publicada es inmutable"
-                                    :options="options" /></TableCell
-                        ></TableRow> </TableBody
-                ></Table>
-                <TablePagination
-                    :meta="subjectMeta"
-                    mode="client"
-                    label="Paginación de materias por malla"
-                    @update:page="setSubjectPage"
-                />
-            </CardContent>
-        </Card>
+                            <Form
+                                v-if="item.state === 'draft'"
+                                v-bind="
+                                    CareerAcademicStructureController.publishCurriculum.form(
+                                        item.id,
+                                    )
+                                "
+                                v-slot="{ errors, processing, submit }"
+                            >
+                                <DropdownMenuItem
+                                    :disabled="
+                                        processing || item.subject_count === 0
+                                    "
+                                    @select="submit()"
+                                >
+                                    <Spinner v-if="processing" />
+                                    <Send v-else aria-hidden="true" />
+                                    Publicar malla
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                    v-if="errors.curriculum"
+                                    disabled
+                                    variant="destructive"
+                                >
+                                    {{ errors.curriculum }}
+                                </DropdownMenuItem>
+                            </Form>
+                        </CareerAcademicActions>
+                    </CardAction>
+                </CardHeader>
+                <CardContent>
+                    <dl class="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <dt class="text-muted-foreground">Estado</dt>
+                            <dd class="mt-1">
+                                <Badge :variant="stateVariant(item.state)">
+                                    {{ stateLabel[item.state] ?? item.state }}
+                                </Badge>
+                            </dd>
+                        </div>
+                        <div>
+                            <dt class="text-muted-foreground">Materias</dt>
+                            <dd class="mt-1 font-medium">
+                                {{ item.subject_count }}
+                            </dd>
+                        </div>
+                        <div class="col-span-2">
+                            <dt class="text-muted-foreground">Publicación</dt>
+                            <dd class="mt-1 font-medium">
+                                {{ formatDate(item.published_at) }}
+                            </dd>
+                        </div>
+                    </dl>
+                </CardContent>
+                <CardFooter>
+                    <Button as-child class="w-full">
+                        <Link :href="curriculumShow(item.id)">
+                            Ver desglose y constructor
+                            <ArrowRight
+                                data-icon="inline-end"
+                                aria-hidden="true"
+                            />
+                        </Link>
+                    </Button>
+                </CardFooter>
+            </Card>
+        </div>
+
+        <TablePagination
+            :meta="curriculumMeta"
+            mode="client"
+            label="Paginación de versiones de malla"
+            @update:page="setCurriculumPage"
+        />
     </div>
 </template>

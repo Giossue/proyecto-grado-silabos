@@ -51,10 +51,10 @@ it('mantiene todas las altas de gestion dentro del sheet derecho compartido', fu
             'component_file' => 'resources/js/components/domain/academic/CurriculumRecordSheet.vue',
             'action' => 'CareerAcademicStructureController.store.form',
         ],
-        'Coordinador · materias' => [
-            'page' => 'resources/js/pages/Coordination/Academic/Subjects.vue',
-            'component' => 'CurriculumRecordSheet',
-            'component_file' => 'resources/js/components/domain/academic/CurriculumRecordSheet.vue',
+        'Coordinador · materias dentro de una malla' => [
+            'page' => 'resources/js/pages/Coordination/Academic/CurriculumBuilder.vue',
+            'component' => 'CurriculumSubjectSheet',
+            'component_file' => 'resources/js/components/domain/academic/curriculum/CurriculumSubjectSheet.vue',
             'action' => 'CareerAcademicStructureController.store.form',
         ],
         'Coordinador · ofertas' => [
@@ -137,6 +137,37 @@ it('protege la direccion y accesibilidad del sheet compartido', function (): voi
         ->toContain('<SheetDescription>');
 });
 
+it('permite elegir la carrera al entrar y cambiar el ambito desde el menu de usuario', function (): void {
+    $root = dirname(__DIR__, 2);
+    $selection = file_get_contents($root.'/resources/js/pages/Role/Select.vue');
+    $navigation = file_get_contents($root.'/resources/js/components/NavUser.vue');
+    $menu = file_get_contents($root.'/resources/js/components/UserMenuContent.vue');
+    $switcher = file_get_contents(
+        $root.'/resources/js/components/domain/identity/WorkScopeSwitcherSheet.vue',
+    );
+
+    expect($selection)
+        ->toBeString()
+        ->toContain('Bienvenida')
+        ->toContain('Entrar a esta carrera')
+        ->toContain('<Card');
+    expect($navigation)
+        ->toBeString()
+        ->toContain('<WorkScopeSwitcherSheet')
+        ->toContain('activeRole?.career_name')
+        ->toContain('@switch-scope="switcherOpen = true"');
+    expect($menu)
+        ->toBeString()
+        ->toContain('Cambiar carrera o rol')
+        ->toContain("$emit('switch-scope')");
+    expect($switcher)
+        ->toBeString()
+        ->toContain('<SheetTitle>')
+        ->toContain('<SheetDescription>')
+        ->toContain('ActiveRoleController.store.form()')
+        ->toContain('role_assignment_id');
+});
+
 it('presenta la jerarquia academica en submenus y rutas sin mezclar catalogos', function (): void {
     $root = dirname(__DIR__, 2);
     $source = file_get_contents(
@@ -168,14 +199,14 @@ it('presenta la jerarquia academica en submenus y rutas sin mezclar catalogos', 
         ->toContain('<SidebarMenuSubButton');
 });
 
-it('separa la gestion academica del coordinador en submenus y pantallas', function (): void {
+it('concentra las materias dentro de las cards y el detalle de cada malla', function (): void {
     $root = dirname(__DIR__, 2);
     $sidebar = file_get_contents($root.'/resources/js/components/AppSidebar.vue');
     $curricula = file_get_contents(
         $root.'/resources/js/pages/Coordination/Academic/Curricula.vue',
     );
-    $subjects = file_get_contents(
-        $root.'/resources/js/pages/Coordination/Academic/Subjects.vue',
+    $curriculaCards = file_get_contents(
+        $root.'/resources/js/components/domain/academic/CurriculaTab.vue',
     );
     $offerings = file_get_contents(
         $root.'/resources/js/pages/Coordination/Academic/Offerings.vue',
@@ -186,23 +217,30 @@ it('separa la gestion academica del coordinador en submenus y pantallas', functi
 
     expect($sidebar)
         ->toBeString()
-        ->toContain("title: 'Mallas y materias'")
         ->toContain("title: 'Mallas'")
         ->toContain('href: curriculaIndex()')
-        ->toContain("title: 'Materias'")
-        ->toContain('href: subjectsIndex()')
+        ->not->toContain("title: 'Mallas y materias'")
+        ->not->toContain('subjectsIndex')
         ->toContain("title: 'Ofertas y paralelos'")
         ->toContain("title: 'Ofertas'")
         ->toContain('href: offeringsIndex()')
         ->toContain("title: 'Paralelos'")
         ->toContain('href: parallelsIndex()');
-    expect($curricula)->toBeString()->toContain('entity="curriculum"');
-    expect($subjects)->toBeString()->toContain('entity="subject"');
+    expect($curricula)
+        ->toBeString()
+        ->toContain('entity="curriculum"')
+        ->toContain('<CurriculaTab');
+    expect($curriculaCards)
+        ->toBeString()
+        ->toContain('<Card v-for="item in curriculumPage"')
+        ->toContain('curriculumShow(item.id)')
+        ->toContain('Ver desglose y constructor')
+        ->not->toContain("section === 'subjects'");
     expect($offerings)->toBeString()->toContain('entity="offering"');
     expect($parallels)->toBeString()->toContain('entity="parallel"');
 });
 
-it('ofrece constructor visual y formulario sobre el mismo contrato de malla', function (): void {
+it('ofrece desglose y constructor visual sobre el mismo contrato de malla', function (): void {
     $root = dirname(__DIR__, 2);
     $page = file_get_contents(
         $root.'/resources/js/pages/Coordination/Academic/CurriculumBuilder.vue',
@@ -219,8 +257,9 @@ it('ofrece constructor visual y formulario sobre el mismo contrato de malla', fu
         ->toContain('<CurriculumCanvas')
         ->toContain('<CurriculumFormView')
         ->toContain('<TabsList')
-        ->toContain('<TabsTrigger value="visual"')
-        ->toContain('<TabsTrigger value="form"');
+        ->toContain('default-value="breakdown"')
+        ->toContain('<TabsTrigger value="breakdown"')
+        ->toContain('<TabsTrigger value="builder"');
     expect($canvas)
         ->toBeString()
         ->toContain("from '@vue-flow/core'")
@@ -237,18 +276,10 @@ it('ofrece constructor visual y formulario sobre el mismo contrato de malla', fu
 
 it('evita repetir el encabezado de pagina dentro de las tablas academicas', function (): void {
     $root = dirname(__DIR__, 2);
-    $curricula = file_get_contents(
-        $root.'/resources/js/components/domain/academic/CurriculaTab.vue',
-    );
     $offerings = file_get_contents(
         $root.'/resources/js/components/domain/academic/OfferingsTab.vue',
     );
 
-    expect($curricula)
-        ->toBeString()
-        ->not->toContain('<CardHeader')
-        ->not->toContain('<CardTitle')
-        ->not->toContain('<CardDescription');
     expect($offerings)
         ->toBeString()
         ->not->toContain('<CardHeader')
@@ -364,7 +395,7 @@ it('agrupa las acciones de tabla en menus accesibles de tres puntos', function (
     $this->assertSame(5, substr_count($catalogs, '<CatalogActions'));
 
     foreach ([
-        'resources/js/components/domain/academic/CurriculaTab.vue' => 2,
+        'resources/js/components/domain/academic/CurriculaTab.vue' => 1,
         'resources/js/components/domain/academic/OfferingsTab.vue' => 2,
         'resources/js/components/domain/academic/TeacherAssignmentsPanel.vue' => 1,
     ] as $surface => $expected) {
@@ -378,7 +409,7 @@ it('agrupa las acciones de tabla en menus accesibles de tres puntos', function (
         $checked += $expected;
     }
 
-    $this->assertSame(13, $checked);
+    $this->assertSame(12, $checked);
 });
 
 it('usa el mismo paginador en todas las superficies tabulares', function (): void {
@@ -413,7 +444,7 @@ it('usa el mismo paginador en todas las superficies tabulares', function (): voi
         $checked += $tableCount;
     }
 
-    $this->assertSame(26, $checked);
+    $this->assertSame(24, $checked);
 });
 
 it('ordena busqueda filtros y accion mediante una barra compartida', function (): void {
@@ -511,7 +542,6 @@ it('normaliza los encabezados de todos los modulos autenticados', function (): v
         'resources/js/pages/Coordination/Academic/CurriculumBuilder.vue',
         'resources/js/pages/Coordination/Academic/Offerings.vue',
         'resources/js/pages/Coordination/Academic/Parallels.vue',
-        'resources/js/pages/Coordination/Academic/Subjects.vue',
         'resources/js/pages/Coordination/Academic/TeacherAssignments.vue',
         'resources/js/pages/Coordination/Convocations/Index.vue',
         'resources/js/pages/Coordination/Convocations/Show.vue',
@@ -628,8 +658,8 @@ it('normaliza los encabezados de todos los modulos autenticados', function (): v
         );
     }
 
-    $this->assertCount(30, $declaredPages);
-    $this->assertCount(31, $pages);
+    $this->assertCount(29, $declaredPages);
+    $this->assertCount(30, $pages);
 });
 
 it('mantiene explicitamente clasificadas las mutaciones store que permanecen en paginas completas', function (): void {

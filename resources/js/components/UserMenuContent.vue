@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link, router } from '@inertiajs/vue3';
-import { LogOut, Settings } from '@lucide/vue';
+import { Building2, LogOut, Settings } from '@lucide/vue';
 import {
     DropdownMenuGroup,
     DropdownMenuItem,
@@ -14,13 +14,16 @@ import type { User } from '@/types';
 
 type Props = {
     user: User;
+    canSwitchScope?: boolean;
 };
+
+defineEmits<{ 'switch-scope': [] }>();
 
 const handleLogout = () => {
     router.flushAll();
 };
 
-defineProps<Props>();
+withDefaults(defineProps<Props>(), { canSwitchScope: false });
 </script>
 
 <template>
@@ -31,9 +34,13 @@ defineProps<Props>();
     </DropdownMenuLabel>
     <DropdownMenuSeparator />
     <DropdownMenuGroup>
+        <DropdownMenuItem v-if="canSwitchScope" @select="$emit('switch-scope')">
+            <Building2 data-icon="inline-start" aria-hidden="true" />
+            Cambiar carrera o rol
+        </DropdownMenuItem>
         <DropdownMenuItem :as-child="true">
             <Link class="block w-full cursor-pointer" :href="edit()" prefetch>
-                <Settings class="mr-2 h-4 w-4" />
+                <Settings data-icon="inline-start" aria-hidden="true" />
                 Configuración
             </Link>
         </DropdownMenuItem>
@@ -47,7 +54,7 @@ defineProps<Props>();
             as="button"
             data-test="logout-button"
         >
-            <LogOut class="mr-2 h-4 w-4" />
+            <LogOut data-icon="inline-start" aria-hidden="true" />
             Cerrar sesión
         </Link>
     </DropdownMenuItem>

@@ -21,6 +21,7 @@ export type ActiveRole = {
     id: string;
     role: 'administrator' | 'coordinator' | 'teacher';
     role_name: string;
+    career_id: string | null;
     career_name: string | null;
 };
 

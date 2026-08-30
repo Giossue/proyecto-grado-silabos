@@ -46,11 +46,13 @@ class HandleInertiaRequests extends Middleware
                     'id' => $assignment->id,
                     'role' => $assignment->role->codigo,
                     'role_name' => $assignment->role->nombre,
+                    'career_id' => $assignment->carrera_id,
                     'career_name' => $assignment->career?->nombre,
                 ])
                 ->values()
             : collect();
-        // Resolver aquí activa el rol único, si lo hay, antes de compartir los props.
+        // Resolver aquí activa el único ámbito no coordinador, si lo hay, antes de
+        // compartir los props. Coordinación siempre confirma primero su carrera.
         $activeRoleId = $user instanceof User ? $activeRole->resolve($request)?->id : null;
 
         return [

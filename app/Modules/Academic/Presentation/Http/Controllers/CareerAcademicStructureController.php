@@ -36,17 +36,6 @@ class CareerAcademicStructureController extends Controller
         );
     }
 
-    public function subjects(
-        ManageCareerAcademicStructureRequest $request,
-        ActiveRole $roles,
-        AcademicStructureViewData $viewData,
-    ): Response {
-        return Inertia::render(
-            'Coordination/Academic/Subjects',
-            $viewData->curricula($this->careerId($request, $roles)),
-        );
-    }
-
     public function curriculumBuilder(
         string $curriculum,
         ManageCareerAcademicStructureRequest $request,
