@@ -130,11 +130,26 @@ class AcademicStructureTest extends TestCase
                 ->where('subjects.0.cycle', 6));
 
         $this->actingAsCoordinator()
+            ->get(route('coordination.academic.subjects.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Coordination/Academic/Subjects')
+                ->where('career.name', 'Software')
+                ->where('subjects.0.code', 'SW-601'));
+
+        $this->actingAsCoordinator()
             ->get(route('coordination.academic.offerings.index'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Coordination/Academic/Offerings')
                 ->has('offerings', 1)
+                ->has('parallels', 1));
+
+        $this->actingAsCoordinator()
+            ->get(route('coordination.academic.parallels.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Coordination/Academic/Parallels')
                 ->has('parallels', 1));
 
         $this->actingAsCoordinator()

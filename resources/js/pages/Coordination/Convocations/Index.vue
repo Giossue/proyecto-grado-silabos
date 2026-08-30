@@ -6,7 +6,6 @@ import FilterToolbar from '@/components/domain/FilterToolbar.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
 import ConvocationCreationSheet from '@/components/domain/syllabus/ConvocationCreationSheet.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Field, FieldLabel } from '@/components/ui/field';
@@ -74,15 +73,6 @@ const stateLabel = (state: string): string =>
                 :sources="sources"
             />
         </template>
-
-        <Alert>
-            <AlertTitle>Un sílabo por paralelo</AlertTitle>
-            <AlertDescription>
-                Cada paralelo genera su propio sílabo. Esta opción aparece
-                seleccionada de forma predeterminada al preparar la
-                convocatoria; cualquier cambio de agrupación quedará registrado.
-            </AlertDescription>
-        </Alert>
 
         <Card>
             <CardContent class="flex flex-col gap-4">

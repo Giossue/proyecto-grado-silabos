@@ -24,7 +24,7 @@ const page = usePage();
 
     <PageFrame
         title="Seleccione con qué rol va a trabajar"
-        description="Lo que puede ver y hacer depende del rol con el que entre. Puede cambiarlo cuando quiera."
+        description=""
         size="narrow"
     >
         <Alert v-if="page.props.auth.roles.length === 0">

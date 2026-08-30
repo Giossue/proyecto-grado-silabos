@@ -40,8 +40,8 @@
 | COR-10 | Reabrir aprobado                           |
 | COR-11 | Fuentes académicas                         |
 | COR-12 | Informes                                   |
-| COR-13 | Mallas y materias de la carrera            |
-| COR-14 | Oferta académica y paralelos de la carrera |
+| COR-13 | Mallas y materias de la carrera, en rutas separadas            |
+| COR-14 | Ofertas académicas y paralelos de la carrera, en rutas separadas |
 | COR-15 | Asignaciones docentes de la carrera        |
 
 ## Administrador
@@ -90,6 +90,9 @@
   Carreras, Campus, Modalidades y Periodos académicos. Carreras muestra su Facultad y
   Facultades muestra la cantidad relacionada; los catálogos no se mezclan ni se ocultan
   en pestañas.
+- COR-13 y COR-14 usan los submenús **Mallas y materias** y **Ofertas y paralelos**.
+  Cada colección tiene una ruta, tabla y formulario de alta propios; no se mezclan dos
+  colecciones en la misma pantalla.
 - **Auditoría** agrupa las rutas administrativas **Procesos** (ADM-09) y **Registro de
   actividad** (ADM-10). La primera permite diagnosticar y reintentar trabajos; la segunda
   reconstruye quién hizo qué y cuándo.

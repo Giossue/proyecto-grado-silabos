@@ -40,7 +40,8 @@ dispositivos continúa centralizada en I-08.
 ## Resultado demostrable
 
 El menú administrativo separa usuarios, estructura académica y coordinaciones. El menú de
-Coordinador ofrece materias y mallas, oferta/paralelos y asignación docente. Toda consulta
+Coordinador agrupa Mallas/Materias y Ofertas/Paralelos en submenús con rutas propias,
+además de la asignación docente. Toda consulta
 y mutación de coordinación se limita en PostgreSQL a la carrera del rol activo,
 incluidos identificadores enviados manualmente fuera de la interfaz. Cada pantalla de
 listado mantiene un único botón principal y despliega su formulario en un panel lateral
@@ -54,6 +55,7 @@ registro ofrece Editar y Archivar/Reactivar sin exponer borrado físico.
 - [x] Separar autorización de gobierno global y gestión académica por carrera.
 - [x] Aplicar alcance por carrera a consultas, creación, publicación y archivo.
 - [x] Reorganizar rutas, navegación y pantallas con componentes compartidos.
+- [x] Separar Mallas, Materias, Ofertas y Paralelos en rutas hijas del sidebar.
 - [x] Usar “ciclo” en materias sin confundirlo con periodo académico.
 - [x] Cubrir permisos, alcance lateral, auditoría e invariantes con pruebas PostgreSQL.
 - [x] Sustituir la tabla plana de ADM-04 por Facultad → Carreras y catálogos separados.

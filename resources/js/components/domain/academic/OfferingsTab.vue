@@ -32,8 +32,11 @@ import { useClientFilter } from '@/composables/useClientFilter';
 import { useClientPagination } from '@/composables/useClientPagination';
 import type { AcademicStructureProps } from '@/types/academic';
 
-const props =
-    defineProps<Pick<AcademicStructureProps, 'offerings' | 'parallels'>>();
+const props = defineProps<
+    Pick<AcademicStructureProps, 'offerings' | 'parallels'> & {
+        section: 'offerings' | 'parallels';
+    }
+>();
 const offeringFilter = useClientFilter(
     () => props.offerings,
     (item) => [
@@ -73,7 +76,7 @@ const {
 
 <template>
     <div class="flex flex-col gap-6">
-        <Card>
+        <Card v-if="section === 'offerings'">
             <CardHeader
                 ><CardTitle>Ofertas académicas</CardTitle
                 ><CardDescription
@@ -171,7 +174,7 @@ const {
             /></CardContent>
         </Card>
 
-        <Card>
+        <Card v-if="section === 'parallels'">
             <CardHeader
                 ><CardTitle>Paralelos</CardTitle
                 ><CardDescription

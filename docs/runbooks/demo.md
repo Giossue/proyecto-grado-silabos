@@ -95,11 +95,12 @@ Las cuentas creadas por el seeder usan exclusivamente datos sintéticos:
 ### 2. Coordinador: estructura de carrera, fuente y convocatoria
 
 1. Cierre sesión, ingrese como Coordinador y seleccione **Coordinador · Software**.
-2. En **Mallas y materias**, cree `MALLA-SW-DEMO`, versión 2. Agregue la materia `SW-701`
-   denominada `Sistemas Distribuidos`, ciclo 7, cuatro créditos y 160 horas. Publique la
-   malla y compruebe que queda inmutable.
-3. En **Oferta y paralelos**, abra `SW-701` para el periodo académico, campus y modalidad
-   sintéticos existentes; cree el paralelo `A`. En **Asignación docente**, asigne
+2. En **Mallas y materias > Mallas**, cree `MALLA-SW-DEMO`, versión 2. Desde **Materias**,
+   agregue `SW-701`, denominada `Sistemas Distribuidos`, ciclo 7, cuatro créditos y 160
+   horas. Vuelva a **Mallas**, publíquela y compruebe que queda inmutable.
+3. En **Ofertas y paralelos > Ofertas**, abra `SW-701` para el periodo académico, campus y
+   modalidad sintéticos existentes; desde **Paralelos**, cree el paralelo `A`. En
+   **Asignación docente**, asigne
    `Docente Demo` a ese paralelo con vigencia actual. Ninguna opción de otra carrera debe
    aparecer. Esto completa el reparto de `CU-03`.
 4. En **Fuentes académicas**, cree `Guía académica de demostración`, tipo `Guía`, autoridad

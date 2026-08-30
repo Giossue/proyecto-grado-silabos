@@ -37,8 +37,11 @@ import { useClientFilter } from '@/composables/useClientFilter';
 import { useClientPagination } from '@/composables/useClientPagination';
 import type { AcademicStructureProps } from '@/types/academic';
 
-const props =
-    defineProps<Pick<AcademicStructureProps, 'curricula' | 'subjects'>>();
+const props = defineProps<
+    Pick<AcademicStructureProps, 'curricula' | 'subjects'> & {
+        section: 'curricula' | 'subjects';
+    }
+>();
 const curriculumFilter = useClientFilter(
     () => props.curricula,
     (item) => [item.code, item.career_name, item.state],
@@ -80,7 +83,7 @@ const stateLabel: Record<string, string> = {
 
 <template>
     <div class="flex flex-col gap-6">
-        <Card>
+        <Card v-if="section === 'curricula'">
             <CardHeader
                 ><CardTitle>Versiones de malla</CardTitle
                 ><CardDescription
@@ -212,7 +215,7 @@ const stateLabel: Record<string, string> = {
             </CardContent>
         </Card>
 
-        <Card>
+        <Card v-if="section === 'subjects'">
             <CardHeader
                 ><CardTitle>Materias por malla</CardTitle
                 ><CardDescription

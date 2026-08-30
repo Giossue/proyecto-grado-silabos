@@ -5,13 +5,7 @@ import NotificationController from '@/actions/App/Modules/Operations/Presentatio
 import PageFrame from '@/components/domain/PageFrame.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
 import { index as notificationsIndex } from '@/routes/notifications';
 
@@ -98,13 +92,6 @@ const paginationLabel = (value: string): string =>
         </nav>
 
         <Card>
-            <CardHeader>
-                <CardTitle>Bandeja interna</CardTitle>
-                <CardDescription>
-                    El correo institucional permanece fuera de alcance hasta
-                    resolver PV-15.
-                </CardDescription>
-            </CardHeader>
             <CardContent class="space-y-3" aria-live="polite">
                 <article
                     v-for="notification in notifications.data"
@@ -172,7 +159,7 @@ const paginationLabel = (value: string): string =>
                     v-if="notifications.data.length === 0"
                     class="py-12 text-center text-sm text-muted-foreground"
                 >
-                    No hay notificaciones en este filtro.
+                    No existen notificaciones.
                 </div>
             </CardContent>
         </Card>

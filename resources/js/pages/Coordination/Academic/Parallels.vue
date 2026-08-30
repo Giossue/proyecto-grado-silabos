@@ -3,12 +3,12 @@ import { Head } from '@inertiajs/vue3';
 import OfferingRecordSheet from '@/components/domain/academic/OfferingRecordSheet.vue';
 import OfferingsTab from '@/components/domain/academic/OfferingsTab.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
-import { index as offeringsIndex } from '@/routes/coordination/academic/offerings';
+import { index as parallelsIndex } from '@/routes/coordination/academic/parallels';
 import type { AcademicStructureProps } from '@/types/academic';
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: 'Ofertas', href: offeringsIndex() }],
+        breadcrumbs: [{ title: 'Paralelos', href: parallelsIndex() }],
     },
 });
 
@@ -21,18 +21,18 @@ defineProps<
 </script>
 
 <template>
-    <Head title="Ofertas académicas" />
+    <Head title="Paralelos" />
 
     <PageFrame
-        title="Ofertas académicas"
-        :description="`Qué materias se dictan cada periodo en ${career.name}, en qué campus y con qué modalidad.`"
+        title="Paralelos"
+        :description="`Paralelos de las ofertas académicas de ${career.name}.`"
     >
         <template #actions>
-            <OfferingRecordSheet entity="offering" :options="options" />
+            <OfferingRecordSheet entity="parallel" :options="options" />
         </template>
 
         <OfferingsTab
-            section="offerings"
+            section="parallels"
             :offerings="offerings"
             :parallels="parallels"
         />

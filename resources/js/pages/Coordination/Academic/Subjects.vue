@@ -3,12 +3,12 @@ import { Head } from '@inertiajs/vue3';
 import CurriculaTab from '@/components/domain/academic/CurriculaTab.vue';
 import CurriculumRecordSheet from '@/components/domain/academic/CurriculumRecordSheet.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
-import { index as curriculaIndex } from '@/routes/coordination/academic/curricula';
+import { index as subjectsIndex } from '@/routes/coordination/academic/subjects';
 import type { AcademicStructureProps } from '@/types/academic';
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: 'Mallas', href: curriculaIndex() }],
+        breadcrumbs: [{ title: 'Materias', href: subjectsIndex() }],
     },
 });
 
@@ -21,18 +21,18 @@ defineProps<
 </script>
 
 <template>
-    <Head title="Mallas" />
+    <Head title="Materias" />
 
     <PageFrame
-        title="Mallas"
-        :description="`Versiones de malla de ${career.name}. Una malla publicada ya no se puede cambiar.`"
+        title="Materias"
+        :description="`Materias organizadas por las mallas de ${career.name}.`"
     >
         <template #actions>
-            <CurriculumRecordSheet entity="curriculum" :options="options" />
+            <CurriculumRecordSheet entity="subject" :options="options" />
         </template>
 
         <CurriculaTab
-            section="curricula"
+            section="subjects"
             :curricula="curricula"
             :subjects="subjects"
         />

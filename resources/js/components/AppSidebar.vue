@@ -38,6 +38,8 @@ import { index as usersIndex } from '@/routes/admin/users';
 import { index as convocationsIndex } from '@/routes/convocations';
 import { index as curriculaIndex } from '@/routes/coordination/academic/curricula';
 import { index as offeringsIndex } from '@/routes/coordination/academic/offerings';
+import { index as parallelsIndex } from '@/routes/coordination/academic/parallels';
+import { index as subjectsIndex } from '@/routes/coordination/academic/subjects';
 import { index as teacherAssignmentsIndex } from '@/routes/coordination/academic/teacher-assignments';
 import { index as reportsIndex } from '@/routes/reports';
 import { index as reviewsIndex } from '@/routes/reviews';
@@ -130,11 +132,31 @@ const mainNavItems = computed<NavItem[]>(() => [
                   title: 'Mallas y materias',
                   href: curriculaIndex(),
                   icon: BookOpenCheck,
+                  items: [
+                      {
+                          title: 'Mallas',
+                          href: curriculaIndex(),
+                      },
+                      {
+                          title: 'Materias',
+                          href: subjectsIndex(),
+                      },
+                  ],
               },
               {
-                  title: 'Oferta y paralelos',
+                  title: 'Ofertas y paralelos',
                   href: offeringsIndex(),
                   icon: Building2,
+                  items: [
+                      {
+                          title: 'Ofertas',
+                          href: offeringsIndex(),
+                      },
+                      {
+                          title: 'Paralelos',
+                          href: parallelsIndex(),
+                      },
+                  ],
               },
               {
                   title: 'Asignación docente',

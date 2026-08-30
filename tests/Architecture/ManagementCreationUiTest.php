@@ -45,14 +45,26 @@ it('mantiene todas las altas de gestion dentro del sheet derecho compartido', fu
             'component_file' => 'resources/js/components/domain/configuration/AcademicSourceFragmentSheet.vue',
             'action' => 'AcademicSourceController.addFragment.form',
         ],
-        'Coordinador · mallas y materias' => [
+        'Coordinador · mallas' => [
             'page' => 'resources/js/pages/Coordination/Academic/Curricula.vue',
             'component' => 'CurriculumRecordSheet',
             'component_file' => 'resources/js/components/domain/academic/CurriculumRecordSheet.vue',
             'action' => 'CareerAcademicStructureController.store.form',
         ],
-        'Coordinador · ofertas y paralelos' => [
+        'Coordinador · materias' => [
+            'page' => 'resources/js/pages/Coordination/Academic/Subjects.vue',
+            'component' => 'CurriculumRecordSheet',
+            'component_file' => 'resources/js/components/domain/academic/CurriculumRecordSheet.vue',
+            'action' => 'CareerAcademicStructureController.store.form',
+        ],
+        'Coordinador · ofertas' => [
             'page' => 'resources/js/pages/Coordination/Academic/Offerings.vue',
+            'component' => 'OfferingRecordSheet',
+            'component_file' => 'resources/js/components/domain/academic/OfferingRecordSheet.vue',
+            'action' => 'CareerAcademicStructureController.store.form',
+        ],
+        'Coordinador · paralelos' => [
+            'page' => 'resources/js/pages/Coordination/Academic/Parallels.vue',
             'component' => 'OfferingRecordSheet',
             'component_file' => 'resources/js/components/domain/academic/OfferingRecordSheet.vue',
             'action' => 'CareerAcademicStructureController.store.form',
@@ -156,6 +168,40 @@ it('presenta la jerarquia academica en submenus y rutas sin mezclar catalogos', 
         ->toContain('<SidebarMenuSubButton');
 });
 
+it('separa la gestion academica del coordinador en submenus y pantallas', function (): void {
+    $root = dirname(__DIR__, 2);
+    $sidebar = file_get_contents($root.'/resources/js/components/AppSidebar.vue');
+    $curricula = file_get_contents(
+        $root.'/resources/js/pages/Coordination/Academic/Curricula.vue',
+    );
+    $subjects = file_get_contents(
+        $root.'/resources/js/pages/Coordination/Academic/Subjects.vue',
+    );
+    $offerings = file_get_contents(
+        $root.'/resources/js/pages/Coordination/Academic/Offerings.vue',
+    );
+    $parallels = file_get_contents(
+        $root.'/resources/js/pages/Coordination/Academic/Parallels.vue',
+    );
+
+    expect($sidebar)
+        ->toBeString()
+        ->toContain("title: 'Mallas y materias'")
+        ->toContain("title: 'Mallas'")
+        ->toContain('href: curriculaIndex()')
+        ->toContain("title: 'Materias'")
+        ->toContain('href: subjectsIndex()')
+        ->toContain("title: 'Ofertas y paralelos'")
+        ->toContain("title: 'Ofertas'")
+        ->toContain('href: offeringsIndex()')
+        ->toContain("title: 'Paralelos'")
+        ->toContain('href: parallelsIndex()');
+    expect($curricula)->toBeString()->toContain('entity="curriculum"');
+    expect($subjects)->toBeString()->toContain('entity="subject"');
+    expect($offerings)->toBeString()->toContain('entity="offering"');
+    expect($parallels)->toBeString()->toContain('entity="parallel"');
+});
+
 it('agrupa procesos y registro de actividad bajo auditoria', function (): void {
     $sidebar = file_get_contents(
         dirname(__DIR__, 2).'/resources/js/components/AppSidebar.vue',
@@ -170,24 +216,17 @@ it('agrupa procesos y registro de actividad bajo auditoria', function (): void {
         ->toContain('href: auditIndex()');
 });
 
-it('presenta la regla de agrupacion sin exponer decisiones internas', function (): void {
-    $root = dirname(__DIR__, 2);
+it('no muestra la regla de agrupacion como aviso en convocatorias', function (): void {
     $page = file_get_contents(
-        $root.'/resources/js/pages/Coordination/Convocations/Index.vue',
-    );
-    $sheet = file_get_contents(
-        $root.'/resources/js/components/domain/syllabus/ConvocationCreationSheet.vue',
+        dirname(__DIR__, 2).'/resources/js/pages/Coordination/Convocations/Index.vue',
     );
 
     expect($page)
         ->toBeString()
-        ->toContain('Un sílabo por paralelo')
-        ->toContain('Cada paralelo genera su propio sílabo')
+        ->not->toContain('Un sílabo por paralelo')
+        ->not->toContain('Cada paralelo genera su propio sílabo')
         ->not->toContain('PV-06')
-        ->not->toContain('pendiente de validación');
-    expect($sheet)
-        ->toBeString()
-        ->toContain("const groupingMode = ref('per_parallel')");
+        ->not->toContain('<Alert>');
 });
 
 it('ofrece edicion y ciclo de vida en cada catalogo institucional', function (): void {
@@ -402,6 +441,8 @@ it('normaliza los encabezados de todos los modulos autenticados', function (): v
         'resources/js/pages/Role/Select.vue',
         'resources/js/pages/Coordination/Academic/Curricula.vue',
         'resources/js/pages/Coordination/Academic/Offerings.vue',
+        'resources/js/pages/Coordination/Academic/Parallels.vue',
+        'resources/js/pages/Coordination/Academic/Subjects.vue',
         'resources/js/pages/Coordination/Academic/TeacherAssignments.vue',
         'resources/js/pages/Coordination/Convocations/Index.vue',
         'resources/js/pages/Coordination/Convocations/Show.vue',
@@ -518,8 +559,8 @@ it('normaliza los encabezados de todos los modulos autenticados', function (): v
         );
     }
 
-    $this->assertCount(27, $declaredPages);
-    $this->assertCount(28, $pages);
+    $this->assertCount(29, $declaredPages);
+    $this->assertCount(30, $pages);
 });
 
 it('mantiene explicitamente clasificadas las mutaciones store que permanecen en paginas completas', function (): void {

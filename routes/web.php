@@ -130,10 +130,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('revisiones/{revision}/aprobar', [ReviewController::class, 'approve'])->name('reviews.approve');
         Route::post('silabos/{syllabus}/reabrir', [ReviewController::class, 'reopen'])->name('reviews.reopen');
         Route::post('silabos/{syllabus}/relevo-docente', [ReviewController::class, 'transferTeacher'])->name('reviews.teacher.transfer');
-        Route::get('mallas-materias', [CareerAcademicStructureController::class, 'curricula'])
+        Route::redirect('mallas-materias', 'mallas');
+        Route::get('mallas', [CareerAcademicStructureController::class, 'curricula'])
             ->name('coordination.academic.curricula.index');
-        Route::get('oferta-paralelos', [CareerAcademicStructureController::class, 'offerings'])
+        Route::get('materias', [CareerAcademicStructureController::class, 'subjects'])
+            ->name('coordination.academic.subjects.index');
+        Route::redirect('oferta-paralelos', 'ofertas');
+        Route::get('ofertas', [CareerAcademicStructureController::class, 'offerings'])
             ->name('coordination.academic.offerings.index');
+        Route::get('paralelos', [CareerAcademicStructureController::class, 'parallels'])
+            ->name('coordination.academic.parallels.index');
         Route::get('asignaciones-docentes', [CareerAcademicStructureController::class, 'teacherAssignments'])
             ->name('coordination.academic.teacher-assignments.index');
         Route::post('estructura-academica/{entity}', [CareerAcademicStructureController::class, 'store'])

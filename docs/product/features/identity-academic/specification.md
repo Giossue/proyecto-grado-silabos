@@ -31,6 +31,8 @@
   no inventa un evento.
 - El Coordinador mantiene mallas, materias, ofertas, paralelos y asignaciones docentes
   únicamente para la carrera de su rol.
+- La navegación del Coordinador separa Mallas de Materias y Ofertas de Paralelos en rutas
+  hijas; cada pantalla muestra únicamente la colección y el alta correspondiente.
 - Estructura, mallas, materias y ofertas usan identificadores estables. La posición de una
   materia se presenta como ciclo; el periodo académico conserva sus fechas.
 - ADM-02..04 y COR-13..15 priorizan sus tablas; una única acción principal abre desde la
@@ -47,4 +49,3 @@
   solicitud fuera de la interfaz.
 - Archivar no elimina referencias históricas; reactivar vuelve a habilitar usos futuros.
 - Una nueva malla no altera expedientes de mallas anteriores.
-
