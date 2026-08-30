@@ -33,6 +33,31 @@
 - Constraints para invariantes y queries parametrizadas.
 - Backups cifrados, acceso auditado y restauración probada tras PV-11.
 
+### Migraciones en la base remota
+
+Desde la estación autorizada, la autenticación de PostgreSQL se obtiene exclusivamente de
+`~/.pgpass`; no se usa SSH, Tailscale ni se copia la contraseña al repositorio o al
+historial del shell. El archivo debe pertenecer al usuario y tener permisos `0600`. La
+entrada de este proyecto identifica el perfil
+`187.127.6.234:8004:silabos_ueb_db:silabos_ueb_app`.
+
+Laravel debe recibir `DB_PASSWORD='(null)'` para que la contraseña local de `.env` no
+reemplace la resolución de libpq mediante `.pgpass`. Primero se consulta el estado y luego
+se ejecuta el migrador con bloqueo:
+
+```bash
+DB_CONNECTION=pgsql DB_HOST=187.127.6.234 DB_PORT=8004 \
+DB_DATABASE=silabos_ueb_db DB_USERNAME=silabos_ueb_app DB_PASSWORD='(null)' \
+php artisan migrate:status
+
+DB_CONNECTION=pgsql DB_HOST=187.127.6.234 DB_PORT=8004 \
+DB_DATABASE=silabos_ueb_db DB_USERNAME=silabos_ueb_app DB_PASSWORD='(null)' \
+php artisan migrate --force --isolated
+```
+
+Después se repite `migrate:status`. Nunca se imprime, registra ni pasa como argumento la
+contraseña almacenada en `.pgpass`.
+
 ## Redis y jobs
 
 - Redis no expuesto públicamente; autenticación/red privada.
