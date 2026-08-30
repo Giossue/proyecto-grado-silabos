@@ -30,8 +30,7 @@ const page = usePage();
         <Alert v-if="page.props.auth.roles.length === 0">
             <AlertTitle>No tiene asignaciones vigentes</AlertTitle>
             <AlertDescription>
-                Solicite al administrador que revise su rol, alcance y fechas de
-                vigencia.
+                Contáctese con el coordinador de la carrera.
             </AlertDescription>
         </Alert>
 
