@@ -79,9 +79,9 @@ no resuelve ni modifica `PV-16`, que trata la edición excepcional de contenido 
 I-10 unifica la presentación de listados por decisión explícita del responsable del
 producto: el fondo se conserva y las superficies usan tokens diferenciados; ADM-04 se
 navega mediante el submenú Estructura académica con rutas propias; toda barra de consulta
-ordena búsqueda, filtros y acción; y las 26 superficies tabulares comparten el mismo pie
+ordena búsqueda, filtros y acción; y las 24 superficies tabulares comparten el mismo pie
 de paginación. Las acciones operativas de Administrador y Coordinador se agrupan detrás
-de un botón accesible de tres puntos sin cambiar autorización ni ciclo de vida. Las 30
+de un botón accesible de tres puntos sin cambiar autorización ni ciclo de vida. Las 29
 páginas operativas y el layout compartido de Configuración usan el mismo encabezado con
 icono, título, descripción y espaciado responsive. No cambia el esquema normalizado, el
 alcance por rol ni una puerta `PV`.
@@ -129,6 +129,13 @@ reubicación y relaciones explícitas; PostgreSQL y los casos de uso Laravel per
 como fuente de verdad. La alternativa de formulario mantiene las mismas operaciones y
 las versiones publicadas continúan inmutables. `PV-08` sigue abierta para las fórmulas y
 siglas oficiales: el sistema no las deduce del color o del aspecto del PDF.
+
+I-19 confirma que una persona puede coordinar varias carreras y vuelve explícita la
+selección de carrera al iniciar como Coordinador, incluso si solo existe una opción. El
+ámbito activo puede cambiarse desde el menú de usuario mediante el mismo caso de uso
+auditado. Materias deja de ser una colección independiente en navegación: las mallas se
+presentan como cards y cada detalle reúne el desglose académico y el constructor visual;
+la URL anterior de Materias redirige a Mallas. No cambia permisos ni elimina historia.
 
 ## Propuesto
 

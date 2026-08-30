@@ -55,9 +55,14 @@ no concede al Administrador permisos sobre mallas, materias o contenido docente.
 
 ## Acumulación de roles
 
-Una persona puede ser coordinadora y docente. Debe seleccionar un rol cuando las
-acciones o datos cambien. No se combinan privilegios de forma implícita para evadir la
-separación de responsabilidades. El evento de auditoría registra el rol usado.
+Una persona puede ser coordinadora de varias carreras y también docente. Cada asignación
+de rol conserva su propia carrera y vigencia. Al iniciar como Coordinador debe elegir una
+carrera incluso si solo tiene una coordinación vigente; durante la sesión puede cambiar
+de carrera o rol desde el menú de usuario. Solo existe un ámbito activo a la vez.
+
+No se combinan privilegios de forma implícita para evadir la separación de
+responsabilidades. Cada selección sustituye el ámbito de sesión y el evento de auditoría
+registra la asignación usada.
 
 ## Reglas de consulta
 

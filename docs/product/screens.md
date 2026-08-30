@@ -5,7 +5,7 @@
 | ID    | Pantalla              |
 | ----- | --------------------- |
 | UI-01 | Acceso                |
-| UI-02 | Selección de rol |
+| UI-02 | Selección de carrera y rol |
 | UI-03 | Notificaciones        |
 | UI-04 | Perfil y sesiones     |
 
@@ -62,6 +62,8 @@
 ## Patrones comunes
 
 - El menú depende del rol activo y de las capacidades efectivas.
+- UI-02 recibe a Coordinación con cards de sus carreras vigentes. La carrera activa se
+  muestra bajo el nombre de usuario y puede cambiarse desde un `Sheet` en ese mismo menú.
 - UI-03 se abre desde el acceso de **Notificaciones** situado junto al selector de tema en
   el encabezado autenticado común. El acceso conserva el contador de pendientes para los
   tres roles y no ocupa una entrada del menú lateral.
@@ -99,17 +101,17 @@
   Carreras, Campus, Modalidades y Periodos académicos. Carreras muestra su Facultad y
   Facultades muestra la cantidad relacionada; los catálogos no se mezclan ni se ocultan
   en pestañas.
-- COR-13 y COR-14 usan los submenús **Mallas y materias** y **Ofertas y paralelos**.
-  Cada colección tiene una ruta, tabla y formulario de alta propios; no se mezclan dos
-  colecciones en la misma pantalla. La tarjeta de la tabla comienza directamente con los
-  filtros y no repite el título ni la descripción ya presentes en el encabezado de página.
+- COR-13 usa una única entrada **Mallas**. Su colección se presenta como cards y cada
+  card abre una página completa con **Desglose académico** y **Constructor visual**;
+  materias, campos y relaciones se consultan y mantienen dentro de esa malla. COR-14
+  conserva el submenú **Ofertas y paralelos** con una ruta por colección.
 - COR-13..15 ofrecen **Editar** para los registros de la carrera del rol activo. Mallas
   publicadas, sus materias y relaciones ya usadas por un sílabo muestran su bloqueo de
   historial en lugar de reescribirse. Editar una asignación cambia docente, paralelo o
   vigencia; nunca nombre o correo de la cuenta.
 - COR-13 abre cada malla en una página completa con ciclos, tarjetas, totales y relaciones.
-  El lienzo permite zoom, desplazamiento, conexión y reubicación; la pestaña de formulario
-  ofrece las mismas operaciones sin depender de arrastre. Ciclos y campos se configuran
+  El lienzo permite zoom, desplazamiento, conexión y reubicación; el desglose académico
+  ofrece las mismas operaciones mediante formularios y tablas accesibles. Ciclos y campos se configuran
   por versión, no por una plantilla global de la Carrera de Software.
 - **Auditoría** agrupa las rutas administrativas **Procesos** (ADM-09) y **Registro de
   actividad** (ADM-10). La primera permite diagnosticar y reintentar trabajos; la segunda

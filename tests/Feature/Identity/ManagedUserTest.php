@@ -283,6 +283,43 @@ class ManagedUserTest extends TestCase
         ]);
     }
 
+    public function test_administrator_can_assign_the_same_coordinator_to_another_career(): void
+    {
+        $coordinator = $this->coordinatorHolder();
+        $originalAssignment = $coordinator->roleAssignments()->firstOrFail();
+        $secondCareer = Career::query()->create([
+            'facultad_id' => Career::query()->firstOrFail()->facultad_id,
+            'codigo_institucional' => 'CARR-SEGUNDA-COORDINACION',
+            'nombre' => 'Segunda carrera coordinada',
+            'activo' => true,
+        ]);
+
+        $this->actingAsAdministrator()
+            ->post(route('admin.users.roles.store', $coordinator), [
+                'role_code' => RoleCode::Coordinator->value,
+                'career_id' => $secondCareer->id,
+                'valid_from' => now()->subDay()->toDateString(),
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('asignaciones_rol', [
+            'id' => $originalAssignment->id,
+            'activo' => true,
+        ]);
+        $this->assertDatabaseHas('asignaciones_rol', [
+            'usuario_id' => $coordinator->id,
+            'carrera_id' => $secondCareer->id,
+            'activo' => true,
+        ]);
+        $this->assertDatabaseHas('asignaciones_coordinador', [
+            'usuario_id' => $coordinator->id,
+            'carrera_id' => $secondCareer->id,
+            'activo' => true,
+        ]);
+        $this->assertCount(2, $coordinator->fresh()->roleAssignments);
+    }
+
     public function test_deactivating_user_revokes_sessions_but_preserves_roles_and_audits(): void
     {
         $teacher = User::query()->where('email', 'docente@silabos.test')->firstOrFail();

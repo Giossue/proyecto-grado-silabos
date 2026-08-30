@@ -14,6 +14,10 @@ resuelva primero el rol. Una sola asignación elegible entra directamente al ár
 persona; dos o más llevan al selector; ninguna lleva a la explicación de falta de
 asignaciones. El Panel ya no presenta una acción redundante para seleccionar rol.
 
+I-19 reemplaza una parte de esa regla: Administrador y Docente conservan la activación
+automática de su única opción, pero Coordinación siempre confirma la carrera al entrar y
+puede cambiarla desde el menú de usuario.
+
 ## Trazabilidad
 
 - RF-001..007 (rol activo), RF-066..075 (panel e informes), RNF-001..036 como cobertura

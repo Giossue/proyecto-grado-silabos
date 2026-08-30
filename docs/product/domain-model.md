@@ -13,6 +13,10 @@
   la base impone, porque sin ella sería una titularidad sin nombrar. Las atribuciones del
   encargado son las mismas que las del titular.
 
+Una persona puede coordinar más de una carrera mediante asignaciones independientes. La
+sesión conserva una sola `AsignacionRol` activa: Coordinación siempre confirma la carrera
+al entrar y puede sustituirla desde el menú, sin sumar alcances ni privilegios.
+
 ### Estructura académica
 
 - `Facultad`, `Escuela`, `Carrera`, `Campus`, `Modalidad`, `PeriodoAcademico`.
@@ -51,7 +55,9 @@ campos tienen clave estable, etiqueta, tipo, posición, visibilidad y capacidad 
 totalización; pueden proyectar un dato estructurado existente o conservar un valor
 adicional tipado por asignatura. Retirar un campo lo desactiva sin borrar sus valores.
 Una relación académica guarda origen, destino y tipo; el color del diagrama no constituye
-la regla. La vista visual y el formulario son dos proyecciones del mismo agregado.
+la regla. El desglose académico y el constructor visual son dos proyecciones del mismo
+agregado; las asignaturas se mantienen dentro de su versión de malla y no como una
+colección de navegación independiente.
 
 ### Configuración
 

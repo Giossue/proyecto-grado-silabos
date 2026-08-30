@@ -1,5 +1,11 @@
 # I-19 — Selección de carrera y mallas unificadas
 
+## Estado
+
+Implementación y verificación automatizada concluidas el 2026-08-30. El cierre formal
+permanece sujeto a la revisión manual de cards, `Sheet`, teclado, lector de pantalla y
+dispositivos reales indicada por `PV-19`.
+
 ## Objetivo
 
 Hacer explícito el alcance de carrera cada vez que una persona entra como Coordinador y
@@ -52,10 +58,16 @@ constructor visual.
 
 ## Verificación
 
-- `ActiveRoleTest` para entrada, cambio, alcance y auditoría.
-- `AcademicStructureTest` para cards, detalle y redirección.
-- Pruebas de arquitectura para navegación y composición shadcn-vue.
-- Lint, formato, tipos, build y `composer verify`.
+- `ActiveRoleTest` verifica entrada, cambio, alcance y auditoría; `ManagedUserTest`
+  demuestra que Administración puede asignar a una persona una segunda coordinación.
+- `AcademicStructureTest` verifica detalle, aislamiento por carrera y redirección de la
+  ruta anterior de Materias.
+- `ManagementCreationUiTest` protege cards, dos apartados, navegación y composición
+  shadcn-vue.
+- `composer verify`: escaneo de secretos, ESLint, Prettier, TypeScript, Pint, Larastan,
+  265 pruebas con 2.536 aserciones y build Vite en verde.
+- En el entorno local se aplicó únicamente la migración aditiva `000017`; la migración
+  destructiva `000016` permanece pendiente de una ejecución autorizada aparte.
 
 ## Riesgos y reversión
 

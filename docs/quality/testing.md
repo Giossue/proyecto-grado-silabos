@@ -48,7 +48,7 @@ Verifica que la página monte el componente de dominio, que la mutación viva de
 `FormSheet`, que el panel salga desde la derecha, tenga título accesible, conserve los
 errores y se cierre solo después del éxito. También mantiene una lista explícita de
 mutaciones `store` que sí pertenecen a flujos de página completa. La misma suite
-inventaría las 26 tablas, exige un `TablePagination` por cada una y protege los patrones
+inventaría las 24 tablas, exige un `TablePagination` por cada una y protege los patrones
 compartidos de filtros, submenús, superficies temáticas y menús de acciones en 17
 superficies operativas. Además inventaría las 29 páginas operativas y el layout de
 Configuración, exige un único `PageFrame` con icono, título y descripción, e impide que

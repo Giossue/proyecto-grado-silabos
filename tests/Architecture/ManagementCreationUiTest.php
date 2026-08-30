@@ -159,7 +159,7 @@ it('permite elegir la carrera al entrar y cambiar el ambito desde el menu de usu
     expect($menu)
         ->toBeString()
         ->toContain('Cambiar carrera o rol')
-        ->toContain("$emit('switch-scope')");
+        ->toContain('$emit(\'switch-scope\')');
     expect($switcher)
         ->toBeString()
         ->toContain('<SheetTitle>')

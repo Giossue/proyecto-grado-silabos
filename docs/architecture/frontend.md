@@ -69,9 +69,13 @@ No crees una variante visual por módulo si el significado es el mismo.
 - Los paneles destacan trabajo que requiere acción; no repiten todos los conteos como cards.
 - CRUD corto puede usar diálogo; editor, revisión, convocatoria y publicación usan página completa.
 - La navegación visible no supera dos niveles y cambia según el rol efectivo.
+- Coordinación entra mediante cards de carrera y el menú de usuario abre
+  `WorkScopeSwitcherSheet` para sustituir el único ámbito activo. Ambos envían el mismo
+  formulario Inertia auditado; la interfaz no mezcla datos de varias carreras.
 - No uses pestañas para ocultar submódulos que merecen una ruta/navegación propia.
-- El constructor de mallas sí usa pestañas para alternar dos modos de operar el mismo
-  recurso: lienzo Vue Flow y formulario accesible sobre un contrato común.
+- El detalle de malla sí usa pestañas para alternar dos modos de operar el mismo recurso:
+  desglose académico con formularios/tablas y constructor Vue Flow sobre un contrato
+  común. Materias no mantiene una pantalla paralela.
 - Las superficies usan `background`, `card`, `popover` y `sidebar` como tokens separados;
   un módulo no introduce colores directos para fabricar contraste.
 

@@ -5,9 +5,9 @@ depende, porque son cosas de naturaleza distinta y no se resuelven igual.
 
 ## 1. Código: sin deuda funcional conocida
 
-No hay `TODO` ni `FIXME` nuevos en I-18. Formato, análisis estático, tipos, compilación y
+No hay `TODO` ni `FIXME` nuevos en I-19. Formato, análisis estático, tipos, compilación y
 las pruebas afectadas pasan. La puerta canónica `composer verify` pasó con PostgreSQL y
-Redis levantados mediante Podman: **261 pruebas y 2482 aserciones**.
+Redis levantados mediante Podman: **265 pruebas y 2536 aserciones**.
 
 Los incrementos anteriores conservan su estado. I-16 implementa y verifica la edición
 académica por alcance y la identidad administrada; permanece activo solo por la revisión
@@ -16,6 +16,9 @@ manual de interfaz que exige la Definition of Done.
 I-18 instala y encapsula Vue Flow, implementa el constructor flexible y su alternativa
 de formulario, y conserva activa la revisión manual del lienzo exigida por la Definition
 of Done.
+
+I-19 incorpora la selección explícita de carrera para Coordinación, el cambio de ámbito
+desde el menú y la integración de Materias dentro de las cards y el detalle de Mallas.
 
 I-15 cerró el último hueco funcional conocido: el plazo de la convocatoria ya tiene fecha
 de inicio, se puede prorrogar con motivo y bloquea el envío al vencer; el relevo de un
@@ -29,7 +32,7 @@ cierre de casi todos los planes, porque la Definition of Done lo exige.
 
 | Qué | Dónde aplica | Por qué no está hecho |
 |---|---|---|
-| Teclado, foco y lector de pantalla | Las 30 páginas operativas | Requiere una persona navegando |
+| Teclado, foco y lector de pantalla | Las 29 páginas operativas | Requiere una persona navegando |
 | Contraste percibido, zoom 200 % y 360 px | Todas las superficies | La comprobación hecha es de cálculo, no de percepción |
 | Claro y oscuro en dispositivos reales | Toda la interfaz | `PV-19` fija la matriz de navegadores |
 | Prueba con usuarios `DT-07` | Revisión y aprobación (I-04) | Necesita docentes reales |
@@ -95,6 +98,7 @@ Done»*, y la Definition of Done incluye la revisión manual de interfaz del pun
 | I-15 | completa | revisión manual de interfaz; cerró `PV-06` y `DT-08` a `DT-11` |
 | I-16 | completa | revisión manual de interfaz |
 | I-18 | completa | revisión manual del lienzo y `PV-08` |
+| I-19 | completa | revisión manual de cards, `Sheet`, foco y dispositivos reales |
 
 ## 5. Orden sugerido
 

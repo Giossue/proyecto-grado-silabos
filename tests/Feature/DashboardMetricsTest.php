@@ -38,8 +38,10 @@ class DashboardMetricsTest extends TestCase
 
         foreach ($esperado as $correo => $claves) {
             $user = User::query()->where('email', $correo)->firstOrFail();
+            $context = $user->roleAssignments()->firstOrFail();
 
             $this->actingAs($user)
+                ->withSession(['active_role_assignment_id' => $context->id])
                 ->followingRedirects()
                 ->get(route('dashboard'))
                 ->assertOk()
@@ -60,6 +62,9 @@ class DashboardMetricsTest extends TestCase
         $this->abrirConvocatoria($this->otraCarrera()->id, 'Convocatoria ajena');
 
         $this->actingAs($coordinator)
+            ->withSession([
+                'active_role_assignment_id' => $coordinator->roleAssignments()->firstOrFail()->id,
+            ])
             ->followingRedirects()
             ->get(route('dashboard'))
             ->assertOk()

@@ -6,6 +6,9 @@ Implementación y verificación automatizada concluidas el 2026-08-14 por decisi
 explícita del responsable del producto. La comprobación manual de accesibilidad y
 dispositivos continúa centralizada en I-08.
 
+La separación histórica de Mallas y Materias en rutas propias fue reemplazada por I-19:
+Materias ahora se gestiona dentro del detalle de la malla y la URL anterior redirige.
+
 ## Trazabilidad
 
 - RF-003 a RF-016; RN-001 a RN-008; CU-02 y CU-03.

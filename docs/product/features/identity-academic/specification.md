@@ -13,8 +13,11 @@
 - El administrador conserva historial al desactivar usuarios.
 - El perfil no permite autoeliminar la cuenta; una baja se representa mediante
   desactivación administrativa para conservar asignaciones y auditoría histórica.
-- Una persona acumula roles con alcance y vigencia.
-- El rol activo se elige explícitamente cuando cambia los permisos.
+- Una persona acumula roles con alcance y vigencia, incluida la coordinación de varias
+  carreras mediante asignaciones independientes.
+- Coordinación elige explícitamente la carrera al iniciar, aunque solo tenga una opción,
+  y puede cambiar el ámbito activo desde el menú de usuario. Administrador y Docente
+  conservan la activación automática cuando solo tienen un rol elegible.
 - El rol Coordinador exige rol y asignación de coordinación vigentes para la misma
   carrera; perder cualquiera de los dos invalida ese rol.
 - El Administrador mantiene facultades, carreras y catálogos globales, crea cuentas y
@@ -37,12 +40,14 @@
   el alcance por registro y la actualización conserva antes/después en auditoría.
 - Una malla publicada y sus materias no se reescriben. Una oferta, paralelo o asignación
   ya incorporada a un sílabo se archiva y reemplaza para no alterar el expediente.
-- La navegación del Coordinador separa Mallas de Materias y Ofertas de Paralelos en rutas
-  hijas; cada pantalla muestra únicamente la colección y el alta correspondiente.
+- La navegación del Coordinador concentra Materias dentro de Mallas. El listado de mallas
+  usa cards y cada detalle ofrece desglose académico y constructor visual sobre el mismo
+  agregado. Ofertas y Paralelos conservan rutas hijas separadas.
 - Estructura, mallas, materias y ofertas usan identificadores estables. La posición de una
   materia se presenta como ciclo; el periodo académico conserva sus fechas.
-- ADM-02..04 y COR-13..15 priorizan sus tablas; una única acción principal abre desde la
-  derecha el formulario de alta correspondiente, sin mostrarlo permanentemente.
+- ADM-02..04 y COR-14..15 priorizan sus tablas; COR-13 prioriza cards y el detalle de
+  malla. Una única acción principal abre desde la derecha el formulario de alta
+  correspondiente, sin mostrarlo permanentemente.
 - La asignación académica decide qué sílabos puede ver y editar un docente.
 
 ## Criterios críticos

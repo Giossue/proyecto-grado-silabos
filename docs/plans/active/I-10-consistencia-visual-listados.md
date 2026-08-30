@@ -54,9 +54,9 @@ para distinguir registros consecutivos.
 
 ## Evidencia
 
-- `ManagementCreationUiTest` inventaría 26 superficies tabulares y exige exactamente un
+- `ManagementCreationUiTest` inventaría 24 superficies tabulares y exige exactamente un
   `TablePagination` compartido por cada una; también protege el orden búsqueda → filtros
-  → aplicar, 17 superficies de acciones agrupadas, 29 páginas operativas y el layout de
+  → aplicar, 16 superficies de acciones agrupadas, 29 páginas operativas y el layout de
   Configuración con `PageFrame`, los submenús de ADM-04 y la separación de tokens
   visuales.
 - `ResponsiveTableTest` protege los tokens del encabezado, las filas impares/pares y la
