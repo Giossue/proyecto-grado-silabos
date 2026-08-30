@@ -22,7 +22,8 @@
 
 `facultades`, `carreras`, `campus`, `modalidades`, `asignaciones_coordinador`,
 `periodos_academicos`, `versiones_malla`, `asignaturas`, `requisitos_asignatura`,
-`ofertas_academicas`, `paralelos`, `asignaciones_docente`.
+`definiciones_campo_malla`, `valores_campo_asignatura`, `ofertas_academicas`,
+`paralelos`, `asignaciones_docente`.
 
 Estos catálogos no comparten una tabla polimórfica. `carreras.facultad_id` implementa la
 relación uno-a-muchos Facultad → Carreras con clave foránea y borrado restringido.
@@ -30,6 +31,13 @@ relación uno-a-muchos Facultad → Carreras con clave foránea y borrado restri
 `ofertas_academicas` los relaciona con una asignatura mediante claves foráneas. La
 jerarquía que presenta ADM-04 es una proyección de lectura y no una desnormalización de
 la persistencia.
+
+Cada `versiones_malla` define su cantidad de ciclos y sus campos de tarjeta. Una
+definición puede enlazarse con una columna académica estructurada o almacenar un valor
+tipado por asignatura en `valores_campo_asignatura`; nunca altera el DDL por carrera.
+`asignaturas.ciclo` y `orden_en_ciclo` determinan la posición reproducible del lienzo.
+Las coordenadas de pantalla no se persisten. `requisitos_asignatura.tipo` conserva la
+semántica explícita de cada flecha.
 
 ### Plantillas y fuentes
 
@@ -87,6 +95,8 @@ Como mínimo, prueba/define:
 - claves de idempotencia únicas por operación;
 - filtros frecuentes por convocatoria, estado, asignación, plazo y fecha;
 - búsquedas de auditoría por recurso/actor/tiempo;
+- clave y dato estructurado únicos por versión de malla, y un valor por
+  asignatura/definición;
 - colas/outbox por estado y próximo intento.
 
 Usa índices parciales o constraints de exclusión PostgreSQL cuando expresen mejor la

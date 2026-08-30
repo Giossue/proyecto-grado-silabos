@@ -43,7 +43,9 @@ defineProps<{
             >
                 <FieldGroup>
                     <Field :data-invalid="Boolean(errors.name)">
-                        <FieldLabel for="source-name">Nombre</FieldLabel>
+                        <FieldLabel for="source-name" required>
+                            Nombre
+                        </FieldLabel>
                         <Input
                             id="source-name"
                             name="name"
@@ -54,7 +56,9 @@ defineProps<{
                     </Field>
 
                     <Field :data-invalid="Boolean(errors.type)">
-                        <FieldLabel for="source-type">Tipo</FieldLabel>
+                        <FieldLabel for="source-type" required>
+                            Tipo
+                        </FieldLabel>
                         <Input
                             id="source-type"
                             name="type"
@@ -95,7 +99,7 @@ defineProps<{
                     </Field>
 
                     <Field :data-invalid="Boolean(errors.authority)">
-                        <FieldLabel for="source-authority">
+                        <FieldLabel for="source-authority" required>
                             Autoridad emisora
                         </FieldLabel>
                         <Input
@@ -108,7 +112,7 @@ defineProps<{
                     </Field>
 
                     <Field :data-invalid="Boolean(errors.responsible)">
-                        <FieldLabel for="source-responsible">
+                        <FieldLabel for="source-responsible" required>
                             Responsable de custodia
                         </FieldLabel>
                         <Input

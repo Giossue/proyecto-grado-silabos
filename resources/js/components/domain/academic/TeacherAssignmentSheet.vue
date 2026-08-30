@@ -43,8 +43,10 @@ defineProps<Pick<AcademicStructureProps, 'options'>>();
             >
                 <FieldGroup>
                     <Field :data-invalid="Boolean(errors.user_id)">
-                        <FieldLabel for="teacher-user">Docente</FieldLabel>
-                        <Select name="user_id">
+                        <FieldLabel for="teacher-user" required>
+                            Docente
+                        </FieldLabel>
+                        <Select name="user_id" required>
                             <SelectTrigger
                                 id="teacher-user"
                                 :aria-invalid="Boolean(errors.user_id)"
@@ -68,10 +70,10 @@ defineProps<Pick<AcademicStructureProps, 'options'>>();
                         <FieldError :errors="[errors.user_id]" />
                     </Field>
                     <Field :data-invalid="Boolean(errors.parallel_id)">
-                        <FieldLabel for="teacher-parallel">
+                        <FieldLabel for="teacher-parallel" required>
                             Materia, periodo y paralelo
                         </FieldLabel>
-                        <Select name="parallel_id">
+                        <Select name="parallel_id" required>
                             <SelectTrigger
                                 id="teacher-parallel"
                                 :aria-invalid="Boolean(errors.parallel_id)"
@@ -95,7 +97,7 @@ defineProps<Pick<AcademicStructureProps, 'options'>>();
                         <FieldError :errors="[errors.parallel_id]" />
                     </Field>
                     <Field :data-invalid="Boolean(errors.valid_from)">
-                        <FieldLabel for="teacher-valid-from">
+                        <FieldLabel for="teacher-valid-from" required>
                             Vigente desde
                         </FieldLabel>
                         <DatePicker

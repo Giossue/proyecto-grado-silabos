@@ -77,7 +77,7 @@ watch(open, (isOpen) => {
             >
                 <FieldGroup>
                     <Field :data-invalid="Boolean(errors.name)">
-                        <FieldLabel for="managed-name">
+                        <FieldLabel for="managed-name" required>
                             Nombre completo
                         </FieldLabel>
                         <Input
@@ -89,7 +89,7 @@ watch(open, (isOpen) => {
                         <FieldError :errors="[errors.name]" />
                     </Field>
                     <Field :data-invalid="Boolean(errors.email)">
-                        <FieldLabel for="managed-email">
+                        <FieldLabel for="managed-email" required>
                             Correo institucional
                         </FieldLabel>
                         <Input
@@ -102,7 +102,7 @@ watch(open, (isOpen) => {
                         <FieldError :errors="[errors.email]" />
                     </Field>
                     <Field :data-invalid="Boolean(errors.password)">
-                        <FieldLabel for="managed-password">
+                        <FieldLabel for="managed-password" required>
                             Contraseña temporal
                         </FieldLabel>
                         <div class="flex items-center gap-2">
@@ -146,10 +146,10 @@ watch(open, (isOpen) => {
                         <FieldError :errors="[errors.password]" />
                     </Field>
                     <Field :data-invalid="Boolean(errors.role_code)">
-                        <FieldLabel for="managed-role">
+                        <FieldLabel for="managed-role" required>
                             Rol inicial
                         </FieldLabel>
-                        <Select v-model="initialRole" name="role_code">
+                        <Select v-model="initialRole" name="role_code" required>
                             <SelectTrigger
                                 id="managed-role"
                                 :aria-invalid="Boolean(errors.role_code)"
@@ -174,8 +174,10 @@ watch(open, (isOpen) => {
                         v-if="initialRole !== 'administrator'"
                         :data-invalid="Boolean(errors.career_id)"
                     >
-                        <FieldLabel for="managed-career"> Carrera </FieldLabel>
-                        <Select name="career_id">
+                        <FieldLabel for="managed-career" required>
+                            Carrera
+                        </FieldLabel>
+                        <Select name="career_id" required>
                             <SelectTrigger
                                 id="managed-career"
                                 :aria-invalid="Boolean(errors.career_id)"

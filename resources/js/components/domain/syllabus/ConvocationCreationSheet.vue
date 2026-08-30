@@ -51,7 +51,9 @@ const groupingMode = ref('per_parallel');
             >
                 <FieldGroup>
                     <Field :data-invalid="Boolean(errors.name)">
-                        <FieldLabel for="convocation-name">Nombre</FieldLabel>
+                        <FieldLabel for="convocation-name" required>
+                            Nombre
+                        </FieldLabel>
                         <Input
                             id="convocation-name"
                             name="name"
@@ -63,10 +65,10 @@ const groupingMode = ref('per_parallel');
                     </Field>
 
                     <Field :data-invalid="Boolean(errors.period_id)">
-                        <FieldLabel for="convocation-period">
+                        <FieldLabel for="convocation-period" required>
                             Periodo académico
                         </FieldLabel>
-                        <Select name="period_id">
+                        <Select name="period_id" required>
                             <SelectTrigger
                                 id="convocation-period"
                                 :aria-invalid="Boolean(errors.period_id)"
@@ -89,10 +91,10 @@ const groupingMode = ref('per_parallel');
                     </Field>
 
                     <Field :data-invalid="Boolean(errors.template_version_id)">
-                        <FieldLabel for="convocation-template">
+                        <FieldLabel for="convocation-template" required>
                             Plantilla publicada
                         </FieldLabel>
-                        <Select name="template_version_id">
+                        <Select name="template_version_id" required>
                             <SelectTrigger
                                 id="convocation-template"
                                 :aria-invalid="
@@ -117,10 +119,14 @@ const groupingMode = ref('per_parallel');
                     </Field>
 
                     <Field :data-invalid="Boolean(errors.grouping_mode)">
-                        <FieldLabel for="convocation-grouping">
+                        <FieldLabel for="convocation-grouping" required>
                             Agrupación explícita
                         </FieldLabel>
-                        <Select v-model="groupingMode" name="grouping_mode">
+                        <Select
+                            v-model="groupingMode"
+                            name="grouping_mode"
+                            required
+                        >
                             <SelectTrigger
                                 id="convocation-grouping"
                                 :aria-invalid="Boolean(errors.grouping_mode)"
@@ -142,7 +148,7 @@ const groupingMode = ref('per_parallel');
                     </Field>
 
                     <Field :data-invalid="Boolean(errors.start_date)">
-                        <FieldLabel for="convocation-start">
+                        <FieldLabel for="convocation-start" required>
                             Inicio de la elaboración
                         </FieldLabel>
                         <Input
@@ -159,7 +165,7 @@ const groupingMode = ref('per_parallel');
                     </Field>
 
                     <Field :data-invalid="Boolean(errors.draft_deadline)">
-                        <FieldLabel for="convocation-deadline">
+                        <FieldLabel for="convocation-deadline" required>
                             Fecha límite del borrador
                         </FieldLabel>
                         <Input
@@ -177,7 +183,7 @@ const groupingMode = ref('per_parallel');
                     </Field>
 
                     <FieldSet>
-                        <FieldLegend variant="label">
+                        <FieldLegend variant="label" required>
                             Fuentes académicas activas
                         </FieldLegend>
                         <FieldError

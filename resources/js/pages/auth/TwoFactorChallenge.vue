@@ -9,6 +9,7 @@ import {
     InputOTPGroup,
     InputOTPSlot,
 } from '@/components/ui/input-otp';
+import { Label } from '@/components/ui/label';
 import { store } from '@/routes/two-factor/login';
 import type { TwoFactorConfigContent } from '@/types';
 
@@ -63,12 +64,14 @@ const toggleRecoveryMode = (clearErrors: () => void): void => {
                 <div
                     class="flex flex-col items-center justify-center space-y-3 text-center"
                 >
+                    <Label for="otp" required> Código de autenticación </Label>
                     <div class="flex w-full items-center justify-center">
                         <InputOTP
                             id="otp"
                             v-model="code"
                             :maxlength="6"
                             :disabled="processing"
+                            aria-required="true"
                             aria-label="Código de autenticación de seis dígitos"
                         >
                             <InputOTPGroup>
@@ -105,14 +108,18 @@ const toggleRecoveryMode = (clearErrors: () => void): void => {
                 reset-on-error
                 #default="{ errors, processing, clearErrors }"
             >
-                <Input
-                    id="recovery-code"
-                    name="recovery_code"
-                    type="text"
-                    placeholder="Ingrese el código de recuperación"
-                    aria-label="Código de recuperación"
-                    required
-                />
+                <div class="grid gap-2">
+                    <Label for="recovery-code" required>
+                        Código de recuperación
+                    </Label>
+                    <Input
+                        id="recovery-code"
+                        name="recovery_code"
+                        type="text"
+                        placeholder="Ingrese el código de recuperación"
+                        required
+                    />
+                </div>
                 <InputError :message="errors.recovery_code" />
                 <Button type="submit" class="w-full" :disabled="processing"
                     >Continuar</Button

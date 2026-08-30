@@ -95,6 +95,7 @@ const entityLabel = computed(
                         <Field :data-invalid="Boolean(errors.code)">
                             <FieldLabel
                                 :for="`edit-curriculum-code-${record.id}`"
+                                required
                             >
                                 Código
                             </FieldLabel>
@@ -110,6 +111,7 @@ const entityLabel = computed(
                         <Field :data-invalid="Boolean(errors.version_number)">
                             <FieldLabel
                                 :for="`edit-curriculum-version-${record.id}`"
+                                required
                             >
                                 Número de versión
                             </FieldLabel>
@@ -128,7 +130,9 @@ const entityLabel = computed(
 
                     <template v-else-if="entity === 'subject'">
                         <Field :data-invalid="Boolean(errors.code)">
-                            <FieldLabel :for="`edit-subject-code-${record.id}`"
+                            <FieldLabel
+                                :for="`edit-subject-code-${record.id}`"
+                                required
                                 >Código</FieldLabel
                             >
                             <Input
@@ -141,7 +145,9 @@ const entityLabel = computed(
                             <FieldError :errors="[errors.code]" />
                         </Field>
                         <Field :data-invalid="Boolean(errors.name)">
-                            <FieldLabel :for="`edit-subject-name-${record.id}`"
+                            <FieldLabel
+                                :for="`edit-subject-name-${record.id}`"
+                                required
                                 >Nombre</FieldLabel
                             >
                             <Input
@@ -203,11 +209,13 @@ const entityLabel = computed(
                         <Field :data-invalid="Boolean(errors.subject_id)">
                             <FieldLabel
                                 :for="`edit-offering-subject-${record.id}`"
+                                required
                                 >Materia publicada</FieldLabel
                             >
                             <Select
                                 name="subject_id"
                                 :default-value="record.subject_id"
+                                required
                             >
                                 <SelectTrigger
                                     :id="`edit-offering-subject-${record.id}`"
@@ -234,11 +242,13 @@ const entityLabel = computed(
                         <Field :data-invalid="Boolean(errors.period_id)">
                             <FieldLabel
                                 :for="`edit-offering-period-${record.id}`"
+                                required
                                 >Periodo académico</FieldLabel
                             >
                             <Select
                                 name="period_id"
                                 :default-value="record.period_id"
+                                required
                             >
                                 <SelectTrigger
                                     :id="`edit-offering-period-${record.id}`"
@@ -263,11 +273,13 @@ const entityLabel = computed(
                         <Field :data-invalid="Boolean(errors.campus_id)">
                             <FieldLabel
                                 :for="`edit-offering-campus-${record.id}`"
+                                required
                                 >Campus</FieldLabel
                             >
                             <Select
                                 name="campus_id"
                                 :default-value="record.campus_id"
+                                required
                             >
                                 <SelectTrigger
                                     :id="`edit-offering-campus-${record.id}`"
@@ -292,11 +304,13 @@ const entityLabel = computed(
                         <Field :data-invalid="Boolean(errors.modality_id)">
                             <FieldLabel
                                 :for="`edit-offering-modality-${record.id}`"
+                                required
                                 >Modalidad</FieldLabel
                             >
                             <Select
                                 name="modality_id"
                                 :default-value="record.modality_id"
+                                required
                             >
                                 <SelectTrigger
                                     :id="`edit-offering-modality-${record.id}`"
@@ -324,11 +338,13 @@ const entityLabel = computed(
                         <Field :data-invalid="Boolean(errors.offering_id)">
                             <FieldLabel
                                 :for="`edit-parallel-offering-${record.id}`"
+                                required
                                 >Oferta académica</FieldLabel
                             >
                             <Select
                                 name="offering_id"
                                 :default-value="record.offering_id"
+                                required
                             >
                                 <SelectTrigger
                                     :id="`edit-parallel-offering-${record.id}`"
@@ -351,7 +367,9 @@ const entityLabel = computed(
                             <FieldError :errors="[errors.offering_id]" />
                         </Field>
                         <Field :data-invalid="Boolean(errors.code)">
-                            <FieldLabel :for="`edit-parallel-code-${record.id}`"
+                            <FieldLabel
+                                :for="`edit-parallel-code-${record.id}`"
+                                required
                                 >Código de paralelo</FieldLabel
                             >
                             <Input
@@ -367,12 +385,15 @@ const entityLabel = computed(
 
                     <template v-else>
                         <Field :data-invalid="Boolean(errors.user_id)">
-                            <FieldLabel :for="`edit-teacher-user-${record.id}`"
+                            <FieldLabel
+                                :for="`edit-teacher-user-${record.id}`"
+                                required
                                 >Docente</FieldLabel
                             >
                             <Select
                                 name="user_id"
                                 :default-value="record.user_id"
+                                required
                             >
                                 <SelectTrigger
                                     :id="`edit-teacher-user-${record.id}`"
@@ -401,11 +422,13 @@ const entityLabel = computed(
                         <Field :data-invalid="Boolean(errors.parallel_id)">
                             <FieldLabel
                                 :for="`edit-teacher-parallel-${record.id}`"
+                                required
                                 >Materia, periodo y paralelo</FieldLabel
                             >
                             <Select
                                 name="parallel_id"
                                 :default-value="record.parallel_id"
+                                required
                             >
                                 <SelectTrigger
                                     :id="`edit-teacher-parallel-${record.id}`"
@@ -428,7 +451,9 @@ const entityLabel = computed(
                             <FieldError :errors="[errors.parallel_id]" />
                         </Field>
                         <Field :data-invalid="Boolean(errors.valid_from)">
-                            <FieldLabel :for="`edit-teacher-from-${record.id}`"
+                            <FieldLabel
+                                :for="`edit-teacher-from-${record.id}`"
+                                required
                                 >Vigente desde</FieldLabel
                             >
                             <DatePicker

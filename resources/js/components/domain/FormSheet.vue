@@ -59,7 +59,7 @@ const close = (): void => {
                 <SheetTitle>{{ title }}</SheetTitle>
                 <SheetDescription>{{ description }}</SheetDescription>
             </SheetHeader>
-            <div class="flex-1 overflow-y-auto px-4 pb-4">
+            <div class="flex-1 overflow-y-auto px-4 pb-28">
                 <slot :close="close" />
             </div>
         </SheetContent>

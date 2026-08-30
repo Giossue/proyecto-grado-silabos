@@ -61,7 +61,7 @@ const description = computed(() =>
                 <FieldGroup>
                     <template v-if="props.entity === 'curriculum'">
                         <Field :data-invalid="Boolean(errors.code)">
-                            <FieldLabel for="curriculum-code">
+                            <FieldLabel for="curriculum-code" required>
                                 Código
                             </FieldLabel>
                             <Input
@@ -73,7 +73,7 @@ const description = computed(() =>
                             <FieldError :errors="[errors.code]" />
                         </Field>
                         <Field :data-invalid="Boolean(errors.version_number)">
-                            <FieldLabel for="curriculum-version">
+                            <FieldLabel for="curriculum-version" required>
                                 Número de versión
                             </FieldLabel>
                             <Input
@@ -90,10 +90,10 @@ const description = computed(() =>
 
                     <template v-else>
                         <Field :data-invalid="Boolean(errors.curriculum_id)">
-                            <FieldLabel for="subject-curriculum">
+                            <FieldLabel for="subject-curriculum" required>
                                 Malla en borrador
                             </FieldLabel>
-                            <Select name="curriculum_id">
+                            <Select name="curriculum_id" required>
                                 <SelectTrigger
                                     id="subject-curriculum"
                                     :aria-invalid="
@@ -119,7 +119,9 @@ const description = computed(() =>
                             <FieldError :errors="[errors.curriculum_id]" />
                         </Field>
                         <Field :data-invalid="Boolean(errors.code)">
-                            <FieldLabel for="subject-code"> Código </FieldLabel>
+                            <FieldLabel for="subject-code" required>
+                                Código
+                            </FieldLabel>
                             <Input
                                 id="subject-code"
                                 name="code"
@@ -129,7 +131,9 @@ const description = computed(() =>
                             <FieldError :errors="[errors.code]" />
                         </Field>
                         <Field :data-invalid="Boolean(errors.name)">
-                            <FieldLabel for="subject-name"> Nombre </FieldLabel>
+                            <FieldLabel for="subject-name" required>
+                                Nombre
+                            </FieldLabel>
                             <Input
                                 id="subject-name"
                                 name="name"

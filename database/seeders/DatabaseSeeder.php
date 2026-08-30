@@ -3,11 +3,13 @@
 namespace Database\Seeders;
 
 use App\Models\User;
+use App\Modules\Academic\Domain\CurriculumSystemFields;
 use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Campus;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CoordinatorAssignment;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CourseOffering;
+use App\Modules\Academic\Infrastructure\Persistence\Models\CurriculumFieldDefinition;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CurriculumVersion;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Faculty;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Modality;
@@ -75,6 +77,23 @@ class DatabaseSeeder extends Seeder
                     'publicado_en' => '2026-01-15 15:00:00+00',
                 ],
             );
+            foreach (CurriculumSystemFields::defaults() as $field) {
+                CurriculumFieldDefinition::query()->firstOrCreate(
+                    [
+                        'version_malla_id' => $curriculum->id,
+                        'clave' => $field['key'],
+                    ],
+                    [
+                        'etiqueta' => $field['label'],
+                        'tipo' => $field['type'],
+                        'clave_sistema' => $field['system_key'],
+                        'posicion' => $field['position'],
+                        'visible_en_tarjeta' => true,
+                        'totalizable' => $field['totalizable'],
+                        'activo' => true,
+                    ],
+                );
+            }
             $subject = Subject::query()->firstOrCreate(
                 ['version_malla_id' => $curriculum->id, 'codigo_institucional' => 'SW-601'],
                 [

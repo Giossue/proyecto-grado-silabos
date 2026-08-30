@@ -40,7 +40,7 @@
 | COR-10 | Reabrir aprobado                           |
 | COR-11 | Fuentes académicas                         |
 | COR-12 | Informes                                   |
-| COR-13 | Mallas y materias de la carrera, en rutas separadas            |
+| COR-13 | Mallas, constructor visual/formulario y materias de la carrera |
 | COR-14 | Ofertas académicas y paralelos de la carrera, en rutas separadas |
 | COR-15 | Asignaciones docentes de la carrera        |
 
@@ -83,6 +83,13 @@
 - En pantallas de gestión con listados, el formulario de alta no ocupa la vista inicial:
   una acción principal abre un panel lateral desde la derecha, conserva los errores en el
   panel y lo cierra únicamente después de una respuesta exitosa.
+- Todo dato obligatorio muestra un asterisco rojo junto a su etiqueta y anuncia
+  «obligatorio» a tecnologías asistivas. Las condiciones como «si es heredado» o «salvo
+  administrador» se indican con la misma condición y no convierten campos opcionales en
+  obligatorios.
+- Los formularios en panel lateral mantienen **Cancelar** y la acción principal en un pie
+  fijo. Solo el contenido central se desplaza, conserva espacio inferior y pasa por debajo
+  del pie sin ocultar el último campo.
 - Editor y revisión usan navegación por secciones, completitud, errores, observaciones y
   estado de guardado sin saturar la pantalla.
 - Acciones de versión muestran de forma explícita qué queda inmutable.
@@ -100,6 +107,10 @@
   publicadas, sus materias y relaciones ya usadas por un sílabo muestran su bloqueo de
   historial en lugar de reescribirse. Editar una asignación cambia docente, paralelo o
   vigencia; nunca nombre o correo de la cuenta.
+- COR-13 abre cada malla en una página completa con ciclos, tarjetas, totales y relaciones.
+  El lienzo permite zoom, desplazamiento, conexión y reubicación; la pestaña de formulario
+  ofrece las mismas operaciones sin depender de arrastre. Ciclos y campos se configuran
+  por versión, no por una plantilla global de la Carrera de Software.
 - **Auditoría** agrupa las rutas administrativas **Procesos** (ADM-09) y **Registro de
   actividad** (ADM-10). La primera permite diagnosticar y reintentar trabajos; la segunda
   reconstruye quién hizo qué y cuándo.

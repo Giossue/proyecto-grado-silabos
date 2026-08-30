@@ -45,7 +45,10 @@ const open = defineModel<boolean>('open', { default: false });
             >
                 <FieldGroup>
                     <Field :data-invalid="Boolean(errors.name)">
-                        <FieldLabel :for="`profile-name-${props.userId}`">
+                        <FieldLabel
+                            :for="`profile-name-${props.userId}`"
+                            required
+                        >
                             Nombre completo
                         </FieldLabel>
                         <Input
@@ -59,7 +62,10 @@ const open = defineModel<boolean>('open', { default: false });
                     </Field>
 
                     <Field :data-invalid="Boolean(errors.email)">
-                        <FieldLabel :for="`profile-email-${props.userId}`">
+                        <FieldLabel
+                            :for="`profile-email-${props.userId}`"
+                            required
+                        >
                             Correo institucional
                         </FieldLabel>
                         <Input

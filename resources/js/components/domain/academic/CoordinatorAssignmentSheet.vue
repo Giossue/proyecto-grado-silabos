@@ -43,10 +43,10 @@ defineProps<Pick<AcademicStructureProps, 'options'>>();
             >
                 <FieldGroup>
                     <Field :data-invalid="Boolean(errors.user_id)">
-                        <FieldLabel for="coordinator-user">
+                        <FieldLabel for="coordinator-user" required>
                             Coordinador
                         </FieldLabel>
-                        <Select name="user_id">
+                        <Select name="user_id" required>
                             <SelectTrigger
                                 id="coordinator-user"
                                 :aria-invalid="Boolean(errors.user_id)"
@@ -70,10 +70,10 @@ defineProps<Pick<AcademicStructureProps, 'options'>>();
                         <FieldError :errors="[errors.user_id]" />
                     </Field>
                     <Field :data-invalid="Boolean(errors.career_id)">
-                        <FieldLabel for="coordinator-career">
+                        <FieldLabel for="coordinator-career" required>
                             Carrera
                         </FieldLabel>
-                        <Select name="career_id">
+                        <Select name="career_id" required>
                             <SelectTrigger
                                 id="coordinator-career"
                                 :aria-invalid="Boolean(errors.career_id)"
@@ -97,7 +97,7 @@ defineProps<Pick<AcademicStructureProps, 'options'>>();
                         <FieldError :errors="[errors.career_id]" />
                     </Field>
                     <Field :data-invalid="Boolean(errors.valid_from)">
-                        <FieldLabel for="coordinator-valid-from">
+                        <FieldLabel for="coordinator-valid-from" required>
                             Vigente desde
                         </FieldLabel>
                         <DatePicker

@@ -165,7 +165,7 @@ watch(open, (isOpen) => {
                     </Field>
 
                     <Field :data-invalid="Boolean(errors.content)">
-                        <FieldLabel for="observation-content">
+                        <FieldLabel for="observation-content" required>
                             Observación
                         </FieldLabel>
                         <Textarea

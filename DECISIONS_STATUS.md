@@ -41,6 +41,9 @@ Fecha de corte: **30 de agosto de 2026**.
   anterior/nuevo en auditoría; no existe borrado físico de catálogos con historia.
 - La posición curricular visible de una materia se denomina ciclo; periodo académico
   continúa siendo la ventana temporal con fechas.
+- Cada versión de malla puede variar en ciclos y campos. El documento de Software es una
+  referencia visual, no una plantilla universal; Coordinación dispone de constructor y
+  formulario sobre la misma información.
 
 ## Actualizado para esta entrega
 
@@ -78,7 +81,7 @@ producto: el fondo se conserva y las superficies usan tokens diferenciados; ADM-
 navega mediante el submenú Estructura académica con rutas propias; toda barra de consulta
 ordena búsqueda, filtros y acción; y las 26 superficies tabulares comparten el mismo pie
 de paginación. Las acciones operativas de Administrador y Coordinador se agrupan detrás
-de un botón accesible de tres puntos sin cambiar autorización ni ciclo de vida. Las 29
+de un botón accesible de tres puntos sin cambiar autorización ni ciclo de vida. Las 30
 páginas operativas y el layout compartido de Configuración usan el mismo encabezado con
 icono, título, descripción y espaciado responsive. No cambia el esquema normalizado, el
 alcance por rol ni una puerta `PV`.
@@ -119,6 +122,13 @@ de su carrera y cada cambio queda auditado; la inmutabilidad de mallas publicada
 historial de sílabos se conserva. Nombre y correo permanecen exclusivamente bajo
 Administración: Coordinadores y Docentes no pueden corregirlos, ni siquiera en la cuenta
 propia. Este cambio no amplía `PV-16`, que sigue referido al contenido del sílabo.
+
+I-18 incorpora Vue Flow como motor de presentación del constructor de mallas. La
+configuración pertenece a cada versión y admite ciclos, campos tipados, totales,
+reubicación y relaciones explícitas; PostgreSQL y los casos de uso Laravel permanecen
+como fuente de verdad. La alternativa de formulario mantiene las mismas operaciones y
+las versiones publicadas continúan inmutables. `PV-08` sigue abierta para las fórmulas y
+siglas oficiales: el sistema no las deduce del color o del aspecto del PDF.
 
 ## Propuesto
 

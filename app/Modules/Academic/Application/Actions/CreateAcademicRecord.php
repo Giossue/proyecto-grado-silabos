@@ -4,11 +4,13 @@ namespace App\Modules\Academic\Application\Actions;
 
 use App\Models\User;
 use App\Modules\Academic\Domain\AcademicStructurePermissions;
+use App\Modules\Academic\Domain\CurriculumSystemFields;
 use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Campus;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CoordinatorAssignment;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CourseOffering;
+use App\Modules\Academic\Infrastructure\Persistence\Models\CurriculumFieldDefinition;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CurriculumVersion;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Faculty;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Modality;
@@ -30,6 +32,7 @@ class CreateAcademicRecord
     public function __construct(
         private readonly ActiveRole $roles,
         private readonly RecordAuditEvent $audit,
+        private readonly SyncSubjectFieldValues $syncSubjectFieldValues,
     ) {}
 
     /** @param array<string, mixed> $data */
@@ -90,12 +93,7 @@ class CreateAcademicRecord
                 'fecha_fin' => $data['ends_on'],
                 'activo' => true,
             ]),
-            'curriculum' => CurriculumVersion::query()->create([
-                'carrera_id' => $this->careerId($activeRole),
-                'codigo' => $data['code'],
-                'numero_version' => $data['version_number'],
-                'estado' => 'draft',
-            ]),
+            'curriculum' => $this->createCurriculum($data, $this->careerId($activeRole)),
             'subject' => $this->createSubject($data, $this->careerId($activeRole)),
             'offering' => $this->createOffering($data, $this->careerId($activeRole)),
             'parallel' => $this->createParallel($data, $this->careerId($activeRole)),
@@ -105,6 +103,34 @@ class CreateAcademicRecord
                 'entity' => 'El tipo de registro académico no es válido.',
             ]),
         };
+    }
+
+    /** @param array<string, mixed> $data */
+    private function createCurriculum(array $data, string $careerId): CurriculumVersion
+    {
+        $curriculum = CurriculumVersion::query()->create([
+            'carrera_id' => $careerId,
+            'codigo' => $data['code'],
+            'numero_version' => $data['version_number'],
+            'numero_ciclos' => 8,
+            'estado' => 'draft',
+        ]);
+
+        foreach (CurriculumSystemFields::defaults() as $field) {
+            CurriculumFieldDefinition::query()->create([
+                'version_malla_id' => $curriculum->id,
+                'clave' => $field['key'],
+                'etiqueta' => $field['label'],
+                'tipo' => $field['type'],
+                'clave_sistema' => $field['system_key'],
+                'posicion' => $field['position'],
+                'visible_en_tarjeta' => true,
+                'totalizable' => $field['totalizable'],
+                'activo' => true,
+            ]);
+        }
+
+        return $curriculum;
     }
 
     /** @param array<string, mixed> $data */
@@ -122,15 +148,34 @@ class CreateAcademicRecord
             ]);
         }
 
-        return Subject::query()->create([
+        if (isset($data['cycle']) && (int) $data['cycle'] > $curriculum->numero_ciclos) {
+            throw ValidationException::withMessages([
+                'cycle' => 'El ciclo excede la configuración de esta malla.',
+            ]);
+        }
+
+        $subject = Subject::query()->create([
             'version_malla_id' => $curriculum->id,
             'codigo_institucional' => $data['code'],
             'nombre' => $data['name'],
             'ciclo' => $data['cycle'] ?? null,
+            'orden_en_ciclo' => $data['position'] ?? 0,
+            'unidad_organizacion_curricular' => $data['organization_unit'] ?? null,
             'creditos' => $data['credits'] ?? null,
             'horas_totales' => $data['total_hours'] ?? null,
+            'horas_proyecto' => $data['hours_project'] ?? null,
+            'horas_ap' => $data['hours_ap'] ?? null,
+            'horas_ac' => $data['hours_ac'] ?? null,
+            'horas_pae' => $data['hours_pae'] ?? null,
+            'horas_aa' => $data['hours_aa'] ?? null,
+            'horas_paec' => $data['hours_paec'] ?? null,
             'activo' => true,
         ]);
+
+        $customValues = $data['custom_values'] ?? [];
+        $this->syncSubjectFieldValues->execute($subject, is_array($customValues) ? $customValues : []);
+
+        return $subject;
     }
 
     /** @param array<string, mixed> $data */

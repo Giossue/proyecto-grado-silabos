@@ -13,6 +13,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int|null $codigo_oculto_institucional
  * @property string $nombre
  * @property int|null $ciclo
+ * @property int $orden_en_ciclo
+ * @property string|null $unidad_organizacion_curricular
  * @property string|null $creditos
  * @property int|null $horas_totales
  * @property string|null $horas_proyecto
@@ -37,6 +39,8 @@ class Subject extends Model
         'codigo_oculto_institucional',
         'nombre',
         'ciclo',
+        'orden_en_ciclo',
+        'unidad_organizacion_curricular',
         'creditos',
         'horas_totales',
         'horas_proyecto',
@@ -53,6 +57,7 @@ class Subject extends Model
     {
         return [
             'ciclo' => 'integer',
+            'orden_en_ciclo' => 'integer',
             'creditos' => 'decimal:2',
             'horas_totales' => 'integer',
             'codigo_oculto_institucional' => 'integer',
@@ -76,5 +81,23 @@ class Subject extends Model
     public function offerings(): HasMany
     {
         return $this->hasMany(CourseOffering::class, 'asignatura_id');
+    }
+
+    /** @return HasMany<SubjectFieldValue, $this> */
+    public function fieldValues(): HasMany
+    {
+        return $this->hasMany(SubjectFieldValue::class, 'asignatura_id');
+    }
+
+    /** @return HasMany<SubjectRequirement, $this> */
+    public function requirements(): HasMany
+    {
+        return $this->hasMany(SubjectRequirement::class, 'asignatura_id');
+    }
+
+    /** @return HasMany<SubjectRequirement, $this> */
+    public function requiredBy(): HasMany
+    {
+        return $this->hasMany(SubjectRequirement::class, 'requisito_id');
     }
 }

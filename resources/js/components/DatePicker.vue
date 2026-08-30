@@ -132,6 +132,7 @@ const clear = (): void => {
                     variant="outline"
                     :disabled="disabled"
                     :aria-invalid="ariaInvalid"
+                    :aria-required="required"
                     :class="
                         cn(
                             'w-full justify-start font-normal',

@@ -48,6 +48,7 @@ const props = defineProps<{
 
 const open = ref(false);
 const selectedField = ref<TemplateField | null>(null);
+const inherited = ref(false);
 
 const fieldForm = computed(() =>
     selectedField.value
@@ -68,9 +69,14 @@ const edit = (field: TemplateField): void => {
 };
 
 watch(open, (isOpen) => {
-    if (!isOpen) {
-        selectedField.value = null;
+    if (isOpen) {
+        inherited.value = selectedField.value?.inherited ?? false;
+
+        return;
     }
+
+    selectedField.value = null;
+    inherited.value = false;
 });
 
 defineExpose({ edit });
@@ -93,11 +99,12 @@ defineExpose({ edit });
             >
                 <FieldGroup>
                     <Field :data-invalid="Boolean(errors.block_id)">
-                        <FieldLabel for="template-field-block">
+                        <FieldLabel for="template-field-block" required>
                             Bloque
                         </FieldLabel>
                         <Select
                             name="block_id"
+                            required
                             :default-value="
                                 selectedField?.block_id ?? blockOptions[0]?.id
                             "
@@ -124,7 +131,7 @@ defineExpose({ edit });
                     </Field>
 
                     <Field :data-invalid="Boolean(errors.key)">
-                        <FieldLabel for="template-field-key">
+                        <FieldLabel for="template-field-key" required>
                             Clave estable
                         </FieldLabel>
                         <Input
@@ -138,7 +145,7 @@ defineExpose({ edit });
                     </Field>
 
                     <Field :data-invalid="Boolean(errors.label)">
-                        <FieldLabel for="template-field-label">
+                        <FieldLabel for="template-field-label" required>
                             Etiqueta
                         </FieldLabel>
                         <Input
@@ -152,9 +159,12 @@ defineExpose({ edit });
                     </Field>
 
                     <Field :data-invalid="Boolean(errors.type)">
-                        <FieldLabel for="template-field-type">Tipo</FieldLabel>
+                        <FieldLabel for="template-field-type" required>
+                            Tipo
+                        </FieldLabel>
                         <Select
                             name="type"
+                            required
                             :default-value="selectedField?.type ?? 'short_text'"
                         >
                             <SelectTrigger
@@ -192,13 +202,17 @@ defineExpose({ edit });
                     </Field>
 
                     <Field :data-invalid="Boolean(errors.master_source)">
-                        <FieldLabel for="template-field-master-source">
+                        <FieldLabel
+                            for="template-field-master-source"
+                            :required="inherited"
+                        >
                             Origen maestro (si es heredado)
                         </FieldLabel>
                         <Input
                             id="template-field-master-source"
                             name="master_source"
                             :default-value="selectedField?.master_source ?? ''"
+                            :required="inherited"
                             :aria-invalid="Boolean(errors.master_source)"
                         />
                         <FieldError :errors="[errors.master_source]" />
@@ -259,11 +273,9 @@ defineExpose({ edit });
                                 />
                                 <Checkbox
                                     id="template-field-inherited"
+                                    v-model="inherited"
                                     name="inherited"
                                     value="1"
-                                    :default-value="
-                                        selectedField?.inherited ?? false
-                                    "
                                     :aria-invalid="Boolean(errors.inherited)"
                                 />
                                 <FieldLabel for="template-field-inherited">

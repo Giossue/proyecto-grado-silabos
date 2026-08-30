@@ -41,7 +41,9 @@ defineProps<{
             >
                 <FieldGroup>
                     <Field :data-invalid="Boolean(errors.name)">
-                        <FieldLabel for="template-name">Nombre</FieldLabel>
+                        <FieldLabel for="template-name" required>
+                            Nombre
+                        </FieldLabel>
                         <Input
                             id="template-name"
                             name="name"

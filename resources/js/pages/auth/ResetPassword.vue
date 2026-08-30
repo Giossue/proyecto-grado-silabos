@@ -36,7 +36,7 @@ const inputEmail = ref(props.email);
     >
         <div class="grid gap-6">
             <div class="grid gap-2">
-                <Label for="email">Correo electrónico</Label>
+                <Label for="email" required>Correo electrónico</Label>
                 <Input
                     id="email"
                     type="email"
@@ -45,15 +45,17 @@ const inputEmail = ref(props.email);
                     v-model="inputEmail"
                     class="mt-1 block w-full"
                     readonly
+                    required
                 />
                 <InputError :message="errors.email" class="mt-2" />
             </div>
 
             <div class="grid gap-2">
-                <Label for="password">Contraseña nueva</Label>
+                <Label for="password" required>Contraseña nueva</Label>
                 <PasswordInput
                     id="password"
                     name="password"
+                    required
                     autocomplete="new-password"
                     class="mt-1 block w-full"
                     placeholder="Contraseña nueva"
@@ -63,12 +65,13 @@ const inputEmail = ref(props.email);
             </div>
 
             <div class="grid gap-2">
-                <Label for="password_confirmation">
+                <Label for="password_confirmation" required>
                     Confirmar contraseña
                 </Label>
                 <PasswordInput
                     id="password_confirmation"
                     name="password_confirmation"
+                    required
                     autocomplete="new-password"
                     class="mt-1 block w-full"
                     placeholder="Confirmar contraseña"

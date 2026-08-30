@@ -129,3 +129,66 @@ export type AcademicStructureProps = {
         teacherUsers: Option[];
     };
 };
+
+export type CurriculumFieldDefinition = {
+    id: string;
+    key: string;
+    label: string;
+    type: 'text' | 'number' | 'integer' | 'boolean';
+    system_key: string | null;
+    position: number;
+    visible_on_card: boolean;
+    totalizable: boolean;
+};
+
+export type CurriculumBuilderSubject = {
+    id: string;
+    code: string;
+    name: string;
+    cycle: number | null;
+    position: number;
+    organization_unit: string | null;
+    credits: string | null;
+    total_hours: number | null;
+    active: boolean;
+    custom_values: Record<string, boolean | number | string | null>;
+    system_values: Record<string, number | string | null>;
+    display_fields: {
+        id: string;
+        label: string;
+        value: boolean | number | string | null;
+    }[];
+};
+
+export type CurriculumBuilderProps = {
+    career: {
+        id: string;
+        name: string;
+    };
+    curriculum: {
+        id: string;
+        code: string;
+        version_number: number;
+        cycle_count: number;
+        state: string;
+        editable: boolean;
+        published_at: string | null;
+    };
+    fieldDefinitions: CurriculumFieldDefinition[];
+    fieldTotals: {
+        id: string;
+        label: string;
+        value: number;
+    }[];
+    subjects: CurriculumBuilderSubject[];
+    requirements: {
+        id: string;
+        subject_id: string;
+        requirement_id: string;
+        type: 'prerequisite' | 'corequisite';
+    }[];
+    systemFieldOptions: {
+        value: string;
+        label: string;
+    }[];
+};

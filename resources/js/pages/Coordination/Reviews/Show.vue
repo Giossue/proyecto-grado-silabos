@@ -25,7 +25,13 @@ import {
     CardTitle,
 } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Field, FieldError, FieldLabel } from '@/components/ui/field';
+import {
+    Field,
+    FieldError,
+    FieldLabel,
+    FieldLegend,
+    FieldSet,
+} from '@/components/ui/field';
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 import { show as documentsShow } from '@/routes/documents';
@@ -451,30 +457,38 @@ const observationState = (value: string): string =>
                                 name="observation_ids[]"
                                 :value="id"
                             />
-                            <label
-                                v-for="observation in openCurrentObservations"
-                                :key="observation.id"
-                                :for="`correction-observation-${observation.id}`"
-                                class="flex items-start gap-3 rounded-md border p-3 text-sm"
-                            >
-                                <Checkbox
-                                    :id="`correction-observation-${observation.id}`"
-                                    :model-value="
-                                        selectedObservationIds.includes(
-                                            observation.id,
-                                        )
-                                    "
-                                    @update:model-value="
-                                        toggleObservation(
-                                            observation.id,
-                                            $event,
-                                        )
-                                    "
-                                />
-                                <span>{{ observation.content }}</span>
-                            </label>
+                            <FieldSet aria-required="true" class="gap-3">
+                                <FieldLegend variant="label" required>
+                                    Observaciones por corregir
+                                </FieldLegend>
+                                <label
+                                    v-for="observation in openCurrentObservations"
+                                    :key="observation.id"
+                                    :for="`correction-observation-${observation.id}`"
+                                    class="flex items-start gap-3 rounded-md border p-3 text-sm"
+                                >
+                                    <Checkbox
+                                        :id="`correction-observation-${observation.id}`"
+                                        :model-value="
+                                            selectedObservationIds.includes(
+                                                observation.id,
+                                            )
+                                        "
+                                        @update:model-value="
+                                            toggleObservation(
+                                                observation.id,
+                                                $event,
+                                            )
+                                        "
+                                    />
+                                    <span>{{ observation.content }}</span>
+                                </label>
+                            </FieldSet>
                             <Field>
-                                <FieldLabel for="correction-justification">
+                                <FieldLabel
+                                    for="correction-justification"
+                                    required
+                                >
                                     Justificación para el docente
                                 </FieldLabel>
                                 <Textarea
@@ -576,7 +590,7 @@ const observationState = (value: string): string =>
                                 :value="reopeningKey"
                             />
                             <Field>
-                                <FieldLabel for="reopening-cause">
+                                <FieldLabel for="reopening-cause" required>
                                     Causa de reapertura
                                 </FieldLabel>
                                 <Textarea

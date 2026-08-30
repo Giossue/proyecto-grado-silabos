@@ -9,6 +9,7 @@
 | Interfaz | Inertia 3 + Vue 3 Composition API | Actualizado al starter oficial vigente |
 | Tipos frontend | TypeScript | Confirmado |
 | Estilos/componentes | Tailwind + shadcn-vue | Confirmado en diagnóstico y starter oficial |
+| Lienzo de mallas | Vue Flow | Confirmado para presentación; ADR-0006 |
 | Compilación | Vite del starter Laravel | Base oficial |
 | Rutas tipadas | Wayfinder del starter oficial | Mantener salvo ADR |
 | Autenticación | Laravel Fortify mediante starter | Base técnica; política de cuentas por validar |
@@ -39,6 +40,7 @@ actualices dependencias principales de forma incidental dentro de una feature.
 | Predis | 3.5.1 |
 | PostgreSQL local/CI | 18 |
 | Redis local/CI | 8 |
+| Vue Flow core / controles / minimapa / toolbar | 1.48.2 / 1.1.3 / 1.5.4 / 1.1.1 |
 
 ## Decisiones deliberadamente abiertas
 
@@ -83,4 +85,5 @@ agente debe leer los archivos de proyecto; este documento no reemplaza sus scrip
 - Laravel 13: `https://laravel.com/docs/13.x`
 - Inertia 3: `https://inertiajs.com/docs/v3`
 - Vue 3: `https://vuejs.org/guide/typescript/overview.html`
+- Vue Flow: `https://vueflow.dev/`
 - PostgreSQL: `https://www.postgresql.org/docs/`

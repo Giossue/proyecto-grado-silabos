@@ -50,7 +50,7 @@ const props = defineProps<{
             v-slot="{ errors, processing }"
         >
             <div class="grid gap-2">
-                <Label for="name">Nombre completo</Label>
+                <Label for="name" required>Nombre completo</Label>
                 <Input
                     id="name"
                     class="mt-1 block w-full"
@@ -64,7 +64,7 @@ const props = defineProps<{
             </div>
 
             <div class="grid gap-2">
-                <Label for="email">Correo electrónico</Label>
+                <Label for="email" required>Correo electrónico</Label>
                 <Input
                     id="email"
                     type="email"

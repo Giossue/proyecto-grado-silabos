@@ -16,7 +16,8 @@
 ### Estructura académica
 
 - `Facultad`, `Escuela`, `Carrera`, `Campus`, `Modalidad`, `PeriodoAcademico`.
-- `VersionMalla`, `Asignatura` con ciclo curricular y `RequisitoAsignatura`.
+- `VersionMalla`, `DefinicionCampoMalla`, `Asignatura` con ciclo/orden,
+  `ValorCampoAsignatura` y `RequisitoAsignatura`.
 - `OfertaAcademica`, `Paralelo`, `AsignacionDocente`.
 - `AliasInstitucional` traduce el texto libre de la fuente hacia un catálogo normalizado.
 
@@ -44,6 +45,13 @@ El Administrador gobierna las entidades institucionales globales y asigna la coo
 de una carrera. El Coordinador mantiene mallas, asignaturas, ofertas, paralelos y
 asignaciones docentes solo dentro de esa carrera. Un periodo académico representa fechas;
 el ciclo representa la posición de una materia dentro de la malla.
+
+Cada versión de malla define su propia cantidad de ciclos y composición de tarjeta. Sus
+campos tienen clave estable, etiqueta, tipo, posición, visibilidad y capacidad de
+totalización; pueden proyectar un dato estructurado existente o conservar un valor
+adicional tipado por asignatura. Retirar un campo lo desactiva sin borrar sus valores.
+Una relación académica guarda origen, destino y tipo; el color del diagrama no constituye
+la regla. La vista visual y el formulario son dos proyecciones del mismo agregado.
 
 ### Configuración
 
@@ -113,6 +121,9 @@ establece; una recomendación de IA nunca bloquea por sí sola.
 10. Un conflicto entre fuentes exactas exige resolución humana explícita.
 11. Word y PDF se generan desde la misma revisión y versión de plantilla.
 12. Redis y el servicio de IA pueden fallar sin corromper el expediente.
+13. Una versión de malla publicada, sus campos, materias y relaciones son inmutables.
+14. Una materia, un campo o una relación de malla siempre pertenece a una única carrera
+    por medio de su versión.
 
 ## Tipos de campo de plantilla
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Form } from '@inertiajs/vue3';
-import { Send } from '@lucide/vue';
+import { Form, Link } from '@inertiajs/vue3';
+import { Send, Workflow } from '@lucide/vue';
 import CareerAcademicStructureController from '@/actions/App/Modules/Academic/Presentation/Http/Controllers/CareerAcademicStructureController';
 import CareerAcademicActions from '@/components/domain/academic/CareerAcademicActions.vue';
 import ClientFilterBar from '@/components/domain/ClientFilterBar.vue';
@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/table';
 import { useClientFilter } from '@/composables/useClientFilter';
 import { useClientPagination } from '@/composables/useClientPagination';
+import { show as curriculumShow } from '@/routes/coordination/academic/curricula';
 import type { AcademicStructureProps } from '@/types/academic';
 
 const props = defineProps<
@@ -163,6 +164,12 @@ const stateLabel: Record<string, string> = {
                                     :status-supported="false"
                                     locked-label="Malla publicada e inmutable"
                                     :options="options"
+                                    ><DropdownMenuItem as-child
+                                        ><Link :href="curriculumShow(item.id)"
+                                            ><Workflow
+                                                aria-hidden="true"
+                                            />Abrir constructor</Link
+                                        ></DropdownMenuItem
                                     ><Form
                                         v-if="item.state === 'draft'"
                                         v-bind="

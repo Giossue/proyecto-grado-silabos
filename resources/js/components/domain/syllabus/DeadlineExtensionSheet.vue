@@ -48,8 +48,10 @@ defineProps<{
             >
                 <FieldGroup>
                     <Field :data-invalid="Boolean(errors.stage)">
-                        <FieldLabel for="extension-stage">Etapa</FieldLabel>
-                        <Select name="stage" default-value="draft">
+                        <FieldLabel for="extension-stage" required>
+                            Etapa
+                        </FieldLabel>
+                        <Select name="stage" default-value="draft" required>
                             <SelectTrigger
                                 id="extension-stage"
                                 :aria-invalid="Boolean(errors.stage)"
@@ -71,7 +73,9 @@ defineProps<{
                     </Field>
 
                     <Field :data-invalid="Boolean(errors.due_at)">
-                        <FieldLabel for="extension-due">Nueva fecha</FieldLabel>
+                        <FieldLabel for="extension-due" required>
+                            Nueva fecha
+                        </FieldLabel>
                         <Input
                             id="extension-due"
                             name="due_at"
@@ -87,7 +91,9 @@ defineProps<{
                     </Field>
 
                     <Field :data-invalid="Boolean(errors.reason)">
-                        <FieldLabel for="extension-reason">Motivo</FieldLabel>
+                        <FieldLabel for="extension-reason" required>
+                            Motivo
+                        </FieldLabel>
                         <Textarea
                             id="extension-reason"
                             name="reason"

@@ -47,6 +47,7 @@ Reutiliza shadcn-vue con tokens semánticos. Componentes de dominio previstos:
 - `DeadlineIndicator`
 - `AuthorizedDownload`
 - `AsyncJobStatus`
+- `CurriculumCanvas` y su alternativa `CurriculumFormView`
 
 No crees una variante visual por módulo si el significado es el mismo.
 
@@ -69,12 +70,22 @@ No crees una variante visual por módulo si el significado es el mismo.
 - CRUD corto puede usar diálogo; editor, revisión, convocatoria y publicación usan página completa.
 - La navegación visible no supera dos niveles y cambia según el rol efectivo.
 - No uses pestañas para ocultar submódulos que merecen una ruta/navegación propia.
+- El constructor de mallas sí usa pestañas para alternar dos modos de operar el mismo
+  recurso: lienzo Vue Flow y formulario accesible sobre un contrato común.
 - Las superficies usan `background`, `card`, `popover` y `sidebar` como tokens separados;
   un módulo no introduce colores directos para fabricar contraste.
 
 ## Formularios y editor
 
-- Etiqueta visible, ayuda breve, indicador de requerido y error junto al campo.
+- `Label`, `FieldLabel` y `FieldLegend` reciben `required` y generan el asterisco con
+  `text-destructive`, además del texto oculto «obligatorio»; ningún módulo recrea el
+  indicador manualmente.
+- La etiqueta visible y el control (`required` o `aria-required`) reflejan las reglas del
+  `FormRequest`. Laravel conserva la validación final, incluidas `required_if`,
+  `required_unless` y `required_without`.
+- `FormSheet` reserva el área desplazable y `FormSheetActions` conserva las acciones
+  dentro del formulario en un `SheetFooter` fijo, con superficie `card` y margen para el
+  área segura del dispositivo.
 - Deshabilitar explica por qué; solo lectura no parece editable.
 - Autoguardado con debounce, idempotencia y estado `guardando/guardado/error/conflicto`.
 - Antes de salir con cambios no confirmados, advierte sin crear falsos positivos.

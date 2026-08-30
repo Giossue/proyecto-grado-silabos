@@ -722,15 +722,12 @@ onBeforeUnmount(() => {
                                 "
                             >
                                 <div class="flex flex-wrap items-center gap-2">
-                                    <FieldLabel :for="`field-${field.id}`">
+                                    <FieldLabel
+                                        :for="`field-${field.id}`"
+                                        :required="field.required"
+                                    >
                                         {{ field.label }}
                                     </FieldLabel>
-                                    <Badge
-                                        v-if="field.required"
-                                        variant="secondary"
-                                    >
-                                        Obligatorio
-                                    </Badge>
                                     <Badge
                                         v-if="field.inherited"
                                         variant="outline"
@@ -773,6 +770,7 @@ onBeforeUnmount(() => {
                                                 validationFor(field.id).length >
                                                 0
                                             "
+                                            :aria-required="field.required"
                                             placeholder="Escriba un elemento estructurado"
                                             @update:model-value="
                                                 updateRow(
@@ -823,6 +821,7 @@ onBeforeUnmount(() => {
                                     :aria-invalid="
                                         validationFor(field.id).length > 0
                                     "
+                                    :required="field.required"
                                     @update:model-value="
                                         updateValue(field, $event)
                                     "
@@ -838,6 +837,7 @@ onBeforeUnmount(() => {
                                         :aria-invalid="
                                             validationFor(field.id).length > 0
                                         "
+                                        :aria-required="field.required"
                                         @update:model-value="
                                             updateBoolean(field, $event)
                                         "
@@ -850,6 +850,7 @@ onBeforeUnmount(() => {
                                 <Select
                                     v-else-if="field.type === 'single_select'"
                                     :model-value="String(textValue(field.id))"
+                                    :required="field.required"
                                     @update:model-value="
                                         updateValue(field, String($event))
                                     "
@@ -877,10 +878,12 @@ onBeforeUnmount(() => {
 
                                 <FieldSet
                                     v-else-if="field.type === 'multi_select'"
+                                    :aria-required="field.required"
                                 >
                                     <FieldLegend
                                         class="sr-only"
                                         variant="label"
+                                        :required="field.required"
                                     >
                                         {{ field.label }}
                                     </FieldLegend>
@@ -919,6 +922,7 @@ onBeforeUnmount(() => {
                                     :aria-invalid="
                                         validationFor(field.id).length > 0
                                     "
+                                    :required="field.required"
                                     class="min-h-32"
                                     @update:model-value="
                                         updateValue(field, $event)
@@ -1028,6 +1032,7 @@ onBeforeUnmount(() => {
                                 <Field>
                                     <FieldLabel
                                         :for="`response-${observation.id}`"
+                                        required
                                     >
                                         Respuesta
                                     </FieldLabel>

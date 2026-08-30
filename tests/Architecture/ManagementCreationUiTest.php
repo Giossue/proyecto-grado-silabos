@@ -202,6 +202,39 @@ it('separa la gestion academica del coordinador en submenus y pantallas', functi
     expect($parallels)->toBeString()->toContain('entity="parallel"');
 });
 
+it('ofrece constructor visual y formulario sobre el mismo contrato de malla', function (): void {
+    $root = dirname(__DIR__, 2);
+    $page = file_get_contents(
+        $root.'/resources/js/pages/Coordination/Academic/CurriculumBuilder.vue',
+    );
+    $canvas = file_get_contents(
+        $root.'/resources/js/components/domain/academic/curriculum/CurriculumCanvas.vue',
+    );
+    $form = file_get_contents(
+        $root.'/resources/js/components/domain/academic/curriculum/CurriculumFormView.vue',
+    );
+
+    expect($page)
+        ->toBeString()
+        ->toContain('<CurriculumCanvas')
+        ->toContain('<CurriculumFormView')
+        ->toContain('<TabsList')
+        ->toContain('<TabsTrigger value="visual"')
+        ->toContain('<TabsTrigger value="form"');
+    expect($canvas)
+        ->toBeString()
+        ->toContain("from '@vue-flow/core'")
+        ->toContain('updateSubjectLayout.url')
+        ->toContain('storeSubjectRequirement.url')
+        ->not->toContain('position.x:')
+        ->not->toContain('position.y:');
+    expect($form)
+        ->toBeString()
+        ->toContain('storeSubjectRequirement.form')
+        ->toContain('destroySubjectRequirement.form')
+        ->toContain('@click="emit(\'edit\', subject)"');
+});
+
 it('evita repetir el encabezado de pagina dentro de las tablas academicas', function (): void {
     $root = dirname(__DIR__, 2);
     $curricula = file_get_contents(
@@ -380,7 +413,7 @@ it('usa el mismo paginador en todas las superficies tabulares', function (): voi
         $checked += $tableCount;
     }
 
-    $this->assertSame(24, $checked);
+    $this->assertSame(26, $checked);
 });
 
 it('ordena busqueda filtros y accion mediante una barra compartida', function (): void {
@@ -475,6 +508,7 @@ it('normaliza los encabezados de todos los modulos autenticados', function (): v
         'resources/js/pages/Admin/Users/Show.vue',
         'resources/js/pages/Role/Select.vue',
         'resources/js/pages/Coordination/Academic/Curricula.vue',
+        'resources/js/pages/Coordination/Academic/CurriculumBuilder.vue',
         'resources/js/pages/Coordination/Academic/Offerings.vue',
         'resources/js/pages/Coordination/Academic/Parallels.vue',
         'resources/js/pages/Coordination/Academic/Subjects.vue',
@@ -594,8 +628,8 @@ it('normaliza los encabezados de todos los modulos autenticados', function (): v
         );
     }
 
-    $this->assertCount(29, $declaredPages);
-    $this->assertCount(30, $pages);
+    $this->assertCount(30, $declaredPages);
+    $this->assertCount(31, $pages);
 });
 
 it('mantiene explicitamente clasificadas las mutaciones store que permanecen en paginas completas', function (): void {

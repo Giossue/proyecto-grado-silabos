@@ -64,7 +64,7 @@ const onLogout = (): void => {
                 class="space-y-4"
             >
                 <div class="grid gap-2">
-                    <Label for="temporary-current-password">
+                    <Label for="temporary-current-password" required>
                         Contraseña temporal
                     </Label>
                     <PasswordInput
@@ -76,7 +76,7 @@ const onLogout = (): void => {
                     <InputError :message="errors.current_password" />
                 </div>
                 <div class="grid gap-2">
-                    <Label for="temporary-new-password">
+                    <Label for="temporary-new-password" required>
                         Contraseña nueva
                     </Label>
                     <PasswordInput
@@ -88,7 +88,7 @@ const onLogout = (): void => {
                     <InputError :message="errors.password" />
                 </div>
                 <div class="grid gap-2">
-                    <Label for="temporary-password-confirmation">
+                    <Label for="temporary-password-confirmation" required>
                         Confirmar contraseña nueva
                     </Label>
                     <PasswordInput

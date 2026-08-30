@@ -97,12 +97,13 @@ const facultyOptions = computed(() =>
                         v-if="entity === 'career'"
                         :data-invalid="Boolean(errors.faculty_id)"
                     >
-                        <FieldLabel :for="`edit-faculty-${recordId}`">
+                        <FieldLabel :for="`edit-faculty-${recordId}`" required>
                             Facultad
                         </FieldLabel>
                         <Select
                             name="faculty_id"
                             :default-value="facultyId ?? undefined"
+                            required
                         >
                             <SelectTrigger
                                 :id="`edit-faculty-${recordId}`"
@@ -134,7 +135,7 @@ const facultyOptions = computed(() =>
                     </Field>
 
                     <Field :data-invalid="Boolean(errors.name)">
-                        <FieldLabel :for="`edit-name-${recordId}`">
+                        <FieldLabel :for="`edit-name-${recordId}`" required>
                             Nombre
                         </FieldLabel>
                         <Input
@@ -148,7 +149,12 @@ const facultyOptions = computed(() =>
                     </Field>
 
                     <Field :data-invalid="Boolean(errors.code)">
-                        <FieldLabel :for="`edit-code-${recordId}`">
+                        <FieldLabel
+                            :for="`edit-code-${recordId}`"
+                            :required="
+                                entity === 'modality' || entity === 'period'
+                            "
+                        >
                             {{ codeLabel }}
                         </FieldLabel>
                         <Input
@@ -167,7 +173,10 @@ const facultyOptions = computed(() =>
                         v-if="entity === 'period'"
                         :data-invalid="Boolean(errors.starts_on)"
                     >
-                        <FieldLabel :for="`edit-starts-on-${recordId}`">
+                        <FieldLabel
+                            :for="`edit-starts-on-${recordId}`"
+                            required
+                        >
                             Fecha de inicio
                         </FieldLabel>
                         <DatePicker
@@ -184,7 +193,7 @@ const facultyOptions = computed(() =>
                         v-if="entity === 'period'"
                         :data-invalid="Boolean(errors.ends_on)"
                     >
-                        <FieldLabel :for="`edit-ends-on-${recordId}`">
+                        <FieldLabel :for="`edit-ends-on-${recordId}`" required>
                             Fecha de fin
                         </FieldLabel>
                         <DatePicker

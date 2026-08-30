@@ -262,10 +262,11 @@ defineOptions({
                                             'source-conflict-decision-' +
                                             conflict.id
                                         "
+                                        required
                                     >
                                         Decisión
                                     </FieldLabel>
-                                    <Select name="decision">
+                                    <Select name="decision" required>
                                         <SelectTrigger
                                             :id="
                                                 'source-conflict-decision-' +
@@ -303,6 +304,7 @@ defineOptions({
                                             'source-conflict-justification-' +
                                             conflict.id
                                         "
+                                        required
                                     >
                                         Justificación académica
                                     </FieldLabel>

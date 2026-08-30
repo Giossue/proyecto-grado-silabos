@@ -133,6 +133,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::redirect('mallas-materias', '/coordinacion/mallas');
         Route::get('mallas', [CareerAcademicStructureController::class, 'curricula'])
             ->name('coordination.academic.curricula.index');
+        Route::get('mallas/{curriculum}', [CareerAcademicStructureController::class, 'curriculumBuilder'])
+            ->whereUuid('curriculum')
+            ->name('coordination.academic.curricula.show');
         Route::get('materias', [CareerAcademicStructureController::class, 'subjects'])
             ->name('coordination.academic.subjects.index');
         Route::redirect('oferta-paralelos', '/coordinacion/ofertas');
@@ -153,6 +156,24 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('mallas/{curriculum}/publicar', [CareerAcademicStructureController::class, 'publishCurriculum'])
             ->whereUuid('curriculum')
             ->name('coordination.academic.curricula.publish');
+        Route::patch('mallas/{curriculum}/configuracion', [CareerAcademicStructureController::class, 'updateCurriculumConfiguration'])
+            ->whereUuid('curriculum')
+            ->name('coordination.academic.curricula.configuration.update');
+        Route::post('mallas/{curriculum}/campos', [CareerAcademicStructureController::class, 'storeCurriculumField'])
+            ->whereUuid('curriculum')
+            ->name('coordination.academic.curricula.fields.store');
+        Route::delete('mallas/{curriculum}/campos/{field}', [CareerAcademicStructureController::class, 'destroyCurriculumField'])
+            ->whereUuid(['curriculum', 'field'])
+            ->name('coordination.academic.curricula.fields.destroy');
+        Route::post('mallas/{curriculum}/relaciones', [CareerAcademicStructureController::class, 'storeSubjectRequirement'])
+            ->whereUuid('curriculum')
+            ->name('coordination.academic.curricula.requirements.store');
+        Route::delete('mallas/{curriculum}/relaciones/{requirement}', [CareerAcademicStructureController::class, 'destroySubjectRequirement'])
+            ->whereUuid(['curriculum', 'requirement'])
+            ->name('coordination.academic.curricula.requirements.destroy');
+        Route::patch('mallas/{curriculum}/posicion-materia', [CareerAcademicStructureController::class, 'updateSubjectLayout'])
+            ->whereUuid('curriculum')
+            ->name('coordination.academic.curricula.layout.update');
     });
 
     // --- Administración ----------------------------------------------------------

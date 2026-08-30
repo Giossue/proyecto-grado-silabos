@@ -61,10 +61,10 @@ const description = computed(() =>
                 <FieldGroup>
                     <template v-if="props.entity === 'offering'">
                         <Field :data-invalid="Boolean(errors.subject_id)">
-                            <FieldLabel for="offering-subject">
+                            <FieldLabel for="offering-subject" required>
                                 Materia publicada
                             </FieldLabel>
-                            <Select name="subject_id">
+                            <Select name="subject_id" required>
                                 <SelectTrigger
                                     id="offering-subject"
                                     :aria-invalid="Boolean(errors.subject_id)"
@@ -90,10 +90,10 @@ const description = computed(() =>
                             <FieldError :errors="[errors.subject_id]" />
                         </Field>
                         <Field :data-invalid="Boolean(errors.period_id)">
-                            <FieldLabel for="offering-period">
+                            <FieldLabel for="offering-period" required>
                                 Periodo académico
                             </FieldLabel>
-                            <Select name="period_id">
+                            <Select name="period_id" required>
                                 <SelectTrigger
                                     id="offering-period"
                                     :aria-invalid="Boolean(errors.period_id)"
@@ -117,10 +117,10 @@ const description = computed(() =>
                             <FieldError :errors="[errors.period_id]" />
                         </Field>
                         <Field :data-invalid="Boolean(errors.campus_id)">
-                            <FieldLabel for="offering-campus">
+                            <FieldLabel for="offering-campus" required>
                                 Campus
                             </FieldLabel>
-                            <Select name="campus_id">
+                            <Select name="campus_id" required>
                                 <SelectTrigger
                                     id="offering-campus"
                                     :aria-invalid="Boolean(errors.campus_id)"
@@ -144,10 +144,10 @@ const description = computed(() =>
                             <FieldError :errors="[errors.campus_id]" />
                         </Field>
                         <Field :data-invalid="Boolean(errors.modality_id)">
-                            <FieldLabel for="offering-modality">
+                            <FieldLabel for="offering-modality" required>
                                 Modalidad
                             </FieldLabel>
-                            <Select name="modality_id">
+                            <Select name="modality_id" required>
                                 <SelectTrigger
                                     id="offering-modality"
                                     :aria-invalid="Boolean(errors.modality_id)"
@@ -174,10 +174,10 @@ const description = computed(() =>
 
                     <template v-else>
                         <Field :data-invalid="Boolean(errors.offering_id)">
-                            <FieldLabel for="parallel-offering">
+                            <FieldLabel for="parallel-offering" required>
                                 Oferta académica
                             </FieldLabel>
-                            <Select name="offering_id">
+                            <Select name="offering_id" required>
                                 <SelectTrigger
                                     id="parallel-offering"
                                     :aria-invalid="Boolean(errors.offering_id)"
@@ -201,7 +201,7 @@ const description = computed(() =>
                             <FieldError :errors="[errors.offering_id]" />
                         </Field>
                         <Field :data-invalid="Boolean(errors.code)">
-                            <FieldLabel for="parallel-code">
+                            <FieldLabel for="parallel-code" required>
                                 Código de paralelo
                             </FieldLabel>
                             <Input

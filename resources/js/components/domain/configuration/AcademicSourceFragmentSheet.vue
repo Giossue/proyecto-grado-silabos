@@ -35,7 +35,7 @@ defineProps<{
             >
                 <FieldGroup>
                     <Field :data-invalid="Boolean(errors.key)">
-                        <FieldLabel for="source-fragment-key">
+                        <FieldLabel for="source-fragment-key" required>
                             Clave estable
                         </FieldLabel>
                         <Input
@@ -49,7 +49,7 @@ defineProps<{
                     </Field>
 
                     <Field :data-invalid="Boolean(errors.title)">
-                        <FieldLabel for="source-fragment-title">
+                        <FieldLabel for="source-fragment-title" required>
                             Título
                         </FieldLabel>
                         <Input
@@ -62,8 +62,8 @@ defineProps<{
                     </Field>
 
                     <Field :data-invalid="Boolean(errors.content)">
-                        <FieldLabel for="source-fragment-content">
-                            Contenido o fragmento textual
+                        <FieldLabel for="source-fragment-content" required>
+                            Contenido textual (si no registra valor JSON)
                         </FieldLabel>
                         <Textarea
                             id="source-fragment-content"
@@ -87,8 +87,11 @@ defineProps<{
                     </Field>
 
                     <Field :data-invalid="Boolean(errors.structured_value)">
-                        <FieldLabel for="source-fragment-structured-value">
-                            Valor estructurado JSON (opcional)
+                        <FieldLabel
+                            for="source-fragment-structured-value"
+                            required
+                        >
+                            Valor JSON (si no registra contenido textual)
                         </FieldLabel>
                         <Textarea
                             id="source-fragment-structured-value"

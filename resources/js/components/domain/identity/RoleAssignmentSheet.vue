@@ -46,10 +46,14 @@ const selectedRole = ref('teacher');
             >
                 <FieldGroup>
                     <Field :data-invalid="Boolean(errors.role_code)">
-                        <FieldLabel for="role-assignment-role">
+                        <FieldLabel for="role-assignment-role" required>
                             Rol
                         </FieldLabel>
-                        <Select v-model="selectedRole" name="role_code">
+                        <Select
+                            v-model="selectedRole"
+                            name="role_code"
+                            required
+                        >
                             <SelectTrigger
                                 id="role-assignment-role"
                                 :aria-invalid="Boolean(errors.role_code)"
@@ -74,10 +78,10 @@ const selectedRole = ref('teacher');
                         v-if="selectedRole !== 'administrator'"
                         :data-invalid="Boolean(errors.career_id)"
                     >
-                        <FieldLabel for="role-assignment-career">
+                        <FieldLabel for="role-assignment-career" required>
                             Carrera
                         </FieldLabel>
-                        <Select name="career_id">
+                        <Select name="career_id" required>
                             <SelectTrigger
                                 id="role-assignment-career"
                                 :aria-invalid="Boolean(errors.career_id)"
@@ -101,7 +105,7 @@ const selectedRole = ref('teacher');
                         <FieldError :errors="[errors.career_id]" />
                     </Field>
                     <Field :data-invalid="Boolean(errors.valid_from)">
-                        <FieldLabel for="role-assignment-valid-from">
+                        <FieldLabel for="role-assignment-valid-from" required>
                             Vigente desde
                         </FieldLabel>
                         <DatePicker

@@ -46,7 +46,9 @@ defineProps<{
     >
         <FieldGroup>
             <Field :data-invalid="Boolean(errors.email)">
-                <FieldLabel for="email">Correo institucional</FieldLabel>
+                <FieldLabel for="email" required>
+                    Correo institucional
+                </FieldLabel>
                 <Input
                     id="email"
                     type="email"
@@ -61,7 +63,9 @@ defineProps<{
 
             <Field :data-invalid="Boolean(errors.password)">
                 <div class="flex items-center justify-between">
-                    <FieldLabel for="password">Contraseña</FieldLabel>
+                    <FieldLabel for="password" required>
+                        Contraseña
+                    </FieldLabel>
                     <TextLink
                         v-if="canResetPassword"
                         :href="request()"

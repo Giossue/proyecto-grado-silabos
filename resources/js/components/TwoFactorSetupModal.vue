@@ -18,6 +18,7 @@ import {
     InputOTPGroup,
     InputOTPSlot,
 } from '@/components/ui/input-otp';
+import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { useAppearance } from '@/composables/useAppearance';
 import { useTwoFactorAuth } from '@/composables/useTwoFactorAuth';
@@ -256,11 +257,15 @@ watch(
                             <div
                                 class="flex w-full flex-col items-center justify-center space-y-3 py-2"
                             >
+                                <Label for="otp" required>
+                                    Código de autenticación
+                                </Label>
                                 <InputOTP
                                     id="otp"
                                     v-model="code"
                                     :maxlength="6"
                                     :disabled="processing"
+                                    aria-required="true"
                                     aria-label="Código de autenticación de seis dígitos"
                                 >
                                     <InputOTPGroup>

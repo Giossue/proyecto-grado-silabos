@@ -106,10 +106,10 @@ const codeLabel = computed(() =>
                             v-if="entity === 'career'"
                             :data-invalid="Boolean(errors.faculty_id)"
                         >
-                            <FieldLabel for="catalog-faculty">
+                            <FieldLabel for="catalog-faculty" required>
                                 Facultad
                             </FieldLabel>
-                            <Select name="faculty_id">
+                            <Select name="faculty_id" required>
                                 <SelectTrigger
                                     id="catalog-faculty"
                                     :aria-invalid="Boolean(errors.faculty_id)"
@@ -138,7 +138,9 @@ const codeLabel = computed(() =>
                         </Field>
 
                         <Field :data-invalid="Boolean(errors.name)">
-                            <FieldLabel for="catalog-name">Nombre</FieldLabel>
+                            <FieldLabel for="catalog-name" required>
+                                Nombre
+                            </FieldLabel>
                             <Input
                                 id="catalog-name"
                                 name="name"
@@ -149,7 +151,12 @@ const codeLabel = computed(() =>
                         </Field>
 
                         <Field :data-invalid="Boolean(errors.code)">
-                            <FieldLabel for="catalog-code">
+                            <FieldLabel
+                                for="catalog-code"
+                                :required="
+                                    entity === 'modality' || entity === 'period'
+                                "
+                            >
                                 {{ codeLabel }}
                             </FieldLabel>
                             <Input
@@ -167,7 +174,7 @@ const codeLabel = computed(() =>
                             v-if="entity === 'period'"
                             :data-invalid="Boolean(errors.starts_on)"
                         >
-                            <FieldLabel for="catalog-starts-on">
+                            <FieldLabel for="catalog-starts-on" required>
                                 Fecha de inicio
                             </FieldLabel>
                             <DatePicker
@@ -183,7 +190,7 @@ const codeLabel = computed(() =>
                             v-if="entity === 'period'"
                             :data-invalid="Boolean(errors.ends_on)"
                         >
-                            <FieldLabel for="catalog-ends-on">
+                            <FieldLabel for="catalog-ends-on" required>
                                 Fecha de fin
                             </FieldLabel>
                             <DatePicker

@@ -34,8 +34,16 @@ class UpdateCareerAcademicRecord
         'codigo_institucional' => 'Código',
         'nombre' => 'Nombre',
         'ciclo' => 'Ciclo',
+        'orden_en_ciclo' => 'Orden dentro del ciclo',
+        'unidad_organizacion_curricular' => 'Unidad de organización curricular',
         'creditos' => 'Créditos',
         'horas_totales' => 'Horas totales',
+        'horas_proyecto' => 'Horas de proyecto',
+        'horas_ap' => 'Horas AP',
+        'horas_ac' => 'Horas AC',
+        'horas_pae' => 'Horas PAE',
+        'horas_aa' => 'Horas AA',
+        'horas_paec' => 'Horas PAEC',
         'periodo_academico_id' => 'Periodo académico',
         'asignatura_id' => 'Materia',
         'campus_id' => 'Campus',
@@ -54,6 +62,8 @@ class UpdateCareerAcademicRecord
         'numero_version' => 'version_number',
         'nombre' => 'name',
         'ciclo' => 'cycle',
+        'orden_en_ciclo' => 'position',
+        'unidad_organizacion_curricular' => 'organization_unit',
         'creditos' => 'credits',
         'horas_totales' => 'total_hours',
         'vigente_desde' => 'valid_from',
@@ -63,6 +73,7 @@ class UpdateCareerAcademicRecord
     public function __construct(
         private readonly ActiveRole $roles,
         private readonly RecordAuditEvent $audit,
+        private readonly SyncSubjectFieldValues $syncSubjectFieldValues,
     ) {}
 
     /** @param array<string, mixed> $data */
@@ -84,16 +95,40 @@ class UpdateCareerAcademicRecord
         return DB::transaction(function () use ($actor, $activeRole, $data, $entity, $recordId, $request): Model {
             $record = $this->scopedRecord($entity, $recordId, $activeRole->carrera_id);
             $this->ensureMutable($entity, $record);
+            if ($record instanceof Subject && isset($data['cycle'])) {
+                $cycleCount = CurriculumVersion::query()
+                    ->whereKey($record->version_malla_id)
+                    ->lockForUpdate()
+                    ->value('numero_ciclos');
+                if ((int) $data['cycle'] > (int) $cycleCount) {
+                    throw ValidationException::withMessages([
+                        'cycle' => 'El ciclo excede la configuración de esta malla.',
+                    ]);
+                }
+            }
             $attributes = $this->attributes($entity, $data, $activeRole->carrera_id);
             $record->fill($attributes);
             $dirty = $record->getDirty();
+            $customValuesChanged = false;
+            if ($record instanceof Subject) {
+                $customValues = $data['custom_values'] ?? [];
+                $customValuesChanged = $this->syncSubjectFieldValues->execute(
+                    $record,
+                    is_array($customValues) ? $customValues : [],
+                );
+            }
 
-            if ($dirty === []) {
+            if ($dirty === [] && ! $customValuesChanged) {
                 return $record;
             }
 
             $metadata = $this->auditContext($record, $dirty);
-            $record->save();
+            if ($customValuesChanged) {
+                $metadata['custom_fields_changed'] = true;
+            }
+            if ($dirty !== []) {
+                $record->save();
+            }
 
             $this->audit->execute(
                 actorId: $actor->id,
@@ -169,18 +204,44 @@ class UpdateCareerAcademicRecord
                 'codigo' => $data['code'],
                 'numero_version' => $data['version_number'],
             ],
-            'subject' => [
-                'codigo_institucional' => $data['code'],
-                'nombre' => $data['name'],
-                'ciclo' => $data['cycle'] ?? null,
-                'creditos' => $data['credits'] ?? null,
-                'horas_totales' => $data['total_hours'] ?? null,
-            ],
+            'subject' => $this->subjectAttributes($data),
             'offering' => $this->offeringAttributes($data, $careerId),
             'parallel' => $this->parallelAttributes($data, $careerId),
             'teacher_assignment' => $this->teacherAssignmentAttributes($data, $careerId),
             default => throw ValidationException::withMessages(['entity' => 'El tipo de registro no admite edición.']),
         };
+    }
+
+    /** @param array<string, mixed> $data
+     * @return array<string, mixed>
+     */
+    private function subjectAttributes(array $data): array
+    {
+        $attributes = [
+            'codigo_institucional' => $data['code'],
+            'nombre' => $data['name'],
+            'ciclo' => $data['cycle'] ?? null,
+            'creditos' => $data['credits'] ?? null,
+            'horas_totales' => $data['total_hours'] ?? null,
+        ];
+        $optional = [
+            'position' => 'orden_en_ciclo',
+            'organization_unit' => 'unidad_organizacion_curricular',
+            'hours_project' => 'horas_proyecto',
+            'hours_ap' => 'horas_ap',
+            'hours_ac' => 'horas_ac',
+            'hours_pae' => 'horas_pae',
+            'hours_aa' => 'horas_aa',
+            'hours_paec' => 'horas_paec',
+        ];
+
+        foreach ($optional as $input => $attribute) {
+            if (array_key_exists($input, $data)) {
+                $attributes[$attribute] = $data[$input];
+            }
+        }
+
+        return $attributes;
     }
 
     /** @param array<string, mixed> $data

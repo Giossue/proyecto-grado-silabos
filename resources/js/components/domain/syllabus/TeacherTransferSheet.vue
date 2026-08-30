@@ -74,10 +74,14 @@ const idempotencyKey = `transfer-${props.syllabusId}-${Math.trunc(performance.no
                 />
                 <FieldGroup>
                     <Field :data-invalid="Boolean(errors.outgoing_user_id)">
-                        <FieldLabel for="transfer-outgoing">
+                        <FieldLabel for="transfer-outgoing" required>
                             Docente saliente
                         </FieldLabel>
-                        <Select v-model="outgoing" name="outgoing_user_id">
+                        <Select
+                            v-model="outgoing"
+                            name="outgoing_user_id"
+                            required
+                        >
                             <SelectTrigger
                                 id="transfer-outgoing"
                                 :aria-invalid="Boolean(errors.outgoing_user_id)"
@@ -100,10 +104,10 @@ const idempotencyKey = `transfer-${props.syllabusId}-${Math.trunc(performance.no
                     </Field>
 
                     <Field :data-invalid="Boolean(errors.incoming_user_id)">
-                        <FieldLabel for="transfer-incoming">
+                        <FieldLabel for="transfer-incoming" required>
                             Docente entrante
                         </FieldLabel>
-                        <Select name="incoming_user_id">
+                        <Select name="incoming_user_id" required>
                             <SelectTrigger
                                 id="transfer-incoming"
                                 :aria-invalid="Boolean(errors.incoming_user_id)"
@@ -129,12 +133,13 @@ const idempotencyKey = `transfer-${props.syllabusId}-${Math.trunc(performance.no
                     </Field>
 
                     <Field :data-invalid="Boolean(errors.backing_type)">
-                        <FieldLabel for="transfer-backing-type">
+                        <FieldLabel for="transfer-backing-type" required>
                             Documento que respalda el relevo
                         </FieldLabel>
                         <Select
                             name="backing_type"
                             default-value="personnel_action"
+                            required
                         >
                             <SelectTrigger
                                 id="transfer-backing-type"
@@ -160,7 +165,7 @@ const idempotencyKey = `transfer-${props.syllabusId}-${Math.trunc(performance.no
                     </Field>
 
                     <Field :data-invalid="Boolean(errors.backing_number)">
-                        <FieldLabel for="transfer-backing-number">
+                        <FieldLabel for="transfer-backing-number" required>
                             Número
                         </FieldLabel>
                         <Input
@@ -174,7 +179,7 @@ const idempotencyKey = `transfer-${props.syllabusId}-${Math.trunc(performance.no
                     </Field>
 
                     <Field :data-invalid="Boolean(errors.backing_date)">
-                        <FieldLabel for="transfer-backing-date">
+                        <FieldLabel for="transfer-backing-date" required>
                             Fecha del documento
                         </FieldLabel>
                         <DatePicker

@@ -108,7 +108,7 @@ onBeforeUnmount(() => {
                 attrs.class as string,
                 // Estrecho: panel que baja desde arriba, sobre el resto.
                 'max-sm:fixed max-sm:inset-x-0 max-sm:top-0 max-sm:z-50 max-sm:max-h-[85vh]',
-                'max-sm:flex max-sm:flex-col max-sm:gap-3 max-sm:overflow-y-auto',
+                'max-sm:flex max-sm:flex-col max-sm:gap-3 max-sm:overflow-hidden',
                 'max-sm:rounded-b-xl max-sm:bg-card max-sm:p-4',
                 // Por debajo de la barra de estado, no detrás de ella.
                 'max-sm:pt-[calc(1rem+env(safe-area-inset-top))]',
@@ -136,7 +136,11 @@ onBeforeUnmount(() => {
             </Button>
         </div>
 
-        <slot />
+        <div
+            class="max-sm:min-h-0 max-sm:flex-1 max-sm:overflow-y-auto sm:contents"
+        >
+            <slot />
+        </div>
 
         <!--
             Los filtros ya se aplicaron al elegirlos, igual que en pantalla ancha. Este
@@ -144,7 +148,11 @@ onBeforeUnmount(() => {
             eligiera, viera la lista cambiar detrás y aun así dudara de si hizo falta
             confirmar.
         -->
-        <Button type="button" class="mt-2 w-full sm:hidden" @click="close">
+        <Button
+            type="button"
+            class="mt-2 w-full shrink-0 sm:hidden"
+            @click="close"
+        >
             Ver resultados
         </Button>
     </div>

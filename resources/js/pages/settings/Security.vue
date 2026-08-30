@@ -53,10 +53,13 @@ defineOptions({
             v-slot="{ errors, processing }"
         >
             <div class="grid gap-2">
-                <Label for="current_password">Contraseña actual</Label>
+                <Label for="current_password" required>
+                    Contraseña actual
+                </Label>
                 <PasswordInput
                     id="current_password"
                     name="current_password"
+                    required
                     class="mt-1 block w-full"
                     autocomplete="current-password"
                     placeholder="Contraseña actual"
@@ -65,10 +68,11 @@ defineOptions({
             </div>
 
             <div class="grid gap-2">
-                <Label for="password">Contraseña nueva</Label>
+                <Label for="password" required>Contraseña nueva</Label>
                 <PasswordInput
                     id="password"
                     name="password"
+                    required
                     class="mt-1 block w-full"
                     autocomplete="new-password"
                     placeholder="Contraseña nueva"
@@ -78,10 +82,13 @@ defineOptions({
             </div>
 
             <div class="grid gap-2">
-                <Label for="password_confirmation">Confirmar contraseña</Label>
+                <Label for="password_confirmation" required>
+                    Confirmar contraseña
+                </Label>
                 <PasswordInput
                     id="password_confirmation"
                     name="password_confirmation"
+                    required
                     class="mt-1 block w-full"
                     autocomplete="new-password"
                     placeholder="Confirmar contraseña"
