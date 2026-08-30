@@ -3,30 +3,30 @@
 ## Estado
 
 Implementado y verificado automáticamente. El cierre depende de la revisión manual de
-interfaz y de `PV-05`, `PV-06` y `PV-08`; ver `docs/plans/pending-work.md`.
+interfaz y de `PV-05` y `PV-08`; ver `docs/plans/pending-work.md`.
 `composer verify` en verde el 2026-08-21: 163 pruebas y 1887 aserciones.
 
 ## Trazabilidad
 
 - RF-034 a RF-044; RN-017 a RN-024; CU-06 y CU-07.
 - DOC-01 a DOC-05; COR-01 a COR-04.
-- PV-05, PV-06, PV-08 y DT-06.
+- PV-05, PV-06 cerrada, PV-08, DT-06 y DT-11.
 
 ## Resultado demostrable
 
 El coordinador de una carrera configura y abre una convocatoria con periodo, plantilla
-publicada, fuentes activas, fechas y una política explícita de agrupación. La apertura
-genera exactamente los expedientes esperados desde ofertas y asignaciones vigentes. El
-docente asignado inicia, edita y valida el borrador por secciones, con datos maestros de
-solo lectura, autoguardado observable y conflicto de concurrencia sin sobrescritura.
+publicada, fuentes activas, fechas y un sílabo por paralelo como agrupación predeterminada.
+La apertura genera exactamente los expedientes esperados desde ofertas y asignaciones
+vigentes. El docente asignado inicia, edita y valida el borrador por secciones, con datos
+maestros de solo lectura, autoguardado observable y conflicto de concurrencia sin sobrescritura.
 
 ## Decisiones y supuestos
 
 - PV-05 impide afirmar volúmenes institucionales. Las colecciones se paginan y las
   pruebas usan datos representativos, sin fijar capacidad real.
-- PV-06 impide imponer una agrupación institucional. Cada convocatoria exige escoger entre
-  `por_oferta` (un expediente agrupa sus paralelos) y `por_paralelo`; la elección queda
-  auditada y el esquema conserva las relaciones explícitas para poder migrar.
+- PV-06 quedó cerrada el 2026-08-26: cada paralelo genera su propio sílabo y
+  `per_parallel` es el valor predeterminado. DT-11 conserva `per_offering` como alternativa
+  y toda elección queda auditada.
 - PV-08 impide inventar fórmulas de horas, créditos o ponderaciones. Los campos de tipo
   cálculo no son editables ni evaluados; la validación informa que requieren una regla
   oficial si llegaran a una plantilla publicada.
@@ -90,8 +90,8 @@ solo lectura, autoguardado observable y conflicto de concurrencia sin sobrescrit
 
 ## Riesgos y reversión
 
-- La elección por convocatoria no define el criterio institucional de PV-06; una decisión
-  posterior puede fijar el valor permitido sin perder relaciones históricas.
+- La regla predeterminada es un sílabo por paralelo conforme a PV-06; DT-11 conserva la
+  agrupación por oferta sin borrar relaciones históricas.
 - No se evalúa expresión arbitraria ni se acepta HTML; los cálculos esperan PV-08.
 - Abrir es transaccional e irreversible desde la interfaz en I-03; una corrección de
   configuración se realiza mediante otra convocatoria y preserva auditoría.
@@ -111,5 +111,5 @@ solo lectura, autoguardado observable y conflicto de concurrencia sin sobrescrit
   en un panel lateral derecho.
 - `composer verify`: 140 pruebas, 1374 aserciones, Pint, PHPStan nivel 7, ESLint,
   Prettier, TypeScript y build aprobados.
-- PV-05/PV-06/PV-08 y la validación manual permanecen abiertos; no se presentan como
-  aceptación institucional.
+- PV-05/PV-08 y la validación manual permanecen abiertos. PV-06 quedó cerrada con un
+  sílabo por paralelo como regla predeterminada.

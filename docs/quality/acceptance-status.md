@@ -66,7 +66,8 @@ los casos manuales en staging autorizado.
 | -------------------------- | ------------ | -------------------------------------------------------------------------------------------------------------------------------- |
 | PV-01, PV-02, PV-07, PV-08 | Bloqueado PV | Autoridad de plantilla, precedencia, DOCX y fórmulas. Se versiona, no se sobrescribe; renderer/cálculo permanecen provisionales. |
 | PV-03, PV-04               | Bloqueado PV | Periodo y responsable de aceptación del piloto. No se asignan por defecto.                                                       |
-| PV-05, PV-06               | Bloqueado PV | Volumen real y política de agrupación. La convocatoria exige elección explícita; el baseline no fija capacidad.                       |
+| PV-05                      | Bloqueado PV | Volumen real de docentes, paralelos, asignaciones y sílabos; el baseline no fija capacidad.                                       |
+| PV-06                      | Cerrada      | Un sílabo por paralelo como regla; `per_parallel` predeterminado y `per_offering` conservado por DT-11.                            |
 | PV-09, PV-10               | Bloqueado PV | Acceso/esquema y claves institucionales. Solo fixture, dry-run, conflicto y exclusión; nunca aplicación.                         |
 | PV-11, PV-12               | Bloqueado PV | Backup/RPO/RTO/retención y base legal/privacidad. Solo restore sintético y minimización.                                         |
 | PV-13, PV-14, PV-18        | Bloqueado PV | Hardware, modelo y umbrales. IA desactivada por defecto y simulador contractual opcional.                                        |

@@ -27,8 +27,10 @@ it('ofrece las notificaciones en el encabezado y no en el menu lateral', functio
     expect($encabezado)
         ->toContain('notificationsIndex')
         ->toContain('page.props.notifications.unread_count')
+        ->toContain('?? 0')
         ->toContain("page.component === 'Notifications/Index'")
-        ->toContain('notificationsLabel')
+        ->toContain('<TooltipContent>Notificaciones</TooltipContent>')
+        ->not->toContain('sin leer')
         ->toContain('<Badge')
         ->toContain('<AppearanceToggle />');
     expect($menu)
@@ -55,7 +57,8 @@ it('conserva las tres opciones de tema y no las reduce a un interruptor', functi
         ->toContain("'light'")
         ->toContain("'dark'")
         ->toContain("'system'")
-        ->toContain('aria-label');
+        ->toContain('aria-label')
+        ->toContain(':title="current.label"');
 });
 
 it('recorre los temas con una pulsacion en vez de abrir un menu', function (): void {

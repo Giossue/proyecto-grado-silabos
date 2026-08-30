@@ -76,13 +76,11 @@ const stateLabel = (state: string): string =>
         </template>
 
         <Alert>
-            <AlertTitle
-                >Política de paralelos pendiente de validación</AlertTitle
-            >
+            <AlertTitle>Un sílabo por paralelo</AlertTitle>
             <AlertDescription>
-                PV-06 sigue abierta. Por eso cada convocatoria exige una
-                elección explícita y auditada; ninguna opción se presenta como
-                política institucional definitiva.
+                Cada paralelo genera su propio sílabo. Esta opción aparece
+                seleccionada de forma predeterminada al preparar la
+                convocatoria; cualquier cambio de agrupación quedará registrado.
             </AlertDescription>
         </Alert>
 

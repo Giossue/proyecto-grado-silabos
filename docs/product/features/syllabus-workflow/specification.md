@@ -11,6 +11,8 @@
 ## Comportamiento
 
 - El coordinador prepara una convocatoria con periodo, plantilla, fuentes, asignaciones y plazos.
+- Cada paralelo genera su propio sílabo y `per_parallel` es la agrupación predeterminada;
+  `per_offering` se conserva como alternativa registrada conforme a DT-11.
 - COR-02 prioriza el listado de convocatorias y abre su formulario de preparación desde una
   acción principal en un panel lateral derecho; conserva allí los errores hasta corregirlos.
 - El sistema genera el conjunto esperado de sílabos sin duplicar el canónico.

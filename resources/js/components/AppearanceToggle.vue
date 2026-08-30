@@ -37,7 +37,7 @@ const onCycle = () => {
         variant="ghost"
         size="icon-sm"
         :aria-label="`Tema visual: ${current.label}. Cambiar a ${next.label}`"
-        :title="`Tema visual: ${current.label}`"
+        :title="current.label"
         @click="onCycle"
     >
         <component

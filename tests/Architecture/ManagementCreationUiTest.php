@@ -170,6 +170,26 @@ it('agrupa procesos y registro de actividad bajo auditoria', function (): void {
         ->toContain('href: auditIndex()');
 });
 
+it('presenta la regla de agrupacion sin exponer decisiones internas', function (): void {
+    $root = dirname(__DIR__, 2);
+    $page = file_get_contents(
+        $root.'/resources/js/pages/Coordination/Convocations/Index.vue',
+    );
+    $sheet = file_get_contents(
+        $root.'/resources/js/components/domain/syllabus/ConvocationCreationSheet.vue',
+    );
+
+    expect($page)
+        ->toBeString()
+        ->toContain('Un sílabo por paralelo')
+        ->toContain('Cada paralelo genera su propio sílabo')
+        ->not->toContain('PV-06')
+        ->not->toContain('pendiente de validación');
+    expect($sheet)
+        ->toBeString()
+        ->toContain("const groupingMode = ref('per_parallel')");
+});
+
 it('ofrece edicion y ciclo de vida en cada catalogo institucional', function (): void {
     $root = dirname(__DIR__, 2);
     $catalogs = file_get_contents(

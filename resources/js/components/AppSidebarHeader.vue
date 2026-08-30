@@ -46,19 +46,10 @@ const trail = computed<BreadcrumbItem[]>(() => {
 });
 
 const page = usePage();
-const unreadCount = computed(() => page.props.notifications.unread_count);
+const unreadCount = computed(() => page.props.notifications.unread_count ?? 0);
 const isNotificationsPage = computed(
     () => page.component === 'Notifications/Index',
 );
-const notificationsLabel = computed(() => {
-    if (unreadCount.value === 0) {
-        return 'Notificaciones';
-    }
-
-    return unreadCount.value === 1
-        ? 'Notificaciones: 1 sin leer'
-        : `Notificaciones: ${unreadCount.value} sin leer`;
-});
 </script>
 
 <template>
@@ -83,7 +74,7 @@ const notificationsLabel = computed(() => {
                         :variant="isNotificationsPage ? 'secondary' : 'ghost'"
                         size="icon-sm"
                         class="relative"
-                        :aria-label="notificationsLabel"
+                        aria-label="Notificaciones"
                         :aria-current="isNotificationsPage ? 'page' : undefined"
                     >
                         <Link :href="notificationsIndex()">
@@ -99,7 +90,7 @@ const notificationsLabel = computed(() => {
                         </Link>
                     </Button>
                 </TooltipTrigger>
-                <TooltipContent>{{ notificationsLabel }}</TooltipContent>
+                <TooltipContent>Notificaciones</TooltipContent>
             </Tooltip>
             <AppearanceToggle />
         </div>

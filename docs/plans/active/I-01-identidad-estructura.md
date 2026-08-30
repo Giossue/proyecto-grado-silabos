@@ -19,9 +19,9 @@ operación académica dentro de su carrera.
 
 - RF-001 a RF-016; RN-001 a RN-008; CU-01 a CU-03.
 - UI-01 a UI-04; ADM-02 a ADM-04.
-- PV-05 y PV-06 no bloquean identidad ni maestros; bloquean capacidad y agrupación de
-  sílabos en I-03. PV-09 y PV-10 bloquean el adaptador institucional final de I-07, no
-  el catálogo local con identificadores externos opcionales.
+- PV-05 no bloquea identidad ni maestros; limita la capacidad institucional en I-03.
+  PV-06 quedó cerrada y fija un sílabo por paralelo. PV-09 y PV-10 bloquean el adaptador
+  institucional final de I-07, no el catálogo local con identificadores externos opcionales.
 - La política de cuentas usa el valor temporal reversible DT-01: cuentas administradas
   y registro público desactivado.
 - La contraseña temporal la genera la interfaz con `crypto.getRandomValues` cumpliendo la
@@ -108,7 +108,8 @@ conserva historial y rechaza vigencias incompatibles.
 - Los identificadores institucionales definitivos siguen en PV-10: se mantienen opcionales
   o de fixture y no se fusionan registros automáticamente.
 - Las cantidades reales siguen en PV-05: no se fijan límites de negocio prematuros.
-- La separación por paralelo sigue en PV-06: I-01 solo registra ofertas y paralelos.
+- La separación por paralelo quedó fijada al cerrar PV-06; I-01 solo registra ofertas y
+  paralelos.
 - Las migraciones son aditivas; cualquier cambio de alcance se hará con otra migración.
 
 ## Evidencia de cierre
