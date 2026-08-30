@@ -46,6 +46,15 @@ final class AcademicStructurePermissions
     ];
 
     /** @var list<string> */
+    public const CAREER_UPDATE_ENTITIES = [
+        'curriculum',
+        'subject',
+        'offering',
+        'parallel',
+        'teacher_assignment',
+    ];
+
+    /** @var list<string> */
     public const CAREER_STATUS_ENTITIES = [
         'subject',
         'offering',
@@ -79,7 +88,9 @@ final class AcademicStructurePermissions
 
     public static function mayUpdate(?RoleAssignment $activeRole, string $entity): bool
     {
-        return self::isGovernanceContext($activeRole)
-            && in_array($entity, self::GOVERNANCE_UPDATE_ENTITIES, true);
+        return (self::isGovernanceContext($activeRole)
+            && in_array($entity, self::GOVERNANCE_UPDATE_ENTITIES, true))
+            || (self::isCareerContext($activeRole)
+                && in_array($entity, self::CAREER_UPDATE_ENTITIES, true));
     }
 }

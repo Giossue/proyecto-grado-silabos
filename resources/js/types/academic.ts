@@ -56,6 +56,7 @@ export type AcademicStructureProps = {
         career_name: string;
         subject_count: number;
         published_at: string | null;
+        editable: boolean;
     }[];
     subjects: {
         id: string;
@@ -66,22 +67,31 @@ export type AcademicStructureProps = {
         total_hours: number | null;
         active: boolean;
         curriculum_code: string;
+        curriculum_id: string;
         career_name: string;
+        editable: boolean;
     }[];
     offerings: {
         id: string;
+        subject_id: string;
+        period_id: string;
+        campus_id: string;
+        modality_id: string;
         label: string;
         period_name: string;
         campus_name: string;
         modality_name: string;
         parallel_count: number;
         active: boolean;
+        editable: boolean;
     }[];
     parallels: {
         id: string;
+        offering_id: string;
         code: string;
         active: boolean;
         offering_label: string;
+        editable: boolean;
     }[];
     coordinatorAssignments: {
         id: string;
@@ -94,6 +104,7 @@ export type AcademicStructureProps = {
     teacherAssignments: {
         id: string;
         user_id: string;
+        parallel_id: string;
         user_name: string;
         user_email: string;
         parallel_code: string;
@@ -102,6 +113,7 @@ export type AcademicStructureProps = {
         valid_from: string;
         valid_until: string | null;
         active: boolean;
+        editable: boolean;
     }[];
     options: {
         faculties: Option[];

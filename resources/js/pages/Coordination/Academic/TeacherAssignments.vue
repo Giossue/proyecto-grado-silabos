@@ -33,6 +33,9 @@ defineProps<
             <TeacherAssignmentSheet :options="options" />
         </template>
 
-        <TeacherAssignmentsPanel :teacher-assignments="teacherAssignments" />
+        <TeacherAssignmentsPanel
+            :teacher-assignments="teacherAssignments"
+            :options="options"
+        />
     </PageFrame>
 </template>

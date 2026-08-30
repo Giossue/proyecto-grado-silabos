@@ -35,6 +35,7 @@ defineProps<
             section="parallels"
             :offerings="offerings"
             :parallels="parallels"
+            :options="options"
         />
     </PageFrame>
 </template>

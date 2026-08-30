@@ -149,8 +149,17 @@ class CreateAcademicRecord
             ]);
         }
 
+        $period = AcademicPeriod::query()
+            ->whereKey($this->stringValue($data, 'period_id'))
+            ->where('activo', true)
+            ->where(fn ($query) => $query
+                ->whereNull('carrera_id')
+                ->orWhere('carrera_id', $careerId))
+            ->lockForUpdate()
+            ->firstOrFail();
+
         return CourseOffering::query()->create([
-            'periodo_academico_id' => $data['period_id'],
+            'periodo_academico_id' => $period->id,
             'asignatura_id' => $subject->id,
             'campus_id' => $data['campus_id'],
             'modalidad_id' => $data['modality_id'],

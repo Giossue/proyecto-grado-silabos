@@ -7,10 +7,12 @@ use App\Models\User;
 use App\Modules\Academic\Application\Actions\CreateAcademicRecord;
 use App\Modules\Academic\Application\Actions\PublishCurriculumVersion;
 use App\Modules\Academic\Application\Actions\SetAcademicRecordStatus;
+use App\Modules\Academic\Application\Actions\UpdateCareerAcademicRecord;
 use App\Modules\Academic\Application\Queries\AcademicStructureViewData;
 use App\Modules\Academic\Presentation\Http\Requests\ManageCareerAcademicStructureRequest;
 use App\Modules\Academic\Presentation\Http\Requests\SetAcademicRecordStatusRequest;
 use App\Modules\Academic\Presentation\Http\Requests\StoreAcademicRecordRequest;
+use App\Modules\Academic\Presentation\Http\Requests\UpdateCareerAcademicRecordRequest;
 use App\Modules\Identity\Application\ActiveRole;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
@@ -99,6 +101,19 @@ class CareerAcademicStructureController extends Controller
         return back()->with('success', $active
             ? 'Registro activado.'
             : 'Registro archivado sin borrar su historial.');
+    }
+
+    public function update(
+        string $entity,
+        string $record,
+        UpdateCareerAcademicRecordRequest $request,
+        UpdateCareerAcademicRecord $action,
+    ): RedirectResponse {
+        $actor = $request->user();
+        abort_unless($actor instanceof User, 401);
+        $action->execute($entity, $record, $request->validated(), $actor, $request);
+
+        return back()->with('success', 'Registro académico actualizado.');
     }
 
     public function publishCurriculum(

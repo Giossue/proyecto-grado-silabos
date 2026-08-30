@@ -34,7 +34,7 @@ const rowClasses = computed(() =>
     cn(
         'border-b transition-colors',
         section === 'body'
-            ? 'odd:bg-card even:bg-table-row-alternate hover:bg-table-row-hover data-[state=selected]:bg-muted'
+            ? 'odd:bg-card even:bg-muted/50 hover:bg-muted/80 data-[state=selected]:bg-muted'
             : 'data-[state=selected]:bg-muted',
         props.class,
     ),

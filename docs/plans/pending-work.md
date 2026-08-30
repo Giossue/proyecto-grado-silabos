@@ -1,17 +1,18 @@
 # Trabajo pendiente
 
-Corte del 26 de agosto de 2026. Este documento separa lo que falta según de quién
+Corte del 30 de agosto de 2026. Este documento separa lo que falta según de quién
 depende, porque son cosas de naturaleza distinta y no se resuelven igual.
 
-## 1. Código: sin deuda
+## 1. Código: sin deuda funcional conocida
 
-No hay `TODO`, `FIXME` ni funcionalidad a medias en `app/`, `resources/js/`, `database/`
-ni `routes/`. La verificación completa —formato, análisis estático, tipos, pruebas y
-compilación— pasa desde un checkout limpio: **204 pruebas y 2148 aserciones**.
+No hay `TODO` ni `FIXME` nuevos en I-16. Formato, análisis estático, tipos, compilación,
+las 78 pruebas de arquitectura y las 45 pruebas funcionales afectadas pasan. La suite
+completa alcanzó **253 de 254 pruebas y 2342 aserciones**; solo `RedisConnectionTest` no
+pudo ejecutarse porque el servicio Redis de pruebas no está instalado en este entorno.
 
-Los quince incrementos están implementados y verificados. Ninguno tiene trabajo de
-programación pendiente dentro de su alcance, salvo lo que las puertas `PV` mantienen
-deliberadamente sin implementar.
+Los incrementos anteriores conservan su estado. I-16 implementa y verifica la edición
+académica por alcance y la identidad administrada; permanece activo solo por la revisión
+manual de interfaz que exige la Definition of Done.
 
 I-15 cerró el último hueco funcional conocido: el plazo de la convocatoria ya tiene fecha
 de inicio, se puede prorrogar con motivo y bloquea el envío al vencer; el relevo de un
@@ -68,7 +69,7 @@ técnica directa, no en confirmación escrita de la UEB.
 
 ## 4. Estado de los planes
 
-Los catorce siguen en `docs/plans/active/` a propósito. El propio criterio del proyecto lo
+Los planes siguen en `docs/plans/active/` a propósito. El propio criterio del proyecto lo
 exige: *«Un plan no se mueve por código escrito; se mueve cuando cumple Definition of
 Done»*, y la Definition of Done incluye la revisión manual de interfaz del punto 2.
 
@@ -89,6 +90,7 @@ Done»*, y la Definition of Done incluye la revisión manual de interfaz del pun
 | I-13 | completa | revisión manual de interfaz |
 | I-14 | completa | ninguna; solo renombrado |
 | I-15 | completa | revisión manual de interfaz; cerró `PV-06` y `DT-08` a `DT-11` |
+| I-16 | completa | revisión manual de interfaz |
 
 ## 5. Orden sugerido
 

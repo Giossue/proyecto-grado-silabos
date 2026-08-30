@@ -5,7 +5,6 @@ namespace App\Modules\Identity\Domain\Policies;
 use App\Models\User;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Identity\Domain\Enums\RoleCode;
-use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
 
 class UserPolicy
 {
@@ -36,31 +35,17 @@ class UserPolicy
      * el estado y los roles: aquí no se toca lo que alguien puede hacer, solo cómo se le
      * nombra y por dónde se le escribe.
      *
-     * La administración alcanza a cualquiera. Una coordinación, solo a los docentes con
-     * rol vigente en su carrera: nadie corrige datos de personas que no dirige.
+     * La identidad de la cuenta pertenece a Administración. Coordinar una carrera o ser
+     * titular de la cuenta no concede permiso para cambiar nombre o correo.
      */
     public function updateProfileData(User $actor, User $target): bool
     {
-        if (! $actor->active || ! $target->active) {
+        if (! $actor->active) {
             return false;
         }
 
         $activeRole = $this->roles->resolve(request());
 
-        if ($activeRole?->role->codigo === RoleCode::Administrator->value) {
-            return true;
-        }
-
-        if ($activeRole?->role->codigo !== RoleCode::Coordinator->value
-            || $activeRole->carrera_id === null) {
-            return false;
-        }
-
-        return RoleAssignment::query()
-            ->where('usuario_id', $target->id)
-            ->where('carrera_id', $activeRole->carrera_id)
-            ->whereHas('role', fn ($role) => $role->where('codigo', RoleCode::Teacher->value))
-            ->effective()
-            ->exists();
+        return $activeRole?->role->codigo === RoleCode::Administrator->value;
     }
 }

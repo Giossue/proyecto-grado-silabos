@@ -96,6 +96,10 @@
   Cada colección tiene una ruta, tabla y formulario de alta propios; no se mezclan dos
   colecciones en la misma pantalla. La tarjeta de la tabla comienza directamente con los
   filtros y no repite el título ni la descripción ya presentes en el encabezado de página.
+- COR-13..15 ofrecen **Editar** para los registros de la carrera del rol activo. Mallas
+  publicadas, sus materias y relaciones ya usadas por un sílabo muestran su bloqueo de
+  historial en lugar de reescribirse. Editar una asignación cambia docente, paralelo o
+  vigencia; nunca nombre o correo de la cuenta.
 - **Auditoría** agrupa las rutas administrativas **Procesos** (ADM-09) y **Registro de
   actividad** (ADM-10). La primera permite diagnosticar y reintentar trabajos; la segunda
   reconstruye quién hizo qué y cuándo.

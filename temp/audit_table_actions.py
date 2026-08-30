@@ -115,6 +115,16 @@ def action_details(block: str) -> tuple[tuple[str, ...], tuple[str, ...]]:
         actions.extend(["Editar", "Archivar/Reactivar"])
         evidence.append("CatalogActions")
 
+    if "<CareerAcademicActions" in block:
+        actions.append("Editar")
+        if not re.search(
+            r"<CareerAcademicActions\b.*?:status-supported=['\"]false['\"]",
+            block,
+            re.DOTALL,
+        ):
+            actions.append("Archivar/Reactivar")
+        evidence.append("CareerAcademicActions")
+
     if "<UserProfileSheet" in block:
         actions.append("Editar datos")
         evidence.append("UserProfileSheet")
@@ -171,7 +181,14 @@ def audit(root: Path) -> list[TableAudit]:
         for index, (start, _end, block) in enumerate(table_blocks(source), start=1):
             columns = unique([clean_text(value) for value in TABLE_HEAD.findall(block)])
             has_actions = "Acciones" in columns
-            uses_menu = "<TableActionsMenu" in block or "<CatalogActions" in block
+            uses_menu = any(
+                component in block
+                for component in (
+                    "<TableActionsMenu",
+                    "<CatalogActions",
+                    "<CareerAcademicActions",
+                )
+            )
             actions, evidence = action_details(block) if has_actions else ((), ())
             audits.append(
                 TableAudit(
@@ -247,12 +264,22 @@ def parse_args() -> argparse.Namespace:
         default=Path(__file__).resolve().parents[1],
         help="Raíz del repositorio (por defecto, el padre de temp/).",
     )
+    parser.add_argument(
+        "--output",
+        type=Path,
+        help="Archivo Markdown de salida; si se omite, imprime en la terminal.",
+    )
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
-    print(markdown(audit(args.root.resolve())), end="")
+    report = markdown(audit(args.root.resolve()))
+    if args.output is not None:
+        args.output.write_text(report, encoding="utf-8")
+        return
+
+    print(report, end="")
 
 
 if __name__ == "__main__":

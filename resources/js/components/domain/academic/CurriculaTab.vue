@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3';
-import { LockKeyhole, Send } from '@lucide/vue';
+import { Send } from '@lucide/vue';
 import CareerAcademicStructureController from '@/actions/App/Modules/Academic/Presentation/Http/Controllers/CareerAcademicStructureController';
-import RecordStatusForm from '@/components/domain/academic/RecordStatusForm.vue';
+import CareerAcademicActions from '@/components/domain/academic/CareerAcademicActions.vue';
 import ClientFilterBar from '@/components/domain/ClientFilterBar.vue';
-import TableActionsMenu from '@/components/domain/TableActionsMenu.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
 import { Card, CardContent } from '@/components/ui/card';
 import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
@@ -32,7 +31,7 @@ import { useClientPagination } from '@/composables/useClientPagination';
 import type { AcademicStructureProps } from '@/types/academic';
 
 const props = defineProps<
-    Pick<AcademicStructureProps, 'curricula' | 'subjects'> & {
+    Pick<AcademicStructureProps, 'curricula' | 'subjects' | 'options'> & {
         section: 'curricula' | 'subjects';
     }
 >();
@@ -156,8 +155,14 @@ const stateLabel: Record<string, string> = {
                                 stateLabel[item.state] ?? item.state
                             }}</TableCell
                             ><TableCell class="text-right"
-                                ><TableActionsMenu
-                                    :label="`Acciones para la malla ${item.code}`"
+                                ><CareerAcademicActions
+                                    entity="curriculum"
+                                    :record="item"
+                                    :record-label="`la malla ${item.code}`"
+                                    :editable="item.editable"
+                                    :status-supported="false"
+                                    locked-label="Malla publicada e inmutable"
+                                    :options="options"
                                     ><Form
                                         v-if="item.state === 'draft'"
                                         v-bind="
@@ -184,10 +189,7 @@ const stateLabel: Record<string, string> = {
                                                 errors.curriculum
                                             }}</DropdownMenuItem
                                         ></Form
-                                    ><DropdownMenuItem v-else disabled
-                                        ><LockKeyhole aria-hidden="true" />Malla
-                                        publicada e inmutable</DropdownMenuItem
-                                    ></TableActionsMenu
+                                    ></CareerAcademicActions
                                 ></TableCell
                             ></TableRow
                         >
@@ -276,16 +278,14 @@ const stateLabel: Record<string, string> = {
                                 item.active ? 'Activa' : 'Archivada'
                             }}</TableCell
                             ><TableCell class="text-right"
-                                ><TableActionsMenu
-                                    :label="`Acciones para ${item.name}`"
-                                    ><RecordStatusForm
-                                        display="menu"
-                                        scope="career"
-                                        entity="subject"
-                                        :record-id="item.id"
-                                        :active="
-                                            item.active
-                                        " /></TableActionsMenu></TableCell
+                                ><CareerAcademicActions
+                                    entity="subject"
+                                    :record="item"
+                                    :record-label="item.name"
+                                    :editable="item.editable"
+                                    :active="item.active"
+                                    locked-label="La malla publicada es inmutable"
+                                    :options="options" /></TableCell
                         ></TableRow> </TableBody
                 ></Table>
                 <TablePagination

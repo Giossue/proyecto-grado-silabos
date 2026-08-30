@@ -1,6 +1,6 @@
 # Estado de decisiones
 
-Fecha de corte: **14 de agosto de 2026**.
+Fecha de corte: **30 de agosto de 2026**.
 
 ## Etiquetas
 
@@ -26,6 +26,9 @@ Fecha de corte: **14 de agosto de 2026**.
 - Gobierno académico distribuido: Administrador mantiene facultades, carreras, cuentas y
   coordinaciones; Coordinador gestiona mallas, materias, ofertas, paralelos y asignaciones
   docentes exclusivamente dentro de su carrera.
+- La identidad de las cuentas se administra de forma centralizada: solo el Administrador
+  puede corregir nombre o correo. Coordinadores y Docentes solicitan esos cambios a
+  Administración, incluso cuando se trata de la cuenta propia.
 - La estructura institucional se presenta y persiste como Facultad → Escuela → Carrera,
   según el esquema real de la fuente verificado en I-11. Campus y modalidades siguen
   siendo catálogos independientes; un campus participa en una oferta académica y no se
@@ -109,6 +112,13 @@ separa lo que depende de una revisión manual de lo que espera decisión de la U
 I-14 renombra «campaña» a «convocatoria» en todo el sistema —base de datos, clases,
 rutas, vistas, auditoría y documentación— por decisión explícita del responsable del
 producto. No altera comportamiento.
+
+I-16 completa la edición de mallas, materias, ofertas, paralelos y asignaciones docentes
+por decisión explícita del responsable del producto. Coordinación solo modifica registros
+de su carrera y cada cambio queda auditado; la inmutabilidad de mallas publicadas y del
+historial de sílabos se conserva. Nombre y correo permanecen exclusivamente bajo
+Administración: Coordinadores y Docentes no pueden corregirlos, ni siquiera en la cuenta
+propia. Este cambio no amplía `PV-16`, que sigue referido al contenido del sílabo.
 
 ## Propuesto
 

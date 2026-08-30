@@ -17,8 +17,8 @@ use Tests\TestCase;
 /**
  * Quién puede corregir el nombre y el correo de una cuenta, y qué recibe quien la estrena.
  *
- * La coordinación alcanza solo a los docentes de su carrera: corregir datos de personas
- * que no se dirigen sería gobierno ajeno, no una corrección.
+ * La identidad de una cuenta pertenece a Administración. Coordinar una carrera permite
+ * gestionar la asignación del docente, no corregir su nombre ni su correo.
  */
 class ManagedUserProfileTest extends TestCase
 {
@@ -46,25 +46,21 @@ class ManagedUserProfileTest extends TestCase
         $this->teacher = User::query()->where('email', 'docente@silabos.test')->firstOrFail();
     }
 
-    public function test_a_coordinator_corrects_a_teacher_of_their_own_career(): void
+    public function test_a_coordinator_cannot_correct_a_teacher_of_their_own_career(): void
     {
         $this->actingAsCoordinator()
             ->patch(route('users.profile.update', $this->teacher), [
                 'name' => 'Docente Corregida',
                 'email' => 'docente.corregida@silabos.test',
             ])
-            ->assertRedirect()
-            ->assertSessionHas('success');
+            ->assertForbidden();
 
         $this->teacher->refresh();
-        $this->assertSame('Docente Corregida', $this->teacher->name);
-        $this->assertSame('docente.corregida@silabos.test', $this->teacher->email);
-
-        // El valor anterior queda registrado: el correo es con lo que se inicia sesión.
-        $this->assertDatabaseHas('eventos_auditoria', [
+        $this->assertSame('Docente Demo', $this->teacher->name);
+        $this->assertSame('docente@silabos.test', $this->teacher->email);
+        $this->assertDatabaseMissing('eventos_auditoria', [
             'accion' => 'user.profile_updated',
             'recurso_id' => $this->teacher->id,
-            'resultado' => 'success',
         ]);
     }
 

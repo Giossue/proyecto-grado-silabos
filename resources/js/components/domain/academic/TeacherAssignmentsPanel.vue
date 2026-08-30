@@ -1,8 +1,6 @@
 <script setup lang="ts">
-import RecordStatusForm from '@/components/domain/academic/RecordStatusForm.vue';
+import CareerAcademicActions from '@/components/domain/academic/CareerAcademicActions.vue';
 import ClientFilterBar from '@/components/domain/ClientFilterBar.vue';
-import UserProfileSheet from '@/components/domain/identity/UserProfileSheet.vue';
-import TableActionsMenu from '@/components/domain/TableActionsMenu.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
 import { Card, CardContent } from '@/components/ui/card';
 import { Field, FieldLabel } from '@/components/ui/field';
@@ -27,7 +25,10 @@ import { useClientFilter } from '@/composables/useClientFilter';
 import { useClientPagination } from '@/composables/useClientPagination';
 import type { AcademicStructureProps } from '@/types/academic';
 
-const props = defineProps<Pick<AcademicStructureProps, 'teacherAssignments'>>();
+const props =
+    defineProps<
+        Pick<AcademicStructureProps, 'teacherAssignments' | 'options'>
+    >();
 
 const filter = useClientFilter(
     () => props.teacherAssignments,
@@ -135,23 +136,14 @@ const {
                                 {{ item.active ? 'Activa' : 'Archivada' }}
                             </TableCell>
                             <TableCell class="text-right">
-                                <TableActionsMenu
-                                    :label="`Acciones para la asignación de ${item.user_name}`"
-                                >
-                                    <UserProfileSheet
-                                        display="menu"
-                                        :user-id="item.user_id"
-                                        :name="item.user_name"
-                                        :email="item.user_email"
-                                    />
-                                    <RecordStatusForm
-                                        display="menu"
-                                        scope="career"
-                                        entity="teacher_assignment"
-                                        :record-id="item.id"
-                                        :active="item.active"
-                                    />
-                                </TableActionsMenu>
+                                <CareerAcademicActions
+                                    entity="teacher_assignment"
+                                    :record="item"
+                                    :record-label="`la asignación de ${item.user_name}`"
+                                    :editable="item.editable"
+                                    :active="item.active"
+                                    :options="options"
+                                />
                             </TableCell>
                         </TableRow>
                     </TableBody>

@@ -3,6 +3,7 @@
 namespace Tests\Feature\Settings;
 
 use App\Models\User;
+use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -21,12 +22,15 @@ class ProfileUpdateTest extends TestCase
         $response->assertOk();
     }
 
-    public function test_profile_information_can_be_updated()
+    public function test_an_administrator_can_update_their_profile_information()
     {
-        $user = User::factory()->create();
+        $this->seed(DatabaseSeeder::class);
+        $user = User::query()->where('email', 'admin@silabos.test')->firstOrFail();
+        $activeRole = $user->roleAssignments()->firstOrFail();
 
         $response = $this
             ->actingAs($user)
+            ->withSession(['active_role_assignment_id' => $activeRole->id])
             ->patch(route('profile.update'), [
                 'name' => 'Test User',
                 'email' => 'test@example.com',
@@ -41,24 +45,34 @@ class ProfileUpdateTest extends TestCase
         $this->assertSame('Test User', $user->name);
         $this->assertSame('test@example.com', $user->email);
         $this->assertNull($user->email_verified_at);
+        $this->assertDatabaseHas('eventos_auditoria', [
+            'accion' => 'user.profile_updated',
+            'actor_usuario_id' => $user->id,
+            'recurso_id' => $user->id,
+        ]);
     }
 
-    public function test_email_verification_status_is_unchanged_when_the_email_address_is_unchanged()
+    public function test_a_teacher_cannot_update_their_own_name_or_email()
     {
-        $user = User::factory()->create();
+        $this->seed(DatabaseSeeder::class);
+        $user = User::query()->where('email', 'docente@silabos.test')->firstOrFail();
+        $activeRole = $user->roleAssignments()->firstOrFail();
+        $originalName = $user->name;
+        $originalEmail = $user->email;
 
         $response = $this
             ->actingAs($user)
+            ->withSession(['active_role_assignment_id' => $activeRole->id])
             ->patch(route('profile.update'), [
                 'name' => 'Test User',
-                'email' => $user->email,
+                'email' => 'otro.correo@silabos.test',
             ]);
 
-        $response
-            ->assertSessionHasNoErrors()
-            ->assertRedirect(route('profile.edit'));
+        $response->assertForbidden();
 
-        $this->assertNotNull($user->refresh()->email_verified_at);
+        $user->refresh();
+        $this->assertSame($originalName, $user->name);
+        $this->assertSame($originalEmail, $user->email);
     }
 
     public function test_account_deletion_is_not_exposed_from_profile_settings()

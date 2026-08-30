@@ -60,11 +60,6 @@
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-ring: var(--sidebar-ring);
 
-    /* Jerarquía visual común de todas las tablas. */
-    --color-table-header: var(--table-header);
-    --color-table-row-alternate: var(--table-row-alternate);
-    --color-table-row-hover: var(--table-row-hover);
-
     /* Contorno de las superficies: cada tema decide su intensidad. */
     --color-surface-ring: var(--surface-ring);
 
@@ -149,9 +144,6 @@
     --sidebar-border: hsl(0 0% 91%);
     --sidebar-ring: hsl(217.2 91.2% 59.8%);
     --sidebar: hsl(0 0% 94%);
-    --table-header: hsl(208 24% 92%);
-    --table-row-alternate: hsl(210 20% 96%);
-    --table-row-hover: hsl(208 22% 89%);
 }
 
 .dark {
@@ -199,9 +191,6 @@
     --sidebar-border: hsl(0 0% 15.9%);
     --sidebar-ring: hsl(217.2 91.2% 59.8%);
     --sidebar: hsl(0 0% 9%);
-    --table-header: hsl(208 18% 17%);
-    --table-row-alternate: hsl(208 13% 13%);
-    --table-row-hover: hsl(208 18% 21%);
 }
 
 @layer base {
@@ -276,7 +265,11 @@
             > tbody
             > tr:nth-child(even)
             > td[data-card-more] {
-            background-color: var(--color-table-row-alternate);
+            background-color: color-mix(
+                in oklab,
+                var(--color-muted) 50%,
+                var(--color-card)
+            );
         }
 
         table[data-cards='true'][data-overflows='true']
@@ -290,7 +283,11 @@
             > tbody
             > tr:hover
             > td[data-card-more] {
-            background-color: var(--color-table-row-hover);
+            background-color: color-mix(
+                in oklab,
+                var(--color-muted) 80%,
+                var(--color-card)
+            );
         }
     }
 
@@ -367,7 +364,7 @@
         > thead
         > tr
         > th:last-child {
-        background-color: var(--color-table-header);
+        background-color: var(--color-muted);
     }
 
     table[data-overflows='true']:has([data-slot='table-actions'])
@@ -381,7 +378,11 @@
         > tbody
         > tr:nth-child(even)
         > td:last-child {
-        background-color: var(--color-table-row-alternate);
+        background-color: color-mix(
+            in oklab,
+            var(--color-muted) 50%,
+            var(--color-card)
+        );
     }
 
     table[data-overflows='true']:has([data-slot='table-actions'])
@@ -399,7 +400,11 @@
         > tbody
         > tr:hover
         > td:last-child {
-        background-color: var(--color-table-row-hover);
+        background-color: color-mix(
+            in oklab,
+            var(--color-muted) 80%,
+            var(--color-card)
+        );
     }
 
     /*

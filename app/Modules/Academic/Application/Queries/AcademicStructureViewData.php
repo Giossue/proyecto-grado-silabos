@@ -16,6 +16,8 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\Subject;
 use App\Modules\Academic\Infrastructure\Persistence\Models\TeacherAssignment;
 use App\Modules\Identity\Domain\Enums\RoleCode;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
+use App\Modules\Syllabus\Infrastructure\Persistence\Models\SyllabusCollaborator;
+use App\Modules\Syllabus\Infrastructure\Persistence\Models\SyllabusScope;
 
 class AcademicStructureViewData
 {
@@ -120,6 +122,7 @@ class AcademicStructureViewData
                     'career_name' => $curriculum->career->nombre,
                     'subject_count' => $curriculum->subjects_count,
                     'published_at' => $curriculum->publicado_en?->toIso8601String(),
+                    'editable' => $curriculum->estado === 'draft',
                 ]),
             'subjects' => Subject::query()
                 ->whereHas('curriculumVersion', fn ($query) => $query->where('carrera_id', $careerId))
@@ -135,7 +138,9 @@ class AcademicStructureViewData
                     'total_hours' => $subject->horas_totales,
                     'active' => $subject->activo,
                     'curriculum_code' => $subject->curriculumVersion->codigo,
+                    'curriculum_id' => $subject->version_malla_id,
                     'career_name' => $subject->curriculumVersion->career->nombre,
+                    'editable' => $subject->curriculumVersion->estado === 'draft',
                 ]),
             'options' => [
                 ...$this->emptyOptions(),
@@ -152,44 +157,64 @@ class AcademicStructureViewData
     public function offerings(string $careerId): array
     {
         $career = $this->career($careerId);
+        $offerings = CourseOffering::query()
+            ->whereHas('subject.curriculumVersion', fn ($query) => $query->where('carrera_id', $careerId))
+            ->with([
+                'academicPeriod:id,nombre',
+                'subject:id,nombre,codigo_institucional',
+                'campus:id,nombre',
+                'modality:id,nombre',
+            ])
+            ->withCount('parallels')
+            ->orderByDesc('created_at')
+            ->get();
+        $parallels = Parallel::query()
+            ->whereHas('offering.subject.curriculumVersion', fn ($query) => $query->where('carrera_id', $careerId))
+            ->with(['offering.subject:id,nombre,codigo_institucional', 'offering.academicPeriod:id,nombre'])
+            ->orderBy('codigo')
+            ->get();
+        $usedOfferingIds = SyllabusScope::query()
+            ->whereIn('oferta_academica_id', $offerings->pluck('id'))
+            ->pluck('oferta_academica_id')
+            ->flip();
+        $usedParallelIds = SyllabusScope::query()
+            ->whereIn('paralelo_id', $parallels->pluck('id'))
+            ->pluck('paralelo_id')
+            ->flip();
 
         return [
             'career' => ['id' => $career->id, 'name' => $career->nombre],
-            'offerings' => CourseOffering::query()
-                ->whereHas('subject.curriculumVersion', fn ($query) => $query->where('carrera_id', $careerId))
-                ->with([
-                    'academicPeriod:id,nombre',
-                    'subject:id,nombre,codigo_institucional',
-                    'campus:id,nombre',
-                    'modality:id,nombre',
-                ])
-                ->withCount('parallels')
-                ->orderByDesc('created_at')
-                ->get()
+            'offerings' => $offerings
                 ->map(fn (CourseOffering $offering) => [
                     'id' => $offering->id,
+                    'subject_id' => $offering->asignatura_id,
+                    'period_id' => $offering->periodo_academico_id,
+                    'campus_id' => $offering->campus_id,
+                    'modality_id' => $offering->modalidad_id,
                     'label' => "{$offering->subject->codigo_institucional} · {$offering->subject->nombre}",
                     'period_name' => $offering->academicPeriod->nombre,
                     'campus_name' => $offering->campus->nombre,
                     'modality_name' => $offering->modality->nombre,
                     'parallel_count' => $offering->parallels_count,
                     'active' => $offering->activo,
+                    'editable' => ! $usedOfferingIds->has($offering->id),
                 ]),
-            'parallels' => Parallel::query()
-                ->whereHas('offering.subject.curriculumVersion', fn ($query) => $query->where('carrera_id', $careerId))
-                ->with(['offering.subject:id,nombre,codigo_institucional', 'offering.academicPeriod:id,nombre'])
-                ->orderBy('codigo')
-                ->get()
+            'parallels' => $parallels
                 ->map(fn (Parallel $parallel) => [
                     'id' => $parallel->id,
+                    'offering_id' => $parallel->oferta_academica_id,
                     'code' => $parallel->codigo,
                     'active' => $parallel->activo,
                     'offering_label' => "{$parallel->offering->subject->codigo_institucional} · {$parallel->offering->academicPeriod->nombre}",
+                    'editable' => ! $usedParallelIds->has($parallel->id),
                 ]),
             'options' => [
                 ...$this->emptyOptions(),
                 'periods' => AcademicPeriod::query()
                     ->where('activo', true)
+                    ->where(fn ($query) => $query
+                        ->whereNull('carrera_id')
+                        ->orWhere('carrera_id', $careerId))
                     ->orderByDesc('fecha_inicio')
                     ->get(['id', 'nombre']),
                 'campuses' => Campus::query()->where('activo', true)->orderBy('nombre')->get(['id', 'nombre']),
@@ -218,24 +243,30 @@ class AcademicStructureViewData
     public function teacherAssignments(string $careerId): array
     {
         $career = $this->career($careerId);
+        $teacherAssignments = TeacherAssignment::query()
+            ->whereHas(
+                'parallel.offering.subject.curriculumVersion',
+                fn ($query) => $query->where('carrera_id', $careerId),
+            )
+            ->with([
+                'user:id,name,email',
+                'parallel.offering.subject:id,nombre,codigo_institucional',
+                'parallel.offering.academicPeriod:id,nombre',
+            ])
+            ->orderByDesc('vigente_desde')
+            ->get();
+        $usedAssignmentIds = SyllabusCollaborator::query()
+            ->whereIn('asignacion_docente_id', $teacherAssignments->pluck('id'))
+            ->pluck('asignacion_docente_id')
+            ->flip();
 
         return [
             'career' => ['id' => $career->id, 'name' => $career->nombre],
-            'teacherAssignments' => TeacherAssignment::query()
-                ->whereHas(
-                    'parallel.offering.subject.curriculumVersion',
-                    fn ($query) => $query->where('carrera_id', $careerId),
-                )
-                ->with([
-                    'user:id,name,email',
-                    'parallel.offering.subject:id,nombre,codigo_institucional',
-                    'parallel.offering.academicPeriod:id,nombre',
-                ])
-                ->orderByDesc('vigente_desde')
-                ->get()
+            'teacherAssignments' => $teacherAssignments
                 ->map(fn (TeacherAssignment $assignment) => [
                     'id' => $assignment->id,
                     'user_id' => $assignment->user->id,
+                    'parallel_id' => $assignment->paralelo_id,
                     'user_name' => $assignment->user->name,
                     'user_email' => $assignment->user->email,
                     'parallel_code' => $assignment->parallel->codigo,
@@ -244,6 +275,7 @@ class AcademicStructureViewData
                     'valid_from' => $assignment->vigente_desde->toDateString(),
                     'valid_until' => $assignment->vigente_hasta?->toDateString(),
                     'active' => $assignment->activo,
+                    'editable' => ! $usedAssignmentIds->has($assignment->id),
                 ]),
             'options' => [
                 ...$this->emptyOptions(),

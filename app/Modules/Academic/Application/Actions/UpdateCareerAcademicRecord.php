@@ -1,0 +1,297 @@
+<?php
+
+namespace App\Modules\Academic\Application\Actions;
+
+use App\Models\User;
+use App\Modules\Academic\Domain\AcademicStructurePermissions;
+use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
+use App\Modules\Academic\Infrastructure\Persistence\Models\Campus;
+use App\Modules\Academic\Infrastructure\Persistence\Models\CourseOffering;
+use App\Modules\Academic\Infrastructure\Persistence\Models\CurriculumVersion;
+use App\Modules\Academic\Infrastructure\Persistence\Models\Modality;
+use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
+use App\Modules\Academic\Infrastructure\Persistence\Models\Subject;
+use App\Modules\Academic\Infrastructure\Persistence\Models\TeacherAssignment;
+use App\Modules\Identity\Application\ActiveRole;
+use App\Modules\Identity\Domain\Enums\RoleCode;
+use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
+use App\Modules\Operations\Application\Actions\RecordAuditEvent;
+use App\Modules\Syllabus\Infrastructure\Persistence\Models\SyllabusCollaborator;
+use App\Modules\Syllabus\Infrastructure\Persistence\Models\SyllabusScope;
+use DateTimeInterface;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
+
+class UpdateCareerAcademicRecord
+{
+    /** @var array<string, string> */
+    private const FIELD_LABELS = [
+        'codigo' => 'Código',
+        'numero_version' => 'Número de versión',
+        'codigo_institucional' => 'Código',
+        'nombre' => 'Nombre',
+        'ciclo' => 'Ciclo',
+        'creditos' => 'Créditos',
+        'horas_totales' => 'Horas totales',
+        'periodo_academico_id' => 'Periodo académico',
+        'asignatura_id' => 'Materia',
+        'campus_id' => 'Campus',
+        'modalidad_id' => 'Modalidad',
+        'oferta_academica_id' => 'Oferta académica',
+        'usuario_id' => 'Docente',
+        'paralelo_id' => 'Paralelo',
+        'vigente_desde' => 'Vigente desde',
+        'vigente_hasta' => 'Vigente hasta',
+    ];
+
+    /** @var array<string, string> */
+    private const AUDIT_KEYS = [
+        'codigo' => 'code',
+        'codigo_institucional' => 'code',
+        'numero_version' => 'version_number',
+        'nombre' => 'name',
+        'ciclo' => 'cycle',
+        'creditos' => 'credits',
+        'horas_totales' => 'total_hours',
+        'vigente_desde' => 'valid_from',
+        'vigente_hasta' => 'valid_until',
+    ];
+
+    public function __construct(
+        private readonly ActiveRole $roles,
+        private readonly RecordAuditEvent $audit,
+    ) {}
+
+    /** @param array<string, mixed> $data */
+    public function execute(
+        string $entity,
+        string $recordId,
+        array $data,
+        User $actor,
+        Request $request,
+    ): Model {
+        $activeRole = $this->roles->resolve($request);
+
+        if (! $activeRole instanceof RoleAssignment
+            || ! AcademicStructurePermissions::mayUpdate($activeRole, $entity)
+            || $activeRole->carrera_id === null) {
+            throw new AuthorizationException('No puede editar este registro con el rol activo.');
+        }
+
+        return DB::transaction(function () use ($actor, $activeRole, $data, $entity, $recordId, $request): Model {
+            $record = $this->scopedRecord($entity, $recordId, $activeRole->carrera_id);
+            $this->ensureMutable($entity, $record);
+            $attributes = $this->attributes($entity, $data, $activeRole->carrera_id);
+            $record->fill($attributes);
+            $dirty = $record->getDirty();
+
+            if ($dirty === []) {
+                return $record;
+            }
+
+            $metadata = $this->auditContext($record, $dirty);
+            $record->save();
+
+            $this->audit->execute(
+                actorId: $actor->id,
+                roleAssignmentId: $activeRole->id,
+                action: "academic.{$entity}.updated",
+                resourceType: $entity,
+                resourceId: (string) $record->getKey(),
+                result: 'success',
+                metadata: $metadata,
+                correlationId: $request->attributes->getString('correlation_id') ?: null,
+            );
+
+            return $record;
+        });
+    }
+
+    private function scopedRecord(string $entity, string $recordId, string $careerId): Model
+    {
+        return match ($entity) {
+            'curriculum' => CurriculumVersion::query()
+                ->whereKey($recordId)->where('carrera_id', $careerId)->lockForUpdate()->firstOrFail(),
+            'subject' => Subject::query()
+                ->whereKey($recordId)
+                ->whereHas('curriculumVersion', fn ($query) => $query->where('carrera_id', $careerId))
+                ->lockForUpdate()->firstOrFail(),
+            'offering' => CourseOffering::query()
+                ->whereKey($recordId)
+                ->whereHas('subject.curriculumVersion', fn ($query) => $query->where('carrera_id', $careerId))
+                ->lockForUpdate()->firstOrFail(),
+            'parallel' => Parallel::query()
+                ->whereKey($recordId)
+                ->whereHas('offering.subject.curriculumVersion', fn ($query) => $query->where('carrera_id', $careerId))
+                ->lockForUpdate()->firstOrFail(),
+            'teacher_assignment' => TeacherAssignment::query()
+                ->whereKey($recordId)
+                ->whereHas('parallel.offering.subject.curriculumVersion', fn ($query) => $query->where('carrera_id', $careerId))
+                ->lockForUpdate()->firstOrFail(),
+            default => throw new AuthorizationException('El tipo de registro no admite edición desde Coordinación.'),
+        };
+    }
+
+    private function ensureMutable(string $entity, Model $record): void
+    {
+        $usedBySyllabus = match ($entity) {
+            'curriculum' => $record->getAttribute('estado') !== 'draft',
+            'subject' => $record instanceof Subject && CurriculumVersion::query()
+                ->whereKey($record->version_malla_id)
+                ->lockForUpdate()
+                ->value('estado') !== 'draft',
+            'offering' => SyllabusScope::query()->where('oferta_academica_id', $record->getKey())->exists(),
+            'parallel' => SyllabusScope::query()->where('paralelo_id', $record->getKey())->exists(),
+            'teacher_assignment' => SyllabusCollaborator::query()->where('asignacion_docente_id', $record->getKey())->exists(),
+            default => true,
+        };
+
+        if ($usedBySyllabus) {
+            throw ValidationException::withMessages([
+                'record' => match ($entity) {
+                    'curriculum', 'subject' => 'La malla publicada y sus materias son inmutables. Cree una nueva versión.',
+                    default => 'Este registro ya forma parte del historial de un sílabo. Archívelo y cree otro para conservar la trazabilidad.',
+                },
+            ]);
+        }
+    }
+
+    /** @param array<string, mixed> $data
+     * @return array<string, mixed>
+     */
+    private function attributes(string $entity, array $data, string $careerId): array
+    {
+        return match ($entity) {
+            'curriculum' => [
+                'codigo' => $data['code'],
+                'numero_version' => $data['version_number'],
+            ],
+            'subject' => [
+                'codigo_institucional' => $data['code'],
+                'nombre' => $data['name'],
+                'ciclo' => $data['cycle'] ?? null,
+                'creditos' => $data['credits'] ?? null,
+                'horas_totales' => $data['total_hours'] ?? null,
+            ],
+            'offering' => $this->offeringAttributes($data, $careerId),
+            'parallel' => $this->parallelAttributes($data, $careerId),
+            'teacher_assignment' => $this->teacherAssignmentAttributes($data, $careerId),
+            default => throw ValidationException::withMessages(['entity' => 'El tipo de registro no admite edición.']),
+        };
+    }
+
+    /** @param array<string, mixed> $data
+     * @return array<string, string>
+     */
+    private function offeringAttributes(array $data, string $careerId): array
+    {
+        $subject = Subject::query()->whereKey($this->stringValue($data, 'subject_id'))
+            ->where('activo', true)
+            ->whereHas('curriculumVersion', fn ($query) => $query
+                ->where('carrera_id', $careerId)->where('estado', 'published'))
+            ->lockForUpdate()->firstOrFail();
+        $period = AcademicPeriod::query()->whereKey($this->stringValue($data, 'period_id'))
+            ->where('activo', true)
+            ->where(fn ($query) => $query->whereNull('carrera_id')->orWhere('carrera_id', $careerId))
+            ->lockForUpdate()->firstOrFail();
+        $campus = Campus::query()->whereKey($this->stringValue($data, 'campus_id'))->where('activo', true)->lockForUpdate()->firstOrFail();
+        $modality = Modality::query()->whereKey($this->stringValue($data, 'modality_id'))->where('activo', true)->lockForUpdate()->firstOrFail();
+
+        return [
+            'periodo_academico_id' => $period->id,
+            'asignatura_id' => $subject->id,
+            'campus_id' => $campus->id,
+            'modalidad_id' => $modality->id,
+        ];
+    }
+
+    /** @param array<string, mixed> $data
+     * @return array<string, string>
+     */
+    private function parallelAttributes(array $data, string $careerId): array
+    {
+        $offering = CourseOffering::query()->whereKey($this->stringValue($data, 'offering_id'))
+            ->where('activo', true)
+            ->whereHas('subject.curriculumVersion', fn ($query) => $query->where('carrera_id', $careerId))
+            ->lockForUpdate()->firstOrFail();
+
+        return ['oferta_academica_id' => $offering->id, 'codigo' => $data['code']];
+    }
+
+    /** @param array<string, mixed> $data
+     * @return array<string, mixed>
+     */
+    private function teacherAssignmentAttributes(array $data, string $careerId): array
+    {
+        $parallel = Parallel::query()->whereKey($this->stringValue($data, 'parallel_id'))
+            ->where('activo', true)
+            ->whereHas('offering.subject.curriculumVersion', fn ($query) => $query->where('carrera_id', $careerId))
+            ->lockForUpdate()->firstOrFail();
+        $userId = $this->stringValue($data, 'user_id');
+        $hasRole = RoleAssignment::query()->effective()
+            ->where('usuario_id', $userId)
+            ->where('carrera_id', $careerId)
+            ->whereHas('role', fn ($query) => $query->where('codigo', RoleCode::Teacher->value))
+            ->exists();
+
+        if (! $hasRole) {
+            throw ValidationException::withMessages([
+                'user_id' => 'La persona no tiene un rol Docente vigente en esta carrera.',
+            ]);
+        }
+
+        return [
+            'usuario_id' => $userId,
+            'paralelo_id' => $parallel->id,
+            'vigente_desde' => $data['valid_from'],
+            'vigente_hasta' => $data['valid_until'] ?? null,
+        ];
+    }
+
+    /** @param array<string, mixed> $dirty
+     * @return array<string, bool|float|int|string|null>
+     */
+    private function auditContext(Model $record, array $dirty): array
+    {
+        $metadata = [
+            'changed_fields' => implode(', ', array_map(
+                fn (string $field): string => self::FIELD_LABELS[$field] ?? $field,
+                array_keys($dirty),
+            )),
+        ];
+
+        foreach (array_keys($dirty) as $field) {
+            $auditKey = self::AUDIT_KEYS[$field] ?? $field;
+            $metadata["before_{$auditKey}"] = $this->scalarValue($record->getRawOriginal($field));
+            $metadata["after_{$auditKey}"] = $this->scalarValue($record->getAttribute($field));
+        }
+
+        return $metadata;
+    }
+
+    private function scalarValue(mixed $value): bool|float|int|string|null
+    {
+        if ($value instanceof DateTimeInterface) {
+            return $value->format('Y-m-d');
+        }
+
+        return is_bool($value) || is_float($value) || is_int($value) || is_string($value)
+            ? $value
+            : null;
+    }
+
+    /** @param array<string, mixed> $data */
+    private function stringValue(array $data, string $key): string
+    {
+        $value = $data[$key] ?? null;
+
+        if (! is_string($value)) {
+            throw ValidationException::withMessages([$key => 'El identificador recibido no es válido.']);
+        }
+
+        return $value;
+    }
+}

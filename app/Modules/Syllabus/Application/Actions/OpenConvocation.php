@@ -64,15 +64,17 @@ class OpenConvocation
                     ->where('estado', 'published'))
                 ->with([
                     'subject.curriculumVersion', 'campus', 'modality',
-                    'parallels' => fn ($query) => $query->where('activo', true)->with([
+                    'parallels' => fn ($query) => $query->where('activo', true)->lockForUpdate()->with([
                         'teacherAssignments' => fn ($assignmentQuery) => $assignmentQuery
                             ->where('activo', true)
                             ->where('vigente_desde', '<=', now())
                             ->where(fn ($validity) => $validity->whereNull('vigente_hasta')->orWhere('vigente_hasta', '>', now()))
-                            ->whereHas('user', fn ($userQuery) => $userQuery->where('active', true)),
+                            ->whereHas('user', fn ($userQuery) => $userQuery->where('active', true))
+                            ->lockForUpdate(),
                     ]),
                 ])
                 ->orderBy('asignatura_id')
+                ->lockForUpdate()
                 ->get();
 
             if ($offerings->isEmpty()) {

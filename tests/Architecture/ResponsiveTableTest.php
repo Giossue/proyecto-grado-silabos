@@ -75,15 +75,14 @@ it('diferencia encabezados y registros alternos desde la tabla compartida', func
     $row = (string) file_get_contents($root.'/resources/js/components/ui/table/TableRow.vue');
     $css = (string) file_get_contents($root.'/resources/css/app.css');
 
-    expect($header)->toContain('bg-table-header')
+    expect($header)->toContain('bg-muted')
         ->and($row)->toContain('odd:bg-card')
-        ->and($row)->toContain('even:bg-table-row-alternate')
-        ->and($row)->toContain('hover:bg-table-row-hover');
+        ->and($row)->toContain('even:bg-muted/50')
+        ->and($row)->toContain('hover:bg-muted/80');
 
-    foreach (['table-header', 'table-row-alternate', 'table-row-hover'] as $token) {
-        expect(substr_count($css, '--'.$token.': hsl('))->toBe(2);
-    }
-
-    expect($css)->toContain('> tr:nth-child(even)')
-        ->and($css)->toContain('background-color: var(--color-table-row-alternate);');
+    expect($css)->not->toContain('--table-header')
+        ->not->toContain('--table-row-alternate')
+        ->not->toContain('--table-row-hover')
+        ->and($css)->toContain('> tr:nth-child(even)')
+        ->and($css)->toContain('var(--color-muted) 50%');
 });

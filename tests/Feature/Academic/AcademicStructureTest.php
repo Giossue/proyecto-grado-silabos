@@ -338,6 +338,160 @@ class AcademicStructureTest extends TestCase
             ->assertSessionHasErrors('curriculum_id');
     }
 
+    public function test_coordinator_edits_a_draft_curriculum_and_its_subject_with_audit(): void
+    {
+        $career = Career::query()->where('codigo_institucional', 'SOFTWARE')->firstOrFail();
+        $curriculum = CurriculumVersion::query()->create([
+            'carrera_id' => $career->id,
+            'codigo' => 'MALLA-EDITAR',
+            'numero_version' => 2,
+            'estado' => 'draft',
+        ]);
+        $subject = Subject::query()->create([
+            'version_malla_id' => $curriculum->id,
+            'codigo_institucional' => 'SW-710',
+            'nombre' => 'Materia provisional',
+            'ciclo' => 7,
+            'creditos' => 3,
+            'horas_totales' => 120,
+            'activo' => true,
+        ]);
+
+        $this->actingAsCoordinator()
+            ->patch(route('coordination.academic.update', [
+                'entity' => 'curriculum',
+                'record' => $curriculum->id,
+            ]), [
+                'code' => 'MALLA-SW-EDITADA',
+                'version_number' => 3,
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->actingAsCoordinator()
+            ->patch(route('coordination.academic.update', [
+                'entity' => 'subject',
+                'record' => $subject->id,
+            ]), [
+                'code' => 'SW-711',
+                'name' => 'Materia corregida',
+                'cycle' => 8,
+                'credits' => 4,
+                'total_hours' => 160,
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('versiones_malla', [
+            'id' => $curriculum->id,
+            'codigo' => 'MALLA-SW-EDITADA',
+            'numero_version' => 3,
+        ]);
+        $this->assertDatabaseHas('asignaturas', [
+            'id' => $subject->id,
+            'codigo_institucional' => 'SW-711',
+            'nombre' => 'Materia corregida',
+            'ciclo' => 8,
+        ]);
+        $this->assertDatabaseHas('eventos_auditoria', [
+            'accion' => 'academic.curriculum.updated',
+            'recurso_id' => $curriculum->id,
+        ]);
+        $this->assertDatabaseHas('eventos_auditoria', [
+            'accion' => 'academic.subject.updated',
+            'recurso_id' => $subject->id,
+        ]);
+    }
+
+    public function test_coordinator_edits_unused_offering_parallel_and_teacher_assignment(): void
+    {
+        $offering = CourseOffering::query()->firstOrFail();
+        $parallel = Parallel::query()->firstOrFail();
+        $assignment = TeacherAssignment::query()->firstOrFail();
+        $teacher = User::query()->where('email', 'docente@silabos.test')->firstOrFail();
+        $campus = Campus::query()->create([
+            'codigo_institucional' => 'NORTE',
+            'nombre' => 'Campus Norte',
+            'activo' => true,
+        ]);
+
+        $this->actingAsCoordinator()
+            ->patch(route('coordination.academic.update', [
+                'entity' => 'offering',
+                'record' => $offering->id,
+            ]), [
+                'period_id' => $offering->periodo_academico_id,
+                'subject_id' => $offering->asignatura_id,
+                'campus_id' => $campus->id,
+                'modality_id' => $offering->modalidad_id,
+            ])
+            ->assertRedirect();
+
+        $this->actingAsCoordinator()
+            ->patch(route('coordination.academic.update', [
+                'entity' => 'parallel',
+                'record' => $parallel->id,
+            ]), [
+                'offering_id' => $offering->id,
+                'code' => 'B',
+            ])
+            ->assertRedirect();
+
+        $this->actingAsCoordinator()
+            ->patch(route('coordination.academic.update', [
+                'entity' => 'teacher_assignment',
+                'record' => $assignment->id,
+            ]), [
+                'user_id' => $teacher->id,
+                'parallel_id' => $parallel->id,
+                'valid_from' => '2026-01-01',
+                'valid_until' => '2026-12-31',
+            ])
+            ->assertRedirect();
+
+        $this->assertSame($campus->id, $offering->fresh()->campus_id);
+        $this->assertSame('B', $parallel->fresh()->codigo);
+        $this->assertSame('2026-12-31', $assignment->fresh()->vigente_hasta?->toDateString());
+        $this->assertSame(3, AuditEvent::query()
+            ->whereIn('accion', [
+                'academic.offering.updated',
+                'academic.parallel.updated',
+                'academic.teacher_assignment.updated',
+            ])
+            ->count());
+    }
+
+    public function test_published_curriculum_and_subject_cannot_be_rewritten(): void
+    {
+        $curriculum = CurriculumVersion::query()->where('estado', 'published')->firstOrFail();
+        $subject = Subject::query()->where('version_malla_id', $curriculum->id)->firstOrFail();
+
+        $this->actingAsCoordinator()
+            ->patch(route('coordination.academic.update', [
+                'entity' => 'curriculum',
+                'record' => $curriculum->id,
+            ]), [
+                'code' => 'MALLA-REESCRITA',
+                'version_number' => $curriculum->numero_version,
+            ])
+            ->assertSessionHasErrors('record');
+
+        $this->actingAsCoordinator()
+            ->patch(route('coordination.academic.update', [
+                'entity' => 'subject',
+                'record' => $subject->id,
+            ]), [
+                'code' => $subject->codigo_institucional,
+                'name' => 'Nombre reescrito',
+                'cycle' => $subject->ciclo,
+                'credits' => $subject->creditos,
+                'total_hours' => $subject->horas_totales,
+            ])
+            ->assertSessionHasErrors('record');
+
+        $this->assertNotSame('MALLA-REESCRITA', $curriculum->fresh()->codigo);
+        $this->assertNotSame('Nombre reescrito', $subject->fresh()->nombre);
+    }
+
     public function test_coordinator_cannot_read_create_publish_or_archive_records_from_another_career(): void
     {
         $otherCareer = $this->createCareer('OTRA');
@@ -383,6 +537,16 @@ class AcademicStructureTest extends TestCase
                 'record' => $otherSubject->id,
             ]), ['active' => false])
             ->assertNotFound();
+
+        $this->actingAsCoordinator()
+            ->patch(route('coordination.academic.update', [
+                'entity' => 'curriculum',
+                'record' => $otherCurriculum->id,
+            ]), [
+                'code' => 'MALLA-AJENA-EDITADA',
+                'version_number' => 2,
+            ])
+            ->assertForbidden();
 
         $this->assertTrue($otherSubject->fresh()->activo);
     }

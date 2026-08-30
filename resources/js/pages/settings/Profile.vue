@@ -24,6 +24,9 @@ defineOptions({
 
 const page = usePage();
 const user = computed(() => page.props.auth.user);
+const props = defineProps<{
+    canEditIdentity: boolean;
+}>();
 </script>
 
 <template>
@@ -33,10 +36,15 @@ const user = computed(() => page.props.auth.user);
         <Heading
             variant="small"
             title="Perfil"
-            description="Actualice su nombre y correo electrónico"
+            :description="
+                props.canEditIdentity
+                    ? 'Actualice su nombre y correo electrónico'
+                    : 'Consulte los datos de su cuenta'
+            "
         />
 
         <Form
+            v-if="props.canEditIdentity"
             v-bind="ProfileController.update.form()"
             class="space-y-6"
             v-slot="{ errors, processing }"
@@ -96,5 +104,33 @@ const user = computed(() => page.props.auth.user);
                 >
             </div>
         </Form>
+
+        <div v-else class="space-y-6">
+            <div class="grid gap-2">
+                <Label for="readonly-name">Nombre completo</Label>
+                <Input
+                    id="readonly-name"
+                    :model-value="user.name"
+                    disabled
+                    aria-describedby="identity-help"
+                />
+            </div>
+
+            <div class="grid gap-2">
+                <Label for="readonly-email">Correo electrónico</Label>
+                <Input
+                    id="readonly-email"
+                    type="email"
+                    :model-value="user.email"
+                    disabled
+                    aria-describedby="identity-help"
+                />
+            </div>
+
+            <p id="identity-help" class="text-sm text-muted-foreground">
+                Si necesita corregir su nombre o correo, solicite el cambio a
+                Administración.
+            </p>
+        </div>
     </div>
 </template>

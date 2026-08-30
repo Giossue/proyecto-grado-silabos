@@ -31,7 +31,17 @@ class UpdateManagedUserProfile
             $previous = ['name' => $locked->name, 'email' => $locked->email];
             $email = mb_strtolower($data['email']);
 
-            $locked->update(['name' => $data['name'], 'email' => $email]);
+            $locked->fill(['name' => $data['name'], 'email' => $email]);
+
+            if (! $locked->isDirty()) {
+                return $locked;
+            }
+
+            if ($locked->isDirty('email')) {
+                $locked->email_verified_at = null;
+            }
+
+            $locked->save();
 
             $this->audit->execute(
                 actorId: $actor->id,

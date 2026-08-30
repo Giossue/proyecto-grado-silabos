@@ -3,6 +3,7 @@ import { Form, Head, Link, usePage } from '@inertiajs/vue3';
 import ManagedUserController from '@/actions/App/Modules/Identity/Presentation/Http/Controllers/ManagedUserController';
 import ClientFilterBar from '@/components/domain/ClientFilterBar.vue';
 import RoleAssignmentSheet from '@/components/domain/identity/RoleAssignmentSheet.vue';
+import UserProfileSheet from '@/components/domain/identity/UserProfileSheet.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
 import { Badge } from '@/components/ui/badge';
@@ -99,6 +100,11 @@ const page = usePage();
             </Badge>
         </template>
         <template #actions>
+            <UserProfileSheet
+                :user-id="managedUser.id"
+                :name="managedUser.name"
+                :email="managedUser.email"
+            />
             <RoleAssignmentSheet
                 :managed-user-id="managedUser.id"
                 :roles="roles"

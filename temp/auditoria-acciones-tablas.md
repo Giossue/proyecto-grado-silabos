@@ -1,100 +1,46 @@
 # Auditoría de acciones en tablas
 
-Fecha: 2026-08-30.
+Análisis estático de los componentes Vue. Los elementos deshabilitados que solo
+explican ausencia de acciones no se cuentan como acciones disponibles.
 
-## Conclusión
+## Resumen
 
-La percepción de que casi todas las tablas solo ofrecen **Archivar** no se confirma en
-todo el sistema, pero sí revela un problema real: se usa el menú de tres puntos incluso
-cuando solo existe una acción efectiva.
-
-- Se encontraron **24 tablas**.
-- **16** tienen una columna `Acciones`.
-- **4 de 16** (25 %) solo permiten Archivar/Reactivar.
-- **5 de 16** tienen otra única acción.
-- En total, **9 de 16** (56,25 %) muestran un menú para una sola acción efectiva.
-- Entre las cuatro pantallas académicas recién separadas, **3 de 4** (75 %) solo permiten
-  Archivar/Reactivar: Materias, Ofertas y Paralelos. Mallas solo permite Publicar mientras
-  la versión está en borrador.
-
-El problema principal no es que el 99 % archive, sino que más de la mitad de los menús de
-acciones agregan un clic sin ofrecer una elección real.
-
-## Causa encontrada
-
-`RecordStatusForm.vue` implementa únicamente Archivar/Reactivar. En las tablas de Materias,
-Ofertas, Paralelos y asignaciones de Coordinador se monta como único hijo de
-`TableActionsMenu.vue`.
-
-Además, las rutas académicas del Coordinador solo exponen creación y cambio de estado:
-
-- `POST coordinacion/estructura-academica/{entity}`.
-- `PATCH coordinacion/estructura-academica/{entity}/{record}/estado`.
-
-`CareerAcademicStructureController` no dispone actualmente de una operación `update` para
-Materia, Oferta, Paralelo o asignación. En cambio, la gestión global del Administrador sí
-tiene actualización y sus cinco catálogos muestran **Editar + Archivar/Reactivar**.
-
-Por tanto, agregar **Editar** a las tablas del Coordinador no es un ajuste visual: requiere
-definir qué campos siguen siendo modificables, autorización, validación, auditoría y una
-acción de aplicación. No debe inventarse como comportamiento confirmado.
-
-## Recomendación
-
-1. Conservar el menú de tres puntos solo cuando haya dos o más acciones reales:
-   Facultades, Carreras, Campus, Modalidades, Periodos académicos, Asignación docente y
-   Documentos.
-2. Mostrar una acción directa, con estado pendiente y nombre accesible, cuando solo exista
-   una mutación: Archivar/Reactivar, Publicar malla, Reintentar o Activar/Desactivar cuenta.
-3. Convertir la entidad principal en enlace y retirar la columna `Acciones` cuando la única
-   operación sea navegar: Abrir revisión en Informes y Revisión.
-4. Evaluar **Editar** para Materia, Oferta y Paralelo como una decisión funcional separada;
-   no mezclarla con esta limpieza de interfaz.
-5. Mantener Archivar/Reactivar como operación reversible; no sustituirla por borrado.
+- Tablas encontradas: **24**.
+- Tablas con columna `Acciones`: **16**.
+- Tablas cuyo menú solo ofrece Archivar/Reactivar: **1**.
+- Otros menús con una sola acción: **4**.
+- Menús con varias acciones: **11**.
 
 ## Tablas con columna de acciones
 
-| Tabla | Archivo | Acciones detectadas | Clasificación |
-| --- | --- | --- | --- |
-| Facultades | `resources/js/components/domain/academic/CatalogSection.vue:167` | Editar, Archivar/Reactivar | Varias acciones |
-| Carreras | `resources/js/components/domain/academic/CatalogSection.vue:262` | Editar, Archivar/Reactivar | Varias acciones |
-| Campus | `resources/js/components/domain/academic/CatalogSection.vue:353` | Editar, Archivar/Reactivar | Varias acciones |
-| Modalidades | `resources/js/components/domain/academic/CatalogSection.vue:446` | Editar, Archivar/Reactivar | Varias acciones |
-| Periodos académicos | `resources/js/components/domain/academic/CatalogSection.vue:532` | Editar, Archivar/Reactivar | Varias acciones |
-| Asignaciones de Coordinador | `resources/js/components/domain/academic/CoordinatorAssignmentsPanel.vue:91` | Archivar/Reactivar | Solo estado |
-| Mallas | `resources/js/components/domain/academic/CurriculaTab.vue:123` | Publicar malla | Una acción |
-| Materias | `resources/js/components/domain/academic/CurriculaTab.vue:243` | Archivar/Reactivar | Solo estado |
-| Ofertas académicas | `resources/js/components/domain/academic/OfferingsTab.vue:113` | Archivar/Reactivar | Solo estado |
-| Paralelos | `resources/js/components/domain/academic/OfferingsTab.vue:204` | Archivar/Reactivar | Solo estado |
-| Asignaciones docentes | `resources/js/components/domain/academic/TeacherAssignmentsPanel.vue:96` | Editar datos, Archivar/Reactivar | Varias acciones |
-| Procesos | `resources/js/pages/Admin/Operations/Jobs.vue:231` | Reintentar | Una acción condicional |
-| Usuarios | `resources/js/pages/Admin/Users/Index.vue:228` | Desactivar/Activar cuenta | Una acción |
-| Detalle de informes | `resources/js/pages/Coordination/Reports/Index.vue:348` | Abrir revisión | Una acción de navegación |
-| Cola de revisión | `resources/js/pages/Coordination/Reviews/Index.vue:134` | Abrir revisión | Una acción de navegación |
-| Documentos | `resources/js/pages/Syllabi/Documents.vue:272` | Descargar DOCX, Descargar PDF | Varias acciones |
+| Tabla | Archivo | Acciones detectadas | Clasificación | Evidencia |
+| --- | --- | --- | --- | --- |
+| Facultades | `resources/js/components/domain/academic/CatalogSection.vue:167` | Editar, Archivar/Reactivar | menú con varias acciones | CatalogActions |
+| Carreras | `resources/js/components/domain/academic/CatalogSection.vue:262` | Editar, Archivar/Reactivar | menú con varias acciones | CatalogActions |
+| Campus | `resources/js/components/domain/academic/CatalogSection.vue:353` | Editar, Archivar/Reactivar | menú con varias acciones | CatalogActions |
+| Modalidades | `resources/js/components/domain/academic/CatalogSection.vue:446` | Editar, Archivar/Reactivar | menú con varias acciones | CatalogActions |
+| Periodo / Código estable | `resources/js/components/domain/academic/CatalogSection.vue:532` | Editar, Archivar/Reactivar | menú con varias acciones | CatalogActions |
+| Persona / Carrera | `resources/js/components/domain/academic/CoordinatorAssignmentsPanel.vue:91` | Archivar/Reactivar | solo archivar/reactivar | RecordStatusForm (coordinator_assignment) |
+| Mallas | `resources/js/components/domain/academic/CurriculaTab.vue:122` | Editar, Publicar malla | menú con varias acciones | CareerAcademicActions, DropdownMenuItem |
+| Materias | `resources/js/components/domain/academic/CurriculaTab.vue:245` | Editar, Archivar/Reactivar | menú con varias acciones | CareerAcademicActions |
+| Ofertas académicas | `resources/js/components/domain/academic/OfferingsTab.vue:112` | Editar, Archivar/Reactivar | menú con varias acciones | CareerAcademicActions |
+| Paralelos | `resources/js/components/domain/academic/OfferingsTab.vue:200` | Editar, Archivar/Reactivar | menú con varias acciones | CareerAcademicActions |
+| Docente / Materia | `resources/js/components/domain/academic/TeacherAssignmentsPanel.vue:97` | Editar, Archivar/Reactivar | menú con varias acciones | CareerAcademicActions |
+| Proceso / Cola | `resources/js/pages/Admin/Operations/Jobs.vue:231` | Reintentar | menú con una sola acción | DropdownMenuItem |
+| Persona / Rol vigente | `resources/js/pages/Admin/Users/Index.vue:228` | Desactivar/Activar cuenta | menú con una sola acción | ManagedUserController.setStatus |
+| Detalle de expedientes | `resources/js/pages/Coordination/Reports/Index.vue:348` | Abrir revisión | menú con una sola acción | DropdownMenuItem |
+| Asignatura / Docente(s) | `resources/js/pages/Coordination/Reviews/Index.vue:134` | Abrir revisión | menú con una sola acción | DropdownMenuItem |
+| Solicitud / Estado | `resources/js/pages/Syllabi/Documents.vue:272` | Descargar DOCX, Descargar PDF | menú con varias acciones | DropdownMenuItem, descarga autorizada |
 
 ## Tablas sin columna de acciones
 
 | Tabla | Archivo |
 | --- | --- |
-| Auditoría | `resources/js/pages/Admin/Operations/Audit.vue:213` |
-| Plantillas | `resources/js/pages/Admin/Templates/Index.vue:118` |
-| Historial de roles | `resources/js/pages/Admin/Users/Show.vue:177` |
-| Convocatorias | `resources/js/pages/Coordination/Convocations/Index.vue:141` |
-| Seguimiento de convocatoria | `resources/js/pages/Coordination/Convocations/Show.vue:287` |
-| Distribución del informe | `resources/js/pages/Coordination/Reports/Index.vue:290` |
-| Fuentes académicas | `resources/js/pages/Sources/Index.vue:130` |
-| Sílabos del docente | `resources/js/pages/Teacher/Syllabi/Index.vue:147` |
-
-## Reproducción
-
-Ejecutar desde la raíz del repositorio:
-
-```bash
-python3 temp/audit_table_actions.py
-```
-
-El script recorre `resources/js/**/*.vue`, localiza cada componente `Table`, identifica la
-columna `Acciones`, descarta opciones deshabilitadas que solo informan ausencia de acción y
-clasifica los componentes/etiquetas encontrados. Es un análisis estático; el informe
-anterior añade la verificación manual de rutas y controladores.
+| Fecha / Actor y rol | `resources/js/pages/Admin/Operations/Audit.vue:213` |
+| Plantilla / Alcance | `resources/js/pages/Admin/Templates/Index.vue:118` |
+| Historial de roles y vigencias | `resources/js/pages/Admin/Users/Show.vue:183` |
+| Convocatoria / Periodo | `resources/js/pages/Coordination/Convocations/Index.vue:141` |
+| Seguimiento por expediente | `resources/js/pages/Coordination/Convocations/Show.vue:287` |
+| Distribución por convocatoria | `resources/js/pages/Coordination/Reports/Index.vue:290` |
+| Fuente / Autoridad y responsable | `resources/js/pages/Sources/Index.vue:130` |
+| Asignatura / Convocatoria | `resources/js/pages/Teacher/Syllabi/Index.vue:147` |

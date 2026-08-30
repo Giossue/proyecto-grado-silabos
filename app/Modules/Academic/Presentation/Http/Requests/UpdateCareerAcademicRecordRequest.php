@@ -5,85 +5,59 @@ namespace App\Modules\Academic\Presentation\Http\Requests;
 use App\Modules\Academic\Domain\AcademicStructurePermissions;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CourseOffering;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CurriculumVersion;
+use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Subject;
+use App\Modules\Academic\Infrastructure\Persistence\Models\TeacherAssignment;
 use App\Modules\Identity\Application\ActiveRole;
+use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules\Unique;
 
-class StoreAcademicRecordRequest extends FormRequest
+class UpdateCareerAcademicRecordRequest extends FormRequest
 {
     public function authorize(): bool
     {
         $entity = $this->route('entity');
+        $activeRole = app(ActiveRole::class)->resolve($this);
 
         return is_string($entity)
             && $this->user()?->active === true
-            && AcademicStructurePermissions::mayCreate(
-                app(ActiveRole::class)->resolve($this),
-                $entity,
-            );
+            && $activeRole instanceof RoleAssignment
+            && AcademicStructurePermissions::mayUpdate($activeRole, $entity)
+            && $this->recordBelongsToCareer($entity, $this->recordId(), $activeRole->carrera_id);
     }
 
     /** @return array<string, list<mixed>> */
     public function rules(): array
     {
         return match ($this->route('entity')) {
-            'faculty' => $this->namedCatalogRules('facultades', 180),
-            'campus' => $this->namedCatalogRules('campus', 120),
-            'modality' => [
-                'code' => ['required', 'string', 'max:40', Rule::unique('modalidades', 'codigo')],
-                'name' => ['required', 'string', 'max:100'],
-            ],
-            'career' => [
-                'faculty_id' => ['required', 'uuid', Rule::exists('facultades', 'id')->where('activo', true)],
-                ...$this->namedCatalogRules('carreras', 180),
-            ],
-            'period' => [
-                'code' => [
-                    'required',
-                    'string',
-                    'max:40',
-                    Rule::unique('periodos_academicos', 'codigo')->whereNull('carrera_id'),
-                ],
-                'name' => ['required', 'string', 'max:120'],
-                'starts_on' => ['required', 'date'],
-                'ends_on' => ['required', 'date', 'after_or_equal:starts_on'],
-            ],
             'curriculum' => [
                 'code' => [
                     'required',
                     'string',
                     'max:80',
-                    Rule::unique('versiones_malla', 'codigo')->where(
-                        'carrera_id',
-                        app(ActiveRole::class)->resolve($this)?->carrera_id,
-                    ),
+                    Rule::unique('versiones_malla', 'codigo')
+                        ->where('carrera_id', $this->careerId())
+                        ->ignore($this->recordId()),
                 ],
                 'version_number' => [
                     'required',
                     'integer',
                     'min:1',
                     'max:999',
-                    Rule::unique('versiones_malla', 'numero_version')->where(
-                        'carrera_id',
-                        app(ActiveRole::class)->resolve($this)?->carrera_id,
-                    ),
+                    Rule::unique('versiones_malla', 'numero_version')
+                        ->where('carrera_id', $this->careerId())
+                        ->ignore($this->recordId()),
                 ],
             ],
             'subject' => [
-                'curriculum_id' => [
-                    'required',
-                    'uuid',
-                    Rule::exists('versiones_malla', 'id')
-                        ->where('estado', 'draft')
-                        ->where('carrera_id', $this->careerId()),
-                ],
                 'code' => [
                     'required',
                     'string',
                     'max:80',
-                    $this->uniqueWithin('asignaturas', 'codigo_institucional', 'version_malla_id', 'curriculum_id'),
+                    Rule::unique('asignaturas', 'codigo_institucional')
+                        ->where('version_malla_id', $this->subjectCurriculumId())
+                        ->ignore($this->recordId()),
                 ],
                 'name' => ['required', 'string', 'max:180'],
                 'cycle' => ['nullable', 'integer', 'min:1', 'max:20'],
@@ -112,7 +86,8 @@ class StoreAcademicRecordRequest extends FormRequest
                     Rule::unique('ofertas_academicas', 'asignatura_id')
                         ->where('periodo_academico_id', $this->input('period_id'))
                         ->where('campus_id', $this->input('campus_id'))
-                        ->where('modalidad_id', $this->input('modality_id')),
+                        ->where('modalidad_id', $this->input('modality_id'))
+                        ->ignore($this->recordId()),
                 ],
                 'campus_id' => ['required', 'uuid', Rule::exists('campus', 'id')->where('activo', true)],
                 'modality_id' => ['required', 'uuid', Rule::exists('modalidades', 'id')->where('activo', true)],
@@ -132,19 +107,10 @@ class StoreAcademicRecordRequest extends FormRequest
                     'required',
                     'string',
                     'max:30',
-                    $this->uniqueWithin('paralelos', 'codigo', 'oferta_academica_id', 'offering_id'),
+                    Rule::unique('paralelos', 'codigo')
+                        ->where('oferta_academica_id', $this->input('offering_id'))
+                        ->ignore($this->recordId()),
                 ],
-            ],
-            'coordinator_assignment' => [
-                ...$this->assignmentRules('carreras', 'career_id'),
-                // Un encargo es un cargo distinto del titular, con duración propia y un
-                // acto que lo respalda. La base exige la fecha de fin: un encargo sin ella
-                // sería una titularidad sin nombrar.
-                'quality' => ['nullable', Rule::in(['titular', 'encargado'])],
-                'valid_until' => ['nullable', 'date', 'after:valid_from', 'required_if:quality,encargado'],
-                'backing_type' => ['nullable', Rule::in(['personnel_action', 'resolution', 'official_letter'])],
-                'backing_number' => ['nullable', 'string', 'max:80', 'required_if:quality,encargado'],
-                'backing_date' => ['nullable', 'date', 'before_or_equal:today', 'required_if:quality,encargado'],
             ],
             'teacher_assignment' => [
                 'user_id' => ['required', 'uuid', Rule::exists('usuarios', 'id')->where('active', true)],
@@ -165,35 +131,42 @@ class StoreAcademicRecordRequest extends FormRequest
         };
     }
 
-    /** @return array<string, list<mixed>> */
-    private function namedCatalogRules(string $table, int $nameLength): array
+    private function recordBelongsToCareer(string $entity, string $recordId, ?string $careerId): bool
     {
-        return [
-            'code' => ['nullable', 'string', 'max:80', Rule::unique($table, 'codigo_institucional')],
-            'name' => ['required', 'string', "max:{$nameLength}"],
-        ];
+        if ($careerId === null) {
+            return false;
+        }
+
+        return match ($entity) {
+            'curriculum' => CurriculumVersion::query()->whereKey($recordId)->where('carrera_id', $careerId)->exists(),
+            'subject' => Subject::query()->whereKey($recordId)->whereHas(
+                'curriculumVersion',
+                fn ($query) => $query->where('carrera_id', $careerId),
+            )->exists(),
+            'offering' => CourseOffering::query()->whereKey($recordId)->whereHas(
+                'subject.curriculumVersion',
+                fn ($query) => $query->where('carrera_id', $careerId),
+            )->exists(),
+            'parallel' => Parallel::query()->whereKey($recordId)->whereHas(
+                'offering.subject.curriculumVersion',
+                fn ($query) => $query->where('carrera_id', $careerId),
+            )->exists(),
+            'teacher_assignment' => TeacherAssignment::query()->whereKey($recordId)->whereHas(
+                'parallel.offering.subject.curriculumVersion',
+                fn ($query) => $query->where('carrera_id', $careerId),
+            )->exists(),
+            default => false,
+        };
     }
 
-    private function uniqueWithin(
-        string $table,
-        string $column,
-        string $scopeColumn,
-        ?string $input = null,
-    ): Unique {
-        $scopeValue = $this->input($input ?? $scopeColumn);
-
-        return Rule::unique($table, $column)->where($scopeColumn, $scopeValue);
+    private function subjectCurriculumId(): string
+    {
+        return (string) Subject::query()->whereKey($this->recordId())->value('version_malla_id');
     }
 
-    /** @return array<string, list<mixed>> */
-    private function assignmentRules(string $table, string $scope): array
+    private function recordId(): string
     {
-        return [
-            'user_id' => ['required', 'uuid', Rule::exists('usuarios', 'id')->where('active', true)],
-            $scope => ['required', 'uuid', Rule::exists($table, 'id')->where('activo', true)],
-            'valid_from' => ['required', 'date'],
-            'valid_until' => ['nullable', 'date', 'after:valid_from'],
-        ];
+        return is_string($this->route('record')) ? $this->route('record') : '';
     }
 
     private function careerId(): ?string

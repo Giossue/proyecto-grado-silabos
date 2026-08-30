@@ -65,8 +65,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware('active-role')->group(function () {
         Route::post('notificaciones/leer-todas', [NotificationController::class, 'markAllRead'])->name('notifications.read-all');
         Route::post('notificaciones/{notification}/leer', [NotificationController::class, 'markRead'])->name('notifications.read');
-        // La corrección de nombre y correo la hace la administración sobre cualquiera y la
-        // coordinación sobre los docentes de su carrera; la política decide el alcance.
+        // Nombre y correo son identidad administrativa. Coordinación gestiona la
+        // asignación académica, pero esta ruta solo la autoriza Administración.
         Route::patch('usuarios/{user}/datos', [ManagedUserController::class, 'updateProfile'])
             ->name('users.profile.update');
         Route::get('exportaciones/{artifact}/{format}', [DocumentController::class, 'download'])
@@ -144,6 +144,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('coordination.academic.teacher-assignments.index');
         Route::post('estructura-academica/{entity}', [CareerAcademicStructureController::class, 'store'])
             ->name('coordination.academic.store');
+        Route::patch('estructura-academica/{entity}/{record}', [CareerAcademicStructureController::class, 'update'])
+            ->whereUuid('record')
+            ->name('coordination.academic.update');
         Route::patch('estructura-academica/{entity}/{record}/estado', [CareerAcademicStructureController::class, 'setStatus'])
             ->whereUuid('record')
             ->name('coordination.academic.status.update');

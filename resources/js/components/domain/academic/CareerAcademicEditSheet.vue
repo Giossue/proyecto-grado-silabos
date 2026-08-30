@@ -1,0 +1,467 @@
+<script setup lang="ts">
+import { Form } from '@inertiajs/vue3';
+import { Check } from '@lucide/vue';
+import { computed } from 'vue';
+import CareerAcademicStructureController from '@/actions/App/Modules/Academic/Presentation/Http/Controllers/CareerAcademicStructureController';
+import DatePicker from '@/components/DatePicker.vue';
+import FormSheet from '@/components/domain/FormSheet.vue';
+import FormSheetActions from '@/components/domain/FormSheetActions.vue';
+import {
+    Field,
+    FieldDescription,
+    FieldError,
+    FieldGroup,
+    FieldLabel,
+} from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import {
+    Select,
+    SelectContent,
+    SelectGroup,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import type { AcademicStructureProps } from '@/types/academic';
+
+export type CareerAcademicEntity =
+    'curriculum' | 'subject' | 'offering' | 'parallel' | 'teacher_assignment';
+
+export type CareerAcademicEditableRecord = {
+    id: string;
+    code?: string;
+    name?: string;
+    version_number?: number;
+    cycle?: number | null;
+    credits?: string | null;
+    total_hours?: number | null;
+    subject_id?: string;
+    period_id?: string;
+    campus_id?: string;
+    modality_id?: string;
+    offering_id?: string;
+    user_id?: string;
+    parallel_id?: string;
+    valid_from?: string;
+    valid_until?: string | null;
+};
+
+const props = defineProps<{
+    entity: CareerAcademicEntity;
+    record: CareerAcademicEditableRecord;
+    options: AcademicStructureProps['options'];
+}>();
+
+const open = defineModel<boolean>('open', { default: false });
+
+const entityLabel = computed(
+    () =>
+        ({
+            curriculum: 'malla',
+            subject: 'materia',
+            offering: 'oferta académica',
+            parallel: 'paralelo',
+            teacher_assignment: 'asignación docente',
+        })[props.entity],
+);
+</script>
+
+<template>
+    <FormSheet
+        v-model:open="open"
+        trigger-label="Editar"
+        :title="`Editar ${entityLabel}`"
+        description="Actualice los datos dentro de su carrera. El cambio quedará registrado en auditoría."
+        :show-trigger="false"
+    >
+        <template #default="{ close }">
+            <Form
+                :key="record.id"
+                v-bind="
+                    CareerAcademicStructureController.update.form({
+                        entity,
+                        record: record.id,
+                    })
+                "
+                v-slot="{ errors, processing }"
+                @success="close"
+            >
+                <FieldGroup>
+                    <Field v-if="errors.record" data-invalid>
+                        <FieldError :errors="[errors.record]" />
+                    </Field>
+
+                    <template v-if="entity === 'curriculum'">
+                        <Field :data-invalid="Boolean(errors.code)">
+                            <FieldLabel
+                                :for="`edit-curriculum-code-${record.id}`"
+                            >
+                                Código
+                            </FieldLabel>
+                            <Input
+                                :id="`edit-curriculum-code-${record.id}`"
+                                name="code"
+                                :default-value="record.code"
+                                required
+                                :aria-invalid="Boolean(errors.code)"
+                            />
+                            <FieldError :errors="[errors.code]" />
+                        </Field>
+                        <Field :data-invalid="Boolean(errors.version_number)">
+                            <FieldLabel
+                                :for="`edit-curriculum-version-${record.id}`"
+                            >
+                                Número de versión
+                            </FieldLabel>
+                            <Input
+                                :id="`edit-curriculum-version-${record.id}`"
+                                name="version_number"
+                                type="number"
+                                min="1"
+                                :default-value="record.version_number"
+                                required
+                                :aria-invalid="Boolean(errors.version_number)"
+                            />
+                            <FieldError :errors="[errors.version_number]" />
+                        </Field>
+                    </template>
+
+                    <template v-else-if="entity === 'subject'">
+                        <Field :data-invalid="Boolean(errors.code)">
+                            <FieldLabel :for="`edit-subject-code-${record.id}`"
+                                >Código</FieldLabel
+                            >
+                            <Input
+                                :id="`edit-subject-code-${record.id}`"
+                                name="code"
+                                :default-value="record.code"
+                                required
+                                :aria-invalid="Boolean(errors.code)"
+                            />
+                            <FieldError :errors="[errors.code]" />
+                        </Field>
+                        <Field :data-invalid="Boolean(errors.name)">
+                            <FieldLabel :for="`edit-subject-name-${record.id}`"
+                                >Nombre</FieldLabel
+                            >
+                            <Input
+                                :id="`edit-subject-name-${record.id}`"
+                                name="name"
+                                :default-value="record.name"
+                                required
+                                :aria-invalid="Boolean(errors.name)"
+                            />
+                            <FieldError :errors="[errors.name]" />
+                        </Field>
+                        <Field :data-invalid="Boolean(errors.cycle)">
+                            <FieldLabel :for="`edit-subject-cycle-${record.id}`"
+                                >Ciclo</FieldLabel
+                            >
+                            <Input
+                                :id="`edit-subject-cycle-${record.id}`"
+                                name="cycle"
+                                type="number"
+                                min="1"
+                                :default-value="record.cycle ?? ''"
+                                :aria-invalid="Boolean(errors.cycle)"
+                            />
+                            <FieldError :errors="[errors.cycle]" />
+                        </Field>
+                        <Field :data-invalid="Boolean(errors.credits)">
+                            <FieldLabel
+                                :for="`edit-subject-credits-${record.id}`"
+                                >Créditos</FieldLabel
+                            >
+                            <Input
+                                :id="`edit-subject-credits-${record.id}`"
+                                name="credits"
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                :default-value="record.credits ?? ''"
+                                :aria-invalid="Boolean(errors.credits)"
+                            />
+                            <FieldError :errors="[errors.credits]" />
+                        </Field>
+                        <Field :data-invalid="Boolean(errors.total_hours)">
+                            <FieldLabel :for="`edit-subject-hours-${record.id}`"
+                                >Horas totales</FieldLabel
+                            >
+                            <Input
+                                :id="`edit-subject-hours-${record.id}`"
+                                name="total_hours"
+                                type="number"
+                                min="0"
+                                :default-value="record.total_hours ?? ''"
+                                :aria-invalid="Boolean(errors.total_hours)"
+                            />
+                            <FieldError :errors="[errors.total_hours]" />
+                        </Field>
+                    </template>
+
+                    <template v-else-if="entity === 'offering'">
+                        <Field :data-invalid="Boolean(errors.subject_id)">
+                            <FieldLabel
+                                :for="`edit-offering-subject-${record.id}`"
+                                >Materia publicada</FieldLabel
+                            >
+                            <Select
+                                name="subject_id"
+                                :default-value="record.subject_id"
+                            >
+                                <SelectTrigger
+                                    :id="`edit-offering-subject-${record.id}`"
+                                    :aria-invalid="Boolean(errors.subject_id)"
+                                >
+                                    <SelectValue
+                                        placeholder="Seleccione una materia"
+                                    />
+                                </SelectTrigger>
+                                <SelectContent
+                                    ><SelectGroup>
+                                        <SelectItem
+                                            v-for="item in options.publishedSubjects"
+                                            :key="item.id"
+                                            :value="item.id"
+                                            >{{ item.codigo_institucional }} ·
+                                            {{ item.nombre }}</SelectItem
+                                        >
+                                    </SelectGroup></SelectContent
+                                >
+                            </Select>
+                            <FieldError :errors="[errors.subject_id]" />
+                        </Field>
+                        <Field :data-invalid="Boolean(errors.period_id)">
+                            <FieldLabel
+                                :for="`edit-offering-period-${record.id}`"
+                                >Periodo académico</FieldLabel
+                            >
+                            <Select
+                                name="period_id"
+                                :default-value="record.period_id"
+                            >
+                                <SelectTrigger
+                                    :id="`edit-offering-period-${record.id}`"
+                                    :aria-invalid="Boolean(errors.period_id)"
+                                    ><SelectValue
+                                        placeholder="Seleccione un periodo"
+                                /></SelectTrigger>
+                                <SelectContent
+                                    ><SelectGroup>
+                                        <SelectItem
+                                            v-for="item in options.periods"
+                                            :key="item.id"
+                                            :value="item.id"
+                                        >
+                                            {{ item.nombre }}
+                                        </SelectItem>
+                                    </SelectGroup></SelectContent
+                                >
+                            </Select>
+                            <FieldError :errors="[errors.period_id]" />
+                        </Field>
+                        <Field :data-invalid="Boolean(errors.campus_id)">
+                            <FieldLabel
+                                :for="`edit-offering-campus-${record.id}`"
+                                >Campus</FieldLabel
+                            >
+                            <Select
+                                name="campus_id"
+                                :default-value="record.campus_id"
+                            >
+                                <SelectTrigger
+                                    :id="`edit-offering-campus-${record.id}`"
+                                    :aria-invalid="Boolean(errors.campus_id)"
+                                    ><SelectValue
+                                        placeholder="Seleccione un campus"
+                                /></SelectTrigger>
+                                <SelectContent
+                                    ><SelectGroup>
+                                        <SelectItem
+                                            v-for="item in options.campuses"
+                                            :key="item.id"
+                                            :value="item.id"
+                                        >
+                                            {{ item.nombre }}
+                                        </SelectItem>
+                                    </SelectGroup></SelectContent
+                                >
+                            </Select>
+                            <FieldError :errors="[errors.campus_id]" />
+                        </Field>
+                        <Field :data-invalid="Boolean(errors.modality_id)">
+                            <FieldLabel
+                                :for="`edit-offering-modality-${record.id}`"
+                                >Modalidad</FieldLabel
+                            >
+                            <Select
+                                name="modality_id"
+                                :default-value="record.modality_id"
+                            >
+                                <SelectTrigger
+                                    :id="`edit-offering-modality-${record.id}`"
+                                    :aria-invalid="Boolean(errors.modality_id)"
+                                    ><SelectValue
+                                        placeholder="Seleccione una modalidad"
+                                /></SelectTrigger>
+                                <SelectContent
+                                    ><SelectGroup>
+                                        <SelectItem
+                                            v-for="item in options.modalities"
+                                            :key="item.id"
+                                            :value="item.id"
+                                        >
+                                            {{ item.nombre }}
+                                        </SelectItem>
+                                    </SelectGroup></SelectContent
+                                >
+                            </Select>
+                            <FieldError :errors="[errors.modality_id]" />
+                        </Field>
+                    </template>
+
+                    <template v-else-if="entity === 'parallel'">
+                        <Field :data-invalid="Boolean(errors.offering_id)">
+                            <FieldLabel
+                                :for="`edit-parallel-offering-${record.id}`"
+                                >Oferta académica</FieldLabel
+                            >
+                            <Select
+                                name="offering_id"
+                                :default-value="record.offering_id"
+                            >
+                                <SelectTrigger
+                                    :id="`edit-parallel-offering-${record.id}`"
+                                    :aria-invalid="Boolean(errors.offering_id)"
+                                    ><SelectValue
+                                        placeholder="Seleccione una oferta"
+                                /></SelectTrigger>
+                                <SelectContent
+                                    ><SelectGroup>
+                                        <SelectItem
+                                            v-for="item in options.offerings"
+                                            :key="item.id"
+                                            :value="item.id"
+                                        >
+                                            {{ item.label }}
+                                        </SelectItem>
+                                    </SelectGroup></SelectContent
+                                >
+                            </Select>
+                            <FieldError :errors="[errors.offering_id]" />
+                        </Field>
+                        <Field :data-invalid="Boolean(errors.code)">
+                            <FieldLabel :for="`edit-parallel-code-${record.id}`"
+                                >Código de paralelo</FieldLabel
+                            >
+                            <Input
+                                :id="`edit-parallel-code-${record.id}`"
+                                name="code"
+                                :default-value="record.code"
+                                required
+                                :aria-invalid="Boolean(errors.code)"
+                            />
+                            <FieldError :errors="[errors.code]" />
+                        </Field>
+                    </template>
+
+                    <template v-else>
+                        <Field :data-invalid="Boolean(errors.user_id)">
+                            <FieldLabel :for="`edit-teacher-user-${record.id}`"
+                                >Docente</FieldLabel
+                            >
+                            <Select
+                                name="user_id"
+                                :default-value="record.user_id"
+                            >
+                                <SelectTrigger
+                                    :id="`edit-teacher-user-${record.id}`"
+                                    :aria-invalid="Boolean(errors.user_id)"
+                                    ><SelectValue
+                                        placeholder="Seleccione un docente"
+                                /></SelectTrigger>
+                                <SelectContent
+                                    ><SelectGroup>
+                                        <SelectItem
+                                            v-for="item in options.teacherUsers"
+                                            :key="item.id"
+                                            :value="item.id"
+                                        >
+                                            {{ item.name }} · {{ item.email }}
+                                        </SelectItem>
+                                    </SelectGroup></SelectContent
+                                >
+                            </Select>
+                            <FieldDescription>
+                                Aquí cambia quién dicta; el nombre y correo de
+                                la cuenta solo los corrige Administración.
+                            </FieldDescription>
+                            <FieldError :errors="[errors.user_id]" />
+                        </Field>
+                        <Field :data-invalid="Boolean(errors.parallel_id)">
+                            <FieldLabel
+                                :for="`edit-teacher-parallel-${record.id}`"
+                                >Materia, periodo y paralelo</FieldLabel
+                            >
+                            <Select
+                                name="parallel_id"
+                                :default-value="record.parallel_id"
+                            >
+                                <SelectTrigger
+                                    :id="`edit-teacher-parallel-${record.id}`"
+                                    :aria-invalid="Boolean(errors.parallel_id)"
+                                    ><SelectValue
+                                        placeholder="Seleccione un paralelo"
+                                /></SelectTrigger>
+                                <SelectContent
+                                    ><SelectGroup>
+                                        <SelectItem
+                                            v-for="item in options.parallels"
+                                            :key="item.id"
+                                            :value="item.id"
+                                        >
+                                            {{ item.label }}
+                                        </SelectItem>
+                                    </SelectGroup></SelectContent
+                                >
+                            </Select>
+                            <FieldError :errors="[errors.parallel_id]" />
+                        </Field>
+                        <Field :data-invalid="Boolean(errors.valid_from)">
+                            <FieldLabel :for="`edit-teacher-from-${record.id}`"
+                                >Vigente desde</FieldLabel
+                            >
+                            <DatePicker
+                                :id="`edit-teacher-from-${record.id}`"
+                                name="valid_from"
+                                :default-value="record.valid_from"
+                                required
+                                :aria-invalid="Boolean(errors.valid_from)"
+                            />
+                            <FieldError :errors="[errors.valid_from]" />
+                        </Field>
+                        <Field :data-invalid="Boolean(errors.valid_until)">
+                            <FieldLabel :for="`edit-teacher-until-${record.id}`"
+                                >Vigente hasta</FieldLabel
+                            >
+                            <DatePicker
+                                :id="`edit-teacher-until-${record.id}`"
+                                name="valid_until"
+                                :default-value="record.valid_until ?? ''"
+                                :aria-invalid="Boolean(errors.valid_until)"
+                            />
+                            <FieldError :errors="[errors.valid_until]" />
+                        </Field>
+                    </template>
+
+                    <FormSheetActions
+                        :close="close"
+                        :processing="processing"
+                        :icon="Check"
+                        label="Guardar cambios"
+                    />
+                </FieldGroup>
+            </Form>
+        </template>
+    </FormSheet>
+</template>

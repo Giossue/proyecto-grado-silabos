@@ -303,10 +303,8 @@ it('agrupa las acciones de tabla en menus accesibles de tres puntos', function (
 
     $surfaces = [
         'resources/js/components/domain/academic/CatalogActions.vue' => 1,
+        'resources/js/components/domain/academic/CareerAcademicActions.vue' => 1,
         'resources/js/components/domain/academic/CoordinatorAssignmentsPanel.vue' => 1,
-        'resources/js/components/domain/academic/CurriculaTab.vue' => 2,
-        'resources/js/components/domain/academic/OfferingsTab.vue' => 2,
-        'resources/js/components/domain/academic/TeacherAssignmentsPanel.vue' => 1,
         'resources/js/pages/Admin/Operations/Jobs.vue' => 1,
         'resources/js/pages/Admin/Users/Index.vue' => 1,
         'resources/js/pages/Coordination/Reports/Index.vue' => 1,
@@ -331,7 +329,23 @@ it('agrupa las acciones de tabla en menus accesibles de tres puntos', function (
     );
     $this->assertIsString($catalogs);
     $this->assertSame(5, substr_count($catalogs, '<CatalogActions'));
-    $this->assertSame(12, $checked);
+
+    foreach ([
+        'resources/js/components/domain/academic/CurriculaTab.vue' => 2,
+        'resources/js/components/domain/academic/OfferingsTab.vue' => 2,
+        'resources/js/components/domain/academic/TeacherAssignmentsPanel.vue' => 1,
+    ] as $surface => $expected) {
+        $source = file_get_contents($root.'/'.$surface);
+        $this->assertIsString($source);
+        $this->assertSame(
+            $expected,
+            substr_count($source, '<CareerAcademicActions'),
+            $surface.' no usa las acciones académicas compartidas en todas sus filas.',
+        );
+        $checked += $expected;
+    }
+
+    $this->assertSame(13, $checked);
 });
 
 it('usa el mismo paginador en todas las superficies tabulares', function (): void {

@@ -21,6 +21,7 @@ el permiso, pero no lo sustituyen.
 | Capacidad | Administrador | Coordinador | Docente |
 |---|---:|---:|---:|
 | Gestionar usuarios/roles | Sí | No | No |
+| Corregir nombre o correo de una cuenta | Sí | No | No |
 | Crear, editar, archivar y reactivar facultades, carreras y catálogos globales | Sí | Consulta de alcance | Consulta asignada |
 | Asignar coordinación a una carrera | Sí | No | No |
 | Gestionar mallas y materias | No por defecto | Sí, en su carrera | Consulta asignada |
@@ -46,6 +47,9 @@ permiso específico, señal visible y auditoría detallada.
 Gestionar materias o asignaciones docentes no concede permiso para alterar el contenido
 de un sílabo. El Administrador crea las cuentas y asigna roles; el Coordinador selecciona
 docentes ya vigentes en su carrera y conserva el historial de cada asignación.
+El nombre y el correo son datos administrativos de la cuenta: solo el Administrador puede
+corregirlos. Ni el Coordinador por dirigir a una persona ni el Docente sobre su propio
+perfil puede modificarlos; el cambio se solicita a Administración.
 La edición administrativa de catálogos conserva el valor anterior y el nuevo en auditoría;
 no concede al Administrador permisos sobre mallas, materias o contenido docente.
 

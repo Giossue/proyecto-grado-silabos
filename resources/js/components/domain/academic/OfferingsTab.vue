@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import RecordStatusForm from '@/components/domain/academic/RecordStatusForm.vue';
+import CareerAcademicActions from '@/components/domain/academic/CareerAcademicActions.vue';
 import ClientFilterBar from '@/components/domain/ClientFilterBar.vue';
-import TableActionsMenu from '@/components/domain/TableActionsMenu.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
 import { Card, CardContent } from '@/components/ui/card';
 import { Field, FieldLabel } from '@/components/ui/field';
@@ -27,7 +26,7 @@ import { useClientPagination } from '@/composables/useClientPagination';
 import type { AcademicStructureProps } from '@/types/academic';
 
 const props = defineProps<
-    Pick<AcademicStructureProps, 'offerings' | 'parallels'> & {
+    Pick<AcademicStructureProps, 'offerings' | 'parallels' | 'options'> & {
         section: 'offerings' | 'parallels';
     }
 >();
@@ -142,16 +141,13 @@ const {
                                 item.active ? 'Activa' : 'Archivada'
                             }}</TableCell
                             ><TableCell class="text-right"
-                                ><TableActionsMenu
-                                    :label="`Acciones para ${item.label}`"
-                                    ><RecordStatusForm
-                                        display="menu"
-                                        scope="career"
-                                        entity="offering"
-                                        :record-id="item.id"
-                                        :active="
-                                            item.active
-                                        " /></TableActionsMenu></TableCell
+                                ><CareerAcademicActions
+                                    entity="offering"
+                                    :record="item"
+                                    :record-label="item.label"
+                                    :editable="item.editable"
+                                    :active="item.active"
+                                    :options="options" /></TableCell
                         ></TableRow> </TableBody></Table
                 ><TablePagination
                     :meta="offeringMeta"
@@ -227,16 +223,13 @@ const {
                                 item.active ? 'Activo' : 'Archivado'
                             }}</TableCell
                             ><TableCell class="text-right"
-                                ><TableActionsMenu
-                                    :label="`Acciones para el paralelo ${item.code}`"
-                                    ><RecordStatusForm
-                                        display="menu"
-                                        scope="career"
-                                        entity="parallel"
-                                        :record-id="item.id"
-                                        :active="
-                                            item.active
-                                        " /></TableActionsMenu></TableCell
+                                ><CareerAcademicActions
+                                    entity="parallel"
+                                    :record="item"
+                                    :record-label="`el paralelo ${item.code}`"
+                                    :editable="item.editable"
+                                    :active="item.active"
+                                    :options="options" /></TableCell
                         ></TableRow> </TableBody></Table
                 ><TablePagination
                     :meta="parallelMeta"

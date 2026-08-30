@@ -35,6 +35,7 @@ defineProps<
             section="curricula"
             :curricula="curricula"
             :subjects="subjects"
+            :options="options"
         />
     </PageFrame>
 </template>

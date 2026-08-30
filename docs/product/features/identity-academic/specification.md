@@ -19,6 +19,8 @@
   carrera; perder cualquiera de los dos invalida ese rol.
 - El Administrador mantiene facultades, carreras y catálogos globales, crea cuentas y
   asigna coordinaciones.
+- Solo el Administrador puede corregir el nombre o el correo de una cuenta. Coordinadores
+  y Docentes consultan esos datos en su perfil y solicitan la corrección a Administración.
 - ADM-04 presenta Facultades, Carreras, Campus, Modalidades y Periodos académicos como
   rutas hijas del submenú Estructura académica. Carreras identifica su Facultad y
   Facultades cuenta sus carreras; no se combinan en una tabla genérica ni se infiere una
@@ -31,6 +33,10 @@
   no inventa un evento.
 - El Coordinador mantiene mallas, materias, ofertas, paralelos y asignaciones docentes
   únicamente para la carrera de su rol.
+- Cada fila editable de esas colecciones ofrece Editar. La autorización vuelve a comprobar
+  el alcance por registro y la actualización conserva antes/después en auditoría.
+- Una malla publicada y sus materias no se reescriben. Una oferta, paralelo o asignación
+  ya incorporada a un sílabo se archiva y reemplaza para no alterar el expediente.
 - La navegación del Coordinador separa Mallas de Materias y Ofertas de Paralelos en rutas
   hijas; cada pantalla muestra únicamente la colección y el alta correspondiente.
 - Estructura, mallas, materias y ofertas usan identificadores estables. La posición de una
