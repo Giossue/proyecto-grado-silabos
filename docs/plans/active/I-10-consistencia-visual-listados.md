@@ -8,7 +8,7 @@ lector de pantalla y dispositivos reales permanece dentro de I-08 y `PV-19`.
 El 2026-08-30 se incorporó el patrón global de encabezado y filas alternas solicitado
 para distinguir registros consecutivos.
 El 2026-08-30 se confirmó además que las cards métricas pertenecen exclusivamente al
-Dashboard; las demás pantallas conservan las cifras útiles en resúmenes compactos.
+Dashboard; las demás pantallas no presentan resúmenes métricos independientes.
 
 ## Trazabilidad
 
@@ -40,9 +40,14 @@ Dashboard; las demás pantallas conservan las cifras útiles en resúmenes compa
   dentro de una superficie semántica, un único `h1`, descripción, separación responsive
   y espacios opcionales para regreso, estado y acciones. Configuración aplica el patrón
   una vez en su layout y conserva Perfil, Seguridad y Apariencia como subsecciones.
-- `StatTile` y cualquier `Card` cuyo contenido principal sea un conteo o porcentaje se
-  reservan al Dashboard. COR-04 y COR-12 muestran sus cifras en listas de definición;
-  COR-13 usa definiciones en línea y DOC-03..04 una barra de completitud compacta.
+- Toda columna **Acciones** usa exclusivamente `TableActionsMenu`: la celda muestra el
+  icono de tres puntos y las acciones aparecen al abrirlo. La regla también aplica a una
+  única acción y a registros bloqueados, cuyo menú explica el estado con una opción
+  deshabilitada.
+- `StatTile`, las cards métricas y cualquier resumen independiente cuyo contenido
+  principal sea un conteo, total, promedio o porcentaje se reservan al Dashboard.
+  COR-04, COR-12, COR-13 y DOC-03..04 no muestran bloques métricos; los valores que
+  formen parte del contexto operativo de una fila o contenido pueden permanecer.
 
 ## Pasos
 
@@ -53,8 +58,10 @@ Dashboard; las demás pantallas conservan las cifras útiles en resúmenes compa
 - [x] Aplicar una paginación compartida a todos los listados tabulares.
 - [x] Diferenciar encabezados y registros consecutivos con colores alternos compartidos.
 - [x] Agrupar las acciones de tabla en un menú compartido de tres puntos.
+- [x] Incorporar al patrón las materias y relaciones del desglose manual de malla.
 - [x] Normalizar icono, título, descripción y espaciado de todos los módulos autenticados.
-- [x] Retirar las cards métricas fuera del Dashboard y proteger esa frontera.
+- [x] Retirar cards y resúmenes métricos independientes fuera del Dashboard y proteger
+      esa frontera.
 - [x] Cubrir el patrón con pruebas de arquitectura y pruebas funcionales de consulta.
 - [x] Actualizar producto, arquitectura, trazabilidad y evidencia de verificación.
 
@@ -62,16 +69,17 @@ Dashboard; las demás pantallas conservan las cifras útiles en resúmenes compa
 
 - `ManagementCreationUiTest` inventaría 24 superficies tabulares y exige exactamente un
   `TablePagination` compartido por cada una; también protege el orden búsqueda → filtros
-  → aplicar, 16 superficies de acciones agrupadas, 29 páginas operativas y el layout de
-  Configuración con `PageFrame`, los submenús de ADM-04 y la separación de tokens
-  visuales.
+  → aplicar, descubre automáticamente las 16 columnas **Acciones** actuales y exige el
+  menú de tres puntos compartido, además de proteger 29 páginas operativas y el layout de
+  Configuración con `PageFrame`, los submenús de ADM-04 y la separación de tokens.
 - `ResponsiveTableTest` protege los tokens del encabezado, las filas impares/pares y la
   continuidad del color en las celdas fijas de acciones y detalle móvil.
-- `MetricCardsScopeTest` reserva `StatTile` al Dashboard y comprueba que convocatorias,
-  informes, mallas y sílabos usen sus representaciones compactas sin cards métricas.
+- `MetricCardsScopeTest` reserva `StatTile` y los resúmenes métricos al Dashboard y
+  comprueba que convocatorias, informes, mallas y sílabos no los reintroduzcan con otra
+  presentación visual.
 - `composer verify` aprobó el ajuste del 2026-08-30 sobre una base PostgreSQL temporal
   aislada: escaneo de secretos, ESLint, Prettier, TypeScript, Pint, Larastan, 268 pruebas
-  con 2.870 aserciones y build Vite de producción.
+  con 3.178 aserciones y build Vite de producción.
 - `AcademicStructureTest` comprueba las cinco rutas hijas de Estructura académica y la
   redirección compatible desde la ruta anterior.
 - `DocumentOperationsTest` e `InstitutionalImportTest` —esta última retirada con el módulo

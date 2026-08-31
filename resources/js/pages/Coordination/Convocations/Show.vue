@@ -167,43 +167,6 @@ const {
             </AlertDescription>
         </Alert>
 
-        <section class="space-y-2" aria-labelledby="convocation-summary-title">
-            <h2 id="convocation-summary-title" class="text-sm font-medium">
-                Resumen de expedientes
-            </h2>
-            <dl
-                class="flex flex-wrap gap-x-8 gap-y-3 border-y py-4"
-                aria-label="Resumen de expedientes de la convocatoria"
-            >
-                <div class="min-w-32 space-y-1">
-                    <dt class="text-sm text-muted-foreground">Expedientes</dt>
-                    <dd class="font-semibold tabular-nums">
-                        {{ convocation.counts.total }}
-                    </dd>
-                </div>
-                <div class="min-w-32 space-y-1">
-                    <dt class="text-sm text-muted-foreground">Sin iniciar</dt>
-                    <dd class="font-semibold tabular-nums">
-                        {{ convocation.counts.not_started }}
-                    </dd>
-                </div>
-                <div class="min-w-32 space-y-1">
-                    <dt class="text-sm text-muted-foreground">
-                        En elaboración
-                    </dt>
-                    <dd class="font-semibold tabular-nums">
-                        {{ convocation.counts.draft }}
-                    </dd>
-                </div>
-                <div class="min-w-32 space-y-1">
-                    <dt class="text-sm text-muted-foreground">Aprobados</dt>
-                    <dd class="font-semibold tabular-nums">
-                        {{ convocation.counts.approved }}
-                    </dd>
-                </div>
-            </dl>
-        </section>
-
         <div class="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]">
             <Card>
                 <CardHeader>

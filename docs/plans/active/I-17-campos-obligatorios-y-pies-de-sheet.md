@@ -39,7 +39,7 @@ dentro de PV-19.
 - `composer verify`: 257 pruebas y 2397 aserciones; escaneo de secretos, Pint, PHPStan,
   ESLint, Prettier, tipos Vue y compilación Vite en verde.
 - `RequiredFieldsAndSheetFooterTest`: protege el indicador accesible, los 18 formularios
-  `FormSheet`, el pie fijo y las reglas mínimas/condicionales del servidor.
+  `FormSheet`, el pie fijo a todo el ancho y las reglas mínimas/condicionales del servidor.
 - Pruebas funcionales enfocadas de autenticación, configuración personal, estructura
   académica, configuración y sílabos: 104 pruebas y 952 aserciones en verde.
 

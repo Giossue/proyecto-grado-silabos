@@ -33,9 +33,11 @@ it('mantiene las acciones de todos los formularios sheet en un pie fijo', functi
         ->toContain('flex-1 overflow-y-auto px-4 pb-28');
     expect($actions)
         ->toContain('<SheetFooter')
-        ->toContain('fixed inset-x-0 bottom-0')
+        ->toContain('absolute inset-x-0 bottom-0')
         ->toContain('bg-card')
-        ->toContain('safe-area-inset-bottom');
+        ->toContain('safe-area-inset-bottom')
+        ->not->toContain('sm:left-auto')
+        ->not->toContain('sm:max-w-lg');
     expect($mobileFilters)
         ->toContain('max-sm:overflow-hidden')
         ->toContain('max-sm:flex-1 max-sm:overflow-y-auto')

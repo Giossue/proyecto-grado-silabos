@@ -14,7 +14,6 @@ import { computed, onBeforeUnmount, reactive, ref } from 'vue';
 import AiAssistanceController from '@/actions/App/Modules/AiAssistance/Presentation/Http/Controllers/AiAssistanceController';
 import SyllabusController from '@/actions/App/Modules/Syllabus/Presentation/Http/Controllers/SyllabusController';
 import PageFrame from '@/components/domain/PageFrame.vue';
-import SyllabusCompletionStatus from '@/components/domain/syllabus/SyllabusCompletionStatus.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -180,7 +179,6 @@ const fieldStates = reactive<Record<string, FieldState>>(
 );
 
 const lockVersion = ref(props.syllabus.lock_version);
-const completion = ref(props.syllabus.completion);
 const savedAt = ref(props.syllabus.saved_at);
 const globalSaving = ref(false);
 const validating = ref(false);
@@ -424,7 +422,6 @@ const saveField = async (field: DraftField): Promise<void> => {
         const payload = (await response.json()) as {
             message?: string;
             lock_version?: number;
-            completion?: number;
             saved_at?: string;
             current_lock_version?: number;
             errors?: Record<string, string[]>;
@@ -452,7 +449,6 @@ const saveField = async (field: DraftField): Promise<void> => {
         }
 
         lockVersion.value = payload.lock_version ?? lockVersion.value;
-        completion.value = payload.completion ?? completion.value;
         savedAt.value = payload.saved_at ?? savedAt.value;
 
         if (field.type === 'repeatable' && payload.rows) {
@@ -1061,10 +1057,6 @@ onBeforeUnmount(() => {
                         </article>
                     </CardContent>
                 </Card>
-                <SyllabusCompletionStatus
-                    :value="completion"
-                    description="Campos obligatorios completos."
-                />
                 <Card>
                     <CardHeader>
                         <CardTitle>Colaboradores</CardTitle>

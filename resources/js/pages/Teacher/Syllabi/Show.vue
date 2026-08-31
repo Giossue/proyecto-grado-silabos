@@ -11,7 +11,6 @@ import {
 import ReviewController from '@/actions/App/Modules/Syllabus/Presentation/Http/Controllers/ReviewController';
 import SyllabusController from '@/actions/App/Modules/Syllabus/Presentation/Http/Controllers/SyllabusController';
 import PageFrame from '@/components/domain/PageFrame.vue';
-import SyllabusCompletionStatus from '@/components/domain/syllabus/SyllabusCompletionStatus.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -46,7 +45,6 @@ type SyllabusSummary = {
     convocation: string;
     period: string;
     state: string;
-    completion: number;
     saved_at: string | null;
     parallels: string[];
     teachers: string[];
@@ -376,11 +374,6 @@ const observationState = (state: string): string =>
                         </div>
                     </CardContent>
                 </Card>
-
-                <SyllabusCompletionStatus
-                    :value="syllabus.completion"
-                    description="Campos obligatorios con contenido válido."
-                />
             </div>
         </div>
     </PageFrame>

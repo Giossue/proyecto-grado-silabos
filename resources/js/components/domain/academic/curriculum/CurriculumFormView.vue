@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3';
-import { Link2, Pencil, Trash2 } from '@lucide/vue';
+import { Link2, LockKeyhole, Pencil, Trash2 } from '@lucide/vue';
 import { computed } from 'vue';
 import CareerAcademicStructureController from '@/actions/App/Modules/Academic/Presentation/Http/Controllers/CareerAcademicStructureController';
+import TableActionsMenu from '@/components/domain/TableActionsMenu.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
 import { Button } from '@/components/ui/button';
 import {
@@ -12,6 +13,7 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
+import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import {
     Field,
     FieldError,
@@ -247,25 +249,21 @@ const {
                                     {{ field.value ?? '—' }}
                                 </TableCell>
                                 <TableCell class="text-right">
-                                    <Button
-                                        v-if="curriculum.editable"
-                                        type="button"
-                                        size="sm"
-                                        variant="outline"
-                                        @click="emit('edit', subject)"
+                                    <TableActionsMenu
+                                        :label="`Acciones para ${subject.name}`"
                                     >
-                                        <Pencil
-                                            data-icon="inline-start"
-                                            aria-hidden="true"
-                                        />
-                                        Editar
-                                    </Button>
-                                    <span
-                                        v-else
-                                        class="text-sm text-muted-foreground"
-                                    >
-                                        Solo lectura
-                                    </span>
+                                        <DropdownMenuItem
+                                            v-if="curriculum.editable"
+                                            @select="emit('edit', subject)"
+                                        >
+                                            <Pencil aria-hidden="true" />
+                                            Editar
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem v-else disabled>
+                                            <LockKeyhole aria-hidden="true" />
+                                            Malla publicada: solo lectura
+                                        </DropdownMenuItem>
+                                    </TableActionsMenu>
                                 </TableCell>
                             </TableRow>
                         </TableBody>
@@ -334,37 +332,41 @@ const {
                                     }}
                                 </TableCell>
                                 <TableCell class="text-right">
-                                    <Form
-                                        v-if="curriculum.editable"
-                                        v-bind="
-                                            CareerAcademicStructureController.destroySubjectRequirement.form(
-                                                {
-                                                    curriculum: curriculum.id,
-                                                    requirement: requirement.id,
-                                                },
-                                            )
-                                        "
-                                        v-slot="{ processing }"
+                                    <TableActionsMenu
+                                        :label="`Acciones para la relación hacia ${subjectById.get(requirement.subject_id)?.name ?? 'materia'}`"
                                     >
-                                        <Button
-                                            type="submit"
-                                            size="sm"
-                                            variant="outline"
-                                            :disabled="processing"
-                                            :aria-label="`Eliminar relación hacia ${subjectById.get(requirement.subject_id)?.name ?? 'materia'}`"
+                                        <Form
+                                            v-if="curriculum.editable"
+                                            v-bind="
+                                                CareerAcademicStructureController.destroySubjectRequirement.form(
+                                                    {
+                                                        curriculum:
+                                                            curriculum.id,
+                                                        requirement:
+                                                            requirement.id,
+                                                    },
+                                                )
+                                            "
+                                            v-slot="{ processing, submit }"
                                         >
-                                            <Spinner
-                                                v-if="processing"
-                                                data-icon="inline-start"
-                                            />
-                                            <Trash2
-                                                v-else
-                                                data-icon="inline-start"
-                                                aria-hidden="true"
-                                            />
-                                            Eliminar
-                                        </Button>
-                                    </Form>
+                                            <DropdownMenuItem
+                                                variant="destructive"
+                                                :disabled="processing"
+                                                @select="submit()"
+                                            >
+                                                <Spinner v-if="processing" />
+                                                <Trash2
+                                                    v-else
+                                                    aria-hidden="true"
+                                                />
+                                                Eliminar relación
+                                            </DropdownMenuItem>
+                                        </Form>
+                                        <DropdownMenuItem v-else disabled>
+                                            <LockKeyhole aria-hidden="true" />
+                                            Malla publicada: solo lectura
+                                        </DropdownMenuItem>
+                                    </TableActionsMenu>
                                 </TableCell>
                             </TableRow>
                         </TableBody>

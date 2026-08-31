@@ -224,62 +224,6 @@ const stateLabel = (value: string): string =>
             </CardContent>
         </Card>
 
-        <section class="space-y-2" aria-labelledby="report-summary-title">
-            <div class="space-y-1">
-                <h2 id="report-summary-title" class="text-sm font-medium">
-                    Resumen del informe
-                </h2>
-                <p class="text-sm text-muted-foreground">
-                    Acción docente agrupa sin iniciar, borrador y corrección
-                    solicitada. Completitud es el promedio de campos
-                    obligatorios completos, no una meta.
-                </p>
-            </div>
-            <dl
-                class="flex flex-wrap gap-x-8 gap-y-3 border-y py-4"
-                aria-label="Resumen de indicadores del informe"
-            >
-                <div class="min-w-36 space-y-1">
-                    <dt class="text-sm text-muted-foreground">
-                        Expedientes filtrados
-                    </dt>
-                    <dd class="font-semibold tabular-nums">
-                        {{ indicators.total }}
-                    </dd>
-                </div>
-                <div class="min-w-36 space-y-1">
-                    <dt class="text-sm text-muted-foreground">
-                        Acción docente
-                    </dt>
-                    <dd class="font-semibold tabular-nums">
-                        {{ indicators.teacher_action }}
-                    </dd>
-                </div>
-                <div class="min-w-36 space-y-1">
-                    <dt class="text-sm text-muted-foreground">
-                        Acción de coordinación
-                    </dt>
-                    <dd class="font-semibold tabular-nums">
-                        {{ indicators.coordination_action }}
-                    </dd>
-                </div>
-                <div class="min-w-36 space-y-1">
-                    <dt class="text-sm text-muted-foreground">Aprobados</dt>
-                    <dd class="font-semibold tabular-nums">
-                        {{ indicators.approved }}
-                    </dd>
-                </div>
-                <div class="min-w-36 space-y-1">
-                    <dt class="text-sm text-muted-foreground">
-                        Completitud media
-                    </dt>
-                    <dd class="font-semibold tabular-nums">
-                        {{ indicators.average_completion.toFixed(1) }} %
-                    </dd>
-                </div>
-            </dl>
-        </section>
-
         <Card>
             <CardHeader>
                 <CardTitle>Distribución por convocatoria</CardTitle>

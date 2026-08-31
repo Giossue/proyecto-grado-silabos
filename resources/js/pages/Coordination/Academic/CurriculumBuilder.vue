@@ -102,24 +102,6 @@ const openSubject = (subject: CurriculumBuilderSubject): void => {
                 </TabsTrigger>
             </TabsList>
             <TabsContent value="breakdown" class="flex flex-col gap-6">
-                <dl
-                    v-if="fieldTotals.length > 0"
-                    class="flex flex-wrap gap-x-8 gap-y-3 border-y py-4"
-                    aria-label="Totales de la malla"
-                >
-                    <div
-                        v-for="field in fieldTotals"
-                        :key="field.id"
-                        class="flex items-baseline gap-2"
-                    >
-                        <dt class="text-sm text-muted-foreground">
-                            Total {{ field.label }}
-                        </dt>
-                        <dd class="font-semibold tabular-nums">
-                            {{ field.value }}
-                        </dd>
-                    </div>
-                </dl>
                 <CurriculumFormView v-bind="props" @edit="openSubject" />
             </TabsContent>
             <TabsContent value="builder">

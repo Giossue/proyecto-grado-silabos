@@ -33,7 +33,7 @@ withDefaults(
         entre las dos no haya duda de cuál es cuál.
     -->
     <SheetFooter
-        class="fixed inset-x-0 bottom-0 border-t bg-card pb-[calc(1rem+env(safe-area-inset-bottom))] sm:left-auto sm:max-w-lg"
+        class="absolute inset-x-0 bottom-0 border-t bg-card pb-[calc(1rem+env(safe-area-inset-bottom))]"
     >
         <Field orientation="horizontal" class="justify-end">
             <Button type="button" variant="outline" @click="close">

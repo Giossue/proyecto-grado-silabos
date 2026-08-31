@@ -287,7 +287,8 @@ it('ofrece desglose y constructor visual sobre el mismo contrato de malla', func
         ->toBeString()
         ->toContain('storeSubjectRequirement.form')
         ->toContain('destroySubjectRequirement.form')
-        ->toContain('@click="emit(\'edit\', subject)"');
+        ->toContain('@select="emit(\'edit\', subject)"')
+        ->toContain('<TableActionsMenu');
     expect($visualForm)
         ->toBeString()
         ->toContain("store.form('subject')")
@@ -394,6 +395,8 @@ it('agrupa las acciones de tabla en menus accesibles de tres puntos', function (
         ->toContain('<DropdownMenuTrigger as-child>')
         ->toContain('<DropdownMenuGroup>')
         ->toContain('<MoreHorizontal')
+        ->toContain('data-slot="table-actions"')
+        ->toContain('size="icon-sm"')
         ->toContain(':aria-label="label"');
 
     $surfaces = [
@@ -405,6 +408,7 @@ it('agrupa las acciones de tabla en menus accesibles de tres puntos', function (
         'resources/js/pages/Coordination/Reports/Index.vue' => 1,
         'resources/js/pages/Coordination/Reviews/Index.vue' => 1,
         'resources/js/pages/Syllabi/Documents.vue' => 1,
+        'resources/js/components/domain/academic/curriculum/CurriculumFormView.vue' => 2,
     ];
     $checked = 0;
 
@@ -440,7 +444,51 @@ it('agrupa las acciones de tabla en menus accesibles de tres puntos', function (
         $checked += $expected;
     }
 
-    $this->assertSame(12, $checked);
+    $this->assertSame(14, $checked);
+
+    $vueFiles = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($root.'/resources/js'),
+    );
+    $checkedColumns = 0;
+
+    foreach ($vueFiles as $file) {
+        if (! $file->isFile() || $file->getExtension() !== 'vue') {
+            continue;
+        }
+
+        $source = file_get_contents($file->getPathname());
+        $this->assertIsString($source);
+        preg_match_all(
+            '/<Table(?:\s[^>]*)?>(.*?)<\/Table>/s',
+            $source,
+            $tables,
+        );
+
+        foreach ($tables[0] as $table) {
+            $actionColumns = preg_match_all(
+                '/<TableHead\b[^>]*>\s*Acciones\s*<\/TableHead>/s',
+                $table,
+            );
+
+            if ($actionColumns === 0) {
+                continue;
+            }
+
+            $sharedMenus = substr_count($table, '<TableActionsMenu')
+                + substr_count($table, '<CareerAcademicActions')
+                + substr_count($table, '<CatalogActions');
+            $relativePath = str_replace($root.'/', '', $file->getPathname());
+
+            $this->assertSame(
+                $actionColumns,
+                $sharedMenus,
+                $relativePath.' tiene una columna Acciones sin el menú compartido de tres puntos.',
+            );
+            $checkedColumns += $actionColumns;
+        }
+    }
+
+    $this->assertGreaterThan(0, $checkedColumns);
 });
 
 it('usa el mismo paginador en todas las superficies tabulares', function (): void {

@@ -71,7 +71,7 @@ it('reserva las cards metricas para el dashboard', function (): void {
     expect(array_values(array_unique($definitionCardViolations)))->toBeEmpty();
 });
 
-it('conserva los indicadores operativos fuera del dashboard en formatos compactos', function (): void {
+it('elimina los resumenes metricos independientes fuera del dashboard', function (): void {
     $root = dirname(__DIR__, 2);
     $convocation = file_get_contents(
         $root.'/resources/js/pages/Coordination/Convocations/Show.vue',
@@ -88,30 +88,25 @@ it('conserva los indicadores operativos fuera del dashboard en formatos compacto
     $syllabusShow = file_get_contents(
         $root.'/resources/js/pages/Teacher/Syllabi/Show.vue',
     );
-    $completion = file_get_contents(
-        $root.'/resources/js/components/domain/syllabus/SyllabusCompletionStatus.vue',
-    );
-
     expect($convocation)
         ->toBeString()
-        ->toContain('Resumen de expedientes')
-        ->toContain('aria-label="Resumen de expedientes de la convocatoria"');
+        ->not->toContain('Resumen de expedientes')
+        ->not->toContain('convocation.counts.total');
     expect($report)
         ->toBeString()
-        ->toContain('Resumen del informe')
-        ->toContain('aria-label="Resumen de indicadores del informe"');
+        ->not->toContain('Resumen del informe')
+        ->not->toContain('indicators.total')
+        ->not->toContain('indicators.average_completion');
     expect($curriculum)
         ->toBeString()
-        ->toContain('aria-label="Totales de la malla"')
-        ->not->toContain('class="rounded-lg border bg-card px-4 py-3 shadow-surface"');
+        ->not->toContain('Totales de la malla')
+        ->not->toContain('fieldTotals');
     expect($syllabusEdit)
         ->toBeString()
-        ->toContain('<SyllabusCompletionStatus');
+        ->not->toContain('<SyllabusCompletionStatus')
+        ->not->toContain('completion.toFixed');
     expect($syllabusShow)
         ->toBeString()
-        ->toContain('<SyllabusCompletionStatus');
-    expect($completion)
-        ->toBeString()
-        ->toContain('role="progressbar"')
-        ->not->toContain('<Card');
+        ->not->toContain('<SyllabusCompletionStatus')
+        ->not->toContain('syllabus.completion');
 });

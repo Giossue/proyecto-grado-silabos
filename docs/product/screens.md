@@ -71,9 +71,10 @@
   título principal único, descripción y espaciado responsive. Regreso, estado y acciones
   ocupan posiciones estables; Configuración comparte el encabezado en su layout y trata
   Perfil, Seguridad y Apariencia como subsecciones.
-- Las cards de métricas se reservan exclusivamente para la pantalla Dashboard de cada
-  rol. Fuera del Dashboard, los conteos y porcentajes necesarios se presentan como texto,
-  definición, tabla o barra de estado compacta; no se envuelven en `Card` ni `StatTile`.
+- Las cards y los resúmenes métricos independientes se reservan exclusivamente para la
+  pantalla Dashboard de cada rol. Fuera del Dashboard no se presentan bloques de
+  conteos, totales, promedios o porcentajes; un valor solo permanece cuando forma parte
+  del contexto operativo de un registro, una tabla o el contenido que se está editando.
 - Los dashboards priorizan tareas vencidas, bloqueos y próximos pasos; evitan métricas
   decorativas.
 - Listados de volumen variable usan URL para filtros, orden y paginación.
@@ -83,9 +84,12 @@
   cuando el resultado ocupa una sola página.
 - Toda tabla diferencia visualmente el encabezado y alterna el fondo de sus registros;
   el primer registro usa la superficie base y el segundo el tono alterno.
-- Las celdas **Acciones** muestran un único botón de tres puntos. El menú nombra el
-  registro para tecnologías asistivas, agrupa todas las opciones aplicables y explica
-  mediante una opción deshabilitada cuando no existe una acción disponible.
+- Toda columna **Acciones** muestra únicamente el botón de tres puntos de
+  `TableActionsMenu`, incluso cuando solo existe una opción o el registro es de solo
+  lectura. Al abrirlo, el menú nombra el registro para tecnologías asistivas, agrupa las
+  opciones aplicables y explica mediante una opción deshabilitada cuando no existe una
+  acción disponible; nunca se muestran botones, enlaces o texto de acción directamente
+  en la celda.
 - En pantallas de gestión con listados, el formulario de alta no ocupa la vista inicial:
   una acción principal abre un panel lateral desde la derecha, conserva los errores en el
   panel y lo cierra únicamente después de una respuesta exitosa.
