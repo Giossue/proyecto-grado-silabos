@@ -68,7 +68,7 @@ constructor visual.
 - `ManagementCreationUiTest` protege cards, dos apartados, navegación y composición
   shadcn-vue.
 - `composer verify`: escaneo de secretos, ESLint, Prettier, TypeScript, Pint, Larastan,
-  265 pruebas con 2.536 aserciones y build Vite en verde.
+  270 pruebas con 3.208 aserciones y build Vite en verde.
 - En el entorno local se aplicó únicamente la migración aditiva `000017`; la migración
   destructiva `000016` permanece pendiente de una ejecución autorizada aparte.
 
