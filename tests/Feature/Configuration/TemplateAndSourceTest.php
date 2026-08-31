@@ -173,6 +173,44 @@ class TemplateAndSourceTest extends TestCase
         $this->assertDatabaseMissing('definiciones_campo', ['bloque_plantilla_id' => $second->id]);
     }
 
+    public function test_administrator_manages_template_blocks_separately_from_their_fields(): void
+    {
+        $version = $this->createTemplate();
+        $first = $version->sections()->firstOrFail();
+
+        $this->actingAsAdministrator()
+            ->post(route('admin.templates.sections.store', $version), [
+                'title' => 'Recursos y materiales',
+                'key' => 'recursos_materiales',
+                'first_field_label' => 'Recursos principales',
+                'first_field_key' => 'recursos_principales',
+                'first_field_content_type' => 'table',
+            ])
+            ->assertRedirect();
+
+        $created = $version->fresh()->sections()
+            ->where('titulo', 'Recursos y materiales')
+            ->firstOrFail();
+        $this->assertSame('Recursos principales', $created->blocks()->firstOrFail()->fields()->firstOrFail()->etiqueta);
+
+        $sectionIds = $version->fresh()->sections()->pluck('id')->all();
+        $orderedIds = [$created->id, ...array_values(array_filter($sectionIds, fn (string $id): bool => $id !== $created->id))];
+
+        $this->actingAsAdministrator()
+            ->patch(route('admin.templates.sections.reorder', $version), ['section_ids' => $orderedIds])
+            ->assertRedirect();
+
+        $this->assertSame(1, $created->fresh()->posicion);
+        $this->assertSame(2, $first->fresh()->posicion);
+
+        $this->actingAsAdministrator()
+            ->delete(route('admin.templates.sections.destroy', ['version' => $version, 'section' => $created]))
+            ->assertRedirect();
+
+        $this->assertDatabaseMissing('secciones_plantilla', ['id' => $created->id]);
+        $this->assertDatabaseMissing('bloques_plantilla', ['seccion_plantilla_id' => $created->id]);
+    }
+
     public function test_coordinator_creates_and_activates_scoped_source_with_immutable_fragment(): void
     {
         $version = $this->createSourceAsCoordinator('Perfil de egreso');

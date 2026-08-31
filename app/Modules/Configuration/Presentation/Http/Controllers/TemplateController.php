@@ -8,9 +8,12 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
 use App\Modules\Configuration\Application\Actions\CloneTemplateVersion;
 use App\Modules\Configuration\Application\Actions\CreateSyllabusTemplate;
 use App\Modules\Configuration\Application\Actions\DeleteTemplateBlock;
+use App\Modules\Configuration\Application\Actions\DeleteTemplateSection;
 use App\Modules\Configuration\Application\Actions\PublishTemplateVersion;
 use App\Modules\Configuration\Application\Actions\ReorderTemplateBlocks;
+use App\Modules\Configuration\Application\Actions\ReorderTemplateSections;
 use App\Modules\Configuration\Application\Actions\SaveFieldDefinition;
+use App\Modules\Configuration\Application\Actions\SaveTemplateSection;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\FieldDefinition;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateBlock;
@@ -19,7 +22,9 @@ use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateVersion;
 use App\Modules\Configuration\Presentation\Http\Requests\CreateTemplateRequest;
 use App\Modules\Configuration\Presentation\Http\Requests\ManageTemplatesRequest;
 use App\Modules\Configuration\Presentation\Http\Requests\ReorderTemplateBlocksRequest;
+use App\Modules\Configuration\Presentation\Http\Requests\ReorderTemplateSectionsRequest;
 use App\Modules\Configuration\Presentation\Http\Requests\SaveFieldDefinitionRequest;
+use App\Modules\Configuration\Presentation\Http\Requests\SaveTemplateSectionRequest;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -140,7 +145,7 @@ class TemplateController extends Controller
         abort_unless($actor instanceof User, 401);
         $action->create($version->id, $request->validated(), $actor, $request);
 
-        return back()->with('success', 'Bloque agregado al borrador.');
+        return back()->with('success', 'Campo agregado al bloque.');
     }
 
     public function updateField(
@@ -153,6 +158,32 @@ class TemplateController extends Controller
         $actor = $request->user();
         abort_unless($actor instanceof User, 401);
         $action->update($field, $request->validated(), $actor, $request);
+
+        return back()->with('success', 'Campo actualizado.');
+    }
+
+    public function storeSection(
+        TemplateVersion $version,
+        SaveTemplateSectionRequest $request,
+        SaveTemplateSection $action,
+    ): RedirectResponse {
+        $actor = $request->user();
+        abort_unless($actor instanceof User, 401);
+        $action->create($version->id, $request->validated(), $actor, $request);
+
+        return back()->with('success', 'Bloque agregado al borrador.');
+    }
+
+    public function updateSection(
+        TemplateVersion $version,
+        TemplateSection $section,
+        SaveTemplateSectionRequest $request,
+        SaveTemplateSection $action,
+    ): RedirectResponse {
+        abort_unless($section->version_plantilla_id === $version->id, 404);
+        $actor = $request->user();
+        abort_unless($actor instanceof User, 401);
+        $action->update($section, $request->validated(), $actor, $request);
 
         return back()->with('success', 'Bloque actualizado.');
     }
@@ -172,6 +203,23 @@ class TemplateController extends Controller
             $request,
         );
 
+        return back()->with('success', 'Orden de campos actualizado.');
+    }
+
+    public function reorderSections(
+        TemplateVersion $version,
+        ReorderTemplateSectionsRequest $request,
+        ReorderTemplateSections $action,
+    ): RedirectResponse {
+        $actor = $request->user();
+        abort_unless($actor instanceof User, 401);
+        $action->execute(
+            $version,
+            $request->collect('section_ids')->filter(fn (mixed $id): bool => is_string($id))->values()->all(),
+            $actor,
+            $request,
+        );
+
         return back()->with('success', 'Orden de bloques actualizado.');
     }
 
@@ -185,6 +233,20 @@ class TemplateController extends Controller
         $actor = $request->user();
         abort_unless($actor instanceof User, 401);
         $action->execute($block, $actor, $request);
+
+        return back()->with('success', 'Campo eliminado.');
+    }
+
+    public function destroySection(
+        TemplateVersion $version,
+        TemplateSection $section,
+        ManageTemplatesRequest $request,
+        DeleteTemplateSection $action,
+    ): RedirectResponse {
+        abort_unless($section->version_plantilla_id === $version->id, 404);
+        $actor = $request->user();
+        abort_unless($actor instanceof User, 401);
+        $action->execute($section, $actor, $request);
 
         return back()->with('success', 'Bloque eliminado.');
     }

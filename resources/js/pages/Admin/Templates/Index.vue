@@ -181,9 +181,9 @@ defineOptions({
                                                         version.id,
                                                     )
                                                 "
-                                                ><Eye aria-hidden="true" />Abrir
-                                                versión
-                                                {{ version.number }}</Link
+                                                ><Eye
+                                                    aria-hidden="true"
+                                                />Abrir</Link
                                             ></DropdownMenuItem
                                         ></template
                                     ><DropdownMenuItem v-else disabled

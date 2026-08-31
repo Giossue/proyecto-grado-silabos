@@ -9,7 +9,11 @@
 
 ## Comportamiento
 
-- Una plantilla borrador se compone de secciones, bloques y campos tipados.
+- Una plantilla borrador se compone de bloques y campos tipados. En la interfaz, un
+  **bloque** es una parte principal del documento (por ejemplo, «Evaluación») y un
+  **campo** es un contenido dentro de ese bloque (por ejemplo, «Criterios de
+  evaluación»). Las entidades de persistencia conservan su estructura interna sin
+  exponerla a quien configura la plantilla.
 - Las definiciones dinámicas nunca crean o eliminan tablas físicas.
 - La previsualización usa datos de prueba antes de publicar.
 - Publicar crea una versión inmutable con identidad y vigencia.

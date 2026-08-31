@@ -31,7 +31,7 @@ it('mantiene todas las altas de gestion dentro del sheet derecho compartido', fu
             'page' => 'resources/js/pages/Admin/Templates/Show.vue',
             'component' => 'TemplateBlockBuilder',
             'component_file' => 'resources/js/components/domain/configuration/TemplateBlockBuilder.vue',
-            'action' => 'TemplateController.storeField.form',
+            'action' => 'TemplateController.storeSection.form',
             'inline' => true,
         ],
         'Administrador o Coordinador · fuentes' => [
@@ -123,7 +123,7 @@ it('mantiene todas las altas de gestion dentro del sheet derecho compartido', fu
         );
         $this->assertStringContainsString(
             ($surface['inline'] ?? false) === true
-                ? '@success="addingSectionId = null"'
+                ? '@success="addingBlock = false"'
                 : '@success="close"',
             $component,
             ($surface['inline'] ?? false) === true
@@ -600,10 +600,13 @@ it('presenta la publicación y los bloques de plantilla con etiquetas breves', f
     expect($builder)
         ->toBeString()
         ->toContain('Nombre del bloque')
+        ->toContain('Nombre del campo')
         ->toContain('Tipo de contenido')
         ->toContain('Agregar bloque')
+        ->toContain('Agregar campo')
         ->toContain('draggable="true"')
-        ->toContain('persistOrder')
+        ->toContain('persistBlockOrder')
+        ->toContain('persistFieldOrder')
         ->toContain('copySections')
         ->not->toContain('Bloque</FieldLabel>')
         ->not->toContain('Clave estable')
@@ -614,7 +617,7 @@ it('abre los detalles de los listados desde sus acciones', function (): void {
     $root = dirname(__DIR__, 2);
     $surfaces = [
         'resources/js/pages/Admin/Templates/Index.vue' => [
-            ['Abrir', 'versión'],
+            ['Abrir'],
             'TemplateController.show',
         ],
         'resources/js/pages/Coordination/Convocations/Index.vue' => [

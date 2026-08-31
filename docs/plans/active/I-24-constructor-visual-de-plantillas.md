@@ -8,11 +8,12 @@ reordenamiento mediante arrastrar y soltar.
 
 ## Alcance y supuesto confirmado por producto
 
-- Las secciones académicas actuales se conservan como contenedores del sílabo.
-- Los bloques dentro de cada sección son configurables: no existe un catálogo fijo de
-  bloques ni se pide elegir uno existente para crear contenido.
-- Cada bloque tendrá un nombre visible y un tipo de contenido pedagógico. Los primeros
-  tipos estándar serán texto, tabla, lista con viñetas y lista numerada.
+- Un bloque es una parte principal del documento, como «Evaluación»; no es un campo de
+  contenido ni un catálogo fijo.
+- Cada bloque contiene uno o varios campos. Cada campo tendrá un nombre visible y un
+  tipo de contenido pedagógico: texto, tabla, lista con viñetas o lista numerada.
+- Se puede crear, ordenar y eliminar bloques; dentro de cada bloque se puede crear,
+  ordenar y eliminar campos de forma independiente.
 - Los códigos técnicos y las referencias `PV-#` no se muestran en la interfaz; se
   mantienen solo en documentación y reglas internas cuando sean necesarias.
 
@@ -30,6 +31,7 @@ reordenamiento mediante arrastrar y soltar.
 - [x] Adaptar la edición docente a los cuatro tipos de contenido y conservar plantillas publicadas.
 - [x] Eliminar referencias `PV-#` de toda interfaz y mensajes visibles.
 - [x] Añadir pruebas de dominio, interfaz y regresión; ejecutar verificaciones completas aplicables.
+- [x] Corregir la jerarquía visible: Bloque como parte del documento y Campo como su contenido.
 
 ## Riesgo controlado
 
@@ -39,10 +41,10 @@ siendo transaccional y autorizada.
 
 ## Resultado
 
-El constructor se incorporó en `ADM-05`: cada sección contiene bloques con nombre y
-tipo de contenido editables en el sitio. Se pueden agregar, eliminar y reordenar por
-arrastre o con controles de teclado; las flechas ofrecen una alternativa accesible al
-arrastre. Las versiones publicadas se mantienen solo de lectura.
+El constructor se incorporó en `ADM-05`: cada bloque contiene campos con nombre y tipo
+de contenido editables en el sitio. Bloques y campos se pueden agregar, eliminar y
+reordenar por arrastre o con controles de teclado; las flechas ofrecen una alternativa
+accesible al arrastre. Las versiones publicadas se mantienen solo de lectura.
 
 Las pruebas específicas del módulo y las comprobaciones de formato, tipos de la
 interfaz y compilación finalizaron correctamente. La suite global conserva fallos
