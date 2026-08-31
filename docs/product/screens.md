@@ -123,10 +123,11 @@
   paginación, publicación ni número de versión. Materias, campos y relaciones se
   consultan y mantienen dentro de esa malla. COR-14 conserva el submenú **Ofertas y
   paralelos** con una ruta por colección.
-- COR-13 ofrece **Editar**, **Deshabilitar/Reactivar** y **Eliminar**. La malla activa o
-  inactiva sigue siendo editable; eliminar se rechaza cuando existen ofertas o sílabos y
-  explica que debe deshabilitarse. Editar una asignación cambia docente, paralelo o
-  vigencia; nunca nombre o correo de la cuenta.
+- COR-13 agrupa **Editar**, **Deshabilitar/Reactivar**, **Eliminar** y **Configurar** en un
+  menú de tres puntos, con el mismo patrón de la columna de acciones de las tablas. La
+  malla activa o inactiva sigue siendo editable; eliminar se rechaza cuando existen
+  ofertas o sílabos y explica que debe deshabilitarse. Editar una asignación cambia
+  docente, paralelo o vigencia; nunca nombre o correo de la cuenta.
 - COR-13 abre la malla en una página completa con ciclos, tarjetas, totales y relaciones.
   El lienzo permite zoom, desplazamiento, conexión y reubicación, además de crear una
   materia en su ciclo y editarla directamente desde su tarjeta. El desglose académico

@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3';
-import { Trash2 } from '@lucide/vue';
+import { Pencil, Settings2, Trash2 } from '@lucide/vue';
 import { ref } from 'vue';
 import CareerAcademicStructureController from '@/actions/App/Modules/Academic/Presentation/Http/Controllers/CareerAcademicStructureController';
 import CareerAcademicEditSheet from '@/components/domain/academic/CareerAcademicEditSheet.vue';
 import RecordStatusForm from '@/components/domain/academic/RecordStatusForm.vue';
+import TableActionsMenu from '@/components/domain/TableActionsMenu.vue';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -14,12 +15,13 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
-    DialogTrigger,
 } from '@/components/ui/dialog';
+import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Spinner } from '@/components/ui/spinner';
 import type { CurriculumBuilderProps } from '@/types/academic';
 
 defineProps<Pick<CurriculumBuilderProps, 'curriculum' | 'options'>>();
+const emit = defineEmits<{ configure: [] }>();
 
 const editOpen = ref(false);
 const deleteOpen = ref(false);
@@ -27,24 +29,29 @@ const deleteOpen = ref(false);
 
 <template>
     <div class="flex flex-wrap items-center gap-2">
-        <Button type="button" variant="outline" @click="editOpen = true">
-            Editar
-        </Button>
-
-        <RecordStatusForm
-            scope="career"
-            entity="curriculum"
-            :record-id="curriculum.id"
-            :active="curriculum.active"
-        />
+        <TableActionsMenu :label="`Acciones para la malla ${curriculum.code}`">
+            <DropdownMenuItem @select="editOpen = true">
+                <Pencil aria-hidden="true" />
+                Editar
+            </DropdownMenuItem>
+            <RecordStatusForm
+                display="menu"
+                scope="career"
+                entity="curriculum"
+                :record-id="curriculum.id"
+                :active="curriculum.active"
+            />
+            <DropdownMenuItem variant="destructive" @select="deleteOpen = true">
+                <Trash2 aria-hidden="true" />
+                Eliminar
+            </DropdownMenuItem>
+            <DropdownMenuItem @select="emit('configure')">
+                <Settings2 aria-hidden="true" />
+                Configurar
+            </DropdownMenuItem>
+        </TableActionsMenu>
 
         <Dialog v-model:open="deleteOpen">
-            <DialogTrigger as-child>
-                <Button type="button" variant="destructive">
-                    <Trash2 data-icon="inline-start" aria-hidden="true" />
-                    Eliminar
-                </Button>
-            </DialogTrigger>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Eliminar malla</DialogTitle>

@@ -209,9 +209,6 @@ const fieldValue = (field: CurriculumFieldDefinition): number | string => {
                                 )
                             "
                         />
-                        <FieldDescription v-if="field.system_key">
-                            Dato académico estructurado: {{ field.system_key }}.
-                        </FieldDescription>
                         <FieldError
                             :errors="[
                                 errors[

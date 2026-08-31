@@ -169,7 +169,7 @@ const errorKey = (field: CurriculumFieldDefinition): string =>
 
             <div
                 v-if="visibleFields.length > 0"
-                class="flex gap-2 overflow-x-auto pb-1"
+                class="-m-1 flex gap-2 overflow-x-auto p-1"
             >
                 <Field
                     v-for="field in visibleFields"

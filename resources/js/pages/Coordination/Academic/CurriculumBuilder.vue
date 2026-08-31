@@ -48,14 +48,11 @@ const openSubject = (subject: CurriculumBuilderSubject): void => {
         :description="`${curriculum.code} · ${career.name}. Edite el desglose académico o trabaje sobre la misma información en el constructor visual.`"
     >
         <template #actions>
-            <CurriculumActions :curriculum="curriculum" :options="options" />
-            <Button
-                type="button"
-                variant="outline"
-                @click="configurationOpen = true"
-            >
-                Configurar
-            </Button>
+            <CurriculumActions
+                :curriculum="curriculum"
+                :options="options"
+                @configure="configurationOpen = true"
+            />
             <Button
                 v-if="activeMode === 'breakdown'"
                 type="button"
