@@ -4,7 +4,6 @@ namespace App\Modules\Configuration\Presentation\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
 use App\Modules\Configuration\Application\Actions\CloneTemplateVersion;
 use App\Modules\Configuration\Application\Actions\CreateSyllabusTemplate;
 use App\Modules\Configuration\Application\Actions\DeleteTemplateBlock;
@@ -35,7 +34,7 @@ class TemplateController extends Controller
     {
         return Inertia::render('Admin/Templates/Index', [
             'templates' => SyllabusTemplate::query()
-                ->with('career:id,nombre')
+                ->where('es_institucional', true)
                 ->with(['versions' => fn ($query) => $query->orderByDesc('numero_version')])
                 ->orderBy('nombre')
                 ->get()
@@ -43,7 +42,6 @@ class TemplateController extends Controller
                     'id' => $template->id,
                     'name' => $template->nombre,
                     'description' => $template->descripcion,
-                    'career_name' => $template->career?->nombre,
                     'active' => $template->activo,
                     'versions' => $template->versions->map(fn (TemplateVersion $version) => [
                         'id' => $version->id,
@@ -52,7 +50,9 @@ class TemplateController extends Controller
                         'published_at' => $version->publicado_en?->toIso8601String(),
                     ])->values()->all(),
                 ]),
-            'careers' => Career::query()->where('activo', true)->orderBy('nombre')->get(['id', 'nombre']),
+            'hasInstitutionalTemplate' => SyllabusTemplate::query()
+                ->where('es_institucional', true)
+                ->exists(),
         ]);
     }
 
@@ -63,7 +63,6 @@ class TemplateController extends Controller
         $version = $action->execute([
             'name' => $request->string('name')->toString(),
             'description' => $request->filled('description') ? $request->string('description')->toString() : null,
-            'career_id' => $request->filled('career_id') ? $request->string('career_id')->toString() : null,
         ], $actor, $request);
 
         return to_route('admin.templates.show', $version)->with('success', 'Plantilla creada con las doce áreas base.');
@@ -71,7 +70,8 @@ class TemplateController extends Controller
 
     public function show(TemplateVersion $version, ManageTemplatesRequest $request): Response
     {
-        $version->load(['template.career:id,nombre', 'sections.blocks.fields']);
+        $this->ensureInstitutional($version);
+        $version->load(['template', 'sections.blocks.fields']);
 
         return Inertia::render('Admin/Templates/Show', [
             'templateVersion' => [
@@ -81,7 +81,6 @@ class TemplateController extends Controller
                 'template' => [
                     'name' => $version->template->nombre,
                     'description' => $version->template->descripcion,
-                    'career_name' => $version->template->career?->nombre,
                 ],
                 'sections' => $version->sections->map(fn (TemplateSection $section) => [
                     'id' => $section->id,
@@ -136,11 +135,18 @@ class TemplateController extends Controller
         return 'text';
     }
 
+    private function ensureInstitutional(TemplateVersion $version): void
+    {
+        $version->loadMissing('template:id,es_institucional');
+        abort_unless($version->template?->es_institucional, 404);
+    }
+
     public function storeField(
         TemplateVersion $version,
         SaveFieldDefinitionRequest $request,
         SaveFieldDefinition $action,
     ): RedirectResponse {
+        $this->ensureInstitutional($version);
         $actor = $request->user();
         abort_unless($actor instanceof User, 401);
         $action->create($version->id, $request->validated(), $actor, $request);
@@ -154,6 +160,7 @@ class TemplateController extends Controller
         SaveFieldDefinitionRequest $request,
         SaveFieldDefinition $action,
     ): RedirectResponse {
+        $this->ensureInstitutional($version);
         abort_unless($field->version_plantilla_id === $version->id, 404);
         $actor = $request->user();
         abort_unless($actor instanceof User, 401);
@@ -167,6 +174,7 @@ class TemplateController extends Controller
         SaveTemplateSectionRequest $request,
         SaveTemplateSection $action,
     ): RedirectResponse {
+        $this->ensureInstitutional($version);
         $actor = $request->user();
         abort_unless($actor instanceof User, 401);
         $action->create($version->id, $request->validated(), $actor, $request);
@@ -180,6 +188,7 @@ class TemplateController extends Controller
         SaveTemplateSectionRequest $request,
         SaveTemplateSection $action,
     ): RedirectResponse {
+        $this->ensureInstitutional($version);
         abort_unless($section->version_plantilla_id === $version->id, 404);
         $actor = $request->user();
         abort_unless($actor instanceof User, 401);
@@ -193,6 +202,7 @@ class TemplateController extends Controller
         ReorderTemplateBlocksRequest $request,
         ReorderTemplateBlocks $action,
     ): RedirectResponse {
+        $this->ensureInstitutional($version);
         $actor = $request->user();
         abort_unless($actor instanceof User, 401);
         $action->execute(
@@ -211,6 +221,7 @@ class TemplateController extends Controller
         ReorderTemplateSectionsRequest $request,
         ReorderTemplateSections $action,
     ): RedirectResponse {
+        $this->ensureInstitutional($version);
         $actor = $request->user();
         abort_unless($actor instanceof User, 401);
         $action->execute(
@@ -229,6 +240,7 @@ class TemplateController extends Controller
         ManageTemplatesRequest $request,
         DeleteTemplateBlock $action,
     ): RedirectResponse {
+        $this->ensureInstitutional($version);
         abort_unless($block->version_plantilla_id === $version->id, 404);
         $actor = $request->user();
         abort_unless($actor instanceof User, 401);
@@ -243,6 +255,7 @@ class TemplateController extends Controller
         ManageTemplatesRequest $request,
         DeleteTemplateSection $action,
     ): RedirectResponse {
+        $this->ensureInstitutional($version);
         abort_unless($section->version_plantilla_id === $version->id, 404);
         $actor = $request->user();
         abort_unless($actor instanceof User, 401);
@@ -256,6 +269,7 @@ class TemplateController extends Controller
         ManageTemplatesRequest $request,
         PublishTemplateVersion $action,
     ): RedirectResponse {
+        $this->ensureInstitutional($version);
         $actor = $request->user();
         abort_unless($actor instanceof User, 401);
         $action->execute($version->id, $actor, $request);
@@ -268,6 +282,7 @@ class TemplateController extends Controller
         ManageTemplatesRequest $request,
         CloneTemplateVersion $action,
     ): RedirectResponse {
+        $this->ensureInstitutional($version);
         $actor = $request->user();
         abort_unless($actor instanceof User, 401);
         $clone = $action->execute($version->id, $actor, $request);

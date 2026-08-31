@@ -9,6 +9,10 @@
 
 ## Comportamiento
 
+- La UEB mantiene una sola plantilla institucional de sílabo, común a todas las carreras.
+  La carrera se fija en la convocatoria y en sus fuentes académicas, no en la estructura
+  del documento. Solo sus versiones publicadas pueden seleccionarse para convocatorias
+  nuevas.
 - Una plantilla borrador se compone de bloques y campos tipados. En la interfaz, un
   **bloque** es una parte principal del documento (por ejemplo, «Evaluación») y un
   **campo** es un contenido dentro de ese bloque (por ejemplo, «Criterios de

@@ -32,9 +32,8 @@ class CreateConvocation
         }
 
         $template = TemplateVersion::query()->with('template')->findOrFail($data['template_version_id']);
-        if ($template->estado !== 'published' || ! $template->template->activo
-            || ($template->template->carrera_id !== null && $template->template->carrera_id !== $activeRole->carrera_id)) {
-            throw ValidationException::withMessages(['template_version_id' => 'Selecciona una plantilla publicada compatible con la carrera.']);
+        if ($template->estado !== 'published' || ! $template->template->activo || ! $template->template->es_institucional) {
+            throw ValidationException::withMessages(['template_version_id' => 'Selecciona una versión publicada de la plantilla institucional.']);
         }
 
         $sources = SourceVersion::query()

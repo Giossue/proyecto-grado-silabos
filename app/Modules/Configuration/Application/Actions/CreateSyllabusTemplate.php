@@ -12,6 +12,7 @@ use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Operations\Application\Actions\RecordAuditEvent;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class CreateSyllabusTemplate
 {
@@ -35,17 +36,23 @@ class CreateSyllabusTemplate
         private readonly RecordAuditEvent $audit,
     ) {}
 
-    /** @param array{name: string, description?: string|null, career_id?: string|null} $data */
+    /** @param array{name: string, description?: string|null} $data */
     public function execute(array $data, User $actor, Request $request): TemplateVersion
     {
         $activeRole = $this->roles->resolve($request);
 
         return DB::transaction(function () use ($actor, $activeRole, $data, $request): TemplateVersion {
+            if (SyllabusTemplate::query()->where('es_institucional', true)->lockForUpdate()->exists()) {
+                throw ValidationException::withMessages([
+                    'template' => 'La plantilla institucional ya existe. Cree una nueva versión para modificarla.',
+                ]);
+            }
+
             $template = SyllabusTemplate::query()->create([
-                'carrera_id' => $data['career_id'] ?? null,
                 'nombre' => $data['name'],
                 'descripcion' => $data['description'] ?? null,
                 'activo' => true,
+                'es_institucional' => true,
             ]);
             $version = TemplateVersion::query()->create([
                 'plantilla_id' => $template->id,

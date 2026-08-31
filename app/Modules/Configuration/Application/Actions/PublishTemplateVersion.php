@@ -43,7 +43,7 @@ class PublishTemplateVersion
 
         return DB::transaction(function () use ($actor, $activeRole, $request, $versionId): TemplateVersion {
             $version = TemplateVersion::query()
-                ->with(['template:id,nombre,carrera_id', 'sections.blocks.fields'])
+                ->with(['template:id,nombre,es_institucional', 'sections.blocks.fields'])
                 ->whereKey($versionId)
                 ->lockForUpdate()
                 ->firstOrFail();

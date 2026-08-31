@@ -39,7 +39,6 @@ defineProps<{
         template: {
             name: string;
             description: string | null;
-            career_name: string | null;
         };
         sections: {
             id: string;
@@ -70,7 +69,7 @@ defineOptions({
 
     <PageFrame
         :title="`${templateVersion.template.name} · v${templateVersion.number}`"
-        :description="`${templateVersion.template.career_name ?? 'Alcance general'} · Organice los bloques de contenido de esta versión.`"
+        description="Plantilla institucional · Organice los bloques de contenido de esta versión."
         size="wide"
     >
         <template #eyebrow>

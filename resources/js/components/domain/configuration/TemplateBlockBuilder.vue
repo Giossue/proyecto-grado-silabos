@@ -4,6 +4,7 @@ import { ArrowDown, ArrowUp, GripVertical, Plus, Trash2 } from '@lucide/vue';
 import { ref, watch } from 'vue';
 import TemplateController from '@/actions/App/Modules/Configuration/Presentation/Http/Controllers/TemplateController';
 import TemplateBlockAddForm from '@/components/domain/configuration/TemplateBlockAddForm.vue';
+import TemplateFieldAddForm from '@/components/domain/configuration/TemplateFieldAddForm.vue';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -71,10 +72,8 @@ const props = defineProps<{
 }>();
 
 const builderBlocks = ref<TemplateSection[]>([]);
-const addingFieldIn = ref<string | null>(null);
+const addingFieldAt = ref<{ sectionId: string; position: number } | null>(null);
 const addingBlockAt = ref<number | null>(null);
-const fieldNames = ref<Record<string, string>>({});
-const fieldTypes = ref<Record<string, string>>({});
 const draggedBlockId = ref<string | null>(null);
 const draggedField = ref<{ sectionId: string; id: string } | null>(null);
 
@@ -94,19 +93,6 @@ watch(
     },
     { immediate: true },
 );
-
-const keyFor = (value: string): string => {
-    const normalized = value
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '_')
-        .replace(/^_+|_+$/g, '');
-
-    return normalized === '' || !/^[a-z]/.test(normalized)
-        ? `elemento_${normalized || 'nuevo'}`
-        : normalized;
-};
 
 const firstField = (container: FieldContainer): TemplateField | null =>
     container.fields[0] ?? null;
@@ -235,6 +221,14 @@ const addBlockAt = (position: number): void => {
 const closeBlockForm = (): void => {
     addingBlockAt.value = null;
 };
+
+const addFieldAt = (sectionId: string, position: number): void => {
+    addingFieldAt.value = { sectionId, position };
+};
+
+const closeFieldForm = (): void => {
+    addingFieldAt.value = null;
+};
 </script>
 
 <template>
@@ -348,298 +342,179 @@ const closeBlockForm = (): void => {
                         </CardHeader>
                         <CardContent class="flex flex-col gap-4">
                             <CardTitle class="text-base">Campos</CardTitle>
-                            <!-- eslint-disable-next-line vuejs-accessibility/no-static-element-interactions -->
-                            <article
+                            <template
                                 v-for="(
                                     container, fieldIndex
                                 ) in section.blocks"
                                 :key="container.id"
-                                draggable="true"
-                                role="group"
-                                :aria-label="`Campo ${firstField(container)?.label ?? ''}`"
-                                class="rounded-lg border bg-muted/20 p-4"
-                                @dragend="draggedField = null"
-                                @dragover.prevent
-                                @dragstart="
-                                    draggedField = {
-                                        sectionId: section.id,
-                                        id: container.id,
-                                    }
-                                "
-                                @drop.prevent="dropField(section, container.id)"
                             >
-                                <Form
-                                    v-if="firstField(container)"
-                                    v-bind="
-                                        TemplateController.updateField.form({
-                                            version: templateVersionId,
-                                            field:
-                                                firstField(container)?.id ?? '',
-                                        })
+                                <!-- eslint-disable-next-line vuejs-accessibility/no-static-element-interactions -->
+                                <article
+                                    draggable="true"
+                                    role="group"
+                                    :aria-label="`Campo ${firstField(container)?.label ?? ''}`"
+                                    class="rounded-lg border bg-muted/20 p-4"
+                                    @dragend="draggedField = null"
+                                    @dragover.prevent
+                                    @dragstart="
+                                        draggedField = {
+                                            sectionId: section.id,
+                                            id: container.id,
+                                        }
                                     "
-                                    :options="{ preserveScroll: true }"
-                                    v-slot="{ errors, processing }"
+                                    @drop.prevent="
+                                        dropField(section, container.id)
+                                    "
                                 >
-                                    <input
-                                        type="hidden"
-                                        name="block_id"
-                                        :value="container.id"
-                                    />
-                                    <input
-                                        type="hidden"
-                                        name="key"
-                                        :value="firstField(container)?.key"
-                                    />
-                                    <input
-                                        type="hidden"
-                                        name="inherited"
-                                        :value="
-                                            firstField(container)?.inherited
-                                                ? '1'
-                                                : '0'
+                                    <Form
+                                        v-if="firstField(container)"
+                                        v-bind="
+                                            TemplateController.updateField.form(
+                                                {
+                                                    version: templateVersionId,
+                                                    field:
+                                                        firstField(container)
+                                                            ?.id ?? '',
+                                                },
+                                            )
                                         "
-                                    />
-                                    <input
-                                        type="hidden"
-                                        name="required"
-                                        :value="
-                                            firstField(container)?.required
-                                                ? '1'
-                                                : '0'
-                                        "
-                                    />
-                                    <input
-                                        type="hidden"
-                                        name="help"
-                                        :value="
-                                            firstField(container)?.help ?? ''
-                                        "
-                                    />
-                                    <input
-                                        type="hidden"
-                                        name="master_source"
-                                        :value="
-                                            firstField(container)
-                                                ?.master_source ?? ''
-                                        "
-                                    />
-                                    <input
-                                        type="hidden"
-                                        name="teacher_editable"
-                                        :value="
-                                            firstField(container)
-                                                ?.teacher_editable
-                                                ? '1'
-                                                : '0'
-                                        "
-                                    />
-                                    <input
-                                        type="hidden"
-                                        name="ai_enabled"
-                                        :value="
-                                            firstField(container)?.ai_enabled
-                                                ? '1'
-                                                : '0'
-                                        "
-                                    />
-                                    <input
-                                        type="hidden"
-                                        name="document_marker"
-                                        :value="
-                                            firstField(container)
-                                                ?.document_marker ?? ''
-                                        "
-                                    />
-                                    <div
-                                        class="mb-4 flex items-center justify-between gap-3"
+                                        :options="{ preserveScroll: true }"
+                                        v-slot="{ errors, processing }"
                                     >
+                                        <input
+                                            type="hidden"
+                                            name="block_id"
+                                            :value="container.id"
+                                        />
+                                        <input
+                                            type="hidden"
+                                            name="key"
+                                            :value="firstField(container)?.key"
+                                        />
+                                        <input
+                                            type="hidden"
+                                            name="inherited"
+                                            :value="
+                                                firstField(container)?.inherited
+                                                    ? '1'
+                                                    : '0'
+                                            "
+                                        />
+                                        <input
+                                            type="hidden"
+                                            name="required"
+                                            :value="
+                                                firstField(container)?.required
+                                                    ? '1'
+                                                    : '0'
+                                            "
+                                        />
+                                        <input
+                                            type="hidden"
+                                            name="help"
+                                            :value="
+                                                firstField(container)?.help ??
+                                                ''
+                                            "
+                                        />
+                                        <input
+                                            type="hidden"
+                                            name="master_source"
+                                            :value="
+                                                firstField(container)
+                                                    ?.master_source ?? ''
+                                            "
+                                        />
+                                        <input
+                                            type="hidden"
+                                            name="teacher_editable"
+                                            :value="
+                                                firstField(container)
+                                                    ?.teacher_editable
+                                                    ? '1'
+                                                    : '0'
+                                            "
+                                        />
+                                        <input
+                                            type="hidden"
+                                            name="ai_enabled"
+                                            :value="
+                                                firstField(container)
+                                                    ?.ai_enabled
+                                                    ? '1'
+                                                    : '0'
+                                            "
+                                        />
+                                        <input
+                                            type="hidden"
+                                            name="document_marker"
+                                            :value="
+                                                firstField(container)
+                                                    ?.document_marker ?? ''
+                                            "
+                                        />
                                         <div
-                                            class="flex items-center gap-2 text-sm text-muted-foreground"
+                                            class="mb-4 flex items-center justify-between gap-3"
                                         >
-                                            <GripVertical
-                                                aria-hidden="true"
-                                            />Arrastre para reordenar el campo
-                                        </div>
-                                        <div class="flex items-center gap-1">
-                                            <Button
-                                                type="button"
-                                                size="icon-sm"
-                                                variant="ghost"
-                                                :aria-label="`Subir ${firstField(container)?.label}`"
-                                                :disabled="fieldIndex === 0"
-                                                @click="
-                                                    moveField(
-                                                        section,
-                                                        container.id,
-                                                        -1,
-                                                    )
-                                                "
-                                                ><ArrowUp aria-hidden="true"
-                                            /></Button>
-                                            <Button
-                                                type="button"
-                                                size="icon-sm"
-                                                variant="ghost"
-                                                :aria-label="`Bajar ${firstField(container)?.label}`"
-                                                :disabled="
-                                                    fieldIndex ===
-                                                    section.blocks.length - 1
-                                                "
-                                                @click="
-                                                    moveField(
-                                                        section,
-                                                        container.id,
-                                                        1,
-                                                    )
-                                                "
-                                                ><ArrowDown aria-hidden="true"
-                                            /></Button>
-                                            <Button
-                                                type="button"
-                                                size="icon-sm"
-                                                variant="ghost"
-                                                :aria-label="`Eliminar ${firstField(container)?.label}`"
-                                                @click="deleteField(container)"
-                                                ><Trash2 aria-hidden="true"
-                                            /></Button>
-                                        </div>
-                                    </div>
-                                    <FieldGroup>
-                                        <Field
-                                            :data-invalid="
-                                                Boolean(errors.label)
-                                            "
-                                        >
-                                            <FieldLabel
-                                                :for="`field-name-${container.id}`"
-                                                required
-                                                >Nombre del campo</FieldLabel
+                                            <div
+                                                class="flex items-center gap-2 text-sm text-muted-foreground"
                                             >
-                                            <Input
-                                                :id="`field-name-${container.id}`"
-                                                name="label"
-                                                :default-value="
-                                                    firstField(container)?.label
-                                                "
-                                                placeholder="Ej. Criterios de evaluación"
-                                                required
-                                                :aria-invalid="
-                                                    Boolean(errors.label)
-                                                "
-                                            />
-                                            <FieldError
-                                                :errors="[errors.label]"
-                                            />
-                                        </Field>
-                                        <Field
-                                            :data-invalid="
-                                                Boolean(errors.content_type)
-                                            "
-                                        >
-                                            <FieldLabel
-                                                :for="`field-type-${container.id}`"
-                                                required
-                                                >Tipo de contenido</FieldLabel
+                                                <GripVertical
+                                                    aria-hidden="true"
+                                                />Arrastre para reordenar el
+                                                campo
+                                            </div>
+                                            <div
+                                                class="flex items-center gap-1"
                                             >
-                                            <Select
-                                                name="content_type"
-                                                required
-                                                :default-value="
-                                                    container.content_type
-                                                "
-                                            >
-                                                <SelectTrigger
-                                                    :id="`field-type-${container.id}`"
-                                                    :aria-invalid="
-                                                        Boolean(
-                                                            errors.content_type,
+                                                <Button
+                                                    type="button"
+                                                    size="icon-sm"
+                                                    variant="ghost"
+                                                    :aria-label="`Subir ${firstField(container)?.label}`"
+                                                    :disabled="fieldIndex === 0"
+                                                    @click="
+                                                        moveField(
+                                                            section,
+                                                            container.id,
+                                                            -1,
                                                         )
                                                     "
-                                                    ><SelectValue
-                                                /></SelectTrigger>
-                                                <SelectContent
-                                                    ><SelectGroup
-                                                        ><SelectItem
-                                                            v-for="type in blockTypes"
-                                                            :key="type.value"
-                                                            :value="type.value"
-                                                            >{{
-                                                                type.label
-                                                            }}</SelectItem
-                                                        ></SelectGroup
-                                                    ></SelectContent
-                                                >
-                                            </Select>
-                                            <FieldError
-                                                :errors="[errors.content_type]"
-                                            />
-                                        </Field>
-                                    </FieldGroup>
-                                    <div class="mt-4 flex justify-end">
-                                        <Button
-                                            type="submit"
-                                            size="sm"
-                                            :disabled="processing"
-                                            ><Spinner
-                                                v-if="processing"
-                                            />Guardar campo</Button
-                                        >
-                                    </div>
-                                </Form>
-                            </article>
-
-                            <Form
-                                v-if="addingFieldIn === section.id"
-                                v-bind="
-                                    TemplateController.storeField.form(
-                                        templateVersionId,
-                                    )
-                                "
-                                :options="{ preserveScroll: true }"
-                                v-slot="{ errors, processing }"
-                                @success="addingFieldIn = null"
-                            >
-                                <input
-                                    type="hidden"
-                                    name="section_id"
-                                    :value="section.id"
-                                />
-                                <input
-                                    type="hidden"
-                                    name="key"
-                                    :value="
-                                        keyFor(
-                                            `${section.title} ${fieldNames[section.id] ?? ''}`,
-                                        )
-                                    "
-                                />
-                                <input
-                                    type="hidden"
-                                    name="required"
-                                    value="0"
-                                />
-                                <input
-                                    type="hidden"
-                                    name="inherited"
-                                    value="0"
-                                />
-                                <input
-                                    type="hidden"
-                                    name="teacher_editable"
-                                    value="1"
-                                />
-                                <input
-                                    type="hidden"
-                                    name="ai_enabled"
-                                    value="0"
-                                />
-                                <Card class="border-dashed">
-                                    <CardHeader
-                                        ><CardTitle class="text-base"
-                                            >Nuevo campo</CardTitle
-                                        ></CardHeader
-                                    >
-                                    <CardContent>
+                                                    ><ArrowUp
+                                                        aria-hidden="true"
+                                                /></Button>
+                                                <Button
+                                                    type="button"
+                                                    size="icon-sm"
+                                                    variant="ghost"
+                                                    :aria-label="`Bajar ${firstField(container)?.label}`"
+                                                    :disabled="
+                                                        fieldIndex ===
+                                                        section.blocks.length -
+                                                            1
+                                                    "
+                                                    @click="
+                                                        moveField(
+                                                            section,
+                                                            container.id,
+                                                            1,
+                                                        )
+                                                    "
+                                                    ><ArrowDown
+                                                        aria-hidden="true"
+                                                /></Button>
+                                                <Button
+                                                    type="button"
+                                                    size="icon-sm"
+                                                    variant="ghost"
+                                                    :aria-label="`Eliminar ${firstField(container)?.label}`"
+                                                    @click="
+                                                        deleteField(container)
+                                                    "
+                                                    ><Trash2 aria-hidden="true"
+                                                /></Button>
+                                            </div>
+                                        </div>
                                         <FieldGroup>
                                             <Field
                                                 :data-invalid="
@@ -647,18 +522,19 @@ const closeBlockForm = (): void => {
                                                 "
                                             >
                                                 <FieldLabel
-                                                    :for="`new-field-name-${section.id}`"
+                                                    :for="`field-name-${container.id}`"
                                                     required
                                                     >Nombre del
                                                     campo</FieldLabel
                                                 >
                                                 <Input
-                                                    :id="`new-field-name-${section.id}`"
-                                                    v-model="
-                                                        fieldNames[section.id]
-                                                    "
+                                                    :id="`field-name-${container.id}`"
                                                     name="label"
-                                                    placeholder="Ej. Actividades de evaluación"
+                                                    :default-value="
+                                                        firstField(container)
+                                                            ?.label
+                                                    "
+                                                    placeholder="Ej. Criterios de evaluación"
                                                     required
                                                     :aria-invalid="
                                                         Boolean(errors.label)
@@ -674,27 +550,26 @@ const closeBlockForm = (): void => {
                                                 "
                                             >
                                                 <FieldLabel
-                                                    :for="`new-field-type-${section.id}`"
+                                                    :for="`field-type-${container.id}`"
                                                     required
                                                     >Tipo de
                                                     contenido</FieldLabel
                                                 >
                                                 <Select
-                                                    v-model="
-                                                        fieldTypes[section.id]
-                                                    "
                                                     name="content_type"
                                                     required
+                                                    :default-value="
+                                                        container.content_type
+                                                    "
                                                 >
                                                     <SelectTrigger
-                                                        :id="`new-field-type-${section.id}`"
+                                                        :id="`field-type-${container.id}`"
                                                         :aria-invalid="
                                                             Boolean(
                                                                 errors.content_type,
                                                             )
                                                         "
                                                         ><SelectValue
-                                                            placeholder="Seleccione un tipo"
                                                     /></SelectTrigger>
                                                     <SelectContent
                                                         ><SelectGroup
@@ -720,36 +595,98 @@ const closeBlockForm = (): void => {
                                                 />
                                             </Field>
                                         </FieldGroup>
-                                        <div
-                                            class="mt-4 flex justify-end gap-2"
-                                        >
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                @click="addingFieldIn = null"
-                                                >Cancelar</Button
-                                            >
+                                        <div class="mt-4 flex justify-end">
                                             <Button
                                                 type="submit"
+                                                size="sm"
                                                 :disabled="processing"
                                                 ><Spinner
                                                     v-if="processing"
-                                                />Agregar campo</Button
+                                                />Guardar campo</Button
                                             >
                                         </div>
-                                    </CardContent>
-                                </Card>
-                            </Form>
-                            <Button
-                                v-else
-                                type="button"
-                                variant="outline"
-                                @click="
-                                    addingFieldIn = section.id;
-                                    fieldTypes[section.id] = 'text';
-                                "
-                                >Agregar campo</Button
+                                    </Form>
+                                </article>
+                                <div
+                                    class="flex min-h-10 items-center justify-center"
+                                >
+                                    <TemplateFieldAddForm
+                                        v-if="
+                                            addingFieldAt?.sectionId ===
+                                                section.id &&
+                                            addingFieldAt?.position ===
+                                                fieldIndex + 1
+                                        "
+                                        :template-version-id="templateVersionId"
+                                        :section-id="section.id"
+                                        :section-title="section.title"
+                                        :position="fieldIndex + 1"
+                                        :block-types="blockTypes"
+                                        @cancel="closeFieldForm"
+                                        @success="closeFieldForm"
+                                    />
+                                    <Tooltip v-else>
+                                        <TooltipTrigger as-child>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="icon-sm"
+                                                aria-label="Agregar campo"
+                                                @click="
+                                                    addFieldAt(
+                                                        section.id,
+                                                        fieldIndex + 1,
+                                                    )
+                                                "
+                                            >
+                                                <Plus
+                                                    data-icon="inline-start"
+                                                    aria-hidden="true"
+                                                />
+                                            </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent
+                                            >Agregar campo</TooltipContent
+                                        >
+                                    </Tooltip>
+                                </div>
+                            </template>
+                            <div
+                                v-if="section.blocks.length === 0"
+                                class="flex min-h-10 items-center justify-center"
                             >
+                                <TemplateFieldAddForm
+                                    v-if="
+                                        addingFieldAt?.sectionId === section.id
+                                    "
+                                    :template-version-id="templateVersionId"
+                                    :section-id="section.id"
+                                    :section-title="section.title"
+                                    :position="0"
+                                    :block-types="blockTypes"
+                                    @cancel="closeFieldForm"
+                                    @success="closeFieldForm"
+                                />
+                                <Tooltip v-else>
+                                    <TooltipTrigger as-child>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon-sm"
+                                            aria-label="Agregar campo"
+                                            @click="addFieldAt(section.id, 0)"
+                                        >
+                                            <Plus
+                                                data-icon="inline-start"
+                                                aria-hidden="true"
+                                            />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent
+                                        >Agregar campo</TooltipContent
+                                    >
+                                </Tooltip>
+                            </div>
                         </CardContent>
                     </Card>
                 </section>

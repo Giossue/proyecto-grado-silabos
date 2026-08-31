@@ -131,6 +131,14 @@ Antes de modificar una pantalla, lee `docs/product/screens.md`,
 documentación del módulo afectado. Esas fuentes definen los patrones visuales,
 composición, estados y criterios de revisión; este archivo solo indica dónde encontrarlos.
 
+Antes de buscar documentación externa o añadir un componente, revisa primero los
+componentes reutilizables ya presentes en `resources/js/components/`, especialmente
+`components/ui/` y los componentes de dominio. Si el componente necesario existe y su
+API se puede determinar leyendo su implementación y usos locales, reutilízalo sin
+consultar la documentación de shadcn/u otra fuente externa. Consulta esa documentación
+solo si el componente no existe, su API es ambigua o hace falta incorporar/actualizar un
+componente.
+
 ## Trabajo con bases de datos
 
 Antes de cambiar el esquema o ejecutar operaciones sobre una base, consulta las fuentes

@@ -39,7 +39,7 @@ maestros de solo lectura, autoguardado observable y conflicto de concurrencia si
 
 - Actor y rol: Coordinador activo en la carrera seleccionada.
 - Disparador: confirma la apertura de una convocatoria preparada.
-- Precondiciones: carrera/periodo vigentes, plantilla publicada compatible, fuentes
+- Precondiciones: carrera/periodo vigentes, versión publicada de la plantilla institucional, fuentes
   seleccionadas activas y sin conflicto abierto, ofertas/paralelos/asignaciones docentes
   vigentes y política de agrupación explícita.
 - Flujo: crea convocatoria en preparación, configura fuentes y fechas, previsualiza el total,

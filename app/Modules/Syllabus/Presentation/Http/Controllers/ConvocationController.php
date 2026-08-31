@@ -61,7 +61,7 @@ class ConvocationController extends Controller
             'periods' => AcademicPeriod::query()->where('activo', true)->orderByDesc('fecha_inicio')->get(['id', 'nombre']),
             'templates' => TemplateVersion::query()
                 ->where('estado', 'published')
-                ->whereHas('template', fn ($query) => $query->whereNull('carrera_id')->orWhere('carrera_id', $careerId))
+                ->whereHas('template', fn ($query) => $query->where('es_institucional', true)->where('activo', true))
                 ->with('template:id,nombre')
                 ->orderByDesc('publicado_en')->get()
                 ->map(fn (TemplateVersion $version) => ['id' => $version->id, 'label' => "{$version->template->nombre} · v{$version->numero_version}"]),

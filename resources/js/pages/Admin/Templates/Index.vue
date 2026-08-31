@@ -37,7 +37,6 @@ const props = defineProps<{
         id: string;
         name: string;
         description: string | null;
-        career_name: string | null;
         active: boolean;
         versions: {
             id: string;
@@ -46,11 +45,11 @@ const props = defineProps<{
             published_at: string | null;
         }[];
     }[];
-    careers: { id: string; nombre: string }[];
+    hasInstitutionalTemplate: boolean;
 }>();
 const filter = useClientFilter(
     () => props.templates,
-    (item) => [item.name, item.description, item.career_name],
+    (item) => [item.name, item.description],
     {
         estado: {
             matches: (item, value) => item.active === (value === 'active'),
@@ -76,7 +75,7 @@ defineOptions({
         description="El formato del sílabo: qué campos tiene y en qué orden. Publicar una versión nueva no toca las que ya se están usando."
     >
         <template #actions>
-            <TemplateCreationSheet :careers="careers" />
+            <TemplateCreationSheet v-if="!hasInstitutionalTemplate" />
         </template>
 
         <Card>
@@ -85,7 +84,7 @@ defineOptions({
                     :filter="filter"
                     input-id="templates-search"
                     label="Buscar plantilla"
-                    placeholder="Buscar por nombre, descripción o carrera"
+                    placeholder="Buscar por nombre o descripción"
                 >
                     <template #filters>
                         <Field>
@@ -122,7 +121,6 @@ defineOptions({
                     ><TableHeader
                         ><TableRow
                             ><TableHead>Plantilla</TableHead
-                            ><TableHead>Alcance</TableHead
                             ><TableHead>Versiones</TableHead
                             ><TableHead>Estado</TableHead
                             ><TableHead class="text-right"
@@ -132,7 +130,7 @@ defineOptions({
                     ><TableBody>
                         <TableEmpty
                             v-if="templatePage.length === 0"
-                            :colspan="5"
+                            :colspan="4"
                             >No existen plantillas.</TableEmpty
                         >
                         <TableRow
@@ -151,9 +149,6 @@ defineOptions({
                                         'Sin descripción'
                                     }}
                                 </div></TableCell
-                            ><TableCell>{{
-                                template.career_name ?? 'General'
-                            }}</TableCell
                             ><TableCell
                                 ><div class="flex flex-wrap gap-2">
                                     <Badge

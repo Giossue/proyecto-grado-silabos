@@ -19,6 +19,8 @@ Fecha de corte: **30 de agosto de 2026**.
 - Aprobar vuelve inmutable la revisión.
 - Reabrir crea una nueva revisión enlazada y conserva la aprobada.
 - Plantillas y fuentes publicadas son inmutables y versionadas.
+- La plantilla de sílabo es única e institucional: no pertenece a una carrera y sus
+  versiones publicadas pueden utilizarse en convocatorias de cualquier carrera.
 - La IA es asistencia explicable; no toma decisiones académicas ni bloquea el flujo.
 - Stack base: Laravel 13, Vue/Inertia, TypeScript, PostgreSQL y Redis.
 - Monolito modular y servicio local de IA desacoplado por HTTP.

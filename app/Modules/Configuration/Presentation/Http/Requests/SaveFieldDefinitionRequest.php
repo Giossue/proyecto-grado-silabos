@@ -30,6 +30,7 @@ class SaveFieldDefinitionRequest extends ManageTemplatesRequest
                 'uuid',
                 Rule::exists('secciones_plantilla', 'id')->where('version_plantilla_id', $versionId),
             ],
+            'position' => ['nullable', 'integer', 'min:0'],
             'block_id' => [
                 Rule::requiredIf($fieldId !== null),
                 'nullable',

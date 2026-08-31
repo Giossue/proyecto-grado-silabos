@@ -607,8 +607,9 @@ it('presenta la publicación y los bloques de plantilla con etiquetas breves', f
     expect($builder)
         ->toBeString()
         ->toContain('TemplateBlockAddForm')
+        ->toContain('TemplateFieldAddForm')
         ->toContain('TooltipContent>Agregar bloque</TooltipContent>')
-        ->toContain('Agregar campo')
+        ->toContain('Agregar campo</TooltipContent')
         ->toContain('draggable="true"')
         ->toContain('addBlockAt(sectionIndex + 1)')
         ->toContain('persistBlockOrder')
@@ -628,6 +629,17 @@ it('presenta la publicación y los bloques de plantilla con etiquetas breves', f
         ->toContain('Nombre del bloque')
         ->toContain('Nombre del primer campo')
         ->toContain('Tipo de contenido del primer campo')
+        ->toContain('name="position"')
+        ->toContain(':options="{ preserveScroll: true }"');
+
+    $newFieldForm = file_get_contents(
+        dirname(__DIR__, 2).'/resources/js/components/domain/configuration/TemplateFieldAddForm.vue',
+    );
+
+    expect($newFieldForm)
+        ->toBeString()
+        ->toContain('Nombre del campo')
+        ->toContain('Tipo de contenido')
         ->toContain('name="position"')
         ->toContain(':options="{ preserveScroll: true }"');
 });

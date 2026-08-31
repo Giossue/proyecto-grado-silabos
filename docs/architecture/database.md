@@ -51,6 +51,11 @@ sustituye las relaciones transaccionales ni permite reconstruir autorizaciones.
 `plantillas_silabo`, `versiones_plantilla`, `secciones_plantilla`, `bloques_plantilla`,
 `definiciones_campo`, `fuentes_academicas`, `versiones_fuente`, `fragmentos_fuente`.
 
+`plantillas_silabo` no referencia una carrera. Un índice parcial sobre
+`es_institucional` permite como máximo una plantilla institucional; sus versiones
+publicadas se fijan desde convocatorias de cualquier carrera. Los registros previos sin
+esa marca se conservan solo como historia y no se habilitan para nuevas operaciones.
+
 ### Convocatorias y sílabos
 
 `convocatorias`, `activaciones_fuente`, `conflictos_fuente`, `fechas_limite`, `silabos`,

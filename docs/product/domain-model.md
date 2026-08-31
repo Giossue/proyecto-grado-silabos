@@ -69,7 +69,7 @@ son historia técnica y no se exponen como versiones al usuario.
 
 ### Configuración
 
-- `PlantillaSilabo` agrupa versiones.
+- `PlantillaSilabo` institucional única agrupa versiones y no pertenece a una carrera.
 - `VersionPlantilla` contiene secciones, bloques y definiciones de campo.
 - `FuenteAcademica` agrupa versiones.
 - `VersionFuente` contiene datos estructurados o narrativa segura.
@@ -127,7 +127,7 @@ establece; una recomendación de IA nunca bloquea por sí sola.
 
 1. Cada acción protegida exige usuario activo y permiso efectivo sobre el recurso.
 2. No se crean dos coordinaciones activas superpuestas para una misma carrera.
-3. Solo una plantilla publicada y vigente crea nuevos sílabos en una convocatoria.
+3. La única plantilla institucional publicada y vigente crea nuevos sílabos en una convocatoria de cualquier carrera.
 4. Una plantilla o fuente publicada y una revisión enviada/aprobada son inmutables.
 5. Todo envío o reenvío inserta una revisión; nunca actualiza la anterior.
 6. Una aprobación apunta a una revisión concreta.

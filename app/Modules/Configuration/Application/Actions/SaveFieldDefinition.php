@@ -105,6 +105,28 @@ class SaveFieldDefinition
             ->where('version_plantilla_id', $version->id)
             ->firstOrFail();
 
+        $blocks = TemplateBlock::query()
+            ->where('seccion_plantilla_id', $section->id)
+            ->orderBy('posicion')
+            ->lockForUpdate()
+            ->get()
+            ->values();
+        $position = min(
+            max(1, ((int) ($data['position'] ?? $blocks->count() + 1))),
+            $blocks->count() + 1,
+        );
+        $temporaryPosition = ((int) $blocks->max('posicion')) + $blocks->count() + 2;
+
+        foreach ($blocks as $index => $existingBlock) {
+            $existingBlock->update(['posicion' => $temporaryPosition + $index]);
+        }
+
+        foreach ($blocks as $index => $existingBlock) {
+            $existingBlock->update([
+                'posicion' => $index < $position - 1 ? $index + 1 : $index + 2,
+            ]);
+        }
+
         return TemplateBlock::query()->create([
             'version_plantilla_id' => $version->id,
             'seccion_plantilla_id' => $section->id,
@@ -112,9 +134,7 @@ class SaveFieldDefinition
             'tipo' => $this->blockType($contentType),
             'titulo' => $data['label'],
             'configuracion' => ['content_type' => $contentType],
-            'posicion' => ((int) TemplateBlock::query()
-                ->where('seccion_plantilla_id', $section->id)
-                ->max('posicion')) + 1,
+            'posicion' => $position,
         ]);
     }
 

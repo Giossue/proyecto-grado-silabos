@@ -9,6 +9,7 @@ use App\Modules\Configuration\Infrastructure\Persistence\Models\AcademicSource;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\SourceConflict;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\SourceFragment;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\SourceVersion;
+use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateVersion;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
 use Database\Seeders\DatabaseSeeder;
@@ -53,6 +54,7 @@ class TemplateAndSourceTest extends TestCase
 
         $version = TemplateVersion::query()->firstOrFail();
         $this->assertSame('draft', $version->estado);
+        $this->assertTrue((bool) $version->template->es_institucional);
         $this->assertCount(12, $version->sections()->get());
         $this->assertCount(12, $version->fields()->get());
 
@@ -63,6 +65,40 @@ class TemplateAndSourceTest extends TestCase
                 ->component('Admin/Templates/Show')
                 ->has('templateVersion.sections', 12)
                 ->where('templateVersion.state', 'draft'));
+    }
+
+    public function test_administrator_can_only_create_one_institutional_template(): void
+    {
+        $this->actingAsAdministrator()
+            ->post(route('admin.templates.store'), ['name' => 'Plantilla institucional'])
+            ->assertRedirect();
+
+        $this->actingAsAdministrator()
+            ->from(route('admin.templates.index'))
+            ->post(route('admin.templates.store'), ['name' => 'Otra plantilla'])
+            ->assertRedirect(route('admin.templates.index'))
+            ->assertSessionHasErrors('template');
+
+        $this->assertSame(1, TemplateVersion::query()
+            ->whereHas('template', fn ($query) => $query->where('es_institucional', true))
+            ->count());
+    }
+
+    public function test_legacy_template_is_not_available_for_new_template_operations(): void
+    {
+        $legacy = SyllabusTemplate::query()->create([
+            'nombre' => 'Plantilla anterior',
+            'activo' => true,
+        ]);
+        $version = TemplateVersion::query()->create([
+            'plantilla_id' => $legacy->id,
+            'numero_version' => 1,
+            'estado' => 'draft',
+        ]);
+
+        $this->actingAsAdministrator()
+            ->get(route('admin.templates.show', $version))
+            ->assertNotFound();
     }
 
     public function test_non_administrator_cannot_manage_templates(): void
@@ -128,6 +164,7 @@ class TemplateAndSourceTest extends TestCase
                 'label' => 'Estrategias de aprendizaje',
                 'content_type' => 'bulleted_list',
                 'teacher_editable' => true,
+                'position' => 1,
             ])
             ->assertRedirect();
 
@@ -136,6 +173,7 @@ class TemplateAndSourceTest extends TestCase
         $this->assertSame('repeatable', $block->tipo);
         $this->assertSame('bulleted_list', $block->configuracion['content_type']);
         $this->assertSame('repeatable', $block->fields()->firstOrFail()->tipo);
+        $this->assertSame(1, $block->posicion);
     }
 
     public function test_administrator_reorders_and_removes_draft_blocks(): void
