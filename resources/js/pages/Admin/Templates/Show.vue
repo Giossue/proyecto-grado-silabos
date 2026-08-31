@@ -71,6 +71,7 @@ defineOptions({
     <PageFrame
         :title="`${templateVersion.template.name} · v${templateVersion.number}`"
         :description="`${templateVersion.template.career_name ?? 'Alcance general'} · Organice los bloques de contenido de esta versión.`"
+        size="wide"
     >
         <template #eyebrow>
             <Button as-child variant="link" class="h-auto px-0">

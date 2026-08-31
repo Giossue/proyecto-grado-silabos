@@ -591,6 +591,7 @@ it('presenta la publicación y los bloques de plantilla con etiquetas breves', f
         ->toBeString()
         ->toContain('Publicar')
         ->not->toContain('Publicar y congelar')
+        ->toContain('size="wide"')
         ->toContain('<TemplateBlockBuilder');
 
     $builder = file_get_contents(
