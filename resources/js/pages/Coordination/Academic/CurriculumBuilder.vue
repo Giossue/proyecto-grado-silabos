@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
 import { ListTree, Plus, PowerOff, Workflow } from '@lucide/vue';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import CurriculumCanvas from '@/components/domain/academic/curriculum/CurriculumCanvas.vue';
 import CurriculumConfigurationSheet from '@/components/domain/academic/curriculum/CurriculumConfigurationSheet.vue';
 import CurriculumFormView from '@/components/domain/academic/curriculum/CurriculumFormView.vue';
@@ -28,6 +28,15 @@ const activeMode = ref<'breakdown' | 'builder'>('breakdown');
 const subjectSheetOpen = ref(false);
 const configurationOpen = ref(false);
 const selectedSubject = ref<CurriculumBuilderSubject | null>(null);
+const organizationUnits = computed(() =>
+    Array.from(
+        new Set(
+            props.subjects
+                .map((subject) => subject.organization_unit?.trim())
+                .filter((unit): unit is string => Boolean(unit)),
+        ),
+    ).sort((left, right) => left.localeCompare(right, 'es')),
+);
 
 const openNewSubject = (): void => {
     selectedSubject.value = null;
@@ -92,6 +101,7 @@ const openSubject = (subject: CurriculumBuilderSubject): void => {
                     :field-definitions="fieldDefinitions"
                     :subjects="subjects"
                     :requirements="requirements"
+                    :organization-units="organizationUnits"
                 />
             </TabsContent>
         </Tabs>
@@ -102,6 +112,7 @@ const openSubject = (subject: CurriculumBuilderSubject): void => {
         :curriculum="curriculum"
         :field-definitions="fieldDefinitions"
         :subject="selectedSubject"
+        :organization-units="organizationUnits"
     />
     <CurriculumConfigurationSheet
         v-model:open="configurationOpen"

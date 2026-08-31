@@ -31,13 +31,12 @@ import '@vue-flow/core/dist/theme-default.css';
 import '@vue-flow/controls/dist/style.css';
 import '@vue-flow/minimap/dist/style.css';
 
-const props =
-    defineProps<
-        Pick<
-            CurriculumBuilderProps,
-            'curriculum' | 'fieldDefinitions' | 'subjects' | 'requirements'
-        >
-    >();
+const props = defineProps<
+    Pick<
+        CurriculumBuilderProps,
+        'curriculum' | 'fieldDefinitions' | 'subjects' | 'requirements'
+    > & { organizationUnits: string[] }
+>();
 
 const flowId = `curriculum-${props.curriculum.id}`;
 const { setEdges, setNodes } = useVueFlow({ id: flowId });
@@ -147,6 +146,7 @@ const buildNodes = (): Node[] => {
                 data: {
                     curriculum: props.curriculum,
                     fieldDefinitions: props.fieldDefinitions,
+                    organizationUnits: props.organizationUnits,
                     subject,
                     cycle,
                     position: subject.position,
@@ -182,6 +182,7 @@ const buildNodes = (): Node[] => {
                 data: {
                     curriculum: props.curriculum,
                     fieldDefinitions: props.fieldDefinitions,
+                    organizationUnits: props.organizationUnits,
                     subject: null,
                     cycle,
                     position,
@@ -244,6 +245,7 @@ watch(
     [
         () => props.subjects,
         () => props.requirements,
+        () => props.organizationUnits,
         () => props.curriculum.cycle_count,
         editingSubjectId,
         draftCycle,

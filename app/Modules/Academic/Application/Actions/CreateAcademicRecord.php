@@ -159,15 +159,29 @@ class CreateAcademicRecord
             ]);
         }
 
+        $lastPosition = Subject::query()
+            ->where('version_malla_id', $curriculum->id)
+            ->where('ciclo', $data['cycle'])
+            ->max('orden_en_ciclo');
+        $position = array_key_exists('position', $data)
+            ? (int) $data['position']
+            : ($lastPosition === null ? 0 : (int) $lastPosition + 1);
+
+        $activeSystemKeys = CurriculumFieldDefinition::query()
+            ->where('version_malla_id', $curriculum->id)
+            ->where('activo', true)
+            ->whereNotNull('clave_sistema')
+            ->pluck('clave_sistema');
+
         $subject = Subject::query()->create([
             'version_malla_id' => $curriculum->id,
             'codigo_institucional' => $data['code'],
             'nombre' => $data['name'],
             'ciclo' => $data['cycle'] ?? null,
-            'orden_en_ciclo' => $data['position'] ?? 0,
+            'orden_en_ciclo' => $position,
             'unidad_organizacion_curricular' => $data['organization_unit'] ?? null,
             'creditos' => $data['credits'] ?? null,
-            'horas_totales' => $data['total_hours'] ?? null,
+            'horas_totales' => CurriculumSystemFields::totalHours($data, $activeSystemKeys),
             'horas_proyecto' => $data['hours_project'] ?? null,
             'horas_ap' => $data['hours_ap'] ?? null,
             'horas_ac' => $data['hours_ac'] ?? null,

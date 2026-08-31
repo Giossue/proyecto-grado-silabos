@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3';
 import { Check, Plus } from '@lucide/vue';
-import { computed } from 'vue';
+import { computed, watch } from 'vue';
 import CareerAcademicStructureController from '@/actions/App/Modules/Academic/Presentation/Http/Controllers/CareerAcademicStructureController';
+import CurriculumSubjectFieldInput from '@/components/domain/academic/curriculum/CurriculumSubjectFieldInput.vue';
 import FormSheet from '@/components/domain/FormSheet.vue';
 import FormSheetActions from '@/components/domain/FormSheetActions.vue';
 import {
@@ -13,10 +14,8 @@ import {
     FieldLabel,
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import {
-    NativeSelect,
-    NativeSelectOption,
-} from '@/components/ui/native-select';
+import { useCurriculumSubjectFieldValues } from '@/composables/useCurriculumSubjectFieldValues';
+import { cn } from '@/lib/utils';
 import type {
     CurriculumBuilderProps,
     CurriculumBuilderSubject,
@@ -27,6 +26,7 @@ const props = defineProps<{
     curriculum: CurriculumBuilderProps['curriculum'];
     fieldDefinitions: CurriculumBuilderProps['fieldDefinitions'];
     subject: CurriculumBuilderSubject | null;
+    organizationUnits: string[];
 }>();
 
 const open = defineModel<boolean>('open', { default: false });
@@ -41,21 +41,21 @@ const formRoute = computed(() =>
 const title = computed(() =>
     props.subject ? `Editar ${props.subject.name}` : 'Agregar materia',
 );
+const { reset, updateValue, valueFor } = useCurriculumSubjectFieldValues(
+    () => props.subject,
+    () => props.fieldDefinitions,
+);
 
-const inputType = (type: string): 'number' | 'text' =>
-    type === 'number' || type === 'integer' ? 'number' : 'text';
-
-const fieldValue = (field: CurriculumFieldDefinition): number | string => {
-    const value = field.system_key
-        ? props.subject?.system_values[field.system_key]
-        : props.subject?.custom_values[field.id];
-
-    if (typeof value === 'boolean') {
-        return value ? 'true' : 'false';
+watch(open, (isOpen) => {
+    if (isOpen) {
+        reset();
     }
+});
 
-    return value ?? '';
-};
+const errorKey = (field: CurriculumFieldDefinition): string =>
+    field.system_key ?? `custom_values.${field.id}`;
+const fieldGridClass = (field: CurriculumFieldDefinition): string =>
+    cn(field.type === 'text' && 'col-span-2 sm:col-span-5');
 </script>
 
 <template>
@@ -131,100 +131,41 @@ const fieldValue = (field: CurriculumFieldDefinition): number | string => {
                         </FieldDescription>
                         <FieldError :errors="[errors.cycle]" />
                     </Field>
-                    <Field :data-invalid="Boolean(errors.position)">
-                        <FieldLabel for="builder-subject-position">
-                            Orden dentro del ciclo
-                        </FieldLabel>
-                        <Input
-                            id="builder-subject-position"
-                            name="position"
-                            type="number"
-                            min="0"
-                            :default-value="subject?.position ?? 0"
-                            :aria-invalid="Boolean(errors.position)"
-                        />
-                        <FieldError :errors="[errors.position]" />
-                    </Field>
                     <Field :data-invalid="Boolean(errors.organization_unit)">
-                        <FieldLabel for="builder-subject-unit">
+                        <FieldLabel for="builder-subject-unit" required>
                             Unidad de organización curricular
                         </FieldLabel>
                         <Input
                             id="builder-subject-unit"
                             name="organization_unit"
+                            list="builder-subject-organization-units"
                             :default-value="subject?.organization_unit ?? ''"
                             placeholder="Ej. Unidad básica"
+                            required
                             :aria-invalid="Boolean(errors.organization_unit)"
                         />
+                        <datalist id="builder-subject-organization-units">
+                            <option
+                                v-for="unit in organizationUnits"
+                                :key="unit"
+                                :value="unit"
+                            />
+                        </datalist>
                         <FieldError :errors="[errors.organization_unit]" />
                     </Field>
 
-                    <Field
-                        v-for="field in fieldDefinitions"
-                        :key="field.id"
-                        :data-invalid="
-                            Boolean(
-                                errors[
-                                    field.system_key ??
-                                        `custom_values.${field.id}`
-                                ],
-                            )
-                        "
-                    >
-                        <FieldLabel :for="`builder-field-${field.id}`">
-                            {{ field.label }}
-                        </FieldLabel>
-                        <NativeSelect
-                            v-if="field.type === 'boolean'"
-                            :id="`builder-field-${field.id}`"
-                            :name="
-                                field.system_key ?? `custom_values[${field.id}]`
-                            "
-                            :model-value="fieldValue(field)"
-                        >
-                            <NativeSelectOption value=""
-                                >Sin valor</NativeSelectOption
-                            >
-                            <NativeSelectOption value="true"
-                                >Sí</NativeSelectOption
-                            >
-                            <NativeSelectOption value="false"
-                                >No</NativeSelectOption
-                            >
-                        </NativeSelect>
-                        <Input
-                            v-else
-                            :id="`builder-field-${field.id}`"
-                            :name="
-                                field.system_key ?? `custom_values[${field.id}]`
-                            "
-                            :type="inputType(field.type)"
-                            :step="field.type === 'number' ? '0.01' : undefined"
-                            min="0"
-                            :default-value="fieldValue(field)"
-                            :placeholder="
-                                field.type === 'text'
-                                    ? `Ej. ${field.label}`
-                                    : undefined
-                            "
-                            :aria-invalid="
-                                Boolean(
-                                    errors[
-                                        field.system_key ??
-                                            `custom_values.${field.id}`
-                                    ],
-                                )
-                            "
+                    <div class="grid grid-cols-2 gap-3 sm:grid-cols-5">
+                        <CurriculumSubjectFieldInput
+                            v-for="field in fieldDefinitions"
+                            :key="field.id"
+                            :class="fieldGridClass(field)"
+                            :field="field"
+                            :input-id="`builder-field-${field.id}`"
+                            :value="valueFor(field)"
+                            :error="errors[errorKey(field)]"
+                            @update:value="updateValue(field, $event)"
                         />
-                        <FieldError
-                            :errors="[
-                                errors[
-                                    field.system_key ??
-                                        `custom_values.${field.id}`
-                                ],
-                            ]"
-                        />
-                    </Field>
+                    </div>
 
                     <FormSheetActions
                         :close="close"

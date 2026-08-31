@@ -55,6 +55,10 @@ composición de tarjeta. Sus campos tienen clave estable, etiqueta, tipo, posici
 visibilidad y capacidad de
 totalización; pueden proyectar un dato estructurado existente o conservar un valor
 adicional tipado por asignatura. Retirar un campo lo desactiva sin borrar sus valores.
+En cada materia, los campos activos son obligatorios. Las horas totales se derivan de la
+suma de los componentes horarios activos y nunca incluyen los créditos; el servidor
+recalcula este valor en cada alta o edición. Si el desglose no envía una posición, la
+materia se agrega después de la última del mismo ciclo.
 Una relación académica guarda origen, destino y tipo; el color del diagrama no constituye
 la regla. El desglose académico y el constructor visual son dos proyecciones del mismo
 agregado; las asignaturas se mantienen dentro de la malla y no como una
@@ -139,6 +143,8 @@ establece; una recomendación de IA nunca bloquea por sí sola.
     por medio de la malla.
 15. Crear ofertas y abrir procesos exige que la malla actual esté activa.
 16. Todo sílabo y toda revisión conservan el contexto académico fijado al crearse.
+17. Las horas totales de una materia se derivan de sus componentes horarios activos y no
+    de un valor ingresado manualmente.
 
 ## Tipos de campo de plantilla
 

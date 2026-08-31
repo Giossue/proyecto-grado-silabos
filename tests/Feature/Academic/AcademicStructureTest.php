@@ -329,8 +329,12 @@ class AcademicStructureTest extends TestCase
                 'code' => 'SW-701',
                 'name' => 'Arquitectura Empresarial',
                 'cycle' => 7,
+                'organization_unit' => 'Unidad profesional',
+                'hours_ac' => 48,
+                'hours_pae' => 32,
+                'hours_aa' => 64,
                 'credits' => 4,
-                'total_hours' => 160,
+                'total_hours' => 999,
             ])
             ->assertRedirect();
 
@@ -338,7 +342,25 @@ class AcademicStructureTest extends TestCase
             'version_malla_id' => $curriculum->id,
             'codigo_institucional' => 'SW-701',
             'ciclo' => 7,
+            'orden_en_ciclo' => 0,
+            'horas_totales' => 144,
         ]);
+
+        $this->actingAs($coordinator)
+            ->withSession(['active_role_assignment_id' => $role->id])
+            ->post(route('coordination.academic.store', 'subject'), [
+                'curriculum_id' => $curriculum->id,
+                'code' => 'SW-702',
+                'name' => 'Materia incompleta',
+                'cycle' => 7,
+            ])
+            ->assertSessionHasErrors([
+                'organization_unit',
+                'hours_ac',
+                'hours_pae',
+                'hours_aa',
+                'credits',
+            ]);
 
         $this->actingAs($coordinator)
             ->withSession(['active_role_assignment_id' => $role->id])
@@ -535,8 +557,12 @@ class AcademicStructureTest extends TestCase
                 'code' => 'SW-711',
                 'name' => 'Materia corregida',
                 'cycle' => 8,
+                'organization_unit' => 'Unidad profesional',
+                'hours_ac' => 48,
+                'hours_pae' => 32,
+                'hours_aa' => 64,
                 'credits' => 4,
-                'total_hours' => 160,
+                'total_hours' => 999,
             ])
             ->assertRedirect();
 
@@ -550,6 +576,7 @@ class AcademicStructureTest extends TestCase
             'codigo_institucional' => 'SW-711',
             'nombre' => 'Materia corregida',
             'ciclo' => 8,
+            'horas_totales' => 144,
         ]);
         $this->assertDatabaseHas('eventos_auditoria', [
             'accion' => 'academic.curriculum.updated',
@@ -641,6 +668,10 @@ class AcademicStructureTest extends TestCase
                 'code' => $subject->codigo_institucional,
                 'name' => 'Nombre reescrito',
                 'cycle' => $subject->ciclo,
+                'organization_unit' => 'Unidad profesional',
+                'hours_ac' => $subject->horas_ac,
+                'hours_pae' => $subject->horas_pae ?? 0,
+                'hours_aa' => $subject->horas_aa,
                 'credits' => $subject->creditos,
                 'total_hours' => $subject->horas_totales,
             ])
@@ -668,6 +699,11 @@ class AcademicStructureTest extends TestCase
                 'code' => 'SW-INACTIVA',
                 'name' => 'Materia editable sin proceso',
                 'cycle' => 1,
+                'organization_unit' => 'Unidad básica',
+                'hours_ac' => 48,
+                'hours_pae' => 32,
+                'hours_aa' => 64,
+                'credits' => 3,
             ])
             ->assertRedirect();
         $subject = Subject::query()->where('codigo_institucional', 'SW-INACTIVA')->firstOrFail();

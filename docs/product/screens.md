@@ -133,8 +133,13 @@
   materia en su ciclo y editarla directamente desde su tarjeta. El desglose académico
   ofrece las mismas operaciones mediante formularios y tablas accesibles; su alta y
   edición manual sí usan Sheet. Ciclos y campos se configuran en la malla, no en una
-  plantilla global de la Carrera de Software. Una reubicación correcta se guarda sin
-  notificación repetitiva; un fallo sí explica la acción correctiva.
+  plantilla global de la Carrera de Software. Al crear o editar una materia, todos los
+  campos activos son obligatorios, las magnitudes se presentan en una fila compacta y
+  **TOTAL** se calcula con la suma de los componentes de horas, sin incluir créditos. La
+  unidad de organización curricular sugiere valores ya usados y admite escribir uno
+  nuevo; el orden dentro del ciclo se asigna automáticamente cuando no lo determina el
+  constructor. Una reubicación correcta se guarda sin notificación repetitiva; un fallo
+  sí explica la acción correctiva.
 - **Auditoría** agrupa las rutas administrativas **Procesos** (ADM-09) y **Registro de
   actividad** (ADM-10). La primera permite diagnosticar y reintentar trabajos; la segunda
   reconstruye quién hizo qué y cuándo.

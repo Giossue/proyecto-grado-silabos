@@ -3,16 +3,37 @@
 namespace App\Modules\Academic\Presentation\Http\Requests;
 
 use App\Modules\Academic\Domain\AcademicStructurePermissions;
+use App\Modules\Academic\Domain\CurriculumSystemFields;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CourseOffering;
+use App\Modules\Academic\Infrastructure\Persistence\Models\CurriculumFieldDefinition;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CurriculumVersion;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Subject;
 use App\Modules\Identity\Application\ActiveRole;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Unique;
 
 class StoreAcademicRecordRequest extends FormRequest
 {
+    protected function prepareForValidation(): void
+    {
+        if ($this->route('entity') !== 'subject') {
+            return;
+        }
+
+        $curriculumId = is_string($this->input('curriculum_id'))
+            ? $this->input('curriculum_id')
+            : '';
+
+        $this->merge([
+            'total_hours' => CurriculumSystemFields::totalHours(
+                $this->all(),
+                $this->activeSubjectSystemKeys($curriculumId),
+            ),
+        ]);
+    }
+
     public function authorize(): bool
     {
         $entity = $this->route('entity');
@@ -61,35 +82,7 @@ class StoreAcademicRecordRequest extends FormRequest
                     ),
                 ],
             ],
-            'subject' => [
-                'curriculum_id' => [
-                    'required',
-                    'uuid',
-                    Rule::exists('versiones_malla', 'id')
-                        ->where('es_actual', true)
-                        ->where('carrera_id', $this->careerId()),
-                ],
-                'code' => [
-                    'required',
-                    'string',
-                    'max:80',
-                    $this->uniqueWithin('asignaturas', 'codigo_institucional', 'version_malla_id', 'curriculum_id'),
-                ],
-                'name' => ['required', 'string', 'max:180'],
-                'cycle' => ['nullable', 'integer', 'min:1', 'max:30'],
-                'position' => ['nullable', 'integer', 'min:0', 'max:999'],
-                'organization_unit' => ['nullable', 'string', 'max:80'],
-                'credits' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
-                'total_hours' => ['nullable', 'integer', 'min:0', 'max:65535'],
-                'hours_project' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
-                'hours_ap' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
-                'hours_ac' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
-                'hours_pae' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
-                'hours_aa' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
-                'hours_paec' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
-                'custom_values' => ['nullable', 'array'],
-                'custom_values.*' => ['nullable'],
-            ],
+            'subject' => $this->subjectRules(),
             'offering' => [
                 'period_id' => [
                     'required',
@@ -188,6 +181,80 @@ class StoreAcademicRecordRequest extends FormRequest
         $scopeValue = $this->input($input ?? $scopeColumn);
 
         return Rule::unique($table, $column)->where($scopeColumn, $scopeValue);
+    }
+
+    /** @return array<string, list<mixed>> */
+    private function subjectRules(): array
+    {
+        $rules = [
+            'curriculum_id' => [
+                'required',
+                'uuid',
+                Rule::exists('versiones_malla', 'id')
+                    ->where('es_actual', true)
+                    ->where('carrera_id', $this->careerId()),
+            ],
+            'code' => [
+                'required',
+                'string',
+                'max:80',
+                $this->uniqueWithin('asignaturas', 'codigo_institucional', 'version_malla_id', 'curriculum_id'),
+            ],
+            'name' => ['required', 'string', 'max:180'],
+            'cycle' => ['required', 'integer', 'min:1', 'max:30'],
+            'position' => ['nullable', 'integer', 'min:0', 'max:999'],
+            'organization_unit' => ['required', 'string', 'max:80'],
+            'credits' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
+            'total_hours' => ['nullable', 'integer', 'min:0', 'max:65535'],
+            'hours_project' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
+            'hours_ap' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
+            'hours_ac' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
+            'hours_pae' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
+            'hours_aa' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
+            'hours_paec' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
+            'custom_values' => ['nullable', 'array'],
+            'custom_values.*' => ['nullable'],
+        ];
+
+        $curriculumId = is_string($this->input('curriculum_id'))
+            ? $this->input('curriculum_id')
+            : '';
+        foreach ($this->activeSubjectFields($curriculumId) as $field) {
+            if ($field->clave_sistema !== null && isset($rules[$field->clave_sistema])) {
+                $rules[$field->clave_sistema][0] = 'required';
+
+                continue;
+            }
+
+            if ($field->clave_sistema === null) {
+                $rules['custom_values'][0] = 'required';
+                $rules["custom_values.{$field->id}"] = ['required'];
+            }
+        }
+
+        return $rules;
+    }
+
+    /** @return Collection<int, CurriculumFieldDefinition> */
+    private function activeSubjectFields(string $curriculumId)
+    {
+        return CurriculumFieldDefinition::query()
+            ->where('version_malla_id', $curriculumId)
+            ->where('activo', true)
+            ->whereHas('curriculumVersion', fn ($query) => $query
+                ->where('carrera_id', $this->careerId())
+                ->where('es_actual', true))
+            ->get(['id', 'clave_sistema']);
+    }
+
+    /** @return list<string> */
+    private function activeSubjectSystemKeys(string $curriculumId): array
+    {
+        return $this->activeSubjectFields($curriculumId)
+            ->pluck('clave_sistema')
+            ->filter(fn (mixed $key): bool => is_string($key))
+            ->values()
+            ->all();
     }
 
     /** @return array<string, list<mixed>> */

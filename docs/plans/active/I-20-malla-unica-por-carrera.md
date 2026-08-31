@@ -39,6 +39,9 @@ actual se deshabilite o cambie.
   esa fotografía y no dependen de cambios posteriores en la malla.
 - Plantillas, fuentes y revisiones mantienen su versionado e inmutabilidad. Esta decisión
   cambia únicamente la gestión de la malla académica.
+- En materias, los campos activos son obligatorios, TOTAL deriva de los componentes de
+  horas y el orden se asigna automáticamente cuando el desglose no lo envía. Las unidades
+  ya usadas se ofrecen como sugerencias sin cerrar la entrada a valores nuevos.
 
 ## Cambios previstos
 
@@ -70,6 +73,7 @@ actual se deshabilite o cambie.
 - [x] Simplificar rutas y pantalla a una sola Malla.
 - [x] Implementar edición, estado y eliminación protegida.
 - [x] Bloquear procesos nuevos sin malla activa y preservar la historia.
+- [x] Simplificar el alta de materias y derivar orden y total en servidor.
 - [x] Actualizar trazabilidad, pruebas y evidencia focalizada.
 
 ## Riesgos y reversión

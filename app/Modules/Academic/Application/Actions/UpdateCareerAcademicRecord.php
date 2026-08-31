@@ -4,9 +4,11 @@ namespace App\Modules\Academic\Application\Actions;
 
 use App\Models\User;
 use App\Modules\Academic\Domain\AcademicStructurePermissions;
+use App\Modules\Academic\Domain\CurriculumSystemFields;
 use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Campus;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CourseOffering;
+use App\Modules\Academic\Infrastructure\Persistence\Models\CurriculumFieldDefinition;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CurriculumVersion;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Modality;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
@@ -104,7 +106,7 @@ class UpdateCareerAcademicRecord
                     ]);
                 }
             }
-            $attributes = $this->attributes($entity, $data, $activeRole->carrera_id);
+            $attributes = $this->attributes($entity, $data, $activeRole->carrera_id, $record);
             $record->fill($attributes);
             $dirty = $record->getDirty();
             $customValuesChanged = false;
@@ -194,13 +196,13 @@ class UpdateCareerAcademicRecord
     /** @param array<string, mixed> $data
      * @return array<string, mixed>
      */
-    private function attributes(string $entity, array $data, string $careerId): array
+    private function attributes(string $entity, array $data, string $careerId, Model $record): array
     {
         return match ($entity) {
             'curriculum' => [
                 'codigo' => $data['code'],
             ],
-            'subject' => $this->subjectAttributes($data),
+            'subject' => $this->subjectAttributes($data, $record),
             'offering' => $this->offeringAttributes($data, $careerId),
             'parallel' => $this->parallelAttributes($data, $careerId),
             'teacher_assignment' => $this->teacherAssignmentAttributes($data, $careerId),
@@ -211,14 +213,24 @@ class UpdateCareerAcademicRecord
     /** @param array<string, mixed> $data
      * @return array<string, mixed>
      */
-    private function subjectAttributes(array $data): array
+    private function subjectAttributes(array $data, Model $record): array
     {
+        if (! $record instanceof Subject) {
+            throw new \LogicException('El registro esperado debe ser una materia.');
+        }
+
+        $activeSystemKeys = CurriculumFieldDefinition::query()
+            ->where('version_malla_id', $record->version_malla_id)
+            ->where('activo', true)
+            ->whereNotNull('clave_sistema')
+            ->pluck('clave_sistema');
+
         $attributes = [
             'codigo_institucional' => $data['code'],
             'nombre' => $data['name'],
             'ciclo' => $data['cycle'] ?? null,
             'creditos' => $data['credits'] ?? null,
-            'horas_totales' => $data['total_hours'] ?? null,
+            'horas_totales' => CurriculumSystemFields::totalHours($data, $activeSystemKeys),
         ];
         $optional = [
             'position' => 'orden_en_ciclo',

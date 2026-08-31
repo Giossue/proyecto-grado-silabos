@@ -6,6 +6,16 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\Subject;
 
 final class CurriculumSystemFields
 {
+    /** @var list<string> */
+    public const HOUR_COMPONENT_KEYS = [
+        'hours_project',
+        'hours_ap',
+        'hours_ac',
+        'hours_pae',
+        'hours_aa',
+        'hours_paec',
+    ];
+
     /** @var array<string, string> */
     public const ATTRIBUTES = [
         'hours_project' => 'horas_proyecto',
@@ -47,5 +57,23 @@ final class CurriculumSystemFields
         $attribute = self::ATTRIBUTES[$systemKey] ?? null;
 
         return $attribute === null ? null : $subject->getAttribute($attribute);
+    }
+
+    /**
+     * @param  array<string, mixed>  $values
+     * @param  iterable<string>|null  $activeSystemKeys
+     */
+    public static function totalHours(array $values, ?iterable $activeSystemKeys = null): int|float
+    {
+        $keys = $activeSystemKeys === null
+            ? self::HOUR_COMPONENT_KEYS
+            : array_values(array_intersect(self::HOUR_COMPONENT_KEYS, [...$activeSystemKeys]));
+
+        return array_reduce(
+            $keys,
+            fn (int|float $total, string $key): int|float => $total
+                + (is_numeric($values[$key] ?? null) ? $values[$key] + 0 : 0),
+            0,
+        );
     }
 }

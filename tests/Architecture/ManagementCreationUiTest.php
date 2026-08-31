@@ -280,6 +280,12 @@ it('ofrece desglose y constructor visual sobre el mismo contrato de malla', func
     $visualForm = file_get_contents(
         $root.'/resources/js/components/domain/academic/curriculum/CurriculumVisualSubjectForm.vue',
     );
+    $subjectSheet = file_get_contents(
+        $root.'/resources/js/components/domain/academic/curriculum/CurriculumSubjectSheet.vue',
+    );
+    $subjectField = file_get_contents(
+        $root.'/resources/js/components/domain/academic/curriculum/CurriculumSubjectFieldInput.vue',
+    );
     $subjectNode = file_get_contents(
         $root.'/resources/js/components/domain/academic/curriculum/CurriculumSubjectNode.vue',
     );
@@ -297,6 +303,7 @@ it('ofrece desglose y constructor visual sobre el mismo contrato de malla', func
         ->toContain('@configure="configurationOpen = true"')
         ->toContain('<CurriculumCanvas')
         ->toContain('<CurriculumFormView')
+        ->toContain('organizationUnits')
         ->toContain('<TabsList')
         ->toContain('v-model="activeMode"')
         ->toContain("activeMode === 'breakdown'")
@@ -329,8 +336,21 @@ it('ofrece desglose y constructor visual sobre el mismo contrato de malla', func
         ->toBeString()
         ->toContain("store.form('subject')")
         ->toContain('update.form({')
-        ->toContain('preservedSystemValues')
+        ->toContain('<CurriculumSubjectFieldInput')
+        ->toContain(':list="organizationUnitListId"')
         ->not->toContain('<FormSheet');
+    expect($subjectSheet)
+        ->toBeString()
+        ->toContain('sm:grid-cols-5')
+        ->toContain('builder-subject-organization-units')
+        ->toContain('<CurriculumSubjectFieldInput')
+        ->not->toContain('name="position"')
+        ->not->toContain('Orden dentro del ciclo');
+    expect($subjectField)
+        ->toBeString()
+        ->toContain('required')
+        ->toContain("field.system_key === 'total_hours'")
+        ->toContain(':readonly="isCalculatedTotal"');
     expect($subjectNode)
         ->toBeString()
         ->toContain('<CurriculumVisualSubjectForm')

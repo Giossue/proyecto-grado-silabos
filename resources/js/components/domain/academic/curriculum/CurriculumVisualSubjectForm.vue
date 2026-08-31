@@ -3,6 +3,7 @@ import { Form } from '@inertiajs/vue3';
 import { Check } from '@lucide/vue';
 import { computed } from 'vue';
 import CareerAcademicStructureController from '@/actions/App/Modules/Academic/Presentation/Http/Controllers/CareerAcademicStructureController';
+import CurriculumSubjectFieldInput from '@/components/domain/academic/curriculum/CurriculumSubjectFieldInput.vue';
 import { Button } from '@/components/ui/button';
 import {
     Field,
@@ -11,11 +12,8 @@ import {
     FieldLabel,
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import {
-    NativeSelect,
-    NativeSelectOption,
-} from '@/components/ui/native-select';
 import { Spinner } from '@/components/ui/spinner';
+import { useCurriculumSubjectFieldValues } from '@/composables/useCurriculumSubjectFieldValues';
 import type {
     CurriculumBuilderProps,
     CurriculumBuilderSubject,
@@ -28,6 +26,7 @@ const props = defineProps<{
     subject: CurriculumBuilderSubject | null;
     cycle: number;
     position: number;
+    organizationUnits: string[];
 }>();
 
 const emit = defineEmits<{
@@ -35,22 +34,6 @@ const emit = defineEmits<{
     saved: [];
 }>();
 
-const visibleFields = computed(() =>
-    props.fieldDefinitions.filter((field) => field.visible_on_card),
-);
-const editableSystemKeys = computed(
-    () =>
-        new Set(
-            visibleFields.value.flatMap((field) =>
-                field.system_key ? [field.system_key] : [],
-            ),
-        ),
-);
-const preservedSystemValues = computed(() =>
-    Object.entries(props.subject?.system_values ?? {}).filter(
-        ([key]) => !editableSystemKeys.value.has(key),
-    ),
-);
 const formRoute = computed(() =>
     props.subject
         ? CareerAcademicStructureController.update.form({
@@ -60,23 +43,16 @@ const formRoute = computed(() =>
         : CareerAcademicStructureController.store.form('subject'),
 );
 
-const inputType = (type: CurriculumFieldDefinition['type']): string =>
-    type === 'number' || type === 'integer' ? 'number' : 'text';
-
-const fieldValue = (field: CurriculumFieldDefinition): number | string => {
-    const value = field.system_key
-        ? props.subject?.system_values[field.system_key]
-        : props.subject?.custom_values[field.id];
-
-    if (typeof value === 'boolean') {
-        return value ? 'true' : 'false';
-    }
-
-    return value ?? '';
-};
+const { updateValue, valueFor } = useCurriculumSubjectFieldValues(
+    () => props.subject,
+    () => props.fieldDefinitions,
+);
 
 const errorKey = (field: CurriculumFieldDefinition): string =>
     field.system_key ?? `custom_values.${field.id}`;
+const organizationUnitListId = computed(
+    () => `visual-subject-units-${props.subject?.id ?? props.cycle}`,
+);
 </script>
 
 <template>
@@ -98,14 +74,6 @@ const errorKey = (field: CurriculumFieldDefinition): string =>
         />
         <input type="hidden" name="cycle" :value="cycle" />
         <input type="hidden" name="position" :value="position" />
-        <input
-            v-for="[key, value] in preservedSystemValues"
-            :key="key"
-            type="hidden"
-            :name="key"
-            :value="value ?? ''"
-        />
-
         <FieldGroup class="gap-3">
             <Field v-if="errors.record" data-invalid>
                 <FieldError :errors="[errors.record]" />
@@ -154,68 +122,43 @@ const errorKey = (field: CurriculumFieldDefinition): string =>
                 <FieldLabel
                     :for="`visual-subject-unit-${subject?.id ?? cycle}`"
                     class="sr-only"
+                    required
                 >
                     Unidad de organización curricular
                 </FieldLabel>
                 <Input
                     :id="`visual-subject-unit-${subject?.id ?? cycle}`"
                     name="organization_unit"
+                    :list="organizationUnitListId"
                     :default-value="subject?.organization_unit ?? ''"
                     placeholder="Ej. Unidad profesional"
+                    required
                     :aria-invalid="Boolean(errors.organization_unit)"
                 />
+                <datalist :id="organizationUnitListId">
+                    <option
+                        v-for="unit in organizationUnits"
+                        :key="unit"
+                        :value="unit"
+                    />
+                </datalist>
                 <FieldError :errors="[errors.organization_unit]" />
             </Field>
 
             <div
-                v-if="visibleFields.length > 0"
+                v-if="fieldDefinitions.length > 0"
                 class="-m-1 flex gap-2 overflow-x-auto p-1"
             >
-                <Field
-                    v-for="field in visibleFields"
+                <CurriculumSubjectFieldInput
+                    v-for="field in fieldDefinitions"
                     :key="field.id"
                     class="min-w-24 flex-1 gap-1"
-                    :data-invalid="Boolean(errors[errorKey(field)])"
-                >
-                    <FieldLabel
-                        :for="`visual-subject-${subject?.id ?? cycle}-${field.id}`"
-                    >
-                        {{ field.label }}
-                    </FieldLabel>
-                    <NativeSelect
-                        v-if="field.type === 'boolean'"
-                        :id="`visual-subject-${subject?.id ?? cycle}-${field.id}`"
-                        :name="field.system_key ?? `custom_values[${field.id}]`"
-                        :model-value="fieldValue(field)"
-                        :aria-invalid="Boolean(errors[errorKey(field)])"
-                    >
-                        <NativeSelectOption value="">—</NativeSelectOption>
-                        <NativeSelectOption value="true">Sí</NativeSelectOption>
-                        <NativeSelectOption value="false"
-                            >No</NativeSelectOption
-                        >
-                    </NativeSelect>
-                    <Input
-                        v-else
-                        :id="`visual-subject-${subject?.id ?? cycle}-${field.id}`"
-                        :name="field.system_key ?? `custom_values[${field.id}]`"
-                        :type="inputType(field.type)"
-                        :step="field.type === 'number' ? '0.01' : undefined"
-                        :min="
-                            field.type === 'number' || field.type === 'integer'
-                                ? 0
-                                : undefined
-                        "
-                        :default-value="fieldValue(field)"
-                        :placeholder="
-                            field.type === 'text'
-                                ? `Ej. ${field.label}`
-                                : undefined
-                        "
-                        :aria-invalid="Boolean(errors[errorKey(field)])"
-                    />
-                    <FieldError :errors="[errors[errorKey(field)]]" />
-                </Field>
+                    :field="field"
+                    :input-id="`visual-subject-${subject?.id ?? cycle}-${field.id}`"
+                    :value="valueFor(field)"
+                    :error="errors[errorKey(field)]"
+                    @update:value="updateValue(field, $event)"
+                />
             </div>
 
             <div class="flex justify-end gap-2">

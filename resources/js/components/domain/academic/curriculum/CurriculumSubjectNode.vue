@@ -14,6 +14,7 @@ defineProps<{
     data: {
         curriculum: CurriculumBuilderProps['curriculum'];
         fieldDefinitions: CurriculumFieldDefinition[];
+        organizationUnits: string[];
         subject: CurriculumBuilderSubject | null;
         cycle: number;
         position: number;
@@ -32,6 +33,7 @@ defineProps<{
         v-if="data.editing"
         :curriculum="data.curriculum"
         :field-definitions="data.fieldDefinitions"
+        :organization-units="data.organizationUnits"
         :subject="data.subject"
         :cycle="data.cycle"
         :position="data.position"
