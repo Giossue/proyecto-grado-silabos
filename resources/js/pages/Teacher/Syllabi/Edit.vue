@@ -14,6 +14,7 @@ import { computed, onBeforeUnmount, reactive, ref } from 'vue';
 import AiAssistanceController from '@/actions/App/Modules/AiAssistance/Presentation/Http/Controllers/AiAssistanceController';
 import SyllabusController from '@/actions/App/Modules/Syllabus/Presentation/Http/Controllers/SyllabusController';
 import PageFrame from '@/components/domain/PageFrame.vue';
+import SyllabusCompletionStatus from '@/components/domain/syllabus/SyllabusCompletionStatus.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -1060,19 +1061,10 @@ onBeforeUnmount(() => {
                         </article>
                     </CardContent>
                 </Card>
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Completitud</CardTitle>
-                        <CardDescription>
-                            Campos obligatorios completos.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div class="text-3xl font-semibold">
-                            {{ completion.toFixed(0) }} %
-                        </div>
-                    </CardContent>
-                </Card>
+                <SyllabusCompletionStatus
+                    :value="completion"
+                    description="Campos obligatorios completos."
+                />
                 <Card>
                     <CardHeader>
                         <CardTitle>Colaboradores</CardTitle>

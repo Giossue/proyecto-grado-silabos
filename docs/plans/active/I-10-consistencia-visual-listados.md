@@ -7,6 +7,8 @@ explícita del responsable del producto. La validación manual de contraste, tec
 lector de pantalla y dispositivos reales permanece dentro de I-08 y `PV-19`.
 El 2026-08-30 se incorporó el patrón global de encabezado y filas alternas solicitado
 para distinguir registros consecutivos.
+El 2026-08-30 se confirmó además que las cards métricas pertenecen exclusivamente al
+Dashboard; las demás pantallas conservan las cifras útiles en resúmenes compactos.
 
 ## Trazabilidad
 
@@ -38,6 +40,9 @@ para distinguir registros consecutivos.
   dentro de una superficie semántica, un único `h1`, descripción, separación responsive
   y espacios opcionales para regreso, estado y acciones. Configuración aplica el patrón
   una vez en su layout y conserva Perfil, Seguridad y Apariencia como subsecciones.
+- `StatTile` y cualquier `Card` cuyo contenido principal sea un conteo o porcentaje se
+  reservan al Dashboard. COR-04 y COR-12 muestran sus cifras en listas de definición;
+  COR-13 usa definiciones en línea y DOC-03..04 una barra de completitud compacta.
 
 ## Pasos
 
@@ -49,6 +54,7 @@ para distinguir registros consecutivos.
 - [x] Diferenciar encabezados y registros consecutivos con colores alternos compartidos.
 - [x] Agrupar las acciones de tabla en un menú compartido de tres puntos.
 - [x] Normalizar icono, título, descripción y espaciado de todos los módulos autenticados.
+- [x] Retirar las cards métricas fuera del Dashboard y proteger esa frontera.
 - [x] Cubrir el patrón con pruebas de arquitectura y pruebas funcionales de consulta.
 - [x] Actualizar producto, arquitectura, trazabilidad y evidencia de verificación.
 
@@ -61,10 +67,11 @@ para distinguir registros consecutivos.
   visuales.
 - `ResponsiveTableTest` protege los tokens del encabezado, las filas impares/pares y la
   continuidad del color en las celdas fijas de acciones y detalle móvil.
-- La prueba focalizada de tablas, ESLint, Prettier, TypeScript y el build Vite aprobaron
-  el ajuste del 2026-08-30. `composer verify` aprobó sus controles previos y no pudo
-  completar la suite dependiente de PostgreSQL/Redis porque esos servicios no estaban
-  disponibles en el entorno local.
+- `MetricCardsScopeTest` reserva `StatTile` al Dashboard y comprueba que convocatorias,
+  informes, mallas y sílabos usen sus representaciones compactas sin cards métricas.
+- `composer verify` aprobó el ajuste del 2026-08-30 sobre una base PostgreSQL temporal
+  aislada: escaneo de secretos, ESLint, Prettier, TypeScript, Pint, Larastan, 268 pruebas
+  con 2.870 aserciones y build Vite de producción.
 - `AcademicStructureTest` comprueba las cinco rutas hijas de Estructura académica y la
   redirección compatible desde la ruta anterior.
 - `DocumentOperationsTest` e `InstitutionalImportTest` —esta última retirada con el módulo

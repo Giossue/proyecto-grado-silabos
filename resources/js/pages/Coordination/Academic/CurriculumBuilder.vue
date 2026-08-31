@@ -27,6 +27,7 @@ defineOptions({
 });
 
 const props = defineProps<CurriculumBuilderProps>();
+const activeMode = ref<'breakdown' | 'builder'>('breakdown');
 const subjectSheetOpen = ref(false);
 const configurationOpen = ref(false);
 const selectedSubject = ref<CurriculumBuilderSubject | null>(null);
@@ -70,7 +71,11 @@ const openSubject = (subject: CurriculumBuilderSubject): void => {
                 <Settings2 data-icon="inline-start" aria-hidden="true" />
                 Configurar
             </Button>
-            <Button type="button" @click="openNewSubject">
+            <Button
+                v-if="activeMode === 'breakdown'"
+                type="button"
+                @click="openNewSubject"
+            >
                 <Plus data-icon="inline-start" aria-hidden="true" />
                 Agregar materia
             </Button>
@@ -85,7 +90,7 @@ const openSubject = (subject: CurriculumBuilderSubject): void => {
             </AlertDescription>
         </Alert>
 
-        <Tabs default-value="breakdown" class="flex flex-col gap-4">
+        <Tabs v-model="activeMode" class="flex flex-col gap-4">
             <TabsList aria-label="Modo de trabajo de la malla">
                 <TabsTrigger value="breakdown">
                     <ListTree aria-hidden="true" />
@@ -99,20 +104,18 @@ const openSubject = (subject: CurriculumBuilderSubject): void => {
             <TabsContent value="breakdown" class="flex flex-col gap-6">
                 <dl
                     v-if="fieldTotals.length > 0"
-                    class="grid gap-3 sm:grid-cols-2 lg:grid-cols-5"
+                    class="flex flex-wrap gap-x-8 gap-y-3 border-y py-4"
                     aria-label="Totales de la malla"
                 >
                     <div
                         v-for="field in fieldTotals"
                         :key="field.id"
-                        class="rounded-lg border bg-card px-4 py-3 shadow-surface"
+                        class="flex items-baseline gap-2"
                     >
-                        <dt
-                            class="text-xs font-medium tracking-wide text-muted-foreground uppercase"
-                        >
+                        <dt class="text-sm text-muted-foreground">
                             Total {{ field.label }}
                         </dt>
-                        <dd class="mt-1 text-xl font-semibold">
+                        <dd class="font-semibold tabular-nums">
                             {{ field.value }}
                         </dd>
                     </div>
@@ -122,9 +125,9 @@ const openSubject = (subject: CurriculumBuilderSubject): void => {
             <TabsContent value="builder">
                 <CurriculumCanvas
                     :curriculum="curriculum"
+                    :field-definitions="fieldDefinitions"
                     :subjects="subjects"
                     :requirements="requirements"
-                    @edit="openSubject"
                 />
             </TabsContent>
         </Tabs>

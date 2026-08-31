@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Form, Head, Link } from '@inertiajs/vue3';
-import { CheckCircle2, CircleDashed, FilePenLine, Files } from '@lucide/vue';
 import ConvocationController from '@/actions/App/Modules/Syllabus/Presentation/Http/Controllers/ConvocationController';
 import ClientFilterBar from '@/components/domain/ClientFilterBar.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
@@ -168,64 +167,42 @@ const {
             </AlertDescription>
         </Alert>
 
-        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <Card>
-                <CardHeader>
-                    <CardDescription>Expedientes</CardDescription>
-                    <CardTitle class="text-3xl">{{
-                        convocation.counts.total
-                    }}</CardTitle>
-                </CardHeader>
-                <CardContent
-                    class="flex items-center gap-2 text-sm text-muted-foreground"
-                >
-                    <Files aria-hidden="true" />
-                    Generados
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader>
-                    <CardDescription>Sin iniciar</CardDescription>
-                    <CardTitle class="text-3xl">{{
-                        convocation.counts.not_started
-                    }}</CardTitle>
-                </CardHeader>
-                <CardContent
-                    class="flex items-center gap-2 text-sm text-muted-foreground"
-                >
-                    <CircleDashed aria-hidden="true" />
-                    Requieren acción docente
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader>
-                    <CardDescription>En elaboración</CardDescription>
-                    <CardTitle class="text-3xl">{{
-                        convocation.counts.draft
-                    }}</CardTitle>
-                </CardHeader>
-                <CardContent
-                    class="flex items-center gap-2 text-sm text-muted-foreground"
-                >
-                    <FilePenLine aria-hidden="true" />
-                    Borradores activos
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader>
-                    <CardDescription>Aprobados</CardDescription>
-                    <CardTitle class="text-3xl">{{
-                        convocation.counts.approved
-                    }}</CardTitle>
-                </CardHeader>
-                <CardContent
-                    class="flex items-center gap-2 text-sm text-muted-foreground"
-                >
-                    <CheckCircle2 aria-hidden="true" />
-                    Cierre del flujo
-                </CardContent>
-            </Card>
-        </div>
+        <section class="space-y-2" aria-labelledby="convocation-summary-title">
+            <h2 id="convocation-summary-title" class="text-sm font-medium">
+                Resumen de expedientes
+            </h2>
+            <dl
+                class="flex flex-wrap gap-x-8 gap-y-3 border-y py-4"
+                aria-label="Resumen de expedientes de la convocatoria"
+            >
+                <div class="min-w-32 space-y-1">
+                    <dt class="text-sm text-muted-foreground">Expedientes</dt>
+                    <dd class="font-semibold tabular-nums">
+                        {{ convocation.counts.total }}
+                    </dd>
+                </div>
+                <div class="min-w-32 space-y-1">
+                    <dt class="text-sm text-muted-foreground">Sin iniciar</dt>
+                    <dd class="font-semibold tabular-nums">
+                        {{ convocation.counts.not_started }}
+                    </dd>
+                </div>
+                <div class="min-w-32 space-y-1">
+                    <dt class="text-sm text-muted-foreground">
+                        En elaboración
+                    </dt>
+                    <dd class="font-semibold tabular-nums">
+                        {{ convocation.counts.draft }}
+                    </dd>
+                </div>
+                <div class="min-w-32 space-y-1">
+                    <dt class="text-sm text-muted-foreground">Aprobados</dt>
+                    <dd class="font-semibold tabular-nums">
+                        {{ convocation.counts.approved }}
+                    </dd>
+                </div>
+            </dl>
+        </section>
 
         <div class="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]">
             <Card>

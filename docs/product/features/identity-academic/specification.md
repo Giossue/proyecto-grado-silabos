@@ -46,8 +46,9 @@
 - Estructura, mallas, materias y ofertas usan identificadores estables. La posición de una
   materia se presenta como ciclo; el periodo académico conserva sus fechas.
 - ADM-02..04 y COR-14..15 priorizan sus tablas; COR-13 prioriza cards y el detalle de
-  malla. Una única acción principal abre desde la derecha el formulario de alta
-  correspondiente, sin mostrarlo permanentemente.
+  malla. En el desglose de COR-13, la acción principal abre desde la derecha el formulario
+  manual; en el constructor visual, cada ciclo permite crear materias y cada tarjeta se
+  edita directamente en el lienzo, sin abrir ese Sheet.
 - La asignación académica decide qué sílabos puede ver y editar un docente.
 
 ## Criterios críticos

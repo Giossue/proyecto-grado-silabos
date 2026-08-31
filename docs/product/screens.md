@@ -2,12 +2,12 @@
 
 ## Globales
 
-| ID    | Pantalla              |
-| ----- | --------------------- |
-| UI-01 | Acceso                |
+| ID    | Pantalla                   |
+| ----- | -------------------------- |
+| UI-01 | Acceso                     |
 | UI-02 | Selección de carrera y rol |
-| UI-03 | Notificaciones        |
-| UI-04 | Perfil y sesiones     |
+| UI-03 | Notificaciones             |
+| UI-04 | Perfil y sesiones          |
 
 ## Docente
 
@@ -26,38 +26,38 @@
 
 ## Coordinador
 
-| ID     | Pantalla                                   |
-| ------ | ------------------------------------------ |
-| COR-01 | Panel de coordinación                      |
-| COR-02 | Convocatorias                                   |
-| COR-03 | Asistente de convocatoria                       |
-| COR-04 | Seguimiento de convocatoria                     |
-| COR-05 | Cola de revisión                           |
-| COR-06 | Espacio de revisión                        |
-| COR-07 | Comparar revisiones                        |
-| COR-08 | Solicitar corrección                       |
-| COR-09 | Aprobar                                    |
-| COR-10 | Reabrir aprobado                           |
-| COR-11 | Fuentes académicas                         |
-| COR-12 | Informes                                   |
-| COR-13 | Mallas, constructor visual/formulario y materias de la carrera |
+| ID     | Pantalla                                                         |
+| ------ | ---------------------------------------------------------------- |
+| COR-01 | Panel de coordinación                                            |
+| COR-02 | Convocatorias                                                    |
+| COR-03 | Asistente de convocatoria                                        |
+| COR-04 | Seguimiento de convocatoria                                      |
+| COR-05 | Cola de revisión                                                 |
+| COR-06 | Espacio de revisión                                              |
+| COR-07 | Comparar revisiones                                              |
+| COR-08 | Solicitar corrección                                             |
+| COR-09 | Aprobar                                                          |
+| COR-10 | Reabrir aprobado                                                 |
+| COR-11 | Fuentes académicas                                               |
+| COR-12 | Informes                                                         |
+| COR-13 | Mallas, constructor visual/formulario y materias de la carrera   |
 | COR-14 | Ofertas académicas y paralelos de la carrera, en rutas separadas |
-| COR-15 | Asignaciones docentes de la carrera        |
+| COR-15 | Asignaciones docentes de la carrera                              |
 
 ## Administrador
 
-| ID     | Pantalla                                                  |
-| ------ | --------------------------------------------------------- |
-| ADM-01 | Panel administrativo                                      |
-| ADM-02 | Usuarios                                                  |
-| ADM-03 | Detalle, roles y vigencia                                 |
-| ADM-04 | Jerarquía de facultades/carreras y catálogos globales     |
-| ADM-05 | Plantillas                                                |
-| ADM-06 | Constructor de plantilla                                  |
-| ADM-07 | Previsualizar y publicar                                  |
+| ID     | Pantalla                                                   |
+| ------ | ---------------------------------------------------------- |
+| ADM-01 | Panel administrativo                                       |
+| ADM-02 | Usuarios                                                   |
+| ADM-03 | Detalle, roles y vigencia                                  |
+| ADM-04 | Jerarquía de facultades/carreras y catálogos globales      |
+| ADM-05 | Plantillas                                                 |
+| ADM-06 | Constructor de plantilla                                   |
+| ADM-07 | Previsualizar y publicar                                   |
 | ADM-09 | Procesos (correos, documentos y análisis en segundo plano) |
-| ADM-10 | Auditoría                                                 |
-| ADM-11 | Configuración                                             |
+| ADM-10 | Auditoría                                                  |
+| ADM-11 | Configuración                                              |
 
 ## Patrones comunes
 
@@ -71,7 +71,11 @@
   título principal único, descripción y espaciado responsive. Regreso, estado y acciones
   ocupan posiciones estables; Configuración comparte el encabezado en su layout y trata
   Perfil, Seguridad y Apariencia como subsecciones.
-- Paneles priorizan tareas vencidas, bloqueos y próximos pasos; evitan métricas decorativas.
+- Las cards de métricas se reservan exclusivamente para la pantalla Dashboard de cada
+  rol. Fuera del Dashboard, los conteos y porcentajes necesarios se presentan como texto,
+  definición, tabla o barra de estado compacta; no se envuelven en `Card` ni `StatTile`.
+- Los dashboards priorizan tareas vencidas, bloqueos y próximos pasos; evitan métricas
+  decorativas.
 - Listados de volumen variable usan URL para filtros, orden y paginación.
 - Toda barra de consulta ordena sus controles como búsqueda, filtros y acción de aplicar;
   en móvil se apilan sin distribuir campos en extremos inconexos.
@@ -110,9 +114,12 @@
   historial en lugar de reescribirse. Editar una asignación cambia docente, paralelo o
   vigencia; nunca nombre o correo de la cuenta.
 - COR-13 abre cada malla en una página completa con ciclos, tarjetas, totales y relaciones.
-  El lienzo permite zoom, desplazamiento, conexión y reubicación; el desglose académico
-  ofrece las mismas operaciones mediante formularios y tablas accesibles. Ciclos y campos se configuran
-  por versión, no por una plantilla global de la Carrera de Software.
+  El lienzo permite zoom, desplazamiento, conexión y reubicación, además de crear una
+  materia en su ciclo y editarla directamente desde su tarjeta. El desglose académico
+  ofrece las mismas operaciones mediante formularios y tablas accesibles; su alta y
+  edición manual sí usan Sheet. Ciclos y campos se configuran por versión, no por una
+  plantilla global de la Carrera de Software. Una reubicación correcta se guarda sin
+  notificación repetitiva; un fallo sí explica la acción correctiva.
 - **Auditoría** agrupa las rutas administrativas **Procesos** (ADM-09) y **Registro de
   actividad** (ADM-10). La primera permite diagnosticar y reintentar trabajos; la segunda
   reconstruye quién hizo qué y cuándo.
@@ -126,7 +133,7 @@
 | Rol           | Interfaces cubiertas                                       | Comportamiento                                                                                                                             |
 | ------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | Administrador | ADM-02, ADM-03, ADM-04, ADM-05, ADM-06 y COR-11 compartida | Cuentas, roles, catálogos, coordinaciones, plantillas, campos, fuentes y fragmentos se crean desde una acción que abre el `Sheet` derecho. |
-| Coordinador   | COR-02, COR-06, COR-11, COR-13, COR-14 y COR-15            | Convocatorias, observaciones, fuentes, fragmentos, mallas, materias, ofertas, paralelos y asignaciones docentes usan el mismo patrón.           |
+| Coordinador   | COR-02, COR-06, COR-11, COR-13, COR-14 y COR-15            | Convocatorias, observaciones, fuentes, fragmentos, mallas, materias, ofertas, paralelos y asignaciones docentes usan el mismo patrón.      |
 | Docente       | DOC-02 a DOC-10                                            | No administra colecciones maestras. Edición, IA, envío y respuestas son flujos académicos de página completa, no formularios de alta.      |
 
 Selección de rol, filtros, configuración personal, resolución de contradicciones y

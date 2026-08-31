@@ -7,6 +7,7 @@ import { MiniMap } from '@vue-flow/minimap';
 import { computed, ref, watch } from 'vue';
 import { toast } from 'vue-sonner';
 import CareerAcademicStructureController from '@/actions/App/Modules/Academic/Presentation/Http/Controllers/CareerAcademicStructureController';
+import CurriculumAddSubjectNode from '@/components/domain/academic/curriculum/CurriculumAddSubjectNode.vue';
 import CurriculumCycleNode from '@/components/domain/academic/curriculum/CurriculumCycleNode.vue';
 import CurriculumSubjectNode from '@/components/domain/academic/curriculum/CurriculumSubjectNode.vue';
 import type {
@@ -21,40 +22,81 @@ import '@vue-flow/minimap/dist/style.css';
 
 const props =
     defineProps<
-        Pick<CurriculumBuilderProps, 'curriculum' | 'subjects' | 'requirements'>
+        Pick<
+            CurriculumBuilderProps,
+            'curriculum' | 'fieldDefinitions' | 'subjects' | 'requirements'
+        >
     >();
 
-const emit = defineEmits<{
-    edit: [subject: CurriculumBuilderSubject];
-}>();
+const laneHeight = 340;
+const laneStart = 145;
+const subjectStep = 290;
+const editorStep = 610;
+const editingSubjectId = ref<string | null>(null);
+const draftCycle = ref<number | null>(null);
+const hasOpenEditor = computed(
+    () => editingSubjectId.value !== null || draftCycle.value !== null,
+);
 
-const laneHeight = 230;
+const subjectsForCycle = (cycle: number): CurriculumBuilderSubject[] =>
+    props.subjects
+        .filter((subject) => subject.cycle === cycle)
+        .sort((left, right) =>
+            left.position === right.position
+                ? left.name.localeCompare(right.name)
+                : left.position - right.position,
+        );
+
 const laneWidth = computed(() => {
-    const largestCycle = Array.from(
+    const widestCycle = Array.from(
         { length: props.curriculum.cycle_count },
-        (_, index) =>
-            props.subjects.filter((subject) => subject.cycle === index + 1)
-                .length,
-    ).reduce((largest, count) => Math.max(largest, count), 1);
+        (_, index) => {
+            const cycle = index + 1;
+            const subjectsWidth = subjectsForCycle(cycle).reduce(
+                (width, subject) =>
+                    width +
+                    (editingSubjectId.value === subject.id
+                        ? editorStep
+                        : subjectStep),
+                laneStart,
+            );
+            const creationWidth = props.curriculum.editable
+                ? draftCycle.value === cycle
+                    ? editorStep
+                    : subjectStep
+                : 0;
 
-    return Math.max(1120, 180 + largestCycle * 290);
+            return subjectsWidth + creationWidth;
+        },
+    ).reduce((widest, width) => Math.max(widest, width), 0);
+
+    return Math.max(1120, widestCycle + 40);
 });
 
 const subjectById = computed(
     () => new Map(props.subjects.map((subject) => [subject.id, subject])),
 );
 
+const beginSubjectEdit = (subjectId: string): void => {
+    draftCycle.value = null;
+    editingSubjectId.value = subjectId;
+};
+
+const beginSubjectCreation = (cycle: number): void => {
+    editingSubjectId.value = null;
+    draftCycle.value = cycle;
+};
+
+const closeEditor = (): void => {
+    editingSubjectId.value = null;
+    draftCycle.value = null;
+};
+
 const buildNodes = (): Node[] => {
     const nodes: Node[] = [];
 
     for (let cycle = 1; cycle <= props.curriculum.cycle_count; cycle += 1) {
-        const cycleSubjects = props.subjects
-            .filter((subject) => subject.cycle === cycle)
-            .sort((left, right) =>
-                left.position === right.position
-                    ? left.name.localeCompare(right.name)
-                    : left.position - right.position,
-            );
+        const cycleSubjects = subjectsForCycle(cycle);
         nodes.push({
             id: `cycle-${cycle}`,
             type: 'cycle',
@@ -78,29 +120,84 @@ const buildNodes = (): Node[] => {
             zIndex: -1,
         });
 
-        cycleSubjects.forEach((subject, index) => {
+        let x = laneStart;
+        cycleSubjects.forEach((subject) => {
+            const editing = editingSubjectId.value === subject.id;
             nodes.push({
                 id: subject.id,
                 type: 'subject',
                 position: {
-                    x: 145 + index * 290,
+                    x,
                     y: (cycle - 1) * laneHeight + 38,
                 },
                 data: {
-                    ...subject,
+                    curriculum: props.curriculum,
+                    fieldDefinitions: props.fieldDefinitions,
+                    subject,
+                    cycle,
+                    position: subject.position,
                     editable: props.curriculum.editable,
-                    onEdit: (id: string) => {
-                        const selected = subjectById.value.get(id);
-
-                        if (selected) {
-                            emit('edit', selected);
-                        }
-                    },
+                    editing,
+                    onEdit: () => beginSubjectEdit(subject.id),
+                    onCancel: closeEditor,
+                    onSaved: closeEditor,
                 },
-                draggable: props.curriculum.editable,
-                connectable: props.curriculum.editable,
+                draggable: props.curriculum.editable && !hasOpenEditor.value,
+                connectable: props.curriculum.editable && !hasOpenEditor.value,
             });
+            x += editing ? editorStep : subjectStep;
         });
+
+        if (!props.curriculum.editable) {
+            continue;
+        }
+
+        if (draftCycle.value === cycle) {
+            const position =
+                Math.max(
+                    -1,
+                    ...cycleSubjects.map((subject) => subject.position),
+                ) + 1;
+            nodes.push({
+                id: `draft-subject-${cycle}`,
+                type: 'subject',
+                position: {
+                    x,
+                    y: (cycle - 1) * laneHeight + 38,
+                },
+                data: {
+                    curriculum: props.curriculum,
+                    fieldDefinitions: props.fieldDefinitions,
+                    subject: null,
+                    cycle,
+                    position,
+                    editable: true,
+                    editing: true,
+                    onEdit: () => undefined,
+                    onCancel: closeEditor,
+                    onSaved: closeEditor,
+                },
+                draggable: false,
+                connectable: false,
+            });
+        } else {
+            nodes.push({
+                id: `add-subject-${cycle}`,
+                type: 'addSubject',
+                position: {
+                    x,
+                    y: (cycle - 1) * laneHeight + 98,
+                },
+                data: {
+                    cycle,
+                    disabled: hasOpenEditor.value,
+                    onAdd: beginSubjectCreation,
+                },
+                draggable: false,
+                selectable: false,
+                connectable: false,
+            });
+        }
     }
 
     return nodes;
@@ -131,7 +228,13 @@ const nodes = ref<Node[]>(buildNodes());
 const edges = ref<Edge[]>(buildEdges());
 
 watch(
-    () => [props.subjects, props.requirements, props.curriculum.cycle_count],
+    [
+        () => props.subjects,
+        () => props.requirements,
+        () => props.curriculum.cycle_count,
+        editingSubjectId,
+        draftCycle,
+    ],
     () => {
         nodes.value = buildNodes();
         edges.value = buildEdges();
@@ -142,6 +245,7 @@ watch(
 const onConnect = (connection: Connection): void => {
     if (
         !props.curriculum.editable ||
+        hasOpenEditor.value ||
         connection.source === null ||
         connection.target === null
     ) {
@@ -173,7 +277,17 @@ const onConnect = (connection: Connection): void => {
 };
 
 const onNodeDragStop = ({ node }: NodeDragEvent): void => {
-    if (!props.curriculum.editable || node.type !== 'subject') {
+    if (
+        !props.curriculum.editable ||
+        node.type !== 'subject' ||
+        !subjectById.value.has(node.id)
+    ) {
+        return;
+    }
+
+    const subject = subjectById.value.get(node.id);
+
+    if (!subject) {
         return;
     }
 
@@ -181,7 +295,17 @@ const onNodeDragStop = ({ node }: NodeDragEvent): void => {
         props.curriculum.cycle_count,
         Math.max(1, Math.round((node.position.y - 38) / laneHeight) + 1),
     );
-    const position = Math.max(0, Math.round((node.position.x - 145) / 290));
+    const position = Math.max(
+        0,
+        Math.round((node.position.x - laneStart) / subjectStep),
+    );
+
+    if (subject.cycle === cycle && subject.position === position) {
+        nodes.value = buildNodes();
+
+        return;
+    }
+
     router.patch(
         CareerAcademicStructureController.updateSubjectLayout.url(
             props.curriculum.id,
@@ -189,11 +313,12 @@ const onNodeDragStop = ({ node }: NodeDragEvent): void => {
         { subject_id: node.id, cycle, position },
         {
             preserveScroll: true,
-            onError: (errors) =>
+            onError: (errors) => {
+                nodes.value = buildNodes();
                 toast.error(
                     String(errors.cycle ?? 'No se pudo mover la materia.'),
-                ),
-            onSuccess: () => toast.success('Materia reubicada.'),
+                );
+            },
         },
     );
 };
@@ -211,8 +336,8 @@ const onNodeDragStop = ({ node }: NodeDragEvent): void => {
             :min-zoom="0.2"
             :max-zoom="1.5"
             :connection-mode="ConnectionMode.Loose"
-            :nodes-draggable="curriculum.editable"
-            :nodes-connectable="curriculum.editable"
+            :nodes-draggable="curriculum.editable && !hasOpenEditor"
+            :nodes-connectable="curriculum.editable && !hasOpenEditor"
             :elements-selectable="true"
             @connect="onConnect"
             @node-drag-stop="onNodeDragStop"
@@ -225,6 +350,9 @@ const onNodeDragStop = ({ node }: NodeDragEvent): void => {
                     :data="nodeProps.data"
                     :selected="nodeProps.selected"
                 />
+            </template>
+            <template #node-addSubject="nodeProps">
+                <CurriculumAddSubjectNode :data="nodeProps.data" />
             </template>
             <Controls position="bottom-left" />
             <MiniMap class="max-sm:hidden" pannable zoomable />

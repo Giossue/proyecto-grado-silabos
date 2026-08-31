@@ -252,6 +252,12 @@ it('ofrece desglose y constructor visual sobre el mismo contrato de malla', func
     $form = file_get_contents(
         $root.'/resources/js/components/domain/academic/curriculum/CurriculumFormView.vue',
     );
+    $visualForm = file_get_contents(
+        $root.'/resources/js/components/domain/academic/curriculum/CurriculumVisualSubjectForm.vue',
+    );
+    $subjectNode = file_get_contents(
+        $root.'/resources/js/components/domain/academic/curriculum/CurriculumSubjectNode.vue',
+    );
     $configuration = file_get_contents(
         $root.'/resources/js/components/domain/academic/curriculum/CurriculumConfigurationSheet.vue',
     );
@@ -261,14 +267,20 @@ it('ofrece desglose y constructor visual sobre el mismo contrato de malla', func
         ->toContain('<CurriculumCanvas')
         ->toContain('<CurriculumFormView')
         ->toContain('<TabsList')
-        ->toContain('default-value="breakdown"')
+        ->toContain('v-model="activeMode"')
+        ->toContain("activeMode === 'breakdown'")
         ->toContain('<TabsTrigger value="breakdown"')
-        ->toContain('<TabsTrigger value="builder"');
+        ->toContain('<TabsTrigger value="builder"')
+        ->toContain(':field-definitions="fieldDefinitions"');
     expect($canvas)
         ->toBeString()
         ->toContain("from '@vue-flow/core'")
         ->toContain('updateSubjectLayout.url')
         ->toContain('storeSubjectRequirement.url')
+        ->toContain('CurriculumAddSubjectNode')
+        ->toContain('draftCycle')
+        ->toContain('#node-addSubject')
+        ->not->toContain("toast.success('Materia reubicada.')")
         ->not->toContain('position.x:')
         ->not->toContain('position.y:');
     expect($form)
@@ -276,6 +288,17 @@ it('ofrece desglose y constructor visual sobre el mismo contrato de malla', func
         ->toContain('storeSubjectRequirement.form')
         ->toContain('destroySubjectRequirement.form')
         ->toContain('@click="emit(\'edit\', subject)"');
+    expect($visualForm)
+        ->toBeString()
+        ->toContain("store.form('subject')")
+        ->toContain('update.form({')
+        ->toContain('preservedSystemValues')
+        ->not->toContain('<FormSheet');
+    expect($subjectNode)
+        ->toBeString()
+        ->toContain('<CurriculumVisualSubjectForm')
+        ->toContain('size="icon-sm"')
+        ->toContain(':aria-label="`Editar ${data.subject.name}`"');
     expect($configuration)
         ->toBeString()
         ->toContain('<FormSheet')

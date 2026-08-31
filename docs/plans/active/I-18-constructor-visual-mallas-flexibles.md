@@ -60,6 +60,14 @@ por separado.
 6. Probar alcance lateral, validación, inmutabilidad, auditoría y contrato frontend.
 7. Actualizar arquitectura, trazabilidad y evidencia de verificación.
 
+## Ajuste de interacción visual — 2026-08-30
+
+- [x] Mantener la Sheet de materia únicamente como alternativa del desglose manual.
+- [x] Crear materias dentro del ciclo correspondiente desde el lienzo.
+- [x] Editar código, nombre, unidad y campos visibles directamente en la tarjeta visual.
+- [x] Guardar una reubicación sin notificación de éxito; informar solamente si falla.
+- [x] Verificar accesibilidad, tipos, lint, pruebas de arquitectura y build.
+
 ## Criterios de aceptación
 
 - Una coordinación solo abre y modifica mallas de su carrera vigente.
@@ -81,11 +89,14 @@ por separado.
 
 ### Evidencia local — 2026-08-30
 
-- `composer verify`: 261 pruebas, 2.482 aserciones, sin fallos.
+- `composer verify`: 266 pruebas, 2.560 aserciones, sin fallos, ejecutado contra una base
+  PostgreSQL temporal aislada para no competir con otra suite local concurrente.
 - ESLint, Prettier, Vue TypeScript, Pint y PHPStan nivel 7: correctos.
 - Build Vite de producción: correcto; el constructor se genera como chunk propio.
 - La configuración de ciclos y campos usa la variante de pantalla completa del Sheet;
   lint, tipos, build y 20 pruebas de arquitectura (595 aserciones) correctos.
+- Alta por ciclo y edición contextual de tarjeta verificadas; la Sheet de materia queda
+  reservada al desglose manual y la reubicación exitosa ya no genera un toast repetitivo.
 - Revisión manual pendiente: teclado, lector de pantalla, zoom, móvil y temas sobre un
   navegador/dispositivo real; `PV-08` continúa abierta.
 
