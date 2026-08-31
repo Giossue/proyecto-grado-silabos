@@ -16,11 +16,19 @@
 
 ## Plan
 
-- [ ] Auditar las vistas y mensajes visibles de plantillas, fuentes, revisiones y documentos.
-- [ ] Sustituir el contenido técnico por lenguaje académico o retirarlo cuando no aporte a la tarea.
-- [ ] Evitar que los contratos de interfaz entreguen huellas que la pantalla no necesita.
-- [ ] Añadir una prueba de arquitectura para impedir regresiones de estas etiquetas.
-- [ ] Ejecutar verificaciones de tipos, estilo, pruebas puntuales y compilación.
+- [x] Auditar las vistas y mensajes visibles de plantillas, fuentes, revisiones y documentos.
+- [x] Sustituir el contenido técnico por lenguaje académico o retirarlo cuando no aporte a la tarea.
+- [x] Evitar que los contratos de interfaz entreguen huellas que la pantalla no necesita.
+- [x] Añadir una prueba de arquitectura para impedir regresiones de estas etiquetas.
+- [x] Ejecutar verificaciones de tipos, estilo, pruebas puntuales y compilación.
+
+## Resultado
+
+- Las pantallas muestran etiquetas académicas en español y dejan de presentar
+  huellas, tipos de almacenamiento, claves de respaldo, versiones de reglas o
+  referencias de decisiones internas.
+- Las huellas continúan almacenándose para trazabilidad, pero los controladores
+  de las pantallas afectadas ya no las envían al navegador.
 
 ## Decisiones y supuestos
 
