@@ -81,6 +81,12 @@ gestor; nunca mezcles gestores o lockfiles. El comando canónico es `composer ve
 PostgreSQL y Redis deben estar activos. Los comandos individuales sirven para diagnóstico,
 pero no sustituyen la puerta completa.
 
+La verificación debe ser proporcional al cambio. Para ajustes pequeños y mecánicos,
+analiza, edita y ejecuta solo la comprobación puntual aplicable; no lances builds ni la
+puerta completa. Tampoco crees scripts, auditorías o artefactos temporales para una
+búsqueda y reemplazo breve: usa búsqueda directa y edición puntual. Reserva esas ayudas
+y `composer verify` para cambios amplios, riesgosos o cuando se soliciten expresamente.
+
 ## Restricciones de producto
 
 - Alcance actual: Carrera de Software UEB.
@@ -127,6 +133,8 @@ pero no sustituyen la puerta completa.
 - Un error indica campo, causa y acción correctiva.
 - Diferencia visualmente errores determinísticos de sugerencias de IA.
 - Explica antes de acciones que crean una versión, aprueban, publican o reabren.
+- La ayuda breve de controles usa `Tooltip` de shadcn; no uses el atributo HTML `title`
+  como tooltip nativo del navegador.
 - Verifica teclado, lector de pantalla, móvil, escritorio, contraste, modo claro y oscuro.
 
 ## Control de versiones

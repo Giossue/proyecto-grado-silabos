@@ -8,7 +8,6 @@ import CurriculumFormView from '@/components/domain/academic/curriculum/Curricul
 import CurriculumSubjectSheet from '@/components/domain/academic/curriculum/CurriculumSubjectSheet.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { index as curriculaIndex } from '@/routes/coordination/academic/curricula';
@@ -50,18 +49,6 @@ const openSubject = (subject: CurriculumBuilderSubject): void => {
         :title="`Malla · ${curriculum.code}`"
         :description="`Versión ${curriculum.version_number} de ${career.name}. Consulte el desglose completo o trabaje sobre la misma información en el constructor visual.`"
     >
-        <template #meta>
-            <Badge :variant="curriculum.editable ? 'secondary' : 'outline'">
-                {{
-                    curriculum.editable
-                        ? 'Borrador editable'
-                        : 'Publicada · solo lectura'
-                }}
-            </Badge>
-            <Badge variant="outline">{{ curriculum.cycle_count }} ciclos</Badge>
-            <Badge variant="outline">{{ subjects.length }} materias</Badge>
-        </template>
-
         <template v-if="curriculum.editable" #actions>
             <Button
                 type="button"
