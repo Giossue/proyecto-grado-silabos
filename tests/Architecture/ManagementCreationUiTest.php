@@ -32,7 +32,9 @@ it('mantiene todas las altas de gestion dentro del sheet derecho compartido', fu
             'component' => 'TemplateBlockBuilder',
             'component_file' => 'resources/js/components/domain/configuration/TemplateBlockBuilder.vue',
             'action' => 'TemplateController.storeSection.form',
+            'action_file' => 'resources/js/components/domain/configuration/TemplateBlockAddForm.vue',
             'inline' => true,
+            'success' => "@success=\"emit('success')\"",
         ],
         'Administrador o Coordinador · fuentes' => [
             'page' => 'resources/js/pages/Sources/Index.vue',
@@ -93,9 +95,13 @@ it('mantiene todas las altas de gestion dentro del sheet derecho compartido', fu
     foreach ($surfaces as $label => $surface) {
         $page = file_get_contents($root.'/'.$surface['page']);
         $component = file_get_contents($root.'/'.$surface['component_file']);
+        $actionComponent = file_get_contents(
+            $root.'/'.($surface['action_file'] ?? $surface['component_file']),
+        );
 
         expect($page)->toBeString();
         expect($component)->toBeString();
+        expect($actionComponent)->toBeString();
 
         $this->assertStringContainsString(
             '<'.$surface['component'],
@@ -118,14 +124,14 @@ it('mantiene todas las altas de gestion dentro del sheet derecho compartido', fu
         }
         $this->assertStringContainsString(
             $surface['action'],
-            $component,
+            $actionComponent,
             $label.' perdió su acción de servidor.',
         );
         $this->assertStringContainsString(
-            ($surface['inline'] ?? false) === true
+            $surface['success'] ?? (($surface['inline'] ?? false) === true
                 ? '@success="addingBlock = false"'
-                : '@success="close"',
-            $component,
+                : '@success="close"'),
+            $actionComponent,
             ($surface['inline'] ?? false) === true
                 ? $label.' no cierra la creación directa después del éxito.'
                 : $label.' no cierra el panel después del éxito.',
@@ -600,18 +606,28 @@ it('presenta la publicación y los bloques de plantilla con etiquetas breves', f
 
     expect($builder)
         ->toBeString()
-        ->toContain('Nombre del bloque')
-        ->toContain('Nombre del campo')
-        ->toContain('Tipo de contenido')
-        ->toContain('Agregar bloque')
+        ->toContain('TemplateBlockAddForm')
+        ->toContain('TooltipContent>Agregar bloque</TooltipContent>')
         ->toContain('Agregar campo')
         ->toContain('draggable="true"')
+        ->toContain('addBlockAt(sectionIndex + 1)')
         ->toContain('persistBlockOrder')
         ->toContain('persistFieldOrder')
         ->toContain('copySections')
         ->not->toContain('Bloque</FieldLabel>')
         ->not->toContain('Clave estable')
         ->not->toContain('structuredClone');
+
+    $newBlockForm = file_get_contents(
+        dirname(__DIR__, 2).'/resources/js/components/domain/configuration/TemplateBlockAddForm.vue',
+    );
+
+    expect($newBlockForm)
+        ->toBeString()
+        ->toContain('Nombre del bloque')
+        ->toContain('Nombre del primer campo')
+        ->toContain('Tipo de contenido del primer campo')
+        ->toContain('name="position"');
 });
 
 it('abre los detalles de los listados desde sus acciones', function (): void {

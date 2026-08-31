@@ -44,6 +44,7 @@ class SaveTemplateSectionRequest extends ManageTemplatesRequest
                 'nullable',
                 Rule::in(self::CONTENT_TYPES),
             ],
+            'position' => [Rule::requiredIf($sectionId === null), 'nullable', 'integer', 'min:0'],
         ];
     }
 }

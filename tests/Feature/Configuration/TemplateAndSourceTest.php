@@ -185,12 +185,14 @@ class TemplateAndSourceTest extends TestCase
                 'first_field_label' => 'Recursos principales',
                 'first_field_key' => 'recursos_principales',
                 'first_field_content_type' => 'table',
+                'position' => 2,
             ])
             ->assertRedirect();
 
         $created = $version->fresh()->sections()
             ->where('titulo', 'Recursos y materiales')
             ->firstOrFail();
+        $this->assertSame(2, $created->posicion);
         $this->assertSame('Recursos principales', $created->blocks()->firstOrFail()->fields()->firstOrFail()->etiqueta);
 
         $sectionIds = $version->fresh()->sections()->pluck('id')->all();

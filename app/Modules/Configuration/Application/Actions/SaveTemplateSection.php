@@ -29,13 +29,33 @@ class SaveTemplateSection
             $version = TemplateVersion::query()->whereKey($versionId)->lockForUpdate()->firstOrFail();
             $this->ensureDraft($version);
 
+            $sections = TemplateSection::query()
+                ->where('version_plantilla_id', $version->id)
+                ->orderBy('posicion')
+                ->lockForUpdate()
+                ->get()
+                ->values();
+            $position = min(
+                max(1, ((int) ($data['position'] ?? $sections->count() + 1))),
+                $sections->count() + 1,
+            );
+            $temporaryPosition = ((int) $sections->max('posicion')) + $sections->count() + 2;
+
+            foreach ($sections as $index => $existingSection) {
+                $existingSection->update(['posicion' => $temporaryPosition + $index]);
+            }
+
+            foreach ($sections as $index => $existingSection) {
+                $existingSection->update([
+                    'posicion' => $index < $position - 1 ? $index + 1 : $index + 2,
+                ]);
+            }
+
             $section = TemplateSection::query()->create([
                 'version_plantilla_id' => $version->id,
                 'clave' => $this->stringValue($data, 'key'),
                 'titulo' => $this->stringValue($data, 'title'),
-                'posicion' => ((int) TemplateSection::query()
-                    ->where('version_plantilla_id', $version->id)
-                    ->max('posicion')) + 1,
+                'posicion' => $position,
             ]);
             $contentType = $this->stringValue($data, 'first_field_content_type');
             $block = TemplateBlock::query()->create([
