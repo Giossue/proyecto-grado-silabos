@@ -71,12 +71,8 @@ const stateVariant = (state: string): 'default' | 'outline' | 'secondary' =>
           ? 'secondary'
           : 'outline';
 
-const formatDate = (value: string | null): string =>
-    value
-        ? new Intl.DateTimeFormat('es-EC', { dateStyle: 'medium' }).format(
-              new Date(value),
-          )
-        : 'Aún no publicada';
+const subjectSummary = (count: number): string =>
+    `${count} ${count === 1 ? 'materia' : 'materias'}`;
 </script>
 
 <template>
@@ -137,13 +133,23 @@ const formatDate = (value: string | null): string =>
             </EmptyHeader>
         </Empty>
 
-        <div v-else class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            <Card v-for="item in curriculumPage" :key="item.id">
-                <CardHeader>
+        <div
+            v-else
+            class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4"
+        >
+            <Card
+                v-for="item in curriculumPage"
+                :key="item.id"
+                class="gap-0 overflow-hidden py-0"
+            >
+                <div class="h-1.5 bg-primary" aria-hidden="true" />
+                <CardHeader class="bg-primary/10 py-5">
                     <CardTitle>{{ item.code }}</CardTitle>
-                    <CardDescription>
-                        {{ item.career_name }} · Versión
-                        {{ item.version_number }}
+                    <CardDescription class="flex flex-wrap items-center gap-2">
+                        <Badge :variant="stateVariant(item.state)">
+                            {{ stateLabel[item.state] ?? item.state }}
+                        </Badge>
+                        <span>Versión {{ item.version_number }}</span>
                     </CardDescription>
                     <CardAction>
                         <CareerAcademicActions
@@ -185,34 +191,22 @@ const formatDate = (value: string | null): string =>
                         </CareerAcademicActions>
                     </CardAction>
                 </CardHeader>
-                <CardContent>
-                    <dl class="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                            <dt class="text-muted-foreground">Estado</dt>
-                            <dd class="mt-1">
-                                <Badge :variant="stateVariant(item.state)">
-                                    {{ stateLabel[item.state] ?? item.state }}
-                                </Badge>
-                            </dd>
-                        </div>
-                        <div>
-                            <dt class="text-muted-foreground">Materias</dt>
-                            <dd class="mt-1 font-medium">
-                                {{ item.subject_count }}
-                            </dd>
-                        </div>
-                        <div class="col-span-2">
-                            <dt class="text-muted-foreground">Publicación</dt>
-                            <dd class="mt-1 font-medium">
-                                {{ formatDate(item.published_at) }}
-                            </dd>
-                        </div>
-                    </dl>
+                <CardContent class="py-4">
+                    <p
+                        class="flex items-center gap-2 text-sm text-muted-foreground"
+                    >
+                        <BookOpenCheck class="size-4" aria-hidden="true" />
+                        {{ subjectSummary(item.subject_count) }}
+                    </p>
                 </CardContent>
-                <CardFooter>
-                    <Button as-child class="w-full">
+                <CardFooter class="mt-auto border-t p-2">
+                    <Button
+                        as-child
+                        variant="ghost"
+                        class="w-full justify-between"
+                    >
                         <Link :href="curriculumShow(item.id)">
-                            Ver desglose y constructor
+                            Abrir malla
                             <ArrowRight
                                 data-icon="inline-end"
                                 aria-hidden="true"

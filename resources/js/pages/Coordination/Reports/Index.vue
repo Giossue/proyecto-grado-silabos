@@ -29,6 +29,7 @@ import {
     Table,
     TableBody,
     TableCell,
+    TableEmpty,
     TableHead,
     TableHeader,
     TableRow,
@@ -261,15 +262,13 @@ const stateLabel = (value: string): string =>
                             }}</TableCell>
                             <TableCell>{{ item.approved }}</TableCell>
                         </TableRow>
-                        <TableRow v-if="convocation_breakdown.length === 0">
-                            <TableCell
-                                colspan="7"
-                                class="py-8 text-center text-muted-foreground"
-                            >
-                                No hay convocatorias con expedientes para los
-                                filtros actuales.
-                            </TableCell>
-                        </TableRow>
+                        <TableEmpty
+                            v-if="convocation_breakdown.length === 0"
+                            :colspan="7"
+                        >
+                            No hay convocatorias con expedientes para los
+                            filtros actuales.
+                        </TableEmpty>
                     </TableBody>
                 </Table>
                 <TablePagination
@@ -355,14 +354,12 @@ const stateLabel = (value: string): string =>
                                 </TableActionsMenu>
                             </TableCell>
                         </TableRow>
-                        <TableRow v-if="syllabi.data.length === 0">
-                            <TableCell
-                                colspan="7"
-                                class="py-8 text-center text-muted-foreground"
-                            >
-                                No hay expedientes para los filtros actuales.
-                            </TableCell>
-                        </TableRow>
+                        <TableEmpty
+                            v-if="syllabi.data.length === 0"
+                            :colspan="7"
+                        >
+                            No hay expedientes para los filtros actuales.
+                        </TableEmpty>
                     </TableBody>
                 </Table>
                 <TablePagination

@@ -43,6 +43,9 @@ constructor visual.
   nuevo alcance.
 - `/coordinacion/materias` redirige a Mallas para conservar enlaces antiguos sin mantener
   una segunda interfaz.
+- Cada card de malla usa una ficha académica compacta: franja de identidad, código,
+  estado, versión, cantidad de materias, menú de tres puntos y acceso **Abrir malla**. No
+  repite la carrera activa ni la fecha de publicación en la colección.
 - El detalle de malla usa el mismo contrato para el desglose por formulario/tablas y el
   constructor Vue Flow.
 
@@ -52,7 +55,7 @@ constructor visual.
 - Solo se muestran coordinaciones vigentes y elegibles de la persona autenticada.
 - El cambio desde el menú no permite seleccionar IDs ajenos o vencidos y queda auditado.
 - La navegación de Coordinación muestra una sola entrada **Mallas** y no **Materias**.
-- Mallas se presenta como cards y cada card abre desglose y constructor.
+- Mallas se presenta como cards compactas y cada card abre desglose y constructor.
 - La antigua ruta de Materias redirige a Mallas.
 - El detalle y todas sus mutaciones conservan alcance por carrera e inmutabilidad.
 

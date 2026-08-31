@@ -21,6 +21,7 @@ import {
     Table,
     TableBody,
     TableCell,
+    TableEmpty,
     TableHead,
     TableHeader,
     TableRow,
@@ -280,14 +281,12 @@ const detailValue = (value: Detail['value']): string => {
                                 >
                             </TableCell>
                         </TableRow>
-                        <TableRow v-if="events.data.length === 0">
-                            <TableCell
-                                colspan="6"
-                                class="py-10 text-center text-muted-foreground"
-                            >
-                                No hay eventos para los filtros actuales.
-                            </TableCell>
-                        </TableRow>
+                        <TableEmpty
+                            v-if="events.data.length === 0"
+                            :colspan="6"
+                        >
+                            No hay eventos para los filtros actuales.
+                        </TableEmpty>
                     </TableBody>
                 </Table>
                 <TablePagination

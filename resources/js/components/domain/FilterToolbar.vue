@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { router, usePage } from '@inertiajs/vue3';
 import { FilterX } from '@lucide/vue';
-import { computed, onBeforeUnmount } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import MobileFilterSheet from '@/components/domain/MobileFilterSheet.vue';
 import { Button } from '@/components/ui/button';
 import { FieldGroup } from '@/components/ui/field';
@@ -34,9 +34,28 @@ const submit = (target: EventTarget | null): void => {
     (target as HTMLElement | null)?.closest('form')?.requestSubmit();
 };
 
+const draftActive = ref<boolean | null>(null);
+
+const syncActive = (target: EventTarget | null): void => {
+    const form = (target as HTMLElement | null)?.closest('form');
+
+    if (!(form instanceof HTMLFormElement)) {
+        return;
+    }
+
+    const values = new FormData(form);
+
+    values.delete('page');
+    draftActive.value = [...values.values()].some(
+        (value) =>
+            typeof value !== 'string' || (value !== '' && value !== 'all'),
+    );
+};
+
 // Texto: se espera. Cada pulsación reinicia la cuenta, así que solo consulta quien deja
 // de escribir.
 const onInput = (event: Event): void => {
+    syncActive(event.target);
     cancel();
     const target = event.target;
     timer = setTimeout(() => submit(target), props.delay);
@@ -50,6 +69,8 @@ const onInput = (event: Event): void => {
 const onChange = (event: Event): void => {
     const target = event.target as HTMLElement | null;
 
+    syncActive(target);
+
     if (target instanceof HTMLInputElement && target.type !== 'checkbox') {
         return;
     }
@@ -58,14 +79,15 @@ const onChange = (event: Event): void => {
 };
 
 /*
- * Aquí los filtros viven en la dirección, así que la dirección dice si hay alguno puesto.
- * Se descarta `page`, que no filtra nada: es en qué página de resultados se está.
+ * La dirección conserva el estado confirmado por el servidor. Mientras una consulta está
+ * pendiente, `draftActive` refleja el formulario para mostrar la acción sin esperar la
+ * respuesta. Se descarta `page`, que no filtra nada: es en qué página se está.
  */
 const page = usePage();
 
 const query = computed(() => new URL(page.url, window.location.origin));
 
-const active = computed(() => {
+const urlActive = computed(() => {
     const params = new URLSearchParams(query.value.search);
 
     params.delete('page');
@@ -75,6 +97,15 @@ const active = computed(() => {
     );
 });
 
+const active = computed(() => draftActive.value ?? urlActive.value);
+
+watch(
+    () => page.url,
+    () => {
+        draftActive.value = null;
+    },
+);
+
 /*
  * Quitar los filtros es volver a la dirección sin nada detrás. `preserveState: false`
  * rehace la pantalla: los campos toman su valor de lo que llega del servidor una sola
@@ -83,6 +114,7 @@ const active = computed(() => {
  */
 const clear = (): void => {
     cancel();
+    draftActive.value = false;
     router.get(
         query.value.pathname,
         {},

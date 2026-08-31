@@ -23,6 +23,7 @@ import {
     Table,
     TableBody,
     TableCell,
+    TableEmpty,
     TableHead,
     TableHeader,
     TableRow,
@@ -311,14 +312,12 @@ const formatDate = (value: string | null): string =>
                                 </TableActionsMenu>
                             </TableCell>
                         </TableRow>
-                        <TableRow v-if="executions.data.length === 0">
-                            <TableCell
-                                colspan="7"
-                                class="py-10 text-center text-muted-foreground"
-                            >
-                                No hay procesos para los filtros actuales.
-                            </TableCell>
-                        </TableRow>
+                        <TableEmpty
+                            v-if="executions.data.length === 0"
+                            :colspan="7"
+                        >
+                            No hay procesos para los filtros actuales.
+                        </TableEmpty>
                     </TableBody>
                 </Table>
                 <TablePagination

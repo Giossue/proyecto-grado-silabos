@@ -1,6 +1,13 @@
 <script setup lang="ts">
+import { Inbox } from "@lucide/vue"
 import type { HTMLAttributes } from "vue"
 import { reactiveOmit } from "@vueuse/core"
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty"
 import { cn } from "@/lib/utils"
 import TableCell from "./TableCell.vue"
 import TableRow from "./TableRow.vue"
@@ -20,15 +27,22 @@ const delegatedProps = reactiveOmit(props, "class")
     <TableCell
       :class="
         cn(
-          'p-4 whitespace-nowrap align-middle text-sm text-foreground',
+          'h-40 p-0 whitespace-normal align-middle',
           props.class,
         )
       "
       v-bind="delegatedProps"
     >
-      <div class="flex items-center justify-center py-10">
-        <slot />
-      </div>
+      <Empty class="gap-3 rounded-none border-0 p-6 md:p-10">
+        <EmptyHeader class="gap-3">
+          <EmptyMedia variant="icon" class="text-muted-foreground">
+            <Inbox aria-hidden="true" />
+          </EmptyMedia>
+          <EmptyTitle class="text-sm text-muted-foreground">
+            <slot />
+          </EmptyTitle>
+        </EmptyHeader>
+      </Empty>
     </TableCell>
   </TableRow>
 </template>

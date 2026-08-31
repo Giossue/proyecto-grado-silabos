@@ -23,6 +23,7 @@ import {
     Table,
     TableBody,
     TableCell,
+    TableEmpty,
     TableHead,
     TableHeader,
     TableRow,
@@ -190,12 +191,12 @@ const stateLabel = (value: string): string =>
                                 </TableActionsMenu>
                             </TableCell>
                         </TableRow>
-                        <TableRow v-if="syllabi.data.length === 0">
-                            <TableCell colspan="6" class="py-10 text-center">
-                                No hay expedientes para los filtros
-                                seleccionados.
-                            </TableCell>
-                        </TableRow>
+                        <TableEmpty
+                            v-if="syllabi.data.length === 0"
+                            :colspan="6"
+                        >
+                            No hay expedientes para los filtros seleccionados.
+                        </TableEmpty>
                     </TableBody>
                 </Table>
 

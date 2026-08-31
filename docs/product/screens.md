@@ -111,8 +111,10 @@
   en pestañas.
 - COR-13 usa una única entrada **Mallas**. Su colección se presenta como cards y cada
   card abre una página completa con **Desglose académico** y **Constructor visual**;
-  materias, campos y relaciones se consultan y mantienen dentro de esa malla. COR-14
-  conserva el submenú **Ofertas y paralelos** con una ruta por colección.
+  cada card prioriza código, estado, versión y cantidad de materias en una ficha compacta,
+  sin repetir carrera ni fecha de publicación. Materias, campos y relaciones se consultan
+  y mantienen dentro de esa malla. COR-14 conserva el submenú **Ofertas y paralelos** con
+  una ruta por colección.
 - COR-13..15 ofrecen **Editar** para los registros de la carrera del rol activo. Mallas
   publicadas, sus materias y relaciones ya usadas por un sílabo muestran su bloqueo de
   historial en lugar de reescribirse. Editar una asignación cambia docente, paralelo o

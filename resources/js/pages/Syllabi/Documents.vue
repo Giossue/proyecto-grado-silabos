@@ -30,6 +30,7 @@ import {
     Table,
     TableBody,
     TableCell,
+    TableEmpty,
     TableHead,
     TableHeader,
     TableRow,
@@ -281,15 +282,13 @@ onUnmounted(() => {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            <TableRow v-if="artifacts.length === 0">
-                                <TableCell
-                                    colspan="4"
-                                    class="py-10 text-center text-muted-foreground"
-                                >
-                                    Todavía no se han solicitado documentos para
-                                    esta revisión.
-                                </TableCell>
-                            </TableRow>
+                            <TableEmpty
+                                v-if="artifacts.length === 0"
+                                :colspan="4"
+                            >
+                                Todavía no se han solicitado documentos para
+                                esta revisión.
+                            </TableEmpty>
                             <TableRow
                                 v-for="artifact in artifactPage"
                                 :key="artifact.id"

@@ -233,9 +233,14 @@ it('concentra las materias dentro de las cards y el detalle de cada malla', func
         ->toContain('<CurriculaTab');
     expect($curriculaCards)
         ->toBeString()
-        ->toContain('<Card v-for="item in curriculumPage"')
+        ->toContain('v-for="item in curriculumPage"')
         ->toContain('curriculumShow(item.id)')
-        ->toContain('Ver desglose y constructor')
+        ->toContain('Abrir malla')
+        ->toContain('bg-primary/10')
+        ->toContain('subjectSummary(item.subject_count)')
+        ->not->toContain('Ver desglose y constructor')
+        ->not->toContain('Publicación')
+        ->not->toContain('{{ item.career_name }} · Versión')
         ->not->toContain("section === 'subjects'");
     expect($offerings)->toBeString()->toContain('entity="offering"');
     expect($parallels)->toBeString()->toContain('entity="parallel"');
@@ -806,4 +811,8 @@ it('ofrece quitar los filtros en las dos barras y solo cuando hay alguno puesto'
     $toolbar = file_get_contents($root.'/resources/js/components/domain/FilterToolbar.vue');
     $this->assertIsString($toolbar);
     $this->assertStringContainsString('preserveState: false', $toolbar);
+    $this->assertStringContainsString('new FormData(form)', $toolbar);
+    $this->assertStringContainsString('syncActive(event.target)', $toolbar);
+    $this->assertStringContainsString('draftActive.value ?? urlActive.value', $toolbar);
+    $this->assertStringContainsString('draftActive.value = false', $toolbar);
 });

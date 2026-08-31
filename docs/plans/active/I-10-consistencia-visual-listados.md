@@ -36,6 +36,8 @@ Dashboard; las demás pantallas no presentan resúmenes métricos independientes
 - Toda tabla diferencia el encabezado mediante un tono semántico y alterna el fondo de
   sus registros: la primera fila conserva la superficie base y la segunda usa el tono
   alterno. El patrón se repite y conserva su correspondencia en columnas fijas y hover.
+- Toda tabla sin registros presenta `TableEmpty`: un único icono universal de bandeja
+  vacía y un mensaje contextual dentro de una celda que cubre todas sus columnas.
 - Todo módulo autenticado usa `PageFrame` como contrato de encabezado: icono de Lucide
   dentro de una superficie semántica, un único `h1`, descripción, separación responsive
   y espacios opcionales para regreso, estado y acciones. Configuración aplica el patrón
@@ -57,6 +59,7 @@ Dashboard; las demás pantallas no presentan resúmenes métricos independientes
 - [x] Unificar orden y distribución de búsqueda, filtros y acción.
 - [x] Aplicar una paginación compartida a todos los listados tabulares.
 - [x] Diferenciar encabezados y registros consecutivos con colores alternos compartidos.
+- [x] Unificar el icono y el mensaje de los estados vacíos en todas las tablas.
 - [x] Agrupar las acciones de tabla en un menú compartido de tres puntos.
 - [x] Incorporar al patrón las materias y relaciones del desglose manual de malla.
 - [x] Normalizar icono, título, descripción y espaciado de todos los módulos autenticados.
@@ -74,6 +77,8 @@ Dashboard; las demás pantallas no presentan resúmenes métricos independientes
   Configuración con `PageFrame`, los submenús de ADM-04 y la separación de tokens.
 - `ResponsiveTableTest` protege los tokens del encabezado, las filas impares/pares y la
   continuidad del color en las celdas fijas de acciones y detalle móvil.
+- `TableEmptyStateTest` inventaría las 24 superficies tabulares, exige un `TableEmpty`
+  por cada cuerpo de tabla y protege el icono universal junto con el mensaje contextual.
 - `MetricCardsScopeTest` reserva `StatTile` y los resúmenes métricos al Dashboard y
   comprueba que convocatorias, informes, mallas y sílabos no los reintroduzcan con otra
   presentación visual.
