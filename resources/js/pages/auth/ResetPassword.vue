@@ -44,6 +44,7 @@ const inputEmail = ref(props.email);
                     autocomplete="email"
                     v-model="inputEmail"
                     class="mt-1 block w-full"
+                    placeholder="Ej. nombre@ueb.edu.ec"
                     readonly
                     required
                 />

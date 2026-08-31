@@ -55,6 +55,7 @@ const open = defineModel<boolean>('open', { default: false });
                             :id="`profile-name-${props.userId}`"
                             name="name"
                             :default-value="props.name"
+                            placeholder="Ej. María Pérez"
                             required
                             :aria-invalid="Boolean(errors.name)"
                         />
@@ -73,6 +74,7 @@ const open = defineModel<boolean>('open', { default: false });
                             name="email"
                             type="email"
                             :default-value="props.email"
+                            placeholder="Ej. maria.perez@ueb.edu.ec"
                             required
                             :aria-invalid="Boolean(errors.email)"
                         />

@@ -58,7 +58,7 @@ const groupingMode = ref('per_parallel');
                             id="convocation-name"
                             name="name"
                             :aria-invalid="Boolean(errors.name)"
-                            placeholder="Elaboración de sílabos 2026-2027"
+                            placeholder="Ej. Elaboración de sílabos 2026-2027"
                             required
                         />
                         <FieldError :errors="[errors.name]" />

@@ -116,7 +116,7 @@ const toggleRecoveryMode = (clearErrors: () => void): void => {
                         id="recovery-code"
                         name="recovery_code"
                         type="text"
-                        placeholder="Ingrese el código de recuperación"
+                        placeholder="Ej. ABCD-EFGH"
                         required
                     />
                 </div>

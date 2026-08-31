@@ -61,6 +61,20 @@ const codeLabel = computed(() =>
         : 'Código institucional',
 );
 
+const examples = computed(
+    () =>
+        ({
+            faculty: {
+                name: 'Ej. Facultad de Ciencias Administrativas',
+                code: 'Ej. FCA',
+            },
+            career: { name: 'Ej. Software', code: 'Ej. SW' },
+            campus: { name: 'Ej. Campus Matriz', code: 'Ej. MATRIZ' },
+            modality: { name: 'Ej. Presencial', code: 'Ej. PRES' },
+            period: { name: 'Ej. 2026-2027', code: 'Ej. 2026-2027' },
+        })[props.entity],
+);
+
 const facultyOptions = computed(() =>
     props.faculties.filter(
         (faculty) => faculty.activo || faculty.id === props.facultyId,
@@ -142,6 +156,7 @@ const facultyOptions = computed(() =>
                             :id="`edit-name-${recordId}`"
                             name="name"
                             :default-value="recordName"
+                            :placeholder="examples.name"
                             required
                             :aria-invalid="Boolean(errors.name)"
                         />
@@ -161,6 +176,7 @@ const facultyOptions = computed(() =>
                             :id="`edit-code-${recordId}`"
                             name="code"
                             :default-value="recordCode ?? ''"
+                            :placeholder="examples.code"
                             :required="
                                 entity === 'modality' || entity === 'period'
                             "

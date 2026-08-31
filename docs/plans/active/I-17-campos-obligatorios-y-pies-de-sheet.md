@@ -22,6 +22,8 @@ dentro de PV-19.
   validación del servidor.
 - Las acciones de todos los formularios `FormSheet` permanecen en un pie fijo; solo el
   contenido central se desplaza y conserva espacio inferior para no ocultar campos.
+- Todo campo textual ofrece un ejemplo contextual mediante `Ej. ...`; las etiquetas y
+  ayudas visibles no revelan claves internas ni nombres de persistencia.
 - Las condiciones `required_if`, `required_unless` y `required_without` se explican sin
   convertirlas en requisitos incondicionales.
 
@@ -31,6 +33,7 @@ dentro de PV-19.
 - [x] Incorporar el indicador compartido en etiquetas y leyendas.
 - [x] Alinear controles visibles con las reglas obligatorias del backend.
 - [x] Fijar las acciones de `FormSheet` en su pie compartido.
+- [x] Incorporar ejemplos en los campos textuales y retirar ayudas técnicas visibles.
 - [x] Agregar pruebas de regresión y actualizar trazabilidad.
 - [x] Ejecutar formato, lint, tipos, pruebas y build aplicables.
 
@@ -39,7 +42,8 @@ dentro de PV-19.
 - `composer verify`: 257 pruebas y 2397 aserciones; escaneo de secretos, Pint, PHPStan,
   ESLint, Prettier, tipos Vue y compilación Vite en verde.
 - `RequiredFieldsAndSheetFooterTest`: protege el indicador accesible, los 18 formularios
-  `FormSheet`, el pie fijo a todo el ancho y las reglas mínimas/condicionales del servidor.
+  `FormSheet`, el pie fijo a todo el ancho, los ejemplos de campos textuales y las reglas
+  mínimas/condicionales del servidor.
 - Pruebas funcionales enfocadas de autenticación, configuración personal, estructura
   académica, configuración y sílabos: 104 pruebas y 952 aserciones en verde.
 

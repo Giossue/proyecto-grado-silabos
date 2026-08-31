@@ -124,7 +124,7 @@ const errorKey = (field: CurriculumFieldDefinition): string =>
                         :id="`visual-subject-code-${subject?.id ?? cycle}`"
                         name="code"
                         :default-value="subject?.code"
-                        placeholder="Código"
+                        placeholder="Ej. SW-601"
                         required
                         :aria-invalid="Boolean(errors.code)"
                     />
@@ -142,7 +142,7 @@ const errorKey = (field: CurriculumFieldDefinition): string =>
                         :id="`visual-subject-name-${subject?.id ?? cycle}`"
                         name="name"
                         :default-value="subject?.name"
-                        placeholder="Nombre de la materia"
+                        placeholder="Ej. Ingeniería de requisitos"
                         required
                         :aria-invalid="Boolean(errors.name)"
                     />
@@ -161,7 +161,7 @@ const errorKey = (field: CurriculumFieldDefinition): string =>
                     :id="`visual-subject-unit-${subject?.id ?? cycle}`"
                     name="organization_unit"
                     :default-value="subject?.organization_unit ?? ''"
-                    placeholder="Unidad de organización curricular"
+                    placeholder="Ej. Unidad profesional"
                     :aria-invalid="Boolean(errors.organization_unit)"
                 />
                 <FieldError :errors="[errors.organization_unit]" />
@@ -207,6 +207,11 @@ const errorKey = (field: CurriculumFieldDefinition): string =>
                                 : undefined
                         "
                         :default-value="fieldValue(field)"
+                        :placeholder="
+                            field.type === 'text'
+                                ? `Ej. ${field.label}`
+                                : undefined
+                        "
                         :aria-invalid="Boolean(errors[errorKey(field)])"
                     />
                     <FieldError :errors="[errors[errorKey(field)]]" />

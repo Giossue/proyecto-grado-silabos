@@ -58,7 +58,7 @@ const props = defineProps<{
                     :default-value="user.name"
                     required
                     autocomplete="name"
-                    placeholder="Nombre completo"
+                    placeholder="Ej. María Pérez"
                 />
                 <InputError class="mt-2" :message="errors.name" />
             </div>
@@ -73,7 +73,7 @@ const props = defineProps<{
                     :default-value="user.email"
                     required
                     autocomplete="username"
-                    placeholder="Correo electrónico"
+                    placeholder="Ej. maria.perez@ueb.edu.ec"
                 />
                 <InputError class="mt-2" :message="errors.email" />
             </div>
@@ -111,6 +111,7 @@ const props = defineProps<{
                 <Input
                     id="readonly-name"
                     :model-value="user.name"
+                    placeholder="Ej. María Pérez"
                     disabled
                     aria-describedby="identity-help"
                 />
@@ -122,6 +123,7 @@ const props = defineProps<{
                     id="readonly-email"
                     type="email"
                     :model-value="user.email"
+                    placeholder="Ej. maria.perez@ueb.edu.ec"
                     disabled
                     aria-describedby="identity-help"
                 />

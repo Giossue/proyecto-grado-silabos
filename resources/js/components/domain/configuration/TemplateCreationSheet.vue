@@ -47,6 +47,7 @@ defineProps<{
                         <Input
                             id="template-name"
                             name="name"
+                            placeholder="Ej. Plantilla de sílabos de Software"
                             required
                             :aria-invalid="Boolean(errors.name)"
                         />

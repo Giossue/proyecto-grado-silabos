@@ -92,6 +92,7 @@ const fieldValue = (field: CurriculumFieldDefinition): number | string => {
                             id="builder-subject-code"
                             name="code"
                             :default-value="subject?.code"
+                            placeholder="Ej. SW-601"
                             required
                             :aria-invalid="Boolean(errors.code)"
                         />
@@ -105,6 +106,7 @@ const fieldValue = (field: CurriculumFieldDefinition): number | string => {
                             id="builder-subject-name"
                             name="name"
                             :default-value="subject?.name"
+                            placeholder="Ej. Ingeniería de requisitos"
                             required
                             :aria-invalid="Boolean(errors.name)"
                         />
@@ -200,6 +202,11 @@ const fieldValue = (field: CurriculumFieldDefinition): number | string => {
                             :step="field.type === 'number' ? '0.01' : undefined"
                             min="0"
                             :default-value="fieldValue(field)"
+                            :placeholder="
+                                field.type === 'text'
+                                    ? `Ej. ${field.label}`
+                                    : undefined
+                            "
                             :aria-invalid="
                                 Boolean(
                                     errors[

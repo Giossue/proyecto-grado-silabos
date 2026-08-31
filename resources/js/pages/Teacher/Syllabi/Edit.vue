@@ -811,6 +811,11 @@ onBeforeUnmount(() => {
                                               ? 'date'
                                               : 'text'
                                     "
+                                    :placeholder="
+                                        field.type === 'short_text'
+                                            ? `Ej. ${field.label}`
+                                            : undefined
+                                    "
                                     :aria-invalid="
                                         validationFor(field.id).length > 0
                                     "

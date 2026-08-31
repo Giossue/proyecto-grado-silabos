@@ -219,6 +219,7 @@ watch(
                                         type="text"
                                         readonly
                                         :value="manualSetupKey"
+                                        placeholder="Ej. JBSWY3DPEHPK3PXP"
                                         aria-label="Clave de configuración manual"
                                         class="h-full w-full bg-background p-3 text-foreground"
                                     />

@@ -138,6 +138,7 @@ defineExpose({ edit });
                             id="template-field-key"
                             name="key"
                             :default-value="selectedField?.key"
+                            placeholder="Ej. resultados_aprendizaje"
                             required
                             :aria-invalid="Boolean(errors.key)"
                         />
@@ -152,6 +153,7 @@ defineExpose({ edit });
                             id="template-field-label"
                             name="label"
                             :default-value="selectedField?.label"
+                            placeholder="Ej. Resultados de aprendizaje"
                             required
                             :aria-invalid="Boolean(errors.label)"
                         />
@@ -212,6 +214,7 @@ defineExpose({ edit });
                             id="template-field-master-source"
                             name="master_source"
                             :default-value="selectedField?.master_source ?? ''"
+                            placeholder="Ej. perfil_egreso"
                             :required="inherited"
                             :aria-invalid="Boolean(errors.master_source)"
                         />
@@ -228,6 +231,7 @@ defineExpose({ edit });
                             :default-value="
                                 selectedField?.document_marker ?? ''
                             "
+                            placeholder="Ej. RESULTADOS_APRENDIZAJE"
                             :aria-invalid="Boolean(errors.document_marker)"
                         />
                         <FieldError :errors="[errors.document_marker]" />

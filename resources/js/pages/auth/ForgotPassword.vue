@@ -42,7 +42,7 @@ defineProps<{
                     name="email"
                     required
                     autocomplete="off"
-                    placeholder="email@example.com"
+                    placeholder="Ej. nombre@ueb.edu.ec"
                 />
                 <InputError :message="errors.email" />
             </div>

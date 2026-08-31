@@ -67,6 +67,7 @@ const description = computed(() =>
                             <Input
                                 id="curriculum-code"
                                 name="code"
+                                placeholder="Ej. MALLA-SW-2026"
                                 required
                                 :aria-invalid="Boolean(errors.code)"
                             />
@@ -111,6 +112,7 @@ const description = computed(() =>
                             <Input
                                 id="subject-code"
                                 name="code"
+                                placeholder="Ej. SW-601"
                                 required
                                 :aria-invalid="Boolean(errors.code)"
                             />
@@ -123,6 +125,7 @@ const description = computed(() =>
                             <Input
                                 id="subject-name"
                                 name="name"
+                                placeholder="Ej. Ingeniería de requisitos"
                                 required
                                 :aria-invalid="Boolean(errors.name)"
                             />

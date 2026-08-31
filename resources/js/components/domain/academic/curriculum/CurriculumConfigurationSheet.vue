@@ -137,7 +137,7 @@ const nextPosition = computed(
                             <Input
                                 id="curriculum-field-key"
                                 name="key"
-                                placeholder="ej. horas_laboratorio"
+                                placeholder="Ej. horas_laboratorio"
                                 pattern="[a-z][a-z0-9_]*"
                                 required
                                 :aria-invalid="Boolean(errors.key)"

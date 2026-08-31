@@ -55,7 +55,7 @@ defineProps<{
                     name="email"
                     required
                     autocomplete="email"
-                    placeholder="nombre@ueb.edu.ec"
+                    placeholder="Ej. nombre@ueb.edu.ec"
                     :aria-invalid="Boolean(errors.email)"
                 />
                 <FieldError :errors="[errors.email]" />

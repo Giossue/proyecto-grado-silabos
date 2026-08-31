@@ -49,6 +49,7 @@ defineProps<{
                         <Input
                             id="source-name"
                             name="name"
+                            placeholder="Ej. Reglamento de régimen académico"
                             required
                             :aria-invalid="Boolean(errors.name)"
                         />
@@ -62,7 +63,7 @@ defineProps<{
                         <Input
                             id="source-type"
                             name="type"
-                            placeholder="Malla, guía, normativa…"
+                            placeholder="Ej. Normativa"
                             required
                             :aria-invalid="Boolean(errors.type)"
                         />
@@ -105,6 +106,7 @@ defineProps<{
                         <Input
                             id="source-authority"
                             name="authority"
+                            placeholder="Ej. Consejo de Educación Superior"
                             required
                             :aria-invalid="Boolean(errors.authority)"
                         />
@@ -118,6 +120,7 @@ defineProps<{
                         <Input
                             id="source-responsible"
                             name="responsible"
+                            placeholder="Ej. Coordinación de Software"
                             required
                             :aria-invalid="Boolean(errors.responsible)"
                         />

@@ -102,6 +102,7 @@ const entityLabel = computed(
                                 :id="`edit-curriculum-code-${record.id}`"
                                 name="code"
                                 :default-value="record.code"
+                                placeholder="Ej. MALLA-SW-2026"
                                 required
                                 :aria-invalid="Boolean(errors.code)"
                             />
@@ -120,6 +121,7 @@ const entityLabel = computed(
                                 :id="`edit-subject-code-${record.id}`"
                                 name="code"
                                 :default-value="record.code"
+                                placeholder="Ej. SW-601"
                                 required
                                 :aria-invalid="Boolean(errors.code)"
                             />
@@ -135,6 +137,7 @@ const entityLabel = computed(
                                 :id="`edit-subject-name-${record.id}`"
                                 name="name"
                                 :default-value="record.name"
+                                placeholder="Ej. Ingeniería de requisitos"
                                 required
                                 :aria-invalid="Boolean(errors.name)"
                             />
@@ -357,6 +360,7 @@ const entityLabel = computed(
                                 :id="`edit-parallel-code-${record.id}`"
                                 name="code"
                                 :default-value="record.code"
+                                placeholder="Ej. A"
                                 required
                                 :aria-invalid="Boolean(errors.code)"
                             />

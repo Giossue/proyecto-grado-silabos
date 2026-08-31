@@ -207,6 +207,7 @@ const description = computed(() =>
                             <Input
                                 id="parallel-code"
                                 name="code"
+                                placeholder="Ej. A"
                                 required
                                 :aria-invalid="Boolean(errors.code)"
                             />

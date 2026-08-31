@@ -172,7 +172,7 @@ const idempotencyKey = `transfer-${props.syllabusId}-${Math.trunc(performance.no
                             id="transfer-backing-number"
                             name="backing_number"
                             :aria-invalid="Boolean(errors.backing_number)"
-                            placeholder="UEB-RECT-2026-0142-R"
+                            placeholder="Ej. UEB-RECT-2026-0142-R"
                             required
                         />
                         <FieldError :errors="[errors.backing_number]" />

@@ -88,6 +88,7 @@ watch(open, (isOpen) => {
                         <Input
                             id="managed-name"
                             name="name"
+                            placeholder="Ej. María Pérez"
                             required
                             :aria-invalid="Boolean(errors.name)"
                         />
@@ -101,6 +102,7 @@ watch(open, (isOpen) => {
                             id="managed-email"
                             name="email"
                             type="email"
+                            placeholder="Ej. maria.perez@ueb.edu.ec"
                             required
                             :aria-invalid="Boolean(errors.email)"
                         />
@@ -116,6 +118,7 @@ watch(open, (isOpen) => {
                                 v-model="password"
                                 name="password"
                                 type="text"
+                                placeholder="Ej. UEB-Temporal-2026"
                                 readonly
                                 required
                                 class="flex-1 font-mono"

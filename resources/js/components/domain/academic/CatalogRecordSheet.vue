@@ -84,6 +84,20 @@ const codeLabel = computed(() =>
         ? 'Código estable'
         : 'Código institucional',
 );
+
+const examples = computed(
+    () =>
+        ({
+            faculty: {
+                name: 'Ej. Facultad de Ciencias Administrativas',
+                code: 'Ej. FCA',
+            },
+            career: { name: 'Ej. Software', code: 'Ej. SW' },
+            campus: { name: 'Ej. Campus Matriz', code: 'Ej. MATRIZ' },
+            modality: { name: 'Ej. Presencial', code: 'Ej. PRES' },
+            period: { name: 'Ej. 2026-2027', code: 'Ej. 2026-2027' },
+        })[props.entity],
+);
 </script>
 
 <template>
@@ -144,6 +158,7 @@ const codeLabel = computed(() =>
                             <Input
                                 id="catalog-name"
                                 name="name"
+                                :placeholder="examples.name"
                                 required
                                 :aria-invalid="Boolean(errors.name)"
                             />
@@ -162,6 +177,7 @@ const codeLabel = computed(() =>
                             <Input
                                 id="catalog-code"
                                 name="code"
+                                :placeholder="examples.code"
                                 :required="
                                     entity === 'modality' || entity === 'period'
                                 "

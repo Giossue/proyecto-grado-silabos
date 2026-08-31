@@ -41,7 +41,7 @@ defineProps<{
                         <Input
                             id="source-fragment-key"
                             name="key"
-                            placeholder="perfil.egreso"
+                            placeholder="Ej. perfil.egreso"
                             required
                             :aria-invalid="Boolean(errors.key)"
                         />
@@ -55,6 +55,7 @@ defineProps<{
                         <Input
                             id="source-fragment-title"
                             name="title"
+                            placeholder="Ej. Perfil de egreso"
                             required
                             :aria-invalid="Boolean(errors.title)"
                         />
@@ -80,7 +81,7 @@ defineProps<{
                         <Input
                             id="source-fragment-data-key"
                             name="data_key"
-                            placeholder="creditos.sw601"
+                            placeholder="Ej. creditos.sw601"
                             :aria-invalid="Boolean(errors.data_key)"
                         />
                         <FieldError :errors="[errors.data_key]" />

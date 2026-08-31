@@ -65,6 +65,63 @@ it('mantiene las acciones de todos los formularios sheet en un pie fijo', functi
     expect(count($formSheets))->toBeGreaterThanOrEqual(18);
 });
 
+it('muestra ejemplos y oculta claves internas en los campos textuales', function (): void {
+    $root = dirname(__DIR__, 2);
+    $directories = [
+        $root.'/resources/js/components/domain',
+        $root.'/resources/js/pages',
+    ];
+    $violations = [];
+
+    foreach ($directories as $directory) {
+        $iterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($directory),
+        );
+
+        foreach ($iterator as $file) {
+            if (! $file->isFile() || $file->getExtension() !== 'vue') {
+                continue;
+            }
+
+            $source = (string) file_get_contents($file->getPathname());
+            preg_match_all(
+                '/<Input\b(?:(?!\/>)[\s\S])*?\/>/',
+                $source,
+                $matches,
+                PREG_OFFSET_CAPTURE,
+            );
+
+            foreach ($matches[0] as [$input, $offset]) {
+                preg_match('/(?<!:)\btype="([^"]+)"/', $input, $typeMatch);
+                $type = $typeMatch[1] ?? 'text';
+
+                if (! in_array($type, ['text', 'email', 'url', 'tel'], true)
+                    && ! str_contains($input, ':type=')) {
+                    continue;
+                }
+
+                $line = substr_count(substr($source, 0, $offset), "\n") + 1;
+                $relativePath = str_replace($root.'/', '', $file->getPathname());
+
+                if (! preg_match('/(?::placeholder|placeholder)=/', $input)) {
+                    $violations[] = "$relativePath:$line no tiene placeholder";
+
+                    continue;
+                }
+
+                if (preg_match('/(?<!:)\bplaceholder="([^"]+)"/', $input, $placeholder)
+                    && ! str_starts_with($placeholder[1], 'Ej. ')) {
+                    $violations[] = "$relativePath:$line no usa un ejemplo";
+                }
+            }
+
+            expect($source)->not->toContain('Dato académico estructurado:');
+        }
+    }
+
+    expect($violations)->toBe([]);
+});
+
 it('conserva en el servidor las obligaciones minimas y condicionales', function (): void {
     $root = dirname(__DIR__, 2).'/app/Modules';
     $requests = [
