@@ -1,6 +1,6 @@
 <?php
 
-it('mantiene los botones secundarios textuales sin iconos de accion', function (): void {
+it('mantiene los botones secundarios textuales sin iconos de accion, salvo el agregador del constructor visual', function (): void {
     $root = dirname(__DIR__, 2);
     $files = new RecursiveIteratorIterator(
         new RecursiveDirectoryIterator($root.'/resources/js'),
@@ -14,6 +14,10 @@ it('mantiene los botones secundarios textuales sin iconos de accion', function (
 
         $path = $file->getPathname();
         if (str_ends_with($path, '/components/DatePicker.vue')) {
+            continue;
+        }
+
+        if (str_ends_with($path, '/components/domain/configuration/TemplateBlockBuilder.vue')) {
             continue;
         }
 

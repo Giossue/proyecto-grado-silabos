@@ -43,3 +43,8 @@ El constructor se incorporó en `ADM-05`: cada sección contiene bloques con nom
 tipo de contenido editables en el sitio. Se pueden agregar, eliminar y reordenar por
 arrastre o con controles de teclado; las flechas ofrecen una alternativa accesible al
 arrastre. Las versiones publicadas se mantienen solo de lectura.
+
+Las pruebas específicas del módulo y las comprobaciones de formato, tipos de la
+interfaz y compilación finalizaron correctamente. La suite global conserva fallos
+ajenos ya existentes en Estructura académica, Asistencia de IA, Convocatorias, el
+control de apariencia y Redis local; no se modificaron en este alcance.
