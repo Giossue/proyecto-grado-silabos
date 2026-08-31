@@ -26,7 +26,7 @@ class SyncSubjectFieldValues
 
         if ($definitions->count() !== count($values)) {
             throw ValidationException::withMessages([
-                'custom_values' => 'Uno de los campos no pertenece a esta versión de malla.',
+                'custom_values' => 'Uno de los campos no pertenece a la malla actual.',
             ]);
         }
 

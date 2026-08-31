@@ -78,8 +78,8 @@ class GenerateSyllabusExportJob implements ShouldQueue
         $syllabus = $artifact->syllabus;
         $revision = $artifact->revision;
         $bundle = $renderer->render(new DocumentRenderInput(
-            subject: $syllabus->subject->nombre,
-            subjectCode: $syllabus->subject->codigo_institucional,
+            subject: $syllabus->academicSubjectName(),
+            subjectCode: $syllabus->academicSubjectCode(),
             academicPeriod: $syllabus->convocation->academicPeriod->nombre,
             revisionNumber: $revision->numero_revision,
             revisionFingerprint: $revision->huella_sha256,
@@ -130,7 +130,7 @@ class GenerateSyllabusExportJob implements ShouldQueue
                 [
                     'tipo' => 'document.export.completed',
                     'titulo' => 'Documentos listos para descargar',
-                    'mensaje' => "Los documentos del sílabo {$syllabus->subject->nombre}, revisión {$revision->numero_revision}, están disponibles.",
+                    'mensaje' => "Los documentos del sílabo {$syllabus->academicSubjectName()}, revisión {$revision->numero_revision}, están disponibles.",
                     'tipo_recurso' => 'export_artifact',
                     'recurso_id' => $locked->id,
                     'creado_en' => now(),

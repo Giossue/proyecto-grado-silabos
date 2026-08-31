@@ -32,12 +32,19 @@ relación uno-a-muchos Facultad → Carreras con clave foránea y borrado restri
 jerarquía que presenta ADM-04 es una proyección de lectura y no una desnormalización de
 la persistencia.
 
-Cada `versiones_malla` define su cantidad de ciclos y sus campos de tarjeta. Una
-definición puede enlazarse con una columna académica estructurada o almacenar un valor
-tipado por asignatura en `valores_campo_asignatura`; nunca altera el DDL por carrera.
-`asignaturas.ciclo` y `orden_en_ciclo` determinan la posición reproducible del lienzo.
-Las coordenadas de pantalla no se persisten. `requisitos_asignatura.tipo` conserva la
-semántica explícita de cada flecha.
+`versiones_malla` es el nombre físico histórico del agregado **Malla**. `es_actual`
+identifica como máximo una fila actual por carrera mediante un índice parcial único; las
+filas anteriores quedan como historia interna y no se exponen como versiones. La malla
+actual puede estar `active` o `inactive` y define su cantidad de ciclos y sus campos de
+tarjeta. Una definición puede enlazarse con una columna académica estructurada o almacenar
+un valor tipado por asignatura en `valores_campo_asignatura`; nunca altera el DDL por
+carrera. `asignaturas.ciclo` y `orden_en_ciclo` determinan la posición reproducible del
+lienzo. Las coordenadas de pantalla no se persisten. `requisitos_asignatura.tipo`
+conserva la semántica explícita de cada flecha.
+
+`silabos.contexto_academico` conserva una fotografía JSON de la malla, la asignatura y la
+oferta al crear el expediente. Es evidencia histórica de lectura y exportación; no
+sustituye las relaciones transaccionales ni permite reconstruir autorizaciones.
 
 ### Plantillas y fuentes
 
@@ -73,13 +80,16 @@ edición funcional. Las correcciones agregan filas. Si es necesario corregir met
 administrativos, se registra el cambio y se preserva el valor anterior. ADM-04 implementa
 esta corrección mediante actualización transaccional del catálogo y un evento append-only
 con campos modificados y valores anterior/nuevo; no requiere desnormalizar ni duplicar la
-entidad.
+entidad. La malla actual no es una versión publicada: permanece editable y su historia se
+protege mediante el contexto académico fijado en cada sílabo.
 
 ## Borrado
 
 - `RESTRICT` para referencias históricas.
 - `CASCADE` únicamente entre padre e hijos que no tienen sentido independiente y aún no
   constituyen evidencia publicada.
+- la malla actual solo se elimina cuando no tiene ofertas ni sílabos; con dependencias se
+  deshabilita.
 - catálogos y usuarios con historia se desactivan/archivan.
 - migraciones destructivas requieren copia, verificación, rollback ensayado y aprobación.
 
@@ -95,7 +105,8 @@ Como mínimo, prueba/define:
 - claves de idempotencia únicas por operación;
 - filtros frecuentes por convocatoria, estado, asignación, plazo y fecha;
 - búsquedas de auditoría por recurso/actor/tiempo;
-- clave y dato estructurado únicos por versión de malla, y un valor por
+- una sola malla actual por carrera mediante índice parcial único;
+- clave y dato estructurado únicos por malla, y un valor por
   asignatura/definición;
 - colas/outbox por estado y próximo intento.
 

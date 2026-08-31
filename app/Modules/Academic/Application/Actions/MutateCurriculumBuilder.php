@@ -31,7 +31,7 @@ class MutateCurriculumBuilder
         Request $request,
     ): CurriculumVersion {
         return DB::transaction(function () use ($actor, $curriculumId, $cycleCount, $request): CurriculumVersion {
-            [$role, $curriculum] = $this->draftCurriculum($curriculumId, $request);
+            [$role, $curriculum] = $this->currentCurriculum($curriculumId, $request);
 
             $lastUsedCycle = (int) $curriculum->subjects()->max('ciclo');
             if ($lastUsedCycle > $cycleCount) {
@@ -55,7 +55,7 @@ class MutateCurriculumBuilder
     public function createField(string $curriculumId, array $data, User $actor, Request $request): CurriculumFieldDefinition
     {
         return DB::transaction(function () use ($actor, $curriculumId, $data, $request): CurriculumFieldDefinition {
-            [$role, $curriculum] = $this->draftCurriculum($curriculumId, $request);
+            [$role, $curriculum] = $this->currentCurriculum($curriculumId, $request);
             if (($data['system_key'] ?? null) !== null
                 && ! in_array($data['type'], ['number', 'integer'], true)) {
                 throw ValidationException::withMessages([
@@ -112,7 +112,7 @@ class MutateCurriculumBuilder
         Request $request,
     ): void {
         DB::transaction(function () use ($actor, $curriculumId, $fieldId, $request): void {
-            [$role, $curriculum] = $this->draftCurriculum($curriculumId, $request);
+            [$role, $curriculum] = $this->currentCurriculum($curriculumId, $request);
             $field = CurriculumFieldDefinition::query()
                 ->where('version_malla_id', $curriculum->id)
                 ->lockForUpdate()
@@ -127,7 +127,7 @@ class MutateCurriculumBuilder
     public function createRequirement(string $curriculumId, array $data, User $actor, Request $request): SubjectRequirement
     {
         return DB::transaction(function () use ($actor, $curriculumId, $data, $request): SubjectRequirement {
-            [$role, $curriculum] = $this->draftCurriculum($curriculumId, $request);
+            [$role, $curriculum] = $this->currentCurriculum($curriculumId, $request);
             $subjects = Subject::query()
                 ->where('version_malla_id', $curriculum->id)
                 ->whereIn('id', [$data['subject_id'], $data['requirement_id']])
@@ -136,7 +136,7 @@ class MutateCurriculumBuilder
 
             if ($subjects->count() !== 2) {
                 throw ValidationException::withMessages([
-                    'requirement_id' => 'Ambas materias deben pertenecer a esta versión de malla.',
+                    'requirement_id' => 'Ambas materias deben pertenecer a la malla actual.',
                 ]);
             }
 
@@ -172,7 +172,7 @@ class MutateCurriculumBuilder
         Request $request,
     ): void {
         DB::transaction(function () use ($actor, $curriculumId, $requirementId, $request): void {
-            [$role, $curriculum] = $this->draftCurriculum($curriculumId, $request);
+            [$role, $curriculum] = $this->currentCurriculum($curriculumId, $request);
             $requirement = SubjectRequirement::query()
                 ->whereHas('subject', fn ($query) => $query->where('version_malla_id', $curriculum->id))
                 ->whereHas('requirement', fn ($query) => $query->where('version_malla_id', $curriculum->id))
@@ -188,7 +188,7 @@ class MutateCurriculumBuilder
     public function updateSubjectLayout(string $curriculumId, array $data, User $actor, Request $request): Subject
     {
         return DB::transaction(function () use ($actor, $curriculumId, $data, $request): Subject {
-            [$role, $curriculum] = $this->draftCurriculum($curriculumId, $request);
+            [$role, $curriculum] = $this->currentCurriculum($curriculumId, $request);
             if ((int) $data['cycle'] > $curriculum->numero_ciclos) {
                 throw ValidationException::withMessages(['cycle' => 'El ciclo excede la configuración de la malla.']);
             }
@@ -216,7 +216,7 @@ class MutateCurriculumBuilder
     }
 
     /** @return array{RoleAssignment, CurriculumVersion} */
-    private function draftCurriculum(string $curriculumId, Request $request): array
+    private function currentCurriculum(string $curriculumId, Request $request): array
     {
         $role = $this->roles->resolve($request);
         if (! $role instanceof RoleAssignment
@@ -227,13 +227,9 @@ class MutateCurriculumBuilder
 
         $curriculum = CurriculumVersion::query()
             ->where('carrera_id', $role->carrera_id)
+            ->current()
             ->lockForUpdate()
             ->findOrFail($curriculumId);
-        if ($curriculum->estado !== 'draft') {
-            throw ValidationException::withMessages([
-                'curriculum' => 'La malla publicada es inmutable. Cree una nueva versión para cambiarla.',
-            ]);
-        }
 
         return [$role, $curriculum];
     }

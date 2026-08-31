@@ -72,8 +72,8 @@ class ReviewController extends Controller
                         'id' => $syllabus->id,
                         'revision_id' => $revision?->id,
                         'revision_number' => $revision?->numero_revision,
-                        'subject' => $syllabus->subject->nombre,
-                        'code' => $syllabus->subject->codigo_institucional,
+                        'subject' => $syllabus->academicSubjectName(),
+                        'code' => $syllabus->academicSubjectCode(),
                         'period' => $syllabus->convocation->academicPeriod->nombre,
                         'state' => $syllabus->estado,
                         'teachers' => $syllabus->teachers->pluck('name')->values(),
@@ -198,8 +198,8 @@ class ReviewController extends Controller
         return Inertia::render('Syllabi/Compare', [
             'syllabus' => [
                 'id' => $syllabus->id,
-                'subject' => $syllabus->subject->nombre,
-                'code' => $syllabus->subject->codigo_institucional,
+                'subject' => $syllabus->academicSubjectName(),
+                'code' => $syllabus->academicSubjectCode(),
                 'period' => $syllabus->convocation->academicPeriod->nombre,
             ],
             'comparison' => $diff->compare($before, $after),
@@ -228,8 +228,8 @@ class ReviewController extends Controller
         return [
             'syllabus' => [
                 'id' => $syllabus->id,
-                'subject' => $syllabus->subject->nombre,
-                'code' => $syllabus->subject->codigo_institucional,
+                'subject' => $syllabus->academicSubjectName(),
+                'code' => $syllabus->academicSubjectCode(),
                 'period' => $syllabus->convocation->academicPeriod->nombre,
                 'state' => $syllabus->estado,
                 'teachers' => $syllabus->teachers->pluck('name')->values(),

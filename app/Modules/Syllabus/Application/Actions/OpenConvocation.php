@@ -4,12 +4,14 @@ namespace App\Modules\Syllabus\Application\Actions;
 
 use App\Models\User;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CourseOffering;
+use App\Modules\Academic\Infrastructure\Persistence\Models\CurriculumVersion;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
 use App\Modules\Academic\Infrastructure\Persistence\Models\TeacherAssignment;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\FieldDefinition;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\SourceConflict;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Operations\Application\Actions\RecordAuditEvent;
+use App\Modules\Syllabus\Application\AcademicContextSnapshot;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\Convocation;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\FieldValue;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\Syllabus;
@@ -25,6 +27,7 @@ class OpenConvocation
     public function __construct(
         private readonly ActiveRole $roles,
         private readonly RecordAuditEvent $audit,
+        private readonly AcademicContextSnapshot $academicContext,
     ) {}
 
     public function execute(string $convocationId, User $actor, Request $request): Convocation
@@ -56,12 +59,23 @@ class OpenConvocation
                 throw ValidationException::withMessages(['convocation' => 'Resuelva las contradicciones de fuentes antes de abrir la convocatoria.']);
             }
 
+            if (! CurriculumVersion::query()
+                ->where('carrera_id', $convocation->carrera_id)
+                ->current()
+                ->active()
+                ->exists()) {
+                throw ValidationException::withMessages([
+                    'convocation' => 'La carrera no tiene una malla activa. Actívela antes de abrir nuevos procesos para docentes.',
+                ]);
+            }
+
             $offerings = CourseOffering::query()
                 ->where('periodo_academico_id', $convocation->periodo_academico_id)
                 ->where('activo', true)
                 ->whereHas('subject.curriculumVersion', fn ($query) => $query
                     ->where('carrera_id', $convocation->carrera_id)
-                    ->where('estado', 'published'))
+                    ->where('es_actual', true)
+                    ->where('estado', 'active'))
                 ->with([
                     'subject.curriculumVersion', 'campus', 'modality',
                     'parallels' => fn ($query) => $query->where('activo', true)->lockForUpdate()->with([
@@ -137,6 +151,7 @@ class OpenConvocation
             'asignatura_id' => $offering->subject->id,
             'version_malla_id' => $offering->subject->version_malla_id,
             'version_plantilla_id' => $convocation->version_plantilla_id,
+            'contexto_academico' => $this->academicContext->build($offering),
             'estado' => 'not_started',
         ]);
 

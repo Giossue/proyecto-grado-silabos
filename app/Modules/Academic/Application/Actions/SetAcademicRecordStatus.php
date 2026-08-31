@@ -33,6 +33,7 @@ class SetAcademicRecordStatus
         'campus' => Campus::class,
         'modality' => Modality::class,
         'period' => AcademicPeriod::class,
+        'curriculum' => CurriculumVersion::class,
         'subject' => Subject::class,
         'offering' => CourseOffering::class,
         'parallel' => Parallel::class,
@@ -73,7 +74,9 @@ class SetAcademicRecordStatus
                 $this->ensureMayDeactivate($entity, $recordId);
             }
 
-            $record->update(['activo' => $active]);
+            $record->update($entity === 'curriculum'
+                ? ['estado' => $active ? 'active' : 'inactive']
+                : ['activo' => $active]);
 
             $this->audit->execute(
                 actorId: $actor->id,
@@ -97,21 +100,26 @@ class SetAcademicRecordStatus
         }
 
         return match ($entity) {
+            'curriculum' => CurriculumVersion::query()
+                ->where('carrera_id', $careerId)
+                ->current()
+                ->lockForUpdate()
+                ->findOrFail($recordId),
             'subject' => Subject::query()->whereHas(
                 'curriculumVersion',
-                fn ($query) => $query->where('carrera_id', $careerId),
+                fn ($query) => $query->where('carrera_id', $careerId)->where('es_actual', true),
             )->lockForUpdate()->findOrFail($recordId),
             'offering' => CourseOffering::query()->whereHas(
                 'subject.curriculumVersion',
-                fn ($query) => $query->where('carrera_id', $careerId),
+                fn ($query) => $query->where('carrera_id', $careerId)->where('es_actual', true),
             )->lockForUpdate()->findOrFail($recordId),
             'parallel' => Parallel::query()->whereHas(
                 'offering.subject.curriculumVersion',
-                fn ($query) => $query->where('carrera_id', $careerId),
+                fn ($query) => $query->where('carrera_id', $careerId)->where('es_actual', true),
             )->lockForUpdate()->findOrFail($recordId),
             'teacher_assignment' => TeacherAssignment::query()->whereHas(
                 'parallel.offering.subject.curriculumVersion',
-                fn ($query) => $query->where('carrera_id', $careerId),
+                fn ($query) => $query->where('carrera_id', $careerId)->where('es_actual', true),
             )->lockForUpdate()->findOrFail($recordId),
             default => throw new AuthorizationException('El registro no pertenece a la gestión de carrera.'),
         };
@@ -121,7 +129,8 @@ class SetAcademicRecordStatus
     {
         $hasActiveDependants = match ($entity) {
             'faculty' => Career::query()->where('facultad_id', $recordId)->where('activo', true)->exists(),
-            'career' => CurriculumVersion::query()->where('carrera_id', $recordId)->whereIn('estado', ['draft', 'published'])->exists(),
+            'career' => CurriculumVersion::query()->where('carrera_id', $recordId)->current()->active()->exists(),
+            'curriculum' => false,
             'campus' => CourseOffering::query()->where('campus_id', $recordId)->where('activo', true)->exists(),
             'modality' => CourseOffering::query()->where('modalidad_id', $recordId)->where('activo', true)->exists(),
             'period' => CourseOffering::query()->where('periodo_academico_id', $recordId)->where('activo', true)->exists(),

@@ -46,7 +46,7 @@ const nextPosition = computed(
     <FormSheet
         v-model:open="open"
         trigger-label="Configurar malla"
-        title="Configurar esta versión de malla"
+        title="Configurar la malla"
         description="Los ciclos y campos pertenecen solo a esta versión; otras carreras pueden usar otra estructura."
         :show-trigger="false"
         full-screen

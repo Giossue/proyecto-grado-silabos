@@ -73,8 +73,8 @@ class DatabaseSeeder extends Seeder
                 ['carrera_id' => $career->id, 'codigo' => 'MALLA-SW-2024'],
                 [
                     'numero_version' => 1,
-                    'estado' => 'published',
-                    'publicado_en' => '2026-01-15 15:00:00+00',
+                    'estado' => 'active',
+                    'es_actual' => true,
                 ],
             );
             foreach (CurriculumSystemFields::defaults() as $field) {

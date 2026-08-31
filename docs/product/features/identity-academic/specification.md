@@ -34,18 +34,21 @@
 - La actualización se autoriza y valida en servidor, se ejecuta dentro de una transacción
   y registra campos modificados y valores anterior/nuevo en auditoría. Un envío sin cambios
   no inventa un evento.
-- El Coordinador mantiene mallas, materias, ofertas, paralelos y asignaciones docentes
+- El Coordinador mantiene la malla, materias, ofertas, paralelos y asignaciones docentes
   únicamente para la carrera de su rol.
 - Cada fila editable de esas colecciones ofrece Editar. La autorización vuelve a comprobar
   el alcance por registro y la actualización conserva antes/después en auditoría.
-- Una malla publicada y sus materias no se reescriben. Una oferta, paralelo o asignación
-  ya incorporada a un sílabo se archiva y reemplaza para no alterar el expediente.
-- La navegación del Coordinador concentra Materias dentro de Mallas. El listado de mallas
-  usa cards y cada detalle ofrece desglose académico y constructor visual sobre el mismo
-  agregado. Ofertas y Paralelos conservan rutas hijas separadas.
+- Cada carrera tiene cero o una malla actual, editable activa o inactiva. Coordinación
+  puede deshabilitarla/reactivarla y solo eliminarla cuando no tiene ofertas ni sílabos.
+  Una oferta, paralelo o asignación ya incorporada a un sílabo se archiva y reemplaza
+  para no alterar el expediente.
+- La navegación del Coordinador concentra Materias dentro de **Malla**. La ruta abre el
+  agregado actual directamente o muestra su estado vacío; no usa buscador, filtros,
+  cards, paginación, publicación ni número de versión. Ofertas y Paralelos conservan
+  rutas hijas separadas.
 - Estructura, mallas, materias y ofertas usan identificadores estables. La posición de una
   materia se presenta como ciclo; el periodo académico conserva sus fechas.
-- ADM-02..04 y COR-14..15 priorizan sus tablas; COR-13 prioriza cards y el detalle de
+- ADM-02..04 y COR-14..15 priorizan sus tablas; COR-13 prioriza la página completa de la
   malla. En el desglose de COR-13, la acción principal abre desde la derecha el formulario
   manual; en el constructor visual, cada ciclo permite crear materias y cada tarjeta se
   edita directamente en el lienzo, sin abrir ese Sheet.
@@ -60,4 +63,5 @@
 - Un Coordinador o Docente no puede actualizar catálogos globales aunque construya la
   solicitud fuera de la interfaz.
 - Archivar no elimina referencias históricas; reactivar vuelve a habilitar usos futuros.
-- Una nueva malla no altera expedientes de mallas anteriores.
+- Sin una malla activa no se crean ofertas ni se abren procesos nuevos. Los sílabos
+  existentes conservan su fotografía académica aunque la malla se edite o deshabilite.

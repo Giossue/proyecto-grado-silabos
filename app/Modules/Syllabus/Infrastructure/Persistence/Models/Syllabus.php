@@ -20,6 +20,7 @@ use Illuminate\Database\Eloquent\Relations\HasManyThrough;
  * @property int $lock_version
  * @property string $porcentaje_completitud
  * @property int $unresolved_observations_count
+ * @property array<string, mixed> $contexto_academico
  * @property CarbonImmutable|null $guardado_en
  * @property-read Convocation $convocation
  * @property-read Subject $subject
@@ -34,7 +35,7 @@ class Syllabus extends Model
     /** @var list<string> */
     protected $fillable = [
         'convocatoria_id', 'asignatura_id', 'version_malla_id', 'version_plantilla_id', 'estado',
-        'lock_version', 'porcentaje_completitud', 'iniciado_en', 'guardado_en',
+        'contexto_academico', 'lock_version', 'porcentaje_completitud', 'iniciado_en', 'guardado_en',
     ];
 
     /** @return array<string, string> */
@@ -42,10 +43,25 @@ class Syllabus extends Model
     {
         return [
             'lock_version' => 'integer',
+            'contexto_academico' => 'array',
             'porcentaje_completitud' => 'decimal:2',
             'iniciado_en' => 'immutable_datetime',
             'guardado_en' => 'immutable_datetime',
         ];
+    }
+
+    public function academicSubjectName(): string
+    {
+        $name = data_get($this->contexto_academico, 'subject.name');
+
+        return is_string($name) ? $name : $this->subject->nombre;
+    }
+
+    public function academicSubjectCode(): string
+    {
+        $code = data_get($this->contexto_academico, 'subject.code');
+
+        return is_string($code) ? $code : $this->subject->codigo_institucional;
     }
 
     /** @return BelongsTo<Convocation, $this> */

@@ -1,5 +1,9 @@
 # I-18 — Constructor visual de mallas flexibles
 
+> Reemplazo parcial del 30 de agosto de 2026: I-20 conserva el constructor y la
+> configuración flexible, pero sustituye las versiones publicables por una sola malla
+> actual editable por carrera.
+
 ## Objetivo
 
 Transformar la gestión de mallas de Coordinación en un constructor por versión de malla

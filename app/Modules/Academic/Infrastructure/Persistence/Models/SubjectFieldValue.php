@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $asignatura_id
  * @property string $definicion_campo_id
  * @property mixed $valor
+ * @property-read CurriculumFieldDefinition $definition
  */
 class SubjectFieldValue extends Model
 {

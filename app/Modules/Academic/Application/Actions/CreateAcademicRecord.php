@@ -108,12 +108,22 @@ class CreateAcademicRecord
     /** @param array<string, mixed> $data */
     private function createCurriculum(array $data, string $careerId): CurriculumVersion
     {
+        Career::query()->whereKey($careerId)->lockForUpdate()->firstOrFail();
+        if (CurriculumVersion::query()->where('carrera_id', $careerId)->current()->exists()) {
+            throw ValidationException::withMessages([
+                'curriculum' => 'La carrera ya tiene una malla. Edite la malla actual en lugar de crear otra.',
+            ]);
+        }
+
         $curriculum = CurriculumVersion::query()->create([
             'carrera_id' => $careerId,
             'codigo' => $data['code'],
-            'numero_version' => $data['version_number'],
+            'numero_version' => ((int) CurriculumVersion::query()
+                ->where('carrera_id', $careerId)
+                ->max('numero_version')) + 1,
             'numero_ciclos' => 8,
-            'estado' => 'draft',
+            'estado' => 'active',
+            'es_actual' => true,
         ]);
 
         foreach (CurriculumSystemFields::defaults() as $field) {
@@ -139,14 +149,9 @@ class CreateAcademicRecord
         $curriculum = CurriculumVersion::query()
             ->whereKey($this->stringValue($data, 'curriculum_id'))
             ->where('carrera_id', $careerId)
+            ->current()
             ->lockForUpdate()
             ->firstOrFail();
-
-        if ($curriculum->estado !== 'draft') {
-            throw ValidationException::withMessages([
-                'curriculum_id' => 'Solo una malla en borrador admite nuevas materias.',
-            ]);
-        }
 
         if (isset($data['cycle']) && (int) $data['cycle'] > $curriculum->numero_ciclos) {
             throw ValidationException::withMessages([
@@ -182,15 +187,17 @@ class CreateAcademicRecord
     private function createOffering(array $data, string $careerId): CourseOffering
     {
         $subject = Subject::query()
-            ->with('curriculumVersion:id,estado,carrera_id')
+            ->with('curriculumVersion:id,estado,carrera_id,es_actual')
             ->whereKey($this->stringValue($data, 'subject_id'))
-            ->whereHas('curriculumVersion', fn ($query) => $query->where('carrera_id', $careerId))
+            ->whereHas('curriculumVersion', fn ($query) => $query
+                ->where('carrera_id', $careerId)
+                ->where('es_actual', true))
             ->lockForUpdate()
             ->firstOrFail();
 
-        if ($subject->curriculumVersion->estado !== 'published') {
+        if ($subject->curriculumVersion->estado !== 'active') {
             throw ValidationException::withMessages([
-                'subject_id' => 'La oferta requiere una materia de una malla publicada.',
+                'subject_id' => 'La oferta requiere una materia de la malla activa.',
             ]);
         }
 
@@ -219,7 +226,10 @@ class CreateAcademicRecord
             ->whereKey($this->stringValue($data, 'offering_id'))
             ->whereHas(
                 'subject.curriculumVersion',
-                fn ($query) => $query->where('carrera_id', $careerId),
+                fn ($query) => $query
+                    ->where('carrera_id', $careerId)
+                    ->where('es_actual', true)
+                    ->where('estado', 'active'),
             )
             ->lockForUpdate()
             ->firstOrFail();
@@ -263,11 +273,14 @@ class CreateAcademicRecord
     private function createTeacherAssignment(array $data, string $careerId): TeacherAssignment
     {
         $parallel = Parallel::query()
-            ->with('offering.subject.curriculumVersion:id,carrera_id')
+            ->with('offering.subject.curriculumVersion:id,carrera_id,estado,es_actual')
             ->whereKey($this->stringValue($data, 'parallel_id'))
             ->whereHas(
                 'offering.subject.curriculumVersion',
-                fn ($query) => $query->where('carrera_id', $careerId),
+                fn ($query) => $query
+                    ->where('carrera_id', $careerId)
+                    ->where('es_actual', true)
+                    ->where('estado', 'active'),
             )
             ->lockForUpdate()
             ->firstOrFail();

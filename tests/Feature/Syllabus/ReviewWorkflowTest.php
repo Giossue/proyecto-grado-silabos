@@ -78,6 +78,7 @@ class ReviewWorkflowTest extends TestCase
         $this->assertSame('in_review', $syllabus->fresh()->estado);
         $this->assertSame(1, $revision->numero_revision);
         $this->assertSame($syllabus->version_plantilla_id, $revision->snapshot['template_version_id']);
+        $this->assertSame($syllabus->contexto_academico, $revision->snapshot['academic_context']);
         $this->assertNotEmpty($revision->snapshot['sections']);
         $this->assertSame(app(CanonicalHasher::class)->hash($revision->snapshot), $revision->huella_sha256);
         $this->assertDatabaseHas('transiciones_silabo', [

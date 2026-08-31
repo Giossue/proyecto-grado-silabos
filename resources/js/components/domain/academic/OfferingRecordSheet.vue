@@ -38,7 +38,7 @@ const title = computed(() =>
 );
 const description = computed(() =>
     props.entity === 'offering'
-        ? 'Abra una materia publicada para un periodo académico, campus y modalidad.'
+        ? 'Abra una materia de la malla activa para un periodo académico, campus y modalidad.'
         : 'Agregue un paralelo a una oferta académica existente.',
 );
 </script>
@@ -62,7 +62,7 @@ const description = computed(() =>
                     <template v-if="props.entity === 'offering'">
                         <Field :data-invalid="Boolean(errors.subject_id)">
                             <FieldLabel for="offering-subject" required>
-                                Materia publicada
+                                Materia de la malla activa
                             </FieldLabel>
                             <Select name="subject_id" required>
                                 <SelectTrigger
@@ -76,7 +76,7 @@ const description = computed(() =>
                                 <SelectContent>
                                     <SelectGroup>
                                         <SelectItem
-                                            v-for="item in options.publishedSubjects"
+                                            v-for="item in options.activeSubjects"
                                             :key="item.id"
                                             :value="item.id"
                                         >

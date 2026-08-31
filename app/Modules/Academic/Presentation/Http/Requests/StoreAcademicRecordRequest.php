@@ -60,23 +60,13 @@ class StoreAcademicRecordRequest extends FormRequest
                         app(ActiveRole::class)->resolve($this)?->carrera_id,
                     ),
                 ],
-                'version_number' => [
-                    'required',
-                    'integer',
-                    'min:1',
-                    'max:999',
-                    Rule::unique('versiones_malla', 'numero_version')->where(
-                        'carrera_id',
-                        app(ActiveRole::class)->resolve($this)?->carrera_id,
-                    ),
-                ],
             ],
             'subject' => [
                 'curriculum_id' => [
                     'required',
                     'uuid',
                     Rule::exists('versiones_malla', 'id')
-                        ->where('estado', 'draft')
+                        ->where('es_actual', true)
                         ->where('carrera_id', $this->careerId()),
                 ],
                 'code' => [
@@ -118,7 +108,8 @@ class StoreAcademicRecordRequest extends FormRequest
                         ->whereIn('version_malla_id', CurriculumVersion::query()
                             ->select('id')
                             ->where('carrera_id', $this->careerId())
-                            ->where('estado', 'published'))),
+                            ->where('es_actual', true)
+                            ->where('estado', 'active'))),
                     Rule::unique('ofertas_academicas', 'asignatura_id')
                         ->where('periodo_academico_id', $this->input('period_id'))
                         ->where('campus_id', $this->input('campus_id'))
@@ -136,7 +127,9 @@ class StoreAcademicRecordRequest extends FormRequest
                         ->whereIn('asignatura_id', Subject::query()
                             ->select('id')
                             ->whereHas('curriculumVersion', fn ($curricula) => $curricula
-                                ->where('carrera_id', $this->careerId())))),
+                                ->where('carrera_id', $this->careerId())
+                                ->where('es_actual', true)
+                                ->where('estado', 'active')))),
                 ],
                 'code' => [
                     'required',
@@ -166,7 +159,9 @@ class StoreAcademicRecordRequest extends FormRequest
                         ->whereIn('oferta_academica_id', CourseOffering::query()
                             ->select('id')
                             ->whereHas('subject.curriculumVersion', fn ($curricula) => $curricula
-                                ->where('carrera_id', $this->careerId())))),
+                                ->where('carrera_id', $this->careerId())
+                                ->where('es_actual', true)
+                                ->where('estado', 'active')))),
                 ],
                 'valid_from' => ['required', 'date'],
                 'valid_until' => ['nullable', 'date', 'after:valid_from'],

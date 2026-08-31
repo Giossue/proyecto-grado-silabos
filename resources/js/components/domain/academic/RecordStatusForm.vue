@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3';
 import { Archive, ArchiveRestore } from '@lucide/vue';
+import { computed } from 'vue';
 import AcademicGovernanceController from '@/actions/App/Modules/Academic/Presentation/Http/Controllers/AcademicGovernanceController';
 import CareerAcademicStructureController from '@/actions/App/Modules/Academic/Presentation/Http/Controllers/CareerAcademicStructureController';
 import { Button } from '@/components/ui/button';
 import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Spinner } from '@/components/ui/spinner';
 
-withDefaults(
+const props = withDefaults(
     defineProps<{
         scope: 'governance' | 'career';
         entity: string;
@@ -19,6 +20,14 @@ withDefaults(
         display: 'button',
     },
 );
+
+const actionLabel = computed(() => {
+    if (props.entity === 'curriculum') {
+        return props.active ? 'Deshabilitar' : 'Reactivar';
+    }
+
+    return props.active ? 'Archivar' : 'Reactivar';
+});
 </script>
 
 <template>
@@ -46,7 +55,7 @@ withDefaults(
             <Spinner v-if="processing" />
             <Archive v-else-if="active" aria-hidden="true" />
             <ArchiveRestore v-else aria-hidden="true" />
-            {{ active ? 'Archivar' : 'Reactivar' }}
+            {{ actionLabel }}
         </DropdownMenuItem>
         <Button
             v-else
@@ -66,7 +75,7 @@ withDefaults(
                 data-icon="inline-start"
                 aria-hidden="true"
             />
-            {{ active ? 'Archivar' : 'Reactivar' }}
+            {{ actionLabel }}
         </Button>
         <DropdownMenuItem
             v-if="display === 'menu' && errors.record"

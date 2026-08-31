@@ -200,14 +200,20 @@ it('presenta la jerarquia academica en submenus y rutas sin mezclar catalogos', 
         ->toContain('<SidebarMenuSubButton');
 });
 
-it('concentra las materias dentro de las cards y el detalle de cada malla', function (): void {
+it('presenta una sola malla por carrera sin buscador filtros cards ni versiones', function (): void {
     $root = dirname(__DIR__, 2);
     $sidebar = file_get_contents($root.'/resources/js/components/AppSidebar.vue');
     $curricula = file_get_contents(
         $root.'/resources/js/pages/Coordination/Academic/Curricula.vue',
     );
-    $curriculaCards = file_get_contents(
-        $root.'/resources/js/components/domain/academic/CurriculaTab.vue',
+    $curriculumActions = file_get_contents(
+        $root.'/resources/js/components/domain/academic/CurriculumActions.vue',
+    );
+    $curriculumBuilder = file_get_contents(
+        $root.'/resources/js/pages/Coordination/Academic/CurriculumBuilder.vue',
+    );
+    $curriculumForm = file_get_contents(
+        $root.'/resources/js/components/domain/academic/curriculum/CurriculumFormView.vue',
     );
     $offerings = file_get_contents(
         $root.'/resources/js/pages/Coordination/Academic/Offerings.vue',
@@ -218,7 +224,7 @@ it('concentra las materias dentro de las cards y el detalle de cada malla', func
 
     expect($sidebar)
         ->toBeString()
-        ->toContain("title: 'Mallas'")
+        ->toContain("title: 'Malla'")
         ->toContain('href: curriculaIndex()')
         ->not->toContain("title: 'Mallas y materias'")
         ->not->toContain('subjectsIndex')
@@ -230,18 +236,26 @@ it('concentra las materias dentro de las cards y el detalle de cada malla', func
     expect($curricula)
         ->toBeString()
         ->toContain('entity="curriculum"')
-        ->toContain('<CurriculaTab');
-    expect($curriculaCards)
+        ->toContain('<Head title="Malla"')
+        ->toContain('<Empty')
+        ->toContain('<Inbox')
+        ->toContain('No hay una malla configurada')
+        ->not->toContain('ClientFilterBar')
+        ->not->toContain('TablePagination')
+        ->not->toContain('CurriculaTab')
+        ->not->toContain('version_number');
+    expect($curriculumActions)
         ->toBeString()
-        ->toContain('v-for="item in curriculumPage"')
-        ->toContain('curriculumShow(item.id)')
-        ->toContain('Abrir malla')
-        ->toContain('bg-primary/10')
-        ->toContain('subjectSummary(item.subject_count)')
-        ->not->toContain('Ver desglose y constructor')
-        ->not->toContain('Publicación')
-        ->not->toContain('{{ item.career_name }} · Versión')
-        ->not->toContain("section === 'subjects'");
+        ->toContain('entity="curriculum"')
+        ->toContain('destroyCurriculum.form')
+        ->toContain('Editar')
+        ->toContain('Eliminar')
+        ->toContain('<Dialog');
+    expect($curriculumBuilder.$curriculumForm)
+        ->toBeString()
+        ->not->toContain('Malla publicada')
+        ->not->toContain('número de versión')
+        ->not->toContain('version_number');
     expect($offerings)->toBeString()->toContain('entity="offering"');
     expect($parallels)->toBeString()->toContain('entity="parallel"');
 });
@@ -272,6 +286,8 @@ it('ofrece desglose y constructor visual sobre el mismo contrato de malla', func
 
     expect($page)
         ->toBeString()
+        ->toContain('<Head title="Malla"')
+        ->toContain('<CurriculumActions')
         ->toContain('<CurriculumCanvas')
         ->toContain('<CurriculumFormView')
         ->toContain('<TabsList')
@@ -445,7 +461,6 @@ it('agrupa las acciones de tabla en menus accesibles de tres puntos', function (
     $this->assertSame(5, substr_count($catalogs, '<CatalogActions'));
 
     foreach ([
-        'resources/js/components/domain/academic/CurriculaTab.vue' => 1,
         'resources/js/components/domain/academic/OfferingsTab.vue' => 2,
         'resources/js/components/domain/academic/TeacherAssignmentsPanel.vue' => 1,
     ] as $surface => $expected) {
@@ -459,7 +474,7 @@ it('agrupa las acciones de tabla en menus accesibles de tres puntos', function (
         $checked += $expected;
     }
 
-    $this->assertSame(14, $checked);
+    $this->assertSame(13, $checked);
 
     $vueFiles = new RecursiveIteratorIterator(
         new RecursiveDirectoryIterator($root.'/resources/js'),

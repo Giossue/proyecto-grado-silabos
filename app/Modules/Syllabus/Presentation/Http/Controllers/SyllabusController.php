@@ -54,9 +54,8 @@ class SyllabusController extends Controller
                 // recuerda un expediente: por la materia y por el periodo en que se pidió.
                 ->when($search, fn ($query, string $term) => $query->where(
                     fn ($outer) => $outer
-                        ->whereHas('subject', fn ($subject) => $subject
-                            ->whereRaw('nombre ILIKE ?', ["%{$term}%"])
-                            ->orWhereRaw('codigo_institucional ILIKE ?', ["%{$term}%"]))
+                        ->whereRaw("contexto_academico->'subject'->>'name' ILIKE ?", ["%{$term}%"])
+                        ->orWhereRaw("contexto_academico->'subject'->>'code' ILIKE ?", ["%{$term}%"])
                         ->orWhereHas('convocation', fn ($convocation) => $convocation
                             ->whereRaw('nombre ILIKE ?', ["%{$term}%"])),
                 ))
@@ -67,8 +66,8 @@ class SyllabusController extends Controller
                 ->withQueryString()
                 ->through(fn (Syllabus $syllabus) => [
                     'id' => $syllabus->id,
-                    'subject' => $syllabus->subject->nombre,
-                    'code' => $syllabus->subject->codigo_institucional,
+                    'subject' => $syllabus->academicSubjectName(),
+                    'code' => $syllabus->academicSubjectCode(),
                     'convocation' => $syllabus->convocation->nombre,
                     'period' => $syllabus->convocation->academicPeriod->nombre,
                     'state' => $syllabus->estado,
@@ -200,8 +199,8 @@ class SyllabusController extends Controller
 
         return [
             'id' => $syllabus->id,
-            'subject' => $syllabus->subject->nombre,
-            'code' => $syllabus->subject->codigo_institucional,
+            'subject' => $syllabus->academicSubjectName(),
+            'code' => $syllabus->academicSubjectCode(),
             'convocation' => $syllabus->convocation->nombre,
             'period' => $syllabus->convocation->academicPeriod->nombre,
             'state' => $syllabus->estado,

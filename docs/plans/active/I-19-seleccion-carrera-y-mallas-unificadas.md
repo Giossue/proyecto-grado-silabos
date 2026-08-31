@@ -1,5 +1,9 @@
 # I-19 — Selección de carrera y mallas unificadas
 
+> Reemplazo parcial del 30 de agosto de 2026: I-20 conserva la selección de carrera y la
+> integración de materias, pero sustituye el listado de cards y múltiples versiones por
+> una sola Malla actual.
+
 ## Estado
 
 Implementación y verificación automatizada concluidas el 2026-08-30. El cierre formal

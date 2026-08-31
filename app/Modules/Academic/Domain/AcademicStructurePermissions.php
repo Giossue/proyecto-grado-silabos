@@ -56,6 +56,7 @@ final class AcademicStructurePermissions
 
     /** @var list<string> */
     public const CAREER_STATUS_ENTITIES = [
+        'curriculum',
         'subject',
         'offering',
         'parallel',

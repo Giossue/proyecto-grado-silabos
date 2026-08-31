@@ -512,8 +512,8 @@ class DocumentOperationsTest extends TestCase
             'carrera_id' => $career->id,
             'codigo' => 'OTRA-MALLA-CP-F',
             'numero_version' => 1,
-            'estado' => 'published',
-            'publicado_en' => now(),
+            'estado' => 'active',
+            'es_actual' => true,
         ]);
         $subject = Subject::query()->create([
             'version_malla_id' => $curriculum->id,

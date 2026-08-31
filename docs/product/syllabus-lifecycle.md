@@ -21,14 +21,14 @@ mutable el documento aprobado.
 
 ## Transiciones permitidas
 
-| Origen | Acción | Actor | Destino | Efecto obligatorio |
-|---|---|---|---|---|
-| Sin iniciar | Crear borrador | Docente asignado/sistema | Borrador | Fija plantilla y datos maestros. |
-| Borrador | Enviar | Docente autorizado | En revisión | Valida, crea revisión inmutable y audita. |
-| En revisión | Solicitar corrección | Coordinador de alcance | Corrección solicitada | Selecciona observaciones y habilita nueva edición. |
-| Corrección solicitada | Reenviar | Docente autorizado | En revisión | Crea nueva revisión y vincula respuestas/cambios. |
-| En revisión | Aprobar | Coordinador autorizado | Aprobado | Fija aprobación sobre revisión inmutable. |
-| Aprobado | Reabrir | Coordinador autorizado | Borrador o Corrección solicitada | Registra causa y crea revisión enlazada. |
+| Origen                | Acción               | Actor                    | Destino                          | Efecto obligatorio                                 |
+| --------------------- | -------------------- | ------------------------ | -------------------------------- | -------------------------------------------------- |
+| Sin iniciar           | Crear borrador       | Docente asignado/sistema | Borrador                         | Fija plantilla y contexto académico.               |
+| Borrador              | Enviar               | Docente autorizado       | En revisión                      | Valida, crea revisión inmutable y audita.          |
+| En revisión           | Solicitar corrección | Coordinador de alcance   | Corrección solicitada            | Selecciona observaciones y habilita nueva edición. |
+| Corrección solicitada | Reenviar             | Docente autorizado       | En revisión                      | Crea nueva revisión y vincula respuestas/cambios.  |
+| En revisión           | Aprobar              | Coordinador autorizado   | Aprobado                         | Fija aprobación sobre revisión inmutable.          |
+| Aprobado              | Reabrir              | Coordinador autorizado   | Borrador o Corrección solicitada | Registra causa y crea revisión enlazada.           |
 
 ADR-0005 fija provisionalmente `Corrección solicitada` tras una reapertura. DT-07 exige
 validar ese lenguaje con usuarios; un cambio futuro afectará trabajo nuevo sin alterar la
@@ -41,13 +41,13 @@ de responsable no crea un expediente nuevo. El relevo cierra la vigencia de quie
 abre la de quien entra sobre los mismos paralelos, en una sola transacción, y exige la
 referencia del acto que lo respalda.
 
-| Estado al relevar | Qué ocurre |
-|---|---|
-| Sin iniciar | Solo cambia el responsable. |
-| Borrador | Se descarta el contenido y el nuevo docente empieza limpio. El avance perdido queda en auditoría. |
-| En revisión | No se traspasa. Primero se resuelve la revisión. |
-| Corrección solicitada | Se conserva el contenido: hubo envío, así que es evidencia. |
-| Aprobado | Se reabre conservando la revisión aprobada intacta; el nuevo docente hereda el contenido. |
+| Estado al relevar     | Qué ocurre                                                                                        |
+| --------------------- | ------------------------------------------------------------------------------------------------- |
+| Sin iniciar           | Solo cambia el responsable.                                                                       |
+| Borrador              | Se descarta el contenido y el nuevo docente empieza limpio. El avance perdido queda en auditoría. |
+| En revisión           | No se traspasa. Primero se resuelve la revisión.                                                  |
+| Corrección solicitada | Se conserva el contenido: hubo envío, así que es evidencia.                                       |
+| Aprobado              | Se reabre conservando la revisión aprobada intacta; el nuevo docente hereda el contenido.         |
 
 El descarte del borrador viene de DT-08 y no se deshace. La herencia del trabajo enviado
 viene de A1. Ambas están registradas en `references/entrevista-2026-08-26-hallazgos.md`.
@@ -68,6 +68,7 @@ periodo académico.
 
 - usuario activo, rol, alcance y asignación vigentes;
 - convocatoria y periodo compatibles;
+- malla actual activa al crear ofertas y abrir un proceso nuevo;
 - control de concurrencia superado;
 - versión de plantilla disponible para renderizar el expediente;
 - validaciones determinísticas obligatorias ejecutadas antes del envío;
@@ -95,5 +96,7 @@ envío.
 - Cambio de plantilla publicado: no altera expedientes ya creados.
 - Cambio de fuente activa: invalida/recalcula ayuda de IA futura, no reescribe resultados
   históricos.
+- Edición o desactivación de la malla: bloquea trabajo nuevo cuando queda inactiva, pero
+  no cambia el contexto académico fijado en sílabos y revisiones existentes.
 - Reintento de exportación: no duplica aprobación ni cambia revisión.
 - Sesión revocada durante edición: se detiene la mutación y se conserva un mensaje claro.

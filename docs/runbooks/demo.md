@@ -48,11 +48,11 @@ por cola; el comando combinado es suficiente para la demostración.
 
 Las cuentas creadas por el seeder usan exclusivamente datos sintéticos:
 
-| Rol | Correo | Contraseña |
-|---|---|---|
-| Administrador | `admin@silabos.test` | `Demo-2026!` |
-| Coordinador | `coordinador@silabos.test` | `Demo-2026!` |
-| Docente | `docente@silabos.test` | `Demo-2026!` |
+| Rol           | Correo                     | Contraseña   |
+| ------------- | -------------------------- | ------------ |
+| Administrador | `admin@silabos.test`       | `Demo-2026!` |
+| Coordinador   | `coordinador@silabos.test` | `Demo-2026!` |
+| Docente       | `docente@silabos.test`     | `Demo-2026!` |
 
 ## Recorrido
 
@@ -82,25 +82,26 @@ Las cuentas creadas por el seeder usan exclusivamente datos sintéticos:
 6. En **Plantillas**, cree `Plantilla de demostración`, limitada a la carrera Software.
    En el constructor seleccione el primer bloque y agregue un campo con:
 
-   - clave `objetivo.general`;
-   - etiqueta `Objetivo general`;
-   - tipo **Texto largo**;
-   - ayuda `Describa el propósito formativo de la asignatura`;
-   - **Obligatorio**, **Editable por docente** y **Permite asistencia de IA** activos;
-   - **Heredado de maestro** inactivo.
+    - clave `objetivo.general`;
+    - etiqueta `Objetivo general`;
+    - tipo **Texto largo**;
+    - ayuda `Describa el propósito formativo de la asignatura`;
+    - **Obligatorio**, **Editable por docente** y **Permite asistencia de IA** activos;
+    - **Heredado de maestro** inactivo.
 
-   Publique y congele la versión. Intente editarla y confirme que la interfaz solo ofrece
-   crear una versión nueva. Esto demuestra `CU-04` y la inmutabilidad de publicación.
+    Publique y congele la versión. Intente editarla y confirme que la interfaz solo ofrece
+    crear una versión nueva. Esto demuestra `CU-04` y la inmutabilidad de publicación.
 
 ### 2. Coordinador: estructura de carrera, fuente y convocatoria
 
 1. Cierre sesión, ingrese como Coordinador y elija la card **Software**. Abra el menú de
    usuario y confirme que la carrera activa aparece bajo su nombre; si dispone de otra,
    use **Cambiar carrera o rol** y vuelva a Software.
-2. En **Mallas**, cree `MALLA-SW-DEMO`, versión 2. Abra su card, entre a **Desglose
-   académico** y agregue `SW-701`, denominada `Sistemas Distribuidos`, ciclo 7, cuatro
-   créditos y 160 horas. Revise la misma materia en **Constructor visual**, publique la
-   malla y compruebe que queda inmutable.
+2. En **Malla**, abra la estructura actual o créela con el código `MALLA-SW-DEMO` si la
+   carrera todavía no tiene una. En **Desglose académico**, agregue `SW-701`, denominada
+   `Sistemas Distribuidos`, ciclo 7, cuatro créditos y 160 horas. Revise y edite la misma
+   materia en **Constructor visual**; confirme que ambas vistas trabajan sobre la misma
+   malla.
 3. En **Ofertas y paralelos > Ofertas**, abra `SW-701` para el periodo académico, campus y
    modalidad sintéticos existentes; desde **Paralelos**, cree el paralelo `A`. En
    **Asignación docente**, asigne
@@ -110,7 +111,7 @@ Las cuentas creadas por el seeder usan exclusivamente datos sintéticos:
    `Coordinación de Software`, responsable `Custodia de demostración`. Abra la versión
    borrador y agregue un fragmento con clave `objetivo.referencia`, título
    `Orientación del objetivo` y contenido `El objetivo debe expresar propósito, alcance y
-   resultado formativo verificable.`. Active la versión. Esto demuestra `CU-05`; la
+resultado formativo verificable.`. Active la versión. Esto demuestra `CU-05`; la
    aplicación debe advertir que una contradicción futura requiere decisión humana.
 5. En **Convocatorias**, prepare `Convocatoria de demostración`, periodo `2026-2027`, la plantilla
    publicada, agrupación **Un sílabo por oferta**, la fuente activa y una fecha límite

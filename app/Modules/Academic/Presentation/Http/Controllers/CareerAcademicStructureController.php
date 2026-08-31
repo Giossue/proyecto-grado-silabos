@@ -5,8 +5,8 @@ namespace App\Modules\Academic\Presentation\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Modules\Academic\Application\Actions\CreateAcademicRecord;
+use App\Modules\Academic\Application\Actions\DeleteCurriculum;
 use App\Modules\Academic\Application\Actions\MutateCurriculumBuilder;
-use App\Modules\Academic\Application\Actions\PublishCurriculumVersion;
 use App\Modules\Academic\Application\Actions\SetAcademicRecordStatus;
 use App\Modules\Academic\Application\Actions\UpdateCareerAcademicRecord;
 use App\Modules\Academic\Application\Queries\AcademicStructureViewData;
@@ -29,10 +29,16 @@ class CareerAcademicStructureController extends Controller
         ManageCareerAcademicStructureRequest $request,
         ActiveRole $roles,
         AcademicStructureViewData $viewData,
-    ): Response {
+    ): Response|RedirectResponse {
+        $careerId = $this->careerId($request, $roles);
+        $curriculumId = $viewData->currentCurriculumId($careerId);
+        if ($curriculumId !== null) {
+            return to_route('coordination.academic.curricula.show', $curriculumId);
+        }
+
         return Inertia::render(
             'Coordination/Academic/Curricula',
-            $viewData->curricula($this->careerId($request, $roles)),
+            $viewData->curricula($careerId),
         );
     }
 
@@ -104,6 +110,12 @@ class CareerAcademicStructureController extends Controller
         $active = $request->boolean('active');
         $action->execute($entity, $record, $active, $actor, $request);
 
+        if ($entity === 'curriculum') {
+            return back()->with('success', $active
+                ? 'Malla reactivada. Los procesos nuevos vuelven a estar disponibles.'
+                : 'Malla deshabilitada. No se crearán procesos nuevos y el historial se conserva.');
+        }
+
         return back()->with('success', $active
             ? 'Registro activado.'
             : 'Registro archivado sin borrar su historial.');
@@ -122,16 +134,17 @@ class CareerAcademicStructureController extends Controller
         return back()->with('success', 'Registro académico actualizado.');
     }
 
-    public function publishCurriculum(
+    public function destroyCurriculum(
         string $curriculum,
         ManageCareerAcademicStructureRequest $request,
-        PublishCurriculumVersion $action,
+        DeleteCurriculum $action,
     ): RedirectResponse {
         $actor = $request->user();
         abort_unless($actor instanceof User, 401);
         $action->execute($curriculum, $actor, $request);
 
-        return back()->with('success', 'Malla publicada. Su contenido queda inmutable.');
+        return to_route('coordination.academic.curricula.index')
+            ->with('success', 'Malla eliminada. La carrera queda sin estructura académica activa.');
     }
 
     public function updateCurriculumConfiguration(
@@ -156,7 +169,7 @@ class CareerAcademicStructureController extends Controller
     ): RedirectResponse {
         $action->createField($curriculum, $request->validated(), $this->actor($request), $request);
 
-        return back()->with('success', 'Campo agregado a esta versión de malla.');
+        return back()->with('success', 'Campo agregado a la malla.');
     }
 
     public function destroyCurriculumField(
@@ -167,7 +180,7 @@ class CareerAcademicStructureController extends Controller
     ): RedirectResponse {
         $action->deleteField($curriculum, $field, $this->actor($request), $request);
 
-        return back()->with('success', 'Campo retirado de esta versión de malla.');
+        return back()->with('success', 'Campo retirado de la malla.');
     }
 
     public function storeSubjectRequirement(

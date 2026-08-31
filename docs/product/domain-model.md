@@ -20,7 +20,7 @@ al entrar y puede sustituirla desde el menú, sin sumar alcances ni privilegios.
 ### Estructura académica
 
 - `Facultad`, `Escuela`, `Carrera`, `Campus`, `Modalidad`, `PeriodoAcademico`.
-- `VersionMalla`, `DefinicionCampoMalla`, `Asignatura` con ciclo/orden,
+- `Malla` —persistida internamente en `VersionMalla`—, `DefinicionCampoMalla`, `Asignatura` con ciclo/orden,
   `ValorCampoAsignatura` y `RequisitoAsignatura`.
 - `OfertaAcademica`, `Paralelo`, `AsignacionDocente`.
 - `AliasInstitucional` traduce el texto libre de la fuente hacia un catálogo normalizado.
@@ -46,18 +46,22 @@ Las relaciones históricas se archivan o desactivan; no se eliminan si ya respal
 sílabo.
 
 El Administrador gobierna las entidades institucionales globales y asigna la coordinación
-de una carrera. El Coordinador mantiene mallas, asignaturas, ofertas, paralelos y
+de una carrera. El Coordinador mantiene la malla, asignaturas, ofertas, paralelos y
 asignaciones docentes solo dentro de esa carrera. Un periodo académico representa fechas;
 el ciclo representa la posición de una materia dentro de la malla.
 
-Cada versión de malla define su propia cantidad de ciclos y composición de tarjeta. Sus
-campos tienen clave estable, etiqueta, tipo, posición, visibilidad y capacidad de
+Cada carrera tiene cero o una sola malla actual. La malla define su cantidad de ciclos y
+composición de tarjeta. Sus campos tienen clave estable, etiqueta, tipo, posición,
+visibilidad y capacidad de
 totalización; pueden proyectar un dato estructurado existente o conservar un valor
 adicional tipado por asignatura. Retirar un campo lo desactiva sin borrar sus valores.
 Una relación académica guarda origen, destino y tipo; el color del diagrama no constituye
 la regla. El desglose académico y el constructor visual son dos proyecciones del mismo
-agregado; las asignaturas se mantienen dentro de su versión de malla y no como una
-colección de navegación independiente.
+agregado; las asignaturas se mantienen dentro de la malla y no como una
+colección de navegación independiente. La malla actual se edita sobre sí misma tanto
+activa como inactiva. Deshabilitarla bloquea ofertas y procesos nuevos; eliminarla solo
+es posible cuando no tiene ofertas ni sílabos. Las filas anteriores de `VersionMalla`
+son historia técnica y no se exponen como versiones al usuario.
 
 ### Configuración
 
@@ -67,8 +71,8 @@ colección de navegación independiente.
 - `VersionFuente` contiene datos estructurados o narrativa segura.
 - `FragmentoFuente` permite recuperar evidencia exacta.
 
-Publicar una versión la vuelve inmutable. Un sílabo conserva la versión con la que fue
-creado.
+Publicar una versión de plantilla o fuente la vuelve inmutable. Un sílabo conserva las
+versiones de configuración y el contexto académico con los que fue creado.
 
 ### Convocatoria
 
@@ -77,8 +81,10 @@ fechas y estado. Antes de abrirla se resuelven conflictos críticos de configura
 
 ### Sílabo
 
-`Silabo` identifica el expediente canónico por asignatura, periodo y versión de malla.
-Puede agrupar docentes/paralelos compatibles o registrar una excepción justificada.
+`Silabo` identifica el expediente canónico por asignatura, periodo y malla. Fija en
+`contexto_academico` una fotografía de la malla, materia y oferta al momento de crearse,
+por lo que cambios posteriores no reescriben el expediente. Puede agrupar
+docentes/paralelos compatibles o registrar una excepción justificada.
 
 `RevisionSilabo` es una fotografía inmutable del contenido enviado. El borrador actual
 puede editarse con control de concurrencia; cada envío crea otra revisión.
@@ -118,7 +124,7 @@ establece; una recomendación de IA nunca bloquea por sí sola.
 1. Cada acción protegida exige usuario activo y permiso efectivo sobre el recurso.
 2. No se crean dos coordinaciones activas superpuestas para una misma carrera.
 3. Solo una plantilla publicada y vigente crea nuevos sílabos en una convocatoria.
-4. Publicado/enviado/aprobado significa inmutable.
+4. Una plantilla o fuente publicada y una revisión enviada/aprobada son inmutables.
 5. Todo envío o reenvío inserta una revisión; nunca actualiza la anterior.
 6. Una aprobación apunta a una revisión concreta.
 7. Una reapertura no altera la aprobación previa.
@@ -127,9 +133,12 @@ establece; una recomendación de IA nunca bloquea por sí sola.
 10. Un conflicto entre fuentes exactas exige resolución humana explícita.
 11. Word y PDF se generan desde la misma revisión y versión de plantilla.
 12. Redis y el servicio de IA pueden fallar sin corromper el expediente.
-13. Una versión de malla publicada, sus campos, materias y relaciones son inmutables.
+13. Cada carrera tiene como máximo una malla actual; su estado es activa o inactiva y
+    ambos admiten edición por Coordinación.
 14. Una materia, un campo o una relación de malla siempre pertenece a una única carrera
-    por medio de su versión.
+    por medio de la malla.
+15. Crear ofertas y abrir procesos exige que la malla actual esté activa.
+16. Todo sílabo y toda revisión conservan el contexto académico fijado al crearse.
 
 ## Tipos de campo de plantilla
 

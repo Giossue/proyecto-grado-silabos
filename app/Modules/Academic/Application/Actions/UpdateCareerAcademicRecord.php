@@ -30,7 +30,6 @@ class UpdateCareerAcademicRecord
     /** @var array<string, string> */
     private const FIELD_LABELS = [
         'codigo' => 'Código',
-        'numero_version' => 'Número de versión',
         'codigo_institucional' => 'Código',
         'nombre' => 'Nombre',
         'ciclo' => 'Ciclo',
@@ -59,7 +58,6 @@ class UpdateCareerAcademicRecord
     private const AUDIT_KEYS = [
         'codigo' => 'code',
         'codigo_institucional' => 'code',
-        'numero_version' => 'version_number',
         'nombre' => 'name',
         'ciclo' => 'cycle',
         'orden_en_ciclo' => 'position',
@@ -149,22 +147,26 @@ class UpdateCareerAcademicRecord
     {
         return match ($entity) {
             'curriculum' => CurriculumVersion::query()
-                ->whereKey($recordId)->where('carrera_id', $careerId)->lockForUpdate()->firstOrFail(),
+                ->whereKey($recordId)->where('carrera_id', $careerId)->current()->lockForUpdate()->firstOrFail(),
             'subject' => Subject::query()
                 ->whereKey($recordId)
-                ->whereHas('curriculumVersion', fn ($query) => $query->where('carrera_id', $careerId))
+                ->whereHas('curriculumVersion', fn ($query) => $query
+                    ->where('carrera_id', $careerId)->where('es_actual', true))
                 ->lockForUpdate()->firstOrFail(),
             'offering' => CourseOffering::query()
                 ->whereKey($recordId)
-                ->whereHas('subject.curriculumVersion', fn ($query) => $query->where('carrera_id', $careerId))
+                ->whereHas('subject.curriculumVersion', fn ($query) => $query
+                    ->where('carrera_id', $careerId)->where('es_actual', true))
                 ->lockForUpdate()->firstOrFail(),
             'parallel' => Parallel::query()
                 ->whereKey($recordId)
-                ->whereHas('offering.subject.curriculumVersion', fn ($query) => $query->where('carrera_id', $careerId))
+                ->whereHas('offering.subject.curriculumVersion', fn ($query) => $query
+                    ->where('carrera_id', $careerId)->where('es_actual', true))
                 ->lockForUpdate()->firstOrFail(),
             'teacher_assignment' => TeacherAssignment::query()
                 ->whereKey($recordId)
-                ->whereHas('parallel.offering.subject.curriculumVersion', fn ($query) => $query->where('carrera_id', $careerId))
+                ->whereHas('parallel.offering.subject.curriculumVersion', fn ($query) => $query
+                    ->where('carrera_id', $careerId)->where('es_actual', true))
                 ->lockForUpdate()->firstOrFail(),
             default => throw new AuthorizationException('El tipo de registro no admite edición desde Coordinación.'),
         };
@@ -173,11 +175,7 @@ class UpdateCareerAcademicRecord
     private function ensureMutable(string $entity, Model $record): void
     {
         $usedBySyllabus = match ($entity) {
-            'curriculum' => $record->getAttribute('estado') !== 'draft',
-            'subject' => $record instanceof Subject && CurriculumVersion::query()
-                ->whereKey($record->version_malla_id)
-                ->lockForUpdate()
-                ->value('estado') !== 'draft',
+            'curriculum', 'subject' => false,
             'offering' => SyllabusScope::query()->where('oferta_academica_id', $record->getKey())->exists(),
             'parallel' => SyllabusScope::query()->where('paralelo_id', $record->getKey())->exists(),
             'teacher_assignment' => SyllabusCollaborator::query()->where('asignacion_docente_id', $record->getKey())->exists(),
@@ -187,7 +185,6 @@ class UpdateCareerAcademicRecord
         if ($usedBySyllabus) {
             throw ValidationException::withMessages([
                 'record' => match ($entity) {
-                    'curriculum', 'subject' => 'La malla publicada y sus materias son inmutables. Cree una nueva versión.',
                     default => 'Este registro ya forma parte del historial de un sílabo. Archívelo y cree otro para conservar la trazabilidad.',
                 },
             ]);
@@ -202,7 +199,6 @@ class UpdateCareerAcademicRecord
         return match ($entity) {
             'curriculum' => [
                 'codigo' => $data['code'],
-                'numero_version' => $data['version_number'],
             ],
             'subject' => $this->subjectAttributes($data),
             'offering' => $this->offeringAttributes($data, $careerId),
@@ -252,7 +248,9 @@ class UpdateCareerAcademicRecord
         $subject = Subject::query()->whereKey($this->stringValue($data, 'subject_id'))
             ->where('activo', true)
             ->whereHas('curriculumVersion', fn ($query) => $query
-                ->where('carrera_id', $careerId)->where('estado', 'published'))
+                ->where('carrera_id', $careerId)
+                ->where('es_actual', true)
+                ->where('estado', 'active'))
             ->lockForUpdate()->firstOrFail();
         $period = AcademicPeriod::query()->whereKey($this->stringValue($data, 'period_id'))
             ->where('activo', true)
@@ -276,7 +274,10 @@ class UpdateCareerAcademicRecord
     {
         $offering = CourseOffering::query()->whereKey($this->stringValue($data, 'offering_id'))
             ->where('activo', true)
-            ->whereHas('subject.curriculumVersion', fn ($query) => $query->where('carrera_id', $careerId))
+            ->whereHas('subject.curriculumVersion', fn ($query) => $query
+                ->where('carrera_id', $careerId)
+                ->where('es_actual', true)
+                ->where('estado', 'active'))
             ->lockForUpdate()->firstOrFail();
 
         return ['oferta_academica_id' => $offering->id, 'codigo' => $data['code']];
@@ -289,7 +290,10 @@ class UpdateCareerAcademicRecord
     {
         $parallel = Parallel::query()->whereKey($this->stringValue($data, 'parallel_id'))
             ->where('activo', true)
-            ->whereHas('offering.subject.curriculumVersion', fn ($query) => $query->where('carrera_id', $careerId))
+            ->whereHas('offering.subject.curriculumVersion', fn ($query) => $query
+                ->where('carrera_id', $careerId)
+                ->where('es_actual', true)
+                ->where('estado', 'active'))
             ->lockForUpdate()->firstOrFail();
         $userId = $this->stringValue($data, 'user_id');
         $hasRole = RoleAssignment::query()->effective()

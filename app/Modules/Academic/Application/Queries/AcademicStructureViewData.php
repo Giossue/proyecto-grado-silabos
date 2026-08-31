@@ -111,31 +111,18 @@ class AcademicStructureViewData
 
         return [
             'career' => ['id' => $career->id, 'name' => $career->nombre],
-            'curricula' => CurriculumVersion::query()
-                ->where('carrera_id', $careerId)
-                ->with('career:id,nombre')
-                ->withCount('subjects')
-                ->orderByDesc('created_at')
-                ->get()
-                ->map(fn (CurriculumVersion $curriculum) => [
-                    'id' => $curriculum->id,
-                    'code' => $curriculum->codigo,
-                    'version_number' => $curriculum->numero_version,
-                    'state' => $curriculum->estado,
-                    'career_name' => $curriculum->career->nombre,
-                    'subject_count' => $curriculum->subjects_count,
-                    'published_at' => $curriculum->publicado_en?->toIso8601String(),
-                    'editable' => $curriculum->estado === 'draft',
-                ]),
-            'options' => [
-                ...$this->emptyOptions(),
-                'draftCurricula' => CurriculumVersion::query()
-                    ->where('carrera_id', $careerId)
-                    ->where('estado', 'draft')
-                    ->orderBy('codigo')
-                    ->get(['id', 'codigo']),
-            ],
+            'options' => $this->emptyOptions(),
         ];
+    }
+
+    public function currentCurriculumId(string $careerId): ?string
+    {
+        $id = CurriculumVersion::query()
+            ->where('carrera_id', $careerId)
+            ->current()
+            ->value('id');
+
+        return is_string($id) ? $id : null;
     }
 
     /** @return array<string, mixed> */
@@ -144,6 +131,7 @@ class AcademicStructureViewData
         $career = $this->career($careerId);
         $curriculum = CurriculumVersion::query()
             ->where('carrera_id', $careerId)
+            ->current()
             ->with([
                 'fieldDefinitions' => fn ($query) => $query
                     ->where('activo', true)
@@ -164,11 +152,10 @@ class AcademicStructureViewData
             'curriculum' => [
                 'id' => $curriculum->id,
                 'code' => $curriculum->codigo,
-                'version_number' => $curriculum->numero_version,
                 'cycle_count' => $curriculum->numero_ciclos,
                 'state' => $curriculum->estado,
-                'editable' => $curriculum->estado === 'draft',
-                'published_at' => $curriculum->publicado_en?->toIso8601String(),
+                'active' => $curriculum->estado === 'active',
+                'editable' => true,
             ],
             'fieldDefinitions' => $definitions->map(fn (CurriculumFieldDefinition $field) => [
                 'id' => $field->id,
@@ -245,6 +232,7 @@ class AcademicStructureViewData
                     'label' => CurriculumSystemFields::LABELS[$key],
                 ])
                 ->values(),
+            'options' => $this->emptyOptions(),
         ];
     }
 
@@ -253,7 +241,8 @@ class AcademicStructureViewData
     {
         $career = $this->career($careerId);
         $offerings = CourseOffering::query()
-            ->whereHas('subject.curriculumVersion', fn ($query) => $query->where('carrera_id', $careerId))
+            ->whereHas('subject.curriculumVersion', fn ($query) => $query
+                ->where('carrera_id', $careerId)->where('es_actual', true))
             ->with([
                 'academicPeriod:id,nombre',
                 'subject:id,nombre,codigo_institucional',
@@ -264,7 +253,8 @@ class AcademicStructureViewData
             ->orderByDesc('created_at')
             ->get();
         $parallels = Parallel::query()
-            ->whereHas('offering.subject.curriculumVersion', fn ($query) => $query->where('carrera_id', $careerId))
+            ->whereHas('offering.subject.curriculumVersion', fn ($query) => $query
+                ->where('carrera_id', $careerId)->where('es_actual', true))
             ->with(['offering.subject:id,nombre,codigo_institucional', 'offering.academicPeriod:id,nombre'])
             ->orderBy('codigo')
             ->get();
@@ -314,16 +304,20 @@ class AcademicStructureViewData
                     ->get(['id', 'nombre']),
                 'campuses' => Campus::query()->where('activo', true)->orderBy('nombre')->get(['id', 'nombre']),
                 'modalities' => Modality::query()->where('activo', true)->orderBy('nombre')->get(['id', 'nombre']),
-                'publishedSubjects' => Subject::query()
+                'activeSubjects' => Subject::query()
                     ->where('activo', true)
                     ->whereHas('curriculumVersion', fn ($query) => $query
                         ->where('carrera_id', $careerId)
-                        ->where('estado', 'published'))
+                        ->where('es_actual', true)
+                        ->where('estado', 'active'))
                     ->orderBy('nombre')
                     ->get(['id', 'codigo_institucional', 'nombre']),
                 'offerings' => CourseOffering::query()
                     ->where('activo', true)
-                    ->whereHas('subject.curriculumVersion', fn ($query) => $query->where('carrera_id', $careerId))
+                    ->whereHas('subject.curriculumVersion', fn ($query) => $query
+                        ->where('carrera_id', $careerId)
+                        ->where('es_actual', true)
+                        ->where('estado', 'active'))
                     ->with(['subject:id,codigo_institucional,nombre', 'academicPeriod:id,nombre'])
                     ->get()
                     ->map(fn (CourseOffering $offering) => [
@@ -341,7 +335,7 @@ class AcademicStructureViewData
         $teacherAssignments = TeacherAssignment::query()
             ->whereHas(
                 'parallel.offering.subject.curriculumVersion',
-                fn ($query) => $query->where('carrera_id', $careerId),
+                fn ($query) => $query->where('carrera_id', $careerId)->where('es_actual', true),
             )
             ->with([
                 'user:id,name,email',
@@ -378,7 +372,10 @@ class AcademicStructureViewData
                     ->where('activo', true)
                     ->whereHas(
                         'offering.subject.curriculumVersion',
-                        fn ($query) => $query->where('carrera_id', $careerId),
+                        fn ($query) => $query
+                            ->where('carrera_id', $careerId)
+                            ->where('es_actual', true)
+                            ->where('estado', 'active'),
                     )
                     ->with(['offering.subject:id,codigo_institucional,nombre', 'offering.academicPeriod:id,nombre'])
                     ->get()
@@ -413,8 +410,8 @@ class AcademicStructureViewData
             'periods' => [],
             'campuses' => [],
             'modalities' => [],
-            'draftCurricula' => [],
-            'publishedSubjects' => [],
+            'currentCurricula' => [],
+            'activeSubjects' => [],
             'offerings' => [],
             'parallels' => [],
             'coordinatorUsers' => [],

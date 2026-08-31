@@ -39,8 +39,8 @@ class DocumentController extends Controller
         return Inertia::render('Syllabi/Documents', [
             'syllabus' => [
                 'id' => $revision->syllabus->id,
-                'subject' => $revision->syllabus->subject->nombre,
-                'code' => $revision->syllabus->subject->codigo_institucional,
+                'subject' => $revision->syllabus->academicSubjectName(),
+                'code' => $revision->syllabus->academicSubjectCode(),
                 'period' => $revision->syllabus->convocation->academicPeriod->nombre,
             ],
             'revision' => [
@@ -117,7 +117,7 @@ class DocumentController extends Controller
             ],
             correlationId: $request->attributes->getString('correlation_id') ?: null,
         );
-        $code = Str::slug($artifact->revision->syllabus->subject->codigo_institucional) ?: 'asignatura';
+        $code = Str::slug($artifact->revision->syllabus->academicSubjectCode()) ?: 'asignatura';
         $filename = "silabo-{$code}-revision-{$artifact->revision->numero_revision}.{$format}";
 
         return Storage::disk('private')->download($object->ruta_interna, $filename, [

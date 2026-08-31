@@ -123,15 +123,20 @@ class AcademicStructureTest extends TestCase
 
     public function test_coordinator_sees_only_their_career_and_subjects_live_inside_each_curriculum(): void
     {
+        $curriculum = CurriculumVersion::query()->current()->firstOrFail();
+
         $this->actingAsCoordinator()
             ->get(route('coordination.academic.curricula.index'))
+            ->assertRedirect(route('coordination.academic.curricula.show', $curriculum->id));
+
+        $this->actingAsCoordinator()
+            ->get(route('coordination.academic.curricula.show', $curriculum->id))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->component('Coordination/Academic/Curricula')
+                ->component('Coordination/Academic/CurriculumBuilder')
                 ->where('career.name', 'Software')
-                ->has('curricula', 1)
-                ->where('curricula.0.subject_count', 1)
-                ->missing('subjects'));
+                ->where('curriculum.id', $curriculum->id)
+                ->has('subjects', 1));
 
         $this->actingAsCoordinator()
             ->get(route('coordination.academic.subjects.index'))
@@ -166,7 +171,6 @@ class AcademicStructureTest extends TestCase
         $this->actingAsAdministrator()
             ->post(route('coordination.academic.store', 'curriculum'), [
                 'code' => 'NO-ADMIN',
-                'version_number' => 99,
             ])
             ->assertForbidden();
 
@@ -285,22 +289,41 @@ class AcademicStructureTest extends TestCase
             ->assertSessionHasErrors('valid_until');
     }
 
-    public function test_coordinator_builds_and_publishes_a_curriculum_for_their_career(): void
+    public function test_each_career_can_create_only_one_current_curriculum_without_a_visible_version(): void
     {
-        $career = Career::query()->where('codigo_institucional', 'SOFTWARE')->firstOrFail();
+        $career = $this->createCareer('MALLA-UNICA');
+        $coordinator = $this->userWithRole(RoleCode::Coordinator, $career);
+        $role = $coordinator->roleAssignments()->firstOrFail();
+        CoordinatorAssignment::query()->create([
+            'usuario_id' => $coordinator->id,
+            'carrera_id' => $career->id,
+            'vigente_desde' => now()->subDay(),
+            'activo' => true,
+        ]);
 
-        $this->actingAsCoordinator()
+        $this->actingAs($coordinator)
+            ->withSession(['active_role_assignment_id' => $role->id])
+            ->get(route('coordination.academic.curricula.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Coordination/Academic/Curricula')
+                ->where('career.id', $career->id)
+                ->has('options'));
+
+        $this->actingAs($coordinator)
+            ->withSession(['active_role_assignment_id' => $role->id])
             ->post(route('coordination.academic.store', 'curriculum'), [
-                'code' => 'MALLA-SW-2027',
-                'version_number' => 2,
+                'code' => 'MALLA-UNICA-2027',
             ])
             ->assertRedirect();
 
-        $curriculum = CurriculumVersion::query()->where('codigo', 'MALLA-SW-2027')->firstOrFail();
+        $curriculum = CurriculumVersion::query()->where('codigo', 'MALLA-UNICA-2027')->firstOrFail();
         $this->assertSame($career->id, $curriculum->carrera_id);
-        $this->assertSame('draft', $curriculum->estado);
+        $this->assertSame('active', $curriculum->estado);
+        $this->assertTrue($curriculum->es_actual);
 
-        $this->actingAsCoordinator()
+        $this->actingAs($coordinator)
+            ->withSession(['active_role_assignment_id' => $role->id])
             ->post(route('coordination.academic.store', 'subject'), [
                 'curriculum_id' => $curriculum->id,
                 'code' => 'SW-701',
@@ -317,25 +340,12 @@ class AcademicStructureTest extends TestCase
             'ciclo' => 7,
         ]);
 
-        $this->actingAsCoordinator()
-            ->post(route('coordination.academic.curricula.publish', $curriculum->id))
-            ->assertRedirect()
-            ->assertSessionHas('success');
-
-        $this->assertSame('published', $curriculum->fresh()->estado);
-        $this->assertNotNull($curriculum->fresh()->publicado_en);
-        $this->assertDatabaseHas('eventos_auditoria', [
-            'accion' => 'academic.curriculum.published',
-            'recurso_id' => $curriculum->id,
-        ]);
-
-        $this->actingAsCoordinator()
-            ->post(route('coordination.academic.store', 'subject'), [
-                'curriculum_id' => $curriculum->id,
-                'code' => 'SW-702',
-                'name' => 'Cambio tardío',
+        $this->actingAs($coordinator)
+            ->withSession(['active_role_assignment_id' => $role->id])
+            ->post(route('coordination.academic.store', 'curriculum'), [
+                'code' => 'MALLA-SEGUNDA',
             ])
-            ->assertSessionHasErrors('curriculum_id');
+            ->assertSessionHasErrors('curriculum');
     }
 
     public function test_coordinator_opens_the_curriculum_builder_with_configurable_fields(): void
@@ -350,22 +360,17 @@ class AcademicStructureTest extends TestCase
                 ->where('career.name', 'Software')
                 ->where('curriculum.id', $curriculum->id)
                 ->where('curriculum.cycle_count', 8)
-                ->where('curriculum.editable', false)
+                ->where('curriculum.active', true)
+                ->where('curriculum.editable', true)
                 ->has('fieldDefinitions', 5)
                 ->where('fieldDefinitions.0.label', 'ACD')
                 ->where('subjects.0.display_fields.0.label', 'ACD')
                 ->where('subjects.0.display_fields.0.value', '64.00'));
     }
 
-    public function test_coordinator_configures_a_flexible_draft_with_fields_layout_and_requirements(): void
+    public function test_coordinator_configures_the_current_curriculum_with_fields_layout_and_requirements(): void
     {
-        $this->actingAsCoordinator()
-            ->post(route('coordination.academic.store', 'curriculum'), [
-                'code' => 'MALLA-FLEXIBLE',
-                'version_number' => 20,
-            ])
-            ->assertRedirect();
-        $curriculum = CurriculumVersion::query()->where('codigo', 'MALLA-FLEXIBLE')->firstOrFail();
+        $curriculum = CurriculumVersion::query()->current()->firstOrFail();
 
         $this->actingAsCoordinator()
             ->patch(route('coordination.academic.curricula.configuration.update', $curriculum->id), [
@@ -468,14 +473,15 @@ class AcademicStructureTest extends TestCase
         $this->assertSame(2, SubjectFieldValue::query()->where('definicion_campo_id', $field->id)->count());
     }
 
-    public function test_builder_rejects_published_or_out_of_scope_mutations(): void
+    public function test_builder_edits_the_current_curriculum_but_rejects_out_of_scope_mutations(): void
     {
-        $published = CurriculumVersion::query()->where('estado', 'published')->firstOrFail();
+        $current = CurriculumVersion::query()->current()->firstOrFail();
         $this->actingAsCoordinator()
-            ->patch(route('coordination.academic.curricula.configuration.update', $published->id), [
+            ->patch(route('coordination.academic.curricula.configuration.update', $current->id), [
                 'cycle_count' => 9,
             ])
-            ->assertSessionHasErrors('curriculum');
+            ->assertRedirect();
+        $this->assertSame(9, $current->fresh()->numero_ciclos);
 
         $otherCareer = $this->createCareer('BUILDER-OTRA');
         $otherCurriculum = CurriculumVersion::query()->create([
@@ -483,7 +489,8 @@ class AcademicStructureTest extends TestCase
             'codigo' => 'MALLA-BUILDER-AJENA',
             'numero_version' => 1,
             'numero_ciclos' => 6,
-            'estado' => 'draft',
+            'estado' => 'active',
+            'es_actual' => true,
         ]);
 
         $this->actingAsCoordinator()
@@ -496,15 +503,10 @@ class AcademicStructureTest extends TestCase
             ->assertNotFound();
     }
 
-    public function test_coordinator_edits_a_draft_curriculum_and_its_subject_with_audit(): void
+    public function test_coordinator_edits_the_current_curriculum_and_its_subject_with_audit(): void
     {
-        $career = Career::query()->where('codigo_institucional', 'SOFTWARE')->firstOrFail();
-        $curriculum = CurriculumVersion::query()->create([
-            'carrera_id' => $career->id,
-            'codigo' => 'MALLA-EDITAR',
-            'numero_version' => 2,
-            'estado' => 'draft',
-        ]);
+        $curriculum = CurriculumVersion::query()->current()->firstOrFail();
+        $versionNumber = $curriculum->numero_version;
         $subject = Subject::query()->create([
             'version_malla_id' => $curriculum->id,
             'codigo_institucional' => 'SW-710',
@@ -521,7 +523,6 @@ class AcademicStructureTest extends TestCase
                 'record' => $curriculum->id,
             ]), [
                 'code' => 'MALLA-SW-EDITADA',
-                'version_number' => 3,
             ])
             ->assertRedirect()
             ->assertSessionHas('success');
@@ -542,7 +543,7 @@ class AcademicStructureTest extends TestCase
         $this->assertDatabaseHas('versiones_malla', [
             'id' => $curriculum->id,
             'codigo' => 'MALLA-SW-EDITADA',
-            'numero_version' => 3,
+            'numero_version' => $versionNumber,
         ]);
         $this->assertDatabaseHas('asignaturas', [
             'id' => $subject->id,
@@ -618,9 +619,9 @@ class AcademicStructureTest extends TestCase
             ->count());
     }
 
-    public function test_published_curriculum_and_subject_cannot_be_rewritten(): void
+    public function test_current_curriculum_and_subject_remain_editable(): void
     {
-        $curriculum = CurriculumVersion::query()->where('estado', 'published')->firstOrFail();
+        $curriculum = CurriculumVersion::query()->current()->firstOrFail();
         $subject = Subject::query()->where('version_malla_id', $curriculum->id)->firstOrFail();
 
         $this->actingAsCoordinator()
@@ -629,9 +630,8 @@ class AcademicStructureTest extends TestCase
                 'record' => $curriculum->id,
             ]), [
                 'code' => 'MALLA-REESCRITA',
-                'version_number' => $curriculum->numero_version,
             ])
-            ->assertSessionHasErrors('record');
+            ->assertRedirect();
 
         $this->actingAsCoordinator()
             ->patch(route('coordination.academic.update', [
@@ -644,28 +644,106 @@ class AcademicStructureTest extends TestCase
                 'credits' => $subject->creditos,
                 'total_hours' => $subject->horas_totales,
             ])
-            ->assertSessionHasErrors('record');
+            ->assertRedirect();
 
-        $this->assertNotSame('MALLA-REESCRITA', $curriculum->fresh()->codigo);
-        $this->assertNotSame('Nombre reescrito', $subject->fresh()->nombre);
+        $this->assertSame('MALLA-REESCRITA', $curriculum->fresh()->codigo);
+        $this->assertSame('Nombre reescrito', $subject->fresh()->nombre);
     }
 
-    public function test_coordinator_cannot_read_create_publish_or_archive_records_from_another_career(): void
+    public function test_coordinator_disables_and_reactivates_the_curriculum_and_inactive_state_blocks_new_offerings(): void
+    {
+        $curriculum = CurriculumVersion::query()->current()->firstOrFail();
+
+        $this->actingAsCoordinator()
+            ->patch(route('coordination.academic.status.update', [
+                'entity' => 'curriculum',
+                'record' => $curriculum->id,
+            ]), ['active' => false])
+            ->assertRedirect();
+        $this->assertSame('inactive', $curriculum->fresh()->estado);
+
+        $this->actingAsCoordinator()
+            ->post(route('coordination.academic.store', 'subject'), [
+                'curriculum_id' => $curriculum->id,
+                'code' => 'SW-INACTIVA',
+                'name' => 'Materia editable sin proceso',
+                'cycle' => 1,
+            ])
+            ->assertRedirect();
+        $subject = Subject::query()->where('codigo_institucional', 'SW-INACTIVA')->firstOrFail();
+        $reference = CourseOffering::query()->firstOrFail();
+
+        $this->actingAsCoordinator()
+            ->post(route('coordination.academic.store', 'offering'), [
+                'period_id' => $reference->periodo_academico_id,
+                'subject_id' => $subject->id,
+                'campus_id' => $reference->campus_id,
+                'modality_id' => $reference->modalidad_id,
+            ])
+            ->assertSessionHasErrors('subject_id');
+
+        $this->actingAsCoordinator()
+            ->patch(route('coordination.academic.status.update', [
+                'entity' => 'curriculum',
+                'record' => $curriculum->id,
+            ]), ['active' => true])
+            ->assertRedirect();
+        $this->assertSame('active', $curriculum->fresh()->estado);
+    }
+
+    public function test_curriculum_delete_is_protected_by_dependencies_and_removes_an_unused_curriculum(): void
+    {
+        $career = $this->createCareer('MALLA-BORRABLE');
+        $coordinator = $this->userWithRole(RoleCode::Coordinator, $career);
+        $role = $coordinator->roleAssignments()->firstOrFail();
+        CoordinatorAssignment::query()->create([
+            'usuario_id' => $coordinator->id,
+            'carrera_id' => $career->id,
+            'vigente_desde' => now()->subDay(),
+            'activo' => true,
+        ]);
+        $curriculum = CurriculumVersion::query()->create([
+            'carrera_id' => $career->id,
+            'codigo' => 'MALLA-BORRABLE',
+            'numero_version' => 1,
+            'estado' => 'active',
+            'es_actual' => true,
+        ]);
+
+        $this->actingAs($coordinator)
+            ->withSession(['active_role_assignment_id' => $role->id])
+            ->delete(route('coordination.academic.curricula.destroy', $curriculum->id))
+            ->assertRedirect(route('coordination.academic.curricula.index'));
+
+        $this->assertDatabaseMissing('versiones_malla', ['id' => $curriculum->id]);
+        $this->assertDatabaseHas('eventos_auditoria', [
+            'accion' => 'academic.curriculum.deleted',
+            'recurso_id' => $curriculum->id,
+        ]);
+
+        $used = CurriculumVersion::query()->where('carrera_id', $this->coordinatorContext->carrera_id)->current()->firstOrFail();
+        $this->actingAsCoordinator()
+            ->delete(route('coordination.academic.curricula.destroy', $used->id))
+            ->assertSessionHasErrors('curriculum');
+        $this->assertDatabaseHas('versiones_malla', ['id' => $used->id]);
+    }
+
+    public function test_coordinator_cannot_read_create_edit_or_archive_records_from_another_career(): void
     {
         $otherCareer = $this->createCareer('OTRA');
         $otherCurriculum = CurriculumVersion::query()->create([
             'carrera_id' => $otherCareer->id,
             'codigo' => 'MALLA-OTRA-1',
             'numero_version' => 1,
-            'estado' => 'draft',
+            'estado' => 'active',
+            'es_actual' => true,
         ]);
 
         $this->actingAsCoordinator()
             ->get(route('coordination.academic.curricula.index'))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page->where(
-                'curricula',
-                fn (Collection $curricula) => $curricula->doesntContain('code', 'MALLA-OTRA-1'),
+            ->assertRedirect(route(
+                'coordination.academic.curricula.show',
+                CurriculumVersion::query()->where('carrera_id', $this->coordinatorContext->carrera_id)->current()->valueOrFail('id'),
             ));
 
         $this->actingAsCoordinator()
@@ -686,10 +764,6 @@ class AcademicStructureTest extends TestCase
         ]);
 
         $this->actingAsCoordinator()
-            ->post(route('coordination.academic.curricula.publish', $otherCurriculum->id))
-            ->assertNotFound();
-
-        $this->actingAsCoordinator()
             ->patch(route('coordination.academic.status.update', [
                 'entity' => 'subject',
                 'record' => $otherSubject->id,
@@ -702,7 +776,6 @@ class AcademicStructureTest extends TestCase
                 'record' => $otherCurriculum->id,
             ]), [
                 'code' => 'MALLA-AJENA-EDITADA',
-                'version_number' => 2,
             ])
             ->assertForbidden();
 
@@ -725,15 +798,9 @@ class AcademicStructureTest extends TestCase
         $this->assertSame(1, CourseOffering::query()->count());
     }
 
-    public function test_coordinator_creates_an_offering_and_parallel_for_a_published_subject_in_their_career(): void
+    public function test_coordinator_creates_an_offering_and_parallel_for_a_subject_in_the_active_curriculum(): void
     {
-        $career = Career::query()->where('codigo_institucional', 'SOFTWARE')->firstOrFail();
-        $curriculum = CurriculumVersion::query()->create([
-            'carrera_id' => $career->id,
-            'codigo' => 'MALLA-OFERTA-2027',
-            'numero_version' => 2,
-            'estado' => 'draft',
-        ]);
+        $curriculum = CurriculumVersion::query()->current()->active()->firstOrFail();
         $subject = Subject::query()->create([
             'version_malla_id' => $curriculum->id,
             'codigo_institucional' => 'SW-750',
@@ -741,7 +808,6 @@ class AcademicStructureTest extends TestCase
             'ciclo' => 7,
             'activo' => true,
         ]);
-        $curriculum->update(['estado' => 'published', 'publicado_en' => now()]);
         $reference = CourseOffering::query()->firstOrFail();
 
         $this->actingAsCoordinator()

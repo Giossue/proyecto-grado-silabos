@@ -40,7 +40,7 @@
 | COR-10 | Reabrir aprobado                                                 |
 | COR-11 | Fuentes académicas                                               |
 | COR-12 | Informes                                                         |
-| COR-13 | Mallas, constructor visual/formulario y materias de la carrera   |
+| COR-13 | Malla, constructor visual/formulario y materias de la carrera    |
 | COR-14 | Ofertas académicas y paralelos de la carrera, en rutas separadas |
 | COR-15 | Asignaciones docentes de la carrera                              |
 
@@ -105,28 +105,29 @@
   del pie sin ocultar el último campo.
 - Editor y revisión usan navegación por secciones, completitud, errores, observaciones y
   estado de guardado sin saturar la pantalla.
-- Acciones de versión muestran de forma explícita qué queda inmutable.
+- Acciones de versión de plantilla o fuente muestran de forma explícita qué queda
+  inmutable.
 - Los estados usan las mismas etiquetas y colores en todo el producto.
 - Los IDs internos y detalles de infraestructura no se muestran.
 - ADM-04 usa el submenú **Estructura académica** con rutas independientes para Facultades,
   Carreras, Campus, Modalidades y Periodos académicos. Carreras muestra su Facultad y
   Facultades muestra la cantidad relacionada; los catálogos no se mezclan ni se ocultan
   en pestañas.
-- COR-13 usa una única entrada **Mallas**. Su colección se presenta como cards y cada
-  card abre una página completa con **Desglose académico** y **Constructor visual**;
-  cada card prioriza código, estado, versión y cantidad de materias en una ficha compacta,
-  sin repetir carrera ni fecha de publicación. Materias, campos y relaciones se consultan
-  y mantienen dentro de esa malla. COR-14 conserva el submenú **Ofertas y paralelos** con
-  una ruta por colección.
-- COR-13..15 ofrecen **Editar** para los registros de la carrera del rol activo. Mallas
-  publicadas, sus materias y relaciones ya usadas por un sílabo muestran su bloqueo de
-  historial en lugar de reescribirse. Editar una asignación cambia docente, paralelo o
+- COR-13 usa una única entrada **Malla**. Si existe, la ruta abre directamente la página
+  completa con **Desglose académico** y **Constructor visual**; si no existe, muestra el
+  estado vacío universal y la acción para crearla. No presenta buscador, filtros, cards,
+  paginación, publicación ni número de versión. Materias, campos y relaciones se
+  consultan y mantienen dentro de esa malla. COR-14 conserva el submenú **Ofertas y
+  paralelos** con una ruta por colección.
+- COR-13 ofrece **Editar**, **Deshabilitar/Reactivar** y **Eliminar**. La malla activa o
+  inactiva sigue siendo editable; eliminar se rechaza cuando existen ofertas o sílabos y
+  explica que debe deshabilitarse. Editar una asignación cambia docente, paralelo o
   vigencia; nunca nombre o correo de la cuenta.
-- COR-13 abre cada malla en una página completa con ciclos, tarjetas, totales y relaciones.
+- COR-13 abre la malla en una página completa con ciclos, tarjetas, totales y relaciones.
   El lienzo permite zoom, desplazamiento, conexión y reubicación, además de crear una
   materia en su ciclo y editarla directamente desde su tarjeta. El desglose académico
   ofrece las mismas operaciones mediante formularios y tablas accesibles; su alta y
-  edición manual sí usan Sheet. Ciclos y campos se configuran por versión, no por una
+  edición manual sí usan Sheet. Ciclos y campos se configuran en la malla, no en una
   plantilla global de la Carrera de Software. Una reubicación correcta se guarda sin
   notificación repetitiva; un fallo sí explica la acción correctiva.
 - **Auditoría** agrupa las rutas administrativas **Procesos** (ADM-09) y **Registro de

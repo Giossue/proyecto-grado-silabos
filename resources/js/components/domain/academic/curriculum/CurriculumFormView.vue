@@ -261,7 +261,7 @@ const {
                                         </DropdownMenuItem>
                                         <DropdownMenuItem v-else disabled>
                                             <LockKeyhole aria-hidden="true" />
-                                            Malla publicada: solo lectura
+                                            Malla sin permiso de edición
                                         </DropdownMenuItem>
                                     </TableActionsMenu>
                                 </TableCell>
@@ -364,7 +364,7 @@ const {
                                         </Form>
                                         <DropdownMenuItem v-else disabled>
                                             <LockKeyhole aria-hidden="true" />
-                                            Malla publicada: solo lectura
+                                            Malla sin permiso de edición
                                         </DropdownMenuItem>
                                     </TableActionsMenu>
                                 </TableCell>

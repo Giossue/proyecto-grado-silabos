@@ -38,8 +38,8 @@ const title = computed(() =>
 );
 const description = computed(() =>
     props.entity === 'curriculum'
-        ? 'Las mallas nacen como borrador y quedan disponibles para incorporar materias.'
-        : 'Las materias se incorporan únicamente a una malla en borrador de esta carrera.',
+        ? 'Cree la malla única de la carrera para incorporar materias, campos y relaciones.'
+        : 'Las materias se incorporan a la malla actual de esta carrera.',
 );
 </script>
 
@@ -72,26 +72,12 @@ const description = computed(() =>
                             />
                             <FieldError :errors="[errors.code]" />
                         </Field>
-                        <Field :data-invalid="Boolean(errors.version_number)">
-                            <FieldLabel for="curriculum-version" required>
-                                Número de versión
-                            </FieldLabel>
-                            <Input
-                                id="curriculum-version"
-                                name="version_number"
-                                type="number"
-                                min="1"
-                                required
-                                :aria-invalid="Boolean(errors.version_number)"
-                            />
-                            <FieldError :errors="[errors.version_number]" />
-                        </Field>
                     </template>
 
                     <template v-else>
                         <Field :data-invalid="Boolean(errors.curriculum_id)">
                             <FieldLabel for="subject-curriculum" required>
-                                Malla en borrador
+                                Malla actual
                             </FieldLabel>
                             <Select name="curriculum_id" required>
                                 <SelectTrigger
@@ -107,7 +93,7 @@ const description = computed(() =>
                                 <SelectContent>
                                     <SelectGroup>
                                         <SelectItem
-                                            v-for="item in options.draftCurricula"
+                                            v-for="item in options.currentCurricula"
                                             :key="item.id"
                                             :value="item.id"
                                         >

@@ -3,6 +3,7 @@
 namespace App\Modules\Academic\Infrastructure\Persistence\Models;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -17,6 +18,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int $numero_version
  * @property int $numero_ciclos
  * @property string $estado
+ * @property bool $es_actual
  * @property CarbonImmutable|null $publicado_en
  * @property int $subjects_count
  * @property-read Career $career
@@ -36,6 +38,7 @@ class CurriculumVersion extends Model
         'numero_version',
         'numero_ciclos',
         'estado',
+        'es_actual',
         'publicado_en',
     ];
 
@@ -45,8 +48,21 @@ class CurriculumVersion extends Model
         return [
             'numero_version' => 'integer',
             'numero_ciclos' => 'integer',
+            'es_actual' => 'boolean',
             'publicado_en' => 'immutable_datetime',
         ];
+    }
+
+    /** @param Builder<self> $query */
+    public function scopeCurrent(Builder $query): void
+    {
+        $query->where('es_actual', true);
+    }
+
+    /** @param Builder<self> $query */
+    public function scopeActive(Builder $query): void
+    {
+        $query->where('estado', 'active');
     }
 
     /** @return BelongsTo<Career, $this> */

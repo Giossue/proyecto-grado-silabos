@@ -48,16 +48,6 @@ export type AcademicStructureProps = {
             active: boolean;
         }[];
     };
-    curricula: {
-        id: string;
-        code: string;
-        version_number: number;
-        state: string;
-        career_name: string;
-        subject_count: number;
-        published_at: string | null;
-        editable: boolean;
-    }[];
     subjects: {
         id: string;
         code: string;
@@ -121,8 +111,8 @@ export type AcademicStructureProps = {
         periods: Option[];
         campuses: Option[];
         modalities: Option[];
-        draftCurricula: Option[];
-        publishedSubjects: Option[];
+        currentCurricula: Option[];
+        activeSubjects: Option[];
         offerings: Option[];
         parallels: Option[];
         coordinatorUsers: Option[];
@@ -168,11 +158,10 @@ export type CurriculumBuilderProps = {
     curriculum: {
         id: string;
         code: string;
-        version_number: number;
         cycle_count: number;
         state: string;
+        active: boolean;
         editable: boolean;
-        published_at: string | null;
     };
     fieldDefinitions: CurriculumFieldDefinition[];
     fieldTotals: {
@@ -191,4 +180,5 @@ export type CurriculumBuilderProps = {
         value: string;
         label: string;
     }[];
+    options: AcademicStructureProps['options'];
 };

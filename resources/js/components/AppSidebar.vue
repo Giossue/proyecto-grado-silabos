@@ -126,7 +126,7 @@ const mainNavItems = computed<NavItem[]>(() => [
     ...(activeRole.value?.role === 'coordinator'
         ? [
               {
-                  title: 'Mallas',
+                  title: 'Malla',
                   href: curriculaIndex(),
                   icon: BookOpenCheck,
               },

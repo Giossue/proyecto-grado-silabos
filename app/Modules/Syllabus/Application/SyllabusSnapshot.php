@@ -28,6 +28,7 @@ class SyllabusSnapshot
         return [
             'schema_version' => 1,
             'template_version_id' => $syllabus->version_plantilla_id,
+            'academic_context' => $syllabus->contexto_academico,
             'sections' => $syllabus->templateVersion->sections
                 ->map(fn (TemplateSection $section): array => [
                     'key' => $section->clave,

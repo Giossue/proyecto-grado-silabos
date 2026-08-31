@@ -4,6 +4,7 @@ namespace Tests\Feature\Syllabus;
 
 use App\Models\User;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CourseOffering;
+use App\Modules\Academic\Infrastructure\Persistence\Models\CurriculumVersion;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
 use App\Modules\Academic\Infrastructure\Persistence\Models\TeacherAssignment;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\AcademicSource;
@@ -61,6 +62,8 @@ class ConvocationAndDraftTest extends TestCase
         $syllabus = Syllabus::query()->firstOrFail();
         $this->assertSame('open', $convocation->estado);
         $this->assertSame('not_started', $syllabus->estado);
+        $this->assertSame('Arquitectura de Software', data_get($syllabus->contexto_academico, 'subject.name'));
+        $this->assertSame('MALLA-SW-2024', data_get($syllabus->contexto_academico, 'curriculum.code'));
         $this->assertCount(1, $syllabus->scopes()->get());
         $this->assertCount(1, $syllabus->collaborators()->get());
         $master = $syllabus->values()->where('heredado', true)->firstOrFail();
@@ -81,6 +84,24 @@ class ConvocationAndDraftTest extends TestCase
         $this->actingAsCoordinator()
             ->post(route('convocations.open', $convocation))
             ->assertForbidden();
+        $this->assertDatabaseCount('silabos', 1);
+    }
+
+    public function test_inactive_curriculum_blocks_opening_without_changing_existing_history(): void
+    {
+        $existing = $this->openConvocationAndGetSyllabus();
+        $originalName = $existing->academicSubjectName();
+        $curriculum = CurriculumVersion::query()->current()->firstOrFail();
+        $curriculum->update(['estado' => 'inactive']);
+        $existing->subject->update(['nombre' => 'Nombre nuevo en la malla']);
+
+        $this->assertSame($originalName, $existing->fresh()->academicSubjectName());
+
+        $convocation = $this->createPreparedConvocation('per_parallel');
+        $this->actingAsCoordinator()
+            ->post(route('convocations.open', $convocation))
+            ->assertSessionHasErrors('convocation');
+        $this->assertSame('preparation', $convocation->fresh()->estado);
         $this->assertDatabaseCount('silabos', 1);
     }
 

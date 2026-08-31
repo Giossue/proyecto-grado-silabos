@@ -31,7 +31,6 @@ export type CareerAcademicEditableRecord = {
     id: string;
     code?: string;
     name?: string;
-    version_number?: number;
     cycle?: number | null;
     credits?: string | null;
     total_hours?: number | null;
@@ -107,24 +106,6 @@ const entityLabel = computed(
                                 :aria-invalid="Boolean(errors.code)"
                             />
                             <FieldError :errors="[errors.code]" />
-                        </Field>
-                        <Field :data-invalid="Boolean(errors.version_number)">
-                            <FieldLabel
-                                :for="`edit-curriculum-version-${record.id}`"
-                                required
-                            >
-                                Número de versión
-                            </FieldLabel>
-                            <Input
-                                :id="`edit-curriculum-version-${record.id}`"
-                                name="version_number"
-                                type="number"
-                                min="1"
-                                :default-value="record.version_number"
-                                required
-                                :aria-invalid="Boolean(errors.version_number)"
-                            />
-                            <FieldError :errors="[errors.version_number]" />
                         </Field>
                     </template>
 
@@ -210,7 +191,7 @@ const entityLabel = computed(
                             <FieldLabel
                                 :for="`edit-offering-subject-${record.id}`"
                                 required
-                                >Materia publicada</FieldLabel
+                                >Materia de la malla activa</FieldLabel
                             >
                             <Select
                                 name="subject_id"
@@ -228,7 +209,7 @@ const entityLabel = computed(
                                 <SelectContent
                                     ><SelectGroup>
                                         <SelectItem
-                                            v-for="item in options.publishedSubjects"
+                                            v-for="item in options.activeSubjects"
                                             :key="item.id"
                                             :value="item.id"
                                             >{{ item.codigo_institucional }} ·

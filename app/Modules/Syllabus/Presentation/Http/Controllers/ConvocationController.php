@@ -111,8 +111,8 @@ class ConvocationController extends Controller
                 ],
                 'syllabi' => $syllabi->map(fn (Syllabus $syllabus) => [
                     'id' => $syllabus->id,
-                    'subject' => $syllabus->subject->nombre,
-                    'code' => $syllabus->subject->codigo_institucional,
+                    'subject' => $syllabus->academicSubjectName(),
+                    'code' => $syllabus->academicSubjectCode(),
                     'state' => $syllabus->estado,
                     'completion' => (float) $syllabus->porcentaje_completitud,
                     'parallels' => $syllabus->scopes->pluck('parallel.codigo')->unique()->values(),

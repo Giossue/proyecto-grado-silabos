@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import { ListTree, Plus, Settings2, Workflow } from '@lucide/vue';
+import { ListTree, Plus, PowerOff, Settings2, Workflow } from '@lucide/vue';
 import { ref } from 'vue';
 import CurriculumCanvas from '@/components/domain/academic/curriculum/CurriculumCanvas.vue';
 import CurriculumConfigurationSheet from '@/components/domain/academic/curriculum/CurriculumConfigurationSheet.vue';
 import CurriculumFormView from '@/components/domain/academic/curriculum/CurriculumFormView.vue';
 import CurriculumSubjectSheet from '@/components/domain/academic/curriculum/CurriculumSubjectSheet.vue';
+import CurriculumActions from '@/components/domain/academic/CurriculumActions.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -18,10 +19,7 @@ import type {
 
 defineOptions({
     layout: {
-        breadcrumbs: [
-            { title: 'Mallas', href: curriculaIndex() },
-            { title: 'Detalle de malla' },
-        ],
+        breadcrumbs: [{ title: 'Malla', href: curriculaIndex() }],
     },
 });
 
@@ -43,13 +41,14 @@ const openSubject = (subject: CurriculumBuilderSubject): void => {
 </script>
 
 <template>
-    <Head :title="`Malla · ${curriculum.code}`" />
+    <Head title="Malla" />
 
     <PageFrame
-        :title="`Malla · ${curriculum.code}`"
-        :description="`Versión ${curriculum.version_number} de ${career.name}. Consulte el desglose completo o trabaje sobre la misma información en el constructor visual.`"
+        title="Malla"
+        :description="`${curriculum.code} · ${career.name}. Edite el desglose académico o trabaje sobre la misma información en el constructor visual.`"
     >
-        <template v-if="curriculum.editable" #actions>
+        <template #actions>
+            <CurriculumActions :curriculum="curriculum" :options="options" />
             <Button
                 type="button"
                 variant="outline"
@@ -68,12 +67,12 @@ const openSubject = (subject: CurriculumBuilderSubject): void => {
             </Button>
         </template>
 
-        <Alert v-if="!curriculum.editable">
-            <Workflow aria-hidden="true" />
-            <AlertTitle>Malla publicada e inmutable</AlertTitle>
+        <Alert v-if="!curriculum.active">
+            <PowerOff aria-hidden="true" />
+            <AlertTitle>Malla deshabilitada</AlertTitle>
             <AlertDescription>
-                Puede explorar el diagrama y consultar el desglose. Para cambiar
-                contenido debe crear otra versión.
+                Puede seguir editándola, pero no se crearán ofertas ni procesos
+                nuevos para sus materias hasta reactivarla.
             </AlertDescription>
         </Alert>
 
@@ -109,7 +108,6 @@ const openSubject = (subject: CurriculumBuilderSubject): void => {
         :subject="selectedSubject"
     />
     <CurriculumConfigurationSheet
-        v-if="curriculum.editable"
         v-model:open="configurationOpen"
         :curriculum="curriculum"
         :field-definitions="fieldDefinitions"

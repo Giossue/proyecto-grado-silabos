@@ -1,5 +1,9 @@
 # I-16 — Edición académica por alcance
 
+> Reemplazo parcial del 30 de agosto de 2026: I-20 sustituye la publicación,
+> inmutabilidad y multiplicidad de mallas de este plan. La edición por alcance,
+> autorización y auditoría permanece vigente.
+
 ## Objetivo
 
 Completar la edición de mallas, materias, ofertas, paralelos y asignaciones docentes

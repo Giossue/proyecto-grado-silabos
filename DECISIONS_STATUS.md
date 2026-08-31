@@ -41,9 +41,13 @@ Fecha de corte: **30 de agosto de 2026**.
   anterior/nuevo en auditoría; no existe borrado físico de catálogos con historia.
 - La posición curricular visible de una materia se denomina ciclo; periodo académico
   continúa siendo la ventana temporal con fechas.
-- Cada versión de malla puede variar en ciclos y campos. El documento de Software es una
-  referencia visual, no una plantilla universal; Coordinación dispone de constructor y
-  formulario sobre la misma información.
+- Cada carrera tiene cero o una sola malla actual, configurable en ciclos y campos. El
+  documento de Software es una referencia visual, no una plantilla universal;
+  Coordinación edita la misma malla mediante constructor y formulario, puede
+  deshabilitarla/reactivarla y solo la elimina si no tiene ofertas ni sílabos.
+- Sin una malla activa no se crean ofertas ni se abren procesos nuevos para docentes.
+  Los sílabos conservan una fotografía de su contexto académico y las revisiones siguen
+  siendo inmutables aunque la malla actual cambie.
 
 ## Actualizado para esta entrega
 
@@ -118,24 +122,32 @@ producto. No altera comportamiento.
 
 I-16 completa la edición de mallas, materias, ofertas, paralelos y asignaciones docentes
 por decisión explícita del responsable del producto. Coordinación solo modifica registros
-de su carrera y cada cambio queda auditado; la inmutabilidad de mallas publicadas y del
-historial de sílabos se conserva. Nombre y correo permanecen exclusivamente bajo
+de su carrera y cada cambio queda auditado; I-20 reemplaza la inmutabilidad de la malla,
+mientras que el historial de sílabos se conserva. Nombre y correo permanecen exclusivamente bajo
 Administración: Coordinadores y Docentes no pueden corregirlos, ni siquiera en la cuenta
 propia. Este cambio no amplía `PV-16`, que sigue referido al contenido del sílabo.
 
 I-18 incorpora Vue Flow como motor de presentación del constructor de mallas. La
-configuración pertenece a cada versión y admite ciclos, campos tipados, totales,
+configuración pertenece a la malla actual y admite ciclos, campos tipados, totales,
 reubicación y relaciones explícitas; PostgreSQL y los casos de uso Laravel permanecen
 como fuente de verdad. La alternativa de formulario mantiene las mismas operaciones y
-las versiones publicadas continúan inmutables. `PV-08` sigue abierta para las fórmulas y
-siglas oficiales: el sistema no las deduce del color o del aspecto del PDF.
+I-20 permite editarlas sobre el mismo agregado. `PV-08` sigue abierta para las fórmulas
+y siglas oficiales: el sistema no las deduce del color o del aspecto del PDF.
 
 I-19 confirma que una persona puede coordinar varias carreras y vuelve explícita la
 selección de carrera al iniciar como Coordinador, incluso si solo existe una opción. El
 ámbito activo puede cambiarse desde el menú de usuario mediante el mismo caso de uso
-auditado. Materias deja de ser una colección independiente en navegación: las mallas se
-presentan como cards y cada detalle reúne el desglose académico y el constructor visual;
-la URL anterior de Materias redirige a Mallas. No cambia permisos ni elimina historia.
+auditado. Materias deja de ser una colección independiente en navegación: I-20 abre una
+sola Malla directamente y reúne allí el desglose académico y el constructor visual; la
+URL anterior de Materias redirige a Malla. No cambia permisos ni elimina historia.
+
+I-20 reemplaza el versionado visible de mallas definido en I-16, I-18 e I-19: la
+navegación muestra una sola **Malla** por carrera, sin buscador, filtros, cards,
+paginación, publicación ni número de versión. La fila técnica histórica se conserva
+solo para mantener referencias existentes; una restricción parcial garantiza una única
+malla actual. Coordinación edita la actual activa o inactiva, la deshabilita para
+bloquear procesos nuevos y solo puede eliminarla sin dependencias. Cada sílabo fija su
+contexto académico y lo incorpora a sus revisiones inmutables.
 
 ## Propuesto
 
