@@ -604,8 +604,10 @@ it('presenta la publicación y los bloques de plantilla con etiquetas breves', f
         ->toContain('Agregar bloque')
         ->toContain('draggable="true"')
         ->toContain('persistOrder')
+        ->toContain('copySections')
         ->not->toContain('Bloque</FieldLabel>')
-        ->not->toContain('Clave estable');
+        ->not->toContain('Clave estable')
+        ->not->toContain('structuredClone');
 });
 
 it('abre los detalles de los listados desde sus acciones', function (): void {

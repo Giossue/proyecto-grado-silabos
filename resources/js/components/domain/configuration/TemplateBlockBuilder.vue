@@ -68,10 +68,19 @@ const addingSectionId = ref<string | null>(null);
 const newNames = ref<Record<string, string>>({});
 const dragged = ref<{ sectionId: string; blockId: string } | null>(null);
 
+const copySections = (value: TemplateSection[]): TemplateSection[] =>
+    value.map((section) => ({
+        ...section,
+        blocks: section.blocks.map((block) => ({
+            ...block,
+            fields: block.fields.map((field) => ({ ...field })),
+        })),
+    }));
+
 watch(
     () => props.sections,
     (value) => {
-        builderSections.value = structuredClone(value);
+        builderSections.value = copySections(value);
     },
     { immediate: true },
 );
