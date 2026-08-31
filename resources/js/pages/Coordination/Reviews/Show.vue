@@ -34,6 +34,11 @@ import {
 } from '@/components/ui/field';
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { show as documentsShow } from '@/routes/documents';
 import { index as reviewsIndex } from '@/routes/reviews';
 
@@ -218,12 +223,16 @@ const observationState = (value: string): string =>
                 Enviada por {{ revision.submitted_by }} ·
                 {{ new Date(revision.submitted_at).toLocaleString('es-EC') }}
             </span>
-            <span
-                class="text-sm text-muted-foreground"
-                title="Huella SHA-256 completa disponible en auditoría"
-            >
-                Huella: {{ revision.fingerprint.slice(0, 12) }}…
-            </span>
+            <Tooltip>
+                <TooltipTrigger as-child>
+                    <span class="cursor-help text-sm text-muted-foreground">
+                        Huella: {{ revision.fingerprint.slice(0, 12) }}…
+                    </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                    Huella SHA-256 completa disponible en auditoría
+                </TooltipContent>
+            </Tooltip>
         </template>
         <template #actions>
             <TeacherTransferSheet

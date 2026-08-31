@@ -38,6 +38,8 @@ Dashboard; las demás pantallas no presentan resúmenes métricos independientes
   alterno. El patrón se repite y conserva su correspondencia en columnas fijas y hover.
 - Toda tabla sin registros presenta `TableEmpty`: un único icono universal de bandeja
   vacía y un mensaje contextual dentro de una celda que cubre todas sus columnas.
+- Toda ayuda breve activada al pasar o enfocar usa `Tooltip`; los controles HTML no
+  conservan el tooltip nativo del atributo `title`.
 - Todo módulo autenticado usa `PageFrame` como contrato de encabezado: icono de Lucide
   dentro de una superficie semántica, un único `h1`, descripción, separación responsive
   y espacios opcionales para regreso, estado y acciones. Configuración aplica el patrón
@@ -60,6 +62,7 @@ Dashboard; las demás pantallas no presentan resúmenes métricos independientes
 - [x] Aplicar una paginación compartida a todos los listados tabulares.
 - [x] Diferenciar encabezados y registros consecutivos con colores alternos compartidos.
 - [x] Unificar el icono y el mensaje de los estados vacíos en todas las tablas.
+- [x] Reemplazar los tooltips nativos por el componente compartido de shadcn.
 - [x] Agrupar las acciones de tabla en un menú compartido de tres puntos.
 - [x] Incorporar al patrón las materias y relaciones del desglose manual de malla.
 - [x] Normalizar icono, título, descripción y espaciado de todos los módulos autenticados.

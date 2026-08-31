@@ -21,6 +21,11 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { generateTemporaryPassword } from '@/lib/temporaryPassword';
 
 defineProps<{
@@ -117,31 +122,44 @@ watch(open, (isOpen) => {
                                 autocomplete="off"
                                 :aria-invalid="Boolean(errors.password)"
                             />
-                            <Button
-                                type="button"
-                                variant="outline"
-                                size="icon"
-                                aria-label="Generar otra contraseña"
-                                title="Generar otra"
-                                @click="regenerate"
-                            >
-                                <RefreshCw aria-hidden="true" />
-                            </Button>
-                            <Button
-                                type="button"
-                                variant="outline"
-                                size="icon"
-                                :aria-label="
-                                    copied
-                                        ? 'Contraseña copiada'
-                                        : 'Copiar contraseña'
-                                "
-                                :title="copied ? 'Copiada' : 'Copiar'"
-                                @click="copy"
-                            >
-                                <Check v-if="copied" aria-hidden="true" />
-                                <Copy v-else aria-hidden="true" />
-                            </Button>
+                            <Tooltip>
+                                <TooltipTrigger as-child>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="icon"
+                                        aria-label="Generar otra contraseña"
+                                        @click="regenerate"
+                                    >
+                                        <RefreshCw aria-hidden="true" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Generar otra</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                                <TooltipTrigger as-child>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="icon"
+                                        :aria-label="
+                                            copied
+                                                ? 'Contraseña copiada'
+                                                : 'Copiar contraseña'
+                                        "
+                                        @click="copy"
+                                    >
+                                        <Check
+                                            v-if="copied"
+                                            aria-hidden="true"
+                                        />
+                                        <Copy v-else aria-hidden="true" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    {{ copied ? 'Copiada' : 'Copiar' }}
+                                </TooltipContent>
+                            </Tooltip>
                         </div>
                         <FieldError :errors="[errors.password]" />
                     </Field>

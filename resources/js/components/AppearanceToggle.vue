@@ -2,6 +2,12 @@
 import { Monitor, Moon, Sun } from '@lucide/vue';
 import { computed } from 'vue';
 import { Button } from '@/components/ui/button';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { useAppearance } from '@/composables/useAppearance';
 
 const { appearance, updateAppearance } = useAppearance();
@@ -32,18 +38,24 @@ const onCycle = () => {
 </script>
 
 <template>
-    <Button
-        type="button"
-        variant="ghost"
-        size="icon-sm"
-        :aria-label="`Tema visual: ${current.label}. Cambiar a ${next.label}`"
-        :title="current.label"
-        @click="onCycle"
-    >
-        <component
-            :is="current.Icon"
-            data-icon="inline-start"
-            aria-hidden="true"
-        />
-    </Button>
+    <TooltipProvider>
+        <Tooltip>
+            <TooltipTrigger as-child>
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    :aria-label="`Tema visual: ${current.label}. Cambiar a ${next.label}`"
+                    @click="onCycle"
+                >
+                    <component
+                        :is="current.Icon"
+                        data-icon="inline-start"
+                        aria-hidden="true"
+                    />
+                </Button>
+            </TooltipTrigger>
+            <TooltipContent>Tema: {{ current.label }}</TooltipContent>
+        </Tooltip>
+    </TooltipProvider>
 </template>

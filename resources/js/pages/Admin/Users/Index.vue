@@ -29,6 +29,11 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { index as usersIndex } from '@/routes/admin/users';
 import type { Paginated } from '@/types/pagination';
 
@@ -308,9 +313,16 @@ defineProps<{
                                     activa pero nadie ha entrado con ella todavía, y eso
                                     cambia a quién hay que recordarle que mire su correo.
                                 -->
-                                <span :title="statusOf(user).hint">{{
-                                    statusOf(user).label
-                                }}</span>
+                                <Tooltip>
+                                    <TooltipTrigger as-child>
+                                        <span class="cursor-help">{{
+                                            statusOf(user).label
+                                        }}</span>
+                                    </TooltipTrigger>
+                                    <TooltipContent class="max-w-xs">
+                                        {{ statusOf(user).hint }}
+                                    </TooltipContent>
+                                </Tooltip>
                             </TableCell>
                             <TableCell class="text-right">
                                 <TableActionsMenu
