@@ -191,7 +191,6 @@ const buildNodes = (): Node[] => {
                 data: {
                     cycle,
                     disabled: hasOpenEditor.value,
-                    onAdd: beginSubjectCreation,
                 },
                 draggable: false,
                 selectable: false,
@@ -352,7 +351,10 @@ const onNodeDragStop = ({ node }: NodeDragEvent): void => {
                 />
             </template>
             <template #node-addSubject="nodeProps">
-                <CurriculumAddSubjectNode :data="nodeProps.data" />
+                <CurriculumAddSubjectNode
+                    :data="nodeProps.data"
+                    @add="beginSubjectCreation"
+                />
             </template>
             <Controls position="bottom-left" />
             <MiniMap class="max-sm:hidden" pannable zoomable />

@@ -6,8 +6,11 @@ defineProps<{
     data: {
         cycle: number;
         disabled: boolean;
-        onAdd: (cycle: number) => void;
     };
+}>();
+
+const emit = defineEmits<{
+    add: [cycle: number];
 }>();
 </script>
 
@@ -17,7 +20,7 @@ defineProps<{
         variant="outline"
         class="nodrag nopan w-64 border-dashed"
         :disabled="data.disabled"
-        @click="data.onAdd(data.cycle)"
+        @click.stop="emit('add', data.cycle)"
     >
         <Plus data-icon="inline-start" aria-hidden="true" />
         Agregar materia

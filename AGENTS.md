@@ -25,6 +25,8 @@ Stack base:
 - Reglas y ciclo de vida: `docs/product/domain-model.md` y
   `docs/product/syllabus-lifecycle.md`.
 - Roles: `docs/product/roles-and-permissions.md`.
+- Interfaz y patrones visuales: `docs/product/screens.md`,
+  `docs/architecture/frontend.md` y `docs/quality/frontend-checklist.md`.
 - Plan activo: `docs/plans/active/`.
 - Pendientes: `docs/plans/decisions-pending.md`.
 - Trabajo pendiente y de quién depende: `docs/plans/pending-work.md`.
@@ -122,20 +124,12 @@ y `composer verify` para cambios amplios, riesgosos o cuando se soliciten expres
   innecesarios en logs.
 - No modifiques archivos generados manualmente.
 
-## Reglas de interfaz
+## Trabajo de interfaz
 
-- Usa lenguaje académico; oculta UUID, rutas, nombres de proveedores y detalles internos.
-- Optimiza pantallas para lectura y trabajo repetido, no para decoración.
-- Colecciones extensas usan tabla, filtros, paginación y estados consistentes.
-- El editor de sílabo y la revisión son páginas completas, no modales.
-- Reutiliza componentes shadcn-vue y componentes de dominio antes de crear variantes.
-- Toda mutación muestra pendiente, éxito o error.
-- Un error indica campo, causa y acción correctiva.
-- Diferencia visualmente errores determinísticos de sugerencias de IA.
-- Explica antes de acciones que crean una versión, aprueban, publican o reabren.
-- La ayuda breve de controles usa `Tooltip` de shadcn; no uses el atributo HTML `title`
-  como tooltip nativo del navegador.
-- Verifica teclado, lector de pantalla, móvil, escritorio, contraste, modo claro y oscuro.
+Antes de modificar una pantalla, lee `docs/product/screens.md`,
+`docs/architecture/frontend.md` y `docs/quality/frontend-checklist.md`, además de la
+documentación del módulo afectado. Esas fuentes definen los patrones visuales,
+composición, estados y criterios de revisión; este archivo solo indica dónde encontrarlos.
 
 ## Control de versiones
 

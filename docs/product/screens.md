@@ -97,6 +97,9 @@
   «obligatorio» a tecnologías asistivas. Las condiciones como «si es heredado» o «salvo
   administrador» se indican con la misma condición y no convierten campos opcionales en
   obligatorios.
+- La ayuda breve que aparece al pasar el puntero o enfocar un control usa `Tooltip` de
+  shadcn. Los elementos HTML no usan el atributo `title` como tooltip nativo; cuando un
+  control necesita nombre accesible, lo conserva mediante texto visible o `aria-label`.
 - Los formularios en panel lateral mantienen **Cancelar** y la acción principal en un pie
   fijo. Solo el contenido central se desplaza, conserva espacio inferior y pasa por debajo
   del pie sin ocultar el último campo.

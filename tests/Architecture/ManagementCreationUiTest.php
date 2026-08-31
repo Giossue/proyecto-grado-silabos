@@ -263,6 +263,9 @@ it('ofrece desglose y constructor visual sobre el mismo contrato de malla', func
     $subjectNode = file_get_contents(
         $root.'/resources/js/components/domain/academic/curriculum/CurriculumSubjectNode.vue',
     );
+    $addSubjectNode = file_get_contents(
+        $root.'/resources/js/components/domain/academic/curriculum/CurriculumAddSubjectNode.vue',
+    );
     $configuration = file_get_contents(
         $root.'/resources/js/components/domain/academic/curriculum/CurriculumConfigurationSheet.vue',
     );
@@ -285,6 +288,8 @@ it('ofrece desglose y constructor visual sobre el mismo contrato de malla', func
         ->toContain('CurriculumAddSubjectNode')
         ->toContain('draftCycle')
         ->toContain('#node-addSubject')
+        ->toContain('@add="beginSubjectCreation"')
+        ->not->toContain('onAdd: beginSubjectCreation')
         ->not->toContain("toast.success('Materia reubicada.')")
         ->not->toContain('position.x:')
         ->not->toContain('position.y:');
@@ -305,6 +310,11 @@ it('ofrece desglose y constructor visual sobre el mismo contrato de malla', func
         ->toContain('<CurriculumVisualSubjectForm')
         ->toContain('size="icon-sm"')
         ->toContain(':aria-label="`Editar ${data.subject.name}`"');
+    expect($addSubjectNode)
+        ->toBeString()
+        ->toContain('add: [cycle: number]')
+        ->toContain('@click.stop="emit(\'add\', data.cycle)"')
+        ->not->toContain('data.onAdd');
     expect($configuration)
         ->toBeString()
         ->toContain('<FormSheet')
