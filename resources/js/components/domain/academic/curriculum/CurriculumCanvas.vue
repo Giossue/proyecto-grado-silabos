@@ -392,7 +392,52 @@ const onNodeDragStop = ({ node }: NodeDragEvent): void => {
                 />
             </template>
             <Controls position="bottom-left" />
-            <MiniMap class="max-sm:hidden" pannable zoomable />
+            <MiniMap
+                class="max-sm:hidden"
+                pannable
+                zoomable
+                node-color="var(--muted)"
+                node-stroke-color="var(--border)"
+                mask-color="color-mix(in srgb, var(--background) 65%, transparent)"
+            />
         </VueFlow>
     </div>
 </template>
+
+<style scoped>
+:deep(.vue-flow) {
+    background-color: color-mix(in srgb, var(--background) 90%, black);
+}
+
+:deep(.vue-flow__minimap) {
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: calc(var(--radius) - 2px);
+    background-color: var(--card);
+}
+
+:deep(.vue-flow__controls) {
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: calc(var(--radius) - 2px);
+    box-shadow: none;
+}
+
+:deep(.vue-flow__controls-button) {
+    border-bottom: 1px solid var(--border);
+    background-color: var(--card);
+    color: var(--foreground);
+}
+
+:deep(.vue-flow__controls-button:last-child) {
+    border-bottom: none;
+}
+
+:deep(.vue-flow__controls-button:hover) {
+    background-color: var(--accent);
+}
+
+:deep(.vue-flow__controls-button svg) {
+    fill: currentColor;
+}
+</style>

@@ -10,7 +10,7 @@ defineProps<{
 
 <template>
     <section
-        class="size-full overflow-hidden rounded-md border bg-background/80"
+        class="size-full overflow-hidden rounded-md border bg-card"
         :aria-label="`Ciclo ${data.cycle}`"
     >
         <div class="flex h-full">

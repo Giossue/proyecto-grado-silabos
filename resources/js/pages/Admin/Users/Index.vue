@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { Form, Head, Link } from '@inertiajs/vue3';
+import { Form, Head } from '@inertiajs/vue3';
 import { UserCheck, UserX } from '@lucide/vue';
 import ManagedUserController from '@/actions/App/Modules/Identity/Presentation/Http/Controllers/ManagedUserController';
 import FilterToolbar from '@/components/domain/FilterToolbar.vue';
 import ManagedUserSheet from '@/components/domain/identity/ManagedUserSheet.vue';
+import RoleAssignmentSheet from '@/components/domain/identity/RoleAssignmentSheet.vue';
+import UserProfileSheet from '@/components/domain/identity/UserProfileSheet.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
 import TableActionsMenu from '@/components/domain/TableActionsMenu.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
@@ -95,6 +97,7 @@ defineProps<{
     };
     roles: { codigo: string; nombre: string }[];
     careers: { id: string; nombre: string }[];
+    today: string;
 }>();
 </script>
 
@@ -251,13 +254,9 @@ defineProps<{
                         >
                             <TableCell>
                                 <div class="flex flex-col">
-                                    <Link
-                                        :href="
-                                            ManagedUserController.show(user.id)
-                                        "
-                                        class="font-medium underline-offset-4 hover:underline"
-                                        >{{ user.name }}</Link
-                                    >
+                                    <span class="font-medium">{{
+                                        user.name
+                                    }}</span>
                                     <span
                                         class="text-sm text-muted-foreground"
                                         >{{ user.email }}</span
@@ -328,6 +327,19 @@ defineProps<{
                                 <TableActionsMenu
                                     :label="`Acciones para ${user.name}`"
                                 >
+                                    <UserProfileSheet
+                                        display="menu"
+                                        :user-id="user.id"
+                                        :name="user.name"
+                                        :email="user.email"
+                                    />
+                                    <RoleAssignmentSheet
+                                        display="menu"
+                                        :managed-user-id="user.id"
+                                        :roles="roles"
+                                        :careers="careers"
+                                        :today="today"
+                                    />
                                     <Form
                                         v-bind="
                                             ManagedUserController.setStatus.form(

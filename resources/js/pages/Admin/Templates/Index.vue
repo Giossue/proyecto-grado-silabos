@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
+import { Eye } from '@lucide/vue';
 import TemplateController from '@/actions/App/Modules/Configuration/Presentation/Http/Controllers/TemplateController';
 import ClientFilterBar from '@/components/domain/ClientFilterBar.vue';
 import TemplateCreationSheet from '@/components/domain/configuration/TemplateCreationSheet.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
+import TableActionsMenu from '@/components/domain/TableActionsMenu.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
-import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Field, FieldLabel } from '@/components/ui/field';
 import {
     Select,
@@ -121,12 +124,15 @@ defineOptions({
                             ><TableHead>Plantilla</TableHead
                             ><TableHead>Alcance</TableHead
                             ><TableHead>Versiones</TableHead
-                            ><TableHead>Estado</TableHead></TableRow
+                            ><TableHead>Estado</TableHead
+                            ><TableHead class="text-right"
+                                >Acciones</TableHead
+                            ></TableRow
                         ></TableHeader
                     ><TableBody>
                         <TableEmpty
                             v-if="templatePage.length === 0"
-                            :colspan="4"
+                            :colspan="5"
                             >No existen plantillas.</TableEmpty
                         >
                         <TableRow
@@ -150,25 +156,42 @@ defineOptions({
                             }}</TableCell
                             ><TableCell
                                 ><div class="flex flex-wrap gap-2">
-                                    <Button
+                                    <Badge
                                         v-for="version in template.versions"
                                         :key="version.id"
-                                        as-child
-                                        size="sm"
                                         variant="outline"
-                                        ><Link
-                                            :href="
-                                                TemplateController.show(
-                                                    version.id,
-                                                )
-                                            "
-                                            >v{{ version.number }}</Link
-                                        ></Button
+                                        >v{{ version.number }}</Badge
                                     >
                                 </div></TableCell
                             ><TableCell>{{
                                 template.active ? 'Activa' : 'Archivada'
-                            }}</TableCell></TableRow
+                            }}</TableCell
+                            ><TableCell class="text-right"
+                                ><TableActionsMenu
+                                    :label="`Acciones para ${template.name}`"
+                                    ><template
+                                        v-if="template.versions.length > 0"
+                                        ><DropdownMenuItem
+                                            v-for="version in template.versions"
+                                            :key="version.id"
+                                            as-child
+                                            ><Link
+                                                :href="
+                                                    TemplateController.show(
+                                                        version.id,
+                                                    )
+                                                "
+                                                ><Eye aria-hidden="true" />Abrir
+                                                versión
+                                                {{ version.number }}</Link
+                                            ></DropdownMenuItem
+                                        ></template
+                                    ><DropdownMenuItem v-else disabled
+                                        >Sin versiones
+                                        disponibles</DropdownMenuItem
+                                    ></TableActionsMenu
+                                ></TableCell
+                            ></TableRow
                         >
                     </TableBody></Table
                 ><TablePagination

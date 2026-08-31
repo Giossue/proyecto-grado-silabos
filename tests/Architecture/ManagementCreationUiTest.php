@@ -252,10 +252,11 @@ it('presenta una sola malla por carrera sin buscador filtros cards ni versiones'
         ->toContain('display="menu"')
         ->toContain('@select="deleteOpen = true"')
         ->toContain('@select="emit(\'configure\')"')
-        ->toContain('Editar')
         ->toContain('Eliminar')
         ->toContain('Configurar')
         ->toContain('<Dialog')
+        ->not->toContain('Editar')
+        ->not->toContain('CareerAcademicEditSheet')
         ->not->toContain('<DialogTrigger');
     expect($curriculumBuilder.$curriculumForm)
         ->toBeString()
@@ -549,6 +550,60 @@ it('agrupa las acciones de tabla en menus accesibles de tres puntos', function (
     }
 
     $this->assertGreaterThan(0, $checkedColumns);
+});
+
+it('edita cuentas y roles desde las acciones del listado de usuarios', function (): void {
+    $source = file_get_contents(
+        dirname(__DIR__, 2).'/resources/js/pages/Admin/Users/Index.vue',
+    );
+    $roleSheet = file_get_contents(
+        dirname(__DIR__, 2).'/resources/js/components/domain/identity/RoleAssignmentSheet.vue',
+    );
+
+    expect($source)
+        ->toBeString()
+        ->toContain('<UserProfileSheet')
+        ->toContain('<RoleAssignmentSheet')
+        ->toContain('display="menu"')
+        ->not->toContain('ManagedUserController.show(user.id)');
+    expect($roleSheet)
+        ->toBeString()
+        ->toContain("display?: 'button' | 'menu'")
+        ->toContain('Asignar rol')
+        ->toContain("display === 'menu'");
+});
+
+it('abre los detalles de los listados desde sus acciones', function (): void {
+    $root = dirname(__DIR__, 2);
+    $surfaces = [
+        'resources/js/pages/Admin/Templates/Index.vue' => [
+            ['Abrir', 'versión'],
+            'TemplateController.show',
+        ],
+        'resources/js/pages/Coordination/Convocations/Index.vue' => [
+            ['Abrir', 'convocatoria'],
+            'ConvocationController.show',
+        ],
+        'resources/js/pages/Teacher/Syllabi/Index.vue' => [
+            ['Abrir', 'sílabo'],
+            'SyllabusController.show',
+        ],
+    ];
+
+    foreach ($surfaces as $surface => [$labels, $route]) {
+        $source = file_get_contents($root.'/'.$surface);
+
+        expect($source)
+            ->toBeString()
+            ->toContain('<TableActionsMenu')
+            ->toContain('<DropdownMenuItem')
+            ->toContain($route)
+            ->not->toContain('variant="link"');
+
+        foreach ($labels as $label) {
+            expect($source)->toContain($label);
+        }
+    }
 });
 
 it('usa el mismo paginador en todas las superficies tabulares', function (): void {

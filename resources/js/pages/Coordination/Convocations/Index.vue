@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { Form, Head, Link } from '@inertiajs/vue3';
-import { ChevronRight } from '@lucide/vue';
+import { Eye } from '@lucide/vue';
 import ConvocationController from '@/actions/App/Modules/Syllabus/Presentation/Http/Controllers/ConvocationController';
 import FilterToolbar from '@/components/domain/FilterToolbar.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
 import ConvocationCreationSheet from '@/components/domain/syllabus/ConvocationCreationSheet.vue';
+import TableActionsMenu from '@/components/domain/TableActionsMenu.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Field, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import {
@@ -148,12 +149,13 @@ const stateLabel = (state: string): string =>
                             <TableHead class="text-right"
                                 >Expedientes</TableHead
                             >
+                            <TableHead class="text-right">Acciones</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         <TableEmpty
                             v-if="convocations.data.length === 0"
-                            :colspan="5"
+                            :colspan="6"
                         >
                             No existen convocatorias con este rol.
                         </TableEmpty>
@@ -163,22 +165,9 @@ const stateLabel = (state: string): string =>
                             :key="convocation.id"
                         >
                             <TableCell>
-                                <Button
-                                    as-child
-                                    variant="link"
-                                    class="h-auto px-0"
-                                >
-                                    <Link
-                                        :href="
-                                            ConvocationController.show(
-                                                convocation.id,
-                                            )
-                                        "
-                                    >
-                                        {{ convocation.name }}
-                                        <ChevronRight aria-hidden="true" />
-                                    </Link>
-                                </Button>
+                                <span class="font-medium">
+                                    {{ convocation.name }}
+                                </span>
                             </TableCell>
                             <TableCell>{{ convocation.period }}</TableCell>
                             <TableCell>
@@ -197,6 +186,24 @@ const stateLabel = (state: string): string =>
                             </TableCell>
                             <TableCell class="text-right">
                                 {{ convocation.syllabi_count }}
+                            </TableCell>
+                            <TableCell class="text-right">
+                                <TableActionsMenu
+                                    :label="`Acciones para ${convocation.name}`"
+                                >
+                                    <DropdownMenuItem as-child>
+                                        <Link
+                                            :href="
+                                                ConvocationController.show(
+                                                    convocation.id,
+                                                )
+                                            "
+                                        >
+                                            <Eye aria-hidden="true" />
+                                            Abrir convocatoria
+                                        </Link>
+                                    </DropdownMenuItem>
+                                </TableActionsMenu>
                             </TableCell>
                         </TableRow>
                     </TableBody>

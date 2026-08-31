@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3';
-import { Plus, Settings2 } from '@lucide/vue';
+import { Check, Plus, Settings2 } from '@lucide/vue';
 import { computed } from 'vue';
 import CareerAcademicStructureController from '@/actions/App/Modules/Academic/Presentation/Http/Controllers/CareerAcademicStructureController';
 import FormSheet from '@/components/domain/FormSheet.vue';
@@ -51,6 +51,54 @@ const nextPosition = computed(
         :show-trigger="false"
         full-screen
     >
+        <Card>
+            <CardHeader>
+                <CardTitle>Identificación</CardTitle>
+                <CardDescription>
+                    El cambio de código quedará registrado en auditoría.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Form
+                    v-bind="
+                        CareerAcademicStructureController.update.form({
+                            entity: 'curriculum',
+                            record: curriculum.id,
+                        })
+                    "
+                    v-slot="{ errors, processing }"
+                    class="flex flex-col gap-4"
+                >
+                    <Field v-if="errors.record" data-invalid>
+                        <FieldError :errors="[errors.record]" />
+                    </Field>
+                    <Field :data-invalid="Boolean(errors.code)">
+                        <FieldLabel for="curriculum-code" required>
+                            Código
+                        </FieldLabel>
+                        <Input
+                            id="curriculum-code"
+                            name="code"
+                            :default-value="curriculum.code"
+                            placeholder="Ej. MALLA-SW-2026"
+                            required
+                            :aria-invalid="Boolean(errors.code)"
+                        />
+                        <FieldError :errors="[errors.code]" />
+                    </Field>
+                    <Button type="submit" :disabled="processing">
+                        <Spinner v-if="processing" data-icon="inline-start" />
+                        <Check
+                            v-else
+                            data-icon="inline-start"
+                            aria-hidden="true"
+                        />
+                        Guardar código
+                    </Button>
+                </Form>
+            </CardContent>
+        </Card>
+
         <Card>
             <CardHeader>
                 <CardTitle>Ciclos</CardTitle>

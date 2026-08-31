@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3';
-import { ShieldCheck } from '@lucide/vue';
+import { Pencil, ShieldCheck } from '@lucide/vue';
 import { ref } from 'vue';
 import ManagedUserController from '@/actions/App/Modules/Identity/Presentation/Http/Controllers/ManagedUserController';
 import DatePicker from '@/components/DatePicker.vue';
 import FormSheet from '@/components/domain/FormSheet.vue';
 import FormSheetActions from '@/components/domain/FormSheetActions.vue';
+import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import {
     Field,
     FieldError,
@@ -26,16 +27,21 @@ defineProps<{
     roles: { codigo: string; nombre: string }[];
     careers: { id: string; nombre: string }[];
     today: string;
+    /** `menu` lo dibuja como opción dentro del menú de tres puntos de una fila. */
+    display?: 'button' | 'menu';
 }>();
 
 const selectedRole = ref('teacher');
+const open = defineModel<boolean>('open', { default: false });
 </script>
 
 <template>
     <FormSheet
+        v-model:open="open"
         trigger-label="Asignar rol"
         title="Asignar otro rol"
         description="Defina el rol, su alcance y vigencia. Los privilegios no se combinan hasta seleccionar ese rol."
+        :show-trigger="display !== 'menu'"
     >
         <template #default="{ close }">
             <Form
@@ -138,4 +144,21 @@ const selectedRole = ref('teacher');
             </Form>
         </template>
     </FormSheet>
+
+    <!--
+        Dentro de un menú, la opción y el panel se separan: el menú se desmonta al
+        cerrarse y no debe interrumpir la asignación de rol.
+    -->
+    <DropdownMenuItem
+        v-if="display === 'menu'"
+        @select="
+            (event: Event) => {
+                event.preventDefault();
+                open = true;
+            }
+        "
+    >
+        <Pencil aria-hidden="true" />
+        Asignar rol
+    </DropdownMenuItem>
 </template>

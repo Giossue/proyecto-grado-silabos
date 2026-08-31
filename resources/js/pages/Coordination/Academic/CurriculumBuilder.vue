@@ -59,7 +59,6 @@ const openSubject = (subject: CurriculumBuilderSubject): void => {
         <template #actions>
             <CurriculumActions
                 :curriculum="curriculum"
-                :options="options"
                 @configure="configurationOpen = true"
             />
             <Button

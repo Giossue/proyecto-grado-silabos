@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { Form, Head, Link } from '@inertiajs/vue3';
-import { ChevronRight } from '@lucide/vue';
+import { Eye } from '@lucide/vue';
 import SyllabusController from '@/actions/App/Modules/Syllabus/Presentation/Http/Controllers/SyllabusController';
 import FilterToolbar from '@/components/domain/FilterToolbar.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
+import TableActionsMenu from '@/components/domain/TableActionsMenu.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Field, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import {
@@ -152,12 +153,13 @@ const formatSavedAt = (value: string | null): string =>
                             <TableHead>Estado</TableHead>
                             <TableHead>Último guardado</TableHead>
                             <TableHead class="text-right">Avance</TableHead>
+                            <TableHead class="text-right">Acciones</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         <TableEmpty
                             v-if="syllabi.data.length === 0"
-                            :colspan="5"
+                            :colspan="6"
                         >
                             No tiene sílabos asignados con este rol.
                         </TableEmpty>
@@ -167,20 +169,9 @@ const formatSavedAt = (value: string | null): string =>
                             :key="syllabus.id"
                         >
                             <TableCell>
-                                <Button
-                                    as-child
-                                    variant="link"
-                                    class="h-auto px-0"
-                                >
-                                    <Link
-                                        :href="
-                                            SyllabusController.show(syllabus.id)
-                                        "
-                                    >
-                                        {{ syllabus.subject }}
-                                        <ChevronRight aria-hidden="true" />
-                                    </Link>
-                                </Button>
+                                <span class="font-medium">
+                                    {{ syllabus.subject }}
+                                </span>
                                 <div class="text-sm text-muted-foreground">
                                     {{ syllabus.code }} · Paralelo(s)
                                     {{ syllabus.parallels.join(', ') }}
@@ -200,6 +191,24 @@ const formatSavedAt = (value: string | null): string =>
                             }}</TableCell>
                             <TableCell class="text-right font-medium">
                                 {{ syllabus.completion.toFixed(0) }} %
+                            </TableCell>
+                            <TableCell class="text-right">
+                                <TableActionsMenu
+                                    :label="`Acciones para ${syllabus.subject}`"
+                                >
+                                    <DropdownMenuItem as-child>
+                                        <Link
+                                            :href="
+                                                SyllabusController.show(
+                                                    syllabus.id,
+                                                )
+                                            "
+                                        >
+                                            <Eye aria-hidden="true" />
+                                            Abrir sílabo
+                                        </Link>
+                                    </DropdownMenuItem>
+                                </TableActionsMenu>
                             </TableCell>
                         </TableRow>
                     </TableBody>

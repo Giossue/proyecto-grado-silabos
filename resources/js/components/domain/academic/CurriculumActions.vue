@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3';
-import { Pencil, Settings2, Trash2 } from '@lucide/vue';
+import { Settings2, Trash2 } from '@lucide/vue';
 import { ref } from 'vue';
 import CareerAcademicStructureController from '@/actions/App/Modules/Academic/Presentation/Http/Controllers/CareerAcademicStructureController';
-import CareerAcademicEditSheet from '@/components/domain/academic/CareerAcademicEditSheet.vue';
 import RecordStatusForm from '@/components/domain/academic/RecordStatusForm.vue';
 import TableActionsMenu from '@/components/domain/TableActionsMenu.vue';
 import { Button } from '@/components/ui/button';
@@ -16,24 +15,27 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
+import {
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
 import { Spinner } from '@/components/ui/spinner';
 import type { CurriculumBuilderProps } from '@/types/academic';
 
-defineProps<Pick<CurriculumBuilderProps, 'curriculum' | 'options'>>();
+defineProps<Pick<CurriculumBuilderProps, 'curriculum'>>();
 const emit = defineEmits<{ configure: [] }>();
 
-const editOpen = ref(false);
 const deleteOpen = ref(false);
 </script>
 
 <template>
     <div class="flex flex-wrap items-center gap-2">
         <TableActionsMenu :label="`Acciones para la malla ${curriculum.code}`">
-            <DropdownMenuItem @select="editOpen = true">
-                <Pencil aria-hidden="true" />
-                Editar
+            <DropdownMenuItem @select="emit('configure')">
+                <Settings2 aria-hidden="true" />
+                Configurar
             </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <RecordStatusForm
                 display="menu"
                 scope="career"
@@ -44,10 +46,6 @@ const deleteOpen = ref(false);
             <DropdownMenuItem variant="destructive" @select="deleteOpen = true">
                 <Trash2 aria-hidden="true" />
                 Eliminar
-            </DropdownMenuItem>
-            <DropdownMenuItem @select="emit('configure')">
-                <Settings2 aria-hidden="true" />
-                Configurar
             </DropdownMenuItem>
         </TableActionsMenu>
 
@@ -94,12 +92,5 @@ const deleteOpen = ref(false);
                 </Form>
             </DialogContent>
         </Dialog>
-
-        <CareerAcademicEditSheet
-            v-model:open="editOpen"
-            entity="curriculum"
-            :record="curriculum"
-            :options="options"
-        />
     </div>
 </template>
