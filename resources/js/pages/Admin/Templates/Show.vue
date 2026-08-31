@@ -72,7 +72,10 @@ const blockOptions = computed(() =>
     props.templateVersion.sections.flatMap((section) =>
         section.blocks.map((block) => ({
             id: block.id,
-            label: section.title + ' · ' + block.title,
+            label:
+                section.title === block.title
+                    ? section.title
+                    : section.title + ' · ' + block.title,
         })),
     ),
 );
@@ -123,7 +126,7 @@ const blockOptions = computed(() =>
                 <FieldError :errors="[errors.version]" />
                 <Button type="submit" :disabled="processing">
                     <Spinner v-if="processing" />
-                    Publicar versión
+                    Publicar
                 </Button>
             </Form>
             <Form

@@ -133,7 +133,7 @@ class PublishTemplateVersion
 
         if ($field->tipo === 'calculation') {
             throw ValidationException::withMessages([
-                'version' => 'Las fórmulas oficiales siguen bloqueadas por PV-08.',
+                'version' => 'Los cálculos automáticos todavía no están disponibles.',
             ]);
         }
     }

@@ -173,6 +173,11 @@ it('presenta el ciclo académico sin detalles de implementación', function (): 
         $source = (string) file_get_contents($root.'/'.$controller);
         expect($source)->not->toContain("'fingerprint' =>");
     }
+
+    $publishTemplate = (string) file_get_contents(
+        $root.'/app/Modules/Configuration/Application/Actions/PublishTemplateVersion.php',
+    );
+    expect($publishTemplate)->not->toContain('PV-08');
 });
 
 it('conserva en el servidor las obligaciones minimas y condicionales', function (): void {

@@ -573,6 +573,20 @@ it('edita cuentas y roles desde las acciones del listado de usuarios', function 
         ->toContain("display === 'menu'");
 });
 
+it('presenta la publicación y los bloques de plantilla con etiquetas breves', function (): void {
+    $source = file_get_contents(
+        dirname(__DIR__, 2).'/resources/js/pages/Admin/Templates/Show.vue',
+    );
+
+    expect($source)
+        ->toBeString()
+        ->toContain('Publicar')
+        ->not->toContain('Publicar y congelar')
+        ->toContain('section.title === block.title')
+        ->toContain('? section.title')
+        ->toContain(": section.title + ' · ' + block.title");
+});
+
 it('abre los detalles de los listados desde sus acciones', function (): void {
     $root = dirname(__DIR__, 2);
     $surfaces = [
