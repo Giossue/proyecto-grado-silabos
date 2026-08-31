@@ -85,6 +85,7 @@ actual se deshabilite o cambie.
 
 - 64 pruebas focalizadas de estructura académica, convocatoria, revisión y contrato de
   interfaz: 1.579 aserciones correctas.
+- 6 pruebas focalizadas de documentos y exportación: 158 aserciones correctas.
 - TypeScript, ESLint focalizado, Prettier y formato PHP: correctos.
 - No se ejecutaron build ni `composer verify`: la validación fue proporcional al cambio
   y queda pendiente la revisión manual de Malla en claro, oscuro, teclado y móvil.

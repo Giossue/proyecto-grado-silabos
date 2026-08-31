@@ -32,8 +32,8 @@ return new class extends Migration
         DB::statement(<<<'SQL'
             UPDATE versiones_malla
             SET estado = CASE
-                WHEN es_actual AND estado = 'inactive' THEN 'inactive'
-                WHEN es_actual THEN 'active'
+                WHEN es_actual AND estado = 'published' THEN 'active'
+                WHEN es_actual THEN 'inactive'
                 ELSE 'historical'
             END,
             publicado_en = NULL
