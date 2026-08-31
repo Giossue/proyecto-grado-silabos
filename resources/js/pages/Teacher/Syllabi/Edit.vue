@@ -77,7 +77,12 @@ type DraftSection = {
     key: string;
     title: string;
     description: string | null;
-    blocks: { id: string; title: string; fields: DraftField[] }[];
+    blocks: {
+        id: string;
+        title: string;
+        content_type: string;
+        fields: DraftField[];
+    }[];
 };
 
 type ValidationSummary = {
@@ -786,7 +791,14 @@ onBeforeUnmount(() => {
                                         class="self-start"
                                         @click="addRow(field)"
                                     >
-                                        Agregar fila
+                                        {{
+                                            [
+                                                'bulleted_list',
+                                                'numbered_list',
+                                            ].includes(block.content_type)
+                                                ? 'Agregar elemento'
+                                                : 'Agregar fila'
+                                        }}
                                     </Button>
                                 </div>
 

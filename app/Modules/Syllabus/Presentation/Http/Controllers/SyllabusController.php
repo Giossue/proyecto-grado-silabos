@@ -324,6 +324,8 @@ class SyllabusController extends Controller
         return [
             'id' => $block->id,
             'title' => $block->titulo,
+            'content_type' => $block->configuredContentType()
+                ?? ($block->tipo === 'repeatable' ? 'table' : 'text'),
             'fields' => $fields,
         ];
     }

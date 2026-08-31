@@ -7,7 +7,9 @@ use App\Models\User;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
 use App\Modules\Configuration\Application\Actions\CloneTemplateVersion;
 use App\Modules\Configuration\Application\Actions\CreateSyllabusTemplate;
+use App\Modules\Configuration\Application\Actions\DeleteTemplateBlock;
 use App\Modules\Configuration\Application\Actions\PublishTemplateVersion;
+use App\Modules\Configuration\Application\Actions\ReorderTemplateBlocks;
 use App\Modules\Configuration\Application\Actions\SaveFieldDefinition;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\FieldDefinition;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
@@ -16,6 +18,7 @@ use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateSection;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateVersion;
 use App\Modules\Configuration\Presentation\Http\Requests\CreateTemplateRequest;
 use App\Modules\Configuration\Presentation\Http\Requests\ManageTemplatesRequest;
+use App\Modules\Configuration\Presentation\Http\Requests\ReorderTemplateBlocksRequest;
 use App\Modules\Configuration\Presentation\Http\Requests\SaveFieldDefinitionRequest;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
@@ -85,6 +88,7 @@ class TemplateController extends Controller
                         'key' => $block->clave,
                         'title' => $block->titulo,
                         'type' => $block->tipo,
+                        'content_type' => $this->contentType($block, $block->fields->first()),
                         'fields' => $block->fields->map(fn (FieldDefinition $field) => [
                             'id' => $field->id,
                             'block_id' => $block->id,
@@ -98,24 +102,33 @@ class TemplateController extends Controller
                             'teacher_editable' => $field->editable_docente,
                             'ai_enabled' => $field->ia_habilitada,
                             'document_marker' => $field->marcador_documento,
+                            'content_type' => $this->contentType($block, $field),
                         ])->values()->all(),
                     ])->values()->all(),
                 ])->values()->all(),
             ],
-            'fieldTypes' => [
-                ['value' => 'short_text', 'label' => 'Texto breve'],
-                ['value' => 'long_text', 'label' => 'Texto amplio'],
-                ['value' => 'markdown', 'label' => 'Texto con formato'],
-                ['value' => 'number', 'label' => 'Número'],
-                ['value' => 'date', 'label' => 'Fecha'],
-                ['value' => 'single_select', 'label' => 'Selección única'],
-                ['value' => 'multi_select', 'label' => 'Selección múltiple'],
-                ['value' => 'boolean', 'label' => 'Sí o no'],
-                ['value' => 'repeatable', 'label' => 'Lista o tabla'],
-                ['value' => 'master_reference', 'label' => 'Dato institucional'],
-                ['value' => 'calculation', 'label' => 'Cálculo automático'],
+            'blockTypes' => [
+                ['value' => 'text', 'label' => 'Texto'],
+                ['value' => 'table', 'label' => 'Tabla'],
+                ['value' => 'bulleted_list', 'label' => 'Lista con viñetas'],
+                ['value' => 'numbered_list', 'label' => 'Lista numerada'],
             ],
         ]);
+    }
+
+    private function contentType(TemplateBlock $block, ?FieldDefinition $field): string
+    {
+        $contentType = $block->configuredContentType();
+
+        if ($contentType !== null) {
+            return $contentType;
+        }
+
+        if ($field?->tipo === 'repeatable' || $block->tipo === 'repeatable') {
+            return 'table';
+        }
+
+        return 'text';
     }
 
     public function storeField(
@@ -127,7 +140,7 @@ class TemplateController extends Controller
         abort_unless($actor instanceof User, 401);
         $action->create($version->id, $request->validated(), $actor, $request);
 
-        return back()->with('success', 'Campo agregado al borrador.');
+        return back()->with('success', 'Bloque agregado al borrador.');
     }
 
     public function updateField(
@@ -141,7 +154,39 @@ class TemplateController extends Controller
         abort_unless($actor instanceof User, 401);
         $action->update($field, $request->validated(), $actor, $request);
 
-        return back()->with('success', 'Definición de campo actualizada.');
+        return back()->with('success', 'Bloque actualizado.');
+    }
+
+    public function reorderBlocks(
+        TemplateVersion $version,
+        ReorderTemplateBlocksRequest $request,
+        ReorderTemplateBlocks $action,
+    ): RedirectResponse {
+        $actor = $request->user();
+        abort_unless($actor instanceof User, 401);
+        $action->execute(
+            $version,
+            $request->string('section_id')->toString(),
+            $request->collect('block_ids')->filter(fn (mixed $id): bool => is_string($id))->values()->all(),
+            $actor,
+            $request,
+        );
+
+        return back()->with('success', 'Orden de bloques actualizado.');
+    }
+
+    public function destroyBlock(
+        TemplateVersion $version,
+        TemplateBlock $block,
+        ManageTemplatesRequest $request,
+        DeleteTemplateBlock $action,
+    ): RedirectResponse {
+        abort_unless($block->version_plantilla_id === $version->id, 404);
+        $actor = $request->user();
+        abort_unless($actor instanceof User, 401);
+        $action->execute($block, $actor, $request);
+
+        return back()->with('success', 'Bloque eliminado.');
     }
 
     public function publish(

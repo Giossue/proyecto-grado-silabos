@@ -41,6 +41,19 @@ class TemplateBlock extends Model
         return $this->hasMany(FieldDefinition::class, 'bloque_plantilla_id')->orderBy('posicion');
     }
 
+    public function configuredContentType(): ?string
+    {
+        $configuration = $this->getAttribute('configuracion');
+
+        if (! is_array($configuration)) {
+            return null;
+        }
+
+        $contentType = $configuration['content_type'] ?? null;
+
+        return is_string($contentType) ? $contentType : null;
+    }
+
     protected static function booted(): void
     {
         static::saving(fn (TemplateBlock $block) => $block->guardDraft());

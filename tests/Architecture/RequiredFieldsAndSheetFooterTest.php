@@ -194,9 +194,9 @@ it('conserva en el servidor las obligaciones minimas y condicionales', function 
             "'structured_value' => ['nullable', 'required_without:content'",
         ],
         'Configuration/Presentation/Http/Requests/SaveFieldDefinitionRequest.php' => [
+            "'section_id' => [",
+            "'content_type' => ['required'",
             "'block_id' => [",
-            "'type' => ['required'",
-            "'master_source' => ['nullable', 'required_if:inherited,true'",
         ],
         'Identity/Presentation/Http/Requests/CreateManagedUserRequest.php' => [
             "'role_code' => ['required'",

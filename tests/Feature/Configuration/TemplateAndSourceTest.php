@@ -116,27 +116,61 @@ class TemplateAndSourceTest extends TestCase
         );
     }
 
-    public function test_calculation_field_cannot_be_published_while_pv_08_is_open(): void
+    public function test_template_blocks_use_document_content_types(): void
     {
         $version = $this->createTemplate();
-        $field = $version->fields()->where('clave', 'descripcion')->firstOrFail();
+        $section = $version->sections()->where('clave', 'objetivos')->firstOrFail();
 
         $this->actingAsAdministrator()
-            ->patch(route('admin.templates.fields.update', ['version' => $version, 'field' => $field]), [
-                'block_id' => $field->bloque_plantilla_id,
-                'key' => $field->clave,
-                'label' => $field->etiqueta,
-                'type' => 'calculation',
-                'required' => true,
+            ->post(route('admin.templates.fields.store', $version), [
+                'section_id' => $section->id,
+                'key' => 'estrategias_aprendizaje',
+                'label' => 'Estrategias de aprendizaje',
+                'content_type' => 'bulleted_list',
                 'teacher_editable' => true,
             ])
             ->assertRedirect();
 
-        $this->actingAsAdministrator()
-            ->post(route('admin.templates.publish', $version))
-            ->assertSessionHasErrors('version');
+        $block = $version->fresh()->sections()->whereKey($section->id)->firstOrFail()
+            ->blocks()->where('titulo', 'Estrategias de aprendizaje')->firstOrFail();
+        $this->assertSame('repeatable', $block->tipo);
+        $this->assertSame('bulleted_list', $block->configuracion['content_type']);
+        $this->assertSame('repeatable', $block->fields()->firstOrFail()->tipo);
+    }
 
-        $this->assertSame('draft', $version->fresh()->estado);
+    public function test_administrator_reorders_and_removes_draft_blocks(): void
+    {
+        $version = $this->createTemplate();
+        $section = $version->sections()->where('clave', 'objetivos')->firstOrFail();
+        $first = $section->blocks()->firstOrFail();
+
+        $this->actingAsAdministrator()
+            ->post(route('admin.templates.fields.store', $version), [
+                'section_id' => $section->id,
+                'key' => 'objetivos_especificos',
+                'label' => 'Objetivos específicos',
+                'content_type' => 'numbered_list',
+            ])
+            ->assertRedirect();
+
+        $second = $section->blocks()->where('titulo', 'Objetivos específicos')->firstOrFail();
+
+        $this->actingAsAdministrator()
+            ->patch(route('admin.templates.blocks.reorder', $version), [
+                'section_id' => $section->id,
+                'block_ids' => [$second->id, $first->id],
+            ])
+            ->assertRedirect();
+
+        $this->assertSame(1, $second->fresh()->posicion);
+        $this->assertSame(2, $first->fresh()->posicion);
+
+        $this->actingAsAdministrator()
+            ->delete(route('admin.templates.blocks.destroy', ['version' => $version, 'block' => $second]))
+            ->assertRedirect();
+
+        $this->assertDatabaseMissing('bloques_plantilla', ['id' => $second->id]);
+        $this->assertDatabaseMissing('definiciones_campo', ['bloque_plantilla_id' => $second->id]);
     }
 
     public function test_coordinator_creates_and_activates_scoped_source_with_immutable_fragment(): void

@@ -63,7 +63,7 @@ class SyllabusPolicy
     /**
      * Relevar al responsable es gobierno de la carrera, no edición de contenido: el
      * coordinador cambia quién responde por el expediente sin poder escribir en él.
-     * PV-16 sigue abierta y este permiso no la anticipa.
+     * La edición excepcional de contenido no forma parte de este permiso.
      */
     public function transferTeacher(User $user, Syllabus $syllabus): bool
     {

@@ -206,6 +206,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('plantillas/versiones/{version}', [TemplateController::class, 'show'])->name('templates.show');
         Route::post('plantillas/versiones/{version}/campos', [TemplateController::class, 'storeField'])->name('templates.fields.store');
         Route::patch('plantillas/versiones/{version}/campos/{field}', [TemplateController::class, 'updateField'])->name('templates.fields.update');
+        Route::patch('plantillas/versiones/{version}/bloques/orden', [TemplateController::class, 'reorderBlocks'])->name('templates.blocks.reorder');
+        Route::delete('plantillas/versiones/{version}/bloques/{block}', [TemplateController::class, 'destroyBlock'])->name('templates.blocks.destroy');
         Route::post('plantillas/versiones/{version}/publicar', [TemplateController::class, 'publish'])->name('templates.publish');
         Route::post('plantillas/versiones/{version}/clonar', [TemplateController::class, 'clone'])->name('templates.clone');
     });

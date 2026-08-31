@@ -9,17 +9,10 @@ use Illuminate\Validation\Rule;
 class SaveFieldDefinitionRequest extends ManageTemplatesRequest
 {
     private const TYPES = [
-        'short_text',
-        'long_text',
-        'markdown',
-        'number',
-        'date',
-        'single_select',
-        'multi_select',
-        'boolean',
-        'repeatable',
-        'calculation',
-        'master_reference',
+        'text',
+        'table',
+        'bulleted_list',
+        'numbered_list',
     ];
 
     /** @return array<string, list<mixed>> */
@@ -31,8 +24,15 @@ class SaveFieldDefinitionRequest extends ManageTemplatesRequest
         $fieldId = $field instanceof FieldDefinition ? $field->id : null;
 
         return [
+            'section_id' => [
+                Rule::requiredIf($fieldId === null),
+                'nullable',
+                'uuid',
+                Rule::exists('secciones_plantilla', 'id')->where('version_plantilla_id', $versionId),
+            ],
             'block_id' => [
-                'required',
+                Rule::requiredIf($fieldId !== null),
+                'nullable',
                 'uuid',
                 Rule::exists('bloques_plantilla', 'id')->where('version_plantilla_id', $versionId),
             ],
@@ -47,7 +47,7 @@ class SaveFieldDefinitionRequest extends ManageTemplatesRequest
             ],
             'label' => ['required', 'string', 'max:180'],
             'help' => ['nullable', 'string', 'max:2000'],
-            'type' => ['required', Rule::in(self::TYPES)],
+            'content_type' => ['required', Rule::in(self::TYPES)],
             'required' => ['nullable', 'boolean'],
             'inherited' => ['nullable', 'boolean'],
             'master_source' => ['nullable', 'required_if:inherited,true', 'string', 'max:100'],

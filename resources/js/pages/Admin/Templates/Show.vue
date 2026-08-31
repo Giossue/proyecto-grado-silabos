@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { Form, Head, Link } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
 import TemplateController from '@/actions/App/Modules/Configuration/Presentation/Http/Controllers/TemplateController';
-import TemplateFieldSheet from '@/components/domain/configuration/TemplateFieldSheet.vue';
+import TemplateBlockBuilder from '@/components/domain/configuration/TemplateBlockBuilder.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -23,20 +22,16 @@ type TemplateField = {
     key: string;
     label: string;
     help: string | null;
-    type: string;
     required: boolean;
     inherited: boolean;
     master_source: string | null;
     teacher_editable: boolean;
     ai_enabled: boolean;
     document_marker: string | null;
+    content_type: string;
 };
 
-type TemplateFieldSheetHandle = {
-    edit: (field: TemplateField) => void;
-};
-
-const props = defineProps<{
+defineProps<{
     templateVersion: {
         id: string;
         number: number;
@@ -55,30 +50,17 @@ const props = defineProps<{
                 id: string;
                 key: string;
                 title: string;
-                type: string;
+                content_type: string;
                 fields: TemplateField[];
             }[];
         }[];
     };
-    fieldTypes: { value: string; label: string }[];
+    blockTypes: { value: string; label: string }[];
 }>();
 
 defineOptions({
     layout: { breadcrumbs: [{ title: 'Plantillas', href: templatesIndex() }] },
 });
-
-const fieldSheet = ref<TemplateFieldSheetHandle | null>(null);
-const blockOptions = computed(() =>
-    props.templateVersion.sections.flatMap((section) =>
-        section.blocks.map((block) => ({
-            id: block.id,
-            label:
-                section.title === block.title
-                    ? section.title
-                    : section.title + ' · ' + block.title,
-        })),
-    ),
-);
 </script>
 
 <template>
@@ -88,7 +70,7 @@ const blockOptions = computed(() =>
 
     <PageFrame
         :title="`${templateVersion.template.name} · v${templateVersion.number}`"
-        :description="`${templateVersion.template.career_name ?? 'Alcance general'} · Añada los campos de esta versión y ordénelos.`"
+        :description="`${templateVersion.template.career_name ?? 'Alcance general'} · Organice los bloques de contenido de esta versión.`"
     >
         <template #eyebrow>
             <Button as-child variant="link" class="h-auto px-0">
@@ -111,13 +93,6 @@ const blockOptions = computed(() =>
             </Badge>
         </template>
         <template #actions>
-            <TemplateFieldSheet
-                v-if="templateVersion.state === 'draft'"
-                ref="fieldSheet"
-                :template-version-id="templateVersion.id"
-                :block-options="blockOptions"
-                :field-types="fieldTypes"
-            />
             <Form
                 v-if="templateVersion.state === 'draft'"
                 v-bind="TemplateController.publish.form(templateVersion.id)"
@@ -141,7 +116,13 @@ const blockOptions = computed(() =>
             </Form>
         </template>
 
-        <div class="flex flex-col gap-4">
+        <TemplateBlockBuilder
+            v-if="templateVersion.state === 'draft'"
+            :template-version-id="templateVersion.id"
+            :sections="templateVersion.sections"
+            :block-types="blockTypes"
+        />
+        <div v-else class="flex flex-col gap-4">
             <Card v-for="section in templateVersion.sections" :key="section.id">
                 <CardHeader>
                     <CardTitle>{{ section.title }}</CardTitle>
@@ -149,59 +130,13 @@ const blockOptions = computed(() =>
                         {{ section.description }}
                     </CardDescription>
                 </CardHeader>
-                <CardContent class="flex flex-col gap-4">
+                <CardContent class="flex flex-col gap-3">
                     <div
                         v-for="block in section.blocks"
                         :key="block.id"
                         class="rounded-lg border p-4"
                     >
-                        <div
-                            class="mb-3 flex items-center justify-between gap-3"
-                        >
-                            <h3 class="font-medium">{{ block.title }}</h3>
-                        </div>
-                        <div class="grid gap-3 sm:grid-cols-2">
-                            <button
-                                v-for="field in block.fields"
-                                :key="field.id"
-                                type="button"
-                                class="rounded-md border bg-muted/20 p-3 text-left transition-colors hover:bg-muted/50 disabled:cursor-default"
-                                :disabled="
-                                    templateVersion.state === 'published'
-                                "
-                                @click="fieldSheet?.edit(field)"
-                            >
-                                <div class="flex flex-wrap items-center gap-2">
-                                    <span class="font-medium">
-                                        {{ field.label }}
-                                    </span>
-                                    <Badge
-                                        v-if="field.required"
-                                        variant="secondary"
-                                    >
-                                        Obligatorio
-                                    </Badge>
-                                    <Badge
-                                        v-if="field.inherited"
-                                        variant="outline"
-                                    >
-                                        Dato institucional
-                                    </Badge>
-                                    <Badge
-                                        v-if="field.ai_enabled"
-                                        variant="outline"
-                                    >
-                                        Asistencia de IA
-                                    </Badge>
-                                </div>
-                                <p
-                                    v-if="field.help"
-                                    class="mt-1 text-sm text-muted-foreground"
-                                >
-                                    {{ field.help }}
-                                </p>
-                            </button>
-                        </div>
+                        <h3 class="font-medium">{{ block.title }}</h3>
                     </div>
                 </CardContent>
             </Card>

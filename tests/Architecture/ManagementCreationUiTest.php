@@ -27,11 +27,12 @@ it('mantiene todas las altas de gestion dentro del sheet derecho compartido', fu
             'component_file' => 'resources/js/components/domain/configuration/TemplateCreationSheet.vue',
             'action' => 'TemplateController.store.form',
         ],
-        'Administrador · campos de plantilla' => [
+        'Administrador · bloques de plantilla' => [
             'page' => 'resources/js/pages/Admin/Templates/Show.vue',
-            'component' => 'TemplateFieldSheet',
-            'component_file' => 'resources/js/components/domain/configuration/TemplateFieldSheet.vue',
+            'component' => 'TemplateBlockBuilder',
+            'component_file' => 'resources/js/components/domain/configuration/TemplateBlockBuilder.vue',
             'action' => 'TemplateController.storeField.form',
+            'inline' => true,
         ],
         'Administrador o Coordinador · fuentes' => [
             'page' => 'resources/js/pages/Sources/Index.vue',
@@ -101,25 +102,33 @@ it('mantiene todas las altas de gestion dentro del sheet derecho compartido', fu
             $page,
             $label.' no monta su componente de alta.',
         );
-        $this->assertStringNotContainsString(
-            $surface['action'],
-            $page,
-            $label.' volvió a incrustar el formulario en la página.',
-        );
-        $this->assertStringContainsString(
-            '<FormSheet',
-            $component,
-            $label.' no usa el Sheet compartido.',
-        );
+        if (($surface['inline'] ?? false) === true) {
+            $this->assertStringNotContainsString('<FormSheet', $component, $label.' volvió a usar un panel lateral.');
+        } else {
+            $this->assertStringNotContainsString(
+                $surface['action'],
+                $page,
+                $label.' volvió a incrustar el formulario en la página.',
+            );
+            $this->assertStringContainsString(
+                '<FormSheet',
+                $component,
+                $label.' no usa el Sheet compartido.',
+            );
+        }
         $this->assertStringContainsString(
             $surface['action'],
             $component,
             $label.' perdió su acción de servidor.',
         );
         $this->assertStringContainsString(
-            '@success="close"',
+            ($surface['inline'] ?? false) === true
+                ? '@success="addingSectionId = null"'
+                : '@success="close"',
             $component,
-            $label.' no cierra el panel después del éxito.',
+            ($surface['inline'] ?? false) === true
+                ? $label.' no cierra la creación directa después del éxito.'
+                : $label.' no cierra el panel después del éxito.',
         );
     }
 });
@@ -582,9 +591,21 @@ it('presenta la publicación y los bloques de plantilla con etiquetas breves', f
         ->toBeString()
         ->toContain('Publicar')
         ->not->toContain('Publicar y congelar')
-        ->toContain('section.title === block.title')
-        ->toContain('? section.title')
-        ->toContain(": section.title + ' · ' + block.title");
+        ->toContain('<TemplateBlockBuilder');
+
+    $builder = file_get_contents(
+        dirname(__DIR__, 2).'/resources/js/components/domain/configuration/TemplateBlockBuilder.vue',
+    );
+
+    expect($builder)
+        ->toBeString()
+        ->toContain('Nombre del bloque')
+        ->toContain('Tipo de contenido')
+        ->toContain('Agregar bloque')
+        ->toContain('draggable="true"')
+        ->toContain('persistOrder')
+        ->not->toContain('Bloque</FieldLabel>')
+        ->not->toContain('Clave estable');
 });
 
 it('abre los detalles de los listados desde sus acciones', function (): void {

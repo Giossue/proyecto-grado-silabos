@@ -5,6 +5,7 @@ namespace App\Modules\Configuration\Application\Actions;
 use App\Models\User;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\FieldDefinition;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateBlock;
+use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateSection;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateVersion;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Operations\Application\Actions\RecordAuditEvent;
@@ -48,11 +49,10 @@ class SaveFieldDefinition
                 throw ValidationException::withMessages(['field' => 'La versión publicada no admite cambios.']);
             }
 
-            $blockId = $this->stringValue($data, 'block_id');
-            $block = TemplateBlock::query()
-                ->whereKey($blockId)
-                ->where('version_plantilla_id', $version->id)
-                ->firstOrFail();
+            $contentType = $this->stringValue($data, 'content_type');
+            $block = $field === null
+                ? $this->createBlock($version, $data, $contentType)
+                : $this->updateBlock($field, $version, $data, $contentType);
             $inherited = (bool) ($data['inherited'] ?? false);
             $attributes = [
                 'version_plantilla_id' => $version->id,
@@ -60,7 +60,7 @@ class SaveFieldDefinition
                 'clave' => $data['key'],
                 'etiqueta' => $data['label'],
                 'ayuda' => $data['help'] ?? null,
-                'tipo' => $data['type'],
+                'tipo' => $this->fieldType($contentType),
                 'obligatorio' => (bool) ($data['required'] ?? false),
                 'heredado' => $inherited,
                 'origen_maestro' => $inherited ? ($data['master_source'] ?? null) : null,
@@ -94,6 +94,72 @@ class SaveFieldDefinition
 
             return $field;
         });
+    }
+
+    /** @param array<string, mixed> $data */
+    private function createBlock(TemplateVersion $version, array $data, string $contentType): TemplateBlock
+    {
+        $sectionId = $this->stringValue($data, 'section_id');
+        $section = TemplateSection::query()
+            ->whereKey($sectionId)
+            ->where('version_plantilla_id', $version->id)
+            ->firstOrFail();
+
+        return TemplateBlock::query()->create([
+            'version_plantilla_id' => $version->id,
+            'seccion_plantilla_id' => $section->id,
+            'clave' => $data['key'],
+            'tipo' => $this->blockType($contentType),
+            'titulo' => $data['label'],
+            'configuracion' => ['content_type' => $contentType],
+            'posicion' => ((int) TemplateBlock::query()
+                ->where('seccion_plantilla_id', $section->id)
+                ->max('posicion')) + 1,
+        ]);
+    }
+
+    /** @param array<string, mixed> $data */
+    private function updateBlock(
+        FieldDefinition $field,
+        TemplateVersion $version,
+        array $data,
+        string $contentType,
+    ): TemplateBlock {
+        $blockId = $this->stringValue($data, 'block_id');
+        $block = TemplateBlock::query()
+            ->whereKey($blockId)
+            ->where('version_plantilla_id', $version->id)
+            ->firstOrFail();
+        abort_unless($block->id === $field->bloque_plantilla_id, 404);
+
+        $configuration = $block->getAttribute('configuracion');
+
+        $block->update([
+            'tipo' => $this->blockType($contentType),
+            'titulo' => $data['label'],
+            'configuracion' => [
+                ...(is_array($configuration) ? $configuration : []),
+                'content_type' => $contentType,
+            ],
+        ]);
+
+        return $block;
+    }
+
+    private function blockType(string $contentType): string
+    {
+        return $contentType === 'institutional'
+            ? 'workflow'
+            : ($contentType === 'text' ? 'narrative' : 'repeatable');
+    }
+
+    private function fieldType(string $contentType): string
+    {
+        return match ($contentType) {
+            'text' => 'markdown',
+            'institutional' => 'master_reference',
+            default => 'repeatable',
+        };
     }
 
     /** @param array<string, mixed> $data */
