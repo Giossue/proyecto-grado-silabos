@@ -131,6 +131,23 @@ Antes de modificar una pantalla, lee `docs/product/screens.md`,
 documentación del módulo afectado. Esas fuentes definen los patrones visuales,
 composición, estados y criterios de revisión; este archivo solo indica dónde encontrarlos.
 
+## Trabajo con bases de datos
+
+Antes de cambiar el esquema o ejecutar operaciones sobre una base, consulta las fuentes
+durables correspondientes:
+
+- modelo, invariantes y criterio de migraciones: `docs/architecture/database.md`;
+- autenticación segura y procedimiento de migración remota:
+  `docs/security/hardening.md`;
+- secuencia de release, comprobación y recuperación:
+  `docs/runbooks/release-verification.md` y `docs/architecture/deployment.md`;
+- configuración local y variables no secretas: `docs/architecture/bootstrap.md`;
+- despliegue administrado por Dokploy: `docs/runbooks/deploy-dokploy.md`.
+
+Si falta información, documéntala en una de esas fuentes según su naturaleza; no copies
+hosts, credenciales ni comandos específicos de un entorno dentro de `AGENTS.md`. Este
+archivo funciona únicamente como orquestador para saber dónde leer.
+
 ## Control de versiones
 
 - Haz cambios pequeños y coherentes.

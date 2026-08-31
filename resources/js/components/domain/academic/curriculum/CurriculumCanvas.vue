@@ -1,8 +1,19 @@
 <script setup lang="ts">
 import { router } from '@inertiajs/vue3';
 import { Controls } from '@vue-flow/controls';
-import { ConnectionMode, MarkerType, VueFlow } from '@vue-flow/core';
-import type { Connection, Edge, Node, NodeDragEvent } from '@vue-flow/core';
+import {
+    ConnectionMode,
+    MarkerType,
+    useVueFlow,
+    VueFlow,
+} from '@vue-flow/core';
+import type {
+    Connection,
+    Edge,
+    Node,
+    NodeDragEvent,
+    NodeMouseEvent,
+} from '@vue-flow/core';
 import { MiniMap } from '@vue-flow/minimap';
 import { computed, ref, watch } from 'vue';
 import { toast } from 'vue-sonner';
@@ -27,6 +38,9 @@ const props =
             'curriculum' | 'fieldDefinitions' | 'subjects' | 'requirements'
         >
     >();
+
+const flowId = `curriculum-${props.curriculum.id}`;
+const { setEdges, setNodes } = useVueFlow({ id: flowId });
 
 const laneHeight = 340;
 const laneStart = 145;
@@ -235,11 +249,28 @@ watch(
         draftCycle,
     ],
     () => {
-        nodes.value = buildNodes();
-        edges.value = buildEdges();
+        const nextNodes = buildNodes();
+        const nextEdges = buildEdges();
+
+        nodes.value = nextNodes;
+        edges.value = nextEdges;
+        setNodes(nextNodes);
+        setEdges(nextEdges);
     },
     { deep: true },
 );
+
+const onNodeClick = ({ node }: NodeMouseEvent): void => {
+    const cycle = node.data.cycle;
+
+    if (
+        node.type === 'addSubject' &&
+        node.data.disabled !== true &&
+        typeof cycle === 'number'
+    ) {
+        beginSubjectCreation(cycle);
+    }
+};
 
 const onConnect = (connection: Connection): void => {
     if (
@@ -329,6 +360,7 @@ const onNodeDragStop = ({ node }: NodeDragEvent): void => {
         aria-label="Constructor visual de la malla"
     >
         <VueFlow
+            :id="flowId"
             v-model:nodes="nodes"
             v-model:edges="edges"
             fit-view-on-init
@@ -339,6 +371,7 @@ const onNodeDragStop = ({ node }: NodeDragEvent): void => {
             :nodes-connectable="curriculum.editable && !hasOpenEditor"
             :elements-selectable="true"
             @connect="onConnect"
+            @node-click="onNodeClick"
             @node-drag-stop="onNodeDragStop"
         >
             <template #node-cycle="nodeProps">

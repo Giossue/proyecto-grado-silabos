@@ -20,7 +20,7 @@ const emit = defineEmits<{
         variant="outline"
         class="nodrag nopan w-64 border-dashed"
         :disabled="data.disabled"
-        @click.stop="emit('add', data.cycle)"
+        @click="emit('add', data.cycle)"
     >
         <Plus data-icon="inline-start" aria-hidden="true" />
         Agregar materia
