@@ -263,6 +263,7 @@ const closeBlockForm = (): void => {
                                         section: section.id,
                                     })
                                 "
+                                :options="{ preserveScroll: true }"
                                 v-slot="{ errors, processing }"
                             >
                                 <div
@@ -376,6 +377,7 @@ const closeBlockForm = (): void => {
                                                 firstField(container)?.id ?? '',
                                         })
                                     "
+                                    :options="{ preserveScroll: true }"
                                     v-slot="{ errors, processing }"
                                 >
                                     <input
@@ -593,6 +595,7 @@ const closeBlockForm = (): void => {
                                         templateVersionId,
                                     )
                                 "
+                                :options="{ preserveScroll: true }"
                                 v-slot="{ errors, processing }"
                                 @success="addingFieldIn = null"
                             >

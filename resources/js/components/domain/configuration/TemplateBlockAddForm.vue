@@ -59,6 +59,7 @@ const keyFor = (value: string): string => {
 <template>
     <Form
         v-bind="TemplateController.storeSection.form(templateVersionId)"
+        :options="{ preserveScroll: true }"
         v-slot="{ errors, processing }"
         @success="emit('success')"
     >

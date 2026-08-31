@@ -613,6 +613,7 @@ it('presenta la publicación y los bloques de plantilla con etiquetas breves', f
         ->toContain('addBlockAt(sectionIndex + 1)')
         ->toContain('persistBlockOrder')
         ->toContain('persistFieldOrder')
+        ->toContain(':options="{ preserveScroll: true }"')
         ->toContain('copySections')
         ->not->toContain('Bloque</FieldLabel>')
         ->not->toContain('Clave estable')
@@ -627,7 +628,8 @@ it('presenta la publicación y los bloques de plantilla con etiquetas breves', f
         ->toContain('Nombre del bloque')
         ->toContain('Nombre del primer campo')
         ->toContain('Tipo de contenido del primer campo')
-        ->toContain('name="position"');
+        ->toContain('name="position"')
+        ->toContain(':options="{ preserveScroll: true }"');
 });
 
 it('abre los detalles de los listados desde sus acciones', function (): void {
