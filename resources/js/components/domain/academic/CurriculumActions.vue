@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3';
-import { Pencil, Trash2 } from '@lucide/vue';
+import { Trash2 } from '@lucide/vue';
 import { ref } from 'vue';
 import CareerAcademicStructureController from '@/actions/App/Modules/Academic/Presentation/Http/Controllers/CareerAcademicStructureController';
 import CareerAcademicEditSheet from '@/components/domain/academic/CareerAcademicEditSheet.vue';
@@ -28,7 +28,6 @@ const deleteOpen = ref(false);
 <template>
     <div class="flex flex-wrap items-center gap-2">
         <Button type="button" variant="outline" @click="editOpen = true">
-            <Pencil data-icon="inline-start" aria-hidden="true" />
             Editar
         </Button>
 

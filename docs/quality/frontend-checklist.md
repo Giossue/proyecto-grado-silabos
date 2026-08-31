@@ -3,6 +3,8 @@
 ## Tarea y jerarquía
 
 - [ ] La acción principal y el siguiente paso son evidentes.
+- [ ] Los botones secundarios textuales no llevan iconos de acción; los indicadores de
+      carga y controles exclusivamente icónicos conservan su función.
 - [ ] No hay títulos, cards o resúmenes duplicados.
 - [ ] La densidad permite escanear trabajo repetido.
 - [ ] Tablas se usan para colecciones comparables; páginas para workflows complejos.

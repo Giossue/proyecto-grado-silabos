@@ -1,14 +1,6 @@
 <script setup lang="ts">
 import { Form, Head, Link } from '@inertiajs/vue3';
-import {
-    CheckCheck,
-    FileDiff,
-    FileDown,
-    LockKeyhole,
-    RotateCcw,
-    ShieldCheck,
-    Undo2,
-} from '@lucide/vue';
+import { LockKeyhole, RotateCcw, ShieldCheck, Undo2 } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import ReviewController from '@/actions/App/Modules/Syllabus/Presentation/Http/Controllers/ReviewController';
 import PageFrame from '@/components/domain/PageFrame.vue';
@@ -423,7 +415,6 @@ const observationState = (value: string): string =>
                                     :disabled="processing"
                                 >
                                     <Spinner v-if="processing" />
-                                    <CheckCheck v-else aria-hidden="true" />
                                     Marcar verificada
                                 </Button>
                             </Form>
@@ -676,7 +667,6 @@ const observationState = (value: string): string =>
                                         variant="outline"
                                     >
                                         <Link :href="documentsShow(item.id)">
-                                            <FileDown aria-hidden="true" />
                                             Documentos
                                         </Link>
                                     </Button>
@@ -695,7 +685,6 @@ const observationState = (value: string): string =>
                                                 })
                                             "
                                         >
-                                            <FileDiff aria-hidden="true" />
                                             Comparar con la anterior
                                         </Link>
                                     </Button>

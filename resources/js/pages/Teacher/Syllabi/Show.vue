@@ -1,13 +1,6 @@
 <script setup lang="ts">
 import { Form, Head, Link } from '@inertiajs/vue3';
-import {
-    FileDiff,
-    FileDown,
-    FilePenLine,
-    History,
-    Send,
-    ShieldCheck,
-} from '@lucide/vue';
+import { FilePenLine, History, Send, ShieldCheck } from '@lucide/vue';
 import ReviewController from '@/actions/App/Modules/Syllabus/Presentation/Http/Controllers/ReviewController';
 import SyllabusController from '@/actions/App/Modules/Syllabus/Presentation/Http/Controllers/SyllabusController';
 import PageFrame from '@/components/domain/PageFrame.vue';
@@ -132,7 +125,6 @@ const observationState = (state: string): string =>
             >
                 <Button as-child variant="outline">
                     <Link :href="SyllabusController.edit(syllabus.id)">
-                        <FilePenLine aria-hidden="true" />
                         Continuar edición
                     </Link>
                 </Button>
@@ -317,7 +309,6 @@ const observationState = (state: string): string =>
                                         <Link
                                             :href="documentsShow(revision.id)"
                                         >
-                                            <FileDown aria-hidden="true" />
                                             Documentos
                                         </Link>
                                     </Button>
@@ -337,7 +328,6 @@ const observationState = (state: string): string =>
                                                 })
                                             "
                                         >
-                                            <FileDiff aria-hidden="true" />
                                             Comparar
                                         </Link>
                                     </Button>

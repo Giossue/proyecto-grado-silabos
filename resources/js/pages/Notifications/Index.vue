@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Form, Head, Link } from '@inertiajs/vue3';
-import { Check, CheckCheck, ExternalLink } from '@lucide/vue';
+import { ExternalLink } from '@lucide/vue';
 import NotificationController from '@/actions/App/Modules/Operations/Presentation/Http/Controllers/NotificationController';
 import PageFrame from '@/components/domain/PageFrame.vue';
 import { Badge } from '@/components/ui/badge';
@@ -64,7 +64,6 @@ const paginationLabel = (value: string): string =>
             >
                 <Button type="submit" variant="outline" :disabled="processing">
                     <Spinner v-if="processing" />
-                    <CheckCheck v-else aria-hidden="true" />
                     Marcar todas como leídas
                 </Button>
             </Form>
@@ -138,7 +137,6 @@ const paginationLabel = (value: string): string =>
                                     :disabled="processing"
                                 >
                                     <Spinner v-if="processing" />
-                                    <Check v-else aria-hidden="true" />
                                     Marcar leída
                                 </Button>
                             </Form>

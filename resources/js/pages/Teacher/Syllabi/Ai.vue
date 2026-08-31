@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { Form, Head, Link, router } from '@inertiajs/vue3';
 import {
-    Check,
     CircleAlert,
     Clock3,
     Eye,
@@ -413,7 +412,6 @@ onBeforeUnmount(() => {
                                             )
                                         "
                                     >
-                                        <Check aria-hidden="true" />
                                         {{
                                             recommendation.my_decisions.includes(
                                                 'accepted',

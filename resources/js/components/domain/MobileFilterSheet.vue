@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ListFilter, X } from '@lucide/vue';
+import { X } from '@lucide/vue';
 import { onBeforeUnmount, ref, useAttrs, useTemplateRef, watch } from 'vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -85,7 +85,6 @@ onBeforeUnmount(() => {
                 recount();
             "
         >
-            <ListFilter data-icon="inline-start" aria-hidden="true" />
             Filtros
             <Badge v-if="activeCount > 0" variant="secondary" class="ml-1">
                 {{ activeCount }}

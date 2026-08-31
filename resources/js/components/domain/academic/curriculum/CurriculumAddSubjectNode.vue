@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { Plus } from '@lucide/vue';
 import { Button } from '@/components/ui/button';
 
 defineProps<{
@@ -22,7 +21,6 @@ const emit = defineEmits<{
         :disabled="data.disabled"
         @click="emit('add', data.cycle)"
     >
-        <Plus data-icon="inline-start" aria-hidden="true" />
         Agregar materia
     </Button>
 </template>

@@ -103,6 +103,10 @@
 - Los formularios en panel lateral mantienen **Cancelar** y la acción principal en un pie
   fijo. Solo el contenido central se desplaza, conserva espacio inferior y pasa por debajo
   del pie sin ocultar el último campo.
+- Los botones secundarios textuales (`outline` o `secondary`) no llevan iconos de acción;
+  su etiqueta basta para comunicar el resultado. El indicador de carga sí permanece. Se
+  exceptúan los controles exclusivamente icónicos con nombre accesible y los disparadores
+  que funcionan como campos compuestos, como el selector de fecha.
 - Editor y revisión usan navegación por secciones, completitud, errores, observaciones y
   estado de guardado sin saturar la pantalla.
 - Acciones de versión de plantilla o fuente muestran de forma explícita qué queda

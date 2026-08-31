@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3';
-import { Plus, Settings2, Trash2 } from '@lucide/vue';
+import { Plus, Settings2 } from '@lucide/vue';
 import { computed } from 'vue';
 import CareerAcademicStructureController from '@/actions/App/Modules/Academic/Presentation/Http/Controllers/CareerAcademicStructureController';
 import FormSheet from '@/components/domain/FormSheet.vue';
@@ -296,11 +296,6 @@ const nextPosition = computed(
                             <Spinner
                                 v-if="processing"
                                 data-icon="inline-start"
-                            />
-                            <Trash2
-                                v-else
-                                data-icon="inline-start"
-                                aria-hidden="true"
                             />
                             Retirar
                         </Button>

@@ -3,11 +3,9 @@ import { Form, Head, Link, router } from '@inertiajs/vue3';
 import {
     AlertTriangle,
     CheckCircle2,
-    Plus,
     RotateCcw,
     Save,
     Send,
-    Sparkles,
     Trash2,
 } from '@lucide/vue';
 import { computed, onBeforeUnmount, reactive, ref } from 'vue';
@@ -630,7 +628,6 @@ onBeforeUnmount(() => {
                     variant="outline"
                     @click="reloadAfterConflict"
                 >
-                    <RotateCcw aria-hidden="true" />
                     Recargar
                 </Button>
             </AlertDescription>
@@ -793,7 +790,6 @@ onBeforeUnmount(() => {
                                         class="self-start"
                                         @click="addRow(field)"
                                     >
-                                        <Plus aria-hidden="true" />
                                         Agregar fila
                                     </Button>
                                 </div>
@@ -968,7 +964,6 @@ onBeforeUnmount(() => {
                                             :disabled="globalSaving || conflict"
                                             @click="openAi(field)"
                                         >
-                                            <Sparkles aria-hidden="true" />
                                             Asistencia IA
                                         </Button>
                                         <Button

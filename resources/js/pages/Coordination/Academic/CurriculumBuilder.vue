@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import { ListTree, Plus, PowerOff, Settings2, Workflow } from '@lucide/vue';
+import { ListTree, Plus, PowerOff, Workflow } from '@lucide/vue';
 import { ref } from 'vue';
 import CurriculumCanvas from '@/components/domain/academic/curriculum/CurriculumCanvas.vue';
 import CurriculumConfigurationSheet from '@/components/domain/academic/curriculum/CurriculumConfigurationSheet.vue';
@@ -54,7 +54,6 @@ const openSubject = (subject: CurriculumBuilderSubject): void => {
                 variant="outline"
                 @click="configurationOpen = true"
             >
-                <Settings2 data-icon="inline-start" aria-hidden="true" />
                 Configurar
             </Button>
             <Button

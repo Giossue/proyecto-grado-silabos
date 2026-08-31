@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3';
-import { Check, X } from '@lucide/vue';
+import { Check } from '@lucide/vue';
 import { computed } from 'vue';
 import CareerAcademicStructureController from '@/actions/App/Modules/Academic/Presentation/Http/Controllers/CareerAcademicStructureController';
 import { Button } from '@/components/ui/button';
@@ -221,7 +221,6 @@ const errorKey = (field: CurriculumFieldDefinition): string =>
                     :disabled="processing"
                     @click="emit('cancel')"
                 >
-                    <X data-icon="inline-start" aria-hidden="true" />
                     Cancelar
                 </Button>
                 <Button type="submit" size="sm" :disabled="processing">

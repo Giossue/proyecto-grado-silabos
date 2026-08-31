@@ -65,16 +65,6 @@ const actionLabel = computed(() => {
             :disabled="processing"
         >
             <Spinner v-if="processing" data-icon="inline-start" />
-            <Archive
-                v-else-if="active"
-                data-icon="inline-start"
-                aria-hidden="true"
-            />
-            <ArchiveRestore
-                v-else
-                data-icon="inline-start"
-                aria-hidden="true"
-            />
             {{ actionLabel }}
         </Button>
         <DropdownMenuItem
