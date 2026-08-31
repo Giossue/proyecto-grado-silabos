@@ -146,7 +146,7 @@ class SyllabusController extends Controller
             $request,
         );
 
-        return back()->with('success', 'Respuesta guardada. Quedará inmutable al reenviar la corrección.');
+        return back()->with('success', 'Respuesta guardada. Se incluirá al reenviar la corrección.');
     }
 
     public function updateField(
@@ -214,7 +214,6 @@ class SyllabusController extends Controller
                 ->values(),
             'validation' => $lastValidation instanceof ValidationRun ? [
                 'completed_at' => $lastValidation->completado_en->toIso8601String(),
-                'rule_version' => $lastValidation->version_reglas,
                 'blocking_errors' => $lastValidation->errores_bloqueantes,
                 'warnings' => $lastValidation->advertencias,
                 'results' => $lastValidation->results->map(fn ($result) => [
@@ -227,7 +226,6 @@ class SyllabusController extends Controller
             'revisions' => $syllabus->revisions->sortBy('numero_revision')->map(fn (SyllabusRevision $revision): array => [
                 'id' => $revision->id,
                 'number' => $revision->numero_revision,
-                'fingerprint' => $revision->huella_sha256,
                 'submitted_at' => $revision->enviado_en->toIso8601String(),
                 'submitted_by' => $revision->submitter->name,
                 'approved_at' => $revision->approval?->aprobado_en->toIso8601String(),

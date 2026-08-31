@@ -39,7 +39,6 @@ type Evidence = {
     source: string;
     authority: string;
     version: number;
-    fragment_key: string;
     fragment_title: string;
     excerpt: string;
 };
@@ -207,11 +206,10 @@ onBeforeUnmount(() => {
 
         <Alert v-if="environment.is_provisional_simulator">
             <ShieldCheck aria-hidden="true" />
-            <AlertTitle>Simulador técnico provisional</AlertTitle>
+            <AlertTitle>Asistencia de IA en pruebas</AlertTitle>
             <AlertDescription>
-                Esta instalación usa un normalizador determinista para probar el
-                contrato, la trazabilidad y el control humano. No es un modelo
-                académico validado ni representa una recomendación
+                Revise siempre las sugerencias antes de aplicarlas. Esta
+                asistencia todavía no representa una recomendación
                 institucional.
             </AlertDescription>
         </Alert>
@@ -253,8 +251,8 @@ onBeforeUnmount(() => {
                                     {{ dateTime(execution.requested_at) }}
                                 </CardTitle>
                                 <CardDescription>
-                                    {{ execution.analysis_label }} · entrada y
-                                    evidencia fijadas al solicitar
+                                    {{ execution.analysis_label }} · contenido y
+                                    fuentes considerados al solicitarlo
                                 </CardDescription>
                             </div>
                             <Badge :variant="statusVariant(execution.status)">
@@ -371,9 +369,7 @@ onBeforeUnmount(() => {
                                         <p
                                             class="mt-2 text-xs text-muted-foreground"
                                         >
-                                            Autoridad:
-                                            {{ evidence.authority }} · fragmento
-                                            {{ evidence.fragment_key }}
+                                            Autoridad: {{ evidence.authority }}
                                         </p>
                                         <p
                                             class="mt-2 text-sm whitespace-pre-wrap"
@@ -599,7 +595,7 @@ onBeforeUnmount(() => {
                             >Contenido actual</CardTitle
                         >
                         <CardDescription>
-                            Versión {{ syllabus.lock_version }} del borrador.
+                            Cambios guardados en este borrador.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>

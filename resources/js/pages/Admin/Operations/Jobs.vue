@@ -110,7 +110,7 @@ const statusLabel = (value: string): string =>
         running: 'En ejecución',
         completed: 'Completado',
         failed: 'Fallido',
-    })[value] ?? value;
+    })[value] ?? 'Estado no disponible';
 
 const formatDate = (value: string | null): string =>
     value === null

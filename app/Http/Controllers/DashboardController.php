@@ -70,7 +70,7 @@ class DashboardController extends Controller
                 'key' => 'templates',
                 'label' => 'Plantillas publicadas',
                 'value' => TemplateVersion::query()->where('estado', 'published')->count(),
-                'hint' => 'Versiones inmutables disponibles para convocatorias',
+                'hint' => 'Versiones publicadas disponibles para convocatorias',
             ],
             [
                 'key' => 'failed_jobs',

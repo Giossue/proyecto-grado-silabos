@@ -100,8 +100,8 @@ const goBack = (): void => window.history.back();
                     {{ comparison.after_revision }}
                 </CardTitle>
                 <CardDescription>
-                    La comparación usa snapshots inmutables del mismo
-                    expediente; las filas se conservan por su identidad estable.
+                    La comparación muestra el contenido enviado en dos
+                    revisiones del mismo expediente.
                 </CardDescription>
             </CardHeader>
         </Card>

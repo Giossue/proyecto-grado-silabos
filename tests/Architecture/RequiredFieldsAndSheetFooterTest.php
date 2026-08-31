@@ -122,6 +122,59 @@ it('muestra ejemplos y oculta claves internas en los campos textuales', function
     expect($violations)->toBe([]);
 });
 
+it('presenta el ciclo académico sin detalles de implementación', function (): void {
+    $root = dirname(__DIR__, 2);
+    $surfaces = [
+        'resources/js/pages/Admin/Templates/Show.vue',
+        'resources/js/pages/Sources/Show.vue',
+        'resources/js/pages/Coordination/Reviews/Show.vue',
+        'resources/js/pages/Syllabi/Documents.vue',
+        'resources/js/pages/Teacher/Syllabi/Show.vue',
+        'resources/js/pages/Teacher/Syllabi/Edit.vue',
+        'resources/js/pages/Teacher/Syllabi/Submit.vue',
+        'resources/js/pages/Syllabi/Compare.vue',
+        'resources/js/components/domain/configuration/TemplateFieldSheet.vue',
+        'resources/js/components/domain/configuration/AcademicSourceFragmentSheet.vue',
+    ];
+
+    foreach ($surfaces as $surface) {
+        $source = (string) file_get_contents($root.'/'.$surface);
+
+        expect($source)
+            ->not->toContain('Huella')
+            ->not->toContain('SHA-256')
+            ->not->toContain('Versión inmutable')
+            ->not->toContain('Clave estable')
+            ->not->toContain('inmutable');
+    }
+
+    $template = (string) file_get_contents(
+        $root.'/resources/js/pages/Admin/Templates/Show.vue',
+    );
+    $source = (string) file_get_contents(
+        $root.'/resources/js/pages/Sources/Show.vue',
+    );
+    $review = (string) file_get_contents(
+        $root.'/resources/js/pages/Coordination/Reviews/Show.vue',
+    );
+
+    expect($template)
+        ->not->toContain('field.help ?? field.type')
+        ->not->toContain('{{ block.type }}');
+    expect($source)->not->toContain('fragment.fingerprint');
+    expect($review)->not->toContain('revision.fingerprint');
+
+    foreach ([
+        'app/Modules/Configuration/Presentation/Http/Controllers/TemplateController.php',
+        'app/Modules/Configuration/Presentation/Http/Controllers/AcademicSourceController.php',
+        'app/Modules/Syllabus/Presentation/Http/Controllers/ReviewController.php',
+        'app/Modules/Documents/Presentation/Http/Controllers/DocumentController.php',
+    ] as $controller) {
+        $source = (string) file_get_contents($root.'/'.$controller);
+        expect($source)->not->toContain("'fingerprint' =>");
+    }
+});
+
 it('conserva en el servidor las obligaciones minimas y condicionales', function (): void {
     $root = dirname(__DIR__, 2).'/app/Modules';
     $requests = [

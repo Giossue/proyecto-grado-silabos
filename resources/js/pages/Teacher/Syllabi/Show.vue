@@ -44,14 +44,12 @@ type SyllabusSummary = {
     sections: { id: string; title: string }[];
     validation: {
         completed_at: string;
-        rule_version: string;
         blocking_errors: number;
         warnings: number;
     } | null;
     revisions: {
         id: string;
         number: number;
-        fingerprint: string;
         submitted_at: string;
         submitted_by: string;
         approved_at: string | null;
@@ -77,12 +75,12 @@ const stateLabel = (state: string): string =>
         in_review: 'En revisión',
         correction_requested: 'Corrección solicitada',
         approved: 'Aprobado',
-    })[state] ?? state;
+    })[state] ?? 'Estado no disponible';
 
 const observationState = (state: string): string =>
     ({ open: 'Abierta', responded: 'Respondida', verified: 'Verificada' })[
         state
-    ] ?? state;
+    ] ?? 'Estado no disponible';
 </script>
 
 <template>
@@ -145,8 +143,8 @@ const observationState = (state: string): string =>
             <ShieldCheck aria-hidden="true" />
             <AlertTitle>La revisión enviada está protegida</AlertTitle>
             <AlertDescription>
-                Coordinación revisa el snapshot exacto. El borrador no se puede
-                editar hasta que se solicite una corrección o se apruebe.
+                Coordinación revisa el contenido enviado. El borrador no se
+                puede editar hasta que se solicite una corrección o se apruebe.
             </AlertDescription>
         </Alert>
 
@@ -154,8 +152,8 @@ const observationState = (state: string): string =>
             <ShieldCheck aria-hidden="true" />
             <AlertTitle>Sílabo aprobado</AlertTitle>
             <AlertDescription>
-                La aprobación y su revisión son inmutables. Una reapertura
-                futura conservará esta evidencia.
+                La aprobación se conserva en el historial. Una reapertura futura
+                mantendrá este respaldo.
             </AlertDescription>
         </Alert>
 
@@ -269,7 +267,7 @@ const observationState = (state: string): string =>
                             Historial
                         </CardTitle>
                         <CardDescription>
-                            Cada envío conserva una fotografía inmutable.
+                            Cada envío se conserva en el historial.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>

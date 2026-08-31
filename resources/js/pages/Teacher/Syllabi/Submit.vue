@@ -29,7 +29,6 @@ type SyllabusForSubmission = {
     sections: { id: string; title: string }[];
     validation: {
         completed_at: string;
-        rule_version: string;
         blocking_errors: number;
         warnings: number;
     } | null;
@@ -78,12 +77,11 @@ const nextRevision = props.syllabus.revisions.length + 1;
 
         <Alert>
             <LockKeyhole aria-hidden="true" />
-            <AlertTitle>El envío crea evidencia inmutable</AlertTitle>
+            <AlertTitle>El envío registra una nueva revisión</AlertTitle>
             <AlertDescription>
                 Se ejecutará nuevamente la validación determinística y se
-                guardará una fotografía exacta del contenido. Esa revisión no
-                podrá editarse; una corrección posterior producirá otra
-                revisión.
+                guardará el contenido enviado. Para realizar cambios después, se
+                deberá atender una corrección y enviar una nueva revisión.
             </AlertDescription>
         </Alert>
 

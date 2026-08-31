@@ -22,7 +22,7 @@ defineProps<{
     <FormSheet
         trigger-label="Agregar fragmento"
         title="Agregar fragmento de evidencia"
-        description="Registre contenido narrativo, un valor JSON estructurado o ambos. El fragmento conservará la identidad de esta versión."
+        description="Registre el contenido de la fuente. Si corresponde, puede añadir datos estructurados."
     >
         <template #default="{ close }">
             <Form
@@ -36,7 +36,7 @@ defineProps<{
                 <FieldGroup>
                     <Field :data-invalid="Boolean(errors.key)">
                         <FieldLabel for="source-fragment-key" required>
-                            Clave estable
+                            Código de referencia
                         </FieldLabel>
                         <Input
                             id="source-fragment-key"
@@ -64,7 +64,7 @@ defineProps<{
 
                     <Field :data-invalid="Boolean(errors.content)">
                         <FieldLabel for="source-fragment-content" required>
-                            Contenido textual (si no registra valor JSON)
+                            Contenido textual (si no añade datos estructurados)
                         </FieldLabel>
                         <Textarea
                             id="source-fragment-content"
@@ -76,7 +76,7 @@ defineProps<{
 
                     <Field :data-invalid="Boolean(errors.data_key)">
                         <FieldLabel for="source-fragment-data-key">
-                            Clave de dato exacto (opcional)
+                            Código del dato (opcional)
                         </FieldLabel>
                         <Input
                             id="source-fragment-data-key"
@@ -92,12 +92,13 @@ defineProps<{
                             for="source-fragment-structured-value"
                             required
                         >
-                            Valor JSON (si no registra contenido textual)
+                            Datos estructurados (si no registra contenido
+                            textual)
                         </FieldLabel>
                         <Textarea
                             id="source-fragment-structured-value"
                             name="structured_value"
-                            placeholder='{"value": 4, "unit": "credits"}'
+                            placeholder='{"valor": 4, "unidad": "créditos"}'
                             :aria-invalid="Boolean(errors.structured_value)"
                         />
                         <FieldError :errors="[errors.structured_value]" />

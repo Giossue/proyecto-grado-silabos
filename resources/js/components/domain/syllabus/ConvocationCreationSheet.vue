@@ -31,8 +31,8 @@ defineProps<{
     sources: { id: string; label: string }[];
 }>();
 
-// PV-06 fijó un sílabo por paralelo como regla. La agrupación por oferta se conserva
-// disponible (DT-11): ninguna norma fija el criterio y la carrera puede cambiarlo.
+// Un sílabo por paralelo es el valor inicial. La agrupación por oferta se conserva
+// disponible porque la carrera puede cambiar el criterio.
 const groupingMode = ref('per_parallel');
 </script>
 

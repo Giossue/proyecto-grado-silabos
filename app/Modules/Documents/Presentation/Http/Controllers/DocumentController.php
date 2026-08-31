@@ -46,7 +46,6 @@ class DocumentController extends Controller
             'revision' => [
                 'id' => $revision->id,
                 'number' => $revision->numero_revision,
-                'fingerprint' => $revision->huella_sha256,
                 'approved_at' => $revision->approval->aprobado_en->toIso8601String(),
                 'approved_by' => $revision->approval->approver->name,
             ],
@@ -55,11 +54,10 @@ class DocumentController extends Controller
                 'status' => $artifact->estado,
                 'requested_at' => $artifact->solicitado_en->toIso8601String(),
                 'completed_at' => $artifact->completado_en?->toIso8601String(),
-                'renderer_label' => 'Formato técnico provisional',
+                'renderer_label' => 'Formato institucional en revisión',
                 'execution' => $artifact->execution === null ? null : [
                     'status' => $artifact->execution->status,
                     'progress' => $artifact->execution->progress,
-                    'error_code' => $artifact->execution->error_code,
                     'error_message' => $artifact->execution->error_message,
                 ],
                 'files' => $artifact->estado !== 'completed' ? null : [

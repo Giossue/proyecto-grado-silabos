@@ -26,11 +26,6 @@ import {
 } from '@/components/ui/field';
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipTrigger,
-} from '@/components/ui/tooltip';
 import { show as documentsShow } from '@/routes/documents';
 import { index as reviewsIndex } from '@/routes/reviews';
 
@@ -96,7 +91,6 @@ const props = defineProps<{
     revision: {
         id: string;
         number: number;
-        fingerprint: string;
         submitted_at: string;
         submitted_by: string;
         snapshot: { schema_version: number; sections: SnapshotSection[] };
@@ -185,12 +179,12 @@ const stateLabel = (value: string): string =>
         in_review: 'En revisión',
         correction_requested: 'Corrección solicitada',
         approved: 'Aprobado',
-    })[value] ?? value;
+    })[value] ?? 'Estado no disponible';
 
 const observationState = (value: string): string =>
     ({ open: 'Abierta', responded: 'Respondida', verified: 'Verificada' })[
         value
-    ] ?? value;
+    ] ?? 'Estado no disponible';
 </script>
 
 <template>
@@ -209,22 +203,10 @@ const observationState = (value: string): string =>
             <Badge variant="outline">
                 {{ stateLabel(syllabus.state) }}
             </Badge>
-            <!-- Datos de la revisión, no acciones: en móvil el bloque de acciones flota
-                 sobre el contenido y este texto no tiene por qué acompañarlo. -->
             <span class="text-sm text-muted-foreground">
                 Enviada por {{ revision.submitted_by }} ·
                 {{ new Date(revision.submitted_at).toLocaleString('es-EC') }}
             </span>
-            <Tooltip>
-                <TooltipTrigger as-child>
-                    <span class="cursor-help text-sm text-muted-foreground">
-                        Huella: {{ revision.fingerprint.slice(0, 12) }}…
-                    </span>
-                </TooltipTrigger>
-                <TooltipContent>
-                    Huella SHA-256 completa disponible en auditoría
-                </TooltipContent>
-            </Tooltip>
         </template>
         <template #actions>
             <TeacherTransferSheet
@@ -240,7 +222,7 @@ const observationState = (value: string): string =>
             <LockKeyhole aria-hidden="true" />
             <AlertTitle>Está consultando una revisión histórica</AlertTitle>
             <AlertDescription>
-                Su contenido permanece exacto e inmutable. Las acciones del
+                Esta revisión se conserva tal como fue enviada. Las acciones del
                 flujo solo están disponibles en la revisión vigente.
             </AlertDescription>
         </Alert>
@@ -618,7 +600,7 @@ const observationState = (value: string): string =>
                     <CardHeader>
                         <CardTitle>Historial de revisiones</CardTitle>
                         <CardDescription>
-                            Consulte o compare evidencia inmutable.
+                            Consulte o compare revisiones enviadas.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>

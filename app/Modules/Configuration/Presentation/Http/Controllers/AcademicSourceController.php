@@ -103,19 +103,14 @@ class AcademicSourceController extends Controller
                 'state' => $selected->estado,
                 'valid_from' => $selected->vigente_desde?->toDateString(),
                 'valid_until' => $selected->vigente_hasta?->toDateString(),
-                'fingerprint' => $selected->huella_sha256,
                 'fragments' => $selected->fragments->map(fn (SourceFragment $fragment) => [
                     'id' => $fragment->id,
-                    'key' => $fragment->clave,
                     'title' => $fragment->titulo,
                     'content' => $fragment->contenido,
-                    'data_key' => $fragment->clave_dato,
                     'structured_value' => $fragment->valor_estructurado,
-                    'fingerprint' => $fragment->huella_sha256,
                 ])->values(),
                 'conflicts' => $conflicts->map(fn (SourceConflict $conflict) => [
                     'id' => $conflict->id,
-                    'data_key' => $conflict->clave_dato,
                     'state' => $conflict->estado,
                     'decision' => $conflict->decision,
                     'active_source_name' => $conflict->activeVersion->source->nombre,
@@ -133,7 +128,7 @@ class AcademicSourceController extends Controller
         abort_unless($actor instanceof User, 401);
         $action->execute($version->id, $request->validated(), $actor, $request);
 
-        return back()->with('success', 'Fragmento agregado con huella verificable.');
+        return back()->with('success', 'Fragmento agregado.');
     }
 
     public function activate(
@@ -151,7 +146,7 @@ class AcademicSourceController extends Controller
             ]);
         }
 
-        return back()->with('success', 'Versión de fuente activada e inmutable.');
+        return back()->with('success', 'Versión de fuente activada.');
     }
 
     public function clone(

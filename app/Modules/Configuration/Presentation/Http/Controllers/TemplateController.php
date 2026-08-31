@@ -70,8 +70,6 @@ class TemplateController extends Controller
                 'id' => $version->id,
                 'number' => $version->numero_version,
                 'state' => $version->estado,
-                'fingerprint' => $version->huella_sha256,
-                'published_at' => $version->publicado_en?->toIso8601String(),
                 'template' => [
                     'name' => $version->template->nombre,
                     'description' => $version->template->descripcion,
@@ -105,17 +103,17 @@ class TemplateController extends Controller
                 ])->values()->all(),
             ],
             'fieldTypes' => [
-                ['value' => 'short_text', 'label' => 'Texto corto'],
-                ['value' => 'long_text', 'label' => 'Texto largo'],
-                ['value' => 'markdown', 'label' => 'Narrativa Markdown segura'],
+                ['value' => 'short_text', 'label' => 'Texto breve'],
+                ['value' => 'long_text', 'label' => 'Texto amplio'],
+                ['value' => 'markdown', 'label' => 'Texto con formato'],
                 ['value' => 'number', 'label' => 'Número'],
                 ['value' => 'date', 'label' => 'Fecha'],
                 ['value' => 'single_select', 'label' => 'Selección única'],
                 ['value' => 'multi_select', 'label' => 'Selección múltiple'],
-                ['value' => 'boolean', 'label' => 'Sí/No'],
-                ['value' => 'repeatable', 'label' => 'Lista o tabla repetible'],
-                ['value' => 'master_reference', 'label' => 'Referencia maestra'],
-                ['value' => 'calculation', 'label' => 'Cálculo (bloqueado por PV-08)'],
+                ['value' => 'boolean', 'label' => 'Sí o no'],
+                ['value' => 'repeatable', 'label' => 'Lista o tabla'],
+                ['value' => 'master_reference', 'label' => 'Dato institucional'],
+                ['value' => 'calculation', 'label' => 'Cálculo automático'],
             ],
         ]);
     }
@@ -155,7 +153,7 @@ class TemplateController extends Controller
         abort_unless($actor instanceof User, 401);
         $action->execute($version->id, $actor, $request);
 
-        return back()->with('success', 'Versión publicada e inmutable.');
+        return back()->with('success', 'Versión publicada.');
     }
 
     public function clone(

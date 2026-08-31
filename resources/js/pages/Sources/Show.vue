@@ -3,7 +3,6 @@ import { Form, Head, Link } from '@inertiajs/vue3';
 import AcademicSourceController from '@/actions/App/Modules/Configuration/Presentation/Http/Controllers/AcademicSourceController';
 import AcademicSourceFragmentSheet from '@/components/domain/configuration/AcademicSourceFragmentSheet.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -48,19 +47,14 @@ defineProps<{
         state: string;
         valid_from: string | null;
         valid_until: string | null;
-        fingerprint: string | null;
         fragments: {
             id: string;
-            key: string;
             title: string;
             content: string | null;
-            data_key: string | null;
             structured_value: unknown;
-            fingerprint: string;
         }[];
         conflicts: {
             id: string;
-            data_key: string;
             state: string;
             decision: string | null;
             active_source_name: string;
@@ -149,21 +143,13 @@ defineOptions({
             </Button>
         </div>
 
-        <Alert v-if="selectedVersion.state !== 'draft'">
-            <AlertTitle>Versión inmutable</AlertTitle>
-            <AlertDescription>
-                Los fragmentos y su vigencia ya no se modifican. Huella SHA-256:
-                {{ selectedVersion.fingerprint }}
-            </AlertDescription>
-        </Alert>
-
         <div class="flex flex-col gap-4">
             <Card>
                 <CardHeader>
                     <CardTitle>Fragmentos de evidencia</CardTitle>
                     <CardDescription>
-                        Cada fragmento conserva fuente, versión y huella para
-                        citarse con precisión.
+                        Cada fragmento identifica la fuente y versión a la que
+                        pertenece.
                     </CardDescription>
                 </CardHeader>
                 <CardContent class="flex flex-col gap-3">
@@ -181,9 +167,6 @@ defineOptions({
                     >
                         <div class="flex flex-wrap items-center gap-2">
                             <h3 class="font-medium">{{ fragment.title }}</h3>
-                            <Badge v-if="fragment.data_key" variant="outline">
-                                {{ fragment.data_key }}
-                            </Badge>
                         </div>
                         <p
                             v-if="fragment.content"
@@ -201,9 +184,6 @@ defineOptions({
                                     2,
                                 )
                             }}</pre>
-                        <p class="mt-2 text-xs break-all text-muted-foreground">
-                            Huella: {{ fragment.fingerprint }}
-                        </p>
                     </article>
                 </CardContent>
             </Card>
@@ -223,9 +203,9 @@ defineOptions({
                         class="rounded-lg border border-destructive/40 p-4"
                     >
                         <div class="flex flex-wrap items-center gap-2">
-                            <span class="font-medium">
-                                {{ conflict.data_key }}
-                            </span>
+                            <span class="font-medium"
+                                >Información en conflicto</span
+                            >
                             <Badge variant="outline">
                                 Fuente activa:
                                 {{ conflict.active_source_name }}

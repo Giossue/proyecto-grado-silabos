@@ -87,7 +87,7 @@ defineExpose({ edit });
         v-model:open="open"
         trigger-label="Agregar campo"
         :title="title"
-        description="Las claves son estables. Las fórmulas no podrán publicarse hasta resolver PV-08."
+        description="Defina cómo se mostrará este campo. Los cálculos automáticos aún no están disponibles."
     >
         <template #default="{ close }">
             <Form
@@ -132,7 +132,7 @@ defineExpose({ edit });
 
                     <Field :data-invalid="Boolean(errors.key)">
                         <FieldLabel for="template-field-key" required>
-                            Clave estable
+                            Código de referencia
                         </FieldLabel>
                         <Input
                             id="template-field-key"
@@ -162,7 +162,7 @@ defineExpose({ edit });
 
                     <Field :data-invalid="Boolean(errors.type)">
                         <FieldLabel for="template-field-type" required>
-                            Tipo
+                            Formato de respuesta
                         </FieldLabel>
                         <Select
                             name="type"

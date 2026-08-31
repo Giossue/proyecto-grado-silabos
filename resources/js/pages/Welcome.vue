@@ -84,8 +84,8 @@ import { dashboard, login } from '@/routes';
                             <div>
                                 <p class="font-medium">Historial verificable</p>
                                 <p class="text-sm text-muted-foreground">
-                                    Las revisiones enviadas y aprobadas
-                                    permanecen inmutables.
+                                    Las revisiones enviadas y aprobadas se
+                                    conservan en el historial.
                                 </p>
                             </div>
                         </div>

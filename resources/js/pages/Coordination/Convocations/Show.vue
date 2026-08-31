@@ -82,7 +82,7 @@ const stateLabel = (state: string): string =>
         in_review: 'En revisión',
         correction_requested: 'Corrección solicitada',
         approved: 'Aprobado',
-    })[state] ?? state;
+    })[state] ?? 'Estado no disponible';
 
 const formatDate = (value: string | null): string =>
     value

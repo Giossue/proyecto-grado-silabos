@@ -54,7 +54,6 @@ type Artifact = {
     execution: {
         status: string;
         progress: number;
-        error_code: string | null;
         error_message: string | null;
     } | null;
     files: {
@@ -73,7 +72,6 @@ const props = defineProps<{
     revision: {
         id: string;
         number: number;
-        fingerprint: string;
         approved_at: string;
         approved_by: string;
     };
@@ -137,7 +135,7 @@ const statusLabel = (status: string): string =>
         running: 'Generando',
         completed: 'Disponible',
         failed: 'Fallida',
-    })[status] ?? status;
+    })[status] ?? 'Estado no disponible';
 
 const formatDate = (value: string | null): string =>
     value === null
@@ -211,7 +209,7 @@ onUnmounted(() => {
 
         <Alert>
             <ShieldCheck aria-hidden="true" />
-            <AlertTitle>Revisión aprobada e inmutable</AlertTitle>
+            <AlertTitle>Revisión aprobada</AlertTitle>
             <AlertDescription>
                 Ambos archivos se generan desde la revisión
                 {{ revision.number }} aprobada por {{ revision.approved_by }} el
@@ -222,11 +220,10 @@ onUnmounted(() => {
 
         <Alert variant="destructive">
             <FileText aria-hidden="true" />
-            <AlertTitle>Formato técnico provisional</AlertTitle>
+            <AlertTitle>Formato institucional en revisión</AlertTitle>
             <AlertDescription>
-                El flujo documental está operativo, pero la fidelidad al DOCX
-                institucional sigue pendiente de validar en PV-07. No use esta
-                salida como formato oficial hasta completar esa validación.
+                Esta exportación está disponible para revisión. La validación
+                del formato institucional continúa en curso.
             </AlertDescription>
         </Alert>
 
@@ -409,9 +406,6 @@ onUnmounted(() => {
             </CardContent>
         </Card>
 
-        <p class="text-xs break-all text-muted-foreground">
-            Huella de la revisión: {{ revision.fingerprint }}
-        </p>
         <Link :href="documentShow(revision.id)" class="sr-only">
             Actualizar estado documental
         </Link>

@@ -40,6 +40,14 @@ const nextPosition = computed(
         Math.max(0, ...props.fieldDefinitions.map((field) => field.position)) +
         1,
 );
+
+const fieldTypeLabel = (type: string): string =>
+    ({
+        integer: 'Número entero',
+        number: 'Número decimal',
+        text: 'Texto',
+        boolean: 'Sí o no',
+    })[type] ?? 'Campo personalizado';
 </script>
 
 <template>
@@ -180,7 +188,7 @@ const nextPosition = computed(
                         </Field>
                         <Field :data-invalid="Boolean(errors.key)">
                             <FieldLabel for="curriculum-field-key" required>
-                                Clave estable
+                                Código de referencia
                             </FieldLabel>
                             <Input
                                 id="curriculum-field-key"
@@ -320,7 +328,7 @@ const nextPosition = computed(
                     <div class="min-w-0">
                         <p class="font-medium">{{ field.label }}</p>
                         <p class="truncate text-sm text-muted-foreground">
-                            {{ field.key }} · {{ field.type }}
+                            {{ fieldTypeLabel(field.type) }}
                         </p>
                     </div>
                     <Form

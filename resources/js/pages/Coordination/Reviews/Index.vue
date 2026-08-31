@@ -72,7 +72,7 @@ const stateLabel = (value: string): string =>
         in_review: 'En revisión',
         correction_requested: 'Corrección solicitada',
         approved: 'Aprobado',
-    })[value] ?? value;
+    })[value] ?? 'Estado no disponible';
 </script>
 
 <template>

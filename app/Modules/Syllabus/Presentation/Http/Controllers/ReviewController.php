@@ -107,7 +107,7 @@ class ReviewController extends Controller
             $request,
         );
 
-        return back()->with('success', 'Observación registrada sobre esta revisión inmutable.');
+        return back()->with('success', 'Observación registrada en esta revisión.');
     }
 
     public function requestCorrection(
@@ -237,7 +237,6 @@ class ReviewController extends Controller
             'revision' => [
                 'id' => $revision->id,
                 'number' => $revision->numero_revision,
-                'fingerprint' => $revision->huella_sha256,
                 'submitted_at' => $revision->enviado_en->toIso8601String(),
                 'submitted_by' => $revision->submitter->name,
                 'snapshot' => $revision->snapshot,

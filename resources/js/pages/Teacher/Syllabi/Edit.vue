@@ -82,7 +82,6 @@ type DraftSection = {
 
 type ValidationSummary = {
     completed_at: string;
-    rule_version: string;
     blocking_errors: number;
     warnings: number;
     results: {
@@ -602,7 +601,7 @@ onBeforeUnmount(() => {
             <RotateCcw aria-hidden="true" />
             <AlertTitle>Está preparando una nueva revisión</AlertTitle>
             <AlertDescription>
-                La revisión anterior permanece inmutable. Modifique el trabajo,
+                La revisión anterior ya fue enviada. Modifique el trabajo,
                 responda las observaciones seleccionadas y reenvíe.
                 <span v-if="syllabus.reopening" class="mt-2 block">
                     Causa de reapertura: {{ syllabus.reopening.cause }}
@@ -641,10 +640,7 @@ onBeforeUnmount(() => {
                     : 'default'
             "
         >
-            <AlertTitle>
-                Validación determinística ·
-                {{ syllabus.validation.rule_version }}
-            </AlertTitle>
+            <AlertTitle>Validación del borrador</AlertTitle>
             <AlertDescription>
                 {{ syllabus.validation.blocking_errors }} error(es)
                 bloqueante(s) y

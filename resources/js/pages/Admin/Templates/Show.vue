@@ -41,8 +41,6 @@ const props = defineProps<{
         id: string;
         number: number;
         state: string;
-        fingerprint: string | null;
-        published_at: string | null;
         template: {
             name: string;
             description: string | null;
@@ -125,7 +123,7 @@ const blockOptions = computed(() =>
                 <FieldError :errors="[errors.version]" />
                 <Button type="submit" :disabled="processing">
                     <Spinner v-if="processing" />
-                    Publicar y congelar
+                    Publicar versión
                 </Button>
             </Form>
             <Form
@@ -140,25 +138,12 @@ const blockOptions = computed(() =>
             </Form>
         </template>
 
-        <Card v-if="templateVersion.state === 'published'">
-            <CardHeader>
-                <CardTitle>Versión inmutable</CardTitle>
-                <CardDescription>
-                    Huella SHA-256: {{ templateVersion.fingerprint }}. Los
-                    cambios requieren clonar otra versión.
-                </CardDescription>
-            </CardHeader>
-        </Card>
-
         <div class="flex flex-col gap-4">
             <Card v-for="section in templateVersion.sections" :key="section.id">
                 <CardHeader>
                     <CardTitle>{{ section.title }}</CardTitle>
-                    <CardDescription>
-                        {{
-                            section.description ??
-                            'Clave estable: ' + section.key
-                        }}
+                    <CardDescription v-if="section.description">
+                        {{ section.description }}
                     </CardDescription>
                 </CardHeader>
                 <CardContent class="flex flex-col gap-4">
@@ -171,7 +156,6 @@ const blockOptions = computed(() =>
                             class="mb-3 flex items-center justify-between gap-3"
                         >
                             <h3 class="font-medium">{{ block.title }}</h3>
-                            <Badge variant="outline">{{ block.type }}</Badge>
                         </div>
                         <div class="grid gap-3 sm:grid-cols-2">
                             <button
@@ -198,17 +182,20 @@ const blockOptions = computed(() =>
                                         v-if="field.inherited"
                                         variant="outline"
                                     >
-                                        Heredado
+                                        Dato institucional
                                     </Badge>
                                     <Badge
                                         v-if="field.ai_enabled"
                                         variant="outline"
                                     >
-                                        IA opcional
+                                        Asistencia de IA
                                     </Badge>
                                 </div>
-                                <p class="mt-1 text-sm text-muted-foreground">
-                                    {{ field.help ?? field.type }}
+                                <p
+                                    v-if="field.help"
+                                    class="mt-1 text-sm text-muted-foreground"
+                                >
+                                    {{ field.help }}
                                 </p>
                             </button>
                         </div>
