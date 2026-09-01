@@ -361,9 +361,32 @@ const onNodeDragStop = ({ node }: NodeDragEvent): void => {
 
 <template>
     <div
-        class="h-[72vh] min-h-[34rem] overflow-hidden rounded-lg border bg-background shadow-surface"
+        class="relative h-[72vh] min-h-[34rem] overflow-hidden rounded-lg border bg-background shadow-surface"
         aria-label="Constructor visual de la malla"
     >
+        <!--
+            El tipo de relación lo codifica el color de la línea; la leyenda lo
+            explica sin depender de etiquetas fijas, que se tapaban entre sí cuando
+            dos conexiones se cruzaban.
+        -->
+        <dl
+            class="absolute top-3 right-3 z-10 flex flex-col gap-1 rounded-md bg-card/90 px-3 py-2 text-xs text-card-foreground shadow-surface ring-1 ring-surface-ring"
+        >
+            <div class="flex items-center gap-2">
+                <dt
+                    class="h-0.5 w-5 rounded bg-destructive"
+                    aria-hidden="true"
+                ></dt>
+                <dd>Prerrequisito</dd>
+            </div>
+            <div class="flex items-center gap-2">
+                <dt
+                    class="h-0.5 w-5 rounded bg-primary"
+                    aria-hidden="true"
+                ></dt>
+                <dd>Correquisito</dd>
+            </div>
+        </dl>
         <VueFlow
             :id="flowId"
             v-model:nodes="nodes"
@@ -442,5 +465,21 @@ const onNodeDragStop = ({ node }: NodeDragEvent): void => {
 
 :deep(.vue-flow__controls-button svg) {
     fill: currentColor;
+}
+
+/*
+ * Las etiquetas fijas en el punto medio de cada arista se tapaban entre sí cuando
+ * dos conexiones se cruzaban. El color ya distingue el tipo (ver leyenda); el texto
+ * aparece solo al pasar el cursor o seleccionar la conexión.
+ */
+:deep(.vue-flow__edge-textwrapper) {
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 120ms ease;
+}
+
+:deep(.vue-flow__edge:hover .vue-flow__edge-textwrapper),
+:deep(.vue-flow__edge.selected .vue-flow__edge-textwrapper) {
+    opacity: 1;
 }
 </style>
