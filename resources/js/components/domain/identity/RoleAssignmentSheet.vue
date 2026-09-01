@@ -31,7 +31,7 @@ defineProps<{
     display?: 'button' | 'menu';
 }>();
 
-const selectedRole = ref('teacher');
+const selectedRole = ref('docente');
 const open = defineModel<boolean>('open', { default: false });
 </script>
 
@@ -81,7 +81,7 @@ const open = defineModel<boolean>('open', { default: false });
                         <FieldError :errors="[errors.role_code]" />
                     </Field>
                     <Field
-                        v-if="selectedRole !== 'administrator'"
+                        v-if="selectedRole !== 'administrador'"
                         :data-invalid="Boolean(errors.career_id)"
                     >
                         <FieldLabel for="role-assignment-career" required>

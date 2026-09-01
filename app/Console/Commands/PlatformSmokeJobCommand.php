@@ -18,7 +18,7 @@ class PlatformSmokeJobCommand extends Command
         $idempotencyKey = is_string($key) && $key !== '' ? $key : 'smoke:'.Str::uuid();
         $execution = $action->execute($idempotencyKey);
 
-        $this->components->info("Trabajo {$execution->id} en estado {$execution->status}.");
+        $this->components->info("Trabajo {$execution->id} en estado {$execution->estado}.");
 
         return self::SUCCESS;
     }

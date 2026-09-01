@@ -20,8 +20,8 @@ class CreateManagedUserRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:180'],
-            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('usuarios', 'email')],
+            'nombre' => ['required', 'string', 'max:180'],
+            'correo_electronico' => ['required', 'string', 'email', 'max:255', Rule::unique('usuarios', 'correo_electronico')],
             // La contraseña la genera la interfaz y se muestra en claro a quien crea la
             // cuenta, así que no hay nada que confirmar: no se escribe a ciegas.
             'password' => ['required', Password::min(12)->letters()->mixedCase()->numbers()->symbols()],
@@ -39,7 +39,7 @@ class CreateManagedUserRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'email.unique' => 'Ya existe una cuenta con este correo.',
+            'correo_electronico.unique' => 'Ya existe una cuenta con este correo.',
             'career_id.required_unless' => 'Seleccione la carrera que limita este rol.',
         ];
     }

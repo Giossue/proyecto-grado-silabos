@@ -14,7 +14,7 @@ use Inertia\Response;
 class OperationalReportController extends Controller
 {
     /** @var list<string> */
-    private const STATES = ['not_started', 'draft', 'in_review', 'correction_requested', 'approved'];
+    private const STATES = ['sin_iniciar', 'borrador', 'en_revision', 'correccion_solicitada', 'aprobado'];
 
     public function index(ViewOperationalReportsRequest $request, ActiveRole $roles): Response
     {
@@ -36,7 +36,7 @@ class OperationalReportController extends Controller
         $convocations = Convocation::query()
             ->where('carrera_id', $careerId)
             ->with('academicPeriod:id,nombre')
-            ->latest('created_at')
+            ->latest('creado_en')
             ->get(['id', 'periodo_academico_id', 'nombre', 'estado']);
         $convocationBreakdown = (clone $query)
             ->join('convocatorias', 'convocatorias.id', '=', 'silabos.convocatoria_id')
@@ -44,11 +44,11 @@ class OperationalReportController extends Controller
                 convocatorias.id,
                 convocatorias.nombre,
                 COUNT(*) AS total,
-                COUNT(*) FILTER (WHERE silabos.estado = 'not_started') AS not_started,
-                COUNT(*) FILTER (WHERE silabos.estado = 'draft') AS draft,
-                COUNT(*) FILTER (WHERE silabos.estado = 'in_review') AS in_review,
-                COUNT(*) FILTER (WHERE silabos.estado = 'correction_requested') AS correction_requested,
-                COUNT(*) FILTER (WHERE silabos.estado = 'approved') AS approved
+                COUNT(*) FILTER (WHERE silabos.estado = 'sin_iniciar') AS not_started,
+                COUNT(*) FILTER (WHERE silabos.estado = 'borrador') AS draft,
+                COUNT(*) FILTER (WHERE silabos.estado = 'en_revision') AS in_review,
+                COUNT(*) FILTER (WHERE silabos.estado = 'correccion_solicitada') AS correction_requested,
+                COUNT(*) FILTER (WHERE silabos.estado = 'aprobado') AS approved
                 SQL)
             ->groupBy('convocatorias.id', 'convocatorias.nombre')
             ->orderBy('convocatorias.nombre')
@@ -67,12 +67,12 @@ class OperationalReportController extends Controller
             ->with([
                 'convocation.academicPeriod:id,nombre',
                 'subject:id,nombre,codigo_institucional',
-                'teachers:id,name',
+                'teachers:id,nombre',
                 'revisions' => fn ($revision) => $revision->orderByDesc('numero_revision')->limit(1),
             ])
             ->withCount(['reviewObservations as unresolved_observations_count' => fn ($observation) => $observation
-                ->where('estado', '!=', 'verified')])
-            ->orderByDesc('updated_at')
+                ->where('estado', '!=', 'verificada')])
+            ->orderByDesc('actualizado_en')
             ->paginate(20)
             ->withQueryString()
             ->through(fn (Syllabus $syllabus): array => [
@@ -83,9 +83,9 @@ class OperationalReportController extends Controller
                 'period' => $syllabus->convocation->academicPeriod->nombre,
                 'state' => $syllabus->estado,
                 'completion' => (float) $syllabus->porcentaje_completitud,
-                'teachers' => $syllabus->teachers->pluck('name')->values(),
+                'teachers' => $syllabus->teachers->pluck('nombre')->values(),
                 'unresolved_observations' => (int) $syllabus->unresolved_observations_count,
-                'updated_at' => $syllabus->updated_at?->toIso8601String(),
+                'actualizado_en' => $syllabus->actualizado_en?->toIso8601String(),
                 'latest_revision_id' => $syllabus->revisions->first()?->id,
             ]);
 
@@ -99,9 +99,9 @@ class OperationalReportController extends Controller
             ]),
             'indicators' => [
                 'total' => $total,
-                'teacher_action' => $counts['not_started'] + $counts['draft'] + $counts['correction_requested'],
-                'coordination_action' => $counts['in_review'],
-                'approved' => $counts['approved'],
+                'teacher_action' => $counts['sin_iniciar'] + $counts['borrador'] + $counts['correccion_solicitada'],
+                'coordination_action' => $counts['en_revision'],
+                'approved' => $counts['aprobado'],
                 'average_completion' => round($averageCompletion, 1),
                 'states' => $counts,
             ],

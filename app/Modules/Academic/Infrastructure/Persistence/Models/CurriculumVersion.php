@@ -27,6 +27,10 @@ class CurriculumVersion extends Model
 {
     use HasUuids;
 
+    public const CREATED_AT = 'creado_en';
+
+    public const UPDATED_AT = 'actualizado_en';
+
     protected $table = 'versiones_malla';
 
     /** @var list<string> */
@@ -62,7 +66,7 @@ class CurriculumVersion extends Model
     /** @param Builder<self> $query */
     public function scopeActive(Builder $query): void
     {
-        $query->where('estado', 'active');
+        $query->where('estado', 'activa');
     }
 
     /** @return BelongsTo<Career, $this> */

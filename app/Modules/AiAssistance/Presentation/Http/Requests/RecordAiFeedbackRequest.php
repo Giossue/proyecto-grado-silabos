@@ -18,6 +18,6 @@ class RecordAiFeedbackRequest extends FormRequest
     /** @return array<string, list<mixed>> */
     public function rules(): array
     {
-        return ['decision' => ['required', Rule::in(['accepted', 'ignored', 'not_useful'])]];
+        return ['decision' => ['required', Rule::in(['aceptada', 'ignorada', 'no_util'])]];
     }
 }

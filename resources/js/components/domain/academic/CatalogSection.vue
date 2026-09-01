@@ -203,7 +203,7 @@ const {
                         </TableCell>
                         <TableCell class="text-right">
                             <CatalogActions
-                                entity="faculty"
+                                entity="facultad"
                                 :record-id="faculty.id"
                                 :record-name="faculty.nombre"
                                 :record-code="
@@ -295,7 +295,7 @@ const {
                         </TableCell>
                         <TableCell class="text-right">
                             <CatalogActions
-                                entity="career"
+                                entity="carrera"
                                 :record-id="career.id"
                                 :record-name="career.name"
                                 :record-code="career.code"
@@ -475,7 +475,7 @@ const {
                         </TableCell>
                         <TableCell class="text-right">
                             <CatalogActions
-                                entity="modality"
+                                entity="modalidad"
                                 :record-id="modality.id"
                                 :record-name="modality.nombre"
                                 :record-code="modality.codigo ?? null"
@@ -569,7 +569,7 @@ const {
                         </TableCell>
                         <TableCell class="text-right">
                             <CatalogActions
-                                entity="period"
+                                entity="periodo"
                                 :record-id="period.id"
                                 :record-name="period.name"
                                 :record-code="period.code"

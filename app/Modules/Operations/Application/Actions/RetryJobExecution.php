@@ -22,9 +22,9 @@ class RetryJobExecution
 
     public function execute(JobExecution $execution, User $actor, Request $request): JobExecution
     {
-        return match ($execution->type) {
-            'document.export' => $this->retryDocument($execution, $actor, $request),
-            'notification.internal' => $this->retryNotification($execution, $actor, $request),
+        return match ($execution->tipo) {
+            'documento.exportacion' => $this->retryDocument($execution, $actor, $request),
+            'notificacion.interna' => $this->retryNotification($execution, $actor, $request),
             default => throw ValidationException::withMessages([
                 'execution' => 'Este tipo de trabajo no admite reintento desde la interfaz.',
             ]),
@@ -34,20 +34,20 @@ class RetryJobExecution
     private function retryDocument(JobExecution $execution, User $actor, Request $request): JobExecution
     {
         return DB::transaction(function () use ($actor, $execution, $request): JobExecution {
-            $artifact = ExportArtifact::query()->lockForUpdate()->find($execution->resource_id);
+            $artifact = ExportArtifact::query()->lockForUpdate()->find($execution->recurso_id);
             $locked = JobExecution::query()->lockForUpdate()->findOrFail($execution->id);
             if ($artifact === null
-                || $locked->type !== 'document.export'
-                || $locked->resource_type !== 'export_artifact'
+                || $locked->tipo !== 'documento.exportacion'
+                || $locked->tipo_recurso !== 'artefacto_exportacion'
                 || $artifact->ejecucion_trabajo_id !== $locked->id) {
                 throw ValidationException::withMessages(['execution' => 'El recurso del trabajo ya no es válido.']);
             }
-            if ($locked->status !== 'failed' || $artifact->estado !== 'failed') {
+            if ($locked->estado !== 'fallida' || $artifact->estado !== 'fallido') {
                 throw ValidationException::withMessages(['execution' => 'Solo puede reintentarse un trabajo fallido.']);
             }
 
             $this->resetExecution($locked, $actor, $request);
-            $artifact->update(['estado' => 'pending']);
+            $artifact->update(['estado' => 'pendiente']);
             GenerateSyllabusExportJob::dispatch($artifact->id)->afterCommit();
 
             return $locked->refresh();
@@ -57,21 +57,21 @@ class RetryJobExecution
     private function retryNotification(JobExecution $execution, User $actor, Request $request): JobExecution
     {
         return DB::transaction(function () use ($actor, $execution, $request): JobExecution {
-            $event = OutboxEvent::query()->lockForUpdate()->find($execution->resource_id);
+            $event = OutboxEvent::query()->lockForUpdate()->find($execution->recurso_id);
             $locked = JobExecution::query()->lockForUpdate()->findOrFail($execution->id);
             if ($event === null
-                || $locked->type !== 'notification.internal'
-                || $locked->resource_type !== 'outbox_event'
-                || $locked->resource_id !== $event->id) {
+                || $locked->tipo !== 'notificacion.interna'
+                || $locked->tipo_recurso !== 'evento_saliente'
+                || $locked->recurso_id !== $event->id) {
                 throw ValidationException::withMessages(['execution' => 'El evento del trabajo ya no es válido.']);
             }
-            if ($locked->status !== 'failed' || $event->estado !== 'failed') {
+            if ($locked->estado !== 'fallida' || $event->estado !== 'fallido') {
                 throw ValidationException::withMessages(['execution' => 'Solo puede reintentarse un trabajo fallido.']);
             }
 
             $this->resetExecution($locked, $actor, $request);
             $event->update([
-                'estado' => 'pending',
+                'estado' => 'pendiente',
                 'disponible_en' => now(),
                 'procesado_en' => null,
                 'codigo_error' => null,
@@ -85,31 +85,31 @@ class RetryJobExecution
 
     private function resetExecution(JobExecution $execution, User $actor, Request $request): void
     {
-        $previousAttempts = $execution->attempts;
-        $previousErrorCode = $execution->error_code;
+        $previousAttempts = $execution->intentos;
+        $previousErrorCode = $execution->codigo_error;
         $execution->update([
-            'status' => 'pending',
-            'progress' => 0,
-            'result' => null,
-            'error_code' => null,
-            'error_message' => null,
-            'started_at' => null,
-            'finished_at' => null,
+            'estado' => 'pendiente',
+            'progreso' => 0,
+            'resultado' => null,
+            'codigo_error' => null,
+            'mensaje_error' => null,
+            'iniciado_en' => null,
+            'finalizado_en' => null,
         ]);
         $activeRole = $this->roles->resolve($request);
         $this->audit->execute(
             actorId: $actor->id,
             roleAssignmentId: $activeRole?->id,
-            action: 'job.retry_requested',
-            resourceType: 'job_execution',
+            action: 'trabajo.reintento_solicitado',
+            resourceType: 'ejecucion_trabajo',
             resourceId: $execution->id,
-            result: 'success',
+            result: 'exito',
             metadata: [
-                'job_type' => $execution->type,
+                'job_type' => $execution->tipo,
                 'previous_attempts' => $previousAttempts,
                 'previous_error_code' => $previousErrorCode,
             ],
-            correlationId: $execution->correlation_id,
+            correlationId: $execution->correlacion_id,
         );
     }
 }

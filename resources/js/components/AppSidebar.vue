@@ -62,11 +62,11 @@ const activeRole = computed(() =>
  */
 const panelHref = computed(() => {
     switch (activeRole.value?.role) {
-        case 'administrator':
+        case 'administrador':
             return adminDashboard();
-        case 'coordinator':
+        case 'coordinador':
             return coordinationDashboard();
-        case 'teacher':
+        case 'docente':
             return teacherDashboard();
         default:
             return dashboard();
@@ -79,7 +79,7 @@ const mainNavItems = computed<NavItem[]>(() => [
         href: panelHref.value,
         icon: LayoutGrid,
     },
-    ...(activeRole.value?.role === 'administrator'
+    ...(activeRole.value?.role === 'administrador'
         ? [
               {
                   title: 'Usuarios y roles',
@@ -137,7 +137,7 @@ const mainNavItems = computed<NavItem[]>(() => [
               },
           ]
         : []),
-    ...(activeRole.value?.role === 'coordinator'
+    ...(activeRole.value?.role === 'coordinador'
         ? [
               {
                   title: 'Malla',
@@ -186,7 +186,7 @@ const mainNavItems = computed<NavItem[]>(() => [
               },
           ]
         : []),
-    ...(activeRole.value?.role === 'teacher'
+    ...(activeRole.value?.role === 'docente'
         ? [
               {
                   title: 'Mis sílabos',

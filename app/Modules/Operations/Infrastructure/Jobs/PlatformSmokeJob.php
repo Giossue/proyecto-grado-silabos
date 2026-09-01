@@ -23,7 +23,7 @@ class PlatformSmokeJob implements ShouldQueue
 
     public function __construct(public readonly string $executionId)
     {
-        $this->onQueue('critical');
+        $this->onQueue('critica');
     }
 
     public function handle(): void
@@ -31,19 +31,19 @@ class PlatformSmokeJob implements ShouldQueue
         DB::transaction(function (): void {
             $execution = JobExecution::query()->lockForUpdate()->find($this->executionId);
 
-            if ($execution === null || $execution->status === 'completed') {
+            if ($execution === null || $execution->estado === 'completada') {
                 return;
             }
 
             $execution->update([
-                'status' => 'completed',
-                'attempts' => max(1, $this->attempts()),
-                'progress' => 100,
-                'result' => ['message' => 'platform-smoke-ok'],
-                'started_at' => $execution->started_at ?? now(),
-                'finished_at' => now(),
-                'error_code' => null,
-                'error_message' => null,
+                'estado' => 'completada',
+                'intentos' => max(1, $this->attempts()),
+                'progreso' => 100,
+                'resultado' => ['message' => 'platform-smoke-ok'],
+                'iniciado_en' => $execution->iniciado_en ?? now(),
+                'finalizado_en' => now(),
+                'codigo_error' => null,
+                'mensaje_error' => null,
             ]);
         });
     }
@@ -51,11 +51,11 @@ class PlatformSmokeJob implements ShouldQueue
     public function failed(\Throwable $exception): void
     {
         JobExecution::query()->whereKey($this->executionId)->update([
-            'status' => 'failed',
-            'attempts' => max(1, $this->attempts()),
-            'error_code' => 'platform_smoke_failed',
-            'error_message' => str($exception->getMessage())->limit(500),
-            'finished_at' => now(),
+            'estado' => 'fallida',
+            'intentos' => max(1, $this->attempts()),
+            'codigo_error' => 'verificacion_plataforma_fallida',
+            'mensaje_error' => str($exception->getMessage())->limit(500),
+            'finalizado_en' => now(),
         ]);
     }
 }

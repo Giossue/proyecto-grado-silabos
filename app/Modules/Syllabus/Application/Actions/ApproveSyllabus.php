@@ -48,13 +48,13 @@ class ApproveSyllabus
                 ->where('silabo_id', $syllabus->id)
                 ->orderByDesc('numero_revision')
                 ->firstOrFail();
-            if ($syllabus->estado !== 'in_review' || $latest->id !== $revision->id) {
+            if ($syllabus->estado !== 'en_revision' || $latest->id !== $revision->id) {
                 throw ValidationException::withMessages(['revision' => 'Solo puede aprobarse la revisión vigente.']);
             }
 
             $unresolved = ReviewObservation::query()
                 ->whereHas('revision', fn ($query) => $query->where('silabo_id', $syllabus->id))
-                ->where('estado', '!=', 'verified')
+                ->where('estado', '!=', 'verificada')
                 ->count();
             if ($unresolved > 0) {
                 throw ValidationException::withMessages([
@@ -78,16 +78,16 @@ class ApproveSyllabus
                 'aprobado_por' => $actor->id,
                 'aprobado_en' => $approvedAt,
             ]);
-            $syllabus->update(['estado' => 'approved', 'lock_version' => $syllabus->lock_version + 1]);
+            $syllabus->update(['estado' => 'aprobado', 'version_bloqueo' => $syllabus->version_bloqueo + 1]);
             $activeRole = $this->roles->resolve($request);
-            $this->transitions->execute($syllabus, $revision, 'in_review', 'approved', 'approve', $actor, $activeRole);
+            $this->transitions->execute($syllabus, $revision, 'en_revision', 'aprobado', 'aprobar', $actor, $activeRole);
             $this->audit->execute(
                 actorId: $actor->id,
                 roleAssignmentId: $activeRole?->id,
-                action: 'syllabus.approved',
-                resourceType: 'approval',
+                action: 'silabo.aprobado',
+                resourceType: 'aprobacion',
                 resourceId: $approval->id,
-                result: 'success',
+                result: 'exito',
                 metadata: [
                     'revision_number' => $revision->numero_revision,
                     'fingerprint' => $fingerprint,
@@ -99,8 +99,8 @@ class ApproveSyllabus
             );
             $this->outbox->execute(
                 syllabus: $syllabus,
-                eventType: 'syllabus.approved',
-                deduplicationKey: "syllabus.approved:{$approval->id}",
+                eventType: 'silabo.aprobado',
+                deduplicationKey: "silabo.aprobado:{$approval->id}",
                 recipientIds: $this->recipients->teachersFor($syllabus),
                 revisionNumber: $revision->numero_revision,
                 correlationId: $request->attributes->getString('correlation_id') ?: null,

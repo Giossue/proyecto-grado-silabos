@@ -23,11 +23,11 @@ class UpdateAcademicRecord
 {
     /** @var array<string, class-string<Model>> */
     private const MODELS = [
-        'faculty' => Faculty::class,
-        'career' => Career::class,
+        'facultad' => Faculty::class,
+        'carrera' => Career::class,
         'campus' => Campus::class,
-        'modality' => Modality::class,
-        'period' => AcademicPeriod::class,
+        'modalidad' => Modality::class,
+        'periodo' => AcademicPeriod::class,
     ];
 
     /** @var array<string, string> */
@@ -75,7 +75,7 @@ class UpdateAcademicRecord
             $record = $modelClass::query()->lockForUpdate()->findOrFail($recordId);
             $attributes = $this->attributes($entity, $data);
 
-            if ($entity === 'career') {
+            if ($entity === 'carrera') {
                 $this->ensureActiveFacultyWhenChanging($record, (string) $attributes['facultad_id']);
             }
 
@@ -92,10 +92,10 @@ class UpdateAcademicRecord
             $this->audit->execute(
                 actorId: $actor->id,
                 roleAssignmentId: $activeRole->id,
-                action: "academic.{$entity}.updated",
+                action: "academico.{$entity}.actualizacion",
                 resourceType: $entity,
                 resourceId: (string) $record->getKey(),
-                result: 'success',
+                result: 'exito',
                 metadata: $auditMetadata,
                 correlationId: $request->attributes->getString('correlation_id') ?: null,
             );
@@ -111,22 +111,22 @@ class UpdateAcademicRecord
     private function attributes(string $entity, array $data): array
     {
         return match ($entity) {
-            'faculty', 'campus' => [
+            'facultad', 'campus' => [
                 'codigo_institucional' => $data['code'] ?? null,
-                'nombre' => $data['name'],
+                'nombre' => $data['nombre'],
             ],
-            'career' => [
+            'carrera' => [
                 'facultad_id' => $data['faculty_id'],
                 'codigo_institucional' => $data['code'] ?? null,
-                'nombre' => $data['name'],
+                'nombre' => $data['nombre'],
             ],
-            'modality' => [
+            'modalidad' => [
                 'codigo' => $data['code'],
-                'nombre' => $data['name'],
+                'nombre' => $data['nombre'],
             ],
-            'period' => [
+            'periodo' => [
                 'codigo' => $data['code'],
-                'nombre' => $data['name'],
+                'nombre' => $data['nombre'],
                 'fecha_inicio' => $data['starts_on'],
                 'fecha_fin' => $data['ends_on'],
             ],
@@ -165,7 +165,7 @@ class UpdateAcademicRecord
         ];
 
         foreach (array_keys($dirty) as $field) {
-            if ($entity === 'career' && $field === 'facultad_id') {
+            if ($entity === 'carrera' && $field === 'facultad_id') {
                 $this->addFacultyChange($activeRole, $record);
 
                 continue;

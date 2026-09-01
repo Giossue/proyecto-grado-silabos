@@ -8,9 +8,9 @@ import type {
 const HOUR_COMPONENT_KEYS = new Set([
     'hours_project',
     'hours_ap',
-    'hours_ac',
-    'hours_pae',
-    'hours_aa',
+    'horas_ac',
+    'horas_pae',
+    'horas_aa',
     'hours_paec',
 ]);
 
@@ -39,7 +39,7 @@ const storedValue = (
     const normalized = normalizedValue(value);
 
     if (
-        (field.type === 'number' || field.type === 'integer') &&
+        (field.type === 'numero' || field.type === 'entero') &&
         typeof normalized === 'string' &&
         normalized !== ''
     ) {
@@ -101,7 +101,7 @@ export function useCurriculumSubjectFieldValues(
     );
 
     const valueFor = (field: CurriculumFieldDefinition): number | string =>
-        field.system_key === 'total_hours'
+        field.system_key === 'horas_totales'
             ? totalHours.value
             : (values.value[fieldKey(field)] ?? '');
 
@@ -109,7 +109,7 @@ export function useCurriculumSubjectFieldValues(
         field: CurriculumFieldDefinition,
         value: unknown,
     ): void => {
-        if (field.system_key === 'total_hours') {
+        if (field.system_key === 'horas_totales') {
             return;
         }
 

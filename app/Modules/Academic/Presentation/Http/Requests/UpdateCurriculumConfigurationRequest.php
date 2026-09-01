@@ -10,7 +10,7 @@ class UpdateCurriculumConfigurationRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()->active === true
+        return $this->user()->activo === true
             && $this->user()->can('manage-career-academics') === true;
     }
 

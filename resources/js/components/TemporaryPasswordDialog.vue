@@ -22,7 +22,7 @@ const page = usePage();
 // La marca viaja en el usuario compartido. El servidor bloquea igual cada ruta: este
 // diálogo es la salida visible del bloqueo, no el bloqueo en sí.
 const required = computed(
-    () => page.props.auth.user?.must_change_password === true,
+    () => page.props.auth.user?.debe_cambiar_contrasena === true,
 );
 
 // El diálogo no se cierra: sin botón, sin «Esc» y sin clic fuera. La única alternativa a

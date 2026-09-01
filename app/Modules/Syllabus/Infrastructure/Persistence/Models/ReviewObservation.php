@@ -24,6 +24,10 @@ class ReviewObservation extends Model
 {
     use HasUuids;
 
+    public const CREATED_AT = 'registrado_en';
+
+    public const UPDATED_AT = 'actualizado_en';
+
     protected $table = 'observaciones_revision';
 
     /** @var list<string> */
@@ -59,7 +63,7 @@ class ReviewObservation extends Model
     protected static function booted(): void
     {
         static::updating(function (ReviewObservation $observation): void {
-            if (array_diff(array_keys($observation->getDirty()), ['estado', 'updated_at']) !== []) {
+            if (array_diff(array_keys($observation->getDirty()), ['estado', 'actualizado_en']) !== []) {
                 throw new LogicException('El contenido de una observación es inmutable.');
             }
         });

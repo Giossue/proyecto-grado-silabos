@@ -14,6 +14,6 @@ class ExportArtifactPolicy
 
     public function download(User $user, ExportArtifact $artifact): bool
     {
-        return $this->view($user, $artifact) && $artifact->estado === 'completed';
+        return $this->view($user, $artifact) && $artifact->estado === 'completado';
     }
 }

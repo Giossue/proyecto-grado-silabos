@@ -43,19 +43,19 @@ class ManagedUserController extends Controller
             ? $filters['career']
             : null;
         $users = User::query()
-            ->select(['id', 'name', 'email', 'active', 'must_change_password', 'created_at'])
+            ->select(['id', 'nombre', 'correo_electronico', 'activo', 'debe_cambiar_contrasena', 'creado_en'])
             ->when($search, fn (Builder $query, string $term) => $query->where(
                 fn (Builder $searchQuery) => $searchQuery
-                    ->whereRaw('name ILIKE ?', ["%{$term}%"])
-                    ->orWhereRaw('email ILIKE ?', ["%{$term}%"]),
+                    ->whereRaw('nombre ILIKE ?', ["%{$term}%"])
+                    ->orWhereRaw('correo_electronico ILIKE ?', ["%{$term}%"]),
             ))
             // Los tres estados de la lista, y cada uno significa lo mismo que su insignia:
             // «activo» es una cuenta en uso, no una recién creada que nadie ha estrenado.
             ->when($status === 'active', fn (Builder $query) => $query
-                ->where('active', true)->where('must_change_password', false))
+                ->where('activo', true)->where('debe_cambiar_contrasena', false))
             ->when($status === 'pending', fn (Builder $query) => $query
-                ->where('active', true)->where('must_change_password', true))
-            ->when($status === 'inactive', fn (Builder $query) => $query->where('active', false))
+                ->where('activo', true)->where('debe_cambiar_contrasena', true))
+            ->when($status === 'inactive', fn (Builder $query) => $query->where('activo', false))
             // El alcance de vigencia vive en `RoleAssignment`, así que se resuelve allí y
             // aquí solo se compara con la lista de identidades que devuelve.
             ->when($role, fn (Builder $query, string $code) => $query->whereIn(
@@ -75,18 +75,18 @@ class ManagedUserController extends Controller
             ->with(['roleAssignments' => fn ($query) => $query
                 ->effective()
                 ->with(['role:id,codigo,nombre', 'career:id,nombre'])])
-            ->orderBy('name')
+            ->orderBy('nombre')
             ->paginate(20)
             ->withQueryString()
             ->through(fn (User $user) => [
                 'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'active' => $user->active,
+                'name' => $user->nombre,
+                'email' => $user->correo_electronico,
+                'active' => $user->activo,
                 // Una cuenta con la contraseña temporal todavía puesta no ha entrado
                 // nunca. Sin esto se ve igual que una en uso y nadie sabe a quién
                 // recordarle que revise su correo.
-                'pending_first_login' => $user->must_change_password,
+                'pending_first_login' => $user->debe_cambiar_contrasena,
                 'roles' => $user->roleAssignments->map(fn ($assignment) => [
                     'name' => $assignment->role->nombre,
                     'career_name' => $assignment->career?->nombre,
@@ -115,8 +115,8 @@ class ManagedUserController extends Controller
         $actor = $request->user();
         abort_unless($actor instanceof User, 401);
         $action->execute([
-            'name' => $request->string('name')->toString(),
-            'email' => $request->string('email')->toString(),
+            'nombre' => $request->string('nombre')->toString(),
+            'correo_electronico' => $request->string('correo_electronico')->toString(),
             'password' => $request->string('password')->toString(),
             'role_code' => $request->string('role_code')->toString(),
             'career_id' => $request->filled('career_id') ? $request->string('career_id')->toString() : null,
@@ -134,9 +134,9 @@ class ManagedUserController extends Controller
         return Inertia::render('Admin/Users/Show', [
             'managedUser' => [
                 'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'active' => $user->active,
+                'name' => $user->nombre,
+                'email' => $user->correo_electronico,
+                'active' => $user->activo,
                 'assignments' => $user->roleAssignments->map(fn ($assignment) => [
                     'id' => $assignment->id,
                     'role_name' => $assignment->role->nombre,
@@ -176,7 +176,7 @@ class ManagedUserController extends Controller
         abort_unless($actor instanceof User, 401);
         $action->execute($user, $request->boolean('active'), $actor, $request);
 
-        return back()->with('success', $user->active ? 'Cuenta activada.' : 'Cuenta desactivada y sesiones revocadas.');
+        return back()->with('success', $user->activo ? 'Cuenta activada.' : 'Cuenta desactivada y sesiones revocadas.');
     }
 
     /**
@@ -192,7 +192,7 @@ class ManagedUserController extends Controller
         $actor = $request->user();
         abort_unless($actor instanceof User, 401);
         $validated = $request->validated();
-        $wasActive = $user->active;
+        $wasActive = $user->activo;
 
         // Una sola transacción: identidad, rol nuevo y estado quedan coherentes o no
         // queda nada. El estado va al final para que una desactivación cierre también

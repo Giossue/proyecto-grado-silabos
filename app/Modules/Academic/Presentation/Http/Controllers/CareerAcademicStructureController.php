@@ -110,7 +110,7 @@ class CareerAcademicStructureController extends Controller
         $active = $request->boolean('active');
         $action->execute($entity, $record, $active, $actor, $request);
 
-        if ($entity === 'curriculum') {
+        if ($entity === 'malla') {
             return back()->with('success', $active
                 ? 'Malla reactivada. Los procesos nuevos vuelven a estar disponibles.'
                 : 'Malla deshabilitada. No se crearán procesos nuevos y el historial se conserva.');

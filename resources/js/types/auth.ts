@@ -1,13 +1,12 @@
 export type User = {
     id: string;
-    name: string;
-    email: string;
+    nombre: string;
+    correo_electronico: string;
     avatar?: string;
-    email_verified_at: string | null;
-    must_change_password?: boolean;
-    two_factor_enabled?: boolean;
-    created_at: string;
-    updated_at: string;
+    correo_verificado_en: string | null;
+    debe_cambiar_contrasena?: boolean;
+    creado_en: string;
+    actualizado_en: string;
     [key: string]: unknown;
 };
 
@@ -19,7 +18,7 @@ export type Auth = {
 
 export type ActiveRole = {
     id: string;
-    role: 'administrator' | 'coordinator' | 'teacher';
+    role: 'administrador' | 'coordinador' | 'docente';
     role_name: string;
     career_id: string | null;
     career_name: string | null;

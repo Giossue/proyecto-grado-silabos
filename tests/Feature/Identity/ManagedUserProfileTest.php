@@ -39,27 +39,27 @@ class ManagedUserProfileTest extends TestCase
         parent::setUp();
         $this->seed(DatabaseSeeder::class);
 
-        $this->administrator = User::query()->where('email', 'admin@silabos.test')->firstOrFail();
+        $this->administrator = User::query()->where('correo_electronico', 'admin@silabos.test')->firstOrFail();
         $this->administratorContext = $this->administrator->roleAssignments()->firstOrFail();
-        $this->coordinator = User::query()->where('email', 'coordinador@silabos.test')->firstOrFail();
+        $this->coordinator = User::query()->where('correo_electronico', 'coordinador@silabos.test')->firstOrFail();
         $this->coordinatorContext = $this->coordinator->roleAssignments()->firstOrFail();
-        $this->teacher = User::query()->where('email', 'docente@silabos.test')->firstOrFail();
+        $this->teacher = User::query()->where('correo_electronico', 'docente@silabos.test')->firstOrFail();
     }
 
     public function test_a_coordinator_cannot_correct_a_teacher_of_their_own_career(): void
     {
         $this->actingAsCoordinator()
             ->patch(route('users.profile.update', $this->teacher), [
-                'name' => 'Docente Corregida',
-                'email' => 'docente.corregida@silabos.test',
+                'nombre' => 'Docente Corregida',
+                'correo_electronico' => 'docente.corregida@silabos.test',
             ])
             ->assertForbidden();
 
         $this->teacher->refresh();
-        $this->assertSame('Docente Demo', $this->teacher->name);
-        $this->assertSame('docente@silabos.test', $this->teacher->email);
+        $this->assertSame('Docente Demo', $this->teacher->nombre);
+        $this->assertSame('docente@silabos.test', $this->teacher->correo_electronico);
         $this->assertDatabaseMissing('eventos_auditoria', [
-            'accion' => 'user.profile_updated',
+            'accion' => 'usuario.perfil_actualizado',
             'recurso_id' => $this->teacher->id,
         ]);
     }
@@ -70,20 +70,20 @@ class ManagedUserProfileTest extends TestCase
 
         $this->actingAsCoordinator()
             ->patch(route('users.profile.update', $outsider), [
-                'name' => 'Intento Ajeno',
-                'email' => 'intento@silabos.test',
+                'nombre' => 'Intento Ajeno',
+                'correo_electronico' => 'intento@silabos.test',
             ])
             ->assertForbidden();
 
-        $this->assertSame('Docente Ajena', $outsider->fresh()->name);
+        $this->assertSame('Docente Ajena', $outsider->fresh()->nombre);
     }
 
     public function test_a_coordinator_cannot_touch_an_administrator(): void
     {
         $this->actingAsCoordinator()
             ->patch(route('users.profile.update', $this->administrator), [
-                'name' => 'Intento',
-                'email' => 'intento@silabos.test',
+                'nombre' => 'Intento',
+                'correo_electronico' => 'intento@silabos.test',
             ])
             ->assertForbidden();
     }
@@ -94,12 +94,12 @@ class ManagedUserProfileTest extends TestCase
 
         $this->actingAsAdministrator()
             ->patch(route('users.profile.update', $outsider), [
-                'name' => 'Docente Ajena Corregida',
-                'email' => 'ajena.corregida@silabos.test',
+                'nombre' => 'Docente Ajena Corregida',
+                'correo_electronico' => 'ajena.corregida@silabos.test',
             ])
             ->assertRedirect();
 
-        $this->assertSame('Docente Ajena Corregida', $outsider->fresh()->name);
+        $this->assertSame('Docente Ajena Corregida', $outsider->fresh()->nombre);
     }
 
     public function test_a_teacher_cannot_correct_anyone(): void
@@ -109,8 +109,8 @@ class ManagedUserProfileTest extends TestCase
         $this->actingAs($this->teacher)
             ->withSession(['active_role_assignment_id' => $teacherContext->id])
             ->patch(route('users.profile.update', $this->coordinator), [
-                'name' => 'Intento',
-                'email' => 'intento@silabos.test',
+                'nombre' => 'Intento',
+                'correo_electronico' => 'intento@silabos.test',
             ])
             ->assertForbidden();
     }
@@ -119,20 +119,20 @@ class ManagedUserProfileTest extends TestCase
     {
         $this->actingAsAdministrator()
             ->patch(route('users.profile.update', $this->teacher), [
-                'name' => 'Docente Demo',
-                'email' => 'coordinador@silabos.test',
+                'nombre' => 'Docente Demo',
+                'correo_electronico' => 'coordinador@silabos.test',
             ])
-            ->assertSessionHasErrors('email');
+            ->assertSessionHasErrors('correo_electronico');
 
         // Guardar sin tocar el correo no puede chocar consigo misma.
         $this->actingAsAdministrator()
             ->patch(route('users.profile.update', $this->teacher), [
-                'name' => 'Docente Renombrada',
-                'email' => 'docente@silabos.test',
+                'nombre' => 'Docente Renombrada',
+                'correo_electronico' => 'docente@silabos.test',
             ])
             ->assertRedirect();
 
-        $this->assertSame('Docente Renombrada', $this->teacher->fresh()->name);
+        $this->assertSame('Docente Renombrada', $this->teacher->fresh()->nombre);
     }
 
     public function test_creating_an_account_sends_its_credentials_by_email(): void
@@ -142,8 +142,8 @@ class ManagedUserProfileTest extends TestCase
 
         $this->actingAsAdministrator()
             ->post(route('admin.users.store'), [
-                'name' => 'Docente Nueva',
-                'email' => 'docente.nueva@silabos.test',
+                'nombre' => 'Docente Nueva',
+                'correo_electronico' => 'docente.nueva@silabos.test',
                 'password' => 'Temporal-2026!',
                 'role_code' => RoleCode::Teacher->value,
                 'career_id' => $career->id,
@@ -188,10 +188,10 @@ class ManagedUserProfileTest extends TestCase
         ]);
         $role = Role::query()->where('codigo', RoleCode::Teacher->value)->firstOrFail();
         $user = User::query()->create([
-            'name' => 'Docente Ajena',
-            'email' => 'ajena@silabos.test',
-            'password' => 'Temporal-2026!',
-            'active' => true,
+            'nombre' => 'Docente Ajena',
+            'correo_electronico' => 'ajena@silabos.test',
+            'contrasena' => 'Temporal-2026!',
+            'activo' => true,
         ]);
         RoleAssignment::query()->create([
             'usuario_id' => $user->id,

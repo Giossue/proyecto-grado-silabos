@@ -25,7 +25,7 @@ class DocumentController extends Controller
     public function show(SyllabusRevision $revision, ViewRevisionDocumentsRequest $request): Response
     {
         $revision->load([
-            'approval.approver:id,name',
+            'approval.approver:id,nombre',
             'syllabus.subject:id,nombre,codigo_institucional',
             'syllabus.convocation.academicPeriod:id,nombre',
         ]);
@@ -47,20 +47,20 @@ class DocumentController extends Controller
                 'id' => $revision->id,
                 'number' => $revision->numero_revision,
                 'approved_at' => $revision->approval->aprobado_en->toIso8601String(),
-                'approved_by' => $revision->approval->approver->name,
+                'approved_by' => $revision->approval->approver->nombre,
             ],
             'artifacts' => $artifacts->map(fn (ExportArtifact $artifact): array => [
                 'id' => $artifact->id,
-                'status' => $artifact->estado,
+                'estado' => $artifact->estado,
                 'requested_at' => $artifact->solicitado_en->toIso8601String(),
                 'completed_at' => $artifact->completado_en?->toIso8601String(),
                 'renderer_label' => 'Formato institucional en revisión',
                 'execution' => $artifact->execution === null ? null : [
-                    'status' => $artifact->execution->status,
-                    'progress' => $artifact->execution->progress,
-                    'error_message' => $artifact->execution->error_message,
+                    'estado' => $artifact->execution->estado,
+                    'progreso' => $artifact->execution->progreso,
+                    'mensaje_error' => $artifact->execution->mensaje_error,
                 ],
-                'files' => $artifact->estado !== 'completed' ? null : [
+                'files' => $artifact->estado !== 'completado' ? null : [
                     'docx_size' => $artifact->docxObject?->tamano_bytes,
                     'pdf_size' => $artifact->pdfObject?->tamano_bytes,
                 ],
@@ -83,7 +83,7 @@ class DocumentController extends Controller
         );
 
         return to_route('documents.show', $revision)
-            ->with('success', $artifact->estado === 'completed'
+            ->with('success', $artifact->estado === 'completado'
                 ? 'Los documentos de esta solicitud ya estaban disponibles.'
                 : 'La generación de DOCX y PDF quedó en cola.');
     }
@@ -104,10 +104,10 @@ class DocumentController extends Controller
         $audit->execute(
             actorId: $actor->id,
             roleAssignmentId: $activeRole?->id,
-            action: 'document.downloaded',
-            resourceType: 'export_artifact',
+            action: 'documento.descargado',
+            resourceType: 'artefacto_exportacion',
             resourceId: $artifact->id,
-            result: 'success',
+            result: 'exito',
             metadata: [
                 'format' => $format,
                 'revision_number' => $artifact->revision->numero_revision,
@@ -132,7 +132,7 @@ class DocumentController extends Controller
             'pdf' => $artifact->pdfObject,
             default => null,
         };
-        abort_unless($artifact->estado === 'completed' && $object instanceof StoredObject, 404);
+        abort_unless($artifact->estado === 'completado' && $object instanceof StoredObject, 404);
 
         return $object;
     }

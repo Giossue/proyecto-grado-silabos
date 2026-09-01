@@ -24,14 +24,14 @@ use LogicException;
  * @property string $estado
  * @property string $version_contrato
  * @property string $version_instruccion
- * @property string $version_gateway_solicitada
- * @property string|null $version_gateway_ejecutada
- * @property string $locale
+ * @property string $version_pasarela_solicitada
+ * @property string|null $version_pasarela_ejecutada
+ * @property string $idioma
  * @property string $contenido_entrada
  * @property string $huella_contenido
  * @property string $huella_conjunto_fuentes
  * @property array<string, mixed> $metadatos_entrada
- * @property int $lock_version_origen
+ * @property int $version_bloqueo_origen
  * @property string|null $motivo_no_concluyente
  * @property string|null $codigo_error
  * @property string|null $mensaje_error
@@ -46,15 +46,19 @@ class AiExecution extends Model
 {
     use HasUuids;
 
+    public const CREATED_AT = 'creado_en';
+
+    public const UPDATED_AT = 'actualizado_en';
+
     protected $table = 'ejecuciones_ia';
 
     /** @var list<string> */
     protected $fillable = [
         'silabo_id', 'definicion_campo_id', 'version_plantilla_id', 'ejecucion_trabajo_id',
         'clave_idempotencia', 'clave_funcional', 'estado', 'version_contrato',
-        'version_instruccion', 'version_gateway_solicitada', 'version_gateway_ejecutada',
-        'locale', 'contenido_entrada', 'huella_contenido', 'huella_conjunto_fuentes',
-        'metadatos_entrada', 'lock_version_origen', 'motivo_no_concluyente', 'codigo_error',
+        'version_instruccion', 'version_pasarela_solicitada', 'version_pasarela_ejecutada',
+        'idioma', 'contenido_entrada', 'huella_contenido', 'huella_conjunto_fuentes',
+        'metadatos_entrada', 'version_bloqueo_origen', 'motivo_no_concluyente', 'codigo_error',
         'mensaje_error', 'solicitado_por', 'asignacion_rol_id', 'solicitado_en',
         'iniciado_en', 'completado_en',
     ];
@@ -64,7 +68,7 @@ class AiExecution extends Model
     {
         return [
             'metadatos_entrada' => 'array',
-            'lock_version_origen' => 'integer',
+            'version_bloqueo_origen' => 'integer',
             'solicitado_en' => 'immutable_datetime',
             'iniciado_en' => 'immutable_datetime',
             'completado_en' => 'immutable_datetime',
@@ -110,7 +114,7 @@ class AiExecution extends Model
     protected static function booted(): void
     {
         static::updating(function (AiExecution $execution): void {
-            if (in_array($execution->getOriginal('estado'), ['completed', 'inconclusive', 'failed'], true)) {
+            if (in_array($execution->getOriginal('estado'), ['completada', 'no_concluyente', 'fallida'], true)) {
                 throw new LogicException('Una ejecución de IA terminal es inmutable.');
             }
         });

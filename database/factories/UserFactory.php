@@ -25,16 +25,16 @@ class UserFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => fake()->name(),
-            'email' => fake()->unique()->safeEmail(),
-            'email_verified_at' => now(),
-            'password' => static::$password ??= Hash::make('password'),
-            'active' => true,
-            'deactivated_at' => null,
-            'remember_token' => Str::random(10),
-            'two_factor_secret' => null,
-            'two_factor_recovery_codes' => null,
-            'two_factor_confirmed_at' => null,
+            'nombre' => fake()->name(),
+            'correo_electronico' => fake()->unique()->safeEmail(),
+            'correo_verificado_en' => now(),
+            'contrasena' => static::$password ??= Hash::make('password'),
+            'activo' => true,
+            'desactivado_en' => null,
+            'codigo_recordarme' => Str::random(10),
+            'secreto_dos_factores' => null,
+            'codigos_recuperacion_dos_factores' => null,
+            'dos_factores_confirmado_en' => null,
         ];
     }
 
@@ -44,7 +44,7 @@ class UserFactory extends Factory
     public function unverified(): static
     {
         return $this->state(fn (array $attributes) => [
-            'email_verified_at' => null,
+            'correo_verificado_en' => null,
         ]);
     }
 
@@ -54,8 +54,8 @@ class UserFactory extends Factory
     public function inactive(): static
     {
         return $this->state(fn (array $attributes) => [
-            'active' => false,
-            'deactivated_at' => now(),
+            'activo' => false,
+            'desactivado_en' => now(),
         ]);
     }
 
@@ -65,9 +65,9 @@ class UserFactory extends Factory
     public function withTwoFactor(): static
     {
         return $this->state(fn (array $attributes) => [
-            'two_factor_secret' => encrypt('secret'),
-            'two_factor_recovery_codes' => encrypt(json_encode(['recovery-code-1'])),
-            'two_factor_confirmed_at' => now(),
+            'secreto_dos_factores' => encrypt('secret'),
+            'codigos_recuperacion_dos_factores' => encrypt(json_encode(['recovery-code-1'])),
+            'dos_factores_confirmado_en' => now(),
         ]);
     }
 }

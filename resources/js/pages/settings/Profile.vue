@@ -54,13 +54,13 @@ const props = defineProps<{
                 <Input
                     id="name"
                     class="mt-1 block w-full"
-                    name="name"
-                    :default-value="user.name"
+                    name="nombre"
+                    :default-value="user.nombre"
                     required
                     autocomplete="name"
                     placeholder="Ej. María Pérez"
                 />
-                <InputError class="mt-2" :message="errors.name" />
+                <InputError class="mt-2" :message="errors.nombre" />
             </div>
 
             <div class="grid gap-2">
@@ -69,16 +69,21 @@ const props = defineProps<{
                     id="email"
                     type="email"
                     class="mt-1 block w-full"
-                    name="email"
-                    :default-value="user.email"
+                    name="correo_electronico"
+                    :default-value="user.correo_electronico"
                     required
                     autocomplete="username"
                     placeholder="Ej. maria.perez@ueb.edu.ec"
                 />
-                <InputError class="mt-2" :message="errors.email" />
+                <InputError
+                    class="mt-2"
+                    :message="errors.correo_electronico"
+                />
             </div>
 
-            <div v-if="page.props.mustVerifyEmail && !user.email_verified_at">
+            <div
+                v-if="page.props.mustVerifyEmail && !user.correo_verificado_en"
+            >
                 <p class="-mt-4 text-sm text-muted-foreground">
                     Su correo electrónico no está verificado.
                     <Link
@@ -110,7 +115,7 @@ const props = defineProps<{
                 <Label for="readonly-name">Nombre completo</Label>
                 <Input
                     id="readonly-name"
-                    :model-value="user.name"
+                    :model-value="user.nombre"
                     placeholder="Ej. María Pérez"
                     disabled
                     aria-describedby="identity-help"
@@ -122,7 +127,7 @@ const props = defineProps<{
                 <Input
                     id="readonly-email"
                     type="email"
-                    :model-value="user.email"
+                    :model-value="user.correo_electronico"
                     placeholder="Ej. maria.perez@ueb.edu.ec"
                     disabled
                     aria-describedby="identity-help"

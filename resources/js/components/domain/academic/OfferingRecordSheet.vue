@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/select';
 import type { AcademicStructureProps } from '@/types/academic';
 
-type OfferingEntity = 'offering' | 'parallel';
+type OfferingEntity = 'oferta' | 'paralelo';
 
 const props = defineProps<
     Pick<AcademicStructureProps, 'options'> & {
@@ -31,13 +31,13 @@ const props = defineProps<
 >();
 
 const submitLabel = computed(() =>
-    props.entity === 'offering' ? 'Crear oferta' : 'Crear paralelo',
+    props.entity === 'oferta' ? 'Crear oferta' : 'Crear paralelo',
 );
 const title = computed(() =>
-    props.entity === 'offering' ? 'Agregar oferta' : 'Agregar paralelo',
+    props.entity === 'oferta' ? 'Agregar oferta' : 'Agregar paralelo',
 );
 const description = computed(() =>
-    props.entity === 'offering'
+    props.entity === 'oferta'
         ? 'Abra una materia de la malla activa para un periodo académico, campus y modalidad.'
         : 'Agregue un paralelo a una oferta académica existente.',
 );
@@ -59,7 +59,7 @@ const description = computed(() =>
                 @success="close"
             >
                 <FieldGroup>
-                    <template v-if="props.entity === 'offering'">
+                    <template v-if="props.entity === 'oferta'">
                         <Field :data-invalid="Boolean(errors.subject_id)">
                             <FieldLabel for="offering-subject" required>
                                 Materia de la malla activa

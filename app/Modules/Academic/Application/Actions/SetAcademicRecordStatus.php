@@ -28,17 +28,17 @@ class SetAcademicRecordStatus
 {
     /** @var array<string, class-string<Model>> */
     private const MODELS = [
-        'faculty' => Faculty::class,
-        'career' => Career::class,
+        'facultad' => Faculty::class,
+        'carrera' => Career::class,
         'campus' => Campus::class,
-        'modality' => Modality::class,
-        'period' => AcademicPeriod::class,
-        'curriculum' => CurriculumVersion::class,
-        'subject' => Subject::class,
-        'offering' => CourseOffering::class,
-        'parallel' => Parallel::class,
-        'coordinator_assignment' => CoordinatorAssignment::class,
-        'teacher_assignment' => TeacherAssignment::class,
+        'modalidad' => Modality::class,
+        'periodo' => AcademicPeriod::class,
+        'malla' => CurriculumVersion::class,
+        'asignatura' => Subject::class,
+        'oferta' => CourseOffering::class,
+        'paralelo' => Parallel::class,
+        'asignacion_coordinador' => CoordinatorAssignment::class,
+        'asignacion_docente' => TeacherAssignment::class,
     ];
 
     public function __construct(
@@ -74,17 +74,17 @@ class SetAcademicRecordStatus
                 $this->ensureMayDeactivate($entity, $recordId);
             }
 
-            $record->update($entity === 'curriculum'
-                ? ['estado' => $active ? 'active' : 'inactive']
+            $record->update($entity === 'malla'
+                ? ['estado' => $active ? 'activa' : 'inactiva']
                 : ['activo' => $active]);
 
             $this->audit->execute(
                 actorId: $actor->id,
                 roleAssignmentId: $activeRole->id,
-                action: "academic.{$entity}.status_changed",
+                action: "academico.{$entity}.cambio_estado",
                 resourceType: $entity,
                 resourceId: (string) $record->getKey(),
-                result: 'success',
+                result: 'exito',
                 metadata: ['active' => $active],
                 correlationId: $request->attributes->getString('correlation_id') ?: null,
             );
@@ -100,24 +100,24 @@ class SetAcademicRecordStatus
         }
 
         return match ($entity) {
-            'curriculum' => CurriculumVersion::query()
+            'malla' => CurriculumVersion::query()
                 ->where('carrera_id', $careerId)
                 ->current()
                 ->lockForUpdate()
                 ->findOrFail($recordId),
-            'subject' => Subject::query()->whereHas(
+            'asignatura' => Subject::query()->whereHas(
                 'curriculumVersion',
                 fn ($query) => $query->where('carrera_id', $careerId)->where('es_actual', true),
             )->lockForUpdate()->findOrFail($recordId),
-            'offering' => CourseOffering::query()->whereHas(
+            'oferta' => CourseOffering::query()->whereHas(
                 'subject.curriculumVersion',
                 fn ($query) => $query->where('carrera_id', $careerId)->where('es_actual', true),
             )->lockForUpdate()->findOrFail($recordId),
-            'parallel' => Parallel::query()->whereHas(
+            'paralelo' => Parallel::query()->whereHas(
                 'offering.subject.curriculumVersion',
                 fn ($query) => $query->where('carrera_id', $careerId)->where('es_actual', true),
             )->lockForUpdate()->findOrFail($recordId),
-            'teacher_assignment' => TeacherAssignment::query()->whereHas(
+            'asignacion_docente' => TeacherAssignment::query()->whereHas(
                 'parallel.offering.subject.curriculumVersion',
                 fn ($query) => $query->where('carrera_id', $careerId)->where('es_actual', true),
             )->lockForUpdate()->findOrFail($recordId),
@@ -128,15 +128,15 @@ class SetAcademicRecordStatus
     private function ensureMayDeactivate(string $entity, string $recordId): void
     {
         $hasActiveDependants = match ($entity) {
-            'faculty' => Career::query()->where('facultad_id', $recordId)->where('activo', true)->exists(),
-            'career' => CurriculumVersion::query()->where('carrera_id', $recordId)->current()->active()->exists(),
-            'curriculum' => false,
+            'facultad' => Career::query()->where('facultad_id', $recordId)->where('activo', true)->exists(),
+            'carrera' => CurriculumVersion::query()->where('carrera_id', $recordId)->current()->active()->exists(),
+            'malla' => false,
             'campus' => CourseOffering::query()->where('campus_id', $recordId)->where('activo', true)->exists(),
-            'modality' => CourseOffering::query()->where('modalidad_id', $recordId)->where('activo', true)->exists(),
-            'period' => CourseOffering::query()->where('periodo_academico_id', $recordId)->where('activo', true)->exists(),
-            'subject' => CourseOffering::query()->where('asignatura_id', $recordId)->where('activo', true)->exists(),
-            'offering' => Parallel::query()->where('oferta_academica_id', $recordId)->where('activo', true)->exists(),
-            'parallel' => TeacherAssignment::query()->where('paralelo_id', $recordId)->where('activo', true)->exists(),
+            'modalidad' => CourseOffering::query()->where('modalidad_id', $recordId)->where('activo', true)->exists(),
+            'periodo' => CourseOffering::query()->where('periodo_academico_id', $recordId)->where('activo', true)->exists(),
+            'asignatura' => CourseOffering::query()->where('asignatura_id', $recordId)->where('activo', true)->exists(),
+            'oferta' => Parallel::query()->where('oferta_academica_id', $recordId)->where('activo', true)->exists(),
+            'paralelo' => TeacherAssignment::query()->where('paralelo_id', $recordId)->where('activo', true)->exists(),
             default => false,
         };
 

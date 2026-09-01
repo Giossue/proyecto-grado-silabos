@@ -40,7 +40,7 @@ class RequestSyllabusCorrection
                 ->where('silabo_id', $syllabus->id)
                 ->orderByDesc('numero_revision')
                 ->value('id');
-            if ($syllabus->estado !== 'in_review' || $latestId !== $revision->id) {
+            if ($syllabus->estado !== 'en_revision' || $latestId !== $revision->id) {
                 throw ValidationException::withMessages([
                     'revision' => 'La revisión dejó de estar disponible para solicitar corrección.',
                 ]);
@@ -52,7 +52,7 @@ class RequestSyllabusCorrection
             $ids = array_values(array_unique($observationIds));
             $observations = ReviewObservation::query()
                 ->where('revision_silabo_id', $revision->id)
-                ->where('estado', 'open')
+                ->where('estado', 'abierta')
                 ->whereIn('id', $ids)
                 ->lockForUpdate()
                 ->get();
@@ -75,22 +75,22 @@ class RequestSyllabusCorrection
                     'id' => (string) Str::uuid(),
                     'solicitud_correccion_id' => $correction->id,
                     'observacion_revision_id' => $observation->id,
-                    'created_at' => $createdAt,
+                    'creado_en' => $createdAt,
                 ]);
             }
 
             $syllabus->update([
-                'estado' => 'correction_requested',
-                'lock_version' => $syllabus->lock_version + 1,
+                'estado' => 'correccion_solicitada',
+                'version_bloqueo' => $syllabus->version_bloqueo + 1,
                 'guardado_en' => now(),
             ]);
             $activeRole = $this->roles->resolve($request);
             $this->transitions->execute(
                 $syllabus,
                 $revision,
-                'in_review',
-                'correction_requested',
-                'request_correction',
+                'en_revision',
+                'correccion_solicitada',
+                'solicitar_correccion',
                 $actor,
                 $activeRole,
                 ['observation_count' => $observations->count()],
@@ -98,17 +98,17 @@ class RequestSyllabusCorrection
             $this->audit->execute(
                 actorId: $actor->id,
                 roleAssignmentId: $activeRole?->id,
-                action: 'syllabus.correction_requested',
-                resourceType: 'correction_request',
+                action: 'silabo.correccion_solicitada',
+                resourceType: 'solicitud_correccion',
                 resourceId: $correction->id,
-                result: 'success',
+                result: 'exito',
                 metadata: ['revision_number' => $revision->numero_revision, 'observation_count' => $observations->count()],
                 correlationId: $request->attributes->getString('correlation_id') ?: null,
             );
             $this->outbox->execute(
                 syllabus: $syllabus,
-                eventType: 'syllabus.correction_requested',
-                deduplicationKey: "syllabus.correction_requested:{$correction->id}",
+                eventType: 'silabo.correccion_solicitada',
+                deduplicationKey: "silabo.correccion_solicitada:{$correction->id}",
                 recipientIds: $this->recipients->teachersFor($syllabus),
                 revisionNumber: $revision->numero_revision,
                 correlationId: $request->attributes->getString('correlation_id') ?: null,

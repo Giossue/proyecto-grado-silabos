@@ -38,7 +38,7 @@ class CloneTemplateVersion
             $clone = TemplateVersion::query()->create([
                 'plantilla_id' => $source->plantilla_id,
                 'numero_version' => $nextNumber,
-                'estado' => 'draft',
+                'estado' => 'borrador',
                 'mapeo_documento' => $source->mapeo_documento,
             ]);
 
@@ -89,10 +89,10 @@ class CloneTemplateVersion
             $this->audit->execute(
                 actorId: $actor->id,
                 roleAssignmentId: $activeRole?->id,
-                action: 'template.version_cloned',
-                resourceType: 'template_version',
+                action: 'plantilla.version_clonada',
+                resourceType: 'version_plantilla',
                 resourceId: $clone->id,
-                result: 'success',
+                result: 'exito',
                 metadata: ['source_version_id' => $source->id],
                 correlationId: $request->attributes->getString('correlation_id') ?: null,
             );

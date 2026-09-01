@@ -37,13 +37,13 @@ class ValidateDraft
             $issues = [];
 
             foreach ($fields as $field) {
-                $missing = $field->tipo === 'repeatable'
+                $missing = $field->tipo === 'repetible'
                     ? (int) ($rowCounts[$field->id] ?? 0) === 0
                     : ! $this->filled($values->get($field->id)?->valor);
                 if ($missing) {
                     $issues[] = [
                         'field_id' => $field->id,
-                        'code' => $field->heredado ? 'required_master_missing' : 'required_field_missing',
+                        'code' => $field->heredado ? 'maestro_obligatorio_faltante' : 'campo_obligatorio_faltante',
                         'severity' => 'error',
                         'message' => $field->heredado
                             ? "No se pudo heredar el dato institucional «{$field->etiqueta}». Solicita corrección de la configuración."
@@ -57,8 +57,8 @@ class ValidateDraft
                 'silabo_id' => $locked->id,
                 'ejecutado_por' => $actor->id,
                 'version_reglas' => self::RULE_VERSION,
-                'estado' => 'completed',
-                'lock_version' => $locked->lock_version,
+                'estado' => 'completada',
+                'version_bloqueo' => $locked->version_bloqueo,
                 'errores_bloqueantes' => count($issues),
                 'advertencias' => 0,
                 'porcentaje_completitud' => $summary['percentage'],
@@ -78,10 +78,10 @@ class ValidateDraft
             $this->audit->execute(
                 actorId: $actor->id,
                 roleAssignmentId: $activeRole?->id,
-                action: 'syllabus.validated',
-                resourceType: 'syllabus',
+                action: 'silabo.validado',
+                resourceType: 'silabo',
                 resourceId: $locked->id,
-                result: 'success',
+                result: 'exito',
                 metadata: ['rule_version' => self::RULE_VERSION, 'blocking_errors' => count($issues)],
                 correlationId: $request->attributes->getString('correlation_id') ?: null,
             );

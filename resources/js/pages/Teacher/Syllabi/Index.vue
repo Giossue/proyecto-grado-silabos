@@ -39,7 +39,7 @@ type SyllabusRow = {
     state: string;
     completion: number;
     parallels: string[];
-    saved_at: string | null;
+    guardado_en: string | null;
 };
 
 defineProps<{
@@ -53,11 +53,11 @@ defineOptions({
 
 const stateLabel = (state: string): string =>
     ({
-        not_started: 'Sin iniciar',
-        draft: 'Borrador',
-        in_review: 'En revisión',
-        correction_requested: 'Corrección solicitada',
-        approved: 'Aprobado',
+        sin_iniciar: 'Sin iniciar',
+        borrador: 'Borrador',
+        en_revision: 'En revisión',
+        correccion_solicitada: 'Corrección solicitada',
+        aprobado: 'Aprobado',
     })[state] ?? 'Estado no disponible';
 
 const formatSavedAt = (value: string | null): string =>
@@ -121,21 +121,21 @@ const formatSavedAt = (value: string | null): string =>
                                             <SelectItem value="all"
                                                 >Todos los estados</SelectItem
                                             >
-                                            <SelectItem value="not_started"
+                                            <SelectItem value="sin_iniciar"
                                                 >Sin iniciar</SelectItem
                                             >
-                                            <SelectItem value="draft"
+                                            <SelectItem value="borrador"
                                                 >Borrador</SelectItem
                                             >
-                                            <SelectItem value="in_review"
+                                            <SelectItem value="en_revision"
                                                 >En revisión</SelectItem
                                             >
                                             <SelectItem
-                                                value="correction_requested"
+                                                value="correccion_solicitada"
                                                 >Corrección
                                                 solicitada</SelectItem
                                             >
-                                            <SelectItem value="approved"
+                                            <SelectItem value="aprobado"
                                                 >Aprobado</SelectItem
                                             >
                                         </SelectGroup>
@@ -187,7 +187,7 @@ const formatSavedAt = (value: string | null): string =>
                                 {{ stateLabel(syllabus.state) }}
                             </TableCell>
                             <TableCell>{{
-                                formatSavedAt(syllabus.saved_at)
+                                formatSavedAt(syllabus.guardado_en)
                             }}</TableCell>
                             <TableCell class="text-right font-medium">
                                 {{ syllabus.completion.toFixed(0) }} %

@@ -19,11 +19,15 @@ class ValidationRun extends Model
 {
     use HasUuids;
 
+    public const CREATED_AT = 'creado_en';
+
+    public const UPDATED_AT = 'actualizado_en';
+
     protected $table = 'ejecuciones_validacion';
 
     /** @var list<string> */
     protected $fillable = [
-        'silabo_id', 'ejecutado_por', 'version_reglas', 'estado', 'lock_version',
+        'silabo_id', 'ejecutado_por', 'version_reglas', 'estado', 'version_bloqueo',
         'errores_bloqueantes', 'advertencias', 'porcentaje_completitud', 'completado_en',
     ];
 
@@ -31,7 +35,7 @@ class ValidationRun extends Model
     protected function casts(): array
     {
         return [
-            'lock_version' => 'integer',
+            'version_bloqueo' => 'integer',
             'errores_bloqueantes' => 'integer',
             'advertencias' => 'integer',
             'porcentaje_completitud' => 'decimal:2',

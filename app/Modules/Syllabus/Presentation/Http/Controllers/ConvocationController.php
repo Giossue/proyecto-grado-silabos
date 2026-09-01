@@ -29,7 +29,7 @@ class ConvocationController extends Controller
         $careerId = $roles->resolve($request)?->carrera_id;
         $filters = $request->validated();
         $search = is_string($filters['q'] ?? null) ? trim($filters['q']) : null;
-        $state = in_array($filters['state'] ?? null, ['preparation', 'open', 'closed'], true)
+        $state = in_array($filters['state'] ?? null, ['preparacion', 'abierta', 'cerrada'], true)
             ? $filters['state']
             : null;
 
@@ -47,7 +47,7 @@ class ConvocationController extends Controller
                 ->when($state, fn ($query, string $value) => $query->where('estado', $value))
                 ->with(['academicPeriod:id,nombre', 'templateVersion.template:id,nombre'])
                 ->withCount('syllabi')
-                ->orderByDesc('created_at')
+                ->orderByDesc('creado_en')
                 ->paginate(15)
                 ->through(fn (Convocation $convocation) => [
                     'id' => $convocation->id,
@@ -60,7 +60,7 @@ class ConvocationController extends Controller
                 ]),
             'periods' => AcademicPeriod::query()->where('activo', true)->orderByDesc('fecha_inicio')->get(['id', 'nombre']),
             'templates' => TemplateVersion::query()
-                ->where('estado', 'published')
+                ->where('estado', 'publicada')
                 ->whereHas('template', fn ($query) => $query->where('es_institucional', true)->where('activo', true))
                 ->with('template:id,nombre')
                 ->orderByDesc('publicado_en')->get()
@@ -87,7 +87,7 @@ class ConvocationController extends Controller
         abort_unless($request->user()?->can('view', $convocation) === true, 403);
         $convocation->load(['academicPeriod', 'templateVersion.template', 'sources', 'deadlines']);
         $syllabi = $convocation->syllabi()
-            ->with(['subject:id,nombre,codigo_institucional', 'scopes.parallel:id,codigo', 'teachers:id,name'])
+            ->with(['subject:id,nombre,codigo_institucional', 'scopes.parallel:id,codigo', 'teachers:id,nombre'])
             ->orderBy('asignatura_id')->get();
 
         return Inertia::render('Coordination/Convocations/Show', [
@@ -99,14 +99,14 @@ class ConvocationController extends Controller
                 'period' => $convocation->academicPeriod->nombre,
                 'template' => "{$convocation->templateVersion->template->nombre} · v{$convocation->templateVersion->numero_version}",
                 'sources' => $convocation->sources->map(fn (AcademicSource $source) => $source->nombre)->values(),
-                'start_date' => $convocation->deadlines->firstWhere('etapa', 'start')?->vence_en->toIso8601String(),
-                'draft_deadline' => $convocation->deadlines->firstWhere('etapa', 'draft')?->vence_en->toIso8601String(),
+                'start_date' => $convocation->deadlines->firstWhere('etapa', 'inicio')?->vence_en->toIso8601String(),
+                'draft_deadline' => $convocation->deadlines->firstWhere('etapa', 'borrador')?->vence_en->toIso8601String(),
                 'counts' => [
                     'total' => $syllabi->count(),
-                    'not_started' => $syllabi->where('estado', 'not_started')->count(),
-                    'draft' => $syllabi->where('estado', 'draft')->count(),
-                    'in_review' => $syllabi->where('estado', 'in_review')->count(),
-                    'approved' => $syllabi->where('estado', 'approved')->count(),
+                    'not_started' => $syllabi->where('estado', 'sin_iniciar')->count(),
+                    'draft' => $syllabi->where('estado', 'borrador')->count(),
+                    'in_review' => $syllabi->where('estado', 'en_revision')->count(),
+                    'approved' => $syllabi->where('estado', 'aprobado')->count(),
                 ],
                 'syllabi' => $syllabi->map(fn (Syllabus $syllabus) => [
                     'id' => $syllabus->id,
@@ -115,7 +115,7 @@ class ConvocationController extends Controller
                     'state' => $syllabus->estado,
                     'completion' => (float) $syllabus->porcentaje_completitud,
                     'parallels' => $syllabus->scopes->pluck('parallel.codigo')->unique()->values(),
-                    'teachers' => $syllabus->teachers->pluck('name')->unique()->values(),
+                    'teachers' => $syllabus->teachers->pluck('nombre')->unique()->values(),
                 ])->values(),
             ],
         ]);

@@ -8,59 +8,63 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * @property string $id
- * @property string $type
- * @property string $queue_name
- * @property string $status
- * @property string $idempotency_key
- * @property string|null $correlation_id
- * @property string|null $resource_type
- * @property string|null $resource_id
- * @property int $attempts
- * @property int $max_attempts
- * @property int $progress
- * @property array<string, mixed>|null $result
- * @property string|null $error_code
- * @property string|null $error_message
- * @property CarbonImmutable|null $started_at
- * @property CarbonImmutable|null $finished_at
- * @property CarbonImmutable|null $created_at
- * @property CarbonImmutable|null $updated_at
+ * @property string $tipo
+ * @property string $cola
+ * @property string $estado
+ * @property string $clave_idempotencia
+ * @property string|null $correlacion_id
+ * @property string|null $tipo_recurso
+ * @property string|null $recurso_id
+ * @property int $intentos
+ * @property int $intentos_maximos
+ * @property int $progreso
+ * @property array<string, mixed>|null $resultado
+ * @property string|null $codigo_error
+ * @property string|null $mensaje_error
+ * @property CarbonImmutable|null $iniciado_en
+ * @property CarbonImmutable|null $finalizado_en
+ * @property CarbonImmutable|null $creado_en
+ * @property CarbonImmutable|null $actualizado_en
  */
 class JobExecution extends Model
 {
     use HasUuids;
 
+    public const CREATED_AT = 'creado_en';
+
+    public const UPDATED_AT = 'actualizado_en';
+
     protected $table = 'ejecuciones_trabajo';
 
     /** @var list<string> */
     protected $fillable = [
-        'type',
-        'queue_name',
-        'status',
-        'idempotency_key',
-        'correlation_id',
-        'resource_type',
-        'resource_id',
-        'attempts',
-        'max_attempts',
-        'progress',
-        'result',
-        'error_code',
-        'error_message',
-        'started_at',
-        'finished_at',
+        'tipo',
+        'cola',
+        'estado',
+        'clave_idempotencia',
+        'correlacion_id',
+        'tipo_recurso',
+        'recurso_id',
+        'intentos',
+        'intentos_maximos',
+        'progreso',
+        'resultado',
+        'codigo_error',
+        'mensaje_error',
+        'iniciado_en',
+        'finalizado_en',
     ];
 
     /** @return array<string, string> */
     protected function casts(): array
     {
         return [
-            'attempts' => 'integer',
-            'max_attempts' => 'integer',
-            'progress' => 'integer',
-            'result' => 'array',
-            'started_at' => 'immutable_datetime',
-            'finished_at' => 'immutable_datetime',
+            'intentos' => 'integer',
+            'intentos_maximos' => 'integer',
+            'progreso' => 'integer',
+            'resultado' => 'array',
+            'iniciado_en' => 'immutable_datetime',
+            'finalizado_en' => 'immutable_datetime',
         ];
     }
 }

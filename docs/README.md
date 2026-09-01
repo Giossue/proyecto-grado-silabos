@@ -22,7 +22,7 @@
 - `architecture/backend.md`, `frontend.md`, `database.md`.
 - `architecture/sequences.md`: interacciones canónicas de los flujos críticos.
 - `architecture/queues-and-jobs.md`, `files-and-documents.md`.
-- `architecture/ai-service.md`, `integrations.md`, `deployment.md`.
+- `architecture/ai-service.md`, `deployment.md`.
 - `architecture/adr/`: decisiones duraderas.
 
 ## Ejecución

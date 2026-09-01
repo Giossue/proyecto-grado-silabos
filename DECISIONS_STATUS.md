@@ -155,6 +155,20 @@ malla actual. Coordinación edita la actual activa o inactiva, la deshabilita pa
 bloquear procesos nuevos y solo puede eliminarla sin dependencias. Cada sílabo fija su
 contexto académico y lo incorpora a sus revisiones inmutables.
 
+I-28 (1 de septiembre de 2026) deja el esquema físico y los valores almacenados 100 %
+en español por decisión explícita del responsable del producto, en la línea de I-12 e
+I-14: timestamps `creado_en`/`actualizado_en`, columnas de `usuarios`
+(`correo_electronico`, `contrasena`…), `ejecuciones_trabajo` completa,
+`eventos_salientes` (antes `eventos_outbox`), familia `version_bloqueo`, estados y
+discriminadores (`pendiente`, `borrador`, `administrador`…), colas Redis y CHECK
+constraints; las tablas de framework vivas se renombraron por configuración
+(`sesiones`, `trabajos_fallidos`, `restablecimientos_contrasena`, `migraciones`) y las
+muertas (`jobs`, `job_batches`, `cache`, `cache_locks`) se eliminaron. Los límites que
+quedan (columnas internas de drivers de Laravel, claves internas de JSONB sellados,
+contrato del gateway de IA) están registrados en `docs/plans/technical-debt.md`. No
+altera autorización ni ciclo de vida; corrige de paso el worker de producción, que no
+escuchaba las colas nombradas.
+
 ## Propuesto
 
 - PHP 8.3 o superior como mínimo del proyecto.

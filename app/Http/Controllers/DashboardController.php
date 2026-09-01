@@ -57,7 +57,7 @@ class DashboardController extends Controller
             [
                 'key' => 'users',
                 'label' => 'Usuarios activos',
-                'value' => User::query()->where('active', true)->count(),
+                'value' => User::query()->where('activo', true)->count(),
                 'hint' => 'Cuentas habilitadas para iniciar sesión',
             ],
             [
@@ -69,13 +69,13 @@ class DashboardController extends Controller
             [
                 'key' => 'templates',
                 'label' => 'Plantillas publicadas',
-                'value' => TemplateVersion::query()->where('estado', 'published')->count(),
+                'value' => TemplateVersion::query()->where('estado', 'publicada')->count(),
                 'hint' => 'Versiones publicadas disponibles para convocatorias',
             ],
             [
                 'key' => 'failed_jobs',
                 'label' => 'Procesos fallidos',
-                'value' => JobExecution::query()->where('status', 'failed')->count(),
+                'value' => JobExecution::query()->where('estado', 'fallida')->count(),
                 'hint' => 'Correos, documentos y análisis que terminaron en error',
             ],
         ];
@@ -95,26 +95,26 @@ class DashboardController extends Controller
                 'label' => 'Convocatorias abiertas',
                 'value' => Convocation::query()
                     ->where('carrera_id', $careerId)
-                    ->where('estado', 'open')
+                    ->where('estado', 'abierta')
                     ->count(),
                 'hint' => 'Convocatorias en curso de su carrera',
             ],
             [
                 'key' => 'in_review',
                 'label' => 'En revisión',
-                'value' => $syllabi('in_review'),
+                'value' => $syllabi('en_revision'),
                 'hint' => 'Expedientes enviados que esperan su revisión',
             ],
             [
                 'key' => 'correction_requested',
                 'label' => 'Con corrección solicitada',
-                'value' => $syllabi('correction_requested'),
+                'value' => $syllabi('correccion_solicitada'),
                 'hint' => 'Devueltos al docente y aún sin reenviar',
             ],
             [
                 'key' => 'approved',
                 'label' => 'Aprobados',
-                'value' => $syllabi('approved'),
+                'value' => $syllabi('aprobado'),
                 'hint' => 'Expedientes con aprobación vigente',
             ],
         ];
@@ -137,19 +137,19 @@ class DashboardController extends Controller
             [
                 'key' => 'draft',
                 'label' => 'En borrador',
-                'value' => $own()->where('estado', 'draft')->count(),
+                'value' => $own()->where('estado', 'borrador')->count(),
                 'hint' => 'Editables y aún sin enviar',
             ],
             [
                 'key' => 'in_review',
                 'label' => 'En revisión',
-                'value' => $own()->where('estado', 'in_review')->count(),
+                'value' => $own()->where('estado', 'en_revision')->count(),
                 'hint' => 'Enviados y a la espera de Coordinación',
             ],
             [
                 'key' => 'correction_requested',
                 'label' => 'Requieren corrección',
-                'value' => $own()->where('estado', 'correction_requested')->count(),
+                'value' => $own()->where('estado', 'correccion_solicitada')->count(),
                 'hint' => 'Devueltos con observaciones por responder',
             ],
         ];

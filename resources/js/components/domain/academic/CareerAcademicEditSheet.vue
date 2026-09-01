@@ -25,7 +25,11 @@ import {
 import type { AcademicStructureProps } from '@/types/academic';
 
 export type CareerAcademicEntity =
-    'curriculum' | 'subject' | 'offering' | 'parallel' | 'teacher_assignment';
+    | 'malla'
+    | 'asignatura'
+    | 'oferta'
+    | 'paralelo'
+    | 'asignacion_docente';
 
 export type CareerAcademicEditableRecord = {
     id: string;
@@ -56,11 +60,11 @@ const open = defineModel<boolean>('open', { default: false });
 const entityLabel = computed(
     () =>
         ({
-            curriculum: 'malla',
-            subject: 'materia',
-            offering: 'oferta académica',
-            parallel: 'paralelo',
-            teacher_assignment: 'asignación docente',
+            malla: 'malla',
+            asignatura: 'materia',
+            oferta: 'oferta académica',
+            paralelo: 'paralelo',
+            asignacion_docente: 'asignación docente',
         })[props.entity],
 );
 </script>
@@ -90,7 +94,7 @@ const entityLabel = computed(
                         <FieldError :errors="[errors.record]" />
                     </Field>
 
-                    <template v-if="entity === 'curriculum'">
+                    <template v-if="entity === 'malla'">
                         <Field :data-invalid="Boolean(errors.code)">
                             <FieldLabel
                                 :for="`edit-curriculum-code-${record.id}`"
@@ -110,7 +114,7 @@ const entityLabel = computed(
                         </Field>
                     </template>
 
-                    <template v-else-if="entity === 'subject'">
+                    <template v-else-if="entity === 'asignatura'">
                         <Field :data-invalid="Boolean(errors.code)">
                             <FieldLabel
                                 :for="`edit-subject-code-${record.id}`"
@@ -127,7 +131,7 @@ const entityLabel = computed(
                             />
                             <FieldError :errors="[errors.code]" />
                         </Field>
-                        <Field :data-invalid="Boolean(errors.name)">
+                        <Field :data-invalid="Boolean(errors.nombre)">
                             <FieldLabel
                                 :for="`edit-subject-name-${record.id}`"
                                 required
@@ -135,13 +139,13 @@ const entityLabel = computed(
                             >
                             <Input
                                 :id="`edit-subject-name-${record.id}`"
-                                name="name"
+                                name="nombre"
                                 :default-value="record.name"
                                 placeholder="Ej. Ingeniería de requisitos"
                                 required
-                                :aria-invalid="Boolean(errors.name)"
+                                :aria-invalid="Boolean(errors.nombre)"
                             />
-                            <FieldError :errors="[errors.name]" />
+                            <FieldError :errors="[errors.nombre]" />
                         </Field>
                         <Field :data-invalid="Boolean(errors.cycle)">
                             <FieldLabel :for="`edit-subject-cycle-${record.id}`"
@@ -157,39 +161,39 @@ const entityLabel = computed(
                             />
                             <FieldError :errors="[errors.cycle]" />
                         </Field>
-                        <Field :data-invalid="Boolean(errors.credits)">
+                        <Field :data-invalid="Boolean(errors.creditos)">
                             <FieldLabel
                                 :for="`edit-subject-credits-${record.id}`"
                                 >Créditos</FieldLabel
                             >
                             <Input
                                 :id="`edit-subject-credits-${record.id}`"
-                                name="credits"
+                                name="creditos"
                                 type="number"
                                 min="0"
                                 step="0.01"
                                 :default-value="record.credits ?? ''"
-                                :aria-invalid="Boolean(errors.credits)"
+                                :aria-invalid="Boolean(errors.creditos)"
                             />
-                            <FieldError :errors="[errors.credits]" />
+                            <FieldError :errors="[errors.creditos]" />
                         </Field>
-                        <Field :data-invalid="Boolean(errors.total_hours)">
+                        <Field :data-invalid="Boolean(errors.horas_totales)">
                             <FieldLabel :for="`edit-subject-hours-${record.id}`"
                                 >Horas totales</FieldLabel
                             >
                             <Input
                                 :id="`edit-subject-hours-${record.id}`"
-                                name="total_hours"
+                                name="horas_totales"
                                 type="number"
                                 min="0"
                                 :default-value="record.total_hours ?? ''"
-                                :aria-invalid="Boolean(errors.total_hours)"
+                                :aria-invalid="Boolean(errors.horas_totales)"
                             />
-                            <FieldError :errors="[errors.total_hours]" />
+                            <FieldError :errors="[errors.horas_totales]" />
                         </Field>
                     </template>
 
-                    <template v-else-if="entity === 'offering'">
+                    <template v-else-if="entity === 'oferta'">
                         <Field :data-invalid="Boolean(errors.subject_id)">
                             <FieldLabel
                                 :for="`edit-offering-subject-${record.id}`"
@@ -318,7 +322,7 @@ const entityLabel = computed(
                         </Field>
                     </template>
 
-                    <template v-else-if="entity === 'parallel'">
+                    <template v-else-if="entity === 'paralelo'">
                         <Field :data-invalid="Boolean(errors.offering_id)">
                             <FieldLabel
                                 :for="`edit-parallel-offering-${record.id}`"

@@ -39,12 +39,12 @@ defineProps<{
                 <Input
                     id="email"
                     type="email"
-                    name="email"
+                    name="correo_electronico"
                     required
                     autocomplete="off"
                     placeholder="Ej. nombre@ueb.edu.ec"
                 />
-                <InputError :message="errors.email" />
+                <InputError :message="errors.correo_electronico" />
             </div>
 
             <div class="my-6 flex items-center justify-start">

@@ -36,13 +36,13 @@ const props = defineProps<
 const labels = computed(
     () =>
         ({
-            faculty: {
+            facultad: {
                 trigger: 'Nueva facultad',
                 title: 'Nueva facultad',
                 description:
                     'Registre una unidad académica que agrupará sus carreras.',
             },
-            career: {
+            carrera: {
                 trigger: 'Nueva carrera',
                 title: 'Nueva carrera',
                 description:
@@ -54,12 +54,12 @@ const labels = computed(
                 description:
                     'Registre una sede institucional disponible para la oferta académica.',
             },
-            modality: {
+            modalidad: {
                 trigger: 'Nueva modalidad',
                 title: 'Nueva modalidad',
                 description: 'Registre una forma institucional de impartición.',
             },
-            period: {
+            periodo: {
                 trigger: 'Nuevo periodo académico',
                 title: 'Nuevo periodo académico',
                 description:
@@ -71,16 +71,16 @@ const labels = computed(
 const submitLabel = computed(
     () =>
         ({
-            faculty: 'Crear facultad',
-            career: 'Crear carrera',
+            facultad: 'Crear facultad',
+            carrera: 'Crear carrera',
             campus: 'Crear campus',
-            modality: 'Crear modalidad',
-            period: 'Crear periodo',
+            modalidad: 'Crear modalidad',
+            periodo: 'Crear periodo',
         })[props.entity],
 );
 
 const codeLabel = computed(() =>
-    ['modality', 'period'].includes(props.entity)
+    ['modalidad', 'periodo'].includes(props.entity)
         ? 'Código estable'
         : 'Código institucional',
 );
@@ -88,14 +88,14 @@ const codeLabel = computed(() =>
 const examples = computed(
     () =>
         ({
-            faculty: {
+            facultad: {
                 name: 'Ej. Facultad de Ciencias Administrativas',
                 code: 'Ej. FCA',
             },
-            career: { name: 'Ej. Software', code: 'Ej. SW' },
+            carrera: { name: 'Ej. Software', code: 'Ej. SW' },
             campus: { name: 'Ej. Campus Matriz', code: 'Ej. MATRIZ' },
-            modality: { name: 'Ej. Presencial', code: 'Ej. PRES' },
-            period: { name: 'Ej. 2026-2027', code: 'Ej. 2026-2027' },
+            modalidad: { name: 'Ej. Presencial', code: 'Ej. PRES' },
+            periodo: { name: 'Ej. 2026-2027', code: 'Ej. 2026-2027' },
         })[props.entity],
 );
 </script>
@@ -117,7 +117,7 @@ const examples = computed(
                 >
                     <FieldGroup>
                         <Field
-                            v-if="entity === 'career'"
+                            v-if="entity === 'carrera'"
                             :data-invalid="Boolean(errors.faculty_id)"
                         >
                             <FieldLabel for="catalog-faculty" required>
@@ -151,25 +151,26 @@ const examples = computed(
                             <FieldError :errors="[errors.faculty_id]" />
                         </Field>
 
-                        <Field :data-invalid="Boolean(errors.name)">
+                        <Field :data-invalid="Boolean(errors.nombre)">
                             <FieldLabel for="catalog-name" required>
                                 Nombre
                             </FieldLabel>
                             <Input
                                 id="catalog-name"
-                                name="name"
+                                name="nombre"
                                 :placeholder="examples.name"
                                 required
-                                :aria-invalid="Boolean(errors.name)"
+                                :aria-invalid="Boolean(errors.nombre)"
                             />
-                            <FieldError :errors="[errors.name]" />
+                            <FieldError :errors="[errors.nombre]" />
                         </Field>
 
                         <Field :data-invalid="Boolean(errors.code)">
                             <FieldLabel
                                 for="catalog-code"
                                 :required="
-                                    entity === 'modality' || entity === 'period'
+                                    entity === 'modalidad' ||
+                                    entity === 'periodo'
                                 "
                             >
                                 {{ codeLabel }}
@@ -179,7 +180,8 @@ const examples = computed(
                                 name="code"
                                 :placeholder="examples.code"
                                 :required="
-                                    entity === 'modality' || entity === 'period'
+                                    entity === 'modalidad' ||
+                                    entity === 'periodo'
                                 "
                                 :aria-invalid="Boolean(errors.code)"
                             />
@@ -187,7 +189,7 @@ const examples = computed(
                         </Field>
 
                         <Field
-                            v-if="entity === 'period'"
+                            v-if="entity === 'periodo'"
                             :data-invalid="Boolean(errors.starts_on)"
                         >
                             <FieldLabel for="catalog-starts-on" required>
@@ -203,7 +205,7 @@ const examples = computed(
                         </Field>
 
                         <Field
-                            v-if="entity === 'period'"
+                            v-if="entity === 'periodo'"
                             :data-invalid="Boolean(errors.ends_on)"
                         >
                             <FieldLabel for="catalog-ends-on" required>

@@ -26,7 +26,7 @@ class ReorderTemplateSections
         DB::transaction(function () use ($activeRole, $actor, $request, $sectionIds, $version): void {
             $lockedVersion = TemplateVersion::query()->whereKey($version->id)->lockForUpdate()->firstOrFail();
 
-            if ($lockedVersion->estado !== 'draft') {
+            if ($lockedVersion->estado !== 'borrador') {
                 throw ValidationException::withMessages(['sections' => 'La versión publicada no admite cambios.']);
             }
 
@@ -52,10 +52,10 @@ class ReorderTemplateSections
             $this->audit->execute(
                 actorId: $actor->id,
                 roleAssignmentId: $activeRole?->id,
-                action: 'template.sections_reordered',
-                resourceType: 'template_version',
+                action: 'plantilla.secciones_reordenadas',
+                resourceType: 'version_plantilla',
                 resourceId: $lockedVersion->id,
-                result: 'success',
+                result: 'exito',
                 correlationId: $request->attributes->getString('correlation_id') ?: null,
             );
         });

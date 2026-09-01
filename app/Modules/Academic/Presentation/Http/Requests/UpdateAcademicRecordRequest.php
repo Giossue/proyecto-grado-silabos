@@ -14,7 +14,7 @@ class UpdateAcademicRecordRequest extends FormRequest
         $entity = $this->route('entity');
 
         return is_string($entity)
-            && $this->user()?->active === true
+            && $this->user()?->activo === true
             && AcademicStructurePermissions::mayUpdate(
                 app(ActiveRole::class)->resolve($this),
                 $entity,
@@ -25,29 +25,29 @@ class UpdateAcademicRecordRequest extends FormRequest
     public function rules(): array
     {
         return match ($this->route('entity')) {
-            'faculty' => $this->namedCatalogRules('facultades', 180),
-            'career' => [
+            'facultad' => $this->namedCatalogRules('facultades', 180),
+            'carrera' => [
                 'faculty_id' => ['required', 'uuid', Rule::exists('facultades', 'id')],
                 ...$this->namedCatalogRules('carreras', 180),
             ],
             'campus' => $this->namedCatalogRules('campus', 120),
-            'modality' => [
+            'modalidad' => [
                 'code' => [
                     'required',
                     'string',
                     'max:40',
                     Rule::unique('modalidades', 'codigo')->ignore($this->recordId()),
                 ],
-                'name' => ['required', 'string', 'max:100'],
+                'nombre' => ['required', 'string', 'max:100'],
             ],
-            'period' => [
+            'periodo' => [
                 'code' => [
                     'required',
                     'string',
                     'max:40',
                     Rule::unique('periodos_academicos', 'codigo')->whereNull('carrera_id')->ignore($this->recordId()),
                 ],
-                'name' => ['required', 'string', 'max:120'],
+                'nombre' => ['required', 'string', 'max:120'],
                 'starts_on' => ['required', 'date'],
                 'ends_on' => ['required', 'date', 'after_or_equal:starts_on'],
             ],
@@ -65,7 +65,7 @@ class UpdateAcademicRecordRequest extends FormRequest
                 'max:80',
                 Rule::unique($table, 'codigo_institucional')->ignore($this->recordId()),
             ],
-            'name' => ['required', 'string', "max:{$nameLength}"],
+            'nombre' => ['required', 'string', "max:{$nameLength}"],
         ];
     }
 

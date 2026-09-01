@@ -42,7 +42,7 @@ class SyllabusController extends Controller
         $filters = $request->validated();
         $search = is_string($filters['q'] ?? null) ? trim($filters['q']) : null;
         $state = in_array($filters['state'] ?? null, [
-            'not_started', 'draft', 'in_review', 'correction_requested', 'approved',
+            'sin_iniciar', 'borrador', 'en_revision', 'correccion_solicitada', 'aprobado',
         ], true) ? $filters['state'] : null;
 
         return Inertia::render('Teacher/Syllabi/Index', [
@@ -61,7 +61,7 @@ class SyllabusController extends Controller
                 ))
                 ->when($state, fn ($query, string $value) => $query->where('estado', $value))
                 ->with(['convocation:id,nombre,periodo_academico_id', 'convocation.academicPeriod:id,nombre', 'subject:id,nombre,codigo_institucional', 'scopes.parallel:id,codigo'])
-                ->orderByDesc('updated_at')
+                ->orderByDesc('actualizado_en')
                 ->paginate(15)
                 ->withQueryString()
                 ->through(fn (Syllabus $syllabus) => [
@@ -73,7 +73,7 @@ class SyllabusController extends Controller
                     'state' => $syllabus->estado,
                     'completion' => (float) $syllabus->porcentaje_completitud,
                     'parallels' => $syllabus->scopes->pluck('parallel.codigo')->unique()->values(),
-                    'saved_at' => $syllabus->guardado_en?->toIso8601String(),
+                    'guardado_en' => $syllabus->guardado_en?->toIso8601String(),
                 ]),
         ]);
     }
@@ -104,7 +104,7 @@ class SyllabusController extends Controller
     public function submitConfirmation(Syllabus $syllabus, Request $request): Response
     {
         abort_unless($request->user()?->can('submit', $syllabus) === true, 403);
-        abort_unless(in_array($syllabus->estado, ['draft', 'correction_requested'], true), 404);
+        abort_unless(in_array($syllabus->estado, ['borrador', 'correccion_solicitada'], true), 404);
 
         return Inertia::render('Teacher/Syllabi/Submit', [
             'syllabus' => $this->syllabusPayload($syllabus),
@@ -120,7 +120,7 @@ class SyllabusController extends Controller
         abort_unless($actor instanceof User, 401);
         $revision = $action->execute(
             $syllabus,
-            $request->integer('lock_version'),
+            $request->integer('version_bloqueo'),
             $request->string('idempotency_key')->toString(),
             $actor,
             $request,
@@ -160,10 +160,10 @@ class SyllabusController extends Controller
 
         return response()->json([
             'message' => 'Borrador guardado.',
-            'lock_version' => $updated->lock_version,
+            'version_bloqueo' => $updated->version_bloqueo,
             'completion' => (float) $updated->porcentaje_completitud,
-            'saved_at' => $updated->guardado_en?->toIso8601String(),
-            'rows' => $field->tipo === 'repeatable'
+            'guardado_en' => $updated->guardado_en?->toIso8601String(),
+            'rows' => $field->tipo === 'repetible'
                 ? $updated->rows()->where('definicion_campo_id', $field->id)->orderBy('posicion')->get(['id', 'datos', 'posicion'])
                 : [],
         ]);
@@ -184,14 +184,14 @@ class SyllabusController extends Controller
     private function syllabusPayload(Syllabus $syllabus): array
     {
         $syllabus->load([
-            'convocation.academicPeriod', 'subject', 'scopes.parallel', 'teachers:id,name',
+            'convocation.academicPeriod', 'subject', 'scopes.parallel', 'teachers:id,nombre',
             'templateVersion.sections.blocks.fields', 'values', 'rows',
             'validationRuns' => fn ($query) => $query->with('results')->latest('completado_en')->limit(1),
             'revisions' => fn ($query) => $query->with([
-                'submitter:id,name', 'approval.approver:id,name',
-                'correctionRequest.observations', 'observations.response.respondent:id,name',
+                'submitter:id,nombre', 'approval.approver:id,nombre',
+                'correctionRequest.observations', 'observations.response.respondent:id,nombre',
             ]),
-            'reopenings' => fn ($query) => $query->with('reopener:id,name')->latest('reabierto_en'),
+            'reopenings' => fn ($query) => $query->with('reopener:id,nombre')->latest('reabierto_en'),
         ]);
         $values = $syllabus->values->keyBy('definicion_campo_id');
         $rows = $syllabus->rows->groupBy('definicion_campo_id');
@@ -204,11 +204,11 @@ class SyllabusController extends Controller
             'convocation' => $syllabus->convocation->nombre,
             'period' => $syllabus->convocation->academicPeriod->nombre,
             'state' => $syllabus->estado,
-            'lock_version' => $syllabus->lock_version,
+            'version_bloqueo' => $syllabus->version_bloqueo,
             'completion' => (float) $syllabus->porcentaje_completitud,
-            'saved_at' => $syllabus->guardado_en?->toIso8601String(),
+            'guardado_en' => $syllabus->guardado_en?->toIso8601String(),
             'parallels' => $syllabus->scopes->pluck('parallel.codigo')->unique()->values(),
-            'teachers' => $syllabus->teachers->pluck('name')->unique()->values(),
+            'teachers' => $syllabus->teachers->pluck('nombre')->unique()->values(),
             'sections' => $syllabus->templateVersion->sections
                 ->map(fn (TemplateSection $section): array => $this->sectionPayload($section, $values, $rows))
                 ->values(),
@@ -227,14 +227,14 @@ class SyllabusController extends Controller
                 'id' => $revision->id,
                 'number' => $revision->numero_revision,
                 'submitted_at' => $revision->enviado_en->toIso8601String(),
-                'submitted_by' => $revision->submitter->name,
+                'submitted_by' => $revision->submitter->nombre,
                 'approved_at' => $revision->approval?->aprobado_en->toIso8601String(),
             ])->values(),
             'observations' => $this->teacherObservationsPayload($syllabus),
             'reopening' => $syllabus->reopenings->first() === null ? null : [
                 'cause' => $syllabus->reopenings->first()->causa,
                 'reopened_at' => $syllabus->reopenings->first()->reabierto_en->toIso8601String(),
-                'reopened_by' => $syllabus->reopenings->first()->reopener->name,
+                'reopened_by' => $syllabus->reopenings->first()->reopener->nombre,
             ],
         ];
     }
@@ -315,7 +315,7 @@ class SyllabusController extends Controller
                 'inherited' => $field->heredado,
                 'teacher_editable' => $field->editable_docente,
                 'ai_enabled' => $field->ia_habilitada
-                    && in_array($field->tipo, ['short_text', 'long_text', 'markdown'], true),
+                    && in_array($field->tipo, ['texto_corto', 'texto_largo', 'markdown'], true),
                 'value' => $values->get($field->id)?->valor,
                 'rows' => $fieldRows,
             ];
@@ -325,7 +325,7 @@ class SyllabusController extends Controller
             'id' => $block->id,
             'title' => $block->titulo,
             'content_type' => $block->configuredContentType()
-                ?? ($block->tipo === 'repeatable' ? 'table' : 'text'),
+                ?? ($block->tipo === 'repetible' ? 'table' : 'text'),
             'fields' => $fields,
         ];
     }

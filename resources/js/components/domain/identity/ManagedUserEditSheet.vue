@@ -28,7 +28,12 @@ import {
 } from '@/components/ui/select';
 
 const props = defineProps<{
-    user: { id: string; name: string; email: string; active: boolean };
+    user: {
+        id: string;
+        nombre: string;
+        correo_electronico: string;
+        active: boolean;
+    };
     roles: { codigo: string; nombre: string }[];
     careers: { id: string; nombre: string }[];
     today: string;
@@ -47,18 +52,18 @@ const editingSelf = computed(() => page.props.auth.user.id === props.user.id);
 const description = computed(() =>
     editingSelf.value
         ? 'Corrija su nombre o su correo. El estado y los roles de la propia cuenta se gestionan desde otra cuenta de administración.'
-        : `Corrija el nombre o el correo de ${props.user.name}, cambie el estado de la cuenta o asigne otro rol. El correo es con el que inicia sesión.`,
+        : `Corrija el nombre o el correo de ${props.user.nombre}, cambie el estado de la cuenta o asigne otro rol. El correo es con el que inicia sesión.`,
 );
 
 // Asignar un rol añade una vigencia nueva, no edita la actual: solo se envía cuando la
 // persona lo pide expresamente, para que guardar el panel no multiplique asignaciones.
 const assigningRole = ref(false);
-const selectedRole = ref('teacher');
+const selectedRole = ref('docente');
 
 watch(open, (isOpen) => {
     if (isOpen) {
         assigningRole.value = false;
-        selectedRole.value = 'teacher';
+        selectedRole.value = 'docente';
     }
 });
 </script>
@@ -81,7 +86,7 @@ watch(open, (isOpen) => {
                 @success="close"
             >
                 <FieldGroup>
-                    <Field :data-invalid="Boolean(errors.name)">
+                    <Field :data-invalid="Boolean(errors.nombre)">
                         <FieldLabel
                             :for="`user-edit-name-${props.user.id}`"
                             required
@@ -90,16 +95,16 @@ watch(open, (isOpen) => {
                         </FieldLabel>
                         <Input
                             :id="`user-edit-name-${props.user.id}`"
-                            name="name"
-                            :default-value="props.user.name"
+                            name="nombre"
+                            :default-value="props.user.nombre"
                             placeholder="Ej. María Pérez"
                             required
-                            :aria-invalid="Boolean(errors.name)"
+                            :aria-invalid="Boolean(errors.nombre)"
                         />
-                        <FieldError :errors="[errors.name]" />
+                        <FieldError :errors="[errors.nombre]" />
                     </Field>
 
-                    <Field :data-invalid="Boolean(errors.email)">
+                    <Field :data-invalid="Boolean(errors.correo_electronico)">
                         <FieldLabel
                             :for="`user-edit-email-${props.user.id}`"
                             required
@@ -108,18 +113,18 @@ watch(open, (isOpen) => {
                         </FieldLabel>
                         <Input
                             :id="`user-edit-email-${props.user.id}`"
-                            name="email"
+                            name="correo_electronico"
                             type="email"
-                            :default-value="props.user.email"
+                            :default-value="props.user.correo_electronico"
                             placeholder="Ej. maria.perez@ueb.edu.ec"
                             required
-                            :aria-invalid="Boolean(errors.email)"
+                            :aria-invalid="Boolean(errors.correo_electronico)"
                         />
                         <FieldDescription>
                             Con este correo inicia sesión. Si lo cambia, avísele
                             antes de que intente entrar.
                         </FieldDescription>
-                        <FieldError :errors="[errors.email]" />
+                        <FieldError :errors="[errors.correo_electronico]" />
                     </Field>
 
                     <template v-if="!editingSelf">
@@ -207,7 +212,7 @@ watch(open, (isOpen) => {
                             </Field>
 
                             <Field
-                                v-if="selectedRole !== 'administrator'"
+                                v-if="selectedRole !== 'administrador'"
                                 :data-invalid="Boolean(errors.career_id)"
                             >
                                 <FieldLabel

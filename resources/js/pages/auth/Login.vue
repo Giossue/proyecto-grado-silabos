@@ -45,20 +45,20 @@ defineProps<{
         class="flex flex-col gap-6"
     >
         <FieldGroup>
-            <Field :data-invalid="Boolean(errors.email)">
+            <Field :data-invalid="Boolean(errors.correo_electronico)">
                 <FieldLabel for="email" required>
                     Correo institucional
                 </FieldLabel>
                 <Input
                     id="email"
                     type="email"
-                    name="email"
+                    name="correo_electronico"
                     required
                     autocomplete="email"
                     placeholder="Ej. nombre@ueb.edu.ec"
-                    :aria-invalid="Boolean(errors.email)"
+                    :aria-invalid="Boolean(errors.correo_electronico)"
                 />
-                <FieldError :errors="[errors.email]" />
+                <FieldError :errors="[errors.correo_electronico]" />
             </Field>
 
             <Field :data-invalid="Boolean(errors.password)">

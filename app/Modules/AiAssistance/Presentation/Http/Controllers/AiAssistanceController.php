@@ -51,7 +51,7 @@ class AiAssistanceController extends Controller
                 'id' => $syllabus->id,
                 'subject' => $syllabus->subject()->valueOrFail('nombre'),
                 'state' => $syllabus->estado,
-                'lock_version' => $syllabus->lock_version,
+                'version_bloqueo' => $syllabus->version_bloqueo,
             ],
             'field' => [
                 'id' => $field->id,
@@ -64,13 +64,13 @@ class AiAssistanceController extends Controller
             ],
             'executions' => $executions->map(fn (AiExecution $execution): array => [
                 'id' => $execution->id,
-                'status' => $execution->estado,
+                'estado' => $execution->estado,
                 'requested_at' => $execution->solicitado_en->toIso8601String(),
                 'completed_at' => $execution->completado_en?->toIso8601String(),
                 'analysis_label' => 'Análisis con asistencia de IA',
                 'input_content' => $execution->contenido_entrada,
                 'reason' => $this->reasonLabel($execution->motivo_no_concluyente),
-                'error_message' => $execution->mensaje_error,
+                'mensaje_error' => $execution->mensaje_error,
                 'evidence' => $execution->evidence->map(fn (AiEvidence $evidence): array => [
                     'id' => $evidence->id,
                     'source' => $evidence->nombre_fuente,
@@ -87,7 +87,7 @@ class AiAssistanceController extends Controller
                         ->where('usuario_id', $actor->id)
                         ->pluck('decision')
                         ->values(),
-                    'applied' => $recommendation->feedback->contains('decision', 'applied'),
+                    'applied' => $recommendation->feedback->contains('decision', 'aplicada'),
                 ])->values(),
             ])->values(),
         ]);
@@ -149,7 +149,7 @@ class AiAssistanceController extends Controller
         $action->execute(
             $syllabus,
             $recommendation,
-            $request->integer('lock_version'),
+            $request->integer('version_bloqueo'),
             $actor,
             $request,
         );
@@ -165,7 +165,7 @@ class AiAssistanceController extends Controller
             && $field->ia_habilitada
             && $field->editable_docente
             && ! $field->heredado
-            && in_array($field->tipo, ['short_text', 'long_text', 'markdown'], true),
+            && in_array($field->tipo, ['texto_corto', 'texto_largo', 'markdown'], true),
             404,
         );
     }
@@ -173,10 +173,10 @@ class AiAssistanceController extends Controller
     private function reasonLabel(?string $reason): ?string
     {
         return match ($reason) {
-            'evidence_limit_exceeded' => 'El conjunto de evidencia excede el límite técnico seguro.',
-            'insufficient_evidence' => 'No hay evidencia activa suficiente para analizar.',
-            'empty_content' => 'El campo todavía no contiene texto para analizar.',
-            'no_editorial_change' => 'No se identificó un cambio editorial verificable.',
+            'limite_evidencia_excedido' => 'El conjunto de evidencia excede el límite técnico seguro.',
+            'evidencia_insuficiente' => 'No hay evidencia activa suficiente para analizar.',
+            'contenido_vacio' => 'El campo todavía no contiene texto para analizar.',
+            'sin_cambio_editorial' => 'No se identificó un cambio editorial verificable.',
             null => null,
             default => 'La evidencia disponible no permite producir una recomendación verificable.',
         };

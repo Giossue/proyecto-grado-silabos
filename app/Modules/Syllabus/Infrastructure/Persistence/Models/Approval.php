@@ -25,6 +25,10 @@ class Approval extends Model
     use HasUuids;
     use ImmutableRecord;
 
+    public const CREATED_AT = 'creado_en';
+
+    public const UPDATED_AT = 'actualizado_en';
+
     protected $table = 'aprobaciones';
 
     /** @var list<string> */

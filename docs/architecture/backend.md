@@ -33,7 +33,7 @@ Envío, corrección, aprobación, reapertura, publicación y activación usan:
 2. reautorización dentro del caso de uso;
 3. validación de transición;
 4. transacción PostgreSQL;
-5. cambio + snapshot/revisión + evento de auditoría;
+5. cambio + fotografía/revisión + evento de auditoría;
 6. outbox/trabajo después del commit;
 7. respuesta idempotente.
 
@@ -61,13 +61,13 @@ académicos localizables para la interfaz.
 - Inyecta un `Clock` en reglas sensibles a fechas.
 - Genera UUID en aplicación.
 - Guarda instantes UTC y presenta en `America/Guayaquil`.
-- Incluye `lock_version` o marca temporal en recursos editables.
+- Incluye `version_bloqueo` o marca temporal en recursos editables.
 - Devuelve un conflicto recuperable con comparación/recarga, nunca last-write-wins oculto.
 
 ## Excepciones y logs
 
 - No muestres trazas al usuario.
-- Propaga un `correlation_id` por petición/trabajo.
+- Propaga un `correlacion_id` por petición/trabajo.
 - Registra identificadores internos y metadatos mínimos, no contenido completo.
 - Distingue error esperado de dominio, entrada inválida, permiso y fallo inesperado.
 

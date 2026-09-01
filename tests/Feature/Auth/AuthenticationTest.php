@@ -24,7 +24,7 @@ class AuthenticationTest extends TestCase
         $user = User::factory()->create();
 
         $response = $this->post(route('login.store'), [
-            'email' => $user->email,
+            'correo_electronico' => $user->correo_electronico,
             'password' => 'password',
         ]);
 
@@ -44,7 +44,7 @@ class AuthenticationTest extends TestCase
         $user = User::factory()->withTwoFactor()->create();
 
         $response = $this->post(route('login'), [
-            'email' => $user->email,
+            'correo_electronico' => $user->correo_electronico,
             'password' => 'password',
         ]);
 
@@ -58,7 +58,7 @@ class AuthenticationTest extends TestCase
         $user = User::factory()->create();
 
         $this->post(route('login.store'), [
-            'email' => $user->email,
+            'correo_electronico' => $user->correo_electronico,
             'password' => 'wrong-password',
         ]);
 
@@ -70,7 +70,7 @@ class AuthenticationTest extends TestCase
         $user = User::factory()->inactive()->create();
 
         $this->post(route('login.store'), [
-            'email' => $user->email,
+            'correo_electronico' => $user->correo_electronico,
             'password' => 'password',
         ]);
 
@@ -84,7 +84,7 @@ class AuthenticationTest extends TestCase
         $response = $this->actingAs($user)->get(route('dashboard'));
 
         $response->assertRedirect(route('login'));
-        $response->assertSessionHasErrors('email');
+        $response->assertSessionHasErrors('correo_electronico');
         $this->assertGuest();
     }
 
@@ -103,10 +103,10 @@ class AuthenticationTest extends TestCase
     {
         $user = User::factory()->create();
 
-        RateLimiter::increment(md5('login'.implode('|', [$user->email, '127.0.0.1'])), amount: 5);
+        RateLimiter::increment(md5('login'.implode('|', [$user->correo_electronico, '127.0.0.1'])), amount: 5);
 
         $response = $this->post(route('login.store'), [
-            'email' => $user->email,
+            'correo_electronico' => $user->correo_electronico,
             'password' => 'wrong-password',
         ]);
 

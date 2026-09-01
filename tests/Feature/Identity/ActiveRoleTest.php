@@ -22,7 +22,7 @@ class ActiveRoleTest extends TestCase
     public function test_authenticated_user_sees_only_effective_own_roles(): void
     {
         $this->seed(DatabaseSeeder::class);
-        $teacher = User::query()->where('email', 'docente@silabos.test')->firstOrFail();
+        $teacher = User::query()->where('correo_electronico', 'docente@silabos.test')->firstOrFail();
         $vigente = $teacher->roleAssignments()->firstOrFail();
         $expired = $vigente->replicate();
         $expired->id = null;
@@ -38,14 +38,14 @@ class ActiveRoleTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Role/Select')
                 ->has('auth.roles', 2)
-                ->where('auth.roles.0.role', 'teacher')
+                ->where('auth.roles.0.role', 'docente')
                 ->where('auth.roles.0.career_name', 'Software'));
     }
 
     public function test_single_eligible_role_activates_without_asking(): void
     {
         $this->seed(DatabaseSeeder::class);
-        $teacher = User::query()->where('email', 'docente@silabos.test')->firstOrFail();
+        $teacher = User::query()->where('correo_electronico', 'docente@silabos.test')->firstOrFail();
         $assignment = $teacher->roleAssignments()->firstOrFail();
 
         $this->actingAs($teacher)
@@ -64,11 +64,11 @@ class ActiveRoleTest extends TestCase
     public function test_teacher_with_one_role_reaches_its_area_after_signing_in(): void
     {
         $this->seed(DatabaseSeeder::class);
-        $teacher = User::query()->where('email', 'docente@silabos.test')->firstOrFail();
+        $teacher = User::query()->where('correo_electronico', 'docente@silabos.test')->firstOrFail();
         $assignment = $teacher->roleAssignments()->firstOrFail();
 
         $this->post(route('login.store'), [
-            'email' => $teacher->email,
+            'correo_electronico' => $teacher->correo_electronico,
             'password' => 'Demo-2026!',
         ])->assertRedirect(route('dashboard', absolute: false));
 
@@ -86,11 +86,11 @@ class ActiveRoleTest extends TestCase
     public function test_coordinator_must_choose_their_career_after_signing_in_even_when_only_one_is_available(): void
     {
         $this->seed(DatabaseSeeder::class);
-        $coordinator = User::query()->where('email', 'coordinador@silabos.test')->firstOrFail();
+        $coordinator = User::query()->where('correo_electronico', 'coordinador@silabos.test')->firstOrFail();
         $assignment = $coordinator->roleAssignments()->firstOrFail();
 
         $this->post(route('login.store'), [
-            'email' => $coordinator->email,
+            'correo_electronico' => $coordinator->correo_electronico,
             'password' => 'Demo-2026!',
         ])->assertRedirect(route('dashboard', absolute: false));
 
@@ -112,7 +112,7 @@ class ActiveRoleTest extends TestCase
     public function test_several_eligible_roles_are_never_activated_on_their_own(): void
     {
         $this->seed(DatabaseSeeder::class);
-        $teacher = User::query()->where('email', 'docente@silabos.test')->firstOrFail();
+        $teacher = User::query()->where('correo_electronico', 'docente@silabos.test')->firstOrFail();
         $this->alsoCoordinates($teacher);
 
         $this->actingAs($teacher)
@@ -131,7 +131,7 @@ class ActiveRoleTest extends TestCase
     public function test_user_without_eligible_roles_is_sent_to_the_explanation_instead_of_an_empty_dashboard(): void
     {
         $this->seed(DatabaseSeeder::class);
-        $teacher = User::query()->where('email', 'docente@silabos.test')->firstOrFail();
+        $teacher = User::query()->where('correo_electronico', 'docente@silabos.test')->firstOrFail();
         $teacher->roleAssignments()->update(['activo' => false]);
 
         $this->actingAs($teacher)
@@ -149,7 +149,7 @@ class ActiveRoleTest extends TestCase
     public function test_user_can_select_an_effective_context_and_action_is_audited(): void
     {
         $this->seed(DatabaseSeeder::class);
-        $coordinator = User::query()->where('email', 'coordinador@silabos.test')->firstOrFail();
+        $coordinator = User::query()->where('correo_electronico', 'coordinador@silabos.test')->firstOrFail();
         $assignment = $coordinator->roleAssignments()->firstOrFail();
 
         $this->actingAs($coordinator)
@@ -160,15 +160,15 @@ class ActiveRoleTest extends TestCase
         $this->assertDatabaseHas('eventos_auditoria', [
             'actor_usuario_id' => $coordinator->id,
             'asignacion_rol_id' => $assignment->id,
-            'accion' => 'active_role.selected',
-            'resultado' => 'success',
+            'accion' => 'rol_activo.seleccionado',
+            'resultado' => 'exito',
         ]);
     }
 
     public function test_coordinator_can_switch_between_multiple_career_scopes(): void
     {
         $this->seed(DatabaseSeeder::class);
-        $coordinator = User::query()->where('email', 'coordinador@silabos.test')->firstOrFail();
+        $coordinator = User::query()->where('correo_electronico', 'coordinador@silabos.test')->firstOrFail();
         $originalAssignment = $coordinator->roleAssignments()->firstOrFail();
         $this->alsoCoordinates($coordinator);
         $secondAssignment = $coordinator->roleAssignments()
@@ -200,7 +200,7 @@ class ActiveRoleTest extends TestCase
     public function test_coordinator_role_requires_an_effective_academic_coordination(): void
     {
         $this->seed(DatabaseSeeder::class);
-        $coordinator = User::query()->where('email', 'coordinador@silabos.test')->firstOrFail();
+        $coordinator = User::query()->where('correo_electronico', 'coordinador@silabos.test')->firstOrFail();
         $roleAssignment = $coordinator->roleAssignments()->firstOrFail();
         CoordinatorAssignment::query()
             ->where('usuario_id', $coordinator->id)
@@ -227,7 +227,7 @@ class ActiveRoleTest extends TestCase
     public function test_role_from_another_user_is_not_revealed_or_selected(): void
     {
         $this->seed(DatabaseSeeder::class);
-        $teacher = User::query()->where('email', 'docente@silabos.test')->firstOrFail();
+        $teacher = User::query()->where('correo_electronico', 'docente@silabos.test')->firstOrFail();
         $foreignAssignment = RoleAssignment::query()
             ->where('usuario_id', '!=', $teacher->id)
             ->firstOrFail();
@@ -271,12 +271,12 @@ class ActiveRoleTest extends TestCase
     {
         $event = AuditEvent::query()->create([
             'accion' => 'test.append_only',
-            'tipo_recurso' => 'test',
-            'resultado' => 'success',
+            'tipo_recurso' => 'prueba',
+            'resultado' => 'exito',
             'ocurrido_en' => now(),
         ]);
 
         $this->expectException(\LogicException::class);
-        $event->update(['resultado' => 'failed']);
+        $event->update(['resultado' => 'fallido']);
     }
 }

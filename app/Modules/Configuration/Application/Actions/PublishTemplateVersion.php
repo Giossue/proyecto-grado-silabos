@@ -48,14 +48,14 @@ class PublishTemplateVersion
                 ->lockForUpdate()
                 ->firstOrFail();
 
-            if ($version->estado !== 'draft') {
+            if ($version->estado !== 'borrador') {
                 throw ValidationException::withMessages(['version' => 'La versión ya fue publicada.']);
             }
 
             $this->validateStructure($version);
             $snapshot = $this->snapshot($version);
             $version->update([
-                'estado' => 'published',
+                'estado' => 'publicada',
                 'huella_sha256' => $this->hasher->hash($snapshot),
                 'publicado_por' => $actor->id,
                 'publicado_en' => now(),
@@ -64,10 +64,10 @@ class PublishTemplateVersion
             $this->audit->execute(
                 actorId: $actor->id,
                 roleAssignmentId: $activeRole?->id,
-                action: 'template.version_published',
-                resourceType: 'template_version',
+                action: 'plantilla.version_publicada',
+                resourceType: 'version_plantilla',
                 resourceId: $version->id,
-                result: 'success',
+                result: 'exito',
                 metadata: ['fingerprint' => $version->huella_sha256],
                 correlationId: $request->attributes->getString('correlation_id') ?: null,
             );
@@ -125,13 +125,13 @@ class PublishTemplateVersion
             ]);
         }
 
-        if ($block->tipo === 'workflow' && $field->editable_docente) {
+        if ($block->tipo === 'flujo' && $field->editable_docente) {
             throw ValidationException::withMessages([
                 'version' => 'Los metadatos de revisión no pueden ser editables por el docente.',
             ]);
         }
 
-        if ($field->tipo === 'calculation') {
+        if ($field->tipo === 'calculo') {
             throw ValidationException::withMessages([
                 'version' => 'Los cálculos automáticos todavía no están disponibles.',
             ]);

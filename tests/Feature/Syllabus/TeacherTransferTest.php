@@ -48,11 +48,11 @@ class TeacherTransferTest extends TestCase
         parent::setUp();
         $this->seed(DatabaseSeeder::class);
 
-        $this->administrator = User::query()->where('email', 'admin@silabos.test')->firstOrFail();
+        $this->administrator = User::query()->where('correo_electronico', 'admin@silabos.test')->firstOrFail();
         $this->administratorContext = $this->administrator->roleAssignments()->firstOrFail();
-        $this->coordinator = User::query()->where('email', 'coordinador@silabos.test')->firstOrFail();
+        $this->coordinator = User::query()->where('correo_electronico', 'coordinador@silabos.test')->firstOrFail();
         $this->coordinatorContext = $this->coordinator->roleAssignments()->firstOrFail();
-        $this->teacher = User::query()->where('email', 'docente@silabos.test')->firstOrFail();
+        $this->teacher = User::query()->where('correo_electronico', 'docente@silabos.test')->firstOrFail();
         $this->teacherContext = $this->teacher->roleAssignments()->firstOrFail();
         $this->replacement = $this->createReplacementTeacher();
     }
@@ -82,11 +82,11 @@ class TeacherTransferTest extends TestCase
         $this->assertDatabaseHas('asignaciones_docente', [
             'usuario_id' => $this->replacement->id,
             'activo' => true,
-            'sustento_tipo' => 'personnel_action',
+            'sustento_tipo' => 'accion_personal',
             'sustento_numero' => 'UEB-RECT-2026-0142-R',
         ]);
         $this->assertDatabaseHas('eventos_auditoria', [
-            'accion' => 'syllabus.teacher_transferred',
+            'accion' => 'silabo.docente_transferido',
             'recurso_id' => $syllabus->id,
         ]);
     }
@@ -100,13 +100,13 @@ class TeacherTransferTest extends TestCase
         $this->transfer($syllabus)->assertRedirect();
 
         $syllabus->refresh();
-        $this->assertSame('not_started', $syllabus->estado);
+        $this->assertSame('sin_iniciar', $syllabus->estado);
         $this->assertSame(0.0, (float) $syllabus->porcentaje_completitud);
         $this->assertSame(0, $syllabus->values()->count());
         $this->assertSame(0, $syllabus->rows()->count());
 
-        $event = AuditEvent::query()->where('accion', 'syllabus.teacher_transferred')->firstOrFail();
-        $this->assertSame('draft', $event->metadatos['previous_state']);
+        $event = AuditEvent::query()->where('accion', 'silabo.docente_transferido')->firstOrFail();
+        $this->assertSame('borrador', $event->metadatos['previous_state']);
         $this->assertGreaterThan(0, $event->metadatos['discarded_completion']);
     }
 
@@ -118,7 +118,7 @@ class TeacherTransferTest extends TestCase
         $this->transfer($syllabus)->assertRedirect();
 
         $syllabus->refresh();
-        $this->assertSame('correction_requested', $syllabus->estado);
+        $this->assertSame('correccion_solicitada', $syllabus->estado);
         // La revisión aprobada y su aprobación siguen ahí: ADR-0005.
         $this->assertSame($revisionCount, $syllabus->revisions()->count());
         $this->assertDatabaseCount('aprobaciones', 1);
@@ -143,10 +143,10 @@ class TeacherTransferTest extends TestCase
     {
         $syllabus = $this->openedSyllabus();
         $outsider = User::query()->create([
-            'name' => 'Docente de otra carrera',
-            'email' => 'ajeno@silabos.test',
-            'password' => 'Temporal-2026!',
-            'active' => true,
+            'nombre' => 'Docente de otra carrera',
+            'correo_electronico' => 'ajeno@silabos.test',
+            'contrasena' => 'Temporal-2026!',
+            'activo' => true,
         ]);
 
         $this->transfer($syllabus, $outsider->id)->assertSessionHasErrors('incoming_user_id');
@@ -170,7 +170,7 @@ class TeacherTransferTest extends TestCase
         $this->actingAsTeacher()->post(route('reviews.teacher.transfer', $syllabus), [
             'outgoing_user_id' => $this->teacher->id,
             'incoming_user_id' => $this->replacement->id,
-            'backing_type' => 'resolution',
+            'backing_type' => 'resolucion',
             'backing_number' => 'R-001',
             'backing_date' => now()->subDay()->toDateString(),
             'idempotency_key' => (string) Str::uuid(),
@@ -182,7 +182,7 @@ class TeacherTransferTest extends TestCase
         return $this->actingAsCoordinator()->post(route('reviews.teacher.transfer', $syllabus), [
             'outgoing_user_id' => $this->teacher->id,
             'incoming_user_id' => $incomingId ?? $this->replacement->id,
-            'backing_type' => 'personnel_action',
+            'backing_type' => 'accion_personal',
             'backing_number' => 'UEB-RECT-2026-0142-R',
             'backing_date' => now()->subDay()->toDateString(),
             'idempotency_key' => (string) Str::uuid(),
@@ -194,10 +194,10 @@ class TeacherTransferTest extends TestCase
         $career = Career::query()->where('codigo_institucional', 'SOFTWARE')->firstOrFail();
         $role = Role::query()->where('codigo', RoleCode::Teacher->value)->firstOrFail();
         $user = User::query()->create([
-            'name' => 'Docente Suplente',
-            'email' => 'suplente@silabos.test',
-            'password' => 'Temporal-2026!',
-            'active' => true,
+            'nombre' => 'Docente Suplente',
+            'correo_electronico' => 'suplente@silabos.test',
+            'contrasena' => 'Temporal-2026!',
+            'activo' => true,
         ]);
         RoleAssignment::query()->create([
             'usuario_id' => $user->id,
@@ -225,7 +225,7 @@ class TeacherTransferTest extends TestCase
     {
         $syllabus = $this->validDraft();
         $this->actingAsTeacher()->post(route('syllabi.submit.store', $syllabus), [
-            'lock_version' => $syllabus->lock_version,
+            'version_bloqueo' => $syllabus->version_bloqueo,
             'idempotency_key' => (string) Str::uuid(),
         ])->assertRedirect();
 
@@ -244,7 +244,7 @@ class TeacherTransferTest extends TestCase
         foreach ($fields as $field) {
             $this->actingAsTeacher()->patchJson(
                 route('syllabi.fields.update', [$syllabus, $field]),
-                $this->validFieldPayload($field, $syllabus->fresh()->lock_version),
+                $this->validFieldPayload($field, $syllabus->fresh()->version_bloqueo),
             )->assertOk();
         }
 
@@ -258,12 +258,12 @@ class TeacherTransferTest extends TestCase
             'name' => 'Convocatoria de relevo',
             'period_id' => CourseOffering::query()->firstOrFail()->periodo_academico_id,
             'template_version_id' => $template->id,
-            'grouping_mode' => 'per_parallel',
+            'grouping_mode' => 'por_paralelo',
             'source_ids' => [$source->id],
             'start_date' => now()->subDay()->toIso8601String(),
             'draft_deadline' => now()->addMonth()->toIso8601String(),
         ])->assertRedirect();
-        $convocation = Convocation::query()->latest('created_at')->firstOrFail();
+        $convocation = Convocation::query()->latest('creado_en')->firstOrFail();
         $this->actingAsCoordinator()->post(route('convocations.open', $convocation))->assertRedirect();
 
         return Syllabus::query()->firstOrFail();
@@ -281,13 +281,13 @@ class TeacherTransferTest extends TestCase
         })->filter()->values();
 
         return match ($field->tipo) {
-            'repeatable' => ['lock_version' => $lockVersion, 'rows' => [['data' => ['texto' => "Contenido {$field->clave}"]]]],
-            'boolean' => ['lock_version' => $lockVersion, 'value' => true],
-            'number' => ['lock_version' => $lockVersion, 'value' => 1],
-            'date' => ['lock_version' => $lockVersion, 'value' => now()->toDateString()],
-            'single_select' => ['lock_version' => $lockVersion, 'value' => $optionValues->first()],
-            'multi_select' => ['lock_version' => $lockVersion, 'value' => [$optionValues->first()]],
-            default => ['lock_version' => $lockVersion, 'value' => "Contenido académico {$field->clave}"],
+            'repetible' => ['version_bloqueo' => $lockVersion, 'rows' => [['data' => ['texto' => "Contenido {$field->clave}"]]]],
+            'booleano' => ['version_bloqueo' => $lockVersion, 'value' => true],
+            'numero' => ['version_bloqueo' => $lockVersion, 'value' => 1],
+            'fecha' => ['version_bloqueo' => $lockVersion, 'value' => now()->toDateString()],
+            'seleccion_unica' => ['version_bloqueo' => $lockVersion, 'value' => $optionValues->first()],
+            'seleccion_multiple' => ['version_bloqueo' => $lockVersion, 'value' => [$optionValues->first()]],
+            default => ['version_bloqueo' => $lockVersion, 'value' => "Contenido académico {$field->clave}"],
         };
     }
 
@@ -295,14 +295,14 @@ class TeacherTransferTest extends TestCase
     private function publishedConfiguration(): array
     {
         $this->actingAsAdministrator()->post(route('admin.templates.store'), ['name' => 'Plantilla relevo']);
-        $template = TemplateVersion::query()->latest('created_at')->firstOrFail();
+        $template = TemplateVersion::query()->latest('creado_en')->firstOrFail();
         $this->actingAsAdministrator()->post(route('admin.templates.publish', $template));
 
         $this->actingAsCoordinator()->post(route('sources.store'), [
             'name' => 'Fuente relevo',
             'description' => 'Documento de apoyo del periodo.',
         ]);
-        $source = AcademicSource::query()->latest('created_at')->firstOrFail();
+        $source = AcademicSource::query()->latest('creado_en')->firstOrFail();
         $this->actingAsCoordinator()->put(route('sources.content.update', $source), [
             'content' => '## Perfil base
 

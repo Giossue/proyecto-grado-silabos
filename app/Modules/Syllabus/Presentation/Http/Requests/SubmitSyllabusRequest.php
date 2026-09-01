@@ -18,7 +18,7 @@ class SubmitSyllabusRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'lock_version' => ['required', 'integer', 'min:0'],
+            'version_bloqueo' => ['required', 'integer', 'min:0'],
             'idempotency_key' => ['required', 'uuid'],
         ];
     }

@@ -24,7 +24,7 @@ type SyllabusForSubmission = {
     convocation: string;
     period: string;
     state: string;
-    lock_version: number;
+    version_bloqueo: number;
     completion: number;
     sections: { id: string; title: string }[];
     validation: {
@@ -51,7 +51,7 @@ const idempotencyKey = crypto.randomUUID();
 const unanswered = props.syllabus.observations.filter(
     (observation) =>
         observation.requested &&
-        observation.state !== 'verified' &&
+        observation.state !== 'verificada' &&
         observation.response === null,
 ).length;
 const nextRevision = props.syllabus.revisions.length + 1;
@@ -106,7 +106,7 @@ const nextRevision = props.syllabus.revisions.length + 1;
                         <span class="text-muted-foreground">Tipo de envío</span>
                         <strong>
                             {{
-                                syllabus.state === 'correction_requested'
+                                syllabus.state === 'correccion_solicitada'
                                     ? 'Reenvío de corrección'
                                     : 'Primer envío'
                             }}
@@ -153,8 +153,8 @@ const nextRevision = props.syllabus.revisions.length + 1;
         >
             <input
                 type="hidden"
-                name="lock_version"
-                :value="syllabus.lock_version"
+                name="version_bloqueo"
+                :value="syllabus.version_bloqueo"
             />
             <input
                 type="hidden"
@@ -166,7 +166,7 @@ const nextRevision = props.syllabus.revisions.length + 1;
                     [
                         errors.validation,
                         errors.syllabus,
-                        errors.lock_version,
+                        errors.version_bloqueo,
                     ].filter(Boolean)
                 "
             />

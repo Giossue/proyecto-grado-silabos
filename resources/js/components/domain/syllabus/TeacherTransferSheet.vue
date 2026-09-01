@@ -42,7 +42,7 @@ const replacements = computed(() =>
 );
 
 // El borrador sin enviar se descarta (DT-08). Se avisa antes, porque no se deshace.
-const discardsDraft = computed(() => props.state === 'draft');
+const discardsDraft = computed(() => props.state === 'borrador');
 
 // La clave hace idempotente el relevo: un doble clic no abre dos asignaciones.
 const idempotencyKey = `transfer-${props.syllabusId}-${Math.trunc(performance.now())}`;
@@ -138,7 +138,7 @@ const idempotencyKey = `transfer-${props.syllabusId}-${Math.trunc(performance.no
                         </FieldLabel>
                         <Select
                             name="backing_type"
-                            default-value="personnel_action"
+                            default-value="accion_personal"
                             required
                         >
                             <SelectTrigger
@@ -149,13 +149,13 @@ const idempotencyKey = `transfer-${props.syllabusId}-${Math.trunc(performance.no
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectGroup>
-                                    <SelectItem value="personnel_action">
+                                    <SelectItem value="accion_personal">
                                         Acción de personal
                                     </SelectItem>
-                                    <SelectItem value="resolution">
+                                    <SelectItem value="resolucion">
                                         Resolución
                                     </SelectItem>
-                                    <SelectItem value="official_letter">
+                                    <SelectItem value="oficio">
                                         Oficio
                                     </SelectItem>
                                 </SelectGroup>

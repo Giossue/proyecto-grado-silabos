@@ -17,14 +17,14 @@ class StoreConvocationRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:180'],
+            'nombre' => ['required', 'string', 'max:180'],
             'period_id' => [
                 'required',
                 'uuid',
                 Rule::exists('periodos_academicos', 'id')->where('activo', true),
             ],
             'template_version_id' => ['required', 'uuid', 'exists:versiones_plantilla,id'],
-            'grouping_mode' => ['required', Rule::in(['per_offering', 'per_parallel'])],
+            'grouping_mode' => ['required', Rule::in(['por_oferta', 'por_paralelo'])],
             'source_ids' => ['required', 'array', 'min:1'],
             'source_ids.*' => ['required', 'uuid', 'distinct', 'exists:fuentes_academicas,id'],
             'start_date' => ['required', 'date'],
@@ -32,13 +32,13 @@ class StoreConvocationRequest extends FormRequest
         ];
     }
 
-    /** @return array{name: string, period_id: string, template_version_id: string, grouping_mode: string, source_ids: list<string>, start_date: string, draft_deadline: string} */
+    /** @return array{nombre: string, period_id: string, template_version_id: string, grouping_mode: string, source_ids: list<string>, start_date: string, draft_deadline: string} */
     public function convocationData(): array
     {
         $sourceIds = $this->input('source_ids', []);
 
         return [
-            'name' => $this->string('name')->toString(),
+            'nombre' => $this->string('nombre')->toString(),
             'period_id' => $this->string('period_id')->toString(),
             'template_version_id' => $this->string('template_version_id')->toString(),
             'grouping_mode' => $this->string('grouping_mode')->toString(),

@@ -32,12 +32,12 @@ class NotificationController extends Controller
             'notifications' => $query->latest('creado_en')->paginate(20)->withQueryString()
                 ->through(fn (InternalNotification $notification): array => [
                     'id' => $notification->id,
-                    'type' => $notification->tipo,
-                    'title' => $notification->titulo,
-                    'message' => $notification->mensaje,
-                    'read_at' => $notification->leido_en?->toIso8601String(),
-                    'created_at' => $notification->creado_en->toIso8601String(),
-                    'resource_url' => $this->resourceUrl($notification, $actor),
+                    'tipo' => $notification->tipo,
+                    'titulo' => $notification->titulo,
+                    'mensaje' => $notification->mensaje,
+                    'leido_en' => $notification->leido_en?->toIso8601String(),
+                    'creado_en' => $notification->creado_en->toIso8601String(),
+                    'url_recurso' => $this->resourceUrl($notification, $actor),
                 ]),
         ]);
     }
@@ -70,7 +70,7 @@ class NotificationController extends Controller
         if ($notification->recurso_id === null) {
             return null;
         }
-        if ($notification->tipo_recurso === 'syllabus') {
+        if ($notification->tipo_recurso === 'silabo') {
             $syllabus = Syllabus::query()->find($notification->recurso_id);
             if ($syllabus !== null && $actor->can('review', $syllabus)) {
                 $revision = $syllabus->revisions()->latest('numero_revision')->first();
@@ -82,14 +82,14 @@ class NotificationController extends Controller
                 ? route('syllabi.show', $syllabus)
                 : null;
         }
-        if ($notification->tipo_recurso === 'export_artifact') {
+        if ($notification->tipo_recurso === 'artefacto_exportacion') {
             $artifact = ExportArtifact::query()->with('revision')->find($notification->recurso_id);
 
             return $artifact !== null && $actor->can('view', $artifact)
                 ? route('documents.show', $artifact->revision)
                 : null;
         }
-        if ($notification->tipo_recurso === 'ai_execution') {
+        if ($notification->tipo_recurso === 'ejecucion_ia') {
             $execution = AiExecution::query()->with(['syllabus', 'field'])->find($notification->recurso_id);
 
             return $execution !== null && $actor->can('edit', $execution->syllabus)

@@ -62,7 +62,7 @@ class TransferSyllabusTeacher
             ]);
         }
 
-        $incoming = User::query()->where('active', true)->find($incomingUserId);
+        $incoming = User::query()->where('activo', true)->find($incomingUserId);
         if ($incoming === null) {
             throw ValidationException::withMessages([
                 'incoming_user_id' => 'La cuenta del docente entrante no existe o está inactiva.',
@@ -79,7 +79,7 @@ class TransferSyllabusTeacher
         ): Syllabus {
             $locked = Syllabus::query()->lockForUpdate()->findOrFail($syllabus->id);
 
-            if ($locked->estado === 'in_review') {
+            if ($locked->estado === 'en_revision') {
                 throw ValidationException::withMessages([
                     'syllabus' => 'El expediente está en revisión. Resuelva la revisión antes de relevar al docente.',
                 ]);
@@ -120,7 +120,7 @@ class TransferSyllabusTeacher
             $previousState = $locked->estado;
             $discardedCompletion = null;
 
-            if ($previousState === 'approved') {
+            if ($previousState === 'aprobado') {
                 // Se reabre después de mover a los colaboradores, para que el aviso de
                 // reapertura llegue a quien entra y no a quien acaba de salir. La revisión
                 // aprobada queda intacta: ADR-0005.
@@ -134,16 +134,16 @@ class TransferSyllabusTeacher
                 $locked->refresh();
             }
 
-            if ($previousState === 'draft') {
+            if ($previousState === 'borrador') {
                 // DT-08: el borrador sin enviar no es evidencia institucional. Se conserva
                 // el porcentaje perdido en auditoría para que el descarte sea rastreable.
                 $discardedCompletion = (float) $locked->porcentaje_completitud;
                 FieldValue::query()->where('silabo_id', $locked->id)->delete();
                 RepeatableRow::query()->where('silabo_id', $locked->id)->delete();
                 $locked->update([
-                    'estado' => 'not_started',
+                    'estado' => 'sin_iniciar',
                     'porcentaje_completitud' => 0,
-                    'lock_version' => $locked->lock_version + 1,
+                    'version_bloqueo' => $locked->version_bloqueo + 1,
                     'iniciado_en' => null,
                     'guardado_en' => null,
                 ]);
@@ -152,10 +152,10 @@ class TransferSyllabusTeacher
             $this->audit->execute(
                 actorId: $actor->id,
                 roleAssignmentId: $activeRole->id,
-                action: 'syllabus.teacher_transferred',
-                resourceType: 'syllabus',
+                action: 'silabo.docente_transferido',
+                resourceType: 'silabo',
                 resourceId: $locked->id,
-                result: 'success',
+                result: 'exito',
                 metadata: [
                     'outgoing_user_id' => $outgoingUserId,
                     'incoming_user_id' => $incomingUserId,

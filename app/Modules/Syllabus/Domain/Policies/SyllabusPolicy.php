@@ -13,18 +13,18 @@ class SyllabusPolicy
 
     public function viewAny(User $user): bool
     {
-        return $user->active && $this->roles->hasRole(request(), RoleCode::Teacher);
+        return $user->activo && $this->roles->hasRole(request(), RoleCode::Teacher);
     }
 
     public function reviewAny(User $user): bool
     {
-        return $user->active && $this->roles->hasRole(request(), RoleCode::Coordinator);
+        return $user->activo && $this->roles->hasRole(request(), RoleCode::Coordinator);
     }
 
     public function view(User $user, Syllabus $syllabus): bool
     {
         $activeRole = $this->roles->resolve(request());
-        if (! $user->active || $activeRole === null) {
+        if (! $user->activo || $activeRole === null) {
             return false;
         }
         if ($activeRole->role->codigo === RoleCode::Coordinator->value) {
@@ -40,24 +40,24 @@ class SyllabusPolicy
 
     public function start(User $user, Syllabus $syllabus): bool
     {
-        return $this->canTeacherEdit($user, $syllabus) && $syllabus->estado === 'not_started';
+        return $this->canTeacherEdit($user, $syllabus) && $syllabus->estado === 'sin_iniciar';
     }
 
     public function edit(User $user, Syllabus $syllabus): bool
     {
         return $this->canTeacherEdit($user, $syllabus)
-            && in_array($syllabus->estado, ['draft', 'correction_requested'], true);
+            && in_array($syllabus->estado, ['borrador', 'correccion_solicitada'], true);
     }
 
     public function submit(User $user, Syllabus $syllabus): bool
     {
         return $this->canTeacherEdit($user, $syllabus)
-            && in_array($syllabus->estado, ['draft', 'correction_requested', 'in_review'], true);
+            && in_array($syllabus->estado, ['borrador', 'correccion_solicitada', 'en_revision'], true);
     }
 
     public function respond(User $user, Syllabus $syllabus): bool
     {
-        return $this->canTeacherEdit($user, $syllabus) && $syllabus->estado === 'correction_requested';
+        return $this->canTeacherEdit($user, $syllabus) && $syllabus->estado === 'correccion_solicitada';
     }
 
     /**
@@ -67,14 +67,14 @@ class SyllabusPolicy
      */
     public function transferTeacher(User $user, Syllabus $syllabus): bool
     {
-        return $this->review($user, $syllabus) && $syllabus->estado !== 'in_review';
+        return $this->review($user, $syllabus) && $syllabus->estado !== 'en_revision';
     }
 
     public function review(User $user, Syllabus $syllabus): bool
     {
         $activeRole = $this->roles->resolve(request());
 
-        return $user->active
+        return $user->activo
             && $activeRole?->role->codigo === RoleCode::Coordinator->value
             && $activeRole->carrera_id === $syllabus->convocation()->value('carrera_id');
     }
@@ -83,10 +83,10 @@ class SyllabusPolicy
     {
         $activeRole = $this->roles->resolve(request());
 
-        return $user->active
+        return $user->activo
             && $activeRole?->role->codigo === RoleCode::Teacher->value
             && $activeRole->carrera_id === $syllabus->convocation()->value('carrera_id')
-            && $syllabus->convocation()->value('estado') === 'open'
+            && $syllabus->convocation()->value('estado') === 'abierta'
             && $this->hasCurrentCollaboration($user, $syllabus);
     }
 

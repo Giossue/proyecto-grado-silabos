@@ -33,7 +33,7 @@ defineProps<{
     careers: { id: string; nombre: string }[];
 }>();
 
-const initialRole = ref('teacher');
+const initialRole = ref('docente');
 
 // La contraseña se genera aquí y se muestra en claro: quien crea la cuenta tiene que
 // leerla para entregarla, y no se le pide confirmarla porque no la escribió.
@@ -81,32 +81,32 @@ watch(open, (isOpen) => {
                 @success="close"
             >
                 <FieldGroup>
-                    <Field :data-invalid="Boolean(errors.name)">
+                    <Field :data-invalid="Boolean(errors.nombre)">
                         <FieldLabel for="managed-name" required>
                             Nombre completo
                         </FieldLabel>
                         <Input
                             id="managed-name"
-                            name="name"
+                            name="nombre"
                             placeholder="Ej. María Pérez"
                             required
-                            :aria-invalid="Boolean(errors.name)"
+                            :aria-invalid="Boolean(errors.nombre)"
                         />
-                        <FieldError :errors="[errors.name]" />
+                        <FieldError :errors="[errors.nombre]" />
                     </Field>
-                    <Field :data-invalid="Boolean(errors.email)">
+                    <Field :data-invalid="Boolean(errors.correo_electronico)">
                         <FieldLabel for="managed-email" required>
                             Correo institucional
                         </FieldLabel>
                         <Input
                             id="managed-email"
-                            name="email"
+                            name="correo_electronico"
                             type="email"
                             placeholder="Ej. maria.perez@ueb.edu.ec"
                             required
-                            :aria-invalid="Boolean(errors.email)"
+                            :aria-invalid="Boolean(errors.correo_electronico)"
                         />
-                        <FieldError :errors="[errors.email]" />
+                        <FieldError :errors="[errors.correo_electronico]" />
                     </Field>
                     <Field :data-invalid="Boolean(errors.password)">
                         <FieldLabel for="managed-password" required>
@@ -192,7 +192,7 @@ watch(open, (isOpen) => {
                         <FieldError :errors="[errors.role_code]" />
                     </Field>
                     <Field
-                        v-if="initialRole !== 'administrator'"
+                        v-if="initialRole !== 'administrador'"
                         :data-invalid="Boolean(errors.career_id)"
                     >
                         <FieldLabel for="managed-career" required>

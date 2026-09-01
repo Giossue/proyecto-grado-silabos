@@ -42,8 +42,12 @@ entrada de este proyecto identifica el perfil
 `187.127.6.234:8004:silabos_ueb_db:silabos_ueb_app`.
 
 Laravel debe recibir `DB_PASSWORD='(null)'` para que la contraseña local de `.env` no
-reemplace la resolución de libpq mediante `.pgpass`. Primero se consulta el estado y luego
-se ejecuta el migrador con bloqueo:
+reemplace la resolución de libpq mediante `.pgpass`.
+
+Desde I-28 la tabla de control del migrador se llama `migraciones`, y ese renombrado no
+puede vivir dentro de una migración: si la tabla configurada no existe, el migrador la
+crearía vacía y consideraría pendiente todo el historial. Por eso la secuencia remota es
+estado → renombrado idempotente → migrador con bloqueo → estado:
 
 ```bash
 DB_CONNECTION=pgsql DB_HOST=187.127.6.234 DB_PORT=8004 \
@@ -52,11 +56,24 @@ php artisan migrate:status
 
 DB_CONNECTION=pgsql DB_HOST=187.127.6.234 DB_PORT=8004 \
 DB_DATABASE=silabos_ueb_db DB_USERNAME=silabos_ueb_app DB_PASSWORD='(null)' \
+php artisan db:rename-migrations-table --force
+
+DB_CONNECTION=pgsql DB_HOST=187.127.6.234 DB_PORT=8004 \
+DB_DATABASE=silabos_ueb_db DB_USERNAME=silabos_ueb_app DB_PASSWORD='(null)' \
 php artisan migrate --force --isolated
 ```
 
 Después se repite `migrate:status`. Nunca se imprime, registra ni pasa como argumento la
 contraseña almacenada en `.pgpass`.
+
+Antes de aplicar la migración `000025` (traducción de valores) sobre una base con datos,
+toma un respaldo (`pg_dump`) y verifica con `SELECT DISTINCT` que las columnas de estado
+y discriminadores no contengan valores fuera del vocabulario mapeado: la migración
+conserva sin traducir cualquier valor desconocido (decisión conservadora) y conviene
+saberlo antes, no después. Tras migrar, reinicia el worker de colas: los nombres de
+cola también cambiaron (`critica`, `notificaciones`, `documentos`, `ia`,
+`integraciones`, `general`) y un worker viejo escucharía colas que ya no reciben
+trabajos.
 
 ## Redis y jobs
 

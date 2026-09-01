@@ -59,10 +59,10 @@ class DeleteCurriculum
             $this->audit->execute(
                 actorId: $actor->id,
                 roleAssignmentId: $role->id,
-                action: 'academic.curriculum.deleted',
-                resourceType: 'curriculum',
+                action: 'academico.malla.eliminacion',
+                resourceType: 'malla',
                 resourceId: $curriculumId,
-                result: 'success',
+                result: 'exito',
                 metadata: ['code' => $curriculum->codigo],
                 correlationId: $request->attributes->getString('correlation_id') ?: null,
             );

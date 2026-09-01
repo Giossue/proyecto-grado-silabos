@@ -24,7 +24,7 @@ class DeleteTemplateSection
         DB::transaction(function () use ($activeRole, $actor, $request, $section): void {
             $section->load('version');
 
-            if ($section->version->estado !== 'draft') {
+            if ($section->version->estado !== 'borrador') {
                 throw ValidationException::withMessages(['section' => 'La versión publicada no admite cambios.']);
             }
 
@@ -33,10 +33,10 @@ class DeleteTemplateSection
             $this->audit->execute(
                 actorId: $actor->id,
                 roleAssignmentId: $activeRole?->id,
-                action: 'template.section_deleted',
-                resourceType: 'template_section',
+                action: 'plantilla.seccion_eliminada',
+                resourceType: 'seccion_plantilla',
                 resourceId: $section->id,
-                result: 'success',
+                result: 'exito',
                 correlationId: $request->attributes->getString('correlation_id') ?: null,
             );
         });

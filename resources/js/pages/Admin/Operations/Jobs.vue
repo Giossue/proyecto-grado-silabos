@@ -45,17 +45,17 @@ type Option = { value: string; label: string };
 
 type Execution = {
     id: string;
-    type: string;
-    queue: string;
-    status: string;
-    attempts: number;
-    max_attempts: number;
-    progress: number;
-    error_message: string | null;
-    created_at: string | null;
-    started_at: string | null;
-    finished_at: string | null;
-    retryable: boolean;
+    tipo: string;
+    cola: string;
+    estado: string;
+    intentos: number;
+    intentos_maximos: number;
+    progreso: number;
+    mensaje_error: string | null;
+    creado_en: string | null;
+    iniciado_en: string | null;
+    finalizado_en: string | null;
+    reintentable: boolean;
 };
 
 const props = defineProps<{
@@ -117,10 +117,10 @@ const retry = (): void => {
 
 const statusLabel = (value: string): string =>
     ({
-        pending: 'En cola',
-        running: 'En ejecución',
-        completed: 'Completado',
-        failed: 'Fallido',
+        pendiente: 'En cola',
+        en_ejecucion: 'En ejecución',
+        completada: 'Completado',
+        fallida: 'Fallido',
     })[value] ?? 'Estado no disponible';
 
 const formatDate = (value: string | null): string =>
@@ -169,16 +169,16 @@ const formatDate = (value: string | null): string =>
                                             <SelectItem value="all">
                                                 Todos los estados
                                             </SelectItem>
-                                            <SelectItem value="pending">
+                                            <SelectItem value="pendiente">
                                                 En cola
                                             </SelectItem>
-                                            <SelectItem value="running">
+                                            <SelectItem value="en_ejecucion">
                                                 En ejecución
                                             </SelectItem>
-                                            <SelectItem value="completed">
+                                            <SelectItem value="completada">
                                                 Completado
                                             </SelectItem>
-                                            <SelectItem value="failed">
+                                            <SelectItem value="fallida">
                                                 Fallido
                                             </SelectItem>
                                         </SelectGroup>
@@ -258,56 +258,57 @@ const formatDate = (value: string | null): string =>
                             :key="execution.id"
                         >
                             <TableCell class="font-medium">{{
-                                execution.type
+                                execution.tipo
                             }}</TableCell>
-                            <TableCell>{{ execution.queue }}</TableCell>
+                            <TableCell>{{ execution.cola }}</TableCell>
                             <TableCell>
                                 <span
                                     :class="
-                                        execution.status === 'failed'
+                                        execution.estado === 'fallida'
                                             ? 'text-destructive'
-                                            : execution.status === 'completed'
+                                            : execution.estado === 'completada'
                                               ? ''
                                               : ''
                                     "
-                                    >{{ statusLabel(execution.status) }}</span
+                                    >{{ statusLabel(execution.estado) }}</span
                                 >
                                 <div
                                     v-if="
-                                        ['pending', 'running'].includes(
-                                            execution.status,
+                                        ['pendiente', 'en_ejecucion'].includes(
+                                            execution.estado,
                                         )
                                     "
                                     class="mt-1 text-xs text-muted-foreground"
                                 >
-                                    {{ execution.progress }} %
+                                    {{ execution.progreso }} %
                                 </div>
                             </TableCell>
                             <TableCell>
-                                {{ execution.attempts }} acumulado(s)
+                                {{ execution.intentos }} acumulado(s)
                                 <div class="text-xs text-muted-foreground">
-                                    máximo {{ execution.max_attempts }} por
+                                    máximo {{ execution.intentos_maximos }} por
                                     ciclo
                                 </div>
                             </TableCell>
                             <TableCell class="text-xs">
                                 <div>
                                     Inicio:
-                                    {{ formatDate(execution.started_at) }}
+                                    {{ formatDate(execution.iniciado_en) }}
                                 </div>
                                 <div>
-                                    Fin: {{ formatDate(execution.finished_at) }}
+                                    Fin:
+                                    {{ formatDate(execution.finalizado_en) }}
                                 </div>
                             </TableCell>
                             <TableCell class="max-w-sm text-sm">
-                                {{ execution.error_message ?? '—' }}
+                                {{ execution.mensaje_error ?? '—' }}
                             </TableCell>
                             <TableCell class="text-right">
                                 <TableActionsMenu
-                                    :label="`Acciones para ${execution.type}`"
+                                    :label="`Acciones para ${execution.tipo}`"
                                 >
                                     <DropdownMenuItem
-                                        v-if="execution.retryable"
+                                        v-if="execution.reintentable"
                                         :disabled="retryingId !== null"
                                         @select="retryCandidate = execution"
                                     >
@@ -350,7 +351,7 @@ const formatDate = (value: string | null): string =>
                 <DialogHeader>
                     <DialogTitle>Reintentar proceso</DialogTitle>
                     <DialogDescription>
-                        Se volverá a encolar «{{ retryCandidate?.type }}». La
+                        Se volverá a encolar «{{ retryCandidate?.tipo }}». La
                         operación conserva el conteo y la auditoría de intentos
                         anteriores.
                     </DialogDescription>

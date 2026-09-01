@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/select';
 import type { AcademicStructureProps } from '@/types/academic';
 
-type CurriculumEntity = 'curriculum' | 'subject';
+type CurriculumEntity = 'malla' | 'asignatura';
 
 const props = defineProps<
     Pick<AcademicStructureProps, 'options'> & {
@@ -31,13 +31,13 @@ const props = defineProps<
 >();
 
 const submitLabel = computed(() =>
-    props.entity === 'curriculum' ? 'Crear malla' : 'Agregar materia',
+    props.entity === 'malla' ? 'Crear malla' : 'Agregar materia',
 );
 const title = computed(() =>
-    props.entity === 'curriculum' ? 'Agregar malla' : 'Agregar materia',
+    props.entity === 'malla' ? 'Agregar malla' : 'Agregar materia',
 );
 const description = computed(() =>
-    props.entity === 'curriculum'
+    props.entity === 'malla'
         ? 'Cree la malla única de la carrera para incorporar materias, campos y relaciones.'
         : 'Las materias se incorporan a la malla actual de esta carrera.',
 );
@@ -59,7 +59,7 @@ const description = computed(() =>
                 @success="close"
             >
                 <FieldGroup>
-                    <template v-if="props.entity === 'curriculum'">
+                    <template v-if="props.entity === 'malla'">
                         <Field :data-invalid="Boolean(errors.code)">
                             <FieldLabel for="curriculum-code" required>
                                 Código
@@ -118,18 +118,18 @@ const description = computed(() =>
                             />
                             <FieldError :errors="[errors.code]" />
                         </Field>
-                        <Field :data-invalid="Boolean(errors.name)">
+                        <Field :data-invalid="Boolean(errors.nombre)">
                             <FieldLabel for="subject-name" required>
                                 Nombre
                             </FieldLabel>
                             <Input
                                 id="subject-name"
-                                name="name"
+                                name="nombre"
                                 placeholder="Ej. Ingeniería de requisitos"
                                 required
-                                :aria-invalid="Boolean(errors.name)"
+                                :aria-invalid="Boolean(errors.nombre)"
                             />
-                            <FieldError :errors="[errors.name]" />
+                            <FieldError :errors="[errors.nombre]" />
                         </Field>
                         <Field :data-invalid="Boolean(errors.cycle)">
                             <FieldLabel for="subject-cycle"> Ciclo </FieldLabel>
@@ -142,32 +142,32 @@ const description = computed(() =>
                             />
                             <FieldError :errors="[errors.cycle]" />
                         </Field>
-                        <Field :data-invalid="Boolean(errors.credits)">
+                        <Field :data-invalid="Boolean(errors.creditos)">
                             <FieldLabel for="subject-credits">
                                 Créditos
                             </FieldLabel>
                             <Input
                                 id="subject-credits"
-                                name="credits"
+                                name="creditos"
                                 type="number"
                                 min="0"
                                 step="0.01"
-                                :aria-invalid="Boolean(errors.credits)"
+                                :aria-invalid="Boolean(errors.creditos)"
                             />
-                            <FieldError :errors="[errors.credits]" />
+                            <FieldError :errors="[errors.creditos]" />
                         </Field>
-                        <Field :data-invalid="Boolean(errors.total_hours)">
+                        <Field :data-invalid="Boolean(errors.horas_totales)">
                             <FieldLabel for="subject-total-hours">
                                 Horas totales
                             </FieldLabel>
                             <Input
                                 id="subject-total-hours"
-                                name="total_hours"
+                                name="horas_totales"
                                 type="number"
                                 min="0"
-                                :aria-invalid="Boolean(errors.total_hours)"
+                                :aria-invalid="Boolean(errors.horas_totales)"
                             />
-                            <FieldError :errors="[errors.total_hours]" />
+                            <FieldError :errors="[errors.horas_totales]" />
                         </Field>
                     </template>
 

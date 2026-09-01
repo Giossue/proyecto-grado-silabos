@@ -47,14 +47,14 @@ import { show as syllabusShow } from '@/routes/syllabi';
 
 type Artifact = {
     id: string;
-    status: string;
+    estado: string;
     requested_at: string;
     completed_at: string | null;
     renderer_label: string;
     execution: {
-        status: string;
-        progress: number;
-        error_message: string | null;
+        estado: string;
+        progreso: number;
+        mensaje_error: string | null;
     } | null;
     files: {
         docx_size: number | null;
@@ -89,25 +89,25 @@ const activeRole = computed(() =>
     ),
 );
 const backHref = computed(() =>
-    activeRole.value?.role === 'coordinator'
+    activeRole.value?.role === 'coordinador'
         ? reviewShow(props.revision.id)
         : syllabusShow(props.syllabus.id),
 );
 const hasPending = computed(() =>
     props.artifacts.some((artifact) =>
-        ['pending', 'running'].includes(artifact.status),
+        ['pendiente', 'en_ejecucion'].includes(artifact.estado),
     ),
 );
 const filter = useClientFilter(
     () => props.artifacts,
-    (item) => [item.status, item.renderer_label],
+    (item) => [item.estado, item.renderer_label],
     {
         // Un artefacto no se archiva: o está listo para descargar o sigue en proceso.
         estado: {
             matches: (item, value) =>
                 value === 'ready'
-                    ? item.status === 'completed'
-                    : item.status !== 'completed',
+                    ? item.estado === 'completado'
+                    : item.estado !== 'completado',
         },
     },
 );
@@ -131,10 +131,10 @@ const requestExport = (): void => {
 
 const statusLabel = (status: string): string =>
     ({
-        pending: 'En cola',
-        running: 'Generando',
-        completed: 'Disponible',
-        failed: 'Fallida',
+        pendiente: 'En cola',
+        en_ejecucion: 'Generando',
+        completado: 'Disponible',
+        fallido: 'Fallida',
     })[status] ?? 'Estado no disponible';
 
 const formatDate = (value: string | null): string =>
@@ -305,34 +305,35 @@ onUnmounted(() => {
                                 <TableCell>
                                     <span
                                         :class="
-                                            artifact.status === 'failed'
+                                            artifact.estado === 'fallido'
                                                 ? 'text-destructive'
-                                                : artifact.status ===
-                                                    'completed'
+                                                : artifact.estado ===
+                                                    'completado'
                                                   ? ''
                                                   : ''
                                         "
                                         >{{
-                                            statusLabel(artifact.status)
+                                            statusLabel(artifact.estado)
                                         }}</span
                                     >
                                     <p
                                         v-if="
                                             artifact.execution &&
-                                            ['pending', 'running'].includes(
-                                                artifact.status,
-                                            )
+                                            [
+                                                'pendiente',
+                                                'en_ejecucion',
+                                            ].includes(artifact.estado)
                                         "
                                         class="mt-1 text-xs text-muted-foreground"
                                     >
                                         Progreso
-                                        {{ artifact.execution.progress }}%
+                                        {{ artifact.execution.progreso }}%
                                     </p>
                                     <p
-                                        v-if="artifact.execution?.error_message"
+                                        v-if="artifact.execution?.mensaje_error"
                                         class="mt-1 max-w-sm text-sm text-destructive"
                                     >
-                                        {{ artifact.execution.error_message }}
+                                        {{ artifact.execution.mensaje_error }}
                                     </p>
                                 </TableCell>
                                 <TableCell class="text-sm">

@@ -18,8 +18,8 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property string|null $reapertura_id
  * @property int $numero_revision
  * @property string $clave_idempotencia
- * @property int $lock_version_origen
- * @property array<string, mixed> $snapshot
+ * @property int $version_bloqueo_origen
+ * @property array<string, mixed> $fotografia
  * @property string $huella_sha256
  * @property string $enviado_por
  * @property CarbonImmutable $enviado_en
@@ -30,12 +30,16 @@ class SyllabusRevision extends Model
     use HasUuids;
     use ImmutableRecord;
 
+    public const CREATED_AT = 'creado_en';
+
+    public const UPDATED_AT = 'actualizado_en';
+
     protected $table = 'revisiones_silabo';
 
     /** @var list<string> */
     protected $fillable = [
         'silabo_id', 'revision_anterior_id', 'reapertura_id', 'numero_revision',
-        'clave_idempotencia', 'lock_version_origen', 'snapshot', 'huella_sha256',
+        'clave_idempotencia', 'version_bloqueo_origen', 'fotografia', 'huella_sha256',
         'enviado_por', 'enviado_en',
     ];
 
@@ -44,8 +48,8 @@ class SyllabusRevision extends Model
     {
         return [
             'numero_revision' => 'integer',
-            'lock_version_origen' => 'integer',
-            'snapshot' => 'array',
+            'version_bloqueo_origen' => 'integer',
+            'fotografia' => 'array',
             'enviado_en' => 'immutable_datetime',
         ];
     }

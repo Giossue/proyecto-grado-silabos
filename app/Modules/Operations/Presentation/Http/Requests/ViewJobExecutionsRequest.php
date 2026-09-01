@@ -16,7 +16,7 @@ class ViewJobExecutionsRequest extends FormRequest
     {
         return [
             'q' => ['nullable', 'string', 'max:100'],
-            'status' => ['nullable', 'string', 'in:pending,running,completed,failed'],
+            'status' => ['nullable', 'string', 'in:pendiente,en_ejecucion,completada,fallida'],
             'type' => ['nullable', 'string', 'max:120'],
             'queue' => ['nullable', 'string', 'max:80'],
         ];

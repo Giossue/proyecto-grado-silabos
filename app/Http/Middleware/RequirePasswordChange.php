@@ -34,7 +34,7 @@ class RequirePasswordChange
     {
         $user = $request->user();
 
-        if (! $user instanceof User || ! $user->must_change_password) {
+        if (! $user instanceof User || ! $user->debe_cambiar_contrasena) {
             return $next($request);
         }
 

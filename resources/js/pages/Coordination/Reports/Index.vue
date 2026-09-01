@@ -67,7 +67,7 @@ type SyllabusRow = {
     completion: number;
     teachers: string[];
     unresolved_observations: number;
-    updated_at: string | null;
+    actualizado_en: string | null;
     latest_revision_id: string | null;
 };
 
@@ -114,11 +114,11 @@ const applyFilters = (): void => {
 
 const stateLabel = (value: string): string =>
     ({
-        not_started: 'Sin iniciar',
-        draft: 'Borrador',
-        in_review: 'En revisión',
-        correction_requested: 'Corrección solicitada',
-        approved: 'Aprobado',
+        sin_iniciar: 'Sin iniciar',
+        borrador: 'Borrador',
+        en_revision: 'En revisión',
+        correccion_solicitada: 'Corrección solicitada',
+        aprobado: 'Aprobado',
     })[value] ?? 'Estado no disponible';
 </script>
 
@@ -198,21 +198,21 @@ const stateLabel = (value: string): string =>
                                             <SelectItem value="all">
                                                 Todos los estados
                                             </SelectItem>
-                                            <SelectItem value="not_started">
+                                            <SelectItem value="sin_iniciar">
                                                 Sin iniciar
                                             </SelectItem>
-                                            <SelectItem value="draft">
+                                            <SelectItem value="borrador">
                                                 Borrador
                                             </SelectItem>
-                                            <SelectItem value="in_review">
+                                            <SelectItem value="en_revision">
                                                 En revisión
                                             </SelectItem>
                                             <SelectItem
-                                                value="correction_requested"
+                                                value="correccion_solicitada"
                                             >
                                                 Corrección solicitada
                                             </SelectItem>
-                                            <SelectItem value="approved">
+                                            <SelectItem value="aprobado">
                                                 Aprobado
                                             </SelectItem>
                                         </SelectGroup>

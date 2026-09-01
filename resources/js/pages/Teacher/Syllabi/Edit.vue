@@ -118,9 +118,9 @@ const props = defineProps<{
         convocation: string;
         period: string;
         state: string;
-        lock_version: number;
+        version_bloqueo: number;
         completion: number;
-        saved_at: string | null;
+        guardado_en: string | null;
         parallels: string[];
         teachers: string[];
         sections: DraftSection[];
@@ -180,8 +180,8 @@ const fieldStates = reactive<Record<string, FieldState>>(
     ),
 );
 
-const lockVersion = ref(props.syllabus.lock_version);
-const savedAt = ref(props.syllabus.saved_at);
+const lockVersion = ref(props.syllabus.version_bloqueo);
+const savedAt = ref(props.syllabus.guardado_en);
 const globalSaving = ref(false);
 const validating = ref(false);
 const preparingSubmission = ref(false);
@@ -393,15 +393,15 @@ const saveField = async (field: DraftField): Promise<void> => {
     state.error = null;
 
     const body =
-        field.type === 'repeatable'
+        field.type === 'repetible'
             ? {
-                  lock_version: lockVersion.value,
+                  version_bloqueo: lockVersion.value,
                   rows: state.rows.map((row) => ({
                       id: row.id,
                       data: row.data,
                   })),
               }
-            : { lock_version: lockVersion.value, value: state.value };
+            : { version_bloqueo: lockVersion.value, value: state.value };
 
     try {
         const response = await fetch(
@@ -423,9 +423,9 @@ const saveField = async (field: DraftField): Promise<void> => {
         );
         const payload = (await response.json()) as {
             message?: string;
-            lock_version?: number;
-            saved_at?: string;
-            current_lock_version?: number;
+            version_bloqueo?: number;
+            guardado_en?: string;
+            version_bloqueo_actual?: number;
             errors?: Record<string, string[]>;
             rows?: { id: string; datos: DraftRow['data'] }[];
         };
@@ -450,10 +450,10 @@ const saveField = async (field: DraftField): Promise<void> => {
             );
         }
 
-        lockVersion.value = payload.lock_version ?? lockVersion.value;
-        savedAt.value = payload.saved_at ?? savedAt.value;
+        lockVersion.value = payload.version_bloqueo ?? lockVersion.value;
+        savedAt.value = payload.guardado_en ?? savedAt.value;
 
-        if (field.type === 'repeatable' && payload.rows) {
+        if (field.type === 'repetible' && payload.rows) {
             state.rows = payload.rows.map((row) => ({
                 id: row.id,
                 data: row.datos,
@@ -519,7 +519,7 @@ const goToSubmission = async (): Promise<void> => {
 };
 
 const stateLabel = computed(() =>
-    props.syllabus.state === 'correction_requested'
+    props.syllabus.state === 'correccion_solicitada'
         ? 'Corrección solicitada'
         : 'Borrador',
 );
@@ -527,7 +527,7 @@ const stateLabel = computed(() =>
 const requestedObservations = computed(() =>
     props.syllabus.observations.filter(
         (observation) =>
-            observation.requested && observation.state !== 'verified',
+            observation.requested && observation.state !== 'verificada',
     ),
 );
 
@@ -602,7 +602,7 @@ onBeforeUnmount(() => {
             </Button>
         </template>
 
-        <Alert v-if="syllabus.state === 'correction_requested'">
+        <Alert v-if="syllabus.state === 'correccion_solicitada'">
             <RotateCcw aria-hidden="true" />
             <AlertTitle>Está preparando una nueva revisión</AlertTitle>
             <AlertDescription>
@@ -747,7 +747,7 @@ onBeforeUnmount(() => {
                                 </div>
 
                                 <div
-                                    v-else-if="field.type === 'repeatable'"
+                                    v-else-if="field.type === 'repetible'"
                                     class="flex flex-col gap-3"
                                 >
                                     <div
@@ -805,22 +805,22 @@ onBeforeUnmount(() => {
                                 <Input
                                     v-else-if="
                                         [
-                                            'short_text',
-                                            'number',
-                                            'date',
+                                            'texto_corto',
+                                            'numero',
+                                            'fecha',
                                         ].includes(field.type)
                                     "
                                     :id="`field-${field.id}`"
                                     :model-value="textValue(field.id)"
                                     :type="
-                                        field.type === 'number'
+                                        field.type === 'numero'
                                             ? 'number'
-                                            : field.type === 'date'
+                                            : field.type === 'fecha'
                                               ? 'date'
                                               : 'text'
                                     "
                                     :placeholder="
-                                        field.type === 'short_text'
+                                        field.type === 'texto_corto'
                                             ? `Ej. ${field.label}`
                                             : undefined
                                     "
@@ -834,7 +834,7 @@ onBeforeUnmount(() => {
                                 />
 
                                 <div
-                                    v-else-if="field.type === 'boolean'"
+                                    v-else-if="field.type === 'booleano'"
                                     class="flex items-center gap-3"
                                 >
                                     <Checkbox
@@ -854,7 +854,9 @@ onBeforeUnmount(() => {
                                 </div>
 
                                 <Select
-                                    v-else-if="field.type === 'single_select'"
+                                    v-else-if="
+                                        field.type === 'seleccion_unica'
+                                    "
                                     :model-value="String(textValue(field.id))"
                                     :required="field.required"
                                     @update:model-value="
@@ -883,7 +885,9 @@ onBeforeUnmount(() => {
                                 </Select>
 
                                 <FieldSet
-                                    v-else-if="field.type === 'multi_select'"
+                                    v-else-if="
+                                        field.type === 'seleccion_multiple'
+                                    "
                                     :aria-required="field.required"
                                 >
                                     <FieldLegend

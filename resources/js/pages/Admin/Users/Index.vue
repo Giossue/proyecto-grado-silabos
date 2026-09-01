@@ -43,8 +43,8 @@ defineOptions({
 
 type ListedUser = {
     id: string;
-    name: string;
-    email: string;
+    nombre: string;
+    correo_electronico: string;
     active: boolean;
     /** Sigue con la contraseña temporal: la cuenta se creó y nadie la ha estrenado. */
     pending_first_login: boolean;
@@ -251,11 +251,11 @@ defineProps<{
                             <TableCell>
                                 <div class="flex flex-col">
                                     <span class="font-medium">{{
-                                        user.name
+                                        user.nombre
                                     }}</span>
                                     <span
                                         class="text-sm text-muted-foreground"
-                                        >{{ user.email }}</span
+                                        >{{ user.correo_electronico }}</span
                                     >
                                 </div>
                             </TableCell>
@@ -321,7 +321,7 @@ defineProps<{
                             </TableCell>
                             <TableCell class="text-right">
                                 <TableActionsMenu
-                                    :label="`Acciones para ${user.name}`"
+                                    :label="`Acciones para ${user.nombre}`"
                                 >
                                     <ManagedUserEditSheet
                                         display="menu"

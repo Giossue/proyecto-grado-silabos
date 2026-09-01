@@ -30,40 +30,40 @@ class JobExecutionController extends Controller
                 ->filter(fn (array $option): bool => str_contains(mb_strtolower($option['label']), mb_strtolower($search)))
                 ->pluck('value');
             $query->where(fn ($builder) => $builder
-                ->where('type', 'ilike', "%{$escaped}%")
-                ->orWhere('queue_name', 'ilike', "%{$escaped}%")
-                ->orWhereIn('type', $matchingTypes)
-                ->orWhereIn('queue_name', $matchingQueues));
+                ->where('tipo', 'ilike', "%{$escaped}%")
+                ->orWhere('cola', 'ilike', "%{$escaped}%")
+                ->orWhereIn('tipo', $matchingTypes)
+                ->orWhereIn('cola', $matchingQueues));
         }
         if ($status !== '') {
-            $query->where('status', $status);
+            $query->where('estado', $status);
         }
         if ($type !== '') {
-            $query->where('type', $type);
+            $query->where('tipo', $type);
         }
         if ($queue !== '') {
-            $query->where('queue_name', $queue);
+            $query->where('cola', $queue);
         }
 
         return Inertia::render('Admin/Operations/Jobs', [
             'filters' => ['q' => $search, 'status' => $status, 'type' => $type, 'queue' => $queue],
             'type_options' => $this->typeOptions(),
             'queue_options' => $this->queueOptions(),
-            'executions' => $query->latest('created_at')->paginate(25)->withQueryString()
+            'executions' => $query->latest('creado_en')->paginate(25)->withQueryString()
                 ->through(fn (JobExecution $execution): array => [
                     'id' => $execution->id,
-                    'type' => $this->typeLabel($execution->type),
-                    'queue' => $this->queueLabel($execution->queue_name),
-                    'status' => $execution->status,
-                    'attempts' => $execution->attempts,
-                    'max_attempts' => $execution->max_attempts,
-                    'progress' => $execution->progress,
-                    'error_message' => $this->safeError($execution),
-                    'created_at' => $execution->created_at?->toIso8601String(),
-                    'started_at' => $execution->started_at?->toIso8601String(),
-                    'finished_at' => $execution->finished_at?->toIso8601String(),
-                    'retryable' => $execution->status === 'failed'
-                        && in_array($execution->type, ['document.export', 'notification.internal'], true),
+                    'tipo' => $this->typeLabel($execution->tipo),
+                    'cola' => $this->queueLabel($execution->cola),
+                    'estado' => $execution->estado,
+                    'intentos' => $execution->intentos,
+                    'intentos_maximos' => $execution->intentos_maximos,
+                    'progreso' => $execution->progreso,
+                    'mensaje_error' => $this->safeError($execution),
+                    'creado_en' => $execution->creado_en?->toIso8601String(),
+                    'iniciado_en' => $execution->iniciado_en?->toIso8601String(),
+                    'finalizado_en' => $execution->finalizado_en?->toIso8601String(),
+                    'reintentable' => $execution->estado === 'fallida'
+                        && in_array($execution->tipo, ['documento.exportacion', 'notificacion.interna'], true),
                 ]),
         ]);
     }
@@ -83,10 +83,10 @@ class JobExecutionController extends Controller
     private function typeLabel(string $type): string
     {
         return match ($type) {
-            'ai.analysis' => 'Asistencia de IA',
-            'document.export' => 'Generación documental',
-            'notification.internal' => 'Notificación interna',
-            'platform.smoke' => 'Comprobación de plataforma',
+            'ia.analisis' => 'Asistencia de IA',
+            'documento.exportacion' => 'Generación documental',
+            'notificacion.interna' => 'Notificación interna',
+            'plataforma.verificacion' => 'Comprobación de plataforma',
             default => 'Proceso del sistema',
         };
     }
@@ -95,7 +95,7 @@ class JobExecutionController extends Controller
     private function typeOptions(): array
     {
         $options = [];
-        foreach (JobExecution::query()->distinct()->orderBy('type')->pluck('type') as $value) {
+        foreach (JobExecution::query()->distinct()->orderBy('tipo')->pluck('tipo') as $value) {
             if (is_string($value)) {
                 $options[] = ['value' => $value, 'label' => $this->typeLabel($value)];
             }
@@ -107,10 +107,11 @@ class JobExecutionController extends Controller
     private function queueLabel(string $queue): string
     {
         return match ($queue) {
-            'ai' => 'IA local',
-            'documents' => 'Documentos',
-            'notifications' => 'Notificaciones',
-            'critical' => 'Crítica',
+            'ia' => 'IA local',
+            'documentos' => 'Documentos',
+            'notificaciones' => 'Notificaciones',
+            'critica' => 'Crítica',
+            'integraciones' => 'Integraciones',
             default => 'General',
         };
     }
@@ -119,7 +120,7 @@ class JobExecutionController extends Controller
     private function queueOptions(): array
     {
         $options = [];
-        foreach (JobExecution::query()->distinct()->orderBy('queue_name')->pluck('queue_name') as $value) {
+        foreach (JobExecution::query()->distinct()->orderBy('cola')->pluck('cola') as $value) {
             if (is_string($value)) {
                 $options[] = ['value' => $value, 'label' => $this->queueLabel($value)];
             }
@@ -130,16 +131,15 @@ class JobExecutionController extends Controller
 
     private function safeError(JobExecution $execution): ?string
     {
-        if ($execution->status !== 'failed') {
+        if ($execution->estado !== 'fallida') {
             return null;
         }
 
-        return in_array($execution->error_code, [
-            'ai_analysis_failed', 'ai_contract_invalid', 'ai_service_unavailable',
-            'import_contract_invalid', 'institutional_reader_unavailable', 'institutional_import_failed',
-            'document_export_failed', 'internal_notification_failed',
+        return in_array($execution->codigo_error, [
+            'analisis_ia_fallido', 'contrato_ia_invalido', 'servicio_ia_no_disponible',
+            'exportacion_documento_fallida', 'notificacion_interna_fallida',
         ], true)
-            ? $execution->error_message
+            ? $execution->mensaje_error
             : 'El trabajo terminó con un error. Revise los registros técnicos usando su identificador de correlación.';
     }
 }

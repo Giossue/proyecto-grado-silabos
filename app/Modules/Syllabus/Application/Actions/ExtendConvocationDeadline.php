@@ -43,7 +43,7 @@ class ExtendConvocationDeadline
             || $activeRole->carrera_id !== $convocation->carrera_id) {
             abort(403);
         }
-        if ($convocation->estado === 'closed') {
+        if ($convocation->estado === 'cerrada') {
             throw ValidationException::withMessages([
                 'convocation' => 'Una convocatoria cerrada ya no admite prórrogas.',
             ]);
@@ -87,10 +87,10 @@ class ExtendConvocationDeadline
             $this->audit->execute(
                 actorId: $actor->id,
                 roleAssignmentId: $activeRole->id,
-                action: 'convocation.deadline_extended',
-                resourceType: 'convocation',
+                action: 'convocatoria.plazo_extendido',
+                resourceType: 'convocatoria',
                 resourceId: $deadline->convocatoria_id,
-                result: 'success',
+                result: 'exito',
                 metadata: [
                     'stage' => $stage,
                     'previous_due_at' => $previous->toIso8601String(),

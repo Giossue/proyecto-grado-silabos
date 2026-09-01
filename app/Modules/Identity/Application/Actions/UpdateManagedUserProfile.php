@@ -21,24 +21,24 @@ class UpdateManagedUserProfile
         private readonly RecordAuditEvent $audit,
     ) {}
 
-    /** @param array{name: string, email: string} $data */
+    /** @param array{nombre: string, correo_electronico: string} $data */
     public function execute(User $target, array $data, User $actor, Request $request): User
     {
         $activeRole = $this->roles->resolve($request);
 
         return DB::transaction(function () use ($activeRole, $actor, $data, $request, $target): User {
             $locked = User::query()->lockForUpdate()->findOrFail($target->id);
-            $previous = ['name' => $locked->name, 'email' => $locked->email];
-            $email = mb_strtolower($data['email']);
+            $previous = ['name' => $locked->nombre, 'email' => $locked->correo_electronico];
+            $email = mb_strtolower($data['correo_electronico']);
 
-            $locked->fill(['name' => $data['name'], 'email' => $email]);
+            $locked->fill(['nombre' => $data['nombre'], 'correo_electronico' => $email]);
 
             if (! $locked->isDirty()) {
                 return $locked;
             }
 
-            if ($locked->isDirty('email')) {
-                $locked->email_verified_at = null;
+            if ($locked->isDirty('correo_electronico')) {
+                $locked->correo_verificado_en = null;
             }
 
             $locked->save();
@@ -46,14 +46,14 @@ class UpdateManagedUserProfile
             $this->audit->execute(
                 actorId: $actor->id,
                 roleAssignmentId: $activeRole?->id,
-                action: 'user.profile_updated',
-                resourceType: 'user',
+                action: 'usuario.perfil_actualizado',
+                resourceType: 'usuario',
                 resourceId: $locked->id,
-                result: 'success',
+                result: 'exito',
                 metadata: [
                     'previous_name' => $previous['name'],
                     'previous_email' => $previous['email'],
-                    'name_changed' => $previous['name'] !== $data['name'],
+                    'name_changed' => $previous['name'] !== $data['nombre'],
                     'email_changed' => $previous['email'] !== $email,
                 ],
                 correlationId: $request->attributes->getString('correlation_id') ?: null,

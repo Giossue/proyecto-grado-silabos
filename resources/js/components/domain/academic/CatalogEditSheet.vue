@@ -47,16 +47,16 @@ const open = defineModel<boolean>('open', { default: false });
 const entityLabel = computed(
     () =>
         ({
-            faculty: 'facultad',
-            career: 'carrera',
+            facultad: 'facultad',
+            carrera: 'carrera',
             campus: 'campus',
-            modality: 'modalidad',
-            period: 'periodo académico',
+            modalidad: 'modalidad',
+            periodo: 'periodo académico',
         })[props.entity],
 );
 
 const codeLabel = computed(() =>
-    ['modality', 'period'].includes(props.entity)
+    ['modalidad', 'periodo'].includes(props.entity)
         ? 'Código estable'
         : 'Código institucional',
 );
@@ -64,14 +64,14 @@ const codeLabel = computed(() =>
 const examples = computed(
     () =>
         ({
-            faculty: {
+            facultad: {
                 name: 'Ej. Facultad de Ciencias Administrativas',
                 code: 'Ej. FCA',
             },
-            career: { name: 'Ej. Software', code: 'Ej. SW' },
+            carrera: { name: 'Ej. Software', code: 'Ej. SW' },
             campus: { name: 'Ej. Campus Matriz', code: 'Ej. MATRIZ' },
-            modality: { name: 'Ej. Presencial', code: 'Ej. PRES' },
-            period: { name: 'Ej. 2026-2027', code: 'Ej. 2026-2027' },
+            modalidad: { name: 'Ej. Presencial', code: 'Ej. PRES' },
+            periodo: { name: 'Ej. 2026-2027', code: 'Ej. 2026-2027' },
         })[props.entity],
 );
 
@@ -108,7 +108,7 @@ const facultyOptions = computed(() =>
             >
                 <FieldGroup>
                     <Field
-                        v-if="entity === 'career'"
+                        v-if="entity === 'carrera'"
                         :data-invalid="Boolean(errors.faculty_id)"
                     >
                         <FieldLabel :for="`edit-faculty-${recordId}`" required>
@@ -148,26 +148,26 @@ const facultyOptions = computed(() =>
                         <FieldError :errors="[errors.faculty_id]" />
                     </Field>
 
-                    <Field :data-invalid="Boolean(errors.name)">
+                    <Field :data-invalid="Boolean(errors.nombre)">
                         <FieldLabel :for="`edit-name-${recordId}`" required>
                             Nombre
                         </FieldLabel>
                         <Input
                             :id="`edit-name-${recordId}`"
-                            name="name"
+                            name="nombre"
                             :default-value="recordName"
                             :placeholder="examples.name"
                             required
-                            :aria-invalid="Boolean(errors.name)"
+                            :aria-invalid="Boolean(errors.nombre)"
                         />
-                        <FieldError :errors="[errors.name]" />
+                        <FieldError :errors="[errors.nombre]" />
                     </Field>
 
                     <Field :data-invalid="Boolean(errors.code)">
                         <FieldLabel
                             :for="`edit-code-${recordId}`"
                             :required="
-                                entity === 'modality' || entity === 'period'
+                                entity === 'modalidad' || entity === 'periodo'
                             "
                         >
                             {{ codeLabel }}
@@ -178,7 +178,7 @@ const facultyOptions = computed(() =>
                             :default-value="recordCode ?? ''"
                             :placeholder="examples.code"
                             :required="
-                                entity === 'modality' || entity === 'period'
+                                entity === 'modalidad' || entity === 'periodo'
                             "
                             :aria-invalid="Boolean(errors.code)"
                         />
@@ -186,7 +186,7 @@ const facultyOptions = computed(() =>
                     </Field>
 
                     <Field
-                        v-if="entity === 'period'"
+                        v-if="entity === 'periodo'"
                         :data-invalid="Boolean(errors.starts_on)"
                     >
                         <FieldLabel
@@ -206,7 +206,7 @@ const facultyOptions = computed(() =>
                     </Field>
 
                     <Field
-                        v-if="entity === 'period'"
+                        v-if="entity === 'periodo'"
                         :data-invalid="Boolean(errors.ends_on)"
                     >
                         <FieldLabel :for="`edit-ends-on-${recordId}`" required>

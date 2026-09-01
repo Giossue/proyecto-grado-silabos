@@ -71,7 +71,7 @@ En otra terminal ejecute el worker:
 
 ```bash
 php artisan queue:work redis \
-  --queue=critical,notifications,documents,ai,integrations,default \
+  --queue=critica,notificaciones,documentos,ia,integraciones,general \
   --timeout=130 --tries=3
 ```
 
@@ -107,7 +107,7 @@ Smoke operacional de una cola real:
 
 ```bash
 php artisan platform:smoke-job
-php artisan queue:work redis --queue=critical --stop-when-empty \
+php artisan queue:work redis --queue=critica --stop-when-empty \
   --timeout=130 --tries=3
 ```
 

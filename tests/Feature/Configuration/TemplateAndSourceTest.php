@@ -34,9 +34,9 @@ class TemplateAndSourceTest extends TestCase
         parent::setUp();
 
         $this->seed(DatabaseSeeder::class);
-        $this->administrator = User::query()->where('email', 'admin@silabos.test')->firstOrFail();
+        $this->administrator = User::query()->where('correo_electronico', 'admin@silabos.test')->firstOrFail();
         $this->administratorContext = $this->administrator->roleAssignments()->firstOrFail();
-        $this->coordinator = User::query()->where('email', 'coordinador@silabos.test')->firstOrFail();
+        $this->coordinator = User::query()->where('correo_electronico', 'coordinador@silabos.test')->firstOrFail();
         $this->coordinatorContext = $this->coordinator->roleAssignments()->firstOrFail();
     }
 
@@ -50,7 +50,7 @@ class TemplateAndSourceTest extends TestCase
             ->assertRedirect();
 
         $version = TemplateVersion::query()->firstOrFail();
-        $this->assertSame('draft', $version->estado);
+        $this->assertSame('borrador', $version->estado);
         $this->assertTrue((bool) $version->template->es_institucional);
         $this->assertCount(12, $version->sections()->get());
         $this->assertCount(12, $version->fields()->get());
@@ -61,7 +61,7 @@ class TemplateAndSourceTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Admin/Templates/Show')
                 ->has('templateVersion.sections', 12)
-                ->where('templateVersion.state', 'draft'));
+                ->where('templateVersion.state', 'borrador'));
     }
 
     public function test_administrator_can_only_create_one_institutional_template(): void
@@ -90,7 +90,7 @@ class TemplateAndSourceTest extends TestCase
         $version = TemplateVersion::query()->create([
             'plantilla_id' => $legacy->id,
             'numero_version' => 1,
-            'estado' => 'draft',
+            'estado' => 'borrador',
         ]);
 
         $this->actingAsAdministrator()
@@ -115,7 +115,7 @@ class TemplateAndSourceTest extends TestCase
             ->assertSessionHas('success');
 
         $published = $version->fresh();
-        $this->assertSame('published', $published->estado);
+        $this->assertSame('publicada', $published->estado);
         $this->assertMatchesRegularExpression('/^[a-f0-9]{64}$/', $published->huella_sha256);
         $field = $published->fields()->firstOrFail();
 
@@ -140,7 +140,7 @@ class TemplateAndSourceTest extends TestCase
             ->assertRedirect();
 
         $clone = TemplateVersion::query()->where('id', '!=', $version->id)->firstOrFail();
-        $this->assertSame('draft', $clone->estado);
+        $this->assertSame('borrador', $clone->estado);
         $this->assertSame(2, $clone->numero_version);
         $this->assertCount(12, $clone->fields()->get());
         $this->assertNotEqualsCanonicalizing(
@@ -155,9 +155,9 @@ class TemplateAndSourceTest extends TestCase
                 ->component('Admin/Templates/Show')
                 ->has('templateVersion.template.versions', 2)
                 ->where('templateVersion.template.versions.0.number', 2)
-                ->where('templateVersion.template.versions.0.state', 'draft')
+                ->where('templateVersion.template.versions.0.state', 'borrador')
                 ->where('templateVersion.template.versions.1.number', 1)
-                ->where('templateVersion.template.versions.1.state', 'published'));
+                ->where('templateVersion.template.versions.1.state', 'publicada'));
     }
 
     public function test_template_blocks_use_document_content_types(): void
@@ -178,9 +178,9 @@ class TemplateAndSourceTest extends TestCase
 
         $block = $version->fresh()->sections()->whereKey($section->id)->firstOrFail()
             ->blocks()->where('titulo', 'Estrategias de aprendizaje')->firstOrFail();
-        $this->assertSame('repeatable', $block->tipo);
+        $this->assertSame('repetible', $block->tipo);
         $this->assertSame('bulleted_list', $block->configuracion['content_type']);
-        $this->assertSame('repeatable', $block->fields()->firstOrFail()->tipo);
+        $this->assertSame('repetible', $block->fields()->firstOrFail()->tipo);
         $this->assertSame(1, $block->posicion);
     }
 
@@ -287,7 +287,7 @@ class TemplateAndSourceTest extends TestCase
 
         $this->assertSame("## Resultado\n\nDiseña software seguro.", $source->fresh()->contenido);
         $this->assertDatabaseHas('eventos_auditoria', [
-            'accion' => 'source.content_updated',
+            'accion' => 'fuente.contenido_actualizado',
             'recurso_id' => $source->id,
         ]);
 
@@ -360,7 +360,7 @@ class TemplateAndSourceTest extends TestCase
     {
         $this->actingAsAdministrator()->post(route('admin.templates.store'), ['name' => 'Plantilla verificable']);
 
-        return TemplateVersion::query()->latest('created_at')->firstOrFail();
+        return TemplateVersion::query()->latest('creado_en')->firstOrFail();
     }
 
     private function createSourceAsCoordinator(string $name): AcademicSource

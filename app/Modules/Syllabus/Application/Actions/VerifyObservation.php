@@ -28,10 +28,10 @@ class VerifyObservation
                 ->with(['revision', 'response'])
                 ->lockForUpdate()
                 ->findOrFail($observation->id);
-            if ($syllabus->estado !== 'in_review') {
+            if ($syllabus->estado !== 'en_revision') {
                 throw ValidationException::withMessages(['syllabus' => 'El expediente no está en revisión.']);
             }
-            if ($observation->estado === 'verified') {
+            if ($observation->estado === 'verificada') {
                 return $observation;
             }
 
@@ -46,15 +46,15 @@ class VerifyObservation
                 ]);
             }
 
-            $observation->update(['estado' => 'verified']);
+            $observation->update(['estado' => 'verificada']);
             $activeRole = $this->roles->resolve($request);
             $this->audit->execute(
                 actorId: $actor->id,
                 roleAssignmentId: $activeRole?->id,
-                action: 'syllabus.observation_verified',
-                resourceType: 'review_observation',
+                action: 'silabo.observacion_verificada',
+                resourceType: 'observacion_revision',
                 resourceId: $observation->id,
-                result: 'success',
+                result: 'exito',
                 metadata: ['revision_number' => $latest->numero_revision],
                 correlationId: $request->attributes->getString('correlation_id') ?: null,
             );

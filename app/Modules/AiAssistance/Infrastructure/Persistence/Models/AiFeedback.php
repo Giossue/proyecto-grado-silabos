@@ -12,6 +12,8 @@ class AiFeedback extends Model
 {
     use HasUuids, ImmutableRecord;
 
+    public const CREATED_AT = 'creado_en';
+
     public const UPDATED_AT = null;
 
     protected $table = 'retroalimentacion_ia';
@@ -19,16 +21,16 @@ class AiFeedback extends Model
     /** @var list<string> */
     protected $fillable = [
         'recomendacion_ia_id', 'usuario_id', 'asignacion_rol_id', 'decision',
-        'contenido_antes', 'contenido_despues', 'lock_version_origen',
-        'lock_version_resultado', 'decidido_en',
+        'contenido_antes', 'contenido_despues', 'version_bloqueo_origen',
+        'version_bloqueo_resultado', 'decidido_en',
     ];
 
     /** @return array<string, string> */
     protected function casts(): array
     {
         return [
-            'lock_version_origen' => 'integer',
-            'lock_version_resultado' => 'integer',
+            'version_bloqueo_origen' => 'integer',
+            'version_bloqueo_resultado' => 'integer',
             'decidido_en' => 'immutable_datetime',
         ];
     }

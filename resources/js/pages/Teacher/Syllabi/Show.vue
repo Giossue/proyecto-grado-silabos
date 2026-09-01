@@ -38,7 +38,7 @@ type SyllabusSummary = {
     convocation: string;
     period: string;
     state: string;
-    saved_at: string | null;
+    guardado_en: string | null;
     parallels: string[];
     teachers: string[];
     sections: { id: string; title: string }[];
@@ -70,15 +70,15 @@ defineOptions({
 
 const stateLabel = (state: string): string =>
     ({
-        not_started: 'Sin iniciar',
-        draft: 'Borrador',
-        in_review: 'En revisión',
-        correction_requested: 'Corrección solicitada',
-        approved: 'Aprobado',
+        sin_iniciar: 'Sin iniciar',
+        borrador: 'Borrador',
+        en_revision: 'En revisión',
+        correccion_solicitada: 'Corrección solicitada',
+        aprobado: 'Aprobado',
     })[state] ?? 'Estado no disponible';
 
 const observationState = (state: string): string =>
-    ({ open: 'Abierta', responded: 'Respondida', verified: 'Verificada' })[
+    ({ abierta: 'Abierta', respondida: 'Respondida', verificada: 'Verificada' })[
         state
     ] ?? 'Estado no disponible';
 </script>
@@ -97,7 +97,9 @@ const observationState = (state: string): string =>
         <template #meta>
             <Badge
                 :variant="
-                    ['draft', 'correction_requested'].includes(syllabus.state)
+                    ['borrador', 'correccion_solicitada'].includes(
+                        syllabus.state,
+                    )
                         ? 'secondary'
                         : 'outline'
                 "
@@ -107,7 +109,7 @@ const observationState = (state: string): string =>
         </template>
         <template #actions>
             <Form
-                v-if="syllabus.state === 'not_started'"
+                v-if="syllabus.state === 'sin_iniciar'"
                 v-bind="SyllabusController.start.form(syllabus.id)"
                 v-slot="{ processing }"
             >
@@ -118,7 +120,9 @@ const observationState = (state: string): string =>
             </Form>
             <template
                 v-else-if="
-                    ['draft', 'correction_requested'].includes(syllabus.state)
+                    ['borrador', 'correccion_solicitada'].includes(
+                        syllabus.state,
+                    )
                 "
             >
                 <Button as-child variant="outline">
@@ -139,7 +143,7 @@ const observationState = (state: string): string =>
             </template>
         </template>
 
-        <Alert v-if="syllabus.state === 'in_review'">
+        <Alert v-if="syllabus.state === 'en_revision'">
             <ShieldCheck aria-hidden="true" />
             <AlertTitle>La revisión enviada está protegida</AlertTitle>
             <AlertDescription>
@@ -148,7 +152,7 @@ const observationState = (state: string): string =>
             </AlertDescription>
         </Alert>
 
-        <Alert v-else-if="syllabus.state === 'approved'">
+        <Alert v-else-if="syllabus.state === 'aprobado'">
             <ShieldCheck aria-hidden="true" />
             <AlertTitle>Sílabo aprobado</AlertTitle>
             <AlertDescription>
@@ -157,7 +161,7 @@ const observationState = (state: string): string =>
             </AlertDescription>
         </Alert>
 
-        <Alert v-else-if="syllabus.state === 'correction_requested'">
+        <Alert v-else-if="syllabus.state === 'correccion_solicitada'">
             <FilePenLine aria-hidden="true" />
             <AlertTitle>Hay una corrección habilitada</AlertTitle>
             <AlertDescription>
@@ -223,7 +227,7 @@ const observationState = (state: string): string =>
                                 </Badge>
                                 <Badge
                                     :variant="
-                                        observation.state === 'verified'
+                                        observation.state === 'verificada'
                                             ? 'secondary'
                                             : 'destructive'
                                     "

@@ -53,13 +53,18 @@ type Recommendation = {
 
 type Execution = {
     id: string;
-    status: 'pending' | 'running' | 'completed' | 'inconclusive' | 'failed';
+    status:
+        | 'pendiente'
+        | 'en_ejecucion'
+        | 'completada'
+        | 'no_concluyente'
+        | 'fallida';
     requested_at: string;
     completed_at: string | null;
     analysis_label: string;
     input_content: string;
     reason: string | null;
-    error_message: string | null;
+    mensaje_error: string | null;
     evidence: Evidence[];
     recommendations: Recommendation[];
 };
@@ -69,7 +74,7 @@ const props = defineProps<{
         id: string;
         subject: string;
         state: string;
-        lock_version: number;
+        version_bloqueo: number;
     };
     field: {
         id: string;
@@ -95,27 +100,27 @@ defineOptions({
 const latest = computed(() => props.executions[0] ?? null);
 const isProcessing = computed(
     () =>
-        latest.value?.status === 'pending' ||
-        latest.value?.status === 'running',
+        latest.value?.status === 'pendiente' ||
+        latest.value?.status === 'en_ejecucion',
 );
 const requestKey = crypto.randomUUID();
 let polling: ReturnType<typeof setInterval> | null = null;
 
 const statusLabel = (status: Execution['status']): string =>
     ({
-        pending: 'Pendiente',
-        running: 'Procesando',
-        completed: 'Completado',
-        inconclusive: 'No concluyente',
-        failed: 'Fallido',
+        pendiente: 'Pendiente',
+        en_ejecucion: 'Procesando',
+        completada: 'Completado',
+        no_concluyente: 'No concluyente',
+        fallida: 'Fallido',
     })[status];
 
 const statusVariant = (status: Execution['status']) => {
-    if (status === 'failed') {
+    if (status === 'fallida') {
         return 'destructive' as const;
     }
 
-    if (status === 'completed') {
+    if (status === 'completada') {
         return 'default' as const;
     }
 
@@ -255,8 +260,8 @@ onBeforeUnmount(() => {
                             <Badge :variant="statusVariant(execution.status)">
                                 <Spinner
                                     v-if="
-                                        execution.status === 'pending' ||
-                                        execution.status === 'running'
+                                        execution.status === 'pendiente' ||
+                                        execution.status === 'en_ejecucion'
                                     "
                                 />
                                 {{ statusLabel(execution.status) }}
@@ -266,8 +271,8 @@ onBeforeUnmount(() => {
                     <CardContent class="flex flex-col gap-5">
                         <Alert
                             v-if="
-                                execution.status === 'pending' ||
-                                execution.status === 'running'
+                                execution.status === 'pendiente' ||
+                                execution.status === 'en_ejecucion'
                             "
                         >
                             <Clock3 aria-hidden="true" />
@@ -279,7 +284,7 @@ onBeforeUnmount(() => {
                         </Alert>
 
                         <Alert
-                            v-else-if="execution.status === 'failed'"
+                            v-else-if="execution.status === 'fallida'"
                             variant="destructive"
                         >
                             <CircleAlert aria-hidden="true" />
@@ -287,12 +292,14 @@ onBeforeUnmount(() => {
                                 >La ayuda no pudo completarse</AlertTitle
                             >
                             <AlertDescription>
-                                {{ execution.error_message }} El borrador
+                                {{ execution.mensaje_error }} El borrador
                                 permanece intacto.
                             </AlertDescription>
                         </Alert>
 
-                        <Alert v-else-if="execution.status === 'inconclusive'">
+                        <Alert
+                            v-else-if="execution.status === 'no_concluyente'"
+                        >
                             <Eye aria-hidden="true" />
                             <AlertTitle>Resultado no concluyente</AlertTitle>
                             <AlertDescription>{{
@@ -385,7 +392,7 @@ onBeforeUnmount(() => {
                                     <input
                                         type="hidden"
                                         name="decision"
-                                        value="accepted"
+                                        value="aceptada"
                                     />
                                     <Button
                                         type="submit"
@@ -394,13 +401,13 @@ onBeforeUnmount(() => {
                                         :disabled="
                                             processing ||
                                             recommendation.my_decisions.includes(
-                                                'accepted',
+                                                'aceptada',
                                             )
                                         "
                                     >
                                         {{
                                             recommendation.my_decisions.includes(
-                                                'accepted',
+                                                'aceptada',
                                             )
                                                 ? 'Aceptada'
                                                 : 'Aceptar'
@@ -421,7 +428,7 @@ onBeforeUnmount(() => {
                                     <input
                                         type="hidden"
                                         name="decision"
-                                        value="ignored"
+                                        value="ignorada"
                                     />
                                     <Button
                                         type="submit"
@@ -430,7 +437,7 @@ onBeforeUnmount(() => {
                                         :disabled="
                                             processing ||
                                             recommendation.my_decisions.includes(
-                                                'ignored',
+                                                'ignorada',
                                             )
                                         "
                                     >
@@ -451,7 +458,7 @@ onBeforeUnmount(() => {
                                     <input
                                         type="hidden"
                                         name="decision"
-                                        value="not_useful"
+                                        value="no_util"
                                     />
                                     <Button
                                         type="submit"
@@ -460,7 +467,7 @@ onBeforeUnmount(() => {
                                         :disabled="
                                             processing ||
                                             recommendation.my_decisions.includes(
-                                                'not_useful',
+                                                'no_util',
                                             )
                                         "
                                     >
@@ -543,19 +550,19 @@ onBeforeUnmount(() => {
                                         >
                                             <input
                                                 type="hidden"
-                                                name="lock_version"
-                                                :value="syllabus.lock_version"
+                                                name="version_bloqueo"
+                                                :value="syllabus.version_bloqueo"
                                             />
                                             <p
                                                 v-if="
                                                     errors.recommendation ||
-                                                    errors.lock_version
+                                                    errors.version_bloqueo
                                                 "
                                                 class="mb-3 text-sm text-destructive"
                                             >
                                                 {{
                                                     errors.recommendation ??
-                                                    errors.lock_version
+                                                    errors.version_bloqueo
                                                 }}
                                             </p>
                                             <DialogFooter>

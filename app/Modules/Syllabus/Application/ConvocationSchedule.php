@@ -9,7 +9,7 @@ use Illuminate\Validation\ValidationException;
 
 /**
  * El calendario de una convocatoria vive en `fechas_limite_convocatoria`, una fila por
- * etapa. La etapa `start` vence cuando se habilita la elaboración; la etapa `draft`,
+ * etapa. La etapa `inicio` vence cuando se habilita la elaboración; la etapa `borrador`,
  * cuando se cierra el envío. Modelarlo así evita duplicar el concepto de fecha en dos
  * sitios distintos.
  *
@@ -19,9 +19,9 @@ use Illuminate\Validation\ValidationException;
  */
 class ConvocationSchedule
 {
-    public const STAGE_START = 'start';
+    public const STAGE_START = 'inicio';
 
-    public const STAGE_DRAFT = 'draft';
+    public const STAGE_DRAFT = 'borrador';
 
     public function startsAt(Convocation $convocation): ?CarbonImmutable
     {

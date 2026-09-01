@@ -25,7 +25,7 @@ const props = defineProps<{
         description: string | null;
         internal_notes: string | null;
         content: string | null;
-        updated_at: string | null;
+        actualizado_en: string | null;
     };
 }>();
 
@@ -61,8 +61,8 @@ defineOptions({
             </Button>
         </template>
         <template #meta>
-            <Badge v-if="source.updated_at" variant="outline">
-                Actualizada el {{ source.updated_at }}
+            <Badge v-if="source.actualizado_en" variant="outline">
+                Actualizada el {{ source.actualizado_en }}
             </Badge>
         </template>
         <template #actions>

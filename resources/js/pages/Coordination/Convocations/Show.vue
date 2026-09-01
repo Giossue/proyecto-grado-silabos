@@ -77,11 +77,11 @@ defineOptions({
 
 const stateLabel = (state: string): string =>
     ({
-        not_started: 'Sin iniciar',
-        draft: 'Borrador',
-        in_review: 'En revisión',
-        correction_requested: 'Corrección solicitada',
-        approved: 'Aprobado',
+        sin_iniciar: 'Sin iniciar',
+        borrador: 'Borrador',
+        en_revision: 'En revisión',
+        correccion_solicitada: 'Corrección solicitada',
+        aprobado: 'Aprobado',
     })[state] ?? 'Estado no disponible';
 
 const formatDate = (value: string | null): string =>
@@ -128,11 +128,13 @@ const {
         <template #meta>
             <Badge
                 :variant="
-                    convocation.state === 'open' ? 'secondary' : 'outline'
+                    convocation.state === 'abierta' ? 'secondary' : 'outline'
                 "
             >
                 {{
-                    convocation.state === 'open' ? 'Abierta' : 'En preparación'
+                    convocation.state === 'abierta'
+                        ? 'Abierta'
+                        : 'En preparación'
                 }}
             </Badge>
         </template>
@@ -140,11 +142,11 @@ const {
              falta un disparador y un desplegable. Un contenedor las escondería como una. -->
         <template #actions>
             <DeadlineExtensionSheet
-                v-if="convocation.state !== 'closed'"
+                v-if="convocation.state !== 'cerrada'"
                 :convocation-id="convocation.id"
             />
             <Form
-                v-if="convocation.state === 'preparation'"
+                v-if="convocation.state === 'preparacion'"
                 v-bind="ConvocationController.open.form(convocation.id)"
                 v-slot="{ errors, processing }"
             >
@@ -158,7 +160,7 @@ const {
             </Form>
         </template>
 
-        <Alert v-if="convocation.state === 'preparation'">
+        <Alert v-if="convocation.state === 'preparacion'">
             <AlertTitle>Revise antes de abrir</AlertTitle>
             <AlertDescription>
                 La apertura fija esta plantilla y estas fuentes, valida que cada
@@ -206,16 +208,16 @@ const {
                                             <SelectItem value="all"
                                                 >Todos los estados</SelectItem
                                             >
-                                            <SelectItem value="not_started"
+                                            <SelectItem value="sin_iniciar"
                                                 >Sin iniciar</SelectItem
                                             >
-                                            <SelectItem value="draft"
+                                            <SelectItem value="borrador"
                                                 >Borrador</SelectItem
                                             >
-                                            <SelectItem value="in_review"
+                                            <SelectItem value="en_revision"
                                                 >En revisión</SelectItem
                                             >
-                                            <SelectItem value="approved"
+                                            <SelectItem value="aprobado"
                                                 >Aprobado</SelectItem
                                             >
                                         </SelectGroup>
@@ -295,7 +297,7 @@ const {
                         <div class="font-medium">Agrupación</div>
                         <div class="text-muted-foreground">
                             {{
-                                convocation.grouping_mode === 'per_parallel'
+                                convocation.grouping_mode === 'por_paralelo'
                                     ? 'Un sílabo por paralelo'
                                     : 'Un sílabo por oferta'
                             }}

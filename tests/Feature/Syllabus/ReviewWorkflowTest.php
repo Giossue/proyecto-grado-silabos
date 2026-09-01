@@ -49,18 +49,18 @@ class ReviewWorkflowTest extends TestCase
         parent::setUp();
         $this->seed(DatabaseSeeder::class);
 
-        $this->administrator = User::query()->where('email', 'admin@silabos.test')->firstOrFail();
+        $this->administrator = User::query()->where('correo_electronico', 'admin@silabos.test')->firstOrFail();
         $this->administratorContext = $this->administrator->roleAssignments()->firstOrFail();
-        $this->coordinator = User::query()->where('email', 'coordinador@silabos.test')->firstOrFail();
+        $this->coordinator = User::query()->where('correo_electronico', 'coordinador@silabos.test')->firstOrFail();
         $this->coordinatorContext = $this->coordinator->roleAssignments()->firstOrFail();
-        $this->teacher = User::query()->where('email', 'docente@silabos.test')->firstOrFail();
+        $this->teacher = User::query()->where('correo_electronico', 'docente@silabos.test')->firstOrFail();
         $this->teacherContext = $this->teacher->roleAssignments()->firstOrFail();
     }
 
     public function test_cp_f_revision_submission_is_validated_idempotent_and_immutable(): void
     {
         $syllabus = $this->createValidDraft();
-        $lockVersion = $syllabus->lock_version;
+        $lockVersion = $syllabus->version_bloqueo;
         $key = (string) Str::uuid();
 
         $this->actingAsTeacher()
@@ -68,37 +68,37 @@ class ReviewWorkflowTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Teacher/Syllabi/Submit')
-                ->where('syllabus.lock_version', $lockVersion));
+                ->where('syllabus.version_bloqueo', $lockVersion));
         $this->actingAsTeacher()->post(route('syllabi.submit.store', $syllabus), [
-            'lock_version' => $lockVersion,
+            'version_bloqueo' => $lockVersion,
             'idempotency_key' => $key,
         ])->assertRedirect(route('syllabi.show', $syllabus));
 
         $revision = SyllabusRevision::query()->firstOrFail();
-        $this->assertSame('in_review', $syllabus->fresh()->estado);
+        $this->assertSame('en_revision', $syllabus->fresh()->estado);
         $this->assertSame(1, $revision->numero_revision);
-        $this->assertSame($syllabus->version_plantilla_id, $revision->snapshot['template_version_id']);
-        $this->assertSame($syllabus->contexto_academico, $revision->snapshot['academic_context']);
-        $this->assertNotEmpty($revision->snapshot['sections']);
-        $this->assertSame(app(CanonicalHasher::class)->hash($revision->snapshot), $revision->huella_sha256);
+        $this->assertSame($syllabus->version_plantilla_id, $revision->fotografia['template_version_id']);
+        $this->assertSame($syllabus->contexto_academico, $revision->fotografia['academic_context']);
+        $this->assertNotEmpty($revision->fotografia['sections']);
+        $this->assertSame(app(CanonicalHasher::class)->hash($revision->fotografia), $revision->huella_sha256);
         $this->assertDatabaseHas('transiciones_silabo', [
             'silabo_id' => $syllabus->id,
-            'accion' => 'submit',
-            'estado_origen' => 'draft',
-            'estado_destino' => 'in_review',
+            'accion' => 'enviar',
+            'estado_origen' => 'borrador',
+            'estado_destino' => 'en_revision',
         ]);
-        $this->assertDatabaseHas('eventos_outbox', [
+        $this->assertDatabaseHas('eventos_salientes', [
             'agregado_id' => $syllabus->id,
-            'tipo_evento' => 'syllabus.submitted',
+            'tipo_evento' => 'silabo.enviado',
         ]);
 
         $this->actingAsTeacher()->post(route('syllabi.submit.store', $syllabus), [
-            'lock_version' => $lockVersion,
+            'version_bloqueo' => $lockVersion,
             'idempotency_key' => $key,
         ])->assertRedirect();
         $this->assertDatabaseCount('revisiones_silabo', 1);
         $this->actingAsTeacher()->post(route('syllabi.submit.store', $syllabus), [
-            'lock_version' => $syllabus->fresh()->lock_version,
+            'version_bloqueo' => $syllabus->fresh()->version_bloqueo,
             'idempotency_key' => (string) Str::uuid(),
         ])->assertSessionHasErrors('syllabus');
         $this->assertDatabaseCount('revisiones_silabo', 1);
@@ -126,11 +126,11 @@ class ReviewWorkflowTest extends TestCase
         $syllabus = $this->createStartedDraft();
 
         $this->actingAsTeacher()->post(route('syllabi.submit.store', $syllabus), [
-            'lock_version' => $syllabus->lock_version,
+            'version_bloqueo' => $syllabus->version_bloqueo,
             'idempotency_key' => (string) Str::uuid(),
         ])->assertSessionHasErrors('validation');
 
-        $this->assertSame('draft', $syllabus->fresh()->estado);
+        $this->assertSame('borrador', $syllabus->fresh()->estado);
         $this->assertDatabaseCount('revisiones_silabo', 0);
         $this->assertDatabaseCount('ejecuciones_validacion', 1);
         $this->assertDatabaseMissing('transiciones_silabo', ['silabo_id' => $syllabus->id]);
@@ -139,18 +139,18 @@ class ReviewWorkflowTest extends TestCase
     public function test_cp_f_stale_submission_returns_to_confirmation_without_creating_evidence(): void
     {
         $syllabus = $this->createValidDraft();
-        $staleVersion = $syllabus->lock_version;
-        $syllabus->increment('lock_version');
+        $staleVersion = $syllabus->version_bloqueo;
+        $syllabus->increment('version_bloqueo');
 
         $this->actingAsTeacher()
             ->from(route('syllabi.submit.confirm', $syllabus))
             ->post(route('syllabi.submit.store', $syllabus), [
-                'lock_version' => $staleVersion,
+                'version_bloqueo' => $staleVersion,
                 'idempotency_key' => (string) Str::uuid(),
             ])->assertRedirect(route('syllabi.submit.confirm', $syllabus))
-            ->assertSessionHasErrors('lock_version');
+            ->assertSessionHasErrors('version_bloqueo');
 
-        $this->assertSame('draft', $syllabus->fresh()->estado);
+        $this->assertSame('borrador', $syllabus->fresh()->estado);
         $this->assertDatabaseCount('revisiones_silabo', 0);
         $this->assertDatabaseCount('ejecuciones_validacion', 0);
     }
@@ -192,13 +192,13 @@ class ReviewWorkflowTest extends TestCase
         $field = $this->editableScalarField($syllabus);
         $repeatableField = FieldDefinition::query()
             ->where('version_plantilla_id', $syllabus->version_plantilla_id)
-            ->where('tipo', 'repeatable')
+            ->where('tipo', 'repetible')
             ->firstOrFail();
         $stableRowId = $syllabus->rows()
             ->where('definicion_campo_id', $repeatableField->id)
             ->firstOrFail()
             ->id;
-        $firstSnapshot = $firstRevision->snapshot;
+        $firstSnapshot = $firstRevision->fotografia;
 
         $this->actingAsCoordinator()->post(route('reviews.observations.store', $firstRevision), [
             'content' => 'Precise la descripción y explique el ajuste realizado.',
@@ -210,13 +210,13 @@ class ReviewWorkflowTest extends TestCase
         ])->assertRedirect();
 
         $syllabus->refresh();
-        $this->assertSame('correction_requested', $syllabus->estado);
-        $this->assertDatabaseHas('eventos_outbox', [
+        $this->assertSame('correccion_solicitada', $syllabus->estado);
+        $this->assertDatabaseHas('eventos_salientes', [
             'agregado_id' => $syllabus->id,
-            'tipo_evento' => 'syllabus.correction_requested',
+            'tipo_evento' => 'silabo.correccion_solicitada',
         ]);
         $this->actingAsCoordinator()->patchJson(route('syllabi.fields.update', [$syllabus, $field]), [
-            'lock_version' => $syllabus->lock_version,
+            'version_bloqueo' => $syllabus->version_bloqueo,
             'value' => 'PV-16 continúa denegada.',
         ])->assertForbidden();
         $this->actingAsTeacher()
@@ -235,12 +235,12 @@ class ReviewWorkflowTest extends TestCase
 
         $syllabus->refresh();
         $this->actingAsTeacher()->patchJson(route('syllabi.fields.update', [$syllabus, $field]), [
-            'lock_version' => $syllabus->lock_version,
+            'version_bloqueo' => $syllabus->version_bloqueo,
             'value' => 'Descripción corregida con evidencia académica.',
         ])->assertOk();
         $syllabus->refresh();
         $rowUpdate = $this->actingAsTeacher()->patchJson(route('syllabi.fields.update', [$syllabus, $repeatableField]), [
-            'lock_version' => $syllabus->lock_version,
+            'version_bloqueo' => $syllabus->version_bloqueo,
             'rows' => [
                 ['id' => $stableRowId, 'data' => ['texto' => 'Fila corregida y estable']],
                 ['data' => ['texto' => 'Fila nueva de la corrección']],
@@ -249,25 +249,25 @@ class ReviewWorkflowTest extends TestCase
         $newRowId = $rowUpdate->json('rows.1.id');
         $syllabus->refresh();
         $this->actingAsTeacher()->post(route('syllabi.submit.store', $syllabus), [
-            'lock_version' => $syllabus->lock_version,
+            'version_bloqueo' => $syllabus->version_bloqueo,
             'idempotency_key' => (string) Str::uuid(),
         ])->assertRedirect();
 
         $secondRevision = SyllabusRevision::query()->where('numero_revision', 2)->firstOrFail();
-        $this->assertSame($firstSnapshot, $firstRevision->fresh()->snapshot);
+        $this->assertSame($firstSnapshot, $firstRevision->fresh()->fotografia);
         $this->assertNotSame($firstRevision->huella_sha256, $secondRevision->huella_sha256);
         $this->assertSame($firstRevision->id, $secondRevision->revision_anterior_id);
         $response = ObservationResponse::query()->firstOrFail();
         $this->assertSame($secondRevision->id, $response->revision_respuesta_id);
         $comparison = app(RevisionDiff::class)->compare($firstRevision, $secondRevision);
         $this->assertGreaterThan(0, $comparison['changed_fields']);
-        $repeatableChange = collect($comparison['changes'])->firstWhere('type', 'repeatable');
+        $repeatableChange = collect($comparison['changes'])->firstWhere('type', 'repetible');
         $this->assertSame($stableRowId, $repeatableChange['before']['rows'][0]['id'], 'La fila estable no coincide en el snapshot anterior.');
         $this->assertSame($stableRowId, $repeatableChange['after']['rows'][0]['id'], 'La fila estable no coincide en el snapshot posterior.');
         $this->assertSame($newRowId, $repeatableChange['after']['rows'][1]['id'], 'La fila nueva no coincide en el snapshot posterior.');
 
         $this->actingAsCoordinator()->post(route('reviews.observations.verify', $observation))->assertRedirect();
-        $this->assertSame('verified', $observation->fresh()->estado);
+        $this->assertSame('verificada', $observation->fresh()->estado);
         try {
             DB::transaction(fn () => DB::table('respuestas_observacion')
                 ->where('id', $response->id)
@@ -300,7 +300,7 @@ class ReviewWorkflowTest extends TestCase
         $this->actingAsCoordinator()->post(route('reviews.approve', $revision), [
             'idempotency_key' => $key,
         ])->assertSessionHasErrors('observations');
-        $this->assertSame('in_review', $syllabus->fresh()->estado);
+        $this->assertSame('en_revision', $syllabus->fresh()->estado);
         $this->assertDatabaseCount('aprobaciones', 0);
 
         $this->actingAsCoordinator()->post(route('reviews.observations.verify', $observation))->assertRedirect();
@@ -308,12 +308,12 @@ class ReviewWorkflowTest extends TestCase
             'idempotency_key' => $key,
         ])->assertRedirect();
         $approval = Approval::query()->firstOrFail();
-        $this->assertSame('approved', $syllabus->fresh()->estado);
+        $this->assertSame('aprobado', $syllabus->fresh()->estado);
         $this->assertSame($revision->id, $approval->revision_silabo_id);
         $this->assertSame(64, strlen($approval->huella_sha256));
-        $this->assertDatabaseHas('eventos_outbox', [
+        $this->assertDatabaseHas('eventos_salientes', [
             'agregado_id' => $syllabus->id,
-            'tipo_evento' => 'syllabus.approved',
+            'tipo_evento' => 'silabo.aprobado',
         ]);
 
         $this->actingAsCoordinator()->post(route('reviews.approve', $revision), [
@@ -346,14 +346,14 @@ class ReviewWorkflowTest extends TestCase
         ])->assertRedirect();
         $syllabus->refresh();
         $reopening = $syllabus->reopenings()->firstOrFail();
-        $this->assertSame('correction_requested', $syllabus->estado);
+        $this->assertSame('correccion_solicitada', $syllabus->estado);
         $this->assertSame($approvedValue, $syllabus->values()->where('definicion_campo_id', $field->id)->firstOrFail()->valor);
         $this->assertSame($approval->id, $reopening->aprobacion_id);
         $this->assertDatabaseCount('aprobaciones', 1);
         $this->assertDatabaseCount('revisiones_silabo', 1);
-        $this->assertDatabaseHas('eventos_outbox', [
+        $this->assertDatabaseHas('eventos_salientes', [
             'agregado_id' => $syllabus->id,
-            'tipo_evento' => 'syllabus.reopened',
+            'tipo_evento' => 'silabo.reabierto',
         ]);
 
         $this->actingAsCoordinator()->post(route('reviews.reopen', $syllabus), [
@@ -363,23 +363,23 @@ class ReviewWorkflowTest extends TestCase
         $this->assertDatabaseCount('reaperturas', 1);
 
         $this->actingAsCoordinator()->patchJson(route('syllabi.fields.update', [$syllabus, $field]), [
-            'lock_version' => $syllabus->lock_version,
+            'version_bloqueo' => $syllabus->version_bloqueo,
             'value' => 'Coordinación no puede editar mientras PV-16 esté pendiente.',
         ])->assertForbidden();
         $this->actingAsTeacher()->patchJson(route('syllabi.fields.update', [$syllabus, $field]), [
-            'lock_version' => $syllabus->lock_version,
+            'version_bloqueo' => $syllabus->version_bloqueo,
             'value' => 'Cambio posterior a la reapertura.',
         ])->assertOk();
         $syllabus->refresh();
         $this->actingAsTeacher()->post(route('syllabi.submit.store', $syllabus), [
-            'lock_version' => $syllabus->lock_version,
+            'version_bloqueo' => $syllabus->version_bloqueo,
             'idempotency_key' => (string) Str::uuid(),
         ])->assertRedirect();
 
         $newRevision = SyllabusRevision::query()->where('numero_revision', 2)->firstOrFail();
         $this->assertSame($reopening->id, $newRevision->reapertura_id);
         $this->assertSame($approvedRevision->id, $approval->fresh()->revision_silabo_id);
-        $this->assertSame('in_review', $syllabus->fresh()->estado);
+        $this->assertSame('en_revision', $syllabus->fresh()->estado);
     }
 
     public function test_cp_f_database_rejects_invalid_transition_and_cross_syllabus_evidence(): void
@@ -390,8 +390,8 @@ class ReviewWorkflowTest extends TestCase
             'asignatura_id' => $syllabus->asignatura_id,
             'version_malla_id' => $syllabus->version_malla_id,
             'version_plantilla_id' => $syllabus->version_plantilla_id,
-            'estado' => 'in_review',
-            'lock_version' => 1,
+            'estado' => 'en_revision',
+            'version_bloqueo' => 1,
             'porcentaje_completitud' => 100,
             'iniciado_en' => now(),
             'guardado_en' => now(),
@@ -400,9 +400,9 @@ class ReviewWorkflowTest extends TestCase
             'silabo_id' => $otherSyllabus->id,
             'numero_revision' => 1,
             'clave_idempotencia' => (string) Str::uuid(),
-            'lock_version_origen' => 1,
-            'snapshot' => $revision->snapshot,
-            'huella_sha256' => app(CanonicalHasher::class)->hash($revision->snapshot),
+            'version_bloqueo_origen' => 1,
+            'fotografia' => $revision->fotografia,
+            'huella_sha256' => app(CanonicalHasher::class)->hash($revision->fotografia),
             'enviado_por' => $this->teacher->id,
             'enviado_en' => now(),
         ]);
@@ -417,9 +417,9 @@ class ReviewWorkflowTest extends TestCase
             DB::transaction(fn () => SyllabusTransition::query()->create([
                 'silabo_id' => $syllabus->id,
                 'revision_silabo_id' => $revision->id,
-                'estado_origen' => 'draft',
-                'estado_destino' => 'approved',
-                'accion' => 'approve',
+                'estado_origen' => 'borrador',
+                'estado_destino' => 'aprobado',
+                'accion' => 'aprobar',
                 'actor_usuario_id' => $this->coordinator->id,
                 'asignacion_rol_id' => $this->coordinatorContext->id,
                 'ocurrido_en' => now(),
@@ -428,8 +428,8 @@ class ReviewWorkflowTest extends TestCase
         } catch (QueryException) {
             $this->assertDatabaseMissing('transiciones_silabo', [
                 'silabo_id' => $syllabus->id,
-                'estado_origen' => 'draft',
-                'estado_destino' => 'approved',
+                'estado_origen' => 'borrador',
+                'estado_destino' => 'aprobado',
             ]);
         }
 
@@ -453,7 +453,7 @@ class ReviewWorkflowTest extends TestCase
     {
         $syllabus = $this->createValidDraft();
         $this->actingAsTeacher()->post(route('syllabi.submit.store', $syllabus), [
-            'lock_version' => $syllabus->lock_version,
+            'version_bloqueo' => $syllabus->version_bloqueo,
             'idempotency_key' => (string) Str::uuid(),
         ])->assertRedirect();
 
@@ -471,7 +471,7 @@ class ReviewWorkflowTest extends TestCase
         foreach ($fields as $field) {
             $this->actingAsTeacher()->patchJson(
                 route('syllabi.fields.update', [$syllabus, $field]),
-                $this->validFieldPayload($field, $syllabus->fresh()->lock_version),
+                $this->validFieldPayload($field, $syllabus->fresh()->version_bloqueo),
             )->assertOk();
         }
 
@@ -490,13 +490,13 @@ class ReviewWorkflowTest extends TestCase
         })->filter()->values();
 
         return match ($field->tipo) {
-            'repeatable' => ['lock_version' => $lockVersion, 'rows' => [['data' => ['texto' => "Contenido {$field->clave}"]]]],
-            'boolean' => ['lock_version' => $lockVersion, 'value' => true],
-            'number' => ['lock_version' => $lockVersion, 'value' => 1],
-            'date' => ['lock_version' => $lockVersion, 'value' => now()->toDateString()],
-            'single_select' => ['lock_version' => $lockVersion, 'value' => $optionValues->first()],
-            'multi_select' => ['lock_version' => $lockVersion, 'value' => [$optionValues->first()]],
-            default => ['lock_version' => $lockVersion, 'value' => "Contenido académico {$field->clave}"],
+            'repetible' => ['version_bloqueo' => $lockVersion, 'rows' => [['data' => ['texto' => "Contenido {$field->clave}"]]]],
+            'booleano' => ['version_bloqueo' => $lockVersion, 'value' => true],
+            'numero' => ['version_bloqueo' => $lockVersion, 'value' => 1],
+            'fecha' => ['version_bloqueo' => $lockVersion, 'value' => now()->toDateString()],
+            'seleccion_unica' => ['version_bloqueo' => $lockVersion, 'value' => $optionValues->first()],
+            'seleccion_multiple' => ['version_bloqueo' => $lockVersion, 'value' => [$optionValues->first()]],
+            default => ['version_bloqueo' => $lockVersion, 'value' => "Contenido académico {$field->clave}"],
         };
     }
 
@@ -508,12 +508,12 @@ class ReviewWorkflowTest extends TestCase
             'name' => 'Convocatoria I-04',
             'period_id' => $periodId,
             'template_version_id' => $template->id,
-            'grouping_mode' => 'per_offering',
+            'grouping_mode' => 'por_oferta',
             'source_ids' => [$source->id],
             'start_date' => now()->subDay()->toIso8601String(),
             'draft_deadline' => now()->addMonth()->toIso8601String(),
         ])->assertRedirect();
-        $convocation = Convocation::query()->latest('created_at')->firstOrFail();
+        $convocation = Convocation::query()->latest('creado_en')->firstOrFail();
         $this->actingAsCoordinator()->post(route('convocations.open', $convocation))->assertRedirect();
         $syllabus = Syllabus::query()->firstOrFail();
         $this->actingAsTeacher()->post(route('syllabi.start', $syllabus))->assertRedirect();
@@ -525,14 +525,14 @@ class ReviewWorkflowTest extends TestCase
     private function publishedConfiguration(): array
     {
         $this->actingAsAdministrator()->post(route('admin.templates.store'), ['name' => 'Plantilla I-04']);
-        $template = TemplateVersion::query()->latest('created_at')->firstOrFail();
+        $template = TemplateVersion::query()->latest('creado_en')->firstOrFail();
         $this->actingAsAdministrator()->post(route('admin.templates.publish', $template))->assertRedirect();
 
         $this->actingAsCoordinator()->post(route('sources.store'), [
             'name' => 'Fuente I-04',
             'description' => 'Documento de apoyo del periodo.',
         ])->assertRedirect();
-        $source = AcademicSource::query()->latest('created_at')->firstOrFail();
+        $source = AcademicSource::query()->latest('creado_en')->firstOrFail();
         $this->actingAsCoordinator()->put(route('sources.content.update', $source), [
             'content' => "## Perfil I-04\n\nEvidencia I-04.",
         ])->assertRedirect();
@@ -546,7 +546,7 @@ class ReviewWorkflowTest extends TestCase
             ->where('version_plantilla_id', $syllabus->version_plantilla_id)
             ->where('heredado', false)
             ->where('editable_docente', true)
-            ->where('tipo', '!=', 'repeatable')
+            ->where('tipo', '!=', 'repetible')
             ->firstOrFail();
     }
 

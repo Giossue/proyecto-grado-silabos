@@ -31,10 +31,10 @@ class UpdateAcademicSourceContent
             $this->audit->execute(
                 actorId: $actor->id,
                 roleAssignmentId: $activeRole?->id,
-                action: 'source.content_updated',
-                resourceType: 'academic_source',
+                action: 'fuente.contenido_actualizado',
+                resourceType: 'fuente_academica',
                 resourceId: $locked->id,
-                result: 'success',
+                result: 'exito',
                 metadata: ['fingerprint' => $content === null ? null : $this->hasher->hash($content)],
                 correlationId: $request->attributes->getString('correlation_id') ?: null,
             );

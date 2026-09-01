@@ -118,7 +118,7 @@ La suite principal debe aprobar con IA desactivada.
 - cita inventada, salida sobredimensionada, acción académica y host no loopback;
 - caída con error seguro y continuidad del guardado determinístico;
 - reutilización por clave funcional e invalidación al cambiar contenido;
-- aplicación explícita con huella y `lock_version`, antes/después y repetición idempotente;
+- aplicación explícita con huella y `version_bloqueo`, antes/después y repetición idempotente;
 - inmutabilidad y cierre temporal de ejecución, evidencia, recomendaciones, citas y
   feedback mediante triggers PostgreSQL.
 
@@ -157,8 +157,8 @@ validez estructural.
   sintético; se niega a operar sobre una base sin sufijo seguro.
 - `composer benchmark:readiness` limita el destino a loopback y registra fallos, p95 y
   tasa con 500 solicitudes/50 concurrencias por defecto.
-- El smoke real debe procesar `critical`; los workers funcionales deben escuchar además
-  `notifications`, `documents`, `ai` e `integrations`.
+- El smoke real debe procesar `critica`; los workers funcionales deben escuchar además
+  `notificaciones`, `documentos`, `ia` e `integraciones`.
 - `eslint-plugin-vuejs-accessibility` protege asociaciones de etiqueta, autofocus y orden
   de tabulación, pero no reemplaza teclado, lector, contraste, zoom y viewport manuales.
 

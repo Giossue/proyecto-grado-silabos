@@ -68,7 +68,7 @@ class SyncSubjectFieldValues
             return null;
         }
 
-        if ($definition->tipo === 'text') {
+        if ($definition->tipo === 'texto') {
             if (! is_string($rawValue) || mb_strlen($rawValue) > 500) {
                 throw ValidationException::withMessages([
                     "custom_values.{$definition->id}" => 'Ingrese un texto de máximo 500 caracteres.',
@@ -78,7 +78,7 @@ class SyncSubjectFieldValues
             return trim($rawValue);
         }
 
-        if ($definition->tipo === 'boolean') {
+        if ($definition->tipo === 'booleano') {
             return filter_var($rawValue, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE)
                 ?? throw ValidationException::withMessages([
                     "custom_values.{$definition->id}" => 'Seleccione un valor verdadero o falso.',
@@ -91,7 +91,7 @@ class SyncSubjectFieldValues
             ]);
         }
 
-        if ($definition->tipo === 'integer') {
+        if ($definition->tipo === 'entero') {
             $integer = filter_var($rawValue, FILTER_VALIDATE_INT);
             if ($integer === false) {
                 throw ValidationException::withMessages([

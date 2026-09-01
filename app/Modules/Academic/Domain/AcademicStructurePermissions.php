@@ -9,58 +9,58 @@ final class AcademicStructurePermissions
 {
     /** @var list<string> */
     public const GOVERNANCE_ENTITIES = [
-        'faculty',
-        'career',
+        'facultad',
+        'carrera',
         'campus',
-        'modality',
-        'period',
-        'coordinator_assignment',
+        'modalidad',
+        'periodo',
+        'asignacion_coordinador',
     ];
 
     /** @var list<string> */
     public const CAREER_ENTITIES = [
-        'curriculum',
-        'subject',
-        'offering',
-        'parallel',
-        'teacher_assignment',
+        'malla',
+        'asignatura',
+        'oferta',
+        'paralelo',
+        'asignacion_docente',
     ];
 
     /** @var list<string> */
     public const GOVERNANCE_STATUS_ENTITIES = [
-        'faculty',
-        'career',
+        'facultad',
+        'carrera',
         'campus',
-        'modality',
-        'period',
-        'coordinator_assignment',
+        'modalidad',
+        'periodo',
+        'asignacion_coordinador',
     ];
 
     /** @var list<string> */
     public const GOVERNANCE_UPDATE_ENTITIES = [
-        'faculty',
-        'career',
+        'facultad',
+        'carrera',
         'campus',
-        'modality',
-        'period',
+        'modalidad',
+        'periodo',
     ];
 
     /** @var list<string> */
     public const CAREER_UPDATE_ENTITIES = [
-        'curriculum',
-        'subject',
-        'offering',
-        'parallel',
-        'teacher_assignment',
+        'malla',
+        'asignatura',
+        'oferta',
+        'paralelo',
+        'asignacion_docente',
     ];
 
     /** @var list<string> */
     public const CAREER_STATUS_ENTITIES = [
-        'curriculum',
-        'subject',
-        'offering',
-        'parallel',
-        'teacher_assignment',
+        'malla',
+        'asignatura',
+        'oferta',
+        'paralelo',
+        'asignacion_docente',
     ];
 
     public static function isGovernanceContext(?RoleAssignment $activeRole): bool

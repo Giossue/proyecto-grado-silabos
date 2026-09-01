@@ -9,7 +9,7 @@ class StoreSubjectRequirementRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()->active === true
+        return $this->user()->activo === true
             && $this->user()->can('manage-career-academics') === true;
     }
 
@@ -19,7 +19,7 @@ class StoreSubjectRequirementRequest extends FormRequest
         return [
             'subject_id' => ['required', 'uuid'],
             'requirement_id' => ['required', 'uuid', 'different:subject_id'],
-            'type' => ['required', 'string', 'max:30', Rule::in(['prerequisite', 'corequisite'])],
+            'type' => ['required', 'string', 'max:30', Rule::in(['prerrequisito', 'correquisito'])],
         ];
     }
 }

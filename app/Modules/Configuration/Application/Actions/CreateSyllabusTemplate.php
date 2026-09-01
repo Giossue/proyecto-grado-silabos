@@ -17,18 +17,18 @@ use Illuminate\Validation\ValidationException;
 class CreateSyllabusTemplate
 {
     private const BASELINE = [
-        ['identificacion', 'Identificación institucional', 'asignatura', 'Asignatura', 'master_reference', true, 'asignaturas', false],
+        ['identificacion', 'Identificación institucional', 'asignatura', 'Asignatura', 'referencia_maestra', true, 'asignaturas', false],
         ['descripcion', 'Descripción de la asignatura', 'descripcion', 'Descripción', 'markdown', true, null, true],
         ['objetivos', 'Objetivos', 'objetivo_general', 'Objetivo general', 'markdown', true, null, true],
-        ['resultados', 'Resultados de aprendizaje', 'resultados_aprendizaje', 'Resultados de aprendizaje', 'repeatable', true, null, false],
-        ['habilidades', 'Habilidades blandas', 'habilidades_blandas', 'Habilidades blandas', 'repeatable', false, null, false],
-        ['planificacion', 'Unidades y planificación', 'unidades', 'Unidades de aprendizaje', 'repeatable', true, null, false],
+        ['resultados', 'Resultados de aprendizaje', 'resultados_aprendizaje', 'Resultados de aprendizaje', 'repetible', true, null, false],
+        ['habilidades', 'Habilidades blandas', 'habilidades_blandas', 'Habilidades blandas', 'repetible', false, null, false],
+        ['planificacion', 'Unidades y planificación', 'unidades', 'Unidades de aprendizaje', 'repetible', true, null, false],
         ['metodologia', 'Metodología y ambientes', 'metodologia', 'Metodología', 'markdown', true, null, true],
-        ['evaluacion', 'Evaluación', 'componentes_evaluacion', 'Componentes de evaluación', 'repeatable', true, null, false],
+        ['evaluacion', 'Evaluación', 'componentes_evaluacion', 'Componentes de evaluación', 'repetible', true, null, false],
         ['perfil_egreso', 'Perfil de egreso', 'contribucion_perfil', 'Contribución al perfil de egreso', 'markdown', true, null, true],
         ['etica', 'Ética y compromisos', 'compromisos', 'Compromisos', 'markdown', true, null, false],
-        ['bibliografia', 'Bibliografía', 'bibliografia', 'Bibliografía', 'repeatable', true, null, false],
-        ['revision', 'Revisión y aprobación', 'estado_revision', 'Estado de revisión', 'master_reference', true, 'workflow', false],
+        ['bibliografia', 'Bibliografía', 'bibliografia', 'Bibliografía', 'repetible', true, null, false],
+        ['revision', 'Revisión y aprobación', 'estado_revision', 'Estado de revisión', 'referencia_maestra', true, 'flujo', false],
     ];
 
     public function __construct(
@@ -36,7 +36,7 @@ class CreateSyllabusTemplate
         private readonly RecordAuditEvent $audit,
     ) {}
 
-    /** @param array{name: string, description?: string|null} $data */
+    /** @param array{nombre: string, description?: string|null} $data */
     public function execute(array $data, User $actor, Request $request): TemplateVersion
     {
         $activeRole = $this->roles->resolve($request);
@@ -49,7 +49,7 @@ class CreateSyllabusTemplate
             }
 
             $template = SyllabusTemplate::query()->create([
-                'nombre' => $data['name'],
+                'nombre' => $data['nombre'],
                 'descripcion' => $data['description'] ?? null,
                 'activo' => true,
                 'es_institucional' => true,
@@ -57,7 +57,7 @@ class CreateSyllabusTemplate
             $version = TemplateVersion::query()->create([
                 'plantilla_id' => $template->id,
                 'numero_version' => 1,
-                'estado' => 'draft',
+                'estado' => 'borrador',
             ]);
 
             foreach (self::BASELINE as $position => $definition) {
@@ -72,7 +72,7 @@ class CreateSyllabusTemplate
                     'version_plantilla_id' => $version->id,
                     'seccion_plantilla_id' => $section->id,
                     'clave' => "{$key}_principal",
-                    'tipo' => $key === 'revision' ? 'workflow' : 'fields',
+                    'tipo' => $key === 'revision' ? 'flujo' : 'campos',
                     'titulo' => $title,
                     'posicion' => 1,
                 ]);
@@ -94,10 +94,10 @@ class CreateSyllabusTemplate
             $this->audit->execute(
                 actorId: $actor->id,
                 roleAssignmentId: $activeRole?->id,
-                action: 'template.created',
-                resourceType: 'syllabus_template',
+                action: 'plantilla.creada',
+                resourceType: 'plantilla_silabo',
                 resourceId: $template->id,
-                result: 'success',
+                result: 'exito',
                 correlationId: $request->attributes->getString('correlation_id') ?: null,
             );
 

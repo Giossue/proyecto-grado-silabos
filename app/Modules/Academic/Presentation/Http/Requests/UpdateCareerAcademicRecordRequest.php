@@ -20,12 +20,12 @@ class UpdateCareerAcademicRecordRequest extends FormRequest
 {
     protected function prepareForValidation(): void
     {
-        if ($this->route('entity') !== 'subject') {
+        if ($this->route('entity') !== 'asignatura') {
             return;
         }
 
         $this->merge([
-            'total_hours' => CurriculumSystemFields::totalHours(
+            'horas_totales' => CurriculumSystemFields::totalHours(
                 $this->all(),
                 $this->activeSubjectSystemKeys($this->subjectCurriculumId()),
             ),
@@ -38,7 +38,7 @@ class UpdateCareerAcademicRecordRequest extends FormRequest
         $activeRole = app(ActiveRole::class)->resolve($this);
 
         return is_string($entity)
-            && $this->user()?->active === true
+            && $this->user()?->activo === true
             && $activeRole instanceof RoleAssignment
             && AcademicStructurePermissions::mayUpdate($activeRole, $entity)
             && $this->recordBelongsToCareer($entity, $this->recordId(), $activeRole->carrera_id);
@@ -48,7 +48,7 @@ class UpdateCareerAcademicRecordRequest extends FormRequest
     public function rules(): array
     {
         return match ($this->route('entity')) {
-            'curriculum' => [
+            'malla' => [
                 'code' => [
                     'required',
                     'string',
@@ -58,8 +58,8 @@ class UpdateCareerAcademicRecordRequest extends FormRequest
                         ->ignore($this->recordId()),
                 ],
             ],
-            'subject' => $this->subjectRules(),
-            'offering' => [
+            'asignatura' => $this->subjectRules(),
+            'oferta' => [
                 'period_id' => [
                     'required',
                     'uuid',
@@ -78,7 +78,7 @@ class UpdateCareerAcademicRecordRequest extends FormRequest
                             ->select('id')
                             ->where('carrera_id', $this->careerId())
                             ->where('es_actual', true)
-                            ->where('estado', 'active'))),
+                            ->where('estado', 'activa'))),
                     Rule::unique('ofertas_academicas', 'asignatura_id')
                         ->where('periodo_academico_id', $this->input('period_id'))
                         ->where('campus_id', $this->input('campus_id'))
@@ -88,7 +88,7 @@ class UpdateCareerAcademicRecordRequest extends FormRequest
                 'campus_id' => ['required', 'uuid', Rule::exists('campus', 'id')->where('activo', true)],
                 'modality_id' => ['required', 'uuid', Rule::exists('modalidades', 'id')->where('activo', true)],
             ],
-            'parallel' => [
+            'paralelo' => [
                 'offering_id' => [
                     'required',
                     'uuid',
@@ -99,7 +99,7 @@ class UpdateCareerAcademicRecordRequest extends FormRequest
                             ->whereHas('curriculumVersion', fn ($curricula) => $curricula
                                 ->where('carrera_id', $this->careerId())
                                 ->where('es_actual', true)
-                                ->where('estado', 'active')))),
+                                ->where('estado', 'activa')))),
                 ],
                 'code' => [
                     'required',
@@ -110,8 +110,8 @@ class UpdateCareerAcademicRecordRequest extends FormRequest
                         ->ignore($this->recordId()),
                 ],
             ],
-            'teacher_assignment' => [
-                'user_id' => ['required', 'uuid', Rule::exists('usuarios', 'id')->where('active', true)],
+            'asignacion_docente' => [
+                'user_id' => ['required', 'uuid', Rule::exists('usuarios', 'id')->where('activo', true)],
                 'parallel_id' => [
                     'required',
                     'uuid',
@@ -122,7 +122,7 @@ class UpdateCareerAcademicRecordRequest extends FormRequest
                             ->whereHas('subject.curriculumVersion', fn ($curricula) => $curricula
                                 ->where('carrera_id', $this->careerId())
                                 ->where('es_actual', true)
-                                ->where('estado', 'active')))),
+                                ->where('estado', 'activa')))),
                 ],
                 'valid_from' => ['required', 'date'],
                 'valid_until' => ['nullable', 'date', 'after:valid_from'],
@@ -138,21 +138,21 @@ class UpdateCareerAcademicRecordRequest extends FormRequest
         }
 
         return match ($entity) {
-            'curriculum' => CurriculumVersion::query()->whereKey($recordId)
+            'malla' => CurriculumVersion::query()->whereKey($recordId)
                 ->where('carrera_id', $careerId)->current()->exists(),
-            'subject' => Subject::query()->whereKey($recordId)->whereHas(
+            'asignatura' => Subject::query()->whereKey($recordId)->whereHas(
                 'curriculumVersion',
                 fn ($query) => $query->where('carrera_id', $careerId)->where('es_actual', true),
             )->exists(),
-            'offering' => CourseOffering::query()->whereKey($recordId)->whereHas(
+            'oferta' => CourseOffering::query()->whereKey($recordId)->whereHas(
                 'subject.curriculumVersion',
                 fn ($query) => $query->where('carrera_id', $careerId)->where('es_actual', true),
             )->exists(),
-            'parallel' => Parallel::query()->whereKey($recordId)->whereHas(
+            'paralelo' => Parallel::query()->whereKey($recordId)->whereHas(
                 'offering.subject.curriculumVersion',
                 fn ($query) => $query->where('carrera_id', $careerId)->where('es_actual', true),
             )->exists(),
-            'teacher_assignment' => TeacherAssignment::query()->whereKey($recordId)->whereHas(
+            'asignacion_docente' => TeacherAssignment::query()->whereKey($recordId)->whereHas(
                 'parallel.offering.subject.curriculumVersion',
                 fn ($query) => $query->where('carrera_id', $careerId)->where('es_actual', true),
             )->exists(),
@@ -173,17 +173,17 @@ class UpdateCareerAcademicRecordRequest extends FormRequest
                     ->where('version_malla_id', $curriculumId)
                     ->ignore($this->recordId()),
             ],
-            'name' => ['required', 'string', 'max:180'],
+            'nombre' => ['required', 'string', 'max:180'],
             'cycle' => ['required', 'integer', 'min:1', 'max:30'],
             'position' => ['nullable', 'integer', 'min:0', 'max:999'],
             'organization_unit' => ['required', 'string', 'max:80'],
-            'credits' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
-            'total_hours' => ['nullable', 'integer', 'min:0', 'max:65535'],
+            'creditos' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
+            'horas_totales' => ['nullable', 'integer', 'min:0', 'max:65535'],
             'hours_project' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
             'hours_ap' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
-            'hours_ac' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
-            'hours_pae' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
-            'hours_aa' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
+            'horas_ac' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
+            'horas_pae' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
+            'horas_aa' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
             'hours_paec' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
             'custom_values' => ['nullable', 'array'],
             'custom_values.*' => ['nullable'],

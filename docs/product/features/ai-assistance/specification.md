@@ -37,7 +37,7 @@
 ## Estado de implementación I-06
 
 - DOC-06 está integrado en cada campo textual con `ia_habilitada`. La solicitud fija el
-  contenido, `lock_version`, plantilla, reglas, locale, versiones del contrato y de las
+  contenido, `version_bloqueo`, plantilla, reglas, idioma, versiones del contrato y de las
   instrucciones, parámetros técnicos y conjunto exacto de fuentes.
 - Solo se recuperan versiones vinculadas a la convocatoria cuya fuente y versión están
   activas y vigentes para la carrera. Un conjunto vacío o mayor al límite queda como no
@@ -45,7 +45,7 @@
   conflicto y no se ordenan mientras `PV-02` siga abierto.
 - `AiAnalysisGateway` tiene implementaciones deshabilitada, HTTP local y simulador
   determinista. El cliente HTTP solo admite loopback, no sigue redirecciones, aplica
-  timeout y tamaño máximo, y rechaza referencias fuera del snapshot o acciones
+  timeout y tamaño máximo, y rechaza referencias fuera de la fotografía o acciones
   académicas en la respuesta.
 - Recomendaciones y citas se insertan durante la ejecución y quedan inmutables al cerrar.
   Aceptar, ignorar y marcar no útil agregan feedback; aplicar exige confirmación,

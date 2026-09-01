@@ -27,7 +27,7 @@ class TemporaryPasswordTest extends TestCase
         parent::setUp();
 
         $this->seed(DatabaseSeeder::class);
-        $this->administrator = User::query()->where('email', 'admin@silabos.test')->firstOrFail();
+        $this->administrator = User::query()->where('correo_electronico', 'admin@silabos.test')->firstOrFail();
     }
 
     public function test_an_account_created_by_an_administrator_is_born_with_a_temporary_password(): void
@@ -38,8 +38,8 @@ class TemporaryPasswordTest extends TestCase
         $this->actingAs($this->administrator)
             ->withSession(['active_role_assignment_id' => $context->id])
             ->post(route('admin.users.store'), [
-                'name' => 'Docente Nueva',
-                'email' => 'docente.nueva@silabos.test',
+                'nombre' => 'Docente Nueva',
+                'correo_electronico' => 'docente.nueva@silabos.test',
                 'password' => 'Temporal-2026!',
                 'role_code' => RoleCode::Teacher->value,
                 'career_id' => $career->id,
@@ -47,7 +47,7 @@ class TemporaryPasswordTest extends TestCase
             ->assertRedirect();
 
         $this->assertTrue(
-            User::query()->where('email', 'docente.nueva@silabos.test')->firstOrFail()->must_change_password,
+            User::query()->where('correo_electronico', 'docente.nueva@silabos.test')->firstOrFail()->debe_cambiar_contrasena,
         );
     }
 
@@ -60,8 +60,8 @@ class TemporaryPasswordTest extends TestCase
         $this->actingAs($this->administrator)
             ->withSession(['active_role_assignment_id' => $context->id])
             ->post(route('admin.users.store'), [
-                'name' => 'Docente Nuevo Sin Estrenar',
-                'email' => 'nuevo.sin.estrenar@silabos.test',
+                'nombre' => 'Docente Nuevo Sin Estrenar',
+                'correo_electronico' => 'nuevo.sin.estrenar@silabos.test',
                 'password' => 'Temporal-2026!',
                 'role_code' => RoleCode::Teacher->value,
                 'career_id' => $career->id,
@@ -80,7 +80,7 @@ class TemporaryPasswordTest extends TestCase
     public function test_the_seeded_administrator_is_not_locked_out_of_a_fresh_installation(): void
     {
         // Si la instalación naciera bloqueada no habría por dónde crear la primera cuenta.
-        $this->assertFalse($this->administrator->must_change_password);
+        $this->assertFalse($this->administrator->debe_cambiar_contrasena);
     }
 
     public function test_a_temporary_password_blocks_every_other_route(): void
@@ -137,13 +137,13 @@ class TemporaryPasswordTest extends TestCase
 
         $user->refresh();
 
-        $this->assertFalse($user->must_change_password);
-        $this->assertTrue(Hash::check('Definitiva-2026!', $user->password));
+        $this->assertFalse($user->debe_cambiar_contrasena);
+        $this->assertTrue(Hash::check('Definitiva-2026!', $user->contrasena));
         $this->assertDatabaseHas('eventos_auditoria', [
             'actor_usuario_id' => $user->id,
-            'accion' => 'user.temporary_password_changed',
+            'accion' => 'usuario.contrasena_temporal_cambiada',
             'recurso_id' => $user->id,
-            'resultado' => 'success',
+            'resultado' => 'exito',
         ]);
 
         // Con la marca apagada, la sesión vuelve a operar donde antes rebotaba.
@@ -162,7 +162,7 @@ class TemporaryPasswordTest extends TestCase
             ])
             ->assertSessionHasErrors('current_password');
 
-        $this->assertTrue($user->refresh()->must_change_password);
+        $this->assertTrue($user->refresh()->debe_cambiar_contrasena);
         $this->actingAs($user)->get(route('notifications.index'))->assertRedirect(route('dashboard'));
     }
 
@@ -178,7 +178,7 @@ class TemporaryPasswordTest extends TestCase
 
         $metadata = json_encode(
             AuditEvent::query()
-                ->where('accion', 'user.temporary_password_changed')
+                ->where('accion', 'usuario.contrasena_temporal_cambiada')
                 ->firstOrFail()
                 ->metadatos,
         );
@@ -189,10 +189,10 @@ class TemporaryPasswordTest extends TestCase
 
     private function userWithTemporaryPassword(): User
     {
-        $teacher = User::query()->where('email', 'docente@silabos.test')->firstOrFail();
+        $teacher = User::query()->where('correo_electronico', 'docente@silabos.test')->firstOrFail();
         $teacher->forceFill([
-            'password' => Hash::make('Temporal-2026!'),
-            'must_change_password' => true,
+            'contrasena' => Hash::make('Temporal-2026!'),
+            'debe_cambiar_contrasena' => true,
         ])->save();
 
         return $teacher;

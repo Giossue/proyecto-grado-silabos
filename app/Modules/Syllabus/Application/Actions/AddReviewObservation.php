@@ -30,14 +30,14 @@ class AddReviewObservation
         return DB::transaction(function () use ($actor, $content, $fieldKey, $request, $revision, $sectionKey): ReviewObservation {
             $syllabus = Syllabus::query()->lockForUpdate()->findOrFail($revision->silabo_id);
             $this->assertCurrentReview($syllabus, $revision);
-            $this->assertSnapshotLocation($revision->snapshot, $sectionKey, $fieldKey);
+            $this->assertSnapshotLocation($revision->fotografia, $sectionKey, $fieldKey);
 
             $observation = ReviewObservation::query()->create([
                 'revision_silabo_id' => $revision->id,
                 'clave_seccion' => $sectionKey,
                 'clave_campo' => $fieldKey,
                 'contenido' => $content,
-                'estado' => 'open',
+                'estado' => 'abierta',
                 'creado_por' => $actor->id,
                 'creado_en' => now(),
             ]);
@@ -45,10 +45,10 @@ class AddReviewObservation
             $this->audit->execute(
                 actorId: $actor->id,
                 roleAssignmentId: $activeRole?->id,
-                action: 'syllabus.observation_added',
-                resourceType: 'review_observation',
+                action: 'silabo.observacion_agregada',
+                resourceType: 'observacion_revision',
                 resourceId: $observation->id,
-                result: 'success',
+                result: 'exito',
                 metadata: ['revision_number' => $revision->numero_revision],
                 correlationId: $request->attributes->getString('correlation_id') ?: null,
             );
@@ -63,7 +63,7 @@ class AddReviewObservation
             ->where('silabo_id', $syllabus->id)
             ->orderByDesc('numero_revision')
             ->value('id');
-        if ($syllabus->estado !== 'in_review' || $latestId !== $revision->id) {
+        if ($syllabus->estado !== 'en_revision' || $latestId !== $revision->id) {
             throw ValidationException::withMessages([
                 'revision' => 'Solo se puede observar la revisión vigente que está en revisión.',
             ]);

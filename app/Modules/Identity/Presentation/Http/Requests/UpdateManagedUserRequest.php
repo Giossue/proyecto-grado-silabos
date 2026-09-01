@@ -35,15 +35,15 @@ class UpdateManagedUserRequest extends FormRequest
         $target = $this->route('user');
 
         return [
-            'name' => ['required', 'string', 'max:180'],
-            'email' => [
+            'nombre' => ['required', 'string', 'max:180'],
+            'correo_electronico' => [
                 'required',
                 'string',
                 'email',
                 'max:255',
                 // Se excluye la propia cuenta: guardar sin tocar el correo no puede
                 // fallar por duplicado consigo misma.
-                Rule::unique('usuarios', 'email')->ignore(
+                Rule::unique('usuarios', 'correo_electronico')->ignore(
                     $target instanceof User ? $target->id : null,
                 ),
             ],
@@ -66,16 +66,16 @@ class UpdateManagedUserRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'email.unique' => 'Ya existe otra cuenta con este correo.',
+            'correo_electronico.unique' => 'Ya existe otra cuenta con este correo.',
         ];
     }
 
-    /** @return array{name: string, email: string} */
+    /** @return array{nombre: string, correo_electronico: string} */
     public function profileData(): array
     {
         return [
-            'name' => $this->string('name')->toString(),
-            'email' => $this->string('email')->toString(),
+            'nombre' => $this->string('nombre')->toString(),
+            'correo_electronico' => $this->string('correo_electronico')->toString(),
         ];
     }
 }

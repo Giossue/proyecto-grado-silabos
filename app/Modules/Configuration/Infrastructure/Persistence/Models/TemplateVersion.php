@@ -23,6 +23,10 @@ class TemplateVersion extends Model
 {
     use HasUuids;
 
+    public const CREATED_AT = 'creado_en';
+
+    public const UPDATED_AT = 'actualizado_en';
+
     protected $table = 'versiones_plantilla';
 
     /** @var list<string> */
@@ -79,12 +83,12 @@ class TemplateVersion extends Model
     protected static function booted(): void
     {
         static::updating(function (TemplateVersion $version): void {
-            if ($version->getOriginal('estado') === 'published') {
+            if ($version->getOriginal('estado') === 'publicada') {
                 throw new LogicException('Una versión de plantilla publicada es inmutable.');
             }
         });
         static::deleting(function (TemplateVersion $version): void {
-            if ($version->estado === 'published') {
+            if ($version->estado === 'publicada') {
                 throw new LogicException('Una versión de plantilla publicada no puede eliminarse.');
             }
         });

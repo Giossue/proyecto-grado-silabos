@@ -38,7 +38,7 @@ php artisan serve
 
 ```bash
 php artisan queue:work redis \
-  --queue=critical,notifications,documents,ai,integrations,default \
+  --queue=critica,notificaciones,documentos,ia,integraciones,general \
   --timeout=130 --tries=3
 ```
 
@@ -132,7 +132,7 @@ Las cuentas creadas por el seeder usan exclusivamente datos sintéticos:
    aplique el texto de forma explícita. Compruebe que el campo solo cambia después de esa
    acción humana (`CU-08`).
 4. Regrese al editor, valide y pulse **Revisar y enviar**. En la confirmación cree la
-   revisión 1. La pantalla debe explicar que el snapshot queda inmutable (`CU-09`).
+   revisión 1. La pantalla debe explicar que la fotografía queda inmutable (`CU-09`).
 
 ### 4. Coordinador y docente: corrección, comparación y aprobación
 
@@ -151,7 +151,7 @@ Las cuentas creadas por el seeder usan exclusivamente datos sintéticos:
 ### 5. Documentos, informes y operación
 
 1. Desde la revisión aprobada abra **Documentos** y
-   solicite DOCX/PDF. El worker de `documents` debe dejar ambos disponibles como archivos
+   solicite DOCX/PDF. El worker de `documentos` debe dejar ambos disponibles como archivos
    privados; la pantalla identifica el renderer como técnico provisional (`CU-15`).
 2. Vuelva al expediente, pulse **Reabrir**, indique `Ajuste posterior de demostración` y
    confirme que se conserva la aprobación y aparece una nueva línea de trabajo en

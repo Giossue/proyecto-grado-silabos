@@ -11,12 +11,12 @@ import { index as notificationsIndex } from '@/routes/notifications';
 
 type Notification = {
     id: string;
-    type: string;
-    title: string;
-    message: string;
-    read_at: string | null;
-    created_at: string;
-    resource_url: string | null;
+    tipo: string;
+    titulo: string;
+    mensaje: string;
+    leido_en: string | null;
+    creado_en: string;
+    url_recurso: string | null;
 };
 
 type Pagination = {
@@ -58,7 +58,9 @@ const paginationLabel = (value: string): string =>
     >
         <template #actions>
             <Form
-                v-if="notifications.data.some((item) => item.read_at === null)"
+                v-if="
+                    notifications.data.some((item) => item.leido_en === null)
+                "
                 v-bind="NotificationController.markAllRead.form()"
                 v-slot="{ processing }"
             >
@@ -96,7 +98,9 @@ const paginationLabel = (value: string): string =>
                     v-for="notification in notifications.data"
                     :key="notification.id"
                     class="rounded-lg border p-4"
-                    :class="notification.read_at === null ? 'bg-muted/40' : ''"
+                    :class="
+                        notification.leido_en === null ? 'bg-muted/40' : ''
+                    "
                 >
                     <div
                         class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
@@ -104,25 +108,25 @@ const paginationLabel = (value: string): string =>
                         <div class="min-w-0">
                             <div class="flex flex-wrap items-center gap-2">
                                 <h2 class="font-medium">
-                                    {{ notification.title }}
+                                    {{ notification.titulo }}
                                 </h2>
                                 <Badge
-                                    v-if="notification.read_at === null"
+                                    v-if="notification.leido_en === null"
                                     variant="secondary"
                                 >
                                     Nueva
                                 </Badge>
                             </div>
                             <p class="mt-1 text-sm">
-                                {{ notification.message }}
+                                {{ notification.mensaje }}
                             </p>
                             <p class="mt-2 text-xs text-muted-foreground">
-                                {{ formatDate(notification.created_at) }}
+                                {{ formatDate(notification.creado_en) }}
                             </p>
                         </div>
                         <div class="flex shrink-0 flex-wrap gap-2">
                             <Form
-                                v-if="notification.read_at === null"
+                                v-if="notification.leido_en === null"
                                 v-bind="
                                     NotificationController.markRead.form(
                                         notification.id,
@@ -141,11 +145,11 @@ const paginationLabel = (value: string): string =>
                                 </Button>
                             </Form>
                             <Button
-                                v-if="notification.resource_url"
+                                v-if="notification.url_recurso"
                                 as-child
                                 size="sm"
                             >
-                                <Link :href="notification.resource_url">
+                                <Link :href="notification.url_recurso">
                                     <ExternalLink aria-hidden="true" />
                                     Abrir expediente
                                 </Link>

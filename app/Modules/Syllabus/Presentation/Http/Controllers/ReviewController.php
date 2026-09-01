@@ -44,16 +44,16 @@ class ReviewController extends Controller
             ->with([
                 'convocation.academicPeriod:id,nombre',
                 'subject:id,nombre,codigo_institucional',
-                'teachers:id,name',
+                'teachers:id,nombre',
                 'revisions' => fn ($revision) => $revision
                     ->orderByDesc('numero_revision')
                     ->limit(1),
             ])
-            ->withCount(['reviewObservations as unresolved_observations_count' => fn ($observation) => $observation->where('estado', '!=', 'verified')]);
+            ->withCount(['reviewObservations as unresolved_observations_count' => fn ($observation) => $observation->where('estado', '!=', 'verificada')]);
         if ($state !== '') {
             $query->where('estado', $state);
         } else {
-            $query->whereIn('estado', ['in_review', 'correction_requested', 'approved']);
+            $query->whereIn('estado', ['en_revision', 'correccion_solicitada', 'aprobado']);
         }
         if ($search !== '') {
             $escaped = addcslashes($search, '%_\\');
@@ -64,7 +64,7 @@ class ReviewController extends Controller
 
         return Inertia::render('Coordination/Reviews/Index', [
             'filters' => ['state' => $state, 'search' => $search],
-            'syllabi' => $query->orderByDesc('updated_at')->paginate(15)->withQueryString()
+            'syllabi' => $query->orderByDesc('actualizado_en')->paginate(15)->withQueryString()
                 ->through(function (Syllabus $syllabus): array {
                     $revision = $syllabus->revisions->first();
 
@@ -76,7 +76,7 @@ class ReviewController extends Controller
                         'code' => $syllabus->academicSubjectCode(),
                         'period' => $syllabus->convocation->academicPeriod->nombre,
                         'state' => $syllabus->estado,
-                        'teachers' => $syllabus->teachers->pluck('name')->values(),
+                        'teachers' => $syllabus->teachers->pluck('nombre')->values(),
                         'unresolved_observations' => (int) $syllabus->unresolved_observations_count,
                         'submitted_at' => $revision?->enviado_en->toIso8601String(),
                     ];
@@ -210,16 +210,16 @@ class ReviewController extends Controller
     private function reviewPayload(SyllabusRevision $revision): array
     {
         $revision->load([
-            'submitter:id,name',
+            'submitter:id,nombre',
             'syllabus.subject',
             'syllabus.convocation.academicPeriod',
-            'syllabus.teachers:id,name',
-            'syllabus.revisions.submitter:id,name',
-            'syllabus.revisions.observations.creator:id,name',
-            'syllabus.revisions.observations.response.respondent:id,name',
+            'syllabus.teachers:id,nombre',
+            'syllabus.revisions.submitter:id,nombre',
+            'syllabus.revisions.observations.creator:id,nombre',
+            'syllabus.revisions.observations.response.respondent:id,nombre',
             'syllabus.revisions.correctionRequest.observations',
-            'syllabus.revisions.approval.approver:id,name',
-            'syllabus.reopenings.reopener:id,name',
+            'syllabus.revisions.approval.approver:id,nombre',
+            'syllabus.reopenings.reopener:id,nombre',
         ]);
         $syllabus = $revision->syllabus;
         $latest = $syllabus->revisions->sortByDesc('numero_revision')->first();
@@ -232,21 +232,21 @@ class ReviewController extends Controller
                 'code' => $syllabus->academicSubjectCode(),
                 'period' => $syllabus->convocation->academicPeriod->nombre,
                 'state' => $syllabus->estado,
-                'teachers' => $syllabus->teachers->pluck('name')->values(),
+                'teachers' => $syllabus->teachers->pluck('nombre')->values(),
             ],
             'revision' => [
                 'id' => $revision->id,
                 'number' => $revision->numero_revision,
                 'submitted_at' => $revision->enviado_en->toIso8601String(),
-                'submitted_by' => $revision->submitter->name,
-                'snapshot' => $revision->snapshot,
+                'submitted_by' => $revision->submitter->nombre,
+                'fotografia' => $revision->fotografia,
                 'is_current' => $latest?->id === $revision->id,
             ],
             'history' => $syllabus->revisions->sortBy('numero_revision')->map(fn (SyllabusRevision $item): array => [
                 'id' => $item->id,
                 'number' => $item->numero_revision,
                 'submitted_at' => $item->enviado_en->toIso8601String(),
-                'submitted_by' => $item->submitter->name,
+                'submitted_by' => $item->submitter->nombre,
                 'approved_at' => $item->approval?->aprobado_en->toIso8601String(),
             ])->values(),
             'observations' => $this->reviewObservationsPayload($syllabus, $latest),
@@ -256,17 +256,17 @@ class ReviewController extends Controller
             ],
             // El relevo necesita identidades, no nombres: quién sale y entre quiénes elegir.
             'transfer' => [
-                'allowed' => $syllabus->estado !== 'in_review',
+                'allowed' => $syllabus->estado !== 'en_revision',
                 'current' => $syllabus->teachers->map(fn (User $teacher): array => [
                     'id' => $teacher->id,
-                    'name' => $teacher->name,
+                    'nombre' => $teacher->nombre,
                 ])->unique('id')->values(),
                 'candidates' => $this->careerTeachers($syllabus),
             ],
             'reopening' => $latestReopening === null ? null : [
                 'cause' => $latestReopening->causa,
                 'reopened_at' => $latestReopening->reabierto_en->toIso8601String(),
-                'reopened_by' => $latestReopening->reopener->name,
+                'reopened_by' => $latestReopening->reopener->nombre,
             ],
         ];
     }
@@ -275,7 +275,7 @@ class ReviewController extends Controller
      * Docentes con rol vigente en la carrera del expediente. Es el universo del que puede
      * salir un reemplazo: fuera de la carrera no hay alcance que lo sostenga.
      *
-     * @return list<array{id: string, name: string}>
+     * @return list<array{id: string, nombre: string}>
      */
     private function careerTeachers(Syllabus $syllabus): array
     {
@@ -286,8 +286,8 @@ class ReviewController extends Controller
             ->pluck('usuario_id');
 
         $payload = [];
-        foreach (User::query()->where('active', true)->whereIn('id', $teacherIds)->orderBy('name')->get(['id', 'name']) as $teacher) {
-            $payload[] = ['id' => $teacher->id, 'name' => $teacher->name];
+        foreach (User::query()->where('activo', true)->whereIn('id', $teacherIds)->orderBy('nombre')->get(['id', 'nombre']) as $teacher) {
+            $payload[] = ['id' => $teacher->id, 'nombre' => $teacher->nombre];
         }
 
         return $payload;
@@ -314,15 +314,15 @@ class ReviewController extends Controller
                     'content' => $observation->contenido,
                     'state' => $observation->estado,
                     'requested' => $requestedIds->contains($observation->id),
-                    'can_verify' => $syllabus->estado === 'in_review'
-                        && $observation->estado !== 'verified'
+                    'can_verify' => $syllabus->estado === 'en_revision'
+                        && $observation->estado !== 'verificada'
                         && (! $requestedIds->contains($observation->id)
                             || $response?->revision_respuesta_id === $latest?->id),
-                    'created_by' => $observation->creator->name,
-                    'created_at' => $observation->creado_en->toIso8601String(),
+                    'created_by' => $observation->creator->nombre,
+                    'creado_en' => $observation->creado_en->toIso8601String(),
                     'response' => $response === null ? null : [
                         'content' => $response->contenido,
-                        'responded_by' => $response->respondent->name,
+                        'responded_by' => $response->respondent->nombre,
                         'responded_at' => $response->respondido_en->toIso8601String(),
                         'revision_number' => $response->revision_respuesta_id === null
                             ? null

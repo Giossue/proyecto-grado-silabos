@@ -78,7 +78,7 @@ class RequestAiAnalysis
                 ->where('silabo_id', $locked->id)
                 ->where('definicion_campo_id', $field->id)
                 ->where('clave_funcional', $functionalKey)
-                ->whereIn('estado', ['pending', 'running', 'completed', 'inconclusive'])
+                ->whereIn('estado', ['pendiente', 'en_ejecucion', 'completada', 'no_concluyente'])
                 ->first();
             if ($reusable !== null) {
                 $this->recordReuse($reusable, $actor, $request);
@@ -105,11 +105,11 @@ class RequestAiAnalysis
                 'version_plantilla_id' => $locked->version_plantilla_id,
                 'clave_idempotencia' => $idempotencyKey,
                 'clave_funcional' => $functionalKey,
-                'estado' => 'pending',
+                'estado' => 'pendiente',
                 'version_contrato' => (string) config('ai.contract_version'),
                 'version_instruccion' => (string) config('ai.instruction_version'),
-                'version_gateway_solicitada' => $this->gateway->version(),
-                'locale' => 'es-EC',
+                'version_pasarela_solicitada' => $this->gateway->version(),
+                'idioma' => 'es-EC',
                 'contenido_entrada' => $content,
                 'huella_contenido' => $contentFingerprint,
                 'huella_conjunto_fuentes' => $evidenceSet['fingerprint'],
@@ -124,7 +124,7 @@ class RequestAiAnalysis
                         'max_evidence_excerpt_characters' => (int) config('ai.limits.evidence_excerpt_characters'),
                     ],
                 ],
-                'lock_version_origen' => $locked->lock_version,
+                'version_bloqueo_origen' => $locked->version_bloqueo,
                 'solicitado_por' => $actor->id,
                 'asignacion_rol_id' => $activeRole?->id,
                 'solicitado_en' => now(),
@@ -142,26 +142,26 @@ class RequestAiAnalysis
 
             $correlationId = $request->attributes->getString('correlation_id');
             $jobExecution = JobExecution::query()->create([
-                'type' => 'ai.analysis',
-                'queue_name' => 'ai',
-                'status' => 'pending',
-                'idempotency_key' => "ai.analysis:{$locked->id}:{$field->id}:{$idempotencyKey}",
-                'correlation_id' => Str::isUuid($correlationId) ? $correlationId : (string) Str::uuid(),
-                'resource_type' => 'ai_execution',
-                'resource_id' => $execution->id,
-                'attempts' => 0,
-                'max_attempts' => 3,
-                'progress' => 0,
+                'tipo' => 'ia.analisis',
+                'cola' => 'ia',
+                'estado' => 'pendiente',
+                'clave_idempotencia' => "ia.analisis:{$locked->id}:{$field->id}:{$idempotencyKey}",
+                'correlacion_id' => Str::isUuid($correlationId) ? $correlationId : (string) Str::uuid(),
+                'tipo_recurso' => 'ejecucion_ia',
+                'recurso_id' => $execution->id,
+                'intentos' => 0,
+                'intentos_maximos' => 3,
+                'progreso' => 0,
             ]);
             $execution->update(['ejecucion_trabajo_id' => $jobExecution->id]);
             AnalyzeSyllabusFieldJob::dispatch($execution->id)->afterCommit();
             $this->audit->execute(
                 actorId: $actor->id,
                 roleAssignmentId: $activeRole?->id,
-                action: 'ai.analysis_requested',
-                resourceType: 'ai_execution',
+                action: 'ia.analisis_solicitado',
+                resourceType: 'ejecucion_ia',
                 resourceId: $execution->id,
-                result: 'success',
+                result: 'exito',
                 metadata: [
                     'field_key' => $field->clave,
                     'content_fingerprint' => $contentFingerprint,
@@ -169,7 +169,7 @@ class RequestAiAnalysis
                     'evidence_count' => count($evidenceRows),
                     'gateway_version' => $this->gateway->version(),
                 ],
-                correlationId: $jobExecution->correlation_id,
+                correlationId: $jobExecution->correlacion_id,
             );
 
             return $execution->refresh();
@@ -178,14 +178,14 @@ class RequestAiAnalysis
 
     private function assertEligible(Syllabus $syllabus, FieldDefinition $field): void
     {
-        if (! in_array($syllabus->estado, ['draft', 'correction_requested'], true)) {
+        if (! in_array($syllabus->estado, ['borrador', 'correccion_solicitada'], true)) {
             throw ValidationException::withMessages(['syllabus' => 'El sílabo no está en estado editable.']);
         }
         if ($field->version_plantilla_id !== $syllabus->version_plantilla_id
             || ! $field->ia_habilitada
             || ! $field->editable_docente
             || $field->heredado
-            || ! in_array($field->tipo, ['short_text', 'long_text', 'markdown'], true)) {
+            || ! in_array($field->tipo, ['texto_corto', 'texto_largo', 'markdown'], true)) {
             throw ValidationException::withMessages([
                 'field' => 'La asistencia de IA no está habilitada para este campo.',
             ]);
@@ -216,10 +216,10 @@ class RequestAiAnalysis
         $this->audit->execute(
             actorId: $actor->id,
             roleAssignmentId: $activeRole?->id,
-            action: 'ai.analysis_reused',
-            resourceType: 'ai_execution',
+            action: 'ia.analisis_reutilizado',
+            resourceType: 'ejecucion_ia',
             resourceId: $execution->id,
-            result: 'success',
+            result: 'exito',
             metadata: ['field_key' => $execution->metadatos_entrada['field_key'] ?? null],
             correlationId: $request->attributes->getString('correlation_id') ?: null,
         );

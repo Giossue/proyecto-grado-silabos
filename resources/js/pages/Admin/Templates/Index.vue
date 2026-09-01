@@ -61,7 +61,7 @@ const {
 } = useClientPagination(() => filter.items.value);
 
 const stateLabel = (state: string): string =>
-    state === 'published' ? 'Publicada' : 'Borrador';
+    state === 'publicada' ? 'Publicada' : 'Borrador';
 
 defineOptions({
     layout: { breadcrumbs: [{ title: 'Plantillas', href: templatesIndex() }] },
@@ -149,7 +149,7 @@ defineOptions({
                                 v-for="version in template.versions"
                                 :key="version.id"
                                 :variant="
-                                    version.state === 'published'
+                                    version.state === 'publicada'
                                         ? 'secondary'
                                         : 'outline'
                                 "

@@ -35,13 +35,13 @@ class OpenConvocation
 
         return DB::transaction(function () use ($actor, $convocationId, $activeRole, $request): Convocation {
             $convocation = Convocation::query()->lockForUpdate()->with(['sources', 'templateVersion.fields'])->findOrFail($convocationId);
-            if ($activeRole?->carrera_id !== $convocation->carrera_id || $activeRole->role->codigo !== 'coordinator') {
+            if ($activeRole?->carrera_id !== $convocation->carrera_id || $activeRole->role->codigo !== 'coordinador') {
                 abort(403);
             }
-            if ($convocation->estado !== 'preparation') {
+            if ($convocation->estado !== 'preparacion') {
                 throw ValidationException::withMessages(['convocation' => 'Solo una convocatoria en preparación puede abrirse.']);
             }
-            if ($convocation->templateVersion->estado !== 'published') {
+            if ($convocation->templateVersion->estado !== 'publicada') {
                 throw ValidationException::withMessages(['convocation' => 'La plantilla fijada ya no está publicada.']);
             }
             if ($convocation->sources->isEmpty()
@@ -65,7 +65,7 @@ class OpenConvocation
                 ->whereHas('subject.curriculumVersion', fn ($query) => $query
                     ->where('carrera_id', $convocation->carrera_id)
                     ->where('es_actual', true)
-                    ->where('estado', 'active'))
+                    ->where('estado', 'activa'))
                 ->with([
                     'subject.curriculumVersion', 'campus', 'modality',
                     'parallels' => fn ($query) => $query->where('activo', true)->lockForUpdate()->with([
@@ -73,7 +73,7 @@ class OpenConvocation
                             ->where('activo', true)
                             ->where('vigente_desde', '<=', now())
                             ->where(fn ($validity) => $validity->whereNull('vigente_hasta')->orWhere('vigente_hasta', '>', now()))
-                            ->whereHas('user', fn ($userQuery) => $userQuery->where('active', true))
+                            ->whereHas('user', fn ($userQuery) => $userQuery->where('activo', true))
                             ->lockForUpdate(),
                     ]),
                 ])
@@ -96,7 +96,7 @@ class OpenConvocation
 
             $generated = 0;
             foreach ($offerings as $offering) {
-                if ($convocation->modo_agrupacion === 'per_parallel') {
+                if ($convocation->modo_agrupacion === 'por_paralelo') {
                     foreach ($offering->parallels as $parallel) {
                         $this->generateSyllabus($convocation, $offering, new Collection([$parallel]));
                         $generated++;
@@ -109,14 +109,14 @@ class OpenConvocation
                 $generated++;
             }
 
-            $convocation->update(['estado' => 'open', 'abierto_por' => $actor->id, 'abierto_en' => now()]);
+            $convocation->update(['estado' => 'abierta', 'abierto_por' => $actor->id, 'abierto_en' => now()]);
             $this->audit->execute(
                 actorId: $actor->id,
                 roleAssignmentId: $activeRole->id,
-                action: 'convocation.opened',
-                resourceType: 'convocation',
+                action: 'convocatoria.abierta',
+                resourceType: 'convocatoria',
                 resourceId: $convocation->id,
-                result: 'success',
+                result: 'exito',
                 metadata: ['generated_count' => $generated, 'grouping_mode' => $convocation->modo_agrupacion],
                 correlationId: $request->attributes->getString('correlation_id') ?: null,
             );
@@ -142,7 +142,7 @@ class OpenConvocation
             'version_malla_id' => $offering->subject->version_malla_id,
             'version_plantilla_id' => $convocation->version_plantilla_id,
             'contexto_academico' => $this->academicContext->build($offering),
-            'estado' => 'not_started',
+            'estado' => 'sin_iniciar',
         ]);
 
         foreach ($parallels as $parallel) {
@@ -173,7 +173,7 @@ class OpenConvocation
                     'campus' => $offering->campus->nombre,
                     'modalidad' => $offering->modality->nombre,
                 ],
-                'workflow' => ['estado' => 'Sin iniciar'],
+                'flujo' => ['estado' => 'Sin iniciar'],
                 default => null,
             };
             FieldValue::query()->create([

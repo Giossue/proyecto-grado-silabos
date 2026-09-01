@@ -19,7 +19,7 @@ class ViewSyllabiRequest extends FormRequest
         return [
             'q' => ['nullable', 'string', 'max:120'],
             'state' => ['nullable', Rule::in([
-                'all', 'not_started', 'draft', 'in_review', 'correction_requested', 'approved',
+                'all', 'sin_iniciar', 'borrador', 'en_revision', 'correccion_solicitada', 'aprobado',
             ])],
             'page' => ['nullable', 'integer', 'min:1'],
         ];

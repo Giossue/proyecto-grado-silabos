@@ -22,7 +22,7 @@ class CreateConvocation
         private readonly RecordAuditEvent $audit,
     ) {}
 
-    /** @param array{name: string, period_id: string, template_version_id: string, grouping_mode: string, source_ids: list<string>, start_date: string, draft_deadline: string} $data */
+    /** @param array{nombre: string, period_id: string, template_version_id: string, grouping_mode: string, source_ids: list<string>, start_date: string, draft_deadline: string} $data */
     public function execute(array $data, User $actor, Request $request): Convocation
     {
         $activeRole = $this->roles->resolve($request);
@@ -31,7 +31,7 @@ class CreateConvocation
         }
 
         $template = TemplateVersion::query()->with('template')->findOrFail($data['template_version_id']);
-        if ($template->estado !== 'published' || ! $template->template->activo || ! $template->template->es_institucional) {
+        if ($template->estado !== 'publicada' || ! $template->template->activo || ! $template->template->es_institucional) {
             throw ValidationException::withMessages(['template_version_id' => 'Selecciona una versión publicada de la plantilla institucional.']);
         }
 
@@ -47,8 +47,8 @@ class CreateConvocation
                 'carrera_id' => $activeRole->carrera_id,
                 'periodo_academico_id' => $data['period_id'],
                 'version_plantilla_id' => $data['template_version_id'],
-                'nombre' => $data['name'],
-                'estado' => 'preparation',
+                'nombre' => $data['nombre'],
+                'estado' => 'preparacion',
                 'modo_agrupacion' => $data['grouping_mode'],
                 'creado_por' => $actor->id,
             ]);
@@ -58,8 +58,8 @@ class CreateConvocation
                     'id' => (string) Str::uuid(),
                     'convocatoria_id' => $convocation->id,
                     'fuente_academica_id' => $sourceId,
-                    'created_at' => now(),
-                    'updated_at' => now(),
+                    'creado_en' => now(),
+                    'actualizado_en' => now(),
                 ]);
             }
             // Dos etapas: la de inicio vence cuando se habilita la elaboración y la de
@@ -73,18 +73,18 @@ class CreateConvocation
                     'convocatoria_id' => $convocation->id,
                     'etapa' => $stage,
                     'vence_en' => $dueAt,
-                    'created_at' => now(),
-                    'updated_at' => now(),
+                    'creado_en' => now(),
+                    'actualizado_en' => now(),
                 ]);
             }
 
             $this->audit->execute(
                 actorId: $actor->id,
                 roleAssignmentId: $activeRole->id,
-                action: 'convocation.created',
-                resourceType: 'convocation',
+                action: 'convocatoria.creada',
+                resourceType: 'convocatoria',
                 resourceId: $convocation->id,
-                result: 'success',
+                result: 'exito',
                 metadata: ['grouping_mode' => $data['grouping_mode'], 'source_count' => count($data['source_ids'])],
                 correlationId: $request->attributes->getString('correlation_id') ?: null,
             );

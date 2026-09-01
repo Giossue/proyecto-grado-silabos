@@ -34,7 +34,7 @@ class AcademicSourceController extends Controller
                     'name' => $source->nombre,
                     'description' => $source->descripcion,
                     'has_content' => is_string($source->contenido) && trim($source->contenido) !== '',
-                    'updated_at' => $source->updated_at?->toDateString(),
+                    'actualizado_en' => $source->actualizado_en?->toDateString(),
                 ]),
         ]);
     }
@@ -57,7 +57,7 @@ class AcademicSourceController extends Controller
                 'description' => $source->descripcion,
                 'internal_notes' => $source->notas_internas,
                 'content' => $source->contenido,
-                'updated_at' => $source->updated_at?->toDateString(),
+                'actualizado_en' => $source->actualizado_en?->toDateString(),
             ],
         ]);
     }

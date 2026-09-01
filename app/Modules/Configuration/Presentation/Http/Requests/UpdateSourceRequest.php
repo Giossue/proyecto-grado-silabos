@@ -15,7 +15,7 @@ class UpdateSourceRequest extends ManageAcademicSourceRequest
         $careerId = $source instanceof AcademicSource ? $source->carrera_id : null;
 
         return [
-            'name' => [
+            'nombre' => [
                 'required',
                 'string',
                 'max:180',
@@ -31,6 +31,6 @@ class UpdateSourceRequest extends ManageAcademicSourceRequest
     /** @return array<string, string> */
     public function messages(): array
     {
-        return ['name.unique' => 'Ya existe una fuente con ese nombre en la carrera.'];
+        return ['nombre.unique' => 'Ya existe una fuente con ese nombre en la carrera.'];
     }
 }

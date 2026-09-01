@@ -17,6 +17,10 @@ class ConvocationDeadline extends Model
 {
     use HasUuids;
 
+    public const CREATED_AT = 'creado_en';
+
+    public const UPDATED_AT = 'actualizado_en';
+
     protected $table = 'fechas_limite_convocatoria';
 
     /** @var list<string> */

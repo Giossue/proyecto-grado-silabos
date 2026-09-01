@@ -23,14 +23,14 @@ class SetUserStatus
 
         return DB::transaction(function () use ($active, $actor, $activeRole, $request, $target): User {
             $target->update([
-                'active' => $active,
-                'deactivated_at' => $active ? null : now(),
+                'activo' => $active,
+                'desactivado_en' => $active ? null : now(),
             ]);
 
             $closedMandates = 0;
 
             if (! $active) {
-                DB::table('sessions')->where('user_id', $target->id)->delete();
+                DB::table('sesiones')->where('user_id', $target->id)->delete();
                 // Un nombramiento abierto de una cuenta desactivada bloquea la carrera:
                 // la base no admite dos coordinaciones vigentes a la vez.
                 $closedMandates = $this->mandate->closeFor($target->id);
@@ -39,10 +39,10 @@ class SetUserStatus
             $this->audit->execute(
                 actorId: $actor->id,
                 roleAssignmentId: $activeRole?->id,
-                action: $active ? 'user.activated' : 'user.deactivated',
-                resourceType: 'user',
+                action: $active ? 'usuario.activado' : 'usuario.desactivado',
+                resourceType: 'usuario',
                 resourceId: $target->id,
-                result: 'success',
+                result: 'exito',
                 metadata: ['closed_coordinations' => $closedMandates],
                 correlationId: $request->attributes->getString('correlation_id') ?: null,
             );

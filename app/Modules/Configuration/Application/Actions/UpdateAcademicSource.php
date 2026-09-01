@@ -24,7 +24,7 @@ class UpdateAcademicSource
         return DB::transaction(function () use ($actor, $activeRole, $data, $request, $source): AcademicSource {
             $locked = AcademicSource::query()->whereKey($source->id)->lockForUpdate()->firstOrFail();
             $locked->update([
-                'nombre' => $data['name'],
+                'nombre' => $data['nombre'],
                 'descripcion' => $data['description'] ?? null,
                 'notas_internas' => $data['internal_notes'] ?? null,
             ]);
@@ -32,10 +32,10 @@ class UpdateAcademicSource
             $this->audit->execute(
                 actorId: $actor->id,
                 roleAssignmentId: $activeRole?->id,
-                action: 'source.updated',
-                resourceType: 'academic_source',
+                action: 'fuente.actualizada',
+                resourceType: 'fuente_academica',
                 resourceId: $locked->id,
-                result: 'success',
+                result: 'exito',
                 correlationId: $request->attributes->getString('correlation_id') ?: null,
             );
 

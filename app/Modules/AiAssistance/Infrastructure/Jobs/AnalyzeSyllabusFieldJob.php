@@ -34,9 +34,28 @@ class AnalyzeSyllabusFieldJob implements ShouldQueue
     /** @var list<int> */
     public array $backoff = [5, 30, 120];
 
+    /**
+     * El contrato del gateway habla inglés (PV-13/14); la BD almacena español.
+     * La traducción ocurre únicamente en el punto de persistencia.
+     *
+     * @var array<string, string>
+     */
+    private const MOTIVOS_NO_CONCLUYENTE = [
+        'evidence_limit_exceeded' => 'limite_evidencia_excedido',
+        'insufficient_evidence' => 'evidencia_insuficiente',
+        'empty_content' => 'contenido_vacio',
+        'no_editorial_change' => 'sin_cambio_editorial',
+    ];
+
+    /** @var array<string, string> */
+    private const TIPOS_RECOMENDACION = [
+        'clarity' => 'claridad',
+        'consistency' => 'consistencia',
+    ];
+
     public function __construct(public readonly string $executionId)
     {
-        $this->onQueue('ai');
+        $this->onQueue('ia');
     }
 
     public function handle(
@@ -69,7 +88,7 @@ class AnalyzeSyllabusFieldJob implements ShouldQueue
             $contract->validate($input, $result);
         } catch (AiContractException) {
             $this->finishFailed(
-                'ai_contract_invalid',
+                'contrato_ia_invalido',
                 'El servicio devolvió una respuesta que no pudo verificarse. El borrador no fue modificado.',
                 $audit,
             );
@@ -91,7 +110,7 @@ class AnalyzeSyllabusFieldJob implements ShouldQueue
 
         DB::transaction(function () use ($audit, $result): void {
             $execution = AiExecution::query()->with('evidence')->lockForUpdate()->findOrFail($this->executionId);
-            if (in_array($execution->estado, ['completed', 'inconclusive', 'failed'], true)) {
+            if (in_array($execution->estado, ['completada', 'no_concluyente', 'fallida'], true)) {
                 return;
             }
             $evidenceById = $execution->evidence->keyBy('id');
@@ -107,36 +126,36 @@ class AnalyzeSyllabusFieldJob implements ShouldQueue
                 }
             }
             $execution->update([
-                'estado' => 'completed',
-                'version_gateway_ejecutada' => $result->gatewayVersion,
+                'estado' => 'completada',
+                'version_pasarela_ejecutada' => $result->gatewayVersion,
                 'completado_en' => now(),
             ]);
             $job = JobExecution::query()->lockForUpdate()->findOrFail($execution->ejecucion_trabajo_id);
             $job->update([
-                'status' => 'completed',
-                'progress' => 100,
-                'result' => [
+                'estado' => 'completada',
+                'progreso' => 100,
+                'resultado' => [
                     'ai_execution_id' => $execution->id,
                     'status' => 'completed',
                     'recommendation_count' => count($result->recommendations),
                 ],
-                'finished_at' => now(),
-                'error_code' => null,
-                'error_message' => null,
+                'finalizado_en' => now(),
+                'codigo_error' => null,
+                'mensaje_error' => null,
             ]);
-            $this->notify($execution, 'completed');
+            $this->notify($execution, 'completada');
             $audit->execute(
                 actorId: null,
                 roleAssignmentId: null,
-                action: 'ai.analysis_completed',
-                resourceType: 'ai_execution',
+                action: 'ia.analisis_completado',
+                resourceType: 'ejecucion_ia',
                 resourceId: $execution->id,
-                result: 'success',
+                result: 'exito',
                 metadata: [
                     'gateway_version' => $result->gatewayVersion,
                     'recommendation_count' => count($result->recommendations),
                 ],
-                correlationId: $job->correlation_id,
+                correlationId: $job->correlacion_id,
             );
         });
     }
@@ -144,8 +163,8 @@ class AnalyzeSyllabusFieldJob implements ShouldQueue
     public function failed(Throwable $exception): void
     {
         $code = $exception instanceof AiGatewayUnavailable
-            ? 'ai_service_unavailable'
-            : 'ai_analysis_failed';
+            ? 'servicio_ia_no_disponible'
+            : 'analisis_ia_fallido';
         $message = $exception instanceof AiGatewayUnavailable
             ? 'La ayuda de IA no está disponible por el momento. Puede continuar editando y volver a solicitarla.'
             : 'No fue posible completar la ayuda de IA. El borrador no fue modificado.';
@@ -156,19 +175,19 @@ class AnalyzeSyllabusFieldJob implements ShouldQueue
     {
         return DB::transaction(function (): bool {
             $execution = AiExecution::query()->lockForUpdate()->find($this->executionId);
-            if ($execution === null || in_array($execution->estado, ['completed', 'inconclusive', 'failed'], true)) {
+            if ($execution === null || in_array($execution->estado, ['completada', 'no_concluyente', 'fallida'], true)) {
                 return false;
             }
             $job = JobExecution::query()->lockForUpdate()->findOrFail($execution->ejecucion_trabajo_id);
-            $execution->update(['estado' => 'running', 'iniciado_en' => $execution->iniciado_en ?? now()]);
+            $execution->update(['estado' => 'en_ejecucion', 'iniciado_en' => $execution->iniciado_en ?? now()]);
             $job->update([
-                'status' => 'running',
-                'attempts' => $job->attempts + 1,
-                'progress' => 15,
-                'started_at' => $job->started_at ?? now(),
-                'finished_at' => null,
-                'error_code' => null,
-                'error_message' => null,
+                'estado' => 'en_ejecucion',
+                'intentos' => $job->intentos + 1,
+                'progreso' => 15,
+                'iniciado_en' => $job->iniciado_en ?? now(),
+                'finalizado_en' => null,
+                'codigo_error' => null,
+                'mensaje_error' => null,
             ]);
 
             return true;
@@ -179,34 +198,36 @@ class AnalyzeSyllabusFieldJob implements ShouldQueue
     {
         DB::transaction(function () use ($audit, $gatewayVersion, $reason): void {
             $execution = AiExecution::query()->lockForUpdate()->findOrFail($this->executionId);
-            if (in_array($execution->estado, ['completed', 'inconclusive', 'failed'], true)) {
+            if (in_array($execution->estado, ['completada', 'no_concluyente', 'fallida'], true)) {
                 return;
             }
+            // `$reason` llega en el vocabulario del contrato; se traduce al persistir.
+            $motivo = self::MOTIVOS_NO_CONCLUYENTE[$reason] ?? $reason;
             $execution->update([
-                'estado' => 'inconclusive',
-                'version_gateway_ejecutada' => $gatewayVersion,
-                'motivo_no_concluyente' => $reason,
+                'estado' => 'no_concluyente',
+                'version_pasarela_ejecutada' => $gatewayVersion,
+                'motivo_no_concluyente' => $motivo,
                 'completado_en' => now(),
             ]);
             $job = JobExecution::query()->lockForUpdate()->findOrFail($execution->ejecucion_trabajo_id);
             $job->update([
-                'status' => 'completed',
-                'progress' => 100,
-                'result' => ['ai_execution_id' => $execution->id, 'status' => 'inconclusive', 'reason' => $reason],
-                'finished_at' => now(),
-                'error_code' => null,
-                'error_message' => null,
+                'estado' => 'completada',
+                'progreso' => 100,
+                'resultado' => ['ai_execution_id' => $execution->id, 'status' => 'inconclusive', 'reason' => $reason],
+                'finalizado_en' => now(),
+                'codigo_error' => null,
+                'mensaje_error' => null,
             ]);
-            $this->notify($execution, 'inconclusive');
+            $this->notify($execution, 'no_concluyente');
             $audit->execute(
                 actorId: null,
                 roleAssignmentId: null,
-                action: 'ai.analysis_inconclusive',
-                resourceType: 'ai_execution',
+                action: 'ia.analisis_no_concluyente',
+                resourceType: 'ejecucion_ia',
                 resourceId: $execution->id,
-                result: 'success',
+                result: 'exito',
                 metadata: ['reason' => $reason, 'gateway_version' => $gatewayVersion],
-                correlationId: $job->correlation_id,
+                correlationId: $job->correlacion_id,
             );
         });
     }
@@ -215,11 +236,11 @@ class AnalyzeSyllabusFieldJob implements ShouldQueue
     {
         DB::transaction(function () use ($audit, $code, $message): void {
             $execution = AiExecution::query()->lockForUpdate()->find($this->executionId);
-            if ($execution === null || in_array($execution->estado, ['completed', 'inconclusive', 'failed'], true)) {
+            if ($execution === null || in_array($execution->estado, ['completada', 'no_concluyente', 'fallida'], true)) {
                 return;
             }
             $execution->update([
-                'estado' => 'failed',
+                'estado' => 'fallida',
                 'codigo_error' => $code,
                 'mensaje_error' => $message,
                 'completado_en' => now(),
@@ -227,22 +248,22 @@ class AnalyzeSyllabusFieldJob implements ShouldQueue
             $job = JobExecution::query()->lockForUpdate()->find($execution->ejecucion_trabajo_id);
             if ($job !== null) {
                 $job->update([
-                    'status' => 'failed',
-                    'progress' => 0,
-                    'result' => null,
-                    'error_code' => $code,
-                    'error_message' => $message,
-                    'finished_at' => now(),
+                    'estado' => 'fallida',
+                    'progreso' => 0,
+                    'resultado' => null,
+                    'codigo_error' => $code,
+                    'mensaje_error' => $message,
+                    'finalizado_en' => now(),
                 ]);
                 $audit->execute(
                     actorId: null,
                     roleAssignmentId: null,
-                    action: 'ai.analysis_failed',
-                    resourceType: 'ai_execution',
+                    action: 'ia.analisis_fallido',
+                    resourceType: 'ejecucion_ia',
                     resourceId: $execution->id,
-                    result: 'failed',
+                    result: 'fallido',
                     metadata: ['error_code' => $code],
-                    correlationId: $job->correlation_id,
+                    correlationId: $job->correlacion_id,
                 );
             }
         });
@@ -269,7 +290,7 @@ class AnalyzeSyllabusFieldJob implements ShouldQueue
             $execution->field->etiqueta,
             $execution->contenido_entrada,
             $execution->huella_contenido,
-            $execution->locale,
+            $execution->idioma,
             $evidence,
             (int) config('ai.limits.recommendations'),
         );
@@ -284,27 +305,28 @@ class AnalyzeSyllabusFieldJob implements ShouldQueue
             'ejecucion_ia_id' => $execution->id,
             'definicion_campo_id' => $execution->definicion_campo_id,
             'ordinal' => $ordinal,
-            'tipo' => $output->type,
+            // El contrato emite `clarity`/`consistency`; la BD guarda español.
+            'tipo' => self::TIPOS_RECOMENDACION[$output->type] ?? $output->type,
             'titulo' => $output->title,
             'explicacion' => $output->explanation,
             'texto_sugerido' => $output->suggestedText,
         ]);
     }
 
-    private function notify(AiExecution $execution, string $status): void
+    private function notify(AiExecution $execution, string $estado): void
     {
         InternalNotification::query()->firstOrCreate(
             [
                 'usuario_id' => $execution->solicitado_por,
-                'clave_deduplicacion' => "ai.analysis.{$status}:{$execution->id}",
+                'clave_deduplicacion' => "ia.analisis.{$estado}:{$execution->id}",
             ],
             [
-                'tipo' => "ai.analysis.{$status}",
-                'titulo' => $status === 'completed' ? 'Recomendación de IA disponible' : 'Análisis de IA no concluyente',
-                'mensaje' => $status === 'completed'
+                'tipo' => "ia.analisis.{$estado}",
+                'titulo' => $estado === 'completada' ? 'Recomendación de IA disponible' : 'Análisis de IA no concluyente',
+                'mensaje' => $estado === 'completada'
                     ? 'La ayuda solicitada está lista para revisión. Ningún cambio se aplicó automáticamente.'
                     : 'La ayuda no produjo recomendaciones verificables. Puede continuar trabajando normalmente.',
-                'tipo_recurso' => 'ai_execution',
+                'tipo_recurso' => 'ejecucion_ia',
                 'recurso_id' => $execution->id,
                 'creado_en' => now(),
             ],

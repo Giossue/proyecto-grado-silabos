@@ -6,13 +6,19 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\Subject;
 
 final class CurriculumSystemFields
 {
-    /** @var list<string> */
+    /**
+     * `hours_project`, `hours_ap` y `hours_paec` conservan la clave inglesa: la
+     * migración I-28 (`definiciones_campo_malla.clave_sistema`) solo tradujo las
+     * cinco claves restantes, por lo que la BD puede contener esos valores.
+     *
+     * @var list<string>
+     */
     public const HOUR_COMPONENT_KEYS = [
         'hours_project',
         'hours_ap',
-        'hours_ac',
-        'hours_pae',
-        'hours_aa',
+        'horas_ac',
+        'horas_pae',
+        'horas_aa',
         'hours_paec',
     ];
 
@@ -20,35 +26,35 @@ final class CurriculumSystemFields
     public const ATTRIBUTES = [
         'hours_project' => 'horas_proyecto',
         'hours_ap' => 'horas_ap',
-        'hours_ac' => 'horas_ac',
-        'hours_pae' => 'horas_pae',
-        'hours_aa' => 'horas_aa',
+        'horas_ac' => 'horas_ac',
+        'horas_pae' => 'horas_pae',
+        'horas_aa' => 'horas_aa',
         'hours_paec' => 'horas_paec',
-        'credits' => 'creditos',
-        'total_hours' => 'horas_totales',
+        'creditos' => 'creditos',
+        'horas_totales' => 'horas_totales',
     ];
 
     /** @var array<string, string> */
     public const LABELS = [
         'hours_project' => 'Horas de proyecto',
         'hours_ap' => 'Horas AP',
-        'hours_ac' => 'Horas AC / ACD',
-        'hours_pae' => 'Horas PAE / APE',
-        'hours_aa' => 'Horas AA',
+        'horas_ac' => 'Horas AC / ACD',
+        'horas_pae' => 'Horas PAE / APE',
+        'horas_aa' => 'Horas AA',
         'hours_paec' => 'Horas PAEC',
-        'credits' => 'Créditos',
-        'total_hours' => 'Horas totales',
+        'creditos' => 'Créditos',
+        'horas_totales' => 'Horas totales',
     ];
 
     /** @return list<array{key: string, label: string, type: string, system_key: string, position: int, totalizable: bool}> */
     public static function defaults(): array
     {
         return [
-            ['key' => 'acd', 'label' => 'ACD', 'type' => 'integer', 'system_key' => 'hours_ac', 'position' => 1, 'totalizable' => true],
-            ['key' => 'ape', 'label' => 'APE', 'type' => 'integer', 'system_key' => 'hours_pae', 'position' => 2, 'totalizable' => true],
-            ['key' => 'aa', 'label' => 'AA', 'type' => 'integer', 'system_key' => 'hours_aa', 'position' => 3, 'totalizable' => true],
-            ['key' => 'cred', 'label' => 'CRED', 'type' => 'number', 'system_key' => 'credits', 'position' => 4, 'totalizable' => true],
-            ['key' => 'total', 'label' => 'TOTAL', 'type' => 'integer', 'system_key' => 'total_hours', 'position' => 5, 'totalizable' => true],
+            ['key' => 'acd', 'label' => 'ACD', 'type' => 'entero', 'system_key' => 'horas_ac', 'position' => 1, 'totalizable' => true],
+            ['key' => 'ape', 'label' => 'APE', 'type' => 'entero', 'system_key' => 'horas_pae', 'position' => 2, 'totalizable' => true],
+            ['key' => 'aa', 'label' => 'AA', 'type' => 'entero', 'system_key' => 'horas_aa', 'position' => 3, 'totalizable' => true],
+            ['key' => 'cred', 'label' => 'CRED', 'type' => 'numero', 'system_key' => 'creditos', 'position' => 4, 'totalizable' => true],
+            ['key' => 'total', 'label' => 'TOTAL', 'type' => 'entero', 'system_key' => 'horas_totales', 'position' => 5, 'totalizable' => true],
         ];
     }
 

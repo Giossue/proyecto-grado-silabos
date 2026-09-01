@@ -2,6 +2,18 @@
 
 ## Convenciones
 
+- **idioma (I-28)**: todos los identificadores del esquema (tablas, columnas, funciones,
+  triggers) y los valores de estado almacenados van **en español**, con grafía sin tilde
+  (`silabos`, `numero_revision`, `decision`). Las siglas técnicas se conservan (`id`,
+  `uuid`, `mime`, `url`, `ip`, `sha256`, `docx`, `pdf`) igual que los nombres propios de
+  formato (`markdown`, `es-EC`). Única excepción: las columnas internas de las tablas
+  que los drivers de Laravel escriben con nombres fijos (`sesiones`,
+  `trabajos_fallidos`, `restablecimientos_contrasena`, `migraciones`) — registrada como
+  deuda técnica. Las clases y rutas de código siguen en inglés (precedente I-14).
+  `SpanishSchemaTest` y `SpanishModelColumnsTest` hacen cumplir la regla.
+- timestamps de Eloquent: `creado_en`/`actualizado_en`; donde `creado_en` ya es una
+  marca de dominio (`notificaciones_internas`, `objetos_almacenados`,
+  `observaciones_revision`), la marca de inserción de Eloquent se llama `registrado_en`.
 - tablas/columnas: plural y `snake_case`;
 - claves primarias internas: UUID generados por aplicación;
 - claves foráneas e índices explícitos;
@@ -16,7 +28,10 @@
 
 ### Identidad
 
-`usuarios`, `roles`, `asignaciones_rol`.
+`usuarios`, `roles`, `asignaciones_rol`. Las columnas de `usuarios` heredadas del
+starter quedaron en español en I-28 (`nombre`, `correo_electronico`, `contrasena`,
+`activo`, `codigo_recordarme`, `secreto_dos_factores`…); el modelo `User` declara los
+puentes que Fortify y el guard exigen.
 
 ### Académico
 
@@ -69,16 +84,29 @@ migración `000020`; la evidencia de IA conserva su propia copia del contenido c
 
 ### Revisión, validación e IA
 
-`observaciones`, `respuestas_observacion`, `aprobaciones`, `reaperturas`,
-`ejecuciones_validacion`, `resultados_validacion`, `ejecuciones_ia`,
-`evidencias_ia`, `recomendaciones_ia`, `recomendacion_evidencias_ia`,
-`retroalimentacion_ia`.
+`revisiones_silabo`, `observaciones_revision`, `solicitudes_correccion`,
+`solicitud_correccion_observaciones`, `respuestas_observacion`, `aprobaciones`,
+`reaperturas`, `transiciones_silabo`, `ejecuciones_validacion`,
+`resultados_validacion`, `ejecuciones_ia`, `evidencias_ia`, `recomendaciones_ia`,
+`recomendacion_evidencias_ia`, `retroalimentacion_ia`.
 
 ### Operación e integración
 
-`objetos_almacenados`, `artefactos_exportacion`, `notificaciones`, `eventos_auditoria`,
-`eventos_outbox`, `ejecuciones_trabajo`, `ejecuciones_importacion`, `items_importacion`,
-`conflictos_importacion`.
+`objetos_almacenados`, `artefactos_exportacion`, `notificaciones_internas`,
+`eventos_auditoria`, `eventos_salientes` (outbox transaccional), `ejecuciones_trabajo`.
+Las tablas de importación institucional (`ejecuciones_importacion`, `items_importacion`,
+`conflictos_importacion`, `alias_institucionales`) se retiraron el 2026-08-27 junto con
+el módulo que las usaba.
+
+### Framework
+
+Colas y caché operan sobre Redis, así que `jobs`, `job_batches`, `cache` y
+`cache_locks` se eliminaron en I-28. Sobreviven, renombradas por configuración
+soportada: `sesiones` (driver de sesión `database`), `trabajos_fallidos` (registro
+forense de trabajos agotados), `restablecimientos_contrasena` (broker de recuperación)
+y `migraciones` (control del migrador; su renombrado se hace con
+`php artisan db:rename-migrations-table` antes de `migrate`, nunca dentro de una
+migración). Sus columnas internas conservan los nombres que los drivers exigen.
 
 Los nombres definitivos se implementan desde el modelo físico v0.1 y se modifican solo
 mediante migración/ADR.
@@ -139,21 +167,10 @@ esto evita que una diferencia de representación temporal intente crear rangos s
 - una ejecución terminal y todos sus hijos son append-only; no admite evidencia o salida
   tardía;
 - feedback solo referencia una ejecución completada; una aplicación por recomendación es
-  única y exige `lock_version_resultado = lock_version_origen + 1`.
+  única y exige `version_bloqueo_resultado = version_bloqueo_origen + 1`.
 
-### Invariantes de importación implementados
-
-- una ejecución solo admite modo `simulation`; fija origen, perfil, versiones, parámetros,
-  actor y clave de idempotencia antes de iniciar;
-- items se insertan únicamente mientras la ejecución está `running`, son append-only y
-  mantienen huellas de payload original y normalizado;
-- un conflicto solo nace para un item `conflict` de la misma ejecución y mientras esta
-  se encuentra en curso;
-- completar exige versión ejecutada, huella del lote y contadores coherentes; una
-  ejecución terminal no se actualiza ni elimina y no admite staging tardío;
-- un conflicto pendiente solo puede pasar a resuelto mediante `exclude`, con actor,
-  fecha y justificación; después queda inmutable;
-- no existe relación de escritura desde staging hacia las tablas académicas.
+Las invariantes del módulo de importación institucional se retiraron con sus tablas el
+2026-08-27.
 
 ## Migraciones
 

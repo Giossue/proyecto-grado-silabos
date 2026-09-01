@@ -18,11 +18,11 @@ defineOptions({
 
 const props = defineProps<{
     token: string;
-    email: string;
+    correo_electronico: string;
     passwordRules: string;
 }>();
 
-const inputEmail = ref(props.email);
+const inputEmail = ref(props.correo_electronico);
 </script>
 
 <template>
@@ -30,7 +30,7 @@ const inputEmail = ref(props.email);
 
     <Form
         v-bind="update.form()"
-        :transform="(data) => ({ ...data, token, email })"
+        :transform="(data) => ({ ...data, token, correo_electronico })"
         :reset-on-success="['password', 'password_confirmation']"
         v-slot="{ errors, processing }"
     >
@@ -40,7 +40,7 @@ const inputEmail = ref(props.email);
                 <Input
                     id="email"
                     type="email"
-                    name="email"
+                    name="correo_electronico"
                     autocomplete="email"
                     v-model="inputEmail"
                     class="mt-1 block w-full"
@@ -48,7 +48,10 @@ const inputEmail = ref(props.email);
                     readonly
                     required
                 />
-                <InputError :message="errors.email" class="mt-2" />
+                <InputError
+                    :message="errors.correo_electronico"
+                    class="mt-2"
+                />
             </div>
 
             <div class="grid gap-2">

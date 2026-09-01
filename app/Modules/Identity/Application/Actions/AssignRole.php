@@ -56,10 +56,10 @@ class AssignRole
             $this->audit->execute(
                 actorId: $actor->id,
                 roleAssignmentId: $activeRole?->id,
-                action: 'user.role_assigned',
-                resourceType: 'user',
+                action: 'usuario.rol_asignado',
+                resourceType: 'usuario',
                 resourceId: $target->id,
-                result: 'success',
+                result: 'exito',
                 metadata: [
                     'role' => $data['role_code'],
                     'coordination_id' => $mandate?->id,

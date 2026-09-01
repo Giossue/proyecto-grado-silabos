@@ -16,7 +16,7 @@ it('presenta el cambio de contrasena temporal como un dialogo que no se descarta
         ->toContain('@interact-outside="block"')
         ->toContain('@pointer-down-outside="block"')
         ->toContain('event.preventDefault()')
-        ->toContain('must_change_password')
+        ->toContain('debe_cambiar_contrasena')
         ->toContain('SecurityController.update.form()')
         // Cerrar sesión es la única alternativa a cambiarla.
         ->toContain('logout()');

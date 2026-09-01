@@ -29,6 +29,10 @@ class FieldDefinition extends Model
 {
     use HasUuids;
 
+    public const CREATED_AT = 'creado_en';
+
+    public const UPDATED_AT = 'actualizado_en';
+
     protected $table = 'definiciones_campo';
 
     /** @var list<string> */
@@ -86,7 +90,7 @@ class FieldDefinition extends Model
     {
         $version = $this->version()->first();
 
-        if ($version !== null && $version->estado !== 'draft') {
+        if ($version !== null && $version->estado !== 'borrador') {
             throw new LogicException('La estructura publicada es inmutable.');
         }
     }

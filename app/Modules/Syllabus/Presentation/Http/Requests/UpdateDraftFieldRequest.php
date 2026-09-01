@@ -26,24 +26,24 @@ class UpdateDraftFieldRequest extends FormRequest
             : ['prohibited'];
 
         $rules = [
-            'lock_version' => ['required', 'integer', 'min:0'],
+            'version_bloqueo' => ['required', 'integer', 'min:0'],
             'value' => $valueRules,
             'rows' => ['nullable', 'array', 'max:100'],
             'rows.*.id' => ['nullable', 'uuid'],
             'rows.*.data' => ['required_with:rows', 'array:texto'],
             'rows.*.data.texto' => ['required_with:rows', 'string', 'max:10000'],
         ];
-        if ($field instanceof FieldDefinition && $field->tipo === 'multi_select') {
+        if ($field instanceof FieldDefinition && $field->tipo === 'seleccion_multiple') {
             $rules['value.*'] = ['string', 'distinct', Rule::in($this->allowedOptions($field))];
         }
 
         return $rules;
     }
 
-    /** @return array{lock_version: int, value?: mixed, rows?: list<array{id?: string|null, data: array<string, mixed>}>} */
+    /** @return array{version_bloqueo: int, value?: mixed, rows?: list<array{id?: string|null, data: array<string, mixed>}>} */
     public function draftData(): array
     {
-        $payload = ['lock_version' => $this->integer('lock_version')];
+        $payload = ['version_bloqueo' => $this->integer('version_bloqueo')];
         if ($this->exists('value')) {
             $payload['value'] = $this->input('value');
         }
@@ -73,8 +73,8 @@ class UpdateDraftFieldRequest extends FormRequest
         $presence = $field->obligatorio ? 'required' : 'nullable';
 
         return match ($field->tipo) {
-            'short_text' => [$presence, 'string', 'max:1000'],
-            'long_text', 'markdown' => [
+            'texto_corto' => [$presence, 'string', 'max:1000'],
+            'texto_largo', 'markdown' => [
                 $presence,
                 'string',
                 'max:50000',
@@ -84,13 +84,13 @@ class UpdateDraftFieldRequest extends FormRequest
                     }
                 },
             ],
-            'number' => [$presence, 'numeric'],
-            'date' => [$presence, 'date_format:Y-m-d'],
-            'single_select' => [$presence, 'string', Rule::in($this->allowedOptions($field))],
-            'multi_select' => [$presence, 'array', 'max:50'],
-            'boolean' => [$presence, 'boolean'],
-            'repeatable' => ['prohibited'],
-            'master_reference', 'calculation' => ['nullable'],
+            'numero' => [$presence, 'numeric'],
+            'fecha' => [$presence, 'date_format:Y-m-d'],
+            'seleccion_unica' => [$presence, 'string', Rule::in($this->allowedOptions($field))],
+            'seleccion_multiple' => [$presence, 'array', 'max:50'],
+            'booleano' => [$presence, 'boolean'],
+            'repetible' => ['prohibited'],
+            'referencia_maestra', 'calculo' => ['nullable'],
             default => ['prohibited'],
         };
     }

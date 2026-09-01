@@ -66,11 +66,11 @@ class DocumentOperationsTest extends TestCase
         $this->seed(DatabaseSeeder::class);
         Storage::fake('private');
 
-        $this->administrator = User::query()->where('email', 'admin@silabos.test')->firstOrFail();
+        $this->administrator = User::query()->where('correo_electronico', 'admin@silabos.test')->firstOrFail();
         $this->administratorContext = $this->administrator->roleAssignments()->firstOrFail();
-        $this->coordinator = User::query()->where('email', 'coordinador@silabos.test')->firstOrFail();
+        $this->coordinator = User::query()->where('correo_electronico', 'coordinador@silabos.test')->firstOrFail();
         $this->coordinatorContext = $this->coordinator->roleAssignments()->firstOrFail();
-        $this->teacher = User::query()->where('email', 'docente@silabos.test')->firstOrFail();
+        $this->teacher = User::query()->where('correo_electronico', 'docente@silabos.test')->firstOrFail();
         $this->teacherContext = $this->teacher->roleAssignments()->firstOrFail();
     }
 

@@ -20,6 +20,10 @@ class CorrectionRequest extends Model
     use HasUuids;
     use ImmutableRecord;
 
+    public const CREATED_AT = 'creado_en';
+
+    public const UPDATED_AT = 'actualizado_en';
+
     protected $table = 'solicitudes_correccion';
 
     /** @var list<string> */

@@ -13,6 +13,8 @@ class SyllabusTransition extends Model
     use HasUuids;
     use ImmutableRecord;
 
+    public const CREATED_AT = 'creado_en';
+
     public const UPDATED_AT = null;
 
     protected $table = 'transiciones_silabo';

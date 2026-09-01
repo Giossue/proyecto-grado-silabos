@@ -19,7 +19,7 @@ use LogicException;
  * @property string|null $recurso_id
  * @property string $resultado
  * @property array<string, mixed>|null $metadatos
- * @property string|null $correlation_id
+ * @property string|null $correlacion_id
  * @property CarbonImmutable $ocurrido_en
  * @property-read User|null $actor
  * @property-read RoleAssignment|null $roleAssignment
@@ -27,6 +27,8 @@ use LogicException;
 class AuditEvent extends Model
 {
     use HasUuids;
+
+    public const CREATED_AT = 'creado_en';
 
     public const UPDATED_AT = null;
 
@@ -41,7 +43,7 @@ class AuditEvent extends Model
         'recurso_id',
         'resultado',
         'metadatos',
-        'correlation_id',
+        'correlacion_id',
         'ocurrido_en',
     ];
 

@@ -48,11 +48,11 @@ class SecurityController extends Controller
         $user = $request->user();
         // Cualquier cambio deja de ser temporal, venga del diálogo que bloquea la sesión
         // o de esta pantalla: la contraseña ya solo la conoce su titular.
-        $wasTemporary = $user->must_change_password;
+        $wasTemporary = $user->debe_cambiar_contrasena;
 
         $user->update([
-            'password' => $request->password,
-            'must_change_password' => false,
+            'contrasena' => $request->password,
+            'debe_cambiar_contrasena' => false,
         ]);
 
         if ($wasTemporary) {
@@ -60,10 +60,10 @@ class SecurityController extends Controller
             $this->audit->execute(
                 actorId: $user->id,
                 roleAssignmentId: $this->roles->resolve($request)?->id,
-                action: 'user.temporary_password_changed',
-                resourceType: 'user',
+                action: 'usuario.contrasena_temporal_cambiada',
+                resourceType: 'usuario',
                 resourceId: $user->id,
-                result: 'success',
+                result: 'exito',
                 correlationId: $request->attributes->getString('correlation_id') ?: null,
             );
         }

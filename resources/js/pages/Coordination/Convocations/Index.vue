@@ -56,7 +56,7 @@ defineOptions({
 });
 
 const stateLabel = (state: string): string =>
-    ({ preparation: 'En preparación', open: 'Abierta', closed: 'Cerrada' })[
+    ({ preparacion: 'En preparación', abierta: 'Abierta', cerrada: 'Cerrada' })[
         state
     ] ?? 'Estado no disponible';
 </script>
@@ -123,13 +123,13 @@ const stateLabel = (state: string): string =>
                                             <SelectItem value="all"
                                                 >Todos los estados</SelectItem
                                             >
-                                            <SelectItem value="preparation"
+                                            <SelectItem value="preparacion"
                                                 >En preparación</SelectItem
                                             >
-                                            <SelectItem value="open"
+                                            <SelectItem value="abierta"
                                                 >Abiertas</SelectItem
                                             >
-                                            <SelectItem value="closed"
+                                            <SelectItem value="cerrada"
                                                 >Cerradas</SelectItem
                                             >
                                         </SelectGroup>
@@ -175,7 +175,7 @@ const stateLabel = (state: string): string =>
                                 <div class="text-sm text-muted-foreground">
                                     {{
                                         convocation.grouping_mode ===
-                                        'per_parallel'
+                                        'por_paralelo'
                                             ? 'Por paralelo'
                                             : 'Por oferta'
                                     }}

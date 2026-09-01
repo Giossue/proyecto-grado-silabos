@@ -13,7 +13,7 @@ class SetAcademicRecordStatusRequest extends FormRequest
         $entity = $this->route('entity');
 
         return is_string($entity)
-            && $this->user()?->active === true
+            && $this->user()?->activo === true
             && AcademicStructurePermissions::mayChangeStatus(
                 app(ActiveRole::class)->resolve($this),
                 $entity,

@@ -13,7 +13,7 @@ class ConvocationPolicy
 
     public function viewAny(User $user): bool
     {
-        return $user->active && $this->roles->hasRole(request(), RoleCode::Coordinator);
+        return $user->activo && $this->roles->hasRole(request(), RoleCode::Coordinator);
     }
 
     public function create(User $user): bool
@@ -25,18 +25,18 @@ class ConvocationPolicy
     {
         $activeRole = $this->roles->resolve(request());
 
-        return $user->active
+        return $user->activo
             && $activeRole?->role->codigo === RoleCode::Coordinator->value
             && $activeRole->carrera_id === $convocation->carrera_id;
     }
 
     public function open(User $user, Convocation $convocation): bool
     {
-        return $this->view($user, $convocation) && $convocation->estado === 'preparation';
+        return $this->view($user, $convocation) && $convocation->estado === 'preparacion';
     }
 
     public function extendDeadline(User $user, Convocation $convocation): bool
     {
-        return $this->view($user, $convocation) && $convocation->estado !== 'closed';
+        return $this->view($user, $convocation) && $convocation->estado !== 'cerrada';
     }
 }

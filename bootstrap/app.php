@@ -51,11 +51,11 @@ return Application::configure(basePath: dirname(__DIR__))
             fn (DraftConflictException $exception, Request $request) => $request->expectsJson()
                 ? response()->json([
                     'message' => $exception->getMessage(),
-                    'code' => 'draft_version_conflict',
-                    'current_lock_version' => $exception->currentVersion,
+                    'code' => 'conflicto_version_borrador',
+                    'version_bloqueo_actual' => $exception->currentVersion,
                 ], 409)
                 : back()->withErrors([
-                    'lock_version' => $exception->getMessage(),
+                    'version_bloqueo' => $exception->getMessage(),
                 ]),
         );
         $exceptions->shouldRenderJsonWhen(

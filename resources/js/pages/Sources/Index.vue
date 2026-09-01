@@ -25,7 +25,7 @@ const props = defineProps<{
         name: string;
         description: string | null;
         has_content: boolean;
-        updated_at: string | null;
+        actualizado_en: string | null;
     }[];
 }>();
 const filter = useClientFilter(
@@ -105,7 +105,7 @@ defineOptions({
                                     }}</Badge
                                 ></TableCell
                             ><TableCell>{{
-                                source.updated_at ?? '—'
+                                source.actualizado_en ?? '—'
                             }}</TableCell></TableRow
                         >
                     </TableBody></Table

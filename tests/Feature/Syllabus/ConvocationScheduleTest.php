@@ -44,11 +44,11 @@ class ConvocationScheduleTest extends TestCase
         parent::setUp();
         $this->seed(DatabaseSeeder::class);
 
-        $this->administrator = User::query()->where('email', 'admin@silabos.test')->firstOrFail();
+        $this->administrator = User::query()->where('correo_electronico', 'admin@silabos.test')->firstOrFail();
         $this->administratorContext = $this->administrator->roleAssignments()->firstOrFail();
-        $this->coordinator = User::query()->where('email', 'coordinador@silabos.test')->firstOrFail();
+        $this->coordinator = User::query()->where('correo_electronico', 'coordinador@silabos.test')->firstOrFail();
         $this->coordinatorContext = $this->coordinator->roleAssignments()->firstOrFail();
-        $this->teacher = User::query()->where('email', 'docente@silabos.test')->firstOrFail();
+        $this->teacher = User::query()->where('correo_electronico', 'docente@silabos.test')->firstOrFail();
         $this->teacherContext = $this->teacher->roleAssignments()->firstOrFail();
     }
 
@@ -58,11 +58,11 @@ class ConvocationScheduleTest extends TestCase
 
         $this->assertDatabaseHas('fechas_limite_convocatoria', [
             'convocatoria_id' => $convocation->id,
-            'etapa' => 'start',
+            'etapa' => 'inicio',
         ]);
         $this->assertDatabaseHas('fechas_limite_convocatoria', [
             'convocatoria_id' => $convocation->id,
-            'etapa' => 'draft',
+            'etapa' => 'borrador',
         ]);
     }
 
@@ -74,7 +74,7 @@ class ConvocationScheduleTest extends TestCase
             'name' => 'Convocatoria invertida',
             'period_id' => CourseOffering::query()->firstOrFail()->periodo_academico_id,
             'template_version_id' => $template->id,
-            'grouping_mode' => 'per_parallel',
+            'grouping_mode' => 'por_paralelo',
             'source_ids' => [$source->id],
             'start_date' => now()->addMonths(2)->toIso8601String(),
             'draft_deadline' => now()->addMonth()->toIso8601String(),
@@ -86,7 +86,7 @@ class ConvocationScheduleTest extends TestCase
         $syllabus = $this->createValidDraft(startsAt: now()->addWeek());
 
         $this->actingAsTeacher()->post(route('syllabi.submit.store', $syllabus), [
-            'lock_version' => $syllabus->lock_version,
+            'version_bloqueo' => $syllabus->version_bloqueo,
             'idempotency_key' => (string) Str::uuid(),
         ])->assertSessionHasErrors('deadline');
 
@@ -99,36 +99,36 @@ class ConvocationScheduleTest extends TestCase
         $this->expireDeadline($syllabus);
 
         $this->actingAsTeacher()->post(route('syllabi.submit.store', $syllabus), [
-            'lock_version' => $syllabus->lock_version,
+            'version_bloqueo' => $syllabus->version_bloqueo,
             'idempotency_key' => (string) Str::uuid(),
         ])->assertSessionHasErrors('deadline');
 
         $this->assertDatabaseCount('revisiones_silabo', 0);
-        $this->assertSame('draft', $syllabus->fresh()->estado);
+        $this->assertSame('borrador', $syllabus->fresh()->estado);
     }
 
     public function test_an_extension_reopens_submission_and_keeps_the_previous_date_in_the_audit_trail(): void
     {
         $syllabus = $this->createValidDraft();
         $convocation = $this->expireDeadline($syllabus);
-        $previous = $convocation->deadlines()->where('etapa', 'draft')->firstOrFail()->vence_en;
+        $previous = $convocation->deadlines()->where('etapa', 'borrador')->firstOrFail()->vence_en;
 
         $this->actingAsCoordinator()->post(route('convocations.deadline.extend', $convocation), [
-            'stage' => 'draft',
+            'stage' => 'borrador',
             'due_at' => now()->addWeek()->toIso8601String(),
             'reason' => 'Relevo de docente por licencia médica del titular.',
         ])->assertRedirect()->assertSessionHas('success');
 
         $event = AuditEvent::query()
-            ->where('accion', 'convocation.deadline_extended')
+            ->where('accion', 'convocatoria.plazo_extendido')
             ->firstOrFail();
         $this->assertSame($previous->toIso8601String(), $event->metadatos['previous_due_at']);
-        $this->assertSame('draft', $event->metadatos['stage']);
+        $this->assertSame('borrador', $event->metadatos['stage']);
         $this->assertStringContainsString('licencia', $event->metadatos['reason']);
 
         // Con el plazo movido, el envío que antes rebotaba ahora entra.
         $this->actingAsTeacher()->post(route('syllabi.submit.store', $syllabus), [
-            'lock_version' => $syllabus->fresh()->lock_version,
+            'version_bloqueo' => $syllabus->fresh()->version_bloqueo,
             'idempotency_key' => (string) Str::uuid(),
         ])->assertRedirect();
         $this->assertDatabaseCount('revisiones_silabo', 1);
@@ -139,7 +139,7 @@ class ConvocationScheduleTest extends TestCase
         $convocation = $this->prepareConvocation();
 
         $this->actingAsCoordinator()->post(route('convocations.deadline.extend', $convocation), [
-            'stage' => 'draft',
+            'stage' => 'borrador',
             'due_at' => now()->addDay()->toIso8601String(),
             'reason' => 'Quiero adelantar el cierre porque ya casi todos entregaron.',
         ])->assertSessionHasErrors('due_at');
@@ -150,7 +150,7 @@ class ConvocationScheduleTest extends TestCase
         $convocation = $this->prepareConvocation();
 
         $this->actingAsCoordinator()->post(route('convocations.deadline.extend', $convocation), [
-            'stage' => 'draft',
+            'stage' => 'borrador',
             'due_at' => now()->addMonths(2)->toIso8601String(),
             'reason' => 'porque sí',
         ])->assertSessionHasErrors('reason');
@@ -160,7 +160,7 @@ class ConvocationScheduleTest extends TestCase
     {
         $convocation = $this->prepareConvocation();
         $payload = [
-            'stage' => 'draft',
+            'stage' => 'borrador',
             'due_at' => now()->addMonths(2)->toIso8601String(),
             'reason' => 'Ampliación por relevo docente en dos paralelos.',
         ];
@@ -180,7 +180,7 @@ class ConvocationScheduleTest extends TestCase
         $convocation = $syllabus->convocation;
         ConvocationDeadline::query()
             ->where('convocatoria_id', $convocation->id)
-            ->where('etapa', 'draft')
+            ->where('etapa', 'borrador')
             ->update(['vence_en' => now()->subDay()]);
 
         return $convocation->fresh();
@@ -201,7 +201,7 @@ class ConvocationScheduleTest extends TestCase
         foreach ($fields as $field) {
             $this->actingAsTeacher()->patchJson(
                 route('syllabi.fields.update', [$syllabus, $field]),
-                $this->validFieldPayload($field, $syllabus->fresh()->lock_version),
+                $this->validFieldPayload($field, $syllabus->fresh()->version_bloqueo),
             )->assertOk();
         }
 
@@ -216,13 +216,13 @@ class ConvocationScheduleTest extends TestCase
             'name' => 'Convocatoria de plazos',
             'period_id' => CourseOffering::query()->firstOrFail()->periodo_academico_id,
             'template_version_id' => $template->id,
-            'grouping_mode' => 'per_parallel',
+            'grouping_mode' => 'por_paralelo',
             'source_ids' => [$source->id],
             'start_date' => ($startsAt ?? now()->subDay())->toIso8601String(),
             'draft_deadline' => now()->addMonth()->toIso8601String(),
         ])->assertRedirect();
 
-        return Convocation::query()->latest('created_at')->firstOrFail();
+        return Convocation::query()->latest('creado_en')->firstOrFail();
     }
 
     /** @return array<string, mixed> */
@@ -237,13 +237,13 @@ class ConvocationScheduleTest extends TestCase
         })->filter()->values();
 
         return match ($field->tipo) {
-            'repeatable' => ['lock_version' => $lockVersion, 'rows' => [['data' => ['texto' => "Contenido {$field->clave}"]]]],
-            'boolean' => ['lock_version' => $lockVersion, 'value' => true],
-            'number' => ['lock_version' => $lockVersion, 'value' => 1],
-            'date' => ['lock_version' => $lockVersion, 'value' => now()->toDateString()],
-            'single_select' => ['lock_version' => $lockVersion, 'value' => $optionValues->first()],
-            'multi_select' => ['lock_version' => $lockVersion, 'value' => [$optionValues->first()]],
-            default => ['lock_version' => $lockVersion, 'value' => "Contenido académico {$field->clave}"],
+            'repetible' => ['version_bloqueo' => $lockVersion, 'rows' => [['data' => ['texto' => "Contenido {$field->clave}"]]]],
+            'booleano' => ['version_bloqueo' => $lockVersion, 'value' => true],
+            'numero' => ['version_bloqueo' => $lockVersion, 'value' => 1],
+            'fecha' => ['version_bloqueo' => $lockVersion, 'value' => now()->toDateString()],
+            'seleccion_unica' => ['version_bloqueo' => $lockVersion, 'value' => $optionValues->first()],
+            'seleccion_multiple' => ['version_bloqueo' => $lockVersion, 'value' => [$optionValues->first()]],
+            default => ['version_bloqueo' => $lockVersion, 'value' => "Contenido académico {$field->clave}"],
         };
     }
 
@@ -251,14 +251,14 @@ class ConvocationScheduleTest extends TestCase
     private function publishedConfiguration(): array
     {
         $this->actingAsAdministrator()->post(route('admin.templates.store'), ['name' => 'Plantilla I-15']);
-        $template = TemplateVersion::query()->latest('created_at')->firstOrFail();
+        $template = TemplateVersion::query()->latest('creado_en')->firstOrFail();
         $this->actingAsAdministrator()->post(route('admin.templates.publish', $template));
 
         $this->actingAsCoordinator()->post(route('sources.store'), [
             'name' => 'Fuente I-15',
             'description' => 'Documento de apoyo del periodo.',
         ]);
-        $source = AcademicSource::query()->latest('created_at')->firstOrFail();
+        $source = AcademicSource::query()->latest('creado_en')->firstOrFail();
         $this->actingAsCoordinator()->put(route('sources.content.update', $source), [
             'content' => '## Perfil base
 

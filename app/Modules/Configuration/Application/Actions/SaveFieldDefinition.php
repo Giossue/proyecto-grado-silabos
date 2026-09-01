@@ -45,7 +45,7 @@ class SaveFieldDefinition
         return DB::transaction(function () use ($actor, $activeRole, $data, $field, $request, $versionId): FieldDefinition {
             $version = TemplateVersion::query()->whereKey($versionId)->lockForUpdate()->firstOrFail();
 
-            if ($version->estado !== 'draft') {
+            if ($version->estado !== 'borrador') {
                 throw ValidationException::withMessages(['field' => 'La versión publicada no admite cambios.']);
             }
 
@@ -76,19 +76,19 @@ class SaveFieldDefinition
                     ->where('bloque_plantilla_id', $block->id)
                     ->max('posicion')) + 1;
                 $field = FieldDefinition::query()->create($attributes);
-                $action = 'template.field_created';
+                $action = 'plantilla.campo_creado';
             } else {
                 $field->update($attributes);
-                $action = 'template.field_updated';
+                $action = 'plantilla.campo_actualizado';
             }
 
             $this->audit->execute(
                 actorId: $actor->id,
                 roleAssignmentId: $activeRole?->id,
                 action: $action,
-                resourceType: 'field_definition',
+                resourceType: 'definicion_campo',
                 resourceId: $field->id,
-                result: 'success',
+                result: 'exito',
                 correlationId: $request->attributes->getString('correlation_id') ?: null,
             );
 
@@ -169,16 +169,16 @@ class SaveFieldDefinition
     private function blockType(string $contentType): string
     {
         return $contentType === 'institutional'
-            ? 'workflow'
-            : ($contentType === 'text' ? 'narrative' : 'repeatable');
+            ? 'flujo'
+            : ($contentType === 'text' ? 'narrativa' : 'repetible');
     }
 
     private function fieldType(string $contentType): string
     {
         return match ($contentType) {
             'text' => 'markdown',
-            'institutional' => 'master_reference',
-            default => 'repeatable',
+            'institutional' => 'referencia_maestra',
+            default => 'repetible',
         };
     }
 

@@ -19,7 +19,7 @@ sequenceDiagram
     participant W as Worker
 
     D->>UI: Confirma enviar
-    UI->>C: POST con lock_version e idempotency_key
+    UI->>C: POST con version_bloqueo e idempotency_key
     C->>P: authorize(submit, syllabus)
     P-->>C: permitido por rol, alcance, asignación y estado
     C->>A: ejecutar DTO validado
@@ -33,7 +33,7 @@ sequenceDiagram
         A->>DB: insertar RevisionSilabo inmutable
         A->>DB: cambiar estado a En revisión
         A->>DB: insertar transición y auditoría
-        A->>O: insertar evento SyllabusSubmitted
+        A->>O: insertar evento silabo.enviado
         A->>DB: commit
         C-->>UI: redirect con número de revisión
         O-->>W: entregar después del commit
@@ -57,7 +57,7 @@ sequenceDiagram
     R->>DB: transacción: observaciones + estado Corrección solicitada + auditoría
     R-->>D: notificación posterior al commit
     D->>UI: Edita nueva versión de trabajo y responde
-    D->>R: Reenviar con lock_version e idempotency_key
+    D->>R: Reenviar con version_bloqueo e idempotency_key
     R->>DB: validar + insertar revisión N+1 inmutable
     R->>DB: vincular respuestas/cambios a observaciones
     R->>DB: estado En revisión + transición + auditoría
@@ -140,7 +140,7 @@ sequenceDiagram
     UI->>E: create export(revision N)
     E->>DB: autorizar + fijar revisión/plantilla + crear trabajo idempotente
     E-->>Q: dispatch después del commit
-    Q->>R: render snapshot inmutable
+    Q->>R: render fotografía inmutable
     R-->>Q: DOCX y PDF desde la misma entrada
     Q->>S: guardar privados y calcular huellas
     Q->>DB: registrar artefactos y estado Completado

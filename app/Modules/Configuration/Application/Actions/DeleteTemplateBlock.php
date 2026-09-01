@@ -24,7 +24,7 @@ class DeleteTemplateBlock
         DB::transaction(function () use ($activeRole, $actor, $block, $request): void {
             $block->load('version');
 
-            if ($block->version->estado !== 'draft') {
+            if ($block->version->estado !== 'borrador') {
                 throw ValidationException::withMessages(['block' => 'La versión publicada no admite cambios.']);
             }
 
@@ -33,10 +33,10 @@ class DeleteTemplateBlock
             $this->audit->execute(
                 actorId: $actor->id,
                 roleAssignmentId: $activeRole?->id,
-                action: 'template.block_deleted',
-                resourceType: 'template_block',
+                action: 'plantilla.bloque_eliminado',
+                resourceType: 'bloque_plantilla',
                 resourceId: $block->id,
-                result: 'success',
+                result: 'exito',
                 correlationId: $request->attributes->getString('correlation_id') ?: null,
             );
         });

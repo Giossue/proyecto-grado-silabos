@@ -23,7 +23,7 @@ class RecordWorkflowOutbox
         ?int $revisionNumber,
         ?string $correlationId,
     ): OutboxEvent {
-        $payload = [
+        $contenido = [
             'recipient_ids' => array_values(array_unique($recipientIds)),
             'syllabus_id' => $syllabus->id,
             'revision_number' => $revisionNumber,
@@ -31,41 +31,41 @@ class RecordWorkflowOutbox
         $event = OutboxEvent::query()->firstOrCreate(
             ['clave_deduplicacion' => $deduplicationKey],
             [
-                'tipo_agregado' => 'syllabus',
+                'tipo_agregado' => 'silabo',
                 'agregado_id' => $syllabus->id,
                 'tipo_evento' => $eventType,
-                'payload' => $payload,
-                'estado' => 'pending',
+                'contenido' => $contenido,
+                'estado' => 'pendiente',
                 'intentos' => 0,
                 'disponible_en' => now(),
                 'ocurrido_en' => now(),
             ],
         );
-        if ($event->tipo_agregado !== 'syllabus'
+        if ($event->tipo_agregado !== 'silabo'
             || $event->agregado_id !== $syllabus->id
             || $event->tipo_evento !== $eventType
-            || $this->hasher->hash($event->payload) !== $this->hasher->hash($payload)) {
+            || $this->hasher->hash($event->contenido) !== $this->hasher->hash($contenido)) {
             throw new RuntimeException('La clave del evento ya identifica otro cambio de dominio.');
         }
 
         $execution = JobExecution::query()->firstOrCreate(
-            ['idempotency_key' => "notification.outbox:{$event->id}"],
+            ['clave_idempotencia' => "notificacion.saliente:{$event->id}"],
             [
-                'type' => 'notification.internal',
-                'queue_name' => 'notifications',
-                'status' => 'pending',
-                'correlation_id' => is_string($correlationId) && Str::isUuid($correlationId)
+                'tipo' => 'notificacion.interna',
+                'cola' => 'notificaciones',
+                'estado' => 'pendiente',
+                'correlacion_id' => is_string($correlationId) && Str::isUuid($correlationId)
                     ? $correlationId
                     : (string) Str::uuid(),
-                'resource_type' => 'outbox_event',
-                'resource_id' => $event->id,
-                'attempts' => 0,
-                'max_attempts' => 5,
-                'progress' => 0,
+                'tipo_recurso' => 'evento_saliente',
+                'recurso_id' => $event->id,
+                'intentos' => 0,
+                'intentos_maximos' => 5,
+                'progreso' => 0,
             ],
         );
-        if ($execution->resource_type !== 'outbox_event' || $execution->resource_id !== $event->id) {
-            throw new RuntimeException('La ejecución no coincide con el evento outbox.');
+        if ($execution->tipo_recurso !== 'evento_saliente' || $execution->recurso_id !== $event->id) {
+            throw new RuntimeException('La ejecución no coincide con el evento saliente.');
         }
         if ($event->wasRecentlyCreated) {
             DeliverInternalNotificationJob::dispatch($event->id)->afterCommit();

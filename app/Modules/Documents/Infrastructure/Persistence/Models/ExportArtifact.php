@@ -20,8 +20,8 @@ use LogicException;
  * @property string|null $ejecucion_trabajo_id
  * @property string|null $objeto_docx_id
  * @property string|null $objeto_pdf_id
- * @property string $version_renderer
- * @property string $locale
+ * @property string $version_renderizador
+ * @property string $idioma
  * @property string $clave_idempotencia
  * @property string $estado
  * @property string $solicitado_por
@@ -33,12 +33,16 @@ class ExportArtifact extends Model
 {
     use HasUuids;
 
+    public const CREATED_AT = 'creado_en';
+
+    public const UPDATED_AT = 'actualizado_en';
+
     protected $table = 'artefactos_exportacion';
 
     /** @var list<string> */
     protected $fillable = [
         'silabo_id', 'revision_silabo_id', 'version_plantilla_id', 'ejecucion_trabajo_id',
-        'objeto_docx_id', 'objeto_pdf_id', 'version_renderer', 'locale',
+        'objeto_docx_id', 'objeto_pdf_id', 'version_renderizador', 'idioma',
         'clave_idempotencia', 'estado', 'solicitado_por', 'asignacion_rol_id',
         'solicitado_en', 'completado_en',
     ];
@@ -88,7 +92,7 @@ class ExportArtifact extends Model
     protected static function booted(): void
     {
         static::updating(function (ExportArtifact $artifact): void {
-            if ($artifact->getOriginal('estado') === 'completed') {
+            if ($artifact->getOriginal('estado') === 'completado') {
                 throw new LogicException('Un artefacto completado es inmutable.');
             }
         });

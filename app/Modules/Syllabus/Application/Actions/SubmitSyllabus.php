@@ -44,7 +44,7 @@ class SubmitSyllabus
         if ($existing !== null) {
             return $existing;
         }
-        if (! in_array($syllabus->estado, ['draft', 'correction_requested'], true)) {
+        if (! in_array($syllabus->estado, ['borrador', 'correccion_solicitada'], true)) {
             throw ValidationException::withMessages(['syllabus' => 'El expediente no está listo para envío.']);
         }
 
@@ -52,8 +52,8 @@ class SubmitSyllabus
         // alguien que corrija errores de un envío que de todos modos no se va a admitir.
         $this->schedule->assertOpenForSubmission($syllabus->convocation()->firstOrFail());
 
-        if ($syllabus->lock_version !== $expectedLockVersion) {
-            throw new DraftConflictException($syllabus->lock_version);
+        if ($syllabus->version_bloqueo !== $expectedLockVersion) {
+            throw new DraftConflictException($syllabus->version_bloqueo);
         }
 
         $validation = $this->validateDraft->execute($syllabus, $actor, $request);
@@ -69,10 +69,10 @@ class SubmitSyllabus
             if ($existing !== null) {
                 return $existing;
             }
-            if ($locked->lock_version !== $expectedLockVersion) {
-                throw new DraftConflictException($locked->lock_version);
+            if ($locked->version_bloqueo !== $expectedLockVersion) {
+                throw new DraftConflictException($locked->version_bloqueo);
             }
-            if (! in_array($locked->estado, ['draft', 'correction_requested'], true)) {
+            if (! in_array($locked->estado, ['borrador', 'correccion_solicitada'], true)) {
                 throw ValidationException::withMessages(['syllabus' => 'La transición de envío ya no está permitida.']);
             }
 
@@ -81,7 +81,7 @@ class SubmitSyllabus
                 ->orderByDesc('numero_revision')
                 ->lockForUpdate()
                 ->first();
-            $reopening = $locked->estado === 'correction_requested'
+            $reopening = $locked->estado === 'correccion_solicitada'
                 ? Reopening::query()
                     ->where('silabo_id', $locked->id)
                     ->whereNotIn('id', SyllabusRevision::query()->whereNotNull('reapertura_id')->select('reapertura_id'))
@@ -95,8 +95,8 @@ class SubmitSyllabus
                 'reapertura_id' => $reopening?->id,
                 'numero_revision' => $previous === null ? 1 : $previous->numero_revision + 1,
                 'clave_idempotencia' => $idempotencyKey,
-                'lock_version_origen' => $locked->lock_version,
-                'snapshot' => $snapshot,
+                'version_bloqueo_origen' => $locked->version_bloqueo,
+                'fotografia' => $snapshot,
                 'huella_sha256' => $this->hasher->hash($snapshot),
                 'enviado_por' => $actor->id,
                 'enviado_en' => now(),
@@ -105,27 +105,30 @@ class SubmitSyllabus
             ObservationResponse::query()
                 ->where('silabo_id', $locked->id)
                 ->whereNull('revision_respuesta_id')
-                ->update(['revision_respuesta_id' => $revision->id, 'updated_at' => now()]);
+                ->update(['revision_respuesta_id' => $revision->id, 'actualizado_en' => now()]);
             $from = $locked->estado;
-            $action = $from === 'draft' ? 'submit' : 'resubmit';
+            $action = $from === 'borrador' ? 'enviar' : 'reenviar';
             $locked->update([
-                'estado' => 'in_review',
-                'lock_version' => $locked->lock_version + 1,
+                'estado' => 'en_revision',
+                'version_bloqueo' => $locked->version_bloqueo + 1,
                 'guardado_en' => now(),
             ]);
             $activeRole = $this->roles->resolve($request);
-            $this->transitions->execute($locked, $revision, $from, 'in_review', $action, $actor, $activeRole);
+            $this->transitions->execute($locked, $revision, $from, 'en_revision', $action, $actor, $activeRole);
             $this->audit->execute(
                 actorId: $actor->id,
                 roleAssignmentId: $activeRole?->id,
-                action: "syllabus.{$action}",
-                resourceType: 'syllabus_revision',
+                action: match ($action) {
+                    'enviar' => 'silabo.enviado',
+                    'reenviar' => 'silabo.reenviado',
+                },
+                resourceType: 'revision_silabo',
                 resourceId: $revision->id,
-                result: 'success',
+                result: 'exito',
                 metadata: ['revision_number' => $revision->numero_revision, 'fingerprint' => $revision->huella_sha256],
                 correlationId: $request->attributes->getString('correlation_id') ?: null,
             );
-            $eventType = $action === 'submit' ? 'syllabus.submitted' : 'syllabus.resubmitted';
+            $eventType = $action === 'enviar' ? 'silabo.enviado' : 'silabo.reenviado';
             $this->outbox->execute(
                 syllabus: $locked,
                 eventType: $eventType,

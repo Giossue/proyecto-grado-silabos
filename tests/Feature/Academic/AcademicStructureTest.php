@@ -47,9 +47,9 @@ class AcademicStructureTest extends TestCase
         parent::setUp();
 
         $this->seed(DatabaseSeeder::class);
-        $this->administrator = User::query()->where('email', 'admin@silabos.test')->firstOrFail();
+        $this->administrator = User::query()->where('correo_electronico', 'admin@silabos.test')->firstOrFail();
         $this->administratorContext = $this->administrator->roleAssignments()->firstOrFail();
-        $this->coordinator = User::query()->where('email', 'coordinador@silabos.test')->firstOrFail();
+        $this->coordinator = User::query()->where('correo_electronico', 'coordinador@silabos.test')->firstOrFail();
         $this->coordinatorContext = $this->coordinator->roleAssignments()->firstOrFail();
     }
 
@@ -169,18 +169,18 @@ class AcademicStructureTest extends TestCase
     public function test_role_boundaries_reject_governance_or_career_mutations_from_the_wrong_context(): void
     {
         $this->actingAsAdministrator()
-            ->post(route('coordination.academic.store', 'curriculum'), [
+            ->post(route('coordination.academic.store', 'malla'), [
                 'code' => 'NO-ADMIN',
             ])
             ->assertForbidden();
 
         $this->actingAsCoordinator()
-            ->post(route('admin.academic.store', 'faculty'), [
+            ->post(route('admin.academic.store', 'facultad'), [
                 'name' => 'No autorizada',
             ])
             ->assertForbidden();
 
-        $teacher = User::query()->where('email', 'docente@silabos.test')->firstOrFail();
+        $teacher = User::query()->where('correo_electronico', 'docente@silabos.test')->firstOrFail();
         $teacherContext = $teacher->roleAssignments()->firstOrFail();
 
         $this->actingAs($teacher)
@@ -195,7 +195,7 @@ class AcademicStructureTest extends TestCase
     public function test_administrator_creates_faculty_career_and_assigns_a_matching_coordinator(): void
     {
         $this->actingAsAdministrator()
-            ->post(route('admin.academic.store', 'faculty'), [
+            ->post(route('admin.academic.store', 'facultad'), [
                 'code' => 'FAC-DEMO',
                 'name' => 'Facultad de demostración',
             ])
@@ -203,7 +203,7 @@ class AcademicStructureTest extends TestCase
         $faculty = Faculty::query()->where('codigo_institucional', 'FAC-DEMO')->firstOrFail();
 
         $this->actingAsAdministrator()
-            ->post(route('admin.academic.store', 'career'), [
+            ->post(route('admin.academic.store', 'carrera'), [
                 'faculty_id' => $faculty->id,
                 'code' => 'CARR-DEMO',
                 'name' => 'Carrera de demostración',
@@ -213,7 +213,7 @@ class AcademicStructureTest extends TestCase
         $candidate = $this->userWithRole(RoleCode::Coordinator, $career);
 
         $this->actingAsAdministrator()
-            ->post(route('admin.academic.store', 'coordinator_assignment'), [
+            ->post(route('admin.academic.store', 'asignacion_coordinador'), [
                 'user_id' => $candidate->id,
                 'career_id' => $career->id,
                 'valid_from' => now()->toDateString(),
@@ -226,8 +226,8 @@ class AcademicStructureTest extends TestCase
             'activo' => true,
         ]);
         $this->assertDatabaseHas('eventos_auditoria', [
-            'accion' => 'academic.coordinator_assignment.created',
-            'tipo_recurso' => 'coordinator_assignment',
+            'accion' => 'academico.asignacion_coordinador.creacion',
+            'tipo_recurso' => 'asignacion_coordinador',
         ]);
         // Sin declararlo, una coordinación es titular: es el caso normal.
         $this->assertDatabaseHas('asignaciones_coordinador', [
@@ -249,13 +249,13 @@ class AcademicStructureTest extends TestCase
             ->update(['vigente_hasta' => now(), 'activo' => false]);
 
         $this->actingAsAdministrator()
-            ->post(route('admin.academic.store', 'coordinator_assignment'), [
+            ->post(route('admin.academic.store', 'asignacion_coordinador'), [
                 'user_id' => $acting->id,
                 'career_id' => $career->id,
                 'quality' => 'encargado',
                 'valid_from' => now()->addDay()->toDateString(),
                 'valid_until' => now()->addMonths(3)->toDateString(),
-                'backing_type' => 'personnel_action',
+                'backing_type' => 'accion_personal',
                 'backing_number' => 'UEB-RECT-2026-0311-R',
                 'backing_date' => now()->subDay()->toDateString(),
             ])
@@ -265,7 +265,7 @@ class AcademicStructureTest extends TestCase
             'usuario_id' => $acting->id,
             'carrera_id' => $career->id,
             'calidad' => 'encargado',
-            'sustento_tipo' => 'personnel_action',
+            'sustento_tipo' => 'accion_personal',
             'sustento_numero' => 'UEB-RECT-2026-0311-R',
         ]);
     }
@@ -277,12 +277,12 @@ class AcademicStructureTest extends TestCase
 
         // Un encargo sin fecha de fin sería una titularidad sin nombrar.
         $this->actingAsAdministrator()
-            ->post(route('admin.academic.store', 'coordinator_assignment'), [
+            ->post(route('admin.academic.store', 'asignacion_coordinador'), [
                 'user_id' => $acting->id,
                 'career_id' => $career->id,
                 'quality' => 'encargado',
                 'valid_from' => now()->addDay()->toDateString(),
-                'backing_type' => 'personnel_action',
+                'backing_type' => 'accion_personal',
                 'backing_number' => 'UEB-RECT-2026-0312-R',
                 'backing_date' => now()->subDay()->toDateString(),
             ])
@@ -312,19 +312,19 @@ class AcademicStructureTest extends TestCase
 
         $this->actingAs($coordinator)
             ->withSession(['active_role_assignment_id' => $role->id])
-            ->post(route('coordination.academic.store', 'curriculum'), [
+            ->post(route('coordination.academic.store', 'malla'), [
                 'code' => 'MALLA-UNICA-2027',
             ])
             ->assertRedirect();
 
         $curriculum = CurriculumVersion::query()->where('codigo', 'MALLA-UNICA-2027')->firstOrFail();
         $this->assertSame($career->id, $curriculum->carrera_id);
-        $this->assertSame('active', $curriculum->estado);
+        $this->assertSame('activa', $curriculum->estado);
         $this->assertTrue($curriculum->es_actual);
 
         $this->actingAs($coordinator)
             ->withSession(['active_role_assignment_id' => $role->id])
-            ->post(route('coordination.academic.store', 'subject'), [
+            ->post(route('coordination.academic.store', 'asignatura'), [
                 'curriculum_id' => $curriculum->id,
                 'code' => 'SW-701',
                 'name' => 'Arquitectura Empresarial',
@@ -348,7 +348,7 @@ class AcademicStructureTest extends TestCase
 
         $this->actingAs($coordinator)
             ->withSession(['active_role_assignment_id' => $role->id])
-            ->post(route('coordination.academic.store', 'subject'), [
+            ->post(route('coordination.academic.store', 'asignatura'), [
                 'curriculum_id' => $curriculum->id,
                 'code' => 'SW-702',
                 'name' => 'Materia incompleta',
@@ -364,7 +364,7 @@ class AcademicStructureTest extends TestCase
 
         $this->actingAs($coordinator)
             ->withSession(['active_role_assignment_id' => $role->id])
-            ->post(route('coordination.academic.store', 'curriculum'), [
+            ->post(route('coordination.academic.store', 'malla'), [
                 'code' => 'MALLA-SEGUNDA',
             ])
             ->assertSessionHasErrors('curriculum');
@@ -401,12 +401,20 @@ class AcademicStructureTest extends TestCase
             ])
             ->assertRedirect();
 
+        // Payload completo: los campos activos de la malla son obligatorios, así
+        // que solo el ciclo fuera de rango debe rechazar la materia.
         $this->actingAsCoordinator()
-            ->post(route('coordination.academic.store', 'subject'), [
+            ->post(route('coordination.academic.store', 'asignatura'), [
                 'curriculum_id' => $curriculum->id,
                 'code' => 'FUERA-101',
                 'name' => 'Materia fuera de rango',
                 'cycle' => 11,
+                'organization_unit' => 'Unidad profesional',
+                'hours_ac' => 48,
+                'hours_pae' => 32,
+                'hours_aa' => 64,
+                'credits' => 3,
+                'total_hours' => 144,
             ])
             ->assertSessionHasErrors('cycle');
 
@@ -414,7 +422,7 @@ class AcademicStructureTest extends TestCase
             ->post(route('coordination.academic.curricula.fields.store', $curriculum->id), [
                 'key' => 'horas_laboratorio',
                 'label' => 'LAB',
-                'type' => 'integer',
+                'type' => 'entero',
                 'system_key' => null,
                 'position' => 6,
                 'visible_on_card' => true,
@@ -431,7 +439,7 @@ class AcademicStructureTest extends TestCase
             ['code' => 'FLEX-201', 'name' => 'Proyecto flexible', 'cycle' => 2, 'position' => 1],
         ] as $subjectData) {
             $this->actingAsCoordinator()
-                ->post(route('coordination.academic.store', 'subject'), [
+                ->post(route('coordination.academic.store', 'asignatura'), [
                     'curriculum_id' => $curriculum->id,
                     ...$subjectData,
                     'organization_unit' => 'Unidad profesional',
@@ -451,14 +459,14 @@ class AcademicStructureTest extends TestCase
             ->post(route('coordination.academic.curricula.requirements.store', $curriculum->id), [
                 'requirement_id' => $first->id,
                 'subject_id' => $second->id,
-                'type' => 'prerequisite',
+                'type' => 'prerrequisito',
             ])
             ->assertRedirect();
         $this->actingAsCoordinator()
             ->post(route('coordination.academic.curricula.requirements.store', $curriculum->id), [
                 'requirement_id' => $second->id,
                 'subject_id' => $first->id,
-                'type' => 'prerequisite',
+                'type' => 'prerrequisito',
             ])
             ->assertSessionHasErrors('requirement_id');
 
@@ -482,8 +490,8 @@ class AcademicStructureTest extends TestCase
                 ->where('fieldTotals.5.label', 'LAB')
                 ->where('fieldTotals.5.value', 48));
         $this->assertDatabaseHas('eventos_auditoria', [
-            'accion' => 'academic.subject_requirement.created',
-            'tipo_recurso' => 'subject_requirement',
+            'accion' => 'academico.requisito_asignatura.creacion',
+            'tipo_recurso' => 'requisito_asignatura',
         ]);
 
         $this->actingAsCoordinator()
@@ -513,7 +521,7 @@ class AcademicStructureTest extends TestCase
             'codigo' => 'MALLA-BUILDER-AJENA',
             'numero_version' => 1,
             'numero_ciclos' => 6,
-            'estado' => 'active',
+            'estado' => 'activa',
             'es_actual' => true,
         ]);
 
@@ -544,7 +552,7 @@ class AcademicStructureTest extends TestCase
 
         $this->actingAsCoordinator()
             ->patch(route('coordination.academic.update', [
-                'entity' => 'curriculum',
+                'entity' => 'malla',
                 'record' => $curriculum->id,
             ]), [
                 'code' => 'MALLA-SW-EDITADA',
@@ -554,7 +562,7 @@ class AcademicStructureTest extends TestCase
 
         $this->actingAsCoordinator()
             ->patch(route('coordination.academic.update', [
-                'entity' => 'subject',
+                'entity' => 'asignatura',
                 'record' => $subject->id,
             ]), [
                 'code' => 'SW-711',
@@ -582,11 +590,11 @@ class AcademicStructureTest extends TestCase
             'horas_totales' => 144,
         ]);
         $this->assertDatabaseHas('eventos_auditoria', [
-            'accion' => 'academic.curriculum.updated',
+            'accion' => 'academico.malla.actualizacion',
             'recurso_id' => $curriculum->id,
         ]);
         $this->assertDatabaseHas('eventos_auditoria', [
-            'accion' => 'academic.subject.updated',
+            'accion' => 'academico.asignatura.actualizacion',
             'recurso_id' => $subject->id,
         ]);
     }
@@ -596,7 +604,7 @@ class AcademicStructureTest extends TestCase
         $offering = CourseOffering::query()->firstOrFail();
         $parallel = Parallel::query()->firstOrFail();
         $assignment = TeacherAssignment::query()->firstOrFail();
-        $teacher = User::query()->where('email', 'docente@silabos.test')->firstOrFail();
+        $teacher = User::query()->where('correo_electronico', 'docente@silabos.test')->firstOrFail();
         $campus = Campus::query()->create([
             'codigo_institucional' => 'NORTE',
             'nombre' => 'Campus Norte',
@@ -605,7 +613,7 @@ class AcademicStructureTest extends TestCase
 
         $this->actingAsCoordinator()
             ->patch(route('coordination.academic.update', [
-                'entity' => 'offering',
+                'entity' => 'oferta',
                 'record' => $offering->id,
             ]), [
                 'period_id' => $offering->periodo_academico_id,
@@ -617,7 +625,7 @@ class AcademicStructureTest extends TestCase
 
         $this->actingAsCoordinator()
             ->patch(route('coordination.academic.update', [
-                'entity' => 'parallel',
+                'entity' => 'paralelo',
                 'record' => $parallel->id,
             ]), [
                 'offering_id' => $offering->id,
@@ -627,7 +635,7 @@ class AcademicStructureTest extends TestCase
 
         $this->actingAsCoordinator()
             ->patch(route('coordination.academic.update', [
-                'entity' => 'teacher_assignment',
+                'entity' => 'asignacion_docente',
                 'record' => $assignment->id,
             ]), [
                 'user_id' => $teacher->id,
@@ -642,9 +650,9 @@ class AcademicStructureTest extends TestCase
         $this->assertSame('2026-12-31', $assignment->fresh()->vigente_hasta?->toDateString());
         $this->assertSame(3, AuditEvent::query()
             ->whereIn('accion', [
-                'academic.offering.updated',
-                'academic.parallel.updated',
-                'academic.teacher_assignment.updated',
+                'academico.oferta.actualizacion',
+                'academico.paralelo.actualizacion',
+                'academico.asignacion_docente.actualizacion',
             ])
             ->count());
     }
@@ -656,7 +664,7 @@ class AcademicStructureTest extends TestCase
 
         $this->actingAsCoordinator()
             ->patch(route('coordination.academic.update', [
-                'entity' => 'curriculum',
+                'entity' => 'malla',
                 'record' => $curriculum->id,
             ]), [
                 'code' => 'MALLA-REESCRITA',
@@ -665,7 +673,7 @@ class AcademicStructureTest extends TestCase
 
         $this->actingAsCoordinator()
             ->patch(route('coordination.academic.update', [
-                'entity' => 'subject',
+                'entity' => 'asignatura',
                 'record' => $subject->id,
             ]), [
                 'code' => $subject->codigo_institucional,
@@ -690,14 +698,14 @@ class AcademicStructureTest extends TestCase
 
         $this->actingAsCoordinator()
             ->patch(route('coordination.academic.status.update', [
-                'entity' => 'curriculum',
+                'entity' => 'malla',
                 'record' => $curriculum->id,
             ]), ['active' => false])
             ->assertRedirect();
-        $this->assertSame('inactive', $curriculum->fresh()->estado);
+        $this->assertSame('inactiva', $curriculum->fresh()->estado);
 
         $this->actingAsCoordinator()
-            ->post(route('coordination.academic.store', 'subject'), [
+            ->post(route('coordination.academic.store', 'asignatura'), [
                 'curriculum_id' => $curriculum->id,
                 'code' => 'SW-INACTIVA',
                 'name' => 'Materia editable sin proceso',
@@ -713,7 +721,7 @@ class AcademicStructureTest extends TestCase
         $reference = CourseOffering::query()->firstOrFail();
 
         $this->actingAsCoordinator()
-            ->post(route('coordination.academic.store', 'offering'), [
+            ->post(route('coordination.academic.store', 'oferta'), [
                 'period_id' => $reference->periodo_academico_id,
                 'subject_id' => $subject->id,
                 'campus_id' => $reference->campus_id,
@@ -723,11 +731,11 @@ class AcademicStructureTest extends TestCase
 
         $this->actingAsCoordinator()
             ->patch(route('coordination.academic.status.update', [
-                'entity' => 'curriculum',
+                'entity' => 'malla',
                 'record' => $curriculum->id,
             ]), ['active' => true])
             ->assertRedirect();
-        $this->assertSame('active', $curriculum->fresh()->estado);
+        $this->assertSame('activa', $curriculum->fresh()->estado);
     }
 
     public function test_curriculum_delete_is_protected_by_dependencies_and_removes_an_unused_curriculum(): void
@@ -745,7 +753,7 @@ class AcademicStructureTest extends TestCase
             'carrera_id' => $career->id,
             'codigo' => 'MALLA-BORRABLE',
             'numero_version' => 1,
-            'estado' => 'active',
+            'estado' => 'activa',
             'es_actual' => true,
         ]);
 
@@ -756,7 +764,7 @@ class AcademicStructureTest extends TestCase
 
         $this->assertDatabaseMissing('versiones_malla', ['id' => $curriculum->id]);
         $this->assertDatabaseHas('eventos_auditoria', [
-            'accion' => 'academic.curriculum.deleted',
+            'accion' => 'academico.malla.eliminacion',
             'recurso_id' => $curriculum->id,
         ]);
 
@@ -789,7 +797,7 @@ class AcademicStructureTest extends TestCase
         $requirement = SubjectRequirement::query()->create([
             'asignatura_id' => $subject->id,
             'requisito_id' => $requirementSubject->id,
-            'tipo' => 'prerequisite',
+            'tipo' => 'prerrequisito',
         ]);
 
         $this->actingAsCoordinator()
@@ -803,7 +811,7 @@ class AcademicStructureTest extends TestCase
         $this->assertDatabaseMissing('asignaturas', ['id' => $subject->id]);
         $this->assertDatabaseMissing('requisitos_asignatura', ['id' => $requirement->id]);
         $this->assertDatabaseHas('eventos_auditoria', [
-            'accion' => 'academic.subject.deleted',
+            'accion' => 'academico.asignatura.eliminacion',
             'recurso_id' => $subject->id,
         ]);
 
@@ -824,7 +832,7 @@ class AcademicStructureTest extends TestCase
             'carrera_id' => $otherCareer->id,
             'codigo' => 'MALLA-OTRA-1',
             'numero_version' => 1,
-            'estado' => 'active',
+            'estado' => 'activa',
             'es_actual' => true,
         ]);
 
@@ -836,7 +844,7 @@ class AcademicStructureTest extends TestCase
             ));
 
         $this->actingAsCoordinator()
-            ->post(route('coordination.academic.store', 'subject'), [
+            ->post(route('coordination.academic.store', 'asignatura'), [
                 'curriculum_id' => $otherCurriculum->id,
                 'code' => 'OTR-101',
                 'name' => 'Materia ajena',
@@ -854,14 +862,14 @@ class AcademicStructureTest extends TestCase
 
         $this->actingAsCoordinator()
             ->patch(route('coordination.academic.status.update', [
-                'entity' => 'subject',
+                'entity' => 'asignatura',
                 'record' => $otherSubject->id,
             ]), ['active' => false])
             ->assertNotFound();
 
         $this->actingAsCoordinator()
             ->patch(route('coordination.academic.update', [
-                'entity' => 'curriculum',
+                'entity' => 'malla',
                 'record' => $otherCurriculum->id,
             ]), [
                 'code' => 'MALLA-AJENA-EDITADA',
@@ -876,7 +884,7 @@ class AcademicStructureTest extends TestCase
         $offering = CourseOffering::query()->firstOrFail();
 
         $this->actingAsCoordinator()
-            ->post(route('coordination.academic.store', 'offering'), [
+            ->post(route('coordination.academic.store', 'oferta'), [
                 'period_id' => $offering->periodo_academico_id,
                 'subject_id' => $offering->asignatura_id,
                 'campus_id' => $offering->campus_id,
@@ -900,7 +908,7 @@ class AcademicStructureTest extends TestCase
         $reference = CourseOffering::query()->firstOrFail();
 
         $this->actingAsCoordinator()
-            ->post(route('coordination.academic.store', 'offering'), [
+            ->post(route('coordination.academic.store', 'oferta'), [
                 'period_id' => $reference->periodo_academico_id,
                 'subject_id' => $subject->id,
                 'campus_id' => $reference->campus_id,
@@ -910,7 +918,7 @@ class AcademicStructureTest extends TestCase
         $offering = CourseOffering::query()->where('asignatura_id', $subject->id)->firstOrFail();
 
         $this->actingAsCoordinator()
-            ->post(route('coordination.academic.store', 'parallel'), [
+            ->post(route('coordination.academic.store', 'paralelo'), [
                 'offering_id' => $offering->id,
                 'code' => 'A',
             ])
@@ -922,14 +930,14 @@ class AcademicStructureTest extends TestCase
             'activo' => true,
         ]);
         $this->assertDatabaseHas('eventos_auditoria', [
-            'accion' => 'academic.parallel.created',
-            'tipo_recurso' => 'parallel',
+            'accion' => 'academico.paralelo.creacion',
+            'tipo_recurso' => 'paralelo',
         ]);
     }
 
     public function test_coordinator_assigns_a_teacher_to_a_parallel_in_their_career(): void
     {
-        $teacher = User::query()->where('email', 'docente@silabos.test')->firstOrFail();
+        $teacher = User::query()->where('correo_electronico', 'docente@silabos.test')->firstOrFail();
         $offering = CourseOffering::query()->firstOrFail();
         $parallel = Parallel::query()->create([
             'oferta_academica_id' => $offering->id,
@@ -938,7 +946,7 @@ class AcademicStructureTest extends TestCase
         ]);
 
         $this->actingAsCoordinator()
-            ->post(route('coordination.academic.store', 'teacher_assignment'), [
+            ->post(route('coordination.academic.store', 'asignacion_docente'), [
                 'user_id' => $teacher->id,
                 'parallel_id' => $parallel->id,
                 'valid_from' => now()->toDateString(),
@@ -951,8 +959,8 @@ class AcademicStructureTest extends TestCase
             'activo' => true,
         ]);
         $this->assertDatabaseHas('eventos_auditoria', [
-            'accion' => 'academic.teacher_assignment.created',
-            'tipo_recurso' => 'teacher_assignment',
+            'accion' => 'academico.asignacion_docente.creacion',
+            'tipo_recurso' => 'asignacion_docente',
         ]);
     }
 
@@ -965,10 +973,10 @@ class AcademicStructureTest extends TestCase
         $this->actingAsCoordinator()
             ->get(route('coordination.academic.teacher-assignments.index'))
             ->assertOk()
-            ->assertDontSee($otherTeacher->email);
+            ->assertDontSee($otherTeacher->correo_electronico);
 
         $this->actingAsCoordinator()
-            ->post(route('coordination.academic.store', 'teacher_assignment'), [
+            ->post(route('coordination.academic.store', 'asignacion_docente'), [
                 'user_id' => $otherTeacher->id,
                 'parallel_id' => $parallel->id,
                 'valid_from' => now()->toDateString(),
@@ -1021,7 +1029,7 @@ class AcademicStructureTest extends TestCase
 
         $this->assertTrue($campus->fresh()->activo);
         $this->assertSame(2, AuditEvent::query()
-            ->where('accion', 'academic.campus.status_changed')
+            ->where('accion', 'academico.campus.cambio_estado')
             ->where('recurso_id', $campus->id)
             ->count());
     }
@@ -1040,7 +1048,7 @@ class AcademicStructureTest extends TestCase
         $period = AcademicPeriod::query()->firstOrFail();
 
         $this->actingAsAdministrator()
-            ->patch(route('admin.academic.update', ['entity' => 'faculty', 'record' => $faculty->id]), [
+            ->patch(route('admin.academic.update', ['entity' => 'facultad', 'record' => $faculty->id]), [
                 'code' => 'FICAYA-ACT',
                 'name' => 'Facultad de Ingeniería actualizada',
             ])
@@ -1048,7 +1056,7 @@ class AcademicStructureTest extends TestCase
             ->assertSessionHas('success');
 
         $this->actingAsAdministrator()
-            ->patch(route('admin.academic.update', ['entity' => 'career', 'record' => $career->id]), [
+            ->patch(route('admin.academic.update', ['entity' => 'carrera', 'record' => $career->id]), [
                 'faculty_id' => $destinationFaculty->id,
                 'code' => 'SOFTWARE-ACT',
                 'name' => 'Ingeniería de Software',
@@ -1064,14 +1072,14 @@ class AcademicStructureTest extends TestCase
             ->assertRedirect();
 
         $this->actingAsAdministrator()
-            ->patch(route('admin.academic.update', ['entity' => 'modality', 'record' => $modality->id]), [
+            ->patch(route('admin.academic.update', ['entity' => 'modalidad', 'record' => $modality->id]), [
                 'code' => 'presencial-act',
                 'name' => 'Presencial actualizada',
             ])
             ->assertRedirect();
 
         $this->actingAsAdministrator()
-            ->patch(route('admin.academic.update', ['entity' => 'period', 'record' => $period->id]), [
+            ->patch(route('admin.academic.update', ['entity' => 'periodo', 'record' => $period->id]), [
                 'code' => '2026-ACT',
                 'name' => 'Periodo actualizado',
                 'starts_on' => '2026-10-01',
@@ -1110,16 +1118,16 @@ class AcademicStructureTest extends TestCase
 
         $this->assertSame(5, AuditEvent::query()
             ->whereIn('accion', [
-                'academic.faculty.updated',
-                'academic.career.updated',
-                'academic.campus.updated',
-                'academic.modality.updated',
-                'academic.period.updated',
+                'academico.facultad.actualizacion',
+                'academico.carrera.actualizacion',
+                'academico.campus.actualizacion',
+                'academico.modalidad.actualizacion',
+                'academico.periodo.actualizacion',
             ])
             ->count());
 
         $careerAudit = AuditEvent::query()
-            ->where('accion', 'academic.career.updated')
+            ->where('accion', 'academico.carrera.actualizacion')
             ->firstOrFail();
         $this->assertSame('Software', $careerAudit->metadatos['before_name'] ?? null);
         $this->assertSame('Ingeniería de Software', $careerAudit->metadatos['after_name'] ?? null);
@@ -1127,19 +1135,19 @@ class AcademicStructureTest extends TestCase
         $this->assertSame('Facultad de destino', $careerAudit->metadatos['after_faculty'] ?? null);
 
         $this->actingAsAdministrator()
-            ->patch(route('admin.academic.update', ['entity' => 'career', 'record' => $career->id]), [
+            ->patch(route('admin.academic.update', ['entity' => 'carrera', 'record' => $career->id]), [
                 'faculty_id' => $destinationFaculty->id,
                 'code' => 'SOFTWARE-ACT',
                 'name' => 'Ingeniería de Software',
             ])
             ->assertRedirect();
         $this->assertSame(1, AuditEvent::query()
-            ->where('accion', 'academic.career.updated')
+            ->where('accion', 'academico.carrera.actualizacion')
             ->where('recurso_id', $career->id)
             ->count());
 
         $this->actingAsAdministrator()
-            ->get(route('admin.audit.index', ['action' => 'academic.career.updated']))
+            ->get(route('admin.audit.index', ['action' => 'academico.carrera.actualizacion']))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Admin/Operations/Audit')
@@ -1164,14 +1172,14 @@ class AcademicStructureTest extends TestCase
         $period = AcademicPeriod::query()->firstOrFail();
 
         $this->actingAsAdministrator()
-            ->patch(route('admin.academic.update', ['entity' => 'faculty', 'record' => $faculty->id]), [
+            ->patch(route('admin.academic.update', ['entity' => 'facultad', 'record' => $faculty->id]), [
                 'code' => $archivedFaculty->codigo_institucional,
                 'name' => 'Código repetido',
             ])
             ->assertSessionHasErrors('code');
 
         $this->actingAsAdministrator()
-            ->patch(route('admin.academic.update', ['entity' => 'career', 'record' => $career->id]), [
+            ->patch(route('admin.academic.update', ['entity' => 'carrera', 'record' => $career->id]), [
                 'faculty_id' => $archivedFaculty->id,
                 'code' => $career->codigo_institucional,
                 'name' => $career->nombre,
@@ -1179,7 +1187,7 @@ class AcademicStructureTest extends TestCase
             ->assertSessionHasErrors('faculty_id');
 
         $this->actingAsAdministrator()
-            ->patch(route('admin.academic.update', ['entity' => 'period', 'record' => $period->id]), [
+            ->patch(route('admin.academic.update', ['entity' => 'periodo', 'record' => $period->id]), [
                 'code' => $period->codigo,
                 'name' => $period->nombre,
                 'starts_on' => '2027-02-01',
@@ -1196,7 +1204,7 @@ class AcademicStructureTest extends TestCase
         $faculty = Faculty::query()->where('codigo_institucional', 'FICAYA')->firstOrFail();
 
         $this->actingAsCoordinator()
-            ->patch(route('admin.academic.update', ['entity' => 'faculty', 'record' => $faculty->id]), [
+            ->patch(route('admin.academic.update', ['entity' => 'facultad', 'record' => $faculty->id]), [
                 'code' => 'NO-AUTORIZADO',
                 'name' => 'Cambio no autorizado',
             ])
@@ -1204,7 +1212,7 @@ class AcademicStructureTest extends TestCase
 
         $this->assertSame('FICAYA', $faculty->fresh()->codigo_institucional);
         $this->assertDatabaseMissing('eventos_auditoria', [
-            'accion' => 'academic.faculty.updated',
+            'accion' => 'academico.facultad.actualizacion',
             'recurso_id' => $faculty->id,
         ]);
     }

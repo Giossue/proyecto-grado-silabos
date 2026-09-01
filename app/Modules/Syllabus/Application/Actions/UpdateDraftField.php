@@ -23,23 +23,23 @@ class UpdateDraftField
         private readonly RecordAuditEvent $audit,
     ) {}
 
-    /** @param array{lock_version: int, value?: mixed, rows?: list<array{id?: string|null, data: array<string, mixed>}>} $data */
+    /** @param array{version_bloqueo: int, value?: mixed, rows?: list<array{id?: string|null, data: array<string, mixed>}>} $data */
     public function execute(Syllabus $syllabus, FieldDefinition $field, array $data, User $actor, Request $request): Syllabus
     {
         return DB::transaction(function () use ($actor, $data, $field, $request, $syllabus): Syllabus {
             $locked = Syllabus::query()->lockForUpdate()->findOrFail($syllabus->id);
-            if ($locked->lock_version !== $data['lock_version']) {
-                throw new DraftConflictException($locked->lock_version);
+            if ($locked->version_bloqueo !== $data['version_bloqueo']) {
+                throw new DraftConflictException($locked->version_bloqueo);
             }
-            if (! in_array($locked->estado, ['draft', 'correction_requested'], true)) {
+            if (! in_array($locked->estado, ['borrador', 'correccion_solicitada'], true)) {
                 throw ValidationException::withMessages(['syllabus' => 'El expediente no está en estado editable.']);
             }
             if ($field->version_plantilla_id !== $locked->version_plantilla_id
-                || $field->heredado || ! $field->editable_docente || $field->tipo === 'calculation') {
+                || $field->heredado || ! $field->editable_docente || $field->tipo === 'calculo') {
                 throw ValidationException::withMessages(['field' => 'Este campo institucional no puede ser editado por el docente.']);
             }
 
-            if ($field->tipo === 'repeatable') {
+            if ($field->tipo === 'repetible') {
                 $this->syncRows($locked, $field, $data['rows'] ?? []);
             } else {
                 FieldValue::query()->updateOrCreate([
@@ -50,7 +50,7 @@ class UpdateDraftField
 
             $result = $this->completeness->calculate($locked);
             $locked->update([
-                'lock_version' => $locked->lock_version + 1,
+                'version_bloqueo' => $locked->version_bloqueo + 1,
                 'porcentaje_completitud' => $result['percentage'],
                 'guardado_en' => now(),
             ]);
@@ -58,11 +58,11 @@ class UpdateDraftField
             $this->audit->execute(
                 actorId: $actor->id,
                 roleAssignmentId: $activeRole?->id,
-                action: 'syllabus.field_saved',
-                resourceType: 'syllabus',
+                action: 'silabo.campo_guardado',
+                resourceType: 'silabo',
                 resourceId: $locked->id,
-                result: 'success',
-                metadata: ['field_key' => $field->clave, 'lock_version' => $locked->lock_version],
+                result: 'exito',
+                metadata: ['field_key' => $field->clave, 'lock_version' => $locked->version_bloqueo],
                 correlationId: $request->attributes->getString('correlation_id') ?: null,
             );
 

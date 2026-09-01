@@ -28,7 +28,7 @@ class RespondToObservation
     ): ObservationResponse {
         return DB::transaction(function () use ($actor, $content, $observation, $request, $syllabus): ObservationResponse {
             $locked = Syllabus::query()->lockForUpdate()->findOrFail($syllabus->id);
-            if ($locked->estado !== 'correction_requested' || ! $this->wasRequested($locked, $observation)) {
+            if ($locked->estado !== 'correccion_solicitada' || ! $this->wasRequested($locked, $observation)) {
                 throw ValidationException::withMessages([
                     'observation' => 'La observación no forma parte de la corrección habilitada.',
                 ]);
@@ -56,18 +56,18 @@ class RespondToObservation
                     'respondido_en' => now(),
                 ]);
             }
-            if ($observation->estado !== 'responded') {
-                $observation->update(['estado' => 'responded']);
+            if ($observation->estado !== 'respondida') {
+                $observation->update(['estado' => 'respondida']);
             }
 
             $activeRole = $this->roles->resolve($request);
             $this->audit->execute(
                 actorId: $actor->id,
                 roleAssignmentId: $activeRole?->id,
-                action: 'syllabus.observation_responded',
-                resourceType: 'observation_response',
+                action: 'silabo.observacion_respondida',
+                resourceType: 'respuesta_observacion',
                 resourceId: $response->id,
-                result: 'success',
+                result: 'exito',
                 metadata: ['observation_id' => $observation->id],
                 correlationId: $request->attributes->getString('correlation_id') ?: null,
             );

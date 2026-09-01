@@ -37,7 +37,7 @@ class DashboardMetricsTest extends TestCase
         ];
 
         foreach ($esperado as $correo => $claves) {
-            $user = User::query()->where('email', $correo)->firstOrFail();
+            $user = User::query()->where('correo_electronico', $correo)->firstOrFail();
             $context = $user->roleAssignments()->firstOrFail();
 
             $this->actingAs($user)
@@ -55,7 +55,7 @@ class DashboardMetricsTest extends TestCase
 
     public function test_el_coordinador_no_cuenta_convocatorias_de_otra_carrera(): void
     {
-        $coordinator = User::query()->where('email', 'coordinador@silabos.test')->firstOrFail();
+        $coordinator = User::query()->where('correo_electronico', 'coordinador@silabos.test')->firstOrFail();
         $propia = $coordinator->roleAssignments()->firstOrFail()->carrera_id;
 
         $this->abrirConvocatoria($propia, 'Convocatoria propia');
@@ -75,7 +75,7 @@ class DashboardMetricsTest extends TestCase
 
     public function test_el_docente_solo_cuenta_los_silabos_en_los_que_colabora(): void
     {
-        $teacher = User::query()->where('email', 'docente@silabos.test')->firstOrFail();
+        $teacher = User::query()->where('correo_electronico', 'docente@silabos.test')->firstOrFail();
         $career = $teacher->roleAssignments()->firstOrFail()->carrera_id;
         $convocation = $this->abrirConvocatoria($career, 'Convocatoria con expedientes');
 
@@ -106,7 +106,7 @@ class DashboardMetricsTest extends TestCase
             'nombre' => $nombre,
             'estado' => 'open',
             'modo_agrupacion' => 'per_offering',
-            'creado_por' => User::query()->where('email', 'coordinador@silabos.test')->firstOrFail()->id,
+            'creado_por' => User::query()->where('correo_electronico', 'coordinador@silabos.test')->firstOrFail()->id,
         ]);
     }
 

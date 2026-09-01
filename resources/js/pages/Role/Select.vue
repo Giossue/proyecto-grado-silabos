@@ -20,7 +20,7 @@ import { Spinner } from '@/components/ui/spinner';
 
 const page = usePage();
 const hasCoordinatorScope = computed(() =>
-    page.props.auth.roles.some((role) => role.role === 'coordinator'),
+    page.props.auth.roles.some((role) => role.role === 'coordinador'),
 );
 const selectionDescription = computed(() =>
     hasCoordinatorScope.value
@@ -33,7 +33,7 @@ const actionLabel = (role: (typeof page.props.auth.roles)[number]): string => {
         return 'Continuar aquí';
     }
 
-    return role.role === 'coordinator'
+    return role.role === 'coordinador'
         ? 'Entrar a esta carrera'
         : `Entrar como ${role.role_name}`;
 };
@@ -43,7 +43,7 @@ const actionLabel = (role: (typeof page.props.auth.roles)[number]): string => {
     <Head title="Seleccionar ámbito de trabajo" />
 
     <PageFrame
-        :title="`Bienvenida, ${page.props.auth.user.name}`"
+        :title="`Bienvenida, ${page.props.auth.user.nombre}`"
         :description="selectionDescription"
         size="wide"
     >
@@ -66,7 +66,7 @@ const actionLabel = (role: (typeof page.props.auth.roles)[number]): string => {
                     </CardTitle>
                     <CardDescription>
                         {{
-                            role.role === 'coordinator'
+                            role.role === 'coordinador'
                                 ? `Coordinación de ${role.career_name}`
                                 : role.career_name
                                   ? `${role.role_name} · ${role.career_name}`

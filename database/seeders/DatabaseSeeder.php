@@ -127,13 +127,13 @@ class DatabaseSeeder extends Seeder
                 RoleCode::Teacher->value => ['Docente Demo', 'docente@silabos.test'],
             ])->mapWithKeys(function (array $data, string $code): array {
                 $user = User::query()->updateOrCreate(
-                    ['email' => $data[1]],
+                    ['correo_electronico' => $data[1]],
                     [
-                        'name' => $data[0],
-                        'password' => Hash::make('Demo-2026!'),
-                        'email_verified_at' => now(),
-                        'active' => true,
-                        'deactivated_at' => null,
+                        'nombre' => $data[0],
+                        'contrasena' => Hash::make('Demo-2026!'),
+                        'correo_verificado_en' => now(),
+                        'activo' => true,
+                        'desactivado_en' => null,
                     ],
                 );
 

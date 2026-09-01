@@ -36,12 +36,12 @@ Estas no reemplazan los PV de la SRS:
 | DT-03 | Motor DOCX/PDF | Puerto + fake; selección por spike con PV-07 | I-05 |
 | DT-04 | Proveedor de archivos | Laravel Filesystem privado | Antes de staging |
 | DT-05 | Herramienta de análisis estático/cobertura | Evaluar en I-00 | I-00 |
-| DT-06 | Estrategia exacta de concurrencia del editor | `lock_version` propuesto; probar colaboración | Antes de I-03 |
-| DT-07 | Estado inicial después de reapertura | `correction_requested` provisional según ADR-0005; probar con usuarios | Aceptación I-04/I-08 |
+| DT-06 | Estrategia exacta de concurrencia del editor | `version_bloqueo` propuesto; probar colaboración | Antes de I-03 |
+| DT-07 | Estado inicial después de reapertura | `correccion_solicitada` provisional según ADR-0005; probar con usuarios | Aceptación I-04/I-08 |
 | DT-08 | Destino del borrador sin enviar cuando cambia el docente | Se descarta; el nuevo empieza limpio | Cerrada el 2026-08-26 |
 | DT-09 | Coordinación encargada como figura propia | Se construye, con duración y sustento documental | Cerrada el 2026-08-26 |
 | DT-10 | Autoaprobación del sílabo por quien lo redactó | Permitida, marcada de forma distinguible en auditoría | Cerrada el 2026-08-26 |
-| DT-11 | Destino del modo `per_offering` tras cerrar PV-06 | Conservado; `per_parallel` es el valor por defecto | Cerrada el 2026-08-26 en I-15 |
+| DT-11 | Destino del modo `por_oferta` tras cerrar PV-06 | Conservado; `por_paralelo` es el valor por defecto | Cerrada el 2026-08-26 en I-15 |
 
 ## Entrevistas pendientes
 
@@ -94,8 +94,8 @@ El conflicto queda reservado a la referencia externa duplicada y a la ambigüeda
 
 Cerrada el 2026-08-26 en la consulta registrada en
 `references/entrevista-2026-08-26-hallazgos.md`. La regla es un sílabo por paralelo,
-aunque el contenido sea idéntico. El modo `per_parallel` deja de ser una opción y pasa a
-ser el comportamiento esperado; queda por decidir si `per_offering` se retira del dominio
+aunque el contenido sea idéntico. El modo `por_paralelo` deja de ser una opción y pasa a
+ser el comportamiento esperado; queda por decidir si `por_oferta` se retira del dominio
 o se conserva como excepción autorizada.
 
 ### Riesgo asumido

@@ -17,7 +17,7 @@ use Illuminate\Database\Eloquent\Relations\HasManyThrough;
  * @property string $id
  * @property string $convocatoria_id
  * @property string $estado
- * @property int $lock_version
+ * @property int $version_bloqueo
  * @property string $porcentaje_completitud
  * @property int $unresolved_observations_count
  * @property array<string, mixed> $contexto_academico
@@ -30,19 +30,23 @@ class Syllabus extends Model
 {
     use HasUuids;
 
+    public const CREATED_AT = 'creado_en';
+
+    public const UPDATED_AT = 'actualizado_en';
+
     protected $table = 'silabos';
 
     /** @var list<string> */
     protected $fillable = [
         'convocatoria_id', 'asignatura_id', 'version_malla_id', 'version_plantilla_id', 'estado',
-        'contexto_academico', 'lock_version', 'porcentaje_completitud', 'iniciado_en', 'guardado_en',
+        'contexto_academico', 'version_bloqueo', 'porcentaje_completitud', 'iniciado_en', 'guardado_en',
     ];
 
     /** @return array<string, string> */
     protected function casts(): array
     {
         return [
-            'lock_version' => 'integer',
+            'version_bloqueo' => 'integer',
             'contexto_academico' => 'array',
             'porcentaje_completitud' => 'decimal:2',
             'iniciado_en' => 'immutable_datetime',

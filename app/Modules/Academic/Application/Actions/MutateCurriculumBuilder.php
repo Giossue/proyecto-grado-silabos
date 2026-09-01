@@ -49,7 +49,7 @@ class MutateCurriculumBuilder
                 'codigo' => $data['code'],
                 'numero_ciclos' => $cycleCount,
             ]);
-            $this->record($actor, $role, $request, 'academic.curriculum.configuration_updated', 'curriculum', $curriculum->id, [
+            $this->record($actor, $role, $request, 'academico.malla.configuracion_actualizada', 'malla', $curriculum->id, [
                 'before_code' => $beforeCode,
                 'after_code' => $curriculum->codigo,
                 'before_cycle_count' => $beforeCycleCount,
@@ -66,12 +66,12 @@ class MutateCurriculumBuilder
         return DB::transaction(function () use ($actor, $curriculumId, $data, $request): CurriculumFieldDefinition {
             [$role, $curriculum] = $this->currentCurriculum($curriculumId, $request);
             if (($data['system_key'] ?? null) !== null
-                && ! in_array($data['type'], ['number', 'integer'], true)) {
+                && ! in_array($data['type'], ['numero', 'entero'], true)) {
                 throw ValidationException::withMessages([
                     'type' => 'Los datos académicos estructurados de esta malla son numéricos.',
                 ]);
             }
-            if ($data['totalizable'] && ! in_array($data['type'], ['number', 'integer'], true)) {
+            if ($data['totalizable'] && ! in_array($data['type'], ['numero', 'entero'], true)) {
                 throw ValidationException::withMessages([
                     'totalizable' => 'Solo los campos numéricos pueden incluirse en los totales.',
                 ]);
@@ -105,7 +105,7 @@ class MutateCurriculumBuilder
                 'activo' => true,
             ]);
             $field->save();
-            $this->record($actor, $role, $request, 'academic.curriculum_field.created', 'curriculum_field', $field->id, [
+            $this->record($actor, $role, $request, 'academico.campo_malla.creacion', 'campo_malla', $field->id, [
                 'curriculum_id' => $curriculum->id,
                 'key' => $field->clave,
             ]);
@@ -128,7 +128,7 @@ class MutateCurriculumBuilder
                 ->findOrFail($fieldId);
             $metadata = ['curriculum_id' => $curriculum->id, 'key' => $field->clave];
             $field->update(['activo' => false]);
-            $this->record($actor, $role, $request, 'academic.curriculum_field.deleted', 'curriculum_field', $fieldId, $metadata);
+            $this->record($actor, $role, $request, 'academico.campo_malla.eliminacion', 'campo_malla', $fieldId, $metadata);
         });
     }
 
@@ -149,7 +149,7 @@ class MutateCurriculumBuilder
                 ]);
             }
 
-            if ($data['type'] === 'prerequisite' && $this->createsCycle($curriculum->id, $data['subject_id'], $data['requirement_id'])) {
+            if ($data['type'] === 'prerrequisito' && $this->createsCycle($curriculum->id, $data['subject_id'], $data['requirement_id'])) {
                 throw ValidationException::withMessages([
                     'requirement_id' => 'La relación produciría un ciclo de prerrequisitos.',
                 ]);
@@ -163,7 +163,7 @@ class MutateCurriculumBuilder
             if (! $requirement->wasRecentlyCreated) {
                 return $requirement;
             }
-            $this->record($actor, $role, $request, 'academic.subject_requirement.created', 'subject_requirement', $requirement->id, [
+            $this->record($actor, $role, $request, 'academico.requisito_asignatura.creacion', 'requisito_asignatura', $requirement->id, [
                 'curriculum_id' => $curriculum->id,
                 'subject_id' => $requirement->asignatura_id,
                 'requirement_id' => $requirement->requisito_id,
@@ -189,7 +189,7 @@ class MutateCurriculumBuilder
                 ->findOrFail($requirementId);
             $metadata = ['curriculum_id' => $curriculum->id, 'type' => $requirement->tipo];
             $requirement->delete();
-            $this->record($actor, $role, $request, 'academic.subject_requirement.deleted', 'subject_requirement', $requirementId, $metadata);
+            $this->record($actor, $role, $request, 'academico.requisito_asignatura.eliminacion', 'requisito_asignatura', $requirementId, $metadata);
         });
     }
 
@@ -224,7 +224,7 @@ class MutateCurriculumBuilder
                 'name' => $subject->nombre,
             ];
             $subject->delete();
-            $this->record($actor, $role, $request, 'academic.subject.deleted', 'subject', $subjectId, $metadata);
+            $this->record($actor, $role, $request, 'academico.asignatura.eliminacion', 'asignatura', $subjectId, $metadata);
         });
     }
 
@@ -248,7 +248,7 @@ class MutateCurriculumBuilder
                 'ciclo' => $data['cycle'],
                 'orden_en_ciclo' => $data['position'],
             ]);
-            $this->record($actor, $role, $request, 'academic.subject.layout_updated', 'subject', $subject->id, [
+            $this->record($actor, $role, $request, 'academico.asignatura.posicion_actualizada', 'asignatura', $subject->id, [
                 'before_cycle' => $beforeCycle,
                 'after_cycle' => $subject->ciclo,
                 'before_position' => $beforePosition,
@@ -281,7 +281,7 @@ class MutateCurriculumBuilder
     private function createsCycle(string $curriculumId, string $subjectId, string $requirementId): bool
     {
         $relations = SubjectRequirement::query()
-            ->where('tipo', 'prerequisite')
+            ->where('tipo', 'prerrequisito')
             ->whereHas('subject', fn ($query) => $query->where('version_malla_id', $curriculumId))
             ->get(['asignatura_id', 'requisito_id'])
             ->groupBy('asignatura_id');
@@ -322,7 +322,7 @@ class MutateCurriculumBuilder
             action: $action,
             resourceType: $resourceType,
             resourceId: $resourceId,
-            result: 'success',
+            result: 'exito',
             metadata: $metadata,
             correlationId: $request->attributes->getString('correlation_id') ?: null,
         );

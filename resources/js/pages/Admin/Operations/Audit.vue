@@ -158,10 +158,10 @@ const detailValue = (value: Detail['value']): string => {
                                             <SelectItem value="all">
                                                 Todos los resultados
                                             </SelectItem>
-                                            <SelectItem value="success">
+                                            <SelectItem value="exito">
                                                 Correcto
                                             </SelectItem>
-                                            <SelectItem value="failed">
+                                            <SelectItem value="fallido">
                                                 Fallido
                                             </SelectItem>
                                         </SelectGroup>
@@ -245,12 +245,12 @@ const detailValue = (value: Detail['value']): string => {
                             <TableCell>
                                 <span
                                     :class="
-                                        event.result === 'failed'
+                                        event.result === 'fallido'
                                             ? 'text-destructive'
                                             : ''
                                     "
                                     >{{
-                                        event.result === 'failed'
+                                        event.result === 'fallido'
                                             ? 'Fallido'
                                             : 'Correcto'
                                     }}</span

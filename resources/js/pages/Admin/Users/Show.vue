@@ -51,8 +51,8 @@ type Assignment = {
 const props = defineProps<{
     managedUser: {
         id: string;
-        name: string;
-        email: string;
+        nombre: string;
+        correo_electronico: string;
         active: boolean;
         assignments: Assignment[];
     };
@@ -86,9 +86,12 @@ const page = usePage();
 </script>
 
 <template>
-    <Head :title="managedUser.name" />
+    <Head :title="managedUser.nombre" />
 
-    <PageFrame :title="managedUser.name" :description="managedUser.email">
+    <PageFrame
+        :title="managedUser.nombre"
+        :description="managedUser.correo_electronico"
+    >
         <template #eyebrow>
             <Button as-child variant="link" class="h-auto px-0">
                 <Link :href="usersIndex()">← Volver a usuarios</Link>
@@ -102,8 +105,8 @@ const page = usePage();
         <template #actions>
             <UserProfileSheet
                 :user-id="managedUser.id"
-                :name="managedUser.name"
-                :email="managedUser.email"
+                :nombre="managedUser.nombre"
+                :correo_electronico="managedUser.correo_electronico"
             />
             <RoleAssignmentSheet
                 :managed-user-id="managedUser.id"

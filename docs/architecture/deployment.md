@@ -57,13 +57,13 @@ La secuencia reproducible y sus límites están en
 
 ## Workers
 
-Los jobs usan colas nombradas: `critical`, `notifications`, `documents`, `ai` e
-`integrations`. El despliegue debe supervisarlas explícitamente; un worker que escuche
-solo `default` no procesa esos trabajos. Para un smoke local puede usarse:
+Los jobs usan colas nombradas: `critica`, `notificaciones`, `documentos`, `ia` e
+`integraciones`. El despliegue debe supervisarlas explícitamente; un worker que escuche
+solo `general` no procesa esos trabajos. Para un smoke local puede usarse:
 
 ```bash
 php artisan queue:work redis \
-  --queue=critical,notifications,documents,ai,integrations,default \
+  --queue=critica,notificaciones,documentos,ia,integraciones,general \
   --timeout=130 --tries=3
 ```
 

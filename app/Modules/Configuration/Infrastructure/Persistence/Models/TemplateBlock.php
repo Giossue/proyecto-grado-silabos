@@ -12,6 +12,10 @@ class TemplateBlock extends Model
 {
     use HasUuids;
 
+    public const CREATED_AT = 'creado_en';
+
+    public const UPDATED_AT = 'actualizado_en';
+
     protected $table = 'bloques_plantilla';
 
     /** @var list<string> */
@@ -64,7 +68,7 @@ class TemplateBlock extends Model
     {
         $version = $this->version()->first();
 
-        if ($version !== null && $version->estado !== 'draft') {
+        if ($version !== null && $version->estado !== 'borrador') {
             throw new LogicException('La estructura publicada es inmutable.');
         }
     }

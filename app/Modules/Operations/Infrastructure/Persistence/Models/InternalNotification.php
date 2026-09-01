@@ -22,6 +22,9 @@ class InternalNotification extends Model
 {
     use HasUuids;
 
+    /** La marca de dominio `creado_en` ya existía: la de Eloquent es `registrado_en`. */
+    public const CREATED_AT = 'registrado_en';
+
     public const UPDATED_AT = null;
 
     protected $table = 'notificaciones_internas';

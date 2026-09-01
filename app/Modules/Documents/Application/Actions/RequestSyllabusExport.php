@@ -60,41 +60,41 @@ class RequestSyllabusExport
                 'silabo_id' => $syllabus->id,
                 'revision_silabo_id' => $lockedRevision->id,
                 'version_plantilla_id' => $syllabus->version_plantilla_id,
-                'version_renderer' => $this->renderer->version(),
-                'locale' => 'es-EC',
+                'version_renderizador' => $this->renderer->version(),
+                'idioma' => 'es-EC',
                 'clave_idempotencia' => $idempotencyKey,
-                'estado' => 'pending',
+                'estado' => 'pendiente',
                 'solicitado_por' => $actor->id,
                 'asignacion_rol_id' => $activeRole?->id,
                 'solicitado_en' => now(),
             ]);
             $correlationId = $request->attributes->getString('correlation_id');
             $execution = JobExecution::query()->create([
-                'type' => 'document.export',
-                'queue_name' => 'documents',
-                'status' => 'pending',
-                'idempotency_key' => "document.export:{$lockedRevision->id}:{$idempotencyKey}",
-                'correlation_id' => Str::isUuid($correlationId) ? $correlationId : (string) Str::uuid(),
-                'resource_type' => 'export_artifact',
-                'resource_id' => $artifact->id,
-                'attempts' => 0,
-                'max_attempts' => 3,
-                'progress' => 0,
+                'tipo' => 'documento.exportacion',
+                'cola' => 'documentos',
+                'estado' => 'pendiente',
+                'clave_idempotencia' => "documento.exportacion:{$lockedRevision->id}:{$idempotencyKey}",
+                'correlacion_id' => Str::isUuid($correlationId) ? $correlationId : (string) Str::uuid(),
+                'tipo_recurso' => 'artefacto_exportacion',
+                'recurso_id' => $artifact->id,
+                'intentos' => 0,
+                'intentos_maximos' => 3,
+                'progreso' => 0,
             ]);
             $artifact->update(['ejecucion_trabajo_id' => $execution->id]);
             GenerateSyllabusExportJob::dispatch($artifact->id)->afterCommit();
             $this->audit->execute(
                 actorId: $actor->id,
                 roleAssignmentId: $activeRole?->id,
-                action: 'document.export_requested',
-                resourceType: 'export_artifact',
+                action: 'documento.exportacion_solicitada',
+                resourceType: 'artefacto_exportacion',
                 resourceId: $artifact->id,
-                result: 'success',
+                result: 'exito',
                 metadata: [
                     'revision_number' => $lockedRevision->numero_revision,
-                    'renderer_version' => $artifact->version_renderer,
+                    'renderer_version' => $artifact->version_renderizador,
                 ],
-                correlationId: $execution->correlation_id,
+                correlationId: $execution->correlacion_id,
             );
 
             return $artifact->refresh();

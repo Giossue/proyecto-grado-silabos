@@ -29,31 +29,31 @@ class DeliverInternalNotificationJob implements ShouldQueue
 
     public function __construct(public readonly string $eventId)
     {
-        $this->onQueue('notifications');
+        $this->onQueue('notificaciones');
     }
 
     public function handle(): void
     {
         $event = DB::transaction(function (): ?OutboxEvent {
             $locked = OutboxEvent::query()->lockForUpdate()->find($this->eventId);
-            if ($locked === null || $locked->estado === 'processed') {
+            if ($locked === null || $locked->estado === 'procesado') {
                 return null;
             }
             $execution = $this->execution($locked, true);
             $locked->update([
-                'estado' => 'processing',
+                'estado' => 'en_proceso',
                 'intentos' => $locked->intentos + 1,
                 'codigo_error' => null,
                 'mensaje_error' => null,
             ]);
             $execution->update([
-                'status' => 'running',
-                'attempts' => $execution->attempts + 1,
-                'progress' => 20,
-                'started_at' => $execution->started_at ?? now(),
-                'finished_at' => null,
-                'error_code' => null,
-                'error_message' => null,
+                'estado' => 'en_ejecucion',
+                'intentos' => $execution->intentos + 1,
+                'progreso' => 20,
+                'iniciado_en' => $execution->iniciado_en ?? now(),
+                'finalizado_en' => null,
+                'codigo_error' => null,
+                'mensaje_error' => null,
             ]);
 
             return $locked->refresh();
@@ -69,12 +69,12 @@ class DeliverInternalNotificationJob implements ShouldQueue
         DB::transaction(function () use ($event, $message, $recipientIds, $syllabus, $title): void {
             $locked = OutboxEvent::query()->lockForUpdate()->findOrFail($event->id);
             $execution = $this->execution($locked, true);
-            if ($locked->estado === 'processed') {
+            if ($locked->estado === 'procesado') {
                 return;
             }
             $activeValues = User::query()
                 ->whereIn('id', $recipientIds)
-                ->where('active', true)
+                ->where('activo', true)
                 ->pluck('id')
                 ->all();
             $activeIds = $this->stringList($activeValues);
@@ -82,31 +82,31 @@ class DeliverInternalNotificationJob implements ShouldQueue
                 InternalNotification::query()->firstOrCreate(
                     [
                         'usuario_id' => $recipientId,
-                        'clave_deduplicacion' => "workflow:{$locked->id}",
+                        'clave_deduplicacion' => "flujo:{$locked->id}",
                     ],
                     [
                         'tipo' => $locked->tipo_evento,
                         'titulo' => $title,
                         'mensaje' => $message,
-                        'tipo_recurso' => 'syllabus',
+                        'tipo_recurso' => 'silabo',
                         'recurso_id' => $syllabus->id,
                         'creado_en' => now(),
                     ],
                 );
             }
             $locked->update([
-                'estado' => 'processed',
+                'estado' => 'procesado',
                 'procesado_en' => now(),
                 'codigo_error' => null,
                 'mensaje_error' => null,
             ]);
             $execution->update([
-                'status' => 'completed',
-                'progress' => 100,
-                'result' => ['event_id' => $locked->id, 'recipient_count' => count($activeIds)],
-                'finished_at' => now(),
-                'error_code' => null,
-                'error_message' => null,
+                'estado' => 'completada',
+                'progreso' => 100,
+                'resultado' => ['event_id' => $locked->id, 'recipient_count' => count($activeIds)],
+                'finalizado_en' => now(),
+                'codigo_error' => null,
+                'mensaje_error' => null,
             ]);
         });
     }
@@ -115,22 +115,22 @@ class DeliverInternalNotificationJob implements ShouldQueue
     {
         DB::transaction(function (): void {
             $event = OutboxEvent::query()->lockForUpdate()->find($this->eventId);
-            if ($event === null || $event->estado === 'processed') {
+            if ($event === null || $event->estado === 'procesado') {
                 return;
             }
             $execution = $this->execution($event, false);
             $event->update([
-                'estado' => 'failed',
-                'codigo_error' => 'internal_notification_failed',
+                'estado' => 'fallido',
+                'codigo_error' => 'notificacion_interna_fallida',
                 'mensaje_error' => 'No fue posible entregar la notificación interna.',
             ]);
             $execution?->update([
-                'status' => 'failed',
-                'progress' => 0,
-                'result' => null,
-                'error_code' => 'internal_notification_failed',
-                'error_message' => 'No fue posible entregar la notificación interna.',
-                'finished_at' => now(),
+                'estado' => 'fallida',
+                'progreso' => 0,
+                'resultado' => null,
+                'codigo_error' => 'notificacion_interna_fallida',
+                'mensaje_error' => 'No fue posible entregar la notificación interna.',
+                'finalizado_en' => now(),
             ]);
         });
     }
@@ -138,23 +138,23 @@ class DeliverInternalNotificationJob implements ShouldQueue
     /** @return array{string, string} */
     private function message(OutboxEvent $event, Syllabus $syllabus): array
     {
-        $revision = $event->payload['revision_number'] ?? null;
+        $revision = $event->contenido['revision_number'] ?? null;
         $revisionLabel = is_int($revision) ? ", revisión {$revision}" : '';
 
         return match ($event->tipo_evento) {
-            'syllabus.submitted', 'syllabus.resubmitted' => [
+            'silabo.enviado', 'silabo.reenviado' => [
                 'Sílabo listo para revisión',
                 "El sílabo {$syllabus->subject->nombre}{$revisionLabel} fue enviado a coordinación.",
             ],
-            'syllabus.correction_requested' => [
+            'silabo.correccion_solicitada' => [
                 'Corrección solicitada',
                 "Coordinación solicitó corregir el sílabo {$syllabus->subject->nombre}{$revisionLabel}.",
             ],
-            'syllabus.approved' => [
+            'silabo.aprobado' => [
                 'Sílabo aprobado',
                 "El sílabo {$syllabus->subject->nombre}{$revisionLabel} fue aprobado.",
             ],
-            'syllabus.reopened' => [
+            'silabo.reabierto' => [
                 'Sílabo reabierto',
                 "El sílabo {$syllabus->subject->nombre}{$revisionLabel} fue reabierto para corrección.",
             ],
@@ -165,7 +165,7 @@ class DeliverInternalNotificationJob implements ShouldQueue
     /** @return list<string> */
     private function recipientIds(OutboxEvent $event): array
     {
-        $values = $event->payload['recipient_ids'] ?? null;
+        $values = $event->contenido['recipient_ids'] ?? null;
         if (! is_array($values)) {
             throw new RuntimeException('El evento no contiene destinatarios válidos.');
         }
@@ -192,8 +192,8 @@ class DeliverInternalNotificationJob implements ShouldQueue
     private function execution(OutboxEvent $event, bool $required): ?JobExecution
     {
         $query = JobExecution::query()
-            ->where('resource_type', 'outbox_event')
-            ->where('resource_id', $event->id)
+            ->where('tipo_recurso', 'evento_saliente')
+            ->where('recurso_id', $event->id)
             ->lockForUpdate();
 
         return $required ? $query->firstOrFail() : $query->first();

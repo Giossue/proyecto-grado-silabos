@@ -15,6 +15,10 @@ class RepeatableRow extends Model
 {
     use HasUuids;
 
+    public const CREATED_AT = 'creado_en';
+
+    public const UPDATED_AT = 'actualizado_en';
+
     protected $table = 'filas_repetibles';
 
     /** @var list<string> */

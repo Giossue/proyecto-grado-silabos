@@ -43,11 +43,11 @@ class FortifyServiceProvider extends ServiceProvider
     {
         Fortify::authenticateUsing(function (Request $request): ?User {
             $user = User::query()
-                ->where('email', Str::lower((string) $request->input('email')))
-                ->where('active', true)
+                ->where('correo_electronico', Str::lower((string) $request->input('correo_electronico')))
+                ->where('activo', true)
                 ->first();
 
-            return $user && Hash::check((string) $request->input('password'), $user->password)
+            return $user && Hash::check((string) $request->input('password'), $user->contrasena)
                 ? $user
                 : null;
         });
@@ -72,7 +72,9 @@ class FortifyServiceProvider extends ServiceProvider
         ]));
 
         Fortify::resetPasswordView(fn (Request $request) => Inertia::render('auth/ResetPassword', [
-            'email' => $request->email,
+            // El enlace del correo trae el parámetro `email`: lo fija la notificación
+            // nativa de Laravel. El formulario ya envía `correo_electronico`.
+            'correo_electronico' => $request->input('email'),
             'token' => $request->route('token'),
             'passwordRules' => Password::defaults()->toPasswordRulesString(),
         ]));

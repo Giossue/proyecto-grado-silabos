@@ -109,9 +109,17 @@ crea la base.
    porque congelan las variables de entorno y un cambio en Dokploy no tendría efecto de
    otro modo—;
 4. espera hasta 60 segundos a que PostgreSQL acepte conexiones;
-5. ejecuta `migrate --force --isolated`, con bloqueo para que dos réplicas no migren a la
-   vez. Se puede desactivar con `RUN_MIGRATIONS=false`;
+5. ejecuta `db:rename-migrations-table --force` (idempotente: renombra la tabla de
+   control `migrations` → `migraciones` de I-28 solo si aún conserva el nombre viejo) y
+   después `migrate --force --isolated`, con bloqueo para que dos réplicas no migren a
+   la vez. Ambos pasos se desactivan con `RUN_MIGRATIONS=false`; en ese caso las
+   migraciones se aplican a mano con el procedimiento de `docs/security/hardening.md`;
 6. crea el enlace de almacenamiento público.
+
+Desde I-28 los nombres de cola son `critica`, `notificaciones`, `documentos`, `ia`,
+`integraciones` y `general`; el worker de `supervisord` ya los escucha y tras aplicar
+las migraciones en remoto hay que redesplegar (o reiniciar el contenedor) para que el
+worker viejo no quede escuchando las colas anteriores.
 
 ## 4. Comprobación
 

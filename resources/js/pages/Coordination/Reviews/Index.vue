@@ -69,9 +69,9 @@ const applyFilters = (): void => {
 
 const stateLabel = (value: string): string =>
     ({
-        in_review: 'En revisión',
-        correction_requested: 'Corrección solicitada',
-        approved: 'Aprobado',
+        en_revision: 'En revisión',
+        correccion_solicitada: 'Corrección solicitada',
+        aprobado: 'Aprobado',
     })[value] ?? 'Estado no disponible';
 </script>
 
@@ -114,15 +114,15 @@ const stateLabel = (value: string): string =>
                                             <SelectItem value="all">
                                                 Todos los estados
                                             </SelectItem>
-                                            <SelectItem value="in_review">
+                                            <SelectItem value="en_revision">
                                                 En revisión
                                             </SelectItem>
                                             <SelectItem
-                                                value="correction_requested"
+                                                value="correccion_solicitada"
                                             >
                                                 Corrección solicitada
                                             </SelectItem>
-                                            <SelectItem value="approved">
+                                            <SelectItem value="aprobado">
                                                 Aprobado
                                             </SelectItem>
                                         </SelectGroup>

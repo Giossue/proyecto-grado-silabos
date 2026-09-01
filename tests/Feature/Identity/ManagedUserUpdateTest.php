@@ -37,34 +37,34 @@ class ManagedUserUpdateTest extends TestCase
         parent::setUp();
         $this->seed(DatabaseSeeder::class);
 
-        $this->administrator = User::query()->where('email', 'admin@silabos.test')->firstOrFail();
+        $this->administrator = User::query()->where('correo_electronico', 'admin@silabos.test')->firstOrFail();
         $this->administratorContext = $this->administrator->roleAssignments()->firstOrFail();
-        $this->coordinator = User::query()->where('email', 'coordinador@silabos.test')->firstOrFail();
+        $this->coordinator = User::query()->where('correo_electronico', 'coordinador@silabos.test')->firstOrFail();
         $this->coordinatorContext = $this->coordinator->roleAssignments()->firstOrFail();
-        $this->teacher = User::query()->where('email', 'docente@silabos.test')->firstOrFail();
+        $this->teacher = User::query()->where('correo_electronico', 'docente@silabos.test')->firstOrFail();
     }
 
     public function test_an_administrator_edits_identity_and_status_in_one_save(): void
     {
         $this->actingAsAdministrator()
             ->patch(route('admin.users.update', $this->teacher), [
-                'name' => 'Docente Corregida',
-                'email' => 'docente.corregida@silabos.test',
+                'nombre' => 'Docente Corregida',
+                'correo_electronico' => 'docente.corregida@silabos.test',
                 'active' => false,
             ])
             ->assertRedirect()
             ->assertSessionHas('success');
 
         $this->teacher->refresh();
-        $this->assertSame('Docente Corregida', $this->teacher->name);
-        $this->assertSame('docente.corregida@silabos.test', $this->teacher->email);
-        $this->assertFalse($this->teacher->active);
+        $this->assertSame('Docente Corregida', $this->teacher->nombre);
+        $this->assertSame('docente.corregida@silabos.test', $this->teacher->correo_electronico);
+        $this->assertFalse($this->teacher->activo);
         $this->assertDatabaseHas('eventos_auditoria', [
-            'accion' => 'user.profile_updated',
+            'accion' => 'usuario.perfil_actualizado',
             'recurso_id' => $this->teacher->id,
         ]);
         $this->assertDatabaseHas('eventos_auditoria', [
-            'accion' => 'user.deactivated',
+            'accion' => 'usuario.desactivado',
             'recurso_id' => $this->teacher->id,
         ]);
     }
@@ -76,8 +76,8 @@ class ManagedUserUpdateTest extends TestCase
 
         $this->actingAsAdministrator()
             ->patch(route('admin.users.update', $this->coordinator), [
-                'name' => $this->coordinator->name,
-                'email' => $this->coordinator->email,
+                'nombre' => $this->coordinator->nombre,
+                'correo_electronico' => $this->coordinator->correo_electronico,
                 'active' => true,
                 'role_code' => RoleCode::Teacher->value,
                 'career_id' => $career->id,
@@ -95,7 +95,7 @@ class ManagedUserUpdateTest extends TestCase
             'activo' => true,
         ]);
         $this->assertDatabaseHas('eventos_auditoria', [
-            'accion' => 'user.role_assigned',
+            'accion' => 'usuario.rol_asignado',
             'recurso_id' => $this->coordinator->id,
         ]);
     }
@@ -106,19 +106,19 @@ class ManagedUserUpdateTest extends TestCase
 
         $this->actingAsAdministrator()
             ->patch(route('admin.users.update', $this->teacher), [
-                'name' => 'Docente Renombrada',
-                'email' => $this->teacher->email,
+                'nombre' => 'Docente Renombrada',
+                'correo_electronico' => $this->teacher->correo_electronico,
                 'active' => true,
             ])
             ->assertRedirect();
 
         $this->teacher->refresh();
-        $this->assertSame('Docente Renombrada', $this->teacher->name);
-        $this->assertTrue($this->teacher->active);
+        $this->assertSame('Docente Renombrada', $this->teacher->nombre);
+        $this->assertTrue($this->teacher->activo);
         $this->assertSame($assignmentsBefore, $this->teacher->roleAssignments()->count());
         // El estado no cambió, así que no se inventa un evento de activación.
         $this->assertDatabaseMissing('eventos_auditoria', [
-            'accion' => 'user.activated',
+            'accion' => 'usuario.activado',
             'recurso_id' => $this->teacher->id,
         ]);
     }
@@ -127,53 +127,53 @@ class ManagedUserUpdateTest extends TestCase
     {
         $this->actingAsAdministrator()
             ->patch(route('admin.users.update', $this->administrator), [
-                'name' => 'Administración Renombrada',
-                'email' => 'admin@silabos.test',
+                'nombre' => 'Administración Renombrada',
+                'correo_electronico' => 'admin@silabos.test',
             ])
             ->assertRedirect();
 
-        $this->assertSame('Administración Renombrada', $this->administrator->fresh()->name);
+        $this->assertSame('Administración Renombrada', $this->administrator->fresh()->nombre);
 
         // Tocar el propio estado o concederse un rol se rechaza completo: la
         // desactivación y los privilegios de la propia cuenta son de otra administración.
         $this->actingAsAdministrator()
             ->patch(route('admin.users.update', $this->administrator), [
-                'name' => 'Administración Renombrada',
-                'email' => 'admin@silabos.test',
+                'nombre' => 'Administración Renombrada',
+                'correo_electronico' => 'admin@silabos.test',
                 'active' => false,
             ])
             ->assertForbidden();
 
         $this->actingAsAdministrator()
             ->patch(route('admin.users.update', $this->administrator), [
-                'name' => 'Administración Renombrada',
-                'email' => 'admin@silabos.test',
+                'nombre' => 'Administración Renombrada',
+                'correo_electronico' => 'admin@silabos.test',
                 'role_code' => RoleCode::Administrator->value,
                 'valid_from' => now()->toDateString(),
             ])
             ->assertForbidden();
 
-        $this->assertTrue($this->administrator->fresh()->active);
+        $this->assertTrue($this->administrator->fresh()->activo);
     }
 
     public function test_a_coordinator_cannot_use_the_unified_edit(): void
     {
         $this->actingAsCoordinator()
             ->patch(route('admin.users.update', $this->teacher), [
-                'name' => 'Intento',
-                'email' => 'intento@silabos.test',
+                'nombre' => 'Intento',
+                'correo_electronico' => 'intento@silabos.test',
             ])
             ->assertForbidden();
 
-        $this->assertSame('Docente Demo', $this->teacher->fresh()->name);
+        $this->assertSame('Docente Demo', $this->teacher->fresh()->nombre);
     }
 
     public function test_a_scoped_role_requires_its_career(): void
     {
         $this->actingAsAdministrator()
             ->patch(route('admin.users.update', $this->teacher), [
-                'name' => $this->teacher->name,
-                'email' => $this->teacher->email,
+                'nombre' => $this->teacher->nombre,
+                'correo_electronico' => $this->teacher->correo_electronico,
                 'active' => true,
                 'role_code' => RoleCode::Teacher->value,
                 'valid_from' => now()->toDateString(),
@@ -192,8 +192,8 @@ class ManagedUserUpdateTest extends TestCase
 
         $this->actingAsAdministrator()
             ->patch(route('admin.users.update', $this->teacher), [
-                'name' => $this->teacher->name,
-                'email' => $this->teacher->email,
+                'nombre' => $this->teacher->nombre,
+                'correo_electronico' => $this->teacher->correo_electronico,
                 'active' => false,
                 'role_code' => RoleCode::Coordinator->value,
                 'career_id' => $career->id,
@@ -204,7 +204,7 @@ class ManagedUserUpdateTest extends TestCase
 
         // El estado se aplica al final: el nombramiento recién concedido queda cerrado y
         // la cuenta desactivada no deja la carrera bloqueada con una coordinación abierta.
-        $this->assertDatabaseHas('usuarios', ['id' => $this->teacher->id, 'active' => false]);
+        $this->assertDatabaseHas('usuarios', ['id' => $this->teacher->id, 'activo' => false]);
         $this->assertDatabaseHas('asignaciones_coordinador', [
             'usuario_id' => $this->teacher->id,
             'carrera_id' => $career->id,

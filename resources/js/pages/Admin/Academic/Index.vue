@@ -35,12 +35,12 @@ const sectionContents: Record<
         title: 'Facultades',
         description:
             'Las facultades de la universidad y cuántas carreras tiene cada una.',
-        entity: 'faculty',
+        entity: 'facultad',
     },
     careers: {
         title: 'Carreras',
         description: 'Las carreras y a qué facultad pertenece cada una.',
-        entity: 'career',
+        entity: 'carrera',
     },
     campuses: {
         title: 'Campus',
@@ -51,13 +51,13 @@ const sectionContents: Record<
         title: 'Modalidades',
         description:
             'Las formas de dictar clase: presencial, en línea y las demás que use la universidad.',
-        entity: 'modality',
+        entity: 'modalidad',
     },
     'academic-periods': {
         title: 'Periodos académicos',
         description:
             'Los periodos lectivos y sus fechas. El ciclo de una materia no va aquí, va en la malla.',
-        entity: 'period',
+        entity: 'periodo',
     },
 };
 

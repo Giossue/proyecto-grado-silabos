@@ -62,7 +62,7 @@ type Observation = {
     requested: boolean;
     can_verify: boolean;
     created_by: string;
-    created_at: string;
+    creado_en: string;
     response: {
         content: string;
         responded_by: string;
@@ -126,17 +126,17 @@ const openCurrentObservations = computed(() =>
     props.observations.filter(
         (observation) =>
             observation.revision_number === props.revision.number &&
-            observation.state === 'open',
+            observation.state === 'abierta',
     ),
 );
 const unresolvedCount = computed(
     () =>
         props.observations.filter(
-            (observation) => observation.state !== 'verified',
+            (observation) => observation.state !== 'verificada',
         ).length,
 );
 const canReviewCurrent = computed(
-    () => props.revision.is_current && props.syllabus.state === 'in_review',
+    () => props.revision.is_current && props.syllabus.state === 'en_revision',
 );
 
 const toggleObservation = (
@@ -176,13 +176,13 @@ const formatValue = (value: JsonValue): string => {
 
 const stateLabel = (value: string): string =>
     ({
-        in_review: 'En revisión',
-        correction_requested: 'Corrección solicitada',
-        approved: 'Aprobado',
+        en_revision: 'En revisión',
+        correccion_solicitada: 'Corrección solicitada',
+        aprobado: 'Aprobado',
     })[value] ?? 'Estado no disponible';
 
 const observationState = (value: string): string =>
-    ({ open: 'Abierta', responded: 'Respondida', verified: 'Verificada' })[
+    ({ abierta: 'Abierta', respondida: 'Respondida', verificada: 'Verificada' })[
         value
     ] ?? 'Estado no disponible';
 </script>
@@ -335,7 +335,7 @@ const observationState = (value: string): string =>
                                 </Badge>
                                 <Badge
                                     :variant="
-                                        observation.state === 'verified'
+                                        observation.state === 'verificada'
                                             ? 'secondary'
                                             : 'destructive'
                                     "
@@ -356,7 +356,7 @@ const observationState = (value: string): string =>
                                 {{ observation.created_by }} ·
                                 {{
                                     new Date(
-                                        observation.created_at,
+                                        observation.creado_en,
                                     ).toLocaleString('es-EC')
                                 }}
                             </p>
@@ -551,7 +551,7 @@ const observationState = (value: string): string =>
                 </Card>
 
                 <Card
-                    v-if="revision.is_current && syllabus.state === 'approved'"
+                    v-if="revision.is_current && syllabus.state === 'aprobado'"
                 >
                     <CardHeader>
                         <CardTitle>Reabrir aprobado</CardTitle>

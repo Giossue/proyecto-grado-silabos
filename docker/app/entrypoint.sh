@@ -32,6 +32,11 @@ until php artisan db:monitor --max=1 >/dev/null 2>&1 || [ "${attempt}" -ge 30 ];
 done
 
 if [ "${RUN_MIGRATIONS:-true}" = "true" ]; then
+    # La tabla de control del migrador se llama `migraciones` desde I-28. El comando es
+    # idempotente: renombra la tabla antigua solo si existe y la nueva no, para que el
+    # migrador no crea que ninguna migración se ha ejecutado.
+    php artisan db:rename-migrations-table --force
+
     # `--isolated` usa un bloqueo para que dos réplicas no migren a la vez.
     php artisan migrate --force --isolated
 fi

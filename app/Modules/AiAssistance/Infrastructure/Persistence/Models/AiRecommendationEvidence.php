@@ -10,6 +10,8 @@ class AiRecommendationEvidence extends Model
 {
     use HasUuids, ImmutableRecord;
 
+    public const CREATED_AT = 'creado_en';
+
     public const UPDATED_AT = null;
 
     protected $table = 'recomendacion_evidencias_ia';

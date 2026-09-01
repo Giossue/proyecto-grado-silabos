@@ -25,11 +25,11 @@ class TransferSyllabusTeacherRequest extends FormRequest
                 'required',
                 'uuid',
                 'different:outgoing_user_id',
-                Rule::exists('usuarios', 'id')->where('active', true),
+                Rule::exists('usuarios', 'id')->where('activo', true),
             ],
             // El relevo lo autoriza coordinación sustentada en un acto, no por su sola
             // voluntad: decisión B3 de la consulta del 2026-08-26.
-            'backing_type' => ['required', Rule::in(['personnel_action', 'resolution', 'official_letter'])],
+            'backing_type' => ['required', Rule::in(['accion_personal', 'resolucion', 'oficio'])],
             'backing_number' => ['required', 'string', 'max:80'],
             'backing_date' => ['required', 'date', 'before_or_equal:today'],
             'idempotency_key' => ['required', 'string', 'max:120'],

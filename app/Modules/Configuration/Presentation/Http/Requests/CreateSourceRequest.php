@@ -19,7 +19,7 @@ class CreateSourceRequest extends FormRequest
         $careerId = app(ActiveRole::class)->resolve($this)?->carrera_id;
 
         return [
-            'name' => [
+            'nombre' => [
                 'required',
                 'string',
                 'max:180',
@@ -33,6 +33,6 @@ class CreateSourceRequest extends FormRequest
     /** @return array<string, string> */
     public function messages(): array
     {
-        return ['name.unique' => 'Ya existe una fuente con ese nombre en la carrera.'];
+        return ['nombre.unique' => 'Ya existe una fuente con ese nombre en la carrera.'];
     }
 }

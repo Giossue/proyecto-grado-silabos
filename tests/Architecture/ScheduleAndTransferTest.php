@@ -53,7 +53,7 @@ it('deja rastro del avance descartado en un relevo', function (): void {
         ->toContain("'discarded_completion'")
         ->toContain('syllabus.teacher_transferred')
         // Un expediente en revisión no se traspasa: el revisor quedaría sin interlocutor.
-        ->toContain("=== 'in_review'")
+        ->toContain("=== 'en_revision'")
         // Cerrar una vigencia y abrir otra por separado deja el sílabo sin responsable.
         ->toContain('DB::transaction');
 });

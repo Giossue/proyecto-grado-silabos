@@ -21,7 +21,7 @@ class DraftCompleteness
             ->pluck('aggregate', 'definicion_campo_id');
 
         $completed = $fields->filter(function (FieldDefinition $field) use ($values, $rowCounts): bool {
-            if ($field->tipo === 'repeatable') {
+            if ($field->tipo === 'repetible') {
                 return (int) ($rowCounts[$field->id] ?? 0) > 0;
             }
 

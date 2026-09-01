@@ -13,11 +13,12 @@ class DispatchPlatformSmoke
     {
         return DB::transaction(function () use ($idempotencyKey, $correlationId): JobExecution {
             $execution = JobExecution::query()->firstOrCreate(
-                ['idempotency_key' => $idempotencyKey],
+                ['clave_idempotencia' => $idempotencyKey],
                 [
-                    'type' => 'platform.smoke',
-                    'status' => 'pending',
-                    'correlation_id' => $correlationId ?? (string) Str::uuid(),
+                    'tipo' => 'plataforma.verificacion',
+                    'cola' => 'critica',
+                    'estado' => 'pendiente',
+                    'correlacion_id' => $correlationId ?? (string) Str::uuid(),
                 ],
             );
 

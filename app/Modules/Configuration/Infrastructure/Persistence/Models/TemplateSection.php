@@ -12,6 +12,10 @@ class TemplateSection extends Model
 {
     use HasUuids;
 
+    public const CREATED_AT = 'creado_en';
+
+    public const UPDATED_AT = 'actualizado_en';
+
     protected $table = 'secciones_plantilla';
 
     /** @var list<string> */
@@ -39,7 +43,7 @@ class TemplateSection extends Model
     {
         $version = $this->version()->first();
 
-        if ($version !== null && $version->estado !== 'draft') {
+        if ($version !== null && $version->estado !== 'borrador') {
             throw new LogicException('La estructura publicada es inmutable.');
         }
     }

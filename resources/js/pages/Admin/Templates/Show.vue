@@ -71,7 +71,7 @@ defineProps<{
 }>();
 
 const stateLabel = (state: string): string =>
-    state === 'published' ? 'Publicada' : 'Borrador';
+    state === 'publicada' ? 'Publicada' : 'Borrador';
 
 defineOptions({
     layout: { breadcrumbs: [{ title: 'Plantillas', href: templatesIndex() }] },
@@ -96,7 +96,7 @@ defineOptions({
         <template #meta>
             <Badge
                 :variant="
-                    templateVersion.state === 'published'
+                    templateVersion.state === 'publicada'
                         ? 'secondary'
                         : 'outline'
                 "
@@ -137,7 +137,7 @@ defineOptions({
                 </DropdownMenuContent>
             </DropdownMenu>
             <Form
-                v-if="templateVersion.state === 'draft'"
+                v-if="templateVersion.state === 'borrador'"
                 v-bind="TemplateController.publish.form(templateVersion.id)"
                 v-slot="{ errors, processing }"
             >
@@ -160,7 +160,7 @@ defineOptions({
         </template>
 
         <TemplateBlockBuilder
-            v-if="templateVersion.state === 'draft'"
+            v-if="templateVersion.state === 'borrador'"
             :template-version-id="templateVersion.id"
             :sections="templateVersion.sections"
             :block-types="blockTypes"

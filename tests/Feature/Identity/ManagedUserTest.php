@@ -27,7 +27,7 @@ class ManagedUserTest extends TestCase
         parent::setUp();
 
         $this->seed(DatabaseSeeder::class);
-        $this->administrator = User::query()->where('email', 'admin@silabos.test')->firstOrFail();
+        $this->administrator = User::query()->where('correo_electronico', 'admin@silabos.test')->firstOrFail();
         $this->administratorContext = $this->administrator->roleAssignments()->firstOrFail();
     }
 
@@ -56,7 +56,7 @@ class ManagedUserTest extends TestCase
 
     public function test_administration_is_denied_without_the_administrator_role(): void
     {
-        $teacher = User::query()->where('email', 'docente@silabos.test')->firstOrFail();
+        $teacher = User::query()->where('correo_electronico', 'docente@silabos.test')->firstOrFail();
 
         $this->actingAs($teacher)
             ->get(route('admin.users.index'))
@@ -65,7 +65,7 @@ class ManagedUserTest extends TestCase
 
     public function test_administrator_sees_complete_role_history_for_a_user(): void
     {
-        $teacher = User::query()->where('email', 'docente@silabos.test')->firstOrFail();
+        $teacher = User::query()->where('correo_electronico', 'docente@silabos.test')->firstOrFail();
         $existing = $teacher->roleAssignments()->firstOrFail();
         $expired = $existing->replicate();
         $expired->id = null;
@@ -111,8 +111,8 @@ class ManagedUserTest extends TestCase
 
         $this->actingAsAdministrator()
             ->post(route('admin.users.store'), [
-                'name' => 'Docente Sin Estrenar',
-                'email' => 'sin.estrenar@silabos.test',
+                'nombre' => 'Docente Sin Estrenar',
+                'correo_electronico' => 'sin.estrenar@silabos.test',
                 'password' => 'Temporal-2026!',
                 'role_code' => RoleCode::Teacher->value,
                 'career_id' => $career->id,
@@ -145,7 +145,7 @@ class ManagedUserTest extends TestCase
 
     public function test_teacher_cannot_access_user_management_even_with_a_valid_context(): void
     {
-        $teacher = User::query()->where('email', 'docente@silabos.test')->firstOrFail();
+        $teacher = User::query()->where('correo_electronico', 'docente@silabos.test')->firstOrFail();
         $teacherContext = $teacher->roleAssignments()->firstOrFail();
 
         $this->actingAs($teacher)
@@ -160,8 +160,8 @@ class ManagedUserTest extends TestCase
 
         $this->actingAsAdministrator()
             ->post(route('admin.users.store'), [
-                'name' => 'Nueva Docente',
-                'email' => 'nueva.docente@silabos.test',
+                'nombre' => 'Nueva Docente',
+                'correo_electronico' => 'nueva.docente@silabos.test',
                 'password' => 'Temporal-2026!',
                 'role_code' => RoleCode::Teacher->value,
                 'career_id' => $career->id,
@@ -169,7 +169,7 @@ class ManagedUserTest extends TestCase
             ->assertRedirect()
             ->assertSessionHas('success');
 
-        $created = User::query()->where('email', 'nueva.docente@silabos.test')->firstOrFail();
+        $created = User::query()->where('correo_electronico', 'nueva.docente@silabos.test')->firstOrFail();
         $teacherRole = Role::query()->where('codigo', RoleCode::Teacher->value)->firstOrFail();
 
         $this->assertDatabaseHas('asignaciones_rol', [
@@ -181,9 +181,9 @@ class ManagedUserTest extends TestCase
         $this->assertDatabaseHas('eventos_auditoria', [
             'actor_usuario_id' => $this->administrator->id,
             'asignacion_rol_id' => $this->administratorContext->id,
-            'accion' => 'user.created',
+            'accion' => 'usuario.creado',
             'recurso_id' => $created->id,
-            'resultado' => 'success',
+            'resultado' => 'exito',
         ]);
     }
 
@@ -191,19 +191,19 @@ class ManagedUserTest extends TestCase
     {
         $this->actingAsAdministrator()
             ->post(route('admin.users.store'), [
-                'name' => 'Docente sin carrera',
-                'email' => 'sin.carrera@silabos.test',
+                'nombre' => 'Docente sin carrera',
+                'correo_electronico' => 'sin.carrera@silabos.test',
                 'password' => 'Temporal-2026!',
                 'role_code' => RoleCode::Teacher->value,
             ])
             ->assertSessionHasErrors('career_id');
 
-        $this->assertDatabaseMissing('usuarios', ['email' => 'sin.carrera@silabos.test']);
+        $this->assertDatabaseMissing('usuarios', ['correo_electronico' => 'sin.carrera@silabos.test']);
     }
 
     public function test_granting_a_coordination_opens_its_mandate(): void
     {
-        $teacher = User::query()->where('email', 'docente@silabos.test')->firstOrFail();
+        $teacher = User::query()->where('correo_electronico', 'docente@silabos.test')->firstOrFail();
         $career = Career::query()->where('codigo_institucional', 'SOFTWARE')->firstOrFail();
 
         // Con la carrera ya coordinada, la concesión se rechaza y lo dice.
@@ -244,12 +244,12 @@ class ManagedUserTest extends TestCase
 
     private function coordinatorHolder(): User
     {
-        return User::query()->where('email', 'coordinador@silabos.test')->firstOrFail();
+        return User::query()->where('correo_electronico', 'coordinador@silabos.test')->firstOrFail();
     }
 
     public function test_administrator_assigns_an_additional_role_without_overwriting_history(): void
     {
-        $teacher = User::query()->where('email', 'docente@silabos.test')->firstOrFail();
+        $teacher = User::query()->where('correo_electronico', 'docente@silabos.test')->firstOrFail();
         $career = Career::query()->where('codigo_institucional', 'SOFTWARE')->firstOrFail();
         $previousAssignmentId = $teacher->roleAssignments()->firstOrFail()->id;
 
@@ -278,7 +278,7 @@ class ManagedUserTest extends TestCase
             'activo' => true,
         ]);
         $this->assertDatabaseHas('eventos_auditoria', [
-            'accion' => 'user.role_assigned',
+            'accion' => 'usuario.rol_asignado',
             'recurso_id' => $teacher->id,
         ]);
     }
@@ -322,9 +322,9 @@ class ManagedUserTest extends TestCase
 
     public function test_deactivating_user_revokes_sessions_but_preserves_roles_and_audits(): void
     {
-        $teacher = User::query()->where('email', 'docente@silabos.test')->firstOrFail();
+        $teacher = User::query()->where('correo_electronico', 'docente@silabos.test')->firstOrFail();
         $roleAssignmentId = $teacher->roleAssignments()->firstOrFail()->id;
-        DB::table('sessions')->insert([
+        DB::table('sesiones')->insert([
             'id' => 'teacher-session-to-revoke',
             'user_id' => $teacher->id,
             'ip_address' => '127.0.0.1',
@@ -338,13 +338,13 @@ class ManagedUserTest extends TestCase
             ->assertRedirect()
             ->assertSessionHas('success');
 
-        $this->assertDatabaseHas('usuarios', ['id' => $teacher->id, 'active' => false]);
-        $this->assertDatabaseMissing('sessions', ['id' => 'teacher-session-to-revoke']);
+        $this->assertDatabaseHas('usuarios', ['id' => $teacher->id, 'activo' => false]);
+        $this->assertDatabaseMissing('sesiones', ['id' => 'teacher-session-to-revoke']);
         $this->assertDatabaseHas('asignaciones_rol', ['id' => $roleAssignmentId]);
         $this->assertDatabaseHas('eventos_auditoria', [
-            'accion' => 'user.deactivated',
+            'accion' => 'usuario.desactivado',
             'recurso_id' => $teacher->id,
-            'resultado' => 'success',
+            'resultado' => 'exito',
         ]);
     }
 
@@ -354,12 +354,12 @@ class ManagedUserTest extends TestCase
             ->patch(route('admin.users.status.update', $this->administrator), ['active' => false])
             ->assertForbidden();
 
-        $this->assertTrue($this->administrator->fresh()->active);
+        $this->assertTrue($this->administrator->fresh()->activo);
     }
 
     public function test_postgresql_rejects_overlapping_active_role_assignments(): void
     {
-        $teacher = User::query()->where('email', 'docente@silabos.test')->firstOrFail();
+        $teacher = User::query()->where('correo_electronico', 'docente@silabos.test')->firstOrFail();
         $existing = $teacher->roleAssignments()->firstOrFail();
 
         $this->expectException(QueryException::class);

@@ -33,7 +33,7 @@ defineProps<{
 
 // Un sílabo por paralelo es el valor inicial. La agrupación por oferta se conserva
 // disponible porque la carrera puede cambiar el criterio.
-const groupingMode = ref('per_parallel');
+const groupingMode = ref('por_paralelo');
 </script>
 
 <template>
@@ -50,18 +50,18 @@ const groupingMode = ref('per_parallel');
                 @success="close"
             >
                 <FieldGroup>
-                    <Field :data-invalid="Boolean(errors.name)">
+                    <Field :data-invalid="Boolean(errors.nombre)">
                         <FieldLabel for="convocation-name" required>
                             Nombre
                         </FieldLabel>
                         <Input
                             id="convocation-name"
-                            name="name"
-                            :aria-invalid="Boolean(errors.name)"
+                            name="nombre"
+                            :aria-invalid="Boolean(errors.nombre)"
                             placeholder="Ej. Elaboración de sílabos 2026-2027"
                             required
                         />
-                        <FieldError :errors="[errors.name]" />
+                        <FieldError :errors="[errors.nombre]" />
                     </Field>
 
                     <Field :data-invalid="Boolean(errors.period_id)">
@@ -135,10 +135,10 @@ const groupingMode = ref('per_parallel');
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectGroup>
-                                    <SelectItem value="per_offering">
+                                    <SelectItem value="por_oferta">
                                         Un sílabo por oferta
                                     </SelectItem>
-                                    <SelectItem value="per_parallel">
+                                    <SelectItem value="por_paralelo">
                                         Un sílabo por paralelo
                                     </SelectItem>
                                 </SelectGroup>

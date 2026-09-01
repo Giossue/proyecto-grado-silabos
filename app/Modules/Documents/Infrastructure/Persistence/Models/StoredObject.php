@@ -21,6 +21,10 @@ class StoredObject extends Model
 {
     use HasUuids;
 
+    public const CREATED_AT = 'registrado_en';
+
+    public const UPDATED_AT = 'actualizado_en';
+
     protected $table = 'objetos_almacenados';
 
     /** @var list<string> */

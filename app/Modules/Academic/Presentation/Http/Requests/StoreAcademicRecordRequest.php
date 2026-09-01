@@ -18,7 +18,7 @@ class StoreAcademicRecordRequest extends FormRequest
 {
     protected function prepareForValidation(): void
     {
-        if ($this->route('entity') !== 'subject') {
+        if ($this->route('entity') !== 'asignatura') {
             return;
         }
 
@@ -27,7 +27,7 @@ class StoreAcademicRecordRequest extends FormRequest
             : '';
 
         $this->merge([
-            'total_hours' => CurriculumSystemFields::totalHours(
+            'horas_totales' => CurriculumSystemFields::totalHours(
                 $this->all(),
                 $this->activeSubjectSystemKeys($curriculumId),
             ),
@@ -39,7 +39,7 @@ class StoreAcademicRecordRequest extends FormRequest
         $entity = $this->route('entity');
 
         return is_string($entity)
-            && $this->user()?->active === true
+            && $this->user()?->activo === true
             && AcademicStructurePermissions::mayCreate(
                 app(ActiveRole::class)->resolve($this),
                 $entity,
@@ -50,28 +50,28 @@ class StoreAcademicRecordRequest extends FormRequest
     public function rules(): array
     {
         return match ($this->route('entity')) {
-            'faculty' => $this->namedCatalogRules('facultades', 180),
+            'facultad' => $this->namedCatalogRules('facultades', 180),
             'campus' => $this->namedCatalogRules('campus', 120),
-            'modality' => [
+            'modalidad' => [
                 'code' => ['required', 'string', 'max:40', Rule::unique('modalidades', 'codigo')],
-                'name' => ['required', 'string', 'max:100'],
+                'nombre' => ['required', 'string', 'max:100'],
             ],
-            'career' => [
+            'carrera' => [
                 'faculty_id' => ['required', 'uuid', Rule::exists('facultades', 'id')->where('activo', true)],
                 ...$this->namedCatalogRules('carreras', 180),
             ],
-            'period' => [
+            'periodo' => [
                 'code' => [
                     'required',
                     'string',
                     'max:40',
                     Rule::unique('periodos_academicos', 'codigo')->whereNull('carrera_id'),
                 ],
-                'name' => ['required', 'string', 'max:120'],
+                'nombre' => ['required', 'string', 'max:120'],
                 'starts_on' => ['required', 'date'],
                 'ends_on' => ['required', 'date', 'after_or_equal:starts_on'],
             ],
-            'curriculum' => [
+            'malla' => [
                 'code' => [
                     'required',
                     'string',
@@ -82,8 +82,8 @@ class StoreAcademicRecordRequest extends FormRequest
                     ),
                 ],
             ],
-            'subject' => $this->subjectRules(),
-            'offering' => [
+            'asignatura' => $this->subjectRules(),
+            'oferta' => [
                 'period_id' => [
                     'required',
                     'uuid',
@@ -102,7 +102,7 @@ class StoreAcademicRecordRequest extends FormRequest
                             ->select('id')
                             ->where('carrera_id', $this->careerId())
                             ->where('es_actual', true)
-                            ->where('estado', 'active'))),
+                            ->where('estado', 'activa'))),
                     Rule::unique('ofertas_academicas', 'asignatura_id')
                         ->where('periodo_academico_id', $this->input('period_id'))
                         ->where('campus_id', $this->input('campus_id'))
@@ -111,7 +111,7 @@ class StoreAcademicRecordRequest extends FormRequest
                 'campus_id' => ['required', 'uuid', Rule::exists('campus', 'id')->where('activo', true)],
                 'modality_id' => ['required', 'uuid', Rule::exists('modalidades', 'id')->where('activo', true)],
             ],
-            'parallel' => [
+            'paralelo' => [
                 'offering_id' => [
                     'required',
                     'uuid',
@@ -122,7 +122,7 @@ class StoreAcademicRecordRequest extends FormRequest
                             ->whereHas('curriculumVersion', fn ($curricula) => $curricula
                                 ->where('carrera_id', $this->careerId())
                                 ->where('es_actual', true)
-                                ->where('estado', 'active')))),
+                                ->where('estado', 'activa')))),
                 ],
                 'code' => [
                     'required',
@@ -131,19 +131,19 @@ class StoreAcademicRecordRequest extends FormRequest
                     $this->uniqueWithin('paralelos', 'codigo', 'oferta_academica_id', 'offering_id'),
                 ],
             ],
-            'coordinator_assignment' => [
+            'asignacion_coordinador' => [
                 ...$this->assignmentRules('carreras', 'career_id'),
                 // Un encargo es un cargo distinto del titular, con duración propia y un
                 // acto que lo respalda. La base exige la fecha de fin: un encargo sin ella
                 // sería una titularidad sin nombrar.
                 'quality' => ['nullable', Rule::in(['titular', 'encargado'])],
                 'valid_until' => ['nullable', 'date', 'after:valid_from', 'required_if:quality,encargado'],
-                'backing_type' => ['nullable', Rule::in(['personnel_action', 'resolution', 'official_letter'])],
+                'backing_type' => ['nullable', Rule::in(['accion_personal', 'resolucion', 'oficio'])],
                 'backing_number' => ['nullable', 'string', 'max:80', 'required_if:quality,encargado'],
                 'backing_date' => ['nullable', 'date', 'before_or_equal:today', 'required_if:quality,encargado'],
             ],
-            'teacher_assignment' => [
-                'user_id' => ['required', 'uuid', Rule::exists('usuarios', 'id')->where('active', true)],
+            'asignacion_docente' => [
+                'user_id' => ['required', 'uuid', Rule::exists('usuarios', 'id')->where('activo', true)],
                 'parallel_id' => [
                     'required',
                     'uuid',
@@ -154,7 +154,7 @@ class StoreAcademicRecordRequest extends FormRequest
                             ->whereHas('subject.curriculumVersion', fn ($curricula) => $curricula
                                 ->where('carrera_id', $this->careerId())
                                 ->where('es_actual', true)
-                                ->where('estado', 'active')))),
+                                ->where('estado', 'activa')))),
                 ],
                 'valid_from' => ['required', 'date'],
                 'valid_until' => ['nullable', 'date', 'after:valid_from'],
@@ -168,7 +168,7 @@ class StoreAcademicRecordRequest extends FormRequest
     {
         return [
             'code' => ['nullable', 'string', 'max:80', Rule::unique($table, 'codigo_institucional')],
-            'name' => ['required', 'string', "max:{$nameLength}"],
+            'nombre' => ['required', 'string', "max:{$nameLength}"],
         ];
     }
 
@@ -200,17 +200,17 @@ class StoreAcademicRecordRequest extends FormRequest
                 'max:80',
                 $this->uniqueWithin('asignaturas', 'codigo_institucional', 'version_malla_id', 'curriculum_id'),
             ],
-            'name' => ['required', 'string', 'max:180'],
+            'nombre' => ['required', 'string', 'max:180'],
             'cycle' => ['required', 'integer', 'min:1', 'max:30'],
             'position' => ['nullable', 'integer', 'min:0', 'max:999'],
             'organization_unit' => ['required', 'string', 'max:80'],
-            'credits' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
-            'total_hours' => ['nullable', 'integer', 'min:0', 'max:65535'],
+            'creditos' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
+            'horas_totales' => ['nullable', 'integer', 'min:0', 'max:65535'],
             'hours_project' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
             'hours_ap' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
-            'hours_ac' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
-            'hours_pae' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
-            'hours_aa' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
+            'horas_ac' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
+            'horas_pae' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
+            'horas_aa' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
             'hours_paec' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
             'custom_values' => ['nullable', 'array'],
             'custom_values.*' => ['nullable'],
@@ -260,7 +260,7 @@ class StoreAcademicRecordRequest extends FormRequest
     private function assignmentRules(string $table, string $scope): array
     {
         return [
-            'user_id' => ['required', 'uuid', Rule::exists('usuarios', 'id')->where('active', true)],
+            'user_id' => ['required', 'uuid', Rule::exists('usuarios', 'id')->where('activo', true)],
             $scope => ['required', 'uuid', Rule::exists($table, 'id')->where('activo', true)],
             'valid_from' => ['required', 'date'],
             'valid_until' => ['nullable', 'date', 'after:valid_from'],

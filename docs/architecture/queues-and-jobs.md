@@ -22,7 +22,7 @@ Cada trabajo define:
 - máximo de intentos y backoff;
 - condiciones de reintento/no reintento;
 - estado y progreso persistidos en PostgreSQL;
-- `correlation_id` y métricas;
+- `correlacion_id` y métricas;
 - resultado o causa segura de fallo.
 
 El payload contiene IDs y versiones, no objetos enormes ni secretos.
@@ -37,7 +37,7 @@ El payload contiene IDs y versiones, no objetos enormes ni secretos.
 
 ## Colas sugeridas
 
-`critical`, `documents`, `integrations`, `ai` y `notifications`. La prioridad y cantidad
+`critica`, `documentos`, `integraciones`, `ia` y `notificaciones`. La prioridad y cantidad
 de workers se miden; no se supone capacidad antes de `PV-05` y `PV-13`.
 
 ## Operación
@@ -54,15 +54,15 @@ payload sensible. Alertas mínimas:
 
 Reprocesar desde interfaz requiere permiso, confirma impacto y conserva todos los intentos.
 
-## Trabajo `ai.analysis`
+## Trabajo `ia.analisis`
 
 I-06 registra el recurso funcional antes de despachar `AnalyzeSyllabusFieldJob` a la cola
-`ai`. El payload contiene solo el UUID de la ejecución. Entrada, evidencia, parámetros,
+`ia`. El payload contiene solo el UUID de la ejecución. Entrada, evidencia, parámetros,
 estado e intentos viven en PostgreSQL. El job es idempotente frente a estados terminales,
 tiene tres intentos, timeout de 60 segundos y backoff 5/30/120.
 
-Los errores de contrato no se reintentan: terminan con `ai_contract_invalid`. Una caída o
+Los errores de contrato no se reintentan: terminan con `contrato_ia_invalido`. Una caída o
 timeout del gateway usa los reintentos del worker y, al agotarlos, guarda
-`ai_service_unavailable` sin copiar el mensaje técnico. Conflicto, evidencia vacía o
+`servicio_ia_no_disponible` sin copiar el mensaje técnico. Conflicto, evidencia vacía o
 exceso de evidencia son resultados no concluyentes, no fallos de la cola.
 

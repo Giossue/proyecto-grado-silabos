@@ -4,7 +4,7 @@ namespace App\Modules\Identity\Domain\Enums;
 
 enum RoleCode: string
 {
-    case Administrator = 'administrator';
-    case Coordinator = 'coordinator';
-    case Teacher = 'teacher';
+    case Administrator = 'administrador';
+    case Coordinator = 'coordinador';
+    case Teacher = 'docente';
 }

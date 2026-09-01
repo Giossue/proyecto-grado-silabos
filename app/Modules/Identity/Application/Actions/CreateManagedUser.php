@@ -22,20 +22,20 @@ class CreateManagedUser
         private readonly RecordAuditEvent $audit,
     ) {}
 
-    /** @param array{name: string, email: string, password: string, role_code: string, career_id?: string|null} $data */
+    /** @param array{nombre: string, correo_electronico: string, password: string, role_code: string, career_id?: string|null} $data */
     public function execute(array $data, User $actor, Request $request): User
     {
         $activeRole = $this->roles->resolve($request);
 
         return DB::transaction(function () use ($actor, $activeRole, $data, $request): User {
             $user = User::query()->create([
-                'name' => $data['name'],
-                'email' => mb_strtolower($data['email']),
-                'password' => $data['password'],
-                'active' => true,
+                'nombre' => $data['nombre'],
+                'correo_electronico' => mb_strtolower($data['correo_electronico']),
+                'contrasena' => $data['password'],
+                'activo' => true,
                 // Quien crea la cuenta conoce la contraseña, así que deja de ser secreta
                 // en cuanto se entrega: su titular la cambia antes de operar.
-                'must_change_password' => true,
+                'debe_cambiar_contrasena' => true,
             ]);
             $role = Role::query()->where('codigo', $data['role_code'])->firstOrFail();
             $careerId = $data['role_code'] === RoleCode::Administrator->value
@@ -60,10 +60,10 @@ class CreateManagedUser
             $this->audit->execute(
                 actorId: $actor->id,
                 roleAssignmentId: $activeRole?->id,
-                action: 'user.created',
-                resourceType: 'user',
+                action: 'usuario.creado',
+                resourceType: 'usuario',
                 resourceId: $user->id,
-                result: 'success',
+                result: 'exito',
                 metadata: ['initial_role' => $data['role_code']],
                 correlationId: $request->attributes->getString('correlation_id') ?: null,
             );
@@ -71,9 +71,9 @@ class CreateManagedUser
             // Después del commit: si la transacción se deshace, nadie recibe las
             // credenciales de una cuenta que no llegó a existir.
             DB::afterCommit(function () use ($data, $role, $user): void {
-                Mail::to($user->email)->send(new ManagedUserCredentialsMail(
-                    name: $user->name,
-                    email: $user->email,
+                Mail::to($user->correo_electronico)->send(new ManagedUserCredentialsMail(
+                    name: $user->nombre,
+                    email: $user->correo_electronico,
                     temporaryPassword: $data['password'],
                     roleName: $role->nombre,
                     loginUrl: route('login'),

@@ -61,7 +61,7 @@ class TemplateController extends Controller
         $actor = $request->user();
         abort_unless($actor instanceof User, 401);
         $version = $action->execute([
-            'name' => $request->string('name')->toString(),
+            'nombre' => $request->string('nombre')->toString(),
             'description' => $request->filled('description') ? $request->string('description')->toString() : null,
         ], $actor, $request);
 
@@ -136,7 +136,7 @@ class TemplateController extends Controller
             return $contentType;
         }
 
-        if ($field?->tipo === 'repeatable' || $block->tipo === 'repeatable') {
+        if ($field?->tipo === 'repetible' || $block->tipo === 'repetible') {
             return 'table';
         }
 

@@ -26,7 +26,7 @@ class RecordAiFeedback
         User $actor,
         Request $request,
     ): AiFeedback {
-        if (! in_array($decision, ['accepted', 'ignored', 'not_useful'], true)) {
+        if (! in_array($decision, ['aceptada', 'ignorada', 'no_util'], true)) {
             throw ValidationException::withMessages(['decision' => 'Seleccione una decisión válida.']);
         }
 
@@ -37,7 +37,7 @@ class RecordAiFeedback
                 ->lockForUpdate()
                 ->firstOrFail();
             if ($lockedRecommendation->execution->silabo_id !== $syllabus->id
-                || $lockedRecommendation->execution->estado !== 'completed') {
+                || $lockedRecommendation->execution->estado !== 'completada') {
                 throw ValidationException::withMessages([
                     'recommendation' => 'La recomendación ya no está disponible para esta decisión.',
                 ]);
@@ -55,10 +55,10 @@ class RecordAiFeedback
                 $this->audit->execute(
                     actorId: $actor->id,
                     roleAssignmentId: $activeRole?->id,
-                    action: "ai.recommendation_{$decision}",
-                    resourceType: 'ai_recommendation',
+                    action: "ia.recomendacion_{$decision}",
+                    resourceType: 'recomendacion_ia',
                     resourceId: $lockedRecommendation->id,
-                    result: 'success',
+                    result: 'exito',
                     metadata: ['ai_execution_id' => $lockedRecommendation->ejecucion_ia_id],
                     correlationId: $request->attributes->getString('correlation_id') ?: null,
                 );

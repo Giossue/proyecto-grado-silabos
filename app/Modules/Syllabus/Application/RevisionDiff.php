@@ -12,8 +12,8 @@ class RevisionDiff
     /** @return array{before_revision: int, after_revision: int, changed_fields: int, changes: list<array<string, mixed>>} */
     public function compare(SyllabusRevision $before, SyllabusRevision $after): array
     {
-        $beforeFields = $this->flatten($before->snapshot);
-        $afterFields = $this->flatten($after->snapshot);
+        $beforeFields = $this->flatten($before->fotografia);
+        $afterFields = $this->flatten($after->fotografia);
         $keys = array_values(array_unique([...array_keys($beforeFields), ...array_keys($afterFields)]));
         sort($keys, SORT_STRING);
         $changes = [];

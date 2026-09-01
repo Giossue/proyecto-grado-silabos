@@ -11,7 +11,7 @@ use LogicException;
  * @property string $id
  * @property string $tipo_evento
  * @property string $clave_deduplicacion
- * @property array<string, mixed> $payload
+ * @property array<string, mixed> $contenido
  * @property string $estado
  * @property int $intentos
  * @property CarbonImmutable $ocurrido_en
@@ -20,12 +20,16 @@ class OutboxEvent extends Model
 {
     use HasUuids;
 
-    protected $table = 'eventos_outbox';
+    public const CREATED_AT = 'creado_en';
+
+    public const UPDATED_AT = 'actualizado_en';
+
+    protected $table = 'eventos_salientes';
 
     /** @var list<string> */
     protected $fillable = [
         'tipo_agregado', 'agregado_id', 'tipo_evento', 'clave_deduplicacion',
-        'payload', 'estado', 'intentos', 'disponible_en', 'procesado_en',
+        'contenido', 'estado', 'intentos', 'disponible_en', 'procesado_en',
         'codigo_error', 'mensaje_error', 'ocurrido_en',
     ];
 
@@ -33,7 +37,7 @@ class OutboxEvent extends Model
     protected function casts(): array
     {
         return [
-            'payload' => 'array',
+            'contenido' => 'array',
             'intentos' => 'integer',
             'disponible_en' => 'immutable_datetime',
             'procesado_en' => 'immutable_datetime',
@@ -44,11 +48,11 @@ class OutboxEvent extends Model
     protected static function booted(): void
     {
         static::updating(function (OutboxEvent $event): void {
-            $mutable = ['estado', 'intentos', 'disponible_en', 'procesado_en', 'codigo_error', 'mensaje_error', 'updated_at'];
+            $mutable = ['estado', 'intentos', 'disponible_en', 'procesado_en', 'codigo_error', 'mensaje_error', 'actualizado_en'];
             if (array_diff(array_keys($event->getDirty()), $mutable) !== []) {
-                throw new LogicException('La identidad y payload del outbox son inmutables.');
+                throw new LogicException('La identidad y contenido del evento saliente son inmutables.');
             }
         });
-        static::deleting(fn () => throw new LogicException('Un evento outbox no puede eliminarse.'));
+        static::deleting(fn () => throw new LogicException('Un evento saliente no puede eliminarse.'));
     }
 }

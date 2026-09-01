@@ -18,7 +18,11 @@ export type CatalogRecord = {
 };
 
 export type GovernanceCatalogEntity =
-    'faculty' | 'career' | 'campus' | 'modality' | 'period';
+    | 'facultad'
+    | 'carrera'
+    | 'campus'
+    | 'modalidad'
+    | 'periodo';
 
 export type GovernanceSection =
     'faculties' | 'careers' | 'campuses' | 'modalities' | 'academic-periods';
@@ -124,7 +128,7 @@ export type CurriculumFieldDefinition = {
     id: string;
     key: string;
     label: string;
-    type: 'text' | 'number' | 'integer' | 'boolean';
+    type: 'texto' | 'numero' | 'entero' | 'booleano';
     system_key: string | null;
     system_label: string | null;
     position: number;
@@ -175,7 +179,7 @@ export type CurriculumBuilderProps = {
         id: string;
         subject_id: string;
         requirement_id: string;
-        type: 'prerequisite' | 'corequisite';
+        type: 'prerrequisito' | 'correquisito';
     }[];
     systemFieldOptions: {
         value: string;

@@ -8,7 +8,7 @@ class CreateTemplateRequest extends ManageTemplatesRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:180'],
+            'nombre' => ['required', 'string', 'max:180'],
             'description' => ['nullable', 'string', 'max:2000'],
         ];
     }

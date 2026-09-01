@@ -51,7 +51,11 @@ defineProps<{
                         <FieldLabel for="extension-stage" required>
                             Etapa
                         </FieldLabel>
-                        <Select name="stage" default-value="draft" required>
+                        <Select
+                            name="stage"
+                            default-value="borrador"
+                            required
+                        >
                             <SelectTrigger
                                 id="extension-stage"
                                 :aria-invalid="Boolean(errors.stage)"
@@ -60,10 +64,10 @@ defineProps<{
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectGroup>
-                                    <SelectItem value="draft">
+                                    <SelectItem value="borrador">
                                         Entrega del borrador
                                     </SelectItem>
-                                    <SelectItem value="start">
+                                    <SelectItem value="inicio">
                                         Inicio de la elaboración
                                     </SelectItem>
                                 </SelectGroup>

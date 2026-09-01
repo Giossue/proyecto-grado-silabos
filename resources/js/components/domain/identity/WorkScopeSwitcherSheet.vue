@@ -33,7 +33,7 @@ const activeRole = computed(() =>
 );
 const coordinatorCareerCount = computed(
     () =>
-        page.props.auth.roles.filter((role) => role.role === 'coordinator')
+        page.props.auth.roles.filter((role) => role.role === 'coordinador')
             .length,
 );
 const title = computed(() =>
@@ -46,7 +46,7 @@ const scopeName = (role: ActiveRole): string =>
     role.career_name ?? role.role_name;
 
 const scopeDescription = (role: ActiveRole): string => {
-    if (role.role === 'coordinator') {
+    if (role.role === 'coordinador') {
         return `Coordinación de ${role.career_name}`;
     }
 

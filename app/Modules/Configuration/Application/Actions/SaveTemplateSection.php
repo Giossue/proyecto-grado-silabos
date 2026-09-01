@@ -62,7 +62,7 @@ class SaveTemplateSection
                 'version_plantilla_id' => $version->id,
                 'seccion_plantilla_id' => $section->id,
                 'clave' => $section->clave.'_campos',
-                'tipo' => $contentType === 'text' ? 'narrative' : 'repeatable',
+                'tipo' => $contentType === 'text' ? 'narrativa' : 'repetible',
                 'titulo' => $this->stringValue($data, 'first_field_label'),
                 'configuracion' => ['content_type' => $contentType],
                 'posicion' => 1,
@@ -72,7 +72,7 @@ class SaveTemplateSection
                 'bloque_plantilla_id' => $block->id,
                 'clave' => $this->stringValue($data, 'first_field_key'),
                 'etiqueta' => $this->stringValue($data, 'first_field_label'),
-                'tipo' => $contentType === 'text' ? 'markdown' : 'repeatable',
+                'tipo' => $contentType === 'text' ? 'markdown' : 'repetible',
                 'obligatorio' => false,
                 'heredado' => false,
                 'editable_docente' => true,
@@ -83,10 +83,10 @@ class SaveTemplateSection
             $this->audit->execute(
                 actorId: $actor->id,
                 roleAssignmentId: $activeRole?->id,
-                action: 'template.section_created',
-                resourceType: 'template_section',
+                action: 'plantilla.seccion_creada',
+                resourceType: 'seccion_plantilla',
                 resourceId: $section->id,
-                result: 'success',
+                result: 'exito',
                 correlationId: $request->attributes->getString('correlation_id') ?: null,
             );
 
@@ -107,10 +107,10 @@ class SaveTemplateSection
             $this->audit->execute(
                 actorId: $actor->id,
                 roleAssignmentId: $activeRole?->id,
-                action: 'template.section_updated',
-                resourceType: 'template_section',
+                action: 'plantilla.seccion_actualizada',
+                resourceType: 'seccion_plantilla',
                 resourceId: $section->id,
-                result: 'success',
+                result: 'exito',
                 correlationId: $request->attributes->getString('correlation_id') ?: null,
             );
 
@@ -120,7 +120,7 @@ class SaveTemplateSection
 
     private function ensureDraft(TemplateVersion $version): void
     {
-        if ($version->estado !== 'draft') {
+        if ($version->estado !== 'borrador') {
             throw ValidationException::withMessages(['section' => 'La versión publicada no admite cambios.']);
         }
     }

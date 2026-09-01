@@ -44,7 +44,7 @@ class ReopenSyllabus
             if ($existing !== null) {
                 return $existing;
             }
-            if ($locked->estado !== 'approved') {
+            if ($locked->estado !== 'aprobado') {
                 throw ValidationException::withMessages(['syllabus' => 'Solo puede reabrirse un sílabo aprobado.']);
             }
 
@@ -66,10 +66,10 @@ class ReopenSyllabus
                 'reabierto_por' => $actor->id,
                 'reabierto_en' => now(),
             ]);
-            $this->snapshots->restore($locked, $approval->revision->snapshot);
+            $this->snapshots->restore($locked, $approval->revision->fotografia);
             $locked->update([
-                'estado' => 'correction_requested',
-                'lock_version' => $locked->lock_version + 1,
+                'estado' => 'correccion_solicitada',
+                'version_bloqueo' => $locked->version_bloqueo + 1,
                 'porcentaje_completitud' => 100,
                 'guardado_en' => now(),
             ]);
@@ -77,9 +77,9 @@ class ReopenSyllabus
             $this->transitions->execute(
                 $locked,
                 $approval->revision,
-                'approved',
-                'correction_requested',
-                'reopen',
+                'aprobado',
+                'correccion_solicitada',
+                'reabrir',
                 $actor,
                 $activeRole,
                 ['approval_id' => $approval->id],
@@ -87,17 +87,17 @@ class ReopenSyllabus
             $this->audit->execute(
                 actorId: $actor->id,
                 roleAssignmentId: $activeRole?->id,
-                action: 'syllabus.reopened',
-                resourceType: 'reopening',
+                action: 'silabo.reabierto',
+                resourceType: 'reapertura',
                 resourceId: $reopening->id,
-                result: 'success',
+                result: 'exito',
                 metadata: ['revision_number' => $approval->revision->numero_revision, 'approval_id' => $approval->id],
                 correlationId: $request->attributes->getString('correlation_id') ?: null,
             );
             $this->outbox->execute(
                 syllabus: $locked,
-                eventType: 'syllabus.reopened',
-                deduplicationKey: "syllabus.reopened:{$reopening->id}",
+                eventType: 'silabo.reabierto',
+                deduplicationKey: "silabo.reabierto:{$reopening->id}",
                 recipientIds: $this->recipients->teachersFor($locked),
                 revisionNumber: $approval->revision->numero_revision,
                 correlationId: $request->attributes->getString('correlation_id') ?: null,

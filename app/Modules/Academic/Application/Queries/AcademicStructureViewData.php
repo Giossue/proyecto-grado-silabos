@@ -75,12 +75,12 @@ class AcademicStructureViewData
     {
         return [
             'coordinatorAssignments' => CoordinatorAssignment::query()
-                ->with(['user:id,name,email', 'career:id,nombre'])
+                ->with(['user:id,nombre,correo_electronico', 'career:id,nombre'])
                 ->orderByDesc('vigente_desde')
                 ->get()
                 ->map(fn (CoordinatorAssignment $assignment) => [
                     'id' => $assignment->id,
-                    'user_name' => $assignment->user->name,
+                    'user_name' => $assignment->user->nombre,
                     'career_name' => $assignment->career->nombre,
                     'valid_from' => $assignment->vigente_desde->toDateString(),
                     'valid_until' => $assignment->vigente_hasta?->toDateString(),
@@ -93,13 +93,13 @@ class AcademicStructureViewData
                     ->orderBy('nombre')
                     ->get(['id', 'nombre']),
                 'coordinatorUsers' => User::query()
-                    ->where('active', true)
+                    ->where('activo', true)
                     ->whereIn('id', RoleAssignment::query()
                         ->select('usuario_id')
                         ->effective()
                         ->whereHas('role', fn ($query) => $query->where('codigo', RoleCode::Coordinator->value)))
-                    ->orderBy('name')
-                    ->get(['id', 'name', 'email']),
+                    ->orderBy('nombre')
+                    ->get(['id', 'nombre', 'correo_electronico']),
             ],
         ];
     }
@@ -154,7 +154,7 @@ class AcademicStructureViewData
                 'code' => $curriculum->codigo,
                 'cycle_count' => $curriculum->numero_ciclos,
                 'state' => $curriculum->estado,
-                'active' => $curriculum->estado === 'active',
+                'active' => $curriculum->estado === 'activa',
                 'editable' => true,
             ],
             'fieldDefinitions' => $definitions->map(fn (CurriculumFieldDefinition $field) => [
@@ -220,7 +220,7 @@ class AcademicStructureViewData
             'requirements' => SubjectRequirement::query()
                 ->whereIn('asignatura_id', $subjectIds)
                 ->whereIn('requisito_id', $subjectIds)
-                ->orderBy('created_at')
+                ->orderBy('creado_en')
                 ->get(['id', 'asignatura_id', 'requisito_id', 'tipo'])
                 ->map(fn (SubjectRequirement $requirement) => [
                     'id' => $requirement->id,
@@ -253,7 +253,7 @@ class AcademicStructureViewData
                 'modality:id,nombre',
             ])
             ->withCount('parallels')
-            ->orderByDesc('created_at')
+            ->orderByDesc('creado_en')
             ->get();
         $parallels = Parallel::query()
             ->whereHas('offering.subject.curriculumVersion', fn ($query) => $query
@@ -312,7 +312,7 @@ class AcademicStructureViewData
                     ->whereHas('curriculumVersion', fn ($query) => $query
                         ->where('carrera_id', $careerId)
                         ->where('es_actual', true)
-                        ->where('estado', 'active'))
+                        ->where('estado', 'activa'))
                     ->orderBy('nombre')
                     ->get(['id', 'codigo_institucional', 'nombre']),
                 'offerings' => CourseOffering::query()
@@ -320,7 +320,7 @@ class AcademicStructureViewData
                     ->whereHas('subject.curriculumVersion', fn ($query) => $query
                         ->where('carrera_id', $careerId)
                         ->where('es_actual', true)
-                        ->where('estado', 'active'))
+                        ->where('estado', 'activa'))
                     ->with(['subject:id,codigo_institucional,nombre', 'academicPeriod:id,nombre'])
                     ->get()
                     ->map(fn (CourseOffering $offering) => [
@@ -341,7 +341,7 @@ class AcademicStructureViewData
                 fn ($query) => $query->where('carrera_id', $careerId)->where('es_actual', true),
             )
             ->with([
-                'user:id,name,email',
+                'user:id,nombre,correo_electronico',
                 'parallel.offering.subject:id,nombre,codigo_institucional',
                 'parallel.offering.academicPeriod:id,nombre',
             ])
@@ -359,8 +359,8 @@ class AcademicStructureViewData
                     'id' => $assignment->id,
                     'user_id' => $assignment->user->id,
                     'parallel_id' => $assignment->paralelo_id,
-                    'user_name' => $assignment->user->name,
-                    'user_email' => $assignment->user->email,
+                    'user_name' => $assignment->user->nombre,
+                    'user_email' => $assignment->user->correo_electronico,
                     'parallel_code' => $assignment->parallel->codigo,
                     'subject_name' => $assignment->parallel->offering->subject->nombre,
                     'period_name' => $assignment->parallel->offering->academicPeriod->nombre,
@@ -378,7 +378,7 @@ class AcademicStructureViewData
                         fn ($query) => $query
                             ->where('carrera_id', $careerId)
                             ->where('es_actual', true)
-                            ->where('estado', 'active'),
+                            ->where('estado', 'activa'),
                     )
                     ->with(['offering.subject:id,codigo_institucional,nombre', 'offering.academicPeriod:id,nombre'])
                     ->get()
@@ -387,14 +387,14 @@ class AcademicStructureViewData
                         'label' => "{$parallel->offering->subject->codigo_institucional} · {$parallel->offering->academicPeriod->nombre} · Paralelo {$parallel->codigo}",
                     ]),
                 'teacherUsers' => User::query()
-                    ->where('active', true)
+                    ->where('activo', true)
                     ->whereIn('id', RoleAssignment::query()
                         ->select('usuario_id')
                         ->effective()
                         ->where('carrera_id', $careerId)
                         ->whereHas('role', fn ($query) => $query->where('codigo', RoleCode::Teacher->value)))
-                    ->orderBy('name')
-                    ->get(['id', 'name', 'email']),
+                    ->orderBy('nombre')
+                    ->get(['id', 'nombre', 'correo_electronico']),
             ],
         ];
     }

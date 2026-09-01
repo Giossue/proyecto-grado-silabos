@@ -33,10 +33,10 @@ class SelectActiveRole
             $this->audit->execute(
                 actorId: $user->id,
                 roleAssignmentId: $assignment->id,
-                action: 'active_role.selected',
-                resourceType: 'role_assignment',
+                action: 'rol_activo.seleccionado',
+                resourceType: 'asignacion_rol',
                 resourceId: $assignment->id,
-                result: 'success',
+                result: 'exito',
                 metadata: ['role' => $assignment->role->codigo],
                 correlationId: $request->attributes->getString('correlation_id') ?: null,
             );

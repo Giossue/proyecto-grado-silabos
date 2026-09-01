@@ -17,6 +17,6 @@ class ApplyAiRecommendationRequest extends FormRequest
     /** @return array<string, list<string>> */
     public function rules(): array
     {
-        return ['lock_version' => ['required', 'integer', 'min:0']];
+        return ['version_bloqueo' => ['required', 'integer', 'min:0']];
     }
 }

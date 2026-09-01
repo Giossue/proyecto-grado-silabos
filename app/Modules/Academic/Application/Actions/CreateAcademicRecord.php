@@ -50,10 +50,10 @@ class CreateAcademicRecord
             $this->audit->execute(
                 actorId: $actor->id,
                 roleAssignmentId: $activeRole->id,
-                action: "academic.{$entity}.created",
+                action: "academico.{$entity}.creacion",
                 resourceType: $entity,
                 resourceId: (string) $record->getKey(),
-                result: 'success',
+                result: 'exito',
                 correlationId: $request->attributes->getString('correlation_id') ?: null,
             );
 
@@ -65,40 +65,40 @@ class CreateAcademicRecord
     private function create(string $entity, array $data, RoleAssignment $activeRole): Model
     {
         return match ($entity) {
-            'faculty' => Faculty::query()->create([
+            'facultad' => Faculty::query()->create([
                 'codigo_institucional' => $data['code'] ?? null,
-                'nombre' => $data['name'],
+                'nombre' => $data['nombre'],
                 'activo' => true,
             ]),
-            'career' => Career::query()->create([
+            'carrera' => Career::query()->create([
                 'facultad_id' => $data['faculty_id'],
                 'codigo_institucional' => $data['code'] ?? null,
-                'nombre' => $data['name'],
+                'nombre' => $data['nombre'],
                 'activo' => true,
             ]),
             'campus' => Campus::query()->create([
                 'codigo_institucional' => $data['code'] ?? null,
-                'nombre' => $data['name'],
+                'nombre' => $data['nombre'],
                 'activo' => true,
             ]),
-            'modality' => Modality::query()->create([
+            'modalidad' => Modality::query()->create([
                 'codigo' => $data['code'],
-                'nombre' => $data['name'],
+                'nombre' => $data['nombre'],
                 'activo' => true,
             ]),
-            'period' => AcademicPeriod::query()->create([
+            'periodo' => AcademicPeriod::query()->create([
                 'codigo' => $data['code'],
-                'nombre' => $data['name'],
+                'nombre' => $data['nombre'],
                 'fecha_inicio' => $data['starts_on'],
                 'fecha_fin' => $data['ends_on'],
                 'activo' => true,
             ]),
-            'curriculum' => $this->createCurriculum($data, $this->careerId($activeRole)),
-            'subject' => $this->createSubject($data, $this->careerId($activeRole)),
-            'offering' => $this->createOffering($data, $this->careerId($activeRole)),
-            'parallel' => $this->createParallel($data, $this->careerId($activeRole)),
-            'coordinator_assignment' => $this->createCoordinatorAssignment($data),
-            'teacher_assignment' => $this->createTeacherAssignment($data, $this->careerId($activeRole)),
+            'malla' => $this->createCurriculum($data, $this->careerId($activeRole)),
+            'asignatura' => $this->createSubject($data, $this->careerId($activeRole)),
+            'oferta' => $this->createOffering($data, $this->careerId($activeRole)),
+            'paralelo' => $this->createParallel($data, $this->careerId($activeRole)),
+            'asignacion_coordinador' => $this->createCoordinatorAssignment($data),
+            'asignacion_docente' => $this->createTeacherAssignment($data, $this->careerId($activeRole)),
             default => throw ValidationException::withMessages([
                 'entity' => 'El tipo de registro académico no es válido.',
             ]),
@@ -122,7 +122,7 @@ class CreateAcademicRecord
                 ->where('carrera_id', $careerId)
                 ->max('numero_version')) + 1,
             'numero_ciclos' => 8,
-            'estado' => 'active',
+            'estado' => 'activa',
             'es_actual' => true,
         ]);
 
@@ -176,17 +176,17 @@ class CreateAcademicRecord
         $subject = Subject::query()->create([
             'version_malla_id' => $curriculum->id,
             'codigo_institucional' => $data['code'],
-            'nombre' => $data['name'],
+            'nombre' => $data['nombre'],
             'ciclo' => $data['cycle'] ?? null,
             'orden_en_ciclo' => $position,
             'unidad_organizacion_curricular' => $data['organization_unit'] ?? null,
-            'creditos' => $data['credits'] ?? null,
+            'creditos' => $data['creditos'] ?? null,
             'horas_totales' => CurriculumSystemFields::totalHours($data, $activeSystemKeys),
             'horas_proyecto' => $data['hours_project'] ?? null,
             'horas_ap' => $data['hours_ap'] ?? null,
-            'horas_ac' => $data['hours_ac'] ?? null,
-            'horas_pae' => $data['hours_pae'] ?? null,
-            'horas_aa' => $data['hours_aa'] ?? null,
+            'horas_ac' => $data['horas_ac'] ?? null,
+            'horas_pae' => $data['horas_pae'] ?? null,
+            'horas_aa' => $data['horas_aa'] ?? null,
             'horas_paec' => $data['hours_paec'] ?? null,
             'activo' => true,
         ]);
@@ -209,7 +209,7 @@ class CreateAcademicRecord
             ->lockForUpdate()
             ->firstOrFail();
 
-        if ($subject->curriculumVersion->estado !== 'active') {
+        if ($subject->curriculumVersion->estado !== 'activa') {
             throw ValidationException::withMessages([
                 'subject_id' => 'La oferta requiere una materia de la malla activa.',
             ]);
@@ -243,7 +243,7 @@ class CreateAcademicRecord
                 fn ($query) => $query
                     ->where('carrera_id', $careerId)
                     ->where('es_actual', true)
-                    ->where('estado', 'active'),
+                    ->where('estado', 'activa'),
             )
             ->lockForUpdate()
             ->firstOrFail();
@@ -294,7 +294,7 @@ class CreateAcademicRecord
                 fn ($query) => $query
                     ->where('carrera_id', $careerId)
                     ->where('es_actual', true)
-                    ->where('estado', 'active'),
+                    ->where('estado', 'activa'),
             )
             ->lockForUpdate()
             ->firstOrFail();

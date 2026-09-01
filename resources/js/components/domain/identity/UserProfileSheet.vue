@@ -17,8 +17,8 @@ import { Input } from '@/components/ui/input';
 
 const props = defineProps<{
     userId: string;
-    name: string;
-    email: string;
+    nombre: string;
+    correo_electronico: string;
     /** `menu` lo dibuja como opción dentro del menú de tres puntos de una fila. */
     display?: 'button' | 'menu';
 }>();
@@ -31,7 +31,7 @@ const open = defineModel<boolean>('open', { default: false });
         v-model:open="open"
         trigger-label="Editar datos"
         title="Editar datos de la cuenta"
-        :description="`Corrija el nombre o el correo de ${props.name}. El correo es con el que inicia sesión, así que cambiarlo cambia su forma de entrar.`"
+        :description="`Corrija el nombre o el correo de ${props.nombre}. El correo es con el que inicia sesión, así que cambiarlo cambia su forma de entrar.`"
         :show-trigger="props.display !== 'menu'"
     >
         <template #trigger>
@@ -44,7 +44,7 @@ const open = defineModel<boolean>('open', { default: false });
                 @success="close"
             >
                 <FieldGroup>
-                    <Field :data-invalid="Boolean(errors.name)">
+                    <Field :data-invalid="Boolean(errors.nombre)">
                         <FieldLabel
                             :for="`profile-name-${props.userId}`"
                             required
@@ -53,16 +53,16 @@ const open = defineModel<boolean>('open', { default: false });
                         </FieldLabel>
                         <Input
                             :id="`profile-name-${props.userId}`"
-                            name="name"
-                            :default-value="props.name"
+                            name="nombre"
+                            :default-value="props.nombre"
                             placeholder="Ej. María Pérez"
                             required
-                            :aria-invalid="Boolean(errors.name)"
+                            :aria-invalid="Boolean(errors.nombre)"
                         />
-                        <FieldError :errors="[errors.name]" />
+                        <FieldError :errors="[errors.nombre]" />
                     </Field>
 
-                    <Field :data-invalid="Boolean(errors.email)">
+                    <Field :data-invalid="Boolean(errors.correo_electronico)">
                         <FieldLabel
                             :for="`profile-email-${props.userId}`"
                             required
@@ -71,18 +71,18 @@ const open = defineModel<boolean>('open', { default: false });
                         </FieldLabel>
                         <Input
                             :id="`profile-email-${props.userId}`"
-                            name="email"
+                            name="correo_electronico"
                             type="email"
-                            :default-value="props.email"
+                            :default-value="props.correo_electronico"
                             placeholder="Ej. maria.perez@ueb.edu.ec"
                             required
-                            :aria-invalid="Boolean(errors.email)"
+                            :aria-invalid="Boolean(errors.correo_electronico)"
                         />
                         <FieldDescription>
                             Con este correo inicia sesión. Si lo cambia, avísele
                             antes de que intente entrar.
                         </FieldDescription>
-                        <FieldError :errors="[errors.email]" />
+                        <FieldError :errors="[errors.correo_electronico]" />
                     </Field>
 
                     <FormSheetActions

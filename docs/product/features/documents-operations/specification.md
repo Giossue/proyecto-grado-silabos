@@ -35,7 +35,7 @@
   contrato con DOCX/PDF estructuralmente válidos y deterministas. Es un formato técnico
   provisional: no sustituye el DOCX oficial ni cierra `PV-07`.
 - Solicitud, ejecución y publicación son idempotentes; ambos objetos privados conservan
-  revisión, plantilla, renderer, locale, fecha, tamaño y huella. Cada descarga vuelve a
+  revisión, plantilla, renderizador, idioma, fecha, tamaño y huella. Cada descarga vuelve a
   autorizar por registro.
 - Los eventos de envío, reenvío, corrección, aprobación y reapertura insertan un outbox
   dentro de la transacción. El consumidor entrega una sola notificación interna. No se

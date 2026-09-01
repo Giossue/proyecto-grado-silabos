@@ -25,7 +25,7 @@ class RecordAuditEvent
             'recurso_id' => $resourceId,
             'resultado' => $result,
             'metadatos' => $metadata,
-            'correlation_id' => $correlationId,
+            'correlacion_id' => $correlationId,
             'ocurrido_en' => now(),
         ]);
     }

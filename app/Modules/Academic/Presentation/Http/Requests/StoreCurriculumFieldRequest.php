@@ -10,7 +10,7 @@ class StoreCurriculumFieldRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()->active === true
+        return $this->user()->activo === true
             && $this->user()->can('manage-career-academics') === true;
     }
 
@@ -28,7 +28,7 @@ class StoreCurriculumFieldRequest extends FormRequest
                     ->where('activo', true),
             ],
             'label' => ['required', 'string', 'max:120'],
-            'type' => ['required', Rule::in(['text', 'number', 'integer', 'boolean'])],
+            'type' => ['required', Rule::in(['texto', 'numero', 'entero', 'booleano'])],
             'system_key' => [
                 'nullable',
                 Rule::in(array_keys(CurriculumSystemFields::ATTRIBUTES)),

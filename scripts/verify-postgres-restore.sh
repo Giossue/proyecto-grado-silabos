@@ -82,7 +82,7 @@ pg_restore \
 
 RESTORE_CHECK_QUERY="
 SELECT json_build_object(
-    'migrations', (SELECT count(*) FROM migrations),
+    'migrations', (SELECT count(*) FROM migraciones),
     'users', (SELECT count(*) FROM usuarios),
     'subjects', (SELECT count(*) FROM asignaturas),
     'syllabi', (SELECT count(*) FROM silabos),

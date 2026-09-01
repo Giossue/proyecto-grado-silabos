@@ -31,7 +31,7 @@ class ReorderTemplateBlocks
         DB::transaction(function () use ($activeRole, $actor, $blockIds, $request, $sectionId, $version): void {
             $lockedVersion = TemplateVersion::query()->whereKey($version->id)->lockForUpdate()->firstOrFail();
 
-            if ($lockedVersion->estado !== 'draft') {
+            if ($lockedVersion->estado !== 'borrador') {
                 throw ValidationException::withMessages(['blocks' => 'La versión publicada no admite cambios.']);
             }
 
@@ -58,10 +58,10 @@ class ReorderTemplateBlocks
             $this->audit->execute(
                 actorId: $actor->id,
                 roleAssignmentId: $activeRole?->id,
-                action: 'template.blocks_reordered',
-                resourceType: 'template_version',
+                action: 'plantilla.bloques_reordenados',
+                resourceType: 'version_plantilla',
                 resourceId: $lockedVersion->id,
-                result: 'success',
+                result: 'exito',
                 correlationId: $request->attributes->getString('correlation_id') ?: null,
             );
         });

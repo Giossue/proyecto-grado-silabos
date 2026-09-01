@@ -17,7 +17,7 @@ class EnsureActiveUser
     {
         $user = $request->user();
 
-        if ($user instanceof User && ! $user->active) {
+        if ($user instanceof User && ! $user->activo) {
             Auth::guard('web')->logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
@@ -27,7 +27,7 @@ class EnsureActiveUser
             }
 
             return redirect()->route('login')->withErrors([
-                'email' => 'La cuenta está inactiva. Solicite ayuda al administrador.',
+                'correo_electronico' => 'La cuenta está inactiva. Solicite ayuda al administrador.',
             ]);
         }
 

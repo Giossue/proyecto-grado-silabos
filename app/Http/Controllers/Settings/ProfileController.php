@@ -36,8 +36,8 @@ class ProfileController extends Controller
         $actor = $request->user();
         abort_unless($actor instanceof User, 401);
         $action->execute($actor, [
-            'name' => $request->string('name')->toString(),
-            'email' => $request->string('email')->toString(),
+            'nombre' => $request->string('nombre')->toString(),
+            'correo_electronico' => $request->string('correo_electronico')->toString(),
         ], $actor, $request);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Perfil actualizado.']);

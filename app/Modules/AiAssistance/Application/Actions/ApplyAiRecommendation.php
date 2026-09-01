@@ -39,7 +39,7 @@ class ApplyAiRecommendation
                 ->lockForUpdate()
                 ->firstOrFail();
             if ($lockedRecommendation->execution->silabo_id !== $locked->id
-                || $lockedRecommendation->execution->estado !== 'completed'
+                || $lockedRecommendation->execution->estado !== 'completada'
                 || $lockedRecommendation->definicion_campo_id !== $lockedRecommendation->execution->definicion_campo_id) {
                 throw ValidationException::withMessages([
                     'recommendation' => 'La recomendación no corresponde a este campo y sílabo.',
@@ -47,17 +47,17 @@ class ApplyAiRecommendation
             }
             $applied = AiFeedback::query()
                 ->where('recomendacion_ia_id', $lockedRecommendation->id)
-                ->where('decision', 'applied')
+                ->where('decision', 'aplicada')
                 ->first();
             if ($applied !== null) {
                 return $locked;
             }
-            if (! in_array($locked->estado, ['draft', 'correction_requested'], true)) {
+            if (! in_array($locked->estado, ['borrador', 'correccion_solicitada'], true)) {
                 throw ValidationException::withMessages(['syllabus' => 'El sílabo ya no está en estado editable.']);
             }
-            if ($locked->lock_version !== $expectedLockVersion) {
+            if ($locked->version_bloqueo !== $expectedLockVersion) {
                 throw ValidationException::withMessages([
-                    'lock_version' => 'El borrador cambió. Recarga y compara nuevamente antes de aplicar.',
+                    'version_bloqueo' => 'El borrador cambió. Recarga y compara nuevamente antes de aplicar.',
                 ]);
             }
 
@@ -73,7 +73,7 @@ class ApplyAiRecommendation
                 ]);
             }
             $suggestedText = $lockedRecommendation->texto_sugerido;
-            $maxLength = $lockedRecommendation->execution->field->tipo === 'short_text' ? 1000 : 50000;
+            $maxLength = $lockedRecommendation->execution->field->tipo === 'texto_corto' ? 1000 : 50000;
             if (mb_strlen($suggestedText) > $maxLength
                 || preg_match('/<\/?[a-z][^>]*>/i', $suggestedText) === 1) {
                 throw ValidationException::withMessages([
@@ -84,7 +84,7 @@ class ApplyAiRecommendation
             $updated = $this->updateDraftField->execute(
                 $locked,
                 $lockedRecommendation->execution->field,
-                ['lock_version' => $expectedLockVersion, 'value' => $suggestedText],
+                ['version_bloqueo' => $expectedLockVersion, 'value' => $suggestedText],
                 $actor,
                 $request,
             );
@@ -93,27 +93,27 @@ class ApplyAiRecommendation
                 'recomendacion_ia_id' => $lockedRecommendation->id,
                 'usuario_id' => $actor->id,
                 'asignacion_rol_id' => $activeRole?->id,
-                'decision' => 'applied',
+                'decision' => 'aplicada',
                 'contenido_antes' => $currentValue,
                 'contenido_despues' => $suggestedText,
-                'lock_version_origen' => $expectedLockVersion,
-                'lock_version_resultado' => $updated->lock_version,
+                'version_bloqueo_origen' => $expectedLockVersion,
+                'version_bloqueo_resultado' => $updated->version_bloqueo,
                 'decidido_en' => now(),
             ]);
             $this->audit->execute(
                 actorId: $actor->id,
                 roleAssignmentId: $activeRole?->id,
-                action: 'ai.recommendation_applied',
-                resourceType: 'ai_recommendation',
+                action: 'ia.recomendacion_aplicada',
+                resourceType: 'recomendacion_ia',
                 resourceId: $lockedRecommendation->id,
-                result: 'success',
+                result: 'exito',
                 metadata: [
                     'ai_execution_id' => $lockedRecommendation->ejecucion_ia_id,
                     'field_key' => $lockedRecommendation->execution->field->clave,
                     'before_fingerprint' => $this->hasher->hash($currentValue),
                     'after_fingerprint' => $this->hasher->hash($suggestedText),
                     'lock_version_origin' => $expectedLockVersion,
-                    'lock_version_result' => $updated->lock_version,
+                    'lock_version_result' => $updated->version_bloqueo,
                 ],
                 correlationId: $request->attributes->getString('correlation_id') ?: null,
             );

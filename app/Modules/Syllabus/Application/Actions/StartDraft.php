@@ -21,18 +21,18 @@ class StartDraft
     {
         return DB::transaction(function () use ($actor, $request, $syllabusId): Syllabus {
             $syllabus = Syllabus::query()->lockForUpdate()->findOrFail($syllabusId);
-            if ($syllabus->estado !== 'not_started') {
+            if ($syllabus->estado !== 'sin_iniciar') {
                 throw ValidationException::withMessages(['syllabus' => 'El borrador ya fue iniciado o no está editable.']);
             }
-            $syllabus->update(['estado' => 'draft', 'iniciado_en' => now(), 'guardado_en' => now(), 'lock_version' => 1]);
+            $syllabus->update(['estado' => 'borrador', 'iniciado_en' => now(), 'guardado_en' => now(), 'version_bloqueo' => 1]);
             $activeRole = $this->roles->resolve($request);
             $this->audit->execute(
                 actorId: $actor->id,
                 roleAssignmentId: $activeRole?->id,
-                action: 'syllabus.draft_started',
-                resourceType: 'syllabus',
+                action: 'silabo.borrador_iniciado',
+                resourceType: 'silabo',
                 resourceId: $syllabus->id,
-                result: 'success',
+                result: 'exito',
                 correlationId: $request->attributes->getString('correlation_id') ?: null,
             );
 

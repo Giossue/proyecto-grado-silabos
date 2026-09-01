@@ -15,7 +15,7 @@ Campos mínimos:
 
 - timestamp UTC;
 - nivel, ambiente y versión;
-- `correlation_id`, request/job ID;
+- `correlacion_id`, request/job ID;
 - usuario interno, rol y alcance cuando sea lícito;
 - módulo, operación y resultado;
 - tipo de excepción seguro y duración.
@@ -48,6 +48,6 @@ Alertar por síntomas accionables con runbook: error sostenido, cola estancada, 
 fallido, almacenamiento casi lleno, dependencia crítica caída, p95 fuera de presupuesto o
 eventos de seguridad. Evita alertas por cada fallo aislado recuperable.
 
-Los supervisores deben observar separadamente `critical`, `notifications`, `documents`,
-`ai` e `integrations`; escuchar solo `default` deja trabajo funcional sin consumir. Estado,
+Los supervisores deben observar separadamente `critica`, `notificaciones`, `documentos`,
+`ia` e `integraciones`; escuchar solo `general` deja trabajo funcional sin consumir. Estado,
 intentos y diagnóstico permanecen en PostgreSQL y se consultan en ADM-09.
