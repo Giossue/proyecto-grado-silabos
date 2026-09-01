@@ -764,6 +764,56 @@ class AcademicStructureTest extends TestCase
         $this->assertDatabaseHas('versiones_malla', ['id' => $used->id]);
     }
 
+    public function test_subject_delete_is_protected_by_dependencies_and_removes_an_unused_subject(): void
+    {
+        $curriculum = CurriculumVersion::query()
+            ->where('carrera_id', $this->coordinatorContext->carrera_id)
+            ->current()
+            ->firstOrFail();
+        $subject = Subject::query()->create([
+            'version_malla_id' => $curriculum->id,
+            'codigo_institucional' => 'SW-901',
+            'nombre' => 'Materia sin historial',
+            'ciclo' => 9,
+            'creditos' => 3,
+            'horas_totales' => 120,
+            'activo' => true,
+        ]);
+        $requirementSubject = Subject::query()
+            ->where('version_malla_id', $curriculum->id)
+            ->whereKeyNot($subject->id)
+            ->firstOrFail();
+        $requirement = SubjectRequirement::query()->create([
+            'asignatura_id' => $subject->id,
+            'requisito_id' => $requirementSubject->id,
+            'tipo' => 'prerequisite',
+        ]);
+
+        $this->actingAsCoordinator()
+            ->delete(route('coordination.academic.curricula.subjects.destroy', [
+                'curriculum' => $curriculum->id,
+                'subject' => $subject->id,
+            ]))
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseMissing('asignaturas', ['id' => $subject->id]);
+        $this->assertDatabaseMissing('requisitos_asignatura', ['id' => $requirement->id]);
+        $this->assertDatabaseHas('eventos_auditoria', [
+            'accion' => 'academic.subject.deleted',
+            'recurso_id' => $subject->id,
+        ]);
+
+        $usedSubject = CourseOffering::query()->firstOrFail()->subject()->firstOrFail();
+        $this->actingAsCoordinator()
+            ->delete(route('coordination.academic.curricula.subjects.destroy', [
+                'curriculum' => $usedSubject->version_malla_id,
+                'subject' => $usedSubject->id,
+            ]))
+            ->assertSessionHasErrors('subject');
+        $this->assertDatabaseHas('asignaturas', ['id' => $usedSubject->id]);
+    }
+
     public function test_coordinator_cannot_read_create_edit_or_archive_records_from_another_career(): void
     {
         $otherCareer = $this->createCareer('OTRA');

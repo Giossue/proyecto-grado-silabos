@@ -1,10 +1,24 @@
 <script setup lang="ts">
-import { Pencil } from '@lucide/vue';
-import { computed } from 'vue';
+import { Form } from '@inertiajs/vue3';
+import { Pencil, Trash2 } from '@lucide/vue';
 import { Handle, Position } from '@vue-flow/core';
+import { computed, ref } from 'vue';
+import CareerAcademicStructureController from '@/actions/App/Modules/Academic/Presentation/Http/Controllers/CareerAcademicStructureController';
 import CurriculumVisualSubjectForm from '@/components/domain/academic/curriculum/CurriculumVisualSubjectForm.vue';
+import TableActionsMenu from '@/components/domain/TableActionsMenu.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
+import { Spinner } from '@/components/ui/spinner';
 import type {
     CurriculumBuilderProps,
     CurriculumBuilderSubject,
@@ -27,6 +41,8 @@ const props = defineProps<{
     };
     selected?: boolean;
 }>();
+
+const deleteOpen = ref(false);
 
 const formatFieldValue = (value: unknown): string => {
     if (value === null || value === undefined || value === '') {
@@ -87,17 +103,28 @@ const totalFields = computed(
             :data-selected="selected"
             :aria-label="`${data.subject.code}: ${data.subject.name}`"
         >
-            <Button
+            <div
                 v-if="data.editable"
-                type="button"
-                size="icon-sm"
-                variant="ghost"
                 class="nodrag nopan absolute top-1 right-1"
-                :aria-label="`Editar ${data.subject.name}`"
-                @click.stop="data.onEdit"
+                @click.stop
+                @mousedown.stop
             >
-                <Pencil aria-hidden="true" />
-            </Button>
+                <TableActionsMenu
+                    :label="`Acciones para ${data.subject.name}`"
+                >
+                    <DropdownMenuItem @select="data.onEdit">
+                        <Pencil aria-hidden="true" />
+                        Editar
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                        variant="destructive"
+                        @select="deleteOpen = true"
+                    >
+                        <Trash2 aria-hidden="true" />
+                        Eliminar
+                    </DropdownMenuItem>
+                </TableActionsMenu>
+            </div>
 
             <div class="flex min-h-20">
                 <div
@@ -167,6 +194,53 @@ const totalFields = computed(
                 </div>
             </dl>
         </article>
+
+        <Dialog v-model:open="deleteOpen">
+            <DialogContent class="nodrag nopan" @mousedown.stop @keydown.stop>
+                <DialogHeader>
+                    <DialogTitle>Eliminar materia</DialogTitle>
+                    <DialogDescription>
+                        Se eliminará «{{ data.subject.name }}» junto con sus
+                        relaciones académicas. Esta acción solo se completará si
+                        la materia no tiene ofertas ni sílabos relacionados.
+                    </DialogDescription>
+                </DialogHeader>
+
+                <Form
+                    v-bind="
+                        CareerAcademicStructureController.destroySubject.form({
+                            curriculum: data.curriculum.id,
+                            subject: data.subject.id,
+                        })
+                    "
+                    v-slot="{ errors, processing }"
+                    :options="{ preserveScroll: true }"
+                    @success="deleteOpen = false"
+                >
+                    <p
+                        v-if="errors.subject"
+                        class="mb-4 text-sm text-destructive"
+                    >
+                        {{ errors.subject }}
+                    </p>
+                    <DialogFooter>
+                        <DialogClose as-child>
+                            <Button type="button" variant="outline">
+                                Cancelar
+                            </Button>
+                        </DialogClose>
+                        <Button
+                            type="submit"
+                            variant="destructive"
+                            :disabled="processing"
+                        >
+                            <Spinner v-if="processing" />
+                            Eliminar materia
+                        </Button>
+                    </DialogFooter>
+                </Form>
+            </DialogContent>
+        </Dialog>
         <Handle
             type="source"
             :position="Position.Bottom"

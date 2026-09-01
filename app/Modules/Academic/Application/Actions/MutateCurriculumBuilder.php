@@ -12,6 +12,7 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\SubjectRequirement;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
 use App\Modules\Operations\Application\Actions\RecordAuditEvent;
+use App\Modules\Syllabus\Infrastructure\Persistence\Models\Syllabus;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -181,6 +182,41 @@ class MutateCurriculumBuilder
             $metadata = ['curriculum_id' => $curriculum->id, 'type' => $requirement->tipo];
             $requirement->delete();
             $this->record($actor, $role, $request, 'academic.subject_requirement.deleted', 'subject_requirement', $requirementId, $metadata);
+        });
+    }
+
+    public function deleteSubject(
+        string $curriculumId,
+        string $subjectId,
+        User $actor,
+        Request $request,
+    ): void {
+        DB::transaction(function () use ($actor, $curriculumId, $subjectId, $request): void {
+            [$role, $curriculum] = $this->currentCurriculum($curriculumId, $request);
+            $subject = Subject::query()
+                ->where('version_malla_id', $curriculum->id)
+                ->lockForUpdate()
+                ->findOrFail($subjectId);
+
+            $hasHistory = $subject->offerings()->exists()
+                || Syllabus::query()->where('asignatura_id', $subject->id)->exists();
+            if ($hasHistory) {
+                throw ValidationException::withMessages([
+                    'subject' => 'La materia tiene ofertas o sílabos relacionados y no puede eliminarse. Archívela para conservar el historial.',
+                ]);
+            }
+
+            SubjectRequirement::query()
+                ->where('asignatura_id', $subject->id)
+                ->orWhere('requisito_id', $subject->id)
+                ->delete();
+            $metadata = [
+                'curriculum_id' => $curriculum->id,
+                'code' => $subject->codigo_institucional,
+                'name' => $subject->nombre,
+            ];
+            $subject->delete();
+            $this->record($actor, $role, $request, 'academic.subject.deleted', 'subject', $subjectId, $metadata);
         });
     }
 

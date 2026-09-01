@@ -204,6 +204,17 @@ class CareerAcademicStructureController extends Controller
         return back()->with('success', 'Relación académica eliminada.');
     }
 
+    public function destroySubject(
+        string $curriculum,
+        string $subject,
+        ManageCareerAcademicStructureRequest $request,
+        MutateCurriculumBuilder $action,
+    ): RedirectResponse {
+        $action->deleteSubject($curriculum, $subject, $this->actor($request), $request);
+
+        return back()->with('success', 'Materia eliminada de la malla.');
+    }
+
     public function updateSubjectLayout(
         string $curriculum,
         UpdateSubjectLayoutRequest $request,
