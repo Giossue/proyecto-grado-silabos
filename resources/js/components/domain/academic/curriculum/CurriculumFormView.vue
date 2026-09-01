@@ -39,6 +39,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { useClientPagination } from '@/composables/useClientPagination';
+import { formatNumericDisplay } from '@/lib/numberDisplay';
 import type {
     CurriculumBuilderProps,
     CurriculumBuilderSubject,
@@ -246,7 +247,7 @@ const {
                                     :key="field.id"
                                     data-card-hidden="true"
                                 >
-                                    {{ field.value ?? '—' }}
+                                    {{ formatNumericDisplay(field.value) }}
                                 </TableCell>
                                 <TableCell class="text-right">
                                     <TableActionsMenu

@@ -10,6 +10,7 @@ import {
 import type {
     Connection,
     Edge,
+    EdgeMouseEvent,
     Node,
     NodeDragEvent,
     NodeMouseEvent,
@@ -21,6 +22,17 @@ import CareerAcademicStructureController from '@/actions/App/Modules/Academic/Pr
 import CurriculumAddSubjectNode from '@/components/domain/academic/curriculum/CurriculumAddSubjectNode.vue';
 import CurriculumCycleNode from '@/components/domain/academic/curriculum/CurriculumCycleNode.vue';
 import CurriculumSubjectNode from '@/components/domain/academic/curriculum/CurriculumSubjectNode.vue';
+import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Spinner } from '@/components/ui/spinner';
 import type {
     CurriculumBuilderProps,
     CurriculumBuilderSubject,
@@ -277,6 +289,15 @@ const onNodeClick = ({ node }: NodeMouseEvent): void => {
     }
 };
 
+// La conexión no se guarda de inmediato: primero se pregunta el tipo, porque un
+// mismo gesto de arrastre puede ser prerrequisito o correquisito.
+const pendingConnection = ref<{ sourceId: string; targetId: string } | null>(
+    null,
+);
+const savingRequirement = ref(false);
+const subjectName = (id: string | null | undefined): string =>
+    (id && subjectById.value.get(id)?.name) || 'materia';
+
 const onConnect = (connection: Connection): void => {
     if (
         !props.curriculum.editable ||
@@ -287,14 +308,28 @@ const onConnect = (connection: Connection): void => {
         return;
     }
 
+    pendingConnection.value = {
+        sourceId: connection.source,
+        targetId: connection.target,
+    };
+};
+
+const createRequirement = (type: 'prerequisite' | 'corequisite'): void => {
+    const pending = pendingConnection.value;
+
+    if (!pending) {
+        return;
+    }
+
+    savingRequirement.value = true;
     router.post(
         CareerAcademicStructureController.storeSubjectRequirement.url(
             props.curriculum.id,
         ),
         {
-            requirement_id: connection.source,
-            subject_id: connection.target,
-            type: 'prerequisite',
+            requirement_id: pending.sourceId,
+            subject_id: pending.targetId,
+            type,
         },
         {
             preserveScroll: true,
@@ -306,7 +341,57 @@ const onConnect = (connection: Connection): void => {
                             'No se pudo crear la relación.',
                     ),
                 ),
-            onSuccess: () => toast.success('Prerrequisito agregado.'),
+            onSuccess: () =>
+                toast.success(
+                    type === 'corequisite'
+                        ? 'Correquisito agregado.'
+                        : 'Prerrequisito agregado.',
+                ),
+            onFinish: () => {
+                savingRequirement.value = false;
+                pendingConnection.value = null;
+            },
+        },
+    );
+};
+
+// Clic sobre una línea: permite revisar la relación y eliminarla si se creó mal.
+const selectedRequirement = ref<
+    (typeof props.requirements)[number] | null
+>(null);
+const deletingRequirement = ref(false);
+
+const onEdgeClick = ({ edge }: EdgeMouseEvent): void => {
+    if (!props.curriculum.editable || hasOpenEditor.value) {
+        return;
+    }
+
+    selectedRequirement.value =
+        props.requirements.find((requirement) => requirement.id === edge.id) ??
+        null;
+};
+
+const deleteRequirement = (): void => {
+    const requirement = selectedRequirement.value;
+
+    if (!requirement) {
+        return;
+    }
+
+    deletingRequirement.value = true;
+    router.delete(
+        CareerAcademicStructureController.destroySubjectRequirement.url({
+            curriculum: props.curriculum.id,
+            requirement: requirement.id,
+        }),
+        {
+            preserveScroll: true,
+            onError: () => toast.error('No se pudo eliminar la relación.'),
+            onSuccess: () => toast.success('Relación académica eliminada.'),
+            onFinish: () => {
+                deletingRequirement.value = false;
+                selectedRequirement.value = null;
+            },
         },
     );
 };
@@ -399,6 +484,7 @@ const onNodeDragStop = ({ node }: NodeDragEvent): void => {
             :nodes-connectable="curriculum.editable && !hasOpenEditor"
             :elements-selectable="true"
             @connect="onConnect"
+            @edge-click="onEdgeClick"
             @node-click="onNodeClick"
             @node-drag-stop="onNodeDragStop"
         >
@@ -418,6 +504,104 @@ const onNodeDragStop = ({ node }: NodeDragEvent): void => {
                 />
             </template>
             <Controls position="bottom-left" />
+            <Dialog
+                :open="pendingConnection !== null"
+                @update:open="
+                    (isOpen) => {
+                        if (!isOpen) pendingConnection = null;
+                    }
+                "
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Nueva relación académica</DialogTitle>
+                        <DialogDescription>
+                            «{{ subjectName(pendingConnection?.sourceId) }}» →
+                            «{{ subjectName(pendingConnection?.targetId) }}».
+                            Prerrequisito: debe aprobarse antes. Correquisito:
+                            se cursan a la vez.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <DialogClose as-child>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                :disabled="savingRequirement"
+                            >
+                                Cancelar
+                            </Button>
+                        </DialogClose>
+                        <Button
+                            type="button"
+                            variant="secondary"
+                            :disabled="savingRequirement"
+                            @click="createRequirement('corequisite')"
+                        >
+                            Correquisito
+                        </Button>
+                        <Button
+                            type="button"
+                            :disabled="savingRequirement"
+                            @click="createRequirement('prerequisite')"
+                        >
+                            Prerrequisito
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog
+                :open="selectedRequirement !== null"
+                @update:open="
+                    (isOpen) => {
+                        if (!isOpen) selectedRequirement = null;
+                    }
+                "
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>
+                            {{
+                                selectedRequirement?.type === 'corequisite'
+                                    ? 'Correquisito'
+                                    : 'Prerrequisito'
+                            }}
+                        </DialogTitle>
+                        <DialogDescription>
+                            «{{
+                                subjectName(selectedRequirement?.requirement_id)
+                            }}» →
+                            «{{ subjectName(selectedRequirement?.subject_id) }}».
+                            Si la relación se creó por error, puede eliminarla;
+                            las materias no se modifican.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <DialogClose as-child>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                :disabled="deletingRequirement"
+                            >
+                                Cancelar
+                            </Button>
+                        </DialogClose>
+                        <Button
+                            type="button"
+                            variant="destructive"
+                            :disabled="deletingRequirement"
+                            @click="deleteRequirement"
+                        >
+                            <Spinner
+                                v-if="deletingRequirement"
+                                data-icon="inline-start"
+                            />
+                            Eliminar relación
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
             <MiniMap
                 class="max-sm:hidden"
                 pannable
