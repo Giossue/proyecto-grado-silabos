@@ -109,8 +109,9 @@
   que funcionan como campos compuestos, como el selector de fecha.
 - Editor y revisión usan navegación por secciones, completitud, errores, observaciones y
   estado de guardado sin saturar la pantalla.
-- Acciones de versión de plantilla o fuente muestran de forma explícita qué queda
-  inmutable.
+- Acciones de versión de plantilla muestran de forma explícita qué queda inmutable. Las
+  fuentes son documentos editables: COR-11 abre el contenido en un editor Markdown con
+  cinta de opciones y vista previa.
 - Los estados usan las mismas etiquetas y colores en todo el producto.
 - Los IDs internos y detalles de infraestructura no se muestran.
 - ADM-04 usa el submenú **Estructura académica** con rutas independientes para Facultades,
@@ -152,8 +153,8 @@
 
 | Rol           | Interfaces cubiertas                                       | Comportamiento                                                                                                                             |
 | ------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Administrador | ADM-02, ADM-03, ADM-04, ADM-05, ADM-06 y COR-11 compartida | Cuentas, roles, catálogos, coordinaciones, plantillas, campos, fuentes y fragmentos se crean desde una acción que abre el `Sheet` derecho. |
-| Coordinador   | COR-02, COR-06, COR-11, COR-13, COR-14 y COR-15            | Convocatorias, observaciones, fuentes, fragmentos, mallas, materias, ofertas, paralelos y asignaciones docentes usan el mismo patrón.      |
+| Administrador | ADM-02, ADM-03, ADM-04, ADM-05 y ADM-06                    | Cuentas, roles, catálogos, coordinaciones, plantillas y campos se crean desde una acción que abre el `Sheet` derecho.                     |
+| Coordinador   | COR-02, COR-06, COR-11, COR-13, COR-14 y COR-15            | Convocatorias, observaciones, fuentes, mallas, materias, ofertas, paralelos y asignaciones docentes usan el mismo patrón.                  |
 | Docente       | DOC-02 a DOC-10                                            | No administra colecciones maestras. Edición, IA, envío y respuestas son flujos académicos de página completa, no formularios de alta.      |
 
 Selección de rol, filtros, configuración personal, resolución de contradicciones y

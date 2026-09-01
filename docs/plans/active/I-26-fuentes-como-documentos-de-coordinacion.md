@@ -28,21 +28,26 @@ huella aunque la fuente se edite después.
 
 ## Plan
 
-- [ ] Migración: `fuentes_academicas` gana `notas_internas` y `contenido`; pierde
+- [x] Migración: `fuentes_academicas` gana `notas_internas` y `contenido`; pierde
   `tipo`, `autoridad` y `responsable`. `fuentes_convocatoria` referencia la fuente.
   `evidencias_ia` cita fuente + extracto + huella de contenido. Se eliminan
   `versiones_fuente`, `fragmentos_fuente` y `conflictos_fuente` con sus triggers.
-- [ ] Backend: gates solo Coordinación; acciones crear/editar metadatos/editar
+- [x] Backend: gates solo Coordinación; acciones crear/editar metadatos/editar
   contenido; retirar activar/clonar/fragmentos/conflictos; convocatorias fijan
   fuentes activas; colector de evidencia lee `contenido`.
-- [ ] Frontend: listado sin versiones; formulario con nombre, descripción y notas
+- [x] Frontend: listado sin versiones; formulario con nombre, descripción y notas
   internas; detalle con editor Markdown (cinta de opciones + vista previa) y edición
   de metadatos; convocatorias seleccionan fuentes.
-- [ ] Pruebas: reescritura de las pruebas de fuentes y ajuste de convocatorias, IA,
+- [x] Pruebas: reescritura de las pruebas de fuentes y ajuste de convocatorias, IA,
   revisión y relevo docente.
-- [ ] Documentación: especificación de plantillas y fuentes, modelo de dominio, roles,
+- [x] Documentación: especificación de plantillas y fuentes, modelo de dominio, roles,
   pantallas, base de datos, decisiones y AGENTS.md.
-- [ ] Verificación: `composer verify`.
+- [x] Verificación: alcance I-26 en verde (Pint, PHPStan, ESLint, vue-tsc, 292 pruebas
+  con la única falla ajena en `AcademicStructureTest` ya presente en HEAD, build de
+  producción). La puerta completa `composer verify` queda bloqueada por dos pendientes
+  externos al plan: `temp/chartdb.sql` dispara el escaneo de seguridad (decisión del
+  usuario: retirarlo o autorizarlo) y 3 archivos del flujo de mallas sin formato
+  Prettier (`CurriculumCanvas`, `CurriculumConfigurationSheet`, `CurriculumSubjectNode`).
 
 ## Migración segura
 

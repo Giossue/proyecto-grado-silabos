@@ -5,7 +5,7 @@
 | ID | Decisión | Responsable esperado | Puerta |
 |---|---|---|---|
 | PV-01 | Autoridad que emite, aprueba y publica la plantilla | Coordinación/autoridad | P0 I-02 |
-| PV-02 | Precedencia entre malla, proyecto, guías y disposiciones | Autoridad académica | P0 fuentes/IA |
+| PV-02 | Precedencia entre malla, proyecto, guías y disposiciones | Autoridad académica | Reducida en I-26 (2026-09-01): las fuentes son documentos sin comparación automática; la precedencia queda como criterio editorial de Coordinación |
 | PV-03 | Periodo exacto de pilotaje y aceptación | Dirección/coordinación | P1 I-08 |
 | PV-04 | Responsable de aceptación funcional | Dirección/coordinación | P1 aceptación |
 | PV-05 | Cantidad real de docentes, paralelos, asignaciones y sílabos | Coordinación | P1 capacidad/I-03 |

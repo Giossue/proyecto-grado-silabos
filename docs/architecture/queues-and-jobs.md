@@ -64,5 +64,5 @@ tiene tres intentos, timeout de 60 segundos y backoff 5/30/120.
 Los errores de contrato no se reintentan: terminan con `ai_contract_invalid`. Una caída o
 timeout del gateway usa los reintentos del worker y, al agotarlos, guarda
 `ai_service_unavailable` sin copiar el mensaje técnico. Conflicto, evidencia vacía o
-exceso de fragmentos son resultados no concluyentes, no fallos de la cola.
+exceso de evidencia son resultados no concluyentes, no fallos de la cola.
 

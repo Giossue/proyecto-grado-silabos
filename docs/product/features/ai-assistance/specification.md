@@ -13,7 +13,7 @@
 - Solo campos/secciones habilitados solicitan análisis.
 - La solicitud se procesa en cola y muestra estado.
 - La recuperación se restringe a fuentes vigentes/activas del rol.
-- Cada recomendación muestra explicación, procedencia y fragmento verificable.
+- Cada recomendación muestra explicación, procedencia y extracto verificable.
 - Aceptar o aplicar requiere acción explícita; ignorar o marcar no útil es válido.
 - La ejecución conserva huellas, modelos, parámetros, fuentes, respuesta y decisión.
 - Solicitudes equivalentes pueden reutilizar un resultado según una clave documentada.

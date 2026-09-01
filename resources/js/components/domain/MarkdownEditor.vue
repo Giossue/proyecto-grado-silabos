@@ -12,7 +12,7 @@ import {
     Minus,
     Pencil,
     Strikethrough,
-    Table,
+    Table as TableIcon,
     TextQuote,
 } from '@lucide/vue';
 import DOMPurify from 'dompurify';
@@ -299,7 +299,7 @@ const previewHtml = computed(() =>
                                             aria-label="Insertar tabla"
                                             :disabled="mode === 'preview'"
                                         >
-                                            <Table aria-hidden="true" />
+                                            <TableIcon aria-hidden="true" />
                                         </Button>
                                     </PopoverTrigger>
                                 </TooltipTrigger>

@@ -28,7 +28,7 @@ el permiso, pero no lo sustituyen.
 | Gestionar ofertas y paralelos | No por defecto | Sí, en su carrera | Consulta asignada |
 | Asignar docentes a paralelos | No por defecto | Sí, en su carrera | Consulta propia |
 | Diseñar/publicar plantilla | Sí | Consulta/aporte según política | No |
-| Versionar/activar fuentes | Administración | Sí, en su alcance | Consulta autorizada |
+| Gestionar fuentes (documentos) | No participa | Sí, en su carrera | Consulta autorizada |
 | Crear/abrir convocatoria | Soporte técnico | Sí | No |
 | Elaborar contenido | No por defecto | No por defecto | Sí, asignado y editable |
 | Solicitar análisis de IA | No por defecto | Consulta de resultados | Sí, si el campo lo permite |

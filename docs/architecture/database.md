@@ -49,17 +49,22 @@ sustituye las relaciones transaccionales ni permite reconstruir autorizaciones.
 ### Plantillas y fuentes
 
 `plantillas_silabo`, `versiones_plantilla`, `secciones_plantilla`, `bloques_plantilla`,
-`definiciones_campo`, `fuentes_academicas`, `versiones_fuente`, `fragmentos_fuente`.
+`definiciones_campo`, `fuentes_academicas`.
 
 `plantillas_silabo` no referencia una carrera. Un índice parcial sobre
 `es_institucional` permite como máximo una plantilla institucional; sus versiones
 publicadas se fijan desde convocatorias de cualquier carrera. Los registros previos sin
 esa marca se conservan solo como historia y no se habilitan para nuevas operaciones.
 
+`fuentes_academicas` es un documento por fila (I-26): nombre único por carrera,
+descripción, notas internas y `contenido` Markdown editable. Las tablas
+`versiones_fuente`, `fragmentos_fuente` y `conflictos_fuente` se retiraron en la
+migración `000020`; la evidencia de IA conserva su propia copia del contenido citado.
+
 ### Convocatorias y sílabos
 
-`convocatorias`, `activaciones_fuente`, `conflictos_fuente`, `fechas_limite`, `silabos`,
-`silabos_oferta`, `colaboradores_silabo`, `revisiones_silabo`, `filas_repetibles`,
+`convocatorias`, `fuentes_convocatoria`, `fechas_limite_convocatoria`, `silabos`,
+`alcances_silabo`, `colaboradores_silabo`, `revisiones_silabo`, `filas_repetibles`,
 `valores_campo`, `transiciones_estado`.
 
 ### Revisión, validación e IA
@@ -106,7 +111,7 @@ Como mínimo, prueba/define:
 - no solapamiento de coordinador activo por carrera;
 - identidad del sílabo canónico;
 - número de revisión único por sílabo;
-- versión única por plantilla/fuente;
+- versión única por plantilla y nombre de fuente único por carrera;
 - claves de idempotencia únicas por operación;
 - filtros frecuentes por convocatoria, estado, asignación, plazo y fecha;
 - búsquedas de auditoría por recurso/actor/tiempo;
@@ -128,7 +133,7 @@ esto evita que una diferencia de representación temporal intente crear rangos s
 - una clave funcional activa es única por sílabo/campo, y una ejecución fallida permite
   una solicitud nueva sin reescribir historia;
 - evidencia solo se fija mientras la ejecución está pendiente y debe provenir de una
-  fuente activa, vigente, de igual carrera y enlazada a la convocatoria;
+  fuente activa, de igual carrera y fijada por la convocatoria;
 - recomendaciones y sus citas solo se insertan mientras la ejecución está corriendo y
   deben pertenecer al mismo análisis/campo;
 - una ejecución terminal y todos sus hijos son append-only; no admite evidencia o salida

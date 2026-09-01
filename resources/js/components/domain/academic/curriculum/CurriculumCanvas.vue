@@ -318,9 +318,7 @@ const edgeOffsets = (): Map<string, { source: number; target: number }> => {
     const orderKey = (subjectId: string): number => {
         const subject = subjectById.value.get(subjectId);
 
-        return subject
-            ? (subject.cycle ?? 0) * 1000 + subject.position
-            : 0;
+        return subject ? (subject.cycle ?? 0) * 1000 + subject.position : 0;
     };
     const groupOffsets = (
         groupBy: (requirement: (typeof props.requirements)[number]) => string,
@@ -508,9 +506,9 @@ const createRequirement = (type: 'prerequisite' | 'corequisite'): void => {
 };
 
 // Clic sobre una línea: permite revisar la relación y eliminarla si se creó mal.
-const selectedRequirement = ref<
-    (typeof props.requirements)[number] | null
->(null);
+const selectedRequirement = ref<(typeof props.requirements)[number] | null>(
+    null,
+);
 const deletingRequirement = ref(false);
 
 const onEdgeClick = ({ edge }: EdgeMouseEvent): void => {
@@ -762,11 +760,13 @@ const onNodeDragStop = ({ node }: NodeDragEvent): void => {
                         </DialogTitle>
                         <DialogDescription>
                             «{{
-                                subjectName(selectedRequirement?.requirement_id)
-                            }}» →
-                            «{{ subjectName(selectedRequirement?.subject_id) }}».
-                            Si la relación se creó por error, puede eliminarla;
-                            las materias no se modifican.
+                                subjectName(
+                                    selectedRequirement?.requirement_id,
+                                )
+                            }}» → «{{
+                                subjectName(selectedRequirement?.subject_id)
+                            }}». Si la relación se creó por error, puede
+                            eliminarla; las materias no se modifican.
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
@@ -842,5 +842,4 @@ const onNodeDragStop = ({ node }: NodeDragEvent): void => {
 :deep(.vue-flow__controls-button svg) {
     fill: currentColor;
 }
-
 </style>

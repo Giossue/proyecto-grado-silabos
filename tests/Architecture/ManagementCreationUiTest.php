@@ -36,17 +36,17 @@ it('mantiene todas las altas de gestion dentro del sheet derecho compartido', fu
             'inline' => true,
             'success' => "@success=\"emit('success')\"",
         ],
-        'Administrador o Coordinador · fuentes' => [
+        'Coordinador · fuentes' => [
             'page' => 'resources/js/pages/Sources/Index.vue',
             'component' => 'AcademicSourceCreationSheet',
             'component_file' => 'resources/js/components/domain/configuration/AcademicSourceCreationSheet.vue',
             'action' => 'AcademicSourceController.store.form',
         ],
-        'Administrador o Coordinador · fragmentos de fuente' => [
+        'Coordinador · edición de fuente' => [
             'page' => 'resources/js/pages/Sources/Show.vue',
-            'component' => 'AcademicSourceFragmentSheet',
-            'component_file' => 'resources/js/components/domain/configuration/AcademicSourceFragmentSheet.vue',
-            'action' => 'AcademicSourceController.addFragment.form',
+            'component' => 'AcademicSourceEditSheet',
+            'component_file' => 'resources/js/components/domain/configuration/AcademicSourceEditSheet.vue',
+            'action' => 'AcademicSourceController.update.form',
         ],
         'Coordinador · mallas' => [
             'page' => 'resources/js/pages/Coordination/Academic/Curricula.vue',
@@ -367,11 +367,14 @@ it('ofrece desglose y constructor visual sobre el mismo contrato de malla', func
         ->toContain('required')
         ->toContain("field.system_key === 'total_hours'")
         ->toContain(':readonly="isCalculatedTotal"');
+    // Las acciones de la tarjeta viven en el menú de 3 puntos con Editar y
+    // Eliminar + Dialog de confirmación (pedido del usuario, 2026-09-01).
     expect($subjectNode)
         ->toBeString()
         ->toContain('<CurriculumVisualSubjectForm')
-        ->toContain('size="icon-sm"')
-        ->toContain(':aria-label="`Editar ${data.subject.name}`"');
+        ->toContain('<TableActionsMenu')
+        ->toContain(':label="`Acciones para ${data.subject.name}`"')
+        ->toContain('destroySubject.form');
     expect($addSubjectNode)
         ->toBeString()
         ->toContain('add: [cycle: number]')

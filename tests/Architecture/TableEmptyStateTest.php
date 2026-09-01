@@ -45,6 +45,6 @@ it('presenta un estado vacio compartido en todas las tablas', function (): void 
     sort($offenders);
 
     expect($offenders)->toBe([])
-        ->and($tableBodies)->toBeGreaterThanOrEqual(24)
+        ->and($tableBodies)->toBeGreaterThanOrEqual(23)
         ->and($emptyStates)->toBe($tableBodies);
 });

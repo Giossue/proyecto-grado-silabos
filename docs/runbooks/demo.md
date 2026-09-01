@@ -107,12 +107,12 @@ Las cuentas creadas por el seeder usan exclusivamente datos sintéticos:
    **Asignación docente**, asigne
    `Docente Demo` a ese paralelo con vigencia actual. Ninguna opción de otra carrera debe
    aparecer. Esto completa el reparto de `CU-03`.
-4. En **Fuentes académicas**, cree `Guía académica de demostración`, tipo `Guía`, autoridad
-   `Coordinación de Software`, responsable `Custodia de demostración`. Abra la versión
-   borrador y agregue un fragmento con clave `objetivo.referencia`, título
-   `Orientación del objetivo` y contenido `El objetivo debe expresar propósito, alcance y
-resultado formativo verificable.`. Active la versión. Esto demuestra `CU-05`; la
-   aplicación debe advertir que una contradicción futura requiere decisión humana.
+4. En **Fuentes académicas**, cree `Guía académica de demostración` con la descripción
+   `Documento de apoyo para la elaboración de sílabos` y una nota interna a su criterio.
+   En la página de la fuente, redacte el contenido con la cinta de opciones: un título
+   `## Orientación del objetivo` y el texto `El objetivo debe expresar propósito, alcance
+   y resultado formativo verificable.`; use **Vista previa** para comprobar el formato y
+   pulse **Guardar contenido**. Esto demuestra `CU-05`.
 5. En **Convocatorias**, prepare `Convocatoria de demostración`, periodo `2026-2027`, la plantilla
    publicada, agrupación **Un sílabo por oferta**, la fuente activa y una fecha límite
    posterior al momento actual. Abra el detalle, revise el resumen y pulse **Abrir y
@@ -128,7 +128,7 @@ resultado formativo verificable.`. Active la versión. Esto demuestra `CU-05`; l
    Ejecute **Validar**; las validaciones determinísticas deben aparecer separadas de la
    ayuda de IA.
 3. Abra **Asistencia de IA**, solicite análisis y espere al worker. La recomendación debe
-   mostrar fuente, versión y fragmento. Registre aceptación o rechazo y, si corresponde,
+   mostrar la fuente citada y su extracto. Registre aceptación o rechazo y, si corresponde,
    aplique el texto de forma explícita. Compruebe que el campo solo cambia después de esa
    acción humana (`CU-08`).
 4. Regrese al editor, valide y pulse **Revisar y enviar**. En la confirmación cree la

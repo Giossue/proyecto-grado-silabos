@@ -35,7 +35,10 @@ it('mantiene los botones secundarios textuales sin iconos de accion, salvo el ag
                 $parts = preg_split('/\s+as\s+/', $name);
 
                 return trim((string) end($parts));
-            });
+            })
+            // Los chevrones no son iconos de acción: indican que el botón
+            // despliega algo (menú o combobox), igual que en DatePicker.
+            ->reject(fn (string $name): bool => in_array($name, ['ChevronDown', 'ChevronsUpDown'], true));
 
         preg_match_all('/<Button\b(?<attributes>[^>]*)>(?<body>.*?)<\/Button>/s', $source, $buttons, PREG_SET_ORDER);
         foreach ($buttons as $button) {

@@ -18,7 +18,11 @@ Fecha de corte: **30 de agosto de 2026**.
 - Enviar y reenviar crea revisión inmutable.
 - Aprobar vuelve inmutable la revisión.
 - Reabrir crea una nueva revisión enlazada y conserva la aprobada.
-- Plantillas y fuentes publicadas son inmutables y versionadas.
+- Las plantillas publicadas son inmutables y versionadas.
+- Las fuentes académicas son documentos de la Coordinación (I-26, 1 de septiembre
+  de 2026): nombre, descripción, notas internas y contenido Markdown editable, sin
+  versiones, fragmentos ni conflictos. Administración no participa. La evidencia de IA
+  conserva nombre, extracto y huella del contenido en el momento del análisis.
 - La plantilla de sílabo es única e institucional: no pertenece a una carrera y sus
   versiones publicadas pueden utilizarse en convocatorias de cualquier carrera.
 - La IA es asistencia explicable; no toma decisiones académicas ni bloquea el flujo.

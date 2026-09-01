@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3';
-import { Check, Pencil } from '@lucide/vue';
+import { Check } from '@lucide/vue';
 import AcademicSourceController from '@/actions/App/Modules/Configuration/Presentation/Http/Controllers/AcademicSourceController';
 import FormSheet from '@/components/domain/FormSheet.vue';
 import FormSheetActions from '@/components/domain/FormSheetActions.vue';
@@ -32,10 +32,7 @@ defineProps<{
         description="Cambie el nombre, la descripción o las notas internas. El contenido se edita en la propia página."
     >
         <template #trigger>
-            <Button variant="outline">
-                <Pencil data-icon="inline-start" aria-hidden="true" />
-                Editar fuente
-            </Button>
+            <Button variant="outline">Editar fuente</Button>
         </template>
         <template #default="{ close }">
             <Form
@@ -51,6 +48,7 @@ defineProps<{
                         <Input
                             id="source-edit-name"
                             name="name"
+                            placeholder="Ej. Reglamento de régimen académico"
                             :default-value="source.name"
                             required
                             :aria-invalid="Boolean(errors.name)"

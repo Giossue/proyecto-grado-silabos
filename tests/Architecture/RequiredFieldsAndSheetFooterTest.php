@@ -29,8 +29,10 @@ it('mantiene las acciones de todos los formularios sheet en un pie fijo', functi
     $actions = (string) file_get_contents($root.'/resources/js/components/domain/FormSheetActions.vue');
     $mobileFilters = (string) file_get_contents($root.'/resources/js/components/domain/MobileFilterSheet.vue');
 
+    // El `pt-1` evita que el contenedor con scroll recorte el `ring-1` de la
+    // primera tarjeta del contenido (pedido del usuario, 2026-09-01).
     expect($sheet)
-        ->toContain('flex-1 overflow-y-auto px-4 pb-28');
+        ->toContain('flex-1 overflow-y-auto px-4 pt-1 pb-28');
     expect($actions)
         ->toContain('<SheetFooter')
         ->toContain('absolute inset-x-0 bottom-0')
@@ -134,7 +136,7 @@ it('presenta el ciclo académico sin detalles de implementación', function (): 
         'resources/js/pages/Teacher/Syllabi/Submit.vue',
         'resources/js/pages/Syllabi/Compare.vue',
         'resources/js/components/domain/configuration/TemplateFieldSheet.vue',
-        'resources/js/components/domain/configuration/AcademicSourceFragmentSheet.vue',
+        'resources/js/components/domain/configuration/AcademicSourceEditSheet.vue',
     ];
 
     foreach ($surfaces as $surface) {
@@ -188,10 +190,10 @@ it('conserva en el servidor las obligaciones minimas y condicionales', function 
             "'valid_from' => ['required'",
             "'required_if:quality,encargado'",
         ],
-        'Configuration/Presentation/Http/Requests/AddSourceFragmentRequest.php' => [
-            "'key' => ['required'",
-            "'content' => ['nullable', 'required_without:structured_value'",
-            "'structured_value' => ['nullable', 'required_without:content'",
+        'Configuration/Presentation/Http/Requests/CreateSourceRequest.php' => [
+            "'name' => [",
+            "'required',",
+            "Rule::unique('fuentes_academicas', 'nombre')",
         ],
         'Configuration/Presentation/Http/Requests/SaveFieldDefinitionRequest.php' => [
             "'section_id' => [",
@@ -203,7 +205,7 @@ it('conserva en el servidor las obligaciones minimas y condicionales', function 
             "'required_unless:role_code,'.RoleCode::Administrator->value",
         ],
         'Syllabus/Presentation/Http/Requests/StoreConvocationRequest.php' => [
-            "'source_version_ids' => ['required', 'array', 'min:1'",
+            "'source_ids' => ['required', 'array', 'min:1'",
             "'draft_deadline' => ['required'",
         ],
         'Syllabus/Presentation/Http/Requests/StoreCorrectionRequest.php' => [

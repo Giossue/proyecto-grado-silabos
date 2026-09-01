@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Form, Head, Link } from '@inertiajs/vue3';
-import { Check, ChevronDown } from '@lucide/vue';
+import { Check } from '@lucide/vue';
 import TemplateController from '@/actions/App/Modules/Configuration/Presentation/Http/Controllers/TemplateController';
 import TemplateBlockBuilder from '@/components/domain/configuration/TemplateBlockBuilder.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
@@ -107,10 +107,7 @@ defineOptions({
         <template #actions>
             <DropdownMenu v-if="templateVersion.template.versions.length > 1">
                 <DropdownMenuTrigger as-child>
-                    <Button variant="outline">
-                        Versiones
-                        <ChevronDown aria-hidden="true" />
-                    </Button>
+                    <Button variant="outline">Versiones</Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                     <DropdownMenuGroup>

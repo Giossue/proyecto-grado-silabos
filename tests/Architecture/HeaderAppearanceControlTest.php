@@ -53,12 +53,15 @@ it('conserva las tres opciones de tema y no las reduce a un interruptor', functi
         dirname(__DIR__, 2).'/resources/js/components/AppearanceToggle.vue',
     );
 
+    // El tema visible se anuncia con el Tooltip compartido, no con `title` nativo:
+    // ambos a la vez mostrarían dos burbujas sobre el mismo botón.
     expect($control)
         ->toContain("'light'")
         ->toContain("'dark'")
         ->toContain("'system'")
         ->toContain('aria-label')
-        ->toContain(':title="current.label"');
+        ->toContain('<TooltipContent>Tema: {{ current.label }}</TooltipContent>')
+        ->not->toContain(':title=');
 });
 
 it('recorre los temas con una pulsacion en vez de abrir un menu', function (): void {

@@ -103,9 +103,7 @@ const totalFields = computed(
                 @click.stop
                 @mousedown.stop
             >
-                <TableActionsMenu
-                    :label="`Acciones para ${data.subject.name}`"
-                >
+                <TableActionsMenu :label="`Acciones para ${data.subject.name}`">
                     <DropdownMenuItem @select="data.onEdit">
                         <Pencil aria-hidden="true" />
                         Editar

@@ -309,7 +309,9 @@ const fieldTypeLabel = (type: string): string =>
                                         <SelectItem value="0">No</SelectItem>
                                     </SelectContent>
                                 </Select>
-                                <FieldError :errors="[errors.visible_on_card]" />
+                                <FieldError
+                                    :errors="[errors.visible_on_card]"
+                                />
                             </Field>
                             <Field :data-invalid="Boolean(errors.totalizable)">
                                 <FieldLabel for="curriculum-field-totalizable">
@@ -395,10 +397,7 @@ const fieldTypeLabel = (type: string): string =>
                                             :aria-label="`Retirar el campo ${field.label}`"
                                         >
                                             <Spinner v-if="processing" />
-                                            <Trash2
-                                                v-else
-                                                aria-hidden="true"
-                                            />
+                                            <Trash2 v-else aria-hidden="true" />
                                         </Button>
                                     </TooltipTrigger>
                                     <TooltipContent>Retirar</TooltipContent>

@@ -214,7 +214,6 @@ class AuditEventController extends Controller
             'changed_fields' => 'Campos modificados',
             'decision' => 'Decisión',
             'field_key' => 'Campo',
-            'fingerprint' => 'Huella del contenido',
             'key' => 'Clave del campo',
             'format' => 'Formato',
             'generated_count' => 'Expedientes generados',

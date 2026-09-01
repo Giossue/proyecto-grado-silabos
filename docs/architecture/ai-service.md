@@ -21,7 +21,7 @@ La petición incluye solo lo necesario:
 - `request_id` y versión del contrato;
 - campo/sección y huella del contenido;
 - contexto académico mínimo;
-- IDs/versiones de fuentes autorizadas o fragmentos ya filtrados;
+- IDs de fuentes autorizadas y extractos ya filtrados;
 - versión de políticas/instrucciones;
 - idioma y límites de salida.
 
@@ -29,7 +29,7 @@ La respuesta incluye:
 
 - `request_id`, estado y modelo/versiones;
 - recomendaciones estructuradas;
-- referencias a fuente-versión-fragmento;
+- referencias a la fuente citada y su extracto;
 - advertencia de evidencia insuficiente;
 - métricas técnicas permitidas;
 - errores tipados, nunca una transición académica.
@@ -45,7 +45,7 @@ La respuesta incluye:
 ## Seguridad
 
 - Fuentes y contenido son datos, no instrucciones ejecutables.
-- Delimita y etiqueta fragmentos para reducir prompt injection.
+- Delimita y etiqueta extractos para reducir prompt injection.
 - No habilites herramientas, red o archivos del host innecesarios al modelo.
 - Limita tamaño, tiempo, concurrencia y salida.
 - Valida el esquema de respuesta; rechaza referencias no solicitadas.
@@ -78,8 +78,8 @@ contrato y sus fakes sí pueden implementarse antes.
   solicitada y la realmente ejecutada se conservan por separado.
 - Red: el adaptador HTTP acepta únicamente `http` hacia `localhost`, `127.0.0.1` o `::1`,
   sin credenciales en URL ni redirecciones, con conexión y tiempo total acotados.
-- Entrada: hasta 50 000 caracteres, 50 fragmentos y 12 000 caracteres por extracto. El
-  snapshot privado conserva texto, huellas, fuente, versión y fragmento; logs y auditoría
+- Entrada: hasta 50 000 caracteres, 50 evidencias y 12 000 caracteres por extracto. El
+  snapshot privado conserva texto, huellas y fuente citada; logs y auditoría
   reciben solo IDs, versiones, conteos y huellas.
 - Admisión: seis solicitudes nuevas por minuto y por docente/sílabo. La cuota es
   configurable y limita trabajo costoso sin afectar guardado, validación ni envío.

@@ -97,10 +97,13 @@ it('elimina los resumenes metricos independientes fuera del dashboard', function
         ->not->toContain('Resumen del informe')
         ->not->toContain('indicators.total')
         ->not->toContain('indicators.average_completion');
+    // La página no vuelve a tener una tarjeta métrica propia; `fieldTotals` solo
+    // se transfiere al constructor visual, cuyo panel de leyenda muestra el
+    // resumen al estilo de la malla institucional (pedido del usuario, 2026-09-01).
     expect($curriculum)
         ->toBeString()
         ->not->toContain('Totales de la malla')
-        ->not->toContain('fieldTotals');
+        ->toContain(':field-totals="fieldTotals"');
     expect($syllabusEdit)
         ->toBeString()
         ->not->toContain('<SyllabusCompletionStatus')

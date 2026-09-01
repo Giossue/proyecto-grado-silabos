@@ -71,17 +71,17 @@ son historia técnica y no se exponen como versiones al usuario.
 
 - `PlantillaSilabo` institucional única agrupa versiones y no pertenece a una carrera.
 - `VersionPlantilla` contiene secciones, bloques y definiciones de campo.
-- `FuenteAcademica` agrupa versiones.
-- `VersionFuente` contiene datos estructurados o narrativa segura.
-- `FragmentoFuente` permite recuperar evidencia exacta.
+- `FuenteAcademica` es un documento de la Coordinación de la carrera: nombre,
+  descripción, notas internas y contenido Markdown editable. No tiene versiones ni
+  fragmentos; la evidencia de IA conserva su propia fotografía del contenido.
 
-Publicar una versión de plantilla o fuente la vuelve inmutable. Un sílabo conserva las
-versiones de configuración y el contexto académico con los que fue creado.
+Publicar una versión de plantilla la vuelve inmutable. Un sílabo conserva la versión de
+plantilla y el contexto académico con los que fue creado.
 
 ### Convocatoria
 
 `Convocatoria` vincula carrera, periodo, plantilla publicada, fuentes activas, asignaciones,
-fechas y estado. Antes de abrirla se resuelven conflictos críticos de configuración.
+fechas y estado. Al abrirla, la plantilla debe seguir publicada y las fuentes activas.
 
 ### Sílabo
 
@@ -112,7 +112,7 @@ por plantilla:
 - `EjecucionValidacion` y `ResultadoValidacion`: reglas determinísticas reproducibles.
 - `EjecucionIA`: entrada/huella, modelo, parámetros, estado y tiempos.
 - `RecomendacionIA`: sugerencia informativa.
-- `EvidenciaRecomendacion`: fuente, versión y fragmento.
+- `EvidenciaRecomendacion`: fuente citada con extracto y huella del contenido.
 - `RetroalimentacionIA`: aceptar, ignorar o no útil; la aplicación explícita es humana.
 
 No mezcles ambos subsistemas. Una validación puede bloquear si una regla aprobada lo
@@ -128,22 +128,22 @@ establece; una recomendación de IA nunca bloquea por sí sola.
 1. Cada acción protegida exige usuario activo y permiso efectivo sobre el recurso.
 2. No se crean dos coordinaciones activas superpuestas para una misma carrera.
 3. La única plantilla institucional publicada y vigente crea nuevos sílabos en una convocatoria de cualquier carrera.
-4. Una plantilla o fuente publicada y una revisión enviada/aprobada son inmutables.
+4. Una versión de plantilla publicada y una revisión enviada/aprobada son inmutables.
 5. Todo envío o reenvío inserta una revisión; nunca actualiza la anterior.
 6. Una aprobación apunta a una revisión concreta.
 7. Una reapertura no altera la aprobación previa.
 8. La comparación solo usa revisiones del mismo expediente autorizado.
-9. Una recomendación solo cita fuentes activas y vigentes para esa convocatoria.
-10. Un conflicto entre fuentes exactas exige resolución humana explícita.
-11. Word y PDF se generan desde la misma revisión y versión de plantilla.
-12. Redis y el servicio de IA pueden fallar sin corromper el expediente.
-13. Cada carrera tiene como máximo una malla actual; su estado es activa o inactiva y
+9. Una recomendación solo cita fuentes activas fijadas por esa convocatoria, y su
+   evidencia es una fotografía inmutable del contenido citado.
+10. Word y PDF se generan desde la misma revisión y versión de plantilla.
+11. Redis y el servicio de IA pueden fallar sin corromper el expediente.
+12. Cada carrera tiene como máximo una malla actual; su estado es activa o inactiva y
     ambos admiten edición por Coordinación.
-14. Una materia, un campo o una relación de malla siempre pertenece a una única carrera
+13. Una materia, un campo o una relación de malla siempre pertenece a una única carrera
     por medio de la malla.
-15. Crear ofertas y abrir procesos exige que la malla actual esté activa.
-16. Todo sílabo y toda revisión conservan el contexto académico fijado al crearse.
-17. Las horas totales de una materia se derivan de sus componentes horarios activos y no
+14. Crear ofertas y abrir procesos exige que la malla actual esté activa.
+15. Todo sílabo y toda revisión conservan el contexto académico fijado al crearse.
+16. Las horas totales de una materia se derivan de sus componentes horarios activos y no
     de un valor ingresado manualmente.
 
 ## Tipos de campo de plantilla

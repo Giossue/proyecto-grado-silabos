@@ -15,12 +15,11 @@
 | Aprobación                | Decisión humana sobre una revisión concreta e inmutable.                                     |
 | Reapertura                | Creación controlada de una nueva revisión desde un aprobado conservado.                      |
 | Plantilla                 | Esquema funcional de secciones, bloques y campos del sílabo.                                 |
-| Versión publicada         | Versión inmutable de plantilla o fuente disponible para convocatorias o evidencia histórica. |
-| Fuente académica          | Origen autorizado de datos o criterios para el sílabo.                                       |
-| Fragmento                 | Porción localizable de una versión de fuente usada como evidencia.                           |
+| Versión publicada         | Versión inmutable de plantilla disponible para convocatorias o evidencia histórica.          |
+| Fuente académica          | Documento Markdown que la coordinación entrega a los docentes como apoyo del sílabo.         |
+| Extracto de evidencia     | Fotografía del contenido de una fuente citada por la IA en un análisis concreto.             |
 | Validación determinística | Regla reproducible que entrega el mismo resultado para igual entrada.                        |
 | Recomendación de IA       | Ayuda informativa con evidencia; no es una decisión ni una regla.                            |
-| Conflicto de fuente       | Contradicción entre datos exactos que requiere resolución humana.                            |
 | Alcance                   | Carrera, periodo, asignación u otra frontera donde un rol es válido.                         |
 | Rol activo                | Combinación de rol y alcance usada durante una sesión de trabajo.                            |
 | Huella                    | SHA-256 u otra huella aprobada que permite verificar integridad.                             |
@@ -28,5 +27,4 @@
 | Outbox                    | Registro transaccional de efectos que se entregarán de forma asíncrona.                      |
 
 Usa estos términos en código, interfaz y documentación. Evita sinónimos ambiguos como
-“versión” cuando sea necesario distinguir borrador, revisión, versión de plantilla o
-versión de fuente.
+“versión” cuando sea necesario distinguir borrador, revisión o versión de plantilla.

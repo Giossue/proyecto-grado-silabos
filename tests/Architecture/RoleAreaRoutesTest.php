@@ -42,7 +42,6 @@ it('encabeza cada pantalla con el area del rol', function (string $name, string 
     ['admin.users.index', 'admin/'],
     ['admin.jobs.index', 'admin/'],
     ['admin.audit.index', 'admin/'],
-    ['admin.sources.index', 'admin/'],
     ['admin.notifications.index', 'admin/'],
 ]);
 

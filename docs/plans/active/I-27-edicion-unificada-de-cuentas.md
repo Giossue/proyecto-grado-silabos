@@ -1,4 +1,4 @@
-# I-26: Edición unificada de cuentas en ADM-02
+# I-27: Edición unificada de cuentas en ADM-02
 
 ## Estado
 

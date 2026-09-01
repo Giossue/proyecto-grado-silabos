@@ -5,8 +5,8 @@ namespace Tests\Feature\Syllabus;
 use App\Models\User;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CourseOffering;
-use App\Modules\Configuration\Infrastructure\Persistence\Models\FieldDefinition;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\AcademicSource;
+use App\Modules\Configuration\Infrastructure\Persistence\Models\FieldDefinition;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateVersion;
 use App\Modules\Identity\Domain\Enums\RoleCode;
 use App\Modules\Identity\Infrastructure\Persistence\Models\Role;
@@ -304,9 +304,9 @@ class TeacherTransferTest extends TestCase
         ]);
         $source = AcademicSource::query()->latest('created_at')->firstOrFail();
         $this->actingAsCoordinator()->put(route('sources.content.update', $source), [
-            'content' => "## Perfil base
+            'content' => '## Perfil base
 
-Evidencia académica autorizada.",
+Evidencia académica autorizada.',
         ]);
 
         return [$template->fresh(), $source->fresh()];

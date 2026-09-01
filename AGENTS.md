@@ -97,9 +97,11 @@ y `composer verify` para cambios amplios, riesgosos o cuando se soliciten expres
 - Una revisión enviada es inmutable.
 - Una revisión aprobada es inmutable.
 - Reabrir conserva la aprobada y crea otra revisión enlazada.
-- Plantillas y fuentes publicadas se versionan y no se sobrescriben.
+- Las plantillas publicadas se versionan y no se sobrescriben. Las fuentes académicas son
+  documentos Markdown editables de la Coordinación, sin versiones; la evidencia de IA
+  guarda su propia fotografía.
 - Las validaciones determinísticas y las recomendaciones de IA son conceptos separados.
-- La IA muestra fuente, versión y fragmento; una persona decide y ejecuta.
+- La IA muestra la fuente y el extracto citado; una persona decide y ejecuta.
 - La indisponibilidad de IA degrada solo la ayuda de IA.
 - Edición directa excepcional del coordinador depende de `PV-16`; no asumirla.
 - No escribir en la base institucional; la integración es un adaptador de lectura/importación.

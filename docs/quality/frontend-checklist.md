@@ -32,7 +32,7 @@
 ## IA
 
 - [ ] Se etiqueta como recomendación, no validación.
-- [ ] Fuente, versión y fragmento se pueden consultar.
+- [ ] La fuente citada y su extracto se pueden consultar.
 - [ ] Aplicar requiere acción explícita y muestra el cambio.
 - [ ] Fallo/ausencia de evidencia no bloquea.
 - [ ] Confianza no se presenta con falsa precisión.
