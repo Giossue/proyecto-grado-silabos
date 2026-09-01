@@ -70,7 +70,11 @@ const close = (): void => {
                 <SheetTitle>{{ title }}</SheetTitle>
                 <SheetDescription>{{ description }}</SheetDescription>
             </SheetHeader>
-            <div class="flex-1 overflow-y-auto px-4 pb-28">
+            <!--
+                El padding superior evita que el contenedor con scroll recorte el
+                anillo (`ring-1`) de la primera tarjeta del contenido.
+            -->
+            <div class="flex-1 overflow-y-auto px-4 pt-1 pb-28">
                 <slot :close="close" />
             </div>
         </SheetContent>

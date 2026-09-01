@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3';
 import { Plus, Settings2, Trash2 } from '@lucide/vue';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import CareerAcademicStructureController from '@/actions/App/Modules/Academic/Presentation/Http/Controllers/CareerAcademicStructureController';
 import FormSheet from '@/components/domain/FormSheet.vue';
 import FormSheetActions from '@/components/domain/FormSheetActions.vue';
@@ -16,9 +16,12 @@ import {
 import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import {
-    NativeSelect,
-    NativeSelectOption,
-} from '@/components/ui/native-select';
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
 import {
     Tooltip,
@@ -41,6 +44,11 @@ const nextPosition = computed(
         Math.max(0, ...props.fieldDefinitions.map((field) => field.position)) +
         1,
 );
+
+// Reka-ui no admite items con valor vacío, así que «sin dato estructurado» se
+// modela con un centinela y el valor real viaja en un input oculto.
+const NO_SYSTEM_KEY = 'none';
+const systemKey = ref(NO_SYSTEM_KEY);
 
 const fieldTypeLabel = (type: string): string =>
     ({
@@ -158,6 +166,7 @@ const fieldTypeLabel = (type: string): string =>
                             v-slot="{ errors, processing }"
                             reset-on-success
                             class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
+                            @success="systemKey = NO_SYSTEM_KEY"
                         >
                             <Field :data-invalid="Boolean(errors.label)">
                                 <FieldLabel
@@ -196,45 +205,71 @@ const fieldTypeLabel = (type: string): string =>
                                 >
                                     Tipo
                                 </FieldLabel>
-                                <NativeSelect
-                                    id="curriculum-field-type"
+                                <Select
                                     name="type"
+                                    default-value="integer"
                                     required
                                 >
-                                    <NativeSelectOption value="integer">
-                                        Entero
-                                    </NativeSelectOption>
-                                    <NativeSelectOption value="number">
-                                        Decimal
-                                    </NativeSelectOption>
-                                    <NativeSelectOption value="text">
-                                        Texto
-                                    </NativeSelectOption>
-                                    <NativeSelectOption value="boolean">
-                                        Sí/No
-                                    </NativeSelectOption>
-                                </NativeSelect>
+                                    <SelectTrigger
+                                        id="curriculum-field-type"
+                                        class="w-full"
+                                        :aria-invalid="Boolean(errors.type)"
+                                    >
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="integer">
+                                            Entero
+                                        </SelectItem>
+                                        <SelectItem value="number">
+                                            Decimal
+                                        </SelectItem>
+                                        <SelectItem value="text">
+                                            Texto
+                                        </SelectItem>
+                                        <SelectItem value="boolean">
+                                            Sí/No
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
                                 <FieldError :errors="[errors.type]" />
                             </Field>
                             <Field :data-invalid="Boolean(errors.system_key)">
                                 <FieldLabel for="curriculum-field-system">
                                     Dato estructurado
                                 </FieldLabel>
-                                <NativeSelect
-                                    id="curriculum-field-system"
-                                    name="system_key"
-                                >
-                                    <NativeSelectOption value="">
-                                        Campo adicional
-                                    </NativeSelectOption>
-                                    <NativeSelectOption
-                                        v-for="option in systemFieldOptions"
-                                        :key="option.value"
-                                        :value="option.value"
+                                <Select v-model="systemKey">
+                                    <SelectTrigger
+                                        id="curriculum-field-system"
+                                        class="w-full"
+                                        :aria-invalid="
+                                            Boolean(errors.system_key)
+                                        "
                                     >
-                                        {{ option.label }}
-                                    </NativeSelectOption>
-                                </NativeSelect>
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem :value="NO_SYSTEM_KEY">
+                                            Campo adicional
+                                        </SelectItem>
+                                        <SelectItem
+                                            v-for="option in systemFieldOptions"
+                                            :key="option.value"
+                                            :value="option.value"
+                                        >
+                                            {{ option.label }}
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <input
+                                    type="hidden"
+                                    name="system_key"
+                                    :value="
+                                        systemKey === NO_SYSTEM_KEY
+                                            ? ''
+                                            : systemKey
+                                    "
+                                />
                                 <FieldError :errors="[errors.system_key]" />
                             </Field>
                             <Field :data-invalid="Boolean(errors.position)">
@@ -256,36 +291,45 @@ const fieldTypeLabel = (type: string): string =>
                                 <FieldLabel for="curriculum-field-visible">
                                     Mostrar en tarjeta
                                 </FieldLabel>
-                                <NativeSelect
-                                    id="curriculum-field-visible"
+                                <Select
                                     name="visible_on_card"
-                                    model-value="1"
+                                    default-value="1"
                                 >
-                                    <NativeSelectOption value="1">
-                                        Sí
-                                    </NativeSelectOption>
-                                    <NativeSelectOption value="0">
-                                        No
-                                    </NativeSelectOption>
-                                </NativeSelect>
+                                    <SelectTrigger
+                                        id="curriculum-field-visible"
+                                        class="w-full"
+                                        :aria-invalid="
+                                            Boolean(errors.visible_on_card)
+                                        "
+                                    >
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="1">Sí</SelectItem>
+                                        <SelectItem value="0">No</SelectItem>
+                                    </SelectContent>
+                                </Select>
                                 <FieldError :errors="[errors.visible_on_card]" />
                             </Field>
                             <Field :data-invalid="Boolean(errors.totalizable)">
                                 <FieldLabel for="curriculum-field-totalizable">
                                     Incluir en totales
                                 </FieldLabel>
-                                <NativeSelect
-                                    id="curriculum-field-totalizable"
-                                    name="totalizable"
-                                    model-value="0"
-                                >
-                                    <NativeSelectOption value="0">
-                                        No
-                                    </NativeSelectOption>
-                                    <NativeSelectOption value="1">
-                                        Sí
-                                    </NativeSelectOption>
-                                </NativeSelect>
+                                <Select name="totalizable" default-value="0">
+                                    <SelectTrigger
+                                        id="curriculum-field-totalizable"
+                                        class="w-full"
+                                        :aria-invalid="
+                                            Boolean(errors.totalizable)
+                                        "
+                                    >
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="0">No</SelectItem>
+                                        <SelectItem value="1">Sí</SelectItem>
+                                    </SelectContent>
+                                </Select>
                                 <FieldError :errors="[errors.totalizable]" />
                             </Field>
                             <div class="flex items-end justify-end">
