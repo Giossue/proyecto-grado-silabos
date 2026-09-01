@@ -163,6 +163,9 @@ class AcademicStructureViewData
                 'label' => $field->etiqueta,
                 'type' => $field->tipo,
                 'system_key' => $field->clave_sistema,
+                'system_label' => $field->clave_sistema === null
+                    ? null
+                    : CurriculumSystemFields::LABELS[$field->clave_sistema] ?? null,
                 'position' => $field->posicion,
                 'visible_on_card' => $field->visible_en_tarjeta,
                 'totalizable' => $field->totalizable,

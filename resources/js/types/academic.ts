@@ -126,6 +126,7 @@ export type CurriculumFieldDefinition = {
     label: string;
     type: 'text' | 'number' | 'integer' | 'boolean';
     system_key: string | null;
+    system_label: string | null;
     position: number;
     visible_on_card: boolean;
     totalizable: boolean;

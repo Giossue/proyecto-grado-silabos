@@ -1,7 +1,12 @@
 <script setup lang="ts">
 import type { HTMLAttributes } from 'vue';
 import { computed } from 'vue';
-import { Field, FieldError, FieldLabel } from '@/components/ui/field';
+import {
+    Field,
+    FieldDescription,
+    FieldError,
+    FieldLabel,
+} from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import {
     NativeSelect,
@@ -73,6 +78,9 @@ const isCalculatedTotal = computed(
             :aria-invalid="Boolean(error)"
             @update:model-value="emit('update:value', $event)"
         />
+        <FieldDescription v-if="field.system_label">
+            {{ field.system_label }}
+        </FieldDescription>
         <FieldError :errors="[error]" />
     </Field>
 </template>
