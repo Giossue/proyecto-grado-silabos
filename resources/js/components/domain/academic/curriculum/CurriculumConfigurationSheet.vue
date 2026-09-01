@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3';
-import { Plus, Settings2 } from '@lucide/vue';
+import { Plus, Settings2, Trash2 } from '@lucide/vue';
 import { computed } from 'vue';
 import CareerAcademicStructureController from '@/actions/App/Modules/Academic/Presentation/Http/Controllers/CareerAcademicStructureController';
 import FormSheet from '@/components/domain/FormSheet.vue';
@@ -20,6 +20,11 @@ import {
     NativeSelectOption,
 } from '@/components/ui/native-select';
 import { Spinner } from '@/components/ui/spinner';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import type { CurriculumBuilderProps } from '@/types/academic';
 
 const props =
@@ -336,19 +341,24 @@ const fieldTypeLabel = (type: string): string =>
                                 "
                                 v-slot="{ processing }"
                             >
-                                <Button
-                                    type="submit"
-                                    size="sm"
-                                    variant="outline"
-                                    :disabled="processing"
-                                    :aria-label="`Retirar el campo ${field.label}`"
-                                >
-                                    <Spinner
-                                        v-if="processing"
-                                        data-icon="inline-start"
-                                    />
-                                    Retirar
-                                </Button>
+                                <Tooltip>
+                                    <TooltipTrigger as-child>
+                                        <Button
+                                            type="submit"
+                                            size="icon-sm"
+                                            variant="outline"
+                                            :disabled="processing"
+                                            :aria-label="`Retirar el campo ${field.label}`"
+                                        >
+                                            <Spinner v-if="processing" />
+                                            <Trash2
+                                                v-else
+                                                aria-hidden="true"
+                                            />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Retirar</TooltipContent>
+                                </Tooltip>
                             </Form>
                         </div>
                     </CardContent>

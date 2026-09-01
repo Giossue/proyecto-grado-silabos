@@ -99,7 +99,7 @@ const totalFields = computed(
             aria-label="Recibir relación académica"
         />
         <article
-            class="relative w-64 overflow-hidden rounded-md border-2 bg-card text-card-foreground shadow-surface data-[selected=true]:ring-2 data-[selected=true]:ring-ring"
+            class="relative w-64 overflow-hidden rounded-md bg-card text-card-foreground shadow-surface ring-1 ring-surface-ring data-[selected=true]:ring-2 data-[selected=true]:ring-ring"
             :data-selected="selected"
             :aria-label="`${data.subject.code}: ${data.subject.name}`"
         >
