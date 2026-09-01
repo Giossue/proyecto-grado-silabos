@@ -22,7 +22,33 @@ const normalizedValue = (value: unknown): number | string => {
         return value ? 'true' : 'false';
     }
 
-    return typeof value === 'number' || typeof value === 'string' ? value : '';
+    if (typeof value !== 'number' && typeof value !== 'string') {
+        return '';
+    }
+
+    return value;
+};
+
+// La base de datos entrega los decimales como cadena («20.00»); convertirlos a
+// número descarta los ceros de relleno sin perder decimales reales («4.50» → 4.5).
+// Solo aplica al cargar: normalizar mientras se teclea borraría el punto de «4.».
+const storedValue = (
+    field: CurriculumFieldDefinition,
+    value: unknown,
+): number | string => {
+    const normalized = normalizedValue(value);
+
+    if (
+        (field.type === 'number' || field.type === 'integer') &&
+        typeof normalized === 'string' &&
+        normalized !== ''
+    ) {
+        const parsed = Number(normalized);
+
+        return Number.isFinite(parsed) ? parsed : normalized;
+    }
+
+    return normalized;
 };
 
 const numericValue = (value: number | string): number => {
@@ -50,7 +76,7 @@ export function useCurriculumSubjectFieldValues(
                     ? currentSubject?.system_values[field.system_key]
                     : currentSubject?.custom_values[field.id];
 
-                return [fieldKey(field), normalizedValue(value)];
+                return [fieldKey(field), storedValue(field, value)];
             }),
         );
     };
