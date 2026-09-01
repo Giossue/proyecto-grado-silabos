@@ -184,12 +184,12 @@ const groupingMode = ref('per_parallel');
 
                     <FieldSet>
                         <FieldLegend variant="label" required>
-                            Fuentes académicas activas
+                            Fuentes académicas
                         </FieldLegend>
                         <FieldError
                             :errors="[
-                                errors.source_version_ids,
-                                errors['source_version_ids.0'],
+                                errors.source_ids,
+                                errors['source_ids.0'],
                             ]"
                         />
                         <div class="grid gap-3">
@@ -200,7 +200,7 @@ const groupingMode = ref('per_parallel');
                             >
                                 <Checkbox
                                     :id="`source-${source.id}`"
-                                    name="source_version_ids[]"
+                                    name="source_ids[]"
                                     :value="source.id"
                                 />
                                 <FieldLabel :for="`source-${source.id}`">

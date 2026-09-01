@@ -6,7 +6,7 @@ use App\Models\User;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CourseOffering;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\FieldDefinition;
-use App\Modules\Configuration\Infrastructure\Persistence\Models\SourceVersion;
+use App\Modules\Configuration\Infrastructure\Persistence\Models\AcademicSource;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateVersion;
 use App\Modules\Identity\Domain\Enums\RoleCode;
 use App\Modules\Identity\Infrastructure\Persistence\Models\Role;
@@ -259,7 +259,7 @@ class TeacherTransferTest extends TestCase
             'period_id' => CourseOffering::query()->firstOrFail()->periodo_academico_id,
             'template_version_id' => $template->id,
             'grouping_mode' => 'per_parallel',
-            'source_version_ids' => [$source->id],
+            'source_ids' => [$source->id],
             'start_date' => now()->subDay()->toIso8601String(),
             'draft_deadline' => now()->addMonth()->toIso8601String(),
         ])->assertRedirect();
@@ -291,7 +291,7 @@ class TeacherTransferTest extends TestCase
         };
     }
 
-    /** @return array{TemplateVersion, SourceVersion} */
+    /** @return array{TemplateVersion, AcademicSource} */
     private function publishedConfiguration(): array
     {
         $this->actingAsAdministrator()->post(route('admin.templates.store'), ['name' => 'Plantilla relevo']);
@@ -300,19 +300,14 @@ class TeacherTransferTest extends TestCase
 
         $this->actingAsCoordinator()->post(route('sources.store'), [
             'name' => 'Fuente relevo',
-            'type' => 'malla',
-            'authority' => 'Consejo académico',
-            'responsible' => 'Coordinación de Software',
-            'valid_from' => now()->toDateString(),
+            'description' => 'Documento de apoyo del periodo.',
         ]);
-        $source = SourceVersion::query()->latest('created_at')->firstOrFail();
-        $this->actingAsCoordinator()->post(route('sources.fragments.store', $source), [
-            'key' => 'perfil_base',
-            'title' => 'Perfil base',
-            'data_key' => 'perfil.base',
-            'structured_value' => json_encode(['value' => 'Evidencia académica autorizada.'], JSON_THROW_ON_ERROR),
+        $source = AcademicSource::query()->latest('created_at')->firstOrFail();
+        $this->actingAsCoordinator()->put(route('sources.content.update', $source), [
+            'content' => "## Perfil base
+
+Evidencia académica autorizada.",
         ]);
-        $this->actingAsCoordinator()->post(route('sources.versions.activate', $source));
 
         return [$template->fresh(), $source->fresh()];
     }

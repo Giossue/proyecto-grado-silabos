@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { Form, Head, Link } from '@inertiajs/vue3';
-import AcademicSourceController from '@/actions/App/Modules/Configuration/Presentation/Http/Controllers/AcademicSourceController';
-import AcademicSourceFragmentSheet from '@/components/domain/configuration/AcademicSourceFragmentSheet.vue';
+import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Check } from '@lucide/vue';
+import AcademicSourceEditSheet from '@/components/domain/configuration/AcademicSourceEditSheet.vue';
+import MarkdownEditor from '@/components/domain/MarkdownEditor.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -12,55 +13,30 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import {
-    Field,
-    FieldError,
-    FieldGroup,
-    FieldLabel,
-} from '@/components/ui/field';
-import {
-    Select,
-    SelectContent,
-    SelectGroup,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
+import { FieldError } from '@/components/ui/field';
 import { Spinner } from '@/components/ui/spinner';
-import { Textarea } from '@/components/ui/textarea';
-import { index as sourcesIndex, show as sourceShow } from '@/routes/sources';
+import { index as sourcesIndex } from '@/routes/sources';
+import { update as sourceContentUpdate } from '@/routes/sources/content';
 
-defineProps<{
+const props = defineProps<{
     source: {
         id: string;
         name: string;
-        type: string;
-        authority: string;
-        responsible: string;
         description: string | null;
-        career_name: string;
-        versions: { id: string; number: number; state: string }[];
-    };
-    selectedVersion: {
-        id: string;
-        number: number;
-        state: string;
-        valid_from: string | null;
-        valid_until: string | null;
-        fragments: {
-            id: string;
-            title: string;
-            content: string | null;
-            structured_value: unknown;
-        }[];
-        conflicts: {
-            id: string;
-            state: string;
-            decision: string | null;
-            active_source_name: string;
-        }[];
+        internal_notes: string | null;
+        content: string | null;
+        updated_at: string | null;
     };
 }>();
+
+const form = useForm({ content: props.source.content ?? '' });
+
+const save = (): void => {
+    form.put(sourceContentUpdate.url(props.source.id), {
+        preserveScroll: true,
+        onSuccess: () => form.defaults(),
+    });
+};
 
 defineOptions({
     layout: {
@@ -74,7 +50,10 @@ defineOptions({
 
     <PageFrame
         :title="source.name"
-        :description="`${source.authority} · ${source.career_name}`"
+        :description="
+            source.description ??
+            'Documento de apoyo para los sílabos de la carrera.'
+        "
     >
         <template #eyebrow>
             <Button as-child variant="link" class="h-auto px-0">
@@ -82,247 +61,65 @@ defineOptions({
             </Button>
         </template>
         <template #meta>
-            <Badge variant="outline">{{ source.type }}</Badge>
+            <Badge v-if="source.updated_at" variant="outline">
+                Actualizada el {{ source.updated_at }}
+            </Badge>
         </template>
         <template #actions>
-            <AcademicSourceFragmentSheet
-                v-if="selectedVersion.state === 'draft'"
-                :source-version-id="selectedVersion.id"
-            />
-            <Form
-                v-if="selectedVersion.state === 'draft'"
-                v-bind="
-                    AcademicSourceController.activate.form(selectedVersion.id)
-                "
-                v-slot="{ errors, processing }"
-            >
-                <FieldError :errors="[errors.version]" />
-                <Button type="submit" :disabled="processing">
-                    <Spinner v-if="processing" />
-                    Activar versión
-                </Button>
-            </Form>
-            <Form
-                v-else
-                v-bind="AcademicSourceController.clone.form(selectedVersion.id)"
-                v-slot="{ processing }"
-            >
-                <Button type="submit" variant="outline" :disabled="processing">
-                    <Spinner v-if="processing" />
-                    Crear nueva versión
-                </Button>
-            </Form>
+            <AcademicSourceEditSheet :source="source" />
         </template>
 
-        <div class="flex flex-wrap gap-2">
-            <Button
-                v-for="version in source.versions"
-                :key="version.id"
-                as-child
-                size="sm"
-                :variant="
-                    version.id === selectedVersion.id ? 'secondary' : 'outline'
-                "
-            >
-                <Link
-                    :href="
-                        sourceShow(source.id, {
-                            query: { version: version.id },
-                        })
-                    "
-                >
-                    v{{ version.number }} ·
-                    {{
-                        version.state === 'active'
-                            ? 'Activa'
-                            : version.state === 'draft'
-                              ? 'Borrador'
-                              : 'Reemplazada'
-                    }}
-                </Link>
-            </Button>
-        </div>
-
         <div class="flex flex-col gap-4">
-            <Card>
+            <Card v-if="source.internal_notes">
                 <CardHeader>
-                    <CardTitle>Fragmentos de evidencia</CardTitle>
+                    <CardTitle>Notas internas</CardTitle>
                     <CardDescription>
-                        Cada fragmento identifica la fuente y versión a la que
-                        pertenece.
+                        Solo las ve la coordinación; no forman parte del
+                        documento.
                     </CardDescription>
                 </CardHeader>
-                <CardContent class="flex flex-col gap-3">
-                    <p
-                        v-if="selectedVersion.fragments.length === 0"
-                        class="text-sm text-muted-foreground"
-                    >
-                        Todavía no hay fragmentos.
+                <CardContent>
+                    <p class="text-sm whitespace-pre-wrap">
+                        {{ source.internal_notes }}
                     </p>
-                    <article
-                        v-for="fragment in selectedVersion.fragments"
-                        v-else
-                        :key="fragment.id"
-                        class="rounded-lg border p-4"
-                    >
-                        <div class="flex flex-wrap items-center gap-2">
-                            <h3 class="font-medium">{{ fragment.title }}</h3>
-                        </div>
-                        <p
-                            v-if="fragment.content"
-                            class="mt-2 text-sm whitespace-pre-wrap"
-                        >
-                            {{ fragment.content }}
-                        </p>
-                        <pre
-                            v-if="fragment.structured_value"
-                            class="mt-2 overflow-auto rounded-md bg-muted p-3 text-xs"
-                            >{{
-                                JSON.stringify(
-                                    fragment.structured_value,
-                                    null,
-                                    2,
-                                )
-                            }}</pre>
-                    </article>
                 </CardContent>
             </Card>
 
-            <Card v-if="selectedVersion.conflicts.length > 0">
+            <Card>
                 <CardHeader>
-                    <CardTitle>Contradicciones exactas</CardTitle>
+                    <CardTitle>Contenido del documento</CardTitle>
                     <CardDescription>
-                        Una persona decide y justifica; el sistema no aplica
-                        precedencia automática.
+                        Redáctelo con la cinta de opciones, como en un
+                        procesador de textos. La vista previa muestra el
+                        resultado final.
                     </CardDescription>
                 </CardHeader>
-                <CardContent class="flex flex-col gap-4">
-                    <div
-                        v-for="conflict in selectedVersion.conflicts"
-                        :key="conflict.id"
-                        class="rounded-lg border border-destructive/40 p-4"
-                    >
-                        <div class="flex flex-wrap items-center gap-2">
-                            <span class="font-medium"
-                                >Información en conflicto</span
-                            >
-                            <Badge variant="outline">
-                                Fuente activa:
-                                {{ conflict.active_source_name }}
-                            </Badge>
-                            <Badge
-                                :variant="
-                                    conflict.state === 'resolved'
-                                        ? 'secondary'
-                                        : 'outline'
-                                "
-                            >
-                                {{
-                                    conflict.state === 'resolved'
-                                        ? 'Resuelto'
-                                        : 'Pendiente'
-                                }}
-                            </Badge>
-                        </div>
-
-                        <Form
-                            v-if="conflict.state === 'pending'"
-                            v-bind="
-                                AcademicSourceController.resolveConflict.form(
-                                    conflict.id,
-                                )
-                            "
-                            v-slot="{ errors, processing }"
-                            class="mt-4"
+                <CardContent class="flex flex-col gap-3">
+                    <MarkdownEditor
+                        v-model="form.content"
+                        label="Contenido del documento en Markdown"
+                    />
+                    <FieldError :errors="[form.errors.content]" />
+                    <div class="flex items-center justify-end gap-3">
+                        <span
+                            v-if="form.isDirty"
+                            class="text-sm text-muted-foreground"
                         >
-                            <FieldGroup>
-                                <Field :data-invalid="Boolean(errors.decision)">
-                                    <FieldLabel
-                                        :for="
-                                            'source-conflict-decision-' +
-                                            conflict.id
-                                        "
-                                        required
-                                    >
-                                        Decisión
-                                    </FieldLabel>
-                                    <Select name="decision" required>
-                                        <SelectTrigger
-                                            :id="
-                                                'source-conflict-decision-' +
-                                                conflict.id
-                                            "
-                                            :aria-invalid="
-                                                Boolean(errors.decision)
-                                            "
-                                        >
-                                            <SelectValue
-                                                placeholder="Seleccione"
-                                            />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectGroup>
-                                                <SelectItem value="candidate">
-                                                    Conservar valor candidato
-                                                </SelectItem>
-                                                <SelectItem value="active">
-                                                    Conservar valor activo
-                                                </SelectItem>
-                                            </SelectGroup>
-                                        </SelectContent>
-                                    </Select>
-                                    <FieldError :errors="[errors.decision]" />
-                                </Field>
-
-                                <Field
-                                    :data-invalid="
-                                        Boolean(errors.justification)
-                                    "
-                                >
-                                    <FieldLabel
-                                        :for="
-                                            'source-conflict-justification-' +
-                                            conflict.id
-                                        "
-                                        required
-                                    >
-                                        Justificación académica
-                                    </FieldLabel>
-                                    <Textarea
-                                        :id="
-                                            'source-conflict-justification-' +
-                                            conflict.id
-                                        "
-                                        name="justification"
-                                        required
-                                        :aria-invalid="
-                                            Boolean(errors.justification)
-                                        "
-                                    />
-                                    <FieldError
-                                        :errors="[errors.justification]"
-                                    />
-                                </Field>
-
-                                <Field orientation="horizontal">
-                                    <Button
-                                        type="submit"
-                                        :disabled="processing"
-                                    >
-                                        <Spinner v-if="processing" />
-                                        Registrar resolución
-                                    </Button>
-                                </Field>
-                            </FieldGroup>
-                        </Form>
-                        <p v-else class="mt-2 text-sm text-muted-foreground">
-                            Decisión:
-                            {{
-                                conflict.decision === 'candidate'
-                                    ? 'valor candidato'
-                                    : 'valor previamente activo'
-                            }}.
-                        </p>
+                            Cambios sin guardar
+                        </span>
+                        <Button
+                            type="button"
+                            :disabled="form.processing || !form.isDirty"
+                            @click="save"
+                        >
+                            <Spinner v-if="form.processing" />
+                            <Check
+                                v-else
+                                data-icon="inline-start"
+                                aria-hidden="true"
+                            />
+                            Guardar contenido
+                        </Button>
                     </div>
                 </CardContent>
             </Card>

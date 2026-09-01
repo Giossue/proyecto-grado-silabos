@@ -2,28 +2,26 @@
 
 namespace App\Modules\Configuration\Presentation\Http\Requests;
 
-use App\Modules\Identity\Application\ActiveRole;
-use Illuminate\Foundation\Http\FormRequest;
+use App\Modules\Configuration\Infrastructure\Persistence\Models\AcademicSource;
 use Illuminate\Validation\Rule;
 
-class CreateSourceRequest extends FormRequest
+class UpdateSourceRequest extends ManageAcademicSourceRequest
 {
-    public function authorize(): bool
-    {
-        return $this->user()?->can('view-sources') === true;
-    }
-
     /** @return array<string, list<mixed>> */
     public function rules(): array
     {
-        $careerId = app(ActiveRole::class)->resolve($this)?->carrera_id;
+        $source = $this->route('source');
+        $sourceId = $source instanceof AcademicSource ? $source->id : null;
+        $careerId = $source instanceof AcademicSource ? $source->carrera_id : null;
 
         return [
             'name' => [
                 'required',
                 'string',
                 'max:180',
-                Rule::unique('fuentes_academicas', 'nombre')->where('carrera_id', $careerId),
+                Rule::unique('fuentes_academicas', 'nombre')
+                    ->where('carrera_id', $careerId)
+                    ->ignore($sourceId),
             ],
             'description' => ['nullable', 'string', 'max:2000'],
             'internal_notes' => ['nullable', 'string', 'max:5000'],

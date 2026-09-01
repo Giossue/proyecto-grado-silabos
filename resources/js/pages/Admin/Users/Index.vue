@@ -1,16 +1,13 @@
 <script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3';
-import { UserCheck, UserX } from '@lucide/vue';
 import ManagedUserController from '@/actions/App/Modules/Identity/Presentation/Http/Controllers/ManagedUserController';
 import FilterToolbar from '@/components/domain/FilterToolbar.vue';
+import ManagedUserEditSheet from '@/components/domain/identity/ManagedUserEditSheet.vue';
 import ManagedUserSheet from '@/components/domain/identity/ManagedUserSheet.vue';
-import RoleAssignmentSheet from '@/components/domain/identity/RoleAssignmentSheet.vue';
-import UserProfileSheet from '@/components/domain/identity/UserProfileSheet.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
 import TableActionsMenu from '@/components/domain/TableActionsMenu.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
 import { Card, CardContent } from '@/components/ui/card';
-import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Field, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import {
@@ -21,7 +18,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Spinner } from '@/components/ui/spinner';
 import {
     Table,
     TableBody,
@@ -327,57 +323,13 @@ defineProps<{
                                 <TableActionsMenu
                                     :label="`Acciones para ${user.name}`"
                                 >
-                                    <UserProfileSheet
+                                    <ManagedUserEditSheet
                                         display="menu"
-                                        :user-id="user.id"
-                                        :name="user.name"
-                                        :email="user.email"
-                                    />
-                                    <RoleAssignmentSheet
-                                        display="menu"
-                                        :managed-user-id="user.id"
+                                        :user="user"
                                         :roles="roles"
                                         :careers="careers"
                                         :today="today"
                                     />
-                                    <Form
-                                        v-bind="
-                                            ManagedUserController.setStatus.form(
-                                                user.id,
-                                            )
-                                        "
-                                        v-slot="{ processing, submit }"
-                                    >
-                                        <input
-                                            type="hidden"
-                                            name="active"
-                                            :value="user.active ? '0' : '1'"
-                                        />
-                                        <DropdownMenuItem
-                                            :disabled="processing"
-                                            :variant="
-                                                user.active
-                                                    ? 'destructive'
-                                                    : 'default'
-                                            "
-                                            @select="submit()"
-                                        >
-                                            <Spinner v-if="processing" />
-                                            <UserX
-                                                v-else-if="user.active"
-                                                aria-hidden="true"
-                                            />
-                                            <UserCheck
-                                                v-else
-                                                aria-hidden="true"
-                                            />
-                                            {{
-                                                user.active
-                                                    ? 'Desactivar cuenta'
-                                                    : 'Activar cuenta'
-                                            }}
-                                        </DropdownMenuItem>
-                                    </Form>
                                 </TableActionsMenu>
                             </TableCell>
                         </TableRow>

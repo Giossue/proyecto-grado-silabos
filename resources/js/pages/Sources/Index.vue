@@ -4,16 +4,8 @@ import ClientFilterBar from '@/components/domain/ClientFilterBar.vue';
 import AcademicSourceCreationSheet from '@/components/domain/configuration/AcademicSourceCreationSheet.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { Field, FieldLabel } from '@/components/ui/field';
-import {
-    Select,
-    SelectContent,
-    SelectGroup,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
 import {
     Table,
     TableBody,
@@ -31,36 +23,14 @@ const props = defineProps<{
     sources: {
         id: string;
         name: string;
-        type: string;
-        authority: string;
-        responsible: string;
-        career_name: string;
-        active: boolean;
-        versions: {
-            id: string;
-            number: number;
-            state: string;
-            valid_from: string | null;
-            valid_until: string | null;
-        }[];
+        description: string | null;
+        has_content: boolean;
+        updated_at: string | null;
     }[];
-    careers: { id: string; nombre: string }[];
-    isAdministrator: boolean;
 }>();
 const filter = useClientFilter(
     () => props.sources,
-    (item) => [
-        item.name,
-        item.type,
-        item.authority,
-        item.responsible,
-        item.career_name,
-    ],
-    {
-        estado: {
-            matches: (item, value) => item.active === (value === 'active'),
-        },
-    },
+    (item) => [item.name, item.description ?? ''],
 );
 
 const {
@@ -80,13 +50,10 @@ defineOptions({
     <Head title="Fuentes académicas" />
     <PageFrame
         title="Fuentes académicas"
-        description="Los documentos oficiales en los que se apoyan los sílabos: de quién son, desde cuándo rigen y qué dicen."
+        description="Los documentos que la coordinación entrega a los docentes como apoyo para elaborar sus sílabos."
     >
         <template #actions>
-            <AcademicSourceCreationSheet
-                :careers="careers"
-                :is-administrator="isAdministrator"
-            />
+            <AcademicSourceCreationSheet />
         </template>
         <Card>
             <CardContent class="flex flex-col gap-4">
@@ -94,49 +61,18 @@ defineOptions({
                     :filter="filter"
                     input-id="sources-search"
                     label="Buscar fuente"
-                    placeholder="Buscar por nombre, tipo, autoridad o responsable"
-                >
-                    <template #filters>
-                        <Field>
-                            <FieldLabel
-                                for="sources-search-state"
-                                class="sr-only"
-                            >
-                                Estado
-                            </FieldLabel>
-                            <Select v-model="filter.values.estado.value">
-                                <SelectTrigger id="sources-search-state">
-                                    <SelectValue
-                                        placeholder="Todos los estados"
-                                    />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectGroup>
-                                        <SelectItem value="all"
-                                            >Todos los estados</SelectItem
-                                        >
-                                        <SelectItem value="active"
-                                            >Activas</SelectItem
-                                        >
-                                        <SelectItem value="inactive"
-                                            >Archivadas</SelectItem
-                                        >
-                                    </SelectGroup>
-                                </SelectContent>
-                            </Select>
-                        </Field>
-                    </template>
-                </ClientFilterBar>
+                    placeholder="Buscar por nombre o descripción" />
                 <Table
                     ><TableHeader
                         ><TableRow
                             ><TableHead>Fuente</TableHead
-                            ><TableHead>Autoridad y responsable</TableHead
-                            ><TableHead>Carrera</TableHead
-                            ><TableHead>Versiones</TableHead></TableRow
+                            ><TableHead>Contenido</TableHead
+                            ><TableHead
+                                >Última actualización</TableHead
+                            ></TableRow
                         ></TableHeader
                     ><TableBody>
-                        <TableEmpty v-if="sourcePage.length === 0" :colspan="4"
+                        <TableEmpty v-if="sourcePage.length === 0" :colspan="3"
                             >No existen fuentes.</TableEmpty
                         >
                         <TableRow
@@ -149,36 +85,28 @@ defineOptions({
                                     class="font-medium underline-offset-4 hover:underline"
                                     >{{ source.name }}</Link
                                 >
-                                <div class="text-sm text-muted-foreground">
-                                    {{ source.type }}
+                                <div
+                                    v-if="source.description"
+                                    class="max-w-md truncate text-sm text-muted-foreground"
+                                >
+                                    {{ source.description }}
                                 </div></TableCell
                             ><TableCell
-                                ><div>{{ source.authority }}</div>
-                                <div class="text-sm text-muted-foreground">
-                                    {{ source.responsible }}
-                                </div></TableCell
-                            ><TableCell>{{ source.career_name }}</TableCell
-                            ><TableCell
-                                ><!--
-                                    Una versión por línea. En fila, sin la caja que las
-                                    separaba, «v1 · Activa v2 · Borrador» se leía como una
-                                    sola frase.
-                                -->
-                                <div class="flex flex-col gap-1">
-                                    <span
-                                        v-for="version in source.versions"
-                                        :key="version.id"
-                                        >v{{ version.number }} ·
-                                        {{
-                                            version.state === 'active'
-                                                ? 'Activa'
-                                                : version.state === 'draft'
-                                                  ? 'Borrador'
-                                                  : 'Reemplazada'
-                                        }}</span
-                                    >
-                                </div></TableCell
-                            ></TableRow
+                                ><Badge
+                                    :variant="
+                                        source.has_content
+                                            ? 'secondary'
+                                            : 'outline'
+                                    "
+                                    >{{
+                                        source.has_content
+                                            ? 'Redactado'
+                                            : 'Sin contenido'
+                                    }}</Badge
+                                ></TableCell
+                            ><TableCell>{{
+                                source.updated_at ?? '—'
+                            }}</TableCell></TableRow
                         >
                     </TableBody></Table
                 ><TablePagination

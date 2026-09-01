@@ -42,8 +42,21 @@ export function useCurrentUrl(): UseCurrentUrlReturn {
         const urlToCompare = currentUrl ?? currentUrlReactive.value;
         const urlString = toUrl(urlToCheck);
 
-        const comparePath = (path: string): boolean =>
-            startsWith ? urlToCompare.startsWith(path) : path === urlToCompare;
+        // El modo prefijo corta en segmentos completos: `/fuentes` cubre
+        // `/fuentes/{id}` pero no una ruta hermana que comparta el texto inicial.
+        const comparePath = (path: string): boolean => {
+            if (path === urlToCompare) {
+                return true;
+            }
+
+            if (!startsWith) {
+                return false;
+            }
+
+            return urlToCompare.startsWith(
+                path.endsWith('/') ? path : `${path}/`,
+            );
+        };
 
         if (!urlString.startsWith('http')) {
             return comparePath(urlString);

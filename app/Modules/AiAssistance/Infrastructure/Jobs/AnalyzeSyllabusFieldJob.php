@@ -52,12 +52,6 @@ class AnalyzeSyllabusFieldJob implements ShouldQueue
             ->with(['field', 'evidence'])
             ->findOrFail($this->executionId);
         $metadata = $execution->metadatos_entrada;
-        $conflictKeys = $metadata['conflict_keys'] ?? [];
-        if (is_array($conflictKeys) && $conflictKeys !== []) {
-            $this->finishInconclusive('source_conflict', $gateway->version(), $audit);
-
-            return;
-        }
         if (($metadata['too_many_evidence'] ?? false) === true) {
             $this->finishInconclusive('evidence_limit_exceeded', $gateway->version(), $audit);
 
@@ -262,14 +256,8 @@ class AnalyzeSyllabusFieldJob implements ShouldQueue
                 $item->id,
                 $item->fuente_academica_id,
                 $item->nombre_fuente,
-                $item->autoridad_fuente,
-                $item->version_fuente_id,
-                $item->numero_version,
-                $item->fragmento_fuente_id,
-                $item->clave_fragmento,
-                $item->titulo_fragmento,
                 $item->extracto,
-                $item->huella_fragmento,
+                $item->huella_contenido,
             );
         }
 

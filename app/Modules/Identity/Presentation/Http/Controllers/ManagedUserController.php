@@ -18,8 +18,10 @@ use App\Modules\Identity\Presentation\Http\Requests\IndexUsersRequest;
 use App\Modules\Identity\Presentation\Http\Requests\SetUserStatusRequest;
 use App\Modules\Identity\Presentation\Http\Requests\ShowManagedUserRequest;
 use App\Modules\Identity\Presentation\Http\Requests\UpdateManagedUserProfileRequest;
+use App\Modules\Identity\Presentation\Http\Requests\UpdateManagedUserRequest;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -175,6 +177,44 @@ class ManagedUserController extends Controller
         $action->execute($user, $request->boolean('active'), $actor, $request);
 
         return back()->with('success', $user->active ? 'Cuenta activada.' : 'Cuenta desactivada y sesiones revocadas.');
+    }
+
+    /**
+     * Guardado único del panel de edición: identidad siempre; rol y estado solo si vienen.
+     */
+    public function update(
+        User $user,
+        UpdateManagedUserRequest $request,
+        UpdateManagedUserProfile $updateProfile,
+        AssignRole $assignRole,
+        SetUserStatus $setStatus,
+    ): RedirectResponse {
+        $actor = $request->user();
+        abort_unless($actor instanceof User, 401);
+        $validated = $request->validated();
+        $wasActive = $user->active;
+
+        // Una sola transacción: identidad, rol nuevo y estado quedan coherentes o no
+        // queda nada. El estado va al final para que una desactivación cierre también
+        // un nombramiento concedido en este mismo guardado.
+        DB::transaction(function () use ($actor, $assignRole, $request, $setStatus, $updateProfile, $user, $validated, $wasActive): void {
+            $updateProfile->execute($user, $request->profileData(), $actor, $request);
+
+            if (array_key_exists('role_code', $validated)) {
+                $assignRole->execute($user, [
+                    'role_code' => $validated['role_code'],
+                    'career_id' => $validated['career_id'] ?? null,
+                    'valid_from' => $validated['valid_from'],
+                    'valid_until' => $validated['valid_until'] ?? null,
+                ], $actor, $request);
+            }
+
+            if (array_key_exists('active', $validated) && (bool) $validated['active'] !== $wasActive) {
+                $setStatus->execute($user, (bool) $validated['active'], $actor, $request);
+            }
+        });
+
+        return back()->with('success', 'Cuenta actualizada.');
     }
 
     public function updateProfile(

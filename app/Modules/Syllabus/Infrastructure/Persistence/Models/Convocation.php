@@ -5,7 +5,7 @@ namespace App\Modules\Syllabus\Infrastructure\Persistence\Models;
 use App\Models\User;
 use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
-use App\Modules\Configuration\Infrastructure\Persistence\Models\SourceVersion;
+use App\Modules\Configuration\Infrastructure\Persistence\Models\AcademicSource;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateVersion;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -69,10 +69,10 @@ class Convocation extends Model
         return $this->belongsTo(User::class, 'creado_por');
     }
 
-    /** @return BelongsToMany<SourceVersion, $this> */
-    public function sourceVersions(): BelongsToMany
+    /** @return BelongsToMany<AcademicSource, $this> */
+    public function sources(): BelongsToMany
     {
-        return $this->belongsToMany(SourceVersion::class, 'fuentes_convocatoria', 'convocatoria_id', 'version_fuente_id')
+        return $this->belongsToMany(AcademicSource::class, 'fuentes_convocatoria', 'convocatoria_id', 'fuente_academica_id')
             ->withTimestamps();
     }
 

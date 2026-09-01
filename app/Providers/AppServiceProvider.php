@@ -94,21 +94,18 @@ class AppServiceProvider extends ServiceProvider
             fn (User $user): bool => $user->active
                 && app(ActiveRole::class)->hasRole(request(), RoleCode::Administrator),
         );
-        Gate::define('view-sources', function (User $user): bool {
-            $activeRole = app(ActiveRole::class)->resolve(request());
-
-            return $user->active && in_array(
-                $activeRole?->role->codigo,
-                [RoleCode::Administrator->value, RoleCode::Coordinator->value],
-                true,
-            );
-        });
+        // Las fuentes son documentos de la Coordinación: Administración no participa.
+        Gate::define(
+            'view-sources',
+            fn (User $user): bool => $user->active
+                && app(ActiveRole::class)->hasRole(request(), RoleCode::Coordinator),
+        );
         Gate::define('manage-source', function (User $user, AcademicSource $source): bool {
             $activeRole = app(ActiveRole::class)->resolve(request());
 
-            return $user->active && ($activeRole?->role->codigo === RoleCode::Administrator->value
-                || ($activeRole?->role->codigo === RoleCode::Coordinator->value
-                    && $activeRole->carrera_id === $source->carrera_id));
+            return $user->active
+                && $activeRole?->role->codigo === RoleCode::Coordinator->value
+                && $activeRole->carrera_id === $source->carrera_id;
         });
         RateLimiter::for('ai-analysis', function (Request $request): Limit {
             $user = $request->user();

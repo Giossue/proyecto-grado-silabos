@@ -74,10 +74,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('exports.download');
         Route::post('revisiones/{revision}/documentos', [DocumentController::class, 'store'])->name('documents.store');
         Route::post('fuentes', [AcademicSourceController::class, 'store'])->name('sources.store');
-        Route::post('fuentes/versiones/{version}/fragmentos', [AcademicSourceController::class, 'addFragment'])->name('sources.fragments.store');
-        Route::post('fuentes/versiones/{version}/activar', [AcademicSourceController::class, 'activate'])->name('sources.versions.activate');
-        Route::post('fuentes/versiones/{version}/clonar', [AcademicSourceController::class, 'clone'])->name('sources.versions.clone');
-        Route::post('fuentes/conflictos/{conflict}/resolver', [AcademicSourceController::class, 'resolveConflict'])->name('sources.conflicts.resolve');
+        Route::patch('fuentes/{source}', [AcademicSourceController::class, 'update'])->name('sources.update');
+        Route::put('fuentes/{source}/contenido', [AcademicSourceController::class, 'updateContent'])->name('sources.content.update');
     });
 
     // --- Docencia ----------------------------------------------------------------
@@ -183,14 +181,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::prefix('admin')->middleware('active-role')->name('admin.')->group(function () {
         Route::get('panel', [DashboardController::class, 'index'])->name('dashboard');
         Route::get('notificaciones', [NotificationController::class, 'index'])->name('notifications.index');
-        Route::get('fuentes', [AcademicSourceController::class, 'index'])->name('sources.index');
-        Route::get('fuentes/{source}', [AcademicSourceController::class, 'show'])->name('sources.show');
         Route::get('procesos', [JobExecutionController::class, 'index'])->name('jobs.index');
         Route::post('procesos/{execution}/reintentar', [JobExecutionController::class, 'retry'])->name('jobs.retry');
         Route::get('auditoria', [AuditEventController::class, 'index'])->name('audit.index');
         Route::get('usuarios', [ManagedUserController::class, 'index'])->name('users.index');
         Route::post('usuarios', [ManagedUserController::class, 'store'])->name('users.store');
         Route::get('usuarios/{user}', [ManagedUserController::class, 'show'])->name('users.show');
+        Route::patch('usuarios/{user}', [ManagedUserController::class, 'update'])->name('users.update');
         Route::post('usuarios/{user}/roles', [ManagedUserController::class, 'assignRole'])->name('users.roles.store');
         Route::patch('usuarios/{user}/estado', [ManagedUserController::class, 'setStatus'])->name('users.status.update');
         Route::redirect('facultades-carreras', '/admin/estructura-academica/facultades');

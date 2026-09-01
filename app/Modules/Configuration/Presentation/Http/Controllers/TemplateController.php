@@ -71,7 +71,10 @@ class TemplateController extends Controller
     public function show(TemplateVersion $version, ManageTemplatesRequest $request): Response
     {
         $this->ensureInstitutional($version);
-        $version->load(['template', 'sections.blocks.fields']);
+        $version->load([
+            'template.versions' => fn ($query) => $query->orderByDesc('numero_version'),
+            'sections.blocks.fields',
+        ]);
 
         return Inertia::render('Admin/Templates/Show', [
             'templateVersion' => [
@@ -81,6 +84,11 @@ class TemplateController extends Controller
                 'template' => [
                     'name' => $version->template->nombre,
                     'description' => $version->template->descripcion,
+                    'versions' => $version->template->versions->map(fn (TemplateVersion $sibling) => [
+                        'id' => $sibling->id,
+                        'number' => $sibling->numero_version,
+                        'state' => $sibling->estado,
+                    ])->values()->all(),
                 ],
                 'sections' => $version->sections->map(fn (TemplateSection $section) => [
                     'id' => $section->id,

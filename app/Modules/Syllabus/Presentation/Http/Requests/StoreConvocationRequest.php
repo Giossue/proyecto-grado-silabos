@@ -25,24 +25,24 @@ class StoreConvocationRequest extends FormRequest
             ],
             'template_version_id' => ['required', 'uuid', 'exists:versiones_plantilla,id'],
             'grouping_mode' => ['required', Rule::in(['per_offering', 'per_parallel'])],
-            'source_version_ids' => ['required', 'array', 'min:1'],
-            'source_version_ids.*' => ['required', 'uuid', 'distinct', 'exists:versiones_fuente,id'],
+            'source_ids' => ['required', 'array', 'min:1'],
+            'source_ids.*' => ['required', 'uuid', 'distinct', 'exists:fuentes_academicas,id'],
             'start_date' => ['required', 'date'],
             'draft_deadline' => ['required', 'date', 'after:now', 'after:start_date'],
         ];
     }
 
-    /** @return array{name: string, period_id: string, template_version_id: string, grouping_mode: string, source_version_ids: list<string>, start_date: string, draft_deadline: string} */
+    /** @return array{name: string, period_id: string, template_version_id: string, grouping_mode: string, source_ids: list<string>, start_date: string, draft_deadline: string} */
     public function convocationData(): array
     {
-        $sourceIds = $this->input('source_version_ids', []);
+        $sourceIds = $this->input('source_ids', []);
 
         return [
             'name' => $this->string('name')->toString(),
             'period_id' => $this->string('period_id')->toString(),
             'template_version_id' => $this->string('template_version_id')->toString(),
             'grouping_mode' => $this->string('grouping_mode')->toString(),
-            'source_version_ids' => is_array($sourceIds)
+            'source_ids' => is_array($sourceIds)
                 ? array_values(array_filter($sourceIds, is_string(...)))
                 : [],
             'start_date' => $this->string('start_date')->toString(),

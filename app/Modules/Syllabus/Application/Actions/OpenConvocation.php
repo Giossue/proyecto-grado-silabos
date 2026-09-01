@@ -8,7 +8,6 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\CurriculumVersion;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
 use App\Modules\Academic\Infrastructure\Persistence\Models\TeacherAssignment;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\FieldDefinition;
-use App\Modules\Configuration\Infrastructure\Persistence\Models\SourceConflict;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Operations\Application\Actions\RecordAuditEvent;
 use App\Modules\Syllabus\Application\AcademicContextSnapshot;
@@ -35,7 +34,7 @@ class OpenConvocation
         $activeRole = $this->roles->resolve($request);
 
         return DB::transaction(function () use ($actor, $convocationId, $activeRole, $request): Convocation {
-            $convocation = Convocation::query()->lockForUpdate()->with(['sourceVersions.source', 'templateVersion.fields'])->findOrFail($convocationId);
+            $convocation = Convocation::query()->lockForUpdate()->with(['sources', 'templateVersion.fields'])->findOrFail($convocationId);
             if ($activeRole?->carrera_id !== $convocation->carrera_id || $activeRole->role->codigo !== 'coordinator') {
                 abort(403);
             }
@@ -45,18 +44,9 @@ class OpenConvocation
             if ($convocation->templateVersion->estado !== 'published') {
                 throw ValidationException::withMessages(['convocation' => 'La plantilla fijada ya no está publicada.']);
             }
-            if ($convocation->sourceVersions->isEmpty()
-                || $convocation->sourceVersions->contains(fn ($version): bool => $version->estado !== 'active')) {
+            if ($convocation->sources->isEmpty()
+                || $convocation->sources->contains(fn ($source): bool => ! $source->activo)) {
                 throw ValidationException::withMessages(['convocation' => 'Las fuentes fijadas deben continuar activas al abrir.']);
-            }
-            $sourceVersionIds = $convocation->sourceVersions->pluck('id');
-            if (SourceConflict::query()
-                ->where('estado', 'pending')
-                ->where(fn ($query) => $query
-                    ->whereIn('version_candidata_id', $sourceVersionIds)
-                    ->orWhereIn('version_activa_id', $sourceVersionIds))
-                ->exists()) {
-                throw ValidationException::withMessages(['convocation' => 'Resuelva las contradicciones de fuentes antes de abrir la convocatoria.']);
             }
 
             if (! CurriculumVersion::query()

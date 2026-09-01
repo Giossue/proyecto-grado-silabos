@@ -93,8 +93,7 @@ class RequestAiAnalysis
                 $evidenceRows[] = $item + ['id' => $evidenceId];
                 $evidenceMetadata[] = [
                     'evidence_id' => $evidenceId,
-                    'source_version_id' => $item['source_version_id'],
-                    'fragment_id' => $item['fragment_id'],
+                    'source_id' => $item['source_id'],
                     'fingerprint' => $item['fingerprint'],
                 ];
             }
@@ -118,7 +117,6 @@ class RequestAiAnalysis
                     'field_key' => $field->clave,
                     'evidence' => $evidenceMetadata,
                     'evidence_count' => count($evidenceRows),
-                    'conflict_keys' => $evidenceSet['conflict_keys'],
                     'too_many_evidence' => $evidenceSet['too_many'],
                     'parameters' => [
                         'max_recommendations' => (int) config('ai.limits.recommendations'),
@@ -136,16 +134,9 @@ class RequestAiAnalysis
                     'id' => $item['id'],
                     'ejecucion_ia_id' => $execution->id,
                     'fuente_academica_id' => $item['source_id'],
-                    'version_fuente_id' => $item['source_version_id'],
-                    'fragmento_fuente_id' => $item['fragment_id'],
                     'nombre_fuente' => $item['source_name'],
-                    'autoridad_fuente' => $item['source_authority'],
-                    'numero_version' => $item['source_version'],
-                    'clave_fragmento' => $item['fragment_key'],
-                    'titulo_fragmento' => $item['fragment_title'],
-                    'clave_dato' => $item['data_key'],
                     'extracto' => $item['excerpt'],
-                    'huella_fragmento' => $item['fingerprint'],
+                    'huella_contenido' => $item['fingerprint'],
                 ]);
             }
 

@@ -29,20 +29,23 @@ import {
 } from '@/components/ui/sidebar';
 import { useCurrentUrl } from '@/composables/useCurrentUrl';
 import { dashboard } from '@/routes';
+import { dashboard as adminDashboard } from '@/routes/admin';
 import { index as academicIndex } from '@/routes/admin/academic';
 import { index as auditIndex } from '@/routes/admin/audit';
 import { index as jobsIndex } from '@/routes/admin/jobs';
 import { index as templatesIndex } from '@/routes/admin/templates';
 import { index as usersIndex } from '@/routes/admin/users';
 import { index as convocationsIndex } from '@/routes/convocations';
+import { dashboard as coordinationDashboard } from '@/routes/coordination';
 import { index as curriculaIndex } from '@/routes/coordination/academic/curricula';
 import { index as offeringsIndex } from '@/routes/coordination/academic/offerings';
 import { index as parallelsIndex } from '@/routes/coordination/academic/parallels';
 import { index as teacherAssignmentsIndex } from '@/routes/coordination/academic/teacher-assignments';
+import { index as coordinationSourcesIndex } from '@/routes/coordination/sources';
 import { index as reportsIndex } from '@/routes/reports';
 import { index as reviewsIndex } from '@/routes/reviews';
-import { index as sourcesIndex } from '@/routes/sources';
 import { index as syllabiIndex } from '@/routes/syllabi';
+import { dashboard as teacherDashboard } from '@/routes/teacher';
 import type { NavItem } from '@/types';
 
 const page = usePage();
@@ -52,10 +55,28 @@ const activeRole = computed(() =>
     ),
 );
 
+/*
+ * Las direcciones cortas (`/dashboard`, `/fuentes`) redirigen a la copia del área, así
+ * que nunca coinciden con la URL final y el ítem jamás se marcaría como actual. La barra
+ * ya sabe el rol activo, así que enlaza directo a la copia del área.
+ */
+const panelHref = computed(() => {
+    switch (activeRole.value?.role) {
+        case 'administrator':
+            return adminDashboard();
+        case 'coordinator':
+            return coordinationDashboard();
+        case 'teacher':
+            return teacherDashboard();
+        default:
+            return dashboard();
+    }
+});
+
 const mainNavItems = computed<NavItem[]>(() => [
     {
         title: 'Panel',
-        href: dashboard(),
+        href: panelHref.value,
         icon: LayoutGrid,
     },
     ...(activeRole.value?.role === 'administrator'
@@ -66,8 +87,10 @@ const mainNavItems = computed<NavItem[]>(() => [
                   icon: UsersRound,
               },
               {
+                  // Sin sección: el `href` del grupo solo decide el marcado como
+                  // actual, y así cubre también la dirección base sin pestaña.
                   title: 'Estructura académica',
-                  href: academicIndex('facultades'),
+                  href: academicIndex(),
                   icon: Building2,
                   items: [
                       {
@@ -114,15 +137,6 @@ const mainNavItems = computed<NavItem[]>(() => [
               },
           ]
         : []),
-    ...(activeRole.value?.role === 'administrator'
-        ? [
-              {
-                  title: 'Fuentes académicas',
-                  href: sourcesIndex(),
-                  icon: LibraryBig,
-              },
-          ]
-        : []),
     ...(activeRole.value?.role === 'coordinator'
         ? [
               {
@@ -152,7 +166,7 @@ const mainNavItems = computed<NavItem[]>(() => [
               },
               {
                   title: 'Fuentes académicas',
-                  href: sourcesIndex(),
+                  href: coordinationSourcesIndex(),
                   icon: LibraryBig,
               },
               {

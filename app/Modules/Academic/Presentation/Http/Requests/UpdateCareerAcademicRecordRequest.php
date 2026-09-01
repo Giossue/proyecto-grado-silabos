@@ -220,11 +220,10 @@ class UpdateCareerAcademicRecordRequest extends FormRequest
     /** @return list<string> */
     private function activeSubjectSystemKeys(string $curriculumId): array
     {
-        return $this->activeSubjectFields($curriculumId)
+        return array_values($this->activeSubjectFields($curriculumId)
             ->pluck('clave_sistema')
             ->filter(fn (mixed $key): bool => is_string($key))
-            ->values()
-            ->all();
+            ->all());
     }
 
     private function subjectCurriculumId(): string

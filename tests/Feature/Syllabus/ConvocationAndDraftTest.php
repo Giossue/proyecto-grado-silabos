@@ -9,7 +9,6 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
 use App\Modules\Academic\Infrastructure\Persistence\Models\TeacherAssignment;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\AcademicSource;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\FieldDefinition;
-use App\Modules\Configuration\Infrastructure\Persistence\Models\SourceVersion;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateVersion;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\Convocation;
@@ -142,30 +141,12 @@ class ConvocationAndDraftTest extends TestCase
         $this->assertDatabaseMissing('eventos_auditoria', ['accion' => 'convocation.opened']);
     }
 
-    public function test_pending_source_contradiction_blocks_convocation_opening(): void
+    public function test_archived_source_blocks_convocation_opening(): void
     {
         $convocation = $this->createPreparedConvocation('per_offering');
-
-        $this->actingAsCoordinator()->post(route('sources.store'), [
-            'name' => 'Fuente contradictoria I-03',
-            'type' => 'malla',
-            'authority' => 'Consejo académico',
-            'responsible' => 'Coordinación de Software',
-            'valid_from' => now()->toDateString(),
-        ]);
-        $candidateSource = AcademicSource::query()
-            ->where('nombre', 'Fuente contradictoria I-03')
-            ->firstOrFail();
-        $candidate = $candidateSource->versions()->firstOrFail();
-        $this->actingAsCoordinator()->post(route('sources.fragments.store', $candidate), [
-            'key' => 'perfil_contradictorio',
-            'title' => 'Perfil contradictorio',
-            'data_key' => 'perfil.base',
-            'structured_value' => json_encode(['value' => 'Valor contradictorio'], JSON_THROW_ON_ERROR),
-        ]);
-        $this->actingAsCoordinator()
-            ->post(route('sources.versions.activate', $candidate))
-            ->assertSessionHasErrors('version');
+        AcademicSource::query()
+            ->whereIn('id', $convocation->sources()->pluck('fuentes_academicas.id'))
+            ->update(['activo' => false]);
 
         $this->actingAsCoordinator()
             ->post(route('convocations.open', $convocation))
@@ -336,15 +317,17 @@ class ConvocationAndDraftTest extends TestCase
             'period_id' => $periodId,
             'template_version_id' => $template->id,
             'grouping_mode' => $groupingMode,
-            'source_version_ids' => [$source->id],
+            'source_ids' => [$source->id],
             'start_date' => now()->subDay()->toIso8601String(),
             'draft_deadline' => now()->addMonth()->toIso8601String(),
         ])->assertRedirect();
 
-        return Convocation::query()->latest('created_at')->firstOrFail();
+        // Por nombre: dos convocatorias creadas en el mismo segundo empatan en
+        // `created_at` y «la última» dejaría de ser la recién preparada.
+        return Convocation::query()->where('nombre', 'Convocatoria '.$groupingMode)->firstOrFail();
     }
 
-    /** @return array{TemplateVersion, SourceVersion} */
+    /** @return array{TemplateVersion, AcademicSource} */
     private function publishedConfiguration(): array
     {
         $this->actingAsAdministrator()->post(route('admin.templates.store'), ['name' => 'Plantilla I-03']);
@@ -353,19 +336,12 @@ class ConvocationAndDraftTest extends TestCase
 
         $this->actingAsCoordinator()->post(route('sources.store'), [
             'name' => 'Fuente I-03',
-            'type' => 'malla',
-            'authority' => 'Consejo académico',
-            'responsible' => 'Coordinación de Software',
-            'valid_from' => now()->toDateString(),
+            'description' => 'Documento de apoyo del periodo.',
         ]);
-        $source = SourceVersion::query()->latest('created_at')->firstOrFail();
-        $this->actingAsCoordinator()->post(route('sources.fragments.store', $source), [
-            'key' => 'perfil_base',
-            'title' => 'Perfil base',
-            'data_key' => 'perfil.base',
-            'structured_value' => json_encode(['value' => 'Evidencia académica autorizada.'], JSON_THROW_ON_ERROR),
+        $source = AcademicSource::query()->latest('created_at')->firstOrFail();
+        $this->actingAsCoordinator()->put(route('sources.content.update', $source), [
+            'content' => "## Perfil base\n\nEvidencia académica autorizada.",
         ]);
-        $this->actingAsCoordinator()->post(route('sources.versions.activate', $source));
 
         return [$template->fresh(), $source->fresh()];
     }

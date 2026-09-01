@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Form, Head, Link } from '@inertiajs/vue3';
+import { Check, ChevronDown } from '@lucide/vue';
 import TemplateController from '@/actions/App/Modules/Configuration/Presentation/Http/Controllers/TemplateController';
 import TemplateBlockBuilder from '@/components/domain/configuration/TemplateBlockBuilder.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
@@ -12,6 +13,13 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuGroup,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { FieldError } from '@/components/ui/field';
 import { Spinner } from '@/components/ui/spinner';
 import { index as templatesIndex } from '@/routes/admin/templates';
@@ -39,6 +47,11 @@ defineProps<{
         template: {
             name: string;
             description: string | null;
+            versions: {
+                id: string;
+                number: number;
+                state: string;
+            }[];
         };
         sections: {
             id: string;
@@ -56,6 +69,9 @@ defineProps<{
     };
     blockTypes: { value: string; label: string }[];
 }>();
+
+const stateLabel = (state: string): string =>
+    state === 'published' ? 'Publicada' : 'Borrador';
 
 defineOptions({
     layout: { breadcrumbs: [{ title: 'Plantillas', href: templatesIndex() }] },
@@ -85,14 +101,44 @@ defineOptions({
                         : 'outline'
                 "
             >
-                {{
-                    templateVersion.state === 'published'
-                        ? 'Publicada'
-                        : 'Borrador'
-                }}
+                {{ stateLabel(templateVersion.state) }}
             </Badge>
         </template>
         <template #actions>
+            <DropdownMenu v-if="templateVersion.template.versions.length > 1">
+                <DropdownMenuTrigger as-child>
+                    <Button variant="outline">
+                        Versiones
+                        <ChevronDown aria-hidden="true" />
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                    <DropdownMenuGroup>
+                        <template
+                            v-for="sibling in templateVersion.template.versions"
+                            :key="sibling.id"
+                        >
+                            <DropdownMenuItem
+                                v-if="sibling.id === templateVersion.id"
+                                disabled
+                            >
+                                <Check aria-hidden="true" />
+                                v{{ sibling.number }} ·
+                                {{ stateLabel(sibling.state) }}
+                                <span class="sr-only">(versión actual)</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem v-else as-child>
+                                <Link
+                                    :href="TemplateController.show(sibling.id)"
+                                >
+                                    v{{ sibling.number }} ·
+                                    {{ stateLabel(sibling.state) }}
+                                </Link>
+                            </DropdownMenuItem>
+                        </template>
+                    </DropdownMenuGroup>
+                </DropdownMenuContent>
+            </DropdownMenu>
             <Form
                 v-if="templateVersion.state === 'draft'"
                 v-bind="TemplateController.publish.form(templateVersion.id)"

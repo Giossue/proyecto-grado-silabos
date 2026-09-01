@@ -1,15 +1,21 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import { Eye } from '@lucide/vue';
 import TemplateController from '@/actions/App/Modules/Configuration/Presentation/Http/Controllers/TemplateController';
 import ClientFilterBar from '@/components/domain/ClientFilterBar.vue';
 import TemplateCreationSheet from '@/components/domain/configuration/TemplateCreationSheet.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
-import TableActionsMenu from '@/components/domain/TableActionsMenu.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
-import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
+import {
+    Card,
+    CardAction,
+    CardContent,
+    CardDescription,
+    CardFooter,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
 import { Field, FieldLabel } from '@/components/ui/field';
 import {
     Select,
@@ -19,15 +25,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableEmpty,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table';
 import { useClientFilter } from '@/composables/useClientFilter';
 import { useClientPagination } from '@/composables/useClientPagination';
 import { index as templatesIndex } from '@/routes/admin/templates';
@@ -63,6 +60,9 @@ const {
     setPage: setTemplatePage,
 } = useClientPagination(() => filter.items.value);
 
+const stateLabel = (state: string): string =>
+    state === 'published' ? 'Publicada' : 'Borrador';
+
 defineOptions({
     layout: { breadcrumbs: [{ title: 'Plantillas', href: templatesIndex() }] },
 });
@@ -78,123 +78,113 @@ defineOptions({
             <TemplateCreationSheet v-if="!hasInstitutionalTemplate" />
         </template>
 
-        <Card>
-            <CardContent class="flex flex-col gap-4">
-                <ClientFilterBar
-                    :filter="filter"
-                    input-id="templates-search"
-                    label="Buscar plantilla"
-                    placeholder="Buscar por nombre o descripción"
-                >
-                    <template #filters>
-                        <Field>
-                            <FieldLabel
-                                for="templates-search-state"
-                                class="sr-only"
-                            >
-                                Estado
-                            </FieldLabel>
-                            <Select v-model="filter.values.estado.value">
-                                <SelectTrigger id="templates-search-state">
-                                    <SelectValue
-                                        placeholder="Todos los estados"
-                                    />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectGroup>
-                                        <SelectItem value="all"
-                                            >Todos los estados</SelectItem
-                                        >
-                                        <SelectItem value="active"
-                                            >Activas</SelectItem
-                                        >
-                                        <SelectItem value="inactive"
-                                            >Archivadas</SelectItem
-                                        >
-                                    </SelectGroup>
-                                </SelectContent>
-                            </Select>
-                        </Field>
-                    </template>
-                </ClientFilterBar>
-                <Table
-                    ><TableHeader
-                        ><TableRow
-                            ><TableHead>Plantilla</TableHead
-                            ><TableHead>Versiones</TableHead
-                            ><TableHead>Estado</TableHead
-                            ><TableHead class="text-right"
-                                >Acciones</TableHead
-                            ></TableRow
-                        ></TableHeader
-                    ><TableBody>
-                        <TableEmpty
-                            v-if="templatePage.length === 0"
-                            :colspan="4"
-                            >No existen plantillas.</TableEmpty
+        <div class="flex flex-col gap-4">
+            <ClientFilterBar
+                :filter="filter"
+                input-id="templates-search"
+                label="Buscar plantilla"
+                placeholder="Buscar por nombre o descripción"
+            >
+                <template #filters>
+                    <Field>
+                        <FieldLabel
+                            for="templates-search-state"
+                            class="sr-only"
                         >
-                        <TableRow
-                            v-for="template in templatePage"
-                            v-else
-                            :key="template.id"
-                            ><TableCell
-                                ><div class="font-medium">
-                                    {{ template.name }}
-                                </div>
-                                <div
-                                    class="max-w-xl text-sm text-muted-foreground"
-                                >
-                                    {{
-                                        template.description ??
-                                        'Sin descripción'
-                                    }}
-                                </div></TableCell
-                            ><TableCell
-                                ><div class="flex flex-wrap gap-2">
-                                    <Badge
-                                        v-for="version in template.versions"
-                                        :key="version.id"
-                                        variant="outline"
-                                        >v{{ version.number }}</Badge
+                            Estado
+                        </FieldLabel>
+                        <Select v-model="filter.values.estado.value">
+                            <SelectTrigger id="templates-search-state">
+                                <SelectValue placeholder="Todos los estados" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectGroup>
+                                    <SelectItem value="all"
+                                        >Todos los estados</SelectItem
                                     >
-                                </div></TableCell
-                            ><TableCell>{{
-                                template.active ? 'Activa' : 'Archivada'
-                            }}</TableCell
-                            ><TableCell class="text-right"
-                                ><TableActionsMenu
-                                    :label="`Acciones para ${template.name}`"
-                                    ><template
-                                        v-if="template.versions.length > 0"
-                                        ><DropdownMenuItem
-                                            v-for="version in template.versions"
-                                            :key="version.id"
-                                            as-child
-                                            ><Link
-                                                :href="
-                                                    TemplateController.show(
-                                                        version.id,
-                                                    )
-                                                "
-                                                ><Eye
-                                                    aria-hidden="true"
-                                                />Abrir</Link
-                                            ></DropdownMenuItem
-                                        ></template
-                                    ><DropdownMenuItem v-else disabled
-                                        >Sin versiones
-                                        disponibles</DropdownMenuItem
-                                    ></TableActionsMenu
-                                ></TableCell
-                            ></TableRow
+                                    <SelectItem value="active"
+                                        >Activas</SelectItem
+                                    >
+                                    <SelectItem value="inactive"
+                                        >Archivadas</SelectItem
+                                    >
+                                </SelectGroup>
+                            </SelectContent>
+                        </Select>
+                    </Field>
+                </template>
+            </ClientFilterBar>
+
+            <Card v-if="templatePage.length === 0">
+                <CardContent
+                    class="py-6 text-center text-sm text-muted-foreground"
+                >
+                    No existen plantillas.
+                </CardContent>
+            </Card>
+
+            <div v-else class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                <Card v-for="template in templatePage" :key="template.id">
+                    <CardHeader>
+                        <CardTitle>{{ template.name }}</CardTitle>
+                        <CardDescription>
+                            {{ template.description ?? 'Sin descripción' }}
+                        </CardDescription>
+                        <CardAction>
+                            <Badge
+                                :variant="
+                                    template.active ? 'secondary' : 'outline'
+                                "
+                            >
+                                {{ template.active ? 'Activa' : 'Archivada' }}
+                            </Badge>
+                        </CardAction>
+                    </CardHeader>
+                    <CardContent class="flex-1">
+                        <div
+                            v-if="template.versions.length > 0"
+                            class="flex flex-wrap gap-2"
                         >
-                    </TableBody></Table
-                ><TablePagination
-                    :meta="templateMeta"
-                    mode="client"
-                    label="Paginación de plantillas"
-                    @update:page="setTemplatePage"
-            /></CardContent>
-        </Card>
+                            <Badge
+                                v-for="version in template.versions"
+                                :key="version.id"
+                                :variant="
+                                    version.state === 'published'
+                                        ? 'secondary'
+                                        : 'outline'
+                                "
+                            >
+                                v{{ version.number }} ·
+                                {{ stateLabel(version.state) }}
+                            </Badge>
+                        </div>
+                        <p v-else class="text-sm text-muted-foreground">
+                            Sin versiones disponibles.
+                        </p>
+                    </CardContent>
+                    <CardFooter v-if="template.versions.length > 0">
+                        <Button as-child class="w-full">
+                            <Link
+                                :href="
+                                    TemplateController.show(
+                                        template.versions[0].id,
+                                    )
+                                "
+                            >
+                                Abrir plantilla
+                                <span class="sr-only">{{ template.name }}</span>
+                            </Link>
+                        </Button>
+                    </CardFooter>
+                </Card>
+            </div>
+
+            <TablePagination
+                :meta="templateMeta"
+                mode="client"
+                label="Paginación de plantillas"
+                @update:page="setTemplatePage"
+            />
+        </div>
     </PageFrame>
 </template>

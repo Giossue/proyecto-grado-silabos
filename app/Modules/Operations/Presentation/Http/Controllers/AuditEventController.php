@@ -118,6 +118,9 @@ class AuditEventController extends Controller
             'document.export_failed' => 'Exportación fallida',
             'document.export_requested' => 'Exportación solicitada',
             'job.retry_requested' => 'Reintento solicitado',
+            'source.created' => 'Fuente académica creada',
+            'source.updated' => 'Fuente académica actualizada',
+            'source.content_updated' => 'Contenido de fuente actualizado',
             'syllabus.approved' => 'Sílabo aprobado',
             'syllabus.correction_requested' => 'Corrección solicitada',
             'syllabus.reopened' => 'Sílabo reabierto',
@@ -141,6 +144,7 @@ class AuditEventController extends Controller
     private function resourceLabel(string $resource): string
     {
         return match ($resource) {
+            'academic_source' => 'Fuente académica',
             'approval' => 'Aprobación',
             'campus' => 'Campus',
             'convocation' => 'Convocatoria',
@@ -210,6 +214,7 @@ class AuditEventController extends Controller
             'changed_fields' => 'Campos modificados',
             'decision' => 'Decisión',
             'field_key' => 'Campo',
+            'fingerprint' => 'Huella del contenido',
             'key' => 'Clave del campo',
             'format' => 'Formato',
             'generated_count' => 'Expedientes generados',

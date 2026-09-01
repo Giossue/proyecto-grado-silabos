@@ -6,9 +6,6 @@ use App\Models\User;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Faculty;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\AcademicSource;
-use App\Modules\Configuration\Infrastructure\Persistence\Models\SourceConflict;
-use App\Modules\Configuration\Infrastructure\Persistence\Models\SourceFragment;
-use App\Modules\Configuration\Infrastructure\Persistence\Models\SourceVersion;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateVersion;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
@@ -150,6 +147,17 @@ class TemplateAndSourceTest extends TestCase
             $version->fields()->pluck('id')->all(),
             $clone->fields()->pluck('id')->all(),
         );
+
+        $this->actingAsAdministrator()
+            ->get(route('admin.templates.show', $clone))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Admin/Templates/Show')
+                ->has('templateVersion.template.versions', 2)
+                ->where('templateVersion.template.versions.0.number', 2)
+                ->where('templateVersion.template.versions.0.state', 'draft')
+                ->where('templateVersion.template.versions.1.number', 1)
+                ->where('templateVersion.template.versions.1.state', 'published'));
     }
 
     public function test_template_blocks_use_document_content_types(): void
@@ -251,57 +259,76 @@ class TemplateAndSourceTest extends TestCase
         $this->assertDatabaseMissing('bloques_plantilla', ['seccion_plantilla_id' => $created->id]);
     }
 
-    public function test_coordinator_creates_and_activates_scoped_source_with_immutable_fragment(): void
+    public function test_coordinator_creates_and_edits_source_document(): void
     {
-        $version = $this->createSourceAsCoordinator('Perfil de egreso');
-        $this->addStructuredFragment($version, 'perfil.resultado', ['value' => 'Diseña software seguro']);
+        $source = $this->createSourceAsCoordinator('Perfil de egreso');
+        $this->assertSame('Documento de referencia.', $source->descripcion);
+        $this->assertSame('Entregar al inicio del periodo.', $source->notas_internas);
 
         $this->actingAsCoordinator()
-            ->post(route('sources.versions.activate', $version))
+            ->patch(route('sources.update', $source), [
+                'name' => 'Perfil de egreso 2026',
+                'description' => 'Versión socializada con docentes.',
+                'internal_notes' => null,
+            ])
             ->assertRedirect()
             ->assertSessionHas('success');
 
-        $active = $version->fresh();
-        $this->assertSame('active', $active->estado);
-        $this->assertMatchesRegularExpression('/^[a-f0-9]{64}$/', $active->huella_sha256);
-        $fragment = $active->fragments()->firstOrFail();
-
-        $this->expectException(LogicException::class);
-        $fragment->update(['titulo' => 'Cambio prohibido']);
-    }
-
-    public function test_exact_contradiction_is_persisted_and_requires_human_resolution(): void
-    {
-        $activeVersion = $this->createSourceAsCoordinator('Fuente vigente');
-        $this->addStructuredFragment($activeVersion, 'creditos.sw601', ['value' => 4]);
-        $this->actingAsCoordinator()->post(route('sources.versions.activate', $activeVersion));
-
-        $candidate = $this->createSourceAsCoordinator('Fuente candidata');
-        $this->addStructuredFragment($candidate, 'creditos.sw601', ['value' => 5]);
-        $this->actingAsCoordinator()
-            ->post(route('sources.versions.activate', $candidate))
-            ->assertSessionHasErrors('version');
-
-        $conflict = SourceConflict::query()->firstOrFail();
-        $this->assertSame('pending', $conflict->estado);
-        $this->assertSame('draft', $candidate->fresh()->estado);
+        $updated = $source->fresh();
+        $this->assertSame('Perfil de egreso 2026', $updated->nombre);
+        $this->assertNull($updated->notas_internas);
 
         $this->actingAsCoordinator()
-            ->post(route('sources.conflicts.resolve', $conflict), [
-                'decision' => 'candidate',
-                'justification' => 'La autoridad académica confirmó el valor candidato.',
+            ->put(route('sources.content.update', $source), [
+                'content' => "## Resultado\n\nDiseña software seguro.",
             ])
-            ->assertRedirect();
-        $this->actingAsCoordinator()
-            ->post(route('sources.versions.activate', $candidate))
+            ->assertRedirect()
             ->assertSessionHas('success');
 
-        $this->assertSame('active', $candidate->fresh()->estado);
-        $this->assertSame('resolved', $conflict->fresh()->estado);
+        $this->assertSame("## Resultado\n\nDiseña software seguro.", $source->fresh()->contenido);
         $this->assertDatabaseHas('eventos_auditoria', [
-            'accion' => 'source.conflict_resolved',
-            'recurso_id' => $conflict->id,
+            'accion' => 'source.content_updated',
+            'recurso_id' => $source->id,
         ]);
+
+        $this->actingAsCoordinator()
+            ->followingRedirects()
+            ->get(route('sources.show', $source))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Sources/Show')
+                ->where('source.name', 'Perfil de egreso 2026')
+                ->where('source.content', "## Resultado\n\nDiseña software seguro."));
+    }
+
+    public function test_source_name_is_unique_per_career(): void
+    {
+        $this->createSourceAsCoordinator('Reglamento académico');
+
+        $this->actingAsCoordinator()
+            ->from(route('coordination.sources.index'))
+            ->post(route('sources.store'), ['name' => 'Reglamento académico'])
+            ->assertRedirect(route('coordination.sources.index'))
+            ->assertSessionHasErrors('name');
+
+        $this->assertSame(1, AcademicSource::query()->where('nombre', 'Reglamento académico')->count());
+    }
+
+    public function test_administrator_cannot_access_sources(): void
+    {
+        $source = $this->createSourceAsCoordinator('Fuente de coordinación');
+
+        $this->actingAsAdministrator()
+            ->get(route('sources.index'))
+            ->assertForbidden();
+
+        $this->actingAsAdministrator()
+            ->post(route('sources.store'), ['name' => 'Fuente administrativa'])
+            ->assertForbidden();
+
+        $this->actingAsAdministrator()
+            ->put(route('sources.content.update', $source), ['content' => 'Edición indebida'])
+            ->assertForbidden();
     }
 
     public function test_coordinator_cannot_open_source_from_another_career(): void
@@ -316,20 +343,16 @@ class TemplateAndSourceTest extends TestCase
         $source = AcademicSource::query()->create([
             'carrera_id' => $otherCareer->id,
             'nombre' => 'Fuente fuera de alcance',
-            'tipo' => 'malla',
-            'autoridad' => 'Autoridad',
-            'responsable' => 'Custodio',
             'activo' => true,
-        ]);
-        SourceVersion::query()->create([
-            'fuente_academica_id' => $source->id,
-            'numero_version' => 1,
-            'estado' => 'draft',
         ]);
 
         $this->actingAsCoordinator()
             ->followingRedirects()
             ->get(route('sources.show', $source))
+            ->assertForbidden();
+
+        $this->actingAsCoordinator()
+            ->put(route('sources.content.update', $source), ['content' => 'Edición fuera de alcance'])
             ->assertForbidden();
     }
 
@@ -340,36 +363,17 @@ class TemplateAndSourceTest extends TestCase
         return TemplateVersion::query()->latest('created_at')->firstOrFail();
     }
 
-    private function createSourceAsCoordinator(string $name): SourceVersion
+    private function createSourceAsCoordinator(string $name): AcademicSource
     {
         $this->actingAsCoordinator()
             ->post(route('sources.store'), [
                 'name' => $name,
-                'type' => 'malla',
-                'authority' => 'Consejo académico',
-                'responsible' => 'Coordinación de Software',
-                'valid_from' => now()->toDateString(),
+                'description' => 'Documento de referencia.',
+                'internal_notes' => 'Entregar al inicio del periodo.',
             ])
             ->assertRedirect();
 
-        $source = AcademicSource::query()->where('nombre', $name)->firstOrFail();
-
-        return $source->versions()->where('numero_version', 1)->firstOrFail();
-    }
-
-    /** @param array<string, mixed> $value */
-    private function addStructuredFragment(SourceVersion $version, string $dataKey, array $value): SourceFragment
-    {
-        $this->actingAsCoordinator()
-            ->post(route('sources.fragments.store', $version), [
-                'key' => str_replace('.', '_', $dataKey),
-                'title' => 'Dato exacto '.$dataKey,
-                'data_key' => $dataKey,
-                'structured_value' => json_encode($value, JSON_THROW_ON_ERROR),
-            ])
-            ->assertRedirect();
-
-        return $version->fragments()->latest('created_at')->firstOrFail();
+        return AcademicSource::query()->where('nombre', $name)->firstOrFail();
     }
 
     private function actingAsAdministrator(): static

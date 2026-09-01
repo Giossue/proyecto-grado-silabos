@@ -37,9 +37,6 @@ import { Spinner } from '@/components/ui/spinner';
 type Evidence = {
     id: string;
     source: string;
-    authority: string;
-    version: number;
-    fragment_title: string;
     excerpt: string;
 };
 
@@ -362,15 +359,8 @@ onBeforeUnmount(() => {
                                         <summary
                                             class="cursor-pointer text-sm font-medium"
                                         >
-                                            {{ evidence.source }} · versión
-                                            {{ evidence.version }} ·
-                                            {{ evidence.fragment_title }}
+                                            {{ evidence.source }}
                                         </summary>
-                                        <p
-                                            class="mt-2 text-xs text-muted-foreground"
-                                        >
-                                            Autoridad: {{ evidence.authority }}
-                                        </p>
                                         <p
                                             class="mt-2 text-sm whitespace-pre-wrap"
                                         >
@@ -619,7 +609,7 @@ onBeforeUnmount(() => {
                             <li>No decide qué fuente tiene precedencia.</li>
                             <li>No modifica el texto automáticamente.</li>
                             <li>
-                                Conserva fuente, versión y fragmento citado.
+                                Conserva la fuente citada y el extracto usado.
                             </li>
                         </ul>
                     </CardContent>

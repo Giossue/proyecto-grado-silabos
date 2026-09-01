@@ -5,7 +5,7 @@ namespace App\Modules\Syllabus\Presentation\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
-use App\Modules\Configuration\Infrastructure\Persistence\Models\SourceVersion;
+use App\Modules\Configuration\Infrastructure\Persistence\Models\AcademicSource;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateVersion;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Syllabus\Application\Actions\CreateConvocation;
@@ -65,12 +65,11 @@ class ConvocationController extends Controller
                 ->with('template:id,nombre')
                 ->orderByDesc('publicado_en')->get()
                 ->map(fn (TemplateVersion $version) => ['id' => $version->id, 'label' => "{$version->template->nombre} · v{$version->numero_version}"]),
-            'sources' => SourceVersion::query()
-                ->where('estado', 'active')
-                ->whereHas('source', fn ($query) => $query->where('carrera_id', $careerId))
-                ->with('source:id,nombre')
-                ->orderByDesc('activado_en')->get()
-                ->map(fn (SourceVersion $version) => ['id' => $version->id, 'label' => "{$version->source->nombre} · v{$version->numero_version}"]),
+            'sources' => AcademicSource::query()
+                ->where('carrera_id', $careerId)
+                ->where('activo', true)
+                ->orderBy('nombre')->get()
+                ->map(fn (AcademicSource $source) => ['id' => $source->id, 'label' => $source->nombre]),
         ]);
     }
 
@@ -86,7 +85,7 @@ class ConvocationController extends Controller
     public function show(Convocation $convocation, Request $request): Response
     {
         abort_unless($request->user()?->can('view', $convocation) === true, 403);
-        $convocation->load(['academicPeriod', 'templateVersion.template', 'sourceVersions.source', 'deadlines']);
+        $convocation->load(['academicPeriod', 'templateVersion.template', 'sources', 'deadlines']);
         $syllabi = $convocation->syllabi()
             ->with(['subject:id,nombre,codigo_institucional', 'scopes.parallel:id,codigo', 'teachers:id,name'])
             ->orderBy('asignatura_id')->get();
@@ -99,7 +98,7 @@ class ConvocationController extends Controller
                 'grouping_mode' => $convocation->modo_agrupacion,
                 'period' => $convocation->academicPeriod->nombre,
                 'template' => "{$convocation->templateVersion->template->nombre} · v{$convocation->templateVersion->numero_version}",
-                'sources' => $convocation->sourceVersions->map(fn (SourceVersion $version) => "{$version->source->nombre} · v{$version->numero_version}")->values(),
+                'sources' => $convocation->sources->map(fn (AcademicSource $source) => $source->nombre)->values(),
                 'start_date' => $convocation->deadlines->firstWhere('etapa', 'start')?->vence_en->toIso8601String(),
                 'draft_deadline' => $convocation->deadlines->firstWhere('etapa', 'draft')?->vence_en->toIso8601String(),
                 'counts' => [

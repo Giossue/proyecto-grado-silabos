@@ -33,7 +33,7 @@ defineProps<{
     items: NavItem[];
 }>();
 
-const { isCurrentUrl } = useCurrentUrl();
+const { isCurrentOrParentUrl } = useCurrentUrl();
 const { state, isMobile } = useSidebar();
 
 // Con el sidebar reducido a iconos no hay sitio para desplegar nada dentro: las
@@ -42,9 +42,12 @@ const showsFlyout = computed(
     () => state.value === 'collapsed' && !isMobile.value,
 );
 
+// Las pantallas de detalle cuelgan de la dirección de su sección, así que la
+// comparación es por prefijo: la sección sigue marcada aunque la URL ya no sea
+// exactamente la del índice.
 const isItemActive = (item: NavItem): boolean =>
-    isCurrentUrl(item.href) ||
-    (item.items?.some((child) => isCurrentUrl(child.href)) ?? false);
+    isCurrentOrParentUrl(item.href) ||
+    (item.items?.some((child) => isCurrentOrParentUrl(child.href)) ?? false);
 </script>
 
 <template>
@@ -125,7 +128,9 @@ const isItemActive = (item: NavItem): boolean =>
                             >
                                 <SidebarMenuSubButton
                                     as-child
-                                    :is-active="isCurrentUrl(child.href)"
+                                    :is-active="
+                                        isCurrentOrParentUrl(child.href)
+                                    "
                                 >
                                     <Link :href="child.href">
                                         <span>{{ child.title }}</span>

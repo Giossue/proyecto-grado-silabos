@@ -74,9 +74,6 @@ class AiAssistanceController extends Controller
                 'evidence' => $execution->evidence->map(fn (AiEvidence $evidence): array => [
                     'id' => $evidence->id,
                     'source' => $evidence->nombre_fuente,
-                    'authority' => $evidence->autoridad_fuente,
-                    'version' => $evidence->numero_version,
-                    'fragment_title' => $evidence->titulo_fragmento,
                     'excerpt' => $evidence->extracto,
                 ])->values(),
                 'recommendations' => $execution->recommendations->map(fn (AiRecommendation $recommendation): array => [
@@ -176,9 +173,8 @@ class AiAssistanceController extends Controller
     private function reasonLabel(?string $reason): ?string
     {
         return match ($reason) {
-            'source_conflict' => 'Las fuentes vigentes contienen valores divergentes y requieren resolución humana.',
             'evidence_limit_exceeded' => 'El conjunto de evidencia excede el límite técnico seguro.',
-            'insufficient_evidence' => 'No hay evidencia activa y vigente suficiente para analizar.',
+            'insufficient_evidence' => 'No hay evidencia activa suficiente para analizar.',
             'empty_content' => 'El campo todavía no contiene texto para analizar.',
             'no_editorial_change' => 'No se identificó un cambio editorial verificable.',
             null => null,

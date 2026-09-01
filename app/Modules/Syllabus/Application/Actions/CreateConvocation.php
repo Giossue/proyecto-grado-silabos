@@ -3,8 +3,7 @@
 namespace App\Modules\Syllabus\Application\Actions;
 
 use App\Models\User;
-use App\Modules\Configuration\Infrastructure\Persistence\Models\SourceConflict;
-use App\Modules\Configuration\Infrastructure\Persistence\Models\SourceVersion;
+use App\Modules\Configuration\Infrastructure\Persistence\Models\AcademicSource;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateVersion;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Identity\Domain\Enums\RoleCode;
@@ -23,7 +22,7 @@ class CreateConvocation
         private readonly RecordAuditEvent $audit,
     ) {}
 
-    /** @param array{name: string, period_id: string, template_version_id: string, grouping_mode: string, source_version_ids: list<string>, start_date: string, draft_deadline: string} $data */
+    /** @param array{name: string, period_id: string, template_version_id: string, grouping_mode: string, source_ids: list<string>, start_date: string, draft_deadline: string} $data */
     public function execute(array $data, User $actor, Request $request): Convocation
     {
         $activeRole = $this->roles->resolve($request);
@@ -36,18 +35,11 @@ class CreateConvocation
             throw ValidationException::withMessages(['template_version_id' => 'Selecciona una versión publicada de la plantilla institucional.']);
         }
 
-        $sources = SourceVersion::query()
-            ->with('source')
-            ->whereIn('id', $data['source_version_ids'])
-            ->get();
-        if ($sources->count() !== count(array_unique($data['source_version_ids']))
-            || $sources->contains(fn (SourceVersion $version): bool => $version->estado !== 'active'
-                || ! $version->source->activo
-                || $version->source->carrera_id !== $activeRole->carrera_id)) {
-            throw ValidationException::withMessages(['source_version_ids' => 'Todas las fuentes deben estar activas y pertenecer a la carrera.']);
-        }
-        if ($this->hasPendingConflict($data['source_version_ids'])) {
-            throw ValidationException::withMessages(['source_version_ids' => 'Resuelva las contradicciones pendientes antes de fijar estas fuentes.']);
+        $sources = AcademicSource::query()->whereIn('id', $data['source_ids'])->get();
+        if ($sources->count() !== count(array_unique($data['source_ids']))
+            || $sources->contains(fn (AcademicSource $source): bool => ! $source->activo
+                || $source->carrera_id !== $activeRole->carrera_id)) {
+            throw ValidationException::withMessages(['source_ids' => 'Todas las fuentes deben estar activas y pertenecer a la carrera.']);
         }
 
         return DB::transaction(function () use ($actor, $activeRole, $data, $request): Convocation {
@@ -61,11 +53,11 @@ class CreateConvocation
                 'creado_por' => $actor->id,
             ]);
 
-            foreach (array_unique($data['source_version_ids']) as $sourceVersionId) {
+            foreach (array_unique($data['source_ids']) as $sourceId) {
                 DB::table('fuentes_convocatoria')->insert([
                     'id' => (string) Str::uuid(),
                     'convocatoria_id' => $convocation->id,
-                    'version_fuente_id' => $sourceVersionId,
+                    'fuente_academica_id' => $sourceId,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
@@ -93,22 +85,11 @@ class CreateConvocation
                 resourceType: 'convocation',
                 resourceId: $convocation->id,
                 result: 'success',
-                metadata: ['grouping_mode' => $data['grouping_mode'], 'source_count' => count($data['source_version_ids'])],
+                metadata: ['grouping_mode' => $data['grouping_mode'], 'source_count' => count($data['source_ids'])],
                 correlationId: $request->attributes->getString('correlation_id') ?: null,
             );
 
             return $convocation;
         });
-    }
-
-    /** @param list<string> $sourceVersionIds */
-    private function hasPendingConflict(array $sourceVersionIds): bool
-    {
-        return SourceConflict::query()
-            ->where('estado', 'pending')
-            ->where(fn ($query) => $query
-                ->whereIn('version_candidata_id', $sourceVersionIds)
-                ->orWhereIn('version_activa_id', $sourceVersionIds))
-            ->exists();
     }
 }

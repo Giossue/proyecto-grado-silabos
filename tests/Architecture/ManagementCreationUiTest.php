@@ -567,24 +567,32 @@ it('agrupa las acciones de tabla en menus accesibles de tres puntos', function (
     $this->assertGreaterThan(0, $checkedColumns);
 });
 
-it('edita cuentas y roles desde las acciones del listado de usuarios', function (): void {
+it('edita cuentas desde una sola accion del listado de usuarios', function (): void {
     $source = file_get_contents(
         dirname(__DIR__, 2).'/resources/js/pages/Admin/Users/Index.vue',
     );
-    $roleSheet = file_get_contents(
-        dirname(__DIR__, 2).'/resources/js/components/domain/identity/RoleAssignmentSheet.vue',
+    $editSheet = file_get_contents(
+        dirname(__DIR__, 2).'/resources/js/components/domain/identity/ManagedUserEditSheet.vue',
     );
 
+    // Una sola opción «Editar» reúne identidad, estado y asignación de rol; el menú de
+    // la fila no vuelve a repartirlas en acciones separadas.
     expect($source)
         ->toBeString()
-        ->toContain('<UserProfileSheet')
-        ->toContain('<RoleAssignmentSheet')
+        ->toContain('<ManagedUserEditSheet')
         ->toContain('display="menu"')
+        ->not->toContain('<UserProfileSheet')
+        ->not->toContain('<RoleAssignmentSheet')
+        ->not->toContain('setStatus.form')
         ->not->toContain('ManagedUserController.show(user.id)');
-    expect($roleSheet)
+    expect($editSheet)
         ->toBeString()
         ->toContain("display?: 'button' | 'menu'")
-        ->toContain('Asignar rol')
+        ->toContain('ManagedUserController.update.form')
+        ->toContain('@success="close"')
+        ->toContain('Cuenta activa')
+        ->toContain('Asignar otro rol')
+        ->toContain('Guardar cambios')
         ->toContain("display === 'menu'");
 });
 
@@ -647,10 +655,6 @@ it('presenta la publicación y los bloques de plantilla con etiquetas breves', f
 it('abre los detalles de los listados desde sus acciones', function (): void {
     $root = dirname(__DIR__, 2);
     $surfaces = [
-        'resources/js/pages/Admin/Templates/Index.vue' => [
-            ['Abrir'],
-            'TemplateController.show',
-        ],
         'resources/js/pages/Coordination/Convocations/Index.vue' => [
             ['Abrir', 'convocatoria'],
             'ConvocationController.show',
@@ -675,6 +679,30 @@ it('abre los detalles de los listados desde sus acciones', function (): void {
             expect($source)->toContain($label);
         }
     }
+});
+
+it('presenta las plantillas como cards y navega versiones desde el detalle', function (): void {
+    $root = dirname(__DIR__, 2);
+
+    // El listado usa cards con una sola acción de apertura hacia la versión más
+    // reciente; las versiones dejan de repartirse en un menú de acciones por fila.
+    $index = file_get_contents($root.'/resources/js/pages/Admin/Templates/Index.vue');
+    expect($index)
+        ->toBeString()
+        ->toContain('<CardTitle')
+        ->toContain('Abrir plantilla')
+        ->toContain('TemplateController.show')
+        ->not->toContain('<TableActionsMenu')
+        ->not->toContain('<Table ');
+
+    // El detalle cambia entre versiones con un botón «Versiones» propio.
+    $show = file_get_contents($root.'/resources/js/pages/Admin/Templates/Show.vue');
+    expect($show)
+        ->toBeString()
+        ->toContain('Versiones')
+        ->toContain('<DropdownMenuTrigger')
+        ->toContain('TemplateController.show(sibling.id)')
+        ->toContain('(versión actual)');
 });
 
 it('usa el mismo paginador en todas las superficies tabulares', function (): void {
@@ -709,7 +737,7 @@ it('usa el mismo paginador en todas las superficies tabulares', function (): voi
         $checked += $tableCount;
     }
 
-    $this->assertSame(24, $checked);
+    $this->assertSame(23, $checked);
 });
 
 it('ordena busqueda filtros y accion mediante una barra compartida', function (): void {
