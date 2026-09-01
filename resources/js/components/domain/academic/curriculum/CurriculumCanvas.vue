@@ -236,6 +236,9 @@ const buildEdges = (): Edge[] =>
             strokeWidth: 2,
         },
         labelStyle: { fill: 'var(--foreground)', fontSize: 10 },
+        labelBgStyle: { fill: 'var(--card)', stroke: 'var(--border)' },
+        labelBgPadding: [6, 3],
+        labelBgBorderRadius: 4,
     }));
 
 const nodes = ref<Node[]>(buildNodes());

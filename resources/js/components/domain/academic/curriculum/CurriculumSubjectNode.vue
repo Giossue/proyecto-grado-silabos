@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Pencil } from '@lucide/vue';
+import { computed } from 'vue';
 import { Handle, Position } from '@vue-flow/core';
 import CurriculumVisualSubjectForm from '@/components/domain/academic/curriculum/CurriculumVisualSubjectForm.vue';
 import { Badge } from '@/components/ui/badge';
@@ -10,7 +11,7 @@ import type {
     CurriculumFieldDefinition,
 } from '@/types/academic';
 
-defineProps<{
+const props = defineProps<{
     data: {
         curriculum: CurriculumBuilderProps['curriculum'];
         fieldDefinitions: CurriculumFieldDefinition[];
@@ -26,6 +27,39 @@ defineProps<{
     };
     selected?: boolean;
 }>();
+
+const formatFieldValue = (value: unknown): string => {
+    if (value === null || value === undefined || value === '') {
+        return '—';
+    }
+
+    const numeric = Number(value);
+
+    return Number.isFinite(numeric) ? String(numeric) : String(value);
+};
+
+const totalFieldIds = computed(
+    () =>
+        new Set(
+            props.data.fieldDefinitions
+                .filter((field) => field.system_key === 'total_hours')
+                .map((field) => field.id),
+        ),
+);
+
+const regularFields = computed(
+    () =>
+        props.data.subject?.display_fields.filter(
+            (field) => !totalFieldIds.value.has(field.id),
+        ) ?? [],
+);
+
+const totalFields = computed(
+    () =>
+        props.data.subject?.display_fields.filter((field) =>
+            totalFieldIds.value.has(field.id),
+        ) ?? [],
+);
 </script>
 
 <template>
@@ -92,15 +126,35 @@ defineProps<{
 
             <dl
                 v-if="data.subject.display_fields.length > 0"
-                class="grid border-t bg-muted/40"
-                :style="{
-                    gridTemplateColumns: `repeat(${data.subject.display_fields.length}, minmax(0, 1fr))`,
-                }"
+                class="border-t bg-muted/40"
             >
                 <div
-                    v-for="field in data.subject.display_fields"
+                    v-if="regularFields.length > 0"
+                    class="grid"
+                    :style="{
+                        gridTemplateColumns: `repeat(${regularFields.length}, minmax(0, 1fr))`,
+                    }"
+                >
+                    <div
+                        v-for="field in regularFields"
+                        :key="field.id"
+                        class="border-r text-center last:border-r-0"
+                    >
+                        <dt
+                            class="bg-primary px-1 py-1 text-[0.6rem] font-semibold text-primary-foreground"
+                        >
+                            {{ field.label }}
+                        </dt>
+                        <dd class="px-1 py-1 text-xs font-medium">
+                            {{ formatFieldValue(field.value) }}
+                        </dd>
+                    </div>
+                </div>
+                <div
+                    v-for="field in totalFields"
                     :key="field.id"
-                    class="border-r text-center last:border-r-0"
+                    class="text-center"
+                    :class="{ 'border-t': regularFields.length > 0 }"
                 >
                     <dt
                         class="bg-primary px-1 py-1 text-[0.6rem] font-semibold text-primary-foreground"
@@ -108,7 +162,7 @@ defineProps<{
                         {{ field.label }}
                     </dt>
                     <dd class="px-1 py-1 text-xs font-medium">
-                        {{ field.value ?? '—' }}
+                        {{ formatFieldValue(field.value) }}
                     </dd>
                 </div>
             </dl>
