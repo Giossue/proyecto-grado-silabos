@@ -152,9 +152,11 @@ class CareerAcademicStructureController extends Controller
         UpdateCurriculumConfigurationRequest $request,
         MutateCurriculumBuilder $action,
     ): RedirectResponse {
+        /** @var array{code: string, cycle_count: int|string} $data */
+        $data = $request->validated();
         $action->updateConfiguration(
             $curriculum,
-            (int) $request->validated('cycle_count'),
+            $data,
             $this->actor($request),
             $request,
         );

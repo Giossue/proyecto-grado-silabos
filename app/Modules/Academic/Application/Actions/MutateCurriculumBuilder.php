@@ -25,14 +25,16 @@ class MutateCurriculumBuilder
         private readonly RecordAuditEvent $audit,
     ) {}
 
+    /** @param array{code: string, cycle_count: int|string} $data */
     public function updateConfiguration(
         string $curriculumId,
-        int $cycleCount,
+        array $data,
         User $actor,
         Request $request,
     ): CurriculumVersion {
-        return DB::transaction(function () use ($actor, $curriculumId, $cycleCount, $request): CurriculumVersion {
+        return DB::transaction(function () use ($actor, $curriculumId, $data, $request): CurriculumVersion {
             [$role, $curriculum] = $this->currentCurriculum($curriculumId, $request);
+            $cycleCount = (int) $data['cycle_count'];
 
             $lastUsedCycle = (int) $curriculum->subjects()->max('ciclo');
             if ($lastUsedCycle > $cycleCount) {
@@ -41,10 +43,16 @@ class MutateCurriculumBuilder
                 ]);
             }
 
-            $before = $curriculum->numero_ciclos;
-            $curriculum->update(['numero_ciclos' => $cycleCount]);
+            $beforeCode = $curriculum->codigo;
+            $beforeCycleCount = $curriculum->numero_ciclos;
+            $curriculum->update([
+                'codigo' => $data['code'],
+                'numero_ciclos' => $cycleCount,
+            ]);
             $this->record($actor, $role, $request, 'academic.curriculum.configuration_updated', 'curriculum', $curriculum->id, [
-                'before_cycle_count' => $before,
+                'before_code' => $beforeCode,
+                'after_code' => $curriculum->codigo,
+                'before_cycle_count' => $beforeCycleCount,
                 'after_cycle_count' => $cycleCount,
             ]);
 

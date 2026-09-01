@@ -396,6 +396,7 @@ class AcademicStructureTest extends TestCase
 
         $this->actingAsCoordinator()
             ->patch(route('coordination.academic.curricula.configuration.update', $curriculum->id), [
+                'code' => $curriculum->codigo,
                 'cycle_count' => 10,
             ])
             ->assertRedirect();
@@ -500,6 +501,7 @@ class AcademicStructureTest extends TestCase
         $current = CurriculumVersion::query()->current()->firstOrFail();
         $this->actingAsCoordinator()
             ->patch(route('coordination.academic.curricula.configuration.update', $current->id), [
+                'code' => 'MALLA-BUILDER-RENOMBRADA',
                 'cycle_count' => 9,
             ])
             ->assertRedirect();
@@ -520,6 +522,7 @@ class AcademicStructureTest extends TestCase
             ->assertNotFound();
         $this->actingAsCoordinator()
             ->patch(route('coordination.academic.curricula.configuration.update', $otherCurriculum->id), [
+                'code' => $otherCurriculum->codigo,
                 'cycle_count' => 7,
             ])
             ->assertNotFound();
