@@ -21,6 +21,7 @@ import { toast } from 'vue-sonner';
 import CareerAcademicStructureController from '@/actions/App/Modules/Academic/Presentation/Http/Controllers/CareerAcademicStructureController';
 import CurriculumAddSubjectNode from '@/components/domain/academic/curriculum/CurriculumAddSubjectNode.vue';
 import CurriculumCycleNode from '@/components/domain/academic/curriculum/CurriculumCycleNode.vue';
+import CurriculumRequirementEdge from '@/components/domain/academic/curriculum/CurriculumRequirementEdge.vue';
 import CurriculumSubjectNode from '@/components/domain/academic/curriculum/CurriculumSubjectNode.vue';
 import { Button } from '@/components/ui/button';
 import {
@@ -33,6 +34,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { Spinner } from '@/components/ui/spinner';
+import { formatNumericDisplay } from '@/lib/numberDisplay';
 import type {
     CurriculumBuilderProps,
     CurriculumBuilderSubject,
@@ -46,9 +48,82 @@ import '@vue-flow/minimap/dist/style.css';
 const props = defineProps<
     Pick<
         CurriculumBuilderProps,
-        'curriculum' | 'fieldDefinitions' | 'subjects' | 'requirements'
+        | 'curriculum'
+        | 'fieldDefinitions'
+        | 'fieldTotals'
+        | 'subjects'
+        | 'requirements'
     > & { organizationUnits: string[] }
 >();
+
+// Paleta al estilo de la malla institucional: cada unidad de organización
+// curricular recibe un color que comparten su franja de nivel y los encabezados
+// ACD/APE/… de sus tarjetas. El orden sigue al listado alfabético de unidades.
+const UNIT_PALETTE = [
+    { backgroundColor: 'hsl(213 55% 47%)', color: 'hsl(0 0% 100%)' },
+    { backgroundColor: 'hsl(210 52% 80%)', color: 'hsl(213 45% 18%)' },
+    { backgroundColor: 'hsl(0 0% 74%)', color: 'hsl(0 0% 12%)' },
+    { backgroundColor: 'hsl(31 62% 62%)', color: 'hsl(24 45% 16%)' },
+    { backgroundColor: 'hsl(150 35% 55%)', color: 'hsl(152 45% 14%)' },
+];
+const FALLBACK_UNIT_STYLE = {
+    backgroundColor: 'var(--primary)',
+    color: 'var(--primary-foreground)',
+};
+
+const unitStyleFor = (
+    unit: string | null | undefined,
+): (typeof UNIT_PALETTE)[number] => {
+    const index = props.organizationUnits.indexOf(unit?.trim() ?? '');
+
+    return index === -1
+        ? FALLBACK_UNIT_STYLE
+        : UNIT_PALETTE[index % UNIT_PALETTE.length];
+};
+
+const ROMAN_NUMERALS = [
+    ['X', 10],
+    ['IX', 9],
+    ['V', 5],
+    ['IV', 4],
+    ['I', 1],
+] as const;
+
+const toRoman = (value: number): string => {
+    let remaining = value;
+    let roman = '';
+    ROMAN_NUMERALS.forEach(([symbol, amount]) => {
+        while (remaining >= amount) {
+            roman += symbol;
+            remaining -= amount;
+        }
+    });
+
+    return roman || String(value);
+};
+
+// La unidad predominante del ciclo define el color de su franja lateral.
+const dominantUnit = (
+    cycleSubjects: CurriculumBuilderSubject[],
+): string | null => {
+    const counts = new Map<string, number>();
+    cycleSubjects.forEach((subject) => {
+        const unit = subject.organization_unit?.trim();
+
+        if (unit) {
+            counts.set(unit, (counts.get(unit) ?? 0) + 1);
+        }
+    });
+
+    return [...counts.entries()].reduce<[string | null, number]>(
+        (winner, [unit, count]) => (count > winner[1] ? [unit, count] : winner),
+        [null, 0],
+    )[0];
+};
+
+const summaryLabel = (fieldId: string, label: string): string =>
+    props.fieldDefinitions.find((field) => field.id === fieldId)
+        ?.system_label ?? label;
 
 const flowId = `curriculum-${props.curriculum.id}`;
 const { setEdges, setNodes } = useVueFlow({ id: flowId });
@@ -95,7 +170,8 @@ const laneWidth = computed(() => {
         },
     ).reduce((widest, width) => Math.max(widest, width), 0);
 
-    return Math.max(1120, widestCycle + 40);
+    // Los 200px extra reservan espacio para las columnas de totales del nivel.
+    return Math.max(1120, widestCycle + 200);
 });
 
 const subjectById = computed(
@@ -128,6 +204,9 @@ const buildNodes = (): Node[] => {
             position: { x: 0, y: (cycle - 1) * laneHeight },
             data: {
                 cycle,
+                level: toRoman(cycle),
+                unit: dominantUnit(cycleSubjects),
+                unitStyle: unitStyleFor(dominantUnit(cycleSubjects)),
                 subjectCount: cycleSubjects.length,
                 totalHours: cycleSubjects.reduce(
                     (total, subject) => total + (subject.total_hours ?? 0),
@@ -160,6 +239,7 @@ const buildNodes = (): Node[] => {
                     fieldDefinitions: props.fieldDefinitions,
                     organizationUnits: props.organizationUnits,
                     subject,
+                    unitStyle: unitStyleFor(subject.organization_unit),
                     cycle,
                     position: subject.position,
                     editable: props.curriculum.editable,
@@ -196,6 +276,7 @@ const buildNodes = (): Node[] => {
                     fieldDefinitions: props.fieldDefinitions,
                     organizationUnits: props.organizationUnits,
                     subject: null,
+                    unitStyle: FALLBACK_UNIT_STYLE,
                     cycle,
                     position,
                     editable: true,
@@ -229,29 +310,100 @@ const buildNodes = (): Node[] => {
     return nodes;
 };
 
-const buildEdges = (): Edge[] =>
-    props.requirements.map((requirement) => ({
-        id: requirement.id,
-        source: requirement.requirement_id,
-        target: requirement.subject_id,
-        type: 'smoothstep',
-        label:
+// Reparte las conexiones que comparten conector: cada línea sale y llega con su
+// propio desplazamiento horizontal para que no se pisen en la materia.
+const EDGE_SPACING = 18;
+
+const edgeOffsets = (): Map<string, { source: number; target: number }> => {
+    const orderKey = (subjectId: string): number => {
+        const subject = subjectById.value.get(subjectId);
+
+        return subject
+            ? (subject.cycle ?? 0) * 1000 + subject.position
+            : 0;
+    };
+    const groupOffsets = (
+        groupBy: (requirement: (typeof props.requirements)[number]) => string,
+        counterpart: (
+            requirement: (typeof props.requirements)[number],
+        ) => string,
+    ): Map<string, number> => {
+        const groups = new Map<string, typeof props.requirements>();
+        props.requirements.forEach((requirement) => {
+            const key = groupBy(requirement);
+            groups.set(key, [...(groups.get(key) ?? []), requirement]);
+        });
+        const offsets = new Map<string, number>();
+        groups.forEach((group) => {
+            [...group]
+                .sort(
+                    (left, right) =>
+                        orderKey(counterpart(left)) -
+                        orderKey(counterpart(right)),
+                )
+                .forEach((requirement, index, siblings) => {
+                    offsets.set(
+                        requirement.id,
+                        (index - (siblings.length - 1) / 2) * EDGE_SPACING,
+                    );
+                });
+        });
+
+        return offsets;
+    };
+
+    const sourceOffsets = groupOffsets(
+        (requirement) => requirement.requirement_id,
+        (requirement) => requirement.subject_id,
+    );
+    const targetOffsets = groupOffsets(
+        (requirement) => requirement.subject_id,
+        (requirement) => requirement.requirement_id,
+    );
+
+    return new Map(
+        props.requirements.map((requirement) => [
+            requirement.id,
+            {
+                source: sourceOffsets.get(requirement.id) ?? 0,
+                target: targetOffsets.get(requirement.id) ?? 0,
+            },
+        ]),
+    );
+};
+
+const buildEdges = (): Edge[] => {
+    const offsets = edgeOffsets();
+
+    return props.requirements.map((requirement) => {
+        const color =
             requirement.type === 'corequisite'
-                ? 'Correquisito'
-                : 'Prerrequisito',
-        markerEnd: MarkerType.ArrowClosed,
-        style: {
-            stroke:
-                requirement.type === 'corequisite'
-                    ? 'var(--primary)'
-                    : 'var(--destructive)',
-            strokeWidth: 2,
-        },
-        labelStyle: { fill: 'var(--foreground)', fontSize: 10 },
-        labelBgStyle: { fill: 'var(--card)', stroke: 'var(--border)' },
-        labelBgPadding: [6, 3],
-        labelBgBorderRadius: 4,
-    }));
+                ? 'var(--primary)'
+                : 'var(--destructive)';
+
+        return {
+            id: requirement.id,
+            source: requirement.requirement_id,
+            target: requirement.subject_id,
+            type: 'requirement',
+            markerEnd: {
+                type: MarkerType.ArrowClosed,
+                color,
+                width: 16,
+                height: 16,
+            },
+            style: { stroke: color, strokeWidth: 2 },
+            data: {
+                label:
+                    requirement.type === 'corequisite'
+                        ? 'Correquisito'
+                        : 'Prerrequisito',
+                sourceOffset: offsets.get(requirement.id)?.source ?? 0,
+                targetOffset: offsets.get(requirement.id)?.target ?? 0,
+            },
+        };
+    });
+};
 
 const nodes = ref<Node[]>(buildNodes());
 const edges = ref<Edge[]>(buildEdges());
@@ -450,28 +602,65 @@ const onNodeDragStop = ({ node }: NodeDragEvent): void => {
         aria-label="Constructor visual de la malla"
     >
         <!--
-            El tipo de relación lo codifica el color de la línea; la leyenda lo
-            explica sin depender de etiquetas fijas, que se tapaban entre sí cuando
-            dos conexiones se cruzaban.
+            Panel al estilo del pie de la malla institucional: leyenda de
+            relaciones y de unidades de organización curricular, más el resumen de
+            totales de la malla completa.
         -->
-        <dl
-            class="absolute top-3 right-3 z-10 flex flex-col gap-1 rounded-md bg-card/90 px-3 py-2 text-xs text-card-foreground shadow-surface ring-1 ring-surface-ring"
+        <div
+            class="absolute top-3 right-3 z-10 flex max-w-56 flex-col gap-2 rounded-md bg-card/90 px-3 py-2 text-xs text-card-foreground shadow-surface ring-1 ring-surface-ring"
         >
-            <div class="flex items-center gap-2">
-                <dt
-                    class="h-0.5 w-5 rounded bg-destructive"
-                    aria-hidden="true"
-                ></dt>
-                <dd>Prerrequisito</dd>
-            </div>
-            <div class="flex items-center gap-2">
-                <dt
-                    class="h-0.5 w-5 rounded bg-primary"
-                    aria-hidden="true"
-                ></dt>
-                <dd>Correquisito</dd>
-            </div>
-        </dl>
+            <dl class="flex flex-col gap-1">
+                <div class="flex items-center gap-2">
+                    <dt
+                        class="h-0.5 w-5 shrink-0 rounded bg-destructive"
+                        aria-hidden="true"
+                    ></dt>
+                    <dd>Prerrequisito</dd>
+                </div>
+                <div class="flex items-center gap-2">
+                    <dt
+                        class="h-0.5 w-5 shrink-0 rounded bg-primary"
+                        aria-hidden="true"
+                    ></dt>
+                    <dd>Correquisito</dd>
+                </div>
+            </dl>
+            <dl
+                v-if="organizationUnits.length > 0"
+                class="flex flex-col gap-1 border-t pt-2"
+            >
+                <div
+                    v-for="unit in organizationUnits"
+                    :key="unit"
+                    class="flex items-center gap-2"
+                >
+                    <dt
+                        class="size-3 shrink-0 rounded-sm"
+                        :style="unitStyleFor(unit)"
+                        aria-hidden="true"
+                    ></dt>
+                    <dd class="truncate">{{ unit }}</dd>
+                </div>
+            </dl>
+            <dl class="flex flex-col gap-1 border-t pt-2">
+                <div class="flex items-center justify-between gap-3">
+                    <dt class="text-muted-foreground">N° asignaturas</dt>
+                    <dd class="font-medium">{{ subjects.length }}</dd>
+                </div>
+                <div
+                    v-for="total in fieldTotals"
+                    :key="total.id"
+                    class="flex items-center justify-between gap-3"
+                >
+                    <dt class="truncate text-muted-foreground">
+                        {{ summaryLabel(total.id, total.label) }}
+                    </dt>
+                    <dd class="font-medium">
+                        {{ formatNumericDisplay(total.value) }}
+                    </dd>
+                </div>
+            </dl>
+        </div>
         <VueFlow
             :id="flowId"
             v-model:nodes="nodes"
@@ -488,6 +677,9 @@ const onNodeDragStop = ({ node }: NodeDragEvent): void => {
             @node-click="onNodeClick"
             @node-drag-stop="onNodeDragStop"
         >
+            <template #edge-requirement="edgeProps">
+                <CurriculumRequirementEdge v-bind="edgeProps" />
+            </template>
             <template #node-cycle="nodeProps">
                 <CurriculumCycleNode :data="nodeProps.data" />
             </template>
@@ -651,19 +843,4 @@ const onNodeDragStop = ({ node }: NodeDragEvent): void => {
     fill: currentColor;
 }
 
-/*
- * Las etiquetas fijas en el punto medio de cada arista se tapaban entre sí cuando
- * dos conexiones se cruzaban. El color ya distingue el tipo (ver leyenda); el texto
- * aparece solo al pasar el cursor o seleccionar la conexión.
- */
-:deep(.vue-flow__edge-textwrapper) {
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 120ms ease;
-}
-
-:deep(.vue-flow__edge:hover .vue-flow__edge-textwrapper),
-:deep(.vue-flow__edge.selected .vue-flow__edge-textwrapper) {
-    opacity: 1;
-}
 </style>

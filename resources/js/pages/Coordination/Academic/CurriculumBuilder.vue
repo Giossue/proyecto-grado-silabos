@@ -98,6 +98,7 @@ const openSubject = (subject: CurriculumBuilderSubject): void => {
                 <CurriculumCanvas
                     :curriculum="curriculum"
                     :field-definitions="fieldDefinitions"
+                    :field-totals="fieldTotals"
                     :subjects="subjects"
                     :requirements="requirements"
                     :organization-units="organizationUnits"

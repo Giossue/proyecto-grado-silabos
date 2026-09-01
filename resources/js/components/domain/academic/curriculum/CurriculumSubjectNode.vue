@@ -32,6 +32,7 @@ const props = defineProps<{
         fieldDefinitions: CurriculumFieldDefinition[];
         organizationUnits: string[];
         subject: CurriculumBuilderSubject | null;
+        unitStyle: { backgroundColor: string; color: string };
         cycle: number;
         position: number;
         editable: boolean;
@@ -161,7 +162,8 @@ const totalFields = computed(
                         class="border-r text-center last:border-r-0"
                     >
                         <dt
-                            class="bg-primary px-1 py-1 text-[0.6rem] font-semibold text-primary-foreground"
+                            class="px-1 py-1 text-[0.6rem] font-semibold"
+                            :style="data.unitStyle"
                         >
                             {{ field.label }}
                         </dt>
@@ -177,7 +179,8 @@ const totalFields = computed(
                     :class="{ 'border-t': regularFields.length > 0 }"
                 >
                     <dt
-                        class="bg-primary px-1 py-1 text-[0.6rem] font-semibold text-primary-foreground"
+                        class="px-1 py-1 text-[0.6rem] font-semibold"
+                        :style="data.unitStyle"
                     >
                         {{ field.label }}
                     </dt>
