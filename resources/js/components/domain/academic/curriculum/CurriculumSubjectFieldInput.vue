@@ -9,9 +9,12 @@ import {
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import {
-    NativeSelect,
-    NativeSelectOption,
-} from '@/components/ui/native-select';
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import type { CurriculumFieldDefinition } from '@/types/academic';
 
 const props = defineProps<{
@@ -46,21 +49,25 @@ const isCalculatedTotal = computed(
         <FieldLabel :for="inputId" required>
             {{ field.label }}
         </FieldLabel>
-        <NativeSelect
+        <Select
             v-if="field.type === 'boolean'"
-            :id="inputId"
             :name="inputName"
             :model-value="String(value)"
             required
-            :aria-invalid="Boolean(error)"
             @update:model-value="emit('update:value', $event)"
         >
-            <NativeSelectOption value="" disabled>
-                Seleccione una opción
-            </NativeSelectOption>
-            <NativeSelectOption value="true">Sí</NativeSelectOption>
-            <NativeSelectOption value="false">No</NativeSelectOption>
-        </NativeSelect>
+            <SelectTrigger
+                :id="inputId"
+                class="w-full"
+                :aria-invalid="Boolean(error)"
+            >
+                <SelectValue placeholder="Seleccione una opción" />
+            </SelectTrigger>
+            <SelectContent>
+                <SelectItem value="true">Sí</SelectItem>
+                <SelectItem value="false">No</SelectItem>
+            </SelectContent>
+        </Select>
         <Input
             v-else
             :id="inputId"

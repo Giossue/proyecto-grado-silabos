@@ -6,7 +6,17 @@ import FilterToolbar from '@/components/domain/FilterToolbar.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
 import TableActionsMenu from '@/components/domain/TableActionsMenu.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Field, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -80,12 +90,12 @@ const applyFilters = (): void => {
     );
 };
 
-const retry = (execution: Execution): void => {
-    const confirmed = window.confirm(
-        `Se volverá a encolar “${execution.type}”. La operación conserva el conteo y la auditoría de intentos anteriores. ¿Continuar?`,
-    );
+const retryCandidate = ref<Execution | null>(null);
 
-    if (!confirmed) {
+const retry = (): void => {
+    const execution = retryCandidate.value;
+
+    if (!execution) {
         return;
     }
 
@@ -99,6 +109,7 @@ const retry = (execution: Execution): void => {
             },
             onFinish: () => {
                 retryingId.value = null;
+                retryCandidate.value = null;
             },
         },
     );
@@ -298,7 +309,7 @@ const formatDate = (value: string | null): string =>
                                     <DropdownMenuItem
                                         v-if="execution.retryable"
                                         :disabled="retryingId !== null"
-                                        @select="retry(execution)"
+                                        @select="retryCandidate = execution"
                                     >
                                         <Spinner
                                             v-if="retryingId === execution.id"
@@ -326,5 +337,52 @@ const formatDate = (value: string | null): string =>
                 />
             </CardContent>
         </Card>
+
+        <Dialog
+            :open="retryCandidate !== null"
+            @update:open="
+                (isOpen) => {
+                    if (!isOpen && retryingId === null) retryCandidate = null;
+                }
+            "
+        >
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Reintentar proceso</DialogTitle>
+                    <DialogDescription>
+                        Se volverá a encolar «{{ retryCandidate?.type }}». La
+                        operación conserva el conteo y la auditoría de intentos
+                        anteriores.
+                    </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                    <DialogClose as-child>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            :disabled="retryingId !== null"
+                        >
+                            Cancelar
+                        </Button>
+                    </DialogClose>
+                    <Button
+                        type="button"
+                        :disabled="retryingId !== null"
+                        @click="retry"
+                    >
+                        <Spinner
+                            v-if="retryingId !== null"
+                            data-icon="inline-start"
+                        />
+                        <RotateCw
+                            v-else
+                            data-icon="inline-start"
+                            aria-hidden="true"
+                        />
+                        Reintentar
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </PageFrame>
 </template>
