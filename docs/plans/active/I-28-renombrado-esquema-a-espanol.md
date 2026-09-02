@@ -301,3 +301,17 @@ capturas del flujo de login y admin de trabajos, y diff de documentación.
       `temp/chartdb.sql` y `.claude/worktrees/esquema-espanol/docker/postgres/init/01-create-test-database.sql`.
       Ambos se preservaron; se requiere decisión explícita para moverlos o excluirlos del
       escaneo. No cerrar ni mover este plan hasta resolver esa puerta.
+
+## Ejecución remota (2026-09-02)
+
+- [x] Respaldo previo creado fuera del repositorio, mediante `pg_dump` y `.pgpass`.
+- [x] `db:rename-migrations-table --force` ejecutado desde la estación autorizada contra
+      PostgreSQL remoto; la tabla de control es `migraciones`.
+- [x] Migraciones 000021–000025 aplicadas con bloqueo. Los `SELECT DISTINCT` previos a
+      000025 no hallaron valores fuera del vocabulario canónico.
+- [x] Verificación posterior: `migrate:status` sin pendientes y
+      `GET /health/ready` respondió `200 {"status":"ready"}`. La ruta Perfil dejó de
+      responder 500 y devuelve la redirección de autenticación esperada.
+- [ ] Reiniciar o redeplegar el contenedor en Dokploy **sin usar Run migrations**, para
+      reiniciar el worker y que escuche `critica`, `notificaciones`, `documentos`, `ia`,
+      `integraciones` y `general`.

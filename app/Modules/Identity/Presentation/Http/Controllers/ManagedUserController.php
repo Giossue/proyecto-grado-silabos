@@ -80,8 +80,8 @@ class ManagedUserController extends Controller
             ->withQueryString()
             ->through(fn (User $user) => [
                 'id' => $user->id,
-                'name' => $user->nombre,
-                'email' => $user->correo_electronico,
+                'nombre' => $user->nombre,
+                'correo_electronico' => $user->correo_electronico,
                 'active' => $user->activo,
                 // Una cuenta con la contraseña temporal todavía puesta no ha entrado
                 // nunca. Sin esto se ve igual que una en uso y nadie sabe a quién
@@ -134,8 +134,8 @@ class ManagedUserController extends Controller
         return Inertia::render('Admin/Users/Show', [
             'managedUser' => [
                 'id' => $user->id,
-                'name' => $user->nombre,
-                'email' => $user->correo_electronico,
+                'nombre' => $user->nombre,
+                'correo_electronico' => $user->correo_electronico,
                 'active' => $user->activo,
                 'assignments' => $user->roleAssignments->map(fn ($assignment) => [
                     'id' => $assignment->id,

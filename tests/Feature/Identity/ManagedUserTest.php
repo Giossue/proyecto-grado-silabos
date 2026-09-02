@@ -39,7 +39,7 @@ class ManagedUserTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Admin/Users/Index')
                 ->has('users.data', 1)
-                ->where('users.data.0.email', 'docente@silabos.test')
+                ->where('users.data.0.correo_electronico', 'docente@silabos.test')
                 // Las cuentas sembradas ya tienen contraseña propia; una recién creada
                 // no, y la lista tiene que distinguirlas.
                 ->where('users.data.0.pending_first_login', false)
@@ -78,7 +78,7 @@ class ManagedUserTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Admin/Users/Show')
-                ->where('managedUser.email', 'docente@silabos.test')
+                ->where('managedUser.correo_electronico', 'docente@silabos.test')
                 ->has('managedUser.assignments', 2)
                 ->where('managedUser.assignments.0.effective', true)
                 ->where('managedUser.assignments.1.effective', false));
@@ -94,7 +94,7 @@ class ManagedUserTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->has('users.data', 1)
-                ->where('users.data.0.email', 'coordinador@silabos.test')
+                ->where('users.data.0.correo_electronico', 'coordinador@silabos.test')
                 ->where('filters.role', RoleCode::Coordinator->value));
 
         // Por carrera: la administración no cuelga de ninguna, así que queda fuera.
@@ -123,7 +123,7 @@ class ManagedUserTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->has('users.data', 1)
-                ->where('users.data.0.email', 'sin.estrenar@silabos.test'));
+                ->where('users.data.0.correo_electronico', 'sin.estrenar@silabos.test'));
 
         // Y deja de contarse entre las activas, que es lo que dice su insignia.
         $this->actingAsAdministrator()
