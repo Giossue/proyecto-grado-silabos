@@ -206,11 +206,26 @@ class MutateCurriculumBuilder
                 ->lockForUpdate()
                 ->findOrFail($subjectId);
 
-            $hasHistory = $subject->offerings()->exists()
-                || Syllabus::query()->where('asignatura_id', $subject->id)->exists();
-            if ($hasHistory) {
+            // Decir «tiene ofertas o sílabos» deja a quien lo lee sin saber qué mirar ni
+            // dónde: se nombra lo que hay y cuánto, que es lo que permite ir a revisarlo.
+            $offerings = $subject->offerings()->count();
+            $syllabi = Syllabus::query()->where('asignatura_id', $subject->id)->count();
+            if ($offerings > 0 || $syllabi > 0) {
+                $blockers = [];
+                if ($offerings > 0) {
+                    $blockers[] = $offerings === 1
+                        ? '1 oferta académica'
+                        : "{$offerings} ofertas académicas";
+                }
+                if ($syllabi > 0) {
+                    $blockers[] = $syllabi === 1 ? '1 sílabo' : "{$syllabi} sílabos";
+                }
+
                 throw ValidationException::withMessages([
-                    'subject' => 'La materia tiene ofertas o sílabos relacionados y no puede eliminarse. Archívela para conservar el historial.',
+                    'subject' => 'No se puede eliminar «'.$subject->nombre.'»: tiene '
+                        .implode(' y ', $blockers)
+                        .'. Estos son registros de otros procesos, no las relaciones de la malla.'
+                        .' Archívela para conservar el historial.',
                 ]);
             }
 
