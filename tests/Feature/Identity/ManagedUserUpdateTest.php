@@ -81,7 +81,6 @@ class ManagedUserUpdateTest extends TestCase
                 'active' => true,
                 'role_code' => RoleCode::Teacher->value,
                 'career_id' => $career->id,
-                'valid_from' => now()->toDateString(),
             ])
             ->assertRedirect()
             ->assertSessionHas('success');
@@ -149,7 +148,6 @@ class ManagedUserUpdateTest extends TestCase
                 'nombre' => 'Administración Renombrada',
                 'correo_electronico' => 'admin@silabos.test',
                 'role_code' => RoleCode::Administrator->value,
-                'valid_from' => now()->toDateString(),
             ])
             ->assertForbidden();
 
@@ -176,7 +174,6 @@ class ManagedUserUpdateTest extends TestCase
                 'correo_electronico' => $this->teacher->correo_electronico,
                 'active' => true,
                 'role_code' => RoleCode::Teacher->value,
-                'valid_from' => now()->toDateString(),
             ])
             ->assertSessionHasErrors('career_id');
     }
@@ -197,7 +194,6 @@ class ManagedUserUpdateTest extends TestCase
                 'active' => false,
                 'role_code' => RoleCode::Coordinator->value,
                 'career_id' => $career->id,
-                'valid_from' => now()->toDateString(),
             ])
             ->assertRedirect()
             ->assertSessionHas('success');

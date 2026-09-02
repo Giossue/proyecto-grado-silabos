@@ -169,6 +169,11 @@ contrato del gateway de IA) están registrados en `docs/plans/technical-debt.md`
 altera autorización ni ciclo de vida; corrige de paso el worker de producción, que no
 escuchaba las colas nombradas.
 
+I-29 (2 de septiembre de 2026) elimina la vigencia programada de los roles de cuenta:
+`asignaciones_rol` queda efectiva únicamente mientras `activo` sea verdadero y su retiro
+es manual. Las vigencias de asignaciones docentes y nombramientos de coordinación no
+cambian, pues representan relaciones académicas distintas.
+
 ## Propuesto
 
 - PHP 8.3 o superior como mínimo del proyecto.

@@ -24,7 +24,7 @@ class Role extends Model
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'asignaciones_rol', 'rol_id', 'usuario_id')
-            ->withPivot(['id', 'carrera_id', 'vigente_desde', 'vigente_hasta', 'activo'])
+            ->withPivot(['id', 'carrera_id', 'activo'])
             ->withTimestamps('creado_en', 'actualizado_en');
     }
 }

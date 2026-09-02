@@ -67,11 +67,10 @@ class ManagedUserTest extends TestCase
     {
         $teacher = User::query()->where('correo_electronico', 'docente@silabos.test')->firstOrFail();
         $existing = $teacher->roleAssignments()->firstOrFail();
-        $expired = $existing->replicate();
-        $expired->id = null;
-        $expired->vigente_desde = now()->subYears(3);
-        $expired->vigente_hasta = now()->subYears(2);
-        $expired->save();
+        $archived = $existing->replicate();
+        $archived->id = null;
+        $archived->activo = false;
+        $archived->save();
 
         $this->actingAsAdministrator()
             ->get(route('admin.users.show', $teacher))
@@ -211,7 +210,6 @@ class ManagedUserTest extends TestCase
             ->post(route('admin.users.roles.store', $teacher), [
                 'role_code' => RoleCode::Coordinator->value,
                 'career_id' => $career->id,
-                'valid_from' => now()->toDateString(),
             ])
             ->assertSessionHasErrors('role_code');
 
@@ -229,7 +227,6 @@ class ManagedUserTest extends TestCase
             ->post(route('admin.users.roles.store', $teacher), [
                 'role_code' => RoleCode::Coordinator->value,
                 'career_id' => $career->id,
-                'valid_from' => now()->toDateString(),
             ])
             ->assertRedirect()
             ->assertSessionHas('success');
@@ -263,8 +260,6 @@ class ManagedUserTest extends TestCase
             ->post(route('admin.users.roles.store', $teacher), [
                 'role_code' => RoleCode::Coordinator->value,
                 'career_id' => $career->id,
-                'valid_from' => now()->toDateString(),
-                'valid_until' => now()->addYear()->toDateString(),
             ])
             ->assertRedirect()
             ->assertSessionHas('success');
@@ -298,7 +293,6 @@ class ManagedUserTest extends TestCase
             ->post(route('admin.users.roles.store', $coordinator), [
                 'role_code' => RoleCode::Coordinator->value,
                 'career_id' => $secondCareer->id,
-                'valid_from' => now()->subDay()->toDateString(),
             ])
             ->assertRedirect()
             ->assertSessionHas('success');
@@ -357,7 +351,7 @@ class ManagedUserTest extends TestCase
         $this->assertTrue($this->administrator->fresh()->activo);
     }
 
-    public function test_postgresql_rejects_overlapping_active_role_assignments(): void
+    public function test_postgresql_rejects_duplicate_active_role_assignments(): void
     {
         $teacher = User::query()->where('correo_electronico', 'docente@silabos.test')->firstOrFail();
         $existing = $teacher->roleAssignments()->firstOrFail();
@@ -368,8 +362,6 @@ class ManagedUserTest extends TestCase
             'usuario_id' => $teacher->id,
             'rol_id' => $existing->rol_id,
             'carrera_id' => $existing->carrera_id,
-            'vigente_desde' => now()->subMonth(),
-            'vigente_hasta' => now()->addMonth(),
             'activo' => true,
         ]);
     }

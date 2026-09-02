@@ -3,7 +3,6 @@ import { Form, usePage } from '@inertiajs/vue3';
 import { Check, Pencil } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import ManagedUserController from '@/actions/App/Modules/Identity/Presentation/Http/Controllers/ManagedUserController';
-import DatePicker from '@/components/DatePicker.vue';
 import FormSheet from '@/components/domain/FormSheet.vue';
 import FormSheetActions from '@/components/domain/FormSheetActions.vue';
 import { Button } from '@/components/ui/button';
@@ -36,7 +35,6 @@ const props = defineProps<{
     };
     roles: { codigo: string; nombre: string }[];
     careers: { id: string; nombre: string }[];
-    today: string;
     /** `menu` lo dibuja como opción dentro del menú de tres puntos de una fila. */
     display?: 'button' | 'menu';
 }>();
@@ -55,8 +53,8 @@ const description = computed(() =>
         : `Corrija el nombre o el correo de ${props.user.nombre}, cambie el estado de la cuenta o asigne otro rol. El correo es con el que inicia sesión.`,
 );
 
-// Asignar un rol añade una vigencia nueva, no edita la actual: solo se envía cuando la
-// persona lo pide expresamente, para que guardar el panel no multiplique asignaciones.
+// Asignar un rol solo se envía cuando la persona lo pide expresamente, para que guardar
+// el panel no multiplique asignaciones.
 const assigningRole = ref(false);
 const selectedRole = ref('docente');
 
@@ -167,8 +165,8 @@ watch(open, (isOpen) => {
                                     Asignar otro rol
                                 </FieldLabel>
                                 <FieldDescription>
-                                    Los roles vigentes se conservan; el nuevo se
-                                    añade con su alcance y vigencia.
+                                    Los roles activos se conservan; el nuevo se
+                                    añade con su alcance.
                                 </FieldDescription>
                             </FieldContent>
                         </Field>
@@ -247,36 +245,6 @@ watch(open, (isOpen) => {
                                 <FieldError :errors="[errors.career_id]" />
                             </Field>
 
-                            <Field :data-invalid="Boolean(errors.valid_from)">
-                                <FieldLabel
-                                    :for="`user-edit-valid-from-${props.user.id}`"
-                                    required
-                                >
-                                    Vigente desde
-                                </FieldLabel>
-                                <DatePicker
-                                    :id="`user-edit-valid-from-${props.user.id}`"
-                                    name="valid_from"
-                                    :default-value="props.today"
-                                    required
-                                    :aria-invalid="Boolean(errors.valid_from)"
-                                />
-                                <FieldError :errors="[errors.valid_from]" />
-                            </Field>
-
-                            <Field :data-invalid="Boolean(errors.valid_until)">
-                                <FieldLabel
-                                    :for="`user-edit-valid-until-${props.user.id}`"
-                                >
-                                    Vigente hasta (opcional)
-                                </FieldLabel>
-                                <DatePicker
-                                    :id="`user-edit-valid-until-${props.user.id}`"
-                                    name="valid_until"
-                                    :aria-invalid="Boolean(errors.valid_until)"
-                                />
-                                <FieldError :errors="[errors.valid_until]" />
-                            </Field>
                         </template>
                     </template>
 

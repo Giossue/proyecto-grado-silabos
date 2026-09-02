@@ -23,12 +23,11 @@ class ActiveRoleTest extends TestCase
     {
         $this->seed(DatabaseSeeder::class);
         $teacher = User::query()->where('correo_electronico', 'docente@silabos.test')->firstOrFail();
-        $vigente = $teacher->roleAssignments()->firstOrFail();
-        $expired = $vigente->replicate();
-        $expired->id = null;
-        $expired->vigente_desde = now()->subYears(2);
-        $expired->vigente_hasta = now()->subYear();
-        $expired->save();
+        $active = $teacher->roleAssignments()->firstOrFail();
+        $archived = $active->replicate();
+        $archived->id = null;
+        $archived->activo = false;
+        $archived->save();
         // La pantalla solo aparece con varios roles entre los que decidir.
         $this->alsoCoordinates($teacher);
 
@@ -256,7 +255,6 @@ class ActiveRoleTest extends TestCase
             'usuario_id' => $user->id,
             'rol_id' => $coordinatorRole->id,
             'carrera_id' => $career->id,
-            'vigente_desde' => now()->subMonth(),
             'activo' => true,
         ]);
         CoordinatorAssignment::query()->create([

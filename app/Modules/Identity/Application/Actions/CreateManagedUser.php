@@ -46,7 +46,6 @@ class CreateManagedUser
                 'usuario_id' => $user->id,
                 'rol_id' => $role->id,
                 'carrera_id' => $careerId,
-                'vigente_desde' => now(),
                 'activo' => true,
             ]);
 

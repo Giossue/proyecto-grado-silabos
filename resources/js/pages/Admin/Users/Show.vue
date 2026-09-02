@@ -42,8 +42,6 @@ type Assignment = {
     id: string;
     role_name: string;
     career_name: string | null;
-    valid_from: string;
-    valid_until: string | null;
     active: boolean;
     effective: boolean;
 };
@@ -58,7 +56,6 @@ const props = defineProps<{
     };
     roles: { codigo: string; nombre: string }[];
     careers: { id: string; nombre: string }[];
-    today: string;
 }>();
 const assignmentFilter = useClientFilter(
     () => props.managedUser.assignments,
@@ -112,7 +109,6 @@ const page = usePage();
                 :managed-user-id="managedUser.id"
                 :roles="roles"
                 :careers="careers"
-                :today="today"
             />
             <Form
                 v-if="page.props.auth.user.id !== managedUser.id"
@@ -136,7 +132,7 @@ const page = usePage();
 
         <Card>
             <CardHeader
-                ><CardTitle>Historial de roles y vigencias</CardTitle
+                ><CardTitle>Historial de roles</CardTitle
                 ><CardDescription
                     >Las asignaciones anteriores se conservan para
                     trazabilidad.</CardDescription
@@ -172,10 +168,10 @@ const page = usePage();
                                             >Todos los estados</SelectItem
                                         >
                                         <SelectItem value="active"
-                                            >Vigentes</SelectItem
+                                            >Activos</SelectItem
                                         >
                                         <SelectItem value="inactive"
-                                            >No vigentes</SelectItem
+                                            >Archivados</SelectItem
                                         >
                                     </SelectGroup>
                                 </SelectContent>
@@ -188,13 +184,12 @@ const page = usePage();
                         ><TableRow
                             ><TableHead>Rol</TableHead
                             ><TableHead>Alcance</TableHead
-                            ><TableHead>Vigencia</TableHead
                             ><TableHead>Estado efectivo</TableHead></TableRow
                         ></TableHeader
                     ><TableBody>
                         <TableEmpty
                             v-if="managedUser.assignments.length === 0"
-                            :colspan="4"
+                            :colspan="3"
                             >No existen asignaciones.</TableEmpty
                         >
                         <TableRow
@@ -207,17 +202,8 @@ const page = usePage();
                             ><TableCell>{{
                                 assignment.career_name ?? 'Institucional'
                             }}</TableCell
-                            ><TableCell
-                                >{{ assignment.valid_from }} →
-                                {{
-                                    assignment.valid_until ?? 'Sin fecha de fin'
-                                }}</TableCell
                             ><TableCell>{{
-                                assignment.effective
-                                    ? 'Vigente'
-                                    : assignment.active
-                                      ? 'Fuera de fecha'
-                                      : 'Archivada'
+                                assignment.active ? 'Activo' : 'Archivada'
                             }}</TableCell></TableRow
                         >
                     </TableBody></Table

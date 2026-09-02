@@ -57,8 +57,6 @@ class UpdateManagedUserRequest extends FormRequest
                 'uuid',
                 Rule::exists('carreras', 'id')->where('activo', true),
             ],
-            'valid_from' => ['exclude_without:role_code', 'required', 'date'],
-            'valid_until' => ['exclude_without:role_code', 'nullable', 'date', 'after:valid_from'],
         ];
     }
 

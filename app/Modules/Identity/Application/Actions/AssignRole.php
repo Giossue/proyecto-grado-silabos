@@ -20,7 +20,7 @@ class AssignRole
         private readonly RecordAuditEvent $audit,
     ) {}
 
-    /** @param array{role_code: string, career_id?: string|null, valid_from: string, valid_until?: string|null} $data */
+    /** @param array{role_code: string, career_id?: string|null} $data */
     public function execute(User $target, array $data, User $actor, Request $request): RoleAssignment
     {
         $activeRole = $this->roles->resolve($request);
@@ -35,13 +35,15 @@ class AssignRole
                     'usuario_id' => $target->id,
                     'rol_id' => $role->id,
                     'carrera_id' => $careerId,
-                    'vigente_desde' => $data['valid_from'],
                 ],
                 [
-                    'vigente_hasta' => $data['valid_until'] ?? null,
                     'activo' => true,
                 ],
             );
+
+            if (! $assignment->activo) {
+                $assignment->update(['activo' => true]);
+            }
 
             // Conceder la coordinación es concederla de verdad: sin nombramiento el rol
             // queda decorativo y la persona no puede activarlo.
@@ -49,8 +51,7 @@ class AssignRole
                 $target->id,
                 $data['role_code'],
                 $careerId,
-                $data['valid_from'],
-                $data['valid_until'] ?? null,
+                now()->subSecond()->toDateTimeString(),
             );
 
             $this->audit->execute(

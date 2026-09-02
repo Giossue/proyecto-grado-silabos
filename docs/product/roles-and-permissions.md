@@ -6,7 +6,7 @@ El rol es solo una dimensión. La autorización efectiva se calcula como:
 
 ```text
 usuario activo
-AND rol vigente
+AND rol activo
 AND alcance académico permitido
 AND asignación vigente, cuando aplique
 AND acción válida para el estado
@@ -56,8 +56,8 @@ no concede al Administrador permisos sobre mallas, materias o contenido docente.
 ## Acumulación de roles
 
 Una persona puede ser coordinadora de varias carreras y también docente. Cada asignación
-de rol conserva su propia carrera y vigencia. Al iniciar como Coordinador debe elegir una
-carrera incluso si solo tiene una coordinación vigente; durante la sesión puede cambiar
+de rol conserva su propia carrera y se retira manualmente al archivarla. Al iniciar como
+Coordinador debe elegir una carrera incluso si solo tiene una coordinación vigente; durante la sesión puede cambiar
 de carrera o rol desde el menú de usuario. Solo existe un ámbito activo a la vez.
 
 No se combinan privilegios de forma implícita para evadir la separación de

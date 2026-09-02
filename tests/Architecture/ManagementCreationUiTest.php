@@ -353,12 +353,12 @@ it('ofrece desglose y constructor visual sobre el mismo contrato de malla', func
         ->toContain("store.form('subject')")
         ->toContain('update.form({')
         ->toContain('<CurriculumSubjectFieldInput')
-        ->toContain(':list="organizationUnitListId"')
+        ->toContain('<OrganizationUnitInput')
         ->not->toContain('<FormSheet');
     expect($subjectSheet)
         ->toBeString()
         ->toContain('sm:grid-cols-5')
-        ->toContain('builder-subject-organization-units')
+        ->toContain('<OrganizationUnitInput')
         ->toContain('<CurriculumSubjectFieldInput')
         ->not->toContain('name="position"')
         ->not->toContain('Orden dentro del ciclo');

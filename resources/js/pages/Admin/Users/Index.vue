@@ -93,7 +93,6 @@ defineProps<{
     };
     roles: { codigo: string; nombre: string }[];
     careers: { id: string; nombre: string }[];
-    today: string;
 }>();
 </script>
 
@@ -102,7 +101,7 @@ defineProps<{
 
     <PageFrame
         title="Usuarios y roles"
-        description="Cuentas de coordinación y docencia: crearlas, decir de qué carrera son y hasta cuándo. Al desactivar una, su sesión se cierra."
+        description="Cuentas de coordinación y docencia: crearlas y decir de qué carrera son. Al desactivar una, su sesión se cierra."
     >
         <template #actions>
             <ManagedUserSheet :roles="roles" :careers="careers" />
@@ -328,7 +327,6 @@ defineProps<{
                                         :user="user"
                                         :roles="roles"
                                         :careers="careers"
-                                        :today="today"
                                     />
                                 </TableActionsMenu>
                             </TableCell>

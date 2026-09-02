@@ -26,8 +26,6 @@ class AssignRoleRequest extends FormRequest
                 'uuid',
                 Rule::exists('carreras', 'id')->where('activo', true),
             ],
-            'valid_from' => ['required', 'date'],
-            'valid_until' => ['nullable', 'date', 'after:valid_from'],
         ];
     }
 }

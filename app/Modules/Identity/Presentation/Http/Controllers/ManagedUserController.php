@@ -56,7 +56,7 @@ class ManagedUserController extends Controller
             ->when($status === 'pending', fn (Builder $query) => $query
                 ->where('activo', true)->where('debe_cambiar_contrasena', true))
             ->when($status === 'inactive', fn (Builder $query) => $query->where('activo', false))
-            // El alcance de vigencia vive en `RoleAssignment`, así que se resuelve allí y
+            // El alcance efectivo vive en `RoleAssignment`, así que se resuelve allí y
             // aquí solo se compara con la lista de identidades que devuelve.
             ->when($role, fn (Builder $query, string $code) => $query->whereIn(
                 'id',
@@ -106,7 +106,6 @@ class ManagedUserController extends Controller
             ],
             'roles' => Role::query()->orderBy('nombre')->get(['codigo', 'nombre']),
             'careers' => Career::query()->where('activo', true)->orderBy('nombre')->get(['id', 'nombre']),
-            'today' => now()->setTimezone(config('app.display_timezone'))->toDateString(),
         ]);
     }
 
@@ -129,7 +128,7 @@ class ManagedUserController extends Controller
     {
         $user->load(['roleAssignments' => fn ($query) => $query
             ->with(['role:id,codigo,nombre', 'career:id,nombre'])
-            ->orderByDesc('vigente_desde')]);
+            ->orderByDesc('creado_en')]);
 
         return Inertia::render('Admin/Users/Show', [
             'managedUser' => [
@@ -141,12 +140,8 @@ class ManagedUserController extends Controller
                     'id' => $assignment->id,
                     'role_name' => $assignment->role->nombre,
                     'career_name' => $assignment->career?->nombre,
-                    'valid_from' => $assignment->vigente_desde->toDateString(),
-                    'valid_until' => $assignment->vigente_hasta?->toDateString(),
                     'active' => $assignment->activo,
-                    'effective' => $assignment->activo
-                        && $assignment->vigente_desde->isPast()
-                        && ($assignment->vigente_hasta === null || $assignment->vigente_hasta->isFuture()),
+                    'effective' => $assignment->activo,
                 ])->values(),
             ],
             'roles' => Role::query()->orderBy('nombre')->get(['codigo', 'nombre']),
@@ -162,11 +157,9 @@ class ManagedUserController extends Controller
         $action->execute($user, [
             'role_code' => $request->string('role_code')->toString(),
             'career_id' => $request->filled('career_id') ? $request->string('career_id')->toString() : null,
-            'valid_from' => $request->string('valid_from')->toString(),
-            'valid_until' => $request->filled('valid_until') ? $request->string('valid_until')->toString() : null,
         ], $actor, $request);
 
-        return back()->with('success', 'Rol asignado con su alcance y vigencia.');
+        return back()->with('success', 'Rol asignado con su alcance.');
     }
 
     public function setStatus(User $user, SetUserStatusRequest $request, SetUserStatus $action): RedirectResponse
@@ -204,8 +197,6 @@ class ManagedUserController extends Controller
                 $assignRole->execute($user, [
                     'role_code' => $validated['role_code'],
                     'career_id' => $validated['career_id'] ?? null,
-                    'valid_from' => $validated['valid_from'],
-                    'valid_until' => $validated['valid_until'] ?? null,
                 ], $actor, $request);
             }
 

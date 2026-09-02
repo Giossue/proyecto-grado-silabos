@@ -148,14 +148,11 @@ class DatabaseSeeder extends Seeder
                 ];
                 $assignment = RoleAssignment::query()
                     ->where($roleScope)
-                    ->whereNull('vigente_hasta')
                     ->first();
 
                 if ($assignment === null) {
                     RoleAssignment::query()->create([
                         ...$roleScope,
-                        'vigente_desde' => '2026-01-01 00:00:00',
-                        'vigente_hasta' => null,
                         'activo' => true,
                     ]);
                 } elseif (! $assignment->activo) {

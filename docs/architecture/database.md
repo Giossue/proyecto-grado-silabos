@@ -31,7 +31,8 @@
 `usuarios`, `roles`, `asignaciones_rol`. Las columnas de `usuarios` heredadas del
 starter quedaron en español en I-28 (`nombre`, `correo_electronico`, `contrasena`,
 `activo`, `codigo_recordarme`, `secreto_dos_factores`…); el modelo `User` declara los
-puentes que Fortify y el guard exigen.
+puentes que Fortify y el guard exigen. I-29 hace las asignaciones de rol manuales:
+`asignaciones_rol.activo` determina su efectividad y no guarda fechas de inicio o fin.
 
 ### Académico
 
