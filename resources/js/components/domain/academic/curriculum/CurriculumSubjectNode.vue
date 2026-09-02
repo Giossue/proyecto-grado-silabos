@@ -42,7 +42,7 @@ const props = defineProps<{
         onCancel: () => void;
         onSaved: () => void;
     };
-    selected?: boolean;
+    dragging?: boolean;
 }>();
 
 const deleteOpen = ref(false);
@@ -99,13 +99,13 @@ const totalFields = computed(
             mientras se arrastra. Los botones de dentro conservan el suyo.
         -->
         <article
-            class="relative w-64 overflow-hidden rounded-md bg-card text-card-foreground shadow-surface ring-1 ring-surface-ring data-[selected=true]:ring-2 data-[selected=true]:ring-ring"
+            class="relative w-64 overflow-hidden rounded-md bg-card text-card-foreground shadow-surface ring-1 ring-surface-ring data-[dragging=true]:shadow-menu data-[dragging=true]:ring-2 data-[dragging=true]:ring-ring"
             :class="
                 data.draggable
                     ? 'cursor-grab active:cursor-grabbing'
                     : 'cursor-default'
             "
-            :data-selected="selected"
+            :data-dragging="dragging"
             :aria-label="`${data.subject.code}: ${data.subject.name}`"
         >
             <div

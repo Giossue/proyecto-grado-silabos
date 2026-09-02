@@ -289,6 +289,7 @@ const buildNodes = (): Node[] => {
                 },
                 draggable: props.curriculum.editable && !hasOpenEditor.value,
                 connectable: props.curriculum.editable && !hasOpenEditor.value,
+                selectable: false,
             });
             x += editing ? editorStep : subjectStep;
         });
@@ -327,6 +328,7 @@ const buildNodes = (): Node[] => {
                 },
                 draggable: false,
                 connectable: false,
+                selectable: false,
             });
         } else {
             nodes.push({
@@ -694,7 +696,7 @@ const onNodeDragStop = ({ node }: NodeDragEvent): void => {
             <template #node-subject="nodeProps">
                 <CurriculumSubjectNode
                     :data="nodeProps.data"
-                    :selected="nodeProps.selected"
+                    :dragging="nodeProps.dragging"
                 />
             </template>
             <template #node-addSubject="nodeProps">
