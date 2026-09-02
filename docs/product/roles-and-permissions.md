@@ -24,12 +24,14 @@ el permiso, pero no lo sustituyen.
 | Corregir nombre o correo de una cuenta | Sí | No | No |
 | Crear, editar, archivar y reactivar facultades, carreras y catálogos globales | Sí | Consulta de alcance | Consulta asignada |
 | Asignar coordinación a una carrera | Sí | No | No |
-| Gestionar mallas y materias | No por defecto | Sí, en su carrera | Consulta asignada |
+| Gestionar mallas y materias | No por defecto | Sí, en su carrera, salvo con convocatoria en curso | Consulta asignada |
 | Gestionar ofertas y paralelos | No por defecto | Sí, en su carrera | Consulta asignada |
 | Asignar docentes a paralelos | No por defecto | Sí, en su carrera | Consulta propia |
-| Diseñar/publicar plantilla | Sí | Consulta/aporte según política | No |
-| Gestionar fuentes (documentos) | No participa | Sí, en su carrera | Consulta autorizada |
-| Crear/abrir convocatoria | Soporte técnico | Sí | No |
+| Diseñar/publicar plantilla | Sí, salvo con proceso abierto | Consulta/aporte según política | No |
+| Gestionar fuentes (documentos) | No participa | Sí, en su carrera, salvo con convocatoria en curso | Consulta autorizada |
+| Abrir, pausar, reanudar y cerrar el proceso de sílabos | Sí | Consulta al convocar | No |
+| Crear/abrir convocatoria dentro del proceso | No | Sí, en su carrera | No |
+| Pausar/reanudar convocatoria | No | Sí, en su carrera | No |
 | Elaborar contenido | No por defecto | No por defecto | Sí, asignado y editable |
 | Solicitar análisis de IA | No por defecto | Consulta de resultados | Sí, si el campo lo permite |
 | Enviar/reenviar | No | No | Sí, asignado |

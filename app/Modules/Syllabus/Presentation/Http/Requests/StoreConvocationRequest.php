@@ -18,35 +18,36 @@ class StoreConvocationRequest extends FormRequest
     {
         return [
             'nombre' => ['required', 'string', 'max:180'],
+            // La plantilla y las fechas vienen del proceso: aquí solo se elige cuál.
+            'process_id' => [
+                'required',
+                'uuid',
+                Rule::exists('procesos_silabos', 'id')->whereNot('estado', 'cerrado'),
+            ],
             'period_id' => [
                 'required',
                 'uuid',
                 Rule::exists('periodos_academicos', 'id')->where('activo', true),
             ],
-            'template_version_id' => ['required', 'uuid', 'exists:versiones_plantilla,id'],
             'grouping_mode' => ['required', Rule::in(['por_oferta', 'por_paralelo'])],
             'source_ids' => ['required', 'array', 'min:1'],
             'source_ids.*' => ['required', 'uuid', 'distinct', 'exists:fuentes_academicas,id'],
-            'start_date' => ['required', 'date'],
-            'draft_deadline' => ['required', 'date', 'after:now', 'after:start_date'],
         ];
     }
 
-    /** @return array{nombre: string, period_id: string, template_version_id: string, grouping_mode: string, source_ids: list<string>, start_date: string, draft_deadline: string} */
+    /** @return array{nombre: string, process_id: string, period_id: string, grouping_mode: string, source_ids: list<string>} */
     public function convocationData(): array
     {
         $sourceIds = $this->input('source_ids', []);
 
         return [
             'nombre' => $this->string('nombre')->toString(),
+            'process_id' => $this->string('process_id')->toString(),
             'period_id' => $this->string('period_id')->toString(),
-            'template_version_id' => $this->string('template_version_id')->toString(),
             'grouping_mode' => $this->string('grouping_mode')->toString(),
             'source_ids' => is_array($sourceIds)
                 ? array_values(array_filter($sourceIds, is_string(...)))
                 : [],
-            'start_date' => $this->string('start_date')->toString(),
-            'draft_deadline' => $this->string('draft_deadline')->toString(),
         ];
     }
 }

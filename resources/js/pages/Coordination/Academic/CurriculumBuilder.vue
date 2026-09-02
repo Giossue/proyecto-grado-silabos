@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import { Link2, ListTree, Plus, PowerOff, Workflow } from '@lucide/vue';
+import { Link2, ListTree, Lock, Plus, PowerOff, Workflow } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import CurriculumCanvas from '@/components/domain/academic/curriculum/CurriculumCanvas.vue';
 import CurriculumConfigurationSheet from '@/components/domain/academic/curriculum/CurriculumConfigurationSheet.vue';
@@ -100,7 +100,7 @@ const openSubject = (subject: CurriculumBuilderSubject): void => {
                 Agregar relación
             </Button>
             <Button
-                v-if="activeMode === 'breakdown'"
+                v-if="activeMode === 'breakdown' && curriculum.editable"
                 type="button"
                 @click="openNewSubject"
             >
@@ -108,6 +108,12 @@ const openSubject = (subject: CurriculumBuilderSubject): void => {
                 Agregar materia
             </Button>
         </template>
+
+        <Alert v-if="curriculum.lock_reason">
+            <Lock aria-hidden="true" />
+            <AlertTitle>Malla protegida durante la convocatoria</AlertTitle>
+            <AlertDescription>{{ curriculum.lock_reason }}</AlertDescription>
+        </Alert>
 
         <Alert v-if="!curriculum.active">
             <PowerOff aria-hidden="true" />

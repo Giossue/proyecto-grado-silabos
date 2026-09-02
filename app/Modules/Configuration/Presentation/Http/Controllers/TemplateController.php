@@ -24,15 +24,17 @@ use App\Modules\Configuration\Presentation\Http\Requests\ReorderTemplateBlocksRe
 use App\Modules\Configuration\Presentation\Http\Requests\ReorderTemplateSectionsRequest;
 use App\Modules\Configuration\Presentation\Http\Requests\SaveFieldDefinitionRequest;
 use App\Modules\Configuration\Presentation\Http\Requests\SaveTemplateSectionRequest;
+use App\Modules\Syllabus\Application\ProcessLocks;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class TemplateController extends Controller
 {
-    public function index(ManageTemplatesRequest $request): Response
+    public function index(ManageTemplatesRequest $request, ProcessLocks $locks): Response
     {
         return Inertia::render('Admin/Templates/Index', [
+            'processLock' => $locks->templateLockReason(),
             'templates' => SyllabusTemplate::query()
                 ->where('es_institucional', true)
                 ->with(['versions' => fn ($query) => $query->orderByDesc('numero_version')])
@@ -68,7 +70,7 @@ class TemplateController extends Controller
         return to_route('admin.templates.show', $version)->with('success', 'Plantilla creada con las doce áreas base.');
     }
 
-    public function show(TemplateVersion $version, ManageTemplatesRequest $request): Response
+    public function show(TemplateVersion $version, ManageTemplatesRequest $request, ProcessLocks $locks): Response
     {
         $this->ensureInstitutional($version);
         $version->load([
@@ -77,6 +79,7 @@ class TemplateController extends Controller
         ]);
 
         return Inertia::render('Admin/Templates/Show', [
+            'processLock' => $locks->templateLockReason(),
             'templateVersion' => [
                 'id' => $version->id,
                 'number' => $version->numero_version,

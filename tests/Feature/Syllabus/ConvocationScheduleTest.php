@@ -16,6 +16,7 @@ use Carbon\CarbonInterface;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
+use Tests\Support\CreatesSyllabusProcess;
 use Tests\TestCase;
 
 /**
@@ -25,6 +26,7 @@ use Tests\TestCase;
  */
 class ConvocationScheduleTest extends TestCase
 {
+    use CreatesSyllabusProcess;
     use RefreshDatabase;
 
     private User $administrator;
@@ -68,17 +70,16 @@ class ConvocationScheduleTest extends TestCase
 
     public function test_the_deadline_cannot_be_set_before_the_start(): void
     {
-        [$template, $source] = $this->publishedConfiguration();
+        // Desde I-31 las fechas las fija Administración en el proceso institucional; la
+        // convocatoria las hereda y solo puede prorrogarlas hacia adelante.
+        [$template] = $this->publishedConfiguration();
 
-        $this->actingAsCoordinator()->post(route('convocations.store'), [
-            'nombre' => 'Convocatoria invertida',
-            'period_id' => CourseOffering::query()->firstOrFail()->periodo_academico_id,
+        $this->actingAsAdministrator()->post(route('admin.processes.store'), [
+            'nombre' => 'Proceso invertido',
             'template_version_id' => $template->id,
-            'grouping_mode' => 'por_paralelo',
-            'source_ids' => [$source->id],
-            'start_date' => now()->addMonths(2)->toIso8601String(),
-            'draft_deadline' => now()->addMonth()->toIso8601String(),
-        ])->assertSessionHasErrors('draft_deadline');
+            'starts_at' => now()->addMonths(2)->toIso8601String(),
+            'due_at' => now()->addMonth()->toIso8601String(),
+        ])->assertSessionHasErrors('due_at');
     }
 
     public function test_a_teacher_cannot_submit_before_the_convocation_starts(): void
@@ -214,12 +215,10 @@ class ConvocationScheduleTest extends TestCase
 
         $this->actingAsCoordinator()->post(route('convocations.store'), [
             'nombre' => 'Convocatoria de plazos',
+            'process_id' => $this->openSyllabusProcess($template->id, $startsAt ?? now()->subDay(), now()->addMonth())->id,
             'period_id' => CourseOffering::query()->firstOrFail()->periodo_academico_id,
-            'template_version_id' => $template->id,
             'grouping_mode' => 'por_paralelo',
             'source_ids' => [$source->id],
-            'start_date' => ($startsAt ?? now()->subDay())->toIso8601String(),
-            'draft_deadline' => now()->addMonth()->toIso8601String(),
         ])->assertRedirect();
 
         return Convocation::query()->latest('creado_en')->firstOrFail();

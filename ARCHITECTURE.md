@@ -55,7 +55,7 @@ en proveedores de servicio sin convertir cada módulo en un microservicio.
 | Identidad | usuarios, roles, sesiones y alcance efectivo |
 | Académico | carreras, periodos, mallas, asignaturas, ofertas y asignaciones |
 | Configuración | plantillas, campos, fuentes, versiones y publicación |
-| Convocatorias | preparación, vigencia, activaciones, plazos y seguimiento |
+| Convocatorias | proceso institucional, preparación por carrera, apertura, pausas, plazos y seguimiento |
 | Sílabos | borradores, secciones, revisiones, colaboradores y estados |
 | Revisión | observaciones, respuestas, comparación, aprobación y reapertura |
 | Validación | reglas determinísticas y resultados reproducibles |

@@ -12,6 +12,7 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\SubjectRequirement;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
 use App\Modules\Operations\Application\Actions\RecordAuditEvent;
+use App\Modules\Syllabus\Application\ProcessLocks;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\Syllabus;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\Request;
@@ -23,6 +24,7 @@ class MutateCurriculumBuilder
     public function __construct(
         private readonly ActiveRole $roles,
         private readonly RecordAuditEvent $audit,
+        private readonly ProcessLocks $locks,
     ) {}
 
     /** @param array{code: string, cycle_count: int|string} $data */
@@ -283,6 +285,8 @@ class MutateCurriculumBuilder
             || $role->carrera_id === null) {
             throw new AuthorizationException('Solo la coordinación vigente puede modificar la malla.');
         }
+        // Con una convocatoria en curso los sílabos se apoyan en la malla: se pausa antes.
+        $this->locks->assertCareerEditable($role->carrera_id);
 
         $curriculum = CurriculumVersion::query()
             ->where('carrera_id', $role->carrera_id)

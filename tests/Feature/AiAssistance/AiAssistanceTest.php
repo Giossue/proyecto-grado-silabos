@@ -44,10 +44,12 @@ use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 use LogicException;
+use Tests\Support\CreatesSyllabusProcess;
 use Tests\TestCase;
 
 class AiAssistanceTest extends TestCase
 {
+    use CreatesSyllabusProcess;
     use RefreshDatabase;
 
     private User $teacher;
@@ -567,6 +569,7 @@ class AiAssistanceTest extends TestCase
             'carrera_id' => $career->id,
             'periodo_academico_id' => $period->id,
             'version_plantilla_id' => $templateVersion->id,
+            'proceso_id' => $this->openSyllabusProcess($templateVersion->id)->id,
             'nombre' => 'Convocatoria IA',
             'estado' => 'abierta',
             'modo_agrupacion' => 'por_paralelo',

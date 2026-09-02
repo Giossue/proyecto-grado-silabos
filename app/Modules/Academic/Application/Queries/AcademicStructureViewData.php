@@ -19,11 +19,14 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\SubjectRequirement;
 use App\Modules\Academic\Infrastructure\Persistence\Models\TeacherAssignment;
 use App\Modules\Identity\Domain\Enums\RoleCode;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
+use App\Modules\Syllabus\Application\ProcessLocks;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\SyllabusCollaborator;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\SyllabusScope;
 
 class AcademicStructureViewData
 {
+    public function __construct(private readonly ProcessLocks $locks) {}
+
     /** @return array<string, mixed> */
     public function governance(): array
     {
@@ -146,6 +149,9 @@ class AcademicStructureViewData
             ->findOrFail($curriculumId);
         $definitions = $curriculum->fieldDefinitions;
         $subjectIds = $curriculum->subjects->pluck('id');
+        // La malla se congela mientras una convocatoria de la carrera está en curso; la
+        // razón viaja a la pantalla para que explique el bloqueo con las mismas palabras.
+        $lockReason = $this->locks->careerLockReason($careerId);
 
         return [
             'career' => ['id' => $career->id, 'name' => $career->nombre],
@@ -155,7 +161,8 @@ class AcademicStructureViewData
                 'cycle_count' => $curriculum->numero_ciclos,
                 'state' => $curriculum->estado,
                 'active' => $curriculum->estado === 'activa',
-                'editable' => true,
+                'editable' => $lockReason === null,
+                'lock_reason' => $lockReason,
             ],
             'fieldDefinitions' => $definitions->map(fn (CurriculumFieldDefinition $field) => [
                 'id' => $field->id,

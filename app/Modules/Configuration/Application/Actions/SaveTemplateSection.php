@@ -9,6 +9,7 @@ use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateSection;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateVersion;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Operations\Application\Actions\RecordAuditEvent;
+use App\Modules\Syllabus\Application\ProcessLocks;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -18,12 +19,15 @@ class SaveTemplateSection
     public function __construct(
         private readonly ActiveRole $roles,
         private readonly RecordAuditEvent $audit,
+        private readonly ProcessLocks $locks,
     ) {}
 
     /** @param array<string, mixed> $data */
     public function create(string $versionId, array $data, User $actor, Request $request): TemplateSection
     {
         $activeRole = $this->roles->resolve($request);
+        // Con el proceso institucional abierto, el formato está en uso: se pausa antes.
+        $this->locks->assertTemplateEditable();
 
         return DB::transaction(function () use ($activeRole, $actor, $data, $request, $versionId): TemplateSection {
             $version = TemplateVersion::query()->whereKey($versionId)->lockForUpdate()->firstOrFail();
@@ -98,6 +102,8 @@ class SaveTemplateSection
     public function update(TemplateSection $section, array $data, User $actor, Request $request): TemplateSection
     {
         $activeRole = $this->roles->resolve($request);
+        // Con el proceso institucional abierto, el formato está en uso: se pausa antes.
+        $this->locks->assertTemplateEditable();
 
         return DB::transaction(function () use ($activeRole, $actor, $data, $request, $section): TemplateSection {
             $section->load('version');

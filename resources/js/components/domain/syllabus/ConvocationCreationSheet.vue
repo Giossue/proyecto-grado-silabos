@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3';
 import { CalendarPlus } from '@lucide/vue';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import ConvocationController from '@/actions/App/Modules/Syllabus/Presentation/Http/Controllers/ConvocationController';
 import FormSheet from '@/components/domain/FormSheet.vue';
 import FormSheetActions from '@/components/domain/FormSheetActions.vue';
@@ -25,22 +25,49 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 
-defineProps<{
+const props = defineProps<{
     periods: { id: string; nombre: string }[];
-    templates: { id: string; label: string }[];
+    processes: {
+        id: string;
+        label: string;
+        state: string;
+        template: string;
+        starts_at: string;
+        due_at: string;
+    }[];
     sources: { id: string; label: string }[];
 }>();
 
 // Un sílabo por paralelo es el valor inicial. La agrupación por oferta se conserva
 // disponible porque la carrera puede cambiar el criterio.
 const groupingMode = ref('por_paralelo');
+
+// El calendario lo fija Administración: al elegir el proceso se muestra lo que la
+// convocatoria hereda, para que no haga falta ir a mirarlo a otra pantalla.
+const processId = ref('');
+const selectedProcess = computed(() =>
+    props.processes.find((process) => process.id === processId.value),
+);
+
+const processStateLabel = (state: string): string =>
+    ({
+        preparacion: 'en preparación',
+        abierto: 'abierto',
+        pausado: 'en pausa',
+    })[state] ?? state;
+
+const formatDate = (value: string): string =>
+    new Intl.DateTimeFormat('es-EC', {
+        dateStyle: 'long',
+        timeStyle: 'short',
+    }).format(new Date(value));
 </script>
 
 <template>
     <FormSheet
         trigger-label="Nueva convocatoria"
         title="Preparar convocatoria"
-        description="Defina el periodo, la plantilla, las fuentes y el alcance. Esta preparación todavía no genera sílabos; podrá revisar el resumen antes de abrirla."
+        description="Elija el proceso institucional, el periodo, las fuentes y el alcance. La plantilla y las fechas se heredan del proceso. Esta preparación todavía no genera sílabos; podrá revisar el resumen antes de abrirla."
     >
         <template #default="{ close }">
             <Form
@@ -62,6 +89,44 @@ const groupingMode = ref('por_paralelo');
                             required
                         />
                         <FieldError :errors="[errors.nombre]" />
+                    </Field>
+
+                    <Field :data-invalid="Boolean(errors.process_id)">
+                        <FieldLabel for="convocation-process" required>
+                            Proceso institucional
+                        </FieldLabel>
+                        <Select v-model="processId" name="process_id" required>
+                            <SelectTrigger
+                                id="convocation-process"
+                                :aria-invalid="Boolean(errors.process_id)"
+                            >
+                                <SelectValue placeholder="Seleccione" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectGroup>
+                                    <SelectItem
+                                        v-for="process in processes"
+                                        :key="process.id"
+                                        :value="process.id"
+                                    >
+                                        {{ process.label }} ·
+                                        {{ processStateLabel(process.state) }}
+                                    </SelectItem>
+                                </SelectGroup>
+                            </SelectContent>
+                        </Select>
+                        <FieldDescription v-if="selectedProcess">
+                            Plantilla {{ selectedProcess.template }}.
+                            Elaboración desde
+                            {{ formatDate(selectedProcess.starts_at) }} hasta
+                            {{ formatDate(selectedProcess.due_at) }}. Podrá
+                            prorrogar la entrega de su carrera después.
+                        </FieldDescription>
+                        <FieldDescription v-else>
+                            Lo abre Administración según el calendario
+                            académico; aquí solo se elige a cuál convocar.
+                        </FieldDescription>
+                        <FieldError :errors="[errors.process_id]" />
                     </Field>
 
                     <Field :data-invalid="Boolean(errors.period_id)">
@@ -88,34 +153,6 @@ const groupingMode = ref('por_paralelo');
                             </SelectContent>
                         </Select>
                         <FieldError :errors="[errors.period_id]" />
-                    </Field>
-
-                    <Field :data-invalid="Boolean(errors.template_version_id)">
-                        <FieldLabel for="convocation-template" required>
-                            Plantilla publicada
-                        </FieldLabel>
-                        <Select name="template_version_id" required>
-                            <SelectTrigger
-                                id="convocation-template"
-                                :aria-invalid="
-                                    Boolean(errors.template_version_id)
-                                "
-                            >
-                                <SelectValue placeholder="Seleccione" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectGroup>
-                                    <SelectItem
-                                        v-for="template in templates"
-                                        :key="template.id"
-                                        :value="template.id"
-                                    >
-                                        {{ template.label }}
-                                    </SelectItem>
-                                </SelectGroup>
-                            </SelectContent>
-                        </Select>
-                        <FieldError :errors="[errors.template_version_id]" />
                     </Field>
 
                     <Field :data-invalid="Boolean(errors.grouping_mode)">
@@ -145,41 +182,6 @@ const groupingMode = ref('por_paralelo');
                             </SelectContent>
                         </Select>
                         <FieldError :errors="[errors.grouping_mode]" />
-                    </Field>
-
-                    <Field :data-invalid="Boolean(errors.start_date)">
-                        <FieldLabel for="convocation-start" required>
-                            Inicio de la elaboración
-                        </FieldLabel>
-                        <Input
-                            id="convocation-start"
-                            name="start_date"
-                            type="datetime-local"
-                            :aria-invalid="Boolean(errors.start_date)"
-                            required
-                        />
-                        <FieldDescription>
-                            Antes de esta fecha nadie puede enviar su sílabo.
-                        </FieldDescription>
-                        <FieldError :errors="[errors.start_date]" />
-                    </Field>
-
-                    <Field :data-invalid="Boolean(errors.draft_deadline)">
-                        <FieldLabel for="convocation-deadline" required>
-                            Fecha límite del borrador
-                        </FieldLabel>
-                        <Input
-                            id="convocation-deadline"
-                            name="draft_deadline"
-                            type="datetime-local"
-                            :aria-invalid="Boolean(errors.draft_deadline)"
-                            required
-                        />
-                        <FieldDescription>
-                            Vencida, el envío se bloquea hasta que usted conceda
-                            una prórroga.
-                        </FieldDescription>
-                        <FieldError :errors="[errors.draft_deadline]" />
                     </Field>
 
                     <FieldSet>

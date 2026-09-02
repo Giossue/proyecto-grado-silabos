@@ -18,6 +18,7 @@ use App\Modules\Operations\Presentation\Http\Controllers\OperationalReportContro
 use App\Modules\Syllabus\Presentation\Http\Controllers\ConvocationController;
 use App\Modules\Syllabus\Presentation\Http\Controllers\ReviewController;
 use App\Modules\Syllabus\Presentation\Http\Controllers\SyllabusController;
+use App\Modules\Syllabus\Presentation\Http\Controllers\SyllabusProcessController;
 use App\Support\RoleArea;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Session\Middleware\StartSession;
@@ -119,6 +120,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('convocatorias/{convocation}', [ConvocationController::class, 'show'])->name('convocations.show');
         Route::post('convocatorias/{convocation}/abrir', [ConvocationController::class, 'open'])->name('convocations.open');
         Route::post('convocatorias/{convocation}/prorroga', [ConvocationController::class, 'extendDeadline'])->name('convocations.deadline.extend');
+        Route::post('convocatorias/{convocation}/{transition}', [ConvocationController::class, 'transition'])
+            ->whereIn('transition', ['pausar', 'reanudar'])
+            ->name('convocations.transition');
         Route::get('revisiones', [ReviewController::class, 'index'])->name('reviews.index');
         Route::get('revisiones/{before}/comparar/{after}', [ReviewController::class, 'compare'])->name('reviews.compare');
         Route::get('revisiones/{revision}', [ReviewController::class, 'show'])->name('reviews.show');
@@ -201,6 +205,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::patch('gobierno-academico/{entity}/{record}/estado', [AcademicGovernanceController::class, 'setStatus'])
             ->whereUuid('record')
             ->name('academic.status.update');
+        // El calendario institucional: Administración abre el proceso que obliga a todas
+        // las carreras y lo pausa cuando hay que corregir la plantilla.
+        Route::get('calendario-silabos', [SyllabusProcessController::class, 'index'])->name('processes.index');
+        Route::post('calendario-silabos', [SyllabusProcessController::class, 'store'])->name('processes.store');
+        Route::patch('calendario-silabos/{process}', [SyllabusProcessController::class, 'update'])
+            ->whereUuid('process')
+            ->name('processes.update');
+        Route::post('calendario-silabos/{process}/{transition}', [SyllabusProcessController::class, 'transition'])
+            ->whereUuid('process')
+            ->whereIn('transition', ['abrir', 'pausar', 'reanudar', 'cerrar'])
+            ->name('processes.transition');
         Route::get('plantillas', [TemplateController::class, 'index'])->name('templates.index');
         Route::post('plantillas', [TemplateController::class, 'store'])->name('templates.store');
         Route::get('plantillas/versiones/{version}', [TemplateController::class, 'show'])->name('templates.show');

@@ -7,6 +7,7 @@ use App\Modules\Configuration\Infrastructure\Persistence\Models\AcademicSource;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Identity\Domain\Enums\RoleCode;
 use App\Modules\Operations\Application\Actions\RecordAuditEvent;
+use App\Modules\Syllabus\Application\ProcessLocks;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -15,6 +16,7 @@ class CreateAcademicSource
     public function __construct(
         private readonly ActiveRole $roles,
         private readonly RecordAuditEvent $audit,
+        private readonly ProcessLocks $locks,
     ) {}
 
     /** @param array<string, mixed> $data */
@@ -24,6 +26,8 @@ class CreateAcademicSource
         if ($activeRole?->role->codigo !== RoleCode::Coordinator->value || $activeRole->carrera_id === null) {
             abort(403);
         }
+        // Con una convocatoria en curso los sílabos se apoyan en las fuentes: se pausa antes.
+        $this->locks->assertCareerEditable($activeRole->carrera_id);
 
         return DB::transaction(function () use ($actor, $activeRole, $data, $request): AcademicSource {
             $source = AcademicSource::query()->create([

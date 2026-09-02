@@ -18,6 +18,7 @@ use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
+use Tests\Support\CreatesSyllabusProcess;
 use Tests\TestCase;
 
 /**
@@ -27,6 +28,7 @@ use Tests\TestCase;
  */
 class TeacherTransferTest extends TestCase
 {
+    use CreatesSyllabusProcess;
     use RefreshDatabase;
 
     private User $administrator;
@@ -257,11 +259,9 @@ class TeacherTransferTest extends TestCase
         $this->actingAsCoordinator()->post(route('convocations.store'), [
             'nombre' => 'Convocatoria de relevo',
             'period_id' => CourseOffering::query()->firstOrFail()->periodo_academico_id,
-            'template_version_id' => $template->id,
+            'process_id' => $this->openSyllabusProcess($template->id, now()->subDay()->toIso8601String(), now()->addMonth()->toIso8601String())->id,
             'grouping_mode' => 'por_paralelo',
             'source_ids' => [$source->id],
-            'start_date' => now()->subDay()->toIso8601String(),
-            'draft_deadline' => now()->addMonth()->toIso8601String(),
         ])->assertRedirect();
         $convocation = Convocation::query()->latest('creado_en')->firstOrFail();
         $this->actingAsCoordinator()->post(route('convocations.open', $convocation))->assertRedirect();

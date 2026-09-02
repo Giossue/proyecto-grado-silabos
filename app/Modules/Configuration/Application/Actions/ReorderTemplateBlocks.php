@@ -7,6 +7,7 @@ use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateBlock;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateVersion;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Operations\Application\Actions\RecordAuditEvent;
+use App\Modules\Syllabus\Application\ProcessLocks;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -16,6 +17,7 @@ class ReorderTemplateBlocks
     public function __construct(
         private readonly ActiveRole $roles,
         private readonly RecordAuditEvent $audit,
+        private readonly ProcessLocks $locks,
     ) {}
 
     /** @param array<int, string> $blockIds */
@@ -27,6 +29,8 @@ class ReorderTemplateBlocks
         Request $request,
     ): void {
         $activeRole = $this->roles->resolve($request);
+        // Con el proceso institucional abierto, el formato está en uso: se pausa antes.
+        $this->locks->assertTemplateEditable();
 
         DB::transaction(function () use ($activeRole, $actor, $blockIds, $request, $sectionId, $version): void {
             $lockedVersion = TemplateVersion::query()->whereKey($version->id)->lockForUpdate()->firstOrFail();

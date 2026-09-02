@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
+import { Lock } from '@lucide/vue';
 import TemplateController from '@/actions/App/Modules/Configuration/Presentation/Http/Controllers/TemplateController';
 import ClientFilterBar from '@/components/domain/ClientFilterBar.vue';
 import TemplateCreationSheet from '@/components/domain/configuration/TemplateCreationSheet.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -43,6 +45,8 @@ const props = defineProps<{
         }[];
     }[];
     hasInstitutionalTemplate: boolean;
+    /** Motivo por el que la plantilla no se edita; nulo cuando sí se puede. */
+    processLock: string | null;
 }>();
 const filter = useClientFilter(
     () => props.templates,
@@ -75,10 +79,17 @@ defineOptions({
         description="El formato del sílabo: qué campos tiene y en qué orden. Publicar una versión nueva no toca las que ya se están usando."
     >
         <template #actions>
-            <TemplateCreationSheet v-if="!hasInstitutionalTemplate" />
+            <TemplateCreationSheet
+                v-if="!hasInstitutionalTemplate && !processLock"
+            />
         </template>
 
         <div class="flex flex-col gap-4">
+            <Alert v-if="processLock">
+                <Lock aria-hidden="true" />
+                <AlertTitle>Plantilla protegida durante el proceso</AlertTitle>
+                <AlertDescription>{{ processLock }}</AlertDescription>
+            </Alert>
             <ClientFilterBar
                 :filter="filter"
                 input-id="templates-search"

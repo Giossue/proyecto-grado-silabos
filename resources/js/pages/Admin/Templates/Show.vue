@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { Form, Head, Link } from '@inertiajs/vue3';
-import { Check } from '@lucide/vue';
+import { Check, Lock } from '@lucide/vue';
 import TemplateController from '@/actions/App/Modules/Configuration/Presentation/Http/Controllers/TemplateController';
 import TemplateBlockBuilder from '@/components/domain/configuration/TemplateBlockBuilder.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -68,6 +69,8 @@ defineProps<{
         }[];
     };
     blockTypes: { value: string; label: string }[];
+    /** Motivo por el que la plantilla no se edita; nulo cuando sí se puede. */
+    processLock: string | null;
 }>();
 
 const stateLabel = (state: string): string =>
@@ -137,21 +140,22 @@ defineOptions({
                 </DropdownMenuContent>
             </DropdownMenu>
             <Form
-                v-if="templateVersion.state === 'borrador'"
+                v-if="templateVersion.state === 'borrador' && !processLock"
                 v-bind="TemplateController.publish.form(templateVersion.id)"
                 v-slot="{ errors, processing }"
             >
-                <FieldError :errors="[errors.version]" />
+                <FieldError :errors="[errors.version, errors.process]" />
                 <Button type="submit" :disabled="processing">
                     <Spinner v-if="processing" />
                     Publicar
                 </Button>
             </Form>
             <Form
-                v-else
+                v-else-if="!processLock"
                 v-bind="TemplateController.clone.form(templateVersion.id)"
-                v-slot="{ processing }"
+                v-slot="{ errors, processing }"
             >
+                <FieldError :errors="[errors.process]" />
                 <Button type="submit" variant="outline" :disabled="processing">
                     <Spinner v-if="processing" />
                     Crear nueva versión
@@ -159,8 +163,14 @@ defineOptions({
             </Form>
         </template>
 
+        <Alert v-if="processLock">
+            <Lock aria-hidden="true" />
+            <AlertTitle>Plantilla protegida durante el proceso</AlertTitle>
+            <AlertDescription>{{ processLock }}</AlertDescription>
+        </Alert>
+
         <TemplateBlockBuilder
-            v-if="templateVersion.state === 'borrador'"
+            v-if="templateVersion.state === 'borrador' && !processLock"
             :template-version-id="templateVersion.id"
             :sections="templateVersion.sections"
             :block-types="blockTypes"

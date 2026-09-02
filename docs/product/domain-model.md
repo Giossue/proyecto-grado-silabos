@@ -78,10 +78,28 @@ son historia técnica y no se exponen como versiones al usuario.
 Publicar una versión de plantilla la vuelve inmutable. Un sílabo conserva la versión de
 plantilla y el contexto académico con los que fue creado.
 
-### Convocatoria
+### Proceso de sílabos y convocatoria
 
-`Convocatoria` vincula carrera, periodo, plantilla publicada, fuentes activas, asignaciones,
-fechas y estado. Al abrirla, la plantilla debe seguir publicada y las fuentes activas.
+`ProcesoSilabos` es el calendario institucional: nombre, versión publicada de plantilla,
+fecha de inicio, fecha de entrega y estado (`preparacion`, `abierto`, `pausado`,
+`cerrado`). Lo administra Administración porque el calendario académico oficial obliga
+a todas las facultades. La base impone un solo proceso abierto o pausado a la vez.
+
+`Convocatoria` cuelga de un proceso obligatorio y vincula carrera, periodo, fuentes
+activas, agrupación, fechas y estado (`preparacion`, `abierta`, `pausada`, `cerrada`).
+Hereda la plantilla y las fechas del proceso al prepararse; las fechas se copian, no se
+referencian, porque la carrera puede prorrogar las suyas. Solo se abre con el proceso
+abierto; al abrirla, la plantilla debe seguir publicada y las fuentes activas.
+
+Una convocatoria está **en curso** cuando ella está abierta y su proceso también. Esa
+condición habilita a los docentes y, por lo mismo, congela lo que sostiene su trabajo:
+con el proceso abierto no se edita ni publica la plantilla; con una convocatoria en
+curso no se editan la malla ni las fuentes de esa carrera. Ofertas, paralelos y
+asignaciones docentes siguen editables, porque el relevo docente los necesita. Para
+corregir se pausa: Administración el proceso —detiene a toda la universidad—,
+Coordinación su convocatoria —solo su carrera—. Los expedientes ya creados conservan
+la plantilla con la que nacieron; cambiar la del proceso solo alcanza a las
+convocatorias que se abran después.
 
 ### Sílabo
 

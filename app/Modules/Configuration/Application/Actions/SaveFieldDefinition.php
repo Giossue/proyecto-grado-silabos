@@ -9,6 +9,7 @@ use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateSection;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateVersion;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Operations\Application\Actions\RecordAuditEvent;
+use App\Modules\Syllabus\Application\ProcessLocks;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -18,17 +19,22 @@ class SaveFieldDefinition
     public function __construct(
         private readonly ActiveRole $roles,
         private readonly RecordAuditEvent $audit,
+        private readonly ProcessLocks $locks,
     ) {}
 
     /** @param array<string, mixed> $data */
     public function create(string $versionId, array $data, User $actor, Request $request): FieldDefinition
     {
+        $this->locks->assertTemplateEditable();
+
         return $this->persist(null, $versionId, $data, $actor, $request);
     }
 
     /** @param array<string, mixed> $data */
     public function update(FieldDefinition $field, array $data, User $actor, Request $request): FieldDefinition
     {
+        $this->locks->assertTemplateEditable();
+
         return $this->persist($field, $field->version_plantilla_id, $data, $actor, $request);
     }
 

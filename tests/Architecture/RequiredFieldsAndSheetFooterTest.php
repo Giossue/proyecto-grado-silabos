@@ -206,7 +206,11 @@ it('conserva en el servidor las obligaciones minimas y condicionales', function 
         ],
         'Syllabus/Presentation/Http/Requests/StoreConvocationRequest.php' => [
             "'source_ids' => ['required', 'array', 'min:1'",
-            "'draft_deadline' => ['required'",
+            "'process_id' => [",
+        ],
+        'Syllabus/Presentation/Http/Requests/StoreSyllabusProcessRequest.php' => [
+            "'template_version_id' => ['required'",
+            "'due_at' => ['required'",
         ],
         'Syllabus/Presentation/Http/Requests/StoreCorrectionRequest.php' => [
             "'observation_ids' => ['required', 'array', 'min:1'",

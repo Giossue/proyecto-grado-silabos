@@ -79,9 +79,16 @@ migración `000020`; la evidencia de IA conserva su propia copia del contenido c
 
 ### Convocatorias y sílabos
 
-`convocatorias`, `fuentes_convocatoria`, `fechas_limite_convocatoria`, `silabos`,
-`alcances_silabo`, `colaboradores_silabo`, `revisiones_silabo`, `filas_repetibles`,
-`valores_campo`, `transiciones_estado`.
+`procesos_silabos`, `convocatorias`, `fuentes_convocatoria`,
+`fechas_limite_convocatoria`, `silabos`, `alcances_silabo`, `colaboradores_silabo`,
+`revisiones_silabo`, `filas_repetibles`, `valores_campo`, `transiciones_estado`.
+
+`procesos_silabos` (I-31) es el calendario institucional: plantilla publicada, inicio,
+entrega y estado. Un índice parcial único sobre `estado IN ('abierto', 'pausado')`
+garantiza un solo proceso en curso. `convocatorias.proceso_id` es obligatorio; la
+migración `000027` creó un proceso por cada convocatoria existente con su propia
+plantilla y fechas. El estado `pausada` de la convocatoria y `pausado` del proceso
+detienen el trabajo docente sin borrar nada.
 
 ### Revisión, validación e IA
 

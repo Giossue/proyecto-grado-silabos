@@ -86,7 +86,9 @@ class SyllabusPolicy
         return $user->activo
             && $activeRole?->role->codigo === RoleCode::Teacher->value
             && $activeRole->carrera_id === $syllabus->convocation()->value('carrera_id')
-            && $syllabus->convocation()->value('estado') === 'abierta'
+            // En curso: abierta por la carrera y con el proceso institucional abierto. Una
+            // pausa en cualquiera de los dos niveles detiene la edición.
+            && $syllabus->convocation()->running()->exists()
             && $this->hasCurrentCollaboration($user, $syllabus);
     }
 

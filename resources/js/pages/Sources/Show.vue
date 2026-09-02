@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3';
-import { Check } from '@lucide/vue';
+import { Check, Lock } from '@lucide/vue';
 import AcademicSourceEditSheet from '@/components/domain/configuration/AcademicSourceEditSheet.vue';
 import MarkdownEditor from '@/components/domain/MarkdownEditor.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -27,6 +28,8 @@ const props = defineProps<{
         content: string | null;
         actualizado_en: string | null;
     };
+    /** Motivo por el que no se edita la fuente; nulo cuando sí se puede. */
+    processLock: string | null;
 }>();
 
 const form = useForm({ content: props.source.content ?? '' });
@@ -66,10 +69,17 @@ defineOptions({
             </Badge>
         </template>
         <template #actions>
-            <AcademicSourceEditSheet :source="source" />
+            <AcademicSourceEditSheet v-if="!processLock" :source="source" />
         </template>
 
         <div class="flex flex-col gap-4">
+            <Alert v-if="processLock">
+                <Lock aria-hidden="true" />
+                <AlertTitle
+                    >Fuente protegida durante la convocatoria</AlertTitle
+                >
+                <AlertDescription>{{ processLock }}</AlertDescription>
+            </Alert>
             <Card v-if="source.internal_notes">
                 <CardHeader>
                     <CardTitle>Notas internas</CardTitle>
@@ -109,7 +119,11 @@ defineOptions({
                         </span>
                         <Button
                             type="button"
-                            :disabled="form.processing || !form.isDirty"
+                            :disabled="
+                                form.processing ||
+                                !form.isDirty ||
+                                Boolean(processLock)
+                            "
                             @click="save"
                         >
                             <Spinner v-if="form.processing" />

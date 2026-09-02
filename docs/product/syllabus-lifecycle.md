@@ -54,11 +54,23 @@ viene de A1. Ambas están registradas en `references/entrevista-2026-08-26-halla
 
 ## Plazos
 
-Una convocatoria fija dos etapas con vencimiento: el inicio de la elaboración y la entrega
-del borrador. Antes del inicio y después de la entrega, el envío se rechaza. Solo el
-coordinador de la carrera prorroga, con motivo escrito, y únicamente hacia adelante:
-adelantar la fecha dejaría fuera de plazo a quien ya estaba dentro. La fecha anterior se
-conserva en el evento de auditoría.
+El proceso institucional fija dos fechas —inicio de la elaboración y entrega del
+borrador— y cada convocatoria las hereda como sus dos etapas con vencimiento. Antes del
+inicio y después de la entrega, el envío se rechaza. Solo el coordinador de la carrera
+prorroga la suya, con motivo escrito, y únicamente hacia adelante: adelantar la fecha
+dejaría fuera de plazo a quien ya estaba dentro. La fecha anterior se conserva en el
+evento de auditoría.
+
+## Pausas
+
+Una pausa detiene el reloj para el alcance que la decide. Administración pausa el
+proceso y ningún docente de la universidad edita ni envía hasta que lo reanude; entre
+tanto la plantilla vuelve a ser editable. Coordinación pausa su convocatoria y solo los
+docentes de esa carrera se detienen; entre tanto la malla y las fuentes de la carrera
+vuelven a ser editables. Los borradores se conservan tal cual. Ambas pausas exigen
+motivo y quedan en auditoría; reanudar una convocatoria requiere que el proceso esté
+abierto. Cerrar el proceso es definitivo: los expedientes se conservan y ya no admiten
+envíos.
 
 El respaldo normativo está en `references/normativa-silabo.md`: el reglamento vigente de
 la UEB exige que la planificación microcurricular esté programada antes de iniciar el

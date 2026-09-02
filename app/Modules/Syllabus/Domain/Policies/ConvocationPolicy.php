@@ -39,4 +39,14 @@ class ConvocationPolicy
     {
         return $this->view($user, $convocation) && $convocation->estado !== 'cerrada';
     }
+
+    public function pause(User $user, Convocation $convocation): bool
+    {
+        return $this->view($user, $convocation) && $convocation->estado === Convocation::STATE_OPEN;
+    }
+
+    public function resume(User $user, Convocation $convocation): bool
+    {
+        return $this->view($user, $convocation) && $convocation->estado === Convocation::STATE_PAUSED;
+    }
 }

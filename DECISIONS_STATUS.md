@@ -54,6 +54,12 @@ Fecha de corte: **30 de agosto de 2026**.
 - Sin una malla activa no se crean ofertas ni se abren procesos nuevos para docentes.
   Los sílabos conservan una fotografía de su contexto académico y las revisiones siguen
   siendo inmutables aunque la malla actual cambie.
+- El calendario académico oficial obliga a toda la universidad (I-31, 2 de septiembre
+  de 2026): Administración abre el **proceso de sílabos** con plantilla y fechas;
+  Coordinación convoca a su carrera dentro de ese proceso y hereda ambas. Con el
+  proceso abierto la plantilla no se edita; con una convocatoria en curso la malla y las
+  fuentes de esa carrera no se editan. Para corregir se pausa: Administración el
+  proceso —toda la universidad—, Coordinación su convocatoria —solo su carrera—.
 
 ## Actualizado para esta entrega
 
@@ -173,6 +179,15 @@ I-29 (2 de septiembre de 2026) elimina la vigencia programada de los roles de cu
 `asignaciones_rol` queda efectiva únicamente mientras `activo` sea verdadero y su retiro
 es manual. Las vigencias de asignaciones docentes y nombramientos de coordinación no
 cambian, pues representan relaciones académicas distintas.
+
+I-31 (2 de septiembre de 2026) traslada el calendario a Administración por decisión
+explícita del responsable del producto: `procesos_silabos` fija plantilla, inicio y
+entrega para toda la universidad y solo puede haber uno en curso. `convocatorias`
+cuelga de un proceso obligatorio, hereda su plantilla y sus fechas y gana el estado
+`pausada`. Una convocatoria está en curso solo si ella está abierta y el proceso
+también; esa condición habilita el trabajo docente y congela plantilla (proceso),
+malla y fuentes (carrera). La prórroga por carrera de I-15 se conserva. No resuelve
+`PV-01`: decide cuándo puede cambiarse la plantilla, no quién la aprueba.
 
 ## Propuesto
 

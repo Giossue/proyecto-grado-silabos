@@ -14,17 +14,19 @@ use App\Modules\Configuration\Presentation\Http\Requests\UpdateSourceContentRequ
 use App\Modules\Configuration\Presentation\Http\Requests\UpdateSourceRequest;
 use App\Modules\Configuration\Presentation\Http\Requests\ViewSourcesRequest;
 use App\Modules\Identity\Application\ActiveRole;
+use App\Modules\Syllabus\Application\ProcessLocks;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class AcademicSourceController extends Controller
 {
-    public function index(ViewSourcesRequest $request, ActiveRole $roles): Response
+    public function index(ViewSourcesRequest $request, ActiveRole $roles, ProcessLocks $locks): Response
     {
         $activeRole = $roles->resolve($request);
 
         return Inertia::render('Sources/Index', [
+            'processLock' => $locks->careerLockReason($activeRole?->carrera_id),
             'sources' => AcademicSource::query()
                 ->where('carrera_id', $activeRole?->carrera_id)
                 ->orderBy('nombre')
@@ -48,9 +50,10 @@ class AcademicSourceController extends Controller
         return to_route('sources.show', $source)->with('success', 'Fuente creada. Ya puede redactar su contenido.');
     }
 
-    public function show(AcademicSource $source, ManageAcademicSourceRequest $request): Response
+    public function show(AcademicSource $source, ManageAcademicSourceRequest $request, ProcessLocks $locks): Response
     {
         return Inertia::render('Sources/Show', [
+            'processLock' => $locks->careerLockReason($source->carrera_id),
             'source' => [
                 'id' => $source->id,
                 'name' => $source->nombre,

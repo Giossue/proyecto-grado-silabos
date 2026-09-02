@@ -1,0 +1,78 @@
+<?php
+
+namespace App\Modules\Syllabus\Application\Actions;
+
+use App\Models\User;
+use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateVersion;
+use App\Modules\Identity\Application\ActiveRole;
+use App\Modules\Identity\Domain\Enums\RoleCode;
+use App\Modules\Operations\Application\Actions\RecordAuditEvent;
+use App\Modules\Syllabus\Infrastructure\Persistence\Models\SyllabusProcess;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
+
+/**
+ * Administración fija el calendario institucional. El proceso nace en preparación: la
+ * plantilla y las fechas se pueden corregir hasta que se abre.
+ */
+class CreateSyllabusProcess
+{
+    public function __construct(
+        private readonly ActiveRole $roles,
+        private readonly RecordAuditEvent $audit,
+    ) {}
+
+    /** @param array{nombre: string, template_version_id: string, starts_at: string, due_at: string} $data */
+    public function execute(array $data, User $actor, Request $request): SyllabusProcess
+    {
+        $activeRole = $this->roles->resolve($request);
+        if ($activeRole?->role->codigo !== RoleCode::Administrator->value) {
+            abort(403);
+        }
+
+        $this->assertPublishedTemplate($data['template_version_id']);
+
+        return DB::transaction(function () use ($actor, $activeRole, $data, $request): SyllabusProcess {
+            $process = SyllabusProcess::query()->create([
+                'nombre' => $data['nombre'],
+                'version_plantilla_id' => $data['template_version_id'],
+                'inicia_en' => $data['starts_at'],
+                'entrega_en' => $data['due_at'],
+                'estado' => SyllabusProcess::STATE_PREPARATION,
+                'creado_por' => $actor->id,
+            ]);
+
+            $this->audit->execute(
+                actorId: $actor->id,
+                roleAssignmentId: $activeRole->id,
+                action: 'proceso_silabos.creado',
+                resourceType: 'proceso_silabos',
+                resourceId: $process->id,
+                result: 'exito',
+                metadata: [
+                    'template_version_id' => $process->version_plantilla_id,
+                    'starts_at' => $process->inicia_en->toIso8601String(),
+                    'due_at' => $process->entrega_en->toIso8601String(),
+                ],
+                correlationId: $request->attributes->getString('correlation_id') ?: null,
+            );
+
+            return $process;
+        });
+    }
+
+    public static function assertPublishedTemplate(string $templateVersionId): void
+    {
+        $template = TemplateVersion::query()->with('template')->find($templateVersionId);
+
+        if ($template === null
+            || $template->estado !== 'publicada'
+            || ! $template->template->activo
+            || ! $template->template->es_institucional) {
+            throw ValidationException::withMessages([
+                'template_version_id' => 'Seleccione una versión publicada de la plantilla institucional.',
+            ]);
+        }
+    }
+}

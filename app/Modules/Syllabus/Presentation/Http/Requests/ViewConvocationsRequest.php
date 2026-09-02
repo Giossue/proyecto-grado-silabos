@@ -18,7 +18,7 @@ class ViewConvocationsRequest extends FormRequest
     {
         return [
             'q' => ['nullable', 'string', 'max:120'],
-            'state' => ['nullable', Rule::in(['all', 'preparacion', 'abierta', 'cerrada'])],
+            'state' => ['nullable', Rule::in(['all', 'preparacion', 'abierta', 'pausada', 'cerrada'])],
             'page' => ['nullable', 'integer', 'min:1'],
         ];
     }

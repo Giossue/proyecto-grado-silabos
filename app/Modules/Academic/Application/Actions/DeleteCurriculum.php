@@ -10,6 +10,7 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\SubjectRequirement;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
 use App\Modules\Operations\Application\Actions\RecordAuditEvent;
+use App\Modules\Syllabus\Application\ProcessLocks;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\Syllabus;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\Request;
@@ -21,6 +22,7 @@ class DeleteCurriculum
     public function __construct(
         private readonly ActiveRole $roles,
         private readonly RecordAuditEvent $audit,
+        private readonly ProcessLocks $locks,
     ) {}
 
     public function execute(string $curriculumId, User $actor, Request $request): void
@@ -31,6 +33,7 @@ class DeleteCurriculum
             || $role->carrera_id === null) {
             throw new AuthorizationException('Solo la coordinación vigente puede eliminar la malla.');
         }
+        $this->locks->assertCareerEditable($role->carrera_id);
 
         DB::transaction(function () use ($actor, $curriculumId, $request, $role): void {
             $curriculum = CurriculumVersion::query()

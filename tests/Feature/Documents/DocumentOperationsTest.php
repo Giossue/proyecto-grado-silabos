@@ -41,11 +41,13 @@ use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 use LogicException;
 use RuntimeException;
+use Tests\Support\CreatesSyllabusProcess;
 use Tests\TestCase;
 use ZipArchive;
 
 class DocumentOperationsTest extends TestCase
 {
+    use CreatesSyllabusProcess;
     use RefreshDatabase;
 
     private User $administrator;
@@ -433,6 +435,7 @@ class DocumentOperationsTest extends TestCase
             'carrera_id' => $career->id,
             'periodo_academico_id' => $period->id,
             'version_plantilla_id' => $version->id,
+            'proceso_id' => $this->openSyllabusProcess($version->id)->id,
             'nombre' => 'Convocatoria documental CP-F',
             'estado' => 'abierta',
             'modo_agrupacion' => 'por_oferta',
@@ -525,6 +528,7 @@ class DocumentOperationsTest extends TestCase
             'carrera_id' => $career->id,
             'periodo_academico_id' => AcademicPeriod::query()->valueOrFail('id'),
             'version_plantilla_id' => $template->id,
+            'proceso_id' => $this->openSyllabusProcess($template->id)->id,
             'nombre' => 'Convocatoria fuera de alcance',
             'estado' => 'abierta',
             'modo_agrupacion' => 'por_oferta',

@@ -26,10 +26,12 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 use LogicException;
+use Tests\Support\CreatesSyllabusProcess;
 use Tests\TestCase;
 
 class ReviewWorkflowTest extends TestCase
 {
+    use CreatesSyllabusProcess;
     use RefreshDatabase;
 
     private User $administrator;
@@ -507,11 +509,9 @@ class ReviewWorkflowTest extends TestCase
         $this->actingAsCoordinator()->post(route('convocations.store'), [
             'nombre' => 'Convocatoria I-04',
             'period_id' => $periodId,
-            'template_version_id' => $template->id,
+            'process_id' => $this->openSyllabusProcess($template->id, now()->subDay()->toIso8601String(), now()->addMonth()->toIso8601String())->id,
             'grouping_mode' => 'por_oferta',
             'source_ids' => [$source->id],
-            'start_date' => now()->subDay()->toIso8601String(),
-            'draft_deadline' => now()->addMonth()->toIso8601String(),
         ])->assertRedirect();
         $convocation = Convocation::query()->latest('creado_en')->firstOrFail();
         $this->actingAsCoordinator()->post(route('convocations.open', $convocation))->assertRedirect();

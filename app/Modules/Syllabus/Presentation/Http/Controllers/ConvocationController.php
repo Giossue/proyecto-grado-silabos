@@ -6,16 +6,18 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\AcademicSource;
-use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateVersion;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Syllabus\Application\Actions\CreateConvocation;
 use App\Modules\Syllabus\Application\Actions\ExtendConvocationDeadline;
 use App\Modules\Syllabus\Application\Actions\OpenConvocation;
+use App\Modules\Syllabus\Application\Actions\TransitionConvocation;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\Convocation;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\Syllabus;
+use App\Modules\Syllabus\Infrastructure\Persistence\Models\SyllabusProcess;
 use App\Modules\Syllabus\Presentation\Http\Requests\ExtendConvocationDeadlineRequest;
 use App\Modules\Syllabus\Presentation\Http\Requests\OpenConvocationRequest;
 use App\Modules\Syllabus\Presentation\Http\Requests\StoreConvocationRequest;
+use App\Modules\Syllabus\Presentation\Http\Requests\TransitionConvocationRequest;
 use App\Modules\Syllabus\Presentation\Http\Requests\ViewConvocationsRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -29,7 +31,7 @@ class ConvocationController extends Controller
         $careerId = $roles->resolve($request)?->carrera_id;
         $filters = $request->validated();
         $search = is_string($filters['q'] ?? null) ? trim($filters['q']) : null;
-        $state = in_array($filters['state'] ?? null, ['preparacion', 'abierta', 'cerrada'], true)
+        $state = in_array($filters['state'] ?? null, ['preparacion', 'abierta', 'pausada', 'cerrada'], true)
             ? $filters['state']
             : null;
 
@@ -45,7 +47,7 @@ class ConvocationController extends Controller
                             ->whereRaw('nombre ILIKE ?', ["%{$term}%"])),
                 ))
                 ->when($state, fn ($query, string $value) => $query->where('estado', $value))
-                ->with(['academicPeriod:id,nombre', 'templateVersion.template:id,nombre'])
+                ->with(['academicPeriod:id,nombre', 'templateVersion.template:id,nombre', 'process:id,nombre,estado'])
                 ->withCount('syllabi')
                 ->orderByDesc('creado_en')
                 ->paginate(15)
@@ -53,18 +55,28 @@ class ConvocationController extends Controller
                     'id' => $convocation->id,
                     'name' => $convocation->nombre,
                     'state' => $convocation->estado,
+                    'process' => $convocation->process->nombre,
+                    'process_state' => $convocation->process->estado,
                     'grouping_mode' => $convocation->modo_agrupacion,
                     'period' => $convocation->academicPeriod->nombre,
                     'template' => $convocation->templateVersion->template->nombre,
                     'syllabi_count' => $convocation->syllabi_count,
                 ]),
             'periods' => AcademicPeriod::query()->where('activo', true)->orderByDesc('fecha_inicio')->get(['id', 'nombre']),
-            'templates' => TemplateVersion::query()
-                ->where('estado', 'publicada')
-                ->whereHas('template', fn ($query) => $query->where('es_institucional', true)->where('activo', true))
-                ->with('template:id,nombre')
-                ->orderByDesc('publicado_en')->get()
-                ->map(fn (TemplateVersion $version) => ['id' => $version->id, 'label' => "{$version->template->nombre} · v{$version->numero_version}"]),
+            // El calendario lo fija Administración: la carrera elige a qué proceso
+            // convoca y hereda su plantilla y sus fechas.
+            'processes' => SyllabusProcess::query()
+                ->whereNot('estado', SyllabusProcess::STATE_CLOSED)
+                ->with('templateVersion.template:id,nombre')
+                ->orderByDesc('inicia_en')->get()
+                ->map(fn (SyllabusProcess $process): array => [
+                    'id' => $process->id,
+                    'label' => $process->nombre,
+                    'state' => $process->estado,
+                    'template' => "{$process->templateVersion->template->nombre} · v{$process->templateVersion->numero_version}",
+                    'starts_at' => $process->inicia_en->toIso8601String(),
+                    'due_at' => $process->entrega_en->toIso8601String(),
+                ]),
             'sources' => AcademicSource::query()
                 ->where('carrera_id', $careerId)
                 ->where('activo', true)
@@ -85,7 +97,7 @@ class ConvocationController extends Controller
     public function show(Convocation $convocation, Request $request): Response
     {
         abort_unless($request->user()?->can('view', $convocation) === true, 403);
-        $convocation->load(['academicPeriod', 'templateVersion.template', 'sources', 'deadlines']);
+        $convocation->load(['academicPeriod', 'templateVersion.template', 'sources', 'deadlines', 'process']);
         $syllabi = $convocation->syllabi()
             ->with(['subject:id,nombre,codigo_institucional', 'scopes.parallel:id,codigo', 'teachers:id,nombre'])
             ->orderBy('asignatura_id')->get();
@@ -95,6 +107,10 @@ class ConvocationController extends Controller
                 'id' => $convocation->id,
                 'name' => $convocation->nombre,
                 'state' => $convocation->estado,
+                'process' => [
+                    'name' => $convocation->process->nombre,
+                    'state' => $convocation->process->estado,
+                ],
                 'grouping_mode' => $convocation->modo_agrupacion,
                 'period' => $convocation->academicPeriod->nombre,
                 'template' => "{$convocation->templateVersion->template->nombre} · v{$convocation->templateVersion->numero_version}",
@@ -147,5 +163,21 @@ class ConvocationController extends Controller
         );
 
         return back()->with('success', 'Plazo prorrogado. El motivo queda registrado en auditoría.');
+    }
+
+    public function transition(
+        Convocation $convocation,
+        string $transition,
+        TransitionConvocationRequest $request,
+        TransitionConvocation $action,
+    ): RedirectResponse {
+        $actor = $request->user();
+        abort_unless($actor instanceof User, 401);
+        $reason = $request->filled('reason') ? $request->string('reason')->toString() : null;
+        $action->execute($convocation, $transition, $reason, $actor, $request);
+
+        return back()->with('success', $transition === TransitionConvocation::PAUSE
+            ? 'Convocatoria en pausa. Los docentes de la carrera no editan ni envían; la malla y las fuentes quedan editables.'
+            : 'Convocatoria reanudada. Los docentes vuelven a trabajar y la malla y las fuentes quedan protegidas.');
     }
 }

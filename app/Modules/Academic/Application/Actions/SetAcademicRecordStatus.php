@@ -18,6 +18,7 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\TeacherAssignment;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
 use App\Modules\Operations\Application\Actions\RecordAuditEvent;
+use App\Modules\Syllabus\Application\ProcessLocks;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
@@ -44,6 +45,7 @@ class SetAcademicRecordStatus
     public function __construct(
         private readonly ActiveRole $roles,
         private readonly RecordAuditEvent $audit,
+        private readonly ProcessLocks $locks,
     ) {}
 
     public function execute(
@@ -63,6 +65,10 @@ class SetAcademicRecordStatus
 
         if (! $activeRole instanceof RoleAssignment || ! AcademicStructurePermissions::mayChangeStatus($activeRole, $entity)) {
             throw new AuthorizationException('No puede cambiar este registro con el rol activo.');
+        }
+        // Malla y materias se congelan mientras una convocatoria de la carrera está en curso.
+        if (in_array($entity, ['malla', 'asignatura'], true) && AcademicStructurePermissions::isCareerContext($activeRole)) {
+            $this->locks->assertCareerEditable($activeRole->carrera_id);
         }
 
         return DB::transaction(function () use ($active, $actor, $activeRole, $entity, $modelClass, $recordId, $request): Model {

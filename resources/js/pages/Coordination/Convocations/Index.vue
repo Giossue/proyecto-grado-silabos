@@ -35,6 +35,8 @@ type ConvocationRow = {
     id: string;
     name: string;
     state: string;
+    process: string;
+    process_state: string;
     grouping_mode: string;
     period: string;
     template: string;
@@ -45,7 +47,14 @@ defineProps<{
     convocations: Paginated<ConvocationRow>;
     filters: { q: string | null; state: string | null };
     periods: { id: string; nombre: string }[];
-    templates: { id: string; label: string }[];
+    processes: {
+        id: string;
+        label: string;
+        state: string;
+        template: string;
+        starts_at: string;
+        due_at: string;
+    }[];
     sources: { id: string; label: string }[];
 }>();
 
@@ -56,9 +65,19 @@ defineOptions({
 });
 
 const stateLabel = (state: string): string =>
-    ({ preparacion: 'En preparación', abierta: 'Abierta', cerrada: 'Cerrada' })[
-        state
-    ] ?? 'Estado no disponible';
+    ({
+        preparacion: 'En preparación',
+        abierta: 'Abierta',
+        pausada: 'En pausa',
+        cerrada: 'Cerrada',
+    })[state] ?? 'Estado no disponible';
+
+// Una convocatoria abierta cuyo proceso institucional está en pausa tampoco avanza:
+// se dice aquí, para no tener que abrirla a averiguarlo.
+const processNote = (row: ConvocationRow): string | null =>
+    row.state === 'abierta' && row.process_state === 'pausado'
+        ? 'Proceso institucional en pausa'
+        : null;
 </script>
 
 <template>
@@ -70,7 +89,7 @@ const stateLabel = (state: string): string =>
         <template #actions>
             <ConvocationCreationSheet
                 :periods="periods"
-                :templates="templates"
+                :processes="processes"
                 :sources="sources"
             />
         </template>
@@ -129,6 +148,9 @@ const stateLabel = (state: string): string =>
                                             <SelectItem value="abierta"
                                                 >Abiertas</SelectItem
                                             >
+                                            <SelectItem value="pausada"
+                                                >En pausa</SelectItem
+                                            >
                                             <SelectItem value="cerrada"
                                                 >Cerradas</SelectItem
                                             >
@@ -144,7 +166,7 @@ const stateLabel = (state: string): string =>
                         <TableRow>
                             <TableHead>Convocatoria</TableHead>
                             <TableHead>Periodo</TableHead>
-                            <TableHead>Configuración</TableHead>
+                            <TableHead>Proceso y configuración</TableHead>
                             <TableHead>Estado</TableHead>
                             <TableHead class="text-right"
                                 >Expedientes</TableHead
@@ -167,8 +189,9 @@ const stateLabel = (state: string): string =>
                             <TableCell>{{ convocation.name }}</TableCell>
                             <TableCell>{{ convocation.period }}</TableCell>
                             <TableCell>
-                                <div>{{ convocation.template }}</div>
+                                <div>{{ convocation.process }}</div>
                                 <div class="text-sm text-muted-foreground">
+                                    {{ convocation.template }} ·
                                     {{
                                         convocation.grouping_mode ===
                                         'por_paralelo'
@@ -178,7 +201,13 @@ const stateLabel = (state: string): string =>
                                 </div>
                             </TableCell>
                             <TableCell>
-                                {{ stateLabel(convocation.state) }}
+                                <div>{{ stateLabel(convocation.state) }}</div>
+                                <div
+                                    v-if="processNote(convocation)"
+                                    class="text-sm text-muted-foreground"
+                                >
+                                    {{ processNote(convocation) }}
+                                </div>
                             </TableCell>
                             <TableCell class="text-right">
                                 {{ convocation.syllabi_count }}

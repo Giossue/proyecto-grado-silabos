@@ -8,6 +8,7 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\AcademicSource;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateVersion;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -17,6 +18,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 /**
  * @property string $id
  * @property string $carrera_id
+ * @property string $proceso_id
  * @property string $periodo_academico_id
  * @property string $version_plantilla_id
  * @property string $nombre
@@ -24,6 +26,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $modo_agrupacion
  * @property CarbonImmutable|null $abierto_en
  * @property-read Career $career
+ * @property-read SyllabusProcess $process
  * @property-read AcademicPeriod $academicPeriod
  * @property-read TemplateVersion $templateVersion
  */
@@ -35,13 +38,46 @@ class Convocation extends Model
 
     public const UPDATED_AT = 'actualizado_en';
 
+    public const STATE_PREPARATION = 'preparacion';
+
+    public const STATE_OPEN = 'abierta';
+
+    public const STATE_PAUSED = 'pausada';
+
+    public const STATE_CLOSED = 'cerrada';
+
     protected $table = 'convocatorias';
 
     /** @var list<string> */
     protected $fillable = [
-        'carrera_id', 'periodo_academico_id', 'version_plantilla_id', 'nombre', 'estado',
+        'carrera_id', 'proceso_id', 'periodo_academico_id', 'version_plantilla_id', 'nombre', 'estado',
         'modo_agrupacion', 'creado_por', 'abierto_por', 'abierto_en', 'cerrado_en',
     ];
+
+    /**
+     * En curso: abierta por su carrera y con el proceso institucional abierto. Es la
+     * única condición que habilita el trabajo docente y, por lo mismo, la que congela
+     * malla y fuentes de la carrera.
+     *
+     * @param  Builder<Convocation>  $query
+     */
+    public function scopeRunning(Builder $query): void
+    {
+        $query->where('estado', self::STATE_OPEN)
+            ->whereHas('process', fn (Builder $process) => $process->where('estado', SyllabusProcess::STATE_OPEN));
+    }
+
+    public function isRunning(): bool
+    {
+        return $this->estado === self::STATE_OPEN
+            && $this->process()->value('estado') === SyllabusProcess::STATE_OPEN;
+    }
+
+    /** @return BelongsTo<SyllabusProcess, $this> */
+    public function process(): BelongsTo
+    {
+        return $this->belongsTo(SyllabusProcess::class, 'proceso_id');
+    }
 
     /** @return array<string, string> */
     protected function casts(): array

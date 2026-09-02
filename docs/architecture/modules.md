@@ -35,8 +35,8 @@ real.
 | Módulo | Puede depender de |
 |---|---|
 | Identidad | soporte común |
-| Académico | identidad (IDs/contratos), soporte |
-| Configuración | identidad, académico mediante contratos |
+| Académico | identidad (IDs/contratos), soporte, `ProcessLocks` de sílabos para saber si hay convocatoria en curso |
+| Configuración | identidad, académico mediante contratos, `ProcessLocks` de sílabos para saber si el proceso está abierto |
 | Convocatorias | académico, configuración, identidad |
 | Sílabos | académico, configuración, convocatorias, identidad |
 | Revisión | sílabos, identidad |

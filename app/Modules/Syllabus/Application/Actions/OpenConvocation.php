@@ -15,6 +15,7 @@ use App\Modules\Syllabus\Infrastructure\Persistence\Models\Convocation;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\FieldValue;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\Syllabus;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\SyllabusCollaborator;
+use App\Modules\Syllabus\Infrastructure\Persistence\Models\SyllabusProcess;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\SyllabusScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -34,12 +35,26 @@ class OpenConvocation
         $activeRole = $this->roles->resolve($request);
 
         return DB::transaction(function () use ($actor, $convocationId, $activeRole, $request): Convocation {
-            $convocation = Convocation::query()->lockForUpdate()->with(['sources', 'templateVersion.fields'])->findOrFail($convocationId);
+            $convocation = Convocation::query()->lockForUpdate()->with(['sources', 'templateVersion.fields', 'process'])->findOrFail($convocationId);
             if ($activeRole?->carrera_id !== $convocation->carrera_id || $activeRole->role->codigo !== 'coordinador') {
                 abort(403);
             }
             if ($convocation->estado !== 'preparacion') {
                 throw ValidationException::withMessages(['convocation' => 'Solo una convocatoria en preparación puede abrirse.']);
+            }
+            // El calendario lo marca Administración: sin proceso abierto no hay a qué convocar.
+            if ($convocation->process->estado !== SyllabusProcess::STATE_OPEN) {
+                throw ValidationException::withMessages(['convocation' => match ($convocation->process->estado) {
+                    SyllabusProcess::STATE_PAUSED => 'El proceso institucional está en pausa. Podrá abrir cuando Administración lo reanude.',
+                    SyllabusProcess::STATE_CLOSED => 'El proceso institucional ya se cerró. Prepare la convocatoria sobre un proceso vigente.',
+                    default => 'El proceso institucional todavía no se abre. Podrá abrir cuando Administración lo inicie.',
+                }]);
+            }
+            // La plantilla se hereda del proceso: si Administración la cambió durante una
+            // pausa, la convocatoria que se abre ahora toma la vigente.
+            if ($convocation->version_plantilla_id !== $convocation->process->version_plantilla_id) {
+                $convocation->update(['version_plantilla_id' => $convocation->process->version_plantilla_id]);
+                $convocation->load('templateVersion.fields');
             }
             if ($convocation->templateVersion->estado !== 'publicada') {
                 throw ValidationException::withMessages(['convocation' => 'La plantilla fijada ya no está publicada.']);

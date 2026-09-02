@@ -3,6 +3,7 @@ import { Form, Head, Link } from '@inertiajs/vue3';
 import ConvocationController from '@/actions/App/Modules/Syllabus/Presentation/Http/Controllers/ConvocationController';
 import ClientFilterBar from '@/components/domain/ClientFilterBar.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
+import ConvocationTransitionDialog from '@/components/domain/syllabus/ConvocationTransitionDialog.vue';
 import DeadlineExtensionSheet from '@/components/domain/syllabus/DeadlineExtensionSheet.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -44,6 +45,7 @@ const props = defineProps<{
         id: string;
         name: string;
         state: string;
+        process: { name: string; state: string };
         grouping_mode: string;
         period: string;
         template: string;
@@ -82,6 +84,14 @@ const stateLabel = (state: string): string =>
         en_revision: 'En revisión',
         correccion_solicitada: 'Corrección solicitada',
         aprobado: 'Aprobado',
+    })[state] ?? 'Estado no disponible';
+
+const convocationStateLabel = (state: string): string =>
+    ({
+        preparacion: 'En preparación',
+        abierta: 'Abierta',
+        pausada: 'En pausa',
+        cerrada: 'Cerrada',
     })[state] ?? 'Estado no disponible';
 
 const formatDate = (value: string | null): string =>
@@ -131,16 +141,25 @@ const {
                     convocation.state === 'abierta' ? 'secondary' : 'outline'
                 "
             >
-                {{
-                    convocation.state === 'abierta'
-                        ? 'Abierta'
-                        : 'En preparación'
-                }}
+                {{ convocationStateLabel(convocation.state) }}
+            </Badge>
+            <Badge variant="outline">
+                {{ convocation.process.name }}
             </Badge>
         </template>
         <!-- Sin envoltorio: PageFrame cuenta las acciones para decidir si en móvil hacen
              falta un disparador y un desplegable. Un contenedor las escondería como una. -->
         <template #actions>
+            <ConvocationTransitionDialog
+                v-if="convocation.state === 'abierta'"
+                :convocation-id="convocation.id"
+                transition="pausar"
+            />
+            <ConvocationTransitionDialog
+                v-if="convocation.state === 'pausada'"
+                :convocation-id="convocation.id"
+                transition="reanudar"
+            />
             <DeadlineExtensionSheet
                 v-if="convocation.state !== 'cerrada'"
                 :convocation-id="convocation.id"
@@ -163,9 +182,37 @@ const {
         <Alert v-if="convocation.state === 'preparacion'">
             <AlertTitle>Revise antes de abrir</AlertTitle>
             <AlertDescription>
-                La apertura fija esta plantilla y estas fuentes, valida que cada
-                paralelo tenga docente vigente y genera todos los expedientes en
-                una sola transacción. Si algo falta, no se crea ninguno.
+                La apertura fija la plantilla del proceso y estas fuentes,
+                valida que cada paralelo tenga docente vigente y genera todos
+                los expedientes en una sola transacción. Si algo falta, no se
+                crea ninguno.
+                {{
+                    convocation.process.state !== 'abierto'
+                        ? ' Solo podrá abrir cuando Administración abra el proceso institucional.'
+                        : ''
+                }}
+            </AlertDescription>
+        </Alert>
+        <Alert v-else-if="convocation.state === 'pausada'">
+            <AlertTitle>Convocatoria en pausa</AlertTitle>
+            <AlertDescription>
+                Los docentes de su carrera no editan ni envían hasta que la
+                reanude. Mientras tanto puede corregir la malla y las fuentes.
+            </AlertDescription>
+        </Alert>
+        <Alert v-else-if="convocation.process.state === 'pausado'">
+            <AlertTitle>Proceso institucional en pausa</AlertTitle>
+            <AlertDescription>
+                Administración pausó «{{ convocation.process.name }}». Nadie
+                envía hasta que lo reanude; su convocatoria seguirá abierta
+                cuando eso ocurra.
+            </AlertDescription>
+        </Alert>
+        <Alert v-else-if="convocation.process.state === 'cerrado'">
+            <AlertTitle>Proceso institucional cerrado</AlertTitle>
+            <AlertDescription>
+                Administración cerró «{{ convocation.process.name }}». Los
+                expedientes se conservan, pero ya no admiten envíos.
             </AlertDescription>
         </Alert>
 
@@ -301,6 +348,12 @@ const {
                                     ? 'Un sílabo por paralelo'
                                     : 'Un sílabo por oferta'
                             }}
+                        </div>
+                    </div>
+                    <div>
+                        <div class="font-medium">Proceso institucional</div>
+                        <div class="text-muted-foreground">
+                            {{ convocation.process.name }}
                         </div>
                     </div>
                     <div>

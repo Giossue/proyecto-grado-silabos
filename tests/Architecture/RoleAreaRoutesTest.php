@@ -43,6 +43,7 @@ it('encabeza cada pantalla con el area del rol', function (string $name, string 
     ['admin.jobs.index', 'admin/'],
     ['admin.audit.index', 'admin/'],
     ['admin.notifications.index', 'admin/'],
+    ['admin.processes.index', 'admin/'],
 ]);
 
 it('deja una sola direccion corta que lleva al area de quien entra', function (string $name): void {

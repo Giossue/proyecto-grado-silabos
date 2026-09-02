@@ -21,6 +21,7 @@ use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Identity\Domain\Enums\RoleCode;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
 use App\Modules\Operations\Application\Actions\RecordAuditEvent;
+use App\Modules\Syllabus\Application\ProcessLocks;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
@@ -32,6 +33,7 @@ class CreateAcademicRecord
     public function __construct(
         private readonly ActiveRole $roles,
         private readonly RecordAuditEvent $audit,
+        private readonly ProcessLocks $locks,
         private readonly SyncSubjectFieldValues $syncSubjectFieldValues,
     ) {}
 
@@ -42,6 +44,11 @@ class CreateAcademicRecord
 
         if (! $activeRole instanceof RoleAssignment || ! AcademicStructurePermissions::mayCreate($activeRole, $entity)) {
             throw new AuthorizationException('No puede gestionar este tipo de registro con el rol activo.');
+        }
+        // Malla y materias se congelan mientras una convocatoria de la carrera está en
+        // curso; ofertas, paralelos y asignaciones siguen editables (relevo docente).
+        if (in_array($entity, ['malla', 'asignatura'], true)) {
+            $this->locks->assertCareerEditable($activeRole->carrera_id);
         }
 
         return DB::transaction(function () use ($actor, $activeRole, $data, $entity, $request): Model {

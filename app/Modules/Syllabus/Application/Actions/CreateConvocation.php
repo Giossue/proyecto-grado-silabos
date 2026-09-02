@@ -4,12 +4,12 @@ namespace App\Modules\Syllabus\Application\Actions;
 
 use App\Models\User;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\AcademicSource;
-use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateVersion;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Identity\Domain\Enums\RoleCode;
 use App\Modules\Operations\Application\Actions\RecordAuditEvent;
 use App\Modules\Syllabus\Application\ConvocationSchedule;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\Convocation;
+use App\Modules\Syllabus\Infrastructure\Persistence\Models\SyllabusProcess;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -22,7 +22,12 @@ class CreateConvocation
         private readonly RecordAuditEvent $audit,
     ) {}
 
-    /** @param array{nombre: string, period_id: string, template_version_id: string, grouping_mode: string, source_ids: list<string>, start_date: string, draft_deadline: string} $data */
+    /**
+     * La plantilla y las fechas no se eligen aquí: vienen del proceso institucional. La
+     * carrera decide periodo, agrupación y fuentes.
+     *
+     * @param  array{nombre: string, process_id: string, period_id: string, grouping_mode: string, source_ids: list<string>}  $data
+     */
     public function execute(array $data, User $actor, Request $request): Convocation
     {
         $activeRole = $this->roles->resolve($request);
@@ -30,9 +35,13 @@ class CreateConvocation
             abort(403);
         }
 
-        $template = TemplateVersion::query()->with('template')->findOrFail($data['template_version_id']);
+        $process = SyllabusProcess::query()->with('templateVersion.template')->findOrFail($data['process_id']);
+        if ($process->estado === SyllabusProcess::STATE_CLOSED) {
+            throw ValidationException::withMessages(['process_id' => 'El proceso ya está cerrado; elija uno vigente.']);
+        }
+        $template = $process->templateVersion;
         if ($template->estado !== 'publicada' || ! $template->template->activo || ! $template->template->es_institucional) {
-            throw ValidationException::withMessages(['template_version_id' => 'Selecciona una versión publicada de la plantilla institucional.']);
+            throw ValidationException::withMessages(['process_id' => 'La plantilla del proceso ya no está publicada; Administración debe corregirla.']);
         }
 
         $sources = AcademicSource::query()->whereIn('id', $data['source_ids'])->get();
@@ -42,11 +51,12 @@ class CreateConvocation
             throw ValidationException::withMessages(['source_ids' => 'Todas las fuentes deben estar activas y pertenecer a la carrera.']);
         }
 
-        return DB::transaction(function () use ($actor, $activeRole, $data, $request): Convocation {
+        return DB::transaction(function () use ($actor, $activeRole, $data, $process, $request): Convocation {
             $convocation = Convocation::query()->create([
                 'carrera_id' => $activeRole->carrera_id,
+                'proceso_id' => $process->id,
                 'periodo_academico_id' => $data['period_id'],
-                'version_plantilla_id' => $data['template_version_id'],
+                'version_plantilla_id' => $process->version_plantilla_id,
                 'nombre' => $data['nombre'],
                 'estado' => 'preparacion',
                 'modo_agrupacion' => $data['grouping_mode'],
@@ -62,11 +72,12 @@ class CreateConvocation
                     'actualizado_en' => now(),
                 ]);
             }
-            // Dos etapas: la de inicio vence cuando se habilita la elaboración y la de
-            // borrador cuando se cierra el envío.
+            // Dos etapas copiadas del calendario institucional: la de inicio vence cuando
+            // se habilita la elaboración y la de borrador cuando se cierra el envío. Se
+            // copian, no se referencian, porque la carrera puede prorrogar la suya.
             foreach ([
-                ConvocationSchedule::STAGE_START => $data['start_date'],
-                ConvocationSchedule::STAGE_DRAFT => $data['draft_deadline'],
+                ConvocationSchedule::STAGE_START => $process->inicia_en,
+                ConvocationSchedule::STAGE_DRAFT => $process->entrega_en,
             ] as $stage => $dueAt) {
                 DB::table('fechas_limite_convocatoria')->insert([
                     'id' => (string) Str::uuid(),
@@ -85,7 +96,7 @@ class CreateConvocation
                 resourceType: 'convocatoria',
                 resourceId: $convocation->id,
                 result: 'exito',
-                metadata: ['grouping_mode' => $data['grouping_mode'], 'source_count' => count($data['source_ids'])],
+                metadata: ['process_id' => $process->id, 'grouping_mode' => $data['grouping_mode'], 'source_count' => count($data['source_ids'])],
                 correlationId: $request->attributes->getString('correlation_id') ?: null,
             );
 

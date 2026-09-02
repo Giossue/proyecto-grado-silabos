@@ -16,10 +16,12 @@ use App\Modules\Syllabus\Infrastructure\Persistence\Models\SyllabusCollaborator;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
+use Tests\Support\CreatesSyllabusProcess;
 use Tests\TestCase;
 
 class DashboardMetricsTest extends TestCase
 {
+    use CreatesSyllabusProcess;
     use RefreshDatabase;
 
     protected function setUp(): void
@@ -103,6 +105,7 @@ class DashboardMetricsTest extends TestCase
             'carrera_id' => $careerId,
             'periodo_academico_id' => AcademicPeriod::query()->firstOrFail()->id,
             'version_plantilla_id' => $this->plantillaPublicada()->id,
+            'proceso_id' => $this->openSyllabusProcess($this->plantillaPublicada()->id)->id,
             'nombre' => $nombre,
             'estado' => 'abierta',
             'modo_agrupacion' => 'por_oferta',

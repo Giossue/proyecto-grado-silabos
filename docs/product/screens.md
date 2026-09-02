@@ -58,6 +58,7 @@
 | ADM-09 | Procesos (correos, documentos y análisis en segundo plano) |
 | ADM-10 | Auditoría                                                  |
 | ADM-11 | Configuración                                              |
+| ADM-12 | Calendario de sílabos (proceso institucional)              |
 
 ## Patrones comunes
 
@@ -144,6 +145,15 @@
 - **Auditoría** agrupa las rutas administrativas **Procesos** (ADM-09) y **Registro de
   actividad** (ADM-10). La primera permite diagnosticar y reintentar trabajos; la segunda
   reconstruye quién hizo qué y cuándo.
+- ADM-12 lista los procesos de sílabos con estado, plantilla, inicio, entrega y
+  convocatorias. El alta usa el `Sheet` derecho; **Editar** solo aparece en preparación o
+  en pausa; **Abrir**, **Pausar**, **Reanudar** y **Cerrar** confirman en un diálogo que
+  explica la consecuencia y **Pausar** exige motivo. COR-03 elige el proceso y muestra la
+  plantilla y las fechas heredadas; COR-04 pausa y reanuda la convocatoria con el mismo
+  diálogo y avisa cuando el proceso institucional está en pausa o cerrado. ADM-05,
+  ADM-06, COR-11 y COR-13 muestran un aviso con la razón del bloqueo y ocultan las
+  acciones de edición mientras dure; el servidor rechaza igual aunque se fuerce la
+  petición.
 - El menú de acciones de ADM-04 distingue edición y ciclo de vida: **Editar** abre un
   `Sheet` precargado; **Archivar/Reactivar** cambia disponibilidad sin borrar historia.
 - El fondo de página y las superficies de trabajo usan tokens distintos en claro y
@@ -153,7 +163,7 @@
 
 | Rol           | Interfaces cubiertas                                       | Comportamiento                                                                                                                             |
 | ------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Administrador | ADM-02, ADM-03, ADM-04, ADM-05 y ADM-06                    | Cuentas, roles, catálogos, coordinaciones, plantillas y campos se crean desde una acción que abre el `Sheet` derecho.                     |
+| Administrador | ADM-02, ADM-03, ADM-04, ADM-05, ADM-06 y ADM-12            | Cuentas, roles, catálogos, coordinaciones, plantillas, campos y procesos de sílabos se crean desde una acción que abre el `Sheet` derecho. |
 | Coordinador   | COR-02, COR-06, COR-11, COR-13, COR-14 y COR-15            | Convocatorias, observaciones, fuentes, mallas, materias, ofertas, paralelos y asignaciones docentes usan el mismo patrón.                  |
 | Docente       | DOC-02 a DOC-10                                            | No administra colecciones maestras. Edición, IA, envío y respuestas son flujos académicos de página completa, no formularios de alta.      |
 

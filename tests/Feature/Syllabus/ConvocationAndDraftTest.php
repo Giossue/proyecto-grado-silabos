@@ -17,10 +17,12 @@ use App\Modules\Syllabus\Infrastructure\Persistence\Models\ValidationRun;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
+use Tests\Support\CreatesSyllabusProcess;
 use Tests\TestCase;
 
 class ConvocationAndDraftTest extends TestCase
 {
+    use CreatesSyllabusProcess;
     use RefreshDatabase;
 
     private User $administrator;
@@ -315,11 +317,9 @@ class ConvocationAndDraftTest extends TestCase
         $this->actingAsCoordinator()->post(route('convocations.store'), [
             'nombre' => 'Convocatoria '.$groupingMode,
             'period_id' => $periodId,
-            'template_version_id' => $template->id,
+            'process_id' => $this->openSyllabusProcess($template->id, now()->subDay()->toIso8601String(), now()->addMonth()->toIso8601String())->id,
             'grouping_mode' => $groupingMode,
             'source_ids' => [$source->id],
-            'start_date' => now()->subDay()->toIso8601String(),
-            'draft_deadline' => now()->addMonth()->toIso8601String(),
         ])->assertRedirect();
 
         // Por nombre: dos convocatorias creadas en el mismo segundo empatan en

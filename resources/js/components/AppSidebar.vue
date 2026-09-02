@@ -33,6 +33,7 @@ import { dashboard as adminDashboard } from '@/routes/admin';
 import { index as academicIndex } from '@/routes/admin/academic';
 import { index as auditIndex } from '@/routes/admin/audit';
 import { index as jobsIndex } from '@/routes/admin/jobs';
+import { index as processesIndex } from '@/routes/admin/processes';
 import { index as templatesIndex } from '@/routes/admin/templates';
 import { index as usersIndex } from '@/routes/admin/users';
 import { index as convocationsIndex } from '@/routes/convocations';
@@ -119,6 +120,11 @@ const mainNavItems = computed<NavItem[]>(() => [
                   title: 'Plantillas',
                   href: templatesIndex(),
                   icon: FileStack,
+              },
+              {
+                  title: 'Calendario de sílabos',
+                  href: processesIndex(),
+                  icon: CalendarRange,
               },
               {
                   title: 'Auditoría',

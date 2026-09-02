@@ -10,6 +10,7 @@ use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateSection;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateVersion;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Operations\Application\Actions\RecordAuditEvent;
+use App\Modules\Syllabus\Application\ProcessLocks;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -34,12 +35,15 @@ class CreateSyllabusTemplate
     public function __construct(
         private readonly ActiveRole $roles,
         private readonly RecordAuditEvent $audit,
+        private readonly ProcessLocks $locks,
     ) {}
 
     /** @param array{nombre: string, description?: string|null} $data */
     public function execute(array $data, User $actor, Request $request): TemplateVersion
     {
         $activeRole = $this->roles->resolve($request);
+        // Con el proceso institucional abierto, el formato está en uso: se pausa antes.
+        $this->locks->assertTemplateEditable();
 
         return DB::transaction(function () use ($actor, $activeRole, $data, $request): TemplateVersion {
             if (SyllabusTemplate::query()->where('es_institucional', true)->lockForUpdate()->exists()) {

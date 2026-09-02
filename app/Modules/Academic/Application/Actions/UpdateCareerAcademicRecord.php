@@ -18,6 +18,7 @@ use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Identity\Domain\Enums\RoleCode;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
 use App\Modules\Operations\Application\Actions\RecordAuditEvent;
+use App\Modules\Syllabus\Application\ProcessLocks;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\SyllabusCollaborator;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\SyllabusScope;
 use DateTimeInterface;
@@ -73,6 +74,7 @@ class UpdateCareerAcademicRecord
     public function __construct(
         private readonly ActiveRole $roles,
         private readonly RecordAuditEvent $audit,
+        private readonly ProcessLocks $locks,
         private readonly SyncSubjectFieldValues $syncSubjectFieldValues,
     ) {}
 
@@ -90,6 +92,11 @@ class UpdateCareerAcademicRecord
             || ! AcademicStructurePermissions::mayUpdate($activeRole, $entity)
             || $activeRole->carrera_id === null) {
             throw new AuthorizationException('No puede editar este registro con el rol activo.');
+        }
+        // Malla y materias se congelan mientras una convocatoria de la carrera está en
+        // curso; ofertas, paralelos y asignaciones siguen editables (relevo docente).
+        if (in_array($entity, ['malla', 'asignatura'], true)) {
+            $this->locks->assertCareerEditable($activeRole->carrera_id);
         }
 
         return DB::transaction(function () use ($actor, $activeRole, $data, $entity, $recordId, $request): Model {

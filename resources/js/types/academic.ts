@@ -163,6 +163,7 @@ export type CurriculumBuilderProps = {
         state: string;
         active: boolean;
         editable: boolean;
+        lock_reason: string | null;
     };
     fieldDefinitions: CurriculumFieldDefinition[];
     fieldTotals: {

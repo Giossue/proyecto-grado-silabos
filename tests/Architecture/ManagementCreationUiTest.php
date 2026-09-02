@@ -78,6 +78,12 @@ it('mantiene todas las altas de gestion dentro del sheet derecho compartido', fu
             'component_file' => 'resources/js/components/domain/academic/TeacherAssignmentSheet.vue',
             'action' => 'CareerAcademicStructureController.store.form',
         ],
+        'Administrador · calendario de sílabos' => [
+            'page' => 'resources/js/pages/Admin/Processes/Index.vue',
+            'component' => 'SyllabusProcessSheet',
+            'component_file' => 'resources/js/components/domain/syllabus/SyllabusProcessSheet.vue',
+            'action' => 'SyllabusProcessController.store.form',
+        ],
         'Coordinador · convocatorias' => [
             'page' => 'resources/js/pages/Coordination/Convocations/Index.vue',
             'component' => 'ConvocationCreationSheet',
@@ -299,6 +305,9 @@ it('ofrece desglose y constructor visual sobre el mismo contrato de malla', func
     $subjectSheet = file_get_contents(
         $root.'/resources/js/components/domain/academic/curriculum/CurriculumSubjectSheet.vue',
     );
+    $requirementSheet = file_get_contents(
+        $root.'/resources/js/components/domain/academic/curriculum/CurriculumRequirementSheet.vue',
+    );
     $subjectField = file_get_contents(
         $root.'/resources/js/components/domain/academic/curriculum/CurriculumSubjectFieldInput.vue',
     );
@@ -342,15 +351,22 @@ it('ofrece desglose y constructor visual sobre el mismo contrato de malla', func
         ->not->toContain("toast.success('Materia reubicada.')")
         ->not->toContain('position.x:')
         ->not->toContain('position.y:');
+    // El alta de relaciones vive en un Sheet, como el alta de materias (pedido del
+    // usuario, 2026-09-02); el desglose conserva la tabla y la eliminación.
+    expect($requirementSheet)
+        ->toBeString()
+        ->toContain('<FormSheet')
+        ->toContain('storeSubjectRequirement.form')
+        ->toContain('@success="close"');
     expect($form)
         ->toBeString()
-        ->toContain('storeSubjectRequirement.form')
+        ->not->toContain('storeSubjectRequirement.form')
         ->toContain('destroySubjectRequirement.form')
         ->toContain('@select="emit(\'edit\', subject)"')
         ->toContain('<TableActionsMenu');
     expect($visualForm)
         ->toBeString()
-        ->toContain("store.form('subject')")
+        ->toContain("store.form('asignatura')")
         ->toContain('update.form({')
         ->toContain('<CurriculumSubjectFieldInput')
         ->toContain('<OrganizationUnitInput')
@@ -555,7 +571,8 @@ it('agrupa las acciones de tabla en menus accesibles de tres puntos', function (
 
             $sharedMenus = substr_count($table, '<TableActionsMenu')
                 + substr_count($table, '<CareerAcademicActions')
-                + substr_count($table, '<CatalogActions');
+                + substr_count($table, '<CatalogActions')
+                + substr_count($table, '<SyllabusProcessActions');
             $relativePath = str_replace($root.'/', '', $file->getPathname());
 
             $this->assertSame(
@@ -753,7 +770,7 @@ it('usa el mismo paginador en todas las superficies tabulares', function (): voi
         $checked += $tableCount;
     }
 
-    $this->assertSame(23, $checked);
+    $this->assertSame(24, $checked);
 });
 
 it('ordena busqueda filtros y accion mediante una barra compartida', function (): void {
@@ -842,6 +859,7 @@ it('normaliza los encabezados de todos los modulos autenticados', function (): v
         'resources/js/pages/Admin/Academic/Index.vue',
         'resources/js/pages/Admin/Operations/Audit.vue',
         'resources/js/pages/Admin/Operations/Jobs.vue',
+        'resources/js/pages/Admin/Processes/Index.vue',
         'resources/js/pages/Admin/Templates/Index.vue',
         'resources/js/pages/Admin/Templates/Show.vue',
         'resources/js/pages/Admin/Users/Index.vue',
@@ -967,8 +985,8 @@ it('normaliza los encabezados de todos los modulos autenticados', function (): v
         );
     }
 
-    $this->assertCount(29, $declaredPages);
-    $this->assertCount(30, $pages);
+    $this->assertCount(30, $declaredPages);
+    $this->assertCount(31, $pages);
 });
 
 it('mantiene explicitamente clasificadas las mutaciones store que permanecen en paginas completas', function (): void {

@@ -75,10 +75,12 @@ it('diferencia encabezados y registros alternos desde la tabla compartida', func
     $row = (string) file_get_contents($root.'/resources/js/components/ui/table/TableRow.vue');
     $css = (string) file_get_contents($root.'/resources/css/app.css');
 
+    // Sin resalte al pasar el puntero (pedido del usuario, 2026-09-02): la fila se
+    // distingue por el rayado, no por seguir al cursor.
     expect($header)->toContain('bg-muted')
         ->and($row)->toContain('odd:bg-card')
         ->and($row)->toContain('even:bg-muted/50')
-        ->and($row)->toContain('hover:bg-muted/80');
+        ->and($row)->not->toContain('hover:bg-muted/80');
 
     expect($css)->not->toContain('--table-header')
         ->not->toContain('--table-row-alternate')
