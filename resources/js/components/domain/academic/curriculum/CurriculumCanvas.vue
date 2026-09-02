@@ -21,9 +21,15 @@ import { toast } from 'vue-sonner';
 import CareerAcademicStructureController from '@/actions/App/Modules/Academic/Presentation/Http/Controllers/CareerAcademicStructureController';
 import CurriculumAddSubjectNode from '@/components/domain/academic/curriculum/CurriculumAddSubjectNode.vue';
 import CurriculumCycleNode from '@/components/domain/academic/curriculum/CurriculumCycleNode.vue';
+import CurriculumLegend from '@/components/domain/academic/curriculum/CurriculumLegend.vue';
 import CurriculumRequirementEdge from '@/components/domain/academic/curriculum/CurriculumRequirementEdge.vue';
 import CurriculumSubjectNode from '@/components/domain/academic/curriculum/CurriculumSubjectNode.vue';
 import { Button } from '@/components/ui/button';
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from '@/components/ui/popover';
 import {
     Dialog,
     DialogClose,
@@ -124,6 +130,27 @@ const dominantUnit = (
 const summaryLabel = (fieldId: string, label: string): string =>
     props.fieldDefinitions.find((field) => field.id === fieldId)
         ?.system_label ?? label;
+
+// La leyenda y el resumen se arman una sola vez y se reparten entre el panel de
+// escritorio y el desplegable de móvil.
+const legendUnits = computed(() =>
+    props.organizationUnits.map((unit) => ({
+        unit,
+        style: unitStyleFor(unit),
+    })),
+);
+const summaryRows = computed(() => [
+    {
+        id: 'subjects',
+        label: 'N° asignaturas',
+        value: String(props.subjects.length),
+    },
+    ...props.fieldTotals.map((total) => ({
+        id: total.id,
+        label: summaryLabel(total.id, total.label),
+        value: formatNumericDisplay(total.value),
+    })),
+]);
 
 const flowId = `curriculum-${props.curriculum.id}`;
 const { setEdges, setNodes } = useVueFlow({ id: flowId });
@@ -602,63 +629,30 @@ const onNodeDragStop = ({ node }: NodeDragEvent): void => {
         <!--
             Panel al estilo del pie de la malla institucional: leyenda de
             relaciones y de unidades de organización curricular, más el resumen de
-            totales de la malla completa.
+            totales de la malla completa. En móvil taparía media malla, así que
+            ahí se repliega tras un botón y se consulta cuando hace falta.
         -->
         <div
-            class="absolute top-3 right-3 z-10 flex max-w-56 flex-col gap-2 rounded-md bg-card/90 px-3 py-2 text-xs text-card-foreground shadow-surface ring-1 ring-surface-ring"
+            class="absolute top-3 right-3 z-10 max-w-56 rounded-md bg-card/90 px-3 py-2 text-card-foreground shadow-surface ring-1 ring-surface-ring max-sm:hidden"
         >
-            <dl class="flex flex-col gap-1">
-                <div class="flex items-center gap-2">
-                    <dt
-                        class="h-0.5 w-5 shrink-0 rounded bg-destructive"
-                        aria-hidden="true"
-                    ></dt>
-                    <dd>Prerrequisito</dd>
-                </div>
-                <div class="flex items-center gap-2">
-                    <dt
-                        class="h-0.5 w-5 shrink-0 rounded bg-primary"
-                        aria-hidden="true"
-                    ></dt>
-                    <dd>Correquisito</dd>
-                </div>
-            </dl>
-            <dl
-                v-if="organizationUnits.length > 0"
-                class="flex flex-col gap-1 border-t pt-2"
-            >
-                <div
-                    v-for="unit in organizationUnits"
-                    :key="unit"
-                    class="flex items-center gap-2"
-                >
-                    <dt
-                        class="size-3 shrink-0 rounded-sm"
-                        :style="unitStyleFor(unit)"
-                        aria-hidden="true"
-                    ></dt>
-                    <dd class="truncate">{{ unit }}</dd>
-                </div>
-            </dl>
-            <dl class="flex flex-col gap-1 border-t pt-2">
-                <div class="flex items-center justify-between gap-3">
-                    <dt class="text-muted-foreground">N° asignaturas</dt>
-                    <dd class="font-medium">{{ subjects.length }}</dd>
-                </div>
-                <div
-                    v-for="total in fieldTotals"
-                    :key="total.id"
-                    class="flex items-center justify-between gap-3"
-                >
-                    <dt class="truncate text-muted-foreground">
-                        {{ summaryLabel(total.id, total.label) }}
-                    </dt>
-                    <dd class="font-medium">
-                        {{ formatNumericDisplay(total.value) }}
-                    </dd>
-                </div>
-            </dl>
+            <CurriculumLegend :units="legendUnits" :rows="summaryRows" />
         </div>
+        <Popover>
+            <PopoverTrigger as-child>
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    class="absolute top-3 right-3 z-10 bg-card sm:hidden"
+                    aria-label="Ver leyenda y totales de la malla"
+                >
+                    <Info aria-hidden="true" />
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" class="w-60 p-3">
+                <CurriculumLegend :units="legendUnits" :rows="summaryRows" />
+            </PopoverContent>
+        </Popover>
         <VueFlow
             :id="flowId"
             v-model:nodes="nodes"
