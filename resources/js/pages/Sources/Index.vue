@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
+import { Head } from '@inertiajs/vue3';
 import ClientFilterBar from '@/components/domain/ClientFilterBar.vue';
+import AcademicSourceActions from '@/components/domain/configuration/AcademicSourceActions.vue';
 import AcademicSourceCreationSheet from '@/components/domain/configuration/AcademicSourceCreationSheet.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
 import ProcessLockAlert from '@/components/domain/ProcessLockAlert.vue';
@@ -17,13 +18,14 @@ import {
 } from '@/components/ui/table';
 import { useClientFilter } from '@/composables/useClientFilter';
 import { useClientPagination } from '@/composables/useClientPagination';
-import { index as sourcesIndex, show as sourceShow } from '@/routes/sources';
+import { index as sourcesIndex } from '@/routes/sources';
 
 const props = defineProps<{
     sources: {
         id: string;
         name: string;
         description: string | null;
+        internal_notes: string | null;
         has_content: boolean;
         actualizado_en: string | null;
     }[];
@@ -74,12 +76,13 @@ defineOptions({
                         ><TableRow
                             ><TableHead>Fuente</TableHead
                             ><TableHead>Contenido</TableHead
-                            ><TableHead
-                                >Última actualización</TableHead
+                            ><TableHead>Última actualización</TableHead
+                            ><TableHead class="text-right"
+                                >Acciones</TableHead
                             ></TableRow
                         ></TableHeader
                     ><TableBody>
-                        <TableEmpty v-if="sourcePage.length === 0" :colspan="3"
+                        <TableEmpty v-if="sourcePage.length === 0" :colspan="4"
                             >No existen fuentes.</TableEmpty
                         >
                         <TableRow
@@ -87,11 +90,7 @@ defineOptions({
                             v-else
                             :key="source.id"
                             ><TableCell
-                                ><Link
-                                    :href="sourceShow(source.id)"
-                                    class="underline-offset-4 hover:underline"
-                                    >{{ source.name }}</Link
-                                >
+                                ><div>{{ source.name }}</div>
                                 <div
                                     v-if="source.description"
                                     class="max-w-md truncate text-sm text-muted-foreground"
@@ -105,9 +104,12 @@ defineOptions({
                             }}</TableCell
                             ><TableCell>{{
                                 source.actualizado_en ?? '—'
-                            }}</TableCell></TableRow
-                        >
-                    </TableBody></Table
+                            }}</TableCell
+                            ><TableCell class="text-right"
+                                ><AcademicSourceActions
+                                    :source="source"
+                                    :locked="Boolean(processLock)" /></TableCell
+                        ></TableRow> </TableBody></Table
                 ><TablePagination
                     :meta="sourceMeta"
                     mode="client"

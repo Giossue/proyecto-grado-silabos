@@ -15,19 +15,25 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 
-defineProps<{
+const props = defineProps<{
     source: {
         id: string;
         name: string;
         description: string | null;
         internal_notes: string | null;
     };
+    /** `menu` lo dibuja sin disparador propio: lo abre la opción del menú de la fila. */
+    display?: 'button' | 'menu';
 }>();
+
+const open = defineModel<boolean>('open', { default: false });
 </script>
 
 <template>
     <FormSheet
+        v-model:open="open"
         trigger-label="Editar fuente"
+        :show-trigger="props.display !== 'menu'"
         title="Editar fuente académica"
         description="Cambie el nombre, la descripción o las notas internas. El contenido se edita en la propia página."
     >

@@ -573,7 +573,8 @@ it('agrupa las acciones de tabla en menus accesibles de tres puntos', function (
                 + substr_count($table, '<CareerAcademicActions')
                 + substr_count($table, '<CatalogActions')
                 + substr_count($table, '<SyllabusProcessActions')
-                + substr_count($table, '<ConvocationActions');
+                + substr_count($table, '<ConvocationActions')
+                + substr_count($table, '<AcademicSourceActions');
             $relativePath = str_replace($root.'/', '', $file->getPathname());
 
             $this->assertSame(
