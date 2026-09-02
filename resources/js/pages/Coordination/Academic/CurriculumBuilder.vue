@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
 import { Link2, ListTree, Plus, PowerOff, Workflow } from '@lucide/vue';
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import CurriculumCanvas from '@/components/domain/academic/curriculum/CurriculumCanvas.vue';
 import CurriculumConfigurationSheet from '@/components/domain/academic/curriculum/CurriculumConfigurationSheet.vue';
 import CurriculumFormView from '@/components/domain/academic/curriculum/CurriculumFormView.vue';
@@ -25,7 +25,34 @@ defineOptions({
 });
 
 const props = defineProps<CurriculumBuilderProps>();
-const activeMode = ref<'breakdown' | 'builder'>('breakdown');
+
+/*
+ * El modo de trabajo se guarda en la dirección: al recargar —o al volver por un
+ * enlace compartido— se sigue en la vista donde se estaba. Se reescribe la entrada
+ * actual del historial en vez de añadir una nueva, para que «atrás» siga llevando a
+ * la pantalla anterior y no a la otra pestaña de esta misma.
+ */
+const INTERACTIVE_MODE_PARAM = 'interactivo';
+
+const modeFromUrl = (): 'breakdown' | 'builder' =>
+    new URL(window.location.href).searchParams.get('modo') ===
+    INTERACTIVE_MODE_PARAM
+        ? 'builder'
+        : 'breakdown';
+
+const activeMode = ref<'breakdown' | 'builder'>(modeFromUrl());
+
+watch(activeMode, (mode) => {
+    const url = new URL(window.location.href);
+
+    if (mode === 'builder') {
+        url.searchParams.set('modo', INTERACTIVE_MODE_PARAM);
+    } else {
+        url.searchParams.delete('modo');
+    }
+
+    window.history.replaceState(window.history.state, '', url);
+});
 const subjectSheetOpen = ref(false);
 const requirementSheetOpen = ref(false);
 const configurationOpen = ref(false);
