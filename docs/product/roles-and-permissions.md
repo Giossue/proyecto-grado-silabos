@@ -31,7 +31,8 @@ el permiso, pero no lo sustituyen.
 | Gestionar fuentes (documentos) | No participa | Sí, en su carrera, salvo con convocatoria en curso | Consulta autorizada |
 | Abrir, pausar, reanudar y cerrar el proceso de sílabos | Sí | Consulta al convocar | No |
 | Crear/abrir convocatoria dentro del proceso | No | Sí, en su carrera | No |
-| Pausar/reanudar/cerrar convocatoria | No | Sí, en su carrera | No |
+| Pausar/reanudar convocatoria | No | Sí, en su carrera | No |
+| Cerrar (sobre el proceso; detiene a todas las convocatorias) | Sí | No | No |
 | Prorrogar plazo (sobre el proceso; alcanza a todas las convocatorias) | Sí | No | No |
 | Elaborar contenido | No por defecto | No por defecto | Sí, asignado y editable |
 | Solicitar análisis de IA | No por defecto | Consulta de resultados | Sí, si el campo lo permite |

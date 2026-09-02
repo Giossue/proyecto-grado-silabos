@@ -13,18 +13,16 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Pausa, reanudación y cierre por carrera. La pausa es lo que permite a Coordinación corregir
+ * Pausa y reanudación por carrera. El cierre no es de la carrera: lo decide
+ * Administración cerrando el proceso, que detiene a todas las convocatorias. La pausa es lo que permite a Coordinación corregir
  * su malla o sus fuentes sin que los docentes sigan trabajando sobre lo que cambia; no
  * toca a las demás carreras. Reanudar exige que el proceso institucional siga abierto.
- * Cerrar es definitivo: los expedientes se conservan y ya no admiten envíos.
  */
 class TransitionConvocation
 {
     public const PAUSE = 'pausar';
 
     public const RESUME = 'reanudar';
-
-    public const CLOSE = 'cerrar';
 
     public function __construct(
         private readonly ActiveRole $roles,
@@ -50,16 +48,13 @@ class TransitionConvocation
             [$from, $to] = match ($transition) {
                 self::PAUSE => [[Convocation::STATE_OPEN], Convocation::STATE_PAUSED],
                 self::RESUME => [[Convocation::STATE_PAUSED], Convocation::STATE_OPEN],
-                self::CLOSE => [[Convocation::STATE_OPEN, Convocation::STATE_PAUSED], Convocation::STATE_CLOSED],
                 default => throw ValidationException::withMessages(['transition' => 'La acción sobre la convocatoria no existe.']),
             };
             if (! in_array($locked->estado, $from, true)) {
                 throw ValidationException::withMessages([
-                    'convocation' => match ($transition) {
-                        self::PAUSE => 'Solo una convocatoria abierta puede pausarse.',
-                        self::RESUME => 'Solo una convocatoria pausada puede reanudarse.',
-                        default => 'Solo una convocatoria abierta o pausada puede cerrarse.',
-                    },
+                    'convocation' => $transition === self::PAUSE
+                        ? 'Solo una convocatoria abierta puede pausarse.'
+                        : 'Solo una convocatoria pausada puede reanudarse.',
                 ]);
             }
             if ($to === Convocation::STATE_OPEN && $locked->process->estado !== SyllabusProcess::STATE_OPEN) {
@@ -68,9 +63,7 @@ class TransitionConvocation
                 ]);
             }
 
-            $locked->update($to === Convocation::STATE_CLOSED
-                ? ['estado' => $to, 'cerrado_en' => now()]
-                : ['estado' => $to]);
+            $locked->update(['estado' => $to]);
 
             $this->audit->execute(
                 actorId: $actor->id,

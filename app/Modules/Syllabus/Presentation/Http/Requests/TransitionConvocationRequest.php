@@ -12,7 +12,6 @@ class TransitionConvocationRequest extends FormRequest
     private const ABILITIES = [
         TransitionConvocation::PAUSE => 'pause',
         TransitionConvocation::RESUME => 'resume',
-        TransitionConvocation::CLOSE => 'close',
     ];
 
     public function authorize(): bool

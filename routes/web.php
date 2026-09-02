@@ -121,7 +121,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('convocatorias/{convocation}/abrir', [ConvocationController::class, 'open'])->name('convocations.open');
         Route::patch('convocatorias/{convocation}', [ConvocationController::class, 'update'])->name('convocations.update');
         Route::post('convocatorias/{convocation}/{transition}', [ConvocationController::class, 'transition'])
-            ->whereIn('transition', ['pausar', 'reanudar', 'cerrar'])
+            ->whereIn('transition', ['pausar', 'reanudar'])
             ->name('convocations.transition');
         Route::get('revisiones', [ReviewController::class, 'index'])->name('reviews.index');
         Route::get('revisiones/{before}/comparar/{after}', [ReviewController::class, 'compare'])->name('reviews.compare');

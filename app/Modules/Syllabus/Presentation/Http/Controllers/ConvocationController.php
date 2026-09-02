@@ -171,10 +171,8 @@ class ConvocationController extends Controller
         $reason = $request->filled('reason') ? $request->string('reason')->toString() : null;
         $action->execute($convocation, $transition, $reason, $actor, $request);
 
-        return back()->with('success', match ($transition) {
-            TransitionConvocation::PAUSE => 'Convocatoria en pausa. Los docentes de la carrera no editan ni envían; la malla y las fuentes quedan editables.',
-            TransitionConvocation::RESUME => 'Convocatoria reanudada. Los docentes vuelven a trabajar y la malla y las fuentes quedan protegidas.',
-            default => 'Convocatoria cerrada. Los expedientes se conservan y ya no admiten envíos.',
-        });
+        return back()->with('success', $transition === TransitionConvocation::PAUSE
+            ? 'Convocatoria en pausa. Los docentes de la carrera no editan ni envían; la malla y las fuentes quedan editables.'
+            : 'Convocatoria reanudada. Los docentes vuelven a trabajar y la malla y las fuentes quedan protegidas.');
     }
 }

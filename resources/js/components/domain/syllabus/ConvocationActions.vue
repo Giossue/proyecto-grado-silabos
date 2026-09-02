@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Form, Link } from '@inertiajs/vue3';
-import { Eye, Lock, Pause, Pencil, Play, Square } from '@lucide/vue';
+import { Eye, Lock, Pause, Pencil, Play } from '@lucide/vue';
 import { ref } from 'vue';
 import ConvocationController from '@/actions/App/Modules/Syllabus/Presentation/Http/Controllers/ConvocationController';
 import ConvocationEditSheet from '@/components/domain/syllabus/ConvocationEditSheet.vue';
@@ -15,20 +15,17 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import {
-    DropdownMenuItem,
-    DropdownMenuSeparator,
-} from '@/components/ui/dropdown-menu';
+import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 
-type Transition = 'abrir' | 'pausar' | 'reanudar' | 'cerrar';
+type Transition = 'abrir' | 'pausar' | 'reanudar';
 
 /*
  * Todo lo que se hace con una convocatoria vive en su menú de tres puntos, como en
- * Administración: ver seguimiento, editar, abrir, pausar, reanudar y cerrar. La prórroga
- * del plazo es del calendario institucional y vive en Administración.
+ * Administración: ver seguimiento, editar, abrir, pausar y reanudar. Prorrogar y cerrar
+ * son del calendario institucional y viven en Administración.
  * Cada acción explica su consecuencia antes de confirmarla.
  */
 defineProps<{
@@ -69,13 +66,6 @@ const dialogs: Record<
         description:
             'Los docentes vuelven a trabajar y la malla y las fuentes de la carrera quedan protegidas de nuevo.',
         label: 'Reanudar',
-    },
-    cerrar: {
-        title: 'Cerrar la convocatoria',
-        description:
-            'Ningún sílabo de esta convocatoria podrá enviarse después. Los expedientes se conservan. Esta acción no se deshace.',
-        label: 'Cerrar convocatoria',
-        destructive: true,
     },
 };
 
@@ -127,21 +117,6 @@ const transitionForm = (id: string, transition: Transition) =>
             <Play aria-hidden="true" />
             Reanudar
         </DropdownMenuItem>
-        <template
-            v-if="
-                convocation.state === 'abierta' ||
-                convocation.state === 'pausada'
-            "
-        >
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-                variant="destructive"
-                @select="pending = 'cerrar'"
-            >
-                <Square aria-hidden="true" />
-                Cerrar
-            </DropdownMenuItem>
-        </template>
         <DropdownMenuItem v-if="convocation.state === 'cerrada'" disabled>
             <Lock aria-hidden="true" />
             Convocatoria cerrada

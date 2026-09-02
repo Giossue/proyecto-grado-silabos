@@ -337,7 +337,7 @@ class SyllabusProcessTest extends TestCase
         $this->actingAsTeacher()->get(route('syllabi.edit', $syllabus))->assertOk();
     }
 
-    public function test_convocation_is_edited_only_in_preparation_or_pause_and_closing_stops_teachers(): void
+    public function test_convocation_is_edited_only_in_preparation_or_pause_and_only_administration_closes(): void
     {
         $convocation = $this->openedConvocation();
         $source = AcademicSource::query()->firstOrFail();
@@ -354,12 +354,12 @@ class SyllabusProcessTest extends TestCase
         $this->assertSame('Convocatoria corregida', $convocation->fresh()->nombre);
         $this->assertDatabaseHas('eventos_auditoria', ['accion' => 'convocatoria.actualizada', 'recurso_id' => $convocation->id]);
 
+        // Cerrar no es de la carrera: lo decide Administración cerrando el proceso.
+        $this->actingAsCoordinator()->post(route('convocations.transition', [$convocation, 'cerrar']))->assertNotFound();
         $syllabus = Syllabus::query()->firstOrFail();
-        $this->actingAsCoordinator()->post(route('convocations.transition', [$convocation, 'cerrar']))->assertRedirect();
-        $this->assertSame('cerrada', $convocation->fresh()->estado);
-        $this->assertNotNull($convocation->fresh()->cerrado_en);
+        $this->transition($convocation->process()->firstOrFail(), 'cerrar')->assertRedirect();
+        $this->assertSame('pausada', $convocation->fresh()->estado);
         $this->actingAsTeacher()->post(route('syllabi.start', $syllabus))->assertForbidden();
-        $this->actingAsCoordinator()->patch(route('convocations.update', $convocation), $payload)->assertForbidden();
     }
 
     public function test_process_configuration_changes_only_in_preparation_or_pause(): void

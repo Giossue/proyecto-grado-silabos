@@ -153,7 +153,7 @@
   explica la consecuencia y **Pausar** exige motivo. COR-03 elige el proceso y muestra la
   plantilla y las fechas heredadas. COR-02 concentra en el menú de tres puntos de cada
   fila todas las acciones —ver seguimiento, editar (solo en preparación o en pausa),
-  abrir, pausar, reanudar, prorrogar plazo y cerrar— con el mismo diálogo de
+  abrir, pausar y reanudar— con el mismo diálogo de
   confirmación que ADM-12; COR-04 es solo seguimiento y avisa cuando la convocatoria o
   el proceso institucional están en pausa o cerrados. ADM-05,
   ADM-06, COR-11 y COR-13 muestran un aviso con la razón del bloqueo y ocultan las

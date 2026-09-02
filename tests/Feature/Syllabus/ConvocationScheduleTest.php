@@ -115,7 +115,7 @@ class ConvocationScheduleTest extends TestCase
         $previous = $convocation->deadlines()->where('etapa', 'borrador')->firstOrFail()->vence_en;
 
         // La fecha del proceso también venció: la prórroga es institucional (I-32).
-        $convocation->process()->update(['entrega_en' => $previous]);
+        $convocation->process()->update(['inicia_en' => $previous->subDay(), 'entrega_en' => $previous]);
 
         $this->actingAsAdministrator()->post(route('admin.processes.deadline.extend', $convocation->proceso_id), [
             'stage' => 'borrador',
