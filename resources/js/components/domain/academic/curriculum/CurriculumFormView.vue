@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3';
-import { Link2, LockKeyhole, Pencil, Trash2 } from '@lucide/vue';
+import { LockKeyhole, Pencil, Trash2 } from '@lucide/vue';
 import { computed } from 'vue';
 import CareerAcademicStructureController from '@/actions/App/Modules/Academic/Presentation/Http/Controllers/CareerAcademicStructureController';
 import TableActionsMenu from '@/components/domain/TableActionsMenu.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
-import { Button } from '@/components/ui/button';
 import {
     Card,
     CardContent,
@@ -14,20 +13,6 @@ import {
     CardTitle,
 } from '@/components/ui/card';
 import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
-import {
-    Field,
-    FieldError,
-    FieldGroup,
-    FieldLabel,
-} from '@/components/ui/field';
-import {
-    Select,
-    SelectContent,
-    SelectGroup,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
 import {
     Table,
@@ -67,127 +52,6 @@ const {
 
 <template>
     <div class="flex flex-col gap-6">
-        <Card v-if="curriculum.editable && subjects.length > 1">
-            <CardHeader>
-                <CardTitle>Agregar relación académica</CardTitle>
-                <CardDescription>
-                    Esta alternativa de formulario permite crear prerrequisitos
-                    y correquisitos sin dibujar una conexión.
-                </CardDescription>
-            </CardHeader>
-            <CardContent>
-                <Form
-                    v-bind="
-                        CareerAcademicStructureController.storeSubjectRequirement.form(
-                            curriculum.id,
-                        )
-                    "
-                    v-slot="{ errors, processing }"
-                    class="flex flex-col gap-4"
-                    reset-on-success
-                >
-                    <FieldGroup class="md:grid md:grid-cols-3">
-                        <Field :data-invalid="Boolean(errors.requirement_id)">
-                            <FieldLabel for="requirement-source" required>
-                                Materia requerida
-                            </FieldLabel>
-                            <Select name="requirement_id" required>
-                                <SelectTrigger
-                                    id="requirement-source"
-                                    :aria-invalid="
-                                        Boolean(errors.requirement_id)
-                                    "
-                                >
-                                    <SelectValue
-                                        placeholder="Seleccione una materia"
-                                    />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectGroup>
-                                        <SelectItem
-                                            v-for="subject in subjects"
-                                            :key="subject.id"
-                                            :value="subject.id"
-                                        >
-                                            {{ subject.code }} ·
-                                            {{ subject.name }}
-                                        </SelectItem>
-                                    </SelectGroup>
-                                </SelectContent>
-                            </Select>
-                            <FieldError :errors="[errors.requirement_id]" />
-                        </Field>
-                        <Field :data-invalid="Boolean(errors.subject_id)">
-                            <FieldLabel for="requirement-target" required>
-                                Materia que la necesita
-                            </FieldLabel>
-                            <Select name="subject_id" required>
-                                <SelectTrigger
-                                    id="requirement-target"
-                                    :aria-invalid="Boolean(errors.subject_id)"
-                                >
-                                    <SelectValue
-                                        placeholder="Seleccione una materia"
-                                    />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectGroup>
-                                        <SelectItem
-                                            v-for="subject in subjects"
-                                            :key="subject.id"
-                                            :value="subject.id"
-                                        >
-                                            {{ subject.code }} ·
-                                            {{ subject.name }}
-                                        </SelectItem>
-                                    </SelectGroup>
-                                </SelectContent>
-                            </Select>
-                            <FieldError :errors="[errors.subject_id]" />
-                        </Field>
-                        <Field :data-invalid="Boolean(errors.type)">
-                            <FieldLabel for="requirement-type" required>
-                                Tipo
-                            </FieldLabel>
-                            <Select
-                                name="type"
-                                default-value="prerrequisito"
-                                required
-                            >
-                                <SelectTrigger id="requirement-type">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectGroup>
-                                        <SelectItem value="prerrequisito">
-                                            Prerrequisito
-                                        </SelectItem>
-                                        <SelectItem value="correquisito">
-                                            Correquisito
-                                        </SelectItem>
-                                    </SelectGroup>
-                                </SelectContent>
-                            </Select>
-                            <FieldError :errors="[errors.type]" />
-                        </Field>
-                    </FieldGroup>
-                    <Button
-                        type="submit"
-                        class="self-end"
-                        :disabled="processing"
-                    >
-                        <Spinner v-if="processing" data-icon="inline-start" />
-                        <Link2
-                            v-else
-                            data-icon="inline-start"
-                            aria-hidden="true"
-                        />
-                        Agregar relación
-                    </Button>
-                </Form>
-            </CardContent>
-        </Card>
-
         <Card>
             <CardHeader>
                 <CardTitle>Materias de la malla</CardTitle>

@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import { ListTree, Plus, PowerOff, Workflow } from '@lucide/vue';
+import { Link2, ListTree, Plus, PowerOff, Workflow } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import CurriculumCanvas from '@/components/domain/academic/curriculum/CurriculumCanvas.vue';
 import CurriculumConfigurationSheet from '@/components/domain/academic/curriculum/CurriculumConfigurationSheet.vue';
 import CurriculumFormView from '@/components/domain/academic/curriculum/CurriculumFormView.vue';
+import CurriculumRequirementSheet from '@/components/domain/academic/curriculum/CurriculumRequirementSheet.vue';
 import CurriculumSubjectSheet from '@/components/domain/academic/curriculum/CurriculumSubjectSheet.vue';
 import CurriculumActions from '@/components/domain/academic/CurriculumActions.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
@@ -26,6 +27,7 @@ defineOptions({
 const props = defineProps<CurriculumBuilderProps>();
 const activeMode = ref<'breakdown' | 'builder'>('breakdown');
 const subjectSheetOpen = ref(false);
+const requirementSheetOpen = ref(false);
 const configurationOpen = ref(false);
 const selectedSubject = ref<CurriculumBuilderSubject | null>(null);
 const organizationUnits = computed(() =>
@@ -61,6 +63,19 @@ const openSubject = (subject: CurriculumBuilderSubject): void => {
                 :curriculum="curriculum"
                 @configure="configurationOpen = true"
             />
+            <Button
+                v-if="
+                    activeMode === 'breakdown' &&
+                    curriculum.editable &&
+                    subjects.length > 1
+                "
+                type="button"
+                variant="outline"
+                @click="requirementSheetOpen = true"
+            >
+                <Link2 data-icon="inline-start" aria-hidden="true" />
+                Agregar relación
+            </Button>
             <Button
                 v-if="activeMode === 'breakdown'"
                 type="button"
@@ -113,6 +128,11 @@ const openSubject = (subject: CurriculumBuilderSubject): void => {
         :field-definitions="fieldDefinitions"
         :subject="selectedSubject"
         :organization-units="organizationUnits"
+    />
+    <CurriculumRequirementSheet
+        v-model:open="requirementSheetOpen"
+        :curriculum="curriculum"
+        :subjects="subjects"
     />
     <CurriculumConfigurationSheet
         v-model:open="configurationOpen"
