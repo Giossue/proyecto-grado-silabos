@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3';
 import { Check, Plus } from '@lucide/vue';
-import { computed, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import CareerAcademicStructureController from '@/actions/App/Modules/Academic/Presentation/Http/Controllers/CareerAcademicStructureController';
 import CurriculumSubjectFieldInput from '@/components/domain/academic/curriculum/CurriculumSubjectFieldInput.vue';
+import OrganizationUnitInput from '@/components/domain/academic/curriculum/OrganizationUnitInput.vue';
 import FormSheet from '@/components/domain/FormSheet.vue';
 import FormSheetActions from '@/components/domain/FormSheetActions.vue';
 import {
@@ -56,6 +57,14 @@ const errorKey = (field: CurriculumFieldDefinition): string =>
     field.system_key ?? `custom_values.${field.id}`;
 const fieldGridClass = (field: CurriculumFieldDefinition): string =>
     cn(field.type === 'texto' && 'col-span-2 sm:col-span-5');
+const organizationUnit = ref(props.subject?.organization_unit ?? '');
+
+watch(
+    () => props.subject?.organization_unit,
+    (value) => {
+        organizationUnit.value = value ?? '';
+    },
+);
 </script>
 
 <template>
@@ -135,22 +144,13 @@ const fieldGridClass = (field: CurriculumFieldDefinition): string =>
                         <FieldLabel for="builder-subject-unit" required>
                             Unidad de organización curricular
                         </FieldLabel>
-                        <Input
+                        <OrganizationUnitInput
                             id="builder-subject-unit"
                             name="organization_unit"
-                            list="builder-subject-organization-units"
-                            :default-value="subject?.organization_unit ?? ''"
-                            placeholder="Ej. Unidad básica"
-                            required
-                            :aria-invalid="Boolean(errors.organization_unit)"
+                            v-model="organizationUnit"
+                            :options="organizationUnits"
+                            :invalid="Boolean(errors.organization_unit)"
                         />
-                        <datalist id="builder-subject-organization-units">
-                            <option
-                                v-for="unit in organizationUnits"
-                                :key="unit"
-                                :value="unit"
-                            />
-                        </datalist>
                         <FieldError :errors="[errors.organization_unit]" />
                     </Field>
 

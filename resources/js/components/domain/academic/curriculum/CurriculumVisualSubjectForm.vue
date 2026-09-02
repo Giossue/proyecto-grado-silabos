@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3';
 import { Check } from '@lucide/vue';
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import CareerAcademicStructureController from '@/actions/App/Modules/Academic/Presentation/Http/Controllers/CareerAcademicStructureController';
 import CurriculumSubjectFieldInput from '@/components/domain/academic/curriculum/CurriculumSubjectFieldInput.vue';
+import OrganizationUnitInput from '@/components/domain/academic/curriculum/OrganizationUnitInput.vue';
 import { Button } from '@/components/ui/button';
 import {
     Field,
@@ -50,8 +51,13 @@ const { updateValue, valueFor } = useCurriculumSubjectFieldValues(
 
 const errorKey = (field: CurriculumFieldDefinition): string =>
     field.system_key ?? `custom_values.${field.id}`;
-const organizationUnitListId = computed(
-    () => `visual-subject-units-${props.subject?.id ?? props.cycle}`,
+const organizationUnit = ref(props.subject?.organization_unit ?? '');
+
+watch(
+    () => props.subject?.organization_unit,
+    (value) => {
+        organizationUnit.value = value ?? '';
+    },
 );
 </script>
 
@@ -123,22 +129,13 @@ const organizationUnitListId = computed(
                 >
                     Unidad de organización curricular
                 </FieldLabel>
-                <Input
+                <OrganizationUnitInput
                     :id="`visual-subject-unit-${subject?.id ?? cycle}`"
                     name="organization_unit"
-                    :list="organizationUnitListId"
-                    :default-value="subject?.organization_unit ?? ''"
-                    placeholder="Ej. Unidad profesional"
-                    required
-                    :aria-invalid="Boolean(errors.organization_unit)"
+                    v-model="organizationUnit"
+                    :options="organizationUnits"
+                    :invalid="Boolean(errors.organization_unit)"
                 />
-                <datalist :id="organizationUnitListId">
-                    <option
-                        v-for="unit in organizationUnits"
-                        :key="unit"
-                        :value="unit"
-                    />
-                </datalist>
                 <FieldError :errors="[errors.organization_unit]" />
             </Field>
 
