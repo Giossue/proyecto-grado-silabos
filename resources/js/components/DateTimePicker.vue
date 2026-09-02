@@ -1,22 +1,15 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import DatePicker from '@/components/DatePicker.vue';
-import {
-    Select,
-    SelectContent,
-    SelectGroup,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 
 /*
  * Fecha y hora con los componentes compartidos: el calendario de `DatePicker` para el
- * día y dos listas para hora y minutos. El campo nativo `datetime-local` dibujaba el
- * selector del navegador, distinto en cada equipo y ajeno al resto de la interfaz.
+ * día y un campo de hora `hh:mm` para la hora, que es lo que hace el propio patrón de
+ * shadcn. Nada de listas de veinticuatro horas y doce minutos: se escribe la hora.
  *
- * El valor viaja como `aaaa-mm-ddThh:mm` —lo mismo que enviaba el campo nativo—, así
- * que el servidor no nota el cambio.
+ * El valor viaja como `aaaa-mm-ddThh:mm` —lo mismo que enviaba el campo nativo
+ * `datetime-local`—, así que el servidor no nota el cambio.
  */
 const props = withDefaults(
     defineProps<{
@@ -36,27 +29,22 @@ const pad = (value: number): string => String(value).padStart(2, '0');
 
 const initial = (() => {
     if (!props.defaultValue) {
-        return { date: '', hour: '08', minute: '00' };
+        return { date: '', time: '08:00' };
     }
 
     const parsed = new Date(props.defaultValue);
 
     return {
         date: `${parsed.getFullYear()}-${pad(parsed.getMonth() + 1)}-${pad(parsed.getDate())}`,
-        hour: pad(parsed.getHours()),
-        minute: pad(Math.floor(parsed.getMinutes() / 5) * 5),
+        time: `${pad(parsed.getHours())}:${pad(parsed.getMinutes())}`,
     };
 })();
 
 const date = ref(initial.date);
-const hour = ref(initial.hour);
-const minute = ref(initial.minute);
-
-const hours = Array.from({ length: 24 }, (_, index) => pad(index));
-const minutes = Array.from({ length: 12 }, (_, index) => pad(index * 5));
+const time = ref(initial.time);
 
 const value = computed(() =>
-    date.value ? `${date.value}T${hour.value}:${minute.value}` : '',
+    date.value && time.value ? `${date.value}T${time.value}` : '',
 );
 
 // Los filtros y formularios escuchan cambios en el campo oculto igual que en un nativo.
@@ -69,7 +57,7 @@ watch(value, () => {
 <template>
     <div
         data-slot="datetime-picker"
-        class="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-2"
+        class="grid grid-cols-[minmax(0,1fr)_7.5rem] gap-2"
     >
         <input ref="hidden" type="hidden" :name="name" :value="value" />
         <DatePicker
@@ -79,45 +67,13 @@ watch(value, () => {
             :aria-invalid="ariaInvalid"
             placeholder="Elegir día"
         />
-        <Select v-model="hour">
-            <SelectTrigger
-                :aria-label="`Hora para ${id}`"
-                :aria-invalid="ariaInvalid"
-                class="w-20"
-            >
-                <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-                <SelectGroup>
-                    <SelectItem
-                        v-for="option in hours"
-                        :key="option"
-                        :value="option"
-                    >
-                        {{ option }} h
-                    </SelectItem>
-                </SelectGroup>
-            </SelectContent>
-        </Select>
-        <Select v-model="minute">
-            <SelectTrigger
-                :aria-label="`Minutos para ${id}`"
-                :aria-invalid="ariaInvalid"
-                class="w-20"
-            >
-                <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-                <SelectGroup>
-                    <SelectItem
-                        v-for="option in minutes"
-                        :key="option"
-                        :value="option"
-                    >
-                        {{ option }} min
-                    </SelectItem>
-                </SelectGroup>
-            </SelectContent>
-        </Select>
+        <Input
+            v-model="time"
+            type="time"
+            step="60"
+            :aria-label="`Hora para ${id}`"
+            :aria-invalid="ariaInvalid"
+            :required="required"
+        />
     </div>
 </template>
