@@ -57,13 +57,13 @@ defineOptions({
 </script>
 
 <template>
-    <Head :title="template.name" />
+    <Head title="Plantilla" />
 
     <PageFrame
-        :title="template.name"
+        title="Plantilla"
         :description="
             template.description ??
-            'Plantilla institucional · Organice los bloques de contenido del sílabo.'
+            'El formato del sílabo: organice las secciones, los bloques y los campos que llenan los docentes.'
         "
         size="wide"
     >

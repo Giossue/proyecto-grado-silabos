@@ -37,14 +37,13 @@ class CreateSyllabusTemplate
         private readonly ProcessLocks $locks,
     ) {}
 
-    /** @param array{nombre: string, description?: string|null} $data */
-    public function execute(array $data, User $actor, Request $request): SyllabusTemplate
+    public function execute(User $actor, Request $request): SyllabusTemplate
     {
         $activeRole = $this->roles->resolve($request);
         // Con el proceso institucional abierto, el formato está en uso: se pausa antes.
         $this->locks->assertTemplateEditable();
 
-        return DB::transaction(function () use ($actor, $activeRole, $data, $request): SyllabusTemplate {
+        return DB::transaction(function () use ($actor, $activeRole, $request): SyllabusTemplate {
             if (SyllabusTemplate::query()->where('es_institucional', true)->lockForUpdate()->exists()) {
                 throw ValidationException::withMessages([
                     'template' => 'La plantilla institucional ya existe. Edítela en lugar de crear otra.',
@@ -52,8 +51,8 @@ class CreateSyllabusTemplate
             }
 
             $template = SyllabusTemplate::query()->create([
-                'nombre' => $data['nombre'],
-                'descripcion' => $data['description'] ?? null,
+                'nombre' => SyllabusTemplate::INSTITUTIONAL_NAME,
+                'descripcion' => null,
                 'activo' => true,
                 'es_institucional' => true,
             ]);

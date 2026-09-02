@@ -48,10 +48,7 @@ class TemplateController extends Controller
     {
         $actor = $request->user();
         abort_unless($actor instanceof User, 401);
-        $template = $action->execute([
-            'nombre' => $request->string('nombre')->toString(),
-            'description' => $request->filled('description') ? $request->string('description')->toString() : null,
-        ], $actor, $request);
+        $template = $action->execute($actor, $request);
 
         return to_route('admin.templates.show', $template)->with('success', 'Plantilla creada con las doce áreas base.');
     }

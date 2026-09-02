@@ -6,19 +6,17 @@ import FormSheet from '@/components/domain/FormSheet.vue';
 import FormSheetActions from '@/components/domain/FormSheetActions.vue';
 import {
     Field,
+    FieldDescription,
     FieldError,
     FieldGroup,
-    FieldLabel,
 } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 </script>
 
 <template>
     <FormSheet
         trigger-label="Nueva plantilla"
         title="Nueva plantilla de sílabo"
-        description="Se crearán las doce áreas funcionales base de la plantilla institucional en una versión borrador. Después podrá completar su estructura en el constructor."
+        description="Se crearán las doce áreas funcionales base de la plantilla institucional. Después podrá completar su estructura en el constructor."
     >
         <template #default="{ close }">
             <Form
@@ -28,37 +26,21 @@ import { Textarea } from '@/components/ui/textarea';
                 @success="close"
             >
                 <FieldGroup>
-                    <Field :data-invalid="Boolean(errors.nombre)">
-                        <FieldLabel for="template-name" required>
-                            Nombre
-                        </FieldLabel>
-                        <Input
-                            id="template-name"
-                            name="nombre"
-                            placeholder="Ej. Plantilla institucional de sílabos"
-                            required
-                            :aria-invalid="Boolean(errors.nombre)"
-                        />
-                        <FieldError :errors="[errors.nombre]" />
-                    </Field>
-
-                    <Field :data-invalid="Boolean(errors.description)">
-                        <FieldLabel for="template-description">
-                            Descripción
-                        </FieldLabel>
-                        <Textarea
-                            id="template-description"
-                            name="description"
-                            :aria-invalid="Boolean(errors.description)"
-                        />
-                        <FieldError :errors="[errors.description]" />
+                    <Field :data-invalid="Boolean(errors.template)">
+                        <FieldError :errors="[errors.template]" />
+                        <FieldDescription>
+                            La plantilla es una sola y se llama «Plantilla
+                            institucional de sílabo». Nace con las doce áreas
+                            funcionales base; después organiza sus bloques y
+                            campos en el constructor.
+                        </FieldDescription>
                     </Field>
 
                     <FormSheetActions
                         :close="close"
                         :processing="processing"
                         :icon="Plus"
-                        label="Crear y abrir constructor"
+                        label="Crear plantilla"
                     />
                 </FieldGroup>
             </Form>

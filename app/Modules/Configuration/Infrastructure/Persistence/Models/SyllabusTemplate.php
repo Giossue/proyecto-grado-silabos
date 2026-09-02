@@ -24,6 +24,9 @@ class SyllabusTemplate extends Model
 {
     use HasUuids;
 
+    /** Nombre universal: no se elige ni se cambia, porque solo hay una. */
+    public const INSTITUTIONAL_NAME = 'Plantilla institucional de sílabo';
+
     public const CREATED_AT = 'creado_en';
 
     public const UPDATED_AT = 'actualizado_en';
