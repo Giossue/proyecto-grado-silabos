@@ -56,7 +56,7 @@ const actionLabel = (role: (typeof page.props.auth.roles)[number]): string => {
             <Card
                 v-for="role in page.props.auth.roles"
                 :key="role.id"
-                class="h-full transition-shadow hover:shadow-menu"
+                class="h-full"
             >
                 <CardHeader>
                     <CardTitle>
