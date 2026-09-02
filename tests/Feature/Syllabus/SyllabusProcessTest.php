@@ -178,6 +178,8 @@ class SyllabusProcessTest extends TestCase
             ->assertSessionHasNoErrors();
         $this->assertSame(13, $template->sections()->count());
         $this->actingAsAdministrator()->get(route('admin.templates.index'))
+            ->assertRedirect(route('admin.templates.show', $template));
+        $this->actingAsAdministrator()->get(route('admin.templates.show', $template))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page->where('processLock', null));
     }

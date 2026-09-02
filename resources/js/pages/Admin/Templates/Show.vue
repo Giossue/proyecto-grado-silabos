@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
+import { Head } from '@inertiajs/vue3';
 import { Lock } from '@lucide/vue';
 import TemplateBlockBuilder from '@/components/domain/configuration/TemplateBlockBuilder.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
 import {
     Card,
     CardContent,
@@ -54,7 +53,7 @@ defineProps<{
 }>();
 
 defineOptions({
-    layout: { breadcrumbs: [{ title: 'Plantillas', href: templatesIndex() }] },
+    layout: { breadcrumbs: [{ title: 'Plantilla', href: templatesIndex() }] },
 });
 </script>
 
@@ -69,12 +68,6 @@ defineOptions({
         "
         size="wide"
     >
-        <template #eyebrow>
-            <Button as-child variant="link" class="h-auto px-0">
-                <Link :href="templatesIndex()">← Volver a plantillas</Link>
-            </Button>
-        </template>
-
         <Alert v-if="processLock">
             <Lock aria-hidden="true" />
             <AlertTitle>Plantilla protegida durante el proceso</AlertTitle>

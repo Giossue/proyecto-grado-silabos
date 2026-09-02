@@ -117,7 +117,7 @@ const mainNavItems = computed<NavItem[]>(() => [
                   ],
               },
               {
-                  title: 'Plantillas',
+                  title: 'Plantilla',
                   href: templatesIndex(),
                   icon: FileStack,
               },

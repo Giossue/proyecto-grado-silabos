@@ -719,16 +719,18 @@ it('abre los detalles de los listados desde sus acciones', function (): void {
 it('presenta las plantillas como cards y navega versiones desde el detalle', function (): void {
     $root = dirname(__DIR__, 2);
 
-    // El listado usa cards con una sola acción de apertura hacia la versión más
-    // reciente; las versiones dejan de repartirse en un menú de acciones por fila.
+    // Una sola plantilla (I-32): la ruta abre directo su constructor y el listado solo
+    // es el estado vacío con la acción de crear, como la malla de una carrera.
     $index = file_get_contents($root.'/resources/js/pages/Admin/Templates/Index.vue');
     expect($index)
         ->toBeString()
-        ->toContain('<CardTitle')
-        ->toContain('Abrir plantilla')
-        ->toContain('TemplateController.show')
-        ->not->toContain('<TableActionsMenu')
-        ->not->toContain('<Table ');
+        ->toContain('<Empty')
+        ->toContain('<Inbox')
+        ->toContain('<TemplateCreationSheet')
+        ->not->toContain('ClientFilterBar')
+        ->not->toContain('TablePagination')
+        ->not->toContain('<CardTitle')
+        ->not->toContain('<TableActionsMenu');
 
     // Una sola plantilla: el detalle no navega versiones (I-32).
     $show = file_get_contents($root.'/resources/js/pages/Admin/Templates/Show.vue');

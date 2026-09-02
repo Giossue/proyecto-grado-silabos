@@ -28,26 +28,19 @@ use Inertia\Response;
 
 class TemplateController extends Controller
 {
-    public function index(ManageTemplatesRequest $request, ProcessLocks $locks): Response
+    /**
+     * Una sola plantilla (I-32): si existe se abre directo, como la malla de una
+     * carrera. La lista solo aparece cuando todavía no hay nada que abrir.
+     */
+    public function index(ManageTemplatesRequest $request, ProcessLocks $locks): Response|RedirectResponse
     {
+        $template = SyllabusTemplate::query()->where('es_institucional', true)->first();
+        if ($template !== null) {
+            return to_route('admin.templates.show', $template);
+        }
+
         return Inertia::render('Admin/Templates/Index', [
             'processLock' => $locks->templateLockReason(),
-            'templates' => SyllabusTemplate::query()
-                ->where('es_institucional', true)
-                ->withCount('sections')
-                ->orderBy('nombre')
-                ->get()
-                ->map(fn (SyllabusTemplate $template) => [
-                    'id' => $template->id,
-                    'name' => $template->nombre,
-                    'description' => $template->descripcion,
-                    'active' => $template->activo,
-                    'sections_count' => $template->sections_count,
-                    'actualizado_en' => $template->actualizado_en?->toIso8601String(),
-                ]),
-            'hasInstitutionalTemplate' => SyllabusTemplate::query()
-                ->where('es_institucional', true)
-                ->exists(),
         ]);
     }
 
