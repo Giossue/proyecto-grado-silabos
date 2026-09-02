@@ -114,16 +114,20 @@ class ConvocationScheduleTest extends TestCase
         $convocation = $this->expireDeadline($syllabus);
         $previous = $convocation->deadlines()->where('etapa', 'borrador')->firstOrFail()->vence_en;
 
-        $this->actingAsCoordinator()->post(route('convocations.deadline.extend', $convocation), [
+        // La fecha del proceso también venció: la prórroga es institucional (I-32).
+        $convocation->process()->update(['entrega_en' => $previous]);
+
+        $this->actingAsAdministrator()->post(route('admin.processes.deadline.extend', $convocation->proceso_id), [
             'stage' => 'borrador',
             'due_at' => now()->addWeek()->toIso8601String(),
             'reason' => 'Relevo de docente por licencia médica del titular.',
         ])->assertRedirect()->assertSessionHas('success');
 
         $event = AuditEvent::query()
-            ->where('accion', 'convocatoria.plazo_extendido')
+            ->where('accion', 'proceso_silabos.plazo_extendido')
             ->firstOrFail();
         $this->assertSame($previous->toIso8601String(), $event->metadatos['previous_due_at']);
+        $this->assertSame(1, $event->metadatos['convocations_reached']);
         $this->assertSame('borrador', $event->metadatos['stage']);
         $this->assertStringContainsString('licencia', $event->metadatos['reason']);
 
@@ -139,7 +143,7 @@ class ConvocationScheduleTest extends TestCase
     {
         $convocation = $this->prepareConvocation();
 
-        $this->actingAsCoordinator()->post(route('convocations.deadline.extend', $convocation), [
+        $this->actingAsAdministrator()->post(route('admin.processes.deadline.extend', $convocation->proceso_id), [
             'stage' => 'borrador',
             'due_at' => now()->addDay()->toIso8601String(),
             'reason' => 'Quiero adelantar el cierre porque ya casi todos entregaron.',
@@ -150,15 +154,16 @@ class ConvocationScheduleTest extends TestCase
     {
         $convocation = $this->prepareConvocation();
 
-        $this->actingAsCoordinator()->post(route('convocations.deadline.extend', $convocation), [
+        $this->actingAsAdministrator()->post(route('admin.processes.deadline.extend', $convocation->proceso_id), [
             'stage' => 'borrador',
             'due_at' => now()->addMonths(2)->toIso8601String(),
             'reason' => 'porque sí',
         ])->assertSessionHasErrors('reason');
     }
 
-    public function test_only_the_coordinator_of_the_career_extends_a_deadline(): void
+    public function test_only_administration_extends_a_deadline(): void
     {
+        // El calendario es de la universidad: ni la coordinación ni un docente lo mueven.
         $convocation = $this->prepareConvocation();
         $payload = [
             'stage' => 'borrador',
@@ -167,12 +172,10 @@ class ConvocationScheduleTest extends TestCase
         ];
 
         $this->actingAsTeacher()
-            ->post(route('convocations.deadline.extend', $convocation), $payload)
+            ->post(route('admin.processes.deadline.extend', $convocation->proceso_id), $payload)
             ->assertForbidden();
-
-        $this->actingAs($this->administrator)
-            ->withSession(['active_role_assignment_id' => $this->administratorContext->id])
-            ->post(route('convocations.deadline.extend', $convocation), $payload)
+        $this->actingAsCoordinator()
+            ->post(route('admin.processes.deadline.extend', $convocation->proceso_id), $payload)
             ->assertForbidden();
     }
 

@@ -8,14 +8,12 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\AcademicSource;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Syllabus\Application\Actions\CreateConvocation;
-use App\Modules\Syllabus\Application\Actions\ExtendConvocationDeadline;
 use App\Modules\Syllabus\Application\Actions\OpenConvocation;
 use App\Modules\Syllabus\Application\Actions\TransitionConvocation;
 use App\Modules\Syllabus\Application\Actions\UpdateConvocation;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\Convocation;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\Syllabus;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\SyllabusProcess;
-use App\Modules\Syllabus\Presentation\Http\Requests\ExtendConvocationDeadlineRequest;
 use App\Modules\Syllabus\Presentation\Http\Requests\OpenConvocationRequest;
 use App\Modules\Syllabus\Presentation\Http\Requests\StoreConvocationRequest;
 use App\Modules\Syllabus\Presentation\Http\Requests\TransitionConvocationRequest;
@@ -148,25 +146,6 @@ class ConvocationController extends Controller
         $action->execute($convocation->id, $actor, $request);
 
         return back()->with('success', 'Convocatoria abierta y expedientes generados sin duplicados.');
-    }
-
-    public function extendDeadline(
-        Convocation $convocation,
-        ExtendConvocationDeadlineRequest $request,
-        ExtendConvocationDeadline $action,
-    ): RedirectResponse {
-        $actor = $request->user();
-        abort_unless($actor instanceof User, 401);
-        $action->execute(
-            $convocation,
-            $request->string('stage')->toString(),
-            $request->string('due_at')->toString(),
-            $request->string('reason')->toString(),
-            $actor,
-            $request,
-        );
-
-        return back()->with('success', 'Plazo prorrogado. El motivo queda registrado en auditoría.');
     }
 
     public function update(

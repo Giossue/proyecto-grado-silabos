@@ -1,18 +1,9 @@
 <script setup lang="ts">
 import { Form, Link } from '@inertiajs/vue3';
-import {
-    CalendarClock,
-    Eye,
-    Lock,
-    Pause,
-    Pencil,
-    Play,
-    Square,
-} from '@lucide/vue';
+import { Eye, Lock, Pause, Pencil, Play, Square } from '@lucide/vue';
 import { ref } from 'vue';
 import ConvocationController from '@/actions/App/Modules/Syllabus/Presentation/Http/Controllers/ConvocationController';
 import ConvocationEditSheet from '@/components/domain/syllabus/ConvocationEditSheet.vue';
-import DeadlineExtensionSheet from '@/components/domain/syllabus/DeadlineExtensionSheet.vue';
 import TableActionsMenu from '@/components/domain/TableActionsMenu.vue';
 import { Button } from '@/components/ui/button';
 import {
@@ -36,7 +27,8 @@ type Transition = 'abrir' | 'pausar' | 'reanudar' | 'cerrar';
 
 /*
  * Todo lo que se hace con una convocatoria vive en su menú de tres puntos, como en
- * Administración: ver seguimiento, editar, abrir, pausar, reanudar, prorrogar y cerrar.
+ * Administración: ver seguimiento, editar, abrir, pausar, reanudar y cerrar. La prórroga
+ * del plazo es del calendario institucional y vive en Administración.
  * Cada acción explica su consecuencia antes de confirmarla.
  */
 defineProps<{
@@ -54,7 +46,6 @@ defineProps<{
 }>();
 
 const editOpen = ref(false);
-const extensionOpen = ref(false);
 const pending = ref<Transition | null>(null);
 
 const dialogs: Record<
@@ -136,16 +127,6 @@ const transitionForm = (id: string, transition: Transition) =>
             <Play aria-hidden="true" />
             Reanudar
         </DropdownMenuItem>
-        <DropdownMenuItem
-            v-if="
-                convocation.state === 'abierta' ||
-                convocation.state === 'pausada'
-            "
-            @select="extensionOpen = true"
-        >
-            <CalendarClock aria-hidden="true" />
-            Prorrogar plazo
-        </DropdownMenuItem>
         <template
             v-if="
                 convocation.state === 'abierta' ||
@@ -172,11 +153,6 @@ const transitionForm = (id: string, transition: Transition) =>
         :convocation="convocation"
         :periods="periods"
         :sources="sources"
-    />
-    <DeadlineExtensionSheet
-        v-model:open="extensionOpen"
-        :convocation-id="convocation.id"
-        display="menu"
     />
 
     <Dialog

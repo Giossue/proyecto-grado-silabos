@@ -56,10 +56,10 @@ viene de A1. Ambas están registradas en `references/entrevista-2026-08-26-halla
 
 El proceso institucional fija dos fechas —inicio de la elaboración y entrega del
 borrador— y cada convocatoria las hereda como sus dos etapas con vencimiento. Antes del
-inicio y después de la entrega, el envío se rechaza. Solo el coordinador de la carrera
-prorroga la suya, con motivo escrito, y únicamente hacia adelante: adelantar la fecha
-dejaría fuera de plazo a quien ya estaba dentro. La fecha anterior se conserva en el
-evento de auditoría.
+inicio y después de la entrega, el envío se rechaza. Solo Administración prorroga, sobre
+el proceso y con motivo escrito; la prórroga alcanza a todas las convocatorias del
+proceso y únicamente hacia adelante: adelantar la fecha dejaría fuera de plazo a quien
+ya estaba dentro. La fecha anterior se conserva en el evento de auditoría.
 
 ## Pausas
 

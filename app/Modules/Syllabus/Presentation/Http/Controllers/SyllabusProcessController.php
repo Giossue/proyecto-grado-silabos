@@ -6,9 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
 use App\Modules\Syllabus\Application\Actions\CreateSyllabusProcess;
+use App\Modules\Syllabus\Application\Actions\ExtendProcessDeadline;
 use App\Modules\Syllabus\Application\Actions\TransitionSyllabusProcess;
 use App\Modules\Syllabus\Application\Actions\UpdateSyllabusProcess;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\SyllabusProcess;
+use App\Modules\Syllabus\Presentation\Http\Requests\ExtendProcessDeadlineRequest;
 use App\Modules\Syllabus\Presentation\Http\Requests\ManageSyllabusProcessesRequest;
 use App\Modules\Syllabus\Presentation\Http\Requests\StoreSyllabusProcessRequest;
 use App\Modules\Syllabus\Presentation\Http\Requests\TransitionSyllabusProcessRequest;
@@ -64,6 +66,25 @@ class SyllabusProcessController extends Controller
         $action->execute($process, $request->processData(), $actor, $request);
 
         return back()->with('success', 'Proceso actualizado. Las convocatorias que se abran desde ahora toman esta configuración.');
+    }
+
+    public function extendDeadline(
+        SyllabusProcess $process,
+        ExtendProcessDeadlineRequest $request,
+        ExtendProcessDeadline $action,
+    ): RedirectResponse {
+        $actor = $request->user();
+        abort_unless($actor instanceof User, 401);
+        $action->execute(
+            $process,
+            $request->string('stage')->toString(),
+            $request->string('due_at')->toString(),
+            $request->string('reason')->toString(),
+            $actor,
+            $request,
+        );
+
+        return back()->with('success', 'Plazo prorrogado para todas las convocatorias del proceso. El motivo queda registrado en auditoría.');
     }
 
     public function transition(

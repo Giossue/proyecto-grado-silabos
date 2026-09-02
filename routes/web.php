@@ -119,7 +119,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('convocatorias', [ConvocationController::class, 'store'])->name('convocations.store');
         Route::get('convocatorias/{convocation}', [ConvocationController::class, 'show'])->name('convocations.show');
         Route::post('convocatorias/{convocation}/abrir', [ConvocationController::class, 'open'])->name('convocations.open');
-        Route::post('convocatorias/{convocation}/prorroga', [ConvocationController::class, 'extendDeadline'])->name('convocations.deadline.extend');
         Route::patch('convocatorias/{convocation}', [ConvocationController::class, 'update'])->name('convocations.update');
         Route::post('convocatorias/{convocation}/{transition}', [ConvocationController::class, 'transition'])
             ->whereIn('transition', ['pausar', 'reanudar', 'cerrar'])
@@ -212,6 +211,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // las carreras y lo pausa cuando hay que corregir la plantilla.
         Route::get('convocatorias', [SyllabusProcessController::class, 'index'])->name('processes.index');
         Route::post('convocatorias', [SyllabusProcessController::class, 'store'])->name('processes.store');
+        Route::post('convocatorias/{process}/prorroga', [SyllabusProcessController::class, 'extendDeadline'])
+            ->whereUuid('process')
+            ->name('processes.deadline.extend');
         Route::patch('convocatorias/{process}', [SyllabusProcessController::class, 'update'])
             ->whereUuid('process')
             ->name('processes.update');

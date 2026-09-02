@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3';
-import { Lock, Pause, Pencil, Play, Square } from '@lucide/vue';
+import { CalendarClock, Lock, Pause, Pencil, Play, Square } from '@lucide/vue';
 import { ref } from 'vue';
 import SyllabusProcessController from '@/actions/App/Modules/Syllabus/Presentation/Http/Controllers/SyllabusProcessController';
+import DeadlineExtensionSheet from '@/components/domain/syllabus/DeadlineExtensionSheet.vue';
 import SyllabusProcessSheet from '@/components/domain/syllabus/SyllabusProcessSheet.vue';
 import TableActionsMenu from '@/components/domain/TableActionsMenu.vue';
 import { Button } from '@/components/ui/button';
@@ -38,6 +39,7 @@ defineProps<{
 }>();
 
 const editOpen = ref(false);
+const extensionOpen = ref(false);
 const pending = ref<Transition | null>(null);
 
 /*
@@ -103,6 +105,13 @@ const dialogs: Record<
             <Play aria-hidden="true" />
             Reanudar
         </DropdownMenuItem>
+        <DropdownMenuItem
+            v-if="process.state === 'abierto' || process.state === 'pausado'"
+            @select="extensionOpen = true"
+        >
+            <CalendarClock aria-hidden="true" />
+            Prorrogar plazo
+        </DropdownMenuItem>
         <template
             v-if="process.state === 'abierto' || process.state === 'pausado'"
         >
@@ -120,6 +129,12 @@ const dialogs: Record<
             Proceso cerrado
         </DropdownMenuItem>
     </TableActionsMenu>
+
+    <DeadlineExtensionSheet
+        v-model:open="extensionOpen"
+        :process-id="process.id"
+        display="menu"
+    />
 
     <SyllabusProcessSheet
         v-model:open="editOpen"

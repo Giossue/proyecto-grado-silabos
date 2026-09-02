@@ -35,11 +35,6 @@ class ConvocationPolicy
         return $this->view($user, $convocation) && $convocation->estado === 'preparacion';
     }
 
-    public function extendDeadline(User $user, Convocation $convocation): bool
-    {
-        return $this->view($user, $convocation) && $convocation->estado !== 'cerrada';
-    }
-
     public function pause(User $user, Convocation $convocation): bool
     {
         return $this->view($user, $convocation) && $convocation->estado === Convocation::STATE_OPEN;

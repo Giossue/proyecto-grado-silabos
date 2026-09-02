@@ -33,13 +33,13 @@ it('bloquea el envio por plazo en la accion y no en el controlador', function ()
 
 it('conserva la fecha anterior y el motivo al prorrogar', function (): void {
     $extend = (string) file_get_contents(
-        dirname(__DIR__, 2).'/app/Modules/Syllabus/Application/Actions/ExtendConvocationDeadline.php',
+        dirname(__DIR__, 2).'/app/Modules/Syllabus/Application/Actions/ExtendProcessDeadline.php',
     );
 
     expect($extend)
         ->toContain("'previous_due_at'")
         ->toContain("'reason'")
-        ->toContain('convocatoria.plazo_extendido')
+        ->toContain('proceso_silabos.plazo_extendido')
         // Adelantar la fecha dejaría fuera de plazo a quien ya estaba dentro.
         ->toContain('lessThanOrEqualTo');
 });

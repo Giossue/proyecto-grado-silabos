@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3';
 import { CalendarClock } from '@lucide/vue';
-import ConvocationController from '@/actions/App/Modules/Syllabus/Presentation/Http/Controllers/ConvocationController';
+import SyllabusProcessController from '@/actions/App/Modules/Syllabus/Presentation/Http/Controllers/SyllabusProcessController';
 import FormSheet from '@/components/domain/FormSheet.vue';
 import FormSheetActions from '@/components/domain/FormSheetActions.vue';
 import { Button } from '@/components/ui/button';
@@ -24,7 +24,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 
 const props = defineProps<{
-    convocationId: string;
+    processId: string;
     /** `menu` lo dibuja sin disparador propio: lo abre la opción del menú de la fila. */
     display?: 'button' | 'menu';
 }>();
@@ -38,7 +38,7 @@ const open = defineModel<boolean>('open', { default: false });
         trigger-label="Prorrogar plazo"
         :show-trigger="props.display !== 'menu'"
         title="Prorrogar el plazo"
-        description="La prórroga es una excepción: solo se puede mover la fecha hacia adelante y el motivo queda registrado en auditoría junto con la fecha anterior."
+        description="La prórroga es una excepción: solo se puede mover la fecha hacia adelante, alcanza a todas las convocatorias del proceso y el motivo queda registrado en auditoría junto con la fecha anterior."
     >
         <template #trigger>
             <Button variant="outline">Prorrogar plazo</Button>
@@ -46,7 +46,7 @@ const open = defineModel<boolean>('open', { default: false });
         <template #default="{ close }">
             <Form
                 v-bind="
-                    ConvocationController.extendDeadline.form(convocationId)
+                    SyllabusProcessController.extendDeadline.form(processId)
                 "
                 v-slot="{ errors, processing }"
                 reset-on-success
@@ -108,9 +108,7 @@ const open = defineModel<boolean>('open', { default: false });
                             placeholder="Relevo de docente por licencia; el reemplazo asumió el 12 de octubre."
                             required
                         />
-                        <FieldError
-                            :errors="[errors.reason, errors.convocation]"
-                        />
+                        <FieldError :errors="[errors.reason, errors.process]" />
                     </Field>
 
                     <FormSheetActions

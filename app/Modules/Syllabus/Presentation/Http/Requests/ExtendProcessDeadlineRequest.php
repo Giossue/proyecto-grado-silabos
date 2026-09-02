@@ -3,18 +3,18 @@
 namespace App\Modules\Syllabus\Presentation\Http\Requests;
 
 use App\Modules\Syllabus\Application\ConvocationSchedule;
-use App\Modules\Syllabus\Infrastructure\Persistence\Models\Convocation;
+use App\Modules\Syllabus\Infrastructure\Persistence\Models\SyllabusProcess;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-class ExtendConvocationDeadlineRequest extends FormRequest
+class ExtendProcessDeadlineRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        $convocation = $this->route('convocation');
+        $process = $this->route('process');
 
-        return $convocation instanceof Convocation
-            && $this->user()?->can('extendDeadline', $convocation) === true;
+        return $process instanceof SyllabusProcess
+            && $this->user()?->can('extendDeadline', $process) === true;
     }
 
     /** @return array<string, list<mixed>> */
