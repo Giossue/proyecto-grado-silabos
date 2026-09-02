@@ -55,7 +55,7 @@ producción.
   convocatoria, `ProcessLocks`, política y controlador administrativo.
 - Configuración y Académico: cada mutación de plantilla, malla o fuente consulta
   `ProcessLocks` y rechaza con mensaje claro.
-- Frontend: ADM «Calendario de sílabos», COR-03 hereda plantilla y fechas, COR-04 pausa y
+- Frontend: ADM «Convocatorias» (`admin/convocatorias`, proceso institucional), COR-03 hereda plantilla y fechas, COR-04 pausa y
   reanuda, avisos de bloqueo en malla, fuentes y plantillas.
 - Documentación: modelo de dominio, ciclo de vida, roles, pantallas, base y trazabilidad.
 

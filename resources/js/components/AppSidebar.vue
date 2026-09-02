@@ -122,7 +122,7 @@ const mainNavItems = computed<NavItem[]>(() => [
                   icon: FileStack,
               },
               {
-                  title: 'Calendario de sílabos',
+                  title: 'Convocatorias',
                   href: processesIndex(),
                   icon: CalendarRange,
               },

@@ -48,9 +48,7 @@ const props = defineProps<{
 
 defineOptions({
     layout: {
-        breadcrumbs: [
-            { title: 'Calendario de sílabos', href: processesIndex() },
-        ],
+        breadcrumbs: [{ title: 'Convocatorias', href: processesIndex() }],
     },
 });
 
@@ -86,9 +84,9 @@ const {
 </script>
 
 <template>
-    <Head title="Calendario de sílabos" />
+    <Head title="Convocatorias" />
     <PageFrame
-        title="Calendario de sílabos"
+        title="Convocatorias de sílabos"
         description="El proceso institucional que obliga a todas las carreras: con qué plantilla se elaboran los sílabos y entre qué fechas. Cada coordinación convoca a su carrera dentro de él."
     >
         <template #actions>

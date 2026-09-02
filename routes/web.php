@@ -207,12 +207,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('academic.status.update');
         // El calendario institucional: Administración abre el proceso que obliga a todas
         // las carreras y lo pausa cuando hay que corregir la plantilla.
-        Route::get('calendario-silabos', [SyllabusProcessController::class, 'index'])->name('processes.index');
-        Route::post('calendario-silabos', [SyllabusProcessController::class, 'store'])->name('processes.store');
-        Route::patch('calendario-silabos/{process}', [SyllabusProcessController::class, 'update'])
+        Route::get('convocatorias', [SyllabusProcessController::class, 'index'])->name('processes.index');
+        Route::post('convocatorias', [SyllabusProcessController::class, 'store'])->name('processes.store');
+        Route::patch('convocatorias/{process}', [SyllabusProcessController::class, 'update'])
             ->whereUuid('process')
             ->name('processes.update');
-        Route::post('calendario-silabos/{process}/{transition}', [SyllabusProcessController::class, 'transition'])
+        Route::post('convocatorias/{process}/{transition}', [SyllabusProcessController::class, 'transition'])
             ->whereUuid('process')
             ->whereIn('transition', ['abrir', 'pausar', 'reanudar', 'cerrar'])
             ->name('processes.transition');

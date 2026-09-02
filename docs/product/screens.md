@@ -58,7 +58,7 @@
 | ADM-09 | Procesos (correos, documentos y análisis en segundo plano) |
 | ADM-10 | Auditoría                                                  |
 | ADM-11 | Configuración                                              |
-| ADM-12 | Calendario de sílabos (proceso institucional)              |
+| ADM-12 | Convocatorias (proceso institucional de sílabos)           |
 
 ## Patrones comunes
 

@@ -31,7 +31,7 @@ class ProcessLocks
         }
 
         return "El proceso «{$process->nombre}» está abierto y los docentes trabajan con esta plantilla."
-            .' Pause el proceso desde el calendario de sílabos para modificarla.';
+            .' Pause el proceso desde Convocatorias para modificarla.';
     }
 
     public function assertTemplateEditable(): void
