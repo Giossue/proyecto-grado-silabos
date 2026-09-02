@@ -59,10 +59,6 @@ const openSubject = (subject: CurriculumBuilderSubject): void => {
         :description="`${curriculum.code} · ${career.name}. Edite el desglose académico o trabaje sobre la misma información en el constructor visual.`"
     >
         <template #actions>
-            <CurriculumActions
-                :curriculum="curriculum"
-                @configure="configurationOpen = true"
-            />
             <Button
                 v-if="
                     activeMode === 'breakdown' &&
@@ -96,16 +92,22 @@ const openSubject = (subject: CurriculumBuilderSubject): void => {
         </Alert>
 
         <Tabs v-model="activeMode" class="flex flex-col gap-4">
-            <TabsList aria-label="Modo de trabajo de la malla">
-                <TabsTrigger value="breakdown">
-                    <ListTree aria-hidden="true" />
-                    Desglose académico
-                </TabsTrigger>
-                <TabsTrigger value="builder">
-                    <Workflow aria-hidden="true" />
-                    Constructor visual
-                </TabsTrigger>
-            </TabsList>
+            <div class="flex items-center justify-between gap-2">
+                <TabsList aria-label="Modo de trabajo de la malla">
+                    <TabsTrigger value="breakdown">
+                        <ListTree aria-hidden="true" />
+                        Desglose académico
+                    </TabsTrigger>
+                    <TabsTrigger value="builder">
+                        <Workflow aria-hidden="true" />
+                        Constructor visual
+                    </TabsTrigger>
+                </TabsList>
+                <CurriculumActions
+                    :curriculum="curriculum"
+                    @configure="configurationOpen = true"
+                />
+            </div>
             <TabsContent value="breakdown" class="flex flex-col gap-6">
                 <CurriculumFormView v-bind="props" @edit="openSubject" />
             </TabsContent>
