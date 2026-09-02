@@ -71,7 +71,11 @@ const selectOption = (option: string): void => {
                     variant="ghost"
                     size="icon"
                     class="absolute inset-y-0 right-0 h-full w-9"
-                    :aria-label="open ? 'Ocultar unidades sugeridas' : 'Mostrar unidades sugeridas'"
+                    :aria-label="
+                        open
+                            ? 'Ocultar unidades sugeridas'
+                            : 'Mostrar unidades sugeridas'
+                    "
                     :aria-expanded="open"
                     @click="open = !open"
                 >

@@ -854,9 +854,7 @@ onBeforeUnmount(() => {
                                 </div>
 
                                 <Select
-                                    v-else-if="
-                                        field.type === 'seleccion_unica'
-                                    "
+                                    v-else-if="field.type === 'seleccion_unica'"
                                     :model-value="String(textValue(field.id))"
                                     :required="field.required"
                                     @update:model-value="

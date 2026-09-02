@@ -120,7 +120,9 @@ watch(open, (isOpen) => {
                                     id="managed-password"
                                     v-model="password"
                                     name="password"
-                                    :type="passwordVisible ? 'text' : 'password'"
+                                    :type="
+                                        passwordVisible ? 'text' : 'password'
+                                    "
                                     placeholder="Ej. UEB-Temporal-2026"
                                     readonly
                                     required
@@ -133,7 +135,11 @@ watch(open, (isOpen) => {
                                     variant="ghost"
                                     size="icon"
                                     class="absolute inset-y-0 right-0 h-full w-9"
-                                    :aria-label="passwordVisible ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                                    :aria-label="
+                                        passwordVisible
+                                            ? 'Ocultar contraseña'
+                                            : 'Mostrar contraseña'
+                                    "
                                     :aria-pressed="passwordVisible"
                                     @click="passwordVisible = !passwordVisible"
                                 >

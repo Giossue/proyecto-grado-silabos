@@ -18,11 +18,7 @@ export type CatalogRecord = {
 };
 
 export type GovernanceCatalogEntity =
-    | 'facultad'
-    | 'carrera'
-    | 'campus'
-    | 'modalidad'
-    | 'periodo';
+    'facultad' | 'carrera' | 'campus' | 'modalidad' | 'periodo';
 
 export type GovernanceSection =
     'faculties' | 'careers' | 'campuses' | 'modalities' | 'academic-periods';

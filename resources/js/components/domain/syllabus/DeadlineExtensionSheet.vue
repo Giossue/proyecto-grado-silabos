@@ -51,11 +51,7 @@ defineProps<{
                         <FieldLabel for="extension-stage" required>
                             Etapa
                         </FieldLabel>
-                        <Select
-                            name="stage"
-                            default-value="borrador"
-                            required
-                        >
+                        <Select name="stage" default-value="borrador" required>
                             <SelectTrigger
                                 id="extension-stage"
                                 :aria-invalid="Boolean(errors.stage)"

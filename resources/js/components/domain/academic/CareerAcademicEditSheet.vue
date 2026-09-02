@@ -25,11 +25,7 @@ import {
 import type { AcademicStructureProps } from '@/types/academic';
 
 export type CareerAcademicEntity =
-    | 'malla'
-    | 'asignatura'
-    | 'oferta'
-    | 'paralelo'
-    | 'asignacion_docente';
+    'malla' | 'asignatura' | 'oferta' | 'paralelo' | 'asignacion_docente';
 
 export type CareerAcademicEditableRecord = {
     id: string;

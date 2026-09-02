@@ -1,11 +1,7 @@
 <script setup lang="ts">
 import type { HTMLAttributes } from 'vue';
 import { computed } from 'vue';
-import {
-    Field,
-    FieldError,
-    FieldLabel,
-} from '@/components/ui/field';
+import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import {
     Select,

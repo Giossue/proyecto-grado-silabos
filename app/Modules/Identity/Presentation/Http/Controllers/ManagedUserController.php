@@ -43,7 +43,19 @@ class ManagedUserController extends Controller
             ? $filters['career']
             : null;
         $users = User::query()
-            ->select(['id', 'nombre', 'correo_electronico', 'activo', 'debe_cambiar_contrasena', 'creado_en'])
+            // El listado envía además los datos que solo se leen en el panel «Ver
+            // cuenta»: identidad completa, fechas y segundo factor.
+            ->select([
+                'id',
+                'nombre',
+                'correo_electronico',
+                'documento_identidad',
+                'activo',
+                'debe_cambiar_contrasena',
+                'desactivado_en',
+                'dos_factores_confirmado_en',
+                'creado_en',
+            ])
             ->when($search, fn (Builder $query, string $term) => $query->where(
                 fn (Builder $searchQuery) => $searchQuery
                     ->whereRaw('nombre ILIKE ?', ["%{$term}%"])
@@ -72,29 +84,45 @@ class ManagedUserController extends Controller
                     ->where('carrera_id', $careerId)
                     ->select('usuario_id'),
             ))
+            // Se cargan también las asignaciones archivadas: las columnas siguen
+            // mostrando solo las vigentes y el panel de lectura muestra el historial.
             ->with(['roleAssignments' => fn ($query) => $query
-                ->effective()
-                ->with(['role:id,codigo,nombre', 'career:id,nombre'])])
+                ->with(['role:id,codigo,nombre', 'career:id,nombre'])
+                ->orderByDesc('creado_en')])
             ->orderBy('nombre')
             ->paginate(20)
             ->withQueryString()
-            ->through(fn (User $user) => [
-                'id' => $user->id,
-                'nombre' => $user->nombre,
-                'correo_electronico' => $user->correo_electronico,
-                'active' => $user->activo,
-                // Una cuenta con la contraseña temporal todavía puesta no ha entrado
-                // nunca. Sin esto se ve igual que una en uso y nadie sabe a quién
-                // recordarle que revise su correo.
-                'pending_first_login' => $user->debe_cambiar_contrasena,
-                'roles' => $user->roleAssignments->map(fn ($assignment) => [
-                    'name' => $assignment->role->nombre,
-                    'career_name' => $assignment->career?->nombre,
-                ])->values(),
-                'careers' => $user->roleAssignments
-                    ->map(fn ($assignment) => $assignment->career?->nombre)
-                    ->values(),
-            ]);
+            ->through(function (User $user): array {
+                $effective = $user->roleAssignments->where('activo', true);
+
+                return [
+                    'id' => $user->id,
+                    'nombre' => $user->nombre,
+                    'correo_electronico' => $user->correo_electronico,
+                    'identity_document' => $user->documento_identidad,
+                    'active' => $user->activo,
+                    // Una cuenta con la contraseña temporal todavía puesta no ha entrado
+                    // nunca. Sin esto se ve igual que una en uso y nadie sabe a quién
+                    // recordarle que revise su correo.
+                    'pending_first_login' => $user->debe_cambiar_contrasena,
+                    'created_at' => $user->creado_en?->toIso8601String(),
+                    'deactivated_at' => $user->desactivado_en?->toIso8601String(),
+                    'two_factor_enabled' => $user->dos_factores_confirmado_en !== null,
+                    'roles' => $effective->map(fn ($assignment) => [
+                        'name' => $assignment->role->nombre,
+                        'career_name' => $assignment->career?->nombre,
+                    ])->values(),
+                    'careers' => $effective
+                        ->map(fn ($assignment) => $assignment->career?->nombre)
+                        ->values(),
+                    'assignments' => $user->roleAssignments->map(fn ($assignment) => [
+                        'id' => $assignment->id,
+                        'role_name' => $assignment->role->nombre,
+                        'career_name' => $assignment->career?->nombre,
+                        'active' => $assignment->activo,
+                    ])->values(),
+                ];
+            });
 
         return Inertia::render('Admin/Users/Index', [
             'users' => $users,

@@ -78,9 +78,11 @@ const stateLabel = (state: string): string =>
     })[state] ?? 'Estado no disponible';
 
 const observationState = (state: string): string =>
-    ({ abierta: 'Abierta', respondida: 'Respondida', verificada: 'Verificada' })[
-        state
-    ] ?? 'Estado no disponible';
+    ({
+        abierta: 'Abierta',
+        respondida: 'Respondida',
+        verificada: 'Verificada',
+    })[state] ?? 'Estado no disponible';
 </script>
 
 <template>

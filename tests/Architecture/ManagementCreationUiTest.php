@@ -588,6 +588,19 @@ it('edita cuentas desde una sola accion del listado de usuarios', function (): v
         ->not->toContain('<RoleAssignmentSheet')
         ->not->toContain('setStatus.form')
         ->not->toContain('ManagedUserController.show(user.id)');
+    // Consultar y corregir son acciones distintas: «Ver» abre una ficha de solo lectura
+    // y no vuelve a montar un formulario dentro del menú.
+    $detailSheet = file_get_contents(
+        dirname(__DIR__, 2).'/resources/js/components/domain/identity/ManagedUserDetailSheet.vue',
+    );
+
+    expect($source)->toContain('<ManagedUserDetailSheet');
+    expect($detailSheet)
+        ->toBeString()
+        ->toContain('<DropdownMenuItem')
+        ->toContain('Roles archivados')
+        ->not->toContain('<Form')
+        ->not->toContain('<FormSheetActions');
     expect($editSheet)
         ->toBeString()
         ->toContain("display?: 'button' | 'menu'")

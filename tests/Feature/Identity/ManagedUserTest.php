@@ -142,6 +142,28 @@ class ManagedUserTest extends TestCase
                 ->where('users.data.0.careers.0', null));
     }
 
+    public function test_the_list_carries_the_read_only_file_of_each_account(): void
+    {
+        $teacher = User::query()->where('correo_electronico', 'docente@silabos.test')->firstOrFail();
+        // Un rol retirado deja de contar entre los vigentes, pero la ficha lo conserva.
+        $archived = $teacher->roleAssignments()->firstOrFail();
+        $archived->update(['activo' => false]);
+
+        $this->actingAsAdministrator()
+            ->get(route('admin.users.index', ['q' => 'docente@silabos.test']))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('users.data', 1)
+                ->has('users.data.0.created_at')
+                ->where('users.data.0.deactivated_at', null)
+                ->where('users.data.0.two_factor_enabled', false)
+                ->where('users.data.0.identity_document', null)
+                ->has('users.data.0.roles', 0)
+                ->has('users.data.0.assignments', 1)
+                ->where('users.data.0.assignments.0.id', $archived->id)
+                ->where('users.data.0.assignments.0.active', false));
+    }
+
     public function test_teacher_cannot_access_user_management_even_with_a_valid_context(): void
     {
         $teacher = User::query()->where('correo_electronico', 'docente@silabos.test')->firstOrFail();

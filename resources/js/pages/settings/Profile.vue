@@ -75,10 +75,7 @@ const props = defineProps<{
                     autocomplete="username"
                     placeholder="Ej. maria.perez@ueb.edu.ec"
                 />
-                <InputError
-                    class="mt-2"
-                    :message="errors.correo_electronico"
-                />
+                <InputError class="mt-2" :message="errors.correo_electronico" />
             </div>
 
             <div

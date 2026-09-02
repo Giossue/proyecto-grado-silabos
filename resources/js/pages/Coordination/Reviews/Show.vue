@@ -182,9 +182,11 @@ const stateLabel = (value: string): string =>
     })[value] ?? 'Estado no disponible';
 
 const observationState = (value: string): string =>
-    ({ abierta: 'Abierta', respondida: 'Respondida', verificada: 'Verificada' })[
-        value
-    ] ?? 'Estado no disponible';
+    ({
+        abierta: 'Abierta',
+        respondida: 'Respondida',
+        verificada: 'Verificada',
+    })[value] ?? 'Estado no disponible';
 </script>
 
 <template>

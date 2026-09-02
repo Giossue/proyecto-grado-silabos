@@ -58,9 +58,7 @@ const paginationLabel = (value: string): string =>
     >
         <template #actions>
             <Form
-                v-if="
-                    notifications.data.some((item) => item.leido_en === null)
-                "
+                v-if="notifications.data.some((item) => item.leido_en === null)"
                 v-bind="NotificationController.markAllRead.form()"
                 v-slot="{ processing }"
             >
@@ -98,9 +96,7 @@ const paginationLabel = (value: string): string =>
                     v-for="notification in notifications.data"
                     :key="notification.id"
                     class="rounded-lg border p-4"
-                    :class="
-                        notification.leido_en === null ? 'bg-muted/40' : ''
-                    "
+                    :class="notification.leido_en === null ? 'bg-muted/40' : ''"
                 >
                     <div
                         class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"

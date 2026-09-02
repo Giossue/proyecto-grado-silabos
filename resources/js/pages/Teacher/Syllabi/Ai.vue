@@ -551,7 +551,9 @@ onBeforeUnmount(() => {
                                             <input
                                                 type="hidden"
                                                 name="version_bloqueo"
-                                                :value="syllabus.version_bloqueo"
+                                                :value="
+                                                    syllabus.version_bloqueo
+                                                "
                                             />
                                             <p
                                                 v-if="

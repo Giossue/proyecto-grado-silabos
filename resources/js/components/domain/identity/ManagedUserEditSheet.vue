@@ -244,7 +244,6 @@ watch(open, (isOpen) => {
                                 </Select>
                                 <FieldError :errors="[errors.career_id]" />
                             </Field>
-
                         </template>
                     </template>
 

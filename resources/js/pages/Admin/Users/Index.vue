@@ -2,6 +2,8 @@
 import { Form, Head } from '@inertiajs/vue3';
 import ManagedUserController from '@/actions/App/Modules/Identity/Presentation/Http/Controllers/ManagedUserController';
 import FilterToolbar from '@/components/domain/FilterToolbar.vue';
+import ManagedUserDetailSheet from '@/components/domain/identity/ManagedUserDetailSheet.vue';
+import type { ManagedUserRow } from '@/components/domain/identity/ManagedUserDetailSheet.vue';
 import ManagedUserEditSheet from '@/components/domain/identity/ManagedUserEditSheet.vue';
 import ManagedUserSheet from '@/components/domain/identity/ManagedUserSheet.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
@@ -41,17 +43,8 @@ defineOptions({
     },
 });
 
-type ListedUser = {
-    id: string;
-    nombre: string;
-    correo_electronico: string;
-    active: boolean;
-    /** Sigue con la contraseña temporal: la cuenta se creó y nadie la ha estrenado. */
-    pending_first_login: boolean;
-    roles: { name: string; career_name: string | null }[];
-    /** Carreras en el mismo orden que los roles, para que ambas columnas casen fila a fila. */
-    careers: (string | null)[];
-};
+/** La fila y la ficha de lectura comparten la misma forma; se declara junto al panel. */
+type ListedUser = ManagedUserRow;
 
 type UserStatus = {
     label: string;
@@ -322,6 +315,7 @@ defineProps<{
                                 <TableActionsMenu
                                     :label="`Acciones para ${user.nombre}`"
                                 >
+                                    <ManagedUserDetailSheet :user="user" />
                                     <ManagedUserEditSheet
                                         display="menu"
                                         :user="user"
