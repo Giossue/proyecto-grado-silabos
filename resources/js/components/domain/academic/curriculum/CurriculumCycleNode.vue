@@ -15,7 +15,7 @@ defineProps<{
 
 <template>
     <section
-        class="size-full overflow-hidden rounded-md border bg-card"
+        class="size-full cursor-default overflow-hidden rounded-md border bg-card"
         :aria-label="`Nivel ${data.level}`"
     >
         <div class="flex h-full">

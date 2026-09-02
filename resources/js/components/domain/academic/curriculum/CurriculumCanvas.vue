@@ -280,6 +280,8 @@ const buildNodes = (): Node[] => {
                     cycle,
                     position: subject.position,
                     editable: props.curriculum.editable,
+                    draggable:
+                        props.curriculum.editable && !hasOpenEditor.value,
                     editing,
                     onEdit: () => beginSubjectEdit(subject.id),
                     onCancel: closeEditor,
@@ -317,6 +319,7 @@ const buildNodes = (): Node[] => {
                     cycle,
                     position,
                     editable: true,
+                    draggable: false,
                     editing: true,
                     onEdit: () => undefined,
                     onCancel: closeEditor,

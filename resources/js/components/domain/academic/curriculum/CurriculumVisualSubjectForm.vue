@@ -66,7 +66,7 @@ watch(
         :key="subject?.id ?? `new-${cycle}-${position}`"
         v-bind="formRoute"
         v-slot="{ errors, processing }"
-        class="nodrag nopan nowheel w-[36rem] rounded-md bg-card p-3 text-card-foreground shadow-modal ring-1 ring-surface-ring"
+        class="nodrag nopan nowheel w-[36rem] cursor-default rounded-md bg-card p-3 text-card-foreground shadow-modal ring-1 ring-surface-ring"
         :options="{ preserveScroll: true }"
         @keydown.stop
         @mousedown.stop

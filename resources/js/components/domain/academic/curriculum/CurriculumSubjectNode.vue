@@ -36,6 +36,7 @@ const props = defineProps<{
         cycle: number;
         position: number;
         editable: boolean;
+        draggable: boolean;
         editing: boolean;
         onEdit: () => void;
         onCancel: () => void;
@@ -92,8 +93,18 @@ const totalFields = computed(
             :connectable="data.editable"
             aria-label="Recibir relación académica"
         />
+        <!--
+            El puntero dice qué se puede hacer donde está: la mano abierta sobre el
+            cuerpo de la tarjeta —que se arrastra a otro nivel o posición— y cerrada
+            mientras se arrastra. Los botones de dentro conservan el suyo.
+        -->
         <article
             class="relative w-64 overflow-hidden rounded-md bg-card text-card-foreground shadow-surface ring-1 ring-surface-ring data-[selected=true]:ring-2 data-[selected=true]:ring-ring"
+            :class="
+                data.draggable
+                    ? 'cursor-grab active:cursor-grabbing'
+                    : 'cursor-default'
+            "
             :data-selected="selected"
             :aria-label="`${data.subject.code}: ${data.subject.name}`"
         >
