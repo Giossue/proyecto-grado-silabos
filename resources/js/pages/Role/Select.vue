@@ -56,7 +56,7 @@ const actionLabel = (role: (typeof page.props.auth.roles)[number]): string => {
             <Card
                 v-for="role in page.props.auth.roles"
                 :key="role.id"
-                class="transition-shadow hover:shadow-menu"
+                class="h-full transition-shadow hover:shadow-menu"
             >
                 <CardHeader>
                     <CardTitle>
@@ -75,7 +75,7 @@ const actionLabel = (role: (typeof page.props.auth.roles)[number]): string => {
                         </Badge>
                     </CardAction>
                 </CardHeader>
-                <CardFooter>
+                <CardFooter class="mt-auto">
                     <Form
                         v-bind="ActiveRoleController.store.form()"
                         v-slot="{ processing }"
