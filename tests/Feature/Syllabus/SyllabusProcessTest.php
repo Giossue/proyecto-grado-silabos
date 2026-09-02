@@ -337,6 +337,31 @@ class SyllabusProcessTest extends TestCase
         $this->actingAsTeacher()->get(route('syllabi.edit', $syllabus))->assertOk();
     }
 
+    public function test_convocation_is_edited_only_in_preparation_or_pause_and_closing_stops_teachers(): void
+    {
+        $convocation = $this->openedConvocation();
+        $source = AcademicSource::query()->firstOrFail();
+        $payload = ['nombre' => 'Convocatoria corregida', 'source_ids' => [$source->id]];
+
+        $this->actingAsCoordinator()->patch(route('convocations.update', $convocation), $payload)->assertForbidden();
+
+        $this->actingAsCoordinator()
+            ->post(route('convocations.transition', [$convocation, 'pausar']), ['reason' => 'Corrección del nombre y de las fuentes.'])
+            ->assertRedirect();
+        $this->actingAsCoordinator()->patch(route('convocations.update', $convocation), $payload)
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+        $this->assertSame('Convocatoria corregida', $convocation->fresh()->nombre);
+        $this->assertDatabaseHas('eventos_auditoria', ['accion' => 'convocatoria.actualizada', 'recurso_id' => $convocation->id]);
+
+        $syllabus = Syllabus::query()->firstOrFail();
+        $this->actingAsCoordinator()->post(route('convocations.transition', [$convocation, 'cerrar']))->assertRedirect();
+        $this->assertSame('cerrada', $convocation->fresh()->estado);
+        $this->assertNotNull($convocation->fresh()->cerrado_en);
+        $this->actingAsTeacher()->post(route('syllabi.start', $syllabus))->assertForbidden();
+        $this->actingAsCoordinator()->patch(route('convocations.update', $convocation), $payload)->assertForbidden();
+    }
+
     public function test_process_configuration_changes_only_in_preparation_or_pause(): void
     {
         $process = $this->openProcess();

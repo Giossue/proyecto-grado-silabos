@@ -1,10 +1,7 @@
 <script setup lang="ts">
-import { Form, Head, Link } from '@inertiajs/vue3';
-import ConvocationController from '@/actions/App/Modules/Syllabus/Presentation/Http/Controllers/ConvocationController';
+import { Head, Link } from '@inertiajs/vue3';
 import ClientFilterBar from '@/components/domain/ClientFilterBar.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
-import ConvocationTransitionDialog from '@/components/domain/syllabus/ConvocationTransitionDialog.vue';
-import DeadlineExtensionSheet from '@/components/domain/syllabus/DeadlineExtensionSheet.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -17,7 +14,6 @@ import {
     CardTitle,
 } from '@/components/ui/card';
 import { Field, FieldLabel } from '@/components/ui/field';
-import { FieldError } from '@/components/ui/field';
 import {
     Select,
     SelectContent,
@@ -26,7 +22,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Spinner } from '@/components/ui/spinner';
 import {
     Table,
     TableBody,
@@ -147,38 +142,6 @@ const {
                 {{ convocation.process.name }}
             </Badge>
         </template>
-        <!-- Sin envoltorio: PageFrame cuenta las acciones para decidir si en móvil hacen
-             falta un disparador y un desplegable. Un contenedor las escondería como una. -->
-        <template #actions>
-            <ConvocationTransitionDialog
-                v-if="convocation.state === 'abierta'"
-                :convocation-id="convocation.id"
-                transition="pausar"
-            />
-            <ConvocationTransitionDialog
-                v-if="convocation.state === 'pausada'"
-                :convocation-id="convocation.id"
-                transition="reanudar"
-            />
-            <DeadlineExtensionSheet
-                v-if="convocation.state !== 'cerrada'"
-                :convocation-id="convocation.id"
-            />
-            <Form
-                v-if="convocation.state === 'preparacion'"
-                v-bind="ConvocationController.open.form(convocation.id)"
-                v-slot="{ errors, processing }"
-            >
-                <div class="flex flex-col items-start gap-2">
-                    <FieldError :errors="[errors.convocation]" />
-                    <Button type="submit" :disabled="processing">
-                        <Spinner v-if="processing" />
-                        Abrir y generar expedientes
-                    </Button>
-                </div>
-            </Form>
-        </template>
-
         <Alert v-if="convocation.state === 'preparacion'">
             <AlertTitle>Revise antes de abrir</AlertTitle>
             <AlertDescription>

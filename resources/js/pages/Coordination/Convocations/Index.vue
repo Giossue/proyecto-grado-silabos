@@ -1,14 +1,12 @@
 <script setup lang="ts">
-import { Form, Head, Link } from '@inertiajs/vue3';
-import { Eye } from '@lucide/vue';
+import { Form, Head } from '@inertiajs/vue3';
 import ConvocationController from '@/actions/App/Modules/Syllabus/Presentation/Http/Controllers/ConvocationController';
 import FilterToolbar from '@/components/domain/FilterToolbar.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
+import ConvocationActions from '@/components/domain/syllabus/ConvocationActions.vue';
 import ConvocationCreationSheet from '@/components/domain/syllabus/ConvocationCreationSheet.vue';
-import TableActionsMenu from '@/components/domain/TableActionsMenu.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
 import { Card, CardContent } from '@/components/ui/card';
-import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Field, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import {
@@ -39,6 +37,8 @@ type ConvocationRow = {
     process_state: string;
     grouping_mode: string;
     period: string;
+    period_id: string;
+    source_ids: string[];
     template: string;
     syllabi_count: number;
 };
@@ -213,22 +213,11 @@ const processNote = (row: ConvocationRow): string | null =>
                                 {{ convocation.syllabi_count }}
                             </TableCell>
                             <TableCell class="text-right">
-                                <TableActionsMenu
-                                    :label="`Acciones para ${convocation.name}`"
-                                >
-                                    <DropdownMenuItem as-child>
-                                        <Link
-                                            :href="
-                                                ConvocationController.show(
-                                                    convocation.id,
-                                                )
-                                            "
-                                        >
-                                            <Eye aria-hidden="true" />
-                                            Abrir convocatoria
-                                        </Link>
-                                    </DropdownMenuItem>
-                                </TableActionsMenu>
+                                <ConvocationActions
+                                    :convocation="convocation"
+                                    :periods="periods"
+                                    :sources="sources"
+                                />
                             </TableCell>
                         </TableRow>
                     </TableBody>

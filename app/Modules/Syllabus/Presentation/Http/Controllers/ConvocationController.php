@@ -11,6 +11,7 @@ use App\Modules\Syllabus\Application\Actions\CreateConvocation;
 use App\Modules\Syllabus\Application\Actions\ExtendConvocationDeadline;
 use App\Modules\Syllabus\Application\Actions\OpenConvocation;
 use App\Modules\Syllabus\Application\Actions\TransitionConvocation;
+use App\Modules\Syllabus\Application\Actions\UpdateConvocation;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\Convocation;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\Syllabus;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\SyllabusProcess;
@@ -18,6 +19,7 @@ use App\Modules\Syllabus\Presentation\Http\Requests\ExtendConvocationDeadlineReq
 use App\Modules\Syllabus\Presentation\Http\Requests\OpenConvocationRequest;
 use App\Modules\Syllabus\Presentation\Http\Requests\StoreConvocationRequest;
 use App\Modules\Syllabus\Presentation\Http\Requests\TransitionConvocationRequest;
+use App\Modules\Syllabus\Presentation\Http\Requests\UpdateConvocationRequest;
 use App\Modules\Syllabus\Presentation\Http\Requests\ViewConvocationsRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -47,7 +49,7 @@ class ConvocationController extends Controller
                             ->whereRaw('nombre ILIKE ?', ["%{$term}%"])),
                 ))
                 ->when($state, fn ($query, string $value) => $query->where('estado', $value))
-                ->with(['academicPeriod:id,nombre', 'template:id,nombre', 'process:id,nombre,estado'])
+                ->with(['academicPeriod:id,nombre', 'template:id,nombre', 'process:id,nombre,estado', 'sources:id'])
                 ->withCount('syllabi')
                 ->orderByDesc('creado_en')
                 ->paginate(15)
@@ -59,6 +61,8 @@ class ConvocationController extends Controller
                     'process_state' => $convocation->process->estado,
                     'grouping_mode' => $convocation->modo_agrupacion,
                     'period' => $convocation->academicPeriod->nombre,
+                    'period_id' => $convocation->periodo_academico_id,
+                    'source_ids' => $convocation->sources->pluck('id')->values(),
                     'template' => $convocation->template->nombre,
                     'syllabi_count' => $convocation->syllabi_count,
                 ]),
@@ -165,6 +169,18 @@ class ConvocationController extends Controller
         return back()->with('success', 'Plazo prorrogado. El motivo queda registrado en auditoría.');
     }
 
+    public function update(
+        Convocation $convocation,
+        UpdateConvocationRequest $request,
+        UpdateConvocation $action,
+    ): RedirectResponse {
+        $actor = $request->user();
+        abort_unless($actor instanceof User, 401);
+        $action->execute($convocation, $request->convocationData(), $actor, $request);
+
+        return back()->with('success', 'Convocatoria actualizada.');
+    }
+
     public function transition(
         Convocation $convocation,
         string $transition,
@@ -176,8 +192,10 @@ class ConvocationController extends Controller
         $reason = $request->filled('reason') ? $request->string('reason')->toString() : null;
         $action->execute($convocation, $transition, $reason, $actor, $request);
 
-        return back()->with('success', $transition === TransitionConvocation::PAUSE
-            ? 'Convocatoria en pausa. Los docentes de la carrera no editan ni envían; la malla y las fuentes quedan editables.'
-            : 'Convocatoria reanudada. Los docentes vuelven a trabajar y la malla y las fuentes quedan protegidas.');
+        return back()->with('success', match ($transition) {
+            TransitionConvocation::PAUSE => 'Convocatoria en pausa. Los docentes de la carrera no editan ni envían; la malla y las fuentes quedan editables.',
+            TransitionConvocation::RESUME => 'Convocatoria reanudada. Los docentes vuelven a trabajar y la malla y las fuentes quedan protegidas.',
+            default => 'Convocatoria cerrada. Los expedientes se conservan y ya no admiten envíos.',
+        });
     }
 }

@@ -49,4 +49,17 @@ class ConvocationPolicy
     {
         return $this->view($user, $convocation) && $convocation->estado === Convocation::STATE_PAUSED;
     }
+
+    public function close(User $user, Convocation $convocation): bool
+    {
+        return $this->view($user, $convocation)
+            && in_array($convocation->estado, [Convocation::STATE_OPEN, Convocation::STATE_PAUSED], true);
+    }
+
+    /** Se corrige antes de abrir o en pausa: nunca con los docentes trabajando. */
+    public function update(User $user, Convocation $convocation): bool
+    {
+        return $this->view($user, $convocation)
+            && in_array($convocation->estado, [Convocation::STATE_PREPARATION, Convocation::STATE_PAUSED], true);
+    }
 }

@@ -23,14 +23,20 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 
-defineProps<{
+const props = defineProps<{
     convocationId: string;
+    /** `menu` lo dibuja sin disparador propio: lo abre la opción del menú de la fila. */
+    display?: 'button' | 'menu';
 }>();
+
+const open = defineModel<boolean>('open', { default: false });
 </script>
 
 <template>
     <FormSheet
+        v-model:open="open"
         trigger-label="Prorrogar plazo"
+        :show-trigger="props.display !== 'menu'"
         title="Prorrogar el plazo"
         description="La prórroga es una excepción: solo se puede mover la fecha hacia adelante y el motivo queda registrado en auditoría junto con la fecha anterior."
     >

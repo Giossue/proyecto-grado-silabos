@@ -572,7 +572,8 @@ it('agrupa las acciones de tabla en menus accesibles de tres puntos', function (
             $sharedMenus = substr_count($table, '<TableActionsMenu')
                 + substr_count($table, '<CareerAcademicActions')
                 + substr_count($table, '<CatalogActions')
-                + substr_count($table, '<SyllabusProcessActions');
+                + substr_count($table, '<SyllabusProcessActions')
+                + substr_count($table, '<ConvocationActions');
             $relativePath = str_replace($root.'/', '', $file->getPathname());
 
             $this->assertSame(
@@ -690,8 +691,9 @@ it('presenta la publicación y los bloques de plantilla con etiquetas breves', f
 it('abre los detalles de los listados desde sus acciones', function (): void {
     $root = dirname(__DIR__, 2);
     $surfaces = [
-        'resources/js/pages/Coordination/Convocations/Index.vue' => [
-            ['Abrir', 'convocatoria'],
+        // Las acciones de la fila viven en su menú compartido (I-32).
+        'resources/js/components/domain/syllabus/ConvocationActions.vue' => [
+            ['Ver seguimiento', 'convocatoria'],
             'ConvocationController.show',
         ],
         'resources/js/pages/Teacher/Syllabi/Index.vue' => [
