@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3';
-import { Check, Copy, RefreshCw, UserPlus } from '@lucide/vue';
+import { Check, Copy, Eye, EyeOff, RefreshCw, UserPlus } from '@lucide/vue';
 import { ref, watch } from 'vue';
 import ManagedUserController from '@/actions/App/Modules/Identity/Presentation/Http/Controllers/ManagedUserController';
 import FormSheet from '@/components/domain/FormSheet.vue';
 import FormSheetActions from '@/components/domain/FormSheetActions.vue';
-import PasswordInput from '@/components/PasswordInput.vue';
 import { Button } from '@/components/ui/button';
 import {
     Field,
@@ -40,10 +39,12 @@ const initialRole = ref('docente');
 // escribió. Permanece oculta hasta que se solicite verla con el control accesible.
 const password = ref(generateTemporaryPassword());
 const copied = ref(false);
+const passwordVisible = ref(false);
 
 const regenerate = (): void => {
     password.value = generateTemporaryPassword();
     copied.value = false;
+    passwordVisible.value = false;
 };
 
 const copy = async (): Promise<void> => {
@@ -114,18 +115,35 @@ watch(open, (isOpen) => {
                             Contraseña temporal
                         </FieldLabel>
                         <div class="flex items-center gap-2">
-                            <PasswordInput
-                                id="managed-password"
-                                v-model="password"
-                                name="password"
-                                type="text"
-                                placeholder="Ej. UEB-Temporal-2026"
-                                readonly
-                                required
-                                class="flex-1 font-mono"
-                                autocomplete="off"
-                                :aria-invalid="Boolean(errors.password)"
-                            />
+                            <div class="relative flex-1">
+                                <Input
+                                    id="managed-password"
+                                    v-model="password"
+                                    name="password"
+                                    :type="passwordVisible ? 'text' : 'password'"
+                                    placeholder="Ej. UEB-Temporal-2026"
+                                    readonly
+                                    required
+                                    class="pr-10 font-mono"
+                                    autocomplete="off"
+                                    :aria-invalid="Boolean(errors.password)"
+                                />
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    class="absolute inset-y-0 right-0 h-full w-9"
+                                    :aria-label="passwordVisible ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                                    :aria-pressed="passwordVisible"
+                                    @click="passwordVisible = !passwordVisible"
+                                >
+                                    <EyeOff
+                                        v-if="passwordVisible"
+                                        aria-hidden="true"
+                                    />
+                                    <Eye v-else aria-hidden="true" />
+                                </Button>
+                            </div>
                             <Tooltip>
                                 <TooltipTrigger as-child>
                                     <Button
