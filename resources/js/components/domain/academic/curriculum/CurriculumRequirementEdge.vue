@@ -20,12 +20,30 @@ const props = defineProps<
 
 const { screenToFlowCoordinate } = useVueFlow();
 
+/*
+ * Un quiebre solo se justifica cuando hay que esquivar algo. Si los dos extremos
+ * quedan a menos de un reparto de distancia —el desplazamiento que separa las
+ * líneas que comparten conector—, el rodeo no evita nada: se alinean al extremo de
+ * llegada, que es donde importa que las puntas de flecha no se solapen, y la línea
+ * baja recta.
+ */
+const ALIGNMENT_TOLERANCE = 24;
+
+const endpoints = computed(() => {
+    const sourceX = props.sourceX + props.data.sourceOffset;
+    const targetX = props.targetX + props.data.targetOffset;
+
+    return Math.abs(sourceX - targetX) <= ALIGNMENT_TOLERANCE
+        ? { sourceX: targetX, targetX }
+        : { sourceX, targetX };
+});
+
 const pathData = computed(() =>
     getSmoothStepPath({
-        sourceX: props.sourceX + props.data.sourceOffset,
+        sourceX: endpoints.value.sourceX,
         sourceY: props.sourceY,
         sourcePosition: props.sourcePosition,
-        targetX: props.targetX + props.data.targetOffset,
+        targetX: endpoints.value.targetX,
         targetY: props.targetY,
         targetPosition: props.targetPosition,
     }),
@@ -51,7 +69,7 @@ const onFocusIn = (): void => {
 
 <template>
     <g
-        class="cursor-pointer"
+        class="cursor-pointer focus:outline-none"
         @mouseenter="onHoverMove"
         @mousemove="onHoverMove"
         @mouseleave="hoverPoint = null"
