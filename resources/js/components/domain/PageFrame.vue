@@ -166,8 +166,7 @@ const floatingHidden = computed(() => hidden.value && !expanded.value);
                 <Button
                     v-if="needsTrigger"
                     type="button"
-                    size="icon-lg"
-                    class="shadow-menu sm:hidden"
+                    class="size-14 rounded-full p-0 shadow-menu sm:hidden"
                     :aria-expanded="expanded"
                     :aria-label="
                         expanded
