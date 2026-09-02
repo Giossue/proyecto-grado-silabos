@@ -5,7 +5,6 @@ import PageFrame from '@/components/domain/PageFrame.vue';
 import SyllabusProcessActions from '@/components/domain/syllabus/SyllabusProcessActions.vue';
 import SyllabusProcessSheet from '@/components/domain/syllabus/SyllabusProcessSheet.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Field, FieldLabel } from '@/components/ui/field';
 import {
@@ -170,15 +169,7 @@ const {
                         >
                             <TableCell>{{ process.name }}</TableCell>
                             <TableCell>
-                                <Badge
-                                    :variant="
-                                        process.state === 'abierto'
-                                            ? 'secondary'
-                                            : 'outline'
-                                    "
-                                >
-                                    {{ stateLabel(process.state) }}
-                                </Badge>
+                                {{ stateLabel(process.state) }}
                             </TableCell>
                             <TableCell>{{ process.template }}</TableCell>
                             <TableCell>{{

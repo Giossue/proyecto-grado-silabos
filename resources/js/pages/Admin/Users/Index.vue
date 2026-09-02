@@ -48,7 +48,6 @@ type ListedUser = ManagedUserRow;
 
 type UserStatus = {
     label: string;
-    variant: 'secondary' | 'outline' | 'default';
     hint: string;
 };
 
@@ -56,7 +55,6 @@ const statusOf = (user: ListedUser): UserStatus => {
     if (!user.active) {
         return {
             label: 'Inactivo',
-            variant: 'outline',
             hint: 'La cuenta está desactivada y no puede iniciar sesión.',
         };
     }
@@ -64,14 +62,12 @@ const statusOf = (user: ListedUser): UserStatus => {
     if (user.pending_first_login) {
         return {
             label: 'Sin estrenar',
-            variant: 'default',
             hint: 'La cuenta se creó y todavía nadie ha iniciado sesión con ella. Conserva su contraseña temporal.',
         };
     }
 
     return {
         label: 'Activo',
-        variant: 'secondary',
         hint: 'La cuenta está en uso y su titular ya definió su contraseña.',
     };
 };

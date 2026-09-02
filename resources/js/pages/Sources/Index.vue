@@ -6,7 +6,6 @@ import AcademicSourceCreationSheet from '@/components/domain/configuration/Acade
 import PageFrame from '@/components/domain/PageFrame.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import {
     Table,
@@ -100,19 +99,11 @@ defineOptions({
                                 >
                                     {{ source.description }}
                                 </div></TableCell
-                            ><TableCell
-                                ><Badge
-                                    :variant="
-                                        source.has_content
-                                            ? 'secondary'
-                                            : 'outline'
-                                    "
-                                    >{{
-                                        source.has_content
-                                            ? 'Redactado'
-                                            : 'Sin contenido'
-                                    }}</Badge
-                                ></TableCell
+                            ><TableCell>{{
+                                source.has_content
+                                    ? 'Redactado'
+                                    : 'Sin contenido'
+                            }}</TableCell
                             ><TableCell>{{
                                 source.actualizado_en ?? '—'
                             }}</TableCell></TableRow
