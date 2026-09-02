@@ -597,7 +597,7 @@ const onNodeDragStop = ({ node }: NodeDragEvent): void => {
 <template>
     <div
         class="relative h-[72vh] min-h-[34rem] overflow-hidden rounded-lg border bg-background shadow-surface"
-        aria-label="Constructor visual de la malla"
+        aria-label="Modo interactivo de la malla"
     >
         <!--
             Panel al estilo del pie de la malla institucional: leyenda de
@@ -693,7 +693,11 @@ const onNodeDragStop = ({ node }: NodeDragEvent): void => {
                     @add="beginSubjectCreation"
                 />
             </template>
-            <Controls position="bottom-left" />
+            <Controls
+                position="bottom-left"
+                :show-fit-view="false"
+                :show-interactive="false"
+            />
             <Dialog
                 :open="pendingConnection !== null"
                 @update:open="

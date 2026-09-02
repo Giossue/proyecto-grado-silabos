@@ -33,7 +33,7 @@ const open = defineModel<boolean>('open', { default: false });
         v-model:open="open"
         trigger-label="Agregar relación"
         title="Agregar relación académica"
-        description="Prerrequisitos y correquisitos se registran aquí o dibujando la conexión en el constructor visual."
+        description="Prerrequisitos y correquisitos se registran aquí o dibujando la conexión en el modo interactivo."
         :show-trigger="false"
     >
         <template #default="{ close }">

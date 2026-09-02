@@ -56,7 +56,7 @@ const openSubject = (subject: CurriculumBuilderSubject): void => {
 
     <PageFrame
         title="Malla"
-        :description="`${curriculum.code} · ${career.name}. Edite el desglose académico o trabaje sobre la misma información en el constructor visual.`"
+        :description="`${curriculum.code} · ${career.name}. Edite el desglose académico o trabaje sobre la misma información en el modo interactivo.`"
     >
         <template #actions>
             <Button
@@ -100,7 +100,7 @@ const openSubject = (subject: CurriculumBuilderSubject): void => {
                     </TabsTrigger>
                     <TabsTrigger value="builder">
                         <Workflow aria-hidden="true" />
-                        Constructor visual
+                        Interactivo
                     </TabsTrigger>
                 </TabsList>
                 <CurriculumActions
