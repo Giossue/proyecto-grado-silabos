@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { router } from '@inertiajs/vue3';
+import { Info } from '@lucide/vue';
 import { Controls } from '@vue-flow/controls';
 import {
     ConnectionMode,
@@ -26,11 +27,6 @@ import CurriculumRequirementEdge from '@/components/domain/academic/curriculum/C
 import CurriculumSubjectNode from '@/components/domain/academic/curriculum/CurriculumSubjectNode.vue';
 import { Button } from '@/components/ui/button';
 import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from '@/components/ui/popover';
-import {
     Dialog,
     DialogClose,
     DialogContent,
@@ -39,6 +35,11 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from '@/components/ui/popover';
 import { Spinner } from '@/components/ui/spinner';
 import { formatNumericDisplay } from '@/lib/numberDisplay';
 import type {
@@ -155,7 +156,16 @@ const summaryRows = computed(() => [
 const flowId = `curriculum-${props.curriculum.id}`;
 const { setEdges, setNodes } = useVueFlow({ id: flowId });
 
-const laneHeight = 340;
+// El carril se dibuja un 30 % más bajo que los 340 px originales; con menos aire
+// sobrante, las tarjetas se centran en él en vez de colgar del borde superior.
+const laneHeight = 238;
+const laneInset = 16;
+const subjectHeight = 110;
+const addSubjectHeight = 36;
+const subjectOffset = Math.round((laneHeight - laneInset - subjectHeight) / 2);
+const addSubjectOffset = Math.round(
+    (laneHeight - laneInset - addSubjectHeight) / 2,
+);
 const laneStart = 145;
 const subjectStep = 290;
 const editorStep = 610;
@@ -246,7 +256,7 @@ const buildNodes = (): Node[] => {
             focusable: false,
             style: {
                 width: `${laneWidth.value}px`,
-                height: `${laneHeight - 16}px`,
+                height: `${laneHeight - laneInset}px`,
             },
             zIndex: -1,
         });
@@ -259,7 +269,7 @@ const buildNodes = (): Node[] => {
                 type: 'subject',
                 position: {
                     x,
-                    y: (cycle - 1) * laneHeight + 38,
+                    y: (cycle - 1) * laneHeight + subjectOffset,
                 },
                 data: {
                     curriculum: props.curriculum,
@@ -296,7 +306,7 @@ const buildNodes = (): Node[] => {
                 type: 'subject',
                 position: {
                     x,
-                    y: (cycle - 1) * laneHeight + 38,
+                    y: (cycle - 1) * laneHeight + subjectOffset,
                 },
                 data: {
                     curriculum: props.curriculum,
@@ -321,7 +331,7 @@ const buildNodes = (): Node[] => {
                 type: 'addSubject',
                 position: {
                     x,
-                    y: (cycle - 1) * laneHeight + 98,
+                    y: (cycle - 1) * laneHeight + addSubjectOffset,
                 },
                 data: {
                     cycle,
@@ -590,7 +600,10 @@ const onNodeDragStop = ({ node }: NodeDragEvent): void => {
 
     const cycle = Math.min(
         props.curriculum.cycle_count,
-        Math.max(1, Math.round((node.position.y - 38) / laneHeight) + 1),
+        Math.max(
+            1,
+            Math.round((node.position.y - subjectOffset) / laneHeight) + 1,
+        ),
     );
     const position = Math.max(
         0,
