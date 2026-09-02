@@ -1,4 +1,4 @@
-# *** Remember to change! (HOST_NAME, PORT, USER_NAME, DATABASE_NAME) ***
+# *** Remember to change! (HOST_NAME, PORT, USER_NAME, DATABASE_NAME) *** 
 psql -h HOST_NAME -p PORT -U USER_NAME -d DATABASE_NAME -c "
 /* PostgreSQL edition */
 WITH fk_info AS (
@@ -158,7 +158,7 @@ cols AS (
                                             ',\"column_position\":', column_position,
                                             ',\"direction\":\"', LOWER(direction),
                                             '\"}')), ',') AS indexes_metadata
-    FROM indexes_cols x
+    FROM indexes_cols x 
 ), tbls AS (
     SELECT array_to_string(array_agg(CONCAT('{',
                         '\"schema\":\"', tbls.TABLE_SCHEMA, '\",',
@@ -177,7 +177,7 @@ cols AS (
                                             AND n.nspname = tbls.TABLE_SCHEMA
         LEFT JOIN pg_catalog.pg_description dsc ON dsc.objoid = c.oid
                                                 AND dsc.objsubid = 0
-        WHERE tbls.TABLE_SCHEMA NOT IN ('information_schema', 'pg_catalog')
+        WHERE tbls.TABLE_SCHEMA NOT IN ('information_schema', 'pg_catalog') 
 ), config AS (
     SELECT array_to_string(
                       array_agg(CONCAT('{\"name\":\"', conf.name, '\",\"value\":\"', replace(conf.setting, '\"', E'\"'), '\"}')),
@@ -189,7 +189,7 @@ cols AS (
                       '\",\"view_definition\":\"\"}')),
                       ',') AS views_metadata
     FROM pg_views views
-    WHERE views.schemaname NOT IN ('information_schema', 'pg_catalog')
+    WHERE views.schemaname NOT IN ('information_schema', 'pg_catalog') 
 ), custom_types AS (
     SELECT array_to_string(array_agg(type_json), ',') AS custom_types_metadata
     FROM (
@@ -203,7 +203,7 @@ cols AS (
         FROM pg_type t
         JOIN pg_enum e ON t.oid = e.enumtypid
         JOIN pg_namespace n ON n.oid = t.typnamespace
-        WHERE n.nspname NOT IN ('pg_catalog', 'information_schema')
+        WHERE n.nspname NOT IN ('pg_catalog', 'information_schema') 
         GROUP BY n.nspname, t.typname
 
         UNION ALL
@@ -230,7 +230,7 @@ cols AS (
             WHERE t.typtype = 'c'
               AND c.relkind = 'c'  -- Only user-defined composite types
               AND a.attnum > 0 AND NOT a.attisdropped
-              AND n.nspname NOT IN ('pg_catalog', 'information_schema')
+              AND n.nspname NOT IN ('pg_catalog', 'information_schema') 
             GROUP BY n.nspname, t.typname
         ) AS comp
     ) AS all_types
@@ -266,5 +266,5 @@ SELECT CONCAT('{    \"fk_info\": [', COALESCE(fk_metadata, ''),
                     '], \"database_name\": \"', CURRENT_DATABASE(), '', '\", \"version\": \"', '',
               '\"}') AS metadata_json_to_import
 FROM fk_info, pk_info, cols, indexes_metadata, tbls, config, views, check_constraints, custom_types;
-
+    
 " -t -A > output.json;

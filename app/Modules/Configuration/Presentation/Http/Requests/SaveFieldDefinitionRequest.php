@@ -3,7 +3,7 @@
 namespace App\Modules\Configuration\Presentation\Http\Requests;
 
 use App\Modules\Configuration\Infrastructure\Persistence\Models\FieldDefinition;
-use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateVersion;
+use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
 use Illuminate\Validation\Rule;
 
 class SaveFieldDefinitionRequest extends ManageTemplatesRequest
@@ -18,8 +18,8 @@ class SaveFieldDefinitionRequest extends ManageTemplatesRequest
     /** @return array<string, list<mixed>> */
     public function rules(): array
     {
-        $version = $this->route('version');
-        $versionId = $version instanceof TemplateVersion ? $version->id : $version;
+        $template = $this->route('template');
+        $templateId = $template instanceof SyllabusTemplate ? $template->id : $template;
         $field = $this->route('field');
         $fieldId = $field instanceof FieldDefinition ? $field->id : null;
 
@@ -28,14 +28,14 @@ class SaveFieldDefinitionRequest extends ManageTemplatesRequest
                 Rule::requiredIf($fieldId === null),
                 'nullable',
                 'uuid',
-                Rule::exists('secciones_plantilla', 'id')->where('version_plantilla_id', $versionId),
+                Rule::exists('secciones_plantilla', 'id')->where('plantilla_id', $templateId),
             ],
             'position' => ['nullable', 'integer', 'min:0'],
             'block_id' => [
                 Rule::requiredIf($fieldId !== null),
                 'nullable',
                 'uuid',
-                Rule::exists('bloques_plantilla', 'id')->where('version_plantilla_id', $versionId),
+                Rule::exists('bloques_plantilla', 'id')->where('plantilla_id', $templateId),
             ],
             'key' => [
                 'required',
@@ -43,7 +43,7 @@ class SaveFieldDefinitionRequest extends ManageTemplatesRequest
                 'regex:/^[a-z][a-z0-9_]*$/',
                 'max:120',
                 Rule::unique('definiciones_campo', 'clave')
-                    ->where('version_plantilla_id', $versionId)
+                    ->where('plantilla_id', $templateId)
                     ->ignore($fieldId),
             ],
             'label' => ['required', 'string', 'max:180'],

@@ -41,7 +41,7 @@ type TemplateField = {
 };
 
 const props = defineProps<{
-    templateVersionId: string;
+    templateId: string;
     blockOptions: { id: string; label: string }[];
     fieldTypes: { value: string; label: string }[];
 }>();
@@ -53,10 +53,10 @@ const inherited = ref(false);
 const fieldForm = computed(() =>
     selectedField.value
         ? TemplateController.updateField.form({
-              version: props.templateVersionId,
+              template: props.templateId,
               field: selectedField.value.id,
           })
-        : TemplateController.storeField.form(props.templateVersionId),
+        : TemplateController.storeField.form(props.templateId),
 );
 
 const title = computed(() =>

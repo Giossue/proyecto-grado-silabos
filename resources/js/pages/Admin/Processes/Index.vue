@@ -33,7 +33,6 @@ type ProcessRow = {
     id: string;
     name: string;
     state: string;
-    template_version_id: string;
     template: string;
     starts_at: string;
     due_at: string;
@@ -43,7 +42,8 @@ type ProcessRow = {
 
 const props = defineProps<{
     processes: ProcessRow[];
-    templates: { id: string; label: string }[];
+    /** Nombre de la plantilla institucional; nula si aún no existe. */
+    template: string | null;
 }>();
 
 defineOptions({
@@ -90,7 +90,7 @@ const {
         description="El proceso institucional que obliga a todas las carreras: con qué plantilla se elaboran los sílabos y entre qué fechas. Cada coordinación convoca a su carrera dentro de él."
     >
         <template #actions>
-            <SyllabusProcessSheet :templates="templates" />
+            <SyllabusProcessSheet :template="template" />
         </template>
 
         <Card>
@@ -193,7 +193,7 @@ const {
                             <TableCell class="text-right">
                                 <SyllabusProcessActions
                                     :process="process"
-                                    :templates="templates"
+                                    :template="template"
                                 />
                             </TableCell>
                         </TableRow>

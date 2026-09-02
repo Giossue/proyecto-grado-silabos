@@ -9,7 +9,7 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\Campus;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CoordinatorAssignment;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CourseOffering;
-use App\Modules\Academic\Infrastructure\Persistence\Models\CurriculumVersion;
+use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Faculty;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Modality;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
@@ -18,6 +18,7 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\TeacherAssignment;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
 use App\Modules\Operations\Application\Actions\RecordAuditEvent;
+use App\Modules\Syllabus\Application\InProgressWork;
 use App\Modules\Syllabus\Application\ProcessLocks;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Model;
@@ -34,7 +35,7 @@ class SetAcademicRecordStatus
         'campus' => Campus::class,
         'modalidad' => Modality::class,
         'periodo' => AcademicPeriod::class,
-        'malla' => CurriculumVersion::class,
+        'malla' => Curriculum::class,
         'asignatura' => Subject::class,
         'oferta' => CourseOffering::class,
         'paralelo' => Parallel::class,
@@ -46,6 +47,7 @@ class SetAcademicRecordStatus
         private readonly ActiveRole $roles,
         private readonly RecordAuditEvent $audit,
         private readonly ProcessLocks $locks,
+        private readonly InProgressWork $work,
     ) {}
 
     public function execute(
@@ -69,6 +71,7 @@ class SetAcademicRecordStatus
         // Malla y materias se congelan mientras una convocatoria de la carrera está en curso.
         if (in_array($entity, ['malla', 'asignatura'], true) && AcademicStructurePermissions::isCareerContext($activeRole)) {
             $this->locks->assertCareerEditable($activeRole->carrera_id);
+            $this->work->requireConfirmation($request, $activeRole->carrera_id);
         }
 
         return DB::transaction(function () use ($active, $actor, $activeRole, $entity, $modelClass, $recordId, $request): Model {
@@ -106,26 +109,25 @@ class SetAcademicRecordStatus
         }
 
         return match ($entity) {
-            'malla' => CurriculumVersion::query()
+            'malla' => Curriculum::query()
                 ->where('carrera_id', $careerId)
-                ->current()
                 ->lockForUpdate()
                 ->findOrFail($recordId),
             'asignatura' => Subject::query()->whereHas(
-                'curriculumVersion',
-                fn ($query) => $query->where('carrera_id', $careerId)->where('es_actual', true),
+                'curriculum',
+                fn ($query) => $query->where('carrera_id', $careerId),
             )->lockForUpdate()->findOrFail($recordId),
             'oferta' => CourseOffering::query()->whereHas(
-                'subject.curriculumVersion',
-                fn ($query) => $query->where('carrera_id', $careerId)->where('es_actual', true),
+                'subject.curriculum',
+                fn ($query) => $query->where('carrera_id', $careerId),
             )->lockForUpdate()->findOrFail($recordId),
             'paralelo' => Parallel::query()->whereHas(
-                'offering.subject.curriculumVersion',
-                fn ($query) => $query->where('carrera_id', $careerId)->where('es_actual', true),
+                'offering.subject.curriculum',
+                fn ($query) => $query->where('carrera_id', $careerId),
             )->lockForUpdate()->findOrFail($recordId),
             'asignacion_docente' => TeacherAssignment::query()->whereHas(
-                'parallel.offering.subject.curriculumVersion',
-                fn ($query) => $query->where('carrera_id', $careerId)->where('es_actual', true),
+                'parallel.offering.subject.curriculum',
+                fn ($query) => $query->where('carrera_id', $careerId),
             )->lockForUpdate()->findOrFail($recordId),
             default => throw new AuthorizationException('El registro no pertenece a la gestión de carrera.'),
         };
@@ -135,7 +137,7 @@ class SetAcademicRecordStatus
     {
         $hasActiveDependants = match ($entity) {
             'facultad' => Career::query()->where('facultad_id', $recordId)->where('activo', true)->exists(),
-            'carrera' => CurriculumVersion::query()->where('carrera_id', $recordId)->current()->active()->exists(),
+            'carrera' => Curriculum::query()->where('carrera_id', $recordId)->active()->exists(),
             'malla' => false,
             'campus' => CourseOffering::query()->where('campus_id', $recordId)->where('activo', true)->exists(),
             'modalidad' => CourseOffering::query()->where('modalidad_id', $recordId)->where('activo', true)->exists(),

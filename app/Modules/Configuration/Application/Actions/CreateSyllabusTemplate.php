@@ -7,7 +7,6 @@ use App\Modules\Configuration\Infrastructure\Persistence\Models\FieldDefinition;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateBlock;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateSection;
-use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateVersion;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Operations\Application\Actions\RecordAuditEvent;
 use App\Modules\Syllabus\Application\ProcessLocks;
@@ -39,16 +38,16 @@ class CreateSyllabusTemplate
     ) {}
 
     /** @param array{nombre: string, description?: string|null} $data */
-    public function execute(array $data, User $actor, Request $request): TemplateVersion
+    public function execute(array $data, User $actor, Request $request): SyllabusTemplate
     {
         $activeRole = $this->roles->resolve($request);
         // Con el proceso institucional abierto, el formato está en uso: se pausa antes.
         $this->locks->assertTemplateEditable();
 
-        return DB::transaction(function () use ($actor, $activeRole, $data, $request): TemplateVersion {
+        return DB::transaction(function () use ($actor, $activeRole, $data, $request): SyllabusTemplate {
             if (SyllabusTemplate::query()->where('es_institucional', true)->lockForUpdate()->exists()) {
                 throw ValidationException::withMessages([
-                    'template' => 'La plantilla institucional ya existe. Cree una nueva versión para modificarla.',
+                    'template' => 'La plantilla institucional ya existe. Edítela en lugar de crear otra.',
                 ]);
             }
 
@@ -58,22 +57,16 @@ class CreateSyllabusTemplate
                 'activo' => true,
                 'es_institucional' => true,
             ]);
-            $version = TemplateVersion::query()->create([
-                'plantilla_id' => $template->id,
-                'numero_version' => 1,
-                'estado' => 'borrador',
-            ]);
-
             foreach (self::BASELINE as $position => $definition) {
                 [$key, $title, $fieldKey, $label, $type, $required, $origin, $aiEnabled] = $definition;
                 $section = TemplateSection::query()->create([
-                    'version_plantilla_id' => $version->id,
+                    'plantilla_id' => $template->id,
                     'clave' => $key,
                     'titulo' => $title,
                     'posicion' => $position + 1,
                 ]);
                 $block = TemplateBlock::query()->create([
-                    'version_plantilla_id' => $version->id,
+                    'plantilla_id' => $template->id,
                     'seccion_plantilla_id' => $section->id,
                     'clave' => "{$key}_principal",
                     'tipo' => $key === 'revision' ? 'flujo' : 'campos',
@@ -81,7 +74,7 @@ class CreateSyllabusTemplate
                     'posicion' => 1,
                 ]);
                 FieldDefinition::query()->create([
-                    'version_plantilla_id' => $version->id,
+                    'plantilla_id' => $template->id,
                     'bloque_plantilla_id' => $block->id,
                     'clave' => $fieldKey,
                     'etiqueta' => $label,
@@ -105,7 +98,7 @@ class CreateSyllabusTemplate
                 correlationId: $request->attributes->getString('correlation_id') ?: null,
             );
 
-            return $version;
+            return $template;
         });
     }
 }

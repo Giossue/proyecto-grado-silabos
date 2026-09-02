@@ -82,7 +82,7 @@ periodo académico.
 - convocatoria y periodo compatibles;
 - malla actual activa al crear ofertas y abrir un proceso nuevo;
 - control de concurrencia superado;
-- versión de plantilla disponible para renderizar el expediente;
+- plantilla institucional completa al abrir el proceso; la revisión enviada se renderiza desde su propia copia;
 - validaciones determinísticas obligatorias ejecutadas antes del envío;
 - transacción atómica y evento de auditoría.
 
@@ -105,7 +105,7 @@ envío.
 
 - Doble clic/reintento de envío: una sola revisión mediante idempotencia.
 - Edición concurrente: conflicto visible; no sobrescritura silenciosa.
-- Cambio de plantilla publicado: no altera expedientes ya creados.
+- Cambio de plantilla o malla con convocatoria pausada: borra, previa confirmación, los sílabos en curso sin enviar de ese alcance; los enviados o con IA no se borran y el cambio se rechaza.
 - Cambio de fuente activa: invalida/recalcula ayuda de IA futura, no reescribe resultados
   históricos.
 - Edición o desactivación de la malla: bloquea trabajo nuevo cuando queda inactiva, pero

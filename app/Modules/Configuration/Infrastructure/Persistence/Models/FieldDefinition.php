@@ -5,11 +5,10 @@ namespace App\Modules\Configuration\Infrastructure\Persistence\Models;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use LogicException;
 
 /**
  * @property string $id
- * @property string $version_plantilla_id
+ * @property string $plantilla_id
  * @property string $bloque_plantilla_id
  * @property string $clave
  * @property string $etiqueta
@@ -37,7 +36,7 @@ class FieldDefinition extends Model
 
     /** @var list<string> */
     protected $fillable = [
-        'version_plantilla_id',
+        'plantilla_id',
         'bloque_plantilla_id',
         'clave',
         'etiqueta',
@@ -68,30 +67,15 @@ class FieldDefinition extends Model
         ];
     }
 
-    /** @return BelongsTo<TemplateVersion, $this> */
-    public function version(): BelongsTo
+    /** @return BelongsTo<SyllabusTemplate, $this> */
+    public function template(): BelongsTo
     {
-        return $this->belongsTo(TemplateVersion::class, 'version_plantilla_id');
+        return $this->belongsTo(SyllabusTemplate::class, 'plantilla_id');
     }
 
     /** @return BelongsTo<TemplateBlock, $this> */
     public function block(): BelongsTo
     {
         return $this->belongsTo(TemplateBlock::class, 'bloque_plantilla_id');
-    }
-
-    protected static function booted(): void
-    {
-        static::saving(fn (FieldDefinition $field) => $field->guardDraft());
-        static::deleting(fn (FieldDefinition $field) => $field->guardDraft());
-    }
-
-    private function guardDraft(): void
-    {
-        $version = $this->version()->first();
-
-        if ($version !== null && $version->estado !== 'borrador') {
-            throw new LogicException('La estructura publicada es inmutable.');
-        }
     }
 }

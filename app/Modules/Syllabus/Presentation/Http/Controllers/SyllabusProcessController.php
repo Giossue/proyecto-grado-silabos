@@ -4,7 +4,7 @@ namespace App\Modules\Syllabus\Presentation\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateVersion;
+use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
 use App\Modules\Syllabus\Application\Actions\CreateSyllabusProcess;
 use App\Modules\Syllabus\Application\Actions\TransitionSyllabusProcess;
 use App\Modules\Syllabus\Application\Actions\UpdateSyllabusProcess;
@@ -23,7 +23,7 @@ class SyllabusProcessController extends Controller
     {
         return Inertia::render('Admin/Processes/Index', [
             'processes' => SyllabusProcess::query()
-                ->with('templateVersion.template:id,nombre')
+                ->with('template:id,nombre')
                 ->withCount('convocations')
                 ->orderByDesc('creado_en')
                 ->get()
@@ -31,19 +31,17 @@ class SyllabusProcessController extends Controller
                     'id' => $process->id,
                     'name' => $process->nombre,
                     'state' => $process->estado,
-                    'template_version_id' => $process->version_plantilla_id,
-                    'template' => "{$process->templateVersion->template->nombre} · v{$process->templateVersion->numero_version}",
+                    'template' => $process->template->nombre,
                     'starts_at' => $process->inicia_en->toIso8601String(),
                     'due_at' => $process->entrega_en->toIso8601String(),
                     'convocations_count' => $process->convocations_count,
                     'configurable' => $process->isConfigurable(),
                 ]),
-            'templates' => TemplateVersion::query()
-                ->where('estado', 'publicada')
-                ->whereHas('template', fn ($query) => $query->where('es_institucional', true)->where('activo', true))
-                ->with('template:id,nombre')
-                ->orderByDesc('publicado_en')->get()
-                ->map(fn (TemplateVersion $version) => ['id' => $version->id, 'label' => "{$version->template->nombre} · v{$version->numero_version}"]),
+            // La plantilla es una sola: se informa cuál es, no se elige.
+            'template' => SyllabusTemplate::query()
+                ->where('es_institucional', true)
+                ->where('activo', true)
+                ->value('nombre'),
         ]);
     }
 

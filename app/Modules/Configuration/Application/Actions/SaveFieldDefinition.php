@@ -4,11 +4,12 @@ namespace App\Modules\Configuration\Application\Actions;
 
 use App\Models\User;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\FieldDefinition;
+use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateBlock;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateSection;
-use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateVersion;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Operations\Application\Actions\RecordAuditEvent;
+use App\Modules\Syllabus\Application\InProgressWork;
 use App\Modules\Syllabus\Application\ProcessLocks;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -20,14 +21,15 @@ class SaveFieldDefinition
         private readonly ActiveRole $roles,
         private readonly RecordAuditEvent $audit,
         private readonly ProcessLocks $locks,
+        private readonly InProgressWork $work,
     ) {}
 
     /** @param array<string, mixed> $data */
-    public function create(string $versionId, array $data, User $actor, Request $request): FieldDefinition
+    public function create(string $templateId, array $data, User $actor, Request $request): FieldDefinition
     {
         $this->locks->assertTemplateEditable();
 
-        return $this->persist(null, $versionId, $data, $actor, $request);
+        return $this->persist(null, $templateId, $data, $actor, $request);
     }
 
     /** @param array<string, mixed> $data */
@@ -35,33 +37,31 @@ class SaveFieldDefinition
     {
         $this->locks->assertTemplateEditable();
 
-        return $this->persist($field, $field->version_plantilla_id, $data, $actor, $request);
+        return $this->persist($field, $field->plantilla_id, $data, $actor, $request);
     }
 
     /** @param array<string, mixed> $data */
     private function persist(
         ?FieldDefinition $field,
-        string $versionId,
+        string $templateId,
         array $data,
         User $actor,
         Request $request,
     ): FieldDefinition {
         $activeRole = $this->roles->resolve($request);
 
-        return DB::transaction(function () use ($actor, $activeRole, $data, $field, $request, $versionId): FieldDefinition {
-            $version = TemplateVersion::query()->whereKey($versionId)->lockForUpdate()->firstOrFail();
-
-            if ($version->estado !== 'borrador') {
-                throw ValidationException::withMessages(['field' => 'La versión publicada no admite cambios.']);
-            }
+        return DB::transaction(function () use ($actor, $activeRole, $data, $field, $request, $templateId): FieldDefinition {
+            $template = SyllabusTemplate::query()->whereKey($templateId)->lockForUpdate()->firstOrFail();
+            // Un campo nuevo o cambiado altera el formato que los docentes están llenando.
+            $this->work->requireConfirmation($request);
 
             $contentType = $this->stringValue($data, 'content_type');
             $block = $field === null
-                ? $this->createBlock($version, $data, $contentType)
-                : $this->updateBlock($field, $version, $data, $contentType);
+                ? $this->createBlock($template, $data, $contentType)
+                : $this->updateBlock($field, $template, $data, $contentType);
             $inherited = (bool) ($data['inherited'] ?? false);
             $attributes = [
-                'version_plantilla_id' => $version->id,
+                'plantilla_id' => $template->id,
                 'bloque_plantilla_id' => $block->id,
                 'clave' => $data['key'],
                 'etiqueta' => $data['label'],
@@ -103,12 +103,12 @@ class SaveFieldDefinition
     }
 
     /** @param array<string, mixed> $data */
-    private function createBlock(TemplateVersion $version, array $data, string $contentType): TemplateBlock
+    private function createBlock(SyllabusTemplate $template, array $data, string $contentType): TemplateBlock
     {
         $sectionId = $this->stringValue($data, 'section_id');
         $section = TemplateSection::query()
             ->whereKey($sectionId)
-            ->where('version_plantilla_id', $version->id)
+            ->where('plantilla_id', $template->id)
             ->firstOrFail();
 
         $blocks = TemplateBlock::query()
@@ -134,7 +134,7 @@ class SaveFieldDefinition
         }
 
         return TemplateBlock::query()->create([
-            'version_plantilla_id' => $version->id,
+            'plantilla_id' => $template->id,
             'seccion_plantilla_id' => $section->id,
             'clave' => $data['key'],
             'tipo' => $this->blockType($contentType),
@@ -147,14 +147,14 @@ class SaveFieldDefinition
     /** @param array<string, mixed> $data */
     private function updateBlock(
         FieldDefinition $field,
-        TemplateVersion $version,
+        SyllabusTemplate $template,
         array $data,
         string $contentType,
     ): TemplateBlock {
         $blockId = $this->stringValue($data, 'block_id');
         $block = TemplateBlock::query()
             ->whereKey($blockId)
-            ->where('version_plantilla_id', $version->id)
+            ->where('plantilla_id', $template->id)
             ->firstOrFail();
         abort_unless($block->id === $field->bloque_plantilla_id, 404);
 

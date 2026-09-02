@@ -4,9 +4,10 @@ namespace App\Modules\Syllabus\Application\Actions;
 
 use App\Models\User;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CourseOffering;
-use App\Modules\Academic\Infrastructure\Persistence\Models\CurriculumVersion;
+use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
 use App\Modules\Academic\Infrastructure\Persistence\Models\TeacherAssignment;
+use App\Modules\Configuration\Application\TemplateStructureValidator;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\FieldDefinition;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Operations\Application\Actions\RecordAuditEvent;
@@ -28,6 +29,7 @@ class OpenConvocation
         private readonly ActiveRole $roles,
         private readonly RecordAuditEvent $audit,
         private readonly AcademicContextSnapshot $academicContext,
+        private readonly TemplateStructureValidator $templateStructure,
     ) {}
 
     public function execute(string $convocationId, User $actor, Request $request): Convocation
@@ -35,7 +37,7 @@ class OpenConvocation
         $activeRole = $this->roles->resolve($request);
 
         return DB::transaction(function () use ($actor, $convocationId, $activeRole, $request): Convocation {
-            $convocation = Convocation::query()->lockForUpdate()->with(['sources', 'templateVersion.fields', 'process'])->findOrFail($convocationId);
+            $convocation = Convocation::query()->lockForUpdate()->with(['sources', 'template.sections.blocks.fields', 'process'])->findOrFail($convocationId);
             if ($activeRole?->carrera_id !== $convocation->carrera_id || $activeRole->role->codigo !== 'coordinador') {
                 abort(403);
             }
@@ -50,23 +52,17 @@ class OpenConvocation
                     default => 'El proceso institucional todavía no se abre. Podrá abrir cuando Administración lo inicie.',
                 }]);
             }
-            // La plantilla se hereda del proceso: si Administración la cambió durante una
-            // pausa, la convocatoria que se abre ahora toma la vigente.
-            if ($convocation->version_plantilla_id !== $convocation->process->version_plantilla_id) {
-                $convocation->update(['version_plantilla_id' => $convocation->process->version_plantilla_id]);
-                $convocation->load('templateVersion.fields');
+            if (! $convocation->template->activo) {
+                throw ValidationException::withMessages(['convocation' => 'La plantilla institucional está archivada.']);
             }
-            if ($convocation->templateVersion->estado !== 'publicada') {
-                throw ValidationException::withMessages(['convocation' => 'La plantilla fijada ya no está publicada.']);
-            }
+            $this->templateStructure->assertUsable($convocation->template, 'convocation');
             if ($convocation->sources->isEmpty()
                 || $convocation->sources->contains(fn ($source): bool => ! $source->activo)) {
                 throw ValidationException::withMessages(['convocation' => 'Las fuentes fijadas deben continuar activas al abrir.']);
             }
 
-            if (! CurriculumVersion::query()
+            if (! Curriculum::query()
                 ->where('carrera_id', $convocation->carrera_id)
-                ->current()
                 ->active()
                 ->exists()) {
                 throw ValidationException::withMessages([
@@ -77,12 +73,11 @@ class OpenConvocation
             $offerings = CourseOffering::query()
                 ->where('periodo_academico_id', $convocation->periodo_academico_id)
                 ->where('activo', true)
-                ->whereHas('subject.curriculumVersion', fn ($query) => $query
+                ->whereHas('subject.curriculum', fn ($query) => $query
                     ->where('carrera_id', $convocation->carrera_id)
-                    ->where('es_actual', true)
                     ->where('estado', 'activa'))
                 ->with([
-                    'subject.curriculumVersion', 'campus', 'modality',
+                    'subject.curriculum', 'campus', 'modality',
                     'parallels' => fn ($query) => $query->where('activo', true)->lockForUpdate()->with([
                         'teacherAssignments' => fn ($assignmentQuery) => $assignmentQuery
                             ->where('activo', true)
@@ -154,8 +149,8 @@ class OpenConvocation
         $syllabus = Syllabus::query()->create([
             'convocatoria_id' => $convocation->id,
             'asignatura_id' => $offering->subject->id,
-            'version_malla_id' => $offering->subject->version_malla_id,
-            'version_plantilla_id' => $convocation->version_plantilla_id,
+            'malla_id' => $offering->subject->malla_id,
+            'plantilla_id' => $convocation->plantilla_id,
             'contexto_academico' => $this->academicContext->build($offering),
             'estado' => 'sin_iniciar',
         ]);
@@ -171,7 +166,7 @@ class OpenConvocation
                 $this->addCollaborator($syllabus, $assignment);
             }
         }
-        $this->inheritMasterValues($syllabus, $convocation->templateVersion->fields, $offering);
+        $this->inheritMasterValues($syllabus, $convocation->template->sections->flatMap(fn ($section) => $section->blocks->flatMap(fn ($block) => $block->fields)), $offering);
     }
 
     /** @param Collection<int, FieldDefinition> $fields */

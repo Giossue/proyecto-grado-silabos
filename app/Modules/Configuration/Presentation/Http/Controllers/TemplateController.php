@@ -4,11 +4,9 @@ namespace App\Modules\Configuration\Presentation\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Modules\Configuration\Application\Actions\CloneTemplateVersion;
 use App\Modules\Configuration\Application\Actions\CreateSyllabusTemplate;
 use App\Modules\Configuration\Application\Actions\DeleteTemplateBlock;
 use App\Modules\Configuration\Application\Actions\DeleteTemplateSection;
-use App\Modules\Configuration\Application\Actions\PublishTemplateVersion;
 use App\Modules\Configuration\Application\Actions\ReorderTemplateBlocks;
 use App\Modules\Configuration\Application\Actions\ReorderTemplateSections;
 use App\Modules\Configuration\Application\Actions\SaveFieldDefinition;
@@ -17,7 +15,6 @@ use App\Modules\Configuration\Infrastructure\Persistence\Models\FieldDefinition;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateBlock;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateSection;
-use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateVersion;
 use App\Modules\Configuration\Presentation\Http\Requests\CreateTemplateRequest;
 use App\Modules\Configuration\Presentation\Http\Requests\ManageTemplatesRequest;
 use App\Modules\Configuration\Presentation\Http\Requests\ReorderTemplateBlocksRequest;
@@ -37,7 +34,7 @@ class TemplateController extends Controller
             'processLock' => $locks->templateLockReason(),
             'templates' => SyllabusTemplate::query()
                 ->where('es_institucional', true)
-                ->with(['versions' => fn ($query) => $query->orderByDesc('numero_version')])
+                ->withCount('sections')
                 ->orderBy('nombre')
                 ->get()
                 ->map(fn (SyllabusTemplate $template) => [
@@ -45,12 +42,8 @@ class TemplateController extends Controller
                     'name' => $template->nombre,
                     'description' => $template->descripcion,
                     'active' => $template->activo,
-                    'versions' => $template->versions->map(fn (TemplateVersion $version) => [
-                        'id' => $version->id,
-                        'number' => $version->numero_version,
-                        'state' => $version->estado,
-                        'published_at' => $version->publicado_en?->toIso8601String(),
-                    ])->values()->all(),
+                    'sections_count' => $template->sections_count,
+                    'actualizado_en' => $template->actualizado_en?->toIso8601String(),
                 ]),
             'hasInstitutionalTemplate' => SyllabusTemplate::query()
                 ->where('es_institucional', true)
@@ -62,38 +55,26 @@ class TemplateController extends Controller
     {
         $actor = $request->user();
         abort_unless($actor instanceof User, 401);
-        $version = $action->execute([
+        $template = $action->execute([
             'nombre' => $request->string('nombre')->toString(),
             'description' => $request->filled('description') ? $request->string('description')->toString() : null,
         ], $actor, $request);
 
-        return to_route('admin.templates.show', $version)->with('success', 'Plantilla creada con las doce áreas base.');
+        return to_route('admin.templates.show', $template)->with('success', 'Plantilla creada con las doce áreas base.');
     }
 
-    public function show(TemplateVersion $version, ManageTemplatesRequest $request, ProcessLocks $locks): Response
+    public function show(SyllabusTemplate $template, ManageTemplatesRequest $request, ProcessLocks $locks): Response
     {
-        $this->ensureInstitutional($version);
-        $version->load([
-            'template.versions' => fn ($query) => $query->orderByDesc('numero_version'),
-            'sections.blocks.fields',
-        ]);
+        $this->ensureInstitutional($template);
+        $template->load('sections.blocks.fields');
 
         return Inertia::render('Admin/Templates/Show', [
             'processLock' => $locks->templateLockReason(),
-            'templateVersion' => [
-                'id' => $version->id,
-                'number' => $version->numero_version,
-                'state' => $version->estado,
-                'template' => [
-                    'name' => $version->template->nombre,
-                    'description' => $version->template->descripcion,
-                    'versions' => $version->template->versions->map(fn (TemplateVersion $sibling) => [
-                        'id' => $sibling->id,
-                        'number' => $sibling->numero_version,
-                        'state' => $sibling->estado,
-                    ])->values()->all(),
-                ],
-                'sections' => $version->sections->map(fn (TemplateSection $section) => [
+            'template' => [
+                'id' => $template->id,
+                'name' => $template->nombre,
+                'description' => $template->descripcion,
+                'sections' => $template->sections->map(fn (TemplateSection $section) => [
                     'id' => $section->id,
                     'key' => $section->clave,
                     'title' => $section->titulo,
@@ -146,33 +127,32 @@ class TemplateController extends Controller
         return 'text';
     }
 
-    private function ensureInstitutional(TemplateVersion $version): void
+    private function ensureInstitutional(SyllabusTemplate $template): void
     {
-        $version->loadMissing('template:id,es_institucional');
-        abort_unless($version->template?->es_institucional, 404);
+        abort_unless($template->es_institucional, 404);
     }
 
     public function storeField(
-        TemplateVersion $version,
+        SyllabusTemplate $template,
         SaveFieldDefinitionRequest $request,
         SaveFieldDefinition $action,
     ): RedirectResponse {
-        $this->ensureInstitutional($version);
+        $this->ensureInstitutional($template);
         $actor = $request->user();
         abort_unless($actor instanceof User, 401);
-        $action->create($version->id, $request->validated(), $actor, $request);
+        $action->create($template->id, $request->validated(), $actor, $request);
 
         return back()->with('success', 'Campo agregado al bloque.');
     }
 
     public function updateField(
-        TemplateVersion $version,
+        SyllabusTemplate $template,
         FieldDefinition $field,
         SaveFieldDefinitionRequest $request,
         SaveFieldDefinition $action,
     ): RedirectResponse {
-        $this->ensureInstitutional($version);
-        abort_unless($field->version_plantilla_id === $version->id, 404);
+        $this->ensureInstitutional($template);
+        abort_unless($field->plantilla_id === $template->id, 404);
         $actor = $request->user();
         abort_unless($actor instanceof User, 401);
         $action->update($field, $request->validated(), $actor, $request);
@@ -181,26 +161,26 @@ class TemplateController extends Controller
     }
 
     public function storeSection(
-        TemplateVersion $version,
+        SyllabusTemplate $template,
         SaveTemplateSectionRequest $request,
         SaveTemplateSection $action,
     ): RedirectResponse {
-        $this->ensureInstitutional($version);
+        $this->ensureInstitutional($template);
         $actor = $request->user();
         abort_unless($actor instanceof User, 401);
-        $action->create($version->id, $request->validated(), $actor, $request);
+        $action->create($template->id, $request->validated(), $actor, $request);
 
         return back()->with('success', 'Bloque agregado al borrador.');
     }
 
     public function updateSection(
-        TemplateVersion $version,
+        SyllabusTemplate $template,
         TemplateSection $section,
         SaveTemplateSectionRequest $request,
         SaveTemplateSection $action,
     ): RedirectResponse {
-        $this->ensureInstitutional($version);
-        abort_unless($section->version_plantilla_id === $version->id, 404);
+        $this->ensureInstitutional($template);
+        abort_unless($section->plantilla_id === $template->id, 404);
         $actor = $request->user();
         abort_unless($actor instanceof User, 401);
         $action->update($section, $request->validated(), $actor, $request);
@@ -209,15 +189,15 @@ class TemplateController extends Controller
     }
 
     public function reorderBlocks(
-        TemplateVersion $version,
+        SyllabusTemplate $template,
         ReorderTemplateBlocksRequest $request,
         ReorderTemplateBlocks $action,
     ): RedirectResponse {
-        $this->ensureInstitutional($version);
+        $this->ensureInstitutional($template);
         $actor = $request->user();
         abort_unless($actor instanceof User, 401);
         $action->execute(
-            $version,
+            $template,
             $request->string('section_id')->toString(),
             $request->collect('block_ids')->filter(fn (mixed $id): bool => is_string($id))->values()->all(),
             $actor,
@@ -228,15 +208,15 @@ class TemplateController extends Controller
     }
 
     public function reorderSections(
-        TemplateVersion $version,
+        SyllabusTemplate $template,
         ReorderTemplateSectionsRequest $request,
         ReorderTemplateSections $action,
     ): RedirectResponse {
-        $this->ensureInstitutional($version);
+        $this->ensureInstitutional($template);
         $actor = $request->user();
         abort_unless($actor instanceof User, 401);
         $action->execute(
-            $version,
+            $template,
             $request->collect('section_ids')->filter(fn (mixed $id): bool => is_string($id))->values()->all(),
             $actor,
             $request,
@@ -246,13 +226,13 @@ class TemplateController extends Controller
     }
 
     public function destroyBlock(
-        TemplateVersion $version,
+        SyllabusTemplate $template,
         TemplateBlock $block,
         ManageTemplatesRequest $request,
         DeleteTemplateBlock $action,
     ): RedirectResponse {
-        $this->ensureInstitutional($version);
-        abort_unless($block->version_plantilla_id === $version->id, 404);
+        $this->ensureInstitutional($template);
+        abort_unless($block->plantilla_id === $template->id, 404);
         $actor = $request->user();
         abort_unless($actor instanceof User, 401);
         $action->execute($block, $actor, $request);
@@ -261,43 +241,17 @@ class TemplateController extends Controller
     }
 
     public function destroySection(
-        TemplateVersion $version,
+        SyllabusTemplate $template,
         TemplateSection $section,
         ManageTemplatesRequest $request,
         DeleteTemplateSection $action,
     ): RedirectResponse {
-        $this->ensureInstitutional($version);
-        abort_unless($section->version_plantilla_id === $version->id, 404);
+        $this->ensureInstitutional($template);
+        abort_unless($section->plantilla_id === $template->id, 404);
         $actor = $request->user();
         abort_unless($actor instanceof User, 401);
         $action->execute($section, $actor, $request);
 
         return back()->with('success', 'Bloque eliminado.');
-    }
-
-    public function publish(
-        TemplateVersion $version,
-        ManageTemplatesRequest $request,
-        PublishTemplateVersion $action,
-    ): RedirectResponse {
-        $this->ensureInstitutional($version);
-        $actor = $request->user();
-        abort_unless($actor instanceof User, 401);
-        $action->execute($version->id, $actor, $request);
-
-        return back()->with('success', 'Versión publicada.');
-    }
-
-    public function clone(
-        TemplateVersion $version,
-        ManageTemplatesRequest $request,
-        CloneTemplateVersion $action,
-    ): RedirectResponse {
-        $this->ensureInstitutional($version);
-        $actor = $request->user();
-        abort_unless($actor instanceof User, 401);
-        $clone = $action->execute($version->id, $actor, $request);
-
-        return to_route('admin.templates.show', $clone)->with('success', 'Nueva versión en borrador creada desde la anterior.');
     }
 }

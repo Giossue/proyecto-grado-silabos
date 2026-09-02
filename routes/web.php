@@ -218,17 +218,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('processes.transition');
         Route::get('plantillas', [TemplateController::class, 'index'])->name('templates.index');
         Route::post('plantillas', [TemplateController::class, 'store'])->name('templates.store');
-        Route::get('plantillas/versiones/{version}', [TemplateController::class, 'show'])->name('templates.show');
-        Route::post('plantillas/versiones/{version}/secciones', [TemplateController::class, 'storeSection'])->name('templates.sections.store');
-        Route::patch('plantillas/versiones/{version}/secciones/orden', [TemplateController::class, 'reorderSections'])->name('templates.sections.reorder');
-        Route::patch('plantillas/versiones/{version}/secciones/{section}', [TemplateController::class, 'updateSection'])->name('templates.sections.update');
-        Route::delete('plantillas/versiones/{version}/secciones/{section}', [TemplateController::class, 'destroySection'])->name('templates.sections.destroy');
-        Route::post('plantillas/versiones/{version}/campos', [TemplateController::class, 'storeField'])->name('templates.fields.store');
-        Route::patch('plantillas/versiones/{version}/campos/{field}', [TemplateController::class, 'updateField'])->name('templates.fields.update');
-        Route::patch('plantillas/versiones/{version}/bloques/orden', [TemplateController::class, 'reorderBlocks'])->name('templates.blocks.reorder');
-        Route::delete('plantillas/versiones/{version}/bloques/{block}', [TemplateController::class, 'destroyBlock'])->name('templates.blocks.destroy');
-        Route::post('plantillas/versiones/{version}/publicar', [TemplateController::class, 'publish'])->name('templates.publish');
-        Route::post('plantillas/versiones/{version}/clonar', [TemplateController::class, 'clone'])->name('templates.clone');
+        // Una sola plantilla que se edita en el sitio (I-32): sin versiones, sin publicar.
+        Route::get('plantillas/{template}', [TemplateController::class, 'show'])->name('templates.show');
+        Route::post('plantillas/{template}/secciones', [TemplateController::class, 'storeSection'])->name('templates.sections.store');
+        Route::patch('plantillas/{template}/secciones/orden', [TemplateController::class, 'reorderSections'])->name('templates.sections.reorder');
+        Route::patch('plantillas/{template}/secciones/{section}', [TemplateController::class, 'updateSection'])->name('templates.sections.update');
+        Route::delete('plantillas/{template}/secciones/{section}', [TemplateController::class, 'destroySection'])->name('templates.sections.destroy');
+        Route::post('plantillas/{template}/campos', [TemplateController::class, 'storeField'])->name('templates.fields.store');
+        Route::patch('plantillas/{template}/campos/{field}', [TemplateController::class, 'updateField'])->name('templates.fields.update');
+        Route::patch('plantillas/{template}/bloques/orden', [TemplateController::class, 'reorderBlocks'])->name('templates.blocks.reorder');
+        Route::delete('plantillas/{template}/bloques/{block}', [TemplateController::class, 'destroyBlock'])->name('templates.blocks.destroy');
     });
 });
 

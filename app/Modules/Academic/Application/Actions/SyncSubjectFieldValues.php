@@ -17,7 +17,7 @@ class SyncSubjectFieldValues
         }
 
         $definitions = CurriculumFieldDefinition::query()
-            ->where('version_malla_id', $subject->version_malla_id)
+            ->where('malla_id', $subject->malla_id)
             ->where('activo', true)
             ->whereNull('clave_sistema')
             ->whereIn('id', array_keys($values))

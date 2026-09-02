@@ -6,8 +6,19 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use LogicException;
 
+/**
+ * @property string $id
+ * @property string $plantilla_id
+ * @property string $seccion_plantilla_id
+ * @property string $clave
+ * @property string $tipo
+ * @property string $titulo
+ * @property array<string, mixed>|null $configuracion
+ * @property int $posicion
+ * @property-read SyllabusTemplate $template
+ * @property-read TemplateSection $section
+ */
 class TemplateBlock extends Model
 {
     use HasUuids;
@@ -19,7 +30,7 @@ class TemplateBlock extends Model
     protected $table = 'bloques_plantilla';
 
     /** @var list<string> */
-    protected $fillable = ['version_plantilla_id', 'seccion_plantilla_id', 'clave', 'tipo', 'titulo', 'configuracion', 'posicion'];
+    protected $fillable = ['plantilla_id', 'seccion_plantilla_id', 'clave', 'tipo', 'titulo', 'configuracion', 'posicion'];
 
     /** @return array<string, string> */
     protected function casts(): array
@@ -27,10 +38,10 @@ class TemplateBlock extends Model
         return ['configuracion' => 'array', 'posicion' => 'integer'];
     }
 
-    /** @return BelongsTo<TemplateVersion, $this> */
-    public function version(): BelongsTo
+    /** @return BelongsTo<SyllabusTemplate, $this> */
+    public function template(): BelongsTo
     {
-        return $this->belongsTo(TemplateVersion::class, 'version_plantilla_id');
+        return $this->belongsTo(SyllabusTemplate::class, 'plantilla_id');
     }
 
     /** @return BelongsTo<TemplateSection, $this> */
@@ -56,20 +67,5 @@ class TemplateBlock extends Model
         $contentType = $configuration['content_type'] ?? null;
 
         return is_string($contentType) ? $contentType : null;
-    }
-
-    protected static function booted(): void
-    {
-        static::saving(fn (TemplateBlock $block) => $block->guardDraft());
-        static::deleting(fn (TemplateBlock $block) => $block->guardDraft());
-    }
-
-    private function guardDraft(): void
-    {
-        $version = $this->version()->first();
-
-        if ($version !== null && $version->estado !== 'borrador') {
-            throw new LogicException('La estructura publicada es inmutable.');
-        }
     }
 }

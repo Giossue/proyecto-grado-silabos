@@ -3,7 +3,7 @@
 namespace App\Modules\Syllabus\Application\Actions;
 
 use App\Models\User;
-use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateVersion;
+use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Identity\Domain\Enums\RoleCode;
 use App\Modules\Operations\Application\Actions\RecordAuditEvent;
@@ -23,7 +23,7 @@ class CreateSyllabusProcess
         private readonly RecordAuditEvent $audit,
     ) {}
 
-    /** @param array{nombre: string, template_version_id: string, starts_at: string, due_at: string} $data */
+    /** @param array{nombre: string, starts_at: string, due_at: string} $data */
     public function execute(array $data, User $actor, Request $request): SyllabusProcess
     {
         $activeRole = $this->roles->resolve($request);
@@ -31,12 +31,12 @@ class CreateSyllabusProcess
             abort(403);
         }
 
-        $this->assertPublishedTemplate($data['template_version_id']);
+        $template = self::institutionalTemplate();
 
-        return DB::transaction(function () use ($actor, $activeRole, $data, $request): SyllabusProcess {
+        return DB::transaction(function () use ($actor, $activeRole, $data, $request, $template): SyllabusProcess {
             $process = SyllabusProcess::query()->create([
                 'nombre' => $data['nombre'],
-                'version_plantilla_id' => $data['template_version_id'],
+                'plantilla_id' => $template->id,
                 'inicia_en' => $data['starts_at'],
                 'entrega_en' => $data['due_at'],
                 'estado' => SyllabusProcess::STATE_PREPARATION,
@@ -51,7 +51,7 @@ class CreateSyllabusProcess
                 resourceId: $process->id,
                 result: 'exito',
                 metadata: [
-                    'template_version_id' => $process->version_plantilla_id,
+                    'template_id' => $process->plantilla_id,
                     'starts_at' => $process->inicia_en->toIso8601String(),
                     'due_at' => $process->entrega_en->toIso8601String(),
                 ],
@@ -62,17 +62,20 @@ class CreateSyllabusProcess
         });
     }
 
-    public static function assertPublishedTemplate(string $templateVersionId): void
+    /** La plantilla es una sola (I-32): el proceso la toma tal como está. */
+    public static function institutionalTemplate(): SyllabusTemplate
     {
-        $template = TemplateVersion::query()->with('template')->find($templateVersionId);
+        $template = SyllabusTemplate::query()
+            ->where('es_institucional', true)
+            ->where('activo', true)
+            ->first();
 
-        if ($template === null
-            || $template->estado !== 'publicada'
-            || ! $template->template->activo
-            || ! $template->template->es_institucional) {
+        if ($template === null) {
             throw ValidationException::withMessages([
-                'template_version_id' => 'Seleccione una versión publicada de la plantilla institucional.',
+                'process' => 'No existe una plantilla institucional activa. Créela en Plantillas antes de preparar el proceso.',
             ]);
         }
+
+        return $template;
     }
 }

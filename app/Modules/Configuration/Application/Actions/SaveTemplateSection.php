@@ -4,11 +4,12 @@ namespace App\Modules\Configuration\Application\Actions;
 
 use App\Models\User;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\FieldDefinition;
+use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateBlock;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateSection;
-use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateVersion;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Operations\Application\Actions\RecordAuditEvent;
+use App\Modules\Syllabus\Application\InProgressWork;
 use App\Modules\Syllabus\Application\ProcessLocks;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -20,21 +21,23 @@ class SaveTemplateSection
         private readonly ActiveRole $roles,
         private readonly RecordAuditEvent $audit,
         private readonly ProcessLocks $locks,
+        private readonly InProgressWork $work,
     ) {}
 
     /** @param array<string, mixed> $data */
-    public function create(string $versionId, array $data, User $actor, Request $request): TemplateSection
+    public function create(string $templateId, array $data, User $actor, Request $request): TemplateSection
     {
         $activeRole = $this->roles->resolve($request);
         // Con el proceso institucional abierto, el formato está en uso: se pausa antes.
         $this->locks->assertTemplateEditable();
 
-        return DB::transaction(function () use ($activeRole, $actor, $data, $request, $versionId): TemplateSection {
-            $version = TemplateVersion::query()->whereKey($versionId)->lockForUpdate()->firstOrFail();
-            $this->ensureDraft($version);
+        return DB::transaction(function () use ($activeRole, $actor, $data, $request, $templateId): TemplateSection {
+            $template = SyllabusTemplate::query()->whereKey($templateId)->lockForUpdate()->firstOrFail();
+            // Una sección nueva cambia el formato que los docentes están llenando.
+            $this->work->requireConfirmation($request);
 
             $sections = TemplateSection::query()
-                ->where('version_plantilla_id', $version->id)
+                ->where('plantilla_id', $template->id)
                 ->orderBy('posicion')
                 ->lockForUpdate()
                 ->get()
@@ -56,14 +59,14 @@ class SaveTemplateSection
             }
 
             $section = TemplateSection::query()->create([
-                'version_plantilla_id' => $version->id,
+                'plantilla_id' => $template->id,
                 'clave' => $this->stringValue($data, 'key'),
                 'titulo' => $this->stringValue($data, 'title'),
                 'posicion' => $position,
             ]);
             $contentType = $this->stringValue($data, 'first_field_content_type');
             $block = TemplateBlock::query()->create([
-                'version_plantilla_id' => $version->id,
+                'plantilla_id' => $template->id,
                 'seccion_plantilla_id' => $section->id,
                 'clave' => $section->clave.'_campos',
                 'tipo' => $contentType === 'text' ? 'narrativa' : 'repetible',
@@ -72,7 +75,7 @@ class SaveTemplateSection
                 'posicion' => 1,
             ]);
             FieldDefinition::query()->create([
-                'version_plantilla_id' => $version->id,
+                'plantilla_id' => $template->id,
                 'bloque_plantilla_id' => $block->id,
                 'clave' => $this->stringValue($data, 'first_field_key'),
                 'etiqueta' => $this->stringValue($data, 'first_field_label'),
@@ -106,8 +109,6 @@ class SaveTemplateSection
         $this->locks->assertTemplateEditable();
 
         return DB::transaction(function () use ($activeRole, $actor, $data, $request, $section): TemplateSection {
-            $section->load('version');
-            $this->ensureDraft($section->version);
             $section->update(['titulo' => $this->stringValue($data, 'title')]);
 
             $this->audit->execute(
@@ -122,13 +123,6 @@ class SaveTemplateSection
 
             return $section;
         });
-    }
-
-    private function ensureDraft(TemplateVersion $version): void
-    {
-        if ($version->estado !== 'borrador') {
-            throw ValidationException::withMessages(['section' => 'La versión publicada no admite cambios.']);
-        }
     }
 
     /** @param array<string, mixed> $data */

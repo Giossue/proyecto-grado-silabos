@@ -3,6 +3,7 @@
 namespace App\Modules\Syllabus\Application\Actions;
 
 use App\Models\User;
+use App\Modules\Configuration\Application\TemplateStructureValidator;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Identity\Domain\Enums\RoleCode;
 use App\Modules\Operations\Application\Actions\RecordAuditEvent;
@@ -14,7 +15,7 @@ use Illuminate\Validation\ValidationException;
 /**
  * Ciclo del proceso institucional: preparación → abierto ⇄ pausado → cerrado.
  *
- * Abrir exige que no haya otro proceso en curso y que la plantilla siga publicada.
+ * Abrir exige que no haya otro proceso en curso y que la plantilla esté completa.
  * Pausar detiene a toda la universidad —envíos y ediciones docentes— y es lo que
  * habilita cambiar la plantilla; por eso pide motivo. Reanudar vuelve a comprobar la
  * plantilla: pudo cambiarse durante la pausa. Cerrar es definitivo.
@@ -40,6 +41,7 @@ class TransitionSyllabusProcess
     public function __construct(
         private readonly ActiveRole $roles,
         private readonly RecordAuditEvent $audit,
+        private readonly TemplateStructureValidator $templateStructure,
     ) {}
 
     public function execute(
@@ -59,7 +61,7 @@ class TransitionSyllabusProcess
         }
 
         return DB::transaction(function () use ($activeRole, $actor, $process, $reason, $request, $rule, $transition): SyllabusProcess {
-            $locked = SyllabusProcess::query()->lockForUpdate()->with('templateVersion')->findOrFail($process->id);
+            $locked = SyllabusProcess::query()->lockForUpdate()->with('template')->findOrFail($process->id);
             if (! in_array($locked->estado, $rule['from'], true)) {
                 throw ValidationException::withMessages([
                     'process' => 'El proceso no está en un estado que admita esta acción.',
@@ -67,11 +69,13 @@ class TransitionSyllabusProcess
             }
 
             if ($rule['to'] === SyllabusProcess::STATE_OPEN) {
-                if ($locked->templateVersion->estado !== 'publicada') {
+                if (! $locked->template->activo) {
                     throw ValidationException::withMessages([
-                        'process' => 'La plantilla fijada ya no está publicada. Elija una versión publicada antes de abrir.',
+                        'process' => 'La plantilla institucional está archivada. Reactívela antes de abrir.',
                     ]);
                 }
+                // Lo que antes garantizaba «publicar»: la plantilla se usa completa o no se usa.
+                $this->templateStructure->assertUsable($locked->template, 'process');
                 $other = SyllabusProcess::query()->inProgress()->whereKeyNot($locked->id)->first(['nombre']);
                 if ($other !== null) {
                     throw ValidationException::withMessages([

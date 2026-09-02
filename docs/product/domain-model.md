@@ -65,22 +65,26 @@ agregado; las asignaturas se mantienen dentro de la malla y no como una
 colección de navegación independiente. La malla actual se edita sobre sí misma tanto
 activa como inactiva. Deshabilitarla bloquea ofertas y procesos nuevos; eliminarla solo
 es posible cuando no tiene ofertas ni sílabos. Las filas anteriores de `VersionMalla`
-son historia técnica y no se exponen como versiones al usuario.
+ya no existen: `mallas` tiene una fila por carrera (I-32).
 
 ### Configuración
 
-- `PlantillaSilabo` institucional única agrupa versiones y no pertenece a una carrera.
-- `VersionPlantilla` contiene secciones, bloques y definiciones de campo.
+- `PlantillaSilabo` institucional única, sin versiones (I-32): contiene directamente
+  secciones, bloques, definiciones de campo y el mapa de exportación. Se edita en el
+  sitio.
 - `FuenteAcademica` es un documento de la Coordinación de la carrera: nombre,
   descripción, notas internas y contenido Markdown editable. No tiene versiones ni
   fragmentos; la evidencia de IA conserva su propia fotografía del contenido.
 
-Publicar una versión de plantilla la vuelve inmutable. Un sílabo conserva la versión de
-plantilla y el contexto académico con los que fue creado.
+No hay publicación: la estructura se comprueba al abrir o reanudar el proceso. Un sílabo
+sin enviar lee la plantilla en vivo; una revisión enviada conserva su copia completa y ya
+no depende de ella. Si la plantilla o la malla cambian con la convocatoria pausada, los
+sílabos en curso sin enviar se borran previa confirmación; los ya enviados o con análisis
+de IA no se borran y el cambio se rechaza.
 
 ### Proceso de sílabos y convocatoria
 
-`ProcesoSilabos` es el calendario institucional: nombre, versión publicada de plantilla,
+`ProcesoSilabos` es el calendario institucional: nombre, plantilla institucional,
 fecha de inicio, fecha de entrega y estado (`preparacion`, `abierto`, `pausado`,
 `cerrado`). Lo administra Administración porque el calendario académico oficial obliga
 a todas las facultades. La base impone un solo proceso abierto o pausado a la vez.
@@ -89,7 +93,7 @@ a todas las facultades. La base impone un solo proceso abierto o pausado a la ve
 activas, agrupación, fechas y estado (`preparacion`, `abierta`, `pausada`, `cerrada`).
 Hereda la plantilla y las fechas del proceso al prepararse; las fechas se copian, no se
 referencian, porque la carrera puede prorrogar las suyas. Solo se abre con el proceso
-abierto; al abrirla, la plantilla debe seguir publicada y las fuentes activas.
+abierto; al abrirla, la plantilla debe estar completa y las fuentes activas.
 
 Una convocatoria está **en curso** cuando ella está abierta y su proceso también. Esa
 condición habilita a los docentes y, por lo mismo, congela lo que sostiene su trabajo:
@@ -145,15 +149,15 @@ establece; una recomendación de IA nunca bloquea por sí sola.
 
 1. Cada acción protegida exige usuario activo y permiso efectivo sobre el recurso.
 2. No se crean dos coordinaciones activas superpuestas para una misma carrera.
-3. La única plantilla institucional publicada y vigente crea nuevos sílabos en una convocatoria de cualquier carrera.
-4. Una versión de plantilla publicada y una revisión enviada/aprobada son inmutables.
+3. La única plantilla institucional activa crea nuevos sílabos en una convocatoria de cualquier carrera.
+4. Una revisión enviada/aprobada es inmutable y contiene su propia copia de la plantilla.
 5. Todo envío o reenvío inserta una revisión; nunca actualiza la anterior.
 6. Una aprobación apunta a una revisión concreta.
 7. Una reapertura no altera la aprobación previa.
 8. La comparación solo usa revisiones del mismo expediente autorizado.
 9. Una recomendación solo cita fuentes activas fijadas por esa convocatoria, y su
    evidencia es una fotografía inmutable del contenido citado.
-10. Word y PDF se generan desde la misma revisión y versión de plantilla.
+10. Word y PDF se generan desde la copia que guarda la propia revisión.
 11. Redis y el servicio de IA pueden fallar sin corromper el expediente.
 12. Cada carrera tiene como máximo una malla actual; su estado es activa o inactiva y
     ambos admiten edición por Coordinación.

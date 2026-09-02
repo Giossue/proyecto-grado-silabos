@@ -66,7 +66,7 @@ type TemplateSection = {
 };
 
 const props = defineProps<{
-    templateVersionId: string;
+    templateId: string;
     sections: TemplateSection[];
     blockTypes: { value: string; label: string }[];
 }>();
@@ -99,7 +99,7 @@ const firstField = (container: FieldContainer): TemplateField | null =>
 
 const persistBlockOrder = (): void => {
     router.patch(
-        TemplateController.reorderSections.url(props.templateVersionId),
+        TemplateController.reorderSections.url(props.templateId),
         { section_ids: builderBlocks.value.map((section) => section.id) },
         { preserveScroll: true },
     );
@@ -145,7 +145,7 @@ const dropBlock = (targetId: string): void => {
 const deleteBlock = (section: TemplateSection): void => {
     router.delete(
         TemplateController.destroySection.url({
-            version: props.templateVersionId,
+            template: props.templateId,
             section: section.id,
         }),
         { preserveScroll: true },
@@ -154,7 +154,7 @@ const deleteBlock = (section: TemplateSection): void => {
 
 const persistFieldOrder = (section: TemplateSection): void => {
     router.patch(
-        TemplateController.reorderBlocks.url(props.templateVersionId),
+        TemplateController.reorderBlocks.url(props.templateId),
         {
             section_id: section.id,
             block_ids: section.blocks.map((field) => field.id),
@@ -207,7 +207,7 @@ const dropField = (section: TemplateSection, targetId: string): void => {
 const deleteField = (container: FieldContainer): void => {
     router.delete(
         TemplateController.destroyBlock.url({
-            version: props.templateVersionId,
+            template: props.templateId,
             block: container.id,
         }),
         { preserveScroll: true },
@@ -253,7 +253,7 @@ const closeFieldForm = (): void => {
                             <Form
                                 v-bind="
                                     TemplateController.updateSection.form({
-                                        version: templateVersionId,
+                                        template: templateId,
                                         section: section.id,
                                     })
                                 "
@@ -371,7 +371,7 @@ const closeFieldForm = (): void => {
                                         v-bind="
                                             TemplateController.updateField.form(
                                                 {
-                                                    version: templateVersionId,
+                                                    template: templateId,
                                                     field:
                                                         firstField(container)
                                                             ?.id ?? '',
@@ -617,7 +617,7 @@ const closeFieldForm = (): void => {
                                             addingFieldAt?.position ===
                                                 fieldIndex + 1
                                         "
-                                        :template-version-id="templateVersionId"
+                                        :template-id="templateId"
                                         :section-id="section.id"
                                         :section-title="section.title"
                                         :position="fieldIndex + 1"
@@ -659,7 +659,7 @@ const closeFieldForm = (): void => {
                                     v-if="
                                         addingFieldAt?.sectionId === section.id
                                     "
-                                    :template-version-id="templateVersionId"
+                                    :template-id="templateId"
                                     :section-id="section.id"
                                     :section-title="section.title"
                                     :position="0"
@@ -694,7 +694,7 @@ const closeFieldForm = (): void => {
                 <div class="flex min-h-10 items-center justify-center">
                     <TemplateBlockAddForm
                         v-if="addingBlockAt === sectionIndex + 1"
-                        :template-version-id="templateVersionId"
+                        :template-id="templateId"
                         :position="sectionIndex + 1"
                         :block-types="blockTypes"
                         @cancel="closeBlockForm"
@@ -726,7 +726,7 @@ const closeFieldForm = (): void => {
             >
                 <TemplateBlockAddForm
                     v-if="addingBlockAt === 0"
-                    :template-version-id="templateVersionId"
+                    :template-id="templateId"
                     :position="0"
                     :block-types="blockTypes"
                     @cancel="closeBlockForm"

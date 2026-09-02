@@ -3,7 +3,7 @@
 namespace App\Modules\Syllabus\Infrastructure\Persistence\Models;
 
 use App\Models\User;
-use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateVersion;
+use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -17,7 +17,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  *
  * @property string $id
  * @property string $nombre
- * @property string $version_plantilla_id
+ * @property string $plantilla_id
  * @property CarbonImmutable $inicia_en
  * @property CarbonImmutable $entrega_en
  * @property string $estado
@@ -26,7 +26,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property CarbonImmutable|null $abierto_en
  * @property CarbonImmutable|null $pausado_en
  * @property CarbonImmutable|null $cerrado_en
- * @property-read TemplateVersion $templateVersion
+ * @property-read SyllabusTemplate $template
  */
 class SyllabusProcess extends Model
 {
@@ -56,7 +56,7 @@ class SyllabusProcess extends Model
 
     /** @var list<string> */
     protected $fillable = [
-        'nombre', 'version_plantilla_id', 'inicia_en', 'entrega_en', 'estado',
+        'nombre', 'plantilla_id', 'inicia_en', 'entrega_en', 'estado',
         'creado_por', 'abierto_por', 'abierto_en', 'pausado_en', 'cerrado_en',
     ];
 
@@ -93,10 +93,10 @@ class SyllabusProcess extends Model
         return in_array($this->estado, [self::STATE_PREPARATION, self::STATE_PAUSED], true);
     }
 
-    /** @return BelongsTo<TemplateVersion, $this> */
-    public function templateVersion(): BelongsTo
+    /** @return BelongsTo<SyllabusTemplate, $this> */
+    public function template(): BelongsTo
     {
-        return $this->belongsTo(TemplateVersion::class, 'version_plantilla_id');
+        return $this->belongsTo(SyllabusTemplate::class, 'plantilla_id');
     }
 
     /** @return BelongsTo<User, $this> */

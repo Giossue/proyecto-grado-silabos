@@ -13,22 +13,14 @@ import {
     FieldLabel,
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import {
-    Select,
-    SelectContent,
-    SelectGroup,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
 
 const props = defineProps<{
-    templates: { id: string; label: string }[];
+    /** Nombre de la plantilla institucional; nula si aún no existe. */
+    template: string | null;
     /** Sin proceso se prepara uno nuevo; con proceso se corrige el existente. */
     process?: {
         id: string;
         name: string;
-        template_version_id: string;
         starts_at: string;
         due_at: string;
     } | null;
@@ -64,7 +56,7 @@ const toLocalInput = (value: string | undefined): string | undefined => {
         :title="
             process ? `Editar ${process.name}` : 'Preparar proceso de sílabos'
         "
-        description="El calendario institucional obliga a todas las carreras: fija la plantilla con la que se elaboran los sílabos y las fechas de inicio y entrega. Cada coordinación convoca a su carrera dentro de este proceso."
+        description="El calendario institucional obliga a todas las carreras: fija las fechas de inicio y entrega con las que se elaboran los sílabos. Cada coordinación convoca a su carrera dentro de este proceso."
         :show-trigger="display !== 'menu'"
     >
         <template #default="{ close }">
@@ -94,41 +86,20 @@ const toLocalInput = (value: string | undefined): string | undefined => {
                         <FieldError :errors="[errors.nombre]" />
                     </Field>
 
-                    <Field :data-invalid="Boolean(errors.template_version_id)">
-                        <FieldLabel for="process-template" required>
-                            Plantilla publicada
-                        </FieldLabel>
-                        <Select
-                            name="template_version_id"
-                            :default-value="process?.template_version_id"
-                            required
-                        >
-                            <SelectTrigger
-                                id="process-template"
-                                :aria-invalid="
-                                    Boolean(errors.template_version_id)
-                                "
-                            >
-                                <SelectValue placeholder="Seleccione" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectGroup>
-                                    <SelectItem
-                                        v-for="template in templates"
-                                        :key="template.id"
-                                        :value="template.id"
-                                    >
-                                        {{ template.label }}
-                                    </SelectItem>
-                                </SelectGroup>
-                            </SelectContent>
-                        </Select>
+                    <Field>
+                        <p class="text-sm font-medium">Plantilla</p>
                         <FieldDescription>
-                            Los expedientes ya creados conservan la plantilla
-                            con la que nacieron; el cambio aplica a las
-                            convocatorias que se abran después.
+                            <template v-if="template">
+                                Se usará «{{ template }}», la plantilla
+                                institucional. Los sílabos entregados conservan
+                                su propia copia aunque la plantilla cambie
+                                después.
+                            </template>
+                            <template v-else>
+                                No hay plantilla institucional. Créela en
+                                Plantillas antes de abrir el proceso.
+                            </template>
                         </FieldDescription>
-                        <FieldError :errors="[errors.template_version_id]" />
                     </Field>
 
                     <Field :data-invalid="Boolean(errors.starts_at)">

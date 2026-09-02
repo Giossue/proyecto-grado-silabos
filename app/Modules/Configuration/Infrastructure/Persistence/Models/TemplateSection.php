@@ -6,8 +6,16 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use LogicException;
 
+/**
+ * @property string $id
+ * @property string $plantilla_id
+ * @property string $clave
+ * @property string $titulo
+ * @property string|null $descripcion
+ * @property int $posicion
+ * @property-read SyllabusTemplate $template
+ */
 class TemplateSection extends Model
 {
     use HasUuids;
@@ -19,32 +27,17 @@ class TemplateSection extends Model
     protected $table = 'secciones_plantilla';
 
     /** @var list<string> */
-    protected $fillable = ['version_plantilla_id', 'clave', 'titulo', 'descripcion', 'posicion'];
+    protected $fillable = ['plantilla_id', 'clave', 'titulo', 'descripcion', 'posicion'];
 
-    /** @return BelongsTo<TemplateVersion, $this> */
-    public function version(): BelongsTo
+    /** @return BelongsTo<SyllabusTemplate, $this> */
+    public function template(): BelongsTo
     {
-        return $this->belongsTo(TemplateVersion::class, 'version_plantilla_id');
+        return $this->belongsTo(SyllabusTemplate::class, 'plantilla_id');
     }
 
     /** @return HasMany<TemplateBlock, $this> */
     public function blocks(): HasMany
     {
         return $this->hasMany(TemplateBlock::class, 'seccion_plantilla_id')->orderBy('posicion');
-    }
-
-    protected static function booted(): void
-    {
-        static::saving(fn (TemplateSection $section) => $section->guardDraft());
-        static::deleting(fn (TemplateSection $section) => $section->guardDraft());
-    }
-
-    private function guardDraft(): void
-    {
-        $version = $this->version()->first();
-
-        if ($version !== null && $version->estado !== 'borrador') {
-            throw new LogicException('La estructura publicada es inmutable.');
-        }
     }
 }

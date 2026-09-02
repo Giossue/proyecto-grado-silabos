@@ -34,7 +34,7 @@ class UpdateDraftField
             if (! in_array($locked->estado, ['borrador', 'correccion_solicitada'], true)) {
                 throw ValidationException::withMessages(['syllabus' => 'El expediente no está en estado editable.']);
             }
-            if ($field->version_plantilla_id !== $locked->version_plantilla_id
+            if ($field->plantilla_id !== $locked->plantilla_id
                 || $field->heredado || ! $field->editable_docente || $field->tipo === 'calculo') {
                 throw ValidationException::withMessages(['field' => 'Este campo institucional no puede ser editado por el docente.']);
             }

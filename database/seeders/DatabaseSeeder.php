@@ -9,8 +9,8 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\Campus;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CoordinatorAssignment;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CourseOffering;
+use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CurriculumFieldDefinition;
-use App\Modules\Academic\Infrastructure\Persistence\Models\CurriculumVersion;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Faculty;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Modality;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
@@ -69,18 +69,16 @@ class DatabaseSeeder extends Seeder
                     'activo' => true,
                 ],
             );
-            $curriculum = CurriculumVersion::query()->firstOrCreate(
+            $curriculum = Curriculum::query()->firstOrCreate(
                 ['carrera_id' => $career->id, 'codigo' => 'MALLA-SW-2024'],
                 [
-                    'numero_version' => 1,
                     'estado' => 'activa',
-                    'es_actual' => true,
                 ],
             );
             foreach (CurriculumSystemFields::defaults() as $field) {
                 CurriculumFieldDefinition::query()->firstOrCreate(
                     [
-                        'version_malla_id' => $curriculum->id,
+                        'malla_id' => $curriculum->id,
                         'clave' => $field['key'],
                     ],
                     [
@@ -95,7 +93,7 @@ class DatabaseSeeder extends Seeder
                 );
             }
             $subject = Subject::query()->firstOrCreate(
-                ['version_malla_id' => $curriculum->id, 'codigo_institucional' => 'SW-601'],
+                ['malla_id' => $curriculum->id, 'codigo_institucional' => 'SW-601'],
                 [
                     'codigo_oculto_institucional' => 2601,
                     'nombre' => 'Arquitectura de Software',

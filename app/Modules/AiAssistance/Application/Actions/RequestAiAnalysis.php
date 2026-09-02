@@ -67,7 +67,7 @@ class RequestAiAnalysis
                 'content_fingerprint' => $contentFingerprint,
                 'field_id' => $field->id,
                 'field_rules' => $field->reglas,
-                'template_version_id' => $locked->version_plantilla_id,
+                'template_id' => $locked->plantilla_id,
                 'source_set_fingerprint' => $evidenceSet['fingerprint'],
                 'gateway_version' => $this->gateway->version(),
                 'instruction_version' => (string) config('ai.instruction_version'),
@@ -102,7 +102,7 @@ class RequestAiAnalysis
             $execution = AiExecution::query()->create([
                 'silabo_id' => $locked->id,
                 'definicion_campo_id' => $field->id,
-                'version_plantilla_id' => $locked->version_plantilla_id,
+                'plantilla_id' => $locked->plantilla_id,
                 'clave_idempotencia' => $idempotencyKey,
                 'clave_funcional' => $functionalKey,
                 'estado' => 'pendiente',
@@ -181,7 +181,7 @@ class RequestAiAnalysis
         if (! in_array($syllabus->estado, ['borrador', 'correccion_solicitada'], true)) {
             throw ValidationException::withMessages(['syllabus' => 'El sílabo no está en estado editable.']);
         }
-        if ($field->version_plantilla_id !== $syllabus->version_plantilla_id
+        if ($field->plantilla_id !== $syllabus->plantilla_id
             || ! $field->ia_habilitada
             || ! $field->editable_docente
             || $field->heredado

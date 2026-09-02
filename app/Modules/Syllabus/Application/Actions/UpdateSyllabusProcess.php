@@ -12,10 +12,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Nombre, plantilla y fechas se cambian solo en preparación o en pausa. Con el proceso
- * abierto, los docentes ya están llenando ese formato contra esas fechas. Los expedientes
- * creados antes del cambio conservan su plantilla: solo las convocatorias que se abran
- * después heredan la nueva.
+ * Nombre y fechas se cambian solo en preparación o en pausa. Con el proceso abierto,
+ * los docentes ya están trabajando contra esas fechas.
  */
 class UpdateSyllabusProcess
 {
@@ -24,7 +22,7 @@ class UpdateSyllabusProcess
         private readonly RecordAuditEvent $audit,
     ) {}
 
-    /** @param array{nombre: string, template_version_id: string, starts_at: string, due_at: string} $data */
+    /** @param array{nombre: string, starts_at: string, due_at: string} $data */
     public function execute(SyllabusProcess $process, array $data, User $actor, Request $request): SyllabusProcess
     {
         $activeRole = $this->roles->resolve($request);
@@ -36,21 +34,17 @@ class UpdateSyllabusProcess
             $locked = SyllabusProcess::query()->lockForUpdate()->findOrFail($process->id);
             if (! $locked->isConfigurable()) {
                 throw ValidationException::withMessages([
-                    'process' => 'Solo un proceso en preparación o en pausa admite cambios. Pause el proceso para modificar la plantilla o las fechas.',
+                    'process' => 'Solo un proceso en preparación o en pausa admite cambios. Pause el proceso para modificar el nombre o las fechas.',
                 ]);
             }
 
-            CreateSyllabusProcess::assertPublishedTemplate($data['template_version_id']);
-
             $before = [
                 'before_nombre' => $locked->nombre,
-                'before_template_version_id' => $locked->version_plantilla_id,
                 'before_starts_at' => $locked->inicia_en->toIso8601String(),
                 'before_due_at' => $locked->entrega_en->toIso8601String(),
             ];
             $locked->update([
                 'nombre' => $data['nombre'],
-                'version_plantilla_id' => $data['template_version_id'],
                 'inicia_en' => $data['starts_at'],
                 'entrega_en' => $data['due_at'],
             ]);
@@ -65,7 +59,6 @@ class UpdateSyllabusProcess
                 metadata: [
                     ...$before,
                     'after_nombre' => $locked->nombre,
-                    'after_template_version_id' => $locked->version_plantilla_id,
                     'after_starts_at' => $locked->inicia_en->toIso8601String(),
                     'after_due_at' => $locked->entrega_en->toIso8601String(),
                 ],

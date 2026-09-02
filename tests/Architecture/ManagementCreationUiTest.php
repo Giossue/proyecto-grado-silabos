@@ -634,10 +634,12 @@ it('presenta la publicación y los bloques de plantilla con etiquetas breves', f
         dirname(__DIR__, 2).'/resources/js/pages/Admin/Templates/Show.vue',
     );
 
+    // I-32: sin versiones ni publicación; la plantilla se edita en el sitio.
     expect($source)
         ->toBeString()
-        ->toContain('Publicar')
-        ->not->toContain('Publicar y congelar')
+        ->not->toContain('Publicar')
+        ->not->toContain('TemplateController.publish')
+        ->not->toContain('TemplateController.clone')
         ->toContain('size="wide"')
         ->toContain('<TemplateBlockBuilder');
 
@@ -728,14 +730,13 @@ it('presenta las plantillas como cards y navega versiones desde el detalle', fun
         ->not->toContain('<TableActionsMenu')
         ->not->toContain('<Table ');
 
-    // El detalle cambia entre versiones con un botón «Versiones» propio.
+    // Una sola plantilla: el detalle no navega versiones (I-32).
     $show = file_get_contents($root.'/resources/js/pages/Admin/Templates/Show.vue');
     expect($show)
         ->toBeString()
-        ->toContain('Versiones')
-        ->toContain('<DropdownMenuTrigger')
-        ->toContain('TemplateController.show(sibling.id)')
-        ->toContain('(versión actual)');
+        ->not->toContain('Versiones')
+        ->not->toContain('sibling.id')
+        ->toContain(':template-id="template.id"');
 });
 
 it('usa el mismo paginador en todas las superficies tabulares', function (): void {

@@ -4,7 +4,8 @@ namespace App\Modules\Syllabus\Infrastructure\Persistence\Models;
 
 use App\Models\User;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Subject;
-use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateVersion;
+use App\Modules\AiAssistance\Infrastructure\Persistence\Models\AiExecution;
+use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -25,7 +26,9 @@ use Illuminate\Database\Eloquent\Relations\HasManyThrough;
  * @property CarbonImmutable|null $actualizado_en
  * @property-read Convocation $convocation
  * @property-read Subject $subject
- * @property-read TemplateVersion $templateVersion
+ * @property string $plantilla_id
+ * @property string $malla_id
+ * @property-read SyllabusTemplate $template
  */
 class Syllabus extends Model
 {
@@ -39,7 +42,7 @@ class Syllabus extends Model
 
     /** @var list<string> */
     protected $fillable = [
-        'convocatoria_id', 'asignatura_id', 'version_malla_id', 'version_plantilla_id', 'estado',
+        'convocatoria_id', 'asignatura_id', 'malla_id', 'plantilla_id', 'estado',
         'contexto_academico', 'version_bloqueo', 'porcentaje_completitud', 'iniciado_en', 'guardado_en',
     ];
 
@@ -81,10 +84,10 @@ class Syllabus extends Model
         return $this->belongsTo(Subject::class, 'asignatura_id');
     }
 
-    /** @return BelongsTo<TemplateVersion, $this> */
-    public function templateVersion(): BelongsTo
+    /** @return BelongsTo<SyllabusTemplate, $this> */
+    public function template(): BelongsTo
     {
-        return $this->belongsTo(TemplateVersion::class, 'version_plantilla_id');
+        return $this->belongsTo(SyllabusTemplate::class, 'plantilla_id');
     }
 
     /** @return HasMany<SyllabusScope, $this> */
@@ -150,6 +153,12 @@ class Syllabus extends Model
     public function reopenings(): HasMany
     {
         return $this->hasMany(Reopening::class, 'silabo_id');
+    }
+
+    /** @return HasMany<AiExecution, $this> */
+    public function aiExecutions(): HasMany
+    {
+        return $this->hasMany(AiExecution::class, 'silabo_id');
     }
 
     /** @return HasMany<SyllabusTransition, $this> */

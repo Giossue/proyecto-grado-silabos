@@ -9,7 +9,6 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\Faculty;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Subject;
 use App\Modules\Academic\Infrastructure\Persistence\Models\TeacherAssignment;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
-use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateVersion;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\Convocation;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\Syllabus;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\SyllabusCollaborator;
@@ -104,7 +103,7 @@ class DashboardMetricsTest extends TestCase
         return Convocation::query()->create([
             'carrera_id' => $careerId,
             'periodo_academico_id' => AcademicPeriod::query()->firstOrFail()->id,
-            'version_plantilla_id' => $this->plantillaPublicada()->id,
+            'plantilla_id' => $this->plantillaPublicada()->id,
             'proceso_id' => $this->openSyllabusProcess($this->plantillaPublicada()->id)->id,
             'nombre' => $nombre,
             'estado' => 'abierta',
@@ -120,26 +119,19 @@ class DashboardMetricsTest extends TestCase
         return Syllabus::query()->create([
             'convocatoria_id' => $convocation->id,
             'asignatura_id' => $subject->id,
-            'version_malla_id' => $subject->version_malla_id,
-            'version_plantilla_id' => $convocation->version_plantilla_id,
+            'malla_id' => $subject->malla_id,
+            'plantilla_id' => $convocation->plantilla_id,
             'estado' => 'borrador',
         ]);
     }
 
-    private function plantillaPublicada(): TemplateVersion
+    private function plantillaPublicada(): SyllabusTemplate
     {
-        return TemplateVersion::query()->firstOr(function (): TemplateVersion {
-            $template = SyllabusTemplate::query()->create([
-                'nombre' => 'Plantilla para indicadores',
-                'activo' => true,
-            ]);
-
-            return TemplateVersion::query()->create([
-                'plantilla_id' => $template->id,
-                'numero_version' => 1,
-                'estado' => 'publicada',
-            ]);
-        });
+        return SyllabusTemplate::query()->firstOr(fn (): SyllabusTemplate => SyllabusTemplate::query()->create([
+            'nombre' => 'Plantilla para indicadores',
+            'activo' => true,
+            'es_institucional' => true,
+        ]));
     }
 
     private function otraCarrera(): Career

@@ -97,9 +97,12 @@ y `composer verify` para cambios amplios, riesgosos o cuando se soliciten expres
 - Una revisión enviada es inmutable.
 - Una revisión aprobada es inmutable.
 - Reabrir conserva la aprobada y crea otra revisión enlazada.
-- Las plantillas publicadas se versionan y no se sobrescriben. Las fuentes académicas son
-  documentos Markdown editables de la Coordinación, sin versiones; la evidencia de IA
-  guarda su propia fotografía.
+- La plantilla institucional es una sola y se edita en el sitio, sin versiones ni
+  publicación (I-32); cada revisión enviada conserva su copia completa. Cambiar la
+  plantilla o la malla con una convocatoria pausada borra, previa confirmación, los
+  sílabos en curso que aún no se enviaron. Las fuentes académicas son documentos
+  Markdown editables de la Coordinación, sin versiones; la evidencia de IA guarda su
+  propia fotografía.
 - Las validaciones determinísticas y las recomendaciones de IA son conceptos separados.
 - La IA muestra la fuente y el extracto citado; una persona decide y ejecuta.
 - La indisponibilidad de IA degrada solo la ayuda de IA.

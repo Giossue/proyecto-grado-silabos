@@ -18,13 +18,15 @@ Fecha de corte: **30 de agosto de 2026**.
 - Enviar y reenviar crea revisión inmutable.
 - Aprobar vuelve inmutable la revisión.
 - Reabrir crea una nueva revisión enlazada y conserva la aprobada.
-- Las plantillas publicadas son inmutables y versionadas.
+- La plantilla institucional es única y se edita en el sitio; no hay versiones ni
+  publicación (I-32, 2 de septiembre de 2026). Cada revisión enviada conserva su copia
+  completa de la estructura y del mapa de exportación, que es lo que la protege.
 - Las fuentes académicas son documentos de la Coordinación (I-26, 1 de septiembre
   de 2026): nombre, descripción, notas internas y contenido Markdown editable, sin
   versiones, fragmentos ni conflictos. Administración no participa. La evidencia de IA
   conserva nombre, extracto y huella del contenido en el momento del análisis.
-- La plantilla de sílabo es única e institucional: no pertenece a una carrera y sus
-  versiones publicadas pueden utilizarse en convocatorias de cualquier carrera.
+- La plantilla de sílabo es única e institucional: no pertenece a una carrera y la usan
+  las convocatorias de cualquier carrera tal como esté al abrir el proceso.
 - La IA es asistencia explicable; no toma decisiones académicas ni bloquea el flujo.
 - Stack base: Laravel 13, Vue/Inertia, TypeScript, PostgreSQL y Redis.
 - Monolito modular y servicio local de IA desacoplado por HTTP.
@@ -188,6 +190,16 @@ cuelga de un proceso obligatorio, hereda su plantilla y sus fechas y gana el est
 también; esa condición habilita el trabajo docente y congela plantilla (proceso),
 malla y fuentes (carrera). La prórroga por carrera de I-15 se conserva. No resuelve
 `PV-01`: decide cuándo puede cambiarse la plantilla, no quién la aprueba.
+
+I-32 (2 de septiembre de 2026) retira las versiones por decisión explícita del
+responsable del producto: `versiones_plantilla` desaparece —secciones, bloques y campos
+cuelgan de `plantillas_silabo`, que gana `mapeo_documento`— y `versiones_malla` pasa a
+`mallas`, una por carrera, sin `numero_version` ni `es_actual`. Ya no hay «publicar» ni
+«crear versión»: la estructura se comprueba al abrir o reanudar el proceso. Regla de
+borrado: con la convocatoria pausada, un cambio estructural en la plantilla o en la
+malla borra los sílabos en curso de ese alcance previa confirmación con la cifra; los que
+ya se enviaron a revisión o tienen análisis de IA no se borran —la base los protege— y en
+ese caso el cambio se rechaza. Los sílabos de procesos cerrados no se tocan.
 
 ## Propuesto
 

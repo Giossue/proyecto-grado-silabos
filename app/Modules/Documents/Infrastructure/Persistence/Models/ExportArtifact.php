@@ -16,7 +16,7 @@ use LogicException;
  * @property string $id
  * @property string $silabo_id
  * @property string $revision_silabo_id
- * @property string $version_plantilla_id
+ * @property string $plantilla_id
  * @property string|null $ejecucion_trabajo_id
  * @property string|null $objeto_docx_id
  * @property string|null $objeto_pdf_id
@@ -41,7 +41,7 @@ class ExportArtifact extends Model
 
     /** @var list<string> */
     protected $fillable = [
-        'silabo_id', 'revision_silabo_id', 'version_plantilla_id', 'ejecucion_trabajo_id',
+        'silabo_id', 'revision_silabo_id', 'plantilla_id', 'ejecucion_trabajo_id',
         'objeto_docx_id', 'objeto_pdf_id', 'version_renderizador', 'idioma',
         'clave_idempotencia', 'estado', 'solicitado_por', 'asignacion_rol_id',
         'solicitado_en', 'completado_en',

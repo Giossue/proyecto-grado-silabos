@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
-use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateVersion;
+use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Identity\Domain\Enums\RoleCode;
 use App\Modules\Operations\Infrastructure\Persistence\Models\JobExecution;
@@ -68,9 +68,9 @@ class DashboardController extends Controller
             ],
             [
                 'key' => 'templates',
-                'label' => 'Plantillas publicadas',
-                'value' => TemplateVersion::query()->where('estado', 'publicada')->count(),
-                'hint' => 'Versiones publicadas disponibles para convocatorias',
+                'label' => 'Plantilla institucional',
+                'value' => SyllabusTemplate::query()->where('es_institucional', true)->where('activo', true)->count(),
+                'hint' => 'Plantilla activa con la que se elaboran los sílabos',
             ],
             [
                 'key' => 'failed_jobs',

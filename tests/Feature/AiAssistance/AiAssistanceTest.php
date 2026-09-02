@@ -5,7 +5,7 @@ namespace Tests\Feature\AiAssistance;
 use App\Models\User;
 use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
-use App\Modules\Academic\Infrastructure\Persistence\Models\CurriculumVersion;
+use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Subject;
 use App\Modules\Academic\Infrastructure\Persistence\Models\TeacherAssignment;
 use App\Modules\AiAssistance\Application\AiResultContract;
@@ -26,7 +26,6 @@ use App\Modules\Configuration\Infrastructure\Persistence\Models\FieldDefinition;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateBlock;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateSection;
-use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateVersion;
 use App\Modules\Identity\Infrastructure\Persistence\Models\Role;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
 use App\Modules\Operations\Application\Actions\RecordAuditEvent;
@@ -415,7 +414,7 @@ class AiAssistanceTest extends TestCase
         }
 
         $otherField = FieldDefinition::query()
-            ->where('version_plantilla_id', $syllabus->version_plantilla_id)
+            ->where('plantilla_id', $syllabus->plantilla_id)
             ->whereKeyNot($field->id)
             ->firstOrFail();
         $this->post(route('syllabi.ai.feedback', [$syllabus, $otherField, $recommendation]), [
@@ -508,25 +507,20 @@ class AiAssistanceTest extends TestCase
         $career = Career::query()->firstOrFail();
         $period = AcademicPeriod::query()->firstOrFail();
         $subject = Subject::query()->firstOrFail();
-        $curriculum = CurriculumVersion::query()->firstOrFail();
-        $template = SyllabusTemplate::query()->create([
-            'carrera_id' => $career->id,
+        $curriculum = Curriculum::query()->firstOrFail();
+        $templateVersion = SyllabusTemplate::query()->create([
             'nombre' => 'Plantilla IA',
             'activo' => true,
-        ]);
-        $templateVersion = TemplateVersion::query()->create([
-            'plantilla_id' => $template->id,
-            'numero_version' => 1,
-            'estado' => 'borrador',
+            'es_institucional' => true,
         ]);
         $section = TemplateSection::query()->create([
-            'version_plantilla_id' => $templateVersion->id,
+            'plantilla_id' => $templateVersion->id,
             'clave' => 'objetivos',
             'titulo' => 'Objetivos',
             'posicion' => 1,
         ]);
         $block = TemplateBlock::query()->create([
-            'version_plantilla_id' => $templateVersion->id,
+            'plantilla_id' => $templateVersion->id,
             'seccion_plantilla_id' => $section->id,
             'clave' => 'objetivo-general',
             'tipo' => 'narrativa',
@@ -534,7 +528,7 @@ class AiAssistanceTest extends TestCase
             'posicion' => 1,
         ]);
         $field = FieldDefinition::query()->create([
-            'version_plantilla_id' => $templateVersion->id,
+            'plantilla_id' => $templateVersion->id,
             'bloque_plantilla_id' => $block->id,
             'clave' => 'objetivo_general',
             'etiqueta' => 'Objetivo general',
@@ -547,7 +541,7 @@ class AiAssistanceTest extends TestCase
             'posicion' => 1,
         ]);
         FieldDefinition::query()->create([
-            'version_plantilla_id' => $templateVersion->id,
+            'plantilla_id' => $templateVersion->id,
             'bloque_plantilla_id' => $block->id,
             'clave' => 'resultado_aprendizaje',
             'etiqueta' => 'Resultado de aprendizaje',
@@ -559,16 +553,10 @@ class AiAssistanceTest extends TestCase
             'reglas' => ['max' => 50000],
             'posicion' => 2,
         ]);
-        $templateVersion->update([
-            'estado' => 'publicada',
-            'huella_sha256' => app(CanonicalHasher::class)->hash(['field' => $field->id]),
-            'publicado_por' => User::query()->where('correo_electronico', 'admin@silabos.test')->valueOrFail('id'),
-            'publicado_en' => now(),
-        ]);
         $convocation = Convocation::query()->create([
             'carrera_id' => $career->id,
             'periodo_academico_id' => $period->id,
-            'version_plantilla_id' => $templateVersion->id,
+            'plantilla_id' => $templateVersion->id,
             'proceso_id' => $this->openSyllabusProcess($templateVersion->id)->id,
             'nombre' => 'Convocatoria IA',
             'estado' => 'abierta',
@@ -580,8 +568,8 @@ class AiAssistanceTest extends TestCase
         $syllabus = Syllabus::query()->create([
             'convocatoria_id' => $convocation->id,
             'asignatura_id' => $subject->id,
-            'version_malla_id' => $curriculum->id,
-            'version_plantilla_id' => $templateVersion->id,
+            'malla_id' => $curriculum->id,
+            'plantilla_id' => $templateVersion->id,
             'estado' => 'borrador',
             'version_bloqueo' => 0,
             'porcentaje_completitud' => 0,

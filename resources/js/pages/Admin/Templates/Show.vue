@@ -1,11 +1,9 @@
 <script setup lang="ts">
-import { Form, Head, Link } from '@inertiajs/vue3';
-import { Check, Lock } from '@lucide/vue';
-import TemplateController from '@/actions/App/Modules/Configuration/Presentation/Http/Controllers/TemplateController';
+import { Head, Link } from '@inertiajs/vue3';
+import { Lock } from '@lucide/vue';
 import TemplateBlockBuilder from '@/components/domain/configuration/TemplateBlockBuilder.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -14,15 +12,6 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuGroup,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { FieldError } from '@/components/ui/field';
-import { Spinner } from '@/components/ui/spinner';
 import { index as templatesIndex } from '@/routes/admin/templates';
 
 type TemplateField = {
@@ -41,19 +30,10 @@ type TemplateField = {
 };
 
 defineProps<{
-    templateVersion: {
+    template: {
         id: string;
-        number: number;
-        state: string;
-        template: {
-            name: string;
-            description: string | null;
-            versions: {
-                id: string;
-                number: number;
-                state: string;
-            }[];
-        };
+        name: string;
+        description: string | null;
         sections: {
             id: string;
             key: string;
@@ -73,94 +53,26 @@ defineProps<{
     processLock: string | null;
 }>();
 
-const stateLabel = (state: string): string =>
-    state === 'publicada' ? 'Publicada' : 'Borrador';
-
 defineOptions({
     layout: { breadcrumbs: [{ title: 'Plantillas', href: templatesIndex() }] },
 });
 </script>
 
 <template>
-    <Head
-        :title="templateVersion.template.name + ' v' + templateVersion.number"
-    />
+    <Head :title="template.name" />
 
     <PageFrame
-        :title="`${templateVersion.template.name} · v${templateVersion.number}`"
-        description="Plantilla institucional · Organice los bloques de contenido de esta versión."
+        :title="template.name"
+        :description="
+            template.description ??
+            'Plantilla institucional · Organice los bloques de contenido del sílabo.'
+        "
         size="wide"
     >
         <template #eyebrow>
             <Button as-child variant="link" class="h-auto px-0">
                 <Link :href="templatesIndex()">← Volver a plantillas</Link>
             </Button>
-        </template>
-        <template #meta>
-            <Badge
-                :variant="
-                    templateVersion.state === 'publicada'
-                        ? 'secondary'
-                        : 'outline'
-                "
-            >
-                {{ stateLabel(templateVersion.state) }}
-            </Badge>
-        </template>
-        <template #actions>
-            <DropdownMenu v-if="templateVersion.template.versions.length > 1">
-                <DropdownMenuTrigger as-child>
-                    <Button variant="outline">Versiones</Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                    <DropdownMenuGroup>
-                        <template
-                            v-for="sibling in templateVersion.template.versions"
-                            :key="sibling.id"
-                        >
-                            <DropdownMenuItem
-                                v-if="sibling.id === templateVersion.id"
-                                disabled
-                            >
-                                <Check aria-hidden="true" />
-                                v{{ sibling.number }} ·
-                                {{ stateLabel(sibling.state) }}
-                                <span class="sr-only">(versión actual)</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem v-else as-child>
-                                <Link
-                                    :href="TemplateController.show(sibling.id)"
-                                >
-                                    v{{ sibling.number }} ·
-                                    {{ stateLabel(sibling.state) }}
-                                </Link>
-                            </DropdownMenuItem>
-                        </template>
-                    </DropdownMenuGroup>
-                </DropdownMenuContent>
-            </DropdownMenu>
-            <Form
-                v-if="templateVersion.state === 'borrador' && !processLock"
-                v-bind="TemplateController.publish.form(templateVersion.id)"
-                v-slot="{ errors, processing }"
-            >
-                <FieldError :errors="[errors.version, errors.process]" />
-                <Button type="submit" :disabled="processing">
-                    <Spinner v-if="processing" />
-                    Publicar
-                </Button>
-            </Form>
-            <Form
-                v-else-if="!processLock"
-                v-bind="TemplateController.clone.form(templateVersion.id)"
-                v-slot="{ errors, processing }"
-            >
-                <FieldError :errors="[errors.process]" />
-                <Button type="submit" variant="outline" :disabled="processing">
-                    <Spinner v-if="processing" />
-                    Crear nueva versión
-                </Button>
-            </Form>
         </template>
 
         <Alert v-if="processLock">
@@ -170,13 +82,13 @@ defineOptions({
         </Alert>
 
         <TemplateBlockBuilder
-            v-if="templateVersion.state === 'borrador' && !processLock"
-            :template-version-id="templateVersion.id"
-            :sections="templateVersion.sections"
+            v-if="!processLock"
+            :template-id="template.id"
+            :sections="template.sections"
             :block-types="blockTypes"
         />
         <div v-else class="flex flex-col gap-4">
-            <Card v-for="section in templateVersion.sections" :key="section.id">
+            <Card v-for="section in template.sections" :key="section.id">
                 <CardHeader>
                     <CardTitle>{{ section.title }}</CardTitle>
                     <CardDescription v-if="section.description">

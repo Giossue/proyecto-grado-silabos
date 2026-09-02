@@ -47,7 +47,7 @@ class ConvocationController extends Controller
                             ->whereRaw('nombre ILIKE ?', ["%{$term}%"])),
                 ))
                 ->when($state, fn ($query, string $value) => $query->where('estado', $value))
-                ->with(['academicPeriod:id,nombre', 'templateVersion.template:id,nombre', 'process:id,nombre,estado'])
+                ->with(['academicPeriod:id,nombre', 'template:id,nombre', 'process:id,nombre,estado'])
                 ->withCount('syllabi')
                 ->orderByDesc('creado_en')
                 ->paginate(15)
@@ -59,7 +59,7 @@ class ConvocationController extends Controller
                     'process_state' => $convocation->process->estado,
                     'grouping_mode' => $convocation->modo_agrupacion,
                     'period' => $convocation->academicPeriod->nombre,
-                    'template' => $convocation->templateVersion->template->nombre,
+                    'template' => $convocation->template->nombre,
                     'syllabi_count' => $convocation->syllabi_count,
                 ]),
             'periods' => AcademicPeriod::query()->where('activo', true)->orderByDesc('fecha_inicio')->get(['id', 'nombre']),
@@ -67,13 +67,13 @@ class ConvocationController extends Controller
             // convoca y hereda su plantilla y sus fechas.
             'processes' => SyllabusProcess::query()
                 ->whereNot('estado', SyllabusProcess::STATE_CLOSED)
-                ->with('templateVersion.template:id,nombre')
+                ->with('template:id,nombre')
                 ->orderByDesc('inicia_en')->get()
                 ->map(fn (SyllabusProcess $process): array => [
                     'id' => $process->id,
                     'label' => $process->nombre,
                     'state' => $process->estado,
-                    'template' => "{$process->templateVersion->template->nombre} · v{$process->templateVersion->numero_version}",
+                    'template' => $process->template->nombre,
                     'starts_at' => $process->inicia_en->toIso8601String(),
                     'due_at' => $process->entrega_en->toIso8601String(),
                 ]),
@@ -97,7 +97,7 @@ class ConvocationController extends Controller
     public function show(Convocation $convocation, Request $request): Response
     {
         abort_unless($request->user()?->can('view', $convocation) === true, 403);
-        $convocation->load(['academicPeriod', 'templateVersion.template', 'sources', 'deadlines', 'process']);
+        $convocation->load(['academicPeriod', 'template', 'sources', 'deadlines', 'process']);
         $syllabi = $convocation->syllabi()
             ->with(['subject:id,nombre,codigo_institucional', 'scopes.parallel:id,codigo', 'teachers:id,nombre'])
             ->orderBy('asignatura_id')->get();
@@ -113,7 +113,7 @@ class ConvocationController extends Controller
                 ],
                 'grouping_mode' => $convocation->modo_agrupacion,
                 'period' => $convocation->academicPeriod->nombre,
-                'template' => "{$convocation->templateVersion->template->nombre} · v{$convocation->templateVersion->numero_version}",
+                'template' => $convocation->template->nombre,
                 'sources' => $convocation->sources->map(fn (AcademicSource $source) => $source->nombre)->values(),
                 'start_date' => $convocation->deadlines->firstWhere('etapa', 'inicio')?->vence_en->toIso8601String(),
                 'draft_deadline' => $convocation->deadlines->firstWhere('etapa', 'borrador')?->vence_en->toIso8601String(),

@@ -6,7 +6,7 @@ use App\Models\User;
 use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\AcademicSource;
-use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateVersion;
+use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -20,7 +20,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $carrera_id
  * @property string $proceso_id
  * @property string $periodo_academico_id
- * @property string $version_plantilla_id
+ * @property string $plantilla_id
  * @property string $nombre
  * @property string $estado
  * @property string $modo_agrupacion
@@ -28,7 +28,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property-read Career $career
  * @property-read SyllabusProcess $process
  * @property-read AcademicPeriod $academicPeriod
- * @property-read TemplateVersion $templateVersion
+ * @property-read SyllabusTemplate $template
  */
 class Convocation extends Model
 {
@@ -50,7 +50,7 @@ class Convocation extends Model
 
     /** @var list<string> */
     protected $fillable = [
-        'carrera_id', 'proceso_id', 'periodo_academico_id', 'version_plantilla_id', 'nombre', 'estado',
+        'carrera_id', 'proceso_id', 'periodo_academico_id', 'plantilla_id', 'nombre', 'estado',
         'modo_agrupacion', 'creado_por', 'abierto_por', 'abierto_en', 'cerrado_en',
     ];
 
@@ -97,10 +97,10 @@ class Convocation extends Model
         return $this->belongsTo(AcademicPeriod::class, 'periodo_academico_id');
     }
 
-    /** @return BelongsTo<TemplateVersion, $this> */
-    public function templateVersion(): BelongsTo
+    /** @return BelongsTo<SyllabusTemplate, $this> */
+    public function template(): BelongsTo
     {
-        return $this->belongsTo(TemplateVersion::class, 'version_plantilla_id');
+        return $this->belongsTo(SyllabusTemplate::class, 'plantilla_id');
     }
 
     /** @return BelongsTo<User, $this> */

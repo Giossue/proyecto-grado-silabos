@@ -11,7 +11,7 @@ class DraftCompleteness
     public function calculate(Syllabus $syllabus): array
     {
         $fields = FieldDefinition::query()
-            ->where('version_plantilla_id', $syllabus->version_plantilla_id)
+            ->where('plantilla_id', $syllabus->plantilla_id)
             ->where('obligatorio', true)
             ->get(['id', 'tipo']);
         $values = $syllabus->values()->get()->keyBy('definicion_campo_id');

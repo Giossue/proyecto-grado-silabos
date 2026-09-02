@@ -4,7 +4,7 @@ namespace Tests\Feature\Academic;
 
 use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
-use App\Modules\Academic\Infrastructure\Persistence\Models\CurriculumVersion;
+use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Faculty;
 use App\Modules\Academic\Infrastructure\Persistence\Models\School;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Subject;
@@ -104,9 +104,9 @@ class InstitutionalSchemaAlignmentTest extends TestCase
 
     public function test_la_identidad_oculta_de_una_asignatura_es_unica(): void
     {
-        $malla = CurriculumVersion::query()->firstOrFail();
+        $malla = Curriculum::query()->firstOrFail();
         Subject::query()->create([
-            'version_malla_id' => $malla->id,
+            'malla_id' => $malla->id,
             'codigo_institucional' => 'SW-900',
             'codigo_oculto_institucional' => 9900,
             'nombre' => 'Materia con identidad institucional',
@@ -117,7 +117,7 @@ class InstitutionalSchemaAlignmentTest extends TestCase
 
         $this->expectException(QueryException::class);
         Subject::query()->create([
-            'version_malla_id' => $malla->id,
+            'malla_id' => $malla->id,
             'codigo_institucional' => 'SW-901',
             'codigo_oculto_institucional' => 9900,
             'nombre' => 'Materia que repite la identidad',

@@ -28,7 +28,7 @@ import {
 import { Spinner } from '@/components/ui/spinner';
 
 defineProps<{
-    templateVersionId: string;
+    templateId: string;
     position: number;
     blockTypes: { value: string; label: string }[];
 }>();
@@ -58,7 +58,7 @@ const keyFor = (value: string): string => {
 
 <template>
     <Form
-        v-bind="TemplateController.storeSection.form(templateVersionId)"
+        v-bind="TemplateController.storeSection.form(templateId)"
         :options="{ preserveScroll: true }"
         v-slot="{ errors, processing }"
         @success="emit('success')"

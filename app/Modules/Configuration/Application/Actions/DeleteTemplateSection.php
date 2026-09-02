@@ -6,10 +6,10 @@ use App\Models\User;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateSection;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Operations\Application\Actions\RecordAuditEvent;
+use App\Modules\Syllabus\Application\InProgressWork;
 use App\Modules\Syllabus\Application\ProcessLocks;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 
 class DeleteTemplateSection
 {
@@ -17,6 +17,7 @@ class DeleteTemplateSection
         private readonly ActiveRole $roles,
         private readonly RecordAuditEvent $audit,
         private readonly ProcessLocks $locks,
+        private readonly InProgressWork $work,
     ) {}
 
     public function execute(TemplateSection $section, User $actor, Request $request): void
@@ -26,11 +27,8 @@ class DeleteTemplateSection
         $this->locks->assertTemplateEditable();
 
         DB::transaction(function () use ($activeRole, $actor, $request, $section): void {
-            $section->load('version');
-
-            if ($section->version->estado !== 'borrador') {
-                throw ValidationException::withMessages(['section' => 'La versión publicada no admite cambios.']);
-            }
+            // Una sección menos cambia el formato que los docentes están llenando.
+            $this->work->requireConfirmation($request);
 
             $section->delete();
 

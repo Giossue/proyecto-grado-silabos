@@ -17,7 +17,6 @@ class StoreSyllabusProcessRequest extends FormRequest
     {
         return [
             'nombre' => ['required', 'string', 'max:180'],
-            'template_version_id' => ['required', 'uuid', 'exists:versiones_plantilla,id'],
             'starts_at' => ['required', 'date'],
             'due_at' => ['required', 'date', 'after:now', 'after:starts_at'],
         ];
@@ -31,12 +30,11 @@ class StoreSyllabusProcessRequest extends FormRequest
         ];
     }
 
-    /** @return array{nombre: string, template_version_id: string, starts_at: string, due_at: string} */
+    /** @return array{nombre: string, starts_at: string, due_at: string} */
     public function processData(): array
     {
         return [
             'nombre' => $this->string('nombre')->toString(),
-            'template_version_id' => $this->string('template_version_id')->toString(),
             'starts_at' => $this->string('starts_at')->toString(),
             'due_at' => $this->string('due_at')->toString(),
         ];

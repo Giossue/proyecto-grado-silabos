@@ -2,7 +2,6 @@
 
 namespace App\Modules\Academic\Infrastructure\Persistence\Models;
 
-use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -10,20 +9,20 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
+ * La malla de una carrera. Una sola por carrera, sin versiones (I-32): se edita en el
+ * sitio y cada sílabo conserva su propia fotografía del contexto académico.
+ *
  * @property string $id
  * @property string $carrera_id
  * @property string $codigo
  * @property string|null $codigo_institucional
  * @property string|null $descripcion
- * @property int $numero_version
  * @property int $numero_ciclos
  * @property string $estado
- * @property bool $es_actual
- * @property CarbonImmutable|null $publicado_en
  * @property int $subjects_count
  * @property-read Career $career
  */
-class CurriculumVersion extends Model
+class Curriculum extends Model
 {
     use HasUuids;
 
@@ -31,7 +30,7 @@ class CurriculumVersion extends Model
 
     public const UPDATED_AT = 'actualizado_en';
 
-    protected $table = 'versiones_malla';
+    protected $table = 'mallas';
 
     /** @var list<string> */
     protected $fillable = [
@@ -39,28 +38,14 @@ class CurriculumVersion extends Model
         'codigo',
         'codigo_institucional',
         'descripcion',
-        'numero_version',
         'numero_ciclos',
         'estado',
-        'es_actual',
-        'publicado_en',
     ];
 
     /** @return array<string, string> */
     protected function casts(): array
     {
-        return [
-            'numero_version' => 'integer',
-            'numero_ciclos' => 'integer',
-            'es_actual' => 'boolean',
-            'publicado_en' => 'immutable_datetime',
-        ];
-    }
-
-    /** @param Builder<self> $query */
-    public function scopeCurrent(Builder $query): void
-    {
-        $query->where('es_actual', true);
+        return ['numero_ciclos' => 'integer'];
     }
 
     /** @param Builder<self> $query */
@@ -78,12 +63,12 @@ class CurriculumVersion extends Model
     /** @return HasMany<Subject, $this> */
     public function subjects(): HasMany
     {
-        return $this->hasMany(Subject::class, 'version_malla_id');
+        return $this->hasMany(Subject::class, 'malla_id');
     }
 
     /** @return HasMany<CurriculumFieldDefinition, $this> */
     public function fieldDefinitions(): HasMany
     {
-        return $this->hasMany(CurriculumFieldDefinition::class, 'version_malla_id');
+        return $this->hasMany(CurriculumFieldDefinition::class, 'malla_id');
     }
 }

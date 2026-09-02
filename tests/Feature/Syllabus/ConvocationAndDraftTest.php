@@ -4,12 +4,12 @@ namespace Tests\Feature\Syllabus;
 
 use App\Models\User;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CourseOffering;
-use App\Modules\Academic\Infrastructure\Persistence\Models\CurriculumVersion;
+use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
 use App\Modules\Academic\Infrastructure\Persistence\Models\TeacherAssignment;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\AcademicSource;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\FieldDefinition;
-use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateVersion;
+use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\Convocation;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\Syllabus;
@@ -92,7 +92,7 @@ class ConvocationAndDraftTest extends TestCase
     {
         $existing = $this->openConvocationAndGetSyllabus();
         $originalName = $existing->academicSubjectName();
-        $curriculum = CurriculumVersion::query()->current()->firstOrFail();
+        $curriculum = Curriculum::query()->firstOrFail();
         $curriculum->update(['estado' => 'inactiva']);
         $existing->subject->update(['nombre' => 'Nombre nuevo en la malla']);
 
@@ -165,7 +165,7 @@ class ConvocationAndDraftTest extends TestCase
         $this->actingAsTeacher()->post(route('syllabi.start', $syllabus))->assertRedirect(route('syllabi.edit', $syllabus));
         $syllabus->refresh();
         $field = FieldDefinition::query()
-            ->where('version_plantilla_id', $syllabus->version_plantilla_id)
+            ->where('plantilla_id', $syllabus->plantilla_id)
             ->where('clave', 'descripcion')->firstOrFail();
 
         $response = $this->actingAsTeacher()->patchJson(route('syllabi.fields.update', [$syllabus, $field]), [
@@ -191,7 +191,7 @@ class ConvocationAndDraftTest extends TestCase
         $syllabus = $this->openConvocationAndGetSyllabus();
         $this->actingAsTeacher()->post(route('syllabi.start', $syllabus));
         $syllabus->refresh();
-        $inherited = FieldDefinition::query()->where('version_plantilla_id', $syllabus->version_plantilla_id)
+        $inherited = FieldDefinition::query()->where('plantilla_id', $syllabus->plantilla_id)
             ->where('heredado', true)->firstOrFail();
 
         $this->actingAsTeacher()->patchJson(route('syllabi.fields.update', [$syllabus, $inherited]), [
@@ -199,7 +199,7 @@ class ConvocationAndDraftTest extends TestCase
             'value' => 'Intento de sobrescritura',
         ])->assertUnprocessable()->assertJsonValidationErrors('field');
 
-        $editable = FieldDefinition::query()->where('version_plantilla_id', $syllabus->version_plantilla_id)
+        $editable = FieldDefinition::query()->where('plantilla_id', $syllabus->plantilla_id)
             ->where('editable_docente', true)->firstOrFail();
         $this->actingAsCoordinator()->patchJson(route('syllabi.fields.update', [$syllabus, $editable]), [
             'version_bloqueo' => $syllabus->version_bloqueo,
@@ -213,7 +213,7 @@ class ConvocationAndDraftTest extends TestCase
         $this->actingAsTeacher()->post(route('syllabi.start', $syllabus));
         $syllabus->refresh();
         $field = FieldDefinition::query()
-            ->where('version_plantilla_id', $syllabus->version_plantilla_id)
+            ->where('plantilla_id', $syllabus->plantilla_id)
             ->where('tipo', 'markdown')
             ->firstOrFail();
 
@@ -241,7 +241,7 @@ class ConvocationAndDraftTest extends TestCase
         $this->assertGreaterThan(0, $firstRun->errores_bloqueantes);
 
         $requiredEditable = FieldDefinition::query()
-            ->where('version_plantilla_id', $syllabus->version_plantilla_id)
+            ->where('plantilla_id', $syllabus->plantilla_id)
             ->where('obligatorio', true)
             ->where('heredado', false)
             ->get();
@@ -264,7 +264,7 @@ class ConvocationAndDraftTest extends TestCase
         $this->actingAsTeacher()->post(route('syllabi.start', $syllabus));
         $syllabus->refresh();
         $field = FieldDefinition::query()
-            ->where('version_plantilla_id', $syllabus->version_plantilla_id)
+            ->where('plantilla_id', $syllabus->plantilla_id)
             ->where('tipo', 'repetible')
             ->firstOrFail();
 
@@ -327,12 +327,11 @@ class ConvocationAndDraftTest extends TestCase
         return Convocation::query()->where('nombre', 'Convocatoria '.$groupingMode)->firstOrFail();
     }
 
-    /** @return array{TemplateVersion, AcademicSource} */
+    /** @return array{SyllabusTemplate, AcademicSource} */
     private function publishedConfiguration(): array
     {
         $this->actingAsAdministrator()->post(route('admin.templates.store'), ['nombre' => 'Plantilla I-03']);
-        $template = TemplateVersion::query()->latest('creado_en')->firstOrFail();
-        $this->actingAsAdministrator()->post(route('admin.templates.publish', $template));
+        $template = SyllabusTemplate::query()->latest('creado_en')->firstOrFail();
 
         $this->actingAsCoordinator()->post(route('sources.store'), [
             'nombre' => 'Fuente I-03',

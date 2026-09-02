@@ -3,8 +3,8 @@
 namespace App\Modules\Configuration\Application\Actions;
 
 use App\Models\User;
+use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateSection;
-use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateVersion;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Operations\Application\Actions\RecordAuditEvent;
 use App\Modules\Syllabus\Application\ProcessLocks;
@@ -21,21 +21,17 @@ class ReorderTemplateSections
     ) {}
 
     /** @param array<int, string> $sectionIds */
-    public function execute(TemplateVersion $version, array $sectionIds, User $actor, Request $request): void
+    public function execute(SyllabusTemplate $template, array $sectionIds, User $actor, Request $request): void
     {
         $activeRole = $this->roles->resolve($request);
         // Con el proceso institucional abierto, el formato está en uso: se pausa antes.
         $this->locks->assertTemplateEditable();
 
-        DB::transaction(function () use ($activeRole, $actor, $request, $sectionIds, $version): void {
-            $lockedVersion = TemplateVersion::query()->whereKey($version->id)->lockForUpdate()->firstOrFail();
-
-            if ($lockedVersion->estado !== 'borrador') {
-                throw ValidationException::withMessages(['sections' => 'La versión publicada no admite cambios.']);
-            }
+        DB::transaction(function () use ($activeRole, $actor, $request, $sectionIds, $template): void {
+            $lockedTemplate = SyllabusTemplate::query()->whereKey($template->id)->lockForUpdate()->firstOrFail();
 
             $sections = TemplateSection::query()
-                ->where('version_plantilla_id', $lockedVersion->id)
+                ->where('plantilla_id', $lockedTemplate->id)
                 ->lockForUpdate()
                 ->get();
 
@@ -57,8 +53,8 @@ class ReorderTemplateSections
                 actorId: $actor->id,
                 roleAssignmentId: $activeRole?->id,
                 action: 'plantilla.secciones_reordenadas',
-                resourceType: 'version_plantilla',
-                resourceId: $lockedVersion->id,
+                resourceType: 'plantilla_silabo',
+                resourceId: $lockedTemplate->id,
                 result: 'exito',
                 correlationId: $request->attributes->getString('correlation_id') ?: null,
             );

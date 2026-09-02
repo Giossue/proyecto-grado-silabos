@@ -5,8 +5,8 @@ namespace App\Modules\Academic\Presentation\Http\Requests;
 use App\Modules\Academic\Domain\AcademicStructurePermissions;
 use App\Modules\Academic\Domain\CurriculumSystemFields;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CourseOffering;
+use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CurriculumFieldDefinition;
-use App\Modules\Academic\Infrastructure\Persistence\Models\CurriculumVersion;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Subject;
 use App\Modules\Identity\Application\ActiveRole;
 use Illuminate\Database\Eloquent\Collection;
@@ -76,7 +76,7 @@ class StoreAcademicRecordRequest extends FormRequest
                     'required',
                     'string',
                     'max:80',
-                    Rule::unique('versiones_malla', 'codigo')->where(
+                    Rule::unique('mallas', 'codigo')->where(
                         'carrera_id',
                         app(ActiveRole::class)->resolve($this)?->carrera_id,
                     ),
@@ -98,10 +98,9 @@ class StoreAcademicRecordRequest extends FormRequest
                     'uuid',
                     Rule::exists('asignaturas', 'id')->where(fn ($query) => $query
                         ->where('activo', true)
-                        ->whereIn('version_malla_id', CurriculumVersion::query()
+                        ->whereIn('malla_id', Curriculum::query()
                             ->select('id')
                             ->where('carrera_id', $this->careerId())
-                            ->where('es_actual', true)
                             ->where('estado', 'activa'))),
                     Rule::unique('ofertas_academicas', 'asignatura_id')
                         ->where('periodo_academico_id', $this->input('period_id'))
@@ -119,9 +118,8 @@ class StoreAcademicRecordRequest extends FormRequest
                         ->where('activo', true)
                         ->whereIn('asignatura_id', Subject::query()
                             ->select('id')
-                            ->whereHas('curriculumVersion', fn ($curricula) => $curricula
+                            ->whereHas('curriculum', fn ($curricula) => $curricula
                                 ->where('carrera_id', $this->careerId())
-                                ->where('es_actual', true)
                                 ->where('estado', 'activa')))),
                 ],
                 'code' => [
@@ -151,9 +149,8 @@ class StoreAcademicRecordRequest extends FormRequest
                         ->where('activo', true)
                         ->whereIn('oferta_academica_id', CourseOffering::query()
                             ->select('id')
-                            ->whereHas('subject.curriculumVersion', fn ($curricula) => $curricula
+                            ->whereHas('subject.curriculum', fn ($curricula) => $curricula
                                 ->where('carrera_id', $this->careerId())
-                                ->where('es_actual', true)
                                 ->where('estado', 'activa')))),
                 ],
                 'valid_from' => ['required', 'date'],
@@ -190,15 +187,14 @@ class StoreAcademicRecordRequest extends FormRequest
             'curriculum_id' => [
                 'required',
                 'uuid',
-                Rule::exists('versiones_malla', 'id')
-                    ->where('es_actual', true)
+                Rule::exists('mallas', 'id')
                     ->where('carrera_id', $this->careerId()),
             ],
             'code' => [
                 'required',
                 'string',
                 'max:80',
-                $this->uniqueWithin('asignaturas', 'codigo_institucional', 'version_malla_id', 'curriculum_id'),
+                $this->uniqueWithin('asignaturas', 'codigo_institucional', 'malla_id', 'curriculum_id'),
             ],
             'nombre' => ['required', 'string', 'max:180'],
             'cycle' => ['required', 'integer', 'min:1', 'max:30'],
@@ -239,11 +235,10 @@ class StoreAcademicRecordRequest extends FormRequest
     private function activeSubjectFields(string $curriculumId)
     {
         return CurriculumFieldDefinition::query()
-            ->where('version_malla_id', $curriculumId)
+            ->where('malla_id', $curriculumId)
             ->where('activo', true)
-            ->whereHas('curriculumVersion', fn ($query) => $query
-                ->where('carrera_id', $this->careerId())
-                ->where('es_actual', true))
+            ->whereHas('curriculum', fn ($query) => $query
+                ->where('carrera_id', $this->careerId()))
             ->get(['id', 'clave_sistema']);
     }
 

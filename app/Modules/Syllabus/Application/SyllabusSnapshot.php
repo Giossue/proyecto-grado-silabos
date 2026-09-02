@@ -14,7 +14,7 @@ class SyllabusSnapshot
     /** @return array<string, mixed> */
     public function build(Syllabus $syllabus): array
     {
-        $syllabus->loadMissing(['templateVersion.sections.blocks.fields', 'values', 'rows']);
+        $syllabus->loadMissing(['template.sections.blocks.fields', 'values', 'rows']);
         $values = $syllabus->values->keyBy('definicion_campo_id');
         $rows = $syllabus->rows
             ->sortBy(fn (RepeatableRow $row): string => sprintf(
@@ -26,10 +26,14 @@ class SyllabusSnapshot
             ->groupBy('definicion_campo_id');
 
         return [
-            'schema_version' => 1,
-            'template_version_id' => $syllabus->version_plantilla_id,
+            'schema_version' => 2,
+            'template_id' => $syllabus->plantilla_id,
+            'template_name' => $syllabus->template->nombre,
+            // La copia lleva también el mapa del documento: la revisión se exporta desde
+            // sí misma aunque la plantilla haya cambiado después.
+            'document_mapping' => $syllabus->template->mapeo_documento,
             'academic_context' => $syllabus->contexto_academico,
-            'sections' => $syllabus->templateVersion->sections
+            'sections' => $syllabus->template->sections
                 ->map(fn (TemplateSection $section): array => [
                     'key' => $section->clave,
                     'title' => $section->titulo,
@@ -42,6 +46,7 @@ class SyllabusSnapshot
                             'label' => $field->etiqueta,
                             'type' => $field->tipo,
                             'inherited' => $field->heredado,
+                            'document_marker' => $field->marcador_documento,
                             'value' => $values->get($field->id)?->valor,
                             'rows' => ($rows->get($field->id) ?? collect())->map(fn (RepeatableRow $row): array => [
                                 'id' => $row->id,

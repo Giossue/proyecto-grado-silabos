@@ -185,7 +185,7 @@ class SyllabusController extends Controller
     {
         $syllabus->load([
             'convocation.academicPeriod', 'subject', 'scopes.parallel', 'teachers:id,nombre',
-            'templateVersion.sections.blocks.fields', 'values', 'rows',
+            'template.sections.blocks.fields', 'values', 'rows',
             'validationRuns' => fn ($query) => $query->with('results')->latest('completado_en')->limit(1),
             'revisions' => fn ($query) => $query->with([
                 'submitter:id,nombre', 'approval.approver:id,nombre',
@@ -209,7 +209,7 @@ class SyllabusController extends Controller
             'guardado_en' => $syllabus->guardado_en?->toIso8601String(),
             'parallels' => $syllabus->scopes->pluck('parallel.codigo')->unique()->values(),
             'teachers' => $syllabus->teachers->pluck('nombre')->unique()->values(),
-            'sections' => $syllabus->templateVersion->sections
+            'sections' => $syllabus->template->sections
                 ->map(fn (TemplateSection $section): array => $this->sectionPayload($section, $values, $rows))
                 ->values(),
             'validation' => $lastValidation instanceof ValidationRun ? [

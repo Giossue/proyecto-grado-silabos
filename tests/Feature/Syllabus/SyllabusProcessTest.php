@@ -4,9 +4,9 @@ namespace Tests\Feature\Syllabus;
 
 use App\Models\User;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CourseOffering;
-use App\Modules\Academic\Infrastructure\Persistence\Models\CurriculumVersion;
+use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\AcademicSource;
-use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateVersion;
+use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\Convocation;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\Syllabus;
@@ -128,7 +128,7 @@ class SyllabusProcessTest extends TestCase
 
         $convocation = Convocation::query()->firstOrFail();
         $this->assertSame($process->id, $convocation->proceso_id);
-        $this->assertSame($template->id, $convocation->version_plantilla_id);
+        $this->assertSame($template->id, $convocation->plantilla_id);
         $this->assertDatabaseHas('fechas_limite_convocatoria', [
             'convocatoria_id' => $convocation->id,
             'etapa' => 'inicio',
@@ -154,29 +154,90 @@ class SyllabusProcessTest extends TestCase
     public function test_an_open_process_freezes_the_template_until_it_is_paused(): void
     {
         $process = $this->openProcess();
-        $version = $process->templateVersion;
+        $template = $process->template;
+        $sectionPayload = [
+            'title' => 'Anexos',
+            'key' => 'anexos',
+            'first_field_label' => 'Anexo',
+            'first_field_key' => 'anexo',
+            'first_field_content_type' => 'text',
+        ];
 
-        $this->actingAsAdministrator()->post(route('admin.templates.clone', $version))
+        $this->actingAsAdministrator()->post(route('admin.templates.sections.store', $template), $sectionPayload)
             ->assertSessionHasErrors('process');
-        $this->assertSame(1, TemplateVersion::query()->count());
+        $this->assertSame(12, $template->sections()->count());
 
-        $this->actingAsAdministrator()->get(route('admin.templates.show', $version))
+        $this->actingAsAdministrator()->get(route('admin.templates.show', $template))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page->whereNot('processLock', null));
 
         $this->transition($process, 'pausar', 'Hay que corregir el bloque de bibliografía.')->assertRedirect();
 
-        $this->actingAsAdministrator()->post(route('admin.templates.clone', $version))->assertRedirect();
-        $this->assertSame(2, TemplateVersion::query()->count());
+        $this->actingAsAdministrator()->post(route('admin.templates.sections.store', $template), $sectionPayload)
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+        $this->assertSame(13, $template->sections()->count());
         $this->actingAsAdministrator()->get(route('admin.templates.index'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page->where('processLock', null));
     }
 
+    public function test_changing_the_template_during_a_pause_asks_before_deleting_unsent_syllabi(): void
+    {
+        $convocation = $this->openedConvocation();
+        $process = $convocation->process()->firstOrFail();
+        $template = $process->template;
+        $syllabus = Syllabus::query()->firstOrFail();
+        $this->actingAsTeacher()->post(route('syllabi.start', $syllabus))->assertRedirect();
+        $this->transition($process, 'pausar', 'Ajuste de la plantilla con expedientes abiertos.')->assertRedirect();
+        $sectionPayload = [
+            'title' => 'Anexos',
+            'key' => 'anexos',
+            'first_field_label' => 'Anexo',
+            'first_field_key' => 'anexo',
+            'first_field_content_type' => 'text',
+        ];
+
+        // Sin confirmar: nada cambia y el servidor devuelve la cifra.
+        $this->actingAsAdministrator()->post(route('admin.templates.sections.store', $template), $sectionPayload)
+            ->assertSessionHasErrors(['purge_required', 'purge_count']);
+        $this->assertDatabaseCount('silabos', 1);
+        $this->assertSame(12, $template->sections()->count());
+
+        // Confirmado: el borrador sin enviar se borra y el cambio se aplica.
+        $this->actingAsAdministrator()
+            ->post(route('admin.templates.sections.store', $template), [...$sectionPayload, 'confirm_purge' => 1])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+        $this->assertDatabaseCount('silabos', 0);
+        $this->assertSame(13, $template->sections()->count());
+    }
+
+    public function test_changing_the_curriculum_during_a_pause_asks_before_deleting_unsent_syllabi(): void
+    {
+        $convocation = $this->openedConvocation();
+        $curriculum = Curriculum::query()->firstOrFail();
+        $this->actingAsCoordinator()
+            ->post(route('convocations.transition', [$convocation, 'pausar']), ['reason' => 'Corrección de la malla con expedientes abiertos.'])
+            ->assertRedirect();
+
+        $this->actingAsCoordinator()
+            ->patch(route('coordination.academic.update', ['entity' => 'malla', 'record' => $curriculum->id]), ['code' => 'MALLA-NUEVA'])
+            ->assertSessionHasErrors('purge_required');
+        $this->assertDatabaseCount('silabos', 1);
+
+        $this->actingAsCoordinator()
+            ->patch(route('coordination.academic.update', ['entity' => 'malla', 'record' => $curriculum->id]), ['code' => 'MALLA-NUEVA', 'confirm_purge' => 1])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+        $this->assertDatabaseCount('silabos', 0);
+        $this->assertSame('MALLA-NUEVA', $curriculum->fresh()->codigo);
+    }
+
     public function test_a_running_convocation_freezes_curriculum_and_sources_of_its_career_only(): void
     {
         $convocation = $this->openedConvocation();
-        $curriculum = CurriculumVersion::query()->current()->firstOrFail();
+        $curriculum = Curriculum::query()->firstOrFail();
         $source = AcademicSource::query()->firstOrFail();
 
         $this->actingAsCoordinator()
@@ -211,9 +272,12 @@ class SyllabusProcessTest extends TestCase
             ->assertSessionHas('success');
         $this->assertSame('pausada', $convocation->fresh()->estado);
 
+        // Con la convocatoria pausada la malla se edita; como hay un expediente sin
+        // enviar, el cambio pide confirmación y lo borra (I-32).
         $this->actingAsCoordinator()
             ->patch(route('coordination.academic.update', ['entity' => 'malla', 'record' => $curriculum->id]), [
                 'code' => 'MALLA-CORREGIDA',
+                'confirm_purge' => 1,
             ])
             ->assertRedirect()
             ->assertSessionHasNoErrors();
@@ -274,7 +338,7 @@ class SyllabusProcessTest extends TestCase
     public function test_process_configuration_changes_only_in_preparation_or_pause(): void
     {
         $process = $this->openProcess();
-        $payload = [...$this->processPayload($process->templateVersion), 'nombre' => 'Renombrado'];
+        $payload = [...$this->processPayload($process->template), 'nombre' => 'Renombrado'];
 
         $this->actingAsAdministrator()->patch(route('admin.processes.update', $process), $payload)
             ->assertForbidden();
@@ -286,18 +350,17 @@ class SyllabusProcessTest extends TestCase
         $this->assertSame('Renombrado', $process->fresh()->nombre);
     }
 
-    /** @return array{nombre: string, template_version_id: string, starts_at: string, due_at: string} */
-    private function processPayload(TemplateVersion $template): array
+    /** @return array{nombre: string, starts_at: string, due_at: string} */
+    private function processPayload(SyllabusTemplate $template): array
     {
         return [
             'nombre' => 'Elaboración de sílabos 2026-2027',
-            'template_version_id' => $template->id,
             'starts_at' => now()->subDay()->toIso8601String(),
             'due_at' => now()->addMonth()->toIso8601String(),
         ];
     }
 
-    private function preparedProcess(TemplateVersion $template, string $name): SyllabusProcess
+    private function preparedProcess(SyllabusTemplate $template, string $name): SyllabusProcess
     {
         $this->actingAsAdministrator()
             ->post(route('admin.processes.store'), [...$this->processPayload($template), 'nombre' => $name])
@@ -340,11 +403,10 @@ class SyllabusProcessTest extends TestCase
         );
     }
 
-    private function publishedTemplate(): TemplateVersion
+    private function publishedTemplate(): SyllabusTemplate
     {
         $this->actingAsAdministrator()->post(route('admin.templates.store'), ['nombre' => 'Plantilla I-31']);
-        $template = TemplateVersion::query()->latest('creado_en')->firstOrFail();
-        $this->actingAsAdministrator()->post(route('admin.templates.publish', $template))->assertRedirect();
+        $template = SyllabusTemplate::query()->latest('creado_en')->firstOrFail();
 
         return $template->fresh();
     }

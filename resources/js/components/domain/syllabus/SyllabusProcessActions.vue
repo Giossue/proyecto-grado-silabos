@@ -30,12 +30,11 @@ defineProps<{
         id: string;
         name: string;
         state: string;
-        template_version_id: string;
         starts_at: string;
         due_at: string;
         configurable: boolean;
     };
-    templates: { id: string; label: string }[];
+    template: string | null;
 }>();
 
 const editOpen = ref(false);
@@ -124,7 +123,7 @@ const dialogs: Record<
 
     <SyllabusProcessSheet
         v-model:open="editOpen"
-        :templates="templates"
+        :template="template"
         :process="process"
         display="menu"
     />

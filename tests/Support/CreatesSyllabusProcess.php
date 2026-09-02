@@ -14,12 +14,12 @@ use Carbon\CarbonInterface;
 trait CreatesSyllabusProcess
 {
     protected function openSyllabusProcess(
-        string $templateVersionId,
+        string $templateId,
         CarbonInterface|string|null $startsAt = null,
         CarbonInterface|string|null $dueAt = null,
     ): SyllabusProcess {
         $attributes = [
-            'version_plantilla_id' => $templateVersionId,
+            'plantilla_id' => $templateId,
             'inicia_en' => $startsAt ?? now()->subDay(),
             'entrega_en' => $dueAt ?? now()->addMonth(),
         ];

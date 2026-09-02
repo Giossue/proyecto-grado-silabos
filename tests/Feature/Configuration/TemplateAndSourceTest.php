@@ -7,14 +7,10 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Faculty;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\AcademicSource;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
-use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateVersion;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
 use Database\Seeders\DatabaseSeeder;
-use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
-use LogicException;
 use Tests\TestCase;
 
 class TemplateAndSourceTest extends TestCase
@@ -49,19 +45,18 @@ class TemplateAndSourceTest extends TestCase
             ])
             ->assertRedirect();
 
-        $version = TemplateVersion::query()->firstOrFail();
-        $this->assertSame('borrador', $version->estado);
-        $this->assertTrue((bool) $version->template->es_institucional);
-        $this->assertCount(12, $version->sections()->get());
-        $this->assertCount(12, $version->fields()->get());
+        $template = SyllabusTemplate::query()->firstOrFail();
+        $this->assertTrue($template->es_institucional);
+        $this->assertCount(12, $template->sections()->get());
+        $this->assertCount(12, $template->fields()->get());
 
         $this->actingAsAdministrator()
-            ->get(route('admin.templates.show', $version))
+            ->get(route('admin.templates.show', $template))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Admin/Templates/Show')
-                ->has('templateVersion.sections', 12)
-                ->where('templateVersion.state', 'borrador'));
+                ->has('template.sections', 12)
+                ->where('processLock', null));
     }
 
     public function test_administrator_can_only_create_one_institutional_template(): void
@@ -76,9 +71,7 @@ class TemplateAndSourceTest extends TestCase
             ->assertRedirect(route('admin.templates.index'))
             ->assertSessionHasErrors('template');
 
-        $this->assertSame(1, TemplateVersion::query()
-            ->whereHas('template', fn ($query) => $query->where('es_institucional', true))
-            ->count());
+        $this->assertSame(1, SyllabusTemplate::query()->where('es_institucional', true)->count());
     }
 
     public function test_legacy_template_is_not_available_for_new_template_operations(): void
@@ -86,15 +79,11 @@ class TemplateAndSourceTest extends TestCase
         $legacy = SyllabusTemplate::query()->create([
             'nombre' => 'Plantilla anterior',
             'activo' => true,
-        ]);
-        $version = TemplateVersion::query()->create([
-            'plantilla_id' => $legacy->id,
-            'numero_version' => 1,
-            'estado' => 'borrador',
+            'es_institucional' => false,
         ]);
 
         $this->actingAsAdministrator()
-            ->get(route('admin.templates.show', $version))
+            ->get(route('admin.templates.show', $legacy))
             ->assertNotFound();
     }
 
@@ -105,59 +94,25 @@ class TemplateAndSourceTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_publishing_calculates_fingerprint_and_database_blocks_mutation(): void
+    public function test_template_is_edited_in_place_without_publishing(): void
     {
-        $version = $this->createTemplate();
+        // I-32: no hay versiones ni publicación. La plantilla se corrige en el sitio y
+        // cada revisión enviada conserva su propia copia.
+        $template = $this->createTemplate();
+        $field = $template->fields()->firstOrFail();
 
         $this->actingAsAdministrator()
-            ->post(route('admin.templates.publish', $version))
+            ->patch(route('admin.templates.fields.update', [$template, $field]), [
+                'block_id' => $field->bloque_plantilla_id,
+                'key' => $field->clave,
+                'label' => 'Etiqueta corregida',
+                'content_type' => 'text',
+            ])
             ->assertRedirect()
             ->assertSessionHas('success');
 
-        $published = $version->fresh();
-        $this->assertSame('publicada', $published->estado);
-        $this->assertMatchesRegularExpression('/^[a-f0-9]{64}$/', $published->huella_sha256);
-        $field = $published->fields()->firstOrFail();
-
-        try {
-            $field->update(['etiqueta' => 'Mutación por modelo']);
-            $this->fail('El modelo permitió modificar un campo publicado.');
-        } catch (LogicException) {
-            $this->assertTrue(true);
-        }
-
-        $this->expectException(QueryException::class);
-        DB::table('definiciones_campo')->where('id', $field->id)->update(['etiqueta' => 'Mutación SQL']);
-    }
-
-    public function test_published_template_is_cloned_to_new_draft_identity(): void
-    {
-        $version = $this->createTemplate();
-        $this->actingAsAdministrator()->post(route('admin.templates.publish', $version));
-
-        $this->actingAsAdministrator()
-            ->post(route('admin.templates.clone', $version))
-            ->assertRedirect();
-
-        $clone = TemplateVersion::query()->where('id', '!=', $version->id)->firstOrFail();
-        $this->assertSame('borrador', $clone->estado);
-        $this->assertSame(2, $clone->numero_version);
-        $this->assertCount(12, $clone->fields()->get());
-        $this->assertNotEqualsCanonicalizing(
-            $version->fields()->pluck('id')->all(),
-            $clone->fields()->pluck('id')->all(),
-        );
-
-        $this->actingAsAdministrator()
-            ->get(route('admin.templates.show', $clone))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('Admin/Templates/Show')
-                ->has('templateVersion.template.versions', 2)
-                ->where('templateVersion.template.versions.0.number', 2)
-                ->where('templateVersion.template.versions.0.state', 'borrador')
-                ->where('templateVersion.template.versions.1.number', 1)
-                ->where('templateVersion.template.versions.1.state', 'publicada'));
+        $this->assertSame('Etiqueta corregida', $field->fresh()->etiqueta);
+        $this->assertSame(1, SyllabusTemplate::query()->count());
     }
 
     public function test_template_blocks_use_document_content_types(): void
@@ -212,7 +167,7 @@ class TemplateAndSourceTest extends TestCase
         $this->assertSame(2, $first->fresh()->posicion);
 
         $this->actingAsAdministrator()
-            ->delete(route('admin.templates.blocks.destroy', ['version' => $version, 'block' => $second]))
+            ->delete(route('admin.templates.blocks.destroy', ['template' => $version, 'block' => $second]))
             ->assertRedirect();
 
         $this->assertDatabaseMissing('bloques_plantilla', ['id' => $second->id]);
@@ -252,7 +207,7 @@ class TemplateAndSourceTest extends TestCase
         $this->assertSame(2, $first->fresh()->posicion);
 
         $this->actingAsAdministrator()
-            ->delete(route('admin.templates.sections.destroy', ['version' => $version, 'section' => $created]))
+            ->delete(route('admin.templates.sections.destroy', ['template' => $version, 'section' => $created]))
             ->assertRedirect();
 
         $this->assertDatabaseMissing('secciones_plantilla', ['id' => $created->id]);
@@ -356,11 +311,11 @@ class TemplateAndSourceTest extends TestCase
             ->assertForbidden();
     }
 
-    private function createTemplate(): TemplateVersion
+    private function createTemplate(): SyllabusTemplate
     {
         $this->actingAsAdministrator()->post(route('admin.templates.store'), ['nombre' => 'Plantilla verificable']);
 
-        return TemplateVersion::query()->latest('creado_en')->firstOrFail();
+        return SyllabusTemplate::query()->latest('creado_en')->firstOrFail();
     }
 
     private function createSourceAsCoordinator(string $name): AcademicSource

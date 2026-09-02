@@ -10,8 +10,8 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\Campus;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CoordinatorAssignment;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CourseOffering;
+use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CurriculumFieldDefinition;
-use App\Modules\Academic\Infrastructure\Persistence\Models\CurriculumVersion;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Faculty;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Modality;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
@@ -21,6 +21,7 @@ use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Identity\Domain\Enums\RoleCode;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
 use App\Modules\Operations\Application\Actions\RecordAuditEvent;
+use App\Modules\Syllabus\Application\InProgressWork;
 use App\Modules\Syllabus\Application\ProcessLocks;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Model;
@@ -34,6 +35,7 @@ class CreateAcademicRecord
         private readonly ActiveRole $roles,
         private readonly RecordAuditEvent $audit,
         private readonly ProcessLocks $locks,
+        private readonly InProgressWork $work,
         private readonly SyncSubjectFieldValues $syncSubjectFieldValues,
     ) {}
 
@@ -49,6 +51,8 @@ class CreateAcademicRecord
         // curso; ofertas, paralelos y asignaciones siguen editables (relevo docente).
         if (in_array($entity, ['malla', 'asignatura'], true)) {
             $this->locks->assertCareerEditable($activeRole->carrera_id);
+            // Lo que el sílabo copia de la malla cambia: el trabajo en curso se borra, con confirmación.
+            $this->work->requireConfirmation($request, $activeRole->carrera_id);
         }
 
         return DB::transaction(function () use ($actor, $activeRole, $data, $entity, $request): Model {
@@ -113,29 +117,25 @@ class CreateAcademicRecord
     }
 
     /** @param array<string, mixed> $data */
-    private function createCurriculum(array $data, string $careerId): CurriculumVersion
+    private function createCurriculum(array $data, string $careerId): Curriculum
     {
         Career::query()->whereKey($careerId)->lockForUpdate()->firstOrFail();
-        if (CurriculumVersion::query()->where('carrera_id', $careerId)->current()->exists()) {
+        if (Curriculum::query()->where('carrera_id', $careerId)->exists()) {
             throw ValidationException::withMessages([
                 'curriculum' => 'La carrera ya tiene una malla. Edite la malla actual en lugar de crear otra.',
             ]);
         }
 
-        $curriculum = CurriculumVersion::query()->create([
+        $curriculum = Curriculum::query()->create([
             'carrera_id' => $careerId,
             'codigo' => $data['code'],
-            'numero_version' => ((int) CurriculumVersion::query()
-                ->where('carrera_id', $careerId)
-                ->max('numero_version')) + 1,
             'numero_ciclos' => 8,
             'estado' => 'activa',
-            'es_actual' => true,
         ]);
 
         foreach (CurriculumSystemFields::defaults() as $field) {
             CurriculumFieldDefinition::query()->create([
-                'version_malla_id' => $curriculum->id,
+                'malla_id' => $curriculum->id,
                 'clave' => $field['key'],
                 'etiqueta' => $field['label'],
                 'tipo' => $field['type'],
@@ -153,10 +153,10 @@ class CreateAcademicRecord
     /** @param array<string, mixed> $data */
     private function createSubject(array $data, string $careerId): Subject
     {
-        $curriculum = CurriculumVersion::query()
+        $curriculum = Curriculum::query()
             ->whereKey($this->stringValue($data, 'curriculum_id'))
             ->where('carrera_id', $careerId)
-            ->current()
+
             ->lockForUpdate()
             ->firstOrFail();
 
@@ -167,7 +167,7 @@ class CreateAcademicRecord
         }
 
         $lastPosition = Subject::query()
-            ->where('version_malla_id', $curriculum->id)
+            ->where('malla_id', $curriculum->id)
             ->where('ciclo', $data['cycle'])
             ->max('orden_en_ciclo');
         $position = array_key_exists('position', $data)
@@ -175,13 +175,13 @@ class CreateAcademicRecord
             : ($lastPosition === null ? 0 : (int) $lastPosition + 1);
 
         $activeSystemKeys = CurriculumFieldDefinition::query()
-            ->where('version_malla_id', $curriculum->id)
+            ->where('malla_id', $curriculum->id)
             ->where('activo', true)
             ->whereNotNull('clave_sistema')
             ->pluck('clave_sistema');
 
         $subject = Subject::query()->create([
-            'version_malla_id' => $curriculum->id,
+            'malla_id' => $curriculum->id,
             'codigo_institucional' => $data['code'],
             'nombre' => $data['nombre'],
             'ciclo' => $data['cycle'] ?? null,
@@ -208,15 +208,14 @@ class CreateAcademicRecord
     private function createOffering(array $data, string $careerId): CourseOffering
     {
         $subject = Subject::query()
-            ->with('curriculumVersion:id,estado,carrera_id,es_actual')
+            ->with('curriculum:id,estado,carrera_id')
             ->whereKey($this->stringValue($data, 'subject_id'))
-            ->whereHas('curriculumVersion', fn ($query) => $query
-                ->where('carrera_id', $careerId)
-                ->where('es_actual', true))
+            ->whereHas('curriculum', fn ($query) => $query
+                ->where('carrera_id', $careerId))
             ->lockForUpdate()
             ->firstOrFail();
 
-        if ($subject->curriculumVersion->estado !== 'activa') {
+        if ($subject->curriculum->estado !== 'activa') {
             throw ValidationException::withMessages([
                 'subject_id' => 'La oferta requiere una materia de la malla activa.',
             ]);
@@ -246,10 +245,9 @@ class CreateAcademicRecord
         $offering = CourseOffering::query()
             ->whereKey($this->stringValue($data, 'offering_id'))
             ->whereHas(
-                'subject.curriculumVersion',
+                'subject.curriculum',
                 fn ($query) => $query
                     ->where('carrera_id', $careerId)
-                    ->where('es_actual', true)
                     ->where('estado', 'activa'),
             )
             ->lockForUpdate()
@@ -294,13 +292,12 @@ class CreateAcademicRecord
     private function createTeacherAssignment(array $data, string $careerId): TeacherAssignment
     {
         $parallel = Parallel::query()
-            ->with('offering.subject.curriculumVersion:id,carrera_id,estado,es_actual')
+            ->with('offering.subject.curriculum:id,carrera_id,estado')
             ->whereKey($this->stringValue($data, 'parallel_id'))
             ->whereHas(
-                'offering.subject.curriculumVersion',
+                'offering.subject.curriculum',
                 fn ($query) => $query
                     ->where('carrera_id', $careerId)
-                    ->where('es_actual', true)
                     ->where('estado', 'activa'),
             )
             ->lockForUpdate()

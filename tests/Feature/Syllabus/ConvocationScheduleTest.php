@@ -6,7 +6,7 @@ use App\Models\User;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CourseOffering;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\AcademicSource;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\FieldDefinition;
-use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateVersion;
+use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
 use App\Modules\Operations\Infrastructure\Persistence\Models\AuditEvent;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\Convocation;
@@ -76,7 +76,7 @@ class ConvocationScheduleTest extends TestCase
 
         $this->actingAsAdministrator()->post(route('admin.processes.store'), [
             'nombre' => 'Proceso invertido',
-            'template_version_id' => $template->id,
+            'template_id' => $template->id,
             'starts_at' => now()->addMonths(2)->toIso8601String(),
             'due_at' => now()->addMonth()->toIso8601String(),
         ])->assertSessionHasErrors('due_at');
@@ -195,7 +195,7 @@ class ConvocationScheduleTest extends TestCase
         $this->actingAsTeacher()->post(route('syllabi.start', $syllabus))->assertRedirect();
 
         $fields = FieldDefinition::query()
-            ->where('version_plantilla_id', $syllabus->version_plantilla_id)
+            ->where('plantilla_id', $syllabus->plantilla_id)
             ->where('obligatorio', true)
             ->where('heredado', false)
             ->get();
@@ -246,12 +246,11 @@ class ConvocationScheduleTest extends TestCase
         };
     }
 
-    /** @return array{TemplateVersion, AcademicSource} */
+    /** @return array{SyllabusTemplate, AcademicSource} */
     private function publishedConfiguration(): array
     {
         $this->actingAsAdministrator()->post(route('admin.templates.store'), ['nombre' => 'Plantilla I-15']);
-        $template = TemplateVersion::query()->latest('creado_en')->firstOrFail();
-        $this->actingAsAdministrator()->post(route('admin.templates.publish', $template));
+        $template = SyllabusTemplate::query()->latest('creado_en')->firstOrFail();
 
         $this->actingAsCoordinator()->post(route('sources.store'), [
             'nombre' => 'Fuente I-15',

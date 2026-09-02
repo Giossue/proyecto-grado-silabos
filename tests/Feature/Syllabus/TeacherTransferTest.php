@@ -7,7 +7,7 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CourseOffering;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\AcademicSource;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\FieldDefinition;
-use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateVersion;
+use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
 use App\Modules\Identity\Domain\Enums\RoleCode;
 use App\Modules\Identity\Infrastructure\Persistence\Models\Role;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
@@ -239,7 +239,7 @@ class TeacherTransferTest extends TestCase
         $syllabus = $this->openedSyllabus();
         $this->actingAsTeacher()->post(route('syllabi.start', $syllabus))->assertRedirect();
         $fields = FieldDefinition::query()
-            ->where('version_plantilla_id', $syllabus->version_plantilla_id)
+            ->where('plantilla_id', $syllabus->plantilla_id)
             ->where('obligatorio', true)
             ->where('heredado', false)
             ->get();
@@ -291,12 +291,11 @@ class TeacherTransferTest extends TestCase
         };
     }
 
-    /** @return array{TemplateVersion, AcademicSource} */
+    /** @return array{SyllabusTemplate, AcademicSource} */
     private function publishedConfiguration(): array
     {
         $this->actingAsAdministrator()->post(route('admin.templates.store'), ['nombre' => 'Plantilla relevo']);
-        $template = TemplateVersion::query()->latest('creado_en')->firstOrFail();
-        $this->actingAsAdministrator()->post(route('admin.templates.publish', $template));
+        $template = SyllabusTemplate::query()->latest('creado_en')->firstOrFail();
 
         $this->actingAsCoordinator()->post(route('sources.store'), [
             'nombre' => 'Fuente relevo',

@@ -24,7 +24,7 @@ class StoreCurriculumFieldRequest extends FormRequest
                 'max:80',
                 'regex:/^[a-z][a-z0-9_]*$/',
                 Rule::unique('definiciones_campo_malla', 'clave')
-                    ->where('version_malla_id', $this->route('curriculum'))
+                    ->where('malla_id', $this->route('curriculum'))
                     ->where('activo', true),
             ],
             'label' => ['required', 'string', 'max:120'],
@@ -33,7 +33,7 @@ class StoreCurriculumFieldRequest extends FormRequest
                 'nullable',
                 Rule::in(array_keys(CurriculumSystemFields::ATTRIBUTES)),
                 Rule::unique('definiciones_campo_malla', 'clave_sistema')
-                    ->where('version_malla_id', $this->route('curriculum'))
+                    ->where('malla_id', $this->route('curriculum'))
                     ->where('activo', true),
             ],
             'position' => ['required', 'integer', 'min:0', 'max:999'],

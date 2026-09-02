@@ -59,7 +59,7 @@ class RequestSyllabusExport
             $artifact = ExportArtifact::query()->create([
                 'silabo_id' => $syllabus->id,
                 'revision_silabo_id' => $lockedRevision->id,
-                'version_plantilla_id' => $syllabus->version_plantilla_id,
+                'plantilla_id' => $syllabus->plantilla_id,
                 'version_renderizador' => $this->renderer->version(),
                 'idioma' => 'es-EC',
                 'clave_idempotencia' => $idempotencyKey,

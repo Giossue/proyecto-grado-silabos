@@ -177,7 +177,7 @@ it('presenta el ciclo académico sin detalles de implementación', function (): 
     }
 
     $publishTemplate = (string) file_get_contents(
-        $root.'/app/Modules/Configuration/Application/Actions/PublishTemplateVersion.php',
+        $root.'/app/Modules/Configuration/Application/TemplateStructureValidator.php',
     );
     expect($publishTemplate)->not->toContain('PV-08');
 });
@@ -209,7 +209,6 @@ it('conserva en el servidor las obligaciones minimas y condicionales', function 
             "'process_id' => [",
         ],
         'Syllabus/Presentation/Http/Requests/StoreSyllabusProcessRequest.php' => [
-            "'template_version_id' => ['required'",
             "'due_at' => ['required'",
         ],
         'Syllabus/Presentation/Http/Requests/StoreCorrectionRequest.php' => [

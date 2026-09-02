@@ -83,7 +83,7 @@ class GenerateSyllabusExportJob implements ShouldQueue
             academicPeriod: $syllabus->convocation->academicPeriod->nombre,
             revisionNumber: $revision->numero_revision,
             revisionFingerprint: $revision->huella_sha256,
-            templateVersionId: $artifact->version_plantilla_id,
+            templateId: $artifact->plantilla_id,
             generatedAt: $artifact->solicitado_en->toIso8601String(),
             locale: $artifact->idioma,
             snapshot: $revision->fotografia,

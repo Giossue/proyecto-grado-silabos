@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * @property string $id
- * @property string $version_malla_id
+ * @property string $malla_id
  * @property string $clave
  * @property string $etiqueta
  * @property string $tipo
@@ -31,7 +31,7 @@ class CurriculumFieldDefinition extends Model
 
     /** @var list<string> */
     protected $fillable = [
-        'version_malla_id',
+        'malla_id',
         'clave',
         'etiqueta',
         'tipo',
@@ -53,10 +53,10 @@ class CurriculumFieldDefinition extends Model
         ];
     }
 
-    /** @return BelongsTo<CurriculumVersion, $this> */
-    public function curriculumVersion(): BelongsTo
+    /** @return BelongsTo<Curriculum, $this> */
+    public function curriculum(): BelongsTo
     {
-        return $this->belongsTo(CurriculumVersion::class, 'version_malla_id');
+        return $this->belongsTo(Curriculum::class, 'malla_id');
     }
 
     /** @return HasMany<SubjectFieldValue, $this> */

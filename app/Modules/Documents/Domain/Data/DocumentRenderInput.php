@@ -11,7 +11,7 @@ final readonly class DocumentRenderInput
         public string $academicPeriod,
         public int $revisionNumber,
         public string $revisionFingerprint,
-        public string $templateVersionId,
+        public string $templateId,
         public string $generatedAt,
         public string $locale,
         public array $snapshot,

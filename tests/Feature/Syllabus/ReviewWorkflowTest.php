@@ -8,7 +8,7 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\CoordinatorAssignment
 use App\Modules\Academic\Infrastructure\Persistence\Models\CourseOffering;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\AcademicSource;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\FieldDefinition;
-use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateVersion;
+use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
 use App\Modules\Syllabus\Application\RevisionDiff;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\Approval;
@@ -79,7 +79,7 @@ class ReviewWorkflowTest extends TestCase
         $revision = SyllabusRevision::query()->firstOrFail();
         $this->assertSame('en_revision', $syllabus->fresh()->estado);
         $this->assertSame(1, $revision->numero_revision);
-        $this->assertSame($syllabus->version_plantilla_id, $revision->fotografia['template_version_id']);
+        $this->assertSame($syllabus->plantilla_id, $revision->fotografia['template_id']);
         $this->assertSame($syllabus->contexto_academico, $revision->fotografia['academic_context']);
         $this->assertNotEmpty($revision->fotografia['sections']);
         $this->assertSame(app(CanonicalHasher::class)->hash($revision->fotografia), $revision->huella_sha256);
@@ -193,7 +193,7 @@ class ReviewWorkflowTest extends TestCase
         [$syllabus, $firstRevision] = $this->submitValidDraft();
         $field = $this->editableScalarField($syllabus);
         $repeatableField = FieldDefinition::query()
-            ->where('version_plantilla_id', $syllabus->version_plantilla_id)
+            ->where('plantilla_id', $syllabus->plantilla_id)
             ->where('tipo', 'repetible')
             ->firstOrFail();
         $stableRowId = $syllabus->rows()
@@ -390,8 +390,8 @@ class ReviewWorkflowTest extends TestCase
         $otherSyllabus = Syllabus::query()->create([
             'convocatoria_id' => $syllabus->convocatoria_id,
             'asignatura_id' => $syllabus->asignatura_id,
-            'version_malla_id' => $syllabus->version_malla_id,
-            'version_plantilla_id' => $syllabus->version_plantilla_id,
+            'malla_id' => $syllabus->malla_id,
+            'plantilla_id' => $syllabus->plantilla_id,
             'estado' => 'en_revision',
             'version_bloqueo' => 1,
             'porcentaje_completitud' => 100,
@@ -466,7 +466,7 @@ class ReviewWorkflowTest extends TestCase
     {
         $syllabus = $this->createStartedDraft();
         $fields = FieldDefinition::query()
-            ->where('version_plantilla_id', $syllabus->version_plantilla_id)
+            ->where('plantilla_id', $syllabus->plantilla_id)
             ->where('obligatorio', true)
             ->where('heredado', false)
             ->get();
@@ -521,12 +521,11 @@ class ReviewWorkflowTest extends TestCase
         return $syllabus->fresh();
     }
 
-    /** @return array{TemplateVersion, AcademicSource} */
+    /** @return array{SyllabusTemplate, AcademicSource} */
     private function publishedConfiguration(): array
     {
         $this->actingAsAdministrator()->post(route('admin.templates.store'), ['nombre' => 'Plantilla I-04']);
-        $template = TemplateVersion::query()->latest('creado_en')->firstOrFail();
-        $this->actingAsAdministrator()->post(route('admin.templates.publish', $template))->assertRedirect();
+        $template = SyllabusTemplate::query()->latest('creado_en')->firstOrFail();
 
         $this->actingAsCoordinator()->post(route('sources.store'), [
             'nombre' => 'Fuente I-04',
@@ -543,7 +542,7 @@ class ReviewWorkflowTest extends TestCase
     private function editableScalarField(Syllabus $syllabus): FieldDefinition
     {
         return FieldDefinition::query()
-            ->where('version_plantilla_id', $syllabus->version_plantilla_id)
+            ->where('plantilla_id', $syllabus->plantilla_id)
             ->where('heredado', false)
             ->where('editable_docente', true)
             ->where('tipo', '!=', 'repetible')

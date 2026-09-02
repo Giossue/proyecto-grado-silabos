@@ -35,13 +35,12 @@ class CreateConvocation
             abort(403);
         }
 
-        $process = SyllabusProcess::query()->with('templateVersion.template')->findOrFail($data['process_id']);
+        $process = SyllabusProcess::query()->with('template')->findOrFail($data['process_id']);
         if ($process->estado === SyllabusProcess::STATE_CLOSED) {
             throw ValidationException::withMessages(['process_id' => 'El proceso ya está cerrado; elija uno vigente.']);
         }
-        $template = $process->templateVersion;
-        if ($template->estado !== 'publicada' || ! $template->template->activo || ! $template->template->es_institucional) {
-            throw ValidationException::withMessages(['process_id' => 'La plantilla del proceso ya no está publicada; Administración debe corregirla.']);
+        if (! $process->template->activo || ! $process->template->es_institucional) {
+            throw ValidationException::withMessages(['process_id' => 'La plantilla del proceso está archivada; Administración debe corregirla.']);
         }
 
         $sources = AcademicSource::query()->whereIn('id', $data['source_ids'])->get();
@@ -56,7 +55,7 @@ class CreateConvocation
                 'carrera_id' => $activeRole->carrera_id,
                 'proceso_id' => $process->id,
                 'periodo_academico_id' => $data['period_id'],
-                'version_plantilla_id' => $process->version_plantilla_id,
+                'plantilla_id' => $process->plantilla_id,
                 'nombre' => $data['nombre'],
                 'estado' => 'preparacion',
                 'modo_agrupacion' => $data['grouping_mode'],

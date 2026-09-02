@@ -24,7 +24,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $horas_aa
  * @property string|null $horas_paec
  * @property bool $activo
- * @property-read CurriculumVersion $curriculumVersion
+ * @property string $malla_id
+ * @property-read Curriculum $curriculum
  */
 class Subject extends Model
 {
@@ -38,7 +39,7 @@ class Subject extends Model
 
     /** @var list<string> */
     protected $fillable = [
-        'version_malla_id',
+        'malla_id',
         'codigo_institucional',
         'codigo_oculto_institucional',
         'nombre',
@@ -75,10 +76,10 @@ class Subject extends Model
         ];
     }
 
-    /** @return BelongsTo<CurriculumVersion, $this> */
-    public function curriculumVersion(): BelongsTo
+    /** @return BelongsTo<Curriculum, $this> */
+    public function curriculum(): BelongsTo
     {
-        return $this->belongsTo(CurriculumVersion::class, 'version_malla_id');
+        return $this->belongsTo(Curriculum::class, 'malla_id');
     }
 
     /** @return HasMany<CourseOffering, $this> */

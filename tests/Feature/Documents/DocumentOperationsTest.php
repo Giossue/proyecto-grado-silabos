@@ -5,12 +5,11 @@ namespace Tests\Feature\Documents;
 use App\Models\User;
 use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
-use App\Modules\Academic\Infrastructure\Persistence\Models\CurriculumVersion;
+use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Faculty;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Subject;
 use App\Modules\Academic\Infrastructure\Persistence\Models\TeacherAssignment;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
-use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateVersion;
 use App\Modules\Documents\Application\DocumentBundleValidator;
 use App\Modules\Documents\Domain\Contracts\DocumentRenderer;
 use App\Modules\Documents\Domain\Data\DocumentRenderInput;
@@ -102,7 +101,7 @@ class DocumentOperationsTest extends TestCase
         Queue::assertPushed(GenerateSyllabusExportJob::class, 1);
         $artifact = ExportArtifact::query()->firstOrFail();
         $this->assertSame($revision->id, $artifact->revision_silabo_id);
-        $this->assertSame($syllabus->version_plantilla_id, $artifact->version_plantilla_id);
+        $this->assertSame($syllabus->plantilla_id, $artifact->plantilla_id);
 
         $outsider = User::factory()->create();
         $outsiderContext = RoleAssignment::query()->create([
@@ -188,7 +187,7 @@ class DocumentOperationsTest extends TestCase
             academicPeriod: $syllabus->convocation->academicPeriod()->valueOrFail('nombre'),
             revisionNumber: $revision->numero_revision,
             revisionFingerprint: $revision->huella_sha256,
-            templateVersionId: $syllabus->version_plantilla_id,
+            templateId: $syllabus->plantilla_id,
             generatedAt: $artifact->solicitado_en->toIso8601String(),
             locale: 'es-EC',
             snapshot: $revision->fotografia,
@@ -343,7 +342,7 @@ class DocumentOperationsTest extends TestCase
     public function test_cp_f_reports_apply_career_scope_to_indicators_and_detail(): void
     {
         [$syllabus] = $this->approvedRevision();
-        $other = $this->otherCareerSyllabus($syllabus->templateVersion);
+        $other = $this->otherCareerSyllabus($syllabus->template);
 
         $this->actingAsCoordinator()
             ->get(route('reports.index'))
@@ -417,24 +416,16 @@ class DocumentOperationsTest extends TestCase
         $career = Career::query()->firstOrFail();
         $period = AcademicPeriod::query()->firstOrFail();
         $subject = Subject::query()->firstOrFail();
-        $template = SyllabusTemplate::query()->create([
-            'carrera_id' => $career->id,
+        $version = SyllabusTemplate::query()->create([
             'nombre' => 'Plantilla documental CP-F',
             'activo' => true,
-        ]);
-        $version = TemplateVersion::query()->create([
-            'plantilla_id' => $template->id,
-            'numero_version' => 1,
-            'estado' => 'publicada',
+            'es_institucional' => true,
             'mapeo_documento' => ['renderer' => 'baseline'],
-            'huella_sha256' => str_repeat('b', 64),
-            'publicado_por' => $this->administrator->id,
-            'publicado_en' => now(),
         ]);
         $convocation = Convocation::query()->create([
             'carrera_id' => $career->id,
             'periodo_academico_id' => $period->id,
-            'version_plantilla_id' => $version->id,
+            'plantilla_id' => $version->id,
             'proceso_id' => $this->openSyllabusProcess($version->id)->id,
             'nombre' => 'Convocatoria documental CP-F',
             'estado' => 'abierta',
@@ -446,8 +437,8 @@ class DocumentOperationsTest extends TestCase
         $syllabus = Syllabus::query()->create([
             'convocatoria_id' => $convocation->id,
             'asignatura_id' => $subject->id,
-            'version_malla_id' => $subject->version_malla_id,
-            'version_plantilla_id' => $version->id,
+            'malla_id' => $subject->malla_id,
+            'plantilla_id' => $version->id,
             'estado' => 'aprobado',
             'version_bloqueo' => 2,
             'porcentaje_completitud' => 100,
@@ -462,7 +453,7 @@ class DocumentOperationsTest extends TestCase
         ]);
         $snapshot = [
             'schema_version' => 1,
-            'template_version_id' => $version->id,
+            'template_id' => $version->id,
             'sections' => [[
                 'key' => 'general',
                 'title' => 'Información general',
@@ -502,7 +493,7 @@ class DocumentOperationsTest extends TestCase
         return [$syllabus->fresh(), $revision->fresh()];
     }
 
-    private function otherCareerSyllabus(TemplateVersion $template): Syllabus
+    private function otherCareerSyllabus(SyllabusTemplate $template): Syllabus
     {
         $faculty = Faculty::query()->firstOrFail();
         $career = Career::query()->create([
@@ -511,15 +502,13 @@ class DocumentOperationsTest extends TestCase
             'nombre' => 'Otra carrera CP-F',
             'activo' => true,
         ]);
-        $curriculum = CurriculumVersion::query()->create([
+        $curriculum = Curriculum::query()->create([
             'carrera_id' => $career->id,
             'codigo' => 'OTRA-MALLA-CP-F',
-            'numero_version' => 1,
             'estado' => 'activa',
-            'es_actual' => true,
         ]);
         $subject = Subject::query()->create([
-            'version_malla_id' => $curriculum->id,
+            'malla_id' => $curriculum->id,
             'codigo_institucional' => 'OTRA-101',
             'nombre' => 'Asignatura fuera de alcance',
             'activo' => true,
@@ -527,7 +516,7 @@ class DocumentOperationsTest extends TestCase
         $convocation = Convocation::query()->create([
             'carrera_id' => $career->id,
             'periodo_academico_id' => AcademicPeriod::query()->valueOrFail('id'),
-            'version_plantilla_id' => $template->id,
+            'plantilla_id' => $template->id,
             'proceso_id' => $this->openSyllabusProcess($template->id)->id,
             'nombre' => 'Convocatoria fuera de alcance',
             'estado' => 'abierta',
@@ -540,8 +529,8 @@ class DocumentOperationsTest extends TestCase
         return Syllabus::query()->create([
             'convocatoria_id' => $convocation->id,
             'asignatura_id' => $subject->id,
-            'version_malla_id' => $curriculum->id,
-            'version_plantilla_id' => $template->id,
+            'malla_id' => $curriculum->id,
+            'plantilla_id' => $template->id,
             'estado' => 'aprobado',
             'version_bloqueo' => 2,
             'porcentaje_completitud' => 100,

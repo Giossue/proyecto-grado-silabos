@@ -161,7 +161,7 @@ class AiAssistanceController extends Controller
     private function assertField(Syllabus $syllabus, FieldDefinition $field): void
     {
         abort_unless(
-            $field->version_plantilla_id === $syllabus->version_plantilla_id
+            $field->plantilla_id === $syllabus->plantilla_id
             && $field->ia_habilitada
             && $field->editable_docente
             && ! $field->heredado

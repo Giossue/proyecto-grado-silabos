@@ -5,7 +5,7 @@ namespace App\Modules\Academic\Application\Actions;
 use App\Models\User;
 use App\Modules\Academic\Domain\AcademicStructurePermissions;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CourseOffering;
-use App\Modules\Academic\Infrastructure\Persistence\Models\CurriculumVersion;
+use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
 use App\Modules\Academic\Infrastructure\Persistence\Models\SubjectRequirement;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
@@ -36,15 +36,14 @@ class DeleteCurriculum
         $this->locks->assertCareerEditable($role->carrera_id);
 
         DB::transaction(function () use ($actor, $curriculumId, $request, $role): void {
-            $curriculum = CurriculumVersion::query()
+            $curriculum = Curriculum::query()
                 ->where('carrera_id', $role->carrera_id)
-                ->current()
-                ->with('subjects:id,version_malla_id')
+                ->with('subjects:id,malla_id')
                 ->lockForUpdate()
                 ->findOrFail($curriculumId);
             $subjectIds = $curriculum->subjects->pluck('id');
 
-            $hasSyllabi = Syllabus::query()->where('version_malla_id', $curriculum->id)->exists();
+            $hasSyllabi = Syllabus::query()->where('malla_id', $curriculum->id)->exists();
             $hasOfferings = CourseOffering::query()->whereIn('asignatura_id', $subjectIds)->exists();
             if ($hasSyllabi || $hasOfferings) {
                 throw ValidationException::withMessages([

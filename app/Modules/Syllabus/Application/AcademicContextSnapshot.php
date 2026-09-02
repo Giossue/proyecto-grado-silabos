@@ -11,14 +11,14 @@ class AcademicContextSnapshot
     public function build(CourseOffering $offering): array
     {
         $offering->loadMissing([
-            'subject.curriculumVersion',
+            'subject.curriculum',
             'subject.fieldValues.definition',
             'academicPeriod',
             'campus',
             'modality',
         ]);
         $subject = $offering->subject;
-        $curriculum = $subject->curriculumVersion;
+        $curriculum = $subject->curriculum;
 
         return [
             'schema_version' => 1,

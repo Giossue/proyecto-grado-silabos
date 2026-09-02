@@ -37,12 +37,8 @@ const props = defineProps<{
         name: string;
         description: string | null;
         active: boolean;
-        versions: {
-            id: string;
-            number: number;
-            state: string;
-            published_at: string | null;
-        }[];
+        sections_count: number;
+        actualizado_en: string | null;
     }[];
     hasInstitutionalTemplate: boolean;
     /** Motivo por el que la plantilla no se edita; nulo cuando sí se puede. */
@@ -64,8 +60,10 @@ const {
     setPage: setTemplatePage,
 } = useClientPagination(() => filter.items.value);
 
-const stateLabel = (state: string): string =>
-    state === 'publicada' ? 'Publicada' : 'Borrador';
+const formatDate = (value: string): string =>
+    new Intl.DateTimeFormat('es-EC', { dateStyle: 'medium' }).format(
+        new Date(value),
+    );
 
 defineOptions({
     layout: { breadcrumbs: [{ title: 'Plantillas', href: templatesIndex() }] },
@@ -76,7 +74,7 @@ defineOptions({
     <Head title="Plantillas" />
     <PageFrame
         title="Plantillas de sílabo"
-        description="El formato del sílabo: qué campos tiene y en qué orden. Publicar una versión nueva no toca las que ya se están usando."
+        description="El formato del sílabo: qué campos tiene y en qué orden. Se edita en el sitio; cada sílabo entregado conserva su propia copia."
     >
         <template #actions>
             <TemplateCreationSheet
@@ -152,36 +150,17 @@ defineOptions({
                         </CardAction>
                     </CardHeader>
                     <CardContent class="flex-1">
-                        <div
-                            v-if="template.versions.length > 0"
-                            class="flex flex-wrap gap-2"
-                        >
-                            <Badge
-                                v-for="version in template.versions"
-                                :key="version.id"
-                                :variant="
-                                    version.state === 'publicada'
-                                        ? 'secondary'
-                                        : 'outline'
-                                "
-                            >
-                                v{{ version.number }} ·
-                                {{ stateLabel(version.state) }}
-                            </Badge>
-                        </div>
-                        <p v-else class="text-sm text-muted-foreground">
-                            Sin versiones disponibles.
+                        <p class="text-sm text-muted-foreground">
+                            {{ template.sections_count }} secciones
+                            <template v-if="template.actualizado_en">
+                                · actualizada el
+                                {{ formatDate(template.actualizado_en) }}
+                            </template>
                         </p>
                     </CardContent>
-                    <CardFooter v-if="template.versions.length > 0">
+                    <CardFooter>
                         <Button as-child class="w-full">
-                            <Link
-                                :href="
-                                    TemplateController.show(
-                                        template.versions[0].id,
-                                    )
-                                "
-                            >
+                            <Link :href="TemplateController.show(template.id)">
                                 Abrir plantilla
                                 <span class="sr-only">{{ template.name }}</span>
                             </Link>
