@@ -4,7 +4,9 @@
 
 ### Identidad y alcance
 
-- `Usuario`: persona autenticable, activa o inactiva.
+- `Usuario`: persona autenticable, activa o inactiva. Su nombre se guarda normalizado
+  (I-32): mayúsculas con tildes, primero nombres y luego apellidos, sin espacios
+  sobrantes; `PersonName::normalize` lo aplica en toda escritura.
 - `Rol`: Administrador, Coordinador o Docente.
 - `AsignacionRol`: rol, alcance y vigencia; una persona puede tener varias.
 - `AsignacionCoordinador` y `AsignacionDocente`: vinculan responsabilidad académica.

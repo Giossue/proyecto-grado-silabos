@@ -4,6 +4,7 @@ namespace App\Modules\Identity\Application\Actions;
 
 use App\Models\User;
 use App\Modules\Identity\Application\ActiveRole;
+use App\Modules\Identity\Domain\PersonName;
 use App\Modules\Operations\Application\Actions\RecordAuditEvent;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -31,7 +32,9 @@ class UpdateManagedUserProfile
             $previous = ['name' => $locked->nombre, 'email' => $locked->correo_electronico];
             $email = mb_strtolower($data['correo_electronico']);
 
-            $locked->fill(['nombre' => $data['nombre'], 'correo_electronico' => $email]);
+            $name = PersonName::normalize($data['nombre']);
+
+            $locked->fill(['nombre' => $name, 'correo_electronico' => $email]);
 
             if (! $locked->isDirty()) {
                 return $locked;
@@ -53,7 +56,7 @@ class UpdateManagedUserProfile
                 metadata: [
                     'previous_name' => $previous['name'],
                     'previous_email' => $previous['email'],
-                    'name_changed' => $previous['name'] !== $data['nombre'],
+                    'name_changed' => $previous['name'] !== $name,
                     'email_changed' => $previous['email'] !== $email,
                 ],
                 correlationId: $request->attributes->getString('correlation_id') ?: null,

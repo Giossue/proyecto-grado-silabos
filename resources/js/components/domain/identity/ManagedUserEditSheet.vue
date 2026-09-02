@@ -95,10 +95,14 @@ watch(open, (isOpen) => {
                             :id="`user-edit-name-${props.user.id}`"
                             name="nombre"
                             :default-value="props.user.nombre"
-                            placeholder="Ej. María Pérez"
+                            placeholder="Ej. MARÍA JOSÉ PÉREZ LÓPEZ"
                             required
                             :aria-invalid="Boolean(errors.nombre)"
                         />
+                        <FieldDescription>
+                            Primero los nombres y luego los apellidos. Se guarda
+                            en mayúsculas, con tildes.
+                        </FieldDescription>
                         <FieldError :errors="[errors.nombre]" />
                     </Field>
 

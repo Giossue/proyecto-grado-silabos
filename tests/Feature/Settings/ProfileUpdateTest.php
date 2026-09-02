@@ -42,7 +42,7 @@ class ProfileUpdateTest extends TestCase
 
         $user->refresh();
 
-        $this->assertSame('Test User', $user->nombre);
+        $this->assertSame('TEST USER', $user->nombre);
         $this->assertSame('test@example.com', $user->correo_electronico);
         $this->assertNull($user->correo_verificado_en);
         $this->assertDatabaseHas('eventos_auditoria', [

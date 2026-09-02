@@ -56,7 +56,7 @@ class ManagedUserUpdateTest extends TestCase
             ->assertSessionHas('success');
 
         $this->teacher->refresh();
-        $this->assertSame('Docente Corregida', $this->teacher->nombre);
+        $this->assertSame('DOCENTE CORREGIDA', $this->teacher->nombre);
         $this->assertSame('docente.corregida@silabos.test', $this->teacher->correo_electronico);
         $this->assertFalse($this->teacher->activo);
         $this->assertDatabaseHas('eventos_auditoria', [
@@ -112,7 +112,7 @@ class ManagedUserUpdateTest extends TestCase
             ->assertRedirect();
 
         $this->teacher->refresh();
-        $this->assertSame('Docente Renombrada', $this->teacher->nombre);
+        $this->assertSame('DOCENTE RENOMBRADA', $this->teacher->nombre);
         $this->assertTrue($this->teacher->activo);
         $this->assertSame($assignmentsBefore, $this->teacher->roleAssignments()->count());
         // El estado no cambió, así que no se inventa un evento de activación.
@@ -131,7 +131,7 @@ class ManagedUserUpdateTest extends TestCase
             ])
             ->assertRedirect();
 
-        $this->assertSame('Administración Renombrada', $this->administrator->fresh()->nombre);
+        $this->assertSame('ADMINISTRACIÓN RENOMBRADA', $this->administrator->fresh()->nombre);
 
         // Tocar el propio estado o concederse un rol se rechaza completo: la
         // desactivación y los privilegios de la propia cuenta son de otra administración.
@@ -163,7 +163,7 @@ class ManagedUserUpdateTest extends TestCase
             ])
             ->assertForbidden();
 
-        $this->assertSame('Docente Demo', $this->teacher->fresh()->nombre);
+        $this->assertSame('DOCENTE DEMO', $this->teacher->fresh()->nombre);
     }
 
     public function test_a_scoped_role_requires_its_career(): void

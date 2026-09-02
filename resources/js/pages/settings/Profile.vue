@@ -58,8 +58,12 @@ const props = defineProps<{
                     :default-value="user.nombre"
                     required
                     autocomplete="name"
-                    placeholder="Ej. María Pérez"
+                    placeholder="Ej. MARÍA JOSÉ PÉREZ LÓPEZ"
                 />
+                <p class="text-sm text-muted-foreground">
+                    Primero los nombres y luego los apellidos. Se guarda en
+                    mayúsculas, con tildes.
+                </p>
                 <InputError class="mt-2" :message="errors.nombre" />
             </div>
 
@@ -113,7 +117,7 @@ const props = defineProps<{
                 <Input
                     id="readonly-name"
                     :model-value="user.nombre"
-                    placeholder="Ej. María Pérez"
+                    placeholder="Ej. MARÍA JOSÉ PÉREZ LÓPEZ"
                     disabled
                     aria-describedby="identity-help"
                 />

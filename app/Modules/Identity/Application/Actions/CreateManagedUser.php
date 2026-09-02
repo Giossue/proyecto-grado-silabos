@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Identity\Application\CoordinationMandate;
 use App\Modules\Identity\Domain\Enums\RoleCode;
+use App\Modules\Identity\Domain\PersonName;
 use App\Modules\Identity\Infrastructure\Mail\ManagedUserCredentialsMail;
 use App\Modules\Identity\Infrastructure\Persistence\Models\Role;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
@@ -29,7 +30,7 @@ class CreateManagedUser
 
         return DB::transaction(function () use ($actor, $activeRole, $data, $request): User {
             $user = User::query()->create([
-                'nombre' => $data['nombre'],
+                'nombre' => PersonName::normalize($data['nombre']),
                 'correo_electronico' => mb_strtolower($data['correo_electronico']),
                 'contrasena' => $data['password'],
                 'activo' => true,

@@ -17,6 +17,7 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Subject;
 use App\Modules\Academic\Infrastructure\Persistence\Models\TeacherAssignment;
 use App\Modules\Identity\Domain\Enums\RoleCode;
+use App\Modules\Identity\Domain\PersonName;
 use App\Modules\Identity\Infrastructure\Persistence\Models\Role;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
@@ -127,7 +128,7 @@ class DatabaseSeeder extends Seeder
                 $user = User::query()->updateOrCreate(
                     ['correo_electronico' => $data[1]],
                     [
-                        'nombre' => $data[0],
+                        'nombre' => PersonName::normalize($data[0]),
                         'contrasena' => Hash::make('Demo-2026!'),
                         'correo_verificado_en' => now(),
                         'activo' => true,

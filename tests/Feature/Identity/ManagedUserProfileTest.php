@@ -56,7 +56,7 @@ class ManagedUserProfileTest extends TestCase
             ->assertForbidden();
 
         $this->teacher->refresh();
-        $this->assertSame('Docente Demo', $this->teacher->nombre);
+        $this->assertSame('DOCENTE DEMO', $this->teacher->nombre);
         $this->assertSame('docente@silabos.test', $this->teacher->correo_electronico);
         $this->assertDatabaseMissing('eventos_auditoria', [
             'accion' => 'usuario.perfil_actualizado',
@@ -99,7 +99,7 @@ class ManagedUserProfileTest extends TestCase
             ])
             ->assertRedirect();
 
-        $this->assertSame('Docente Ajena Corregida', $outsider->fresh()->nombre);
+        $this->assertSame('DOCENTE AJENA CORREGIDA', $outsider->fresh()->nombre);
     }
 
     public function test_a_teacher_cannot_correct_anyone(): void
@@ -132,7 +132,7 @@ class ManagedUserProfileTest extends TestCase
             ])
             ->assertRedirect();
 
-        $this->assertSame('Docente Renombrada', $this->teacher->fresh()->nombre);
+        $this->assertSame('DOCENTE RENOMBRADA', $this->teacher->fresh()->nombre);
     }
 
     public function test_creating_an_account_sends_its_credentials_by_email(): void
