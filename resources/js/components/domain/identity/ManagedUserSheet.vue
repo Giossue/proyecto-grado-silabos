@@ -5,6 +5,7 @@ import { ref, watch } from 'vue';
 import ManagedUserController from '@/actions/App/Modules/Identity/Presentation/Http/Controllers/ManagedUserController';
 import FormSheet from '@/components/domain/FormSheet.vue';
 import FormSheetActions from '@/components/domain/FormSheetActions.vue';
+import PasswordInput from '@/components/PasswordInput.vue';
 import { Button } from '@/components/ui/button';
 import {
     Field,
@@ -35,8 +36,8 @@ defineProps<{
 
 const initialRole = ref('docente');
 
-// La contraseña se genera aquí y se muestra en claro: quien crea la cuenta tiene que
-// leerla para entregarla, y no se le pide confirmarla porque no la escribió.
+// La contraseña se genera aquí sin pedir confirmación: quien crea la cuenta no la
+// escribió. Permanece oculta hasta que se solicite verla con el control accesible.
 const password = ref(generateTemporaryPassword());
 const copied = ref(false);
 
@@ -113,7 +114,7 @@ watch(open, (isOpen) => {
                             Contraseña temporal
                         </FieldLabel>
                         <div class="flex items-center gap-2">
-                            <Input
+                            <PasswordInput
                                 id="managed-password"
                                 v-model="password"
                                 name="password"
