@@ -22,10 +22,10 @@ const { screenToFlowCoordinate } = useVueFlow();
 
 /*
  * Un quiebre solo se justifica cuando hay que esquivar algo. Si los dos extremos
- * quedan a menos de un reparto de distancia —el desplazamiento que separa las
- * líneas que comparten conector—, el rodeo no evita nada: se alinean al extremo de
- * llegada, que es donde importa que las puntas de flecha no se solapen, y la línea
- * baja recta.
+ * quedan a menos de un reparto de distancia —el desplazamiento que separa las líneas
+ * que comparten conector—, el rodeo no evita nada: la línea baja recta desde donde
+ * sale. Manda la salida y no la llegada: una materia con una sola línea debe verse
+ * salir de su centro, y la punta cae donde esa vertical llegue.
  */
 const ALIGNMENT_TOLERANCE = 24;
 
@@ -34,7 +34,7 @@ const endpoints = computed(() => {
     const targetX = props.targetX + props.data.targetOffset;
 
     return Math.abs(sourceX - targetX) <= ALIGNMENT_TOLERANCE
-        ? { sourceX: targetX, targetX }
+        ? { sourceX, targetX: sourceX }
         : { sourceX, targetX };
 });
 

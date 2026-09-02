@@ -352,8 +352,9 @@ const buildNodes = (): Node[] => {
     return nodes;
 };
 
-// Reparte las conexiones que comparten conector: cada línea sale y llega con su
-// propio desplazamiento horizontal para que no se pisen en la materia.
+// Reparte las conexiones que comparten conector. La primera se queda en el centro de
+// la materia —que es de donde se espera que salga una línea— y las siguientes se
+// apartan hacia un lado para no pisarla.
 const EDGE_SPACING = 18;
 
 const edgeOffsets = (): Map<string, { source: number; target: number }> => {
@@ -381,11 +382,8 @@ const edgeOffsets = (): Map<string, { source: number; target: number }> => {
                         orderKey(counterpart(left)) -
                         orderKey(counterpart(right)),
                 )
-                .forEach((requirement, index, siblings) => {
-                    offsets.set(
-                        requirement.id,
-                        (index - (siblings.length - 1) / 2) * EDGE_SPACING,
-                    );
+                .forEach((requirement, index) => {
+                    offsets.set(requirement.id, index * EDGE_SPACING);
                 });
         });
 
