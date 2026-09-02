@@ -8,8 +8,8 @@ import {
     DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import UserInfo from '@/components/UserInfo.vue';
+import { useSettingsRoutes } from '@/composables/useSettingsRoutes';
 import { logout } from '@/routes';
-import { edit } from '@/routes/profile';
 import type { User } from '@/types';
 
 type Props = {
@@ -24,6 +24,8 @@ const handleLogout = () => {
 };
 
 withDefaults(defineProps<Props>(), { canSwitchScope: false });
+
+const settings = useSettingsRoutes();
 </script>
 
 <template>
@@ -39,7 +41,11 @@ withDefaults(defineProps<Props>(), { canSwitchScope: false });
             Cambiar carrera o rol
         </DropdownMenuItem>
         <DropdownMenuItem :as-child="true">
-            <Link class="block w-full cursor-pointer" :href="edit()" prefetch>
+            <Link
+                class="block w-full cursor-pointer"
+                :href="settings.profile.value"
+                prefetch
+            >
                 <Settings data-icon="inline-start" aria-hidden="true" />
                 Configuración
             </Link>

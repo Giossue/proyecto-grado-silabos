@@ -1,33 +1,33 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
 import { Palette, ShieldCheck, UserRound } from '@lucide/vue';
+import { computed } from 'vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useCurrentUrl } from '@/composables/useCurrentUrl';
+import { useSettingsRoutes } from '@/composables/useSettingsRoutes';
 import { toUrl } from '@/lib/utils';
-import { edit as editAppearance } from '@/routes/appearance';
-import { edit as editProfile } from '@/routes/profile';
-import { edit as editSecurity } from '@/routes/security';
 import type { NavItem } from '@/types';
 
-const sidebarNavItems: NavItem[] = [
+const settings = useSettingsRoutes();
+const sidebarNavItems = computed<NavItem[]>(() => [
     {
         title: 'Perfil',
-        href: editProfile(),
+        href: settings.profile.value,
         icon: UserRound,
     },
     {
         title: 'Seguridad',
-        href: editSecurity(),
+        href: settings.security.value,
         icon: ShieldCheck,
     },
     {
         title: 'Apariencia',
-        href: editAppearance(),
+        href: settings.appearance.value,
         icon: Palette,
     },
-];
+]);
 
 const { isCurrentOrParentUrl } = useCurrentUrl();
 </script>

@@ -34,21 +34,18 @@ class SecurityTest extends TestCase
             );
     }
 
-    public function test_security_page_requires_password_confirmation_when_enabled()
+    public function test_security_page_does_not_ask_for_the_password_again()
     {
+        // Decisión del responsable del producto (2026-09-02): la sesión ya autenticó a
+        // la persona; no se vuelve a pedir la contraseña para entrar a Seguridad.
         $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());
 
         $user = User::factory()->create();
 
-        Features::twoFactorAuthentication([
-            'confirm' => true,
-            'confirmPassword' => true,
-        ]);
-
-        $response = $this->actingAs($user)
-            ->get(route('security.edit'));
-
-        $response->assertRedirect(route('password.confirm'));
+        $this->actingAs($user)
+            ->get(route('security.edit'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->component('settings/Security'));
     }
 
     public function test_security_page_renders_without_two_factor_when_feature_is_disabled()

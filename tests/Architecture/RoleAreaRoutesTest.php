@@ -27,6 +27,9 @@ it('encabeza cada pantalla con el area del rol', function (string $name, string 
     ['teacher.dashboard', 'docente/'],
     ['teacher.notifications.index', 'docente/'],
     ['teacher.documents.show', 'docente/'],
+    ['teacher.profile.edit', 'docente/'],
+    ['teacher.security.edit', 'docente/'],
+    ['teacher.appearance.edit', 'docente/'],
     // Coordinacion
     ['convocations.index', 'coordinacion/'],
     ['convocations.show', 'coordinacion/'],
@@ -37,6 +40,7 @@ it('encabeza cada pantalla con el area del rol', function (string $name, string 
     ['coordination.dashboard', 'coordinacion/'],
     ['coordination.sources.index', 'coordinacion/'],
     ['coordination.documents.show', 'coordinacion/'],
+    ['coordination.profile.edit', 'coordinacion/'],
     // Administracion
     ['admin.dashboard', 'admin/'],
     ['admin.users.index', 'admin/'],
@@ -44,6 +48,9 @@ it('encabeza cada pantalla con el area del rol', function (string $name, string 
     ['admin.audit.index', 'admin/'],
     ['admin.notifications.index', 'admin/'],
     ['admin.processes.index', 'admin/'],
+    ['admin.profile.edit', 'admin/'],
+    ['admin.security.edit', 'admin/'],
+    ['admin.appearance.edit', 'admin/'],
 ]);
 
 it('deja una sola direccion corta que lleva al area de quien entra', function (string $name): void {

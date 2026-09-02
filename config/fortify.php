@@ -148,7 +148,8 @@ return [
         Features::emailVerification(),
         Features::twoFactorAuthentication([
             'confirm' => true,
-            'confirmPassword' => true,
+            // Sin confirmación de contraseña: la sesión ya autenticó a la persona.
+            'confirmPassword' => false,
             // 'window' => 0
         ]),
     ],
