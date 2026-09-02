@@ -252,9 +252,9 @@ runbooks, docs, factories/seeder, Pint en verde. Falta:
 4. `npm run build` (regenera wayfinder), `npm run types:check`, `npm run lint`.
 5. `composer verify`: bloqueado por `temp/chartdb.sql` (security:scan; decisión del
    usuario — mover el dump o correr las piezas sueltas).
-6. **Verificación UI** con cuentas demo (`admin@silabos.test` / `Demo-2026!`): login,
-   recuperación, Admin→Procesos, Fuentes, autoguardado de sílabo (ver memoria
-   «receta-verificacion-ui-local»: build+serve, borrar `public/hot`).
+6. **Verificación UI (responsable)** con cuentas demo (`admin@silabos.test` /
+   `Demo-2026!`): login, recuperación, Admin→Procesos, Fuentes y autoguardado de
+   sílabo. No corresponde al agente iniciar automatización visual.
 7. Cerrar plan (checkboxes, mover a `completed/` con evidencia). No commitear sin
    permiso del usuario. La rama `feat/esquema-espanol` (worktree de otra sesión) queda
    descartada y puede borrarse al cierre.
@@ -295,9 +295,8 @@ capturas del flujo de login y admin de trabajos, y diff de documentación.
 - [x] Calidad frontend: Pint, `npm run types:check`, `npm run lint:check` y
       `npm run build` en verde.
 - [x] Acceso local autenticado: login de `admin@silabos.test` y respuesta HTTP 200 de
-      `GET /admin/usuarios` verificados con la sesión resultante. No hubo captura visual:
-      Firefox arrancó, pero la automatización de escritorio no expuso ninguna ventana en
-      esta sesión.
+      `GET /admin/usuarios` verificados con la sesión resultante. La comprobación visual
+      queda asignada al responsable.
 - [ ] `composer verify` sigue bloqueado únicamente en `security:scan`: detecta
       `temp/chartdb.sql` y `.claude/worktrees/esquema-espanol/docker/postgres/init/01-create-test-database.sql`.
       Ambos se preservaron; se requiere decisión explícita para moverlos o excluirlos del
