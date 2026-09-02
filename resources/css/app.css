@@ -416,3 +416,19 @@
         display: none;
     }
 }
+
+/*
+ * Puntero del lienzo de la malla.
+ *
+ * Desplazar el lienzo es moverlo en las cuatro direcciones, así que ahí va la cruz
+ * de flechas; la mano abierta queda reservada para lo que de verdad se agarra y se
+ * suelta, que son las tarjetas de materia.
+ *
+ * Fuera de `@layer` y con una clase de más: el CSS de Vue Flow tampoco está en una
+ * capa, así que una regla en capa —cualquier utilidad de Tailwind— perdería contra
+ * la suya por mucho que llegue después.
+ */
+.vue-flow .vue-flow__pane.draggable,
+.vue-flow .vue-flow__pane.dragging {
+    cursor: move;
+}
