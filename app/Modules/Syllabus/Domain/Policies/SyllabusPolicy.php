@@ -70,6 +70,13 @@ class SyllabusPolicy
         return $this->review($user, $syllabus) && $syllabus->estado !== 'en_revision';
     }
 
+    /** Descartar lo presentado para que el docente lo rehaga: coordinación de la carrera, nunca sobre aprobados. */
+    public function reset(User $user, Syllabus $syllabus): bool
+    {
+        return $this->review($user, $syllabus)
+            && in_array($syllabus->estado, ['borrador', 'en_revision', 'correccion_solicitada'], true);
+    }
+
     public function review(User $user, Syllabus $syllabus): bool
     {
         $activeRole = $this->roles->resolve(request());

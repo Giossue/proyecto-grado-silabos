@@ -158,6 +158,10 @@ class DeliverInternalNotificationJob implements ShouldQueue
                 'Sílabo reabierto',
                 "El sílabo {$syllabus->subject->nombre}{$revisionLabel} fue reabierto para corrección.",
             ],
+            'silabo.reiniciado' => [
+                'Sílabo reiniciado',
+                "Coordinación reinició el sílabo {$syllabus->subject->nombre}. Empiece de nuevo con la malla y la plantilla actuales.",
+            ],
             default => throw new RuntimeException('Tipo de notificación interna no soportado.'),
         };
     }

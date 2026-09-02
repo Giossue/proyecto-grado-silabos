@@ -59,7 +59,7 @@ class ProcessLocks
         }
 
         return "La convocatoria «{$convocation->nombre}» está en curso y los sílabos se apoyan en esta información."
-            .' Pause la convocatoria para modificarla; las demás carreras no se ven afectadas.';
+            .' Pause la convocatoria desde Convocatorias para modificarla; las demás carreras no se ven afectadas.';
     }
 
     public function assertCareerEditable(?string $careerId): void

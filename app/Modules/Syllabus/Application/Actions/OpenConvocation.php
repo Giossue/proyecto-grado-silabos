@@ -8,12 +8,11 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
 use App\Modules\Academic\Infrastructure\Persistence\Models\TeacherAssignment;
 use App\Modules\Configuration\Application\TemplateStructureValidator;
-use App\Modules\Configuration\Infrastructure\Persistence\Models\FieldDefinition;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Operations\Application\Actions\RecordAuditEvent;
 use App\Modules\Syllabus\Application\AcademicContextSnapshot;
+use App\Modules\Syllabus\Application\InheritMasterValues;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\Convocation;
-use App\Modules\Syllabus\Infrastructure\Persistence\Models\FieldValue;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\Syllabus;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\SyllabusCollaborator;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\SyllabusProcess;
@@ -30,6 +29,7 @@ class OpenConvocation
         private readonly RecordAuditEvent $audit,
         private readonly AcademicContextSnapshot $academicContext,
         private readonly TemplateStructureValidator $templateStructure,
+        private readonly InheritMasterValues $inherit,
     ) {}
 
     public function execute(string $convocationId, User $actor, Request $request): Convocation
@@ -166,33 +166,6 @@ class OpenConvocation
                 $this->addCollaborator($syllabus, $assignment);
             }
         }
-        $this->inheritMasterValues($syllabus, $convocation->template->sections->flatMap(fn ($section) => $section->blocks->flatMap(fn ($block) => $block->fields)), $offering);
-    }
-
-    /** @param Collection<int, FieldDefinition> $fields */
-    private function inheritMasterValues(Syllabus $syllabus, Collection $fields, CourseOffering $offering): void
-    {
-        foreach ($fields->where('heredado', true) as $field) {
-            $value = match ($field->origen_maestro) {
-                'asignaturas' => [
-                    'codigo' => $offering->subject->codigo_institucional,
-                    'nombre' => $offering->subject->nombre,
-                    'ciclo' => $offering->subject->ciclo,
-                    'creditos' => $offering->subject->creditos,
-                    'horas_totales' => $offering->subject->horas_totales,
-                    'campus' => $offering->campus->nombre,
-                    'modalidad' => $offering->modality->nombre,
-                ],
-                'flujo' => ['estado' => 'Sin iniciar'],
-                default => null,
-            };
-            FieldValue::query()->create([
-                'silabo_id' => $syllabus->id,
-                'definicion_campo_id' => $field->id,
-                'valor' => $value,
-                'heredado' => true,
-                'origen' => $field->origen_maestro,
-            ]);
-        }
+        $this->inherit->execute($syllabus, $convocation->template->sections->flatMap(fn ($section) => $section->blocks->flatMap(fn ($block) => $block->fields)), $offering);
     }
 }

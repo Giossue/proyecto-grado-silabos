@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Monitor, Moon, Sun } from '@lucide/vue';
+import { Moon, Sun } from '@lucide/vue';
 import { computed } from 'vue';
 import { Button } from '@/components/ui/button';
 import {
@@ -12,13 +12,11 @@ import { useAppearance } from '@/composables/useAppearance';
 
 const { appearance, updateAppearance } = useAppearance();
 
-// El orden es el del ciclo: cada pulsación avanza una posición y vuelve al inicio.
-// Se conservan las mismas tres opciones que Configuración; reducirlo a dos estados
-// dejaría fuera «Sistema» y la preferencia dejaría de coincidir entre ambas pantallas.
+// Solo dos temas, claro y oscuro, en el mismo orden que Configuración. No existe la
+// opción «Sistema»: la aplicación arranca en claro y solo cambia cuando la persona pulsa.
 const options = [
     { value: 'light', Icon: Sun, label: 'Claro' },
     { value: 'dark', Icon: Moon, label: 'Oscuro' },
-    { value: 'system', Icon: Monitor, label: 'Sistema' },
 ] as const;
 
 const currentIndex = computed(() => {
@@ -26,7 +24,7 @@ const currentIndex = computed(() => {
         (option) => option.value === appearance.value,
     );
 
-    return index === -1 ? 2 : index;
+    return index === -1 ? 0 : index;
 });
 
 const current = computed(() => options[currentIndex.value]);

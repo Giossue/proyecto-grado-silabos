@@ -134,6 +134,7 @@ class AuditEventController extends Controller
             'silabo.aprobado' => 'Sílabo aprobado',
             'silabo.correccion_solicitada' => 'Corrección solicitada',
             'silabo.reabierto' => 'Sílabo reabierto',
+            'silabo.reiniciado' => 'Sílabo reiniciado',
             'silabo.reenviado' => 'Sílabo reenviado',
             'silabo.enviado' => 'Sílabo enviado',
             'silabo.observacion_agregada' => 'Observación registrada',

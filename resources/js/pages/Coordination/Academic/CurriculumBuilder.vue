@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import { Link2, ListTree, Lock, Plus, PowerOff, Workflow } from '@lucide/vue';
+import { Link2, ListTree, Plus, PowerOff, Workflow } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import CurriculumCanvas from '@/components/domain/academic/curriculum/CurriculumCanvas.vue';
 import CurriculumConfigurationSheet from '@/components/domain/academic/curriculum/CurriculumConfigurationSheet.vue';
@@ -9,6 +9,7 @@ import CurriculumRequirementSheet from '@/components/domain/academic/curriculum/
 import CurriculumSubjectSheet from '@/components/domain/academic/curriculum/CurriculumSubjectSheet.vue';
 import CurriculumActions from '@/components/domain/academic/CurriculumActions.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
+import ProcessLockAlert from '@/components/domain/ProcessLockAlert.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -109,11 +110,11 @@ const openSubject = (subject: CurriculumBuilderSubject): void => {
             </Button>
         </template>
 
-        <Alert v-if="curriculum.lock_reason">
-            <Lock aria-hidden="true" />
-            <AlertTitle>Malla protegida durante la convocatoria</AlertTitle>
-            <AlertDescription>{{ curriculum.lock_reason }}</AlertDescription>
-        </Alert>
+        <ProcessLockAlert
+            v-if="curriculum.lock_reason"
+            title="Malla protegida durante la convocatoria"
+            :reason="curriculum.lock_reason"
+        />
 
         <Alert v-if="!curriculum.active">
             <PowerOff aria-hidden="true" />

@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import { Lock } from '@lucide/vue';
 import ClientFilterBar from '@/components/domain/ClientFilterBar.vue';
 import AcademicSourceCreationSheet from '@/components/domain/configuration/AcademicSourceCreationSheet.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
+import ProcessLockAlert from '@/components/domain/ProcessLockAlert.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Card, CardContent } from '@/components/ui/card';
 import {
     Table,
@@ -58,11 +57,11 @@ defineOptions({
         <template #actions>
             <AcademicSourceCreationSheet v-if="!processLock" />
         </template>
-        <Alert v-if="processLock">
-            <Lock aria-hidden="true" />
-            <AlertTitle>Fuentes protegidas durante la convocatoria</AlertTitle>
-            <AlertDescription>{{ processLock }}</AlertDescription>
-        </Alert>
+        <ProcessLockAlert
+            v-if="processLock"
+            title="Fuentes protegidas durante la convocatoria"
+            :reason="processLock"
+        />
         <Card>
             <CardContent class="flex flex-col gap-4">
                 <ClientFilterBar

@@ -10,24 +10,21 @@ export type UseAppearanceReturn = {
     updateAppearance: (value: Appearance) => void;
 };
 
+/**
+ * El tema por defecto es claro y no se consulta la preferencia del sistema: la persona
+ * elige claro u oscuro desde el control del encabezado o desde Configuración.
+ */
+export const DEFAULT_APPEARANCE: Appearance = 'light';
+
+const isAppearance = (value: unknown): value is Appearance =>
+    value === 'light' || value === 'dark';
+
 export function updateTheme(value: Appearance): void {
     if (typeof window === 'undefined') {
         return;
     }
 
-    if (value === 'system') {
-        const mediaQueryList = window.matchMedia(
-            '(prefers-color-scheme: dark)',
-        );
-        const systemTheme = mediaQueryList.matches ? 'dark' : 'light';
-
-        document.documentElement.classList.toggle(
-            'dark',
-            systemTheme === 'dark',
-        );
-    } else {
-        document.documentElement.classList.toggle('dark', value === 'dark');
-    }
+    document.documentElement.classList.toggle('dark', value === 'dark');
 }
 
 const setCookie = (name: string, value: string, days = 365) => {
@@ -40,34 +37,15 @@ const setCookie = (name: string, value: string, days = 365) => {
     document.cookie = `${name}=${value};path=/;max-age=${maxAge};SameSite=Lax`;
 };
 
-const mediaQuery = () => {
+/** Cualquier valor guardado que no sea claro u oscuro (p. ej. «system») vuelve a claro. */
+const getStoredAppearance = (): Appearance => {
     if (typeof window === 'undefined') {
-        return null;
+        return DEFAULT_APPEARANCE;
     }
 
-    return window.matchMedia('(prefers-color-scheme: dark)');
-};
+    const stored = localStorage.getItem('appearance');
 
-const getStoredAppearance = () => {
-    if (typeof window === 'undefined') {
-        return null;
-    }
-
-    return localStorage.getItem('appearance') as Appearance | null;
-};
-
-const prefersDark = (): boolean => {
-    if (typeof window === 'undefined') {
-        return false;
-    }
-
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
-};
-
-const handleSystemThemeChange = () => {
-    const currentAppearance = getStoredAppearance();
-
-    updateTheme(currentAppearance || 'system');
+    return isAppearance(stored) ? stored : DEFAULT_APPEARANCE;
 };
 
 export function initializeTheme(): void {
@@ -75,34 +53,19 @@ export function initializeTheme(): void {
         return;
     }
 
-    // Initialize theme from saved preference or default to system...
-    const savedAppearance = getStoredAppearance();
-    updateTheme(savedAppearance || 'system');
-
-    // Set up system theme change listener...
-    mediaQuery()?.addEventListener('change', handleSystemThemeChange);
+    updateTheme(getStoredAppearance());
 }
 
-const appearance = ref<Appearance>('system');
+const appearance = ref<Appearance>(DEFAULT_APPEARANCE);
 
 export function useAppearance(): UseAppearanceReturn {
     onMounted(() => {
-        const savedAppearance = localStorage.getItem(
-            'appearance',
-        ) as Appearance | null;
-
-        if (savedAppearance) {
-            appearance.value = savedAppearance;
-        }
+        appearance.value = getStoredAppearance();
     });
 
-    const resolvedAppearance = computed<ResolvedAppearance>(() => {
-        if (appearance.value === 'system') {
-            return prefersDark() ? 'dark' : 'light';
-        }
-
-        return appearance.value;
-    });
+    const resolvedAppearance = computed<ResolvedAppearance>(
+        () => appearance.value,
+    );
 
     function updateAppearance(value: Appearance) {
         appearance.value = value;

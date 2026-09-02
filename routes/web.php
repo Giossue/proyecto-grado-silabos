@@ -132,6 +132,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('observaciones/{observation}/verificar', [ReviewController::class, 'verifyObservation'])->name('reviews.observations.verify');
         Route::post('revisiones/{revision}/aprobar', [ReviewController::class, 'approve'])->name('reviews.approve');
         Route::post('silabos/{syllabus}/reabrir', [ReviewController::class, 'reopen'])->name('reviews.reopen');
+        Route::post('silabos/{syllabus}/reiniciar', [ReviewController::class, 'reset'])->name('reviews.reset');
         Route::post('silabos/{syllabus}/relevo-docente', [ReviewController::class, 'transferTeacher'])->name('reviews.teacher.transfer');
         Route::redirect('mallas-materias', '/coordinacion/malla');
         Route::redirect('mallas', '/coordinacion/malla');

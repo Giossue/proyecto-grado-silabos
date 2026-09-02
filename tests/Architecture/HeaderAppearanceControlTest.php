@@ -48,24 +48,49 @@ it('ofrece el control de tema tambien sin haber entrado', function (string $arch
     'resources/js/pages/Welcome.vue',
 ]);
 
-it('conserva las tres opciones de tema y no las reduce a un interruptor', function (): void {
-    $control = (string) file_get_contents(
-        dirname(__DIR__, 2).'/resources/js/components/AppearanceToggle.vue',
-    );
+it('ofrece solo los temas claro y oscuro, sin seguir al sistema', function (): void {
+    $raiz = dirname(__DIR__, 2);
+    $control = (string) file_get_contents($raiz.'/resources/js/components/AppearanceToggle.vue');
+    $pestanas = (string) file_get_contents($raiz.'/resources/js/components/AppearanceTabs.vue');
 
     // El tema visible se anuncia con el Tooltip compartido, no con `title` nativo:
     // ambos a la vez mostrarían dos burbujas sobre el mismo botón.
     expect($control)
         ->toContain("'light'")
         ->toContain("'dark'")
-        ->toContain("'system'")
+        ->not->toContain("'system'")
         ->toContain('aria-label')
         ->toContain('<TooltipContent>Tema: {{ current.label }}</TooltipContent>')
         ->not->toContain(':title=');
+
+    // Configuración ofrece las mismas dos opciones que el encabezado.
+    expect($pestanas)
+        ->toContain("'light'")
+        ->toContain("'dark'")
+        ->not->toContain("'system'");
+});
+
+it('arranca siempre en claro y no consulta la preferencia del sistema', function (): void {
+    $raiz = dirname(__DIR__, 2);
+    $plantilla = (string) file_get_contents($raiz.'/resources/views/app.blade.php');
+    $composable = (string) file_get_contents($raiz.'/resources/js/composables/useAppearance.ts');
+    $middleware = (string) file_get_contents($raiz.'/app/Http/Middleware/HandleAppearance.php');
+    $tipos = (string) file_get_contents($raiz.'/resources/js/types/ui.ts');
+
+    // Ni la plantilla ni el cliente preguntan al sistema operativo; sin preferencia
+    // guardada, la página es clara en el primer pintado y tras hidratar.
+    expect($plantilla)->not->toContain('prefers-color-scheme');
+    expect($composable)
+        ->not->toContain('prefers-color-scheme')
+        ->toContain("DEFAULT_APPEARANCE: Appearance = 'light'");
+    expect($middleware)
+        ->toContain("=== 'dark' ? 'dark' : 'light'")
+        ->not->toContain("'system'");
+    expect($tipos)->toContain("export type Appearance = 'light' | 'dark';");
 });
 
 it('recorre los temas con una pulsacion en vez de abrir un menu', function (): void {
-    // El control es un botón que cicla las tres opciones. Si vuelve a ser un menú
+    // El control es un botón que alterna las dos opciones. Si vuelve a ser un menú
     // desplegable, cada cambio costaría dos interacciones en lugar de una.
     $control = (string) file_get_contents(
         dirname(__DIR__, 2).'/resources/js/components/AppearanceToggle.vue',

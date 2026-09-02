@@ -5,6 +5,7 @@ import { computed, ref } from 'vue';
 import ReviewController from '@/actions/App/Modules/Syllabus/Presentation/Http/Controllers/ReviewController';
 import PageFrame from '@/components/domain/PageFrame.vue';
 import ReviewObservationSheet from '@/components/domain/syllabus/ReviewObservationSheet.vue';
+import SyllabusResetDialog from '@/components/domain/syllabus/SyllabusResetDialog.vue';
 import TeacherTransferSheet from '@/components/domain/syllabus/TeacherTransferSheet.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -112,6 +113,7 @@ const props = defineProps<{
         current: { id: string; name: string }[];
         candidates: { id: string; name: string }[];
     };
+    reset: { allowed: boolean };
 }>();
 
 defineOptions({
@@ -211,6 +213,11 @@ const observationState = (value: string): string =>
             </span>
         </template>
         <template #actions>
+            <SyllabusResetDialog
+                v-if="reset.allowed && revision.is_current"
+                :syllabus-id="syllabus.id"
+                :subject="syllabus.subject"
+            />
             <TeacherTransferSheet
                 v-if="transfer.allowed && transfer.current.length > 0"
                 :syllabus-id="syllabus.id"

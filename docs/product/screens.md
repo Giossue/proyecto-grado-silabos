@@ -65,6 +65,8 @@
 - El menú depende del rol activo y de las capacidades efectivas.
 - UI-02 recibe a Coordinación con cards de sus carreras vigentes. La carrera activa se
   muestra bajo el nombre de usuario y puede cambiarse desde un `Sheet` en ese mismo menú.
+- El selector de tema del encabezado alterna únicamente entre claro y oscuro; no existe
+  la opción «Sistema». Sin preferencia guardada, la aplicación arranca en claro.
 - UI-03 se abre desde el acceso de **Notificaciones** situado junto al selector de tema en
   el encabezado autenticado común. El acceso conserva el contador de pendientes para los
   tres roles y no ocupa una entrada del menú lateral.

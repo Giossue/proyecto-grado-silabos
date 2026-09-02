@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import { Lock } from '@lucide/vue';
 import TemplateBlockBuilder from '@/components/domain/configuration/TemplateBlockBuilder.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import ProcessLockAlert from '@/components/domain/ProcessLockAlert.vue';
 import {
     Card,
     CardContent,
@@ -68,11 +67,11 @@ defineOptions({
         "
         size="wide"
     >
-        <Alert v-if="processLock">
-            <Lock aria-hidden="true" />
-            <AlertTitle>Plantilla protegida durante el proceso</AlertTitle>
-            <AlertDescription>{{ processLock }}</AlertDescription>
-        </Alert>
+        <ProcessLockAlert
+            v-if="processLock"
+            title="Plantilla protegida durante el proceso"
+            :reason="processLock"
+        />
 
         <TemplateBlockBuilder
             v-if="!processLock"

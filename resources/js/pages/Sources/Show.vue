@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3';
-import { Check, Lock } from '@lucide/vue';
+import { Check } from '@lucide/vue';
 import AcademicSourceEditSheet from '@/components/domain/configuration/AcademicSourceEditSheet.vue';
 import MarkdownEditor from '@/components/domain/MarkdownEditor.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import ProcessLockAlert from '@/components/domain/ProcessLockAlert.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -73,13 +73,11 @@ defineOptions({
         </template>
 
         <div class="flex flex-col gap-4">
-            <Alert v-if="processLock">
-                <Lock aria-hidden="true" />
-                <AlertTitle
-                    >Fuente protegida durante la convocatoria</AlertTitle
-                >
-                <AlertDescription>{{ processLock }}</AlertDescription>
-            </Alert>
+            <ProcessLockAlert
+                v-if="processLock"
+                title="Fuente protegida durante la convocatoria"
+                :reason="processLock"
+            />
             <Card v-if="source.internal_notes">
                 <CardHeader>
                     <CardTitle>Notas internas</CardTitle>

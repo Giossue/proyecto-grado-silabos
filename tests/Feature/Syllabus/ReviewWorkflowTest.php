@@ -502,6 +502,40 @@ class ReviewWorkflowTest extends TestCase
         };
     }
 
+    public function test_coordinator_resets_a_submitted_syllabus_so_the_teacher_starts_over(): void
+    {
+        [$syllabus, $revision] = $this->submitValidDraft();
+        $this->assertSame('en_revision', $syllabus->estado);
+
+        $this->actingAsCoordinator()
+            ->post(route('reviews.reset', $syllabus), ['reason' => 'Corto'])
+            ->assertSessionHasErrors('reason');
+
+        $this->actingAsCoordinator()
+            ->post(route('reviews.reset', $syllabus), ['reason' => 'La malla cambió las horas de la materia después de la entrega.'])
+            ->assertRedirect(route('reviews.index'))
+            ->assertSessionHas('success');
+
+        $fresh = $syllabus->fresh();
+        $this->assertSame('sin_iniciar', $fresh->estado);
+        $this->assertSame(0, $fresh->version_bloqueo);
+        $this->assertSame(0.0, (float) $fresh->porcentaje_completitud);
+        // Solo quedan los valores heredados de la malla; lo escrito se descartó.
+        $this->assertSame(0, $fresh->values()->where('heredado', false)->count());
+        $this->assertSame(0, $fresh->rows()->count());
+        // La revisión enviada es historial y sigue ahí.
+        $this->assertDatabaseHas('revisiones_silabo', ['id' => $revision->id]);
+        $this->assertDatabaseHas('eventos_auditoria', ['accion' => 'silabo.reiniciado', 'recurso_id' => $syllabus->id]);
+        $this->assertDatabaseHas('eventos_salientes', ['tipo_evento' => 'silabo.reiniciado']);
+
+        // El docente vuelve a empezar de cero.
+        $this->actingAsTeacher()->post(route('syllabi.start', $syllabus))->assertRedirect();
+        $this->assertSame('borrador', $syllabus->fresh()->estado);
+
+        // Sin trabajo que descartar no hay nada que reiniciar; y el docente nunca puede.
+        $this->actingAsTeacher()->post(route('reviews.reset', $syllabus), ['reason' => 'Intento no autorizado.'])->assertForbidden();
+    }
+
     private function createStartedDraft(): Syllabus
     {
         [$template, $source] = $this->publishedConfiguration();

@@ -16,7 +16,11 @@ class HandleAppearance
      */
     public function handle(Request $request, Closure $next): Response
     {
-        View::share('appearance', $request->cookie('appearance') ?? 'system');
+        // Solo existen dos temas. Cualquier otro valor guardado (p. ej. «system» de una
+        // versión anterior) se trata como claro, que es el tema inicial.
+        $appearance = $request->cookie('appearance') === 'dark' ? 'dark' : 'light';
+
+        View::share('appearance', $appearance);
 
         return $next($request);
     }

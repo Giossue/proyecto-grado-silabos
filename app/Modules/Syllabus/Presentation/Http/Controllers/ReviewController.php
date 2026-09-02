@@ -11,6 +11,7 @@ use App\Modules\Syllabus\Application\Actions\AddReviewObservation;
 use App\Modules\Syllabus\Application\Actions\ApproveSyllabus;
 use App\Modules\Syllabus\Application\Actions\ReopenSyllabus;
 use App\Modules\Syllabus\Application\Actions\RequestSyllabusCorrection;
+use App\Modules\Syllabus\Application\Actions\ResetSyllabus;
 use App\Modules\Syllabus\Application\Actions\TransferSyllabusTeacher;
 use App\Modules\Syllabus\Application\Actions\VerifyObservation;
 use App\Modules\Syllabus\Application\RevisionDiff;
@@ -19,6 +20,7 @@ use App\Modules\Syllabus\Infrastructure\Persistence\Models\Syllabus;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\SyllabusRevision;
 use App\Modules\Syllabus\Presentation\Http\Requests\ApproveSyllabusRequest;
 use App\Modules\Syllabus\Presentation\Http\Requests\ReopenSyllabusRequest;
+use App\Modules\Syllabus\Presentation\Http\Requests\ResetSyllabusRequest;
 use App\Modules\Syllabus\Presentation\Http\Requests\StoreCorrectionRequest;
 use App\Modules\Syllabus\Presentation\Http\Requests\StoreObservationRequest;
 use App\Modules\Syllabus\Presentation\Http\Requests\TransferSyllabusTeacherRequest;
@@ -255,6 +257,10 @@ class ReviewController extends Controller
                 'requested_at' => $revision->correctionRequest->solicitado_en->toIso8601String(),
             ],
             // El relevo necesita identidades, no nombres: quién sale y entre quiénes elegir.
+            'reset' => [
+                'allowed' => in_array($syllabus->estado, ResetSyllabus::RESETTABLE_STATES, true)
+                    && in_array($syllabus->convocation()->value('estado'), ['abierta', 'pausada'], true),
+            ],
             'transfer' => [
                 'allowed' => $syllabus->estado !== 'en_revision',
                 'current' => $syllabus->teachers->map(fn (User $teacher): array => [
@@ -333,6 +339,18 @@ class ReviewController extends Controller
         }
 
         return $payload;
+    }
+
+    public function reset(
+        Syllabus $syllabus,
+        ResetSyllabusRequest $request,
+        ResetSyllabus $action,
+    ): RedirectResponse {
+        $actor = $request->user();
+        abort_unless($actor instanceof User, 401);
+        $action->execute($syllabus, $request->string('reason')->toString(), $actor, $request);
+
+        return to_route('reviews.index')->with('success', 'Sílabo reiniciado. El docente empieza de cero con la malla y la plantilla actuales; el historial se conserva.');
     }
 
     public function transferTeacher(
