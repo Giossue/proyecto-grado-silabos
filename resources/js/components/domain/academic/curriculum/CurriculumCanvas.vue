@@ -375,7 +375,7 @@ const buildEdges = (): Edge[] => {
 
     return props.requirements.map((requirement) => {
         const color =
-            requirement.type === 'corequisite'
+            requirement.type === 'correquisito'
                 ? 'var(--primary)'
                 : 'var(--destructive)';
 
@@ -393,7 +393,7 @@ const buildEdges = (): Edge[] => {
             style: { stroke: color, strokeWidth: 2 },
             data: {
                 label:
-                    requirement.type === 'corequisite'
+                    requirement.type === 'correquisito'
                         ? 'Correquisito'
                         : 'Prerrequisito',
                 sourceOffset: offsets.get(requirement.id)?.source ?? 0,
@@ -464,7 +464,7 @@ const onConnect = (connection: Connection): void => {
     };
 };
 
-const createRequirement = (type: 'prerequisite' | 'corequisite'): void => {
+const createRequirement = (type: 'prerrequisito' | 'correquisito'): void => {
     const pending = pendingConnection.value;
 
     if (!pending) {
@@ -493,7 +493,7 @@ const createRequirement = (type: 'prerequisite' | 'corequisite'): void => {
                 ),
             onSuccess: () =>
                 toast.success(
-                    type === 'corequisite'
+                    type === 'correquisito'
                         ? 'Correquisito agregado.'
                         : 'Prerrequisito agregado.',
                 ),
@@ -726,14 +726,14 @@ const onNodeDragStop = ({ node }: NodeDragEvent): void => {
                             type="button"
                             variant="secondary"
                             :disabled="savingRequirement"
-                            @click="createRequirement('corequisite')"
+                            @click="createRequirement('correquisito')"
                         >
                             Correquisito
                         </Button>
                         <Button
                             type="button"
                             :disabled="savingRequirement"
-                            @click="createRequirement('prerequisite')"
+                            @click="createRequirement('prerrequisito')"
                         >
                             Prerrequisito
                         </Button>
@@ -753,7 +753,7 @@ const onNodeDragStop = ({ node }: NodeDragEvent): void => {
                     <DialogHeader>
                         <DialogTitle>
                             {{
-                                selectedRequirement?.type === 'corequisite'
+                                selectedRequirement?.type === 'correquisito'
                                     ? 'Correquisito'
                                     : 'Prerrequisito'
                             }}

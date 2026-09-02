@@ -12,7 +12,7 @@ class UserPolicy
 
     public function viewAny(User $actor): bool
     {
-        return $actor->active && $this->roles->hasRole(request(), RoleCode::Administrator);
+        return $actor->activo && $this->roles->hasRole(request(), RoleCode::Administrator);
     }
 
     public function create(User $actor): bool
@@ -40,7 +40,7 @@ class UserPolicy
      */
     public function updateProfileData(User $actor, User $target): bool
     {
-        if (! $actor->active) {
+        if (! $actor->activo) {
             return false;
         }
 

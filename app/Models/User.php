@@ -94,7 +94,10 @@ class User extends Authenticatable
         return $this->correo_electronico;
     }
 
-    /** Fortify lee y escribe `two_factor_secret` por literal. */
+    /** Fortify lee y escribe `two_factor_secret` por literal.
+     *
+     * @return Attribute<string|null, string|null>
+     */
     protected function twoFactorSecret(): Attribute
     {
         return Attribute::make(
@@ -103,6 +106,7 @@ class User extends Authenticatable
         );
     }
 
+    /** @return Attribute<string|null, string|null> */
     protected function twoFactorRecoveryCodes(): Attribute
     {
         return Attribute::make(
@@ -111,6 +115,7 @@ class User extends Authenticatable
         );
     }
 
+    /** @return Attribute<mixed, mixed> */
     protected function twoFactorConfirmedAt(): Attribute
     {
         // El valor del mutator no pasa por casts(): se serializa aquí mismo.

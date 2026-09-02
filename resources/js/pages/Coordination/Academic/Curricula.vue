@@ -30,7 +30,7 @@ defineProps<Pick<AcademicStructureProps, 'career' | 'options'>>();
         :description="`Configure la estructura académica de ${career.name}. Sin una malla activa no se habilitarán procesos nuevos para docentes.`"
     >
         <template #actions>
-            <CurriculumRecordSheet entity="curriculum" :options="options" />
+            <CurriculumRecordSheet entity="malla" :options="options" />
         </template>
 
         <Empty class="min-h-72 border">

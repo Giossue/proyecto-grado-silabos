@@ -22,6 +22,7 @@ use Illuminate\Database\Eloquent\Relations\HasManyThrough;
  * @property int $unresolved_observations_count
  * @property array<string, mixed> $contexto_academico
  * @property CarbonImmutable|null $guardado_en
+ * @property CarbonImmutable|null $actualizado_en
  * @property-read Convocation $convocation
  * @property-read Subject $subject
  * @property-read TemplateVersion $templateVersion

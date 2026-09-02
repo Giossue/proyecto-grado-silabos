@@ -71,39 +71,39 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Syllabus::class, SyllabusPolicy::class);
         Gate::policy(SyllabusRevision::class, SyllabusRevisionPolicy::class);
         Gate::policy(ExportArtifact::class, ExportArtifactPolicy::class);
-        Gate::define('manage-academic-governance', fn (User $user): bool => $user->active
+        Gate::define('manage-academic-governance', fn (User $user): bool => $user->activo
             && AcademicStructurePermissions::isGovernanceContext(
                 app(ActiveRole::class)->resolve(request()),
             ));
-        Gate::define('manage-career-academics', fn (User $user): bool => $user->active
+        Gate::define('manage-career-academics', fn (User $user): bool => $user->activo
             && AcademicStructurePermissions::isCareerContext(
                 app(ActiveRole::class)->resolve(request()),
             ));
         Gate::define(
             'manage-templates',
-            fn (User $user): bool => $user->active
+            fn (User $user): bool => $user->activo
                 && app(ActiveRole::class)->hasRole(request(), RoleCode::Administrator),
         );
         Gate::define(
             'operate-jobs',
-            fn (User $user): bool => $user->active
+            fn (User $user): bool => $user->activo
                 && app(ActiveRole::class)->hasRole(request(), RoleCode::Administrator),
         );
         Gate::define(
             'view-audit',
-            fn (User $user): bool => $user->active
+            fn (User $user): bool => $user->activo
                 && app(ActiveRole::class)->hasRole(request(), RoleCode::Administrator),
         );
         // Las fuentes son documentos de la Coordinación: Administración no participa.
         Gate::define(
             'view-sources',
-            fn (User $user): bool => $user->active
+            fn (User $user): bool => $user->activo
                 && app(ActiveRole::class)->hasRole(request(), RoleCode::Coordinator),
         );
         Gate::define('manage-source', function (User $user, AcademicSource $source): bool {
             $activeRole = app(ActiveRole::class)->resolve(request());
 
-            return $user->active
+            return $user->activo
                 && $activeRole?->role->codigo === RoleCode::Coordinator->value
                 && $activeRole->carrera_id === $source->carrera_id;
         });

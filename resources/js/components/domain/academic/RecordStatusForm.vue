@@ -22,7 +22,7 @@ const props = withDefaults(
 );
 
 const actionLabel = computed(() => {
-    if (props.entity === 'curriculum') {
+    if (props.entity === 'malla') {
         return props.active ? 'Deshabilitar' : 'Reactivar';
     }
 

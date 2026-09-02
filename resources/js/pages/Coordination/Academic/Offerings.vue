@@ -28,7 +28,7 @@ defineProps<
         :description="`Qué materias se dictan cada periodo en ${career.name}, en qué campus y con qué modalidad.`"
     >
         <template #actions>
-            <OfferingRecordSheet entity="offering" :options="options" />
+            <OfferingRecordSheet entity="oferta" :options="options" />
         </template>
 
         <OfferingsTab

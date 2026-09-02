@@ -44,7 +44,7 @@ class TemplateAndSourceTest extends TestCase
     {
         $this->actingAsAdministrator()
             ->post(route('admin.templates.store'), [
-                'name' => 'Plantilla Software',
+                'nombre' => 'Plantilla Software',
                 'description' => 'Prototipo estructurado para validación.',
             ])
             ->assertRedirect();
@@ -67,12 +67,12 @@ class TemplateAndSourceTest extends TestCase
     public function test_administrator_can_only_create_one_institutional_template(): void
     {
         $this->actingAsAdministrator()
-            ->post(route('admin.templates.store'), ['name' => 'Plantilla institucional'])
+            ->post(route('admin.templates.store'), ['nombre' => 'Plantilla institucional'])
             ->assertRedirect();
 
         $this->actingAsAdministrator()
             ->from(route('admin.templates.index'))
-            ->post(route('admin.templates.store'), ['name' => 'Otra plantilla'])
+            ->post(route('admin.templates.store'), ['nombre' => 'Otra plantilla'])
             ->assertRedirect(route('admin.templates.index'))
             ->assertSessionHasErrors('template');
 
@@ -267,7 +267,7 @@ class TemplateAndSourceTest extends TestCase
 
         $this->actingAsCoordinator()
             ->patch(route('sources.update', $source), [
-                'name' => 'Perfil de egreso 2026',
+                'nombre' => 'Perfil de egreso 2026',
                 'description' => 'Versión socializada con docentes.',
                 'internal_notes' => null,
             ])
@@ -307,9 +307,9 @@ class TemplateAndSourceTest extends TestCase
 
         $this->actingAsCoordinator()
             ->from(route('coordination.sources.index'))
-            ->post(route('sources.store'), ['name' => 'Reglamento académico'])
+            ->post(route('sources.store'), ['nombre' => 'Reglamento académico'])
             ->assertRedirect(route('coordination.sources.index'))
-            ->assertSessionHasErrors('name');
+            ->assertSessionHasErrors('nombre');
 
         $this->assertSame(1, AcademicSource::query()->where('nombre', 'Reglamento académico')->count());
     }
@@ -323,7 +323,7 @@ class TemplateAndSourceTest extends TestCase
             ->assertForbidden();
 
         $this->actingAsAdministrator()
-            ->post(route('sources.store'), ['name' => 'Fuente administrativa'])
+            ->post(route('sources.store'), ['nombre' => 'Fuente administrativa'])
             ->assertForbidden();
 
         $this->actingAsAdministrator()
@@ -358,7 +358,7 @@ class TemplateAndSourceTest extends TestCase
 
     private function createTemplate(): TemplateVersion
     {
-        $this->actingAsAdministrator()->post(route('admin.templates.store'), ['name' => 'Plantilla verificable']);
+        $this->actingAsAdministrator()->post(route('admin.templates.store'), ['nombre' => 'Plantilla verificable']);
 
         return TemplateVersion::query()->latest('creado_en')->firstOrFail();
     }
@@ -367,7 +367,7 @@ class TemplateAndSourceTest extends TestCase
     {
         $this->actingAsCoordinator()
             ->post(route('sources.store'), [
-                'name' => $name,
+                'nombre' => $name,
                 'description' => 'Documento de referencia.',
                 'internal_notes' => 'Entregar al inicio del periodo.',
             ])

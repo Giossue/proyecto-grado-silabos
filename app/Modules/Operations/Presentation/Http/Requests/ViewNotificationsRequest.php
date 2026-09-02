@@ -8,7 +8,7 @@ class ViewNotificationsRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->active === true;
+        return $this->user()?->activo === true;
     }
 
     /** @return array<string, list<string>> */

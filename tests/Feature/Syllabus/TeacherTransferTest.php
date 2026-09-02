@@ -255,7 +255,7 @@ class TeacherTransferTest extends TestCase
     {
         [$template, $source] = $this->publishedConfiguration();
         $this->actingAsCoordinator()->post(route('convocations.store'), [
-            'name' => 'Convocatoria de relevo',
+            'nombre' => 'Convocatoria de relevo',
             'period_id' => CourseOffering::query()->firstOrFail()->periodo_academico_id,
             'template_version_id' => $template->id,
             'grouping_mode' => 'por_paralelo',
@@ -294,12 +294,12 @@ class TeacherTransferTest extends TestCase
     /** @return array{TemplateVersion, AcademicSource} */
     private function publishedConfiguration(): array
     {
-        $this->actingAsAdministrator()->post(route('admin.templates.store'), ['name' => 'Plantilla relevo']);
+        $this->actingAsAdministrator()->post(route('admin.templates.store'), ['nombre' => 'Plantilla relevo']);
         $template = TemplateVersion::query()->latest('creado_en')->firstOrFail();
         $this->actingAsAdministrator()->post(route('admin.templates.publish', $template));
 
         $this->actingAsCoordinator()->post(route('sources.store'), [
-            'name' => 'Fuente relevo',
+            'nombre' => 'Fuente relevo',
             'description' => 'Documento de apoyo del periodo.',
         ]);
         $source = AcademicSource::query()->latest('creado_en')->firstOrFail();

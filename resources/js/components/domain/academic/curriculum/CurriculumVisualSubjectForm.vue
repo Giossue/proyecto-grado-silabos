@@ -98,7 +98,7 @@ const organizationUnitListId = computed(
                     />
                     <FieldError :errors="[errors.code]" />
                 </Field>
-                <Field :data-invalid="Boolean(errors.name)">
+                <Field :data-invalid="Boolean(errors.nombre)">
                     <FieldLabel
                         :for="`visual-subject-name-${subject?.id ?? cycle}`"
                         class="sr-only"
@@ -108,13 +108,13 @@ const organizationUnitListId = computed(
                     </FieldLabel>
                     <Input
                         :id="`visual-subject-name-${subject?.id ?? cycle}`"
-                        name="name"
+                        name="nombre"
                         :default-value="subject?.name"
                         placeholder="Ej. Ingeniería de requisitos"
                         required
-                        :aria-invalid="Boolean(errors.name)"
+                        :aria-invalid="Boolean(errors.nombre)"
                     />
-                    <FieldError :errors="[errors.name]" />
+                    <FieldError :errors="[errors.nombre]" />
                 </Field>
             </div>
 

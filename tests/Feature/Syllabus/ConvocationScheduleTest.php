@@ -71,7 +71,7 @@ class ConvocationScheduleTest extends TestCase
         [$template, $source] = $this->publishedConfiguration();
 
         $this->actingAsCoordinator()->post(route('convocations.store'), [
-            'name' => 'Convocatoria invertida',
+            'nombre' => 'Convocatoria invertida',
             'period_id' => CourseOffering::query()->firstOrFail()->periodo_academico_id,
             'template_version_id' => $template->id,
             'grouping_mode' => 'por_paralelo',
@@ -213,7 +213,7 @@ class ConvocationScheduleTest extends TestCase
         [$template, $source] = $this->publishedConfiguration();
 
         $this->actingAsCoordinator()->post(route('convocations.store'), [
-            'name' => 'Convocatoria de plazos',
+            'nombre' => 'Convocatoria de plazos',
             'period_id' => CourseOffering::query()->firstOrFail()->periodo_academico_id,
             'template_version_id' => $template->id,
             'grouping_mode' => 'por_paralelo',
@@ -250,12 +250,12 @@ class ConvocationScheduleTest extends TestCase
     /** @return array{TemplateVersion, AcademicSource} */
     private function publishedConfiguration(): array
     {
-        $this->actingAsAdministrator()->post(route('admin.templates.store'), ['name' => 'Plantilla I-15']);
+        $this->actingAsAdministrator()->post(route('admin.templates.store'), ['nombre' => 'Plantilla I-15']);
         $template = TemplateVersion::query()->latest('creado_en')->firstOrFail();
         $this->actingAsAdministrator()->post(route('admin.templates.publish', $template));
 
         $this->actingAsCoordinator()->post(route('sources.store'), [
-            'name' => 'Fuente I-15',
+            'nombre' => 'Fuente I-15',
             'description' => 'Documento de apoyo del periodo.',
         ]);
         $source = AcademicSource::query()->latest('creado_en')->firstOrFail();

@@ -77,7 +77,7 @@ class Convocation extends Model
     public function sources(): BelongsToMany
     {
         return $this->belongsToMany(AcademicSource::class, 'fuentes_convocatoria', 'convocatoria_id', 'fuente_academica_id')
-            ->withTimestamps();
+            ->withTimestamps('creado_en', 'actualizado_en');
     }
 
     /** @return HasMany<Syllabus, $this> */

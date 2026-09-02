@@ -37,7 +37,7 @@ use App\Modules\Syllabus\Infrastructure\Persistence\Models\SyllabusCollaborator;
 use App\Support\CanonicalHasher;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Database\QueryException;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
@@ -48,7 +48,7 @@ use Tests\TestCase;
 
 class AiAssistanceTest extends TestCase
 {
-    use DatabaseMigrations;
+    use RefreshDatabase;
 
     private User $teacher;
 
@@ -114,7 +114,7 @@ class AiAssistanceTest extends TestCase
         $this->get(route('syllabi.ai.show', [$syllabus, $field]))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->where('executions.0.status', 'completada')
+                ->where('executions.0.estado', 'completada')
                 ->where('executions.0.evidence.0.source', 'Fuente IA 1')
                 ->where(
                     'executions.0.evidence.0.excerpt',
@@ -210,7 +210,7 @@ class AiAssistanceTest extends TestCase
 
             public function analyze(AiAnalysisInput $input): AiAnalysisResult
             {
-                return new AiAnalysisResult($input->requestId, 'completed', $this->version(), [
+                return new AiAnalysisResult($input->requestId, 'completada', $this->version(), [
                     new AiRecommendationOutput(
                         'editorial',
                         'Referencia inventada',
@@ -244,7 +244,7 @@ class AiAssistanceTest extends TestCase
 
             public function analyze(AiAnalysisInput $input): AiAnalysisResult
             {
-                return new AiAnalysisResult($input->requestId, 'completed', $this->version(), [
+                return new AiAnalysisResult($input->requestId, 'completada', $this->version(), [
                     new AiRecommendationOutput(
                         'editorial',
                         'Salida sobredimensionada',
@@ -386,19 +386,19 @@ class AiAssistanceTest extends TestCase
             }
         }
         try {
-            AiEvidence::query()->create([
+            DB::transaction(fn () => AiEvidence::query()->create([
                 'ejecucion_ia_id' => $execution->id,
                 'fuente_academica_id' => $evidence->fuente_academica_id,
                 'nombre_fuente' => $evidence->nombre_fuente,
                 'extracto' => $evidence->extracto,
                 'huella_contenido' => $evidence->huella_contenido,
-            ]);
+            ]));
             $this->fail('PostgreSQL permitió agregar evidencia después del resultado terminal.');
         } catch (QueryException) {
             $this->assertDatabaseCount('evidencias_ia', 1);
         }
         try {
-            AiRecommendation::query()->create([
+            DB::transaction(fn () => AiRecommendation::query()->create([
                 'ejecucion_ia_id' => $execution->id,
                 'definicion_campo_id' => $field->id,
                 'ordinal' => 2,
@@ -406,7 +406,7 @@ class AiAssistanceTest extends TestCase
                 'titulo' => 'Tardía',
                 'explicacion' => 'No debe poder agregarse tras completar la ejecución.',
                 'texto_sugerido' => 'Texto tardío.',
-            ]);
+            ]));
             $this->fail('PostgreSQL permitió agregar una recomendación después del resultado terminal.');
         } catch (QueryException) {
             $this->assertDatabaseCount('recomendaciones_ia', 1);
@@ -466,9 +466,9 @@ class AiAssistanceTest extends TestCase
         Http::fake([
             'http://127.0.0.1:8081/*' => Http::response([
                 'request_id' => $input->requestId,
-                'status' => 'inconclusive',
-                'gateway_version' => 'malicious-local-v1',
-                'inconclusive_reason' => 'insufficient_evidence',
+                'status' => 'no_concluyente',
+                'version_pasarela' => 'malicious-local-v1',
+                'motivo_no_concluyente' => 'insufficient_evidence',
                 'recommendations' => [],
                 'decision' => 'approve',
             ]),

@@ -250,7 +250,7 @@ it('presenta una sola malla por carrera sin buscador filtros cards ni versiones'
         ->toContain('href: parallelsIndex()');
     expect($curricula)
         ->toBeString()
-        ->toContain('entity="curriculum"')
+        ->toContain('entity="malla"')
         ->toContain('<Head title="Malla"')
         ->toContain('<Empty')
         ->toContain('<Inbox')
@@ -261,7 +261,7 @@ it('presenta una sola malla por carrera sin buscador filtros cards ni versiones'
         ->not->toContain('version_number');
     expect($curriculumActions)
         ->toBeString()
-        ->toContain('entity="curriculum"')
+        ->toContain('entity="malla"')
         ->toContain('destroyCurriculum.form')
         ->toContain('<TableActionsMenu')
         ->toContain('display="menu"')
@@ -278,8 +278,8 @@ it('presenta una sola malla por carrera sin buscador filtros cards ni versiones'
         ->not->toContain('Malla publicada')
         ->not->toContain('número de versión')
         ->not->toContain('version_number');
-    expect($offerings)->toBeString()->toContain('entity="offering"');
-    expect($parallels)->toBeString()->toContain('entity="parallel"');
+    expect($offerings)->toBeString()->toContain('entity="oferta"');
+    expect($parallels)->toBeString()->toContain('entity="paralelo"');
 });
 
 it('ofrece desglose y constructor visual sobre el mismo contrato de malla', function (): void {
@@ -444,11 +444,11 @@ it('ofrece edicion y ciclo de vida en cada catalogo institucional', function ():
     expect($catalogs)
         ->toBeString()
         ->toContain('<CatalogActions')
-        ->toContain('entity="faculty"')
-        ->toContain('entity="career"')
+        ->toContain('entity="facultad"')
+        ->toContain('entity="carrera"')
         ->toContain('entity="campus"')
-        ->toContain('entity="modality"')
-        ->toContain('entity="period"');
+        ->toContain('entity="modalidad"')
+        ->toContain('entity="periodo"');
     expect($actions)
         ->toBeString()
         ->toContain('<CatalogEditSheet')

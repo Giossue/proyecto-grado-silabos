@@ -178,8 +178,8 @@ class ConvocationAndDraftTest extends TestCase
             'version_bloqueo' => 1,
             'value' => 'Escritura obsoleta.',
         ])->assertConflict()
-            ->assertJsonPath('code', 'draft_version_conflict')
-            ->assertJsonPath('current_lock_version', 2);
+            ->assertJsonPath('code', 'conflicto_version_borrador')
+            ->assertJsonPath('version_bloqueo_actual', 2);
 
         $this->assertSame('Descripción académica verificable.', $syllabus->values()->where('definicion_campo_id', $field->id)->firstOrFail()->valor);
     }
@@ -313,7 +313,7 @@ class ConvocationAndDraftTest extends TestCase
         $periodId = CourseOffering::query()->firstOrFail()->periodo_academico_id;
 
         $this->actingAsCoordinator()->post(route('convocations.store'), [
-            'name' => 'Convocatoria '.$groupingMode,
+            'nombre' => 'Convocatoria '.$groupingMode,
             'period_id' => $periodId,
             'template_version_id' => $template->id,
             'grouping_mode' => $groupingMode,
@@ -330,12 +330,12 @@ class ConvocationAndDraftTest extends TestCase
     /** @return array{TemplateVersion, AcademicSource} */
     private function publishedConfiguration(): array
     {
-        $this->actingAsAdministrator()->post(route('admin.templates.store'), ['name' => 'Plantilla I-03']);
+        $this->actingAsAdministrator()->post(route('admin.templates.store'), ['nombre' => 'Plantilla I-03']);
         $template = TemplateVersion::query()->latest('creado_en')->firstOrFail();
         $this->actingAsAdministrator()->post(route('admin.templates.publish', $template));
 
         $this->actingAsCoordinator()->post(route('sources.store'), [
-            'name' => 'Fuente I-03',
+            'nombre' => 'Fuente I-03',
             'description' => 'Documento de apoyo del periodo.',
         ]);
         $source = AcademicSource::query()->latest('creado_en')->firstOrFail();

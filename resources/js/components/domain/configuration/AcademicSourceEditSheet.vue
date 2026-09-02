@@ -41,19 +41,19 @@ defineProps<{
                 @success="close"
             >
                 <FieldGroup>
-                    <Field :data-invalid="Boolean(errors.name)">
+                    <Field :data-invalid="Boolean(errors.nombre)">
                         <FieldLabel for="source-edit-name" required>
                             Nombre
                         </FieldLabel>
                         <Input
                             id="source-edit-name"
-                            name="name"
+                            name="nombre"
                             placeholder="Ej. Reglamento de régimen académico"
                             :default-value="source.name"
                             required
-                            :aria-invalid="Boolean(errors.name)"
+                            :aria-invalid="Boolean(errors.nombre)"
                         />
-                        <FieldError :errors="[errors.name]" />
+                        <FieldError :errors="[errors.nombre]" />
                     </Field>
 
                     <Field :data-invalid="Boolean(errors.description)">

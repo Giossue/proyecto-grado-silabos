@@ -153,7 +153,7 @@ return new class extends Migration
             DROP TRIGGER proteger_evento_outbox ON eventos_salientes;
             DROP FUNCTION proteger_payload_outbox();
 
-            CREATE FUNCTION proteger_contenido_evento_saliente() RETURNS trigger AS $$
+            CREATE OR REPLACE FUNCTION proteger_contenido_evento_saliente() RETURNS trigger AS $$
             BEGIN
                 IF TG_OP = 'DELETE'
                    OR NEW.tipo_agregado IS DISTINCT FROM OLD.tipo_agregado
@@ -229,7 +229,7 @@ return new class extends Migration
             DROP TRIGGER proteger_evento_saliente ON eventos_salientes;
             DROP FUNCTION proteger_contenido_evento_saliente();
 
-            CREATE FUNCTION proteger_payload_outbox() RETURNS trigger AS $$
+            CREATE OR REPLACE FUNCTION proteger_payload_outbox() RETURNS trigger AS $$
             BEGIN
                 IF TG_OP = 'DELETE'
                    OR NEW.tipo_agregado IS DISTINCT FROM OLD.tipo_agregado

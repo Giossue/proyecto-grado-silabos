@@ -137,7 +137,7 @@ const {
                             </TableCell>
                             <TableCell class="text-right">
                                 <CareerAcademicActions
-                                    entity="teacher_assignment"
+                                    entity="asignacion_docente"
                                     :record="item"
                                     :record-label="`la asignación de ${item.user_name}`"
                                     :editable="item.editable"

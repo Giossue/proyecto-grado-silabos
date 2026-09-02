@@ -32,7 +32,7 @@ use App\Modules\Syllabus\Infrastructure\Persistence\Models\SyllabusRevision;
 use App\Support\CanonicalHasher;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Database\QueryException;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
@@ -46,7 +46,7 @@ use ZipArchive;
 
 class DocumentOperationsTest extends TestCase
 {
-    use DatabaseMigrations;
+    use RefreshDatabase;
 
     private User $administrator;
 
@@ -105,7 +105,7 @@ class DocumentOperationsTest extends TestCase
         $outsider = User::factory()->create();
         $outsiderContext = RoleAssignment::query()->create([
             'usuario_id' => $outsider->id,
-            'rol_id' => Role::query()->where('codigo', 'teacher')->valueOrFail('id'),
+            'rol_id' => Role::query()->where('codigo', 'docente')->valueOrFail('id'),
             'carrera_id' => $this->teacherContext->carrera_id,
             'vigente_desde' => now()->subDay(),
             'activo' => true,
@@ -122,8 +122,8 @@ class DocumentOperationsTest extends TestCase
             'revision_anterior_id' => $revision->id,
             'numero_revision' => 2,
             'clave_idempotencia' => (string) Str::uuid(),
-            'lock_version_origen' => 2,
-            'snapshot' => $revision->snapshot,
+            'version_bloqueo_origen' => 2,
+            'fotografia' => $revision->fotografia,
             'huella_sha256' => $revision->huella_sha256,
             'enviado_por' => $this->teacher->id,
             'enviado_en' => now(),
@@ -150,9 +150,9 @@ class DocumentOperationsTest extends TestCase
         );
 
         $artifact->refresh()->load(['docxObject', 'pdfObject', 'execution']);
-        $this->assertSame('completed', $artifact->estado);
-        $this->assertSame('completed', $artifact->execution->status);
-        $this->assertSame(100, $artifact->execution->progress);
+        $this->assertSame('completado', $artifact->estado);
+        $this->assertSame('completada', $artifact->execution->estado);
+        $this->assertSame(100, $artifact->execution->progreso);
         $this->assertDatabaseCount('objetos_almacenados', 2);
         $docx = $artifact->docxObject;
         $pdf = $artifact->pdfObject;
@@ -189,7 +189,7 @@ class DocumentOperationsTest extends TestCase
             templateVersionId: $syllabus->version_plantilla_id,
             generatedAt: $artifact->solicitado_en->toIso8601String(),
             locale: 'es-EC',
-            snapshot: $revision->snapshot,
+            snapshot: $revision->fotografia,
         );
         $firstBundle = app(DocumentRenderer::class)->render($input);
         $secondBundle = app(DocumentRenderer::class)->render($input);
@@ -205,7 +205,7 @@ class DocumentOperationsTest extends TestCase
         $this->assertSame($docxBytes, Storage::disk('private')->get($docx->ruta_interna));
         $this->assertDatabaseHas('notificaciones_internas', [
             'usuario_id' => $this->teacher->id,
-            'tipo' => 'document.export.completed',
+            'tipo' => 'documento.exportacion.completada',
         ]);
 
         $this->actingAsTeacher()
@@ -219,10 +219,10 @@ class DocumentOperationsTest extends TestCase
         $this->actingAsAdministrator()->get(route('exports.download', [$artifact, 'pdf']))->assertForbidden();
 
         try {
-            $artifact->update(['estado' => 'failed']);
+            $artifact->update(['estado' => 'fallido']);
             $this->fail('El modelo permitió modificar un artefacto completado.');
         } catch (LogicException) {
-            $this->assertSame('completed', $artifact->fresh()->estado);
+            $this->assertSame('completado', $artifact->fresh()->estado);
         }
         try {
             DB::transaction(fn () => DB::table('objetos_almacenados')
@@ -242,19 +242,19 @@ class DocumentOperationsTest extends TestCase
         ]);
         $artifact = ExportArtifact::query()->firstOrFail();
         $execution = $artifact->execution()->firstOrFail();
-        $artifact->update(['estado' => 'running']);
-        $execution->update(['status' => 'running', 'attempts' => 3]);
+        $artifact->update(['estado' => 'en_ejecucion']);
+        $execution->update(['estado' => 'en_ejecucion', 'intentos' => 3]);
         $secret = 'SECRET=/srv/private/documento.docx';
         (new GenerateSyllabusExportJob($artifact->id))->failed(new RuntimeException($secret));
 
         $execution->refresh();
-        $this->assertSame('failed', $artifact->fresh()->estado);
-        $this->assertSame('failed', $execution->status);
-        $this->assertSame(3, $execution->attempts);
-        $this->assertStringNotContainsString('SECRET', (string) $execution->error_message);
+        $this->assertSame('fallido', $artifact->fresh()->estado);
+        $this->assertSame('fallida', $execution->estado);
+        $this->assertSame(3, $execution->intentos);
+        $this->assertStringNotContainsString('SECRET', (string) $execution->mensaje_error);
         $this->assertDatabaseHas('eventos_auditoria', [
-            'accion' => 'document.export_failed',
-            'resultado' => 'failed',
+            'accion' => 'documento.exportacion_fallida',
+            'resultado' => 'fallido',
         ]);
         $this->actingAsAdministrator()
             ->get(route('admin.jobs.index', ['q' => 'Generación documental']))
@@ -264,15 +264,15 @@ class DocumentOperationsTest extends TestCase
                 ->component('Admin/Operations/Jobs')
                 ->where('filters.q', 'Generación documental')
                 ->where('executions.total', 1)
-                ->where('executions.data.0.retryable', true));
+                ->where('executions.data.0.reintentable', true));
         $this->actingAsTeacher()->post(route('admin.jobs.retry', $execution))->assertForbidden();
         $this->actingAsAdministrator()->post(route('admin.jobs.retry', $execution))->assertRedirect();
 
-        $this->assertSame('pending', $artifact->fresh()->estado);
-        $this->assertSame('pending', $execution->fresh()->status);
-        $this->assertSame(3, $execution->fresh()->attempts);
+        $this->assertSame('pendiente', $artifact->fresh()->estado);
+        $this->assertSame('pendiente', $execution->fresh()->estado);
+        $this->assertSame(3, $execution->fresh()->intentos);
         Queue::assertPushed(GenerateSyllabusExportJob::class, 2);
-        $retryAudit = AuditEvent::query()->where('accion', 'job.retry_requested')->firstOrFail();
+        $retryAudit = AuditEvent::query()->where('accion', 'trabajo.reintento_solicitado')->firstOrFail();
         $this->assertSame(3, $retryAudit->metadatos['previous_attempts']);
     }
 
@@ -286,7 +286,7 @@ class DocumentOperationsTest extends TestCase
 
         $first = $recorder->execute(
             $syllabus,
-            'syllabus.approved',
+            'silabo.aprobado',
             $key,
             [$this->coordinator->id],
             1,
@@ -294,7 +294,7 @@ class DocumentOperationsTest extends TestCase
         );
         $second = $recorder->execute(
             $syllabus,
-            'syllabus.approved',
+            'silabo.aprobado',
             $key,
             [$this->coordinator->id],
             1,
@@ -309,7 +309,7 @@ class DocumentOperationsTest extends TestCase
         $this->assertDatabaseCount('notificaciones_internas', 1);
         $notification = InternalNotification::query()->firstOrFail();
         $this->assertSame($this->coordinator->id, $notification->usuario_id);
-        $this->assertSame('processed', $first->fresh()->estado);
+        $this->assertSame('procesado', $first->fresh()->estado);
         $this->actingAsCoordinator()
             ->followingRedirects()
             ->get(route('notifications.index'))
@@ -330,11 +330,11 @@ class DocumentOperationsTest extends TestCase
             $this->assertSame('Sílabo aprobado', $notification->fresh()->titulo);
         }
         try {
-            DB::transaction(fn () => DB::table('eventos_outbox')
-                ->where('id', $first->id)->update(['payload' => ['recipient_ids' => []]]));
+            DB::transaction(fn () => DB::table('eventos_salientes')
+                ->where('id', $first->id)->update(['contenido' => ['recipient_ids' => []]]));
             $this->fail('PostgreSQL permitió alterar el payload del outbox.');
         } catch (QueryException) {
-            $this->assertSame([$this->coordinator->id], $first->fresh()->payload['recipient_ids']);
+            $this->assertSame([$this->coordinator->id], $first->fresh()->contenido['recipient_ids']);
         }
     }
 
@@ -371,7 +371,7 @@ class DocumentOperationsTest extends TestCase
             'accion' => 'syllabus.approved',
             'tipo_recurso' => 'approval',
             'recurso_id' => (string) Str::uuid(),
-            'resultado' => 'success',
+            'resultado' => 'exito',
             'metadatos' => [
                 'revision_number' => 2,
                 'fingerprint' => $fingerprint,
@@ -395,17 +395,17 @@ class DocumentOperationsTest extends TestCase
         $this->actingAsCoordinator()->get(route('admin.audit.index'))->assertForbidden();
 
         try {
-            $event->update(['resultado' => 'failed']);
+            $event->update(['resultado' => 'fallida']);
             $this->fail('El modelo permitió modificar auditoría histórica.');
         } catch (LogicException) {
-            $this->assertSame('success', $event->fresh()->resultado);
+            $this->assertSame('exito', $event->fresh()->resultado);
         }
         try {
             DB::transaction(fn () => DB::table('eventos_auditoria')
-                ->where('id', $event->id)->update(['resultado' => 'failed']));
+                ->where('id', $event->id)->update(['resultado' => 'fallida']));
             $this->fail('PostgreSQL permitió modificar auditoría histórica.');
         } catch (QueryException) {
-            $this->assertSame('success', $event->fresh()->resultado);
+            $this->assertSame('exito', $event->fresh()->resultado);
         }
     }
 
@@ -423,7 +423,7 @@ class DocumentOperationsTest extends TestCase
         $version = TemplateVersion::query()->create([
             'plantilla_id' => $template->id,
             'numero_version' => 1,
-            'estado' => 'published',
+            'estado' => 'publicada',
             'mapeo_documento' => ['renderer' => 'baseline'],
             'huella_sha256' => str_repeat('b', 64),
             'publicado_por' => $this->administrator->id,
@@ -434,8 +434,8 @@ class DocumentOperationsTest extends TestCase
             'periodo_academico_id' => $period->id,
             'version_plantilla_id' => $version->id,
             'nombre' => 'Convocatoria documental CP-F',
-            'estado' => 'open',
-            'modo_agrupacion' => 'per_offering',
+            'estado' => 'abierta',
+            'modo_agrupacion' => 'por_oferta',
             'creado_por' => $this->coordinator->id,
             'abierto_por' => $this->coordinator->id,
             'abierto_en' => now(),
@@ -445,8 +445,8 @@ class DocumentOperationsTest extends TestCase
             'asignatura_id' => $subject->id,
             'version_malla_id' => $subject->version_malla_id,
             'version_plantilla_id' => $version->id,
-            'estado' => 'approved',
-            'lock_version' => 2,
+            'estado' => 'aprobado',
+            'version_bloqueo' => 2,
             'porcentaje_completitud' => 100,
             'iniciado_en' => now()->subDay(),
             'guardado_en' => now(),
@@ -481,8 +481,8 @@ class DocumentOperationsTest extends TestCase
             'silabo_id' => $syllabus->id,
             'numero_revision' => 1,
             'clave_idempotencia' => (string) Str::uuid(),
-            'lock_version_origen' => 1,
-            'snapshot' => $snapshot,
+            'version_bloqueo_origen' => 1,
+            'fotografia' => $snapshot,
             'huella_sha256' => app(CanonicalHasher::class)->hash($snapshot),
             'enviado_por' => $this->teacher->id,
             'enviado_en' => now()->subMinute(),
@@ -512,7 +512,7 @@ class DocumentOperationsTest extends TestCase
             'carrera_id' => $career->id,
             'codigo' => 'OTRA-MALLA-CP-F',
             'numero_version' => 1,
-            'estado' => 'active',
+            'estado' => 'activa',
             'es_actual' => true,
         ]);
         $subject = Subject::query()->create([
@@ -526,8 +526,8 @@ class DocumentOperationsTest extends TestCase
             'periodo_academico_id' => AcademicPeriod::query()->valueOrFail('id'),
             'version_plantilla_id' => $template->id,
             'nombre' => 'Convocatoria fuera de alcance',
-            'estado' => 'open',
-            'modo_agrupacion' => 'per_offering',
+            'estado' => 'abierta',
+            'modo_agrupacion' => 'por_oferta',
             'creado_por' => $this->coordinator->id,
             'abierto_por' => $this->coordinator->id,
             'abierto_en' => now(),
@@ -538,8 +538,8 @@ class DocumentOperationsTest extends TestCase
             'asignatura_id' => $subject->id,
             'version_malla_id' => $curriculum->id,
             'version_plantilla_id' => $template->id,
-            'estado' => 'approved',
-            'lock_version' => 2,
+            'estado' => 'aprobado',
+            'version_bloqueo' => 2,
             'porcentaje_completitud' => 100,
             'iniciado_en' => now(),
             'guardado_en' => now(),

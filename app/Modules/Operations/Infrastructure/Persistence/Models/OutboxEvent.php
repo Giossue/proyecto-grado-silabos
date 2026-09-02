@@ -9,6 +9,8 @@ use LogicException;
 
 /**
  * @property string $id
+ * @property string $tipo_agregado
+ * @property string $agregado_id
  * @property string $tipo_evento
  * @property string $clave_deduplicacion
  * @property array<string, mixed> $contenido

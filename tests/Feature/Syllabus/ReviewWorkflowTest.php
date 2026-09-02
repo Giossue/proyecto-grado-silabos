@@ -505,7 +505,7 @@ class ReviewWorkflowTest extends TestCase
         [$template, $source] = $this->publishedConfiguration();
         $periodId = CourseOffering::query()->firstOrFail()->periodo_academico_id;
         $this->actingAsCoordinator()->post(route('convocations.store'), [
-            'name' => 'Convocatoria I-04',
+            'nombre' => 'Convocatoria I-04',
             'period_id' => $periodId,
             'template_version_id' => $template->id,
             'grouping_mode' => 'por_oferta',
@@ -524,12 +524,12 @@ class ReviewWorkflowTest extends TestCase
     /** @return array{TemplateVersion, AcademicSource} */
     private function publishedConfiguration(): array
     {
-        $this->actingAsAdministrator()->post(route('admin.templates.store'), ['name' => 'Plantilla I-04']);
+        $this->actingAsAdministrator()->post(route('admin.templates.store'), ['nombre' => 'Plantilla I-04']);
         $template = TemplateVersion::query()->latest('creado_en')->firstOrFail();
         $this->actingAsAdministrator()->post(route('admin.templates.publish', $template))->assertRedirect();
 
         $this->actingAsCoordinator()->post(route('sources.store'), [
-            'name' => 'Fuente I-04',
+            'nombre' => 'Fuente I-04',
             'description' => 'Documento de apoyo del periodo.',
         ])->assertRedirect();
         $source = AcademicSource::query()->latest('creado_en')->firstOrFail();

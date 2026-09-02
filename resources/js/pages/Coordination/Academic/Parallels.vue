@@ -28,7 +28,7 @@ defineProps<
         :description="`Paralelos de las ofertas académicas de ${career.name}.`"
     >
         <template #actions>
-            <OfferingRecordSheet entity="parallel" :options="options" />
+            <OfferingRecordSheet entity="paralelo" :options="options" />
         </template>
 
         <OfferingsTab

@@ -3,6 +3,7 @@
 namespace App\Modules\Configuration\Infrastructure\Persistence\Models;
 
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -17,6 +18,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $notas_internas
  * @property string|null $contenido
  * @property bool $activo
+ * @property CarbonImmutable|null $creado_en
+ * @property CarbonImmutable|null $actualizado_en
  */
 class AcademicSource extends Model
 {

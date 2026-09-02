@@ -23,7 +23,7 @@ class WorkflowNotificationRecipients
             ->where(fn ($query) => $query
                 ->whereNull('vigente_hasta')
                 ->orWhere('vigente_hasta', '>', now()))
-            ->whereHas('user', fn ($query) => $query->where('active', true))
+            ->whereHas('user', fn ($query) => $query->where('activo', true))
             ->pluck('usuario_id')
             ->all();
 
@@ -41,7 +41,7 @@ class WorkflowNotificationRecipients
                 ->where(fn ($validity) => $validity
                     ->whereNull('vigente_hasta')
                     ->orWhere('vigente_hasta', '>', now())))
-            ->whereHas('user', fn ($query) => $query->where('active', true))
+            ->whereHas('user', fn ($query) => $query->where('activo', true))
             ->pluck('usuario_id')
             ->all();
 

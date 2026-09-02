@@ -73,7 +73,7 @@ class DatabaseSeeder extends Seeder
                 ['carrera_id' => $career->id, 'codigo' => 'MALLA-SW-2024'],
                 [
                     'numero_version' => 1,
-                    'estado' => 'active',
+                    'estado' => 'activa',
                     'es_actual' => true,
                 ],
             );

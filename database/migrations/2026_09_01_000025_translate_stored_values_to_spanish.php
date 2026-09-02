@@ -137,7 +137,11 @@ return new class extends Migration
         'approved' => 'aprobado',
     ];
 
-    /** Acciones de auditoría compuestas: academic.{entidad}.{evento}. */
+    /**
+     * Acciones de auditoría compuestas: academic.{entidad}.{evento}.
+     *
+     * @return array<string, string>
+     */
     private function accionesAuditoria(): array
     {
         $acciones = self::ACCIONES_AUDITORIA;
@@ -157,7 +161,11 @@ return new class extends Migration
         return $acciones;
     }
 
-    /** [tabla => [columna => mapa]] para las traducciones directas por CASE. */
+    /**
+     * [tabla => [columna => mapa]] para las traducciones directas por CASE.
+     *
+     * @return array<string, array<string, array<string, string>>>
+     */
     private function mapas(): array
     {
         $sustento = [

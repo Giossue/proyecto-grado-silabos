@@ -176,7 +176,7 @@ class AcademicStructureTest extends TestCase
 
         $this->actingAsCoordinator()
             ->post(route('admin.academic.store', 'facultad'), [
-                'name' => 'No autorizada',
+                'nombre' => 'No autorizada',
             ])
             ->assertForbidden();
 
@@ -197,7 +197,7 @@ class AcademicStructureTest extends TestCase
         $this->actingAsAdministrator()
             ->post(route('admin.academic.store', 'facultad'), [
                 'code' => 'FAC-DEMO',
-                'name' => 'Facultad de demostración',
+                'nombre' => 'Facultad de demostración',
             ])
             ->assertRedirect();
         $faculty = Faculty::query()->where('codigo_institucional', 'FAC-DEMO')->firstOrFail();
@@ -206,7 +206,7 @@ class AcademicStructureTest extends TestCase
             ->post(route('admin.academic.store', 'carrera'), [
                 'faculty_id' => $faculty->id,
                 'code' => 'CARR-DEMO',
-                'name' => 'Carrera de demostración',
+                'nombre' => 'Carrera de demostración',
             ])
             ->assertRedirect();
         $career = Career::query()->where('codigo_institucional', 'CARR-DEMO')->firstOrFail();
@@ -327,14 +327,14 @@ class AcademicStructureTest extends TestCase
             ->post(route('coordination.academic.store', 'asignatura'), [
                 'curriculum_id' => $curriculum->id,
                 'code' => 'SW-701',
-                'name' => 'Arquitectura Empresarial',
+                'nombre' => 'Arquitectura Empresarial',
                 'cycle' => 7,
                 'organization_unit' => 'Unidad profesional',
-                'hours_ac' => 48,
-                'hours_pae' => 32,
-                'hours_aa' => 64,
-                'credits' => 4,
-                'total_hours' => 999,
+                'horas_ac' => 48,
+                'horas_pae' => 32,
+                'horas_aa' => 64,
+                'creditos' => 4,
+                'horas_totales' => 999,
             ])
             ->assertRedirect();
 
@@ -351,15 +351,15 @@ class AcademicStructureTest extends TestCase
             ->post(route('coordination.academic.store', 'asignatura'), [
                 'curriculum_id' => $curriculum->id,
                 'code' => 'SW-702',
-                'name' => 'Materia incompleta',
+                'nombre' => 'Materia incompleta',
                 'cycle' => 7,
             ])
             ->assertSessionHasErrors([
                 'organization_unit',
-                'hours_ac',
-                'hours_pae',
-                'hours_aa',
-                'credits',
+                'horas_ac',
+                'horas_pae',
+                'horas_aa',
+                'creditos',
             ]);
 
         $this->actingAs($coordinator)
@@ -407,14 +407,14 @@ class AcademicStructureTest extends TestCase
             ->post(route('coordination.academic.store', 'asignatura'), [
                 'curriculum_id' => $curriculum->id,
                 'code' => 'FUERA-101',
-                'name' => 'Materia fuera de rango',
+                'nombre' => 'Materia fuera de rango',
                 'cycle' => 11,
                 'organization_unit' => 'Unidad profesional',
-                'hours_ac' => 48,
-                'hours_pae' => 32,
-                'hours_aa' => 64,
-                'credits' => 3,
-                'total_hours' => 144,
+                'horas_ac' => 48,
+                'horas_pae' => 32,
+                'horas_aa' => 64,
+                'creditos' => 3,
+                'horas_totales' => 144,
             ])
             ->assertSessionHasErrors('cycle');
 
@@ -435,19 +435,19 @@ class AcademicStructureTest extends TestCase
             ->firstOrFail();
 
         foreach ([
-            ['code' => 'FLEX-101', 'name' => 'Fundamentos flexibles', 'cycle' => 1, 'position' => 0],
-            ['code' => 'FLEX-201', 'name' => 'Proyecto flexible', 'cycle' => 2, 'position' => 1],
+            ['code' => 'FLEX-101', 'nombre' => 'Fundamentos flexibles', 'cycle' => 1, 'position' => 0],
+            ['code' => 'FLEX-201', 'nombre' => 'Proyecto flexible', 'cycle' => 2, 'position' => 1],
         ] as $subjectData) {
             $this->actingAsCoordinator()
                 ->post(route('coordination.academic.store', 'asignatura'), [
                     'curriculum_id' => $curriculum->id,
                     ...$subjectData,
                     'organization_unit' => 'Unidad profesional',
-                    'hours_ac' => 48,
-                    'hours_pae' => 32,
-                    'hours_aa' => 64,
-                    'credits' => 3,
-                    'total_hours' => 144,
+                    'horas_ac' => 48,
+                    'horas_pae' => 32,
+                    'horas_aa' => 64,
+                    'creditos' => 3,
+                    'horas_totales' => 144,
                     'custom_values' => [$field->id => 24],
                 ])
                 ->assertRedirect();
@@ -566,14 +566,14 @@ class AcademicStructureTest extends TestCase
                 'record' => $subject->id,
             ]), [
                 'code' => 'SW-711',
-                'name' => 'Materia corregida',
+                'nombre' => 'Materia corregida',
                 'cycle' => 8,
                 'organization_unit' => 'Unidad profesional',
-                'hours_ac' => 48,
-                'hours_pae' => 32,
-                'hours_aa' => 64,
-                'credits' => 4,
-                'total_hours' => 999,
+                'horas_ac' => 48,
+                'horas_pae' => 32,
+                'horas_aa' => 64,
+                'creditos' => 4,
+                'horas_totales' => 999,
             ])
             ->assertRedirect();
 
@@ -677,14 +677,14 @@ class AcademicStructureTest extends TestCase
                 'record' => $subject->id,
             ]), [
                 'code' => $subject->codigo_institucional,
-                'name' => 'Nombre reescrito',
+                'nombre' => 'Nombre reescrito',
                 'cycle' => $subject->ciclo,
                 'organization_unit' => 'Unidad profesional',
-                'hours_ac' => $subject->horas_ac,
-                'hours_pae' => $subject->horas_pae ?? 0,
-                'hours_aa' => $subject->horas_aa,
-                'credits' => $subject->creditos,
-                'total_hours' => $subject->horas_totales,
+                'horas_ac' => $subject->horas_ac,
+                'horas_pae' => $subject->horas_pae ?? 0,
+                'horas_aa' => $subject->horas_aa,
+                'creditos' => $subject->creditos,
+                'horas_totales' => $subject->horas_totales,
             ])
             ->assertRedirect();
 
@@ -708,13 +708,13 @@ class AcademicStructureTest extends TestCase
             ->post(route('coordination.academic.store', 'asignatura'), [
                 'curriculum_id' => $curriculum->id,
                 'code' => 'SW-INACTIVA',
-                'name' => 'Materia editable sin proceso',
+                'nombre' => 'Materia editable sin proceso',
                 'cycle' => 1,
                 'organization_unit' => 'Unidad básica',
-                'hours_ac' => 48,
-                'hours_pae' => 32,
-                'hours_aa' => 64,
-                'credits' => 3,
+                'horas_ac' => 48,
+                'horas_pae' => 32,
+                'horas_aa' => 64,
+                'creditos' => 3,
             ])
             ->assertRedirect();
         $subject = Subject::query()->where('codigo_institucional', 'SW-INACTIVA')->firstOrFail();
@@ -847,7 +847,7 @@ class AcademicStructureTest extends TestCase
             ->post(route('coordination.academic.store', 'asignatura'), [
                 'curriculum_id' => $otherCurriculum->id,
                 'code' => 'OTR-101',
-                'name' => 'Materia ajena',
+                'nombre' => 'Materia ajena',
                 'cycle' => 1,
             ])
             ->assertSessionHasErrors('curriculum_id');
@@ -1050,7 +1050,7 @@ class AcademicStructureTest extends TestCase
         $this->actingAsAdministrator()
             ->patch(route('admin.academic.update', ['entity' => 'facultad', 'record' => $faculty->id]), [
                 'code' => 'FICAYA-ACT',
-                'name' => 'Facultad de Ingeniería actualizada',
+                'nombre' => 'Facultad de Ingeniería actualizada',
             ])
             ->assertRedirect()
             ->assertSessionHas('success');
@@ -1059,7 +1059,7 @@ class AcademicStructureTest extends TestCase
             ->patch(route('admin.academic.update', ['entity' => 'carrera', 'record' => $career->id]), [
                 'faculty_id' => $destinationFaculty->id,
                 'code' => 'SOFTWARE-ACT',
-                'name' => 'Ingeniería de Software',
+                'nombre' => 'Ingeniería de Software',
             ])
             ->assertRedirect()
             ->assertSessionHas('success');
@@ -1067,21 +1067,21 @@ class AcademicStructureTest extends TestCase
         $this->actingAsAdministrator()
             ->patch(route('admin.academic.update', ['entity' => 'campus', 'record' => $campus->id]), [
                 'code' => 'MATRIZ-ACT',
-                'name' => 'Campus Central',
+                'nombre' => 'Campus Central',
             ])
             ->assertRedirect();
 
         $this->actingAsAdministrator()
             ->patch(route('admin.academic.update', ['entity' => 'modalidad', 'record' => $modality->id]), [
                 'code' => 'presencial-act',
-                'name' => 'Presencial actualizada',
+                'nombre' => 'Presencial actualizada',
             ])
             ->assertRedirect();
 
         $this->actingAsAdministrator()
             ->patch(route('admin.academic.update', ['entity' => 'periodo', 'record' => $period->id]), [
                 'code' => '2026-ACT',
-                'name' => 'Periodo actualizado',
+                'nombre' => 'Periodo actualizado',
                 'starts_on' => '2026-10-01',
                 'ends_on' => '2027-02-28',
             ])
@@ -1138,7 +1138,7 @@ class AcademicStructureTest extends TestCase
             ->patch(route('admin.academic.update', ['entity' => 'carrera', 'record' => $career->id]), [
                 'faculty_id' => $destinationFaculty->id,
                 'code' => 'SOFTWARE-ACT',
-                'name' => 'Ingeniería de Software',
+                'nombre' => 'Ingeniería de Software',
             ])
             ->assertRedirect();
         $this->assertSame(1, AuditEvent::query()
@@ -1174,7 +1174,7 @@ class AcademicStructureTest extends TestCase
         $this->actingAsAdministrator()
             ->patch(route('admin.academic.update', ['entity' => 'facultad', 'record' => $faculty->id]), [
                 'code' => $archivedFaculty->codigo_institucional,
-                'name' => 'Código repetido',
+                'nombre' => 'Código repetido',
             ])
             ->assertSessionHasErrors('code');
 
@@ -1182,14 +1182,14 @@ class AcademicStructureTest extends TestCase
             ->patch(route('admin.academic.update', ['entity' => 'carrera', 'record' => $career->id]), [
                 'faculty_id' => $archivedFaculty->id,
                 'code' => $career->codigo_institucional,
-                'name' => $career->nombre,
+                'nombre' => $career->nombre,
             ])
             ->assertSessionHasErrors('faculty_id');
 
         $this->actingAsAdministrator()
             ->patch(route('admin.academic.update', ['entity' => 'periodo', 'record' => $period->id]), [
                 'code' => $period->codigo,
-                'name' => $period->nombre,
+                'nombre' => $period->nombre,
                 'starts_on' => '2027-02-01',
                 'ends_on' => '2027-01-01',
             ])
@@ -1206,7 +1206,7 @@ class AcademicStructureTest extends TestCase
         $this->actingAsCoordinator()
             ->patch(route('admin.academic.update', ['entity' => 'facultad', 'record' => $faculty->id]), [
                 'code' => 'NO-AUTORIZADO',
-                'name' => 'Cambio no autorizado',
+                'nombre' => 'Cambio no autorizado',
             ])
             ->assertForbidden();
 

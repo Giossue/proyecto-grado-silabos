@@ -10,8 +10,8 @@ it('modela el calendario como etapas y no como columnas de la convocatoria', fun
     $create = (string) file_get_contents($root.'/app/Modules/Syllabus/Application/Actions/CreateConvocation.php');
 
     expect($schedule)
-        ->toContain("STAGE_START = 'start'")
-        ->toContain("STAGE_DRAFT = 'draft'");
+        ->toContain("STAGE_START = 'inicio'")
+        ->toContain("STAGE_DRAFT = 'borrador'");
 
     // Duplicar la fecha en `convocatorias` dejaría dos sitios donde buscarla.
     expect($create)
@@ -39,7 +39,7 @@ it('conserva la fecha anterior y el motivo al prorrogar', function (): void {
     expect($extend)
         ->toContain("'previous_due_at'")
         ->toContain("'reason'")
-        ->toContain('convocation.deadline_extended')
+        ->toContain('convocatoria.plazo_extendido')
         // Adelantar la fecha dejaría fuera de plazo a quien ya estaba dentro.
         ->toContain('lessThanOrEqualTo');
 });
@@ -51,7 +51,7 @@ it('deja rastro del avance descartado en un relevo', function (): void {
 
     expect($transfer)
         ->toContain("'discarded_completion'")
-        ->toContain('syllabus.teacher_transferred')
+        ->toContain('silabo.docente_transferido')
         // Un expediente en revisión no se traspasa: el revisor quedaría sin interlocutor.
         ->toContain("=== 'en_revision'")
         // Cerrar una vigencia y abrir otra por separado deja el sílabo sin responsable.

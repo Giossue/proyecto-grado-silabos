@@ -62,7 +62,7 @@ class DeliverInternalNotificationJob implements ShouldQueue
             return;
         }
 
-        $syllabus = Syllabus::query()->with('subject:id,nombre')->findOrFail($event->agregado_id);
+        $syllabus = $this->syllabusFor($event);
         [$title, $message] = $this->message($event, $syllabus);
         $recipientIds = $this->recipientIds($event);
 
@@ -197,5 +197,10 @@ class DeliverInternalNotificationJob implements ShouldQueue
             ->lockForUpdate();
 
         return $required ? $query->firstOrFail() : $query->first();
+    }
+
+    private function syllabusFor(OutboxEvent $event): Syllabus
+    {
+        return Syllabus::query()->with('subject:id,nombre')->findOrFail($event->agregado_id);
     }
 }

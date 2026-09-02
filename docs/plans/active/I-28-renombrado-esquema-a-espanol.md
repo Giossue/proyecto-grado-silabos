@@ -224,6 +224,46 @@ almacenados (estados, roles, acciones de auditoría, discriminadores, colas, cla
 prefijo semántico) y los slugs de entidad de las rutas académicas. Se corrigió de paso
 el worker de producción (no escuchaba las colas nombradas).
 
+## Traspaso — pendiente exacto (2026-09-01, sesión e3)
+
+Hecho y verificado: migraciones 000021–000025 (up/down ensayados en local, esquema sin
+inglés), auth/Fortify probado en vivo, backend de los 6 módulos barrido, configuración,
+runbooks, docs, factories/seeder, Pint en verde. Falta:
+
+1. **13 errores de Larastan** (`composer types:check`), todos triviales del renombrado:
+   `app/Models/User.php` 3× genéricos de `Attribute` sin `TGet/TSet` en los accessors
+   2FA (añadir `@return Attribute<string|null, string|null>` o equivalente);
+   docblocks `@property` faltantes: `AcademicSource::$actualizado_en` (+creado_en),
+   `OutboxEvent::$tipo_agregado`/`$agregado_id`, `Syllabus::$actualizado_en`;
+   `DeliverInternalNotificationJob` 65-92 (tipar el `findOrFail` de Syllabus);
+   migración 000025: 2 docblocks `@return array<...>` en `mapas()` y
+   `accionesAuditoria()`. No usar ignores.
+2. **Cierre frontend y tests**: dos agentes idempotentes quedaron en vuelo
+   («Cierre barrido frontend Vue/TS» y «Cierre barrido tests Pest»); si murieron,
+   repetir su método: grep de cada literal viejo del mapa
+   (`I-28-mapa-renombrado.md`) en `resources/js` (sin generados) y `tests/`.
+   Regla clave: campo de formulario `name`→`nombre` en plantillas/fuentes/
+   convocatorias/registros académicos (backend ya valida `nombre`); NO tocar
+   `SpanishSchemaTest`/`SpanishModelColumnsTest` (listas negras a propósito) ni revertir
+   el `AcademicStructureTest` de la sesión -ed.
+3. **Suite completa**: `php artisan test` (Postgres/Redis: `podman start
+   silabos-ueb-postgres silabos-ueb-redis`); iterar fallos (esperables desajustes de
+   claves/valores entre capas).
+4. `npm run build` (regenera wayfinder), `npm run types:check`, `npm run lint`.
+5. `composer verify`: bloqueado por `temp/chartdb.sql` (security:scan; decisión del
+   usuario — mover el dump o correr las piezas sueltas).
+6. **Verificación UI** con cuentas demo (`admin@silabos.test` / `Demo-2026!`): login,
+   recuperación, Admin→Procesos, Fuentes, autoguardado de sílabo (ver memoria
+   «receta-verificacion-ui-local»: build+serve, borrar `public/hot`).
+7. Cerrar plan (checkboxes, mover a `completed/` con evidencia). No commitear sin
+   permiso del usuario. La rama `feat/esquema-espanol` (worktree de otra sesión) queda
+   descartada y puede borrarse al cierre.
+8. **Remota — SOLO con confirmación del usuario**: procedimiento en
+   `docs/security/hardening.md` (pg_dump → `SELECT DISTINCT` de discriminadores →
+   `db:rename-migrations-table --force` → `migrate --force --isolated` → redeploy para
+   que el worker escuche las colas nuevas). El contenedor no migra al arrancar
+   (`RUN_MIGRATIONS=false`).
+
 ## Riesgos y reversión
 
 - Riesgo mayor: autenticación (login/recuperación/2FA) tras renombrar `usuarios`.
@@ -243,3 +283,22 @@ el worker de producción (no escuchaba las colas nombradas).
 
 Pendiente al cierre: salida de `composer verify`, `migrate:status` local antes/después,
 capturas del flujo de login y admin de trabajos, y diff de documentación.
+
+## Actualización de cierre parcial (2026-09-01, sesión posterior)
+
+- [x] Barrido frontend y de pruebas cerrado contra el mapa canónico. Se corrigieron los
+      formularios `nombre`, los slugs académicos y los contratos que deliberadamente
+      conservan claves HTTP en inglés (`active`, métricas y contratos externos).
+- [x] Larastan: `composer types:check` sin errores.
+- [x] Suite PostgreSQL: `DB_DATABASE=silabos_ueb_test php artisan migrate:fresh --seed
+      --force` seguido de `php artisan test --compact`: **296 pruebas, 4392 aserciones**.
+- [x] Calidad frontend: Pint, `npm run types:check`, `npm run lint:check` y
+      `npm run build` en verde.
+- [x] Acceso local autenticado: login de `admin@silabos.test` y respuesta HTTP 200 de
+      `GET /admin/usuarios` verificados con la sesión resultante. No hubo captura visual:
+      Firefox arrancó, pero la automatización de escritorio no expuso ninguna ventana en
+      esta sesión.
+- [ ] `composer verify` sigue bloqueado únicamente en `security:scan`: detecta
+      `temp/chartdb.sql` y `.claude/worktrees/esquema-espanol/docker/postgres/init/01-create-test-database.sql`.
+      Ambos se preservaron; se requiere decisión explícita para moverlos o excluirlos del
+      escaneo. No cerrar ni mover este plan hasta resolver esa puerta.

@@ -104,8 +104,8 @@ class DashboardMetricsTest extends TestCase
             'periodo_academico_id' => AcademicPeriod::query()->firstOrFail()->id,
             'version_plantilla_id' => $this->plantillaPublicada()->id,
             'nombre' => $nombre,
-            'estado' => 'open',
-            'modo_agrupacion' => 'per_offering',
+            'estado' => 'abierta',
+            'modo_agrupacion' => 'por_oferta',
             'creado_por' => User::query()->where('correo_electronico', 'coordinador@silabos.test')->firstOrFail()->id,
         ]);
     }
@@ -119,7 +119,7 @@ class DashboardMetricsTest extends TestCase
             'asignatura_id' => $subject->id,
             'version_malla_id' => $subject->version_malla_id,
             'version_plantilla_id' => $convocation->version_plantilla_id,
-            'estado' => 'draft',
+            'estado' => 'borrador',
         ]);
     }
 
@@ -134,7 +134,7 @@ class DashboardMetricsTest extends TestCase
             return TemplateVersion::query()->create([
                 'plantilla_id' => $template->id,
                 'numero_version' => 1,
-                'estado' => 'published',
+                'estado' => 'publicada',
             ]);
         });
     }

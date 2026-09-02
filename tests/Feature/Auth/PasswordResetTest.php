@@ -90,6 +90,6 @@ class PasswordResetTest extends TestCase
             'password_confirmation' => 'newpassword123',
         ]);
 
-        $response->assertSessionHasErrors('correo_electronico');
+        $response->assertSessionHasErrors('email');
     }
 }

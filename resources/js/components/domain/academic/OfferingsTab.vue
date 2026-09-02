@@ -142,7 +142,7 @@ const {
                             }}</TableCell
                             ><TableCell class="text-right"
                                 ><CareerAcademicActions
-                                    entity="offering"
+                                    entity="oferta"
                                     :record="item"
                                     :record-label="item.label"
                                     :editable="item.editable"
@@ -224,7 +224,7 @@ const {
                             }}</TableCell
                             ><TableCell class="text-right"
                                 ><CareerAcademicActions
-                                    entity="parallel"
+                                    entity="paralelo"
                                     :record="item"
                                     :record-label="`el paralelo ${item.code}`"
                                     :editable="item.editable"

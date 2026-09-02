@@ -35,7 +35,7 @@ const inputName = computed(() =>
         : `custom_values[${props.field.id}]`,
 );
 const inputType = computed(() =>
-    props.field.type === 'number' || props.field.type === 'integer'
+    props.field.type === 'numero' || props.field.type === 'entero'
         ? 'number'
         : 'text',
 );
@@ -50,7 +50,7 @@ const isCalculatedTotal = computed(
             {{ field.label }}
         </FieldLabel>
         <Select
-            v-if="field.type === 'boolean'"
+            v-if="field.type === 'booleano'"
             :name="inputName"
             :model-value="String(value)"
             required
@@ -73,11 +73,11 @@ const isCalculatedTotal = computed(
             :id="inputId"
             :name="inputName"
             :type="inputType"
-            :step="field.type === 'number' ? '0.01' : undefined"
+            :step="field.type === 'numero' ? '0.01' : undefined"
             :min="inputType === 'number' ? 0 : undefined"
             :model-value="value"
             :placeholder="
-                field.type === 'text' ? `Ej. ${field.label}` : undefined
+                field.type === 'texto' ? `Ej. ${field.label}` : undefined
             "
             :readonly="isCalculatedTotal"
             :aria-readonly="isCalculatedTotal || undefined"

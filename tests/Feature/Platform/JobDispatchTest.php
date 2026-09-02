@@ -8,13 +8,13 @@ use App\Modules\Operations\Application\Actions\DispatchPlatformSmoke;
 use App\Modules\Operations\Infrastructure\Jobs\DeliverInternalNotificationJob;
 use App\Modules\Operations\Infrastructure\Jobs\PlatformSmokeJob;
 use App\Modules\Operations\Infrastructure\Persistence\Models\JobExecution;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 class JobDispatchTest extends TestCase
 {
-    use DatabaseMigrations;
+    use RefreshDatabase;
 
     public function test_job_is_dispatched_after_commit_and_repeated_request_is_idempotent(): void
     {
@@ -32,9 +32,9 @@ class JobDispatchTest extends TestCase
     public function test_processing_the_same_job_twice_keeps_one_completed_execution(): void
     {
         $execution = JobExecution::query()->create([
-            'type' => 'platform.smoke',
-            'status' => 'pending',
-            'idempotency_key' => 'CP-N-smoke-replay',
+            'tipo' => 'plataforma.verificacion',
+            'estado' => 'pendiente',
+            'clave_idempotencia' => 'CP-N-smoke-replay',
         ]);
         $job = new PlatformSmokeJob($execution->id);
 
@@ -42,8 +42,8 @@ class JobDispatchTest extends TestCase
         $job->handle();
 
         $execution->refresh();
-        $this->assertSame('completed', $execution->status);
-        $this->assertSame(100, $execution->progress);
+        $this->assertSame('completada', $execution->estado);
+        $this->assertSame(100, $execution->progreso);
         $this->assertSame(1, JobExecution::query()->count());
     }
 

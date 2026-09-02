@@ -39,7 +39,7 @@ const deleteOpen = ref(false);
             <RecordStatusForm
                 display="menu"
                 scope="career"
-                entity="curriculum"
+            entity="malla"
                 :record-id="curriculum.id"
                 :active="curriculum.active"
             />

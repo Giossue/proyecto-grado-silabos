@@ -151,7 +151,7 @@ const {
                             </FieldLabel>
                             <Select
                                 name="type"
-                                default-value="prerequisite"
+                                default-value="prerrequisito"
                                 required
                             >
                                 <SelectTrigger id="requirement-type">
@@ -159,10 +159,10 @@ const {
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectGroup>
-                                        <SelectItem value="prerequisite">
+                                        <SelectItem value="prerrequisito">
                                             Prerrequisito
                                         </SelectItem>
-                                        <SelectItem value="corequisite">
+                                        <SelectItem value="correquisito">
                                             Correquisito
                                         </SelectItem>
                                     </SelectGroup>
@@ -327,7 +327,7 @@ const {
                                 </TableCell>
                                 <TableCell>
                                     {{
-                                        requirement.type === 'corequisite'
+                                        requirement.type === 'correquisito'
                                             ? 'Correquisito'
                                             : 'Prerrequisito'
                                     }}

@@ -12,7 +12,7 @@ class ViewOperationalReportsRequest extends FormRequest
     {
         $activeRole = app(ActiveRole::class)->resolve($this);
 
-        return $this->user()?->active === true
+        return $this->user()?->activo === true
             && $activeRole?->role->codigo === RoleCode::Coordinator->value
             && $activeRole->carrera_id !== null;
     }

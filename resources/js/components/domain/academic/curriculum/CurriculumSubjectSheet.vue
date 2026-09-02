@@ -55,7 +55,7 @@ watch(open, (isOpen) => {
 const errorKey = (field: CurriculumFieldDefinition): string =>
     field.system_key ?? `custom_values.${field.id}`;
 const fieldGridClass = (field: CurriculumFieldDefinition): string =>
-    cn(field.type === 'text' && 'col-span-2 sm:col-span-5');
+    cn(field.type === 'texto' && 'col-span-2 sm:col-span-5');
 </script>
 
 <template>
@@ -98,19 +98,19 @@ const fieldGridClass = (field: CurriculumFieldDefinition): string =>
                         />
                         <FieldError :errors="[errors.code]" />
                     </Field>
-                    <Field :data-invalid="Boolean(errors.name)">
+                    <Field :data-invalid="Boolean(errors.nombre)">
                         <FieldLabel for="builder-subject-name" required>
                             Nombre
                         </FieldLabel>
                         <Input
                             id="builder-subject-name"
-                            name="name"
+                            name="nombre"
                             :default-value="subject?.name"
                             placeholder="Ej. Ingeniería de requisitos"
                             required
-                            :aria-invalid="Boolean(errors.name)"
+                            :aria-invalid="Boolean(errors.nombre)"
                         />
-                        <FieldError :errors="[errors.name]" />
+                        <FieldError :errors="[errors.nombre]" />
                     </Field>
                     <Field :data-invalid="Boolean(errors.cycle)">
                         <FieldLabel for="builder-subject-cycle" required>
