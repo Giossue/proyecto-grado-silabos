@@ -3,6 +3,7 @@ import { Form } from '@inertiajs/vue3';
 import { CalendarPlus, Check } from '@lucide/vue';
 import { computed } from 'vue';
 import SyllabusProcessController from '@/actions/App/Modules/Syllabus/Presentation/Http/Controllers/SyllabusProcessController';
+import DateTimePicker from '@/components/DateTimePicker.vue';
 import FormSheet from '@/components/domain/FormSheet.vue';
 import FormSheetActions from '@/components/domain/FormSheetActions.vue';
 import {
@@ -35,18 +36,6 @@ const formRoute = computed(() =>
         ? SyllabusProcessController.update.form(props.process.id)
         : SyllabusProcessController.store.form(),
 );
-
-// `datetime-local` no entiende la zona: se le da la hora tal como la ve quien edita.
-const toLocalInput = (value: string | undefined): string | undefined => {
-    if (!value) {
-        return undefined;
-    }
-
-    const date = new Date(value);
-    const pad = (n: number): string => String(n).padStart(2, '0');
-
-    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-};
 </script>
 
 <template>
@@ -106,11 +95,10 @@ const toLocalInput = (value: string | undefined): string | undefined => {
                         <FieldLabel for="process-starts" required>
                             Inicio de la elaboración
                         </FieldLabel>
-                        <Input
+                        <DateTimePicker
                             id="process-starts"
                             name="starts_at"
-                            type="datetime-local"
-                            :default-value="toLocalInput(process?.starts_at)"
+                            :default-value="process?.starts_at"
                             :aria-invalid="Boolean(errors.starts_at)"
                             required
                         />
@@ -124,11 +112,10 @@ const toLocalInput = (value: string | undefined): string | undefined => {
                         <FieldLabel for="process-due" required>
                             Fecha límite de entrega
                         </FieldLabel>
-                        <Input
+                        <DateTimePicker
                             id="process-due"
                             name="due_at"
-                            type="datetime-local"
-                            :default-value="toLocalInput(process?.due_at)"
+                            :default-value="process?.due_at"
                             :aria-invalid="Boolean(errors.due_at)"
                             required
                         />

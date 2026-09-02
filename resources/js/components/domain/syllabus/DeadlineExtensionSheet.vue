@@ -2,6 +2,7 @@
 import { Form } from '@inertiajs/vue3';
 import { CalendarClock } from '@lucide/vue';
 import SyllabusProcessController from '@/actions/App/Modules/Syllabus/Presentation/Http/Controllers/SyllabusProcessController';
+import DateTimePicker from '@/components/DateTimePicker.vue';
 import FormSheet from '@/components/domain/FormSheet.vue';
 import FormSheetActions from '@/components/domain/FormSheetActions.vue';
 import { Button } from '@/components/ui/button';
@@ -12,7 +13,6 @@ import {
     FieldGroup,
     FieldLabel,
 } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
 import {
     Select,
     SelectContent,
@@ -82,10 +82,9 @@ const open = defineModel<boolean>('open', { default: false });
                         <FieldLabel for="extension-due" required>
                             Nueva fecha
                         </FieldLabel>
-                        <Input
+                        <DateTimePicker
                             id="extension-due"
                             name="due_at"
-                            type="datetime-local"
                             :aria-invalid="Boolean(errors.due_at)"
                             required
                         />
