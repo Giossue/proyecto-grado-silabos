@@ -2,8 +2,8 @@
 
 ## Estado
 
-Implementado y verificado localmente el 2026-09-02. Pendiente únicamente la ejecución
-remota autorizada de la migración.
+Implementado y verificado el 2026-09-02. La migración remota ya se ejecutó; queda
+pendiente desplegar el artefacto de aplicación compatible antes de usar ADM-02 o ADM-03.
 
 ## Trazabilidad
 
@@ -70,3 +70,7 @@ anterior, pero no reconstruye los valores descartados.
   la expectativa arquitectónica del selector manual de unidades curriculares.
 - `./vendor/bin/pint --test`, `npm run types:check`, `npm run lint:check` y
   `npm run build`: en verde.
+- Remoto: respaldo `silabos_ueb_db-2026-09-02-pre-i29.dump`, migración 000026 aplicada
+  en lote 12; cero columnas de vigencia, índice `asignacion_rol_activa_unica` presente,
+  seis roles activos y `/health/ready` con `200`. El código de aplicación debe
+  desplegarse de inmediato: el artefacto anterior consulta las columnas eliminadas.
