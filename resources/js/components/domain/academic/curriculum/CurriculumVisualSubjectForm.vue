@@ -83,7 +83,6 @@ const organizationUnitListId = computed(
                 <Field :data-invalid="Boolean(errors.code)">
                     <FieldLabel
                         :for="`visual-subject-code-${subject?.id ?? cycle}`"
-                        class="sr-only"
                         required
                     >
                         Código
@@ -101,7 +100,6 @@ const organizationUnitListId = computed(
                 <Field :data-invalid="Boolean(errors.nombre)">
                     <FieldLabel
                         :for="`visual-subject-name-${subject?.id ?? cycle}`"
-                        class="sr-only"
                         required
                     >
                         Nombre
@@ -121,7 +119,6 @@ const organizationUnitListId = computed(
             <Field :data-invalid="Boolean(errors.organization_unit)">
                 <FieldLabel
                     :for="`visual-subject-unit-${subject?.id ?? cycle}`"
-                    class="sr-only"
                     required
                 >
                     Unidad de organización curricular
