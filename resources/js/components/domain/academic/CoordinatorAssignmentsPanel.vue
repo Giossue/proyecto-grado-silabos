@@ -128,7 +128,7 @@ const {
                                     <RecordStatusForm
                                         display="menu"
                                         scope="governance"
-                                        entity="coordinator_assignment"
+                                        entity="asignacion_coordinador"
                                         :record-id="item.id"
                                         :active="item.active"
                                     />

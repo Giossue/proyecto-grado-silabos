@@ -34,7 +34,7 @@ defineProps<Pick<AcademicStructureProps, 'options'>>();
             <Form
                 v-bind="
                     AcademicGovernanceController.store.form(
-                        'coordinator_assignment',
+                        'asignacion_coordinador',
                     )
                 "
                 v-slot="{ errors, processing }"

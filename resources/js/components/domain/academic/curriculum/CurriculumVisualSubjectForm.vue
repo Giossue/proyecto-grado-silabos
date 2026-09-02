@@ -38,10 +38,10 @@ const emit = defineEmits<{
 const formRoute = computed(() =>
     props.subject
         ? CareerAcademicStructureController.update.form({
-              entity: 'subject',
+              entity: 'asignatura',
               record: props.subject.id,
           })
-        : CareerAcademicStructureController.store.form('subject'),
+        : CareerAcademicStructureController.store.form('asignatura'),
 );
 
 const { updateValue, valueFor } = useCurriculumSubjectFieldValues(
