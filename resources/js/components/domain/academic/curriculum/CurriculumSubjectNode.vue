@@ -94,17 +94,12 @@ const totalFields = computed(
             aria-label="Recibir relación académica"
         />
         <!--
-            El puntero dice qué se puede hacer donde está: la mano abierta sobre el
-            cuerpo de la tarjeta —que se arrastra a otro nivel o posición— y cerrada
-            mientras se arrastra. Los botones de dentro conservan el suyo.
+            El puntero dice qué se puede hacer donde está: mano abierta sobre el
+            cuerpo de la tarjeta y cerrada mientras se arrastra. Los botones de
+            dentro y las líneas de relación conservan el suyo de pulsación.
         -->
         <article
-            class="relative w-64 overflow-hidden rounded-md bg-card text-card-foreground shadow-surface ring-1 ring-surface-ring data-[dragging=true]:shadow-menu data-[dragging=true]:ring-2 data-[dragging=true]:ring-ring"
-            :class="
-                data.draggable
-                    ? 'cursor-grab active:cursor-grabbing'
-                    : 'cursor-default'
-            "
+            class="relative w-64 cursor-grab overflow-hidden rounded-md bg-card text-card-foreground shadow-surface ring-1 ring-surface-ring active:cursor-grabbing data-[dragging=true]:shadow-menu data-[dragging=true]:ring-2 data-[dragging=true]:ring-ring"
             :data-dragging="dragging"
             :aria-label="`${data.subject.code}: ${data.subject.name}`"
         >
