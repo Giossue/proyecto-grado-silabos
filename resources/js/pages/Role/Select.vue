@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Form, Head, usePage } from '@inertiajs/vue3';
-import { ArrowRight, Building2, CheckCircle2 } from '@lucide/vue';
+import { ArrowRight, CheckCircle2 } from '@lucide/vue';
 import { computed } from 'vue';
 import ActiveRoleController from '@/actions/App/Modules/Identity/Presentation/Http/Controllers/ActiveRoleController';
 import PageFrame from '@/components/domain/PageFrame.vue';
@@ -10,8 +10,6 @@ import { Button } from '@/components/ui/button';
 import {
     Card,
     CardAction,
-    CardContent,
-    CardDescription,
     CardFooter,
     CardHeader,
     CardTitle,
@@ -64,15 +62,6 @@ const actionLabel = (role: (typeof page.props.auth.roles)[number]): string => {
                     <CardTitle>
                         {{ role.career_name ?? role.role_name }}
                     </CardTitle>
-                    <CardDescription>
-                        {{
-                            role.role === 'coordinador'
-                                ? `Coordinación de ${role.career_name}`
-                                : role.career_name
-                                  ? `${role.role_name} · ${role.career_name}`
-                                  : 'Administración general del sistema'
-                        }}
-                    </CardDescription>
                     <CardAction>
                         <Badge
                             v-if="page.props.auth.active_role_id === role.id"
@@ -86,17 +75,6 @@ const actionLabel = (role: (typeof page.props.auth.roles)[number]): string => {
                         </Badge>
                     </CardAction>
                 </CardHeader>
-                <CardContent>
-                    <div
-                        class="flex items-center gap-2 text-sm text-muted-foreground"
-                    >
-                        <Building2 aria-hidden="true" />
-                        <span>{{
-                            role.career_name ??
-                            'Ámbito institucional sin carrera específica'
-                        }}</span>
-                    </div>
-                </CardContent>
                 <CardFooter>
                     <Form
                         v-bind="ActiveRoleController.store.form()"
