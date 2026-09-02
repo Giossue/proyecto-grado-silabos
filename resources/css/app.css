@@ -278,17 +278,6 @@
             > td[data-card-more] {
             background-color: var(--color-muted);
         }
-
-        table[data-cards='true'][data-overflows='true']
-            > tbody
-            > tr:hover
-            > td[data-card-more] {
-            background-color: color-mix(
-                in oklab,
-                var(--color-muted) 80%,
-                var(--color-card)
-            );
-        }
     }
 
     /*
@@ -390,21 +379,6 @@
         > tr[data-state='selected']
         > td:last-child {
         background-color: var(--color-muted);
-    }
-
-    /*
-     * La fila resaltada al pasar el puntero se resalta entera, columna fija incluida, o
-     * el ancla se vería despegada de su propia fila.
-     */
-    table[data-overflows='true']:has([data-slot='table-actions'])
-        > tbody
-        > tr:hover
-        > td:last-child {
-        background-color: color-mix(
-            in oklab,
-            var(--color-muted) 80%,
-            var(--color-card)
-        );
     }
 
     /*
