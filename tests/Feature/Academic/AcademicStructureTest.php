@@ -140,7 +140,7 @@ class AcademicStructureTest extends TestCase
 
         $this->actingAsCoordinator()
             ->get(route('coordination.academic.subjects.index'))
-            ->assertRedirect('/coordinacion/mallas');
+            ->assertRedirect('/coordinacion/malla');
 
         $this->actingAsCoordinator()
             ->get(route('coordination.academic.offerings.index'))

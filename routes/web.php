@@ -132,13 +132,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('revisiones/{revision}/aprobar', [ReviewController::class, 'approve'])->name('reviews.approve');
         Route::post('silabos/{syllabus}/reabrir', [ReviewController::class, 'reopen'])->name('reviews.reopen');
         Route::post('silabos/{syllabus}/relevo-docente', [ReviewController::class, 'transferTeacher'])->name('reviews.teacher.transfer');
-        Route::redirect('mallas-materias', '/coordinacion/mallas');
-        Route::get('mallas', [CareerAcademicStructureController::class, 'curricula'])
+        Route::redirect('mallas-materias', '/coordinacion/malla');
+        Route::redirect('mallas', '/coordinacion/malla');
+        Route::get('malla', [CareerAcademicStructureController::class, 'curricula'])
             ->name('coordination.academic.curricula.index');
-        Route::get('mallas/{curriculum}', [CareerAcademicStructureController::class, 'curriculumBuilder'])
+        Route::get('malla/{curriculum}', [CareerAcademicStructureController::class, 'curriculumBuilder'])
             ->whereUuid('curriculum')
             ->name('coordination.academic.curricula.show');
-        Route::redirect('materias', '/coordinacion/mallas')
+        Route::redirect('materias', '/coordinacion/malla')
             ->name('coordination.academic.subjects.index');
         Route::redirect('oferta-paralelos', '/coordinacion/ofertas');
         Route::get('ofertas', [CareerAcademicStructureController::class, 'offerings'])
@@ -155,28 +156,28 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::patch('estructura-academica/{entity}/{record}/estado', [CareerAcademicStructureController::class, 'setStatus'])
             ->whereUuid('record')
             ->name('coordination.academic.status.update');
-        Route::delete('mallas/{curriculum}', [CareerAcademicStructureController::class, 'destroyCurriculum'])
+        Route::delete('malla/{curriculum}', [CareerAcademicStructureController::class, 'destroyCurriculum'])
             ->whereUuid('curriculum')
             ->name('coordination.academic.curricula.destroy');
-        Route::patch('mallas/{curriculum}/configuracion', [CareerAcademicStructureController::class, 'updateCurriculumConfiguration'])
+        Route::patch('malla/{curriculum}/configuracion', [CareerAcademicStructureController::class, 'updateCurriculumConfiguration'])
             ->whereUuid('curriculum')
             ->name('coordination.academic.curricula.configuration.update');
-        Route::post('mallas/{curriculum}/campos', [CareerAcademicStructureController::class, 'storeCurriculumField'])
+        Route::post('malla/{curriculum}/campos', [CareerAcademicStructureController::class, 'storeCurriculumField'])
             ->whereUuid('curriculum')
             ->name('coordination.academic.curricula.fields.store');
-        Route::delete('mallas/{curriculum}/campos/{field}', [CareerAcademicStructureController::class, 'destroyCurriculumField'])
+        Route::delete('malla/{curriculum}/campos/{field}', [CareerAcademicStructureController::class, 'destroyCurriculumField'])
             ->whereUuid(['curriculum', 'field'])
             ->name('coordination.academic.curricula.fields.destroy');
-        Route::post('mallas/{curriculum}/relaciones', [CareerAcademicStructureController::class, 'storeSubjectRequirement'])
+        Route::post('malla/{curriculum}/relaciones', [CareerAcademicStructureController::class, 'storeSubjectRequirement'])
             ->whereUuid('curriculum')
             ->name('coordination.academic.curricula.requirements.store');
-        Route::delete('mallas/{curriculum}/relaciones/{requirement}', [CareerAcademicStructureController::class, 'destroySubjectRequirement'])
+        Route::delete('malla/{curriculum}/relaciones/{requirement}', [CareerAcademicStructureController::class, 'destroySubjectRequirement'])
             ->whereUuid(['curriculum', 'requirement'])
             ->name('coordination.academic.curricula.requirements.destroy');
-        Route::delete('mallas/{curriculum}/materias/{subject}', [CareerAcademicStructureController::class, 'destroySubject'])
+        Route::delete('malla/{curriculum}/materias/{subject}', [CareerAcademicStructureController::class, 'destroySubject'])
             ->whereUuid(['curriculum', 'subject'])
             ->name('coordination.academic.curricula.subjects.destroy');
-        Route::patch('mallas/{curriculum}/posicion-materia', [CareerAcademicStructureController::class, 'updateSubjectLayout'])
+        Route::patch('malla/{curriculum}/posicion-materia', [CareerAcademicStructureController::class, 'updateSubjectLayout'])
             ->whereUuid('curriculum')
             ->name('coordination.academic.curricula.layout.update');
     });
@@ -216,18 +217,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->whereUuid('process')
             ->whereIn('transition', ['abrir', 'pausar', 'reanudar', 'cerrar'])
             ->name('processes.transition');
-        Route::get('plantillas', [TemplateController::class, 'index'])->name('templates.index');
-        Route::post('plantillas', [TemplateController::class, 'store'])->name('templates.store');
+        Route::get('plantilla', [TemplateController::class, 'index'])->name('templates.index');
+        Route::post('plantilla', [TemplateController::class, 'store'])->name('templates.store');
         // Una sola plantilla que se edita en el sitio (I-32): sin versiones, sin publicar.
-        Route::get('plantillas/{template}', [TemplateController::class, 'show'])->name('templates.show');
-        Route::post('plantillas/{template}/secciones', [TemplateController::class, 'storeSection'])->name('templates.sections.store');
-        Route::patch('plantillas/{template}/secciones/orden', [TemplateController::class, 'reorderSections'])->name('templates.sections.reorder');
-        Route::patch('plantillas/{template}/secciones/{section}', [TemplateController::class, 'updateSection'])->name('templates.sections.update');
-        Route::delete('plantillas/{template}/secciones/{section}', [TemplateController::class, 'destroySection'])->name('templates.sections.destroy');
-        Route::post('plantillas/{template}/campos', [TemplateController::class, 'storeField'])->name('templates.fields.store');
-        Route::patch('plantillas/{template}/campos/{field}', [TemplateController::class, 'updateField'])->name('templates.fields.update');
-        Route::patch('plantillas/{template}/bloques/orden', [TemplateController::class, 'reorderBlocks'])->name('templates.blocks.reorder');
-        Route::delete('plantillas/{template}/bloques/{block}', [TemplateController::class, 'destroyBlock'])->name('templates.blocks.destroy');
+        Route::redirect('plantillas', '/admin/plantilla');
+        Route::get('plantilla/{template}', [TemplateController::class, 'show'])->name('templates.show');
+        Route::post('plantilla/{template}/secciones', [TemplateController::class, 'storeSection'])->name('templates.sections.store');
+        Route::patch('plantilla/{template}/secciones/orden', [TemplateController::class, 'reorderSections'])->name('templates.sections.reorder');
+        Route::patch('plantilla/{template}/secciones/{section}', [TemplateController::class, 'updateSection'])->name('templates.sections.update');
+        Route::delete('plantilla/{template}/secciones/{section}', [TemplateController::class, 'destroySection'])->name('templates.sections.destroy');
+        Route::post('plantilla/{template}/campos', [TemplateController::class, 'storeField'])->name('templates.fields.store');
+        Route::patch('plantilla/{template}/campos/{field}', [TemplateController::class, 'updateField'])->name('templates.fields.update');
+        Route::patch('plantilla/{template}/bloques/orden', [TemplateController::class, 'reorderBlocks'])->name('templates.blocks.reorder');
+        Route::delete('plantilla/{template}/bloques/{block}', [TemplateController::class, 'destroyBlock'])->name('templates.blocks.destroy');
     });
 });
 
