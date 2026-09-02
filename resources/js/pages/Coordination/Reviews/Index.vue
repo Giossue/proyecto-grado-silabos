@@ -146,7 +146,7 @@ const stateLabel = (value: string): string =>
                     <TableBody>
                         <TableRow v-for="item in syllabi.data" :key="item.id">
                             <TableCell>
-                                <div class="font-medium">
+                                <div>
                                     {{ item.subject }}
                                 </div>
                                 <div class="text-sm text-muted-foreground">

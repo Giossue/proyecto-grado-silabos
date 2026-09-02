@@ -228,7 +228,7 @@ const detailValue = (value: Detail['value']): string => {
                                 {{ formatDate(event.occurred_at) }}
                             </TableCell>
                             <TableCell>
-                                <div class="font-medium">{{ event.actor }}</div>
+                                <div>{{ event.actor }}</div>
                                 <div class="text-xs text-muted-foreground">
                                     {{
                                         [event.role, event.career]
@@ -238,9 +238,7 @@ const detailValue = (value: Detail['value']): string => {
                                     }}
                                 </div>
                             </TableCell>
-                            <TableCell class="font-medium">{{
-                                event.action
-                            }}</TableCell>
+                            <TableCell>{{ event.action }}</TableCell>
                             <TableCell>{{ event.resource }}</TableCell>
                             <TableCell>
                                 <span

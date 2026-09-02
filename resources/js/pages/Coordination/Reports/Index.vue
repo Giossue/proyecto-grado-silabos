@@ -250,9 +250,7 @@ const stateLabel = (value: string): string =>
                             v-for="item in convocationPage"
                             :key="item.id"
                         >
-                            <TableCell class="font-medium">{{
-                                item.name
-                            }}</TableCell>
+                            <TableCell>{{ item.name }}</TableCell>
                             <TableCell>{{ item.total }}</TableCell>
                             <TableCell>{{ item.not_started }}</TableCell>
                             <TableCell>{{ item.draft }}</TableCell>
@@ -304,7 +302,7 @@ const stateLabel = (value: string): string =>
                     <TableBody>
                         <TableRow v-for="item in syllabi.data" :key="item.id">
                             <TableCell>
-                                <div class="font-medium">
+                                <div>
                                     {{ item.subject }}
                                 </div>
                                 <div class="text-xs text-muted-foreground">

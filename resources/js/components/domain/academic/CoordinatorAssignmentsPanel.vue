@@ -110,7 +110,7 @@ const {
                             v-else
                             :key="item.id"
                         >
-                            <TableCell class="font-medium">
+                            <TableCell>
                                 {{ item.user_name }}
                             </TableCell>
                             <TableCell>{{ item.career_name }}</TableCell>

@@ -242,9 +242,7 @@ defineProps<{
                         >
                             <TableCell>
                                 <div class="flex flex-col">
-                                    <span class="font-medium">{{
-                                        user.nombre
-                                    }}</span>
+                                    <span>{{ user.nombre }}</span>
                                     <span
                                         class="text-sm text-muted-foreground"
                                         >{{ user.correo_electronico }}</span

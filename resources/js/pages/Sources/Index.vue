@@ -82,7 +82,7 @@ defineOptions({
                             ><TableCell
                                 ><Link
                                     :href="sourceShow(source.id)"
-                                    class="font-medium underline-offset-4 hover:underline"
+                                    class="underline-offset-4 hover:underline"
                                     >{{ source.name }}</Link
                                 >
                                 <div

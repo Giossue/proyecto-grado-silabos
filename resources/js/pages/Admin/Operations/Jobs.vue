@@ -257,9 +257,7 @@ const formatDate = (value: string | null): string =>
                             v-for="execution in executions.data"
                             :key="execution.id"
                         >
-                            <TableCell class="font-medium">{{
-                                execution.tipo
-                            }}</TableCell>
+                            <TableCell>{{ execution.tipo }}</TableCell>
                             <TableCell>{{ execution.cola }}</TableCell>
                             <TableCell>
                                 <span

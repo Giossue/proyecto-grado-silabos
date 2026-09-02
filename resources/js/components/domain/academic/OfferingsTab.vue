@@ -129,9 +129,7 @@ const {
                             v-for="item in offeringPage"
                             v-else
                             :key="item.id"
-                            ><TableCell class="font-medium">{{
-                                item.label
-                            }}</TableCell
+                            ><TableCell>{{ item.label }}</TableCell
                             ><TableCell>{{ item.period_name }}</TableCell
                             ><TableCell
                                 >{{ item.campus_name }} ·
@@ -216,9 +214,7 @@ const {
                             v-else
                             :key="item.id"
                             ><TableCell>{{ item.offering_label }}</TableCell
-                            ><TableCell class="font-medium">{{
-                                item.code
-                            }}</TableCell
+                            ><TableCell>{{ item.code }}</TableCell
                             ><TableCell>{{
                                 item.active ? 'Activo' : 'Archivado'
                             }}</TableCell

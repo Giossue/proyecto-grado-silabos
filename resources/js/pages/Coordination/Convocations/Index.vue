@@ -164,11 +164,7 @@ const stateLabel = (state: string): string =>
                             v-else
                             :key="convocation.id"
                         >
-                            <TableCell>
-                                <span class="font-medium">
-                                    {{ convocation.name }}
-                                </span>
-                            </TableCell>
+                            <TableCell>{{ convocation.name }}</TableCell>
                             <TableCell>{{ convocation.period }}</TableCell>
                             <TableCell>
                                 <div>{{ convocation.template }}</div>

@@ -229,7 +229,7 @@ const {
                                 :key="subject.id"
                             >
                                 <TableCell>
-                                    <div class="font-medium">
+                                    <div>
                                         {{ subject.name }}
                                     </div>
                                     <div class="text-sm text-muted-foreground">

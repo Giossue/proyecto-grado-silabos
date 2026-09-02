@@ -186,7 +186,7 @@ const {
                         v-else
                         :key="faculty.id"
                     >
-                        <TableCell class="font-medium">
+                        <TableCell>
                             {{ faculty.nombre }}
                         </TableCell>
                         <TableCell>
@@ -281,7 +281,7 @@ const {
                         v-else
                         :key="career.id"
                     >
-                        <TableCell class="font-medium">
+                        <TableCell>
                             {{ career.name }}
                         </TableCell>
                         <TableCell>
@@ -371,7 +371,7 @@ const {
                         v-else
                         :key="campus.id"
                     >
-                        <TableCell class="font-medium">
+                        <TableCell>
                             {{ campus.nombre }}
                         </TableCell>
                         <TableCell>
@@ -464,7 +464,7 @@ const {
                         v-else
                         :key="modality.id"
                     >
-                        <TableCell class="font-medium">
+                        <TableCell>
                             {{ modality.nombre }}
                         </TableCell>
                         <TableCell>
@@ -551,7 +551,7 @@ const {
                         v-else
                         :key="period.id"
                     >
-                        <TableCell class="font-medium">
+                        <TableCell>
                             {{ period.name }}
                         </TableCell>
                         <TableCell>{{ period.code }}</TableCell>

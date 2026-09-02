@@ -291,7 +291,7 @@ onUnmounted(() => {
                                 :key="artifact.id"
                             >
                                 <TableCell>
-                                    <p class="font-medium">
+                                    <p>
                                         {{ formatDate(artifact.requested_at) }}
                                     </p>
                                     <p

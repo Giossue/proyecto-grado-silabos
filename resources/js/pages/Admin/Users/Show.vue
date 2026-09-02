@@ -196,9 +196,7 @@ const page = usePage();
                             v-for="assignment in assignmentPage"
                             v-else
                             :key="assignment.id"
-                            ><TableCell class="font-medium">{{
-                                assignment.role_name
-                            }}</TableCell
+                            ><TableCell>{{ assignment.role_name }}</TableCell
                             ><TableCell>{{
                                 assignment.career_name ?? 'Institucional'
                             }}</TableCell

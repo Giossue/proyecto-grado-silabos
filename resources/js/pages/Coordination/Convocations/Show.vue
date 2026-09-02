@@ -251,7 +251,7 @@ const {
                                 :key="syllabus.id"
                             >
                                 <TableCell>
-                                    <div class="font-medium">
+                                    <div>
                                         {{ syllabus.subject }}
                                     </div>
                                     <div class="text-sm text-muted-foreground">

@@ -169,7 +169,7 @@ const formatSavedAt = (value: string | null): string =>
                             :key="syllabus.id"
                         >
                             <TableCell>
-                                <span class="font-medium">
+                                <span>
                                     {{ syllabus.subject }}
                                 </span>
                                 <div class="text-sm text-muted-foreground">
@@ -189,7 +189,7 @@ const formatSavedAt = (value: string | null): string =>
                             <TableCell>{{
                                 formatSavedAt(syllabus.guardado_en)
                             }}</TableCell>
-                            <TableCell class="text-right font-medium">
+                            <TableCell class="text-right">
                                 {{ syllabus.completion.toFixed(0) }} %
                             </TableCell>
                             <TableCell class="text-right">
