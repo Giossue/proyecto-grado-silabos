@@ -4,6 +4,7 @@ import { Bell } from '@lucide/vue';
 import { computed } from 'vue';
 import AppearanceToggle from '@/components/AppearanceToggle.vue';
 import Breadcrumbs from '@/components/Breadcrumbs.vue';
+import SetupProgress from '@/components/SetupProgress.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SidebarTrigger } from '@/components/ui/sidebar';
@@ -67,6 +68,7 @@ const isNotificationsPage = computed(
             </template>
         </div>
         <div class="ml-auto flex items-center gap-2">
+            <SetupProgress />
             <Tooltip>
                 <TooltipTrigger as-child>
                     <Button

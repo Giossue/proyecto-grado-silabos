@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Models\User;
 use App\Modules\Identity\Application\ActiveRole;
+use App\Modules\Operations\Application\SetupChecklist;
 use App\Modules\Operations\Infrastructure\Persistence\Models\InternalNotification;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -53,7 +54,8 @@ class HandleInertiaRequests extends Middleware
             : collect();
         // Resolver aquí activa el único ámbito no coordinador, si lo hay, antes de
         // compartir los props. Coordinación siempre confirma primero su carrera.
-        $activeRoleId = $user instanceof User ? $activeRole->resolve($request)?->id : null;
+        $resolvedRole = $user instanceof User ? $activeRole->resolve($request) : null;
+        $activeRoleId = $resolvedRole?->id;
 
         return [
             ...parent::share($request),
@@ -76,6 +78,11 @@ class HandleInertiaRequests extends Middleware
                         ->count()
                     : 0,
             ],
+            // Puesta en marcha en el encabezado: se recalcula en cada petición, así vuelve
+            // a aparecer si se borra algo.
+            'setupProgress' => fn () => $user instanceof User && $resolvedRole !== null
+                ? app(SetupChecklist::class)->summaryFor($user, $resolvedRole)
+                : null,
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
     }

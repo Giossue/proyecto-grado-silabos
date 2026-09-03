@@ -19,6 +19,11 @@ declare module '@inertiajs/core' {
             name: string;
             auth: Auth;
             notifications: { unread_count: number };
+            setupProgress: {
+                title: string;
+                done: number;
+                total: number;
+            } | null;
             sidebarOpen: boolean;
             [key: string]: unknown;
         };

@@ -15,6 +15,8 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
 use App\Modules\Academic\Infrastructure\Persistence\Models\TeacherAssignment;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\AcademicSource;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
+use App\Modules\Identity\Domain\Enums\RoleCode;
+use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\Convocation;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\Syllabus;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\SyllabusProcess;
@@ -30,6 +32,25 @@ use Illuminate\Database\Eloquent\Builder;
  */
 class SetupChecklist
 {
+    /**
+     * Resumen para el encabezado: cuánto falta según el rol activo.
+     *
+     * @return array{title: string, done: int, total: int}|null
+     */
+    public function summaryFor(User $user, RoleAssignment $assignment): ?array
+    {
+        $checklist = match ($assignment->role->codigo) {
+            RoleCode::Administrator->value => $this->forAdministrator(),
+            RoleCode::Coordinator->value => $this->forCoordinator($assignment->carrera_id),
+            RoleCode::Teacher->value => $this->forTeacher($user, $assignment->carrera_id),
+            default => null,
+        };
+
+        return $checklist === null
+            ? null
+            : ['title' => $checklist['title'], 'done' => $checklist['done'], 'total' => $checklist['total']];
+    }
+
     /** @return Checklist */
     public function forAdministrator(): array
     {

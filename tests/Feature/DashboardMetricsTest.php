@@ -76,7 +76,8 @@ class DashboardMetricsTest extends TestCase
                     ->has('setup.steps', $total)
                     ->where('setup.steps.0.key', $primero)
                     ->where('setup.steps.'.($total - 1).'.key', $ultimo)
-                    ->where('setup.steps.0.done', $primeroHecho));
+                    ->where('setup.steps.0.done', $primeroHecho)
+                    ->where('setupProgress.total', $total));
         }
 
         // Con la base sembrada, al administrador le faltan la plantilla y el proceso.
