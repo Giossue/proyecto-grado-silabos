@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { Check, MoreHorizontal, Plus, Trash2, X } from '@lucide/vue';
+import { Check, MoreHorizontal, Trash2, X } from '@lucide/vue';
 import { computed, nextTick, ref, watch } from 'vue';
 import { toast } from 'vue-sonner';
-import { Button } from '@/components/ui/button';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -20,15 +19,17 @@ import {
 } from '@/lib/tableLayout';
 import type {
     HeaderCell,
+    TableColumn,
     TableColumnType,
     TableLayout,
 } from '@/lib/tableLayout';
+import { isUnformattedTable, TABLE_PRESETS } from '@/lib/tablePresets';
 
 /**
- * Diseñador de tabla sobre la hoja (I-34). Se edita como en Word pero sin dejar
- * que se rompa: renombrar con un clic, columna nueva con «+», arrastrar para
- * reordenar, seleccionar vecinas para agrupar. Emite el esquema; el editor de la
- * plantilla lo guarda.
+ * Diseñador de tabla sobre la hoja (I-34). Piensa como Word: cada celda de
+ * cabecera tiene su menú (insertar, combinar con la derecha, separar, tipo,
+ * quitar) y se renombra con un clic. Una tabla recién soltada ofrece los formatos
+ * institucionales listos. Emite el esquema; el editor de la plantilla lo guarda.
  */
 const props = defineProps<{
     layout: TableLayout;
@@ -52,20 +53,22 @@ const SAMPLE_TEXT = [
 const SAMPLE_NUMBERS = [2, 1, 3];
 
 const draft = ref<TableLayout>(cloneTableLayout(props.layout));
-const selecting = ref(false);
-const selected = ref<string[]>([]);
-const groupName = ref('');
 const editing = ref<Editing | null>(null);
 const editValue = ref('');
 const editorInput = ref<HTMLInputElement | null>(null);
 const draggedColumn = ref<string | null>(null);
 const dropTarget = ref<string | null>(null);
 /**
- * Claves creadas en esta sesión con el nombre provisional («Nueva columna»). Al
- * ponerles nombre real la clave se rehace a partir de él; después ya no cambia,
- * porque las celdas guardadas cuelgan de ella.
+ * Claves creadas en esta sesión con un nombre provisional. Al ponerles nombre
+ * real la clave se rehace a partir de él; después ya no cambia, porque las celdas
+ * guardadas cuelgan de ella.
  */
 const freshKeys = new Set<string>();
+/**
+ * Insertar o combinar dejan el nombre en edición y guardan al terminar de
+ * escribirlo: un solo guardado, sin que la respuesta del primero pise al segundo.
+ */
+let pendingCommit = false;
 
 watch(
     () => props.layout,
@@ -80,6 +83,7 @@ const columnCount = computed(() => draft.value.columns.length);
 const hasUnitHeader = computed(
     () => draft.value.repeat.enabled || draft.value.header_fields.length > 0,
 );
+const unformatted = computed(() => isUnformattedTable(draft.value));
 
 const setEditorRef = (element: unknown): void => {
     const instance = element as { $el?: HTMLInputElement } | null;
@@ -90,6 +94,17 @@ const commit = (): void => {
     emit('update:layout', cloneTableLayout(draft.value));
 };
 
+const applyPreset = (key: string): void => {
+    const preset = TABLE_PRESETS.find((item) => item.key === key);
+
+    if (!preset) {
+        return;
+    }
+
+    draft.value = cloneTableLayout(preset.layout);
+    commit();
+};
+
 const isEditing = (kind: Editing['kind'], key: string): boolean =>
     editing.value?.kind === kind && editing.value.key === key;
 
@@ -98,7 +113,7 @@ const startRename = async (
     key: string,
     value: string,
 ): Promise<void> => {
-    if (props.readonly || selecting.value) {
+    if (props.readonly) {
         return;
     }
 
@@ -111,6 +126,11 @@ const startRename = async (
 
 const cancelRename = (): void => {
     editing.value = null;
+
+    if (pendingCommit) {
+        pendingCommit = false;
+        commit();
+    }
 };
 
 const commitRename = (): void => {
@@ -118,7 +138,14 @@ const commitRename = (): void => {
     editing.value = null;
     const value = editValue.value.trim();
 
+    const dirty = pendingCommit;
+    pendingCommit = false;
+
     if (current === null || value === '') {
+        if (dirty) {
+            commit();
+        }
+
         return;
     }
 
@@ -139,6 +166,10 @@ const commitRename = (): void => {
                     : layout.repeat;
 
     if (!target || target.label === value) {
+        if (dirty) {
+            commit();
+        }
+
         return;
     }
 
@@ -164,22 +195,43 @@ const commitRename = (): void => {
     commit();
 };
 
-const addColumn = (): void => {
+/** Grupos y agrupamientos sin columnas desaparecen. */
+const pruneContainers = (): void => {
+    const groups = new Set(draft.value.columns.map((column) => column.group));
+    const bands = new Set(draft.value.columns.map((column) => column.band));
+    draft.value.groups = draft.value.groups.filter((group) =>
+        groups.has(group.key),
+    );
+    draft.value.bands = draft.value.bands.filter((band) => bands.has(band.key));
+};
+
+const columnAt = (key: string): TableColumn | undefined =>
+    draft.value.columns.find((column) => column.key === key);
+
+/** Nueva columna a la derecha, dentro del mismo grupo para no partir la cabecera. */
+const insertRight = (key: string): void => {
+    const index = draft.value.columns.findIndex((column) => column.key === key);
+    const anchor = draft.value.columns[index];
+
+    if (!anchor) {
+        return;
+    }
+
     const label = 'Nueva columna';
-    const key = tableKeyFor(
+    const newKey = tableKeyFor(
         label,
         draft.value.columns.map((column) => column.key),
     );
-    draft.value.columns.push({
-        key,
+    draft.value.columns.splice(index + 1, 0, {
+        key: newKey,
         label,
         type: 'text',
-        group: null,
-        band: null,
+        group: anchor.group,
+        band: anchor.band,
     });
-    freshKeys.add(key);
-    commit();
-    void startRename('leaf', key, label);
+    freshKeys.add(newKey);
+    pendingCommit = true;
+    void startRename('leaf', newKey, label);
 };
 
 const removeColumn = (key: string): void => {
@@ -197,7 +249,7 @@ const removeColumn = (key: string): void => {
 };
 
 const setType = (key: string, type: TableColumnType): void => {
-    const column = draft.value.columns.find((item) => item.key === key);
+    const column = columnAt(key);
 
     if (!column || column.type === type) {
         return;
@@ -207,146 +259,145 @@ const setType = (key: string, type: TableColumnType): void => {
     commit();
 };
 
-/** Grupos y agrupamientos sin columnas desaparecen. */
-const pruneContainers = (): void => {
-    const groups = new Set(draft.value.columns.map((column) => column.group));
-    const bands = new Set(draft.value.columns.map((column) => column.band));
-    draft.value.groups = draft.value.groups.filter((group) =>
-        groups.has(group.key),
-    );
-    draft.value.bands = draft.value.bands.filter((band) => bands.has(band.key));
-};
-
-const startSelecting = (): void => {
-    selecting.value = true;
-    selected.value = [];
-    groupName.value = '';
-    editing.value = null;
-};
-
-const stopSelecting = (): void => {
-    selecting.value = false;
-    selected.value = [];
-    groupName.value = '';
-};
-
-const toggleSelected = (key: string): void => {
-    selected.value = selected.value.includes(key)
-        ? selected.value.filter((item) => item !== key)
-        : [...selected.value, key];
-};
-
-const selectedIndexes = computed(() =>
-    selected.value
-        .map((key) =>
-            draft.value.columns.findIndex((column) => column.key === key),
-        )
-        .filter((index) => index >= 0)
-        .sort((a, b) => a - b),
-);
-
-const selectionIsContiguous = computed(() =>
-    selectedIndexes.value.every(
-        (index, position) =>
-            position === 0 || index === selectedIndexes.value[position - 1] + 1,
-    ),
-);
+const columnsOfGroup = (group: string): TableColumn[] =>
+    draft.value.columns.filter((column) => column.group === group);
 
 /**
- * Columnas sueltas vecinas → grupo. Si alguna ya tiene grupo, la selección debe
- * cubrir esos grupos enteros y pasa a ser un agrupamiento (nivel superior).
+ * «Combinar con la derecha», como en Word: dos columnas sueltas forman un grupo;
+ * una suelta se suma al grupo vecino; dos grupos distintos se abrazan con un
+ * agrupamiento superior. La celda combinada nace lista para escribirle el nombre.
  */
-const createGroup = (): void => {
-    const name = groupName.value.trim();
+const mergeRight = (key: string): void => {
+    const index = draft.value.columns.findIndex((column) => column.key === key);
+    const left = draft.value.columns[index];
+    const right = draft.value.columns[index + 1];
 
-    if (name === '' || selectedIndexes.value.length < 2) {
-        toast.error('Elija dos o más columnas vecinas y escriba un nombre.');
+    if (!left || !right) {
+        return;
+    }
+
+    if (left.group !== null && left.group === right.group) {
+        toast.error('Estas columnas ya están combinadas.');
 
         return;
     }
 
-    if (!selectionIsContiguous.value) {
-        toast.error('Las columnas agrupadas deben estar juntas.');
-
-        return;
-    }
-
-    const columns = selectedIndexes.value.map(
-        (index) => draft.value.columns[index],
-    );
-    const ungrouped = columns.every((column) => column.group === null);
-
-    if (ungrouped) {
-        const bands = new Set(columns.map((column) => column.band));
-
-        if (bands.size > 1) {
-            toast.error('Un grupo no puede cruzar dos agrupamientos.');
+    if (left.group === null && right.group === null) {
+        if (
+            left.band !== null &&
+            right.band !== null &&
+            left.band !== right.band
+        ) {
+            toast.error('Están en agrupamientos distintos; sepárelas primero.');
 
             return;
         }
 
-        const key = tableKeyFor(
-            name,
+        const groupKey = tableKeyFor(
+            'grupo',
             draft.value.groups.map((group) => group.key),
         );
-        draft.value.groups.push({ key, label: name });
+        draft.value.groups.push({ key: groupKey, label: 'Grupo' });
+        const band = left.band ?? right.band;
+        left.group = groupKey;
+        right.group = groupKey;
+        left.band = band;
+        right.band = band;
+        pendingCommit = true;
+        void startRename('group', groupKey, 'Grupo');
 
-        for (const column of columns) {
-            column.group = key;
-        }
-    } else {
-        if (columns.some((column) => column.band !== null)) {
-            toast.error('Estas columnas ya tienen un agrupamiento.');
-
-            return;
-        }
-
-        const insideGroups = new Set(
-            columns
-                .map((column) => column.group)
-                .filter((group) => group !== null),
-        );
-        const covered = draft.value.columns
-            .filter(
-                (column) =>
-                    column.group !== null && insideGroups.has(column.group),
-            )
-            .every((column) => selected.value.includes(column.key));
-
-        if (!covered) {
-            toast.error('Incluya los grupos completos para agruparlos.');
-
-            return;
-        }
-
-        const key = tableKeyFor(
-            name,
-            draft.value.bands.map((band) => band.key),
-        );
-        draft.value.bands.push({ key, label: name });
-
-        for (const column of columns) {
-            column.band = key;
-        }
+        return;
     }
 
-    stopSelecting();
+    if (left.group === null || right.group === null) {
+        const host = left.group === null ? right : left;
+        const guest = left.group === null ? left : right;
+        guest.group = host.group;
+        guest.band = host.band;
+        commit();
+
+        return;
+    }
+
+    // Dos grupos distintos: un agrupamiento los abraza.
+    if (left.band !== null && right.band !== null && left.band !== right.band) {
+        toast.error('Están en agrupamientos distintos; sepárelas primero.');
+
+        return;
+    }
+
+    const existing = left.band ?? right.band;
+    const bandKey =
+        existing ??
+        tableKeyFor(
+            'agrupamiento',
+            draft.value.bands.map((band) => band.key),
+        );
+
+    if (existing === null) {
+        draft.value.bands.push({ key: bandKey, label: 'Agrupamiento' });
+    }
+
+    for (const column of [
+        ...columnsOfGroup(left.group),
+        ...columnsOfGroup(right.group),
+    ]) {
+        column.band = bandKey;
+    }
+
+    if (existing === null) {
+        pendingCommit = true;
+        void startRename('band', bandKey, 'Agrupamiento');
+
+        return;
+    }
+
     commit();
 };
 
-const ungroup = (cell: HeaderCell): void => {
-    for (const column of draft.value.columns) {
-        if (cell.kind === 'group' && column.group === cell.key) {
-            column.group = null;
+const canMergeRight = (cell: HeaderCell): boolean =>
+    cell.kind === 'leaf' && cell.columns[0] < columnCount.value - 1;
+
+/** «Separar»: la columna sale de su grupo; un grupo o agrupamiento se deshace. */
+const split = (cell: HeaderCell): void => {
+    if (cell.kind === 'leaf') {
+        const column = columnAt(cell.key);
+
+        if (!column) {
+            return;
         }
 
-        if (cell.kind === 'band' && column.band === cell.key) {
+        if (column.group !== null) {
+            column.group = null;
+        } else {
             column.band = null;
+        }
+    } else {
+        for (const column of draft.value.columns) {
+            if (cell.kind === 'group' && column.group === cell.key) {
+                column.group = null;
+            }
+
+            if (cell.kind === 'band' && column.band === cell.key) {
+                column.band = null;
+            }
         }
     }
 
     pruneContainers();
     commit();
+};
+
+const canSplit = (cell: HeaderCell): boolean => {
+    if (cell.kind !== 'leaf') {
+        return true;
+    }
+
+    const column = columnAt(cell.key);
+
+    return (
+        column !== undefined && (column.group !== null || column.band !== null)
+    );
 };
 
 const startDrag = (event: DragEvent, key: string): void => {
@@ -403,32 +454,10 @@ const dropOnColumn = (targetKey: string): void => {
     commit();
 };
 
-const addHeaderField = (): void => {
-    const label = 'Nuevo dato';
-    const key = tableKeyFor(
-        label,
-        draft.value.header_fields.map((field) => field.key),
-    );
-    draft.value.header_fields.push({ key, label });
-    freshKeys.add(key);
-    commit();
-    void startRename('header', key, label);
-};
-
 const removeHeaderField = (key: string): void => {
     draft.value.header_fields = draft.value.header_fields.filter(
         (field) => field.key !== key,
     );
-    commit();
-};
-
-const toggleTotals = (): void => {
-    draft.value.totals.enabled = !draft.value.totals.enabled;
-    commit();
-};
-
-const toggleRepeat = (): void => {
-    draft.value.repeat.enabled = !draft.value.repeat.enabled;
     commit();
 };
 
@@ -454,384 +483,343 @@ const sampleTotal = (columnIndex: number): string =>
 
 <template>
     <div class="dt">
-        <div v-if="!readonly" class="dt-tools">
-            <template v-if="selecting">
-                <span class="dt-hint"
-                    >Pulse las columnas vecinas a agrupar</span
-                >
-                <Input
-                    v-model="groupName"
-                    class="h-8 max-w-56"
-                    aria-label="Nombre del grupo"
-                    placeholder="Ej. Horas por semana"
-                    @keydown.enter.prevent="createGroup"
-                    @keydown.esc.prevent="stopSelecting"
-                />
-                <Button type="button" size="sm" @click="createGroup">
-                    <Check data-icon="inline-start" aria-hidden="true" />
-                    Crear grupo
-                </Button>
-                <Button
+        <!-- Tabla recién soltada: se elige un formato institucional, no se arma a mano. -->
+        <div v-if="unformatted && !readonly" class="dt-gallery">
+            <p class="dt-gallery-title">Elija el formato de la tabla</p>
+            <div class="dt-gallery-grid">
+                <button
+                    v-for="preset in TABLE_PRESETS"
+                    :key="preset.key"
                     type="button"
-                    size="sm"
-                    variant="ghost"
-                    @click="stopSelecting"
+                    class="dt-preset"
+                    @click="applyPreset(preset.key)"
                 >
-                    Cancelar
-                </Button>
-            </template>
-            <template v-else>
-                <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    @click="addColumn"
-                >
-                    <Plus data-icon="inline-start" aria-hidden="true" />
-                    Columna
-                </Button>
-                <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    :disabled="columnCount < 2"
-                    @click="startSelecting"
-                >
-                    Agrupar
-                </Button>
-                <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    @click="addHeaderField"
-                >
-                    <Plus data-icon="inline-start" aria-hidden="true" />
-                    Dato de cabecera
-                </Button>
-                <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    :aria-pressed="draft.totals.enabled"
-                    @click="toggleTotals"
-                >
-                    <Check
-                        data-icon="inline-start"
-                        aria-hidden="true"
-                        :class="{ invisible: !draft.totals.enabled }"
-                    />
-                    Totales
-                </Button>
-                <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    :aria-pressed="draft.repeat.enabled"
-                    @click="toggleRepeat"
-                >
-                    <Check
-                        data-icon="inline-start"
-                        aria-hidden="true"
-                        :class="{ invisible: !draft.repeat.enabled }"
-                    />
-                    Por unidad
-                </Button>
-            </template>
+                    <span class="dt-preset-name">{{ preset.name }}</span>
+                    <span class="dt-preset-preview" aria-hidden="true">
+                        <span
+                            v-for="(cells, rowIndex) in headerRows(
+                                preset.layout,
+                            )"
+                            :key="rowIndex"
+                            class="dt-preset-row"
+                        >
+                            <span
+                                v-for="cell in cells"
+                                :key="cell.id"
+                                class="dt-preset-cell"
+                                :style="{ flex: cell.colspan }"
+                            />
+                        </span>
+                    </span>
+                    <span class="dt-preset-description">
+                        {{ preset.description }}
+                    </span>
+                </button>
+            </div>
         </div>
 
-        <table class="dt-table">
-            <tbody v-if="hasUnitHeader">
-                <tr v-if="draft.repeat.enabled">
-                    <th scope="row" class="dt-unit-label">
-                        <Input
-                            v-if="isEditing('repeat', 'repeat')"
-                            :ref="setEditorRef"
-                            v-model="editValue"
-                            class="dt-input"
-                            aria-label="Nombre de la unidad"
-                            placeholder="Ej. Unidad"
-                            @keydown.enter.prevent="commitRename"
-                            @keydown.esc.prevent="cancelRename"
-                            @blur="commitRename"
-                        />
-                        <button
-                            v-else-if="!readonly"
-                            type="button"
-                            class="dt-rename"
-                            :aria-label="`Renombrar ${draft.repeat.label}`"
-                            @click="
-                                startRename(
-                                    'repeat',
-                                    'repeat',
-                                    draft.repeat.label,
-                                )
+        <template v-else>
+            <table class="dt-table">
+                <tbody v-if="hasUnitHeader">
+                    <tr v-if="draft.repeat.enabled">
+                        <th scope="row" class="dt-unit-label">
+                            <Input
+                                v-if="isEditing('repeat', 'repeat')"
+                                :ref="setEditorRef"
+                                v-model="editValue"
+                                class="dt-input"
+                                aria-label="Nombre de la unidad"
+                                placeholder="Ej. Unidad"
+                                @keydown.enter.prevent="commitRename"
+                                @keydown.esc.prevent="cancelRename"
+                                @blur="commitRename"
+                            />
+                            <button
+                                v-else-if="!readonly"
+                                type="button"
+                                class="dt-rename"
+                                :aria-label="`Renombrar ${draft.repeat.label}`"
+                                @click="
+                                    startRename(
+                                        'repeat',
+                                        'repeat',
+                                        draft.repeat.label,
+                                    )
+                                "
+                            >
+                                {{ draft.repeat.label }} No.
+                            </button>
+                            <template v-else
+                                >{{ draft.repeat.label }} No.</template
+                            >
+                        </th>
+                        <td :colspan="Math.max(1, columnCount - 1)">1</td>
+                    </tr>
+                    <tr v-for="field in draft.header_fields" :key="field.key">
+                        <th scope="row" class="dt-unit-label">
+                            <span class="dt-cell-row">
+                                <Input
+                                    v-if="isEditing('header', field.key)"
+                                    :ref="setEditorRef"
+                                    v-model="editValue"
+                                    class="dt-input"
+                                    aria-label="Nombre del dato de cabecera"
+                                    placeholder="Ej. Nombre de la unidad"
+                                    @keydown.enter.prevent="commitRename"
+                                    @keydown.esc.prevent="cancelRename"
+                                    @blur="commitRename"
+                                />
+                                <button
+                                    v-else-if="!readonly"
+                                    type="button"
+                                    class="dt-rename"
+                                    :aria-label="`Renombrar ${field.label}`"
+                                    @click="
+                                        startRename(
+                                            'header',
+                                            field.key,
+                                            field.label,
+                                        )
+                                    "
+                                >
+                                    {{ field.label }}
+                                </button>
+                                <template v-else>{{ field.label }}</template>
+                                <button
+                                    v-if="!readonly"
+                                    type="button"
+                                    class="dt-icon"
+                                    :aria-label="`Quitar ${field.label}`"
+                                    @click="removeHeaderField(field.key)"
+                                >
+                                    <X aria-hidden="true" />
+                                </button>
+                            </span>
+                        </th>
+                        <td :colspan="Math.max(1, columnCount - 1)">
+                            Lorem ipsum dolor sit amet
+                        </td>
+                    </tr>
+                </tbody>
+                <thead>
+                    <tr v-for="(cells, rowIndex) in header" :key="rowIndex">
+                        <!-- eslint-disable-next-line vuejs-accessibility/no-static-element-interactions -->
+                        <th
+                            v-for="cell in cells"
+                            :key="cell.id"
+                            scope="col"
+                            :colspan="cell.colspan"
+                            :rowspan="cell.rowspan"
+                            class="dt-head"
+                            :class="{ 'dt-head-drop': dropTarget === cell.key }"
+                            :draggable="!readonly && cell.kind === 'leaf'"
+                            @dragstart="
+                                cell.kind === 'leaf' &&
+                                startDrag($event, cell.key)
+                            "
+                            @dragover="
+                                cell.kind === 'leaf' &&
+                                overColumn($event, cell.key)
+                            "
+                            @dragleave="dropTarget = null"
+                            @drop.prevent="
+                                cell.kind === 'leaf' && dropOnColumn(cell.key)
+                            "
+                            @dragend="endDrag"
+                        >
+                            <span class="dt-cell-row">
+                                <Input
+                                    v-if="isEditing(cell.kind, cell.key)"
+                                    :ref="setEditorRef"
+                                    v-model="editValue"
+                                    class="dt-input dt-input-head"
+                                    aria-label="Nombre de la columna"
+                                    placeholder="Ej. Contenidos"
+                                    @keydown.enter.prevent="commitRename"
+                                    @keydown.esc.prevent="cancelRename"
+                                    @blur="commitRename"
+                                />
+                                <button
+                                    v-else-if="!readonly"
+                                    type="button"
+                                    class="dt-rename"
+                                    :aria-label="`Renombrar ${cell.label}`"
+                                    @click="
+                                        startRename(
+                                            cell.kind,
+                                            cell.key,
+                                            cell.label,
+                                        )
+                                    "
+                                >
+                                    {{ cell.label }}
+                                </button>
+                                <template v-else>{{ cell.label }}</template>
+
+                                <DropdownMenu v-if="!readonly">
+                                    <DropdownMenuTrigger as-child>
+                                        <button
+                                            type="button"
+                                            class="dt-icon"
+                                            :aria-label="`Acciones de ${cell.label}`"
+                                        >
+                                            <MoreHorizontal
+                                                aria-hidden="true"
+                                            />
+                                        </button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="start">
+                                        <template v-if="cell.kind === 'leaf'">
+                                            <DropdownMenuItem
+                                                @select="insertRight(cell.key)"
+                                            >
+                                                Insertar columna a la derecha
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem
+                                                :disabled="!canMergeRight(cell)"
+                                                @select="mergeRight(cell.key)"
+                                            >
+                                                Combinar con la derecha
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem
+                                                :disabled="!canSplit(cell)"
+                                                @select="split(cell)"
+                                            >
+                                                Separar
+                                            </DropdownMenuItem>
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuLabel>
+                                                Tipo
+                                            </DropdownMenuLabel>
+                                            <DropdownMenuItem
+                                                @select="
+                                                    setType(cell.key, 'text')
+                                                "
+                                            >
+                                                <Check
+                                                    aria-hidden="true"
+                                                    :class="{
+                                                        invisible:
+                                                            columnAt(cell.key)
+                                                                ?.type !==
+                                                            'text',
+                                                    }"
+                                                />
+                                                Texto
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem
+                                                @select="
+                                                    setType(cell.key, 'number')
+                                                "
+                                            >
+                                                <Check
+                                                    aria-hidden="true"
+                                                    :class="{
+                                                        invisible:
+                                                            columnAt(cell.key)
+                                                                ?.type !==
+                                                            'number',
+                                                    }"
+                                                />
+                                                Número
+                                            </DropdownMenuItem>
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuItem
+                                                variant="destructive"
+                                                @select="removeColumn(cell.key)"
+                                            >
+                                                <Trash2 aria-hidden="true" />
+                                                Quitar columna
+                                            </DropdownMenuItem>
+                                        </template>
+                                        <template v-else>
+                                            <DropdownMenuItem
+                                                @select="
+                                                    startRename(
+                                                        cell.kind,
+                                                        cell.key,
+                                                        cell.label,
+                                                    )
+                                                "
+                                            >
+                                                Renombrar
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem
+                                                variant="destructive"
+                                                @select="split(cell)"
+                                            >
+                                                <Trash2 aria-hidden="true" />
+                                                Separar
+                                            </DropdownMenuItem>
+                                        </template>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </span>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="rowIndex in [0, 1, 2]" :key="rowIndex">
+                        <td
+                            v-for="(column, columnIndex) in draft.columns"
+                            :key="column.key"
+                            :class="{ 'dt-number': column.type === 'number' }"
+                        >
+                            {{ sample(columnIndex, rowIndex) }}
+                        </td>
+                    </tr>
+                    <tr v-if="draft.totals.enabled" class="dt-totals">
+                        <td
+                            v-for="(column, columnIndex) in draft.columns"
+                            :key="column.key"
+                            :class="
+                                columnIndex === 0
+                                    ? 'dt-totals-label'
+                                    : 'dt-number'
                             "
                         >
-                            {{ draft.repeat.label }} No.
-                        </button>
-                        <template v-else>{{ draft.repeat.label }} No.</template>
-                    </th>
-                    <td :colspan="Math.max(1, columnCount - 1)">1</td>
-                </tr>
-                <tr v-for="field in draft.header_fields" :key="field.key">
-                    <th scope="row" class="dt-unit-label">
-                        <span class="dt-cell-row">
-                            <Input
-                                v-if="isEditing('header', field.key)"
-                                :ref="setEditorRef"
-                                v-model="editValue"
-                                class="dt-input"
-                                aria-label="Nombre del dato de cabecera"
-                                placeholder="Ej. Nombre de la unidad"
-                                @keydown.enter.prevent="commitRename"
-                                @keydown.esc.prevent="cancelRename"
-                                @blur="commitRename"
-                            />
-                            <button
-                                v-else-if="!readonly"
-                                type="button"
-                                class="dt-rename"
-                                :aria-label="`Renombrar ${field.label}`"
-                                @click="
-                                    startRename(
-                                        'header',
-                                        field.key,
-                                        field.label,
-                                    )
-                                "
-                            >
-                                {{ field.label }}
-                            </button>
-                            <template v-else>{{ field.label }}</template>
-                            <button
-                                v-if="!readonly"
-                                type="button"
-                                class="dt-icon"
-                                :aria-label="`Quitar ${field.label}`"
-                                @click="removeHeaderField(field.key)"
-                            >
-                                <X aria-hidden="true" />
-                            </button>
-                        </span>
-                    </th>
-                    <td :colspan="Math.max(1, columnCount - 1)">
-                        Lorem ipsum dolor sit amet
-                    </td>
-                </tr>
-            </tbody>
-            <thead>
-                <tr v-for="(cells, rowIndex) in header" :key="rowIndex">
-                    <!-- eslint-disable-next-line vuejs-accessibility/no-static-element-interactions -->
-                    <th
-                        v-for="cell in cells"
-                        :key="cell.id"
-                        scope="col"
-                        :colspan="cell.colspan"
-                        :rowspan="cell.rowspan"
-                        class="dt-head"
-                        :class="{
-                            'dt-head-selected': selected.includes(cell.key),
-                            'dt-head-selectable':
-                                selecting && cell.kind === 'leaf',
-                            'dt-head-drop': dropTarget === cell.key,
-                        }"
-                        :draggable="
-                            !readonly && !selecting && cell.kind === 'leaf'
-                        "
-                        @dragstart="
-                            cell.kind === 'leaf' && startDrag($event, cell.key)
-                        "
-                        @dragover="
-                            cell.kind === 'leaf' && overColumn($event, cell.key)
-                        "
-                        @dragleave="dropTarget = null"
-                        @drop.prevent="
-                            cell.kind === 'leaf' && dropOnColumn(cell.key)
-                        "
-                        @dragend="endDrag"
-                    >
-                        <span class="dt-cell-row">
-                            <Input
-                                v-if="isEditing(cell.kind, cell.key)"
-                                :ref="setEditorRef"
-                                v-model="editValue"
-                                class="dt-input dt-input-head"
-                                aria-label="Nombre de la columna"
-                                placeholder="Ej. Contenidos"
-                                @keydown.enter.prevent="commitRename"
-                                @keydown.esc.prevent="cancelRename"
-                                @blur="commitRename"
-                            />
-                            <button
-                                v-else-if="selecting && cell.kind === 'leaf'"
-                                type="button"
-                                class="dt-rename"
-                                :aria-pressed="selected.includes(cell.key)"
-                                @click="toggleSelected(cell.key)"
-                            >
-                                {{ cell.label }}
-                            </button>
-                            <button
-                                v-else-if="!readonly"
-                                type="button"
-                                class="dt-rename"
-                                :aria-label="`Renombrar ${cell.label}`"
-                                @click="
-                                    startRename(cell.kind, cell.key, cell.label)
-                                "
-                            >
-                                {{ cell.label }}
-                            </button>
-                            <template v-else>{{ cell.label }}</template>
-
-                            <DropdownMenu v-if="!readonly && !selecting">
-                                <DropdownMenuTrigger as-child>
-                                    <button
-                                        type="button"
-                                        class="dt-icon"
-                                        :aria-label="`Acciones de ${cell.label}`"
-                                    >
-                                        <MoreHorizontal aria-hidden="true" />
-                                    </button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="start">
-                                    <template v-if="cell.kind === 'leaf'">
-                                        <DropdownMenuLabel
-                                            >Tipo</DropdownMenuLabel
-                                        >
-                                        <DropdownMenuItem
-                                            @select="setType(cell.key, 'text')"
-                                        >
-                                            <Check
-                                                aria-hidden="true"
-                                                :class="{
-                                                    invisible:
-                                                        draft.columns[
-                                                            cell.columns[0]
-                                                        ]?.type !== 'text',
-                                                }"
-                                            />
-                                            Texto
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem
-                                            @select="
-                                                setType(cell.key, 'number')
-                                            "
-                                        >
-                                            <Check
-                                                aria-hidden="true"
-                                                :class="{
-                                                    invisible:
-                                                        draft.columns[
-                                                            cell.columns[0]
-                                                        ]?.type !== 'number',
-                                                }"
-                                            />
-                                            Número
-                                        </DropdownMenuItem>
-                                        <DropdownMenuSeparator />
-                                        <DropdownMenuItem
-                                            @select="
-                                                startRename(
-                                                    'leaf',
-                                                    cell.key,
-                                                    cell.label,
-                                                )
-                                            "
-                                        >
-                                            Renombrar
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem
-                                            variant="destructive"
-                                            @select="removeColumn(cell.key)"
-                                        >
-                                            <Trash2 aria-hidden="true" />
-                                            Quitar columna
-                                        </DropdownMenuItem>
-                                    </template>
-                                    <template v-else>
-                                        <DropdownMenuItem
-                                            @select="
-                                                startRename(
-                                                    cell.kind,
-                                                    cell.key,
-                                                    cell.label,
-                                                )
-                                            "
-                                        >
-                                            Renombrar
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem
-                                            variant="destructive"
-                                            @select="ungroup(cell)"
-                                        >
-                                            <Trash2 aria-hidden="true" />
-                                            Desagrupar
-                                        </DropdownMenuItem>
-                                    </template>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        </span>
-                    </th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="rowIndex in [0, 1, 2]" :key="rowIndex">
-                    <td
-                        v-for="(column, columnIndex) in draft.columns"
-                        :key="column.key"
-                        :class="{ 'dt-number': column.type === 'number' }"
-                    >
-                        {{ sample(columnIndex, rowIndex) }}
-                    </td>
-                </tr>
-                <tr v-if="draft.totals.enabled" class="dt-totals">
-                    <td
-                        v-for="(column, columnIndex) in draft.columns"
-                        :key="column.key"
-                        :class="
-                            columnIndex === 0 ? 'dt-totals-label' : 'dt-number'
-                        "
-                    >
-                        <template v-if="columnIndex === 0">
-                            <Input
-                                v-if="isEditing('totals', 'totals')"
-                                :ref="setEditorRef"
-                                v-model="editValue"
-                                class="dt-input"
-                                aria-label="Etiqueta de totales"
-                                placeholder="Ej. Total, horas"
-                                @keydown.enter.prevent="commitRename"
-                                @keydown.esc.prevent="cancelRename"
-                                @blur="commitRename"
-                            />
-                            <button
-                                v-else-if="!readonly"
-                                type="button"
-                                class="dt-rename"
-                                :aria-label="`Renombrar ${draft.totals.label}`"
-                                @click="
-                                    startRename(
-                                        'totals',
-                                        'totals',
-                                        draft.totals.label,
-                                    )
-                                "
-                            >
-                                {{ draft.totals.label }}
-                            </button>
-                            <template v-else>{{ draft.totals.label }}</template>
-                        </template>
-                        <template v-else-if="column.type === 'number'">
-                            {{ sampleTotal(columnIndex) }}
-                        </template>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-        <p v-if="draft.repeat.enabled" class="dt-note">
-            Se repite por cada {{ draft.repeat.label.toLowerCase() }}.
-        </p>
+                            <template v-if="columnIndex === 0">
+                                <Input
+                                    v-if="isEditing('totals', 'totals')"
+                                    :ref="setEditorRef"
+                                    v-model="editValue"
+                                    class="dt-input"
+                                    aria-label="Etiqueta de totales"
+                                    placeholder="Ej. Total, horas"
+                                    @keydown.enter.prevent="commitRename"
+                                    @keydown.esc.prevent="cancelRename"
+                                    @blur="commitRename"
+                                />
+                                <button
+                                    v-else-if="!readonly"
+                                    type="button"
+                                    class="dt-rename"
+                                    :aria-label="`Renombrar ${draft.totals.label}`"
+                                    @click="
+                                        startRename(
+                                            'totals',
+                                            'totals',
+                                            draft.totals.label,
+                                        )
+                                    "
+                                >
+                                    {{ draft.totals.label }}
+                                </button>
+                                <template v-else>
+                                    {{ draft.totals.label }}
+                                </template>
+                            </template>
+                            <template v-else-if="column.type === 'number'">
+                                {{ sampleTotal(columnIndex) }}
+                            </template>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+            <p v-if="draft.repeat.enabled" class="dt-note">
+                Se repite por cada {{ draft.repeat.label.toLowerCase() }}.
+            </p>
+        </template>
     </div>
 </template>
 
@@ -841,18 +829,68 @@ const sampleTotal = (columnIndex: number): string =>
     margin-bottom: 6pt;
 }
 
-.dt-tools {
-    align-items: center;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.25rem;
-    margin-bottom: 4pt;
+.dt-gallery {
+    border: 1px dashed #7f7f7f;
+    border-radius: 0.375rem;
+    padding: 0.75rem;
 }
 
-.dt-hint {
+.dt-gallery-title {
     color: #595959;
-    font-size: 0.8rem;
-    margin-inline-end: 0.25rem;
+    font-size: 9pt;
+    margin: 0 0 0.5rem;
+}
+
+.dt-gallery-grid {
+    display: grid;
+    gap: 0.5rem;
+    grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+}
+
+.dt-preset {
+    background: #fff;
+    border: 1px solid #bfbfbf;
+    border-radius: 0.375rem;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 0.6rem;
+    text-align: left;
+}
+
+.dt-preset:hover,
+.dt-preset:focus-visible {
+    border-color: #0070c0;
+    outline: none;
+}
+
+.dt-preset-name {
+    font-size: 9.5pt;
+    font-weight: 700;
+}
+
+.dt-preset-preview {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.dt-preset-row {
+    display: flex;
+    gap: 2px;
+}
+
+.dt-preset-cell {
+    background: #4f81bd;
+    border-radius: 2px;
+    height: 6px;
+}
+
+.dt-preset-description {
+    color: #595959;
+    font-size: 8pt;
+    line-height: 1.3;
 }
 
 .dt-table {
@@ -879,16 +917,6 @@ const sampleTotal = (columnIndex: number): string =>
 
 .dt-head[draggable='true'] {
     cursor: grab;
-}
-
-.dt-head-selectable {
-    cursor: pointer;
-}
-
-.dt-head-selected {
-    background: #1f497d;
-    outline: 2px solid #ffd966;
-    outline-offset: -2px;
 }
 
 .dt-head-drop {
@@ -950,10 +978,6 @@ const sampleTotal = (columnIndex: number): string =>
 .dt-rename:focus-visible {
     background: rgb(255 255 255 / 0.2);
     outline: none;
-}
-
-.dt-head-selectable .dt-rename {
-    cursor: pointer;
 }
 
 .dt-icon {

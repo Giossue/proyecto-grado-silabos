@@ -35,7 +35,11 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
-import { defaultTableLayout } from '@/lib/tableLayout';
+import {
+    cloneTableLayout,
+    defaultTableLayout,
+    tableKeyFor,
+} from '@/lib/tableLayout';
 import type { TableLayout } from '@/lib/tableLayout';
 
 type TemplateField = {
@@ -219,10 +223,16 @@ const keyFor = (value: string): string => {
 const requestOptions = (success: string) => ({
     preserveScroll: true,
     onSuccess: () => toast.success(success),
-    onError: (errors: Record<string, string>) =>
+    onError: (errors: Record<string, string>) => {
+        // El borrado de sílabos en curso lo confirma el diálogo global (I-32).
+        if ('purge_required' in errors) {
+            return;
+        }
+
         toast.error(
             Object.values(errors)[0] ?? 'No se pudo guardar el cambio.',
-        ),
+        );
+    },
 });
 
 const addSection = (position: number): void => {
@@ -408,7 +418,6 @@ const saveTableLayout = (
     container: FieldContainer,
     layout: TableLayout,
 ): void => {
-    container.table = layout;
     router.patch(
         TemplateController.updateTableLayout.url({
             template: props.templateId,
@@ -417,6 +426,40 @@ const saveTableLayout = (
         layout,
         requestOptions('Tabla guardada.'),
     );
+};
+
+/** Ajustes de la tabla que no son de una celda: viven en el menú del campo. */
+const tableOf = (container: FieldContainer): TableLayout =>
+    cloneTableLayout(container.table ?? defaultTableLayout());
+
+const toggleTotals = (container: FieldContainer): void => {
+    const layout = tableOf(container);
+    layout.totals.enabled = !layout.totals.enabled;
+    saveTableLayout(container, layout);
+};
+
+const toggleRepeat = (container: FieldContainer): void => {
+    const layout = tableOf(container);
+    layout.repeat.enabled = !layout.repeat.enabled;
+    saveTableLayout(container, layout);
+};
+
+const addHeaderField = (container: FieldContainer): void => {
+    const layout = tableOf(container);
+    const label = 'Nuevo dato';
+    layout.header_fields.push({
+        key: tableKeyFor(
+            label,
+            layout.header_fields.map((field) => field.key),
+        ),
+        label,
+    });
+    saveTableLayout(container, layout);
+};
+
+/** Vuelve a la galería de formatos; las columnas actuales se reemplazan. */
+const resetTableFormat = (container: FieldContainer): void => {
+    saveTableLayout(container, defaultTableLayout());
 };
 
 const openProperties = (container: FieldContainer): void => {
@@ -965,6 +1008,74 @@ const dropOnFieldZone = (section: TemplateSection, index: number): void => {
                                                     />
                                                     Propiedades
                                                 </DropdownMenuItem>
+                                                <template
+                                                    v-if="
+                                                        container.content_type ===
+                                                        'table'
+                                                    "
+                                                >
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuLabel>
+                                                        Tabla
+                                                    </DropdownMenuLabel>
+                                                    <DropdownMenuItem
+                                                        @select="
+                                                            toggleTotals(
+                                                                container,
+                                                            )
+                                                        "
+                                                    >
+                                                        <Check
+                                                            aria-hidden="true"
+                                                            :class="{
+                                                                invisible:
+                                                                    !container
+                                                                        .table
+                                                                        ?.totals
+                                                                        .enabled,
+                                                            }"
+                                                        />
+                                                        Fila de totales
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        @select="
+                                                            toggleRepeat(
+                                                                container,
+                                                            )
+                                                        "
+                                                    >
+                                                        <Check
+                                                            aria-hidden="true"
+                                                            :class="{
+                                                                invisible:
+                                                                    !container
+                                                                        .table
+                                                                        ?.repeat
+                                                                        .enabled,
+                                                            }"
+                                                        />
+                                                        Se repite por unidad
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        @select="
+                                                            addHeaderField(
+                                                                container,
+                                                            )
+                                                        "
+                                                    >
+                                                        Agregar dato de cabecera
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        @select="
+                                                            resetTableFormat(
+                                                                container,
+                                                            )
+                                                        "
+                                                    >
+                                                        Elegir otro formato
+                                                    </DropdownMenuItem>
+                                                </template>
+                                                <DropdownMenuSeparator />
                                                 <DropdownMenuItem
                                                     variant="destructive"
                                                     @select="

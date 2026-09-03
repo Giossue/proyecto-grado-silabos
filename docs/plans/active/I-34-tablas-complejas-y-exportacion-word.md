@@ -41,9 +41,14 @@ defecto de las tablas sin esquema y de las listas.
       `PATCH plantilla/{template}/bloques/{block}/tabla` con confirmación de borrado.
 - [x] Esquema en la página de plantilla, en el borrador docente y en la copia de cada
       revisión (`content_type` y `table` por bloque).
-- [x] Diseñador sobre la hoja (`TemplateTableDesigner`): renombrar con clic, «+ Columna»,
-      arrastrar cabeceras, «Agrupar» con selección de vecinas (grupo o agrupamiento
-      según lo elegido), tipo por menú, cabecera de unidad, totales y por unidad.
+- [x] Diseñador sobre la hoja (`TemplateTableDesigner`), pensado como Word: al soltar una
+      tabla aparece la galería de formatos institucionales (`tablePresets.ts`:
+      planificación por unidades, bibliografía, escala de valoración, perfil de egreso,
+      tabla simple); cada celda de cabecera tiene su menú (insertar a la derecha,
+      combinar con la derecha, separar, texto/número, quitar) y se renombra con un clic;
+      arrastrar reordena. Totales, «se repite por unidad», dato de cabecera y «elegir
+      otro formato» viven en el menú ⋯ del campo. Sin barra de botones ni modo de
+      selección (rechazados por el responsable del producto por complejos).
 - [x] Cuadrícula del docente (`SyllabusTableEditor`): casilla por celda, unidades, totales
       calculados; validación de celdas escalares.
 - [x] Vista de revisión (`SyllabusTableView`) con el esquema copiado en la revisión.
