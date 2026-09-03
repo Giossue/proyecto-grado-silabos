@@ -174,7 +174,8 @@ DOC-01 llena una cuadrícula con una casilla por celda, unidades y totales calcu
   carrera (ADM-04 pide ambos al crearla). Repetirlo no duplica; lo que no se dicte se
   archiva. Luego solo quedan los paralelos extra y la asignación docente.
 - COR-13 usa una única entrada **Malla**. Si existe, la ruta abre directamente la página
-  completa con **Desglose académico** y **Constructor visual**; si no existe, muestra el
+  completa con **Interactivo** (pestaña principal, decisión de los coordinadores) y
+  **Desglose académico** (`?modo=desglose`); si no existe, muestra el
   estado vacío universal y la acción para crearla. No presenta buscador, filtros, cards,
   paginación, publicación ni número de versión. Materias, campos y relaciones se
   consultan y mantienen dentro de esa malla. COR-14 conserva el submenú **Ofertas y

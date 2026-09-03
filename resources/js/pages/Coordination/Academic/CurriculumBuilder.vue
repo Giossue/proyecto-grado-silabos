@@ -33,21 +33,23 @@ const props = defineProps<CurriculumBuilderProps>();
  * actual del historial en vez de añadir una nueva, para que «atrás» siga llevando a
  * la pantalla anterior y no a la otra pestaña de esta misma.
  */
-const INTERACTIVE_MODE_PARAM = 'interactivo';
+const BREAKDOWN_MODE_PARAM = 'desglose';
 
 const modeFromUrl = (): 'breakdown' | 'builder' =>
     new URL(window.location.href).searchParams.get('modo') ===
-    INTERACTIVE_MODE_PARAM
-        ? 'builder'
-        : 'breakdown';
+    BREAKDOWN_MODE_PARAM
+        ? 'breakdown'
+        : 'builder';
 
+// El interactivo es la vista principal (decisión de los coordinadores); el desglose
+// se pide con `?modo=desglose`.
 const activeMode = ref<'breakdown' | 'builder'>(modeFromUrl());
 
 watch(activeMode, (mode) => {
     const url = new URL(window.location.href);
 
-    if (mode === 'builder') {
-        url.searchParams.set('modo', INTERACTIVE_MODE_PARAM);
+    if (mode === 'breakdown') {
+        url.searchParams.set('modo', BREAKDOWN_MODE_PARAM);
     } else {
         url.searchParams.delete('modo');
     }
@@ -128,13 +130,13 @@ const openSubject = (subject: CurriculumBuilderSubject): void => {
         <Tabs v-model="activeMode" class="flex flex-col gap-4">
             <div class="flex items-center justify-between gap-2">
                 <TabsList aria-label="Modo de trabajo de la malla">
-                    <TabsTrigger value="breakdown">
-                        <ListTree aria-hidden="true" />
-                        Desglose académico
-                    </TabsTrigger>
                     <TabsTrigger value="builder">
                         <Workflow aria-hidden="true" />
                         Interactivo
+                    </TabsTrigger>
+                    <TabsTrigger value="breakdown">
+                        <ListTree aria-hidden="true" />
+                        Desglose académico
                     </TabsTrigger>
                 </TabsList>
                 <CurriculumActions
