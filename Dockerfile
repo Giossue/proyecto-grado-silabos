@@ -109,6 +109,11 @@ RUN mkdir -p \
     && chown -R www-data:www-data storage bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
 
+# nginx.conf corre los workers como www-data, pero el paquete de Alpine deja
+# /var/lib/nginx/tmp (cuerpos de petición y respuestas que exceden los búferes) solo para
+# el usuario nginx. Sin esto, toda subida mayor a 8 KB termina en un 500 de nginx.
+RUN chown -R www-data:www-data /var/lib/nginx
+
 EXPOSE 8080
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \

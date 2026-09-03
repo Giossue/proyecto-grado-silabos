@@ -83,6 +83,13 @@ el `entrypoint` crea `private/` y `public/` y los entrega a `www-data` en cada a
 sin eso PHP-FPM no puede escribir y las subidas fallan. Tras cambiar un volumen en
 Dokploy hay que redesplegar.
 
+Los cuerpos de petición mayores a 8 KB y las respuestas que exceden los búferes de
+FastCGI pasan por `/var/lib/nginx/tmp`, que el paquete de Alpine deja solo para el
+usuario `nginx` mientras los workers corren como `www-data`. La imagen entrega ese
+directorio a `www-data` en el `Dockerfile`; sin eso nginx responde 500 (sin llegar a PHP)
+a cualquier subida de logo y el navegador se queda esperando. Prueba rápida tras
+desplegar: un `POST /login` con un cuerpo de 16 KB debe devolver 419, no 500.
+
 ## Redis y jobs
 
 - Redis no expuesto públicamente; autenticación/red privada.
