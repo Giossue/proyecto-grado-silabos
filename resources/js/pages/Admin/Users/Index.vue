@@ -5,6 +5,7 @@ import FilterToolbar from '@/components/domain/FilterToolbar.vue';
 import ManagedUserDetailSheet from '@/components/domain/identity/ManagedUserDetailSheet.vue';
 import type { ManagedUserRow } from '@/components/domain/identity/ManagedUserDetailSheet.vue';
 import ManagedUserEditSheet from '@/components/domain/identity/ManagedUserEditSheet.vue';
+import ManagedUserPendingActions from '@/components/domain/identity/ManagedUserPendingActions.vue';
 import ManagedUserSheet from '@/components/domain/identity/ManagedUserSheet.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
 import TableActionsMenu from '@/components/domain/TableActionsMenu.vue';
@@ -313,6 +314,12 @@ defineProps<{
                                         :user="user"
                                         :roles="roles"
                                         :careers="careers"
+                                    />
+                                    <ManagedUserPendingActions
+                                        v-if="user.pending_first_login"
+                                        :user-id="user.id"
+                                        :user-name="user.nombre"
+                                        :user-email="user.correo_electronico"
                                     />
                                 </TableActionsMenu>
                             </TableCell>

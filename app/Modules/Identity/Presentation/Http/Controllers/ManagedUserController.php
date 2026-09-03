@@ -7,6 +7,8 @@ use App\Models\User;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
 use App\Modules\Identity\Application\Actions\AssignRole;
 use App\Modules\Identity\Application\Actions\CreateManagedUser;
+use App\Modules\Identity\Application\Actions\DeleteManagedUser;
+use App\Modules\Identity\Application\Actions\ResendManagedUserCredentials;
 use App\Modules\Identity\Application\Actions\SetUserStatus;
 use App\Modules\Identity\Application\Actions\UpdateManagedUserProfile;
 use App\Modules\Identity\Domain\Enums\RoleCode;
@@ -21,6 +23,7 @@ use App\Modules\Identity\Presentation\Http\Requests\UpdateManagedUserProfileRequ
 use App\Modules\Identity\Presentation\Http\Requests\UpdateManagedUserRequest;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
@@ -198,6 +201,28 @@ class ManagedUserController extends Controller
         $action->execute($user, $request->boolean('active'), $actor, $request);
 
         return back()->with('success', $user->activo ? 'Cuenta activada.' : 'Cuenta desactivada y sesiones revocadas.');
+    }
+
+    /** Nueva contraseña temporal al correo actual; solo cuentas pendientes de activación. */
+    public function resendCredentials(User $user, Request $request, ResendManagedUserCredentials $action): RedirectResponse
+    {
+        Gate::authorize('managePending', $user);
+        $actor = $request->user();
+        abort_unless($actor instanceof User, 401);
+        $action->execute($user, $actor, $request);
+
+        return back()->with('success', "Acceso reenviado a {$user->correo_electronico}.");
+    }
+
+    /** Borra una cuenta pendiente de activación sin actividad; con historia, se archiva. */
+    public function destroy(User $user, Request $request, DeleteManagedUser $action): RedirectResponse
+    {
+        Gate::authorize('managePending', $user);
+        $actor = $request->user();
+        abort_unless($actor instanceof User, 401);
+        $action->execute($user, $actor, $request);
+
+        return redirect()->route('admin.users.index')->with('success', 'Cuenta eliminada.');
     }
 
     /**

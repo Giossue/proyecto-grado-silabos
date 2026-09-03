@@ -20,6 +20,7 @@ class UpdateManagedUserProfile
     public function __construct(
         private readonly ActiveRole $roles,
         private readonly RecordAuditEvent $audit,
+        private readonly ResendManagedUserCredentials $credentials,
     ) {}
 
     /** @param array{nombre: string, correo_electronico: string} $data */
@@ -61,6 +62,12 @@ class UpdateManagedUserProfile
                 ],
                 correlationId: $request->attributes->getString('correlation_id') ?: null,
             );
+
+            // Si el correo estaba mal y nadie ha estrenado la cuenta, el acceso viaja solo al
+            // correo corregido: no hay que acordarse de reenviarlo.
+            if ($previous['email'] !== $email && $locked->debe_cambiar_contrasena) {
+                $this->credentials->execute($locked, $actor, $request, 'correo_corregido');
+            }
 
             return $locked->refresh();
         });

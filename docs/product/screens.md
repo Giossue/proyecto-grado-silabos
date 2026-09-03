@@ -157,6 +157,10 @@ DOC-01 llena una cuadrícula con una casilla por celda, unidades y totales calcu
   COR-05 la muestra tal cual.
   Las fuentes son documentos editables: COR-11 abre el contenido en un editor Markdown con
   cinta de opciones y vista previa.
+- ADM-02: una cuenta «Pendiente de activación» (contraseña temporal sin cambiar) tiene en
+  su menú **Reenviar acceso** (nueva contraseña temporal al correo actual) y
+  **Eliminar** (solo sin actividad; con historia, archivar). Corregir su correo reenvía
+  el acceso al nuevo correo sin pedirlo (I-38).
 - Los estados usan las mismas etiquetas y colores en todo el producto.
 - Los IDs internos y detalles de infraestructura no se muestran.
 - ADM-04 usa el submenú **Estructura académica** con rutas independientes para Facultades,

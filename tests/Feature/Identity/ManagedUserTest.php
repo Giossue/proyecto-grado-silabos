@@ -5,12 +5,16 @@ namespace Tests\Feature\Identity;
 use App\Models\User;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
 use App\Modules\Identity\Domain\Enums\RoleCode;
+use App\Modules\Identity\Infrastructure\Mail\ManagedUserCredentialsMail;
 use App\Modules\Identity\Infrastructure\Persistence\Models\Role;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -371,6 +375,112 @@ class ManagedUserTest extends TestCase
             ->assertForbidden();
 
         $this->assertTrue($this->administrator->fresh()->activo);
+    }
+
+    /** I-38: una cuenta que nadie estrenó puede recibir otro acceso o borrarse. */
+    public function test_a_pending_account_gets_its_access_resent_with_a_new_temporary_password(): void
+    {
+        Mail::fake();
+        $pending = $this->pendingTeacher();
+        $previous = $pending->contrasena;
+
+        $this->actingAsAdministrator()
+            ->post(route('admin.users.credentials.resend', $pending))
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $pending->refresh();
+        $this->assertNotSame($previous, $pending->contrasena);
+        $this->assertTrue($pending->debe_cambiar_contrasena);
+        Mail::assertQueuedCount(2);
+        Mail::assertQueued(ManagedUserCredentialsMail::class, fn (ManagedUserCredentialsMail $mail): bool => $mail->hasTo('pendiente@silabos.test')
+            && Hash::check($mail->temporaryPassword, $pending->contrasena));
+        $this->assertDatabaseHas('eventos_auditoria', ['accion' => 'usuario.acceso_reenviado', 'recurso_id' => $pending->id]);
+
+        // Activada por su titular: ya no se reenvía nada.
+        $pending->forceFill(['debe_cambiar_contrasena' => false])->save();
+        $this->actingAsAdministrator()
+            ->post(route('admin.users.credentials.resend', $pending))
+            ->assertForbidden();
+    }
+
+    public function test_correcting_the_email_of_a_pending_account_resends_the_access_to_the_new_address(): void
+    {
+        Mail::fake();
+        $pending = $this->pendingTeacher();
+
+        $this->actingAsAdministrator()
+            ->patch(route('admin.users.update', $pending), [
+                'nombre' => $pending->nombre,
+                'correo_electronico' => 'corregido@silabos.test',
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        Mail::assertQueued(ManagedUserCredentialsMail::class, fn (ManagedUserCredentialsMail $mail): bool => $mail->hasTo('corregido@silabos.test'));
+        $this->assertDatabaseHas('eventos_auditoria', ['accion' => 'usuario.acceso_reenviado', 'recurso_id' => $pending->id]);
+
+        // Solo cambiar el nombre no reenvía nada.
+        $this->actingAsAdministrator()
+            ->patch(route('admin.users.update', $pending), [
+                'nombre' => 'Nombre Corregido',
+                'correo_electronico' => 'corregido@silabos.test',
+            ])
+            ->assertRedirect();
+        Mail::assertQueuedCount(2);
+    }
+
+    public function test_a_pending_account_without_activity_can_be_deleted_but_a_used_one_is_archived(): void
+    {
+        $pending = $this->pendingTeacher();
+
+        $this->actingAsAdministrator()
+            ->delete(route('admin.users.destroy', $pending))
+            ->assertRedirect(route('admin.users.index'));
+        $this->assertDatabaseMissing('usuarios', ['id' => $pending->id]);
+        $this->assertDatabaseMissing('asignaciones_rol', ['usuario_id' => $pending->id]);
+        $this->assertDatabaseHas('eventos_auditoria', ['accion' => 'usuario.eliminado', 'recurso_id' => $pending->id]);
+
+        // Una cuenta activada no se borra.
+        $teacher = User::query()->where('correo_electronico', 'docente@silabos.test')->firstOrFail();
+        $this->actingAsAdministrator()
+            ->delete(route('admin.users.destroy', $teacher))
+            ->assertForbidden();
+        $this->assertDatabaseHas('usuarios', ['id' => $teacher->id]);
+
+        // Pendiente pero con huella (asignación docente): tampoco.
+        $assigned = $this->pendingTeacher('asignado@silabos.test');
+        $parallel = DB::table('paralelos')->first();
+        DB::table('asignaciones_docente')->insert([
+            'id' => (string) Str::uuid7(),
+            'usuario_id' => $assigned->id,
+            'paralelo_id' => $parallel->id,
+            'vigente_desde' => now()->toDateString(),
+            'activo' => true,
+            'creado_en' => now(),
+            'actualizado_en' => now(),
+        ]);
+        $this->actingAsAdministrator()
+            ->from(route('admin.users.index'))
+            ->delete(route('admin.users.destroy', $assigned))
+            ->assertSessionHasErrors('user');
+        $this->assertDatabaseHas('usuarios', ['id' => $assigned->id]);
+    }
+
+    private function pendingTeacher(string $email = 'pendiente@silabos.test'): User
+    {
+        $career = Career::query()->where('codigo_institucional', 'SOFTWARE')->firstOrFail();
+        $this->actingAsAdministrator()
+            ->post(route('admin.users.store'), [
+                'nombre' => 'Docente Pendiente',
+                'correo_electronico' => $email,
+                'password' => 'Temporal-2026!',
+                'role_code' => RoleCode::Teacher->value,
+                'career_id' => $career->id,
+            ])
+            ->assertRedirect();
+
+        return User::query()->where('correo_electronico', $email)->firstOrFail();
     }
 
     public function test_postgresql_rejects_duplicate_active_role_assignments(): void

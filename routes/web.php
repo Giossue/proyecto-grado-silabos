@@ -203,6 +203,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::patch('usuarios/{user}', [ManagedUserController::class, 'update'])->name('users.update');
         Route::post('usuarios/{user}/roles', [ManagedUserController::class, 'assignRole'])->name('users.roles.store');
         Route::patch('usuarios/{user}/estado', [ManagedUserController::class, 'setStatus'])->name('users.status.update');
+        Route::post('usuarios/{user}/reenviar-acceso', [ManagedUserController::class, 'resendCredentials'])->name('users.credentials.resend');
+        Route::delete('usuarios/{user}', [ManagedUserController::class, 'destroy'])->name('users.destroy');
         Route::redirect('facultades-carreras', '/admin/estructura-academica/facultades');
         Route::get('estructura-academica/{section?}', [AcademicGovernanceController::class, 'index'])
             ->whereIn('section', ['facultades', 'carreras', 'campus', 'periodos-academicos'])

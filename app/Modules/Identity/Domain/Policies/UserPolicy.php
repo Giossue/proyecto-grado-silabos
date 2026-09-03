@@ -30,6 +30,12 @@ class UserPolicy
         return $this->viewAny($actor) && $actor->id !== $target->id;
     }
 
+    /** Reenviar el acceso o borrar: solo cuentas que nadie ha estrenado (I-38). */
+    public function managePending(User $actor, User $target): bool
+    {
+        return $this->update($actor, $target) && $target->debe_cambiar_contrasena;
+    }
+
     /**
      * Corregir el nombre o el correo de una cuenta. Es distinto de `update`, que gobierna
      * el estado y los roles: aquí no se toca lo que alguien puede hacer, solo cómo se le
