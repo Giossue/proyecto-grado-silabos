@@ -47,7 +47,8 @@ relación uno-a-muchos Facultad → Carreras con clave foránea y borrado restri
 `ofertas_academicas` los relaciona con una asignatura mediante claves foráneas. La
 modalidad además cuelga de la carrera (`carreras.modalidad_id`) y, si
 `modalidades.combina_por_asignatura`, de cada materia (`asignaturas.modalidad_id`); la
-oferta guarda la heredada (migración `000032`, I-35). La
+oferta guarda la heredada (migración `000032`, I-35). El campus también cuelga de la
+carrera (`carreras.campus_id`, migración `000033`, I-36) y la oferta guarda la copia. La
 jerarquía que presenta ADM-04 es una proyección de lectura y no una desnormalización de
 la persistencia.
 

@@ -202,10 +202,44 @@ const examples = computed(
                             </Select>
                             <FieldDescription>
                                 La que aprobó el CES para la carrera. Sus
-                                ofertas la heredan; si combina modalidades,
-                                cada materia indica la suya en la malla.
+                                ofertas la heredan; si combina modalidades, cada
+                                materia indica la suya en la malla.
                             </FieldDescription>
                             <FieldError :errors="[errors.modality_id]" />
+                        </Field>
+                        <Field
+                            v-if="entity === 'carrera'"
+                            :data-invalid="Boolean(errors.campus_id)"
+                        >
+                            <FieldLabel for="catalog-campus" required>
+                                Campus
+                            </FieldLabel>
+                            <Select name="campus_id" required>
+                                <SelectTrigger
+                                    id="catalog-campus"
+                                    :aria-invalid="Boolean(errors.campus_id)"
+                                >
+                                    <SelectValue
+                                        placeholder="Seleccione la sede aprobada"
+                                    />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectGroup>
+                                        <SelectItem
+                                            v-for="item in options.campuses"
+                                            :key="item.id"
+                                            :value="item.id"
+                                        >
+                                            {{ item.nombre }}
+                                        </SelectItem>
+                                    </SelectGroup>
+                                </SelectContent>
+                            </Select>
+                            <FieldDescription>
+                                Sede donde se dicta la carrera. Todas sus
+                                ofertas la heredan.
+                            </FieldDescription>
+                            <FieldError :errors="[errors.campus_id]" />
                         </Field>
 
                         <Field :data-invalid="Boolean(errors.nombre)">

@@ -124,6 +124,7 @@ class UpdateAcademicRecord
             'carrera' => [
                 'facultad_id' => $data['faculty_id'],
                 'modalidad_id' => $data['modality_id'],
+                'campus_id' => $data['campus_id'],
                 'codigo_institucional' => $data['code'] ?? null,
                 'nombre' => $data['nombre'],
             ],

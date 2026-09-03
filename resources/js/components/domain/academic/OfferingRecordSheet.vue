@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { Form, useForm } from '@inertiajs/vue3';
-import { Plus } from '@lucide/vue';
-import { computed, ref, watch } from 'vue';
+import { CalendarCheck, Plus } from '@lucide/vue';
+import { computed, watch } from 'vue';
 import CareerAcademicStructureController from '@/actions/App/Modules/Academic/Presentation/Http/Controllers/CareerAcademicStructureController';
 import FormSheet from '@/components/domain/FormSheet.vue';
 import FormSheetActions from '@/components/domain/FormSheetActions.vue';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
     Field,
     FieldDescription,
@@ -14,7 +13,6 @@ import {
     FieldLabel,
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
     Select,
     SelectContent,
@@ -24,7 +22,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { PARALLEL_SHIFTS as SHIFTS } from '@/lib/parallelShifts';
-import type { AcademicStructureProps, Option } from '@/types/academic';
+import type { AcademicStructureProps } from '@/types/academic';
 
 type OfferingEntity = 'oferta' | 'paralelo';
 
@@ -35,113 +33,45 @@ const props = defineProps<
 >();
 
 const title = computed(() =>
-    props.entity === 'oferta' ? 'Abrir ofertas' : 'Agregar paralelo',
+    props.entity === 'oferta' ? 'Preparar periodo' : 'Agregar paralelo',
 );
 const description = computed(() =>
     props.entity === 'oferta'
-        ? 'Elija el periodo y el campus una sola vez y marque las materias que se dictan. La modalidad la fija la carrera, o cada materia si la carrera combina modalidades.'
+        ? 'Toda materia de la malla activa queda con su oferta y un paralelo A. Campus y modalidad vienen de la carrera. Lo que no se dicte este periodo se archiva después.'
         : 'Agregue un paralelo a una oferta académica existente.',
 );
 
 /*
- * Ofertas en lote (I-36): el formulario nativo no sirve para una lista marcada con
- * búsqueda y «todo el ciclo», así que se arma con `useForm` y se envía como JSON.
+ * Preparar periodo (I-36): un solo dato, el periodo. Se envía como JSON con `useForm`
+ * para leer la respuesta y cerrar el panel al terminar.
  */
-const batch = useForm<{
-    period_id: string;
-    campus_id: string;
-    subject_ids: string[];
-}>({ period_id: '', campus_id: '', subject_ids: [] });
-const search = ref('');
-
-const cycles = computed(() => {
-    const groups = new Map<number, Option[]>();
-
-    for (const subject of props.options.activeSubjects) {
-        const cycle = subject.ciclo ?? 0;
-        groups.set(cycle, [...(groups.get(cycle) ?? []), subject]);
-    }
-
-    return Array.from(groups.entries())
-        .sort(([left], [right]) => left - right)
-        .map(([cycle, subjects]) => ({ cycle, subjects }));
-});
-const matches = (subject: Option): boolean => {
-    const needle = search.value.trim().toLocaleLowerCase('es');
-
-    return (
-        needle === '' ||
-        `${subject.codigo_institucional ?? ''} ${subject.nombre ?? ''}`
-            .toLocaleLowerCase('es')
-            .includes(needle)
-    );
-};
-const visibleCycles = computed(() =>
-    cycles.value
-        .map(({ cycle, subjects }) => ({
-            cycle,
-            subjects: subjects.filter(matches),
-        }))
-        .filter(({ subjects }) => subjects.length > 0),
-);
-const selected = computed(() => new Set(batch.subject_ids));
-const isSelected = (id: string): boolean => selected.value.has(id);
-const toggle = (id: string, checked: boolean): void => {
-    batch.subject_ids = checked
-        ? Array.from(new Set([...batch.subject_ids, id]))
-        : batch.subject_ids.filter((item) => item !== id);
-};
-const cycleState = (subjects: Option[]): boolean | 'indeterminate' => {
-    const count = subjects.filter((subject) => isSelected(subject.id)).length;
-
-    return count === 0
-        ? false
-        : count === subjects.length
-          ? true
-          : 'indeterminate';
-};
-const toggleCycle = (subjects: Option[], checked: boolean): void => {
-    const ids = subjects.map((subject) => subject.id);
-    batch.subject_ids = checked
-        ? Array.from(new Set([...batch.subject_ids, ...ids]))
-        : batch.subject_ids.filter((id) => !ids.includes(id));
-};
-const submitLabel = computed(() =>
-    batch.subject_ids.length === 0
-        ? 'Abrir ofertas'
-        : `Abrir ${batch.subject_ids.length} ${batch.subject_ids.length === 1 ? 'oferta' : 'ofertas'}`,
-);
-const submitBatch = (close: () => void): void => {
-    batch.post(CareerAcademicStructureController.storeOfferingBatch.url(), {
+const prepare = useForm<{ period_id: string }>({ period_id: '' });
+const subjectCount = computed(() => props.options.activeSubjects.length);
+const submitPrepare = (close: () => void): void => {
+    prepare.post(CareerAcademicStructureController.preparePeriod.url(), {
         preserveScroll: true,
         onSuccess: () => {
-            batch.reset();
-            search.value = '';
+            prepare.reset();
             close();
         },
     });
 };
-/*
- * Errores que no pertenecen a periodo ni campus: los de la lista (`subject_ids`,
- * `subject_ids.n`) y los que devuelve la herencia de modalidad (`subject_id`).
- * Sin esto, un rechazo del servidor dejaría el panel abierto sin explicación.
- */
-const subjectError = computed(
-    () =>
-        Object.entries(batch.errors).find(
-            ([key]) => key !== 'period_id' && key !== 'campus_id',
-        )?.[1],
+/* Cualquier rechazo del servidor se muestra: sin esto el panel quedaría mudo. */
+const prepareError = computed(
+    () => Object.values(prepare.errors).find(Boolean) ?? undefined,
 );
 
 watch(
     () => props.entity,
-    () => batch.reset(),
+    () => prepare.reset(),
 );
 </script>
 
 <template>
     <FormSheet
-        :trigger-label="props.entity === 'oferta' ? 'Abrir ofertas' : 'Agregar'"
+        :trigger-label="
+            props.entity === 'oferta' ? 'Preparar periodo' : 'Agregar'
+        "
         :title="title"
         :description="description"
     >
@@ -149,17 +79,17 @@ watch(
             <form
                 v-if="props.entity === 'oferta'"
                 class="contents"
-                @submit.prevent="submitBatch(close)"
+                @submit.prevent="submitPrepare(close)"
             >
                 <FieldGroup>
-                    <Field :data-invalid="Boolean(batch.errors.period_id)">
+                    <Field :data-invalid="Boolean(prepareError)">
                         <FieldLabel for="offering-period" required>
                             Periodo académico
                         </FieldLabel>
-                        <Select v-model="batch.period_id" required>
+                        <Select v-model="prepare.period_id" required>
                             <SelectTrigger
                                 id="offering-period"
-                                :aria-invalid="Boolean(batch.errors.period_id)"
+                                :aria-invalid="Boolean(prepareError)"
                             >
                                 <SelectValue
                                     placeholder="Seleccione un periodo"
@@ -177,130 +107,21 @@ watch(
                                 </SelectGroup>
                             </SelectContent>
                         </Select>
-                        <FieldError :errors="[batch.errors.period_id]" />
-                    </Field>
-                    <Field :data-invalid="Boolean(batch.errors.campus_id)">
-                        <FieldLabel for="offering-campus" required>
-                            Campus
-                        </FieldLabel>
-                        <Select v-model="batch.campus_id" required>
-                            <SelectTrigger
-                                id="offering-campus"
-                                :aria-invalid="Boolean(batch.errors.campus_id)"
-                            >
-                                <SelectValue
-                                    placeholder="Seleccione un campus"
-                                />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectGroup>
-                                    <SelectItem
-                                        v-for="item in options.campuses"
-                                        :key="item.id"
-                                        :value="item.id"
-                                    >
-                                        {{ item.nombre }}
-                                    </SelectItem>
-                                </SelectGroup>
-                            </SelectContent>
-                        </Select>
-                        <FieldError :errors="[batch.errors.campus_id]" />
-                    </Field>
-                    <Field :data-invalid="Boolean(subjectError)">
-                        <FieldLabel for="offering-subject-search" required>
-                            Materias de la malla activa
-                        </FieldLabel>
-                        <Input
-                            id="offering-subject-search"
-                            v-model="search"
-                            type="search"
-                            placeholder="Buscar por código o nombre"
-                        />
                         <FieldDescription>
-                            Marque un ciclo completo o materias sueltas. Las que
-                            ya tengan oferta en ese periodo y campus se omiten.
+                            {{
+                                subjectCount === 0
+                                    ? 'La malla activa no tiene materias: ármela primero.'
+                                    : `Se prepararán ${subjectCount} materias. Repetirlo no duplica nada.`
+                            }}
                         </FieldDescription>
-                        <div
-                            v-if="options.activeSubjects.length === 0"
-                            class="rounded-md border border-dashed p-4 text-sm text-muted-foreground"
-                        >
-                            La malla activa no tiene materias.
-                        </div>
-                        <div
-                            v-else
-                            class="flex max-h-96 flex-col gap-3 overflow-y-auto rounded-md border p-3"
-                        >
-                            <p
-                                v-if="visibleCycles.length === 0"
-                                class="text-sm text-muted-foreground"
-                            >
-                                Ninguna materia coincide con la búsqueda.
-                            </p>
-                            <div
-                                v-for="group in visibleCycles"
-                                :key="group.cycle"
-                                class="flex flex-col gap-1"
-                            >
-                                <div class="flex items-center gap-2">
-                                    <Checkbox
-                                        :id="`offering-cycle-${group.cycle}`"
-                                        :model-value="
-                                            cycleState(group.subjects)
-                                        "
-                                        @update:model-value="
-                                            toggleCycle(
-                                                group.subjects,
-                                                $event === true,
-                                            )
-                                        "
-                                    />
-                                    <Label
-                                        :for="`offering-cycle-${group.cycle}`"
-                                        class="text-sm font-medium"
-                                    >
-                                        {{
-                                            group.cycle === 0
-                                                ? 'Sin ciclo'
-                                                : `Ciclo ${group.cycle}`
-                                        }}
-                                        <span
-                                            class="font-normal text-muted-foreground"
-                                        >
-                                            · {{ group.subjects.length }}
-                                        </span>
-                                    </Label>
-                                </div>
-                                <div
-                                    v-for="subject in group.subjects"
-                                    :key="subject.id"
-                                    class="flex items-center gap-2 pl-6"
-                                >
-                                    <Checkbox
-                                        :id="`offering-subject-${subject.id}`"
-                                        :model-value="isSelected(subject.id)"
-                                        @update:model-value="
-                                            toggle(subject.id, $event === true)
-                                        "
-                                    />
-                                    <Label
-                                        :for="`offering-subject-${subject.id}`"
-                                        class="text-sm font-normal"
-                                    >
-                                        <span class="text-muted-foreground">
-                                            {{ subject.codigo_institucional }}
-                                        </span>
-                                        {{ subject.nombre }}
-                                    </Label>
-                                </div>
-                            </div>
-                        </div>
-                        <FieldError :errors="[subjectError]" />
+                        <FieldError :errors="[prepareError]" />
                     </Field>
                     <FormSheetActions
                         :close="close"
-                        :processing="batch.processing"
-                        :icon="Plus"
-                        :label="submitLabel"
+                        :processing="prepare.processing"
+                        :disabled="subjectCount === 0"
+                        :icon="CalendarCheck"
+                        label="Preparar periodo"
                     />
                 </FieldGroup>
             </form>
@@ -383,7 +204,7 @@ watch(
                         :close="close"
                         :processing="processing"
                         :icon="Plus"
-                        :label="submitLabel"
+                        label="Crear paralelo"
                     />
                 </FieldGroup>
             </Form>

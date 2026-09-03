@@ -33,17 +33,20 @@ const props = withDefaults(
         recordCode: string | null;
         facultyId?: string | null;
         modalityId?: string | null;
+        campusId?: string | null;
         perSubject?: boolean;
         startsOn?: string | null;
         endsOn?: string | null;
         faculties: CatalogRecord[];
         modalities?: CatalogRecord[];
+        campuses?: CatalogRecord[];
         logoUrl?: string | null;
         showTrigger?: boolean;
     }>(),
     {
         showTrigger: true,
         modalities: () => [],
+        campuses: () => [],
         perSubject: false,
     },
 );
@@ -207,7 +210,9 @@ const facultyOptions = computed(() =>
                                         :value="modality.id"
                                     >
                                         {{ modality.nombre }}
-                                        {{ modality.activo ? '' : '(archivada)' }}
+                                        {{
+                                            modality.activo ? '' : '(archivada)'
+                                        }}
                                     </SelectItem>
                                 </SelectGroup>
                             </SelectContent>
@@ -217,6 +222,45 @@ const facultyOptions = computed(() =>
                             cambian.
                         </FieldDescription>
                         <FieldError :errors="[errors.modality_id]" />
+                    </Field>
+                    <Field
+                        v-if="entity === 'carrera'"
+                        :data-invalid="Boolean(errors.campus_id)"
+                    >
+                        <FieldLabel :for="`edit-campus-${recordId}`" required>
+                            Campus
+                        </FieldLabel>
+                        <Select
+                            name="campus_id"
+                            :default-value="campusId ?? undefined"
+                            required
+                        >
+                            <SelectTrigger
+                                :id="`edit-campus-${recordId}`"
+                                :aria-invalid="Boolean(errors.campus_id)"
+                            >
+                                <SelectValue
+                                    placeholder="Seleccione la sede aprobada"
+                                />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectGroup>
+                                    <SelectItem
+                                        v-for="campus in campuses"
+                                        :key="campus.id"
+                                        :value="campus.id"
+                                    >
+                                        {{ campus.nombre }}
+                                        {{ campus.activo ? '' : '(archivado)' }}
+                                    </SelectItem>
+                                </SelectGroup>
+                            </SelectContent>
+                        </Select>
+                        <FieldDescription>
+                            Las ofertas nuevas lo heredan; las ya abiertas no
+                            cambian.
+                        </FieldDescription>
+                        <FieldError :errors="[errors.campus_id]" />
                     </Field>
                     <Field
                         v-if="entity === 'modalidad'"

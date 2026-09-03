@@ -5,17 +5,17 @@ namespace App\Modules\Academic\Presentation\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Modules\Academic\Application\Actions\CreateAcademicRecord;
-use App\Modules\Academic\Application\Actions\CreateOfferingBatch;
 use App\Modules\Academic\Application\Actions\DeleteCurriculum;
 use App\Modules\Academic\Application\Actions\MutateCurriculumBuilder;
+use App\Modules\Academic\Application\Actions\PreparePeriod;
 use App\Modules\Academic\Application\Actions\SetAcademicRecordStatus;
 use App\Modules\Academic\Application\Actions\UpdateCareerAcademicRecord;
 use App\Modules\Academic\Application\Queries\AcademicStructureViewData;
 use App\Modules\Academic\Presentation\Http\Requests\ManageCareerAcademicStructureRequest;
+use App\Modules\Academic\Presentation\Http\Requests\PreparePeriodRequest;
 use App\Modules\Academic\Presentation\Http\Requests\SetAcademicRecordStatusRequest;
 use App\Modules\Academic\Presentation\Http\Requests\StoreAcademicRecordRequest;
 use App\Modules\Academic\Presentation\Http\Requests\StoreCurriculumFieldRequest;
-use App\Modules\Academic\Presentation\Http\Requests\StoreOfferingBatchRequest;
 use App\Modules\Academic\Presentation\Http\Requests\StoreSubjectRequirementRequest;
 use App\Modules\Academic\Presentation\Http\Requests\UpdateCareerAcademicRecordRequest;
 use App\Modules\Academic\Presentation\Http\Requests\UpdateCurriculumConfigurationRequest;
@@ -101,22 +101,20 @@ class CareerAcademicStructureController extends Controller
         return back()->with('success', 'Registro académico creado dentro de su carrera.');
     }
 
-    /** Varias ofertas de una vez para un periodo y un campus (I-36). */
-    public function storeOfferingBatch(
-        StoreOfferingBatchRequest $request,
-        CreateOfferingBatch $action,
+    /** Un clic: ofertas y paralelo «A» de toda la malla activa para el periodo (I-36). */
+    public function preparePeriod(
+        PreparePeriodRequest $request,
+        PreparePeriod $action,
     ): RedirectResponse {
         $actor = $request->user();
         abort_unless($actor instanceof User, 401);
-        /** @var array{period_id: string, campus_id: string, subject_ids: list<string>} $data */
+        /** @var array{period_id: string} $data */
         $data = $request->validated();
         $result = $action->execute($data, $actor, $request);
 
-        $message = match (true) {
-            $result['created'] === 0 => 'Esas ofertas ya estaban abiertas para ese periodo y campus.',
-            $result['skipped'] === 0 => "Se abrieron {$result['created']} ofertas.",
-            default => "Se abrieron {$result['created']} ofertas; {$result['skipped']} ya existían.",
-        };
+        $message = $result['offerings'] === 0 && $result['parallels'] === 0
+            ? "El periodo ya estaba preparado: las {$result['subjects']} materias tienen oferta y paralelo."
+            : "Periodo preparado: {$result['offerings']} ofertas y {$result['parallels']} paralelos nuevos para {$result['subjects']} materias.";
 
         return back()->with('success', $message);
     }

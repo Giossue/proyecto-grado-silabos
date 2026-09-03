@@ -211,6 +211,7 @@ class AcademicStructureTest extends TestCase
             ->post(route('admin.academic.store', 'carrera'), [
                 'faculty_id' => $faculty->id,
                 'modality_id' => Modality::query()->firstOrFail()->id,
+                'campus_id' => Campus::query()->firstOrFail()->id,
                 'code' => 'CARR-DEMO',
                 'nombre' => 'Carrera de demostración',
             ])
@@ -606,21 +607,22 @@ class AcademicStructureTest extends TestCase
         $parallel = Parallel::query()->firstOrFail();
         $assignment = TeacherAssignment::query()->firstOrFail();
         $teacher = User::query()->where('correo_electronico', 'docente@silabos.test')->firstOrFail();
-        $campus = Campus::query()->create([
-            'codigo_institucional' => 'NORTE',
-            'nombre' => 'Campus Norte',
+        $period = AcademicPeriod::query()->create([
+            'codigo' => '2027-2028',
+            'nombre' => 'Periodo académico 2027-2028',
+            'fecha_inicio' => '2027-05-01',
+            'fecha_fin' => '2027-09-30',
             'activo' => true,
         ]);
 
+        // El campus no se edita en la oferta: lo fija la carrera (I-36).
         $this->actingAsCoordinator()
             ->patch(route('coordination.academic.update', [
                 'entity' => 'oferta',
                 'record' => $offering->id,
             ]), [
-                'period_id' => $offering->periodo_academico_id,
+                'period_id' => $period->id,
                 'subject_id' => $offering->asignatura_id,
-                'campus_id' => $campus->id,
-                'modality_id' => $offering->modalidad_id,
             ])
             ->assertRedirect();
 
@@ -646,7 +648,8 @@ class AcademicStructureTest extends TestCase
             ])
             ->assertRedirect();
 
-        $this->assertSame($campus->id, $offering->fresh()->campus_id);
+        $this->assertSame($period->id, $offering->fresh()->periodo_academico_id);
+        $this->assertSame(Career::query()->findOrFail($this->coordinatorContext->carrera_id)->campus_id, $offering->fresh()->campus_id);
         $this->assertSame('B', $parallel->fresh()->codigo);
         $this->assertSame('2026-12-31', $assignment->fresh()->vigente_hasta?->toDateString());
         $this->assertSame(3, AuditEvent::query()
@@ -981,46 +984,50 @@ class AcademicStructureTest extends TestCase
         $this->assertSame($online->id, CourseOffering::query()->where('asignatura_id', $subject->id)->value('modalidad_id'));
     }
 
-    /** I-36: varias ofertas de una vez; las repetidas se omiten y todas heredan la modalidad. */
-    public function test_coordinator_opens_offerings_in_batch_and_existing_ones_are_skipped(): void
+    /** I-36: un clic deja toda la malla con oferta y paralelo «A»; repetirlo no duplica. */
+    public function test_coordinator_prepares_a_period_for_the_whole_curriculum_in_one_click(): void
     {
         $career = Career::query()->findOrFail($this->coordinatorContext->carrera_id);
         $curriculum = Curriculum::query()->active()->where('carrera_id', $career->id)->firstOrFail();
         $reference = CourseOffering::query()->firstOrFail();
-        $subjects = collect(['SW-L1', 'SW-L2', 'SW-L3'])->map(fn (string $code, int $index) => Subject::query()->create([
-            'malla_id' => $curriculum->id,
-            'codigo_institucional' => $code,
-            'nombre' => "Materia en lote {$index}",
-            'ciclo' => 4,
-            'orden_en_ciclo' => $index,
-            'activo' => true,
-        ]));
+        foreach (['SW-P1', 'SW-P2'] as $index => $code) {
+            Subject::query()->create([
+                'malla_id' => $curriculum->id,
+                'codigo_institucional' => $code,
+                'nombre' => "Materia preparada {$index}",
+                'ciclo' => 5,
+                'orden_en_ciclo' => $index,
+                'activo' => true,
+            ]);
+        }
+        $subjectCount = Subject::query()->where('malla_id', $curriculum->id)->where('activo', true)->count();
 
         $this->actingAsCoordinator()
-            ->from(route('coordination.academic.offerings.index'))
-            ->post(route('coordination.academic.offerings.batch'), [
-                'period_id' => $reference->periodo_academico_id,
-                'campus_id' => $reference->campus_id,
-                'subject_ids' => [],
-            ])
-            ->assertSessionHasErrors('subject_ids');
-
-        $this->actingAsCoordinator()
-            ->post(route('coordination.academic.offerings.batch'), [
-                'period_id' => $reference->periodo_academico_id,
-                'campus_id' => $reference->campus_id,
-                // La referencia ya existe: se omite sin error.
-                'subject_ids' => [...$subjects->pluck('id')->all(), $reference->asignatura_id],
-            ])
+            ->post(route('coordination.academic.period.prepare'), ['period_id' => $reference->periodo_academico_id])
             ->assertRedirect()
             ->assertSessionHasNoErrors()
-            ->assertSessionHas('success', 'Se abrieron 3 ofertas; 1 ya existían.');
+            ->assertSessionHas('success', "Periodo preparado: 2 ofertas y 2 paralelos nuevos para {$subjectCount} materias.");
 
-        $created = CourseOffering::query()->whereIn('asignatura_id', $subjects->pluck('id'))->get();
-        $this->assertCount(3, $created);
-        $this->assertTrue($created->every(fn (CourseOffering $offering): bool => $offering->modalidad_id === $career->modalidad_id));
-        $this->assertSame(3, AuditEvent::query()->where('accion', 'academico.oferta.creacion')->count());
-        $this->assertSame(4, CourseOffering::query()->count());
+        $offerings = CourseOffering::query()->where('periodo_academico_id', $reference->periodo_academico_id)->get();
+        $this->assertCount($subjectCount, $offerings);
+        $this->assertTrue($offerings->every(fn (CourseOffering $offering): bool => $offering->campus_id === $career->campus_id
+            && $offering->modalidad_id === $career->modalidad_id));
+        $this->assertSame($subjectCount, Parallel::query()->whereIn('oferta_academica_id', $offerings->pluck('id'))->count());
+        $this->assertSame(2, AuditEvent::query()->where('accion', 'academico.paralelo.creacion')->count());
+
+        // Segunda vez: nada nuevo, y se dice.
+        $this->actingAsCoordinator()
+            ->post(route('coordination.academic.period.prepare'), ['period_id' => $reference->periodo_academico_id])
+            ->assertRedirect()
+            ->assertSessionHas('success', "El periodo ya estaba preparado: las {$subjectCount} materias tienen oferta y paralelo.");
+        $this->assertSame($subjectCount, CourseOffering::query()->where('periodo_academico_id', $reference->periodo_academico_id)->count());
+
+        // Sin campus en la carrera no hay de dónde heredar.
+        $career->forceFill(['campus_id' => null])->save();
+        $this->actingAsCoordinator()
+            ->from(route('coordination.academic.offerings.index'))
+            ->post(route('coordination.academic.period.prepare'), ['period_id' => $reference->periodo_academico_id])
+            ->assertSessionHasErrors('subject_id');
     }
 
     public function test_duplicate_offering_is_reported_to_the_coordinator_as_a_validation_error(): void
@@ -1205,6 +1212,7 @@ class AcademicStructureTest extends TestCase
             ->patch(route('admin.academic.update', ['entity' => 'carrera', 'record' => $career->id]), [
                 'faculty_id' => $destinationFaculty->id,
                 'modality_id' => $career->modalidad_id,
+                'campus_id' => $career->campus_id,
                 'code' => 'SOFTWARE-ACT',
                 'nombre' => 'Ingeniería de Software',
             ])
@@ -1285,6 +1293,7 @@ class AcademicStructureTest extends TestCase
             ->patch(route('admin.academic.update', ['entity' => 'carrera', 'record' => $career->id]), [
                 'faculty_id' => $destinationFaculty->id,
                 'modality_id' => $career->modalidad_id,
+                'campus_id' => $career->campus_id,
                 'code' => 'SOFTWARE-ACT',
                 'nombre' => 'Ingeniería de Software',
             ])
@@ -1330,6 +1339,7 @@ class AcademicStructureTest extends TestCase
             ->patch(route('admin.academic.update', ['entity' => 'carrera', 'record' => $career->id]), [
                 'faculty_id' => $archivedFaculty->id,
                 'modality_id' => $career->modalidad_id,
+                'campus_id' => $career->campus_id,
                 'code' => $career->codigo_institucional,
                 'nombre' => $career->nombre,
             ])

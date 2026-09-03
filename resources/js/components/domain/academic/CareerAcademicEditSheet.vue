@@ -287,37 +287,6 @@ const entityLabel = computed(
                             </Select>
                             <FieldError :errors="[errors.period_id]" />
                         </Field>
-                        <Field :data-invalid="Boolean(errors.campus_id)">
-                            <FieldLabel
-                                :for="`edit-offering-campus-${record.id}`"
-                                required
-                                >Campus</FieldLabel
-                            >
-                            <Select
-                                name="campus_id"
-                                :default-value="record.campus_id"
-                                required
-                            >
-                                <SelectTrigger
-                                    :id="`edit-offering-campus-${record.id}`"
-                                    :aria-invalid="Boolean(errors.campus_id)"
-                                    ><SelectValue
-                                        placeholder="Seleccione un campus"
-                                /></SelectTrigger>
-                                <SelectContent
-                                    ><SelectGroup>
-                                        <SelectItem
-                                            v-for="item in options.campuses"
-                                            :key="item.id"
-                                            :value="item.id"
-                                        >
-                                            {{ item.nombre }}
-                                        </SelectItem>
-                                    </SelectGroup></SelectContent
-                                >
-                            </Select>
-                            <FieldError :errors="[errors.campus_id]" />
-                        </Field>
                     </template>
 
                     <template v-else-if="entity === 'paralelo'">

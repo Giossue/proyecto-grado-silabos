@@ -162,6 +162,8 @@ return [
         'organization_unit' => 'unidad de organización curricular',
         'modality_id' => 'modalidad',
         'faculty_id' => 'facultad',
+        'campus_id' => 'campus',
+        'period_id' => 'periodo académico',
         'per_subject' => 'alcance de la modalidad',
         'credits' => 'créditos',
         'total_hours' => 'horas totales',

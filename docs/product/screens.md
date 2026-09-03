@@ -160,18 +160,18 @@ DOC-01 llena una cuadrícula con una casilla por celda, unidades y totales calcu
 - Los estados usan las mismas etiquetas y colores en todo el producto.
 - Los IDs internos y detalles de infraestructura no se muestran.
 - ADM-04 usa el submenú **Estructura académica** con rutas independientes para Facultades,
-  Carreras, Campus, Modalidades y Periodos académicos. Carreras muestra su Facultad y su
-  Modalidad, Facultades muestra la cantidad relacionada; los catálogos no se mezclan ni
+  Carreras, Campus, Modalidades y Periodos académicos. Carreras muestra su Facultad, su
+  Modalidad y su Campus, Facultades muestra la cantidad relacionada; los catálogos no se mezclan ni
   se ocultan en pestañas.
 - La modalidad se fija por carrera (obligatoria al crearla; la aprueba el CES) y no por
   oferta. Una modalidad con alcance «Por materia» (híbrida) hace que cada materia de la
   malla pida la suya en COR-13 (campo, columna del desglose y etiqueta en la tarjeta).
   COR-14 abre ofertas sin selector de modalidad: la hereda de la materia o de la carrera
   y la muestra en el listado (I-35).
-- COR-14 abre ofertas en lote (I-36): periodo y campus una sola vez, y las materias de la
-  malla activa marcadas por ciclo completo o una a una, con buscador. Las que ya tenían
-  oferta en ese periodo y campus se omiten y el aviso dice cuántas se abrieron y cuántas
-  existían. No hay alta de oferta suelta aparte: marcar una sola materia es el mismo lote.
+- COR-14 no crea ofertas una a una: **Preparar periodo** (I-36) deja toda la malla activa
+  con oferta y paralelo «A» para el periodo elegido; campus y modalidad vienen de la
+  carrera (ADM-04 pide ambos al crearla). Repetirlo no duplica; lo que no se dicte se
+  archiva. Luego solo quedan los paralelos extra y la asignación docente.
 - COR-13 usa una única entrada **Malla**. Si existe, la ruta abre directamente la página
   completa con **Desglose académico** y **Constructor visual**; si no existe, muestra el
   estado vacío universal y la acción para crearla. No presenta buscador, filtros, cards,

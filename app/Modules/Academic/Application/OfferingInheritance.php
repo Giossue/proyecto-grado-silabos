@@ -2,18 +2,19 @@
 
 namespace App\Modules\Academic\Application;
 
+use App\Modules\Academic\Infrastructure\Persistence\Models\Campus;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Modality;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Subject;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Con qué modalidad se dicta una materia. El CES aprueba cada carrera en una modalidad
- * (RRA arts. 70-74); si esa modalidad «combina por asignatura» (híbrida, art. 74A),
- * cada materia de la malla lleva la suya. La oferta no la elige: la hereda de aquí, y
- * el sílabo la copia de la oferta (I-35).
+ * Lo que la oferta hereda en vez de preguntar. El CES aprueba cada carrera para una
+ * sede y una modalidad (RRA arts. 70-74): campus y modalidad viven en la carrera. Si
+ * la modalidad «combina por asignatura» (híbrida, art. 74A), cada materia lleva la
+ * suya. El sílabo copia ambos datos de la oferta (I-35, I-36).
  */
-class OfferingModality
+class OfferingInheritance
 {
     /** La carrera exige indicar la modalidad materia por materia. */
     public function perSubject(Career $career): bool
@@ -46,7 +47,7 @@ class OfferingModality
     }
 
     /** Modalidad con la que se abre la oferta de una materia. */
-    public function forSubject(Subject $subject): Modality
+    public function modalityFor(Subject $subject): Modality
     {
         $subject->loadMissing(['curriculum.career.modality', 'modality']);
         $career = $subject->curriculum->career;
@@ -69,5 +70,19 @@ class OfferingModality
         }
 
         return $subject->modality;
+    }
+
+    /** Campus en el que se dicta cualquier oferta de la carrera. */
+    public function campusFor(Career $career): Campus
+    {
+        $career->loadMissing('campus');
+
+        if ($career->campus === null) {
+            throw ValidationException::withMessages([
+                'subject_id' => 'La carrera no tiene campus. Administración debe asignarlo en Carreras antes de abrir ofertas.',
+            ]);
+        }
+
+        return $career->campus;
     }
 }

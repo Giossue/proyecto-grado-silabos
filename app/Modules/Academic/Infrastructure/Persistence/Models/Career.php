@@ -17,7 +17,7 @@ class Career extends Model
     protected $table = 'carreras';
 
     /** @var list<string> */
-    protected $fillable = ['facultad_id', 'escuela_id', 'modalidad_id', 'codigo_institucional', 'nombre', 'activo'];
+    protected $fillable = ['facultad_id', 'escuela_id', 'modalidad_id', 'campus_id', 'codigo_institucional', 'nombre', 'activo'];
 
     /** @return array<string, string> */
     protected function casts(): array
@@ -29,6 +29,13 @@ class Career extends Model
     public function faculty(): BelongsTo
     {
         return $this->belongsTo(Faculty::class, 'facultad_id');
+    }
+
+    /** Sede aprobada para la carrera; la heredan sus ofertas (I-36). */
+    /** @return BelongsTo<Campus, $this> */
+    public function campus(): BelongsTo
+    {
+        return $this->belongsTo(Campus::class, 'campus_id');
     }
 
     /** Modalidad aprobada para la carrera; la heredan sus ofertas (I-35). */

@@ -41,6 +41,8 @@ export type AcademicStructureProps = {
             faculty_id: string;
             modality_id: string | null;
             modality_name: string | null;
+            campus_id: string | null;
+            campus_name: string | null;
             code: string | null;
             name: string;
             active: boolean;

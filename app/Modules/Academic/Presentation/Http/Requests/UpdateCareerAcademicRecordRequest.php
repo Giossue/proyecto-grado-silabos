@@ -81,10 +81,8 @@ class UpdateCareerAcademicRecordRequest extends FormRequest
                             ->where('estado', 'activa'))),
                     Rule::unique('ofertas_academicas', 'asignatura_id')
                         ->where('periodo_academico_id', $this->input('period_id'))
-                        ->where('campus_id', $this->input('campus_id'))
                         ->ignore($this->recordId()),
                 ],
-                'campus_id' => ['required', 'uuid', Rule::exists('campus', 'id')->where('activo', true)],
             ],
             'paralelo' => [
                 'offering_id' => [

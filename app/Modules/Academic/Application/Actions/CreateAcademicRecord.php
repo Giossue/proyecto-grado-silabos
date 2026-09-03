@@ -3,7 +3,7 @@
 namespace App\Modules\Academic\Application\Actions;
 
 use App\Models\User;
-use App\Modules\Academic\Application\OfferingModality;
+use App\Modules\Academic\Application\OfferingInheritance;
 use App\Modules\Academic\Domain\AcademicStructurePermissions;
 use App\Modules\Academic\Domain\CurriculumSystemFields;
 use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
@@ -41,7 +41,7 @@ class CreateAcademicRecord
         private readonly InProgressWork $work,
         private readonly SyncSubjectFieldValues $syncSubjectFieldValues,
         private readonly InstitutionalLogos $logos,
-        private readonly OfferingModality $modalities,
+        private readonly OfferingInheritance $inheritance,
     ) {}
 
     /** @param array<string, mixed> $data */
@@ -100,6 +100,7 @@ class CreateAcademicRecord
             'carrera' => Career::query()->create([
                 'facultad_id' => $data['faculty_id'],
                 'modalidad_id' => $data['modality_id'],
+                'campus_id' => $data['campus_id'],
                 'codigo_institucional' => $data['code'] ?? null,
                 'nombre' => $data['nombre'],
                 'activo' => true,
@@ -205,7 +206,7 @@ class CreateAcademicRecord
             'ciclo' => $data['cycle'] ?? null,
             'orden_en_ciclo' => $position,
             'unidad_organizacion_curricular' => $data['organization_unit'] ?? null,
-            'modalidad_id' => $this->modalities->subjectModalityId($curriculum->career, $data),
+            'modalidad_id' => $this->inheritance->subjectModalityId($curriculum->career, $data),
             'creditos' => $data['creditos'] ?? null,
             'horas_totales' => CurriculumSystemFields::totalHours($data, $activeSystemKeys),
             'horas_proyecto' => $data['hours_project'] ?? null,
@@ -252,9 +253,9 @@ class CreateAcademicRecord
         return CourseOffering::query()->create([
             'periodo_academico_id' => $period->id,
             'asignatura_id' => $subject->id,
-            'campus_id' => $data['campus_id'],
-            // Heredada: la fija la carrera, o la materia si la carrera combina modalidades.
-            'modalidad_id' => $this->modalities->forSubject($subject)->id,
+            // Heredados: el campus lo fija la carrera; la modalidad, la carrera o la materia.
+            'campus_id' => $this->inheritance->campusFor($subject->curriculum->career)->id,
+            'modalidad_id' => $this->inheritance->modalityFor($subject)->id,
             'activo' => true,
         ]);
     }

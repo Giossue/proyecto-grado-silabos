@@ -33,6 +33,7 @@ class UpdateAcademicRecordRequest extends FormRequest
             'carrera' => [
                 'faculty_id' => ['required', 'uuid', Rule::exists('facultades', 'id')],
                 'modality_id' => ['required', 'uuid', Rule::exists('modalidades', 'id')->where('activo', true)],
+                'campus_id' => ['required', 'uuid', Rule::exists('campus', 'id')->where('activo', true)],
                 ...$this->namedCatalogRules('carreras', 180),
             ],
             'campus' => $this->namedCatalogRules('campus', 120),

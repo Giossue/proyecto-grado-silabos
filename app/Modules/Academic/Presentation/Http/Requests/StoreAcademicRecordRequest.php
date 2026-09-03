@@ -68,6 +68,7 @@ class StoreAcademicRecordRequest extends FormRequest
                 'faculty_id' => ['required', 'uuid', Rule::exists('facultades', 'id')->where('activo', true)],
                 // La modalidad la aprueba el CES por carrera; las ofertas la heredan (I-35).
                 'modality_id' => ['required', 'uuid', Rule::exists('modalidades', 'id')->where('activo', true)],
+                'campus_id' => ['required', 'uuid', Rule::exists('campus', 'id')->where('activo', true)],
                 ...$this->namedCatalogRules('carreras', 180),
             ],
             'periodo' => [
@@ -113,10 +114,8 @@ class StoreAcademicRecordRequest extends FormRequest
                             ->where('carrera_id', $this->careerId())
                             ->where('estado', 'activa'))),
                     Rule::unique('ofertas_academicas', 'asignatura_id')
-                        ->where('periodo_academico_id', $this->input('period_id'))
-                        ->where('campus_id', $this->input('campus_id')),
+                        ->where('periodo_academico_id', $this->input('period_id')),
                 ],
-                'campus_id' => ['required', 'uuid', Rule::exists('campus', 'id')->where('activo', true)],
             ],
             'paralelo' => [
                 'offering_id' => [

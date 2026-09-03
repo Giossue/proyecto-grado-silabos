@@ -154,8 +154,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('coordination.academic.parallels.index');
         Route::get('asignaciones-docentes', [CareerAcademicStructureController::class, 'teacherAssignments'])
             ->name('coordination.academic.teacher-assignments.index');
-        Route::post('estructura-academica/ofertas/lote', [CareerAcademicStructureController::class, 'storeOfferingBatch'])
-            ->name('coordination.academic.offerings.batch');
+        Route::post('estructura-academica/periodo/preparar', [CareerAcademicStructureController::class, 'preparePeriod'])
+            ->name('coordination.academic.period.prepare');
         Route::post('estructura-academica/{entity}', [CareerAcademicStructureController::class, 'store'])
             ->name('coordination.academic.store');
         Route::patch('estructura-academica/{entity}/{record}', [CareerAcademicStructureController::class, 'update'])

@@ -266,6 +266,7 @@ const {
                         <TableHead>Carrera</TableHead>
                         <TableHead>Facultad</TableHead>
                         <TableHead>Modalidad</TableHead>
+                        <TableHead>Campus</TableHead>
                         <TableHead>Código institucional</TableHead>
                         <TableHead>Estado</TableHead>
                         <TableHead class="text-right">Acciones</TableHead>
@@ -274,7 +275,7 @@ const {
                 <TableBody>
                     <TableEmpty
                         v-if="catalogs.careers.length === 0"
-                        :colspan="6"
+                        :colspan="7"
                     >
                         No existen carreras registradas.
                     </TableEmpty>
@@ -293,6 +294,9 @@ const {
                             {{ career.modality_name ?? 'Sin modalidad' }}
                         </TableCell>
                         <TableCell>
+                            {{ career.campus_name ?? 'Sin campus' }}
+                        </TableCell>
+                        <TableCell>
                             {{ career.code || 'Sin código institucional' }}
                         </TableCell>
                         <TableCell>
@@ -307,8 +311,10 @@ const {
                                 :active="career.active"
                                 :faculty-id="career.faculty_id"
                                 :modality-id="career.modality_id"
+                                :campus-id="career.campus_id"
                                 :faculties="catalogs.faculties"
                                 :modalities="catalogs.modalities"
+                                :campuses="catalogs.campuses"
                             />
                         </TableCell>
                     </TableRow>

@@ -16,11 +16,13 @@ defineProps<{
     active: boolean;
     facultyId?: string | null;
     modalityId?: string | null;
+    campusId?: string | null;
     perSubject?: boolean;
     startsOn?: string | null;
     endsOn?: string | null;
     faculties: CatalogRecord[];
     modalities?: CatalogRecord[];
+    campuses?: CatalogRecord[];
 }>();
 
 const editOpen = ref(false);
@@ -55,8 +57,10 @@ const editOpen = ref(false);
             :record-code="recordCode"
             :faculty-id="facultyId"
             :modality-id="modalityId"
+            :campus-id="campusId"
             :per-subject="perSubject"
             :modalities="modalities"
+            :campuses="campuses"
             :logo-url="logoUrl"
             :starts-on="startsOn"
             :ends-on="endsOn"

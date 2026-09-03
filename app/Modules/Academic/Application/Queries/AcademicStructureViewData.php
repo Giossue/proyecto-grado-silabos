@@ -48,14 +48,16 @@ class AcademicStructureViewData
                         'logo_url' => route('logos.faculty', ['faculty' => $faculty->id, 'v' => $this->logos->version($this->logos->facultyPath($faculty))]),
                     ]),
                 'careers' => Career::query()
-                    ->with('modality:id,nombre')
+                    ->with(['modality:id,nombre', 'campus:id,nombre'])
                     ->orderBy('nombre')
-                    ->get(['id', 'facultad_id', 'modalidad_id', 'codigo_institucional', 'nombre', 'activo'])
+                    ->get(['id', 'facultad_id', 'modalidad_id', 'campus_id', 'codigo_institucional', 'nombre', 'activo'])
                     ->map(fn (Career $career) => [
                         'id' => $career->id,
                         'faculty_id' => $career->facultad_id,
                         'modality_id' => $career->modalidad_id,
                         'modality_name' => $career->modality?->nombre,
+                        'campus_id' => $career->campus_id,
+                        'campus_name' => $career->campus?->nombre,
                         'code' => $career->codigo_institucional,
                         'name' => $career->nombre,
                         'active' => $career->activo,
@@ -85,6 +87,7 @@ class AcademicStructureViewData
                     ->orderBy('nombre')
                     ->get(['id', 'nombre']),
                 'modalities' => $this->activeModalities(),
+                'campuses' => Campus::query()->where('activo', true)->orderBy('nombre')->get(['id', 'nombre']),
             ],
         ];
     }

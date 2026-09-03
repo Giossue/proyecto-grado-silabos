@@ -53,13 +53,13 @@ class DatabaseSeeder extends Seeder
                 ['codigo' => 'presencial'],
                 ['nombre' => 'Presencial', 'activo' => true],
             );
-            $career = Career::query()->firstOrCreate(
-                ['codigo_institucional' => 'SOFTWARE'],
-                ['facultad_id' => $faculty->id, 'modalidad_id' => $modality->id, 'nombre' => 'Software', 'activo' => true],
-            );
             $campus = Campus::query()->firstOrCreate(
                 ['codigo_institucional' => 'MATRIZ'],
                 ['nombre' => 'Campus Matriz', 'activo' => true],
+            );
+            $career = Career::query()->firstOrCreate(
+                ['codigo_institucional' => 'SOFTWARE'],
+                ['facultad_id' => $faculty->id, 'modalidad_id' => $modality->id, 'campus_id' => $campus->id, 'nombre' => 'Software', 'activo' => true],
             );
             $period = AcademicPeriod::query()->firstOrCreate(
                 ['codigo' => '2026-2027'],
