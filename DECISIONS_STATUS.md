@@ -39,6 +39,11 @@ Fecha de corte: **30 de agosto de 2026**.
   2026). La ley fija componentes ACD/APE/AA,
   unidades de organización curricular y créditos de 48 h; el dibujo de la malla y el
   formato del sílabo son institucionales, no ministeriales.
+- Las personas no son dueñas de nada: tienen vigencias (rol, nombramiento, asignación
+  docente) sobre lo que es de la carrera o del sílabo. Salir = cerrar vigencias y, si no
+  queda ninguna, archivar; nunca borrar cuentas con historia ni reutilizarlas. Reemplazo
+  de coordinación y relevo docente en un paso; archivo bloqueado con sílabos en curso
+  (I-38, I-39, 3 de septiembre de 2026).
 - La IA es asistencia explicable; no toma decisiones académicas ni bloquea el flujo.
 - Stack base: Laravel 13, Vue/Inertia, TypeScript, PostgreSQL y Redis.
 - Monolito modular y servicio local de IA desacoplado por HTTP.

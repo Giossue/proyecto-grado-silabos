@@ -3,8 +3,8 @@
 ## Estado
 
 Parte 1 implementada el 2026-09-03 (cuentas pendientes). Parte 2 (salida de docentes y
-coordinadores) analizada y propuesta; pendiente de decisión del responsable del producto
-(`PV-16` en `docs/plans/decisions-pending.md`).
+coordinadores) implementada el mismo día en `I-39-salida-de-personas-y-relevos.md`, con
+la tabla completa de casos.
 
 ## Parte 1: cuentas que nadie ha estrenado
 

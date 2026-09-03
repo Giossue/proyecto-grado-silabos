@@ -1,6 +1,6 @@
 # Decisiones pendientes y puertas
 
-## Registro oficial PV-01 a PV-20
+## Registro oficial PV-01 a PV-21
 
 | ID | Decisión | Responsable esperado | Puerta |
 |---|---|---|---|
@@ -24,6 +24,7 @@
 | PV-18 | Umbrales de utilidad y precisión de IA | Coordinación/docentes expertos | P1 aceptación IA |
 | PV-19 | Navegadores y dispositivos reales | Técnico/usuarios | P1 matriz UX |
 | PV-20 | Línea, sublínea, director, pares y fechas académicas | Integración Curricular | P1 documentación |
+| PV-21 | Salida de docentes y coordinadores (reemplazo, relevo, archivo) | Responsable del producto | Resuelta el 2026-09-03: I-39 (reemplazo de coordinación y relevo docente en un paso; archivo bloqueado con sílabos en curso; cuentas no se reutilizan) |
 
 ## Decisiones técnicas adicionales
 

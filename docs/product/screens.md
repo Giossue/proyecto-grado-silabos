@@ -161,6 +161,14 @@ DOC-01 llena una cuadrícula con una casilla por celda, unidades y totales calcu
   su menú **Reenviar acceso** (nueva contraseña temporal al correo actual) y
   **Eliminar** (solo sin actividad; con historia, archivar). Corregir su correo reenvía
   el acceso al nuevo correo sin pedirlo (I-38).
+- Salida de personas (I-39): en ADM-04 Carreras muestra la coordinación vigente y su menú
+  tiene **Reemplazar coordinador** (o **Asignar coordinador** si no hay): cierra
+  nombramiento y rol de quien sale, abre los de quien entra y, si se marca y no le
+  queda otro rol, archiva la cuenta saliente. En COR-15 **Relevar docente** mueve todos
+  los paralelos y sílabos de un docente al entrante con el mismo sustento documental
+  (borrador se descarta, aprobado se reabre, en revisión bloquea). Archivar una cuenta
+  (ADM-02) se rechaza si tiene sílabos en curso o es la única administración; al
+  archivar se cierran sus asignaciones docentes vigentes.
 - Los estados usan las mismas etiquetas y colores en todo el producto.
 - Los IDs internos y detalles de infraestructura no se muestran.
 - ADM-04 usa el submenú **Estructura académica** con rutas independientes para Facultades,

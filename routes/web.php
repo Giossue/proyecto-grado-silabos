@@ -156,6 +156,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('coordination.academic.teacher-assignments.index');
         Route::post('estructura-academica/periodo/preparar', [CareerAcademicStructureController::class, 'preparePeriod'])
             ->name('coordination.academic.period.prepare');
+        Route::post('estructura-academica/docentes/relevar', [CareerAcademicStructureController::class, 'relieveTeacher'])
+            ->name('coordination.academic.teachers.relieve');
         Route::post('estructura-academica/{entity}', [CareerAcademicStructureController::class, 'store'])
             ->name('coordination.academic.store');
         Route::patch('estructura-academica/{entity}/{record}', [CareerAcademicStructureController::class, 'update'])
@@ -209,6 +211,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('estructura-academica/{section?}', [AcademicGovernanceController::class, 'index'])
             ->whereIn('section', ['facultades', 'carreras', 'campus', 'periodos-academicos'])
             ->name('academic.index');
+        Route::post('gobierno-academico/carreras/{career}/coordinador', [AcademicGovernanceController::class, 'replaceCoordinator'])
+            ->whereUuid('career')
+            ->name('academic.careers.coordinator.replace');
         Route::post('gobierno-academico/{entity}', [AcademicGovernanceController::class, 'store'])->name('academic.store');
         Route::patch('gobierno-academico/{entity}/{record}', [AcademicGovernanceController::class, 'update'])
             ->whereUuid('record')

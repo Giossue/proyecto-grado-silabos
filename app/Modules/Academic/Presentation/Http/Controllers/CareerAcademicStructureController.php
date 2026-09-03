@@ -21,6 +21,8 @@ use App\Modules\Academic\Presentation\Http\Requests\UpdateCareerAcademicRecordRe
 use App\Modules\Academic\Presentation\Http\Requests\UpdateCurriculumConfigurationRequest;
 use App\Modules\Academic\Presentation\Http\Requests\UpdateSubjectLayoutRequest;
 use App\Modules\Identity\Application\ActiveRole;
+use App\Modules\Syllabus\Application\Actions\RelieveTeacher;
+use App\Modules\Syllabus\Presentation\Http\Requests\RelieveTeacherRequest;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -99,6 +101,23 @@ class CareerAcademicStructureController extends Controller
         $action->execute($entity, $request->validated(), $actor, $request);
 
         return back()->with('success', 'Registro académico creado dentro de su carrera.');
+    }
+
+    /** Relevo de un docente en todos sus paralelos y sílabos de la carrera (I-39). */
+    public function relieveTeacher(RelieveTeacherRequest $request, RelieveTeacher $action): RedirectResponse
+    {
+        $actor = $request->user();
+        abort_unless($actor instanceof User, 401);
+        $summary = $action->execute(
+            $request->string('outgoing_user_id')->toString(),
+            $request->string('incoming_user_id')->toString(),
+            $request->backing(),
+            $request->string('idempotency_key')->toString(),
+            $actor,
+            $request,
+        );
+
+        return back()->with('success', "Relevo aplicado en {$summary['parallels']} paralelos; {$summary['syllabi']} sílabos pasaron al docente entrante.");
     }
 
     /** Un clic: ofertas y paralelo «A» de toda la malla activa para el periodo (I-36). */

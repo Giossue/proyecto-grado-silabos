@@ -6,6 +6,7 @@ use App\Modules\Academic\Domain\StudyModality;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * @property string $id
@@ -40,6 +41,12 @@ class Career extends Model
     public function faculty(): BelongsTo
     {
         return $this->belongsTo(Faculty::class, 'facultad_id');
+    }
+
+    /** @return HasMany<CoordinatorAssignment, $this> */
+    public function coordinatorAssignments(): HasMany
+    {
+        return $this->hasMany(CoordinatorAssignment::class, 'carrera_id');
     }
 
     /** Sede aprobada para la carrera; la heredan sus ofertas (I-36). */

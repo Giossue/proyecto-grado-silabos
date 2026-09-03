@@ -49,12 +49,17 @@ class AcademicStructureViewData
                         'logo_url' => route('logos.faculty', ['faculty' => $faculty->id, 'v' => $this->logos->version($this->logos->facultyPath($faculty))]),
                     ]),
                 'careers' => Career::query()
-                    ->with('campus:id,nombre')
+                    ->with(['campus:id,nombre', 'coordinatorAssignments' => fn ($query) => $query->effective()->with('user:id,nombre,correo_electronico')])
                     ->orderBy('nombre')
                     ->get(['id', 'facultad_id', 'modalidad', 'campus_id', 'codigo_institucional', 'nombre', 'activo'])
                     ->map(fn (Career $career) => [
                         'id' => $career->id,
                         'faculty_id' => $career->facultad_id,
+                        // Quién coordina hoy: la acción «Reemplazar coordinador» parte de aquí.
+                        'coordinator' => $career->coordinatorAssignments->first()?->user === null ? null : [
+                            'id' => $career->coordinatorAssignments->first()->user->id,
+                            'name' => $career->coordinatorAssignments->first()->user->nombre,
+                        ],
                         // Base elegida por Administración y etiqueta real («Híbrida» si hay materias apartadas).
                         'modality' => $career->modalidad?->value,
                         'modality_label' => $this->inheritance->labelFor($career),
@@ -87,6 +92,8 @@ class AcademicStructureViewData
                     ->orderBy('nombre')
                     ->get(['id', 'nombre']),
                 'campuses' => Campus::query()->where('activo', true)->orderBy('nombre')->get(['id', 'nombre']),
+                // Cualquier cuenta activa puede asumir una coordinación: el rol se concede al nombrarla.
+                'coordinatorUsers' => User::query()->where('activo', true)->orderBy('nombre')->get(['id', 'nombre', 'correo_electronico']),
             ],
         ];
     }

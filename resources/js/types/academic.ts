@@ -7,6 +7,7 @@ export type Option = {
     codigo?: string;
     codigo_institucional?: string;
     email?: string;
+    correo_electronico?: string;
     /** Materias de la malla activa: para agruparlas por ciclo al abrir ofertas. */
     ciclo?: number | null;
 };
@@ -41,6 +42,8 @@ export type AcademicStructureProps = {
             modality: string | null;
             modality_label: string | null;
             hybrid: boolean;
+            /** Quién coordina hoy; nulo si la carrera no tiene coordinación vigente. */
+            coordinator: { id: string; name: string } | null;
             campus_id: string | null;
             campus_name: string | null;
             code: string | null;

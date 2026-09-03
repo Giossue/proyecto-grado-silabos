@@ -4,6 +4,7 @@ namespace Tests\Feature\Identity;
 
 use App\Models\User;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
+use App\Modules\Identity\Application\Actions\SetUserStatus;
 use App\Modules\Identity\Domain\Enums\RoleCode;
 use App\Modules\Identity\Infrastructure\Mail\ManagedUserCredentialsMail;
 use App\Modules\Identity\Infrastructure\Persistence\Models\Role;
@@ -481,6 +482,51 @@ class ManagedUserTest extends TestCase
             ->assertRedirect();
 
         return User::query()->where('correo_electronico', $email)->firstOrFail();
+    }
+
+    /** I-39: archivar nunca deja la institución sin administración ni un paralelo a nombre de quien se fue. */
+    public function test_the_last_administrator_cannot_be_archived_and_archiving_closes_teacher_assignments(): void
+    {
+        $career = Career::query()->where('codigo_institucional', 'SOFTWARE')->firstOrFail();
+        $secondAdmin = User::query()->create(['nombre' => 'Segunda Admin', 'correo_electronico' => 'admin2@silabos.test', 'contrasena' => 'Temporal-2026!', 'activo' => true]);
+        RoleAssignment::query()->create([
+            'usuario_id' => $secondAdmin->id,
+            'rol_id' => Role::query()->where('codigo', RoleCode::Administrator->value)->firstOrFail()->id,
+            'carrera_id' => null,
+            'activo' => true,
+        ]);
+
+        // Con dos administraciones, archivar la segunda es válido…
+        $this->actingAsAdministrator()
+            ->patch(route('admin.users.update', $secondAdmin), ['nombre' => $secondAdmin->nombre, 'correo_electronico' => $secondAdmin->correo_electronico, 'active' => 0])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+        $this->assertFalse($secondAdmin->fresh()->activo);
+
+        // Con la segunda archivada, la primera es la única administración: ni siquiera el
+        // reemplazo de coordinación con archivo podría cerrarla (`SetUserStatus` lo rechaza).
+        $this->expectExceptionMessageMatches('/única cuenta de administración/');
+        try {
+            app(SetUserStatus::class)
+                ->execute($this->administrator, false, $secondAdmin, request());
+        } finally {
+            $this->assertTrue($this->administrator->fresh()->activo);
+        }
+    }
+
+    public function test_archiving_a_teacher_without_syllabi_in_progress_closes_its_assignments(): void
+    {
+        $career = Career::query()->where('codigo_institucional', 'SOFTWARE')->firstOrFail();
+        // Un docente con paralelos pero sin sílabos en curso se archiva y sus asignaciones se cierran.
+        $teacher = User::query()->where('correo_electronico', 'docente@silabos.test')->firstOrFail();
+        $this->assertDatabaseHas('asignaciones_docente', ['usuario_id' => $teacher->id, 'activo' => true]);
+        $this->actingAsAdministrator()
+            ->patch(route('admin.users.update', $teacher), ['nombre' => $teacher->nombre, 'correo_electronico' => $teacher->correo_electronico, 'active' => 0])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+        $this->assertFalse($teacher->fresh()->activo);
+        $this->assertDatabaseMissing('asignaciones_docente', ['usuario_id' => $teacher->id, 'activo' => true]);
+        $this->assertSame($career->id, RoleAssignment::query()->where('usuario_id', $teacher->id)->value('carrera_id'));
     }
 
     public function test_postgresql_rejects_duplicate_active_role_assignments(): void

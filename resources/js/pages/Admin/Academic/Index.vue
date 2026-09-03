@@ -72,6 +72,10 @@ const sectionContent = computed(() => sectionContents[props.section]);
             />
         </template>
 
-        <CatalogSection :section="section" :catalogs="catalogs" />
+        <CatalogSection
+            :section="section"
+            :catalogs="catalogs"
+            :options="options"
+        />
     </PageFrame>
 </template>

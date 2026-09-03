@@ -30,7 +30,7 @@ import type {
 } from '@/types/academic';
 
 const props = defineProps<
-    Pick<AcademicStructureProps, 'catalogs'> & {
+    Pick<AcademicStructureProps, 'catalogs' | 'options'> & {
         section: GovernanceSection;
     }
 >();
@@ -252,6 +252,7 @@ const {
                         <TableHead>Facultad</TableHead>
                         <TableHead>Modalidad</TableHead>
                         <TableHead>Campus</TableHead>
+                        <TableHead>Coordinación</TableHead>
                         <TableHead>Código institucional</TableHead>
                         <TableHead>Estado</TableHead>
                         <TableHead class="text-right">Acciones</TableHead>
@@ -260,7 +261,7 @@ const {
                 <TableBody>
                     <TableEmpty
                         v-if="catalogs.careers.length === 0"
-                        :colspan="7"
+                        :colspan="8"
                     >
                         No existen carreras registradas.
                     </TableEmpty>
@@ -282,6 +283,9 @@ const {
                             {{ career.campus_name ?? 'Sin campus' }}
                         </TableCell>
                         <TableCell>
+                            {{ career.coordinator?.name ?? 'Sin coordinador' }}
+                        </TableCell>
+                        <TableCell>
                             {{ career.code || 'Sin código institucional' }}
                         </TableCell>
                         <TableCell>
@@ -300,6 +304,8 @@ const {
                                 :campus-id="career.campus_id"
                                 :faculties="catalogs.faculties"
                                 :campuses="catalogs.campuses"
+                                :coordinator="career.coordinator"
+                                :coordinator-users="options.coordinatorUsers"
                             />
                         </TableCell>
                     </TableRow>

@@ -5,10 +5,13 @@ namespace App\Modules\Academic\Presentation\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Modules\Academic\Application\Actions\CreateAcademicRecord;
+use App\Modules\Academic\Application\Actions\ReplaceCoordinator;
 use App\Modules\Academic\Application\Actions\SetAcademicRecordStatus;
 use App\Modules\Academic\Application\Actions\UpdateAcademicRecord;
 use App\Modules\Academic\Application\Queries\AcademicStructureViewData;
+use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
 use App\Modules\Academic\Presentation\Http\Requests\ManageAcademicGovernanceRequest;
+use App\Modules\Academic\Presentation\Http\Requests\ReplaceCoordinatorRequest;
 use App\Modules\Academic\Presentation\Http\Requests\SetAcademicRecordStatusRequest;
 use App\Modules\Academic\Presentation\Http\Requests\StoreAcademicRecordRequest;
 use App\Modules\Academic\Presentation\Http\Requests\UpdateAcademicRecordRequest;
@@ -47,6 +50,27 @@ class AcademicGovernanceController extends Controller
         $action->execute($entity, $request->validated(), $actor, $request);
 
         return back()->with('success', 'Registro institucional creado.');
+    }
+
+    /** Nombra o reemplaza la coordinación de una carrera en un paso (I-39). */
+    public function replaceCoordinator(
+        Career $career,
+        ReplaceCoordinatorRequest $request,
+        ReplaceCoordinator $action,
+    ): RedirectResponse {
+        $actor = $request->user();
+        abort_unless($actor instanceof User, 401);
+        /** @var array{incoming_user_id: string, archive_outgoing?: bool} $data */
+        $data = $request->validated();
+        $result = $action->execute($career, $data, $actor, $request);
+
+        $message = $result['previous_user_id'] === null
+            ? "Coordinación de {$career->nombre} asignada."
+            : ($result['archived']
+                ? "Coordinación de {$career->nombre} reemplazada; la cuenta saliente quedó archivada."
+                : "Coordinación de {$career->nombre} reemplazada.");
+
+        return back()->with('success', $message);
     }
 
     public function setStatus(
