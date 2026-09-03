@@ -27,7 +27,7 @@ type TemplateField = {
     content_type: string;
 };
 
-defineProps<{
+const props = defineProps<{
     template: {
         id: string;
         name: string;
@@ -50,6 +50,9 @@ defineProps<{
     /** Motivo por el que la plantilla no se edita; nulo cuando sí se puede. */
     processLock: string | null;
 }>();
+
+const typeLabel = (value: string): string =>
+    props.blockTypes.find((type) => type.value === value)?.label ?? value;
 
 defineOptions({
     layout: { breadcrumbs: [{ title: 'Plantilla', href: templatesIndex() }] },
@@ -88,13 +91,49 @@ defineOptions({
                     </CardDescription>
                 </CardHeader>
                 <CardContent class="flex flex-col gap-3">
-                    <div
-                        v-for="block in section.blocks"
-                        :key="block.id"
-                        class="rounded-lg border p-4"
+                    <p class="text-base font-semibold">Campos</p>
+                    <ul
+                        v-if="section.blocks.length > 0"
+                        class="flex flex-col gap-3"
                     >
-                        <h3 class="font-medium">{{ block.title }}</h3>
-                    </div>
+                        <li
+                            v-for="block in section.blocks"
+                            :key="block.id"
+                            class="rounded-lg border bg-muted/20 p-4"
+                        >
+                            <dl class="grid gap-3 sm:grid-cols-2">
+                                <div>
+                                    <dt class="text-sm text-muted-foreground">
+                                        Nombre del campo
+                                    </dt>
+                                    <dd>
+                                        {{
+                                            block.fields[0]?.label ??
+                                            block.title
+                                        }}
+                                    </dd>
+                                </div>
+                                <div>
+                                    <dt class="text-sm text-muted-foreground">
+                                        Tipo de contenido
+                                    </dt>
+                                    <dd>{{ typeLabel(block.content_type) }}</dd>
+                                </div>
+                                <div
+                                    v-if="block.fields[0]?.help"
+                                    class="sm:col-span-2"
+                                >
+                                    <dt class="text-sm text-muted-foreground">
+                                        Ayuda para el docente
+                                    </dt>
+                                    <dd>{{ block.fields[0]?.help }}</dd>
+                                </div>
+                            </dl>
+                        </li>
+                    </ul>
+                    <p v-else class="text-sm text-muted-foreground">
+                        Este bloque no tiene campos.
+                    </p>
                 </CardContent>
             </Card>
         </div>
