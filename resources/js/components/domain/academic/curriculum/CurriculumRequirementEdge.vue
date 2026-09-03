@@ -17,6 +17,8 @@ const props = defineProps<
         targetOffset: number;
         /** Correquisito del mismo nivel: la línea pasa por encima, no por debajo. */
         sameLevel: boolean;
+        sourceShared: boolean;
+        targetShared: boolean;
     }>
 >();
 
@@ -38,9 +40,11 @@ const endpoints = computed(() => {
     const sourceX = props.sourceX + props.data.sourceOffset;
     const targetX = props.targetX + props.data.targetOffset;
 
-    return Math.abs(sourceX - targetX) <= ALIGNMENT_TOLERANCE
-        ? { sourceX, targetX: sourceX }
-        : { sourceX, targetX };
+    const alignable =
+        !props.data.targetShared &&
+        Math.abs(sourceX - targetX) <= ALIGNMENT_TOLERANCE;
+
+    return alignable ? { sourceX, targetX: sourceX } : { sourceX, targetX };
 });
 
 const pathData = computed((): [string, number, number] => {
@@ -49,7 +53,7 @@ const pathData = computed((): [string, number, number] => {
         // misma Y que el conector de llegada. Sube, cruza y baja, con punta en ambos.
         const top = props.targetY;
         const rise = top - OVERPASS_RISE;
-        const sourceX = props.sourceX;
+        const sourceX = props.sourceX + props.data.sourceOffset;
         const targetX = props.targetX + props.data.targetOffset;
 
         return [

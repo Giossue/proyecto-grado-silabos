@@ -443,6 +443,18 @@ const buildEdges = (): Edge[] => {
     const cycleOf = new Map(
         props.subjects.map((subject) => [subject.id, subject.cycle]),
     );
+    const incoming = new Map<string, number>();
+    const outgoing = new Map<string, number>();
+    props.requirements.forEach((requirement) => {
+        incoming.set(
+            requirement.subject_id,
+            (incoming.get(requirement.subject_id) ?? 0) + 1,
+        );
+        outgoing.set(
+            requirement.requirement_id,
+            (outgoing.get(requirement.requirement_id) ?? 0) + 1,
+        );
+    });
 
     return props.requirements.map((requirement) => {
         const color =
@@ -486,6 +498,11 @@ const buildEdges = (): Edge[] => {
                 sourceOffset: offsets.get(requirement.id)?.source ?? 0,
                 targetOffset: offsets.get(requirement.id)?.target ?? 0,
                 sameLevel,
+                // Con varias líneas en un conector, cada una conserva su reparto: si una
+                // se recentrara, caería sobre la vecina.
+                sourceShared:
+                    (outgoing.get(requirement.requirement_id) ?? 0) > 1,
+                targetShared: (incoming.get(requirement.subject_id) ?? 0) > 1,
             },
         };
     });
