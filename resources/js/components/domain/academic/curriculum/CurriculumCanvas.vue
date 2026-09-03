@@ -290,6 +290,9 @@ const buildNodes = (): Node[] => {
                 draggable: props.curriculum.editable && !hasOpenEditor.value,
                 connectable: props.curriculum.editable && !hasOpenEditor.value,
                 selectable: false,
+                // El formulario en línea es más alto que la tarjeta e invade la fila de
+                // abajo: el nodo en edición se pinta por encima de todos los demás.
+                zIndex: editing ? 1000 : 0,
             });
             x += editing ? editorStep : subjectStep;
         });
@@ -328,6 +331,7 @@ const buildNodes = (): Node[] => {
                 },
                 draggable: false,
                 connectable: false,
+                zIndex: 1000,
                 selectable: false,
             });
         } else {
