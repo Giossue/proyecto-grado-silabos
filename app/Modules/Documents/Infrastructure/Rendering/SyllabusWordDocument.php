@@ -90,8 +90,10 @@ class SyllabusWordDocument
                 ['bold' => true, 'size' => 12],
                 ['spaceBefore' => 240, 'spaceAfter' => 120, 'keepNext' => true],
             );
-            foreach ($this->arrayList($block['blocks'] ?? null) as $fieldIndex => $container) {
-                $this->field($section, $container, $number.'.'.($fieldIndex + 1));
+            $containers = $this->arrayList($block['blocks'] ?? null);
+            foreach ($containers as $fieldIndex => $container) {
+                // Un solo campo en la sección: basta el título de la sección.
+                $this->field($section, $container, count($containers) > 1 ? $number.'.'.($fieldIndex + 1) : null);
             }
         }
 
@@ -218,16 +220,18 @@ class SyllabusWordDocument
     }
 
     /** @param array<string, mixed> $container */
-    private function field(Section $section, array $container, string $number): void
+    private function field(Section $section, array $container, ?string $number): void
     {
         $fields = $this->arrayList($container['fields'] ?? null);
         $field = $fields[0] ?? [];
         $label = $this->string($field['label'] ?? null, $this->string($container['title'] ?? null, 'Campo'));
-        $section->addText(
-            $number.' '.$label,
-            ['bold' => true, 'size' => 11],
-            ['spaceBefore' => 160, 'spaceAfter' => 80, 'keepNext' => true],
-        );
+        if ($number !== null) {
+            $section->addText(
+                $number.' '.$label,
+                ['bold' => true, 'size' => 11],
+                ['spaceBefore' => 160, 'spaceAfter' => 80, 'keepNext' => true],
+            );
+        }
 
         $contentType = $this->string($container['content_type'] ?? null, 'text');
         $rows = $this->arrayList($field['rows'] ?? null);

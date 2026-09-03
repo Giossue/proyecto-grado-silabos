@@ -300,7 +300,12 @@ const observationState = (value: string): string =>
                             :key="block.key"
                             class="space-y-4"
                         >
-                            <h3 class="font-medium">{{ block.title }}</h3>
+                            <h3
+                                v-if="section.blocks.length > 1"
+                                class="font-medium"
+                            >
+                                {{ block.title }}
+                            </h3>
                             <dl class="grid gap-4">
                                 <div
                                     v-for="field in block.fields"

@@ -52,7 +52,8 @@ class WordRendererTest extends TestCase
 
         // Bloque y campo numerados, metadatos y texto libre.
         $this->assertStringContainsString('2. Unidades y planificación', $document);
-        $this->assertStringContainsString('2.1 Planificación', $document);
+        // Sección con un solo campo: sin subtítulo «2.1»; con varios, sí se numeran.
+        $this->assertStringNotContainsString('2.1 Planificación', $document);
         $this->assertStringContainsString('3.1 Descripción', $document);
         $this->assertStringContainsString('Descripción libre', $document);
         $this->assertStringContainsString(str_repeat('ab', 32), $document);

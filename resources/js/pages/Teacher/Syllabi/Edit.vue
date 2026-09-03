@@ -711,7 +711,12 @@ onBeforeUnmount(() => {
                             :key="block.id"
                             class="flex flex-col gap-5"
                         >
-                            <h3 class="font-medium">{{ block.title }}</h3>
+                            <h3
+                                v-if="section.blocks.length > 1"
+                                class="font-medium"
+                            >
+                                {{ block.title }}
+                            </h3>
                             <Field
                                 v-for="field in block.fields"
                                 :key="field.id"

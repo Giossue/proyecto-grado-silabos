@@ -873,7 +873,14 @@ const dropOnFieldZone = (section: TemplateSection, index: number): void => {
                                 class="doc-field group/field"
                                 :aria-label="`Campo ${fieldLabel(container)}`"
                             >
-                                <div class="doc-heading-row">
+                                <div
+                                    class="doc-heading-row"
+                                    :class="{
+                                        'doc-heading-row-compact':
+                                            section.blocks.length === 1 &&
+                                            !isEditing('field', container.id),
+                                    }"
+                                >
                                     <Input
                                         v-if="isEditing('field', container.id)"
                                         :ref="setEditorRef"
@@ -885,7 +892,11 @@ const dropOnFieldZone = (section: TemplateSection, index: number): void => {
                                         @keydown.esc.prevent="cancelRename"
                                         @blur="commitRename"
                                     />
-                                    <h3 v-else class="doc-h3">
+                                    <!-- Un solo campo en la sección: basta el título de la sección. -->
+                                    <h3
+                                        v-else-if="section.blocks.length > 1"
+                                        class="doc-h3"
+                                    >
                                         <button
                                             v-if="!readonly"
                                             type="button"
@@ -911,6 +922,7 @@ const dropOnFieldZone = (section: TemplateSection, index: number): void => {
                                             {{ fieldLabel(container) }}
                                         </template>
                                     </h3>
+                                    <span v-else class="doc-h3-spacer" />
 
                                     <div v-if="!readonly" class="doc-tools">
                                         <button
@@ -975,6 +987,19 @@ const dropOnFieldZone = (section: TemplateSection, index: number): void => {
                                                     {{ type.label }}
                                                 </DropdownMenuItem>
                                                 <DropdownMenuSeparator />
+                                                <DropdownMenuItem
+                                                    @select="
+                                                        startRename(
+                                                            'field',
+                                                            container.id,
+                                                            fieldLabel(
+                                                                container,
+                                                            ),
+                                                        )
+                                                    "
+                                                >
+                                                    Renombrar
+                                                </DropdownMenuItem>
                                                 <DropdownMenuItem
                                                     @select="
                                                         openProperties(
@@ -1279,6 +1304,23 @@ const dropOnFieldZone = (section: TemplateSection, index: number): void => {
 
 .doc-h3-input {
     font-size: 11pt;
+}
+
+.doc-h3-spacer {
+    flex: 1;
+}
+
+/* Sin subtítulo: las herramientas flotan a la derecha sin ocupar altura. */
+.doc-heading-row-compact {
+    height: 0;
+    justify-content: flex-end;
+    margin: 0;
+    overflow: visible;
+}
+
+.doc-heading-row-compact > .doc-tools {
+    position: relative;
+    top: -4pt;
 }
 
 .doc-field {

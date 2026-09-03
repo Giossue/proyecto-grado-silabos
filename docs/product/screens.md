@@ -126,6 +126,9 @@
   con datos de la malla, la oferta, los paralelos (incluida su jornada) y los docentes;
   no se diseña ni se llena (I-34). Mapa de datos: `docs/product/identificacion-institucional.md`.
   COR-14 (paralelos) muestra y edita la jornada.
+- Si una sección tiene un solo campo, no lleva subtítulo «n.1»: basta el título de la
+  sección, en la hoja, el editor docente, la revisión y el Word. Con varios campos sí
+  se numeran.
 - Las tablas se eligen, no se diseñan (I-34). Al soltar «Tabla» se escoge un formato
   institucional listo (planificación por unidades, bibliografía, escala, perfil de egreso
   o tabla simple); las cabeceras se renombran con un clic y el menú ⋯ del campo ofrece
