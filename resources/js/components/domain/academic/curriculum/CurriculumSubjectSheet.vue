@@ -9,7 +9,6 @@ import FormSheet from '@/components/domain/FormSheet.vue';
 import FormSheetActions from '@/components/domain/FormSheetActions.vue';
 import {
     Field,
-    FieldDescription,
     FieldError,
     FieldGroup,
     FieldLabel,
@@ -158,9 +157,6 @@ watch(
                             required
                             :aria-invalid="Boolean(errors.cycle)"
                         />
-                        <FieldDescription>
-                            Entre 1 y {{ curriculum.cycle_count }}.
-                        </FieldDescription>
                         <FieldError :errors="[errors.cycle]" />
                     </Field>
                     <Field :data-invalid="Boolean(errors.organization_unit)">
@@ -212,10 +208,6 @@ watch(
                                 </SelectGroup>
                             </SelectContent>
                         </Select>
-                        <FieldDescription>
-                            Si se aparta de la carrera, la carrera pasa a
-                            híbrida y la oferta de esta materia se abre así.
-                        </FieldDescription>
                         <FieldError :errors="[errors.modality]" />
                     </Field>
 

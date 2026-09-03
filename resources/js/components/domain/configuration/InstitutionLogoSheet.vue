@@ -6,7 +6,6 @@ import FormSheet from '@/components/domain/FormSheet.vue';
 import FormSheetActions from '@/components/domain/FormSheetActions.vue';
 import {
     Field,
-    FieldDescription,
     FieldError,
     FieldGroup,
     FieldLabel,
@@ -43,7 +42,7 @@ defineProps<{
                     </div>
                     <Field :data-invalid="Boolean(errors.logo)">
                         <FieldLabel for="institution-logo" required>
-                            Nuevo logo
+                            Nuevo logo (PNG sin fondo)
                         </FieldLabel>
                         <Input
                             id="institution-logo"
@@ -53,10 +52,6 @@ defineProps<{
                             required
                             :aria-invalid="Boolean(errors.logo)"
                         />
-                        <FieldDescription>
-                            PNG sin fondo; se ajusta solo a {{ size.width }} ×
-                            {{ size.height }} píxeles.
-                        </FieldDescription>
                         <FieldError :errors="[errors.logo]" />
                     </Field>
                     <FormSheetActions

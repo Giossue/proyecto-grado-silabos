@@ -7,7 +7,6 @@ import FormSheetActions from '@/components/domain/FormSheetActions.vue';
 import { Button } from '@/components/ui/button';
 import {
     Field,
-    FieldDescription,
     FieldError,
     FieldGroup,
     FieldLabel,
@@ -72,9 +71,6 @@ const open = defineModel<boolean>('open', { default: false });
                             :default-value="source.description ?? ''"
                             :aria-invalid="Boolean(errors.description)"
                         />
-                        <FieldDescription>
-                            Los docentes la ven junto al nombre de la fuente.
-                        </FieldDescription>
                         <FieldError :errors="[errors.description]" />
                     </Field>
 
@@ -88,9 +84,6 @@ const open = defineModel<boolean>('open', { default: false });
                             :default-value="source.internal_notes ?? ''"
                             :aria-invalid="Boolean(errors.internal_notes)"
                         />
-                        <FieldDescription>
-                            Solo las ve la coordinación.
-                        </FieldDescription>
                         <FieldError :errors="[errors.internal_notes]" />
                     </Field>
 

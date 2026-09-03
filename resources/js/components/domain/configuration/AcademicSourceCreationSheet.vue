@@ -6,7 +6,6 @@ import FormSheet from '@/components/domain/FormSheet.vue';
 import FormSheetActions from '@/components/domain/FormSheetActions.vue';
 import {
     Field,
-    FieldDescription,
     FieldError,
     FieldGroup,
     FieldLabel,
@@ -52,9 +51,6 @@ import { Textarea } from '@/components/ui/textarea';
                             name="description"
                             :aria-invalid="Boolean(errors.description)"
                         />
-                        <FieldDescription>
-                            Los docentes la ven junto al nombre de la fuente.
-                        </FieldDescription>
                         <FieldError :errors="[errors.description]" />
                     </Field>
 
@@ -67,9 +63,6 @@ import { Textarea } from '@/components/ui/textarea';
                             name="internal_notes"
                             :aria-invalid="Boolean(errors.internal_notes)"
                         />
-                        <FieldDescription>
-                            Solo las ve la coordinación.
-                        </FieldDescription>
                         <FieldError :errors="[errors.internal_notes]" />
                     </Field>
 

@@ -8,7 +8,6 @@ import FormSheet from '@/components/domain/FormSheet.vue';
 import FormSheetActions from '@/components/domain/FormSheetActions.vue';
 import {
     Field,
-    FieldDescription,
     FieldError,
     FieldGroup,
     FieldLabel,
@@ -77,18 +76,6 @@ const formRoute = computed(() =>
 
                     <Field>
                         <p class="text-sm font-medium">Plantilla</p>
-                        <FieldDescription>
-                            <template v-if="template">
-                                Se usará «{{ template }}», la plantilla
-                                institucional. Los sílabos entregados conservan
-                                su propia copia aunque la plantilla cambie
-                                después.
-                            </template>
-                            <template v-else>
-                                No hay plantilla institucional. Créela en
-                                Plantillas antes de abrir el proceso.
-                            </template>
-                        </FieldDescription>
                     </Field>
 
                     <Field :data-invalid="Boolean(errors.starts_at)">
@@ -102,9 +89,6 @@ const formRoute = computed(() =>
                             :aria-invalid="Boolean(errors.starts_at)"
                             required
                         />
-                        <FieldDescription>
-                            Antes de esta fecha nadie puede enviar su sílabo.
-                        </FieldDescription>
                         <FieldError :errors="[errors.starts_at]" />
                     </Field>
 
@@ -119,10 +103,6 @@ const formRoute = computed(() =>
                             :aria-invalid="Boolean(errors.due_at)"
                             required
                         />
-                        <FieldDescription>
-                            Cada coordinación puede prorrogar la de su carrera;
-                            esta es la fecha de la que parten.
-                        </FieldDescription>
                         <FieldError :errors="[errors.due_at]" />
                     </Field>
 

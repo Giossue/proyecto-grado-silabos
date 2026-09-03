@@ -1,14 +1,13 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3';
 import { CalendarPlus } from '@lucide/vue';
-import { computed, ref } from 'vue';
+import { ref } from 'vue';
 import ConvocationController from '@/actions/App/Modules/Syllabus/Presentation/Http/Controllers/ConvocationController';
 import FormSheet from '@/components/domain/FormSheet.vue';
 import FormSheetActions from '@/components/domain/FormSheetActions.vue';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
     Field,
-    FieldDescription,
     FieldError,
     FieldGroup,
     FieldLabel,
@@ -25,7 +24,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 
-const props = defineProps<{
+defineProps<{
     periods: { id: string; nombre: string }[];
     processes: {
         id: string;
@@ -45,9 +44,6 @@ const groupingMode = ref('por_paralelo');
 // El calendario lo fija Administración: al elegir el proceso se muestra lo que la
 // convocatoria hereda, para que no haga falta ir a mirarlo a otra pantalla.
 const processId = ref('');
-const selectedProcess = computed(() =>
-    props.processes.find((process) => process.id === processId.value),
-);
 
 const processStateLabel = (state: string): string =>
     ({
@@ -55,11 +51,6 @@ const processStateLabel = (state: string): string =>
         abierto: 'abierto',
         pausado: 'en pausa',
     })[state] ?? state;
-
-const formatDate = (value: string): string =>
-    new Intl.DateTimeFormat('es-EC', {
-        dateStyle: 'long',
-    }).format(new Date(value));
 </script>
 
 <template>
@@ -114,17 +105,6 @@ const formatDate = (value: string): string =>
                                 </SelectGroup>
                             </SelectContent>
                         </Select>
-                        <FieldDescription v-if="selectedProcess">
-                            Plantilla {{ selectedProcess.template }}.
-                            Elaboración desde
-                            {{ formatDate(selectedProcess.starts_at) }} hasta
-                            {{ formatDate(selectedProcess.due_at) }}. Podrá
-                            prorrogar la entrega de su carrera después.
-                        </FieldDescription>
-                        <FieldDescription v-else>
-                            Lo abre Administración según el calendario
-                            académico; aquí solo se elige a cuál convocar.
-                        </FieldDescription>
                         <FieldError :errors="[errors.process_id]" />
                     </Field>
 

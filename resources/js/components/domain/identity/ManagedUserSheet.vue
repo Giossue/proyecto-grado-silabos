@@ -8,7 +8,6 @@ import FormSheetActions from '@/components/domain/FormSheetActions.vue';
 import { Button } from '@/components/ui/button';
 import {
     Field,
-    FieldDescription,
     FieldError,
     FieldGroup,
     FieldLabel,
@@ -95,10 +94,6 @@ watch(open, (isOpen) => {
                             required
                             :aria-invalid="Boolean(errors.nombre)"
                         />
-                        <FieldDescription>
-                            Primero los nombres y luego los apellidos. Se guarda
-                            en mayúsculas, con tildes.
-                        </FieldDescription>
                         <FieldError :errors="[errors.nombre]" />
                     </Field>
                     <Field :data-invalid="Boolean(errors.correo_electronico)">

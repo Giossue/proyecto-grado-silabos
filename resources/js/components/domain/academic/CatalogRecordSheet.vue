@@ -8,7 +8,6 @@ import FormSheet from '@/components/domain/FormSheet.vue';
 import FormSheetActions from '@/components/domain/FormSheetActions.vue';
 import {
     Field,
-    FieldDescription,
     FieldError,
     FieldGroup,
     FieldLabel,
@@ -113,7 +112,7 @@ const examples = computed(
                             :data-invalid="Boolean(errors.logo)"
                         >
                             <FieldLabel for="faculty-logo" required>
-                                Logo de la facultad
+                                Logo de la facultad (PNG sin fondo)
                             </FieldLabel>
                             <Input
                                 id="faculty-logo"
@@ -123,11 +122,6 @@ const examples = computed(
                                 required
                                 :aria-invalid="Boolean(errors.logo)"
                             />
-                            <FieldDescription>
-                                PNG sin fondo; se ajusta solo a 600 × 180
-                                píxeles. Encabeza el sílabo de todas sus
-                                carreras.
-                            </FieldDescription>
                             <FieldError :errors="[errors.logo]" />
                         </Field>
                         <Field
@@ -158,10 +152,6 @@ const examples = computed(
                                     </SelectGroup>
                                 </SelectContent>
                             </Select>
-                            <FieldDescription>
-                                Toda carrera debe pertenecer a una facultad
-                                activa.
-                            </FieldDescription>
                             <FieldError :errors="[errors.faculty_id]" />
                         </Field>
                         <Field
@@ -192,11 +182,6 @@ const examples = computed(
                                     </SelectGroup>
                                 </SelectContent>
                             </Select>
-                            <FieldDescription>
-                                La que aprobó el CES. Si Coordinación aparta
-                                alguna materia en la malla, la carrera pasa a
-                                híbrida sola.
-                            </FieldDescription>
                             <FieldError :errors="[errors.modality]" />
                         </Field>
                         <Field
@@ -227,10 +212,6 @@ const examples = computed(
                                     </SelectGroup>
                                 </SelectContent>
                             </Select>
-                            <FieldDescription>
-                                Sede donde se dicta la carrera. Todas sus
-                                ofertas la heredan.
-                            </FieldDescription>
                             <FieldError :errors="[errors.campus_id]" />
                         </Field>
 

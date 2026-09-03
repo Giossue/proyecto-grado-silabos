@@ -8,7 +8,6 @@ import FormSheetActions from '@/components/domain/FormSheetActions.vue';
 import { Button } from '@/components/ui/button';
 import {
     Field,
-    FieldDescription,
     FieldError,
     FieldGroup,
     FieldLabel,
@@ -88,10 +87,6 @@ const open = defineModel<boolean>('open', { default: false });
                             :aria-invalid="Boolean(errors.due_at)"
                             required
                         />
-                        <FieldDescription>
-                            Debe ser posterior a la vigente: adelantarla dejaría
-                            fuera de plazo a quien ya estaba dentro.
-                        </FieldDescription>
                         <FieldError :errors="[errors.due_at]" />
                     </Field>
 

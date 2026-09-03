@@ -7,7 +7,6 @@ import FormSheet from '@/components/domain/FormSheet.vue';
 import FormSheetActions from '@/components/domain/FormSheetActions.vue';
 import {
     Field,
-    FieldDescription,
     FieldError,
     FieldGroup,
     FieldLabel,
@@ -107,13 +106,6 @@ watch(
                                 </SelectGroup>
                             </SelectContent>
                         </Select>
-                        <FieldDescription>
-                            {{
-                                subjectCount === 0
-                                    ? 'La malla activa no tiene materias: ármela primero.'
-                                    : `Se prepararán ${subjectCount} materias. Repetirlo no duplica nada.`
-                            }}
-                        </FieldDescription>
                         <FieldError :errors="[prepareError]" />
                     </Field>
                     <FormSheetActions

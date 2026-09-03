@@ -7,7 +7,6 @@ import FormSheetActions from '@/components/domain/FormSheetActions.vue';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
     Field,
-    FieldDescription,
     FieldError,
     FieldGroup,
     FieldLabel,
@@ -159,10 +158,6 @@ const preparing = props.convocation.state === 'preparacion';
                         <FieldLegend variant="label" required
                             >Fuentes académicas</FieldLegend
                         >
-                        <FieldDescription>
-                            Los análisis de IA que se pidan desde ahora leen
-                            estas fuentes.
-                        </FieldDescription>
                         <FieldError
                             :errors="[
                                 errors.source_ids,

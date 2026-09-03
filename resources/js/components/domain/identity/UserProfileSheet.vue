@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import {
     Field,
-    FieldDescription,
     FieldError,
     FieldGroup,
     FieldLabel,
@@ -78,10 +77,6 @@ const open = defineModel<boolean>('open', { default: false });
                             required
                             :aria-invalid="Boolean(errors.correo_electronico)"
                         />
-                        <FieldDescription>
-                            Con este correo inicia sesión. Si lo cambia, avísele
-                            antes de que intente entrar.
-                        </FieldDescription>
                         <FieldError :errors="[errors.correo_electronico]" />
                     </Field>
 

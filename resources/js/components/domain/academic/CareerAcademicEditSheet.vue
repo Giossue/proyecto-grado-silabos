@@ -8,7 +8,6 @@ import FormSheet from '@/components/domain/FormSheet.vue';
 import FormSheetActions from '@/components/domain/FormSheetActions.vue';
 import {
     Field,
-    FieldDescription,
     FieldError,
     FieldGroup,
     FieldLabel,
@@ -368,10 +367,6 @@ const entityLabel = computed(
                                     </SelectGroup></SelectContent
                                 >
                             </Select>
-                            <FieldDescription>
-                                Aquí cambia quién dicta; el nombre y correo de
-                                la cuenta solo los corrige Administración.
-                            </FieldDescription>
                             <FieldError :errors="[errors.user_id]" />
                         </Field>
                         <Field :data-invalid="Boolean(errors.parallel_id)">

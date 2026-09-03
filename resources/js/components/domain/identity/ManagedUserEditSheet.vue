@@ -11,7 +11,6 @@ import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import {
     Field,
     FieldContent,
-    FieldDescription,
     FieldError,
     FieldGroup,
     FieldLabel,
@@ -99,10 +98,6 @@ watch(open, (isOpen) => {
                             required
                             :aria-invalid="Boolean(errors.nombre)"
                         />
-                        <FieldDescription>
-                            Primero los nombres y luego los apellidos. Se guarda
-                            en mayúsculas, con tildes.
-                        </FieldDescription>
                         <FieldError :errors="[errors.nombre]" />
                     </Field>
 
@@ -122,10 +117,6 @@ watch(open, (isOpen) => {
                             required
                             :aria-invalid="Boolean(errors.correo_electronico)"
                         />
-                        <FieldDescription>
-                            Con este correo inicia sesión. Si lo cambia, avísele
-                            antes de que intente entrar.
-                        </FieldDescription>
                         <FieldError :errors="[errors.correo_electronico]" />
                     </Field>
 
@@ -148,11 +139,6 @@ watch(open, (isOpen) => {
                                 >
                                     Cuenta activa
                                 </FieldLabel>
-                                <FieldDescription>
-                                    Sin marcar, la cuenta no puede iniciar
-                                    sesión: al guardar se cierran sus sesiones
-                                    abiertas y sus coordinaciones vigentes.
-                                </FieldDescription>
                                 <FieldError :errors="[errors.active]" />
                             </FieldContent>
                         </Field>
@@ -168,10 +154,6 @@ watch(open, (isOpen) => {
                                 >
                                     Asignar otro rol
                                 </FieldLabel>
-                                <FieldDescription>
-                                    Los roles activos se conservan; el nuevo se
-                                    añade con su alcance.
-                                </FieldDescription>
                             </FieldContent>
                         </Field>
 

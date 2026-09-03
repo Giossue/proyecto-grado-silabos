@@ -9,7 +9,6 @@ import FormSheetActions from '@/components/domain/FormSheetActions.vue';
 import { Button } from '@/components/ui/button';
 import {
     Field,
-    FieldDescription,
     FieldError,
     FieldGroup,
     FieldLabel,
@@ -116,7 +115,7 @@ const facultyOptions = computed(() =>
                         :data-invalid="Boolean(errors.logo)"
                     >
                         <FieldLabel :for="`edit-faculty-logo-${recordId}`">
-                            Logo de la facultad
+                            Logo de la facultad (PNG sin fondo)
                         </FieldLabel>
                         <img
                             v-if="logoUrl"
@@ -131,10 +130,6 @@ const facultyOptions = computed(() =>
                             accept="image/png"
                             :aria-invalid="Boolean(errors.logo)"
                         />
-                        <FieldDescription>
-                            Para reemplazarlo: PNG sin fondo; se ajusta solo a
-                            600 × 180 píxeles.
-                        </FieldDescription>
                         <FieldError :errors="[errors.logo]" />
                     </Field>
                     <Field
@@ -172,9 +167,6 @@ const facultyOptions = computed(() =>
                                 </SelectGroup>
                             </SelectContent>
                         </Select>
-                        <FieldDescription>
-                            Reasignar una carrera exige otra facultad activa.
-                        </FieldDescription>
                         <FieldError :errors="[errors.faculty_id]" />
                     </Field>
                     <Field
@@ -209,13 +201,6 @@ const facultyOptions = computed(() =>
                                 </SelectGroup>
                             </SelectContent>
                         </Select>
-                        <FieldDescription>
-                            {{
-                                hybrid
-                                    ? 'Hoy la carrera es híbrida: Coordinación apartó materias de esta base. La base no se puede cambiar hasta alinearlas en la malla.'
-                                    : 'Las ofertas nuevas la heredan; las ya abiertas no cambian.'
-                            }}
-                        </FieldDescription>
                         <FieldError :errors="[errors.modality]" />
                     </Field>
                     <Field
@@ -251,10 +236,6 @@ const facultyOptions = computed(() =>
                                 </SelectGroup>
                             </SelectContent>
                         </Select>
-                        <FieldDescription>
-                            Las ofertas nuevas lo heredan; las ya abiertas no
-                            cambian.
-                        </FieldDescription>
                         <FieldError :errors="[errors.campus_id]" />
                     </Field>
                     <Field :data-invalid="Boolean(errors.nombre)">

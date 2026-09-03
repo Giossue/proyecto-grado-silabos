@@ -6,10 +6,10 @@ import ReviewController from '@/actions/App/Modules/Syllabus/Presentation/Http/C
 import DatePicker from '@/components/DatePicker.vue';
 import FormSheet from '@/components/domain/FormSheet.vue';
 import FormSheetActions from '@/components/domain/FormSheetActions.vue';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
     Field,
-    FieldDescription,
     FieldError,
     FieldGroup,
     FieldLabel,
@@ -73,6 +73,13 @@ const idempotencyKey = `transfer-${props.syllabusId}-${Math.trunc(performance.no
                     :value="idempotencyKey"
                 />
                 <FieldGroup>
+                    <Alert v-if="discardsDraft" variant="destructive">
+                        <AlertDescription>
+                            El borrador que no se ha enviado se descartará y el
+                            docente entrante empezará limpio. La operación no se
+                            deshace; el avance perdido queda en auditoría.
+                        </AlertDescription>
+                    </Alert>
                     <Field :data-invalid="Boolean(errors.outgoing_user_id)">
                         <FieldLabel for="transfer-outgoing" required>
                             Docente saliente
@@ -126,9 +133,6 @@ const idempotencyKey = `transfer-${props.syllabusId}-${Math.trunc(performance.no
                                 </SelectGroup>
                             </SelectContent>
                         </Select>
-                        <FieldDescription>
-                            Solo docentes con rol vigente en esta carrera.
-                        </FieldDescription>
                         <FieldError :errors="[errors.incoming_user_id]" />
                     </Field>
 
@@ -192,13 +196,6 @@ const idempotencyKey = `transfer-${props.syllabusId}-${Math.trunc(performance.no
                             :errors="[errors.backing_date, errors.syllabus]"
                         />
                     </Field>
-
-                    <FieldDescription v-if="discardsDraft">
-                        El borrador que no se ha enviado se descartará y el
-                        docente entrante empezará limpio. La operación no se
-                        deshace; el avance perdido queda registrado en
-                        auditoría.
-                    </FieldDescription>
 
                     <FormSheetActions
                         :close="close"
