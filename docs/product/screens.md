@@ -113,8 +113,11 @@
 - Editor y revisión usan navegación por secciones, completitud, errores, observaciones y
   estado de guardado sin saturar la pantalla.
 - ADM-06 alterna entre **Editar** y **Vista previa**, como el editor de fuentes. La vista
-  previa pinta el sílabo con texto de relleno según el tipo de contenido de cada campo
-  (párrafo, tabla, lista con viñetas o numerada). Con el proceso abierto la plantilla se
+  previa pinta una hoja carta como saldrá impresa, con texto de relleno según el tipo de
+  contenido de cada campo (párrafo, tabla, lista con viñetas o numerada). Estándar del
+  impreso: logos institucionales, título azul centrado, Arial 11 pt, bloques numerados
+  «1.» y campos «1.1» en negrita, márgenes de 2.5 cm, tablas con cabecera azul y filas
+  alternas celestes. El formato lo pone la plantilla; el docente solo llena contenido. Con el proceso abierto la plantilla se
   protege pero sigue visible: **Estructura** lista bloques, campos y tipos sin formularios.
   Las fuentes son documentos editables: COR-11 abre el contenido en un editor Markdown con
   cinta de opciones y vista previa.
