@@ -3,6 +3,7 @@
 namespace App\Modules\Syllabus\Presentation\Http\Requests;
 
 use App\Modules\Syllabus\Application\ConvocationSchedule;
+use App\Modules\Syllabus\Application\ProcessDates;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\SyllabusProcess;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -15,6 +16,12 @@ class ExtendProcessDeadlineRequest extends FormRequest
 
         return $process instanceof SyllabusProcess
             && $this->user()?->can('extendDeadline', $process) === true;
+    }
+
+    /** Una prórroga a fecha sola vale hasta el final de ese día. */
+    protected function prepareForValidation(): void
+    {
+        $this->merge(['due_at' => ProcessDates::endOfDay($this->input('due_at'))]);
     }
 
     /** @return array<string, list<mixed>> */

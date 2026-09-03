@@ -76,6 +76,26 @@ class SyllabusProcessTest extends TestCase
                 ->where('processes.0.state', 'preparacion'));
     }
 
+    public function test_process_dates_arrive_as_days_and_cover_the_whole_deadline_day(): void
+    {
+        $template = $this->publishedTemplate();
+        $start = now()->addDay()->toDateString();
+        $due = now()->addMonth()->toDateString();
+
+        $this->actingAsAdministrator()
+            ->post(route('admin.processes.store'), [
+                'nombre' => 'Proceso por días',
+                'starts_at' => $start,
+                'due_at' => $due,
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $process = SyllabusProcess::query()->where('nombre', 'Proceso por días')->firstOrFail();
+        $this->assertSame("{$start} 00:00:00", $process->inicia_en->format('Y-m-d H:i:s'));
+        $this->assertSame("{$due} 23:59:59", $process->entrega_en->format('Y-m-d H:i:s'));
+    }
+
     public function test_only_one_process_can_be_in_progress(): void
     {
         $template = $this->publishedTemplate();

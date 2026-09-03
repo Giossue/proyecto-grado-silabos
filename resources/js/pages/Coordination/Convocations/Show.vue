@@ -93,7 +93,6 @@ const formatDate = (value: string | null): string =>
     value
         ? new Intl.DateTimeFormat('es-EC', {
               dateStyle: 'long',
-              timeStyle: 'short',
           }).format(new Date(value))
         : 'Sin fecha';
 

@@ -62,7 +62,6 @@ const stateLabel = (state: string): string =>
 const formatDate = (value: string): string =>
     new Intl.DateTimeFormat('es-EC', {
         dateStyle: 'medium',
-        timeStyle: 'short',
     }).format(new Date(value));
 
 const filter = useClientFilter(

@@ -132,7 +132,10 @@
   orden (Administración: facultades, carreras, campus, modalidades, periodo, cuentas,
   coordinadores, plantilla, proceso; Coordinación: malla, ofertas, paralelos, docentes,
   fuentes, convocatoria; Docencia: recibir, iniciar, enviar). Cada paso se calcula con
-  datos reales; el siguiente lleva su botón y la tarjeta desaparece al completarse.
+  datos reales; el siguiente lleva su botón y la tarjeta desaparece al completarse. El
+  encabezado repite el avance en miniatura (barra con color y «n/m», tooltip
+  «Configuración del sistema») y lleva al Panel; se recalcula en cada petición, así
+  que reaparece si algo se borra.
 - Encabezado del sílabo: logo de la universidad (uno, lo reemplaza Administración desde
   «Logo de la universidad» en la plantilla) y logo de la facultad de la carrera
   (obligatorio al crear la facultad en ADM-04; se reemplaza al editarla). Ambos PNG sin

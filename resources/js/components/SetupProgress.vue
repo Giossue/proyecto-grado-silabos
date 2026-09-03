@@ -28,12 +28,13 @@ const visible = computed(
         progress.value.total > 0 &&
         progress.value.done < progress.value.total,
 );
+/** Color según lo que falta; también tiñe el conteo para que se lea aun al 0 %. */
 const tone = computed(() =>
     percent.value < 34
-        ? 'bg-destructive'
+        ? { bar: 'bg-destructive', text: 'text-destructive' }
         : percent.value < 67
-          ? 'bg-amber-500'
-          : 'bg-emerald-600',
+          ? { bar: 'bg-amber-500', text: 'text-amber-600' }
+          : { bar: 'bg-emerald-600', text: 'text-emerald-700' },
 );
 </script>
 
@@ -43,7 +44,6 @@ const tone = computed(() =>
             <Link
                 :href="dashboard()"
                 class="flex h-8 items-center gap-2 rounded-md px-2 text-xs text-muted-foreground tabular-nums hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                :aria-label="`Configuración del sistema: ${progress.done} de ${progress.total} pasos`"
             >
                 <span
                     class="h-1.5 w-20 overflow-hidden rounded-full bg-muted"
@@ -51,11 +51,16 @@ const tone = computed(() =>
                 >
                     <span
                         class="block h-full rounded-full transition-[width]"
-                        :class="tone"
+                        :class="tone.bar"
                         :style="{ width: `${percent}%` }"
                     />
                 </span>
-                <span>{{ progress.done }}/{{ progress.total }}</span>
+                <span class="font-medium" :class="tone.text">
+                    {{ progress.done }}/{{ progress.total }}
+                </span>
+                <span class="sr-only">
+                    pasos de configuración del sistema completados
+                </span>
             </Link>
         </TooltipTrigger>
         <TooltipContent>Configuración del sistema</TooltipContent>

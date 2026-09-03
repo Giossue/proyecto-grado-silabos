@@ -3,7 +3,7 @@ import { Form } from '@inertiajs/vue3';
 import { CalendarPlus, Check } from '@lucide/vue';
 import { computed } from 'vue';
 import SyllabusProcessController from '@/actions/App/Modules/Syllabus/Presentation/Http/Controllers/SyllabusProcessController';
-import DateTimePicker from '@/components/DateTimePicker.vue';
+import DatePicker from '@/components/DatePicker.vue';
 import FormSheet from '@/components/domain/FormSheet.vue';
 import FormSheetActions from '@/components/domain/FormSheetActions.vue';
 import {
@@ -95,10 +95,10 @@ const formRoute = computed(() =>
                         <FieldLabel for="process-starts" required>
                             Inicio de la elaboración
                         </FieldLabel>
-                        <DateTimePicker
+                        <DatePicker
                             id="process-starts"
                             name="starts_at"
-                            :default-value="process?.starts_at"
+                            :default-value="process?.starts_at?.slice(0, 10)"
                             :aria-invalid="Boolean(errors.starts_at)"
                             required
                         />
@@ -112,10 +112,10 @@ const formRoute = computed(() =>
                         <FieldLabel for="process-due" required>
                             Fecha límite de entrega
                         </FieldLabel>
-                        <DateTimePicker
+                        <DatePicker
                             id="process-due"
                             name="due_at"
-                            :default-value="process?.due_at"
+                            :default-value="process?.due_at?.slice(0, 10)"
                             :aria-invalid="Boolean(errors.due_at)"
                             required
                         />
