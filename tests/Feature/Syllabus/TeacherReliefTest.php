@@ -156,7 +156,6 @@ class TeacherReliefTest extends TestCase
         TeacherAssignment::query()->create([
             'usuario_id' => $teacher->id,
             'paralelo_id' => $parallel->id,
-            'vigente_desde' => now()->subMonth(),
             'activo' => true,
         ]);
 

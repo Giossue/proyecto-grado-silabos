@@ -101,7 +101,6 @@ const {
                             <TableHead>Materia</TableHead>
                             <TableHead>Periodo</TableHead>
                             <TableHead>Paralelo</TableHead>
-                            <TableHead>Vigencia</TableHead>
                             <TableHead>Estado</TableHead>
                             <TableHead class="text-right">Acciones</TableHead>
                         </TableRow>
@@ -109,7 +108,7 @@ const {
                     <TableBody>
                         <TableEmpty
                             v-if="teacherAssignments.length === 0"
-                            :colspan="7"
+                            :colspan="6"
                         >
                             {{
                                 filter.active.value
@@ -128,10 +127,6 @@ const {
                             <TableCell>{{ item.subject_name }}</TableCell>
                             <TableCell>{{ item.period_name }}</TableCell>
                             <TableCell>{{ item.parallel_code }}</TableCell>
-                            <TableCell>
-                                {{ item.valid_from }} →
-                                {{ item.valid_until ?? 'Sin fecha de fin' }}
-                            </TableCell>
                             <TableCell>
                                 {{ item.active ? 'Activa' : 'Archivada' }}
                             </TableCell>

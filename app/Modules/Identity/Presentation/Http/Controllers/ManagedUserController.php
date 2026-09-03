@@ -56,6 +56,8 @@ class ManagedUserController extends Controller
                 'activo',
                 'debe_cambiar_contrasena',
                 'desactivado_en',
+                'vigente_desde',
+                'vigente_hasta',
                 'dos_factores_confirmado_en',
                 'creado_en',
             ])
@@ -110,6 +112,8 @@ class ManagedUserController extends Controller
                     'pending_first_login' => $user->debe_cambiar_contrasena,
                     'created_at' => $user->creado_en?->toIso8601String(),
                     'deactivated_at' => $user->desactivado_en?->toIso8601String(),
+                    'valid_from' => $user->vigente_desde?->toDateString(),
+                    'valid_until' => $user->vigente_hasta?->toDateString(),
                     'two_factor_enabled' => $user->dos_factores_confirmado_en !== null,
                     'roles' => $effective->map(fn ($assignment) => [
                         'name' => $assignment->role->nombre,
@@ -148,6 +152,8 @@ class ManagedUserController extends Controller
             'nombre' => $request->string('nombre')->toString(),
             'correo_electronico' => $request->string('correo_electronico')->toString(),
             'password' => $request->string('password')->toString(),
+            'valid_from' => $request->string('valid_from')->toString(),
+            'valid_until' => $request->filled('valid_until') ? $request->string('valid_until')->toString() : null,
             'role_code' => $request->string('role_code')->toString(),
             'career_id' => $request->filled('career_id') ? $request->string('career_id')->toString() : null,
         ], $actor, $request);
@@ -167,6 +173,8 @@ class ManagedUserController extends Controller
                 'nombre' => $user->nombre,
                 'correo_electronico' => $user->correo_electronico,
                 'active' => $user->activo,
+                'valid_from' => $user->vigente_desde?->toDateString(),
+                'valid_until' => $user->vigente_hasta?->toDateString(),
                 'assignments' => $user->roleAssignments->map(fn ($assignment) => [
                     'id' => $assignment->id,
                     'role_name' => $assignment->role->nombre,

@@ -378,11 +378,11 @@ class AcademicStructureViewData
                 fn ($query) => $query->where('carrera_id', $careerId),
             )
             ->with([
-                'user:id,nombre,correo_electronico',
+                'user:id,nombre,correo_electronico,vigente_desde,vigente_hasta',
                 'parallel.offering.subject:id,nombre,codigo_institucional',
                 'parallel.offering.academicPeriod:id,nombre',
             ])
-            ->orderByDesc('vigente_desde')
+            ->orderByDesc('creado_en')
             ->get();
         $usedAssignmentIds = SyllabusCollaborator::query()
             ->whereIn('asignacion_docente_id', $teacherAssignments->pluck('id'))
@@ -401,8 +401,6 @@ class AcademicStructureViewData
                     'parallel_code' => $assignment->parallel->codigo,
                     'subject_name' => $assignment->parallel->offering->subject->nombre,
                     'period_name' => $assignment->parallel->offering->academicPeriod->nombre,
-                    'valid_from' => $assignment->vigente_desde->toDateString(),
-                    'valid_until' => $assignment->vigente_hasta?->toDateString(),
                     'active' => $assignment->activo,
                     'editable' => ! $usedAssignmentIds->has($assignment->id),
                 ]),
@@ -424,6 +422,7 @@ class AcademicStructureViewData
                     ]),
                 'teacherUsers' => User::query()
                     ->where('activo', true)
+                    ->laborallyEffective()
                     ->whereIn('id', RoleAssignment::query()
                         ->select('usuario_id')
                         ->effective()

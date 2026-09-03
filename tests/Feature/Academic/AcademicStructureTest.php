@@ -643,8 +643,6 @@ class AcademicStructureTest extends TestCase
             ]), [
                 'user_id' => $teacher->id,
                 'parallel_id' => $parallel->id,
-                'valid_from' => '2026-01-01',
-                'valid_until' => '2026-12-31',
             ])
             ->assertRedirect();
 
@@ -652,8 +650,8 @@ class AcademicStructureTest extends TestCase
         $this->assertSame(Career::query()->findOrFail($this->coordinatorContext->carrera_id)->campus_id, $offering->fresh()->campus_id);
         $this->assertSame('B', $parallel->fresh()->codigo);
         $this->assertSame('vespertina', $parallel->fresh()->jornada);
-        $this->assertSame('2026-12-31', $assignment->fresh()->vigente_hasta?->toDateString());
-        $this->assertSame(3, AuditEvent::query()
+        $this->assertSame($teacher->id, $assignment->fresh()->usuario_id);
+        $this->assertSame(2, AuditEvent::query()
             ->whereIn('accion', [
                 'academico.oferta.actualizacion',
                 'academico.paralelo.actualizacion',
@@ -1472,7 +1470,7 @@ class AcademicStructureTest extends TestCase
         ]);
     }
 
-    public function test_postgresql_rejects_overlapping_teacher_assignments_for_same_parallel(): void
+    public function test_postgresql_rejects_duplicate_teacher_assignments_for_same_parallel(): void
     {
         $existing = TeacherAssignment::query()->firstOrFail();
 
@@ -1480,8 +1478,6 @@ class AcademicStructureTest extends TestCase
         TeacherAssignment::query()->create([
             'usuario_id' => $existing->usuario_id,
             'paralelo_id' => $existing->paralelo_id,
-            'vigente_desde' => now()->subMonth(),
-            'vigente_hasta' => now()->addMonth(),
             'activo' => true,
         ]);
     }

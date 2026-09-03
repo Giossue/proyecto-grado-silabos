@@ -179,13 +179,10 @@ class DatabaseSeeder extends Seeder
             ];
             $teacherAssignment = TeacherAssignment::query()
                 ->where($teacherScope)
-                ->whereNull('vigente_hasta')
                 ->first();
             if ($teacherAssignment === null) {
                 TeacherAssignment::query()->create([
                     ...$teacherScope,
-                    'vigente_desde' => '2026-01-01 00:00:00',
-                    'vigente_hasta' => null,
                     'activo' => true,
                 ]);
             } elseif (! $teacherAssignment->activo) {

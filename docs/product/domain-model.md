@@ -4,13 +4,17 @@
 
 ### Identidad y alcance
 
-- `Usuario`: persona autenticable, activa o inactiva. Su nombre se guarda normalizado
+- `Usuario`: persona autenticable, activa o inactiva, con una vigencia laboral general
+  (`vigente_desde`/`vigente_hasta`) que aplica por igual a Administrador, Coordinador y
+  Docente. Su nombre se guarda normalizado
   (I-32): mayúsculas con tildes, primero nombres y luego apellidos, sin espacios
   sobrantes; `PersonName::normalize` lo aplica en toda escritura.
 - `Rol`: Administrador, Coordinador o Docente.
 - `AsignacionRol`: rol, alcance y vigencia; una persona puede tener varias.
 - `AsignacionCoordinador` y `AsignacionDocente`: vinculan responsabilidad académica.
   Ambas guardan la referencia del acto que las respalda —tipo, número y fecha—. La
+  asignación docente no duplica vigencia laboral: solo conecta al docente con el paralelo.
+  La
   coordinación distingue además titular de encargado; un encargo exige fecha de fin, que
   la base impone, porque sin ella sería una titularidad sin nombrar. Las atribuciones del
   encargado son las mismas que las del titular.

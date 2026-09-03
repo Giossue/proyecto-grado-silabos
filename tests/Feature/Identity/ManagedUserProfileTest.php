@@ -145,6 +145,7 @@ class ManagedUserProfileTest extends TestCase
                 'nombre' => 'Docente Nueva',
                 'correo_electronico' => 'docente.nueva@silabos.test',
                 'password' => 'Temporal-2026!',
+                'valid_from' => now()->toDateString(),
                 'role_code' => RoleCode::Teacher->value,
                 'career_id' => $career->id,
             ])

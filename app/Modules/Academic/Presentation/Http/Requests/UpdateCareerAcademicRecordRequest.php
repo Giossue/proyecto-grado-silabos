@@ -115,8 +115,6 @@ class UpdateCareerAcademicRecordRequest extends FormRequest
                                 ->where('carrera_id', $this->careerId())
                                 ->where('estado', 'activa')))),
                 ],
-                'valid_from' => ['required', 'date'],
-                'valid_until' => ['nullable', 'date', 'after:valid_from'],
             ],
             default => [],
         };

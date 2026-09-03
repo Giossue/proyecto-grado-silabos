@@ -7,6 +7,7 @@ use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -29,6 +30,8 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property Carbon|null $correo_verificado_en
  * @property string $contrasena
  * @property bool $activo
+ * @property Carbon|null $vigente_desde
+ * @property Carbon|null $vigente_hasta
  * @property bool $debe_cambiar_contrasena
  * @property Carbon|null $desactivado_en
  * @property string|null $secreto_dos_factores
@@ -41,7 +44,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property string|null $two_factor_recovery_codes
  * @property mixed $two_factor_confirmed_at
  */
-#[Fillable(['nombre', 'correo_electronico', 'documento_identidad', 'contrasena', 'activo', 'desactivado_en', 'debe_cambiar_contrasena'])]
+#[Fillable(['nombre', 'correo_electronico', 'documento_identidad', 'contrasena', 'activo', 'vigente_desde', 'vigente_hasta', 'desactivado_en', 'debe_cambiar_contrasena'])]
 #[Hidden(['contrasena', 'secreto_dos_factores', 'codigos_recuperacion_dos_factores', 'codigo_recordarme'])]
 class User extends Authenticatable
 {
@@ -94,6 +97,24 @@ class User extends Authenticatable
         return $this->correo_electronico;
     }
 
+    /** Una fecha nula conserva las cuentas históricas cuya relación laboral no se registró. */
+    public function isLaborallyEffective(): bool
+    {
+        $today = now()->toDateString();
+
+        return ($this->vigente_desde === null || $this->vigente_desde->toDateString() <= $today)
+            && ($this->vigente_hasta === null || $this->vigente_hasta->toDateString() >= $today);
+    }
+
+    /** @param Builder<User> $query */
+    public function scopeLaborallyEffective(Builder $query): void
+    {
+        $today = now()->toDateString();
+        $query
+            ->where(fn (Builder $validity) => $validity->whereNull('vigente_desde')->orWhere('vigente_desde', '<=', $today))
+            ->where(fn (Builder $validity) => $validity->whereNull('vigente_hasta')->orWhere('vigente_hasta', '>=', $today));
+    }
+
     /** Fortify lee y escribe `two_factor_secret` por literal.
      *
      * @return Attribute<string|null, string|null>
@@ -138,6 +159,8 @@ class User extends Authenticatable
             'correo_verificado_en' => 'datetime',
             'contrasena' => 'hashed',
             'activo' => 'boolean',
+            'vigente_desde' => 'immutable_date',
+            'vigente_hasta' => 'immutable_date',
             'debe_cambiar_contrasena' => 'boolean',
             'desactivado_en' => 'datetime',
             'dos_factores_confirmado_en' => 'datetime',

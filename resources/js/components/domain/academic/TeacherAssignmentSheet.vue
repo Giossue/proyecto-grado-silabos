@@ -2,7 +2,6 @@
 import { Form } from '@inertiajs/vue3';
 import { UserPlus } from '@lucide/vue';
 import CareerAcademicStructureController from '@/actions/App/Modules/Academic/Presentation/Http/Controllers/CareerAcademicStructureController';
-import DatePicker from '@/components/DatePicker.vue';
 import FormSheet from '@/components/domain/FormSheet.vue';
 import FormSheetActions from '@/components/domain/FormSheetActions.vue';
 import {
@@ -28,7 +27,7 @@ defineProps<Pick<AcademicStructureProps, 'options'>>();
     <FormSheet
         trigger-label="Asignar docente"
         title="Asignar docente"
-        description="Seleccione una cuenta con rol Docente vigente y un paralelo perteneciente a esta carrera."
+        description="Seleccione una cuenta con rol Docente y vigencia laboral actual, y un paralelo perteneciente a esta carrera."
     >
         <template #default="{ close }">
             <Form
@@ -95,29 +94,6 @@ defineProps<Pick<AcademicStructureProps, 'options'>>();
                             </SelectContent>
                         </Select>
                         <FieldError :errors="[errors.parallel_id]" />
-                    </Field>
-                    <Field :data-invalid="Boolean(errors.valid_from)">
-                        <FieldLabel for="teacher-valid-from" required>
-                            Vigente desde
-                        </FieldLabel>
-                        <DatePicker
-                            id="teacher-valid-from"
-                            name="valid_from"
-                            required
-                            :aria-invalid="Boolean(errors.valid_from)"
-                        />
-                        <FieldError :errors="[errors.valid_from]" />
-                    </Field>
-                    <Field :data-invalid="Boolean(errors.valid_until)">
-                        <FieldLabel for="teacher-valid-until">
-                            Vigente hasta
-                        </FieldLabel>
-                        <DatePicker
-                            id="teacher-valid-until"
-                            name="valid_until"
-                            :aria-invalid="Boolean(errors.valid_until)"
-                        />
-                        <FieldError :errors="[errors.valid_until]" />
                     </Field>
                     <FormSheetActions
                         :close="close"

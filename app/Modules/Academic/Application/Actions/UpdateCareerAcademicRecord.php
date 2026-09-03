@@ -54,8 +54,6 @@ class UpdateCareerAcademicRecord
         'oferta_academica_id' => 'Oferta académica',
         'usuario_id' => 'Docente',
         'paralelo_id' => 'Paralelo',
-        'vigente_desde' => 'Vigente desde',
-        'vigente_hasta' => 'Vigente hasta',
     ];
 
     /** @var array<string, string> */
@@ -69,8 +67,6 @@ class UpdateCareerAcademicRecord
         'modalidad' => 'modality',
         'creditos' => 'credits',
         'horas_totales' => 'total_hours',
-        'vigente_desde' => 'valid_from',
-        'vigente_hasta' => 'valid_until',
     ];
 
     public function __construct(
@@ -322,6 +318,7 @@ class UpdateCareerAcademicRecord
             ->where('usuario_id', $userId)
             ->where('carrera_id', $careerId)
             ->whereHas('role', fn ($query) => $query->where('codigo', RoleCode::Teacher->value))
+            ->whereHas('user', fn ($query) => $query->where('activo', true)->laborallyEffective())
             ->exists();
 
         if (! $hasRole) {
@@ -333,8 +330,6 @@ class UpdateCareerAcademicRecord
         return [
             'usuario_id' => $userId,
             'paralelo_id' => $parallel->id,
-            'vigente_desde' => $data['valid_from'],
-            'vigente_hasta' => $data['valid_until'] ?? null,
         ];
     }
 

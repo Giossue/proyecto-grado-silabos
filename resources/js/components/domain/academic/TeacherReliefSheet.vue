@@ -39,7 +39,7 @@ const outgoingTeachers = computed(() => {
     const seen = new Map<string, { id: string; name: string; count: number }>();
 
     for (const assignment of props.teacherAssignments) {
-        if (!assignment.active || assignment.valid_until) {
+        if (!assignment.active) {
             continue;
         }
 
@@ -67,7 +67,7 @@ const idempotencyKey = `relief-${Math.trunc(performance.now())}-${Math.random().
     <FormSheet
         trigger-label="Relevar docente"
         title="Relevar a un docente en todos sus paralelos"
-        description="Cierra la vigencia de quien sale y abre la de quien entra sobre todos los paralelos que tiene en la carrera, sílabos incluidos."
+        description="Archiva las asignaciones de quien sale y asigna a quien entra en todos sus paralelos de la carrera, sílabos incluidos."
     >
         <template #trigger>
             <Button variant="outline">Relevar docente</Button>

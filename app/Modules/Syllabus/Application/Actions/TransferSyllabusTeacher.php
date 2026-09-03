@@ -17,8 +17,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Relevar a un docente son dos cosas que deben ocurrir juntas: cerrar su vigencia y abrir
- * la del reemplazo sobre los mismos paralelos. Hacerlas por separado deja una ventana en
+ * Relevar a un docente son dos cosas que deben ocurrir juntas: archivar su asignación y
+ * abrir la del reemplazo sobre los mismos paralelos. Hacerlas por separado deja una ventana en
  * la que el expediente no tiene responsable, y la apertura de convocatoria ya rechaza los
  * paralelos sin docente vigente.
  *
@@ -62,7 +62,7 @@ class TransferSyllabusTeacher
             ]);
         }
 
-        $incoming = User::query()->where('activo', true)->find($incomingUserId);
+        $incoming = User::query()->where('activo', true)->laborallyEffective()->find($incomingUserId);
         if ($incoming === null) {
             throw ValidationException::withMessages([
                 'incoming_user_id' => 'La cuenta del docente entrante no existe o está inactiva.',
@@ -96,15 +96,13 @@ class TransferSyllabusTeacher
                 ]);
             }
 
-            $now = now();
             foreach ($collaborations as $collaboration) {
                 $previous = $collaboration->teacherAssignment;
-                $previous->update(['vigente_hasta' => $now, 'activo' => false]);
+                $previous->update(['activo' => false]);
 
                 $replacement = TeacherAssignment::query()->create([
                     'usuario_id' => $incomingUserId,
                     'paralelo_id' => $previous->paralelo_id,
-                    'vigente_desde' => $now,
                     'activo' => true,
                     'sustento_tipo' => $backing['type'],
                     'sustento_numero' => $backing['number'],
@@ -179,6 +177,7 @@ class TransferSyllabusTeacher
             ->where('usuario_id', $userId)
             ->where('carrera_id', $careerId)
             ->whereHas('role', fn ($query) => $query->where('codigo', RoleCode::Teacher->value))
+            ->whereHas('user', fn ($query) => $query->where('activo', true)->laborallyEffective())
             ->effective()
             ->exists();
     }

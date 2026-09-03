@@ -112,8 +112,6 @@ export type AcademicStructureProps = {
         parallel_code: string;
         subject_name: string;
         period_name: string;
-        valid_from: string;
-        valid_until: string | null;
         active: boolean;
         editable: boolean;
     }[];

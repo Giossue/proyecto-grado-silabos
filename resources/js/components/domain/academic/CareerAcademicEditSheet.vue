@@ -3,7 +3,6 @@ import { Form } from '@inertiajs/vue3';
 import { Check } from '@lucide/vue';
 import { computed } from 'vue';
 import CareerAcademicStructureController from '@/actions/App/Modules/Academic/Presentation/Http/Controllers/CareerAcademicStructureController';
-import DatePicker from '@/components/DatePicker.vue';
 import FormSheet from '@/components/domain/FormSheet.vue';
 import FormSheetActions from '@/components/domain/FormSheetActions.vue';
 import {
@@ -41,8 +40,6 @@ export type CareerAcademicEditableRecord = {
     offering_id?: string;
     user_id?: string;
     parallel_id?: string;
-    valid_from?: string;
-    valid_until?: string | null;
 };
 
 const props = defineProps<{
@@ -399,33 +396,6 @@ const entityLabel = computed(
                                 >
                             </Select>
                             <FieldError :errors="[errors.parallel_id]" />
-                        </Field>
-                        <Field :data-invalid="Boolean(errors.valid_from)">
-                            <FieldLabel
-                                :for="`edit-teacher-from-${record.id}`"
-                                required
-                                >Vigente desde</FieldLabel
-                            >
-                            <DatePicker
-                                :id="`edit-teacher-from-${record.id}`"
-                                name="valid_from"
-                                :default-value="record.valid_from"
-                                required
-                                :aria-invalid="Boolean(errors.valid_from)"
-                            />
-                            <FieldError :errors="[errors.valid_from]" />
-                        </Field>
-                        <Field :data-invalid="Boolean(errors.valid_until)">
-                            <FieldLabel :for="`edit-teacher-until-${record.id}`"
-                                >Vigente hasta</FieldLabel
-                            >
-                            <DatePicker
-                                :id="`edit-teacher-until-${record.id}`"
-                                name="valid_until"
-                                :default-value="record.valid_until ?? ''"
-                                :aria-invalid="Boolean(errors.valid_until)"
-                            />
-                            <FieldError :errors="[errors.valid_until]" />
                         </Field>
                     </template>
 

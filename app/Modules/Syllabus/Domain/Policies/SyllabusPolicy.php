@@ -105,8 +105,7 @@ class SyllabusPolicy
             ->where('usuario_id', $user->id)
             ->whereHas('teacherAssignment', fn ($query) => $query
                 ->where('activo', true)
-                ->where('vigente_desde', '<=', now())
-                ->where(fn ($validity) => $validity->whereNull('vigente_hasta')->orWhere('vigente_hasta', '>', now())))
+                ->whereHas('user', fn ($userQuery) => $userQuery->where('activo', true)->laborallyEffective()))
             ->exists();
     }
 }

@@ -198,7 +198,6 @@ it('conserva en el servidor las obligaciones minimas y condicionales', function 
     $requests = [
         'Academic/Presentation/Http/Requests/StoreAcademicRecordRequest.php' => [
             "'user_id' => ['required'",
-            "'valid_from' => ['required'",
             "'required_if:quality,encargado'",
         ],
         'Configuration/Presentation/Http/Requests/CreateSourceRequest.php' => [
@@ -212,6 +211,7 @@ it('conserva en el servidor las obligaciones minimas y condicionales', function 
             "'block_id' => [",
         ],
         'Identity/Presentation/Http/Requests/CreateManagedUserRequest.php' => [
+            "'valid_from' => ['required'",
             "'role_code' => ['required'",
             "'required_unless:role_code,'.RoleCode::Administrator->value",
         ],

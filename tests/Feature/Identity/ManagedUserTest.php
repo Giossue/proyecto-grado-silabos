@@ -118,6 +118,7 @@ class ManagedUserTest extends TestCase
                 'nombre' => 'Docente Sin Estrenar',
                 'correo_electronico' => 'sin.estrenar@silabos.test',
                 'password' => 'Temporal-2026!',
+                'valid_from' => now()->toDateString(),
                 'role_code' => RoleCode::Teacher->value,
                 'career_id' => $career->id,
             ])->assertRedirect();
@@ -189,6 +190,7 @@ class ManagedUserTest extends TestCase
                 'nombre' => 'Nueva Docente',
                 'correo_electronico' => 'nueva.docente@silabos.test',
                 'password' => 'Temporal-2026!',
+                'valid_from' => now()->toDateString(),
                 'role_code' => RoleCode::Teacher->value,
                 'career_id' => $career->id,
             ])
@@ -197,6 +199,9 @@ class ManagedUserTest extends TestCase
 
         $created = User::query()->where('correo_electronico', 'nueva.docente@silabos.test')->firstOrFail();
         $teacherRole = Role::query()->where('codigo', RoleCode::Teacher->value)->firstOrFail();
+
+        $this->assertSame(now()->toDateString(), $created->vigente_desde?->toDateString());
+        $this->assertNull($created->vigente_hasta);
 
         $this->assertDatabaseHas('asignaciones_rol', [
             'usuario_id' => $created->id,
@@ -213,6 +218,26 @@ class ManagedUserTest extends TestCase
         ]);
     }
 
+    public function test_administrator_updates_the_laboral_validity_of_any_account(): void
+    {
+        $teacher = User::query()->where('correo_electronico', 'docente@silabos.test')->firstOrFail();
+
+        $this->actingAsAdministrator()
+            ->patch(route('admin.users.update', $teacher), [
+                'nombre' => $teacher->nombre,
+                'correo_electronico' => $teacher->correo_electronico,
+                'valid_from' => '2026-01-01',
+                'valid_until' => '2026-12-31',
+                'active' => true,
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $teacher->refresh();
+        $this->assertSame('2026-01-01', $teacher->vigente_desde?->toDateString());
+        $this->assertSame('2026-12-31', $teacher->vigente_hasta?->toDateString());
+    }
+
     public function test_scoped_role_requires_an_active_career(): void
     {
         $this->actingAsAdministrator()
@@ -220,6 +245,7 @@ class ManagedUserTest extends TestCase
                 'nombre' => 'Docente sin carrera',
                 'correo_electronico' => 'sin.carrera@silabos.test',
                 'password' => 'Temporal-2026!',
+                'valid_from' => now()->toDateString(),
                 'role_code' => RoleCode::Teacher->value,
             ])
             ->assertSessionHasErrors('career_id');
@@ -456,7 +482,6 @@ class ManagedUserTest extends TestCase
             'id' => (string) Str::uuid7(),
             'usuario_id' => $assigned->id,
             'paralelo_id' => $parallel->id,
-            'vigente_desde' => now()->toDateString(),
             'activo' => true,
             'creado_en' => now(),
             'actualizado_en' => now(),
@@ -476,6 +501,7 @@ class ManagedUserTest extends TestCase
                 'nombre' => 'Docente Pendiente',
                 'correo_electronico' => $email,
                 'password' => 'Temporal-2026!',
+                'valid_from' => now()->toDateString(),
                 'role_code' => RoleCode::Teacher->value,
                 'career_id' => $career->id,
             ])

@@ -117,7 +117,6 @@ class ConvocationAndDraftTest extends TestCase
         TeacherAssignment::query()->create([
             'usuario_id' => $this->teacher->id,
             'paralelo_id' => $parallel->id,
-            'vigente_desde' => now()->subMonth(),
             'activo' => true,
         ]);
         $convocation = $this->createPreparedConvocation('por_paralelo');
@@ -333,12 +332,12 @@ class ConvocationAndDraftTest extends TestCase
         $this->actingAsCoordinator()->get(route('syllabi.index'))->assertForbidden();
     }
 
-    public function test_expired_teacher_assignment_revokes_record_access(): void
+    public function test_expired_laboral_validity_revokes_record_access(): void
     {
         $syllabus = $this->openConvocationAndGetSyllabus();
-        TeacherAssignment::query()->update(['vigente_hasta' => now()->subMinute()]);
+        $this->teacher->update(['vigente_hasta' => now()->subDay()->toDateString()]);
 
-        $this->actingAsTeacher()->get(route('syllabi.show', $syllabus))->assertForbidden();
+        $this->actingAsTeacher()->get(route('syllabi.show', $syllabus))->assertRedirect(route('login'));
     }
 
     private function createPreparedConvocation(string $groupingMode): Convocation

@@ -58,7 +58,6 @@ class RelieveTeacher
             $assignments = TeacherAssignment::query()
                 ->where('usuario_id', $outgoingUserId)
                 ->where('activo', true)
-                ->whereNull('vigente_hasta')
                 ->whereHas('parallel.offering.subject.curriculum', fn ($query) => $query->where('carrera_id', $careerId))
                 ->with('parallel.offering.subject:id,nombre')
                 ->lockForUpdate()
@@ -86,17 +85,15 @@ class RelieveTeacher
                 $this->transfer->execute($syllabus, $outgoingUserId, $incomingUserId, $backing, "{$idempotencyKey}-{$syllabus->id}", $actor, $request);
             }
 
-            $now = now();
             $movedWithoutSyllabus = 0;
             foreach ($assignments as $assignment) {
                 if ($collaborations->contains('asignacion_docente_id', $assignment->id)) {
                     continue;
                 }
-                $assignment->update(['vigente_hasta' => $now, 'activo' => false]);
+                $assignment->update(['activo' => false]);
                 TeacherAssignment::query()->create([
                     'usuario_id' => $incomingUserId,
                     'paralelo_id' => $assignment->paralelo_id,
-                    'vigente_desde' => $now,
                     'activo' => true,
                     'sustento_tipo' => $backing['type'],
                     'sustento_numero' => $backing['number'],
@@ -128,6 +125,7 @@ class RelieveTeacher
             ->where('usuario_id', $userId)
             ->where('carrera_id', $careerId)
             ->whereHas('role', fn ($query) => $query->where('codigo', RoleCode::Teacher->value))
+            ->whereHas('user', fn ($query) => $query->where('activo', true)->laborallyEffective())
             ->exists();
     }
 }

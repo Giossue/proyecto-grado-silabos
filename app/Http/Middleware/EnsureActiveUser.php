@@ -17,17 +17,17 @@ class EnsureActiveUser
     {
         $user = $request->user();
 
-        if ($user instanceof User && ! $user->activo) {
+        if ($user instanceof User && (! $user->activo || ! $user->isLaborallyEffective())) {
             Auth::guard('web')->logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
 
             if ($request->expectsJson()) {
-                abort(Response::HTTP_FORBIDDEN, 'La cuenta está inactiva.');
+                abort(Response::HTTP_FORBIDDEN, 'La cuenta no está vigente.');
             }
 
             return redirect()->route('login')->withErrors([
-                'correo_electronico' => 'La cuenta está inactiva. Solicite ayuda al administrador.',
+                'correo_electronico' => 'La cuenta no está vigente. Solicite ayuda al administrador.',
             ]);
         }
 

@@ -320,8 +320,6 @@ class CreateAcademicRecord
         return TeacherAssignment::query()->create([
             'usuario_id' => $userId,
             'paralelo_id' => $parallel->id,
-            'vigente_desde' => $data['valid_from'],
-            'vigente_hasta' => $data['valid_until'] ?? null,
             'activo' => true,
         ]);
     }
@@ -342,6 +340,7 @@ class CreateAcademicRecord
             ->where('usuario_id', $userId)
             ->where('carrera_id', $careerId)
             ->whereHas('role', fn ($query) => $query->where('codigo', $role->value))
+            ->whereHas('user', fn ($query) => $query->where('activo', true)->laborallyEffective())
             ->exists();
 
         if (! $hasRole) {

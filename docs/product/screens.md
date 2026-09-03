@@ -199,7 +199,8 @@ DOC-01 llena una cuadrícula con una casilla por celda, unidades y totales calcu
   menú de tres puntos, con el mismo patrón de la columna de acciones de las tablas. La
   malla activa o inactiva sigue siendo editable; eliminar se rechaza cuando existen
   ofertas o sílabos y explica que debe deshabilitarse. Editar una asignación cambia
-  docente, paralelo o vigencia; nunca nombre o correo de la cuenta.
+  docente o paralelo; la vigencia laboral se gestiona en la cuenta, nunca nombre o correo
+  desde esta pantalla.
 - COR-13 abre la malla en una página completa con ciclos, tarjetas, totales y relaciones.
   El lienzo permite zoom, desplazamiento, conexión y reubicación, además de crear una
   materia en su ciclo y editarla directamente desde su tarjeta. El desglose académico

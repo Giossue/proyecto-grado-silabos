@@ -23,19 +23,30 @@ class UpdateManagedUserProfile
         private readonly ResendManagedUserCredentials $credentials,
     ) {}
 
-    /** @param array{nombre: string, correo_electronico: string} $data */
+    /** @param array{nombre: string, correo_electronico: string, valid_from?: string|null, valid_until?: string|null} $data */
     public function execute(User $target, array $data, User $actor, Request $request): User
     {
         $activeRole = $this->roles->resolve($request);
 
         return DB::transaction(function () use ($activeRole, $actor, $data, $request, $target): User {
             $locked = User::query()->lockForUpdate()->findOrFail($target->id);
-            $previous = ['name' => $locked->nombre, 'email' => $locked->correo_electronico];
+            $previous = [
+                'name' => $locked->nombre,
+                'email' => $locked->correo_electronico,
+                'valid_from' => $locked->vigente_desde?->toDateString(),
+                'valid_until' => $locked->vigente_hasta?->toDateString(),
+            ];
             $email = mb_strtolower($data['correo_electronico']);
 
             $name = PersonName::normalize($data['nombre']);
 
             $locked->fill(['nombre' => $name, 'correo_electronico' => $email]);
+            if (array_key_exists('valid_from', $data)) {
+                $locked->vigente_desde = $data['valid_from'];
+            }
+            if (array_key_exists('valid_until', $data)) {
+                $locked->vigente_hasta = $data['valid_until'];
+            }
 
             if (! $locked->isDirty()) {
                 return $locked;
@@ -59,6 +70,10 @@ class UpdateManagedUserProfile
                     'previous_email' => $previous['email'],
                     'name_changed' => $previous['name'] !== $name,
                     'email_changed' => $previous['email'] !== $email,
+                    'previous_valid_from' => $previous['valid_from'],
+                    'previous_valid_until' => $previous['valid_until'],
+                    'valid_from_changed' => $previous['valid_from'] !== $locked->vigente_desde?->toDateString(),
+                    'valid_until_changed' => $previous['valid_until'] !== $locked->vigente_hasta?->toDateString(),
                 ],
                 correlationId: $request->attributes->getString('correlation_id') ?: null,
             );

@@ -30,8 +30,10 @@
 
 `usuarios`, `roles`, `asignaciones_rol`. Las columnas de `usuarios` heredadas del
 starter quedaron en español en I-28 (`nombre`, `correo_electronico`, `contrasena`,
-`activo`, `codigo_recordarme`, `secreto_dos_factores`…); el modelo `User` declara los
-puentes que Fortify y el guard exigen. I-29 hace las asignaciones de rol manuales:
+`activo`, `vigente_desde`, `vigente_hasta`, `codigo_recordarme`, `secreto_dos_factores`…);
+`vigente_desde` y `vigente_hasta` describen la relación laboral general de la persona,
+para todos sus roles. El modelo `User` declara los puentes que Fortify y el guard exigen.
+I-29 hace las asignaciones de rol manuales:
 `asignaciones_rol.activo` determina su efectividad y no guarda fechas de inicio o fin.
 
 ### Académico
@@ -40,6 +42,10 @@ puentes que Fortify y el guard exigen. I-29 hace las asignaciones de rol manuale
 `periodos_academicos`, `versiones_malla`, `asignaturas`, `requisitos_asignatura`,
 `definiciones_campo_malla`, `valores_campo_asignatura`, `ofertas_academicas`,
 `paralelos`, `asignaciones_docente`.
+
+`asignaciones_docente` vincula una persona con un paralelo y conserva el acto que la
+respalda; no tiene intervalo de vigencia laboral. Su identidad única es
+`usuario_id + paralelo_id`; un relevo archiva la relación anterior y crea la nueva.
 
 Estos catálogos no comparten una tabla polimórfica. `carreras.facultad_id` implementa la
 relación uno-a-muchos Facultad → Carreras con clave foránea y borrado restringido.
