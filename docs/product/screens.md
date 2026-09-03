@@ -123,13 +123,13 @@
   filas alternas celestes. El formato lo pone la plantilla; el docente solo llena
   contenido.
 - La ficha de identificación institucional (bloque «Asignatura», heredado) se pinta fija
-  con datos de la malla, la oferta y los docentes; no se diseña ni se llena (I-34).
-- Las tablas se diseñan sobre la misma hoja (I-34), como en Word. Al soltar «Tabla» se
-  elige un formato institucional listo (planificación por unidades, bibliografía, escala,
-  perfil de egreso o tabla simple). Cada celda de cabecera tiene menú ⋯: insertar a la
-  derecha, combinar con la derecha (crea el grupo o el agrupamiento superior), separar,
-  Texto o Número, quitar; clic renombra; arrastrar reordena. En el menú ⋯ del campo:
-  fila de totales, se repite por unidad, dato de cabecera y elegir otro formato.
+  con datos de la malla, la oferta, los paralelos (incluida su jornada) y los docentes;
+  no se diseña ni se llena (I-34). Mapa de datos: `docs/product/identificacion-institucional.md`.
+  COR-14 (paralelos) muestra y edita la jornada.
+- Las tablas se eligen, no se diseñan (I-34). Al soltar «Tabla» se escoge un formato
+  institucional listo (planificación por unidades, bibliografía, escala, perfil de egreso
+  o tabla simple); las cabeceras se renombran con un clic y el menú ⋯ del campo ofrece
+  «Elegir otro formato». Un formato nuevo se agrega en código (`tablePresets.ts`).
 DOC-01 llena una cuadrícula con una casilla por celda, unidades y totales calculados;
   COR-05 la muestra tal cual.
   Las fuentes son documentos editables: COR-11 abre el contenido en un editor Markdown con

@@ -22,6 +22,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { PARALLEL_SHIFTS as SHIFTS } from '@/lib/parallelShifts';
 import type { AcademicStructureProps } from '@/types/academic';
 
 export type CareerAcademicEntity =
@@ -30,6 +31,7 @@ export type CareerAcademicEntity =
 export type CareerAcademicEditableRecord = {
     id: string;
     code?: string;
+    shift?: string | null;
     name?: string;
     cycle?: number | null;
     credits?: string | null;
@@ -107,6 +109,37 @@ const entityLabel = computed(
                                 :aria-invalid="Boolean(errors.code)"
                             />
                             <FieldError :errors="[errors.code]" />
+                        </Field>
+                        <Field :data-invalid="Boolean(errors.shift)">
+                            <FieldLabel
+                                :for="`edit-parallel-shift-${record.id}`"
+                                >Jornada</FieldLabel
+                            >
+                            <Select
+                                name="shift"
+                                :default-value="record.shift ?? undefined"
+                            >
+                                <SelectTrigger
+                                    :id="`edit-parallel-shift-${record.id}`"
+                                    :aria-invalid="Boolean(errors.shift)"
+                                >
+                                    <SelectValue
+                                        placeholder="Seleccione la jornada"
+                                    />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectGroup>
+                                        <SelectItem
+                                            v-for="shift in SHIFTS"
+                                            :key="shift.value"
+                                            :value="shift.value"
+                                        >
+                                            {{ shift.label }}
+                                        </SelectItem>
+                                    </SelectGroup>
+                                </SelectContent>
+                            </Select>
+                            <FieldError :errors="[errors.shift]" />
                         </Field>
                     </template>
 

@@ -297,6 +297,7 @@ class AcademicStructureViewData
                     'id' => $parallel->id,
                     'offering_id' => $parallel->oferta_academica_id,
                     'code' => $parallel->codigo,
+                    'shift' => $parallel->jornada,
                     'active' => $parallel->activo,
                     'offering_label' => "{$parallel->offering->subject->codigo_institucional} · {$parallel->offering->academicPeriod->nombre}",
                     'editable' => ! $usedParallelIds->has($parallel->id),

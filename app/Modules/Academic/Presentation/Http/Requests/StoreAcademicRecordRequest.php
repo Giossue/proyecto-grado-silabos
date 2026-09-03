@@ -7,6 +7,7 @@ use App\Modules\Academic\Domain\CurriculumSystemFields;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CourseOffering;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CurriculumFieldDefinition;
+use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Subject;
 use App\Modules\Identity\Application\ActiveRole;
 use Illuminate\Database\Eloquent\Collection;
@@ -128,6 +129,7 @@ class StoreAcademicRecordRequest extends FormRequest
                     'max:30',
                     $this->uniqueWithin('paralelos', 'codigo', 'oferta_academica_id', 'offering_id'),
                 ],
+                'shift' => ['nullable', 'string', Rule::in(Parallel::SHIFTS)],
             ],
             'asignacion_coordinador' => [
                 ...$this->assignmentRules('carreras', 'career_id'),

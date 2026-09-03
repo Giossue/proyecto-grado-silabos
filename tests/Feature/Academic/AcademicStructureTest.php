@@ -911,12 +911,14 @@ class AcademicStructureTest extends TestCase
             ->post(route('coordination.academic.store', 'paralelo'), [
                 'offering_id' => $offering->id,
                 'code' => 'A',
+                'shift' => 'matutina',
             ])
             ->assertRedirect();
 
         $this->assertDatabaseHas('paralelos', [
             'oferta_academica_id' => $offering->id,
             'codigo' => 'A',
+            'jornada' => 'matutina',
             'activo' => true,
         ]);
         $this->assertDatabaseHas('eventos_auditoria', [

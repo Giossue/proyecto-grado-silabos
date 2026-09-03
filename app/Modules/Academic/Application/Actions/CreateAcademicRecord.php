@@ -256,6 +256,7 @@ class CreateAcademicRecord
         return Parallel::query()->create([
             'oferta_academica_id' => $offering->id,
             'codigo' => $data['code'],
+            'jornada' => $data['shift'] ?? null,
             'activo' => true,
         ]);
     }

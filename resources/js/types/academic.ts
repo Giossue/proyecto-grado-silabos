@@ -79,6 +79,7 @@ export type AcademicStructureProps = {
         id: string;
         offering_id: string;
         code: string;
+        shift: string | null;
         active: boolean;
         offering_label: string;
         editable: boolean;

@@ -57,6 +57,7 @@ class UpdateCareerAcademicRecordRequest extends FormRequest
                         ->where('carrera_id', $this->careerId())
                         ->ignore($this->recordId()),
                 ],
+                'shift' => ['nullable', 'string', Rule::in(Parallel::SHIFTS)],
             ],
             'asignatura' => $this->subjectRules(),
             'oferta' => [

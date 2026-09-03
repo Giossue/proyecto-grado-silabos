@@ -41,14 +41,14 @@ defecto de las tablas sin esquema y de las listas.
       `PATCH plantilla/{template}/bloques/{block}/tabla` con confirmación de borrado.
 - [x] Esquema en la página de plantilla, en el borrador docente y en la copia de cada
       revisión (`content_type` y `table` por bloque).
-- [x] Diseñador sobre la hoja (`TemplateTableDesigner`), pensado como Word: al soltar una
+- [x] Tabla sobre la hoja (`TemplateTableDesigner`), deliberadamente simple: al soltar una
       tabla aparece la galería de formatos institucionales (`tablePresets.ts`:
       planificación por unidades, bibliografía, escala de valoración, perfil de egreso,
-      tabla simple); cada celda de cabecera tiene su menú (insertar a la derecha,
-      combinar con la derecha, separar, texto/número, quitar) y se renombra con un clic;
-      arrastrar reordena. Totales, «se repite por unidad», dato de cabecera y «elegir
-      otro formato» viven en el menú ⋯ del campo. Sin barra de botones ni modo de
-      selección (rechazados por el responsable del producto por complejos).
+      tabla simple); después solo se renombran cabeceras con un clic y «Elegir otro
+      formato» en el menú del campo. El diseñador interactivo (combinar, separar,
+      insertar, arrastrar, tipo por menú) se retiró por decisión del responsable del
+      producto (2026-09-02): otra tabla nueva = un preset en código, mismo criterio que
+      la ficha de identificación. Escala por datos, no por diseñador.
 - [x] Cuadrícula del docente (`SyllabusTableEditor`): casilla por celda, unidades, totales
       calculados; validación de celdas escalares.
 - [x] Vista de revisión (`SyllabusTableView`) con el esquema copiado en la revisión.
@@ -59,6 +59,13 @@ defecto de las tablas sin esquema y de las listas.
       créditos, docente, correo). El bloque heredado «Asignatura» pasa a
       `content_type = institutional`; la hoja, el editor docente, la revisión y el Word
       la pintan fija. Se copia armada en cada revisión (`snapshot.identification`).
+      Es la cuadrícula del formato oficial calcada (9 columnas, celdas combinadas,
+      medidas con python-docx del sílabo IA-SW-2026); el mapa celda → columna de la base
+      está en `docs/product/identificacion-institucional.md` y
+      `IdentificationCardTest` fija la cuadrícula.
+- [x] Jornada del paralelo (`paralelos.jornada`, migración `000030`: matutina,
+      vespertina, nocturna; opcional) para completar la ficha. Se elige al crear o
+      editar el paralelo. Los campos propios de la malla no llegan al sílabo.
 - [x] `PhpWordDocumentRenderer`: DOCX con el estándar del impreso y tablas con
       `gridSpan`/`vMerge`; bytes reproducibles (fechas y `nsid` fijos). PDF sigue en
       texto plano de respaldo (`PlainTextPdf`).

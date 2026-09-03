@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/table';
 import { useClientFilter } from '@/composables/useClientFilter';
 import { useClientPagination } from '@/composables/useClientPagination';
+import { shiftLabel } from '@/lib/parallelShifts';
 import type { AcademicStructureProps } from '@/types/academic';
 
 const props = defineProps<
@@ -200,13 +201,14 @@ const {
                         ><TableRow
                             ><TableHead>Oferta</TableHead
                             ><TableHead>Paralelo</TableHead
+                            ><TableHead>Jornada</TableHead
                             ><TableHead>Estado</TableHead
                             ><TableHead class="text-right"
                                 >Acciones</TableHead
                             ></TableRow
                         ></TableHeader
                     ><TableBody>
-                        <TableEmpty v-if="parallels.length === 0" :colspan="4"
+                        <TableEmpty v-if="parallels.length === 0" :colspan="5"
                             >No existen paralelos.</TableEmpty
                         >
                         <TableRow
@@ -215,6 +217,7 @@ const {
                             :key="item.id"
                             ><TableCell>{{ item.offering_label }}</TableCell
                             ><TableCell>{{ item.code }}</TableCell
+                            ><TableCell>{{ shiftLabel(item.shift) }}</TableCell
                             ><TableCell>{{
                                 item.active ? 'Activo' : 'Archivado'
                             }}</TableCell

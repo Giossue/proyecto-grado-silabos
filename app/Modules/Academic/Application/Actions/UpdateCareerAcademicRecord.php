@@ -301,7 +301,7 @@ class UpdateCareerAcademicRecord
                 ->where('estado', 'activa'))
             ->lockForUpdate()->firstOrFail();
 
-        return ['oferta_academica_id' => $offering->id, 'codigo' => $data['code']];
+        return ['oferta_academica_id' => $offering->id, 'codigo' => $data['code'], 'jornada' => $data['shift'] ?? null];
     }
 
     /** @param array<string, mixed> $data

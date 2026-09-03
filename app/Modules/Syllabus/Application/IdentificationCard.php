@@ -16,6 +16,9 @@ use Illuminate\Support\Collection;
  */
 final class IdentificationCard
 {
+    /** Jornada del paralelo tal como la escribe el formato. */
+    public const SHIFT_LABELS = ['matutina' => 'Matutina', 'vespertina' => 'Vespertina', 'nocturna' => 'Nocturna'];
+
     /** Anchos de las 9 columnas del formato, en porcentaje. */
     public const WIDTHS = [15.9, 9.4, 4.6, 3.7, 8.5, 4.3, 13.8, 16.5, 23.2];
 
@@ -24,12 +27,18 @@ final class IdentificationCard
     {
         $syllabus->loadMissing(['scopes.parallel', 'teachers']);
 
-        return self::build(
+        $data = self::build(
             $syllabus->contexto_academico ?? [],
             self::strings($syllabus->scopes->pluck('parallel.codigo')),
             self::strings($syllabus->teachers->pluck('nombre')),
             self::strings($syllabus->teachers->pluck('correo_electronico')),
         );
+        $data['shift'] = implode(', ', array_map(
+            fn (string $shift): string => self::SHIFT_LABELS[$shift] ?? ucfirst($shift),
+            self::strings($syllabus->scopes->pluck('parallel.jornada')),
+        ));
+
+        return $data;
     }
 
     /**
@@ -70,7 +79,7 @@ final class IdentificationCard
     /** @return Data Valores de muestra para la hoja de la plantilla. */
     public static function sample(): array
     {
-        return self::build(
+        $data = self::build(
             [
                 'career' => ['name' => 'Software', 'faculty' => 'Ciencias Administrativas, Gestión Empresarial e Informática'],
                 'subject' => [
@@ -84,6 +93,9 @@ final class IdentificationCard
             ['NOMBRE DEL DOCENTE'],
             ['docente@ueb.edu.ec'],
         );
+        $data['shift'] = 'Matutina';
+
+        return $data;
     }
 
     /**

@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 /**
  * @property string $id
  * @property string $codigo
+ * @property string|null $jornada
  * @property bool $activo
  * @property-read CourseOffering $offering
  */
@@ -24,7 +25,11 @@ class Parallel extends Model
     protected $table = 'paralelos';
 
     /** @var list<string> */
-    protected $fillable = ['oferta_academica_id', 'codigo', 'activo'];
+    /** Jornadas del formato oficial del sílabo. */
+    public const SHIFTS = ['matutina', 'vespertina', 'nocturna'];
+
+    /** @var list<string> */
+    protected $fillable = ['oferta_academica_id', 'codigo', 'jornada', 'activo'];
 
     /** @return BelongsTo<CourseOffering, $this> */
     public function offering(): BelongsTo

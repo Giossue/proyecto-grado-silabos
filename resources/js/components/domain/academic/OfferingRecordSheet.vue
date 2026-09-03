@@ -20,6 +20,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { PARALLEL_SHIFTS as SHIFTS } from '@/lib/parallelShifts';
 import type { AcademicStructureProps } from '@/types/academic';
 
 type OfferingEntity = 'oferta' | 'paralelo';
@@ -212,6 +213,33 @@ const description = computed(() =>
                                 :aria-invalid="Boolean(errors.code)"
                             />
                             <FieldError :errors="[errors.code]" />
+                        </Field>
+                        <Field :data-invalid="Boolean(errors.shift)">
+                            <FieldLabel for="parallel-shift"
+                                >Jornada</FieldLabel
+                            >
+                            <Select name="shift">
+                                <SelectTrigger
+                                    id="parallel-shift"
+                                    :aria-invalid="Boolean(errors.shift)"
+                                >
+                                    <SelectValue
+                                        placeholder="Seleccione la jornada"
+                                    />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectGroup>
+                                        <SelectItem
+                                            v-for="shift in SHIFTS"
+                                            :key="shift.value"
+                                            :value="shift.value"
+                                        >
+                                            {{ shift.label }}
+                                        </SelectItem>
+                                    </SelectGroup>
+                                </SelectContent>
+                            </Select>
+                            <FieldError :errors="[errors.shift]" />
                         </Field>
                     </template>
 
