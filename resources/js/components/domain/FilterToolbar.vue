@@ -127,18 +127,18 @@ onBeforeUnmount(cancel);
 
 <template>
     <FieldGroup
-        class="gap-3 lg:flex-row lg:items-end"
+        class="gap-3 lg:flex-row lg:flex-wrap lg:items-end"
         @input="onInput"
         @change="onChange"
     >
         <!-- La búsqueda se queda con el espacio libre: su contenido es texto abierto.
              Los filtros ofrecen opciones cortas y conocidas, así que van a un ancho
              contenido y solo crecen si no caben. -->
-        <div class="min-w-0 lg:flex-1">
+        <div class="min-w-0 lg:min-w-64 lg:flex-1">
             <slot name="search" />
         </div>
         <MobileFilterSheet
-            class="grid min-w-0 gap-3 sm:grid-cols-2 lg:flex lg:flex-none lg:items-end [&_[data-slot=select-trigger]]:w-full [&>[data-slot=field]]:min-w-0 lg:[&>[data-slot=field]]:w-44"
+            class="grid min-w-0 gap-3 sm:grid-cols-2 lg:flex lg:flex-none lg:items-end [&_[data-slot=field]]:min-w-0 lg:[&_[data-slot=field]]:w-48 lg:[&_[data-slot=field]]:shrink-0 [&_[data-slot=select-trigger]]:w-full"
         >
             <slot name="filters" />
 

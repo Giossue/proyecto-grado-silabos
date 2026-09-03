@@ -246,9 +246,11 @@ class ConvocationAndDraftTest extends TestCase
             ->where('heredado', false)
             ->get();
         foreach ($requiredEditable as $field) {
-            $payload = $field->tipo === 'repetible'
-                ? ['version_bloqueo' => $syllabus->fresh()->version_bloqueo, 'rows' => [['data' => ['texto' => "Contenido {$field->clave}"]]]]
-                : ['version_bloqueo' => $syllabus->fresh()->version_bloqueo, 'value' => "Contenido {$field->clave}"];
+            $payload = match ($field->tipo) {
+                'repetible' => ['version_bloqueo' => $syllabus->fresh()->version_bloqueo, 'rows' => [['data' => ['texto' => "Contenido {$field->clave}"]]]],
+                'seleccion_unica' => ['version_bloqueo' => $syllabus->fresh()->version_bloqueo, 'value' => (string) ($field->opciones[0] ?? '')],
+                default => ['version_bloqueo' => $syllabus->fresh()->version_bloqueo, 'value' => "Contenido {$field->clave}"],
+            };
             $this->actingAsTeacher()->patchJson(route('syllabi.fields.update', [$syllabus, $field]), $payload)->assertOk();
         }
 

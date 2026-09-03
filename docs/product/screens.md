@@ -112,6 +112,8 @@
   que funcionan como campos compuestos, como el selector de fecha.
 - Editor y revisión usan navegación por secciones, completitud, errores, observaciones y
   estado de guardado sin saturar la pantalla.
+- «Nueva plantilla» crea de una vez el formato oficial completo (doce secciones, campos,
+  tablas armadas y ficha de identificación); Administración solo ajusta sobre la hoja.
 - ADM-06 se arma sobre la hoja tal como se imprimirá (I-33). Una paleta fija ofrece
   Bloque, Texto, Tabla, Lista con viñetas y Lista numerada: se arrastran a la hoja (una
   línea azul marca dónde caerán) o se pulsan para agregar al final del bloque activo. Los

@@ -48,7 +48,7 @@ class TemplateAndSourceTest extends TestCase
         $template = SyllabusTemplate::query()->firstOrFail();
         $this->assertTrue($template->es_institucional);
         $this->assertCount(12, $template->sections()->get());
-        $this->assertCount(12, $template->fields()->get());
+        $this->assertCount(24, $template->fields()->get(), 'Doce campos base más los cuatro de la ficha y los extra del formato.');
 
         $this->actingAsAdministrator()
             ->get(route('admin.templates.show', $template))
@@ -177,12 +177,12 @@ class TemplateAndSourceTest extends TestCase
     public function test_administrator_designs_a_complex_table_on_a_block(): void
     {
         $version = $this->createTemplate();
-        $section = $version->sections()->where('clave', 'planificacion')->firstOrFail();
+        // La descripción nace como texto: al pasar a tabla expone la tabla mínima.
+        $section = $version->sections()->where('clave', 'descripcion')->firstOrFail();
         $block = $section->blocks()->firstOrFail();
         $field = $block->fields()->firstOrFail();
         $sectionIndex = $section->posicion - 1;
 
-        // El campo pasa a tabla; sin esquema propio expone la tabla mínima.
         $this->actingAsAdministrator()
             ->patch(route('admin.templates.fields.update', ['template' => $version, 'field' => $field]), [
                 'block_id' => $block->id,
@@ -231,7 +231,7 @@ class TemplateAndSourceTest extends TestCase
             ->assertSessionHasErrors('groups');
 
         // Un campo de texto no acepta esquema de tabla.
-        $textBlock = $version->sections()->where('clave', 'descripcion')->firstOrFail()->blocks()->firstOrFail();
+        $textBlock = $version->sections()->where('clave', 'habilidades')->firstOrFail()->blocks()->firstOrFail();
         $this->actingAsAdministrator()
             ->from(route('admin.templates.show', $version))
             ->patch(route('admin.templates.blocks.table', ['template' => $version, 'block' => $textBlock]), $layout)

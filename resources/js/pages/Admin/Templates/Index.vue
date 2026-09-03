@@ -5,7 +5,6 @@ import TemplateCreationSheet from '@/components/domain/configuration/TemplateCre
 import PageFrame from '@/components/domain/PageFrame.vue';
 import {
     Empty,
-    EmptyDescription,
     EmptyHeader,
     EmptyMedia,
     EmptyTitle,
@@ -36,17 +35,16 @@ defineOptions({
             <TemplateCreationSheet v-if="!processLock" />
         </template>
 
-        <Empty class="min-h-72 border">
-            <EmptyHeader>
+        <!-- Mismo vacío que las tablas: icono y una sola frase. -->
+        <Empty class="min-h-60 gap-3 border-0 p-6 md:p-10">
+            <EmptyHeader class="gap-3">
                 <EmptyMedia variant="icon" class="text-muted-foreground">
                     <Inbox aria-hidden="true" />
                 </EmptyMedia>
-                <EmptyTitle>No hay una plantilla institucional</EmptyTitle>
-                <EmptyDescription>
-                    Cree la plantilla con las doce áreas base y organice después
-                    sus bloques y campos. Sin ella no se puede abrir el proceso
-                    de sílabos.
-                </EmptyDescription>
+                <EmptyTitle class="text-sm font-normal text-muted-foreground">
+                    No hay una plantilla institucional. Cree la primera: trae el
+                    formato oficial completo, listo para ajustar.
+                </EmptyTitle>
             </EmptyHeader>
         </Empty>
     </PageFrame>
