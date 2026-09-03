@@ -14,7 +14,7 @@ import {
 import type { Component } from 'vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
 import SetupChecklist from '@/components/domain/SetupChecklist.vue';
-import type {Setup} from '@/components/domain/SetupChecklist.vue';
+import type { Setup } from '@/components/domain/SetupChecklist.vue';
 import StatTile from '@/components/domain/StatTile.vue';
 import { dashboard } from '@/routes';
 
@@ -22,6 +22,7 @@ type Metric = {
     key: string;
     label: string;
     value: number;
+    suffix: string | null;
     hint: string;
 };
 
@@ -40,16 +41,15 @@ const activeRole = page.props.auth.roles.find(
 
 // El icono acompaña a la etiqueta; el número no cambia de color según su valor.
 const icons: Record<string, Component> = {
-    users: UsersRound,
-    careers: Building2,
-    templates: FileStack,
-    failed_jobs: ListRestart,
-    open_convocations: CalendarRange,
+    progress: BookOpenCheck,
+    days_left: CalendarRange,
+    careers_without_convocation: Building2,
+    not_started: PencilLine,
     in_review: ClipboardCheck,
+    pending: FileStack,
+    completion: ListRestart,
     correction_requested: CircleAlert,
-    approved: BookOpenCheck,
-    assigned: BookOpenCheck,
-    draft: PencilLine,
+    teachers_pending: UsersRound,
 };
 </script>
 
@@ -79,6 +79,7 @@ const icons: Record<string, Component> = {
                 :key="metric.key"
                 :label="metric.label"
                 :value="metric.value"
+                :suffix="metric.suffix ?? undefined"
                 :hint="metric.hint"
                 :icon="icons[metric.key]"
             />

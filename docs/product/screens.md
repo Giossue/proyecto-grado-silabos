@@ -128,6 +128,10 @@
   con datos de la malla, la oferta, los paralelos (incluida su jornada) y los docentes;
   no se diseña ni se llena (I-34). Mapa de datos: `docs/product/identificacion-institucional.md`.
   COR-14 (paralelos) muestra y edita la jornada.
+- Indicadores del Panel (UI-01), cuatro por rol y todos accionables: Administración ve
+  avance del proceso (% aprobados), días para la entrega, carreras sin convocar y sílabos
+  sin iniciar; Coordinación, avance, días, por revisar y sin iniciar; Docencia, sílabos
+  por entregar, días, avance de sus borradores y por corregir. Sin conteos de catálogo.
 - El Panel de cada rol abre con «Puesta en marcha»: barra de progreso y los pasos en
   orden (Administración: facultades, carreras, campus, modalidades, periodo, cuentas,
   coordinadores, plantilla, proceso; Coordinación: malla, ofertas, paralelos, docentes,

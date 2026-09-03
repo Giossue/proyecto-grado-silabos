@@ -32,9 +32,9 @@ class DashboardMetricsTest extends TestCase
     public function test_cada_rol_recibe_sus_propios_indicadores(): void
     {
         $esperado = [
-            'admin@silabos.test' => ['users', 'careers', 'templates', 'failed_jobs'],
-            'coordinador@silabos.test' => ['open_convocations', 'in_review', 'correction_requested', 'approved'],
-            'docente@silabos.test' => ['assigned', 'draft', 'in_review', 'correction_requested'],
+            'admin@silabos.test' => ['progress', 'days_left', 'careers_without_convocation', 'not_started'],
+            'coordinador@silabos.test' => ['progress', 'days_left', 'in_review', 'not_started'],
+            'docente@silabos.test' => ['pending', 'days_left', 'completion', 'correction_requested'],
         ];
 
         foreach ($esperado as $correo => $claves) {
@@ -107,8 +107,10 @@ class DashboardMetricsTest extends TestCase
             ->get(route('dashboard'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->where('metrics.0.key', 'open_convocations')
-                ->where('metrics.0.value', 1));
+                ->where('metrics.0.key', 'progress')
+                ->where('metrics.0.value', 0)
+                ->where('metrics.0.hint', '0 de 0 sílabos aprobados')
+                ->where('metrics.1.suffix', 'días'));
     }
 
     public function test_el_docente_solo_cuenta_los_silabos_en_los_que_colabora(): void
@@ -131,8 +133,10 @@ class DashboardMetricsTest extends TestCase
             ->get(route('dashboard'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->where('metrics.0.key', 'assigned')
-                ->where('metrics.0.value', 1));
+                ->where('metrics.0.key', 'pending')
+                ->where('metrics.0.value', 1)
+                ->where('metrics.2.key', 'completion')
+                ->where('metrics.2.suffix', '%'));
     }
 
     private function abrirConvocatoria(?string $careerId, string $nombre): Convocation

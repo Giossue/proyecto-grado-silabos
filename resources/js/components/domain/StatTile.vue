@@ -6,6 +6,8 @@ import { Card, CardContent } from '@/components/ui/card';
 const props = defineProps<{
     label: string;
     value: number;
+    /** Unidad corta detrás del número: «%», «días». */
+    suffix?: string;
     hint?: string;
     icon?: Component;
 }>();
@@ -33,7 +35,12 @@ const formatted = computed(() =>
                 <span class="text-sm">{{ label }}</span>
             </div>
             <span class="text-3xl leading-none font-semibold text-foreground">
-                {{ formatted }}
+                {{ formatted
+                }}<span
+                    v-if="suffix"
+                    class="ml-1 text-base font-medium text-muted-foreground"
+                    >{{ suffix }}</span
+                >
             </span>
             <span v-if="hint" class="text-xs text-muted-foreground">
                 {{ hint }}
