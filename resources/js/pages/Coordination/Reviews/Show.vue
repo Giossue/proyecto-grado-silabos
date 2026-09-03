@@ -322,6 +322,7 @@ const observationState = (value: string): string =>
                                         v-if="
                                             block.content_type ===
                                                 'institutional' &&
+                                            field.inherited &&
                                             revision.identification
                                         "
                                         class="mt-3"

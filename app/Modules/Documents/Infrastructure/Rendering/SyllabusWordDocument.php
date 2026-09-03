@@ -197,8 +197,15 @@ class SyllabusWordDocument
                     'size' => $cell['small'] ? 7 : 9,
                     'color' => $cell['style'] === 'blue' ? 'FFFFFF' : '000000',
                 ];
-                $row->addCell($this->width($widths, $column, $cell['span']), $options)
-                    ->addText($cell['text'], $font, ['spaceAfter' => 0, 'alignment' => $cell['center'] ? Jc::CENTER : Jc::START]);
+                $target = $row->addCell($this->width($widths, $column, $cell['span']), $options);
+                $lines = preg_split('/\R/u', $cell['text']) ?: [''];
+                foreach ($lines as $index => $line) {
+                    // «ETIQUETA:» seguida de texto del docente: la etiqueta va en negrita.
+                    $lineFont = $index === 0 && count($lines) > 1 && str_ends_with(trim($line), ':')
+                        ? ['bold' => true] + $font
+                        : $font;
+                    $target->addText($line, $lineFont, ['spaceAfter' => 0, 'alignment' => $cell['center'] ? Jc::CENTER : Jc::START]);
+                }
                 $column += $cell['span'];
             }
         }

@@ -46,7 +46,12 @@ defineProps<{
                         },
                     ]"
                 >
-                    {{ cell.text }}
+                    <template v-if="cell.text.includes('\n')">
+                        <strong>{{ cell.text.split('\n')[0] }}</strong>
+                        <br />
+                        {{ cell.text.split('\n').slice(1).join('\n') }}
+                    </template>
+                    <template v-else>{{ cell.text }}</template>
                 </td>
             </tr>
         </tbody>
@@ -69,6 +74,7 @@ defineProps<{
     padding: 2pt 4pt;
     text-align: left;
     vertical-align: middle;
+    white-space: pre-line;
     word-wrap: break-word;
 }
 

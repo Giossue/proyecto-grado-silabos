@@ -43,7 +43,12 @@ celda o cambiar una etiqueta.
 | Total, créditos | `credits` | `asignaturas.creditos` |
 | Nombre del docente | `teacher` | `colaboradores_silabo` → `usuarios.nombre` |
 | Correo institucional | `email` | `colaboradores_silabo` → `usuarios.correo_electronico` |
-| Estudiantes con discapacidad | (ninguna) | No es dato del sílabo; las celdas quedan vacías como en el formato |
+| Estudiantes con discapacidad (Sí/No, tipo, adaptación) | `disability`, `disability_type`, `disability_description` | Lo escribe el docente: campos `discapacidad_tiene`, `discapacidad_tipo`, `discapacidad_adaptacion` del bloque de identificación (`valores_campo`) |
+| Formación y experiencia académica-investigativa | `formation` | Lo escribe el docente: campo `formacion_experiencia` del mismo bloque; última fila de la tabla |
+
+Los campos que llena el docente viven en el mismo bloque «Identificación institucional»
+de la plantilla (`IdentificationCard::INPUT_KEYS`): el editor los muestra debajo de la
+ficha y la ficha impresa los coloca en sus filas.
 
 Los datos de la malla y la oferta llegan por `contexto_academico` (copiado al abrir la
 convocatoria por `AcademicContextSnapshot`). Paralelos y docentes se leen del

@@ -743,7 +743,8 @@ onBeforeUnmount(() => {
 
                                 <IdentificationCard
                                     v-if="
-                                        block.content_type === 'institutional'
+                                        block.content_type ===
+                                            'institutional' && field.inherited
                                     "
                                     :id="`field-${field.id}`"
                                     :grid="syllabus.identification"

@@ -27,6 +27,7 @@ class IdentificationCardTest extends TestCase
             ['A', 'B'],
             ['PAUL GUARANGA'],
             ['paul.guaranga@ueb.edu.ec'],
+            ['discapacidad_tiene' => 'Sí', 'discapacidad_tipo' => 'Visual', 'formacion_experiencia' => 'Ingeniera en Sistemas'],
         );
 
         $this->assertSame('FCAGEI', $data['faculty']);
@@ -36,14 +37,22 @@ class IdentificationCardTest extends TestCase
         $this->assertSame('Ninguno', $data['corequisites']);
         $this->assertSame('96', $data['total_hours']);
         $this->assertSame('', $data['shift']);
+        $this->assertSame('si', $data['disability']);
+        $this->assertSame('Ingeniera en Sistemas', $data['formation']);
+
+        $grid = IdentificationCard::grid($data);
+        $this->assertSame('X', $grid[9][2]['text'], 'Sí debe quedar marcado.');
+        $this->assertSame('', $grid[11][1]['text']);
+        $this->assertSame('Tipo de discapacidad: Visual', $grid[9][3]['text']);
+        $this->assertStringEndsWith("\nIngeniera en Sistemas", $grid[17][0]['text']);
     }
 
     public function test_grid_matches_the_official_format(): void
     {
         $grid = IdentificationCard::grid(IdentificationCard::sample());
 
-        // 17 filas; cada una completa las 9 columnas contando las combinaciones verticales.
-        $this->assertCount(17, $grid);
+        // 18 filas; cada una completa las 9 columnas contando las combinaciones verticales.
+        $this->assertCount(18, $grid);
         $occupied = [];
         foreach ($grid as $rowIndex => $cells) {
             $width = array_sum(array_map(fn (array $cell): int => $cell['span'], $cells));
@@ -69,6 +78,8 @@ class IdentificationCardTest extends TestCase
         $this->assertSame('', $texts[6][2], 'La unidad básica no debe marcarse.');
         $this->assertSame(['32', '16', '48', '96'], $texts[14]);
         $this->assertSame(['NOMBRE DEL DOCENTE', 'NOMBRE DEL DOCENTE', 'CORREO INSTITUCIONAL', 'docente@ueb.edu.ec'], $texts[16]);
+        $this->assertSame('X', $texts[11][1], 'La muestra marca No.');
+        $this->assertStringStartsWith('FORMACIÓN Y EXPERIENCIA ACADÉMICA – INVESTIGATIVA:', $texts[17][0]);
         $this->assertSame('blue', $grid[0][0]['style']);
     }
 }
