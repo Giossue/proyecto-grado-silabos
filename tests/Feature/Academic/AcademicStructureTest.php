@@ -981,6 +981,48 @@ class AcademicStructureTest extends TestCase
         $this->assertSame($online->id, CourseOffering::query()->where('asignatura_id', $subject->id)->value('modalidad_id'));
     }
 
+    /** I-36: varias ofertas de una vez; las repetidas se omiten y todas heredan la modalidad. */
+    public function test_coordinator_opens_offerings_in_batch_and_existing_ones_are_skipped(): void
+    {
+        $career = Career::query()->findOrFail($this->coordinatorContext->carrera_id);
+        $curriculum = Curriculum::query()->active()->where('carrera_id', $career->id)->firstOrFail();
+        $reference = CourseOffering::query()->firstOrFail();
+        $subjects = collect(['SW-L1', 'SW-L2', 'SW-L3'])->map(fn (string $code, int $index) => Subject::query()->create([
+            'malla_id' => $curriculum->id,
+            'codigo_institucional' => $code,
+            'nombre' => "Materia en lote {$index}",
+            'ciclo' => 4,
+            'orden_en_ciclo' => $index,
+            'activo' => true,
+        ]));
+
+        $this->actingAsCoordinator()
+            ->from(route('coordination.academic.offerings.index'))
+            ->post(route('coordination.academic.offerings.batch'), [
+                'period_id' => $reference->periodo_academico_id,
+                'campus_id' => $reference->campus_id,
+                'subject_ids' => [],
+            ])
+            ->assertSessionHasErrors('subject_ids');
+
+        $this->actingAsCoordinator()
+            ->post(route('coordination.academic.offerings.batch'), [
+                'period_id' => $reference->periodo_academico_id,
+                'campus_id' => $reference->campus_id,
+                // La referencia ya existe: se omite sin error.
+                'subject_ids' => [...$subjects->pluck('id')->all(), $reference->asignatura_id],
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('success', 'Se abrieron 3 ofertas; 1 ya existían.');
+
+        $created = CourseOffering::query()->whereIn('asignatura_id', $subjects->pluck('id'))->get();
+        $this->assertCount(3, $created);
+        $this->assertTrue($created->every(fn (CourseOffering $offering): bool => $offering->modalidad_id === $career->modalidad_id));
+        $this->assertSame(3, AuditEvent::query()->where('accion', 'academico.oferta.creacion')->count());
+        $this->assertSame(4, CourseOffering::query()->count());
+    }
+
     public function test_duplicate_offering_is_reported_to_the_coordinator_as_a_validation_error(): void
     {
         $offering = CourseOffering::query()->firstOrFail();

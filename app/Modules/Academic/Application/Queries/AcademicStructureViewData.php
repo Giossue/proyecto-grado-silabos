@@ -345,8 +345,10 @@ class AcademicStructureViewData
                     ->whereHas('curriculum', fn ($query) => $query
                         ->where('carrera_id', $careerId)
                         ->where('estado', 'activa'))
+                    ->orderBy('ciclo')
+                    ->orderBy('orden_en_ciclo')
                     ->orderBy('nombre')
-                    ->get(['id', 'codigo_institucional', 'nombre']),
+                    ->get(['id', 'codigo_institucional', 'nombre', 'ciclo']),
                 'offerings' => CourseOffering::query()
                     ->where('activo', true)
                     ->whereHas('subject.curriculum', fn ($query) => $query

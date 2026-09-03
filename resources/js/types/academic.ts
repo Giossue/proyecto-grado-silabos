@@ -7,6 +7,8 @@ export type Option = {
     codigo?: string;
     codigo_institucional?: string;
     email?: string;
+    /** Materias de la malla activa: para agruparlas por ciclo al abrir ofertas. */
+    ciclo?: number | null;
 };
 
 export type CatalogRecord = {

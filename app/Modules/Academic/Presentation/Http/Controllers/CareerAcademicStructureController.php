@@ -5,6 +5,7 @@ namespace App\Modules\Academic\Presentation\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Modules\Academic\Application\Actions\CreateAcademicRecord;
+use App\Modules\Academic\Application\Actions\CreateOfferingBatch;
 use App\Modules\Academic\Application\Actions\DeleteCurriculum;
 use App\Modules\Academic\Application\Actions\MutateCurriculumBuilder;
 use App\Modules\Academic\Application\Actions\SetAcademicRecordStatus;
@@ -14,6 +15,7 @@ use App\Modules\Academic\Presentation\Http\Requests\ManageCareerAcademicStructur
 use App\Modules\Academic\Presentation\Http\Requests\SetAcademicRecordStatusRequest;
 use App\Modules\Academic\Presentation\Http\Requests\StoreAcademicRecordRequest;
 use App\Modules\Academic\Presentation\Http\Requests\StoreCurriculumFieldRequest;
+use App\Modules\Academic\Presentation\Http\Requests\StoreOfferingBatchRequest;
 use App\Modules\Academic\Presentation\Http\Requests\StoreSubjectRequirementRequest;
 use App\Modules\Academic\Presentation\Http\Requests\UpdateCareerAcademicRecordRequest;
 use App\Modules\Academic\Presentation\Http\Requests\UpdateCurriculumConfigurationRequest;
@@ -97,6 +99,26 @@ class CareerAcademicStructureController extends Controller
         $action->execute($entity, $request->validated(), $actor, $request);
 
         return back()->with('success', 'Registro académico creado dentro de su carrera.');
+    }
+
+    /** Varias ofertas de una vez para un periodo y un campus (I-36). */
+    public function storeOfferingBatch(
+        StoreOfferingBatchRequest $request,
+        CreateOfferingBatch $action,
+    ): RedirectResponse {
+        $actor = $request->user();
+        abort_unless($actor instanceof User, 401);
+        /** @var array{period_id: string, campus_id: string, subject_ids: list<string>} $data */
+        $data = $request->validated();
+        $result = $action->execute($data, $actor, $request);
+
+        $message = match (true) {
+            $result['created'] === 0 => 'Esas ofertas ya estaban abiertas para ese periodo y campus.',
+            $result['skipped'] === 0 => "Se abrieron {$result['created']} ofertas.",
+            default => "Se abrieron {$result['created']} ofertas; {$result['skipped']} ya existían.",
+        };
+
+        return back()->with('success', $message);
     }
 
     public function setStatus(

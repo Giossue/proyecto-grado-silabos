@@ -168,6 +168,10 @@ DOC-01 llena una cuadrícula con una casilla por celda, unidades y totales calcu
   malla pida la suya en COR-13 (campo, columna del desglose y etiqueta en la tarjeta).
   COR-14 abre ofertas sin selector de modalidad: la hereda de la materia o de la carrera
   y la muestra en el listado (I-35).
+- COR-14 abre ofertas en lote (I-36): periodo y campus una sola vez, y las materias de la
+  malla activa marcadas por ciclo completo o una a una, con buscador. Las que ya tenían
+  oferta en ese periodo y campus se omiten y el aviso dice cuántas se abrieron y cuántas
+  existían. No hay alta de oferta suelta aparte: marcar una sola materia es el mismo lote.
 - COR-13 usa una única entrada **Malla**. Si existe, la ruta abre directamente la página
   completa con **Desglose académico** y **Constructor visual**; si no existe, muestra el
   estado vacío universal y la acción para crearla. No presenta buscador, filtros, cards,
