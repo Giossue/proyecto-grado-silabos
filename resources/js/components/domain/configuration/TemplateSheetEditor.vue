@@ -514,6 +514,8 @@ const acceptsSectionZone = computed(
         dragging.value?.kind === 'section',
 );
 
+/** Un campo cae en cualquier bloque; el servidor lo muda y compacta el origen. */
+/** Un campo se reordena dentro de su bloque; los bloques, entre sí. */
 const acceptsFieldZone = (sectionId: string): boolean =>
     dragging.value?.kind === 'new-field' ||
     (dragging.value?.kind === 'field' &&

@@ -49,8 +49,9 @@ filas alternas celeste DBE5F1. Listas con sangría francesa de 0.63 cm.
 - Sin cambios de backend: crear, renombrar, reordenar y eliminar ya existen. Los códigos
   técnicos (`key`) se generan en el cliente a partir del nombre más un sufijo único y no
   se muestran.
-- Un campo no se mueve de un bloque a otro (el reordenamiento es por bloque). Se elimina
-  y se vuelve a crear.
+- Los bloques se reordenan entre sí arrastrando el asa de su título. Un campo se reordena
+  solo dentro de su bloque (decisión del responsable del producto, 2026-09-02); al
+  arrastrarlo, solo se abren las zonas de ese bloque.
 - Arrastre nativo del navegador; en pantallas pequeñas la paleta se agrega con clic.
 - El borrado de bloques y campos pide confirmación en un Dialog; el borrado de sílabos en
   curso sigue pasando por el diálogo global de I-32.
