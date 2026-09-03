@@ -189,8 +189,9 @@ DOC-01 llena una cuadrícula con una casilla por celda, unidades y totales calcu
   El lienzo permite zoom, desplazamiento, conexión y reubicación, además de crear una
   materia en su ciclo y editarla directamente desde su tarjeta. El desglose académico
   ofrece las mismas operaciones mediante formularios y tablas accesibles; su alta y
-  edición manual sí usan Sheet. Ciclos y campos se configuran en la malla, no en una
-  plantilla global de la Carrera de Software. Al crear o editar una materia, todos los
+  edición manual sí usan Sheet. «Configurar malla» solo edita código y cantidad de
+  ciclos; los campos de la tarjeta (ACD, APE, AA, CRED, TOTAL) los fija el reglamento y
+  nacen con la malla. Al crear o editar una materia, todos los
   campos activos son obligatorios, las magnitudes se presentan en una fila compacta y
   **TOTAL** se calcula con la suma de los componentes de horas, sin incluir créditos. La
   unidad de organización curricular sugiere valores ya usados y admite escribir uno

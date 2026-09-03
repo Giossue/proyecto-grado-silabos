@@ -404,10 +404,15 @@ it('ofrece desglose y constructor visual sobre el mismo contrato de malla', func
         ->toContain('add: [cycle: number]')
         ->toContain('@click="emit(\'add\', data.cycle)"')
         ->not->toContain('data.onAdd');
+    // Configurar la malla es código y ciclos: tamaño normal, sin alta ni baja de campos
+    // (pedido del responsable del producto, 2026-09-03).
     expect($configuration)
         ->toBeString()
         ->toContain('<FormSheet')
-        ->toContain('full-screen');
+        ->toContain('updateCurriculumConfiguration.form')
+        ->not->toContain('full-screen')
+        ->not->toContain('storeCurriculumField')
+        ->not->toContain('destroyCurriculumField');
 });
 
 it('evita repetir el encabezado de pagina dentro de las tablas academicas', function (): void {
