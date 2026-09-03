@@ -186,7 +186,8 @@ const addSubjectOffset = Math.round(
     (laneHeight - laneInset - addSubjectHeight) / 2,
 );
 const laneStart = 145;
-const subjectStep = 290;
+// Tarjeta de 274 px (un 7 % más ancha que las 256 originales) más 34 px de aire.
+const subjectStep = 308;
 const editorStep = 610;
 const editingSubjectId = ref<string | null>(null);
 const draftCycle = ref<number | null>(null);

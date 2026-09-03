@@ -103,7 +103,7 @@ const totalFields = computed(
             dentro y las líneas de relación conservan el suyo de pulsación.
         -->
         <article
-            class="relative w-64 cursor-grab overflow-hidden rounded-md bg-card text-card-foreground shadow-surface ring-1 ring-surface-ring active:cursor-grabbing data-[dragging=true]:shadow-menu data-[dragging=true]:ring-2 data-[dragging=true]:ring-ring"
+            class="relative w-[17.125rem] cursor-grab overflow-hidden rounded-md bg-card text-card-foreground shadow-surface ring-1 ring-surface-ring active:cursor-grabbing data-[dragging=true]:shadow-menu data-[dragging=true]:ring-2 data-[dragging=true]:ring-ring"
             :data-dragging="dragging"
             :aria-label="`${data.subject.code}: ${data.subject.name}`"
         >
