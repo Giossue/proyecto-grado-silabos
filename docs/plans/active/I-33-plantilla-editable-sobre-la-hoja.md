@@ -55,3 +55,13 @@ filas alternas celeste DBE5F1. Listas con sangría francesa de 0.63 cm.
 - Arrastre nativo del navegador; en pantallas pequeñas la paleta se agrega con clic.
 - El borrado de bloques y campos pide confirmación en un Dialog; el borrado de sílabos en
   curso sigue pasando por el diálogo global de I-32.
+
+## Ajuste del 2026-09-03: propiedades del campo
+
+«Propiedades» de un campo queda en dos cosas: la ayuda para el docente y, en los campos
+que el docente escribe, si la IA puede asistirlo. Se retiraron «Obligatorio» (todo el
+formato es obligatorio: `SaveFieldDefinition` guarda siempre `obligatorio = true` y la
+plantilla por defecto ya no trae campos opcionales), «Editable por docente», «Se llena
+desde la malla» y su dato de origen (solo la ficha de identificación se llena sola, y es
+un bloque fijo) y «Marcador en el documento exportado». Los bloques fijos (identificación
+y estado de revisión) solo admiten ayuda.

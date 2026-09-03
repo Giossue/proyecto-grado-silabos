@@ -56,10 +56,23 @@ class SaveFieldDefinition
             $this->work->requireConfirmation($request);
 
             $contentType = $this->stringValue($data, 'content_type');
+
+            // Bloques fijos (ficha de identificación, estado de revisión): su estructura no
+            // se toca; solo cambian etiqueta y ayuda.
+            if ($field !== null && in_array($contentType, ['institutional', 'flow'], true)) {
+                $field->update(['etiqueta' => $data['label'], 'ayuda' => $data['help'] ?? null]);
+                TemplateBlock::query()->whereKey($field->bloque_plantilla_id)->update(['titulo' => $data['label']]);
+                $this->auditField($field, 'plantilla.campo_actualizado', $actor, $activeRole?->id, $request);
+
+                return $field;
+            }
+
             $block = $field === null
                 ? $this->createBlock($template, $data, $contentType)
                 : $this->updateBlock($field, $template, $data, $contentType);
-            $inherited = (bool) ($data['inherited'] ?? false);
+            // Todo campo es obligatorio y lo llena el docente salvo lo heredado de la
+            // malla, que nace así con la plantilla y no se cambia desde aquí (I-33).
+            $inherited = $field !== null && $field->heredado;
             $attributes = [
                 'plantilla_id' => $template->id,
                 'bloque_plantilla_id' => $block->id,
@@ -67,14 +80,14 @@ class SaveFieldDefinition
                 'etiqueta' => $data['label'],
                 'ayuda' => $data['help'] ?? null,
                 'tipo' => $this->fieldType($contentType),
-                'obligatorio' => (bool) ($data['required'] ?? false),
+                'obligatorio' => true,
                 'heredado' => $inherited,
-                'origen_maestro' => $inherited ? ($data['master_source'] ?? null) : null,
-                'editable_docente' => $inherited ? false : (bool) ($data['teacher_editable'] ?? true),
-                'ia_habilitada' => (bool) ($data['ai_enabled'] ?? false),
-                'reglas' => $data['rules'] ?? null,
-                'opciones' => $data['options'] ?? null,
-                'marcador_documento' => $data['document_marker'] ?? null,
+                'origen_maestro' => $field !== null && $field->heredado ? $field->origen_maestro : null,
+                'editable_docente' => ! $inherited,
+                'ia_habilitada' => ! $inherited && (bool) ($data['ai_enabled'] ?? ($field !== null ? $field->ia_habilitada : false)),
+                'reglas' => $data['rules'] ?? ($field !== null ? $field->reglas : null),
+                'opciones' => $data['options'] ?? ($field !== null ? $field->opciones : null),
+                'marcador_documento' => $field !== null ? $field->marcador_documento : null,
             ];
 
             if ($field === null) {
@@ -88,18 +101,23 @@ class SaveFieldDefinition
                 $action = 'plantilla.campo_actualizado';
             }
 
-            $this->audit->execute(
-                actorId: $actor->id,
-                roleAssignmentId: $activeRole?->id,
-                action: $action,
-                resourceType: 'definicion_campo',
-                resourceId: $field->id,
-                result: 'exito',
-                correlationId: $request->attributes->getString('correlation_id') ?: null,
-            );
+            $this->auditField($field, $action, $actor, $activeRole?->id, $request);
 
             return $field;
         });
+    }
+
+    private function auditField(FieldDefinition $field, string $action, User $actor, ?string $roleAssignmentId, Request $request): void
+    {
+        $this->audit->execute(
+            actorId: $actor->id,
+            roleAssignmentId: $roleAssignmentId,
+            action: $action,
+            resourceType: 'definicion_campo',
+            resourceId: $field->id,
+            result: 'exito',
+            correlationId: $request->attributes->getString('correlation_id') ?: null,
+        );
     }
 
     /** @param array<string, mixed> $data */

@@ -22,6 +22,9 @@ class SaveFieldDefinitionRequest extends ManageTemplatesRequest
         $templateId = $template instanceof SyllabusTemplate ? $template->id : $template;
         $field = $this->route('field');
         $fieldId = $field instanceof FieldDefinition ? $field->id : null;
+        // Los bloques fijos (identificación, estado de revisión) no se crean desde la
+        // paleta, pero sí se les edita la ayuda.
+        $types = $fieldId === null ? self::TYPES : [...self::TYPES, 'institutional', 'flow'];
 
         return [
             'section_id' => [
@@ -48,7 +51,7 @@ class SaveFieldDefinitionRequest extends ManageTemplatesRequest
             ],
             'label' => ['required', 'string', 'max:180'],
             'help' => ['nullable', 'string', 'max:2000'],
-            'content_type' => ['required', Rule::in(self::TYPES)],
+            'content_type' => ['required', Rule::in($types)],
             'required' => ['nullable', 'boolean'],
             'inherited' => ['nullable', 'boolean'],
             'master_source' => ['nullable', 'required_if:inherited,true', 'string', 'max:100'],

@@ -8,13 +8,11 @@ import FormSheetActions from '@/components/domain/FormSheetActions.vue';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
     Field,
+    FieldContent,
     FieldError,
     FieldGroup,
     FieldLabel,
-    FieldLegend,
-    FieldSet,
 } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 
 type TemplateField = {
@@ -22,12 +20,7 @@ type TemplateField = {
     key: string;
     label: string;
     help: string | null;
-    required: boolean;
-    inherited: boolean;
-    master_source: string | null;
-    teacher_editable: boolean;
     ai_enabled: boolean;
-    document_marker: string | null;
     content_type: string;
 };
 
@@ -36,12 +29,18 @@ const props = defineProps<{
 }>();
 
 /**
- * Propiedades avanzadas de un campo. El nombre y el tipo se cambian sobre la
- * hoja; aquí va lo que no cabe en un clic: obligatoriedad, herencia, IA y ayuda.
+ * Lo poco que se decide por campo: la ayuda que ve el docente y, en los campos que
+ * escribe, si la IA puede asistirlo. Todo campo es obligatorio y todo lo que no viene de
+ * la malla lo llena el docente, así que no hay más casillas (decisión del responsable
+ * del producto, 2026-09-03). La ficha de identificación y el estado de revisión son
+ * bloques fijos: solo admiten ayuda.
  */
+const FIXED_BLOCKS = ['institutional', 'flow'];
 const open = ref(false);
 const selected = ref<{ field: TemplateField; blockId: string } | null>(null);
-const inherited = ref(false);
+const fixedBlock = computed(() =>
+    FIXED_BLOCKS.includes(selected.value?.field.content_type ?? ''),
+);
 
 const form = computed(() =>
     selected.value
@@ -54,14 +53,12 @@ const form = computed(() =>
 
 const edit = (field: TemplateField, blockId: string): void => {
     selected.value = { field, blockId };
-    inherited.value = field.inherited;
     open.value = true;
 };
 
 watch(open, (isOpen) => {
     if (!isOpen) {
         selected.value = null;
-        inherited.value = false;
     }
 });
 
@@ -121,142 +118,25 @@ defineExpose({ edit });
                         <FieldError :errors="[errors.help]" />
                     </Field>
 
-                    <FieldSet>
-                        <FieldLegend variant="label">
-                            Comportamiento del campo
-                        </FieldLegend>
-                        <FieldGroup>
-                            <Field
-                                orientation="horizontal"
-                                :data-invalid="Boolean(errors.required)"
-                            >
-                                <input
-                                    type="hidden"
-                                    name="required"
-                                    value="0"
-                                />
-                                <Checkbox
-                                    id="template-field-required"
-                                    name="required"
-                                    value="1"
-                                    :default-value="selected.field.required"
-                                    :aria-invalid="Boolean(errors.required)"
-                                />
-                                <FieldLabel for="template-field-required">
-                                    Obligatorio
-                                </FieldLabel>
-                                <FieldError :errors="[errors.required]" />
-                            </Field>
-
-                            <Field
-                                orientation="horizontal"
-                                :data-invalid="Boolean(errors.teacher_editable)"
-                            >
-                                <input
-                                    type="hidden"
-                                    name="teacher_editable"
-                                    value="0"
-                                />
-                                <Checkbox
-                                    id="template-field-teacher-editable"
-                                    name="teacher_editable"
-                                    value="1"
-                                    :default-value="
-                                        selected.field.teacher_editable
-                                    "
-                                    :aria-invalid="
-                                        Boolean(errors.teacher_editable)
-                                    "
-                                />
-                                <FieldLabel
-                                    for="template-field-teacher-editable"
-                                >
-                                    Editable por docente
-                                </FieldLabel>
-                                <FieldError
-                                    :errors="[errors.teacher_editable]"
-                                />
-                            </Field>
-
-                            <Field
-                                orientation="horizontal"
-                                :data-invalid="Boolean(errors.ai_enabled)"
-                            >
-                                <input
-                                    type="hidden"
-                                    name="ai_enabled"
-                                    value="0"
-                                />
-                                <Checkbox
-                                    id="template-field-ai-enabled"
-                                    name="ai_enabled"
-                                    value="1"
-                                    :default-value="selected.field.ai_enabled"
-                                    :aria-invalid="Boolean(errors.ai_enabled)"
-                                />
-                                <FieldLabel for="template-field-ai-enabled">
-                                    Permite asistencia de IA
-                                </FieldLabel>
-                                <FieldError :errors="[errors.ai_enabled]" />
-                            </Field>
-
-                            <Field
-                                orientation="horizontal"
-                                :data-invalid="Boolean(errors.inherited)"
-                            >
-                                <input
-                                    type="hidden"
-                                    name="inherited"
-                                    value="0"
-                                />
-                                <Checkbox
-                                    id="template-field-inherited"
-                                    v-model="inherited"
-                                    name="inherited"
-                                    value="1"
-                                    :aria-invalid="Boolean(errors.inherited)"
-                                />
-                                <FieldLabel for="template-field-inherited">
-                                    Se llena desde la malla
-                                </FieldLabel>
-                                <FieldError :errors="[errors.inherited]" />
-                            </Field>
-                        </FieldGroup>
-                    </FieldSet>
-
                     <Field
-                        v-if="inherited"
-                        :data-invalid="Boolean(errors.master_source)"
+                        v-if="!fixedBlock"
+                        orientation="horizontal"
+                        :data-invalid="Boolean(errors.ai_enabled)"
                     >
-                        <FieldLabel for="template-field-master-source" required>
-                            Dato de la malla que lo llena
-                        </FieldLabel>
-                        <Input
-                            id="template-field-master-source"
-                            name="master_source"
-                            :default-value="selected.field.master_source ?? ''"
-                            placeholder="Ej. perfil_egreso"
-                            required
-                            :aria-invalid="Boolean(errors.master_source)"
+                        <input type="hidden" name="ai_enabled" value="0" />
+                        <Checkbox
+                            id="template-field-ai-enabled"
+                            name="ai_enabled"
+                            value="1"
+                            :default-value="selected.field.ai_enabled"
+                            :aria-invalid="Boolean(errors.ai_enabled)"
                         />
-                        <FieldError :errors="[errors.master_source]" />
-                    </Field>
-                    <input v-else type="hidden" name="master_source" value="" />
-
-                    <Field :data-invalid="Boolean(errors.document_marker)">
-                        <FieldLabel for="template-field-document-marker">
-                            Marcador en el documento exportado
-                        </FieldLabel>
-                        <Input
-                            id="template-field-document-marker"
-                            name="document_marker"
-                            :default-value="
-                                selected.field.document_marker ?? ''
-                            "
-                            placeholder="Ej. RESULTADOS_APRENDIZAJE"
-                            :aria-invalid="Boolean(errors.document_marker)"
-                        />
-                        <FieldError :errors="[errors.document_marker]" />
+                        <FieldContent>
+                            <FieldLabel for="template-field-ai-enabled">
+                                Permite asistencia de IA
+                            </FieldLabel>
+                            <FieldError :errors="[errors.ai_enabled]" />
+                        </FieldContent>
                     </Field>
 
                     <FormSheetActions

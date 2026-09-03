@@ -24,7 +24,7 @@ class CreateSyllabusTemplate
 {
     /**
      * Sección => [título, campos]. Campo => [clave, etiqueta, tipo de contenido,
-     * obligatorio, preset de tabla]. Los tipos `institutional` y `flow` son bloques
+     * obligatorio (siempre: todo el formato se llena), preset de tabla]. Los tipos `institutional` y `flow` son bloques
      * fijos: ficha de identificación (más lo que llena el docente dentro de ella) y
      * estado de revisión.
      */
@@ -43,7 +43,7 @@ class CreateSyllabusTemplate
             ['resultados_aprendizaje', 'Resultados de aprendizaje', 'bulleted_list', true, null],
         ]],
         ['habilidades', 'Habilidades blandas de la asignatura', [
-            ['habilidades_blandas', 'Habilidades blandas', 'text', false, null],
+            ['habilidades_blandas', 'Habilidades blandas', 'text', true, null],
         ]],
         ['planificacion', 'Distribución y planificación de las unidades curriculares', [
             ['unidades', 'Planificación de unidades', 'table', true, 'planificacion'],
@@ -52,7 +52,7 @@ class CreateSyllabusTemplate
             ['metodologia', 'Métodos de enseñanza-aprendizaje', 'bulleted_list', true, null],
             ['tecnicas_ensenanza', 'Técnicas de enseñanza', 'bulleted_list', true, null],
             ['recursos_medios', 'Recursos y medios didácticos', 'text', true, null],
-            ['herramientas_tic', 'Herramientas pedagógicas, TAC e inteligencia artificial', 'bulleted_list', false, null],
+            ['herramientas_tic', 'Herramientas pedagógicas, TAC e inteligencia artificial', 'bulleted_list', true, null],
             ['ambientes_aprendizaje', 'Ambientes o escenarios de aprendizaje', 'text', true, null],
         ]],
         ['evaluacion', 'Evaluación de los aprendizajes', [
@@ -68,7 +68,7 @@ class CreateSyllabusTemplate
         ]],
         ['bibliografia', 'Bibliografía', [
             ['bibliografia', 'Bibliografía básica', 'table', true, 'bibliografia'],
-            ['bibliografia_complementaria', 'Bibliografía complementaria', 'table', false, 'bibliografia'],
+            ['bibliografia_complementaria', 'Bibliografía complementaria', 'table', true, 'bibliografia'],
         ]],
         ['revision', 'Revisión y aprobación', [
             ['estado_revision', 'Estado de revisión', 'flow', true, null],

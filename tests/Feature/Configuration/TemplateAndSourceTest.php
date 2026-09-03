@@ -115,6 +115,56 @@ class TemplateAndSourceTest extends TestCase
         $this->assertSame(1, SyllabusTemplate::query()->count());
     }
 
+    /** I-33 (ajuste 2026-09-03): todo campo es obligatorio; solo se decide ayuda e IA. */
+    public function test_field_properties_are_help_and_ai_only_and_every_field_stays_required(): void
+    {
+        $template = $this->createTemplate();
+        $this->assertSame(0, $template->fields()->where('obligatorio', false)->whereNotIn('clave', ['discapacidad_tipo', 'discapacidad_adaptacion'])->count());
+
+        $field = $template->fields()->where('clave', 'objetivo_general')->firstOrFail();
+        $this->actingAsAdministrator()
+            ->patch(route('admin.templates.fields.update', [$template, $field]), [
+                'block_id' => $field->bloque_plantilla_id,
+                'key' => $field->clave,
+                'label' => $field->etiqueta,
+                'content_type' => 'text',
+                'help' => 'Redáctelo en infinitivo.',
+                'ai_enabled' => 1,
+                'required' => 0,
+                'teacher_editable' => 0,
+                'inherited' => 1,
+                'master_source' => 'invento',
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+        $field->refresh();
+        $this->assertSame('Redáctelo en infinitivo.', $field->ayuda);
+        $this->assertTrue($field->ia_habilitada);
+        $this->assertTrue($field->obligatorio);
+        $this->assertTrue($field->editable_docente);
+        $this->assertFalse($field->heredado);
+        $this->assertNull($field->origen_maestro);
+
+        // La ficha de identificación es un bloque fijo: admite ayuda y conserva su origen.
+        $identification = $template->fields()->where('clave', 'asignatura')->firstOrFail();
+        $this->actingAsAdministrator()
+            ->patch(route('admin.templates.fields.update', [$template, $identification]), [
+                'block_id' => $identification->bloque_plantilla_id,
+                'key' => $identification->clave,
+                'label' => $identification->etiqueta,
+                'content_type' => 'institutional',
+                'help' => 'Se llena sola desde la malla y la oferta.',
+                'ai_enabled' => 1,
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+        $identification->refresh();
+        $this->assertSame('Se llena sola desde la malla y la oferta.', $identification->ayuda);
+        $this->assertTrue($identification->heredado);
+        $this->assertSame('asignaturas', $identification->origen_maestro);
+        $this->assertFalse($identification->ia_habilitada);
+    }
+
     public function test_template_blocks_use_document_content_types(): void
     {
         $version = $this->createTemplate();
