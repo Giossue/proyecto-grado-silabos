@@ -112,8 +112,11 @@
   que funcionan como campos compuestos, como el selector de fecha.
 - Editor y revisión usan navegación por secciones, completitud, errores, observaciones y
   estado de guardado sin saturar la pantalla.
-- Acciones de versión de plantilla muestran de forma explícita qué queda inmutable. Las
-  fuentes son documentos editables: COR-11 abre el contenido en un editor Markdown con
+- ADM-06 alterna entre **Editar** y **Vista previa**, como el editor de fuentes. La vista
+  previa pinta el sílabo con texto de relleno según el tipo de contenido de cada campo
+  (párrafo, tabla, lista con viñetas o numerada). Con el proceso abierto la plantilla se
+  protege pero sigue visible: **Estructura** lista bloques, campos y tipos sin formularios.
+  Las fuentes son documentos editables: COR-11 abre el contenido en un editor Markdown con
   cinta de opciones y vista previa.
 - Los estados usan las mismas etiquetas y colores en todo el producto.
 - Los IDs internos y detalles de infraestructura no se muestran.

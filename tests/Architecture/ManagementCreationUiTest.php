@@ -742,6 +742,22 @@ it('presenta las plantillas como cards y navega versiones desde el detalle', fun
         ->not->toContain('Versiones')
         ->not->toContain('sibling.id')
         ->toContain(':template-id="template.id"');
+
+    // La plantilla se puede mirar siempre: estructura aunque esté protegida y
+    // vista previa con datos de ejemplo según el tipo de contenido.
+    expect($show)
+        ->toContain('<TemplatePreview')
+        ->toContain('Vista previa')
+        ->toContain("mode === 'preview'");
+
+    $preview = (string) file_get_contents(
+        $root.'/resources/js/components/domain/configuration/TemplatePreview.vue',
+    );
+    expect($preview)
+        ->toContain("content_type === 'table'")
+        ->toContain("content_type === 'bulleted_list'")
+        ->toContain("content_type === 'numbered_list'")
+        ->toContain('Lorem ipsum');
 });
 
 it('usa el mismo paginador en todas las superficies tabulares', function (): void {
