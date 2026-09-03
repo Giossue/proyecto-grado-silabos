@@ -34,10 +34,10 @@ aplicación.
 
 `Campus` y `Modalidad` son catálogos institucionales, pero la oferta no los elige: los
 hereda de la carrera, porque el CES aprueba cada carrera para una sede
-(`carreras.campus_id`, I-36) y una modalidad. el CES aprueba cada carrera en una modalidad (`carreras.modalidad_id`),
-una modalidad marcada «combina por asignatura» (híbrida) deja que cada materia de la
-malla indique la suya (`asignaturas.modalidad_id`) y la oferta hereda una u otra al
-crearse (I-35). La oferta conserva la modalidad copiada porque el sílabo la toma de ahí.
+(`carreras.campus_id`, I-36) y una modalidad (`carreras.modalidad_id`, I-35). Una
+modalidad marcada «combina por asignatura» (híbrida) deja que cada materia de la malla
+indique la suya (`asignaturas.modalidad_id`) y la oferta hereda una u otra al crearse.
+La oferta conserva las copias porque el sílabo toma de ahí campus y modalidad.
 
 `PeriodoAcademico` no es un catálogo global: pertenece a una carrera. En la fuente el
 mismo nombre de periodo existe una vez por carrera con fechas propias, así que el código
