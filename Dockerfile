@@ -6,7 +6,9 @@
 
 # --- Etapa 1: dependencias PHP --------------------------------------------------------
 # Se instalan sin scripts y se genera el autoload aparte: `package:discover` arrancaría
-# la aplicación, y aquí todavía no hay entorno que la sostenga.
+# la aplicación, y aquí todavía no hay entorno que la sostenga. La imagen de Composer no
+# trae `gd`, que PhpWord declara como requisito: aquí solo se resuelven archivos, y la
+# extensión sí está en la imagen final, así que se ignora únicamente en esta etapa.
 FROM docker.io/library/composer:2 AS php-deps
 WORKDIR /app
 COPY composer.json composer.lock ./
@@ -16,6 +18,7 @@ RUN composer install \
         --no-scripts \
         --prefer-dist \
         --no-interaction \
+        --ignore-platform-req=ext-gd \
     && composer dump-autoload --optimize --classmap-authoritative --no-dev
 
 # --- Etapa 2: assets del navegador ----------------------------------------------------
