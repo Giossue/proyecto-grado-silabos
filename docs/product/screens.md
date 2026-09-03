@@ -143,7 +143,8 @@
 - Encabezado del sílabo: logo de la universidad (uno, lo reemplaza Administración desde
   «Logo de la universidad» en la plantilla) y logo de la facultad de la carrera
   (obligatorio al crear la facultad en ADM-04; se reemplaza al editarla). Ambos PNG sin
-  fondo con medida fija: universidad 850 × 315 px, facultad 600 × 180 px.
+  fondo; el sistema los ajusta a la medida fija (universidad 850 × 315 px, facultad
+  600 × 180 px) conservando la proporción y centrando sobre transparente.
 - Si una sección tiene un solo campo, no lleva subtítulo «n.1»: basta el título de la
   sección, en la hoja, el editor docente, la revisión y el Word. Con varios campos sí
   se numeran.

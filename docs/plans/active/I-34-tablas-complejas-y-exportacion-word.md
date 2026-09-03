@@ -72,8 +72,10 @@ defecto de las tablas sin esquema y de las listas.
 - [x] Logos del encabezado (`InstitutionalLogos`): el de la universidad se reemplaza
       desde la plantilla (`POST admin/plantilla/logo`); el de cada facultad es
       obligatorio al crearla (`facultades.logo_ruta`, migración `000031`) y opcional al
-      editarla. PNG sin fondo (regla `TransparentPng`, canal alfa) y medida exacta
-      (850 × 315 y 600 × 180). Se sirven en `logos/institucion` y
+      editarla. PNG sin fondo (regla `TransparentPng`, canal alfa); la medida no se
+      exige: `InstitutionalLogos::fit` escala conservando la proporción y centra sobre
+      lienzo transparente de 850 × 315 o 600 × 180 (decisión del responsable del
+      producto, 2026-09-03: mejor ajustar que rechazar). Se sirven en `logos/institucion` y
       `logos/facultad/{id}`; el Word lee el archivo del disco privado. Sin subida,
       salen los de fábrica.
 - [x] Jornada del paralelo (`paralelos.jornada`, migración `000030`: matutina,

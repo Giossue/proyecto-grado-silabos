@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Storage;
 use Tests\Support\MakesTransparentPng;
 use Tests\TestCase;
 
-/** I-34: logos del encabezado con medida fija y sin fondo. */
+/** I-34: logos del encabezado sin fondo, ajustados a la medida fija al guardar. */
 class InstitutionalLogosTest extends TestCase
 {
     use MakesTransparentPng;
@@ -44,19 +44,21 @@ class InstitutionalLogosTest extends TestCase
         $this->get(route('logos.institution'))->assertOk()->assertHeader('Content-Type', 'image/png');
     }
 
-    public function test_the_university_logo_must_be_a_transparent_png_of_the_exact_size(): void
+    public function test_the_university_logo_is_fitted_to_its_size_and_must_be_transparent(): void
     {
-        $this->actingAsAdministrator()
-            ->from(route('admin.templates.index'))
-            ->post(route('admin.templates.logo.store'), ['logo' => $this->transparentPng(800, 300)])
-            ->assertSessionHasErrors('logo');
-
         $this->actingAsAdministrator()
             ->from(route('admin.templates.index'))
             ->post(route('admin.templates.logo.store'), ['logo' => $this->opaquePng(850, 315)])
             ->assertSessionHasErrors('logo');
-
         Storage::disk('private')->assertMissing('logos/institucion.png');
+
+        // Otra medida y otra proporción: se escala y se centra sobre lienzo transparente.
+        $this->actingAsAdministrator()
+            ->post(route('admin.templates.logo.store'), ['logo' => $this->transparentPng(1600, 400)])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertStoredPngHasSize('logos/institucion.png', 850, 315);
     }
 
     public function test_a_faculty_requires_its_logo_and_serves_it(): void
@@ -71,19 +73,31 @@ class InstitutionalLogosTest extends TestCase
             ->post(route('admin.academic.store', 'facultad'), [
                 'code' => 'FAC-CL',
                 'nombre' => 'Con logo',
-                'logo' => $this->transparentPng(600, 180),
+                'logo' => $this->transparentPng(300, 300),
             ])
             ->assertRedirect()
             ->assertSessionHasNoErrors();
 
         $faculty = Faculty::query()->where('codigo_institucional', 'FAC-CL')->firstOrFail();
         $this->assertSame("logos/facultades/{$faculty->id}.png", $faculty->logo_ruta);
-        Storage::disk('private')->assertExists($faculty->logo_ruta);
+        $this->assertStoredPngHasSize($faculty->logo_ruta, 600, 180);
         $this->get(route('logos.faculty', $faculty))->assertOk()->assertHeader('Content-Type', 'image/png');
 
         // Sin subida propia, la facultad muestra el logo de fábrica.
         $legacy = Faculty::query()->where('codigo_institucional', '!=', 'FAC-CL')->firstOrFail();
         $this->get(route('logos.faculty', $legacy))->assertOk();
+    }
+
+    /** El archivo guardado tiene la medida fija y conserva el canal alfa (tipo de color 6). */
+    private function assertStoredPngHasSize(string $path, int $width, int $height): void
+    {
+        Storage::disk('private')->assertExists($path);
+        $contents = Storage::disk('private')->get($path);
+        $this->assertIsString($contents);
+        $info = getimagesizefromstring($contents);
+        $this->assertNotFalse($info);
+        $this->assertSame([$width, $height], [$info[0], $info[1]]);
+        $this->assertSame(6, ord($contents[25]));
     }
 
     private function actingAsAdministrator(): static

@@ -129,8 +129,8 @@ const facultyOptions = computed(() =>
                             :aria-invalid="Boolean(errors.logo)"
                         />
                         <FieldDescription>
-                            Para reemplazarlo: PNG sin fondo, exactamente 600 ×
-                            180 píxeles.
+                            Para reemplazarlo: PNG sin fondo; se ajusta solo a
+                            600 × 180 píxeles.
                         </FieldDescription>
                         <FieldError :errors="[errors.logo]" />
                     </Field>

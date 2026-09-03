@@ -132,8 +132,9 @@ const examples = computed(
                                 :aria-invalid="Boolean(errors.logo)"
                             />
                             <FieldDescription>
-                                PNG sin fondo, exactamente 600 × 180 píxeles.
-                                Encabeza el sílabo de todas sus carreras.
+                                PNG sin fondo; se ajusta solo a 600 × 180
+                                píxeles. Encabeza el sílabo de todas sus
+                                carreras.
                             </FieldDescription>
                             <FieldError :errors="[errors.logo]" />
                         </Field>

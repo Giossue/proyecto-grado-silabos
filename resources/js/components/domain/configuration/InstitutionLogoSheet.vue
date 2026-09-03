@@ -54,7 +54,7 @@ defineProps<{
                             :aria-invalid="Boolean(errors.logo)"
                         />
                         <FieldDescription>
-                            PNG sin fondo, exactamente {{ size.width }} ×
+                            PNG sin fondo; se ajusta solo a {{ size.width }} ×
                             {{ size.height }} píxeles.
                         </FieldDescription>
                         <FieldError :errors="[errors.logo]" />
