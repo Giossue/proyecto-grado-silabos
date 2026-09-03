@@ -54,6 +54,42 @@ class DashboardMetricsTest extends TestCase
         }
     }
 
+    public function test_cada_rol_recibe_su_puesta_en_marcha_en_orden(): void
+    {
+        $esperado = [
+            // El docente no tiene sílabos hasta que Coordinación abra la convocatoria.
+            'admin@silabos.test' => ['faculties', 'process', 9, true],
+            'coordinador@silabos.test' => ['curriculum', 'convocation', 6, true],
+            'docente@silabos.test' => ['assigned', 'submitted', 3, false],
+        ];
+        foreach ($esperado as $correo => [$primero, $ultimo, $total, $primeroHecho]) {
+            $user = User::query()->where('correo_electronico', $correo)->firstOrFail();
+            $context = $user->roleAssignments()->firstOrFail();
+            $this->actingAs($user)
+                ->withSession(['active_role_assignment_id' => $context->id])
+                ->followingRedirects()
+                ->get(route('dashboard'))
+                ->assertOk()
+                ->assertInertia(fn (Assert $page) => $page
+                    ->component('Dashboard')
+                    ->where('setup.total', $total)
+                    ->has('setup.steps', $total)
+                    ->where('setup.steps.0.key', $primero)
+                    ->where('setup.steps.'.($total - 1).'.key', $ultimo)
+                    ->where('setup.steps.0.done', $primeroHecho));
+        }
+
+        // Con la base sembrada, al administrador le faltan la plantilla y el proceso.
+        $admin = User::query()->where('correo_electronico', 'admin@silabos.test')->firstOrFail();
+        $this->actingAs($admin)
+            ->withSession(['active_role_assignment_id' => $admin->roleAssignments()->firstOrFail()->id])
+            ->followingRedirects()
+            ->get(route('dashboard'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('setup.steps.7.done', false)
+                ->where('setup.steps.8.done', false));
+    }
+
     public function test_el_coordinador_no_cuenta_convocatorias_de_otra_carrera(): void
     {
         $coordinator = User::query()->where('correo_electronico', 'coordinador@silabos.test')->firstOrFail();

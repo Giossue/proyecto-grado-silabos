@@ -128,6 +128,11 @@
   con datos de la malla, la oferta, los paralelos (incluida su jornada) y los docentes;
   no se diseña ni se llena (I-34). Mapa de datos: `docs/product/identificacion-institucional.md`.
   COR-14 (paralelos) muestra y edita la jornada.
+- El Panel de cada rol abre con «Puesta en marcha»: barra de progreso y los pasos en
+  orden (Administración: facultades, carreras, campus, modalidades, periodo, cuentas,
+  coordinadores, plantilla, proceso; Coordinación: malla, ofertas, paralelos, docentes,
+  fuentes, convocatoria; Docencia: recibir, iniciar, enviar). Cada paso se calcula con
+  datos reales; el siguiente lleva su botón y la tarjeta desaparece al completarse.
 - Encabezado del sílabo: logo de la universidad (uno, lo reemplaza Administración desde
   «Logo de la universidad» en la plantilla) y logo de la facultad de la carrera
   (obligatorio al crear la facultad en ADM-04; se reemplaza al editarla). Ambos PNG sin

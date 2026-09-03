@@ -7,6 +7,7 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Identity\Domain\Enums\RoleCode;
+use App\Modules\Operations\Application\SetupChecklist;
 use App\Modules\Operations\Infrastructure\Persistence\Models\JobExecution;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\Convocation;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\Syllabus;
@@ -23,7 +24,7 @@ use Inertia\Response;
  */
 class DashboardController extends Controller
 {
-    public function index(Request $request, ActiveRole $roles): Response|RedirectResponse
+    public function index(Request $request, ActiveRole $roles, SetupChecklist $setup): Response|RedirectResponse
     {
         $activeRole = $roles->resolve($request);
         $user = $request->user();
@@ -47,7 +48,16 @@ class DashboardController extends Controller
             default => [],
         };
 
-        return Inertia::render('Dashboard', ['metrics' => $metrics]);
+        // Puesta en marcha: lo que falta para que el rol pueda trabajar, en orden.
+        $checklist = match (true) {
+            $activeRole === null || ! $user instanceof User => null,
+            $activeRole->role->codigo === RoleCode::Administrator->value => $setup->forAdministrator(),
+            $activeRole->role->codigo === RoleCode::Coordinator->value => $setup->forCoordinator($activeRole->carrera_id),
+            $activeRole->role->codigo === RoleCode::Teacher->value => $setup->forTeacher($user, $activeRole->carrera_id),
+            default => null,
+        };
+
+        return Inertia::render('Dashboard', ['metrics' => $metrics, 'setup' => $checklist]);
     }
 
     /** @return list<array{key: string, label: string, value: int, hint: string}> */

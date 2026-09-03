@@ -13,6 +13,8 @@ import {
 } from '@lucide/vue';
 import type { Component } from 'vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
+import SetupChecklist from '@/components/domain/SetupChecklist.vue';
+import type {Setup} from '@/components/domain/SetupChecklist.vue';
 import StatTile from '@/components/domain/StatTile.vue';
 import { dashboard } from '@/routes';
 
@@ -23,7 +25,7 @@ type Metric = {
     hint: string;
 };
 
-defineProps<{ metrics: Metric[] }>();
+defineProps<{ metrics: Metric[]; setup: Setup | null }>();
 
 defineOptions({
     layout: {
@@ -61,6 +63,8 @@ const icons: Record<string, Component> = {
             activeRole?.career_name ?? 'Gestión institucional de Sílabos UEB'
         "
     >
+        <SetupChecklist v-if="setup" :setup="setup" />
+
         <!--
             Dos por fila desde el móvil: son cifras cortas y una sola por fila obligaba a
             desplazarse para ver cuatro números. Cuando sobra una, ocupa la fila entera en
