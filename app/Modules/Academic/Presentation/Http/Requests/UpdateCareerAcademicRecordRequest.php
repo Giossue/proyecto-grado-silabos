@@ -64,11 +64,7 @@ class UpdateCareerAcademicRecordRequest extends FormRequest
                 'period_id' => [
                     'required',
                     'uuid',
-                    Rule::exists('periodos_academicos', 'id')->where(fn ($query) => $query
-                        ->where('activo', true)
-                        ->where(fn ($periods) => $periods
-                            ->whereNull('carrera_id')
-                            ->orWhere('carrera_id', $this->careerId()))),
+                    Rule::exists('periodos_academicos', 'id')->where('activo', true),
                 ],
                 'subject_id' => [
                     'required',

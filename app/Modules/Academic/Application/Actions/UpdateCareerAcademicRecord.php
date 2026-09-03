@@ -279,7 +279,6 @@ class UpdateCareerAcademicRecord
             ->lockForUpdate()->firstOrFail();
         $period = AcademicPeriod::query()->whereKey($this->stringValue($data, 'period_id'))
             ->where('activo', true)
-            ->where(fn ($query) => $query->whereNull('carrera_id')->orWhere('carrera_id', $careerId))
             ->lockForUpdate()->firstOrFail();
         $subject->loadMissing('curriculum.career');
 

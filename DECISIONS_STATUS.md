@@ -57,10 +57,9 @@ Fecha de corte: **30 de agosto de 2026**.
 - La estructura institucional se presenta y persiste como Facultad → Escuela → Carrera,
   según el esquema real de la fuente verificado en I-11. Campus y modalidades siguen
   siendo catálogos independientes; un campus participa en una oferta académica y no se
-  mezcla ni se duplica como facultad o carrera. El periodo académico deja de ser catálogo
-  global: pertenece a una carrera, porque en la fuente `periodo_lectivo.cod_carr` es
-  obligatorio y el mismo nombre de periodo se repite una vez por carrera con fechas
-  propias.
+  mezcla ni se duplica como facultad o carrera. El período académico es un catálogo
+  institucional único (I-41, decisión explícita del responsable del producto del
+  2026-09-03), aunque la fuente histórica lo repita por carrera.
 - Administración puede corregir los metadatos de esos catálogos, reasignar una carrera a
   otra facultad activa y archivar o reactivar registros. Cada edición conserva valores
   anterior/nuevo en auditoría; no existe borrado físico de catálogos con historia.
@@ -123,7 +122,8 @@ alcance por rol ni una puerta `PV`.
 
 I-11 alinea el esquema académico con la fuente institucional SIANET a partir del acceso
 concedido al respaldo del 23 de junio de 2025. El análisis se hizo sobre datos y no sobre
-el DDL. Agrega el nivel `escuelas`, vuelve el periodo dependiente de la carrera, separa la
+el DDL. Agrega el nivel `escuelas`, inicialmente volvió el periodo dependiente de la carrera,
+separa la
 identidad oculta de la asignatura de su código visible, renombra `nivel` a `ciclo`,
 incorpora el desglose de horas y traduce el texto libre de campus y modalidad mediante
 `alias_institucionales`, sin copiar los defectos de la fuente. `PV-09` y `PV-10` quedan
@@ -131,6 +131,9 @@ incorpora el desglose de horas y traduce el texto libre de campus y modalidad me
 institucional confirmada, la importación ya propone alta, cambio o sin cambio en lugar de
 declarar todo conflicto. La importación permanece en modo simulación y `PV-08` y `PV-12`
 conservan su autoridad y estado `POR VALIDAR`.
+I-41 reemplaza específicamente esa pertenencia por carrera: en el producto el período es
+institucional, de código único, y un proceso de sílabos lo fija para todas las convocatorias
+que cuelgan de él.
 
 I-12 renombra «contexto» a rol en todo el sistema —clases, props, rutas, vistas, columna
 de auditoría, documentación y pruebas— por decisión explícita del responsable del

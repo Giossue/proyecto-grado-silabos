@@ -13,14 +13,25 @@ import {
     FieldLabel,
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import {
+    Select,
+    SelectContent,
+    SelectGroup,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 
 const props = defineProps<{
     /** Nombre de la plantilla institucional; nula si aún no existe. */
     template: string | null;
+    periods: { id: string; nombre: string }[];
     /** Sin proceso se prepara uno nuevo; con proceso se corrige el existente. */
     process?: {
         id: string;
         name: string;
+        period_id: string;
+        period_name: string;
         starts_at: string;
         due_at: string;
     } | null;
@@ -76,6 +87,39 @@ const formRoute = computed(() =>
 
                     <Field>
                         <p class="text-sm font-medium">Plantilla</p>
+                    </Field>
+
+                    <Field :data-invalid="Boolean(errors.period_id)">
+                        <FieldLabel for="process-period" required>
+                            Periodo académico
+                        </FieldLabel>
+                        <Select
+                            name="period_id"
+                            :default-value="process?.period_id"
+                            required
+                        >
+                            <SelectTrigger
+                                id="process-period"
+                                :aria-invalid="Boolean(errors.period_id)"
+                            >
+                                <SelectValue placeholder="Seleccione un periodo" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectGroup>
+                                    <SelectItem
+                                        v-for="period in periods"
+                                        :key="period.id"
+                                        :value="period.id"
+                                    >
+                                        {{ period.nombre }}
+                                    </SelectItem>
+                                </SelectGroup>
+                            </SelectContent>
+                        </Select>
+                        <p v-if="process" class="text-sm text-muted-foreground">
+                            No se puede cambiar si ya existen convocatorias.
+                        </p>
+                        <FieldError :errors="[errors.period_id]" />
                     </Field>
 
                     <Field :data-invalid="Boolean(errors.starts_at)">

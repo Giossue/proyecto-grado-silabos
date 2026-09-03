@@ -4,7 +4,6 @@ namespace App\Modules\Syllabus\Presentation\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\AcademicSource;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Syllabus\Application\Actions\CreateConvocation;
@@ -64,18 +63,18 @@ class ConvocationController extends Controller
                     'template' => $convocation->template->nombre,
                     'syllabi_count' => $convocation->syllabi_count,
                 ]),
-            'periods' => AcademicPeriod::query()->where('activo', true)->orderByDesc('fecha_inicio')->get(['id', 'nombre']),
             // El calendario lo fija Administración: la carrera elige a qué proceso
             // convoca y hereda su plantilla y sus fechas.
             'processes' => SyllabusProcess::query()
                 ->whereNot('estado', SyllabusProcess::STATE_CLOSED)
-                ->with('template:id,nombre')
+                ->with(['template:id,nombre', 'academicPeriod:id,nombre'])
                 ->orderByDesc('inicia_en')->get()
                 ->map(fn (SyllabusProcess $process): array => [
                     'id' => $process->id,
                     'label' => $process->nombre,
                     'state' => $process->estado,
                     'template' => $process->template->nombre,
+                    'period_name' => $process->academicPeriod->nombre,
                     'starts_at' => $process->inicia_en->toIso8601String(),
                     'due_at' => $process->entrega_en->toIso8601String(),
                 ]),

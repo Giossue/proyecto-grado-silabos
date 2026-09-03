@@ -38,7 +38,6 @@ defineProps<{
         grouping_mode: string;
         source_ids: string[];
     };
-    periods: { id: string; nombre: string }[];
     sources: { id: string; label: string }[];
 }>();
 
@@ -126,7 +125,6 @@ const transitionForm = (id: string, transition: Transition) =>
     <ConvocationEditSheet
         v-model:open="editOpen"
         :convocation="convocation"
-        :periods="periods"
         :sources="sources"
     />
 

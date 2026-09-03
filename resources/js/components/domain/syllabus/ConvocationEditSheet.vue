@@ -32,11 +32,9 @@ const props = defineProps<{
         id: string;
         name: string;
         state: string;
-        period_id: string;
         grouping_mode: string;
         source_ids: string[];
     };
-    periods: { id: string; nombre: string }[];
     sources: { id: string; label: string }[];
 }>();
 
@@ -51,8 +49,8 @@ const preparing = props.convocation.state === 'preparacion';
         :title="`Editar ${convocation.name}`"
         :description="
             preparing
-                ? 'Corrija el nombre, el periodo, la agrupación o las fuentes antes de abrir.'
-                : 'En pausa solo se corrigen el nombre y las fuentes: el periodo y la agrupación ya generaron expedientes.'
+                ? 'Corrija el nombre, la agrupación o las fuentes antes de abrir. El período viene del proceso institucional.'
+                : 'En pausa solo se corrigen el nombre y las fuentes: el período y la agrupación ya generaron expedientes.'
         "
         :show-trigger="false"
     >
@@ -86,39 +84,6 @@ const preparing = props.convocation.state === 'preparacion';
                     </Field>
 
                     <template v-if="preparing">
-                        <Field :data-invalid="Boolean(errors.period_id)">
-                            <FieldLabel
-                                :for="`convocation-edit-period-${convocation.id}`"
-                                required
-                            >
-                                Periodo académico
-                            </FieldLabel>
-                            <Select
-                                name="period_id"
-                                :default-value="convocation.period_id"
-                                required
-                            >
-                                <SelectTrigger
-                                    :id="`convocation-edit-period-${convocation.id}`"
-                                    :aria-invalid="Boolean(errors.period_id)"
-                                >
-                                    <SelectValue placeholder="Seleccione" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectGroup>
-                                        <SelectItem
-                                            v-for="period in periods"
-                                            :key="period.id"
-                                            :value="period.id"
-                                        >
-                                            {{ period.nombre }}
-                                        </SelectItem>
-                                    </SelectGroup>
-                                </SelectContent>
-                            </Select>
-                            <FieldError :errors="[errors.period_id]" />
-                        </Field>
-
                         <Field :data-invalid="Boolean(errors.grouping_mode)">
                             <FieldLabel
                                 :for="`convocation-edit-grouping-${convocation.id}`"

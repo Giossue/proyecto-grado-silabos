@@ -21,8 +21,8 @@ producción.
 - Administración crea un **proceso de sílabos** con plantilla publicada, fecha de inicio
   y fecha de entrega, y lo abre, pausa, reanuda o cierra. Solo puede haber un proceso en
   curso (abierto o pausado) a la vez.
-- Coordinación prepara su convocatoria eligiendo el proceso: la plantilla y las fechas se
-  heredan; solo decide periodo, agrupación y fuentes. Solo puede abrirla si el proceso está
+- Coordinación prepara su convocatoria eligiendo el proceso: la plantilla, el período y
+  las fechas se heredan; solo decide agrupación y fuentes. Solo puede abrirla si el proceso está
   abierto. Puede pausar y reanudar su convocatoria con motivo.
 - Con el proceso abierto, la plantilla no se edita ni se publica: hay que pausar el proceso.
 - Con una convocatoria en curso (abierta y proceso abierto), la malla y las fuentes de la

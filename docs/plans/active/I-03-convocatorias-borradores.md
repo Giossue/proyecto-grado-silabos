@@ -6,6 +6,9 @@ Implementado y verificado automáticamente. El cierre depende de la revisión ma
 interfaz y de `PV-05` y `PV-08`; ver `docs/plans/pending-work.md`.
 `composer verify` en verde el 2026-08-21: 163 pruebas y 1887 aserciones.
 
+> I-41 (2026-09-03) reemplaza la selección directa de período de esta versión inicial:
+> la convocatoria ahora hereda el período institucional del proceso de sílabos.
+
 ## Trazabilidad
 
 - RF-034 a RF-044; RN-017 a RN-024; CU-06 y CU-07.
@@ -14,8 +17,9 @@ interfaz y de `PV-05` y `PV-08`; ver `docs/plans/pending-work.md`.
 
 ## Resultado demostrable
 
-El coordinador de una carrera configura y abre una convocatoria con periodo, plantilla
-publicada, fuentes activas, fechas y un sílabo por paralelo como agrupación predeterminada.
+El coordinador de una carrera configura y abre una convocatoria con el período heredado
+del proceso, plantilla publicada, fuentes activas, fechas y un sílabo por paralelo como
+agrupación predeterminada.
 La apertura genera exactamente los expedientes esperados desde ofertas y asignaciones
 vigentes. El docente asignado inicia, edita y valida el borrador por secciones, con datos
 maestros de solo lectura, autoguardado observable y conflicto de concurrencia sin sobrescritura.

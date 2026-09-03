@@ -3,6 +3,7 @@
 namespace App\Modules\Syllabus\Infrastructure\Persistence\Models;
 
 use App\Models\User;
+use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
@@ -18,6 +19,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $id
  * @property string $nombre
  * @property string $plantilla_id
+ * @property string $periodo_academico_id
  * @property CarbonImmutable $inicia_en
  * @property CarbonImmutable $entrega_en
  * @property string $estado
@@ -56,7 +58,7 @@ class SyllabusProcess extends Model
 
     /** @var list<string> */
     protected $fillable = [
-        'nombre', 'plantilla_id', 'inicia_en', 'entrega_en', 'estado',
+        'nombre', 'plantilla_id', 'periodo_academico_id', 'inicia_en', 'entrega_en', 'estado',
         'creado_por', 'abierto_por', 'abierto_en', 'pausado_en', 'cerrado_en',
     ];
 
@@ -97,6 +99,12 @@ class SyllabusProcess extends Model
     public function template(): BelongsTo
     {
         return $this->belongsTo(SyllabusTemplate::class, 'plantilla_id');
+    }
+
+    /** @return BelongsTo<AcademicPeriod, $this> */
+    public function academicPeriod(): BelongsTo
+    {
+        return $this->belongsTo(AcademicPeriod::class, 'periodo_academico_id');
     }
 
     /** @return BelongsTo<User, $this> */

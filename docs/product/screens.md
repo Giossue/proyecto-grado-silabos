@@ -216,11 +216,12 @@ DOC-01 llena una cuadrícula con una casilla por celda, unidades y totales calcu
 - **Auditoría** agrupa las rutas administrativas **Procesos** (ADM-09) y **Registro de
   actividad** (ADM-10). La primera permite diagnosticar y reintentar trabajos; la segunda
   reconstruye quién hizo qué y cuándo.
-- ADM-12 lista los procesos de sílabos con estado, plantilla, inicio, entrega y
+- ADM-12 lista los procesos de sílabos con estado, período institucional, plantilla, inicio, entrega y
   convocatorias. El alta usa el `Sheet` derecho; **Editar** solo aparece en preparación o
   en pausa; **Abrir**, **Pausar**, **Reanudar** y **Cerrar** confirman en un diálogo que
-  explica la consecuencia y **Pausar** exige motivo. COR-03 elige el proceso y muestra la
-  plantilla y las fechas heredadas. COR-02 concentra en el menú de tres puntos de cada
+  explica la consecuencia y **Pausar** exige motivo. El alta exige elegir el período
+  académico institucional. COR-03 elige el proceso y muestra la plantilla, el período y
+  las fechas heredadas; no puede elegir ni cambiar el período. COR-02 concentra en el menú de tres puntos de cada
   fila todas las acciones —ver seguimiento, editar (solo en preparación o en pausa),
   abrir, pausar y reanudar— con el mismo diálogo de
   confirmación que ADM-12; COR-04 es solo seguimiento y avisa cuando la convocatoria o

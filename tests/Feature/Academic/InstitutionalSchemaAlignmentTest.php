@@ -73,18 +73,8 @@ class InstitutionalSchemaAlignmentTest extends TestCase
         $this->assertSame($facultad->id, $carrera->school->faculty->id);
     }
 
-    public function test_el_mismo_codigo_de_periodo_se_repite_entre_carreras_pero_no_dentro_de_una(): void
+    public function test_el_codigo_de_periodo_es_unico_para_toda_la_universidad(): void
     {
-        // En la fuente hay 1462 periodos con solo 49 nombres distintos porque
-        // `periodo_lectivo.cod_carr` es obligatorio.
-        $primera = Career::query()->firstOrFail();
-        $segunda = Career::query()->create([
-            'facultad_id' => $primera->facultad_id,
-            'codigo_institucional' => 'CARR-SEGUNDA',
-            'nombre' => 'Segunda carrera',
-            'activo' => true,
-        ]);
-
         $atributos = [
             'codigo' => 'MAYO-2022-SEPTIEMBRE-2022',
             'nombre' => 'Mayo 2022 - Septiembre 2022',
@@ -92,14 +82,13 @@ class InstitutionalSchemaAlignmentTest extends TestCase
             'fecha_fin' => '2022-09-30',
             'activo' => true,
         ];
-        AcademicPeriod::query()->create($atributos + ['carrera_id' => $primera->id]);
-        AcademicPeriod::query()->create($atributos + ['carrera_id' => $segunda->id]);
+        AcademicPeriod::query()->create($atributos);
 
-        $this->assertSame(2, AcademicPeriod::query()
+        $this->assertSame(1, AcademicPeriod::query()
             ->where('codigo', 'MAYO-2022-SEPTIEMBRE-2022')->count());
 
         $this->expectException(QueryException::class);
-        AcademicPeriod::query()->create($atributos + ['carrera_id' => $primera->id]);
+        AcademicPeriod::query()->create($atributos);
     }
 
     public function test_la_identidad_oculta_de_una_asignatura_es_unica(): void

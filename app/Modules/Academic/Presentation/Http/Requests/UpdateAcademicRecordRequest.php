@@ -43,7 +43,7 @@ class UpdateAcademicRecordRequest extends FormRequest
                     'required',
                     'string',
                     'max:40',
-                    Rule::unique('periodos_academicos', 'codigo')->whereNull('carrera_id')->ignore($this->recordId()),
+                    Rule::unique('periodos_academicos', 'codigo')->ignore($this->recordId()),
                 ],
                 'nombre' => ['required', 'string', 'max:120'],
                 'starts_on' => ['required', 'date'],

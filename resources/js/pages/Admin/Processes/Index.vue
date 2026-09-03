@@ -31,6 +31,8 @@ import { index as processesIndex } from '@/routes/admin/processes';
 type ProcessRow = {
     id: string;
     name: string;
+    period_id: string;
+    period_name: string;
     state: string;
     template: string;
     starts_at: string;
@@ -43,6 +45,7 @@ const props = defineProps<{
     processes: ProcessRow[];
     /** Nombre de la plantilla institucional; nula si aún no existe. */
     template: string | null;
+    periods: { id: string; nombre: string }[];
 }>();
 
 defineOptions({
@@ -66,7 +69,7 @@ const formatDate = (value: string): string =>
 
 const filter = useClientFilter(
     () => props.processes,
-    (item) => [item.name, item.template],
+    (item) => [item.name, item.period_name, item.template],
     {
         estado: {
             matches: (item, value) => item.state === value,
@@ -88,7 +91,7 @@ const {
         description="El proceso institucional que obliga a todas las carreras: con qué plantilla se elaboran los sílabos y entre qué fechas. Cada coordinación convoca a su carrera dentro de él."
     >
         <template #actions>
-            <SyllabusProcessSheet :template="template" />
+            <SyllabusProcessSheet :template="template" :periods="periods" />
         </template>
 
         <Card>
@@ -141,6 +144,7 @@ const {
                         <TableRow>
                             <TableHead>Proceso</TableHead>
                             <TableHead>Estado</TableHead>
+                            <TableHead>Periodo</TableHead>
                             <TableHead>Plantilla</TableHead>
                             <TableHead>Inicio</TableHead>
                             <TableHead>Entrega</TableHead>
@@ -153,7 +157,7 @@ const {
                     <TableBody>
                         <TableEmpty
                             v-if="processPage.length === 0"
-                            :colspan="7"
+                            :colspan="8"
                         >
                             {{
                                 filter.active.value
@@ -170,6 +174,7 @@ const {
                             <TableCell>
                                 {{ stateLabel(process.state) }}
                             </TableCell>
+                            <TableCell>{{ process.period_name }}</TableCell>
                             <TableCell>{{ process.template }}</TableCell>
                             <TableCell>{{
                                 formatDate(process.starts_at)
@@ -184,6 +189,7 @@ const {
                                 <SyllabusProcessActions
                                     :process="process"
                                     :template="template"
+                                    :periods="periods"
                                 />
                             </TableCell>
                         </TableRow>

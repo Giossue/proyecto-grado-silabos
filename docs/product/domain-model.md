@@ -39,9 +39,9 @@ la carrera (`carreras.campus_id`, I-36) y la modalidad de la materia si se apart
 Si alguna materia se aparta, la carrera es híbrida sin marcarlo. La oferta conserva las
 copias porque el sílabo toma de ahí campus y modalidad.
 
-`PeriodoAcademico` no es un catálogo global: pertenece a una carrera. En la fuente el
-mismo nombre de periodo existe una vez por carrera con fechas propias, así que el código
-de periodo es único dentro de su carrera y no en toda la institución.
+`PeriodoAcademico` es un catálogo institucional único: su código no se repite entre
+carreras. Aunque la fuente histórica lo replique por carrera, el producto lo consolida
+como la ventana temporal común de la universidad (I-41).
 
 Una `Asignatura` tiene dos identificadores institucionales con papeles distintos: el
 código oculto es la identidad canónica con la que se reconcilia, y el código visible es
@@ -89,15 +89,16 @@ de IA no se borran y el cambio se rechaza.
 
 ### Proceso de sílabos y convocatoria
 
-`ProcesoSilabos` es el calendario institucional: nombre, plantilla institucional,
-fecha de inicio, fecha de entrega y estado (`preparacion`, `abierto`, `pausado`,
+`ProcesoSilabos` es el calendario institucional: nombre, período académico, plantilla
+institucional, fecha de inicio, fecha de entrega y estado (`preparacion`, `abierto`, `pausado`,
 `cerrado`). Lo administra Administración porque el calendario académico oficial obliga
 a todas las facultades. La base impone un solo proceso abierto o pausado a la vez.
 
-`Convocatoria` cuelga de un proceso obligatorio y vincula carrera, periodo, fuentes
+`Convocatoria` cuelga de un proceso obligatorio y vincula carrera, período heredado del
+proceso, fuentes
 activas, agrupación, fechas y estado (`preparacion`, `abierta`, `pausada`, `cerrada`).
-Hereda la plantilla y las fechas del proceso al prepararse; las fechas se copian, no se
-referencian, porque la carrera puede prorrogar las suyas. Solo se abre con el proceso
+Hereda la plantilla, el período y las fechas del proceso al prepararse; las fechas se
+copian, no se referencian, porque la carrera puede prorrogar las suyas. Solo se abre con el proceso
 abierto; al abrirla, la plantilla debe estar completa y las fuentes activas.
 
 Una convocatoria está **en curso** cuando ella está abierta y su proceso también. Esa

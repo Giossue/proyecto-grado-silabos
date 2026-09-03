@@ -1,6 +1,10 @@
 # I-11: Alineación del esquema con la fuente institucional
 
 
+> **Nota del 2026-09-03 (I-41).** La decisión de período por carrera queda reemplazada:
+> el producto usa un período institucional único, por indicación explícita del responsable
+> del producto. El hallazgo de la fuente se conserva solo como antecedente histórico.
+>
 > **Nota del 2026-08-27.** El módulo de importación que motivaba este incremento se
 > retiró. Lo que aquí se decidió sobre la estructura académica —escuelas, periodo por
 > carrera, ciclo en la malla, identidad del docente— se conserva: describe cómo se

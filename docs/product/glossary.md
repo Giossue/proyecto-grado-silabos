@@ -2,7 +2,7 @@
 
 | Término                   | Definición operativa                                                                         |
 | ------------------------- | -------------------------------------------------------------------------------------------- |
-| Convocatoria              | Configuración de elaboración de sílabos para una carrera y periodo.                          |
+| Convocatoria              | Configuración de elaboración de sílabos para una carrera dentro de un proceso; hereda su período institucional. |
 | Ciclo                     | Posición curricular de una materia dentro de una malla; no representa fechas.                |
 | Periodo académico         | Ventana temporal con fecha de inicio y fin en la que se ofrece una materia.                  |
 | Malla                     | Estructura académica actual y única de una carrera; puede estar activa o inactiva.           |

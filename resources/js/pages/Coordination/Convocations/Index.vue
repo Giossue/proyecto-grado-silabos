@@ -46,7 +46,6 @@ type ConvocationRow = {
 defineProps<{
     convocations: Paginated<ConvocationRow>;
     filters: { q: string | null; state: string | null };
-    periods: { id: string; nombre: string }[];
     processes: {
         id: string;
         label: string;
@@ -54,6 +53,7 @@ defineProps<{
         template: string;
         starts_at: string;
         due_at: string;
+        period_name: string;
     }[];
     sources: { id: string; label: string }[];
 }>();
@@ -88,7 +88,6 @@ const processNote = (row: ConvocationRow): string | null =>
     >
         <template #actions>
             <ConvocationCreationSheet
-                :periods="periods"
                 :processes="processes"
                 :sources="sources"
             />
@@ -215,7 +214,6 @@ const processNote = (row: ConvocationRow): string | null =>
                             <TableCell class="text-right">
                                 <ConvocationActions
                                     :convocation="convocation"
-                                    :periods="periods"
                                     :sources="sources"
                                 />
                             </TableCell>

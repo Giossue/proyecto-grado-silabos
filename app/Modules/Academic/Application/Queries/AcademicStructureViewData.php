@@ -341,9 +341,6 @@ class AcademicStructureViewData
                 ...$this->emptyOptions(),
                 'periods' => AcademicPeriod::query()
                     ->where('activo', true)
-                    ->where(fn ($query) => $query
-                        ->whereNull('carrera_id')
-                        ->orWhere('carrera_id', $careerId))
                     ->orderByDesc('fecha_inicio')
                     ->get(['id', 'nombre']),
                 'campuses' => Campus::query()->where('activo', true)->orderBy('nombre')->get(['id', 'nombre']),

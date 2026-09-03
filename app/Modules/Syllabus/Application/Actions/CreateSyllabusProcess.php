@@ -23,7 +23,7 @@ class CreateSyllabusProcess
         private readonly RecordAuditEvent $audit,
     ) {}
 
-    /** @param array{nombre: string, starts_at: string, due_at: string} $data */
+    /** @param array{nombre: string, period_id: string, starts_at: string, due_at: string} $data */
     public function execute(array $data, User $actor, Request $request): SyllabusProcess
     {
         $activeRole = $this->roles->resolve($request);
@@ -37,6 +37,7 @@ class CreateSyllabusProcess
             $process = SyllabusProcess::query()->create([
                 'nombre' => $data['nombre'],
                 'plantilla_id' => $template->id,
+                'periodo_academico_id' => $data['period_id'],
                 'inicia_en' => $data['starts_at'],
                 'entrega_en' => $data['due_at'],
                 'estado' => SyllabusProcess::STATE_PREPARATION,
@@ -52,6 +53,7 @@ class CreateSyllabusProcess
                 result: 'exito',
                 metadata: [
                     'template_id' => $process->plantilla_id,
+                    'period_id' => $process->periodo_academico_id,
                     'starts_at' => $process->inicia_en->toIso8601String(),
                     'due_at' => $process->entrega_en->toIso8601String(),
                 ],

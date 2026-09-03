@@ -22,7 +22,7 @@ class UpdateSyllabusProcess
         private readonly RecordAuditEvent $audit,
     ) {}
 
-    /** @param array{nombre: string, starts_at: string, due_at: string} $data */
+    /** @param array{nombre: string, period_id: string, starts_at: string, due_at: string} $data */
     public function execute(SyllabusProcess $process, array $data, User $actor, Request $request): SyllabusProcess
     {
         $activeRole = $this->roles->resolve($request);
@@ -40,11 +40,18 @@ class UpdateSyllabusProcess
 
             $before = [
                 'before_nombre' => $locked->nombre,
+                'before_period_id' => $locked->periodo_academico_id,
                 'before_starts_at' => $locked->inicia_en->toIso8601String(),
                 'before_due_at' => $locked->entrega_en->toIso8601String(),
             ];
+            if ($locked->periodo_academico_id !== $data['period_id'] && $locked->convocations()->exists()) {
+                throw ValidationException::withMessages([
+                    'period_id' => 'No se puede cambiar el período de un proceso que ya tiene convocatorias.',
+                ]);
+            }
             $locked->update([
                 'nombre' => $data['nombre'],
+                'periodo_academico_id' => $data['period_id'],
                 'inicia_en' => $data['starts_at'],
                 'entrega_en' => $data['due_at'],
             ]);
@@ -59,6 +66,7 @@ class UpdateSyllabusProcess
                 metadata: [
                     ...$before,
                     'after_nombre' => $locked->nombre,
+                    'after_period_id' => $locked->periodo_academico_id,
                     'after_starts_at' => $locked->inicia_en->toIso8601String(),
                     'after_due_at' => $locked->entrega_en->toIso8601String(),
                 ],

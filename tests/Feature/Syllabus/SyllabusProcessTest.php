@@ -3,7 +3,7 @@
 namespace Tests\Feature\Syllabus;
 
 use App\Models\User;
-use App\Modules\Academic\Infrastructure\Persistence\Models\CourseOffering;
+use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\AcademicSource;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
@@ -12,6 +12,7 @@ use App\Modules\Syllabus\Infrastructure\Persistence\Models\Convocation;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\Syllabus;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\SyllabusProcess;
 use Database\Seeders\DatabaseSeeder;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -84,6 +85,7 @@ class SyllabusProcessTest extends TestCase
 
         $this->actingAsAdministrator()
             ->post(route('admin.processes.store'), [
+                ...$this->processPayload($template),
                 'nombre' => 'Proceso por días',
                 'starts_at' => $start,
                 'due_at' => $due,
@@ -94,6 +96,15 @@ class SyllabusProcessTest extends TestCase
         $process = SyllabusProcess::query()->where('nombre', 'Proceso por días')->firstOrFail();
         $this->assertSame("{$start} 00:00:00", $process->inicia_en->format('Y-m-d H:i:s'));
         $this->assertSame("{$due} 23:59:59", $process->entrega_en->format('Y-m-d H:i:s'));
+    }
+
+    public function test_a_process_requires_an_active_institutional_period(): void
+    {
+        $payload = $this->processPayload($this->publishedTemplate());
+        unset($payload['period_id']);
+
+        $this->actingAsAdministrator()->post(route('admin.processes.store'), $payload)
+            ->assertSessionHasErrors('period_id');
     }
 
     public function test_only_one_process_can_be_in_progress(): void
@@ -137,17 +148,26 @@ class SyllabusProcessTest extends TestCase
         $template = $this->publishedTemplate();
         $process = $this->preparedProcess($template, 'Elaboración 2026-2027');
         $source = $this->coordinatorSource();
+        $otherPeriod = AcademicPeriod::query()->create([
+            'codigo' => 'I-41-ALTERNO',
+            'nombre' => 'Período institucional alterno',
+            'fecha_inicio' => '2027-01-01',
+            'fecha_fin' => '2027-05-31',
+            'activo' => true,
+        ]);
 
         $this->actingAsCoordinator()->post(route('convocations.store'), [
             'nombre' => 'Convocatoria de Software',
             'process_id' => $process->id,
-            'period_id' => CourseOffering::query()->firstOrFail()->periodo_academico_id,
+            // Un cliente no puede sustituir el período que ya fijó el proceso.
+            'period_id' => $otherPeriod->id,
             'grouping_mode' => 'por_oferta',
             'source_ids' => [$source->id],
         ])->assertRedirect();
 
         $convocation = Convocation::query()->firstOrFail();
         $this->assertSame($process->id, $convocation->proceso_id);
+        $this->assertSame($process->periodo_academico_id, $convocation->periodo_academico_id);
         $this->assertSame($template->id, $convocation->plantilla_id);
         $this->assertDatabaseHas('fechas_limite_convocatoria', [
             'convocatoria_id' => $convocation->id,
@@ -169,6 +189,10 @@ class SyllabusProcessTest extends TestCase
         $this->actingAsCoordinator()->post(route('convocations.open', $convocation))->assertRedirect();
         $this->assertSame('abierta', $convocation->fresh()->estado);
         $this->assertDatabaseCount('silabos', 1);
+
+        // La regla también vive en PostgreSQL, por si una mutación evita el caso de uso.
+        $this->expectException(QueryException::class);
+        $convocation->update(['periodo_academico_id' => $otherPeriod->id]);
     }
 
     public function test_an_open_process_freezes_the_template_until_it_is_paused(): void
@@ -397,11 +421,36 @@ class SyllabusProcessTest extends TestCase
         $this->assertSame('Renombrado', $process->fresh()->nombre);
     }
 
-    /** @return array{nombre: string, starts_at: string, due_at: string} */
+    public function test_period_of_a_process_with_convocations_cannot_change(): void
+    {
+        $process = $this->preparedProcess($this->publishedTemplate(), 'Proceso con convocatoria');
+        $source = $this->coordinatorSource();
+        $this->actingAsCoordinator()->post(route('convocations.store'), [
+            'nombre' => 'Convocatoria ligada',
+            'process_id' => $process->id,
+            'grouping_mode' => 'por_oferta',
+            'source_ids' => [$source->id],
+        ])->assertRedirect();
+        $otherPeriod = AcademicPeriod::query()->create([
+            'codigo' => 'I-41-NO-CAMBIAR',
+            'nombre' => 'Período no reasignable',
+            'fecha_inicio' => '2027-06-01',
+            'fecha_fin' => '2027-10-31',
+            'activo' => true,
+        ]);
+
+        $this->actingAsAdministrator()->patch(route('admin.processes.update', $process), [
+            ...$this->processPayload($process->template),
+            'period_id' => $otherPeriod->id,
+        ])->assertSessionHasErrors('period_id');
+    }
+
+    /** @return array{nombre: string, period_id: string, starts_at: string, due_at: string} */
     private function processPayload(SyllabusTemplate $template): array
     {
         return [
             'nombre' => 'Elaboración de sílabos 2026-2027',
+            'period_id' => AcademicPeriod::query()->where('activo', true)->valueOrFail('id'),
             'starts_at' => now()->subDay()->toIso8601String(),
             'due_at' => now()->addMonth()->toIso8601String(),
         ];
@@ -432,7 +481,6 @@ class SyllabusProcessTest extends TestCase
         $this->actingAsCoordinator()->post(route('convocations.store'), [
             'nombre' => 'Convocatoria en curso',
             'process_id' => $process->id,
-            'period_id' => CourseOffering::query()->firstOrFail()->periodo_academico_id,
             'grouping_mode' => 'por_oferta',
             'source_ids' => [$source->id],
         ])->assertRedirect();

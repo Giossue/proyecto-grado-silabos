@@ -30,12 +30,15 @@ defineProps<{
     process: {
         id: string;
         name: string;
+        period_id: string;
+        period_name: string;
         state: string;
         starts_at: string;
         due_at: string;
         configurable: boolean;
     };
     template: string | null;
+    periods: { id: string; nombre: string }[];
 }>();
 
 const editOpen = ref(false);
@@ -139,6 +142,7 @@ const dialogs: Record<
     <SyllabusProcessSheet
         v-model:open="editOpen"
         :template="template"
+        :periods="periods"
         :process="process"
         display="menu"
     />

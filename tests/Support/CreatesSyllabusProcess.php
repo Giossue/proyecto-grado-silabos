@@ -3,6 +3,7 @@
 namespace Tests\Support;
 
 use App\Models\User;
+use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\SyllabusProcess;
 use Carbon\CarbonInterface;
 
@@ -20,6 +21,7 @@ trait CreatesSyllabusProcess
     ): SyllabusProcess {
         $attributes = [
             'plantilla_id' => $templateId,
+            'periodo_academico_id' => AcademicPeriod::query()->where('activo', true)->valueOrFail('id'),
             'inicia_en' => $startsAt ?? now()->subDay(),
             'entrega_en' => $dueAt ?? now()->addMonth(),
         ];

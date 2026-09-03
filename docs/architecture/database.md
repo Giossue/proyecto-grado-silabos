@@ -43,7 +43,8 @@ puentes que Fortify y el guard exigen. I-29 hace las asignaciones de rol manuale
 
 Estos catálogos no comparten una tabla polimórfica. `carreras.facultad_id` implementa la
 relación uno-a-muchos Facultad → Carreras con clave foránea y borrado restringido.
-`campus` y `periodos_academicos` conservan identidad propia; `ofertas_academicas` los
+`campus` y `periodos_academicos` conservan identidad propia; el período es institucional
+y de código único, no depende de una carrera. `ofertas_academicas` los
 relaciona con una asignatura mediante claves foráneas. La modalidad no es tabla sino
 columna de texto con valores fijos (`carreras.modalidad` base, `asignaturas.modalidad`
 opcional, `ofertas_academicas.modalidad` copia heredada; migración `000034`, I-37). El
@@ -87,9 +88,12 @@ migración `000020`; la evidencia de IA conserva su propia copia del contenido c
 `fechas_limite_convocatoria`, `silabos`, `alcances_silabo`, `colaboradores_silabo`,
 `revisiones_silabo`, `filas_repetibles`, `valores_campo`, `transiciones_estado`.
 
-`procesos_silabos` (I-31) es el calendario institucional: plantilla publicada, inicio,
-entrega y estado. Un índice parcial único sobre `estado IN ('abierto', 'pausado')`
-garantiza un solo proceso en curso. `convocatorias.proceso_id` es obligatorio; la
+`procesos_silabos` (I-31, I-41) es el calendario institucional: período académico,
+plantilla publicada, inicio, entrega y estado. Un índice parcial único sobre
+`estado IN ('abierto', 'pausado')` garantiza un solo proceso en curso.
+`convocatorias.proceso_id` es obligatorio y su `periodo_academico_id` debe coincidir con
+el del proceso: triggers PostgreSQL protegen esa consistencia y bloquean cambiar el
+período de un proceso que ya tiene convocatorias. La
 migración `000027` creó un proceso por cada convocatoria existente con su propia
 plantilla y fechas. El estado `pausada` de la convocatoria y `pausado` del proceso
 detienen el trabajo docente sin borrar nada.

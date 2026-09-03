@@ -5,11 +5,9 @@ namespace App\Modules\Academic\Infrastructure\Persistence\Models;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * @property string $id
- * @property string|null $carrera_id
  * @property string|null $codigo_institucional
  * @property string $codigo
  * @property string $nombre
@@ -30,7 +28,6 @@ class AcademicPeriod extends Model
 
     /** @var list<string> */
     protected $fillable = [
-        'carrera_id',
         'codigo_institucional',
         'codigo',
         'nombre',
@@ -49,17 +46,5 @@ class AcademicPeriod extends Model
             'anio' => 'integer',
             'activo' => 'boolean',
         ];
-    }
-
-    /**
-     * Un periodo sin carrera es un catálogo institucional global; con carrera reproduce
-     * la fuente, donde `periodo_lectivo.cod_carr` es obligatorio y el mismo nombre de
-     * periodo se repite una vez por carrera con fechas propias.
-     *
-     * @return BelongsTo<Career, $this>
-     */
-    public function career(): BelongsTo
-    {
-        return $this->belongsTo(Career::class, 'carrera_id');
     }
 }

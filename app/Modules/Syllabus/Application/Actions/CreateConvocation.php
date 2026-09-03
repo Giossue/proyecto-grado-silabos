@@ -24,9 +24,9 @@ class CreateConvocation
 
     /**
      * La plantilla y las fechas no se eligen aquí: vienen del proceso institucional. La
-     * carrera decide periodo, agrupación y fuentes.
+     * carrera decide agrupación y fuentes; el período viene del proceso institucional.
      *
-     * @param  array{nombre: string, process_id: string, period_id: string, grouping_mode: string, source_ids: list<string>}  $data
+     * @param  array{nombre: string, process_id: string, grouping_mode: string, source_ids: list<string>}  $data
      */
     public function execute(array $data, User $actor, Request $request): Convocation
     {
@@ -35,12 +35,15 @@ class CreateConvocation
             abort(403);
         }
 
-        $process = SyllabusProcess::query()->with('template')->findOrFail($data['process_id']);
+        $process = SyllabusProcess::query()->with(['template', 'academicPeriod'])->findOrFail($data['process_id']);
         if ($process->estado === SyllabusProcess::STATE_CLOSED) {
             throw ValidationException::withMessages(['process_id' => 'El proceso ya está cerrado; elija uno vigente.']);
         }
         if (! $process->template->activo || ! $process->template->es_institucional) {
             throw ValidationException::withMessages(['process_id' => 'La plantilla del proceso está archivada; Administración debe corregirla.']);
+        }
+        if (! $process->academicPeriod->activo) {
+            throw ValidationException::withMessages(['process_id' => 'El período del proceso está archivado; Administración debe corregir el proceso.']);
         }
 
         $sources = AcademicSource::query()->whereIn('id', $data['source_ids'])->get();
@@ -54,7 +57,7 @@ class CreateConvocation
             $convocation = Convocation::query()->create([
                 'carrera_id' => $activeRole->carrera_id,
                 'proceso_id' => $process->id,
-                'periodo_academico_id' => $data['period_id'],
+                'periodo_academico_id' => $process->periodo_academico_id,
                 'plantilla_id' => $process->plantilla_id,
                 'nombre' => $data['nombre'],
                 'estado' => 'preparacion',
@@ -95,7 +98,7 @@ class CreateConvocation
                 resourceType: 'convocatoria',
                 resourceId: $convocation->id,
                 result: 'exito',
-                metadata: ['process_id' => $process->id, 'grouping_mode' => $data['grouping_mode'], 'source_count' => count($data['source_ids'])],
+                metadata: ['process_id' => $process->id, 'period_id' => $process->periodo_academico_id, 'grouping_mode' => $data['grouping_mode'], 'source_count' => count($data['source_ids'])],
                 correlationId: $request->attributes->getString('correlation_id') ?: null,
             );
 

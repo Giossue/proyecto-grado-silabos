@@ -5,6 +5,7 @@ namespace App\Modules\Syllabus\Presentation\Http\Requests;
 use App\Modules\Syllabus\Application\ProcessDates;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\SyllabusProcess;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreSyllabusProcessRequest extends FormRequest
 {
@@ -31,6 +32,7 @@ class StoreSyllabusProcessRequest extends FormRequest
     {
         return [
             'nombre' => ['required', 'string', 'max:180'],
+            'period_id' => ['required', 'uuid', Rule::exists('periodos_academicos', 'id')->where('activo', true)],
             'starts_at' => ['required', 'date'],
             'due_at' => ['required', 'date', 'after:now', 'after:starts_at'],
         ];
@@ -44,11 +46,12 @@ class StoreSyllabusProcessRequest extends FormRequest
         ];
     }
 
-    /** @return array{nombre: string, starts_at: string, due_at: string} */
+    /** @return array{nombre: string, period_id: string, starts_at: string, due_at: string} */
     public function processData(): array
     {
         return [
             'nombre' => $this->string('nombre')->toString(),
+            'period_id' => $this->string('period_id')->toString(),
             'starts_at' => $this->string('starts_at')->toString(),
             'due_at' => $this->string('due_at')->toString(),
         ];

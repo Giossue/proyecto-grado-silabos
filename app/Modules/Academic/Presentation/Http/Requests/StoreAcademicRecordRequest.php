@@ -71,7 +71,7 @@ class StoreAcademicRecordRequest extends FormRequest
                     'required',
                     'string',
                     'max:40',
-                    Rule::unique('periodos_academicos', 'codigo')->whereNull('carrera_id'),
+                    Rule::unique('periodos_academicos', 'codigo'),
                 ],
                 'nombre' => ['required', 'string', 'max:120'],
                 'starts_on' => ['required', 'date'],
@@ -93,11 +93,7 @@ class StoreAcademicRecordRequest extends FormRequest
                 'period_id' => [
                     'required',
                     'uuid',
-                    Rule::exists('periodos_academicos', 'id')->where(fn ($query) => $query
-                        ->where('activo', true)
-                        ->where(fn ($periods) => $periods
-                            ->whereNull('carrera_id')
-                            ->orWhere('carrera_id', $this->careerId()))),
+                    Rule::exists('periodos_academicos', 'id')->where('activo', true),
                 ],
                 'subject_id' => [
                     'required',

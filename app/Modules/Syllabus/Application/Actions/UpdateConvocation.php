@@ -15,7 +15,7 @@ use Illuminate\Validation\ValidationException;
 
 /**
  * La convocatoria se corrige en preparación o en pausa. Antes de abrir se cambia todo;
- * abierta y pausada, solo el nombre y las fuentes: el periodo y la agrupación ya
+ * abierta y pausada, solo el nombre y las fuentes: la agrupación ya
  * generaron expedientes y cambiarlos dejaría los sílabos sin correspondencia.
  */
 class UpdateConvocation
@@ -25,7 +25,7 @@ class UpdateConvocation
         private readonly RecordAuditEvent $audit,
     ) {}
 
-    /** @param array{nombre: string, period_id?: string|null, grouping_mode?: string|null, source_ids: list<string>} $data */
+    /** @param array{nombre: string, grouping_mode?: string|null, source_ids: list<string>} $data */
     public function execute(Convocation $convocation, array $data, User $actor, Request $request): Convocation
     {
         $activeRole = $this->roles->resolve($request);
@@ -52,13 +52,11 @@ class UpdateConvocation
 
             $before = [
                 'nombre' => $locked->nombre,
-                'period_id' => $locked->periodo_academico_id,
                 'grouping_mode' => $locked->modo_agrupacion,
                 'source_ids' => $locked->sources()->pluck('fuentes_academicas.id')->sort()->values()->all(),
             ];
             $attributes = ['nombre' => $data['nombre']];
             if ($locked->estado === Convocation::STATE_PREPARATION) {
-                $attributes['periodo_academico_id'] = $data['period_id'] ?? $locked->periodo_academico_id;
                 $attributes['modo_agrupacion'] = $data['grouping_mode'] ?? $locked->modo_agrupacion;
             }
             $locked->update($attributes);
@@ -84,8 +82,6 @@ class UpdateConvocation
                 metadata: [
                     'before_nombre' => $before['nombre'],
                     'after_nombre' => $locked->nombre,
-                    'before_period_id' => $before['period_id'],
-                    'after_period_id' => $locked->periodo_academico_id,
                     'before_grouping_mode' => $before['grouping_mode'],
                     'after_grouping_mode' => $locked->modo_agrupacion,
                     'before_source_ids' => implode(',', $before['source_ids']),

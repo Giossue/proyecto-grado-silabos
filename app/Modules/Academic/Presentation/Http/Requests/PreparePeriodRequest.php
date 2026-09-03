@@ -22,17 +22,11 @@ class PreparePeriodRequest extends FormRequest
     /** @return array<string, list<mixed>> */
     public function rules(): array
     {
-        $careerId = app(ActiveRole::class)->resolve($this)?->carrera_id;
-
         return [
             'period_id' => [
                 'required',
                 'uuid',
-                Rule::exists('periodos_academicos', 'id')->where(fn ($query) => $query
-                    ->where('activo', true)
-                    ->where(fn ($periods) => $periods
-                        ->whereNull('carrera_id')
-                        ->orWhere('carrera_id', $careerId))),
+                Rule::exists('periodos_academicos', 'id')->where('activo', true),
             ],
         ];
     }

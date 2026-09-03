@@ -25,7 +25,6 @@ import {
 } from '@/components/ui/select';
 
 defineProps<{
-    periods: { id: string; nombre: string }[];
     processes: {
         id: string;
         label: string;
@@ -33,6 +32,7 @@ defineProps<{
         template: string;
         starts_at: string;
         due_at: string;
+        period_name: string;
     }[];
     sources: { id: string; label: string }[];
 }>();
@@ -57,7 +57,7 @@ const processStateLabel = (state: string): string =>
     <FormSheet
         trigger-label="Nueva convocatoria"
         title="Preparar convocatoria"
-        description="Elija el proceso institucional, el periodo, las fuentes y el alcance. La plantilla y las fechas se heredan del proceso. Esta preparación todavía no genera sílabos; podrá revisar el resumen antes de abrirla."
+        description="Elija el proceso institucional, las fuentes y el alcance. La plantilla, las fechas y el período se heredan del proceso. Esta preparación todavía no genera sílabos; podrá revisar el resumen antes de abrirla."
     >
         <template #default="{ close }">
             <Form
@@ -100,38 +100,13 @@ const processStateLabel = (state: string): string =>
                                         :value="process.id"
                                     >
                                         {{ process.label }} ·
+                                        {{ process.period_name }} ·
                                         {{ processStateLabel(process.state) }}
                                     </SelectItem>
                                 </SelectGroup>
                             </SelectContent>
                         </Select>
                         <FieldError :errors="[errors.process_id]" />
-                    </Field>
-
-                    <Field :data-invalid="Boolean(errors.period_id)">
-                        <FieldLabel for="convocation-period" required>
-                            Periodo académico
-                        </FieldLabel>
-                        <Select name="period_id" required>
-                            <SelectTrigger
-                                id="convocation-period"
-                                :aria-invalid="Boolean(errors.period_id)"
-                            >
-                                <SelectValue placeholder="Seleccione" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectGroup>
-                                    <SelectItem
-                                        v-for="period in periods"
-                                        :key="period.id"
-                                        :value="period.id"
-                                    >
-                                        {{ period.nombre }}
-                                    </SelectItem>
-                                </SelectGroup>
-                            </SelectContent>
-                        </Select>
-                        <FieldError :errors="[errors.period_id]" />
                     </Field>
 
                     <Field :data-invalid="Boolean(errors.grouping_mode)">
