@@ -2,6 +2,7 @@
 
 namespace App\Modules\Academic\Infrastructure\Persistence\Models;
 
+use App\Modules\Academic\Domain\StudyModality;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -15,7 +16,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int|null $ciclo
  * @property int $orden_en_ciclo
  * @property string|null $unidad_organizacion_curricular
- * @property string|null $modalidad_id
+ * @property StudyModality|null $modalidad
  * @property string|null $creditos
  * @property int|null $horas_totales
  * @property string|null $horas_proyecto
@@ -47,7 +48,7 @@ class Subject extends Model
         'ciclo',
         'orden_en_ciclo',
         'unidad_organizacion_curricular',
-        'modalidad_id',
+        'modalidad',
         'creditos',
         'horas_totales',
         'horas_proyecto',
@@ -64,6 +65,7 @@ class Subject extends Model
     {
         return [
             'ciclo' => 'integer',
+            'modalidad' => StudyModality::class,
             'orden_en_ciclo' => 'integer',
             'creditos' => 'decimal:2',
             'horas_totales' => 'integer',
@@ -82,13 +84,6 @@ class Subject extends Model
     public function curriculum(): BelongsTo
     {
         return $this->belongsTo(Curriculum::class, 'malla_id');
-    }
-
-    /** Solo cuando la carrera combina modalidades por materia (I-35). */
-    /** @return BelongsTo<Modality, $this> */
-    public function modality(): BelongsTo
-    {
-        return $this->belongsTo(Modality::class, 'modalidad_id');
     }
 
     /** @return HasMany<CourseOffering, $this> */

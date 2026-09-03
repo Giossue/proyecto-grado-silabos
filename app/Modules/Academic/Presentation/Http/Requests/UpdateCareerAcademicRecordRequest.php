@@ -4,6 +4,7 @@ namespace App\Modules\Academic\Presentation\Http\Requests;
 
 use App\Modules\Academic\Domain\AcademicStructurePermissions;
 use App\Modules\Academic\Domain\CurriculumSystemFields;
+use App\Modules\Academic\Domain\StudyModality;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CourseOffering;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CurriculumFieldDefinition;
@@ -171,7 +172,7 @@ class UpdateCareerAcademicRecordRequest extends FormRequest
             'cycle' => ['required', 'integer', 'min:1', 'max:30'],
             'position' => ['nullable', 'integer', 'min:0', 'max:999'],
             'organization_unit' => ['required', 'string', 'max:80'],
-            'modality_id' => ['nullable', 'uuid', Rule::exists('modalidades', 'id')->where('activo', true)],
+            'modality' => ['nullable', 'string', Rule::in(StudyModality::values())],
             'creditos' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
             'horas_totales' => ['nullable', 'integer', 'min:0', 'max:65535'],
             'hours_project' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],

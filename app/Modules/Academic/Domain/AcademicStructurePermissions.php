@@ -12,7 +12,6 @@ final class AcademicStructurePermissions
         'facultad',
         'carrera',
         'campus',
-        'modalidad',
         'periodo',
         'asignacion_coordinador',
     ];
@@ -31,7 +30,6 @@ final class AcademicStructurePermissions
         'facultad',
         'carrera',
         'campus',
-        'modalidad',
         'periodo',
         'asignacion_coordinador',
     ];
@@ -41,7 +39,6 @@ final class AcademicStructurePermissions
         'facultad',
         'carrera',
         'campus',
-        'modalidad',
         'periodo',
     ];
 

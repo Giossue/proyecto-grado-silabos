@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
 import { useCurriculumSubjectFieldValues } from '@/composables/useCurriculumSubjectFieldValues';
+import { INHERITED_MODALITY } from '@/lib/studyModalities';
 import type {
     CurriculumBuilderProps,
     CurriculumBuilderSubject,
@@ -31,7 +32,7 @@ import type {
 
 const props = defineProps<{
     career: CurriculumBuilderProps['career'];
-    modalities: CurriculumBuilderProps['options']['modalities'];
+    modalityOptions: CurriculumBuilderProps['modalityOptions'];
     curriculum: CurriculumBuilderProps['curriculum'];
     fieldDefinitions: CurriculumFieldDefinition[];
     subject: CurriculumBuilderSubject | null;
@@ -40,9 +41,13 @@ const props = defineProps<{
     organizationUnits: string[];
 }>();
 
-/** Solo una carrera híbrida pide modalidad por materia; las demás heredan la suya. */
-const modalityPerSubject = computed(
-    () => props.career.modality?.per_subject === true,
+/** Por defecto la de la carrera; apartarla vuelve híbrida la carrera. */
+const modality = ref(props.subject?.modality ?? INHERITED_MODALITY);
+watch(
+    () => props.subject?.modality,
+    (value) => {
+        modality.value = value ?? INHERITED_MODALITY;
+    },
 );
 
 const emit = defineEmits<{
@@ -154,40 +159,42 @@ watch(
                 <FieldError :errors="[errors.organization_unit]" />
             </Field>
 
-            <Field
-                v-if="modalityPerSubject"
-                :data-invalid="Boolean(errors.modality_id)"
-            >
+            <Field :data-invalid="Boolean(errors.modality)">
                 <FieldLabel
                     :for="`visual-subject-modality-${subject?.id ?? cycle}`"
-                    required
                 >
                     Modalidad
                 </FieldLabel>
-                <Select
-                    name="modality_id"
-                    :default-value="subject?.modality_id ?? undefined"
-                    required
-                >
+                <input
+                    type="hidden"
+                    name="modality"
+                    :value="modality === INHERITED_MODALITY ? '' : modality"
+                />
+                <Select v-model="modality">
                     <SelectTrigger
                         :id="`visual-subject-modality-${subject?.id ?? cycle}`"
-                        :aria-invalid="Boolean(errors.modality_id)"
+                        :aria-invalid="Boolean(errors.modality)"
                     >
-                        <SelectValue placeholder="Seleccione la modalidad" />
+                        <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                         <SelectGroup>
+                            <SelectItem :value="INHERITED_MODALITY">
+                                Igual que la carrera ({{
+                                    career.modality?.label ?? 'sin modalidad'
+                                }})
+                            </SelectItem>
                             <SelectItem
-                                v-for="item in modalities"
-                                :key="item.id"
-                                :value="item.id"
+                                v-for="item in modalityOptions"
+                                :key="item.value"
+                                :value="item.value"
                             >
-                                {{ item.nombre }}
+                                {{ item.label }}
                             </SelectItem>
                         </SelectGroup>
                     </SelectContent>
                 </Select>
-                <FieldError :errors="[errors.modality_id]" />
+                <FieldError :errors="[errors.modality]" />
             </Field>
 
             <div

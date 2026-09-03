@@ -14,7 +14,6 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\CourseOffering;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CurriculumFieldDefinition;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Faculty;
-use App\Modules\Academic\Infrastructure\Persistence\Models\Modality;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Subject;
 use App\Modules\Academic\Infrastructure\Persistence\Models\TeacherAssignment;
@@ -99,7 +98,7 @@ class CreateAcademicRecord
             'facultad' => $this->createFaculty($data),
             'carrera' => Career::query()->create([
                 'facultad_id' => $data['faculty_id'],
-                'modalidad_id' => $data['modality_id'],
+                'modalidad' => $data['modality'],
                 'campus_id' => $data['campus_id'],
                 'codigo_institucional' => $data['code'] ?? null,
                 'nombre' => $data['nombre'],
@@ -108,12 +107,6 @@ class CreateAcademicRecord
             'campus' => Campus::query()->create([
                 'codigo_institucional' => $data['code'] ?? null,
                 'nombre' => $data['nombre'],
-                'activo' => true,
-            ]),
-            'modalidad' => Modality::query()->create([
-                'codigo' => $data['code'],
-                'nombre' => $data['nombre'],
-                'combina_por_asignatura' => (bool) ($data['per_subject'] ?? false),
                 'activo' => true,
             ]),
             'periodo' => AcademicPeriod::query()->create([
@@ -206,7 +199,7 @@ class CreateAcademicRecord
             'ciclo' => $data['cycle'] ?? null,
             'orden_en_ciclo' => $position,
             'unidad_organizacion_curricular' => $data['organization_unit'] ?? null,
-            'modalidad_id' => $this->inheritance->subjectModalityId($curriculum->career, $data),
+            'modalidad' => $this->inheritance->subjectModality($data),
             'creditos' => $data['creditos'] ?? null,
             'horas_totales' => CurriculumSystemFields::totalHours($data, $activeSystemKeys),
             'horas_proyecto' => $data['hours_project'] ?? null,
@@ -255,7 +248,7 @@ class CreateAcademicRecord
             'asignatura_id' => $subject->id,
             // Heredados: el campus lo fija la carrera; la modalidad, la carrera o la materia.
             'campus_id' => $this->inheritance->campusFor($subject->curriculum->career)->id,
-            'modalidad_id' => $this->inheritance->modalityFor($subject)->id,
+            'modalidad' => $this->inheritance->modalityFor($subject),
             'activo' => true,
         ]);
     }

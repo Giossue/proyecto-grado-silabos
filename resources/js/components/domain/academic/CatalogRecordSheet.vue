@@ -22,6 +22,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { STUDY_MODALITIES } from '@/lib/studyModalities';
 import type {
     AcademicStructureProps,
     GovernanceCatalogEntity,
@@ -54,11 +55,6 @@ const labels = computed(
                 description:
                     'Registre una sede institucional disponible para la oferta académica.',
             },
-            modalidad: {
-                trigger: 'Nueva modalidad',
-                title: 'Nueva modalidad',
-                description: 'Registre una forma institucional de impartición.',
-            },
             periodo: {
                 trigger: 'Nuevo periodo académico',
                 title: 'Nuevo periodo académico',
@@ -74,15 +70,12 @@ const submitLabel = computed(
             facultad: 'Crear facultad',
             carrera: 'Crear carrera',
             campus: 'Crear campus',
-            modalidad: 'Crear modalidad',
             periodo: 'Crear periodo',
         })[props.entity],
 );
 
 const codeLabel = computed(() =>
-    ['modalidad', 'periodo'].includes(props.entity)
-        ? 'Código estable'
-        : 'Código institucional',
+    props.entity === 'periodo' ? 'Código estable' : 'Código institucional',
 );
 
 const examples = computed(
@@ -94,7 +87,6 @@ const examples = computed(
             },
             carrera: { name: 'Ej. Software', code: 'Ej. SW' },
             campus: { name: 'Ej. Campus Matriz', code: 'Ej. MATRIZ' },
-            modalidad: { name: 'Ej. Presencial', code: 'Ej. PRES' },
             periodo: { name: 'Ej. 2026-2027', code: 'Ej. 2026-2027' },
         })[props.entity],
 );
@@ -174,15 +166,15 @@ const examples = computed(
                         </Field>
                         <Field
                             v-if="entity === 'carrera'"
-                            :data-invalid="Boolean(errors.modality_id)"
+                            :data-invalid="Boolean(errors.modality)"
                         >
                             <FieldLabel for="catalog-modality" required>
                                 Modalidad
                             </FieldLabel>
-                            <Select name="modality_id" required>
+                            <Select name="modality" required>
                                 <SelectTrigger
                                     id="catalog-modality"
-                                    :aria-invalid="Boolean(errors.modality_id)"
+                                    :aria-invalid="Boolean(errors.modality)"
                                 >
                                     <SelectValue
                                         placeholder="Seleccione la modalidad aprobada"
@@ -191,21 +183,21 @@ const examples = computed(
                                 <SelectContent>
                                     <SelectGroup>
                                         <SelectItem
-                                            v-for="item in options.modalities"
-                                            :key="item.id"
-                                            :value="item.id"
+                                            v-for="item in STUDY_MODALITIES"
+                                            :key="item.value"
+                                            :value="item.value"
                                         >
-                                            {{ item.nombre }}
+                                            {{ item.label }}
                                         </SelectItem>
                                     </SelectGroup>
                                 </SelectContent>
                             </Select>
                             <FieldDescription>
-                                La que aprobó el CES para la carrera. Sus
-                                ofertas la heredan; si combina modalidades, cada
-                                materia indica la suya en la malla.
+                                La que aprobó el CES. Si Coordinación aparta
+                                alguna materia en la malla, la carrera pasa a
+                                híbrida sola.
                             </FieldDescription>
-                            <FieldError :errors="[errors.modality_id]" />
+                            <FieldError :errors="[errors.modality]" />
                         </Field>
                         <Field
                             v-if="entity === 'carrera'"
@@ -259,10 +251,7 @@ const examples = computed(
                         <Field :data-invalid="Boolean(errors.code)">
                             <FieldLabel
                                 for="catalog-code"
-                                :required="
-                                    entity === 'modalidad' ||
-                                    entity === 'periodo'
-                                "
+                                :required="entity === 'periodo'"
                             >
                                 {{ codeLabel }}
                             </FieldLabel>
@@ -270,45 +259,10 @@ const examples = computed(
                                 id="catalog-code"
                                 name="code"
                                 :placeholder="examples.code"
-                                :required="
-                                    entity === 'modalidad' ||
-                                    entity === 'periodo'
-                                "
+                                :required="entity === 'periodo'"
                                 :aria-invalid="Boolean(errors.code)"
                             />
                             <FieldError :errors="[errors.code]" />
-                        </Field>
-
-                        <Field
-                            v-if="entity === 'modalidad'"
-                            :data-invalid="Boolean(errors.per_subject)"
-                        >
-                            <FieldLabel for="catalog-per-subject">
-                                Alcance
-                            </FieldLabel>
-                            <Select name="per_subject" default-value="0">
-                                <SelectTrigger
-                                    id="catalog-per-subject"
-                                    :aria-invalid="Boolean(errors.per_subject)"
-                                >
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectGroup>
-                                        <SelectItem value="0">
-                                            Toda la carrera
-                                        </SelectItem>
-                                        <SelectItem value="1">
-                                            Por materia (híbrida)
-                                        </SelectItem>
-                                    </SelectGroup>
-                                </SelectContent>
-                            </Select>
-                            <FieldDescription>
-                                «Por materia»: la carrera combina modalidades y
-                                cada materia de la malla indica la suya.
-                            </FieldDescription>
-                            <FieldError :errors="[errors.per_subject]" />
                         </Field>
 
                         <Field

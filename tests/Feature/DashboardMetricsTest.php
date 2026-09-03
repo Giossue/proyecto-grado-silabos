@@ -58,7 +58,7 @@ class DashboardMetricsTest extends TestCase
     {
         $esperado = [
             // El docente no tiene sílabos hasta que Coordinación abra la convocatoria.
-            'admin@silabos.test' => ['faculties', 'process', 9, true],
+            'admin@silabos.test' => ['faculties', 'process', 8, true],
             'coordinador@silabos.test' => ['curriculum', 'convocation', 6, true],
             'docente@silabos.test' => ['assigned', 'submitted', 3, false],
         ];
@@ -87,8 +87,8 @@ class DashboardMetricsTest extends TestCase
             ->followingRedirects()
             ->get(route('dashboard'))
             ->assertInertia(fn (Assert $page) => $page
-                ->where('setup.steps.7.done', false)
-                ->where('setup.steps.8.done', false));
+                ->where('setup.steps.6.done', false)
+                ->where('setup.steps.7.done', false));
     }
 
     public function test_el_coordinador_no_cuenta_convocatorias_de_otra_carrera(): void

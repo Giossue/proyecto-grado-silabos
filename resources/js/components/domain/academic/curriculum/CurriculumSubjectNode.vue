@@ -29,7 +29,7 @@ import type {
 const props = defineProps<{
     data: {
         career: CurriculumBuilderProps['career'];
-        modalities: CurriculumBuilderProps['options']['modalities'];
+        modalityOptions: CurriculumBuilderProps['modalityOptions'];
         curriculum: CurriculumBuilderProps['curriculum'];
         fieldDefinitions: CurriculumFieldDefinition[];
         organizationUnits: string[];
@@ -79,7 +79,7 @@ const totalFields = computed(
     <CurriculumVisualSubjectForm
         v-if="data.editing"
         :career="data.career"
-        :modalities="data.modalities"
+        :modality-options="data.modalityOptions"
         :curriculum="data.curriculum"
         :field-definitions="data.fieldDefinitions"
         :organization-units="data.organizationUnits"
@@ -149,10 +149,10 @@ const totalFields = computed(
                             {{ data.subject.organization_unit }}
                         </Badge>
                         <Badge
-                            v-if="data.subject.modality_name"
+                            v-if="data.subject.modality_label"
                             variant="outline"
                         >
-                            {{ data.subject.modality_name }}
+                            {{ data.subject.modality_label }}
                         </Badge>
                     </div>
                     <h3 class="text-xs leading-snug font-semibold uppercase">

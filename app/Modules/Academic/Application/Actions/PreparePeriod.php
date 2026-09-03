@@ -47,13 +47,13 @@ class PreparePeriod
         $careerId = $activeRole->carrera_id;
 
         return DB::transaction(function () use ($actor, $activeRole, $careerId, $data, $request): array {
-            $career = Career::query()->whereKey($careerId)->with(['campus', 'modality'])->lockForUpdate()->firstOrFail();
+            $career = Career::query()->whereKey($careerId)->with('campus')->lockForUpdate()->firstOrFail();
             $period = AcademicPeriod::query()->whereKey($data['period_id'])->lockForUpdate()->firstOrFail();
             $campus = $this->inheritance->campusFor($career);
             $subjects = Subject::query()
                 ->where('activo', true)
                 ->whereHas('curriculum', fn ($query) => $query->where('carrera_id', $careerId)->where('estado', 'activa'))
-                ->with(['curriculum.career.modality', 'modality'])
+                ->with('curriculum.career')
                 ->orderBy('ciclo')
                 ->orderBy('orden_en_ciclo')
                 ->get();
@@ -80,7 +80,7 @@ class PreparePeriod
                         'periodo_academico_id' => $period->id,
                         'asignatura_id' => $subject->id,
                         'campus_id' => $campus->id,
-                        'modalidad_id' => $this->inheritance->modalityFor($subject)->id,
+                        'modalidad' => $this->inheritance->modalityFor($subject),
                         'activo' => true,
                     ]);
                     $offering->parallels_count = 0;

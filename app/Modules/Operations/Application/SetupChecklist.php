@@ -10,7 +10,6 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\CoordinatorAssignment
 use App\Modules\Academic\Infrastructure\Persistence\Models\CourseOffering;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Faculty;
-use App\Modules\Academic\Infrastructure\Persistence\Models\Modality;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
 use App\Modules\Academic\Infrastructure\Persistence\Models\TeacherAssignment;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\AcademicSource;
@@ -68,7 +67,6 @@ class SetupChecklist
             [
                 $this->step('faculties', 'Registrar las facultades', 'Con su logo: encabeza el sílabo de sus carreras.', Faculty::query()->where('activo', true)->exists(), route('admin.academic.index', 'facultades')),
                 $this->step('campus', 'Registrar los campus', 'Matriz, Laguacoto, CENI, San Miguel… donde se dictan clases.', Campus::query()->where('activo', true)->exists(), route('admin.academic.index', 'campus')),
-                $this->step('modalities', 'Registrar las modalidades', 'Presencial, en línea, híbrida (esta combina modalidades por materia).', Modality::query()->where('activo', true)->exists(), route('admin.academic.index', 'modalidades')),
                 $this->step('careers', 'Registrar las carreras', 'Cada carrera cuelga de una facultad, con su campus y su modalidad aprobados.', $careerCount > 0, route('admin.academic.index', 'carreras')),
                 $this->step('periods', 'Registrar el periodo académico', 'El periodo que abrirá el primer proceso de sílabos.', AcademicPeriod::query()->where('activo', true)->exists(), route('admin.academic.index', 'periodos-academicos')),
                 $this->step('accounts', 'Crear las cuentas de coordinadores y docentes', 'Con su rol; el docente se asigna a paralelos desde Coordinación.', $accounts > 0, route('admin.users.index')),

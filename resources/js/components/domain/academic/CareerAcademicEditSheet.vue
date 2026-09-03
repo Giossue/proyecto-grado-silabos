@@ -39,7 +39,6 @@ export type CareerAcademicEditableRecord = {
     subject_id?: string;
     period_id?: string;
     campus_id?: string;
-    modality_id?: string;
     offering_id?: string;
     user_id?: string;
     parallel_id?: string;

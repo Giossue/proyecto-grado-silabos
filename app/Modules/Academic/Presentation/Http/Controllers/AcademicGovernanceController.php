@@ -27,7 +27,6 @@ class AcademicGovernanceController extends Controller
             null, 'facultades' => 'faculties',
             'carreras' => 'careers',
             'campus' => 'campuses',
-            'modalidades' => 'modalities',
             'periodos-academicos' => 'academic-periods',
             default => abort(404),
         };

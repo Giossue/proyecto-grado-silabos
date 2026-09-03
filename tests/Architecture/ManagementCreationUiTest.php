@@ -215,7 +215,6 @@ it('presenta la jerarquia academica en submenus y rutas sin mezclar catalogos', 
         ->toContain("section === 'faculties'")
         ->toContain("section === 'careers'")
         ->toContain("section === 'campuses'")
-        ->toContain("section === 'modalities'")
         ->not->toContain('<Tabs');
     expect($sidebar)
         ->toBeString()
@@ -223,7 +222,6 @@ it('presenta la jerarquia academica en submenus y rutas sin mezclar catalogos', 
         ->toContain("academicIndex('facultades')")
         ->toContain("academicIndex('carreras')")
         ->toContain("academicIndex('campus')")
-        ->toContain("academicIndex('modalidades')")
         ->toContain("academicIndex('periodos-academicos')");
     expect($navigation)
         ->toBeString()
@@ -473,7 +471,6 @@ it('ofrece edicion y ciclo de vida en cada catalogo institucional', function ():
         ->toContain('entity="facultad"')
         ->toContain('entity="carrera"')
         ->toContain('entity="campus"')
-        ->toContain('entity="modalidad"')
         ->toContain('entity="periodo"');
     expect($actions)
         ->toBeString()
@@ -533,7 +530,7 @@ it('agrupa las acciones de tabla en menus accesibles de tres puntos', function (
         $root.'/resources/js/components/domain/academic/CatalogSection.vue',
     );
     $this->assertIsString($catalogs);
-    $this->assertSame(5, substr_count($catalogs, '<CatalogActions'));
+    $this->assertSame(4, substr_count($catalogs, '<CatalogActions'));
 
     foreach ([
         'resources/js/components/domain/academic/OfferingsTab.vue' => 2,
@@ -808,7 +805,7 @@ it('usa el mismo paginador en todas las superficies tabulares', function (): voi
         $checked += $tableCount;
     }
 
-    $this->assertSame(24, $checked);
+    $this->assertSame(23, $checked);
 });
 
 it('ordena busqueda filtros y accion mediante una barra compartida', function (): void {

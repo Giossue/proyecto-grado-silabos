@@ -3,6 +3,7 @@
 namespace App\Modules\Academic\Presentation\Http\Requests;
 
 use App\Modules\Academic\Domain\AcademicStructurePermissions;
+use App\Modules\Academic\Domain\StudyModality;
 use App\Modules\Configuration\Application\InstitutionalLogos;
 use App\Modules\Identity\Application\ActiveRole;
 use Illuminate\Foundation\Http\FormRequest;
@@ -32,21 +33,11 @@ class UpdateAcademicRecordRequest extends FormRequest
             ],
             'carrera' => [
                 'faculty_id' => ['required', 'uuid', Rule::exists('facultades', 'id')],
-                'modality_id' => ['required', 'uuid', Rule::exists('modalidades', 'id')->where('activo', true)],
+                'modality' => ['required', 'string', Rule::in(StudyModality::values())],
                 'campus_id' => ['required', 'uuid', Rule::exists('campus', 'id')->where('activo', true)],
                 ...$this->namedCatalogRules('carreras', 180),
             ],
             'campus' => $this->namedCatalogRules('campus', 120),
-            'modalidad' => [
-                'code' => [
-                    'required',
-                    'string',
-                    'max:40',
-                    Rule::unique('modalidades', 'codigo')->ignore($this->recordId()),
-                ],
-                'nombre' => ['required', 'string', 'max:100'],
-                'per_subject' => ['nullable', 'boolean'],
-            ],
             'periodo' => [
                 'code' => [
                     'required',

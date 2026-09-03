@@ -205,7 +205,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::patch('usuarios/{user}/estado', [ManagedUserController::class, 'setStatus'])->name('users.status.update');
         Route::redirect('facultades-carreras', '/admin/estructura-academica/facultades');
         Route::get('estructura-academica/{section?}', [AcademicGovernanceController::class, 'index'])
-            ->whereIn('section', ['facultades', 'carreras', 'campus', 'modalidades', 'periodos-academicos'])
+            ->whereIn('section', ['facultades', 'carreras', 'campus', 'periodos-academicos'])
             ->name('academic.index');
         Route::post('gobierno-academico/{entity}', [AcademicGovernanceController::class, 'store'])->name('academic.store');
         Route::patch('gobierno-academico/{entity}/{record}', [AcademicGovernanceController::class, 'update'])

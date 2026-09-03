@@ -73,14 +73,14 @@ Dashboard; las demás pantallas no presentan resúmenes métricos independientes
 
 ## Evidencia
 
-- `ManagementCreationUiTest` inventaría 24 superficies tabulares y exige exactamente un
+- `ManagementCreationUiTest` inventaría 23 superficies tabulares y exige exactamente un
   `TablePagination` compartido por cada una; también protege el orden búsqueda → filtros
   → aplicar, descubre automáticamente las 16 columnas **Acciones** actuales y exige el
   menú de tres puntos compartido, además de proteger 29 páginas operativas y el layout de
   Configuración con `PageFrame`, los submenús de ADM-04 y la separación de tokens.
 - `ResponsiveTableTest` protege los tokens del encabezado, las filas impares/pares y la
   continuidad del color en las celdas fijas de acciones y detalle móvil.
-- `TableEmptyStateTest` inventaría las 24 superficies tabulares, exige un `TableEmpty`
+- `TableEmptyStateTest` inventaría las 23 superficies tabulares, exige un `TableEmpty`
   por cada cuerpo de tabla y protege el icono universal junto con el mensaje contextual.
 - `MetricCardsScopeTest` reserva `StatTile` y los resúmenes métricos al Dashboard y
   comprueba que convocatorias, informes, mallas y sílabos no los reintroduzcan con otra

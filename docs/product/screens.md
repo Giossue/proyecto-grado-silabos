@@ -160,12 +160,13 @@ DOC-01 llena una cuadrícula con una casilla por celda, unidades y totales calcu
 - Los estados usan las mismas etiquetas y colores en todo el producto.
 - Los IDs internos y detalles de infraestructura no se muestran.
 - ADM-04 usa el submenú **Estructura académica** con rutas independientes para Facultades,
-  Carreras, Campus, Modalidades y Periodos académicos. Carreras muestra su Facultad, su
-  Modalidad y su Campus, Facultades muestra la cantidad relacionada; los catálogos no se mezclan ni
+  Carreras, Campus y Periodos académicos. Carreras muestra su Facultad, su Modalidad y
+  su Campus, Facultades muestra la cantidad relacionada; los catálogos no se mezclan ni
   se ocultan en pestañas.
 - La modalidad se fija por carrera (obligatoria al crearla; la aprueba el CES) y no por
-  oferta. Una modalidad con alcance «Por materia» (híbrida) hace que cada materia de la
-  malla pida la suya en COR-13 (campo, columna del desglose y etiqueta en la tarjeta).
+  oferta. No hay catálogo: son las del reglamento (presencial, semipresencial, en línea,
+  a distancia). Cualquier materia puede apartarse en COR-13 («Igual que la carrera» o
+  una distinta); si alguna se aparta, la carrera aparece como «Híbrida» sola (I-37).
   COR-14 abre ofertas sin selector de modalidad: la hereda de la materia o de la carrera
   y la muestra en el listado (I-35).
 - COR-14 no crea ofertas una a una: **Preparar periodo** (I-36) deja toda la malla activa

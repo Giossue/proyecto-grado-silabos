@@ -2,6 +2,7 @@
 
 namespace App\Modules\Academic\Infrastructure\Persistence\Models;
 
+use App\Modules\Academic\Domain\StudyModality;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -14,7 +15,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property-read AcademicPeriod $academicPeriod
  * @property-read Subject $subject
  * @property-read Campus $campus
- * @property-read Modality $modality
+ * @property StudyModality $modalidad
  */
 class CourseOffering extends Model
 {
@@ -27,7 +28,13 @@ class CourseOffering extends Model
     protected $table = 'ofertas_academicas';
 
     /** @var list<string> */
-    protected $fillable = ['periodo_academico_id', 'asignatura_id', 'campus_id', 'modalidad_id', 'activo'];
+    protected $fillable = ['periodo_academico_id', 'asignatura_id', 'campus_id', 'modalidad', 'activo'];
+
+    /** @return array<string, string> */
+    protected function casts(): array
+    {
+        return ['activo' => 'boolean', 'modalidad' => StudyModality::class];
+    }
 
     /** @return BelongsTo<AcademicPeriod, $this> */
     public function academicPeriod(): BelongsTo
@@ -45,12 +52,6 @@ class CourseOffering extends Model
     public function campus(): BelongsTo
     {
         return $this->belongsTo(Campus::class, 'campus_id');
-    }
-
-    /** @return BelongsTo<Modality, $this> */
-    public function modality(): BelongsTo
-    {
-        return $this->belongsTo(Modality::class, 'modalidad_id');
     }
 
     /** @return HasMany<Parallel, $this> */

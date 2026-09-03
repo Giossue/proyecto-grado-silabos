@@ -2,7 +2,9 @@
 
 ## Estado
 
-Implementado el 2026-09-03. Verificación al pie.
+Implementado el 2026-09-03. Verificación al pie. El mismo día I-37 retiró el catálogo de
+modalidades (valores fijos del reglamento) y la marca «combina por asignatura»: ahora
+cualquier materia puede apartarse y la carrera pasa a híbrida sola.
 
 ## Objetivo
 

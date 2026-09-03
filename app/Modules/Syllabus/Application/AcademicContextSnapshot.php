@@ -17,7 +17,6 @@ class AcademicContextSnapshot
             'subject.fieldValues.definition',
             'academicPeriod',
             'campus',
-            'modality',
         ]);
         $subject = $offering->subject;
         $curriculum = $subject->curriculum;
@@ -73,7 +72,7 @@ class AcademicContextSnapshot
                 'id' => $offering->id,
                 'period' => $offering->academicPeriod->nombre,
                 'campus' => $offering->campus->nombre,
-                'modality' => $offering->modality->nombre,
+                'modality' => $offering->modalidad->label(),
             ],
         ];
     }

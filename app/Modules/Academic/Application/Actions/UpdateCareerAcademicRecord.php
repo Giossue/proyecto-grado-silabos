@@ -50,7 +50,7 @@ class UpdateCareerAcademicRecord
         'periodo_academico_id' => 'Periodo académico',
         'asignatura_id' => 'Materia',
         'campus_id' => 'Campus',
-        'modalidad_id' => 'Modalidad',
+        'modalidad' => 'Modalidad',
         'oferta_academica_id' => 'Oferta académica',
         'usuario_id' => 'Docente',
         'paralelo_id' => 'Paralelo',
@@ -66,7 +66,7 @@ class UpdateCareerAcademicRecord
         'ciclo' => 'cycle',
         'orden_en_ciclo' => 'position',
         'unidad_organizacion_curricular' => 'organization_unit',
-        'modalidad_id' => 'modality',
+        'modalidad' => 'modality',
         'creditos' => 'credits',
         'horas_totales' => 'total_hours',
         'vigente_desde' => 'valid_from',
@@ -238,12 +238,11 @@ class UpdateCareerAcademicRecord
             ->whereNotNull('clave_sistema')
             ->pluck('clave_sistema');
 
-        $record->loadMissing('curriculum.career');
         $attributes = [
             'codigo_institucional' => $data['code'],
             'nombre' => $data['nombre'],
             'ciclo' => $data['cycle'] ?? null,
-            'modalidad_id' => $this->inheritance->subjectModalityId($record->curriculum->career, $data),
+            'modalidad' => $this->inheritance->subjectModality($data),
             'creditos' => $data['creditos'] ?? null,
             'horas_totales' => CurriculumSystemFields::totalHours($data, $activeSystemKeys),
         ];
@@ -268,7 +267,7 @@ class UpdateCareerAcademicRecord
     }
 
     /** @param array<string, mixed> $data
-     * @return array<string, string>
+     * @return array<string, mixed>
      */
     private function offeringAttributes(array $data, string $careerId): array
     {
@@ -289,7 +288,7 @@ class UpdateCareerAcademicRecord
             'asignatura_id' => $subject->id,
             // Heredados: el campus lo fija la carrera; la modalidad, la carrera o la materia.
             'campus_id' => $this->inheritance->campusFor($subject->curriculum->career)->id,
-            'modalidad_id' => $this->inheritance->modalityFor($subject)->id,
+            'modalidad' => $this->inheritance->modalityFor($subject),
         ];
     }
 

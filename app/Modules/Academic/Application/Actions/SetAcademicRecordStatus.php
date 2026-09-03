@@ -11,7 +11,6 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\CoordinatorAssignment
 use App\Modules\Academic\Infrastructure\Persistence\Models\CourseOffering;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Faculty;
-use App\Modules\Academic\Infrastructure\Persistence\Models\Modality;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Subject;
 use App\Modules\Academic\Infrastructure\Persistence\Models\TeacherAssignment;
@@ -33,7 +32,6 @@ class SetAcademicRecordStatus
         'facultad' => Faculty::class,
         'carrera' => Career::class,
         'campus' => Campus::class,
-        'modalidad' => Modality::class,
         'periodo' => AcademicPeriod::class,
         'malla' => Curriculum::class,
         'asignatura' => Subject::class,
@@ -140,7 +138,6 @@ class SetAcademicRecordStatus
             'carrera' => Curriculum::query()->where('carrera_id', $recordId)->active()->exists(),
             'malla' => false,
             'campus' => CourseOffering::query()->where('campus_id', $recordId)->where('activo', true)->exists(),
-            'modalidad' => CourseOffering::query()->where('modalidad_id', $recordId)->where('activo', true)->exists(),
             'periodo' => CourseOffering::query()->where('periodo_academico_id', $recordId)->where('activo', true)->exists(),
             'asignatura' => CourseOffering::query()->where('asignatura_id', $recordId)->where('activo', true)->exists(),
             'oferta' => Parallel::query()->where('oferta_academica_id', $recordId)->where('activo', true)->exists(),

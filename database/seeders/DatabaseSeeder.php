@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\User;
 use App\Modules\Academic\Domain\CurriculumSystemFields;
+use App\Modules\Academic\Domain\StudyModality;
 use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Campus;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
@@ -12,7 +13,6 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\CourseOffering;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CurriculumFieldDefinition;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Faculty;
-use App\Modules\Academic\Infrastructure\Persistence\Models\Modality;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Subject;
 use App\Modules\Academic\Infrastructure\Persistence\Models\TeacherAssignment;
@@ -49,17 +49,13 @@ class DatabaseSeeder extends Seeder
                 ['codigo_institucional' => 'FICAYA'],
                 ['nombre' => 'Facultad de Ciencias de la Ingeniería', 'activo' => true],
             );
-            $modality = Modality::query()->firstOrCreate(
-                ['codigo' => 'presencial'],
-                ['nombre' => 'Presencial', 'activo' => true],
-            );
             $campus = Campus::query()->firstOrCreate(
                 ['codigo_institucional' => 'MATRIZ'],
                 ['nombre' => 'Campus Matriz', 'activo' => true],
             );
             $career = Career::query()->firstOrCreate(
                 ['codigo_institucional' => 'SOFTWARE'],
-                ['facultad_id' => $faculty->id, 'modalidad_id' => $modality->id, 'campus_id' => $campus->id, 'nombre' => 'Software', 'activo' => true],
+                ['facultad_id' => $faculty->id, 'modalidad' => StudyModality::Presencial, 'campus_id' => $campus->id, 'nombre' => 'Software', 'activo' => true],
             );
             $period = AcademicPeriod::query()->firstOrCreate(
                 ['codigo' => '2026-2027'],
@@ -111,9 +107,8 @@ class DatabaseSeeder extends Seeder
                     'periodo_academico_id' => $period->id,
                     'asignatura_id' => $subject->id,
                     'campus_id' => $campus->id,
-                    'modalidad_id' => $modality->id,
                 ],
-                ['activo' => true],
+                ['modalidad' => StudyModality::Presencial, 'activo' => true],
             );
             $parallel = Parallel::query()->firstOrCreate(
                 ['oferta_academica_id' => $offering->id, 'codigo' => 'A'],

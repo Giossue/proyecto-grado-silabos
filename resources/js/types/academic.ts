@@ -19,15 +19,13 @@ export type CatalogRecord = {
     activo: boolean;
     /** Solo facultades: logo que encabeza el sílabo de sus carreras. */
     logo_url?: string | null;
-    /** Solo modalidades: híbrida, cada materia de la malla indica la suya. */
-    combina_por_asignatura?: boolean;
 };
 
 export type GovernanceCatalogEntity =
-    'facultad' | 'carrera' | 'campus' | 'modalidad' | 'periodo';
+    'facultad' | 'carrera' | 'campus' | 'periodo';
 
 export type GovernanceSection =
-    'faculties' | 'careers' | 'campuses' | 'modalities' | 'academic-periods';
+    'faculties' | 'careers' | 'campuses' | 'academic-periods';
 
 export type AcademicStructureProps = {
     career: {
@@ -39,8 +37,10 @@ export type AcademicStructureProps = {
         careers: {
             id: string;
             faculty_id: string;
-            modality_id: string | null;
-            modality_name: string | null;
+            /** Base elegida por Administración; `modality_label` dice «Híbrida» si hay materias apartadas. */
+            modality: string | null;
+            modality_label: string | null;
+            hybrid: boolean;
             campus_id: string | null;
             campus_name: string | null;
             code: string | null;
@@ -48,7 +48,6 @@ export type AcademicStructureProps = {
             active: boolean;
         }[];
         campuses: CatalogRecord[];
-        modalities: CatalogRecord[];
         periods: {
             id: string;
             code: string;
@@ -76,7 +75,6 @@ export type AcademicStructureProps = {
         subject_id: string;
         period_id: string;
         campus_id: string;
-        modality_id: string;
         label: string;
         period_name: string;
         campus_name: string;
@@ -121,7 +119,6 @@ export type AcademicStructureProps = {
         careers: Option[];
         periods: Option[];
         campuses: Option[];
-        modalities: Option[];
         currentCurricula: Option[];
         activeSubjects: Option[];
         offerings: Option[];
@@ -150,9 +147,9 @@ export type CurriculumBuilderSubject = {
     cycle: number | null;
     position: number;
     organization_unit: string | null;
-    /** Solo cuando la carrera combina modalidades por materia. */
-    modality_id: string | null;
-    modality_name: string | null;
+    /** Vacío = la de la carrera. Con valor, la materia se aparta y la carrera es híbrida. */
+    modality: string | null;
+    modality_label: string | null;
     credits: string | null;
     total_hours: number | null;
     active: boolean;
@@ -169,8 +166,8 @@ export type CurriculumBuilderProps = {
     career: {
         id: string;
         name: string;
-        /** Modalidad aprobada; `per_subject` = cada materia lleva la suya. */
-        modality: { id: string; name: string; per_subject: boolean } | null;
+        /** Base aprobada; `hybrid` cuando alguna materia se aparta de ella. */
+        modality: { value: string; label: string; hybrid: boolean } | null;
     };
     curriculum: {
         id: string;
@@ -198,5 +195,6 @@ export type CurriculumBuilderProps = {
         value: string;
         label: string;
     }[];
+    modalityOptions: { value: string; label: string }[];
     options: AcademicStructureProps['options'];
 };

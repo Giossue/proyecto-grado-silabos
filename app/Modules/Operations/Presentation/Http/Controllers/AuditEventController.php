@@ -174,7 +174,6 @@ class AuditEventController extends Controller
             'artefacto_exportacion' => 'Exportación',
             'facultad' => 'Facultad',
             'ejecucion_trabajo' => 'Trabajo asíncrono',
-            'modalidad' => 'Modalidad',
             'malla' => 'Malla',
             'campo_malla' => 'Campo de malla',
             'asignatura' => 'Materia',

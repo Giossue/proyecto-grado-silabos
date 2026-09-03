@@ -97,21 +97,6 @@ const {
     meta: campusMeta,
     setPage: setCampusPage,
 } = useClientPagination(() => campusFilter.items.value);
-const modalityFilter = useClientFilter(
-    () => props.catalogs.modalities,
-    (item) => [item.nombre, item.codigo_institucional, item.codigo],
-    {
-        estado: {
-            matches: (item, value) => item.activo === (value === 'active'),
-        },
-    },
-);
-
-const {
-    items: modalityPage,
-    meta: modalityMeta,
-    setPage: setModalityPage,
-} = useClientPagination(() => modalityFilter.items.value);
 const periodFilter = useClientFilter(
     () => props.catalogs.periods,
     (item) => [item.name, item.code],
@@ -291,7 +276,7 @@ const {
                             {{ facultyName(career.faculty_id) }}
                         </TableCell>
                         <TableCell>
-                            {{ career.modality_name ?? 'Sin modalidad' }}
+                            {{ career.modality_label ?? 'Sin modalidad' }}
                         </TableCell>
                         <TableCell>
                             {{ career.campus_name ?? 'Sin campus' }}
@@ -310,10 +295,10 @@ const {
                                 :record-code="career.code"
                                 :active="career.active"
                                 :faculty-id="career.faculty_id"
-                                :modality-id="career.modality_id"
+                                :modality="career.modality"
+                                :hybrid="career.hybrid"
                                 :campus-id="career.campus_id"
                                 :faculties="catalogs.faculties"
-                                :modalities="catalogs.modalities"
                                 :campuses="catalogs.campuses"
                             />
                         </TableCell>
@@ -416,103 +401,6 @@ const {
                 mode="client"
                 label="Paginación de campus"
                 @update:page="setCampusPage"
-            />
-        </CardContent>
-    </Card>
-
-    <Card v-else-if="section === 'modalities'">
-        <CardContent class="flex flex-col gap-4">
-            <ClientFilterBar
-                :filter="modalityFilter"
-                input-id="modalities-search"
-                label="Buscar modalidad"
-                placeholder="Buscar por nombre o código"
-            >
-                <template #filters>
-                    <Field>
-                        <FieldLabel
-                            for="modalities-search-state"
-                            class="sr-only"
-                            >Estado</FieldLabel
-                        >
-                        <Select v-model="modalityFilter.values.estado.value">
-                            <SelectTrigger id="modalities-search-state">
-                                <SelectValue placeholder="Todos los estados" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectGroup>
-                                    <SelectItem value="all"
-                                        >Todos los estados</SelectItem
-                                    >
-                                    <SelectItem value="active"
-                                        >Activos</SelectItem
-                                    >
-                                    <SelectItem value="inactive"
-                                        >Archivados</SelectItem
-                                    >
-                                </SelectGroup>
-                            </SelectContent>
-                        </Select>
-                    </Field>
-                </template>
-            </ClientFilterBar>
-            <Table>
-                <TableHeader>
-                    <TableRow>
-                        <TableHead>Modalidad</TableHead>
-                        <TableHead>Código estable</TableHead>
-                        <TableHead>Alcance</TableHead>
-                        <TableHead>Estado</TableHead>
-                        <TableHead class="text-right">Acciones</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    <TableEmpty
-                        v-if="catalogs.modalities.length === 0"
-                        :colspan="5"
-                    >
-                        No existen modalidades registradas.
-                    </TableEmpty>
-                    <TableRow
-                        v-for="modality in modalityPage"
-                        v-else
-                        :key="modality.id"
-                    >
-                        <TableCell>
-                            {{ modality.nombre }}
-                        </TableCell>
-                        <TableCell>
-                            {{ modality.codigo || 'Sin código' }}
-                        </TableCell>
-                        <TableCell>
-                            {{
-                                modality.combina_por_asignatura
-                                    ? 'Por materia'
-                                    : 'Toda la carrera'
-                            }}
-                        </TableCell>
-                        <TableCell>
-                            {{ modality.activo ? 'Activa' : 'Archivada' }}
-                        </TableCell>
-                        <TableCell class="text-right">
-                            <CatalogActions
-                                entity="modalidad"
-                                :record-id="modality.id"
-                                :record-name="modality.nombre"
-                                :record-code="modality.codigo ?? null"
-                                :active="modality.activo"
-                                :per-subject="modality.combina_por_asignatura"
-                                :faculties="catalogs.faculties"
-                            />
-                        </TableCell>
-                    </TableRow>
-                </TableBody>
-            </Table>
-            <TablePagination
-                :meta="modalityMeta"
-                mode="client"
-                label="Paginación de modalidades"
-                @update:page="setModalityPage"
             />
         </CardContent>
     </Card>

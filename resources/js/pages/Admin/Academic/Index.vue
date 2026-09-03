@@ -47,12 +47,6 @@ const sectionContents: Record<
         description: 'Las sedes donde se dictan clases.',
         entity: 'campus',
     },
-    modalities: {
-        title: 'Modalidades',
-        description:
-            'Las formas de dictar clase: presencial, en línea y las demás que use la universidad.',
-        entity: 'modalidad',
-    },
     'academic-periods': {
         title: 'Periodos académicos',
         description:

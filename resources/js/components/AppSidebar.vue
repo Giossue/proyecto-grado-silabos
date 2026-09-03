@@ -107,10 +107,6 @@ const mainNavItems = computed<NavItem[]>(() => [
                           href: academicIndex('campus'),
                       },
                       {
-                          title: 'Modalidades',
-                          href: academicIndex('modalidades'),
-                      },
-                      {
                           title: 'Periodos académicos',
                           href: academicIndex('periodos-academicos'),
                       },

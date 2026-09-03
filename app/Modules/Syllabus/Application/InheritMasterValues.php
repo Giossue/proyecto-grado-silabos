@@ -17,7 +17,7 @@ class InheritMasterValues
     /** @param Collection<int, FieldDefinition> $fields */
     public function execute(Syllabus $syllabus, Collection $fields, CourseOffering $offering): void
     {
-        $offering->loadMissing(['subject', 'campus', 'modality']);
+        $offering->loadMissing(['subject', 'campus']);
 
         foreach ($fields->where('heredado', true) as $field) {
             $value = match ($field->origen_maestro) {
@@ -28,7 +28,7 @@ class InheritMasterValues
                     'creditos' => $offering->subject->creditos,
                     'horas_totales' => $offering->subject->horas_totales,
                     'campus' => $offering->campus->nombre,
-                    'modalidad' => $offering->modality->nombre,
+                    'modalidad' => $offering->modalidad->label(),
                 ],
                 'flujo' => ['estado' => 'Sin iniciar'],
                 default => null,

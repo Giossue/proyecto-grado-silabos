@@ -25,7 +25,7 @@ celda o cambiar una etiqueta.
 |---|---|---|
 | Facultad | `faculty` | `carreras.facultad_id` → `facultades.nombre` |
 | Carrera | `career` | `mallas.carrera_id` → `carreras.nombre` |
-| Modalidad de estudio | `modality` | `ofertas_academicas.modalidad_id` → `modalidades.nombre` (heredada de la materia o de la carrera al abrir la oferta, I-35) |
+| Modalidad de estudio | `modality` | `ofertas_academicas.modalidad` (valor fijo del RRA, heredado de la materia o de la carrera al abrir la oferta; I-35, I-37) |
 | Campus universitario | `campus` | `ofertas_academicas.campus_id` → `campus.nombre` |
 | Asignatura | `subject` | `asignaturas.nombre` |
 | Periodo académico | `period` | `ofertas_academicas.periodo_academico_id` → `periodos_academicos.nombre` |

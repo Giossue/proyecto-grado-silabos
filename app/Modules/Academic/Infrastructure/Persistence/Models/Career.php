@@ -2,10 +2,21 @@
 
 namespace App\Modules\Academic\Infrastructure\Persistence\Models;
 
+use App\Modules\Academic\Domain\StudyModality;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property string $id
+ * @property string $nombre
+ * @property string|null $codigo_institucional
+ * @property string $facultad_id
+ * @property StudyModality|null $modalidad
+ * @property string|null $campus_id
+ * @property bool $activo
+ * @property-read Campus|null $campus
+ */
 class Career extends Model
 {
     use HasUuids;
@@ -17,12 +28,12 @@ class Career extends Model
     protected $table = 'carreras';
 
     /** @var list<string> */
-    protected $fillable = ['facultad_id', 'escuela_id', 'modalidad_id', 'campus_id', 'codigo_institucional', 'nombre', 'activo'];
+    protected $fillable = ['facultad_id', 'escuela_id', 'modalidad', 'campus_id', 'codigo_institucional', 'nombre', 'activo'];
 
     /** @return array<string, string> */
     protected function casts(): array
     {
-        return ['activo' => 'boolean'];
+        return ['activo' => 'boolean', 'modalidad' => StudyModality::class];
     }
 
     /** @return BelongsTo<Faculty, $this> */
@@ -36,13 +47,6 @@ class Career extends Model
     public function campus(): BelongsTo
     {
         return $this->belongsTo(Campus::class, 'campus_id');
-    }
-
-    /** Modalidad aprobada para la carrera; la heredan sus ofertas (I-35). */
-    /** @return BelongsTo<Modality, $this> */
-    public function modality(): BelongsTo
-    {
-        return $this->belongsTo(Modality::class, 'modalidad_id');
     }
 
     /** @return BelongsTo<School, $this> */

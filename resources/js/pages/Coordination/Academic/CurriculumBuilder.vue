@@ -148,7 +148,7 @@ const openSubject = (subject: CurriculumBuilderSubject): void => {
             <TabsContent value="builder">
                 <CurriculumCanvas
                     :career="career"
-                    :modalities="options.modalities"
+                    :modality-options="modalityOptions"
                     :curriculum="curriculum"
                     :field-definitions="fieldDefinitions"
                     :field-totals="fieldTotals"
@@ -163,7 +163,7 @@ const openSubject = (subject: CurriculumBuilderSubject): void => {
     <CurriculumSubjectSheet
         v-model:open="subjectSheetOpen"
         :career="career"
-        :modalities="options.modalities"
+        :modality-options="modalityOptions"
         :curriculum="curriculum"
         :field-definitions="fieldDefinitions"
         :subject="selectedSubject"

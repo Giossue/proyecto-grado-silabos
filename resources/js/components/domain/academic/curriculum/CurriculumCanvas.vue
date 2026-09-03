@@ -63,7 +63,7 @@ const props = defineProps<
         | 'career'
     > & {
         organizationUnits: string[];
-        modalities: CurriculumBuilderProps['options']['modalities'];
+        modalityOptions: CurriculumBuilderProps['modalityOptions'];
     }
 >();
 
@@ -167,7 +167,7 @@ const laneInset = 16;
 // En una carrera híbrida la tarjeta lleva además la etiqueta de modalidad: crece y se
 // vuelve a centrar en el carril para no colgar del borde inferior.
 const subjectHeight = computed(
-    () => 110 + (props.career.modality?.per_subject ? 24 : 0),
+    () => 110 + (props.career.modality?.hybrid ? 24 : 0),
 );
 const addSubjectHeight = 36;
 const subjectOffset = computed(() =>
@@ -283,7 +283,7 @@ const buildNodes = (): Node[] => {
                 },
                 data: {
                     career: props.career,
-                    modalities: props.modalities,
+                    modalityOptions: props.modalityOptions,
                     curriculum: props.curriculum,
                     fieldDefinitions: props.fieldDefinitions,
                     organizationUnits: props.organizationUnits,
@@ -328,7 +328,7 @@ const buildNodes = (): Node[] => {
                 },
                 data: {
                     career: props.career,
-                    modalities: props.modalities,
+                    modalityOptions: props.modalityOptions,
                     curriculum: props.curriculum,
                     fieldDefinitions: props.fieldDefinitions,
                     organizationUnits: props.organizationUnits,

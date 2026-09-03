@@ -160,7 +160,7 @@ return [
         'cycle_count' => 'cantidad de ciclos',
         'position' => 'posición',
         'organization_unit' => 'unidad de organización curricular',
-        'modality_id' => 'modalidad',
+        'modality' => 'modalidad',
         'faculty_id' => 'facultad',
         'campus_id' => 'campus',
         'period_id' => 'periodo académico',

@@ -36,19 +36,19 @@ puentes que Fortify y el guard exigen. I-29 hace las asignaciones de rol manuale
 
 ### Académico
 
-`facultades`, `carreras`, `campus`, `modalidades`, `asignaciones_coordinador`,
+`facultades`, `carreras`, `campus`, `asignaciones_coordinador`,
 `periodos_academicos`, `versiones_malla`, `asignaturas`, `requisitos_asignatura`,
 `definiciones_campo_malla`, `valores_campo_asignatura`, `ofertas_academicas`,
 `paralelos`, `asignaciones_docente`.
 
 Estos catálogos no comparten una tabla polimórfica. `carreras.facultad_id` implementa la
 relación uno-a-muchos Facultad → Carreras con clave foránea y borrado restringido.
-`campus`, `modalidades` y `periodos_academicos` conservan identidad propia;
-`ofertas_academicas` los relaciona con una asignatura mediante claves foráneas. La
-modalidad además cuelga de la carrera (`carreras.modalidad_id`) y, si
-`modalidades.combina_por_asignatura`, de cada materia (`asignaturas.modalidad_id`); la
-oferta guarda la heredada (migración `000032`, I-35). El campus también cuelga de la
-carrera (`carreras.campus_id`, migración `000033`, I-36) y la oferta guarda la copia. La
+`campus` y `periodos_academicos` conservan identidad propia; `ofertas_academicas` los
+relaciona con una asignatura mediante claves foráneas. La modalidad no es tabla sino
+columna de texto con valores fijos (`carreras.modalidad` base, `asignaturas.modalidad`
+opcional, `ofertas_academicas.modalidad` copia heredada; migración `000034`, I-37). El
+campus cuelga de la carrera (`carreras.campus_id`, migración `000033`, I-36) y la oferta
+guarda la copia. La
 jerarquía que presenta ADM-04 es una proyección de lectura y no una desnormalización de
 la persistencia.
 

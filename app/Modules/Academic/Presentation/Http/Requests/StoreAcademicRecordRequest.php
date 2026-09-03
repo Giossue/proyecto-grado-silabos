@@ -4,6 +4,7 @@ namespace App\Modules\Academic\Presentation\Http\Requests;
 
 use App\Modules\Academic\Domain\AcademicStructurePermissions;
 use App\Modules\Academic\Domain\CurriculumSystemFields;
+use App\Modules\Academic\Domain\StudyModality;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CourseOffering;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CurriculumFieldDefinition;
@@ -58,16 +59,10 @@ class StoreAcademicRecordRequest extends FormRequest
                 'logo' => ['required', ...InstitutionalLogos::rules(InstitutionalLogos::FACULTY)],
             ],
             'campus' => $this->namedCatalogRules('campus', 120),
-            'modalidad' => [
-                'code' => ['required', 'string', 'max:40', Rule::unique('modalidades', 'codigo')],
-                'nombre' => ['required', 'string', 'max:100'],
-                // Híbrida: cada materia de la malla indica su modalidad (RRA art. 74A).
-                'per_subject' => ['nullable', 'boolean'],
-            ],
             'carrera' => [
                 'faculty_id' => ['required', 'uuid', Rule::exists('facultades', 'id')->where('activo', true)],
                 // La modalidad la aprueba el CES por carrera; las ofertas la heredan (I-35).
-                'modality_id' => ['required', 'uuid', Rule::exists('modalidades', 'id')->where('activo', true)],
+                'modality' => ['required', 'string', Rule::in(StudyModality::values())],
                 'campus_id' => ['required', 'uuid', Rule::exists('campus', 'id')->where('activo', true)],
                 ...$this->namedCatalogRules('carreras', 180),
             ],
@@ -208,7 +203,8 @@ class StoreAcademicRecordRequest extends FormRequest
             'cycle' => ['required', 'integer', 'min:1', 'max:30'],
             'position' => ['nullable', 'integer', 'min:0', 'max:999'],
             'organization_unit' => ['required', 'string', 'max:80'],
-            'modality_id' => ['nullable', 'uuid', Rule::exists('modalidades', 'id')->where('activo', true)],
+            // Vacío = la de la carrera; otra cosa aparta la materia y vuelve híbrida la carrera.
+            'modality' => ['nullable', 'string', Rule::in(StudyModality::values())],
             'creditos' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
             'horas_totales' => ['nullable', 'integer', 'min:0', 'max:65535'],
             'hours_project' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],

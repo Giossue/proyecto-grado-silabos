@@ -24,12 +24,12 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { useCurriculumSubjectFieldValues } from '@/composables/useCurriculumSubjectFieldValues';
+import { INHERITED_MODALITY } from '@/lib/studyModalities';
 import { cn } from '@/lib/utils';
 import type {
     CurriculumBuilderProps,
     CurriculumBuilderSubject,
     CurriculumFieldDefinition,
-    Option,
 } from '@/types/academic';
 
 const props = defineProps<{
@@ -38,12 +38,19 @@ const props = defineProps<{
     fieldDefinitions: CurriculumBuilderProps['fieldDefinitions'];
     subject: CurriculumBuilderSubject | null;
     organizationUnits: string[];
-    modalities: Option[];
+    modalityOptions: CurriculumBuilderProps['modalityOptions'];
 }>();
 
-/** Solo una carrera híbrida pide modalidad por materia; las demás heredan la suya. */
-const modalityPerSubject = computed(
-    () => props.career.modality?.per_subject === true,
+/*
+ * Modalidad de la materia: por defecto la de la carrera. Apartarla (tres materias en
+ * línea en una carrera presencial) vuelve híbrida la carrera sin que Admin toque nada.
+ */
+const modality = ref(props.subject?.modality ?? INHERITED_MODALITY);
+watch(
+    () => props.subject?.modality,
+    (value) => {
+        modality.value = value ?? INHERITED_MODALITY;
+    },
 );
 
 const open = defineModel<boolean>('open', { default: false });
@@ -169,43 +176,47 @@ watch(
                         />
                         <FieldError :errors="[errors.organization_unit]" />
                     </Field>
-                    <Field
-                        v-if="modalityPerSubject"
-                        :data-invalid="Boolean(errors.modality_id)"
-                    >
-                        <FieldLabel for="builder-subject-modality" required>
+                    <Field :data-invalid="Boolean(errors.modality)">
+                        <FieldLabel for="builder-subject-modality">
                             Modalidad
                         </FieldLabel>
-                        <Select
-                            name="modality_id"
-                            :default-value="subject?.modality_id ?? undefined"
-                            required
-                        >
+                        <input
+                            type="hidden"
+                            name="modality"
+                            :value="
+                                modality === INHERITED_MODALITY ? '' : modality
+                            "
+                        />
+                        <Select v-model="modality">
                             <SelectTrigger
                                 id="builder-subject-modality"
-                                :aria-invalid="Boolean(errors.modality_id)"
+                                :aria-invalid="Boolean(errors.modality)"
                             >
-                                <SelectValue
-                                    placeholder="Seleccione la modalidad"
-                                />
+                                <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectGroup>
+                                    <SelectItem :value="INHERITED_MODALITY">
+                                        Igual que la carrera ({{
+                                            career.modality?.label ??
+                                            'sin modalidad'
+                                        }})
+                                    </SelectItem>
                                     <SelectItem
-                                        v-for="item in modalities"
-                                        :key="item.id"
-                                        :value="item.id"
+                                        v-for="item in modalityOptions"
+                                        :key="item.value"
+                                        :value="item.value"
                                     >
-                                        {{ item.nombre }}
+                                        {{ item.label }}
                                     </SelectItem>
                                 </SelectGroup>
                             </SelectContent>
                         </Select>
                         <FieldDescription>
-                            La carrera combina modalidades: la oferta de esta
-                            materia se abrirá con la que indique aquí.
+                            Si se aparta de la carrera, la carrera pasa a
+                            híbrida y la oferta de esta materia se abre así.
                         </FieldDescription>
-                        <FieldError :errors="[errors.modality_id]" />
+                        <FieldError :errors="[errors.modality]" />
                     </Field>
 
                     <div class="grid grid-cols-2 gap-3 sm:grid-cols-5">

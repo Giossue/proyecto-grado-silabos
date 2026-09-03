@@ -23,6 +23,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { STUDY_MODALITIES } from '@/lib/studyModalities';
 import type { CatalogRecord, GovernanceCatalogEntity } from '@/types/academic';
 
 const props = withDefaults(
@@ -32,22 +33,20 @@ const props = withDefaults(
         recordName: string;
         recordCode: string | null;
         facultyId?: string | null;
-        modalityId?: string | null;
+        modality?: string | null;
+        hybrid?: boolean;
         campusId?: string | null;
-        perSubject?: boolean;
         startsOn?: string | null;
         endsOn?: string | null;
         faculties: CatalogRecord[];
-        modalities?: CatalogRecord[];
         campuses?: CatalogRecord[];
         logoUrl?: string | null;
         showTrigger?: boolean;
     }>(),
     {
         showTrigger: true,
-        modalities: () => [],
         campuses: () => [],
-        perSubject: false,
+        hybrid: false,
     },
 );
 
@@ -59,15 +58,12 @@ const entityLabel = computed(
             facultad: 'facultad',
             carrera: 'carrera',
             campus: 'campus',
-            modalidad: 'modalidad',
             periodo: 'periodo académico',
         })[props.entity],
 );
 
 const codeLabel = computed(() =>
-    ['modalidad', 'periodo'].includes(props.entity)
-        ? 'Código estable'
-        : 'Código institucional',
+    props.entity === 'periodo' ? 'Código estable' : 'Código institucional',
 );
 
 const examples = computed(
@@ -79,7 +75,6 @@ const examples = computed(
             },
             carrera: { name: 'Ej. Software', code: 'Ej. SW' },
             campus: { name: 'Ej. Campus Matriz', code: 'Ej. MATRIZ' },
-            modalidad: { name: 'Ej. Presencial', code: 'Ej. PRES' },
             periodo: { name: 'Ej. 2026-2027', code: 'Ej. 2026-2027' },
         })[props.entity],
 );
@@ -184,19 +179,19 @@ const facultyOptions = computed(() =>
                     </Field>
                     <Field
                         v-if="entity === 'carrera'"
-                        :data-invalid="Boolean(errors.modality_id)"
+                        :data-invalid="Boolean(errors.modality)"
                     >
                         <FieldLabel :for="`edit-modality-${recordId}`" required>
                             Modalidad
                         </FieldLabel>
                         <Select
-                            name="modality_id"
-                            :default-value="modalityId ?? undefined"
+                            name="modality"
+                            :default-value="modality ?? undefined"
                             required
                         >
                             <SelectTrigger
                                 :id="`edit-modality-${recordId}`"
-                                :aria-invalid="Boolean(errors.modality_id)"
+                                :aria-invalid="Boolean(errors.modality)"
                             >
                                 <SelectValue
                                     placeholder="Seleccione la modalidad aprobada"
@@ -205,23 +200,23 @@ const facultyOptions = computed(() =>
                             <SelectContent>
                                 <SelectGroup>
                                     <SelectItem
-                                        v-for="modality in modalities"
-                                        :key="modality.id"
-                                        :value="modality.id"
+                                        v-for="item in STUDY_MODALITIES"
+                                        :key="item.value"
+                                        :value="item.value"
                                     >
-                                        {{ modality.nombre }}
-                                        {{
-                                            modality.activo ? '' : '(archivada)'
-                                        }}
+                                        {{ item.label }}
                                     </SelectItem>
                                 </SelectGroup>
                             </SelectContent>
                         </Select>
                         <FieldDescription>
-                            Las ofertas nuevas la heredan; las ya abiertas no
-                            cambian.
+                            {{
+                                hybrid
+                                    ? 'Hoy la carrera es híbrida: Coordinación apartó materias de esta base. La base no se puede cambiar hasta alinearlas en la malla.'
+                                    : 'Las ofertas nuevas la heredan; las ya abiertas no cambian.'
+                            }}
                         </FieldDescription>
-                        <FieldError :errors="[errors.modality_id]" />
+                        <FieldError :errors="[errors.modality]" />
                     </Field>
                     <Field
                         v-if="entity === 'carrera'"
@@ -262,41 +257,6 @@ const facultyOptions = computed(() =>
                         </FieldDescription>
                         <FieldError :errors="[errors.campus_id]" />
                     </Field>
-                    <Field
-                        v-if="entity === 'modalidad'"
-                        :data-invalid="Boolean(errors.per_subject)"
-                    >
-                        <FieldLabel :for="`edit-per-subject-${recordId}`">
-                            Alcance
-                        </FieldLabel>
-                        <Select
-                            name="per_subject"
-                            :default-value="perSubject ? '1' : '0'"
-                        >
-                            <SelectTrigger
-                                :id="`edit-per-subject-${recordId}`"
-                                :aria-invalid="Boolean(errors.per_subject)"
-                            >
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectGroup>
-                                    <SelectItem value="0">
-                                        Toda la carrera
-                                    </SelectItem>
-                                    <SelectItem value="1">
-                                        Por materia (híbrida)
-                                    </SelectItem>
-                                </SelectGroup>
-                            </SelectContent>
-                        </Select>
-                        <FieldDescription>
-                            «Por materia»: la carrera combina modalidades y cada
-                            materia de la malla indica la suya.
-                        </FieldDescription>
-                        <FieldError :errors="[errors.per_subject]" />
-                    </Field>
-
                     <Field :data-invalid="Boolean(errors.nombre)">
                         <FieldLabel :for="`edit-name-${recordId}`" required>
                             Nombre
@@ -315,9 +275,7 @@ const facultyOptions = computed(() =>
                     <Field :data-invalid="Boolean(errors.code)">
                         <FieldLabel
                             :for="`edit-code-${recordId}`"
-                            :required="
-                                entity === 'modalidad' || entity === 'periodo'
-                            "
+                            :required="entity === 'periodo'"
                         >
                             {{ codeLabel }}
                         </FieldLabel>
@@ -326,9 +284,7 @@ const facultyOptions = computed(() =>
                             name="code"
                             :default-value="recordCode ?? ''"
                             :placeholder="examples.code"
-                            :required="
-                                entity === 'modalidad' || entity === 'periodo'
-                            "
+                            :required="entity === 'periodo'"
                             :aria-invalid="Boolean(errors.code)"
                         />
                         <FieldError :errors="[errors.code]" />
