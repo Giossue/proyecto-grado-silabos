@@ -11,6 +11,10 @@ export type TableColumn = {
     type: TableColumnType;
     group: string | null;
     band: string | null;
+    /** Solo numéricas: si entra en la fila de totales (las semanas no). */
+    sum?: boolean;
+    /** Peso relativo del ancho, calcado del formato oficial; vacío = automático. */
+    width?: number | null;
 };
 
 export type TableNamed = { key: string; label: string };
@@ -203,6 +207,30 @@ export const headerRows = (layout: TableLayout): HeaderCell[][] => {
 
 export const numericColumns = (layout: TableLayout): TableColumn[] =>
     layout.columns.filter((column) => column.type === 'number');
+
+/**
+ * Anchos en porcentaje cuando todas las columnas declaran su peso (formato oficial);
+ * si falta alguno, se deja que el navegador reparta.
+ */
+export const columnWidths = (layout: TableLayout): string[] | null => {
+    const weights: number[] = [];
+
+    for (const column of layout.columns) {
+        if (!column.width || column.width <= 0) {
+            return null;
+        }
+
+        weights.push(column.width);
+    }
+
+    const total = weights.reduce((sum, weight) => sum + weight, 0);
+
+    return weights.map((weight) => `${((weight * 100) / total).toFixed(2)}%`);
+};
+
+/** Columnas que suman en la fila de totales. */
+export const totalizes = (column: TableColumn): boolean =>
+    column.type === 'number' && column.sum !== false;
 
 export const sumColumn = (rows: TableRowData[], key: string): number =>
     rows.reduce((total, row) => {

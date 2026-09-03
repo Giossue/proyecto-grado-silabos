@@ -49,6 +49,26 @@ class TableLayoutTest extends TestCase
         $this->assertSame(['enabled' => true, 'label' => 'Unidad'], $layout['repeat']);
     }
 
+    /** Formato oficial: las semanas no suman y los anchos vienen de la tabla original. */
+    public function test_numeric_columns_can_be_excluded_from_totals_and_carry_a_width(): void
+    {
+        $layout = TableLayout::normalize([
+            'columns' => [
+                ['key' => 'contenidos', 'label' => 'Contenidos', 'type' => 'text', 'sum' => true, 'width' => 2121],
+                ['key' => 'semana', 'label' => 'Semanas (16)', 'type' => 'number', 'sum' => false, 'width' => '427'],
+                ['key' => 'acd', 'label' => 'ACD', 'type' => 'number', 'width' => 0],
+            ],
+        ]);
+
+        $this->assertFalse($layout['columns'][0]['sum']);
+        $this->assertSame(2121, $layout['columns'][0]['width']);
+        $this->assertFalse($layout['columns'][1]['sum']);
+        $this->assertSame(427, $layout['columns'][1]['width']);
+        $this->assertTrue($layout['columns'][2]['sum']);
+        $this->assertNull($layout['columns'][2]['width']);
+        $this->assertSame(['acd'], TableLayout::numericColumns($layout));
+    }
+
     public function test_rejects_groups_that_are_not_contiguous_or_cross_bands(): void
     {
         try {

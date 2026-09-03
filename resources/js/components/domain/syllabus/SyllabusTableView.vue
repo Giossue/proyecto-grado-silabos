@@ -5,6 +5,8 @@ import {
     groupByUnit,
     headerRows,
     sumColumn,
+    columnWidths,
+    totalizes,
 } from '@/lib/tableLayout';
 import type { TableLayout, TableRowData } from '@/lib/tableLayout';
 
@@ -21,6 +23,7 @@ const units = computed(() =>
 
 const display = (value: TableRowData[string]): string =>
     value === null || value === undefined ? '' : String(value);
+const widths = computed(() => columnWidths(props.layout));
 </script>
 
 <template>
@@ -30,13 +33,20 @@ const display = (value: TableRowData[string]): string =>
             :key="unit.number"
             class="w-full border-collapse text-sm"
         >
+            <colgroup v-if="widths">
+                <col
+                    v-for="(width, index) in widths"
+                    :key="index"
+                    :style="{ width }"
+                />
+            </colgroup>
             <tbody
                 v-if="layout.repeat.enabled || layout.header_fields.length > 0"
             >
                 <tr v-if="layout.repeat.enabled">
                     <th
                         scope="row"
-                        class="w-1/4 border bg-muted px-3 py-1.5 text-start font-semibold"
+                        class="w-1/4 border bg-[#DBE5F1] px-3 py-1.5 text-start font-semibold text-[#365F91]"
                     >
                         {{ layout.repeat.label }} No.
                     </th>
@@ -50,7 +60,7 @@ const display = (value: TableRowData[string]): string =>
                 <tr v-for="field in layout.header_fields" :key="field.key">
                     <th
                         scope="row"
-                        class="w-1/4 border bg-muted px-3 py-1.5 text-start font-semibold"
+                        class="w-1/4 border bg-[#DBE5F1] px-3 py-1.5 text-start font-semibold text-[#365F91]"
                     >
                         {{ field.label }}
                     </th>
@@ -70,7 +80,7 @@ const display = (value: TableRowData[string]): string =>
                         scope="col"
                         :colspan="cell.colspan"
                         :rowspan="cell.rowspan"
-                        class="border bg-muted px-3 py-1.5 text-center font-semibold"
+                        class="border bg-[#DBE5F1] px-3 py-1.5 text-center font-semibold text-[#365F91]"
                     >
                         {{ cell.label }}
                     </th>
@@ -102,13 +112,13 @@ const display = (value: TableRowData[string]): string =>
                     <td
                         v-for="(column, index) in layout.columns"
                         :key="column.key"
-                        class="border bg-muted px-3 py-1.5 font-semibold"
+                        class="border bg-[#B8CCE4] px-3 py-1.5 font-semibold text-[#365F91]"
                         :class="index === 0 ? 'text-end' : 'text-center'"
                     >
                         <template v-if="index === 0">
                             {{ layout.totals.label }}
                         </template>
-                        <template v-else-if="column.type === 'number'">
+                        <template v-else-if="totalizes(column)">
                             {{
                                 formatSum(
                                     sumColumn(

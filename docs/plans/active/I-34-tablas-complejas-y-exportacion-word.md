@@ -107,3 +107,16 @@ activaron totales y por unidad, y todo persistió tras recargar. Como docente, c
 convocatoria demo abierta, se llenó la cabecera de unidad y dos filas (2, 1, 3 y 2, 1.5,
 3): totales 4, 2.5 y 6 en pantalla; guardado automático; una celda por columna en
 `filas_repetibles.datos`; «Agregar unidad» creó la Unidad 2 con su fila de cabecera.
+
+## Ajuste del 2026-09-03: formato oficial de «Distribución y planificación»
+
+El preset `planificacion` se calcó de la tabla del sílabo IA-SW-2026 (medida con el
+XML del DOCX): columnas «Contenidos temáticos de la unidad», «Semanas (16)», ACD (grupo
+DOCENCIA), APE y AA (grupo ESTUDIANTE) bajo el agrupamiento «Horas por semana ·
+Organización del aprendizaje»; tres actividades bajo «ACTIVIDADES DE APRENDIZAJE»;
+«Evaluación de los aprendizajes»; cabecera de unidad «Unidad No. | n | Nombre de la
+unidad / Resultados de aprendizaje»; fila «Total, horas». Dos campos nuevos por columna
+en `TableLayout`: `sum` (las semanas no entran en la suma; ACD/APE/AA sí, automática) y
+`width` (anchos en twips del original, que el Word respeta). Colores del formato:
+cabeceras y etiquetas `DBE5F1` con texto `365F91`, totales `B8CCE4`, cuerpo sin
+sombreado; mismos colores en la hoja, el editor docente y la revisión.

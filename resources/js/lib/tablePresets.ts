@@ -17,27 +17,56 @@ const column = (
     type: 'text' | 'number' = 'text',
     group: string | null = null,
     band: string | null = null,
-) => ({ key, label, type, group, band });
+    sum = true,
+    width: number | null = null,
+) => ({ key, label, type, group, band, sum: type === 'number' && sum, width });
 
 export const TABLE_PRESETS: TablePreset[] = [
     {
         key: 'planificacion',
         name: 'Planificación por unidades',
         description:
-            'Contenidos, horas por semana (docencia y estudiante), actividades y evaluación. Una tabla por unidad con totales.',
+            'Formato oficial: contenidos, semanas, horas por semana (docencia y estudiante), actividades y evaluación. Una tabla por unidad con totales.',
         layout: {
+            // Anchos en twips de la tabla del sílabo IA-SW-2026; las semanas no suman.
             columns: [
-                column('contenidos', 'Contenidos temáticos de la unidad'),
-                column('semana', 'Semanas', 'number', null, 'horas'),
-                column('acd', 'ACD', 'number', 'docencia', 'horas'),
-                column('ape', 'APE', 'number', 'estudiante', 'horas'),
-                column('aa', 'AA', 'number', 'estudiante', 'horas'),
+                column(
+                    'contenidos',
+                    'Contenidos temáticos de la unidad',
+                    'text',
+                    null,
+                    null,
+                    true,
+                    2121,
+                ),
+                column(
+                    'semana',
+                    'Semanas (16)',
+                    'number',
+                    null,
+                    'horas',
+                    false,
+                    427,
+                ),
+                column('acd', 'ACD', 'number', 'docencia', 'horas', true, 849),
+                column(
+                    'ape',
+                    'APE',
+                    'number',
+                    'estudiante',
+                    'horas',
+                    true,
+                    566,
+                ),
+                column('aa', 'AA', 'number', 'estudiante', 'horas', true, 566),
                 column(
                     'act_acd',
-                    'Aprendizaje en contacto con el docente (ACD)',
+                    'Aprendizaje en Contacto con el Docente (ACD)',
                     'text',
                     null,
                     'actividades',
+                    true,
+                    2553,
                 ),
                 column(
                     'act_ape',
@@ -45,6 +74,8 @@ export const TABLE_PRESETS: TablePreset[] = [
                     'text',
                     null,
                     'actividades',
+                    true,
+                    1843,
                 ),
                 column(
                     'act_aa',
@@ -52,16 +83,29 @@ export const TABLE_PRESETS: TablePreset[] = [
                     'text',
                     null,
                     'actividades',
+                    true,
+                    2165,
                 ),
-                column('evaluacion', 'Evaluación de los aprendizajes'),
+                column(
+                    'evaluacion',
+                    'Evaluación de los aprendizajes',
+                    'text',
+                    null,
+                    null,
+                    true,
+                    2266,
+                ),
             ],
             groups: [
-                { key: 'docencia', label: 'Docencia' },
-                { key: 'estudiante', label: 'Estudiante' },
+                { key: 'docencia', label: 'DOCENCIA' },
+                { key: 'estudiante', label: 'ESTUDIANTE' },
             ],
             bands: [
-                { key: 'horas', label: 'Horas por semana' },
-                { key: 'actividades', label: 'Actividades de aprendizaje' },
+                {
+                    key: 'horas',
+                    label: 'Horas por semana · Organización del aprendizaje',
+                },
+                { key: 'actividades', label: 'ACTIVIDADES DE APRENDIZAJE' },
             ],
             header_fields: [
                 { key: 'nombre', label: 'Nombre de la unidad' },

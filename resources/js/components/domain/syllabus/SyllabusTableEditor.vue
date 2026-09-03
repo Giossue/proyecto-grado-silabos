@@ -9,6 +9,8 @@ import {
     groupByUnit,
     headerRows,
     sumColumn,
+    columnWidths,
+    totalizes,
 } from '@/lib/tableLayout';
 import type { TableLayout, TableRowData } from '@/lib/tableLayout';
 
@@ -144,6 +146,7 @@ const removeUnit = (number: number): void => {
 
     emit('update:rows', rows);
 };
+const widths = computed(() => columnWidths(props.layout));
 </script>
 
 <template>
@@ -205,6 +208,13 @@ const removeUnit = (number: number): void => {
 
             <div class="overflow-x-auto">
                 <table class="w-full border-collapse text-sm">
+                    <colgroup v-if="widths">
+                        <col
+                            v-for="(width, index) in widths"
+                            :key="index"
+                            :style="{ width }"
+                        />
+                    </colgroup>
                     <thead>
                         <tr v-for="(cells, rowIndex) in header" :key="rowIndex">
                             <th
@@ -213,7 +223,7 @@ const removeUnit = (number: number): void => {
                                 scope="col"
                                 :colspan="cell.colspan"
                                 :rowspan="cell.rowspan"
-                                class="border bg-muted px-2 py-1.5 text-center text-xs font-semibold"
+                                class="border bg-[#DBE5F1] px-2 py-1.5 text-center text-xs font-semibold text-[#365F91]"
                             >
                                 {{ cell.label }}
                             </th>
@@ -221,7 +231,7 @@ const removeUnit = (number: number): void => {
                                 v-if="rowIndex === 0"
                                 scope="col"
                                 :rowspan="header.length"
-                                class="w-10 border bg-muted"
+                                class="w-10 border bg-[#DBE5F1]"
                             >
                                 <span class="sr-only">Acciones</span>
                             </th>
@@ -302,7 +312,7 @@ const removeUnit = (number: number): void => {
                             <td
                                 v-for="(column, index) in layout.columns"
                                 :key="column.key"
-                                class="border bg-muted px-2 py-1.5 font-semibold"
+                                class="border bg-[#B8CCE4] px-2 py-1.5 font-semibold text-[#365F91]"
                                 :class="
                                     index === 0 ? 'text-end' : 'text-center'
                                 "
@@ -310,7 +320,7 @@ const removeUnit = (number: number): void => {
                                 <template v-if="index === 0">
                                     {{ layout.totals.label }}
                                 </template>
-                                <template v-else-if="column.type === 'number'">
+                                <template v-else-if="totalizes(column)">
                                     {{
                                         formatSum(
                                             sumColumn(
@@ -323,7 +333,7 @@ const removeUnit = (number: number): void => {
                                     }}
                                 </template>
                             </td>
-                            <td class="border bg-muted" />
+                            <td class="border bg-[#B8CCE4]" />
                         </tr>
                     </tbody>
                 </table>

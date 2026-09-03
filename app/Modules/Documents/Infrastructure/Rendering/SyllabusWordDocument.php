@@ -27,6 +27,12 @@ class SyllabusWordDocument
 
     private const LIGHT_BLUE = 'DBE5F1';
 
+    /** Fila de totales del formato oficial. */
+    private const TOTAL_BLUE = 'B8CCE4';
+
+    /** Texto de las cabeceras de tabla del formato oficial. */
+    private const HEADER_TEXT = '365F91';
+
     private const TITLE_BLUE = '0070C0';
 
     private const BORDER = '7F7F7F';
@@ -298,7 +304,7 @@ class SyllabusWordDocument
     }
 
     /**
-     * @param  array{columns: list<array{key: string, label: string, type: string, group: string|null, band: string|null}>, groups: list<array{key: string, label: string}>, bands: list<array{key: string, label: string}>, header_fields: list<array{key: string, label: string}>, totals: array{enabled: bool, label: string}, repeat: array{enabled: bool, label: string}}  $layout
+     * @param  array{columns: list<array{key: string, label: string, type: string, group: string|null, band: string|null, sum?: bool, width?: int|null}>, groups: list<array{key: string, label: string}>, bands: list<array{key: string, label: string}>, header_fields: list<array{key: string, label: string}>, totals: array{enabled: bool, label: string}, repeat: array{enabled: bool, label: string}}  $layout
      * @param  list<array<string, mixed>>  $rows
      */
     private function table(Section $section, array $layout, array $rows): void
@@ -319,29 +325,53 @@ class SyllabusWordDocument
             $columnCount = count($layout['columns']);
 
             if ($layout['repeat']['enabled'] || $layout['header_fields'] !== []) {
+                // Cabecera de unidad como en el formato oficial: «Unidad No.» y su número a la
+                // izquierda (combinados hacia abajo), y a la derecha cada dato con su etiqueta.
                 $header = $unit['header'];
-                $labels = $layout['repeat']['enabled']
-                    ? [[$layout['repeat']['label'].' No.', (string) ($index + 1)]]
-                    : [];
-                foreach ($layout['header_fields'] as $headerField) {
-                    $labels[] = [$headerField['label'], $this->cell($header, $headerField['key'])];
-                }
-                foreach ($labels as [$label, $value]) {
+                $labelStyle = ['bold' => true, 'size' => 9, 'color' => self::HEADER_TEXT];
+                $first = $widths[0];
+                $numberWidth = $layout['repeat']['enabled'] ? (int) floor($first * 0.32) : 0;
+                $unitWidth = $first - $numberWidth;
+                $labelSpan = max(1, min(4, $columnCount - 2));
+                $labelWidth = $columnCount > 2 ? (int) array_sum(array_slice($widths, 1, $labelSpan)) : 0;
+                $valueSpan = max(1, $columnCount - 1 - $labelSpan);
+                $valueWidth = self::CONTENT_WIDTH - $first - $labelWidth;
+                $fields = $layout['header_fields'] !== [] ? $layout['header_fields'] : [['key' => '', 'label' => '']];
+                foreach ($fields as $fieldIndex => $headerField) {
                     $row = $table->addRow();
-                    $row->addCell($widths[0], ['bgColor' => self::LIGHT_BLUE, 'gridSpan' => 1])
-                        ->addText($label, ['bold' => true, 'size' => 9, 'color' => '1F497D'], ['spaceAfter' => 0]);
-                    $cell = $row->addCell(self::CONTENT_WIDTH - $widths[0], ['gridSpan' => max(1, $columnCount - 1)]);
-                    $cell->addText($value, ['size' => 9], ['spaceAfter' => 0]);
+                    $value = $headerField['key'] === '' ? '' : $this->cell($header, $headerField['key']);
+                    if ($layout['repeat']['enabled']) {
+                        $merge = $fieldIndex === 0 ? 'restart' : 'continue';
+                        $unitCell = $row->addCell($unitWidth, ['vMerge' => $merge, 'valign' => 'center']);
+                        $numberCell = $row->addCell($numberWidth, ['vMerge' => $merge, 'valign' => 'center']);
+                        if ($fieldIndex === 0) {
+                            $unitCell->addText($layout['repeat']['label'].' No.', $labelStyle, ['spaceAfter' => 0]);
+                            $numberCell->addText((string) ($index + 1), $labelStyle, ['spaceAfter' => 0, 'alignment' => Jc::CENTER]);
+                        }
+                        if ($columnCount > 2) {
+                            $row->addCell($labelWidth, ['bgColor' => self::LIGHT_BLUE, 'gridSpan' => $labelSpan])
+                                ->addText($headerField['label'], $labelStyle, ['spaceAfter' => 0]);
+                            $row->addCell($valueWidth, ['gridSpan' => $valueSpan])
+                                ->addText($value, ['size' => 9], ['spaceAfter' => 0]);
+                        } else {
+                            $row->addCell(self::CONTENT_WIDTH - $first, ['gridSpan' => max(1, $columnCount - 1)])
+                                ->addText($headerField['label'].($value === '' ? '' : ': '.$value), ['size' => 9], ['spaceAfter' => 0]);
+                        }
+                    } else {
+                        $row->addCell($first, ['bgColor' => self::LIGHT_BLUE])
+                            ->addText($headerField['label'], $labelStyle, ['spaceAfter' => 0]);
+                        $row->addCell(self::CONTENT_WIDTH - $first, ['gridSpan' => max(1, $columnCount - 1)])
+                            ->addText($value, ['size' => 9], ['spaceAfter' => 0]);
+                    }
                 }
             }
 
             $this->headerRows($table, $layout, $widths);
 
-            foreach ($unit['rows'] as $rowIndex => $data) {
+            foreach ($unit['rows'] as $data) {
                 $row = $table->addRow();
-                $shade = $rowIndex % 2 === 1 ? self::LIGHT_BLUE : null;
                 foreach ($layout['columns'] as $columnIndex => $column) {
-                    $cell = $row->addCell($widths[$columnIndex], $shade !== null ? ['bgColor' => $shade] : []);
+                    $cell = $row->addCell($widths[$columnIndex]);
                     $cell->addText(
                         $this->cell($data, $column['key']),
                         ['size' => 9],
@@ -358,13 +388,13 @@ class SyllabusWordDocument
             if ($layout['totals']['enabled']) {
                 $row = $table->addRow();
                 foreach ($layout['columns'] as $columnIndex => $column) {
-                    $cell = $row->addCell($widths[$columnIndex], ['bgColor' => self::LIGHT_BLUE]);
+                    $cell = $row->addCell($widths[$columnIndex], ['bgColor' => self::TOTAL_BLUE]);
                     $text = $columnIndex === 0
                         ? $layout['totals']['label']
-                        : ($column['type'] === 'number' ? $this->sum($unit['rows'], $column['key']) : '');
+                        : ($column['type'] === 'number' && ($column['sum'] ?? true) === true ? $this->sum($unit['rows'], $column['key']) : '');
                     $cell->addText(
                         $text,
-                        ['bold' => true, 'size' => 9, 'color' => '1F497D'],
+                        ['bold' => true, 'size' => 9, 'color' => self::HEADER_TEXT],
                         ['spaceAfter' => 0, 'alignment' => $columnIndex === 0 ? Jc::END : Jc::CENTER],
                     );
                 }
@@ -377,7 +407,7 @@ class SyllabusWordDocument
      * columna sabe en qué fila empieza su celda y cuántas ocupa; las vecinas del
      * mismo grupo se funden con `gridSpan`.
      *
-     * @param  array{columns: list<array{key: string, label: string, type: string, group: string|null, band: string|null}>, groups: list<array{key: string, label: string}>, bands: list<array{key: string, label: string}>}  $layout
+     * @param  array{columns: list<array{key: string, label: string, type: string, group: string|null, band: string|null, sum?: bool, width?: int|null}>, groups: list<array{key: string, label: string}>, bands: list<array{key: string, label: string}>}  $layout
      * @param  list<int>  $widths
      */
     private function headerRows(Table $table, array $layout, array $widths): void
@@ -407,7 +437,7 @@ class SyllabusWordDocument
             $matrix[$row][$index] = ['id' => 'leaf:'.$column['key'], 'label' => $column['label'], 'span' => $depth - $row];
         }
 
-        $style = ['bold' => true, 'size' => 9, 'color' => 'FFFFFF'];
+        $style = ['bold' => true, 'size' => 8, 'color' => self::HEADER_TEXT];
         $paragraph = ['spaceAfter' => 0, 'alignment' => Jc::CENTER];
         for ($rowIndex = 0; $rowIndex < $depth; $rowIndex++) {
             $row = $table->addRow(null, ['tblHeader' => true]);
@@ -416,7 +446,7 @@ class SyllabusWordDocument
                 $cell = $matrix[$rowIndex][$columnIndex];
                 if ($cell === null) {
                     // Continuación vertical de una celda que empezó arriba.
-                    $row->addCell($widths[$columnIndex], ['bgColor' => self::BLUE, 'vMerge' => 'continue']);
+                    $row->addCell($widths[$columnIndex], ['bgColor' => self::LIGHT_BLUE, 'vMerge' => 'continue']);
                     $columnIndex++;
 
                     continue;
@@ -431,7 +461,7 @@ class SyllabusWordDocument
                     $width += $widths[$columnIndex + $span];
                     $span++;
                 }
-                $options = ['bgColor' => self::BLUE, 'valign' => 'center'];
+                $options = ['bgColor' => self::LIGHT_BLUE, 'valign' => 'center'];
                 if ($span > 1) {
                     $options['gridSpan'] = $span;
                 }
@@ -476,12 +506,17 @@ class SyllabusWordDocument
     }
 
     /**
-     * @param  array{columns: list<array{type: string}>}  $layout
+     * @param  array{columns: list<array{type: string, width?: int|null}>}  $layout
      * @return list<int>
      */
     private function widths(array $layout): array
     {
-        $weights = array_map(fn (array $column): int => $column['type'] === 'number' ? 1 : 3, $layout['columns']);
+        // Con anchos declarados (formato oficial) se respetan sus proporciones; si no, las
+        // columnas numéricas valen un tercio de las de texto.
+        $declared = array_map(fn (array $column): ?int => $column['width'] ?? null, $layout['columns']);
+        $weights = in_array(null, $declared, true) || $declared === []
+            ? array_map(fn (array $column): int => $column['type'] === 'number' ? 1 : 3, $layout['columns'])
+            : array_map('intval', $declared);
         $total = max(1, array_sum($weights));
 
         return array_map(fn (int $weight): int => (int) floor(self::CONTENT_WIDTH * $weight / $total), $weights);

@@ -2,7 +2,13 @@
 import { X } from '@lucide/vue';
 import { computed, nextTick, ref, watch } from 'vue';
 import { Input } from '@/components/ui/input';
-import { cloneTableLayout, formatSum, headerRows } from '@/lib/tableLayout';
+import {
+    cloneTableLayout,
+    formatSum,
+    headerRows,
+    columnWidths,
+    totalizes,
+} from '@/lib/tableLayout';
 import type { TableLayout } from '@/lib/tableLayout';
 import { isUnformattedTable, TABLE_PRESETS } from '@/lib/tablePresets';
 
@@ -154,6 +160,7 @@ const sampleTotal = (columnIndex: number): string =>
             0,
         ),
     );
+const widths = computed(() => columnWidths(draft.value));
 </script>
 
 <template>
@@ -195,6 +202,13 @@ const sampleTotal = (columnIndex: number): string =>
 
         <template v-else>
             <table class="dt-table">
+                <colgroup v-if="widths">
+                    <col
+                        v-for="(width, index) in widths"
+                        :key="index"
+                        :style="{ width }"
+                    />
+                </colgroup>
                 <tbody v-if="hasUnitHeader">
                     <tr v-if="draft.repeat.enabled">
                         <th scope="row" class="dt-unit-label">
@@ -363,7 +377,7 @@ const sampleTotal = (columnIndex: number): string =>
                                     {{ draft.totals.label }}
                                 </template>
                             </template>
-                            <template v-else-if="column.type === 'number'">
+                            <template v-else-if="totalizes(column)">
                                 {{ sampleTotal(columnIndex) }}
                             </template>
                         </td>
@@ -462,8 +476,8 @@ const sampleTotal = (columnIndex: number): string =>
 }
 
 .dt-head {
-    background: #4f81bd;
-    color: #fff;
+    background: #dbe5f1;
+    color: #365f91;
     font-weight: 700;
     text-align: center;
     vertical-align: middle;
@@ -471,13 +485,9 @@ const sampleTotal = (columnIndex: number): string =>
 
 .dt-unit-label {
     background: #dbe5f1;
-    color: #1f497d;
+    color: #365f91;
     font-weight: 700;
     width: 28%;
-}
-
-.dt-table tbody tr:nth-child(even) td {
-    background: #dbe5f1;
 }
 
 .dt-number {
@@ -485,8 +495,8 @@ const sampleTotal = (columnIndex: number): string =>
 }
 
 .dt-totals td {
-    background: #dbe5f1 !important;
-    color: #1f497d;
+    background: #b8cce4 !important;
+    color: #365f91;
     font-weight: 700;
 }
 

@@ -18,23 +18,25 @@ final class TablePresets
     /** @return array<string, array<string, mixed>> */
     private static function raw(): array
     {
-        $col = fn (string $key, string $label, string $type = 'text', ?string $group = null, ?string $band = null): array => compact('key', 'label', 'type', 'group', 'band');
+        $col = fn (string $key, string $label, string $type = 'text', ?string $group = null, ?string $band = null, bool $sum = true, ?int $width = null): array => ['key' => $key, 'label' => $label, 'type' => $type, 'group' => $group, 'band' => $band, 'sum' => $type === 'number' && $sum, 'width' => $width];
 
         return [
+            // Calcada del formato oficial (sílabo IA-SW-2026): anchos en twips de la tabla
+            // original, semanas fuera de la suma, cabeceras en dos niveles.
             'planificacion' => [
                 'columns' => [
-                    $col('contenidos', 'Contenidos temáticos de la unidad'),
-                    $col('semana', 'Semanas', 'number', null, 'horas'),
-                    $col('acd', 'ACD', 'number', 'docencia', 'horas'),
-                    $col('ape', 'APE', 'number', 'estudiante', 'horas'),
-                    $col('aa', 'AA', 'number', 'estudiante', 'horas'),
-                    $col('act_acd', 'Aprendizaje en contacto con el docente (ACD)', 'text', null, 'actividades'),
-                    $col('act_ape', 'Aprendizaje práctico-experimental (APE)', 'text', null, 'actividades'),
-                    $col('act_aa', 'Aprendizaje autónomo (AA)', 'text', null, 'actividades'),
-                    $col('evaluacion', 'Evaluación de los aprendizajes'),
+                    $col('contenidos', 'Contenidos temáticos de la unidad', 'text', null, null, true, 2121),
+                    $col('semana', 'Semanas (16)', 'number', null, 'horas', false, 427),
+                    $col('acd', 'ACD', 'number', 'docencia', 'horas', true, 849),
+                    $col('ape', 'APE', 'number', 'estudiante', 'horas', true, 566),
+                    $col('aa', 'AA', 'number', 'estudiante', 'horas', true, 566),
+                    $col('act_acd', 'Aprendizaje en Contacto con el Docente (ACD)', 'text', null, 'actividades', true, 2553),
+                    $col('act_ape', 'Aprendizaje práctico-experimental (APE)', 'text', null, 'actividades', true, 1843),
+                    $col('act_aa', 'Aprendizaje autónomo (AA)', 'text', null, 'actividades', true, 2165),
+                    $col('evaluacion', 'Evaluación de los aprendizajes', 'text', null, null, true, 2266),
                 ],
-                'groups' => [['key' => 'docencia', 'label' => 'Docencia'], ['key' => 'estudiante', 'label' => 'Estudiante']],
-                'bands' => [['key' => 'horas', 'label' => 'Horas por semana'], ['key' => 'actividades', 'label' => 'Actividades de aprendizaje']],
+                'groups' => [['key' => 'docencia', 'label' => 'DOCENCIA'], ['key' => 'estudiante', 'label' => 'ESTUDIANTE']],
+                'bands' => [['key' => 'horas', 'label' => 'Horas por semana · Organización del aprendizaje'], ['key' => 'actividades', 'label' => 'ACTIVIDADES DE APRENDIZAJE']],
                 'header_fields' => [['key' => 'nombre', 'label' => 'Nombre de la unidad'], ['key' => 'resultados', 'label' => 'Resultados de aprendizaje']],
                 'totals' => ['enabled' => true, 'label' => 'Total, horas'],
                 'repeat' => ['enabled' => true, 'label' => 'Unidad'],

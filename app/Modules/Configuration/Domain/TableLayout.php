@@ -13,7 +13,7 @@ use Illuminate\Validation\ValidationException;
  * cabecera por unidad, fila de totales y repetición por unidad. Las celdas combinadas
  * solo existen en la cabecera y en los totales; el cuerpo siempre es rectangular.
  *
- * @phpstan-type Column array{key: string, label: string, type: 'text'|'number', group: string|null, band: string|null}
+ * @phpstan-type Column array{key: string, label: string, type: 'text'|'number', group: string|null, band: string|null, sum: bool, width: int|null}
  * @phpstan-type Named array{key: string, label: string}
  * @phpstan-type Layout array{
  *     columns: list<Column>,
@@ -42,7 +42,7 @@ final class TableLayout
     {
         return [
             'columns' => [
-                ['key' => 'texto', 'label' => 'Contenido', 'type' => 'text', 'group' => null, 'band' => null],
+                ['key' => 'texto', 'label' => 'Contenido', 'type' => 'text', 'group' => null, 'band' => null, 'sum' => false, 'width' => null],
             ],
             'groups' => [],
             'bands' => [],
@@ -114,12 +114,17 @@ final class TableLayout
             if ($band === false) {
                 $errors["columns.$index.band"] = 'El agrupamiento indicado no existe.';
             }
+            // `sum`: si la columna numérica entra en la fila de totales (las semanas no
+            // suman). `width`: peso relativo del ancho, calcado del formato oficial.
+            $width = $column['width'] ?? null;
             $columns[] = [
                 'key' => $key ?? "columna_$index",
                 'label' => $label ?? '',
                 'type' => $type,
                 'group' => $group === false ? null : $group,
                 'band' => $band === false ? null : $band,
+                'sum' => $type === 'number' && (bool) ($column['sum'] ?? true),
+                'width' => is_numeric($width) && (int) $width > 0 ? (int) $width : null,
             ];
         }
 
@@ -160,7 +165,7 @@ final class TableLayout
     {
         return array_values(array_map(
             fn (array $column): string => $column['key'],
-            array_filter($layout['columns'], fn (array $column): bool => $column['type'] === 'number'),
+            array_filter($layout['columns'], fn (array $column): bool => $column['type'] === 'number' && $column['sum']),
         ));
     }
 

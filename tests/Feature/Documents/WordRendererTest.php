@@ -72,6 +72,12 @@ class WordRendererTest extends TestCase
         $this->assertSame(2, substr_count($document, 'Total, horas'));
         $this->assertStringContainsString('>4<', $document);
         $this->assertStringContainsString('>2.5<', $document);
+        // Las semanas no suman (5 + 6 no aparece) y el formato oficial pinta las cabeceras
+        // en azul claro con texto azul y los totales en un azul más oscuro.
+        $this->assertStringNotContainsString('>11<', $document);
+        $this->assertStringContainsString('w:fill="DBE5F1"', $document);
+        $this->assertStringContainsString('w:fill="B8CCE4"', $document);
+        $this->assertStringContainsString('w:color w:val="365F91"', $document);
 
         // Lista con viñetas del segundo bloque.
         $this->assertStringContainsString('Primer objetivo', $document);
@@ -84,7 +90,7 @@ class WordRendererTest extends TestCase
         $table = [
             'columns' => [
                 ['key' => 'contenidos', 'label' => 'Contenidos temáticos', 'type' => 'text'],
-                ['key' => 'semana', 'label' => 'Semanas', 'type' => 'number', 'band' => 'horas'],
+                ['key' => 'semana', 'label' => 'Semanas (16)', 'type' => 'number', 'band' => 'horas', 'sum' => false],
                 ['key' => 'acd', 'label' => 'ACD', 'type' => 'number', 'group' => 'docencia', 'band' => 'horas'],
                 ['key' => 'ape', 'label' => 'APE', 'type' => 'number', 'group' => 'estudiante', 'band' => 'horas'],
                 ['key' => 'aa', 'label' => 'AA', 'type' => 'number', 'group' => 'estudiante', 'band' => 'horas'],
