@@ -68,7 +68,7 @@ const status = computed(() => {
 
     if (props.user.pending_first_login) {
         return {
-            label: 'Sin estrenar',
+            label: 'Pendiente de activación',
             variant: 'default' as const,
             hint: 'La cuenta se creó y todavía nadie ha iniciado sesión con ella. Conserva su contraseña temporal.',
         };

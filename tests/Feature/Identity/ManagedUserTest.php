@@ -102,7 +102,7 @@ class ManagedUserTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page->has('users.data', 2));
 
-        // «Sin estrenar» es distinto de «activo»: las cuentas sembradas ya se usaron.
+        // «Pendiente de activación» es distinto de «activo»: las cuentas sembradas ya se usaron.
         $this->actingAsAdministrator()
             ->get(route('admin.users.index', ['status' => 'pending']))
             ->assertOk()

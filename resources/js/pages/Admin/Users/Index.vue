@@ -61,7 +61,7 @@ const statusOf = (user: ListedUser): UserStatus => {
 
     if (user.pending_first_login) {
         return {
-            label: 'Sin estrenar',
+            label: 'Pendiente de activación',
             hint: 'La cuenta se creó y todavía nadie ha iniciado sesión con ella. Conserva su contraseña temporal.',
         };
     }
@@ -204,7 +204,7 @@ defineProps<{
                                                 Activos
                                             </SelectItem>
                                             <SelectItem value="pending">
-                                                Sin estrenar
+                                                Pendiente de activación
                                             </SelectItem>
                                             <SelectItem value="inactive">
                                                 Inactivos
@@ -296,9 +296,7 @@ defineProps<{
                                 -->
                                 <Tooltip>
                                     <TooltipTrigger as-child>
-                                        <span class="cursor-help">{{
-                                            statusOf(user).label
-                                        }}</span>
+                                        <span>{{ statusOf(user).label }}</span>
                                     </TooltipTrigger>
                                     <TooltipContent class="max-w-xs">
                                         {{ statusOf(user).hint }}
