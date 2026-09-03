@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
+import InstitutionLogoSheet from '@/components/domain/configuration/InstitutionLogoSheet.vue';
 import TemplateSheetEditor from '@/components/domain/configuration/TemplateSheetEditor.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
 import ProcessLockAlert from '@/components/domain/ProcessLockAlert.vue';
@@ -47,6 +48,10 @@ defineProps<{
     processLock: string | null;
     /** Ficha de identificación con datos de muestra, ya en cuadrícula. */
     identificationSample: IdentificationCell[][];
+    logos: {
+        institution: string;
+        institution_size: { width: number; height: number };
+    };
 }>();
 
 defineOptions({
@@ -65,6 +70,13 @@ defineOptions({
         "
         size="wide"
     >
+        <template #actions>
+            <InstitutionLogoSheet
+                :current-url="logos.institution"
+                :size="logos.institution_size"
+            />
+        </template>
+
         <ProcessLockAlert
             v-if="processLock"
             title="Plantilla protegida durante el proceso"
@@ -76,6 +88,7 @@ defineOptions({
             :sections="template.sections"
             :block-types="blockTypes"
             :identification="identificationSample"
+            :institution-logo="logos.institution"
             :readonly="processLock !== null"
         />
     </PageFrame>

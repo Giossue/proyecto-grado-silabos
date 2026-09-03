@@ -210,6 +210,7 @@ const {
                                     faculty.codigo_institucional ?? null
                                 "
                                 :active="faculty.activo"
+                                :logo-url="faculty.logo_url"
                                 :faculties="catalogs.faculties"
                             />
                         </TableCell>

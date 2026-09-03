@@ -126,6 +126,10 @@
   con datos de la malla, la oferta, los paralelos (incluida su jornada) y los docentes;
   no se diseña ni se llena (I-34). Mapa de datos: `docs/product/identificacion-institucional.md`.
   COR-14 (paralelos) muestra y edita la jornada.
+- Encabezado del sílabo: logo de la universidad (uno, lo reemplaza Administración desde
+  «Logo de la universidad» en la plantilla) y logo de la facultad de la carrera
+  (obligatorio al crear la facultad en ADM-04; se reemplaza al editarla). Ambos PNG sin
+  fondo con medida fija: universidad 850 × 315 px, facultad 600 × 180 px.
 - Si una sección tiene un solo campo, no lleva subtítulo «n.1»: basta el título de la
   sección, en la hoja, el editor docente, la revisión y el Word. Con varios campos sí
   se numeran.

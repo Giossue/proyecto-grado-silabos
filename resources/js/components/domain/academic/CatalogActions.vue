@@ -10,6 +10,7 @@ import type { CatalogRecord, GovernanceCatalogEntity } from '@/types/academic';
 defineProps<{
     entity: GovernanceCatalogEntity;
     recordId: string;
+    logoUrl?: string | null;
     recordName: string;
     recordCode: string | null;
     active: boolean;
@@ -50,6 +51,7 @@ const editOpen = ref(false);
             :record-name="recordName"
             :record-code="recordCode"
             :faculty-id="facultyId"
+            :logo-url="logoUrl"
             :starts-on="startsOn"
             :ends-on="endsOn"
             :faculties="faculties"

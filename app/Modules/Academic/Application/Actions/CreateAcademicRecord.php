@@ -17,6 +17,7 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\Modality;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Subject;
 use App\Modules\Academic\Infrastructure\Persistence\Models\TeacherAssignment;
+use App\Modules\Configuration\Application\InstitutionalLogos;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Identity\Domain\Enums\RoleCode;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
@@ -26,6 +27,7 @@ use App\Modules\Syllabus\Application\ProcessLocks;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -37,6 +39,7 @@ class CreateAcademicRecord
         private readonly ProcessLocks $locks,
         private readonly InProgressWork $work,
         private readonly SyncSubjectFieldValues $syncSubjectFieldValues,
+        private readonly InstitutionalLogos $logos,
     ) {}
 
     /** @param array<string, mixed> $data */
@@ -73,14 +76,25 @@ class CreateAcademicRecord
     }
 
     /** @param array<string, mixed> $data */
+    private function createFaculty(array $data): Faculty
+    {
+        $faculty = Faculty::query()->create([
+            'codigo_institucional' => $data['code'] ?? null,
+            'nombre' => $data['nombre'],
+            'activo' => true,
+        ]);
+        if (($data['logo'] ?? null) instanceof UploadedFile) {
+            $this->logos->storeFaculty($faculty, $data['logo']);
+        }
+
+        return $faculty;
+    }
+
+    /** @param array<string, mixed> $data */
     private function create(string $entity, array $data, RoleAssignment $activeRole): Model
     {
         return match ($entity) {
-            'facultad' => Faculty::query()->create([
-                'codigo_institucional' => $data['code'] ?? null,
-                'nombre' => $data['nombre'],
-                'activo' => true,
-            ]),
+            'facultad' => $this->createFaculty($data),
             'carrera' => Career::query()->create([
                 'facultad_id' => $data['faculty_id'],
                 'codigo_institucional' => $data['code'] ?? null,

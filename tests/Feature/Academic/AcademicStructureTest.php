@@ -26,12 +26,15 @@ use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
+use Tests\Support\MakesTransparentPng;
 use Tests\TestCase;
 
 class AcademicStructureTest extends TestCase
 {
+    use MakesTransparentPng;
     use RefreshDatabase;
 
     private User $administrator;
@@ -45,6 +48,7 @@ class AcademicStructureTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        Storage::fake('private');
 
         $this->seed(DatabaseSeeder::class);
         $this->administrator = User::query()->where('correo_electronico', 'admin@silabos.test')->firstOrFail();
@@ -198,6 +202,7 @@ class AcademicStructureTest extends TestCase
             ->post(route('admin.academic.store', 'facultad'), [
                 'code' => 'FAC-DEMO',
                 'nombre' => 'Facultad de demostración',
+                'logo' => $this->transparentPng(600, 180),
             ])
             ->assertRedirect();
         $faculty = Faculty::query()->where('codigo_institucional', 'FAC-DEMO')->firstOrFail();

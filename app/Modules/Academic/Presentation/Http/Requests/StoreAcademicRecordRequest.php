@@ -9,6 +9,7 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CurriculumFieldDefinition;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Subject;
+use App\Modules\Configuration\Application\InstitutionalLogos;
 use App\Modules\Identity\Application\ActiveRole;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Http\FormRequest;
@@ -51,7 +52,11 @@ class StoreAcademicRecordRequest extends FormRequest
     public function rules(): array
     {
         return match ($this->route('entity')) {
-            'facultad' => $this->namedCatalogRules('facultades', 180),
+            'facultad' => [
+                ...$this->namedCatalogRules('facultades', 180),
+                // El logo encabeza el sílabo de sus carreras: obligatorio desde el alta.
+                'logo' => ['required', ...InstitutionalLogos::rules(InstitutionalLogos::FACULTY)],
+            ],
             'campus' => $this->namedCatalogRules('campus', 120),
             'modalidad' => [
                 'code' => ['required', 'string', 'max:40', Rule::unique('modalidades', 'codigo')],

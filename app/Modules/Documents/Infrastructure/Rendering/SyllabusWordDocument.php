@@ -2,6 +2,7 @@
 
 namespace App\Modules\Documents\Infrastructure\Rendering;
 
+use App\Modules\Configuration\Application\InstitutionalLogos;
 use App\Modules\Configuration\Domain\TableLayout;
 use App\Modules\Documents\Domain\Data\DocumentRenderInput;
 use App\Modules\Syllabus\Application\IdentificationCard;
@@ -76,7 +77,7 @@ class SyllabusWordDocument
             'marginRight' => self::MARGIN,
         ]);
 
-        $this->logos($section);
+        $this->logos($section, $input);
         $section->addText(
             'PROGRAMA DE ASIGNATURA (SÍLABO)',
             ['bold' => true, 'size' => 16, 'color' => self::TITLE_BLUE],
@@ -102,10 +103,14 @@ class SyllabusWordDocument
         return $word;
     }
 
-    private function logos(Section $section): void
+    public function __construct(private readonly InstitutionalLogos $logos) {}
+
+    /** Encabezado: logo de la universidad y logo de la facultad de la carrera. */
+    private function logos(Section $section, DocumentRenderInput $input): void
     {
-        $ueb = public_path('images/silabo/ueb.jpeg');
-        $faculty = public_path('images/silabo/facultad.jpeg');
+        $facultyId = data_get($input->snapshot, 'academic_context.career.faculty_id');
+        $ueb = $this->logos->institutionPath();
+        $faculty = $this->logos->facultyPathById(is_string($facultyId) ? $facultyId : null);
         if (! is_file($ueb) && ! is_file($faculty)) {
             return;
         }

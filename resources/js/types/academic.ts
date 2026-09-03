@@ -15,6 +15,8 @@ export type CatalogRecord = {
     codigo?: string | null;
     nombre: string;
     activo: boolean;
+    /** Solo facultades: logo que encabeza el sílabo de sus carreras. */
+    logo_url?: string | null;
 };
 
 export type GovernanceCatalogEntity =

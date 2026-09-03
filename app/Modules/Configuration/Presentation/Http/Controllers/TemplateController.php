@@ -12,6 +12,7 @@ use App\Modules\Configuration\Application\Actions\ReorderTemplateSections;
 use App\Modules\Configuration\Application\Actions\SaveFieldDefinition;
 use App\Modules\Configuration\Application\Actions\SaveTemplateSection;
 use App\Modules\Configuration\Application\Actions\UpdateTableLayout;
+use App\Modules\Configuration\Application\InstitutionalLogos;
 use App\Modules\Configuration\Domain\TableLayout;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\FieldDefinition;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
@@ -23,10 +24,14 @@ use App\Modules\Configuration\Presentation\Http\Requests\ReorderTemplateBlocksRe
 use App\Modules\Configuration\Presentation\Http\Requests\ReorderTemplateSectionsRequest;
 use App\Modules\Configuration\Presentation\Http\Requests\SaveFieldDefinitionRequest;
 use App\Modules\Configuration\Presentation\Http\Requests\SaveTemplateSectionRequest;
+use App\Modules\Configuration\Presentation\Http\Requests\StoreInstitutionLogoRequest;
 use App\Modules\Configuration\Presentation\Http\Requests\UpdateTableLayoutRequest;
+use App\Modules\Identity\Application\ActiveRole;
+use App\Modules\Operations\Application\Actions\RecordAuditEvent;
 use App\Modules\Syllabus\Application\IdentificationCard;
 use App\Modules\Syllabus\Application\ProcessLocks;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\UploadedFile;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -57,7 +62,7 @@ class TemplateController extends Controller
         return to_route('admin.templates.show', $template)->with('success', 'Plantilla creada con las doce áreas base.');
     }
 
-    public function show(SyllabusTemplate $template, ManageTemplatesRequest $request, ProcessLocks $locks): Response
+    public function show(SyllabusTemplate $template, ManageTemplatesRequest $request, ProcessLocks $locks, InstitutionalLogos $logos): Response
     {
         $this->ensureInstitutional($template);
         $template->load('sections.blocks.fields');
@@ -65,6 +70,10 @@ class TemplateController extends Controller
         return Inertia::render('Admin/Templates/Show', [
             'processLock' => $locks->templateLockReason(),
             'identificationSample' => IdentificationCard::grid(IdentificationCard::sample()),
+            'logos' => [
+                'institution' => route('logos.institution', ['v' => $logos->version($logos->institutionPath())]),
+                'institution_size' => InstitutionalLogos::INSTITUTION,
+            ],
             'template' => [
                 'id' => $template->id,
                 'name' => $template->nombre,
@@ -219,6 +228,28 @@ class TemplateController extends Controller
         );
 
         return back()->with('success', 'Orden de bloques actualizado.');
+    }
+
+    /** Reemplaza el logo de la universidad que encabeza todos los sílabos. */
+    public function storeLogo(StoreInstitutionLogoRequest $request, InstitutionalLogos $logos, RecordAuditEvent $audit, ActiveRole $roles): RedirectResponse
+    {
+        $actor = $request->user();
+        abort_unless($actor instanceof User, 401);
+        $file = $request->file('logo');
+        abort_unless($file instanceof UploadedFile, 422);
+        $logos->storeInstitution($file);
+        $template = SyllabusTemplate::query()->where('es_institucional', true)->first();
+        $audit->execute(
+            actorId: $actor->id,
+            roleAssignmentId: $roles->resolve($request)?->id,
+            action: 'institucion.logo_actualizado',
+            resourceType: 'plantilla_silabo',
+            resourceId: $template?->id,
+            result: 'exito',
+            correlationId: $request->attributes->getString('correlation_id') ?: null,
+        );
+
+        return back()->with('success', 'Logo de la universidad actualizado.');
     }
 
     public function updateTableLayout(

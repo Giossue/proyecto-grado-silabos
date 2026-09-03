@@ -63,6 +63,13 @@ defecto de las tablas sin esquema y de las listas.
       medidas con python-docx del sílabo IA-SW-2026); el mapa celda → columna de la base
       está en `docs/product/identificacion-institucional.md` y
       `IdentificationCardTest` fija la cuadrícula.
+- [x] Logos del encabezado (`InstitutionalLogos`): el de la universidad se reemplaza
+      desde la plantilla (`POST admin/plantilla/logo`); el de cada facultad es
+      obligatorio al crearla (`facultades.logo_ruta`, migración `000031`) y opcional al
+      editarla. PNG sin fondo (regla `TransparentPng`, canal alfa) y medida exacta
+      (850 × 315 y 600 × 180). Se sirven en `logos/institucion` y
+      `logos/facultad/{id}`; el Word lee el archivo del disco privado. Sin subida,
+      salen los de fábrica.
 - [x] Jornada del paralelo (`paralelos.jornada`, migración `000030`: matutina,
       vespertina, nocturna; opcional) para completar la ficha. Se elige al crear o
       editar el paralelo. Los campos propios de la malla no llegan al sílabo.

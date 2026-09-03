@@ -35,6 +35,7 @@ const props = withDefaults(
         startsOn?: string | null;
         endsOn?: string | null;
         faculties: CatalogRecord[];
+        logoUrl?: string | null;
         showTrigger?: boolean;
     }>(),
     {
@@ -107,6 +108,32 @@ const facultyOptions = computed(() =>
                 @success="close"
             >
                 <FieldGroup>
+                    <Field
+                        v-if="entity === 'facultad'"
+                        :data-invalid="Boolean(errors.logo)"
+                    >
+                        <FieldLabel :for="`edit-faculty-logo-${recordId}`">
+                            Logo de la facultad
+                        </FieldLabel>
+                        <img
+                            v-if="logoUrl"
+                            :src="logoUrl"
+                            alt="Logo actual de la facultad"
+                            class="h-12 w-auto rounded border bg-white p-1"
+                        />
+                        <Input
+                            :id="`edit-faculty-logo-${recordId}`"
+                            name="logo"
+                            type="file"
+                            accept="image/png"
+                            :aria-invalid="Boolean(errors.logo)"
+                        />
+                        <FieldDescription>
+                            Para reemplazarlo: PNG sin fondo, exactamente 600 ×
+                            180 píxeles.
+                        </FieldDescription>
+                        <FieldError :errors="[errors.logo]" />
+                    </Field>
                     <Field
                         v-if="entity === 'carrera'"
                         :data-invalid="Boolean(errors.faculty_id)"

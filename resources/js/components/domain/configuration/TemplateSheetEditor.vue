@@ -96,6 +96,8 @@ const props = defineProps<{
     readonly: boolean;
     /** Ficha de identificación de muestra: se llena sola desde la malla y la oferta. */
     identification: IdentificationCell[][];
+    /** Logo de la universidad vigente; el de la facultad depende de cada carrera. */
+    institutionLogo: string;
 }>();
 
 const PALETTE: { type: ContentType; label: string; icon: typeof Type }[] = [
@@ -699,15 +701,14 @@ const dropOnFieldZone = (section: TemplateSection, index: number): void => {
             <div class="doc-page mx-auto">
                 <header class="doc-header">
                     <img
-                        src="/images/silabo/ueb.jpeg"
+                        :src="institutionLogo"
                         alt="Universidad Estatal de Bolívar"
                         class="doc-logo-ueb"
                     />
-                    <img
-                        src="/images/silabo/facultad.jpeg"
-                        alt="Facultad"
-                        class="doc-logo-facultad"
-                    />
+                    <!-- El logo de la facultad lo pone cada carrera en su sílabo. -->
+                    <span class="doc-logo-facultad-placeholder">
+                        Logo de la facultad de la carrera
+                    </span>
                 </header>
 
                 <h1 class="doc-title">PROGRAMA DE ASIGNATURA (SÍLABO)</h1>
@@ -1234,9 +1235,17 @@ const dropOnFieldZone = (section: TemplateSection, index: number): void => {
     width: auto;
 }
 
-.doc-logo-facultad {
-    height: 1.5cm;
-    width: auto;
+.doc-logo-facultad-placeholder {
+    align-items: center;
+    border: 1px dashed #7f7f7f;
+    color: #595959;
+    display: inline-flex;
+    font-size: 8pt;
+    height: 1.2cm;
+    justify-content: center;
+    padding: 0 0.4cm;
+    text-align: center;
+    width: 4cm;
 }
 
 .doc-title {

@@ -37,6 +37,7 @@ class AcademicContextSnapshot
                 'code' => $career->codigo_institucional,
                 'name' => $career->nombre,
                 'faculty' => $career->faculty?->nombre,
+                'faculty_id' => $career->facultad_id,
             ],
             'curriculum' => [
                 'id' => $curriculum->id,

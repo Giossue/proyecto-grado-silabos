@@ -9,6 +9,7 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\Campus;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Faculty;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Modality;
+use App\Modules\Configuration\Application\InstitutionalLogos;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
 use App\Modules\Operations\Application\Actions\RecordAuditEvent;
@@ -16,6 +17,7 @@ use DateTimeInterface;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -52,6 +54,7 @@ class UpdateAcademicRecord
     public function __construct(
         private readonly ActiveRole $roles,
         private readonly RecordAuditEvent $audit,
+        private readonly InstitutionalLogos $logos,
     ) {}
 
     /** @param array<string, mixed> $data */
@@ -80,6 +83,9 @@ class UpdateAcademicRecord
             }
 
             $record->fill($attributes);
+            if ($record instanceof Faculty && ($data['logo'] ?? null) instanceof UploadedFile) {
+                $record->logo_ruta = $this->logos->storeFaculty($record, $data['logo']);
+            }
             $dirty = $record->getDirty();
 
             if ($dirty === []) {

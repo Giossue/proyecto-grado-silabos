@@ -3,6 +3,7 @@
 namespace App\Modules\Academic\Presentation\Http\Requests;
 
 use App\Modules\Academic\Domain\AcademicStructurePermissions;
+use App\Modules\Configuration\Application\InstitutionalLogos;
 use App\Modules\Identity\Application\ActiveRole;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -25,7 +26,10 @@ class UpdateAcademicRecordRequest extends FormRequest
     public function rules(): array
     {
         return match ($this->route('entity')) {
-            'facultad' => $this->namedCatalogRules('facultades', 180),
+            'facultad' => [
+                ...$this->namedCatalogRules('facultades', 180),
+                'logo' => ['nullable', ...InstitutionalLogos::rules(InstitutionalLogos::FACULTY)],
+            ],
             'carrera' => [
                 'faculty_id' => ['required', 'uuid', Rule::exists('facultades', 'id')],
                 ...$this->namedCatalogRules('carreras', 180),

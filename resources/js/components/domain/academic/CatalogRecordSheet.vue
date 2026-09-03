@@ -117,6 +117,27 @@ const examples = computed(
                 >
                     <FieldGroup>
                         <Field
+                            v-if="entity === 'facultad'"
+                            :data-invalid="Boolean(errors.logo)"
+                        >
+                            <FieldLabel for="faculty-logo" required>
+                                Logo de la facultad
+                            </FieldLabel>
+                            <Input
+                                id="faculty-logo"
+                                name="logo"
+                                type="file"
+                                accept="image/png"
+                                required
+                                :aria-invalid="Boolean(errors.logo)"
+                            />
+                            <FieldDescription>
+                                PNG sin fondo, exactamente 600 × 180 píxeles.
+                                Encabeza el sílabo de todas sus carreras.
+                            </FieldDescription>
+                            <FieldError :errors="[errors.logo]" />
+                        </Field>
+                        <Field
                             v-if="entity === 'carrera'"
                             :data-invalid="Boolean(errors.faculty_id)"
                         >

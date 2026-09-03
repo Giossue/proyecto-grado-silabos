@@ -7,6 +7,7 @@ use App\Modules\Academic\Presentation\Http\Controllers\AcademicGovernanceControl
 use App\Modules\Academic\Presentation\Http\Controllers\CareerAcademicStructureController;
 use App\Modules\AiAssistance\Presentation\Http\Controllers\AiAssistanceController;
 use App\Modules\Configuration\Presentation\Http\Controllers\AcademicSourceController;
+use App\Modules\Configuration\Presentation\Http\Controllers\LogoController;
 use App\Modules\Configuration\Presentation\Http\Controllers\TemplateController;
 use App\Modules\Documents\Presentation\Http\Controllers\DocumentController;
 use App\Modules\Identity\Presentation\Http\Controllers\ActiveRoleController;
@@ -34,6 +35,10 @@ Route::get('/health/ready', ReadinessController::class)
         HandleInertiaRequests::class,
     ])
     ->name('health.ready');
+
+// Logos del encabezado del sílabo: públicos, sin sesión (imagen institucional).
+Route::get('logos/institucion', [LogoController::class, 'institution'])->name('logos.institution');
+Route::get('logos/facultad/{faculty}', [LogoController::class, 'faculty'])->whereUuid('faculty')->name('logos.faculty');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     /*
@@ -223,6 +228,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('processes.transition');
         Route::get('plantilla', [TemplateController::class, 'index'])->name('templates.index');
         Route::post('plantilla', [TemplateController::class, 'store'])->name('templates.store');
+        Route::post('plantilla/logo', [TemplateController::class, 'storeLogo'])->name('templates.logo.store');
         // Una sola plantilla que se edita en el sitio (I-32): sin versiones, sin publicar.
         Route::redirect('plantillas', '/admin/plantilla');
         Route::get('plantilla/{template}', [TemplateController::class, 'show'])->name('templates.show');

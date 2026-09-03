@@ -17,6 +17,7 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Subject;
 use App\Modules\Academic\Infrastructure\Persistence\Models\SubjectRequirement;
 use App\Modules\Academic\Infrastructure\Persistence\Models\TeacherAssignment;
+use App\Modules\Configuration\Application\InstitutionalLogos;
 use App\Modules\Identity\Domain\Enums\RoleCode;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
 use App\Modules\Syllabus\Application\ProcessLocks;
@@ -25,7 +26,10 @@ use App\Modules\Syllabus\Infrastructure\Persistence\Models\SyllabusScope;
 
 class AcademicStructureViewData
 {
-    public function __construct(private readonly ProcessLocks $locks) {}
+    public function __construct(
+        private readonly ProcessLocks $locks,
+        private readonly InstitutionalLogos $logos,
+    ) {}
 
     /** @return array<string, mixed> */
     public function governance(): array
@@ -34,7 +38,14 @@ class AcademicStructureViewData
             'catalogs' => [
                 'faculties' => Faculty::query()
                     ->orderBy('nombre')
-                    ->get(['id', 'codigo_institucional', 'nombre', 'activo']),
+                    ->get(['id', 'codigo_institucional', 'nombre', 'logo_ruta', 'activo'])
+                    ->map(fn (Faculty $faculty): array => [
+                        'id' => $faculty->id,
+                        'codigo_institucional' => $faculty->codigo_institucional,
+                        'nombre' => $faculty->nombre,
+                        'activo' => $faculty->activo,
+                        'logo_url' => route('logos.faculty', ['faculty' => $faculty->id, 'v' => $this->logos->version($this->logos->facultyPath($faculty))]),
+                    ]),
                 'careers' => Career::query()
                     ->orderBy('nombre')
                     ->get(['id', 'facultad_id', 'codigo_institucional', 'nombre', 'activo'])
