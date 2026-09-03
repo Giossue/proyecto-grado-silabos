@@ -179,7 +179,5 @@ const openSubject = (subject: CurriculumBuilderSubject): void => {
     <CurriculumConfigurationSheet
         v-model:open="configurationOpen"
         :curriculum="curriculum"
-        :field-definitions="fieldDefinitions"
-        :system-field-options="systemFieldOptions"
     />
 </template>
