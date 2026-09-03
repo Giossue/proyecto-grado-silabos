@@ -5,6 +5,7 @@ namespace App\Modules\Academic\Presentation\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Modules\Academic\Application\Actions\CreateAcademicRecord;
+use App\Modules\Academic\Application\Actions\CreateParallels;
 use App\Modules\Academic\Application\Actions\DeleteCurriculum;
 use App\Modules\Academic\Application\Actions\MutateCurriculumBuilder;
 use App\Modules\Academic\Application\Actions\PreparePeriod;
@@ -16,6 +17,7 @@ use App\Modules\Academic\Presentation\Http\Requests\PreparePeriodRequest;
 use App\Modules\Academic\Presentation\Http\Requests\SetAcademicRecordStatusRequest;
 use App\Modules\Academic\Presentation\Http\Requests\StoreAcademicRecordRequest;
 use App\Modules\Academic\Presentation\Http\Requests\StoreCurriculumFieldRequest;
+use App\Modules\Academic\Presentation\Http\Requests\StoreParallelsRequest;
 use App\Modules\Academic\Presentation\Http\Requests\StoreSubjectRequirementRequest;
 use App\Modules\Academic\Presentation\Http\Requests\UpdateCareerAcademicRecordRequest;
 use App\Modules\Academic\Presentation\Http\Requests\UpdateCurriculumConfigurationRequest;
@@ -101,6 +103,20 @@ class CareerAcademicStructureController extends Controller
         $action->execute($entity, $request->validated(), $actor, $request);
 
         return back()->with('success', 'Registro académico creado dentro de su carrera.');
+    }
+
+    /** Crea varios paralelos de una misma oferta en una operación atómica (I-40). */
+    public function storeParallels(
+        StoreParallelsRequest $request,
+        CreateParallels $action,
+    ): RedirectResponse {
+        $actor = $request->user();
+        abort_unless($actor instanceof User, 401);
+        /** @var array{offering_id: string, codes: list<string>, shift?: string|null} $data */
+        $data = $request->validated();
+        $created = $action->execute($data, $actor, $request);
+
+        return back()->with('success', "{$created} paralelos creados dentro de su carrera.");
     }
 
     /** Relevo de un docente en todos sus paralelos y sílabos de la carrera (I-39). */

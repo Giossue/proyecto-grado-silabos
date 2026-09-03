@@ -58,7 +58,6 @@ class UpdateCareerAcademicRecordRequest extends FormRequest
                         ->where('carrera_id', $this->careerId())
                         ->ignore($this->recordId()),
                 ],
-                'shift' => ['nullable', 'string', Rule::in(Parallel::SHIFTS)],
             ],
             'asignatura' => $this->subjectRules(),
             'oferta' => [
@@ -105,6 +104,7 @@ class UpdateCareerAcademicRecordRequest extends FormRequest
                         ->where('oferta_academica_id', $this->input('offering_id'))
                         ->ignore($this->recordId()),
                 ],
+                'shift' => ['nullable', 'string', Rule::in(Parallel::SHIFTS)],
             ],
             'asignacion_docente' => [
                 'user_id' => ['required', 'uuid', Rule::exists('usuarios', 'id')->where('activo', true)],

@@ -102,6 +102,7 @@ Done»_, y la Definition of Done incluye la revisión manual de interfaz del pun
 | I-18       | completa               | revisión manual del lienzo y `PV-08`                           |
 | I-19       | completa               | revisión manual de cards, `Sheet`, foco y dispositivos reales  |
 | I-20       | completa               | revisión manual de Malla, estados, foco y dispositivos reales  |
+| I-40       | completa               | revisión manual de COR-14; DT-12 antes de automatizar el cierre de períodos |
 
 ## 5. Orden sugerido
 

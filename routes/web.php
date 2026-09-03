@@ -158,6 +158,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('coordination.academic.period.prepare');
         Route::post('estructura-academica/docentes/relevar', [CareerAcademicStructureController::class, 'relieveTeacher'])
             ->name('coordination.academic.teachers.relieve');
+        Route::post('estructura-academica/paralelos', [CareerAcademicStructureController::class, 'storeParallels'])
+            ->name('coordination.academic.parallels.store');
         Route::post('estructura-academica/{entity}', [CareerAcademicStructureController::class, 'store'])
             ->name('coordination.academic.store');
         Route::patch('estructura-academica/{entity}/{record}', [CareerAcademicStructureController::class, 'update'])

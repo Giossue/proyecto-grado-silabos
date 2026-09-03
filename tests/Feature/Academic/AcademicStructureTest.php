@@ -632,6 +632,7 @@ class AcademicStructureTest extends TestCase
             ]), [
                 'offering_id' => $offering->id,
                 'code' => 'B',
+                'shift' => 'vespertina',
             ])
             ->assertRedirect();
 
@@ -650,6 +651,7 @@ class AcademicStructureTest extends TestCase
         $this->assertSame($period->id, $offering->fresh()->periodo_academico_id);
         $this->assertSame(Career::query()->findOrFail($this->coordinatorContext->carrera_id)->campus_id, $offering->fresh()->campus_id);
         $this->assertSame('B', $parallel->fresh()->codigo);
+        $this->assertSame('vespertina', $parallel->fresh()->jornada);
         $this->assertSame('2026-12-31', $assignment->fresh()->vigente_hasta?->toDateString());
         $this->assertSame(3, AuditEvent::query()
             ->whereIn('accion', [
@@ -1117,6 +1119,82 @@ class AcademicStructureTest extends TestCase
         $this->assertDatabaseHas('eventos_auditoria', [
             'accion' => 'academico.paralelo.creacion',
             'tipo_recurso' => 'paralelo',
+        ]);
+    }
+
+    public function test_coordinator_creates_multiple_parallels_atomically_for_one_offering(): void
+    {
+        $offering = CourseOffering::query()->firstOrFail();
+
+        $this->actingAsCoordinator()
+            ->post(route('coordination.academic.parallels.store'), [
+                'offering_id' => $offering->id,
+                'codes' => ['B', 'C'],
+                'shift' => 'vespertina',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success', '2 paralelos creados dentro de su carrera.');
+
+        foreach (['B', 'C'] as $code) {
+            $this->assertDatabaseHas('paralelos', [
+                'oferta_academica_id' => $offering->id,
+                'codigo' => $code,
+                'jornada' => 'vespertina',
+                'activo' => true,
+            ]);
+        }
+        $this->assertSame(2, AuditEvent::query()
+            ->where('accion', 'academico.paralelo.creacion')
+            ->where('metadatos->bulk', true)
+            ->count());
+
+        $this->actingAsCoordinator()
+            ->post(route('coordination.academic.parallels.store'), [
+                'offering_id' => $offering->id,
+                'codes' => ['C', 'D'],
+                'shift' => 'nocturna',
+            ])
+            ->assertSessionHasErrors('codes');
+
+        $this->assertDatabaseMissing('paralelos', [
+            'oferta_academica_id' => $offering->id,
+            'codigo' => 'D',
+        ]);
+    }
+
+    public function test_coordinator_cannot_create_parallel_lot_for_an_offering_from_another_career(): void
+    {
+        $otherCareer = $this->createCareer('OTRA-PAR');
+        $curriculum = Curriculum::query()->create([
+            'carrera_id' => $otherCareer->id,
+            'codigo' => 'MALLA-OTRA-PAR',
+            'estado' => 'activa',
+        ]);
+        $subject = Subject::query()->create([
+            'malla_id' => $curriculum->id,
+            'codigo_institucional' => 'OTRA-PAR-101',
+            'nombre' => 'Materia ajena',
+            'ciclo' => 1,
+            'activo' => true,
+        ]);
+        $offering = CourseOffering::query()->create([
+            'periodo_academico_id' => AcademicPeriod::query()->firstOrFail()->id,
+            'asignatura_id' => $subject->id,
+            'campus_id' => Campus::query()->firstOrFail()->id,
+            'modalidad' => StudyModality::Presencial,
+            'activo' => true,
+        ]);
+
+        $this->actingAsCoordinator()
+            ->post(route('coordination.academic.parallels.store'), [
+                'offering_id' => $offering->id,
+                'codes' => ['B'],
+            ])
+            ->assertSessionHasErrors('offering_id');
+
+        $this->assertDatabaseMissing('paralelos', [
+            'oferta_academica_id' => $offering->id,
+            'codigo' => 'B',
         ]);
     }
 

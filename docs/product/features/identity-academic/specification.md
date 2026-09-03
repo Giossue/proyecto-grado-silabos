@@ -38,6 +38,9 @@
   únicamente para la carrera de su rol.
 - Cada fila editable de esas colecciones ofrece Editar. La autorización vuelve a comprobar
   el alcance por registro y la actualización conserva antes/después en auditoría.
+- COR-14 puede crear varios paralelos de una misma oferta en un lote atómico: los códigos
+  separados por coma o línea comparten jornada; una duplicación o un código inválido no
+  crea una parte del lote. Cada paralelo creado queda auditado por separado.
 - Cada carrera tiene cero o una malla actual, editable activa o inactiva. Coordinación
   puede deshabilitarla/reactivarla y solo eliminarla cuando no tiene ofertas ni sílabos.
   Una oferta, paralelo o asignación ya incorporada a un sílabo se archiva y reemplaza

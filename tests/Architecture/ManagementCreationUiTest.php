@@ -58,13 +58,15 @@ it('mantiene las altas de gestión que requieren datos dentro del sheet derecho 
             'page' => 'resources/js/pages/Coordination/Academic/Offerings.vue',
             'component' => 'OfferingRecordSheet',
             'component_file' => 'resources/js/components/domain/academic/OfferingRecordSheet.vue',
-            'action' => 'CareerAcademicStructureController.store.form',
+            'action' => 'CareerAcademicStructureController.preparePeriod.url',
+            'success' => 'onSuccess: () => {',
         ],
         'Coordinador · paralelos' => [
             'page' => 'resources/js/pages/Coordination/Academic/Parallels.vue',
             'component' => 'OfferingRecordSheet',
             'component_file' => 'resources/js/components/domain/academic/OfferingRecordSheet.vue',
-            'action' => 'CareerAcademicStructureController.store.form',
+            'action' => 'CareerAcademicStructureController.storeParallels.url',
+            'success' => 'onSuccess: () => {',
         ],
         'Coordinador · asignaciones docentes' => [
             'page' => 'resources/js/pages/Coordination/Academic/TeacherAssignments.vue',

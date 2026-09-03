@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Form, useForm } from '@inertiajs/vue3';
+import { useForm } from '@inertiajs/vue3';
 import { CalendarCheck, Plus } from '@lucide/vue';
 import { computed, watch } from 'vue';
 import CareerAcademicStructureController from '@/actions/App/Modules/Academic/Presentation/Http/Controllers/CareerAcademicStructureController';
@@ -11,7 +11,6 @@ import {
     FieldGroup,
     FieldLabel,
 } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
 import {
     Select,
     SelectContent,
@@ -20,6 +19,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { PARALLEL_SHIFTS as SHIFTS } from '@/lib/parallelShifts';
 import type { AcademicStructureProps } from '@/types/academic';
 
@@ -32,12 +32,12 @@ const props = defineProps<
 >();
 
 const title = computed(() =>
-    props.entity === 'oferta' ? 'Preparar periodo' : 'Agregar paralelo',
+    props.entity === 'oferta' ? 'Preparar periodo' : 'Agregar paralelos',
 );
 const description = computed(() =>
     props.entity === 'oferta'
         ? 'Toda materia de la malla activa queda con su oferta y un paralelo A. Campus y modalidad vienen de la carrera. Lo que no se dicte este periodo se archiva después.'
-        : 'Agregue un paralelo a una oferta académica existente.',
+        : 'Agregue varios paralelos a una oferta. Escriba un código por línea o sepárelos con comas; todos tendrán la misma jornada.',
 );
 
 /*
@@ -60,16 +60,49 @@ const prepareError = computed(
     () => Object.values(prepare.errors).find(Boolean) ?? undefined,
 );
 
+const parallels = useForm<{
+    offering_id: string;
+    codes: string;
+    shift: string;
+}>({
+    offering_id: '',
+    codes: '',
+    shift: '',
+});
+const parallelCodes = (): string[] =>
+    parallels.codes
+        .split(/[;,\n]/)
+        .map((code) => code.trim())
+        .filter(Boolean);
+const submitParallels = (close: () => void): void => {
+    parallels
+        .transform((data) => ({
+            offering_id: data.offering_id,
+            codes: parallelCodes(),
+            shift: data.shift || null,
+        }))
+        .post(CareerAcademicStructureController.storeParallels.url(), {
+            preserveScroll: true,
+            onSuccess: () => {
+                parallels.reset();
+                close();
+            },
+        });
+};
+
 watch(
     () => props.entity,
-    () => prepare.reset(),
+    () => {
+        prepare.reset();
+        parallels.reset();
+    },
 );
 </script>
 
 <template>
     <FormSheet
         :trigger-label="
-            props.entity === 'oferta' ? 'Preparar periodo' : 'Agregar'
+            props.entity === 'oferta' ? 'Preparar periodo' : 'Agregar varios'
         "
         :title="title"
         :description="description"
@@ -117,24 +150,24 @@ watch(
                     />
                 </FieldGroup>
             </form>
-            <Form
+            <form
                 v-else
-                v-bind="
-                    CareerAcademicStructureController.store.form(props.entity)
-                "
-                v-slot="{ errors, processing }"
-                reset-on-success
-                @success="close"
+                class="contents"
+                @submit.prevent="submitParallels(close)"
             >
                 <FieldGroup>
-                    <Field :data-invalid="Boolean(errors.offering_id)">
+                    <Field
+                        :data-invalid="Boolean(parallels.errors.offering_id)"
+                    >
                         <FieldLabel for="parallel-offering" required>
                             Oferta académica
                         </FieldLabel>
-                        <Select name="offering_id" required>
+                        <Select v-model="parallels.offering_id" required>
                             <SelectTrigger
                                 id="parallel-offering"
-                                :aria-invalid="Boolean(errors.offering_id)"
+                                :aria-invalid="
+                                    Boolean(parallels.errors.offering_id)
+                                "
                             >
                                 <SelectValue
                                     placeholder="Seleccione una oferta"
@@ -152,27 +185,30 @@ watch(
                                 </SelectGroup>
                             </SelectContent>
                         </Select>
-                        <FieldError :errors="[errors.offering_id]" />
+                        <FieldError :errors="[parallels.errors.offering_id]" />
                     </Field>
-                    <Field :data-invalid="Boolean(errors.code)">
-                        <FieldLabel for="parallel-code" required>
-                            Código de paralelo
+                    <Field :data-invalid="Boolean(parallels.errors.codes)">
+                        <FieldLabel for="parallel-codes" required>
+                            Códigos de paralelo
                         </FieldLabel>
-                        <Input
-                            id="parallel-code"
-                            name="code"
-                            placeholder="Ej. A"
+                        <Textarea
+                            id="parallel-codes"
+                            v-model="parallels.codes"
+                            placeholder="Ej. B, C, D"
                             required
-                            :aria-invalid="Boolean(errors.code)"
+                            :aria-invalid="Boolean(parallels.errors.codes)"
                         />
-                        <FieldError :errors="[errors.code]" />
+                        <p class="text-sm text-muted-foreground">
+                            Un código por línea, o separados por coma.
+                        </p>
+                        <FieldError :errors="[parallels.errors.codes]" />
                     </Field>
-                    <Field :data-invalid="Boolean(errors.shift)">
+                    <Field :data-invalid="Boolean(parallels.errors.shift)">
                         <FieldLabel for="parallel-shift">Jornada</FieldLabel>
-                        <Select name="shift">
+                        <Select v-model="parallels.shift">
                             <SelectTrigger
                                 id="parallel-shift"
-                                :aria-invalid="Boolean(errors.shift)"
+                                :aria-invalid="Boolean(parallels.errors.shift)"
                             >
                                 <SelectValue
                                     placeholder="Seleccione la jornada"
@@ -190,16 +226,16 @@ watch(
                                 </SelectGroup>
                             </SelectContent>
                         </Select>
-                        <FieldError :errors="[errors.shift]" />
+                        <FieldError :errors="[parallels.errors.shift]" />
                     </Field>
                     <FormSheetActions
                         :close="close"
-                        :processing="processing"
+                        :processing="parallels.processing"
                         :icon="Plus"
-                        label="Crear paralelo"
+                        label="Crear paralelos"
                     />
                 </FieldGroup>
-            </Form>
+            </form>
         </template>
     </FormSheet>
 </template>

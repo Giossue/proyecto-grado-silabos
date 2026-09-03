@@ -128,7 +128,9 @@
 - La ficha de identificación institucional (bloque «Asignatura», heredado) se pinta fija
   con datos de la malla, la oferta, los paralelos (incluida su jornada) y los docentes;
   no se diseña ni se llena (I-34). Mapa de datos: `docs/product/identificacion-institucional.md`.
-  COR-14 (paralelos) muestra y edita la jornada.
+  COR-14 (paralelos) muestra y edita la jornada. **Agregar varios** crea, para una
+  oferta elegida, los códigos separados por coma o línea con una jornada compartida en
+  una única operación; el lote se rechaza completo si algún código ya existe.
 - Indicadores del Panel (UI-01), cuatro por rol y todos accionables: Administración ve
   avance del proceso (% aprobados), días para la entrega, carreras sin convocar y sílabos
   sin iniciar; Coordinación, avance, días, por revisar y sin iniciar; Docencia, sílabos
@@ -184,7 +186,8 @@ DOC-01 llena una cuadrícula con una casilla por celda, unidades y totales calcu
 - COR-14 no crea ofertas una a una: **Preparar periodo** (I-36) deja toda la malla activa
   con oferta y paralelo «A» para el periodo elegido; campus y modalidad vienen de la
   carrera (ADM-04 pide ambos al crearla). Repetirlo no duplica; lo que no se dicte se
-  archiva. Luego solo quedan los paralelos extra y la asignación docente.
+  archiva. Luego solo quedan los paralelos extra —que se pueden agregar por lote para
+  una oferta— y la asignación docente.
 - COR-13 usa una única entrada **Malla**. Si existe, la ruta abre directamente la página
   completa con **Interactivo** (pestaña principal, decisión de los coordinadores) y
   **Desglose académico** (`?modo=desglose`); si no existe, muestra el
