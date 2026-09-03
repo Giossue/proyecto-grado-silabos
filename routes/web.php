@@ -168,6 +168,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::patch('estructura-academica/{entity}/{record}/estado', [CareerAcademicStructureController::class, 'setStatus'])
             ->whereUuid('record')
             ->name('coordination.academic.status.update');
+        Route::delete('ofertas/{offering}', [CareerAcademicStructureController::class, 'destroyOffering'])
+            ->whereUuid('offering')
+            ->name('coordination.academic.offerings.destroy');
         Route::delete('malla/{curriculum}', [CareerAcademicStructureController::class, 'destroyCurriculum'])
             ->whereUuid('curriculum')
             ->name('coordination.academic.curricula.destroy');

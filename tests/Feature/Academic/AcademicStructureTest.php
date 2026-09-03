@@ -740,6 +740,27 @@ class AcademicStructureTest extends TestCase
         $this->assertSame('activa', $curriculum->fresh()->estado);
     }
 
+    public function test_coordinator_deletes_an_offering_with_its_parallels_and_teacher_assignments_without_syllabi(): void
+    {
+        $offering = CourseOffering::query()->firstOrFail();
+        $parallelIds = Parallel::query()
+            ->where('oferta_academica_id', $offering->id)
+            ->pluck('id');
+
+        $this->actingAsCoordinator()
+            ->delete(route('coordination.academic.offerings.destroy', $offering))
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseMissing('ofertas_academicas', ['id' => $offering->id]);
+        $this->assertSame(0, Parallel::query()->whereIn('id', $parallelIds)->count());
+        $this->assertSame(0, TeacherAssignment::query()->whereIn('paralelo_id', $parallelIds)->count());
+        $this->assertDatabaseHas('eventos_auditoria', [
+            'accion' => 'academico.oferta.eliminacion',
+            'recurso_id' => $offering->id,
+        ]);
+    }
+
     public function test_curriculum_delete_is_protected_by_dependencies_and_removes_an_unused_curriculum(): void
     {
         $career = $this->createCareer('MALLA-BORRABLE');

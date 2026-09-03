@@ -146,6 +146,8 @@ const {
                                     :record-label="item.label"
                                     :editable="item.editable"
                                     :active="item.active"
+                                    :status-supported="false"
+                                    delete-supported
                                     :options="options" /></TableCell
                         ></TableRow> </TableBody></Table
                 ><TablePagination

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Modules\Academic\Application\Actions\CreateAcademicRecord;
 use App\Modules\Academic\Application\Actions\CreateParallels;
+use App\Modules\Academic\Application\Actions\DeleteCourseOffering;
 use App\Modules\Academic\Application\Actions\DeleteCurriculum;
 use App\Modules\Academic\Application\Actions\MutateCurriculumBuilder;
 use App\Modules\Academic\Application\Actions\PreparePeriod;
@@ -200,6 +201,18 @@ class CareerAcademicStructureController extends Controller
 
         return to_route('coordination.academic.curricula.index')
             ->with('success', 'Malla eliminada. La carrera queda sin estructura académica activa.');
+    }
+
+    public function destroyOffering(
+        string $offering,
+        ManageCareerAcademicStructureRequest $request,
+        DeleteCourseOffering $action,
+    ): RedirectResponse {
+        $actor = $request->user();
+        abort_unless($actor instanceof User, 401);
+        $action->execute($offering, $actor, $request);
+
+        return back()->with('success', 'Oferta eliminada junto con sus paralelos y asignaciones sin historial.');
     }
 
     public function updateCurriculumConfiguration(

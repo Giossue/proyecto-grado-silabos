@@ -185,9 +185,10 @@ DOC-01 llena una cuadrícula con una casilla por celda, unidades y totales calcu
   y la muestra en el listado (I-35).
 - COR-14 no crea ofertas una a una: **Preparar periodo** (I-36) deja toda la malla activa
   con oferta y paralelo «A» para el periodo elegido; campus y modalidad vienen de la
-  carrera (ADM-04 pide ambos al crearla). Repetirlo no duplica; lo que no se dicte se
-  archiva. Luego solo quedan los paralelos extra —que se pueden agregar por lote para
-  una oferta— y la asignación docente.
+  carrera (ADM-04 pide ambos al crearla). Repetirlo no duplica; una oferta que no se
+  dicta se elimina junto con sus paralelos y asignaciones docentes, siempre que no tenga
+  sílabos relacionados. Luego solo quedan los paralelos extra —que se pueden agregar por
+  lote para una oferta— y la asignación docente.
 - COR-13 usa una única entrada **Malla**. Si existe, la ruta abre directamente la página
   completa con **Interactivo** (pestaña principal, decisión de los coordinadores) y
   **Desglose académico** (`?modo=desglose`); si no existe, muestra el
