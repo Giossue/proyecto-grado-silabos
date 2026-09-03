@@ -92,17 +92,28 @@ class TemporaryPasswordTest extends TestCase
             route('profile.edit'),
             route('security.edit'),
             route('notifications.index'),
-            route('role.index'),
             route('home'),
         ] as $url) {
             $this->actingAs($user)
                 ->get($url)
                 ->assertRedirect(route('dashboard'));
         }
+    }
 
-        $this->actingAs($user)
-            ->post(route('role.store'), ['assignment_id' => $user->roleAssignments()->firstOrFail()->id])
+    public function test_a_coordinator_with_a_temporary_password_can_still_choose_the_career(): void
+    {
+        // Coordinación no tiene rol activo hasta elegir carrera: el panel manda a la
+        // elección y esta debe abrirse, no rebotar al panel (bucle de redirecciones).
+        $coordinator = User::query()->where('correo_electronico', 'coordinador@silabos.test')->firstOrFail();
+        $coordinator->forceFill(['contrasena' => Hash::make('Temporal-2026!'), 'debe_cambiar_contrasena' => true])->save();
+
+        $this->actingAs($coordinator)->get(route('dashboard'))->assertRedirect(route('role.index'));
+        $this->actingAs($coordinator)->get(route('role.index'))->assertOk();
+
+        $this->actingAs($coordinator)
+            ->post(route('role.store'), ['role_assignment_id' => $coordinator->roleAssignments()->firstOrFail()->id])
             ->assertRedirect(route('dashboard'));
+        $this->actingAs($coordinator)->followingRedirects()->get(route('dashboard'))->assertOk();
     }
 
     public function test_the_dashboard_the_change_and_the_logout_stay_reachable(): void

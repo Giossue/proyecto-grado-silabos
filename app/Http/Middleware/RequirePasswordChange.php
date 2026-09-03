@@ -22,6 +22,10 @@ class RequirePasswordChange
         'admin.dashboard',
         'coordination.dashboard',
         'teacher.dashboard',
+        // Coordinación debe elegir carrera antes de que exista un panel donde mostrar el
+        // diálogo; si se bloqueara esta pantalla, panel y elección se rebotarían sin fin.
+        'role.index',
+        'role.store',
         'user-password.update',
         'logout',
     ];
