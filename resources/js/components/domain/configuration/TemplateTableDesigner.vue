@@ -60,6 +60,12 @@ const editValue = ref('');
 const editorInput = ref<HTMLInputElement | null>(null);
 const draggedColumn = ref<string | null>(null);
 const dropTarget = ref<string | null>(null);
+/**
+ * Claves creadas en esta sesión con el nombre provisional («Nueva columna»). Al
+ * ponerles nombre real la clave se rehace a partir de él; después ya no cambia,
+ * porque las celdas guardadas cuelgan de ella.
+ */
+const freshKeys = new Set<string>();
 
 watch(
     () => props.layout,
@@ -137,6 +143,24 @@ const commitRename = (): void => {
     }
 
     target.label = value;
+
+    if (
+        (current.kind === 'leaf' || current.kind === 'header') &&
+        'key' in target &&
+        freshKeys.has(target.key)
+    ) {
+        const siblings =
+            current.kind === 'leaf'
+                ? layout.columns.map((column) => column.key)
+                : layout.header_fields.map((field) => field.key);
+        const key = tableKeyFor(
+            value,
+            siblings.filter((sibling) => sibling !== target.key),
+        );
+        freshKeys.delete(target.key);
+        target.key = key;
+    }
+
     commit();
 };
 
@@ -153,6 +177,7 @@ const addColumn = (): void => {
         group: null,
         band: null,
     });
+    freshKeys.add(key);
     commit();
     void startRename('leaf', key, label);
 };
@@ -385,6 +410,7 @@ const addHeaderField = (): void => {
         draft.value.header_fields.map((field) => field.key),
     );
     draft.value.header_fields.push({ key, label });
+    freshKeys.add(key);
     commit();
     void startRename('header', key, label);
 };

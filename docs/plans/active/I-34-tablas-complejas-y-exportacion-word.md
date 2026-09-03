@@ -69,4 +69,7 @@ defecto de las tablas sin esquema y de las listas.
 DocumentOperationsTest) y arquitectura (105) en verde; pint, phpstan, eslint, vue-tsc y
 build sin errores. En navegador local: en «Datos generales» se agregaron ACD, APE y AA
 como números, se agrupó APE+AA en «Estudiante» y ACD+Estudiante en «Horas por semana», se
-activaron totales y por unidad, y todo persistió tras recargar.
+activaron totales y por unidad, y todo persistió tras recargar. Como docente, con una
+convocatoria demo abierta, se llenó la cabecera de unidad y dos filas (2, 1, 3 y 2, 1.5,
+3): totales 4, 2.5 y 6 en pantalla; guardado automático; una celda por columna en
+`filas_repetibles.datos`; «Agregar unidad» creó la Unidad 2 con su fila de cabecera.
