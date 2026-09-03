@@ -29,12 +29,12 @@ it('mantiene todas las altas de gestion dentro del sheet derecho compartido', fu
         ],
         'Administrador · bloques de plantilla' => [
             'page' => 'resources/js/pages/Admin/Templates/Show.vue',
-            'component' => 'TemplateBlockBuilder',
-            'component_file' => 'resources/js/components/domain/configuration/TemplateBlockBuilder.vue',
-            'action' => 'TemplateController.storeSection.form',
-            'action_file' => 'resources/js/components/domain/configuration/TemplateBlockAddForm.vue',
+            'component' => 'TemplateSheetEditor',
+            'component_file' => 'resources/js/components/domain/configuration/TemplateSheetEditor.vue',
+            'action' => 'TemplateController.storeSection',
             'inline' => true,
-            'success' => "@success=\"emit('success')\"",
+            // I-33: la pieza recién soltada queda con el nombre listo para escribirse.
+            'success' => "pendingFocus.value = { kind: 'section', key }",
         ],
         'Coordinador · fuentes' => [
             'page' => 'resources/js/pages/Sources/Index.vue',
@@ -631,62 +631,78 @@ it('edita cuentas desde una sola accion del listado de usuarios', function (): v
         ->toContain("display === 'menu'");
 });
 
-it('presenta la publicación y los bloques de plantilla con etiquetas breves', function (): void {
-    $source = file_get_contents(
-        dirname(__DIR__, 2).'/resources/js/pages/Admin/Templates/Show.vue',
-    );
+it('arma la plantilla sobre la hoja impresa, sin formularios por tarjeta', function (): void {
+    $root = dirname(__DIR__, 2);
+    $source = file_get_contents($root.'/resources/js/pages/Admin/Templates/Show.vue');
 
-    // I-32: sin versiones ni publicación; la plantilla se edita en el sitio.
+    // I-32: sin versiones ni publicación. I-33: una sola superficie, la hoja.
     expect($source)
         ->toBeString()
         ->not->toContain('Publicar')
         ->not->toContain('TemplateController.publish')
         ->not->toContain('TemplateController.clone')
+        ->not->toContain('Vista previa')
+        ->not->toContain('<Card')
         ->toContain('size="wide"')
-        ->toContain('<TemplateBlockBuilder');
+        ->toContain('<TemplateSheetEditor')
+        ->toContain(':readonly="processLock !== null"');
 
-    $builder = file_get_contents(
-        dirname(__DIR__, 2).'/resources/js/components/domain/configuration/TemplateBlockBuilder.vue',
+    $editor = file_get_contents(
+        $root.'/resources/js/components/domain/configuration/TemplateSheetEditor.vue',
     );
 
-    expect($builder)
+    expect($editor)
         ->toBeString()
-        ->toContain('TemplateBlockAddForm')
-        ->toContain('TemplateFieldAddForm')
-        ->toContain('TooltipContent>Agregar bloque</TooltipContent>')
-        ->toContain('Agregar campo</TooltipContent')
+        // Paleta: cinco piezas, arrastrables y con clic.
+        ->toContain('Bloque')
+        ->toContain("label: 'Texto'")
+        ->toContain("label: 'Tabla'")
+        ->toContain("label: 'Lista con viñetas'")
+        ->toContain("label: 'Lista numerada'")
         ->toContain('draggable="true"')
-        ->toContain('addBlockAt(sectionIndex + 1)')
-        ->toContain('persistBlockOrder')
+        ->toContain('addFromPalette')
+        // Zonas de soltado y reordenamiento por arrastre.
+        ->toContain('doc-zone')
+        ->toContain('dropOnSectionZone')
+        ->toContain('dropOnFieldZone')
+        ->toContain('persistSectionOrder')
         ->toContain('persistFieldOrder')
-        ->toContain(':options="{ preserveScroll: true }"')
         ->toContain('copySections')
-        ->not->toContain('Bloque</FieldLabel>')
-        ->not->toContain('Clave estable')
-        ->not->toContain('structuredClone');
-
-    $newBlockForm = file_get_contents(
-        dirname(__DIR__, 2).'/resources/js/components/domain/configuration/TemplateBlockAddForm.vue',
-    );
-
-    expect($newBlockForm)
-        ->toBeString()
-        ->toContain('Nombre del bloque')
-        ->toContain('Nombre del primer campo')
-        ->toContain('Tipo de contenido del primer campo')
-        ->toContain('name="position"')
-        ->toContain(':options="{ preserveScroll: true }"');
-
-    $newFieldForm = file_get_contents(
-        dirname(__DIR__, 2).'/resources/js/components/domain/configuration/TemplateFieldAddForm.vue',
-    );
-
-    expect($newFieldForm)
-        ->toBeString()
-        ->toContain('Nombre del campo')
+        // Renombrar con un clic; Enter guarda, Escape cancela.
+        ->toContain('startRename')
+        ->toContain('@keydown.enter.prevent="commitRename"')
+        ->toContain('@keydown.esc.prevent="cancelRename"')
+        // Menú del campo: tipo, propiedades y eliminar. Sin botones «Guardar».
         ->toContain('Tipo de contenido')
-        ->toContain('name="position"')
-        ->toContain(':options="{ preserveScroll: true }"');
+        ->toContain('Propiedades')
+        ->toContain('Eliminar campo')
+        ->toContain('Eliminar bloque')
+        ->toContain('<TemplateFieldSheet')
+        ->toContain('preserveScroll: true')
+        ->not->toContain('Guardar bloque')
+        ->not->toContain('Guardar campo')
+        ->not->toContain('<Form')
+        ->not->toContain('Clave estable')
+        ->not->toContain('structuredClone')
+        // La hoja: estándar del impreso y relleno por tipo de contenido.
+        ->toContain('PROGRAMA DE ASIGNATURA (SÍLABO)')
+        ->toContain('font-family: Arial')
+        ->toContain("'table'")
+        ->toContain("'bulleted_list'")
+        ->toContain("'numbered_list'")
+        ->toContain('Lorem ipsum');
+
+    $properties = file_get_contents(
+        $root.'/resources/js/components/domain/configuration/TemplateFieldSheet.vue',
+    );
+
+    expect($properties)
+        ->toBeString()
+        ->toContain('Propiedades del campo')
+        ->toContain(':show-trigger="false"')
+        ->toContain('defineExpose({ edit })')
+        ->toContain('name="content_type"')
+        ->not->toContain('Código de referencia');
 });
 
 it('abre los detalles de los listados desde sus acciones', function (): void {
@@ -743,21 +759,6 @@ it('presenta las plantillas como cards y navega versiones desde el detalle', fun
         ->not->toContain('sibling.id')
         ->toContain(':template-id="template.id"');
 
-    // La plantilla se puede mirar siempre: estructura aunque esté protegida y
-    // vista previa con datos de ejemplo según el tipo de contenido.
-    expect($show)
-        ->toContain('<TemplatePreview')
-        ->toContain('Vista previa')
-        ->toContain("mode === 'preview'");
-
-    $preview = (string) file_get_contents(
-        $root.'/resources/js/components/domain/configuration/TemplatePreview.vue',
-    );
-    expect($preview)
-        ->toContain("content_type === 'table'")
-        ->toContain("content_type === 'bulleted_list'")
-        ->toContain("content_type === 'numbered_list'")
-        ->toContain('Lorem ipsum');
 });
 
 it('usa el mismo paginador en todas las superficies tabulares', function (): void {

@@ -15,68 +15,54 @@ import {
     FieldSet,
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import {
-    Select,
-    SelectContent,
-    SelectGroup,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 
 type TemplateField = {
     id: string;
-    block_id: string;
     key: string;
     label: string;
     help: string | null;
-    type: string;
     required: boolean;
     inherited: boolean;
     master_source: string | null;
     teacher_editable: boolean;
     ai_enabled: boolean;
     document_marker: string | null;
+    content_type: string;
 };
 
 const props = defineProps<{
     templateId: string;
-    blockOptions: { id: string; label: string }[];
-    fieldTypes: { value: string; label: string }[];
 }>();
 
+/**
+ * Propiedades avanzadas de un campo. El nombre y el tipo se cambian sobre la
+ * hoja; aquí va lo que no cabe en un clic: obligatoriedad, herencia, IA y ayuda.
+ */
 const open = ref(false);
-const selectedField = ref<TemplateField | null>(null);
+const selected = ref<{ field: TemplateField; blockId: string } | null>(null);
 const inherited = ref(false);
 
-const fieldForm = computed(() =>
-    selectedField.value
+const form = computed(() =>
+    selected.value
         ? TemplateController.updateField.form({
               template: props.templateId,
-              field: selectedField.value.id,
+              field: selected.value.field.id,
           })
-        : TemplateController.storeField.form(props.templateId),
+        : null,
 );
 
-const title = computed(() =>
-    selectedField.value ? 'Editar campo' : 'Agregar campo',
-);
-
-const edit = (field: TemplateField): void => {
-    selectedField.value = field;
+const edit = (field: TemplateField, blockId: string): void => {
+    selected.value = { field, blockId };
+    inherited.value = field.inherited;
     open.value = true;
 };
 
 watch(open, (isOpen) => {
-    if (isOpen) {
-        inherited.value = selectedField.value?.inherited ?? false;
-
-        return;
+    if (!isOpen) {
+        selected.value = null;
+        inherited.value = false;
     }
-
-    selectedField.value = null;
-    inherited.value = false;
 });
 
 defineExpose({ edit });
@@ -85,111 +71,42 @@ defineExpose({ edit });
 <template>
     <FormSheet
         v-model:open="open"
-        trigger-label="Agregar campo"
-        :title="title"
-        description="Defina cómo se mostrará este campo. Los cálculos automáticos aún no están disponibles."
+        trigger-label="Propiedades del campo"
+        :show-trigger="false"
+        title="Propiedades del campo"
+        :description="
+            selected
+                ? `Cómo se comporta «${selected.field.label}» al llenar el sílabo.`
+                : ''
+        "
     >
         <template #default="{ close }">
             <Form
-                :key="selectedField?.id ?? 'new'"
-                v-bind="fieldForm"
+                v-if="selected && form"
+                :key="selected.field.id"
+                v-bind="form"
+                :options="{ preserveScroll: true }"
                 v-slot="{ errors, processing }"
-                reset-on-success
                 @success="close"
             >
+                <input
+                    type="hidden"
+                    name="block_id"
+                    :value="selected.blockId"
+                />
+                <input type="hidden" name="key" :value="selected.field.key" />
+                <input
+                    type="hidden"
+                    name="label"
+                    :value="selected.field.label"
+                />
+                <input
+                    type="hidden"
+                    name="content_type"
+                    :value="selected.field.content_type"
+                />
+
                 <FieldGroup>
-                    <Field :data-invalid="Boolean(errors.block_id)">
-                        <FieldLabel for="template-field-block" required>
-                            Bloque
-                        </FieldLabel>
-                        <Select
-                            name="block_id"
-                            required
-                            :default-value="
-                                selectedField?.block_id ?? blockOptions[0]?.id
-                            "
-                        >
-                            <SelectTrigger
-                                id="template-field-block"
-                                :aria-invalid="Boolean(errors.block_id)"
-                            >
-                                <SelectValue placeholder="Seleccione" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectGroup>
-                                    <SelectItem
-                                        v-for="block in blockOptions"
-                                        :key="block.id"
-                                        :value="block.id"
-                                    >
-                                        {{ block.label }}
-                                    </SelectItem>
-                                </SelectGroup>
-                            </SelectContent>
-                        </Select>
-                        <FieldError :errors="[errors.block_id]" />
-                    </Field>
-
-                    <Field :data-invalid="Boolean(errors.key)">
-                        <FieldLabel for="template-field-key" required>
-                            Código de referencia
-                        </FieldLabel>
-                        <Input
-                            id="template-field-key"
-                            name="key"
-                            :default-value="selectedField?.key"
-                            placeholder="Ej. resultados_aprendizaje"
-                            required
-                            :aria-invalid="Boolean(errors.key)"
-                        />
-                        <FieldError :errors="[errors.key]" />
-                    </Field>
-
-                    <Field :data-invalid="Boolean(errors.label)">
-                        <FieldLabel for="template-field-label" required>
-                            Etiqueta
-                        </FieldLabel>
-                        <Input
-                            id="template-field-label"
-                            name="label"
-                            :default-value="selectedField?.label"
-                            placeholder="Ej. Resultados de aprendizaje"
-                            required
-                            :aria-invalid="Boolean(errors.label)"
-                        />
-                        <FieldError :errors="[errors.label]" />
-                    </Field>
-
-                    <Field :data-invalid="Boolean(errors.type)">
-                        <FieldLabel for="template-field-type" required>
-                            Formato de respuesta
-                        </FieldLabel>
-                        <Select
-                            name="type"
-                            required
-                            :default-value="selectedField?.type ?? 'short_text'"
-                        >
-                            <SelectTrigger
-                                id="template-field-type"
-                                :aria-invalid="Boolean(errors.type)"
-                            >
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectGroup>
-                                    <SelectItem
-                                        v-for="type in fieldTypes"
-                                        :key="type.value"
-                                        :value="type.value"
-                                    >
-                                        {{ type.label }}
-                                    </SelectItem>
-                                </SelectGroup>
-                            </SelectContent>
-                        </Select>
-                        <FieldError :errors="[errors.type]" />
-                    </Field>
-
                     <Field :data-invalid="Boolean(errors.help)">
                         <FieldLabel for="template-field-help">
                             Ayuda para el docente
@@ -197,44 +114,11 @@ defineExpose({ edit });
                         <Textarea
                             id="template-field-help"
                             name="help"
-                            :default-value="selectedField?.help ?? ''"
+                            :default-value="selected.field.help ?? ''"
+                            placeholder="Ej. Describa los resultados en infinitivo"
                             :aria-invalid="Boolean(errors.help)"
                         />
                         <FieldError :errors="[errors.help]" />
-                    </Field>
-
-                    <Field :data-invalid="Boolean(errors.master_source)">
-                        <FieldLabel
-                            for="template-field-master-source"
-                            :required="inherited"
-                        >
-                            Origen maestro (si es heredado)
-                        </FieldLabel>
-                        <Input
-                            id="template-field-master-source"
-                            name="master_source"
-                            :default-value="selectedField?.master_source ?? ''"
-                            placeholder="Ej. perfil_egreso"
-                            :required="inherited"
-                            :aria-invalid="Boolean(errors.master_source)"
-                        />
-                        <FieldError :errors="[errors.master_source]" />
-                    </Field>
-
-                    <Field :data-invalid="Boolean(errors.document_marker)">
-                        <FieldLabel for="template-field-document-marker">
-                            Marcador documental opcional
-                        </FieldLabel>
-                        <Input
-                            id="template-field-document-marker"
-                            name="document_marker"
-                            :default-value="
-                                selectedField?.document_marker ?? ''
-                            "
-                            placeholder="Ej. RESULTADOS_APRENDIZAJE"
-                            :aria-invalid="Boolean(errors.document_marker)"
-                        />
-                        <FieldError :errors="[errors.document_marker]" />
                     </Field>
 
                     <FieldSet>
@@ -255,37 +139,13 @@ defineExpose({ edit });
                                     id="template-field-required"
                                     name="required"
                                     value="1"
-                                    :default-value="
-                                        selectedField?.required ?? false
-                                    "
+                                    :default-value="selected.field.required"
                                     :aria-invalid="Boolean(errors.required)"
                                 />
                                 <FieldLabel for="template-field-required">
                                     Obligatorio
                                 </FieldLabel>
                                 <FieldError :errors="[errors.required]" />
-                            </Field>
-
-                            <Field
-                                orientation="horizontal"
-                                :data-invalid="Boolean(errors.inherited)"
-                            >
-                                <input
-                                    type="hidden"
-                                    name="inherited"
-                                    value="0"
-                                />
-                                <Checkbox
-                                    id="template-field-inherited"
-                                    v-model="inherited"
-                                    name="inherited"
-                                    value="1"
-                                    :aria-invalid="Boolean(errors.inherited)"
-                                />
-                                <FieldLabel for="template-field-inherited">
-                                    Heredado de maestro
-                                </FieldLabel>
-                                <FieldError :errors="[errors.inherited]" />
                             </Field>
 
                             <Field
@@ -302,7 +162,7 @@ defineExpose({ edit });
                                     name="teacher_editable"
                                     value="1"
                                     :default-value="
-                                        selectedField?.teacher_editable ?? true
+                                        selected.field.teacher_editable
                                     "
                                     :aria-invalid="
                                         Boolean(errors.teacher_editable)
@@ -331,9 +191,7 @@ defineExpose({ edit });
                                     id="template-field-ai-enabled"
                                     name="ai_enabled"
                                     value="1"
-                                    :default-value="
-                                        selectedField?.ai_enabled ?? false
-                                    "
+                                    :default-value="selected.field.ai_enabled"
                                     :aria-invalid="Boolean(errors.ai_enabled)"
                                 />
                                 <FieldLabel for="template-field-ai-enabled">
@@ -341,16 +199,71 @@ defineExpose({ edit });
                                 </FieldLabel>
                                 <FieldError :errors="[errors.ai_enabled]" />
                             </Field>
+
+                            <Field
+                                orientation="horizontal"
+                                :data-invalid="Boolean(errors.inherited)"
+                            >
+                                <input
+                                    type="hidden"
+                                    name="inherited"
+                                    value="0"
+                                />
+                                <Checkbox
+                                    id="template-field-inherited"
+                                    v-model="inherited"
+                                    name="inherited"
+                                    value="1"
+                                    :aria-invalid="Boolean(errors.inherited)"
+                                />
+                                <FieldLabel for="template-field-inherited">
+                                    Se llena desde la malla
+                                </FieldLabel>
+                                <FieldError :errors="[errors.inherited]" />
+                            </Field>
                         </FieldGroup>
                     </FieldSet>
+
+                    <Field
+                        v-if="inherited"
+                        :data-invalid="Boolean(errors.master_source)"
+                    >
+                        <FieldLabel for="template-field-master-source" required>
+                            Dato de la malla que lo llena
+                        </FieldLabel>
+                        <Input
+                            id="template-field-master-source"
+                            name="master_source"
+                            :default-value="selected.field.master_source ?? ''"
+                            placeholder="Ej. perfil_egreso"
+                            required
+                            :aria-invalid="Boolean(errors.master_source)"
+                        />
+                        <FieldError :errors="[errors.master_source]" />
+                    </Field>
+                    <input v-else type="hidden" name="master_source" value="" />
+
+                    <Field :data-invalid="Boolean(errors.document_marker)">
+                        <FieldLabel for="template-field-document-marker">
+                            Marcador en el documento exportado
+                        </FieldLabel>
+                        <Input
+                            id="template-field-document-marker"
+                            name="document_marker"
+                            :default-value="
+                                selected.field.document_marker ?? ''
+                            "
+                            placeholder="Ej. RESULTADOS_APRENDIZAJE"
+                            :aria-invalid="Boolean(errors.document_marker)"
+                        />
+                        <FieldError :errors="[errors.document_marker]" />
+                    </Field>
 
                     <FormSheetActions
                         :close="close"
                         :processing="processing"
                         :icon="Check"
-                        :label="
-                            selectedField ? 'Guardar campo' : 'Agregar campo'
-                        "
+                        label="Guardar cambios"
                     />
                     <FieldError :errors="[errors.field]" />
                 </FieldGroup>

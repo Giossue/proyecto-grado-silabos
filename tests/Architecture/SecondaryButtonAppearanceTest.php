@@ -17,10 +17,6 @@ it('mantiene los botones secundarios textuales sin iconos de accion, salvo el ag
             continue;
         }
 
-        if (str_ends_with($path, '/components/domain/configuration/TemplateBlockBuilder.vue')) {
-            continue;
-        }
-
         $source = (string) file_get_contents($path);
         preg_match_all(
             '/import\s*\{(?<names>[^}]+)\}\s*from\s*[\'\"]@lucide\/vue[\'\"];?/s',
