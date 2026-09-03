@@ -5,8 +5,9 @@ import { Input } from '@/components/ui/input';
 
 /*
  * Fecha y hora con los componentes compartidos: el calendario de `DatePicker` para el
- * día y un campo de hora `hh:mm` para la hora, que es lo que hace el propio patrón de
- * shadcn. Nada de listas de veinticuatro horas y doce minutos: se escribe la hora.
+ * día y un campo de hora `hh:mm` para la hora, calcado del patrón «Date and Time
+ * Picker» de shadcn (calendar-24): campo nativo con el indicador del navegador oculto.
+ * Nada de listas de veinticuatro horas y doce minutos: se escribe la hora.
  *
  * El valor viaja como `aaaa-mm-ddThh:mm` —lo mismo que enviaba el campo nativo
  * `datetime-local`—, así que el servidor no nota el cambio.
@@ -67,10 +68,16 @@ watch(value, () => {
             :aria-invalid="ariaInvalid"
             placeholder="Elegir día"
         />
+        <!--
+            Como en el patrón «Date and Time Picker» de shadcn: hora nativa sin el
+            desplegable del navegador (se oculta el indicador), se escribe en el campo
+            segmentado hh:mm. El desplegable de Chromium se salía del panel.
+        -->
         <Input
             v-model="time"
             type="time"
             step="60"
+            class="appearance-none bg-background [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
             :aria-label="`Hora para ${id}`"
             :aria-invalid="ariaInvalid"
             :required="required"

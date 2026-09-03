@@ -6,6 +6,13 @@ it('muestra un indicador accesible y tematico para los campos obligatorios', fun
     $fieldLabel = (string) file_get_contents($root.'/resources/js/components/ui/field/FieldLabel.vue');
     $fieldLegend = (string) file_get_contents($root.'/resources/js/components/ui/field/FieldLegend.vue');
     $datePicker = (string) file_get_contents($root.'/resources/js/components/DatePicker.vue');
+    // La hora sigue el patrón «Date and Time Picker» de shadcn: campo nativo sin el
+    // desplegable del navegador, que se salía del panel lateral.
+    $dateTimePicker = (string) file_get_contents($root.'/resources/js/components/DateTimePicker.vue');
+    expect($dateTimePicker)
+        ->toContain('type="time"')
+        ->toContain('[&::-webkit-calendar-picker-indicator]:hidden')
+        ->not->toContain('<Select');
 
     expect($label)
         ->toContain('required?: boolean')
