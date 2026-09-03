@@ -11,6 +11,8 @@ use App\Modules\Configuration\Application\Actions\ReorderTemplateBlocks;
 use App\Modules\Configuration\Application\Actions\ReorderTemplateSections;
 use App\Modules\Configuration\Application\Actions\SaveFieldDefinition;
 use App\Modules\Configuration\Application\Actions\SaveTemplateSection;
+use App\Modules\Configuration\Application\Actions\UpdateTableLayout;
+use App\Modules\Configuration\Domain\TableLayout;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\FieldDefinition;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateBlock;
@@ -21,6 +23,7 @@ use App\Modules\Configuration\Presentation\Http\Requests\ReorderTemplateBlocksRe
 use App\Modules\Configuration\Presentation\Http\Requests\ReorderTemplateSectionsRequest;
 use App\Modules\Configuration\Presentation\Http\Requests\SaveFieldDefinitionRequest;
 use App\Modules\Configuration\Presentation\Http\Requests\SaveTemplateSectionRequest;
+use App\Modules\Configuration\Presentation\Http\Requests\UpdateTableLayoutRequest;
 use App\Modules\Syllabus\Application\ProcessLocks;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
@@ -75,6 +78,7 @@ class TemplateController extends Controller
                         'title' => $block->titulo,
                         'type' => $block->tipo,
                         'content_type' => $this->contentType($block, $block->fields->first()),
+                        'table' => TableLayout::fromBlock($block),
                         'fields' => $block->fields->map(fn (FieldDefinition $field) => [
                             'id' => $field->id,
                             'block_id' => $block->id,
@@ -213,6 +217,21 @@ class TemplateController extends Controller
         );
 
         return back()->with('success', 'Orden de bloques actualizado.');
+    }
+
+    public function updateTableLayout(
+        SyllabusTemplate $template,
+        TemplateBlock $block,
+        UpdateTableLayoutRequest $request,
+        UpdateTableLayout $action,
+    ): RedirectResponse {
+        $this->ensureInstitutional($template);
+        abort_unless($block->plantilla_id === $template->id, 404);
+        $actor = $request->user();
+        abort_unless($actor instanceof User, 401);
+        $action->execute($block, $request->validated(), $actor, $request);
+
+        return back()->with('success', 'Tabla actualizada.');
     }
 
     public function destroyBlock(

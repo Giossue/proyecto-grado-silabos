@@ -16,6 +16,7 @@ import { computed, nextTick, ref, watch } from 'vue';
 import { toast } from 'vue-sonner';
 import TemplateController from '@/actions/App/Modules/Configuration/Presentation/Http/Controllers/TemplateController';
 import TemplateFieldSheet from '@/components/domain/configuration/TemplateFieldSheet.vue';
+import TemplateTableDesigner from '@/components/domain/configuration/TemplateTableDesigner.vue';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -34,6 +35,8 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
+import { defaultTableLayout } from '@/lib/tableLayout';
+import type { TableLayout } from '@/lib/tableLayout';
 
 type TemplateField = {
     id: string;
@@ -56,6 +59,8 @@ type FieldContainer = {
     key: string;
     title: string;
     content_type: string;
+    /** Esquema de la tabla; nulo cuando el campo no es una tabla. */
+    table: TableLayout | null;
     fields: TemplateField[];
 };
 
@@ -107,15 +112,6 @@ const LOREM_ITEMS = [
     'Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
     'Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.',
 ];
-
-const LOREM_TABLE = {
-    headers: ['Lorem ipsum', 'Dolor sit', 'Amet consectetur', 'Adipiscing'],
-    rows: [
-        ['Sed do eiusmod', 'Tempor incididunt', 'Ut labore et dolore', '12'],
-        ['Magna aliqua', 'Ut enim ad minim', 'Veniam quis nostrud', '8'],
-        ['Exercitation', 'Ullamco laboris', 'Nisi ut aliquip', '4'],
-    ],
-};
 
 const doc = ref<TemplateSection[]>([]);
 const dragging = ref<Drag | null>(null);
@@ -405,6 +401,21 @@ const changeType = (container: FieldContainer, contentType: string): void => {
         container,
         { content_type: contentType },
         `Ahora es ${typeLabel(contentType).toLowerCase()}.`,
+    );
+};
+
+const saveTableLayout = (
+    container: FieldContainer,
+    layout: TableLayout,
+): void => {
+    container.table = layout;
+    router.patch(
+        TemplateController.updateTableLayout.url({
+            template: props.templateId,
+            block: container.id,
+        }),
+        layout,
+        requestOptions('Tabla guardada.'),
     );
 };
 
@@ -974,33 +985,16 @@ const dropOnFieldZone = (section: TemplateSection, index: number): void => {
                                     </div>
                                 </div>
 
-                                <table
+                                <TemplateTableDesigner
                                     v-if="container.content_type === 'table'"
-                                    class="doc-table"
-                                >
-                                    <thead>
-                                        <tr>
-                                            <th
-                                                v-for="header in LOREM_TABLE.headers"
-                                                :key="header"
-                                            >
-                                                {{ header }}
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr
-                                            v-for="(
-                                                row, rowIndex
-                                            ) in LOREM_TABLE.rows"
-                                            :key="rowIndex"
-                                        >
-                                            <td v-for="cell in row" :key="cell">
-                                                {{ cell }}
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
+                                    :layout="
+                                        container.table ?? defaultTableLayout()
+                                    "
+                                    :readonly="readonly"
+                                    @update:layout="
+                                        saveTableLayout(container, $event)
+                                    "
+                                />
 
                                 <ul
                                     v-else-if="

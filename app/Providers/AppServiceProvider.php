@@ -13,7 +13,7 @@ use App\Modules\Configuration\Infrastructure\Persistence\Models\AcademicSource;
 use App\Modules\Documents\Domain\Contracts\DocumentRenderer;
 use App\Modules\Documents\Domain\Policies\ExportArtifactPolicy;
 use App\Modules\Documents\Infrastructure\Persistence\Models\ExportArtifact;
-use App\Modules\Documents\Infrastructure\Rendering\BaselineDocumentRenderer;
+use App\Modules\Documents\Infrastructure\Rendering\PhpWordDocumentRenderer;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Identity\Application\Contracts\RoleEligibility;
 use App\Modules\Identity\Domain\Enums\RoleCode;
@@ -44,7 +44,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(RoleEligibility::class, AcademicRoleEligibility::class);
-        $this->app->bind(DocumentRenderer::class, BaselineDocumentRenderer::class);
+        $this->app->bind(DocumentRenderer::class, PhpWordDocumentRenderer::class);
         $this->app->bind(AiAnalysisGateway::class, function (): AiAnalysisGateway {
             return match ((string) config('ai.driver')) {
                 'baseline' => app(BaselineAiAnalysisGateway::class),

@@ -30,8 +30,19 @@ class UpdateDraftFieldRequest extends FormRequest
             'value' => $valueRules,
             'rows' => ['nullable', 'array', 'max:100'],
             'rows.*.id' => ['nullable', 'uuid'],
-            'rows.*.data' => ['required_with:rows', 'array:texto'],
-            'rows.*.data.texto' => ['required_with:rows', 'string', 'max:10000'],
+            // Una celda por columna (I-34); `_unit` agrupa filas por unidad y `_kind`
+            // marca la fila de cabecera de la unidad.
+            'rows.*.data' => ['required_with:rows', 'array'],
+            'rows.*.data.*' => ['nullable', function (string $attribute, mixed $value, Closure $fail): void {
+                if (! is_scalar($value)) {
+                    $fail('Cada celda debe ser un texto o un número.');
+
+                    return;
+                }
+                if (is_string($value) && mb_strlen($value) > 10000) {
+                    $fail('La celda supera los 10 000 caracteres.');
+                }
+            }],
         ];
         if ($field instanceof FieldDefinition && $field->tipo === 'seleccion_multiple') {
             $rules['value.*'] = ['string', 'distinct', Rule::in($this->allowedOptions($field))];

@@ -233,6 +233,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('plantilla/{template}/campos', [TemplateController::class, 'storeField'])->name('templates.fields.store');
         Route::patch('plantilla/{template}/campos/{field}', [TemplateController::class, 'updateField'])->name('templates.fields.update');
         Route::patch('plantilla/{template}/bloques/orden', [TemplateController::class, 'reorderBlocks'])->name('templates.blocks.reorder');
+        Route::patch('plantilla/{template}/bloques/{block}/tabla', [TemplateController::class, 'updateTableLayout'])->name('templates.blocks.table');
         Route::delete('plantilla/{template}/bloques/{block}', [TemplateController::class, 'destroyBlock'])->name('templates.blocks.destroy');
     });
 });

@@ -12,6 +12,7 @@ import { computed, onBeforeUnmount, reactive, ref } from 'vue';
 import AiAssistanceController from '@/actions/App/Modules/AiAssistance/Presentation/Http/Controllers/AiAssistanceController';
 import SyllabusController from '@/actions/App/Modules/Syllabus/Presentation/Http/Controllers/SyllabusController';
 import PageFrame from '@/components/domain/PageFrame.vue';
+import SyllabusTableEditor from '@/components/domain/syllabus/SyllabusTableEditor.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -42,6 +43,8 @@ import {
 } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
+import { defaultTableLayout } from '@/lib/tableLayout';
+import type { TableLayout, TableRowData } from '@/lib/tableLayout';
 import { index as syllabiIndex } from '@/routes/syllabi';
 
 type JsonValue =
@@ -54,7 +57,7 @@ type JsonValue =
 
 type DraftRow = {
     id: string | null;
-    data: { texto: string; [key: string]: JsonValue };
+    data: TableRowData;
 };
 
 type DraftField = {
@@ -81,6 +84,7 @@ type DraftSection = {
         id: string;
         title: string;
         content_type: string;
+        table: TableLayout | null;
         fields: DraftField[];
     }[];
 };
@@ -165,13 +169,7 @@ const fieldStates = reactive<Record<string, FieldState>>(
                         : JSON.stringify(field.value),
                 rows: field.rows.map((row) => ({
                     id: row.id,
-                    data: {
-                        ...row.data,
-                        texto:
-                            typeof row.data.texto === 'string'
-                                ? row.data.texto
-                                : '',
-                    },
+                    data: { ...row.data },
                 })),
                 status: 'idle',
                 error: null,
@@ -321,6 +319,12 @@ const updateRow = (
     value: string | number,
 ): void => {
     fieldStates[field.id].rows[index].data.texto = String(value);
+    scheduleSave(field);
+};
+
+/** La cuadrícula de tabla entrega la lista completa de filas. */
+const replaceRows = (field: DraftField, rows: DraftRow[]): void => {
+    fieldStates[field.id].rows = rows;
     scheduleSave(field);
 };
 
@@ -746,6 +750,24 @@ onBeforeUnmount(() => {
                                     {{ masterValue(field.value) }}
                                 </div>
 
+                                <SyllabusTableEditor
+                                    v-else-if="
+                                        field.type === 'repetible' &&
+                                        block.content_type === 'table'
+                                    "
+                                    :field-id="field.id"
+                                    :label="field.label"
+                                    :layout="
+                                        block.table ?? defaultTableLayout()
+                                    "
+                                    :rows="fieldStates[field.id].rows"
+                                    :required="field.required"
+                                    :invalid="
+                                        validationFor(field.id).length > 0
+                                    "
+                                    @update:rows="replaceRows(field, $event)"
+                                />
+
                                 <div
                                     v-else-if="field.type === 'repetible'"
                                     class="flex flex-col gap-3"
@@ -759,7 +781,9 @@ onBeforeUnmount(() => {
                                     >
                                         <Textarea
                                             :id="`field-${field.id}-row-${rowIndex}`"
-                                            :model-value="row.data.texto"
+                                            :model-value="
+                                                String(row.data.texto ?? '')
+                                            "
                                             :aria-label="`${field.label}, fila ${rowIndex + 1}`"
                                             :aria-invalid="
                                                 validationFor(field.id).length >

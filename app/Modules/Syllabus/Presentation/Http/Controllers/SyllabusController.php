@@ -4,6 +4,7 @@ namespace App\Modules\Syllabus\Presentation\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Modules\Configuration\Domain\TableLayout;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\FieldDefinition;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateBlock;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateSection;
@@ -326,6 +327,7 @@ class SyllabusController extends Controller
             'title' => $block->titulo,
             'content_type' => $block->configuredContentType()
                 ?? ($block->tipo === 'repetible' ? 'table' : 'text'),
+            'table' => TableLayout::fromBlock($block),
             'fields' => $fields,
         ];
     }

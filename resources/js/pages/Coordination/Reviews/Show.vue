@@ -6,6 +6,7 @@ import ReviewController from '@/actions/App/Modules/Syllabus/Presentation/Http/C
 import PageFrame from '@/components/domain/PageFrame.vue';
 import ReviewObservationSheet from '@/components/domain/syllabus/ReviewObservationSheet.vue';
 import SyllabusResetDialog from '@/components/domain/syllabus/SyllabusResetDialog.vue';
+import SyllabusTableView from '@/components/domain/syllabus/SyllabusTableView.vue';
 import TeacherTransferSheet from '@/components/domain/syllabus/TeacherTransferSheet.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -27,6 +28,7 @@ import {
 } from '@/components/ui/field';
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
+import type { TableLayout, TableRowData } from '@/lib/tableLayout';
 import { show as documentsShow } from '@/routes/documents';
 import { index as reviewsIndex } from '@/routes/reviews';
 
@@ -50,7 +52,14 @@ type SnapshotField = {
 type SnapshotSection = {
     key: string;
     title: string;
-    blocks: { key: string; title: string; fields: SnapshotField[] }[];
+    blocks: {
+        key: string;
+        title: string;
+        content_type?: string;
+        /** Esquema de tabla copiado en la revisión (I-34); ausente en copias antiguas. */
+        table?: TableLayout | null;
+        fields: SnapshotField[];
+    }[];
 };
 
 type Observation = {
@@ -159,6 +168,19 @@ const toggleObservation = (
 
     selectedObservationIds.value = [...values];
 };
+
+/** Filas de una tabla: solo las que traen un objeto de celdas. */
+const tableRows = (
+    field: SnapshotField,
+): { id: string | null; data: TableRowData }[] =>
+    field.rows
+        .filter(
+            (row) =>
+                typeof row.data === 'object' &&
+                row.data !== null &&
+                !Array.isArray(row.data),
+        )
+        .map((row) => ({ id: row.id, data: row.data as TableRowData }));
 
 const formatValue = (value: JsonValue): string => {
     if (value === null || value === '') {
@@ -297,6 +319,12 @@ const observationState = (value: string): string =>
                                         class="mt-2 text-sm whitespace-pre-wrap"
                                     >
                                         {{ formatValue(field.value) }}
+                                    </dd>
+                                    <dd v-else-if="block.table" class="mt-3">
+                                        <SyllabusTableView
+                                            :layout="block.table"
+                                            :rows="tableRows(field)"
+                                        />
                                     </dd>
                                     <dd v-else class="mt-3 space-y-2">
                                         <div

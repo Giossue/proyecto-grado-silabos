@@ -2,6 +2,7 @@
 
 namespace App\Modules\Syllabus\Application;
 
+use App\Modules\Configuration\Domain\TableLayout;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\FieldDefinition;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateBlock;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateSection;
@@ -40,6 +41,11 @@ class SyllabusSnapshot
                     'blocks' => $section->blocks->map(fn (TemplateBlock $block): array => [
                         'key' => $block->clave,
                         'title' => $block->titulo,
+                        'content_type' => $block->configuredContentType()
+                            ?? ($block->tipo === 'repetible' ? 'table' : 'text'),
+                        // El esquema de la tabla viaja con la copia: el documento se
+                        // exporta con las columnas que el docente llenó.
+                        'table' => TableLayout::fromBlock($block),
                         'fields' => $block->fields->map(fn (FieldDefinition $field): array => [
                             'definition_id' => $field->id,
                             'key' => $field->clave,

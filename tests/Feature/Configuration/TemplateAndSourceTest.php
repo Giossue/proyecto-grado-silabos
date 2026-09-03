@@ -174,6 +174,70 @@ class TemplateAndSourceTest extends TestCase
         $this->assertDatabaseMissing('definiciones_campo', ['bloque_plantilla_id' => $second->id]);
     }
 
+    public function test_administrator_designs_a_complex_table_on_a_block(): void
+    {
+        $version = $this->createTemplate();
+        $section = $version->sections()->where('clave', 'planificacion')->firstOrFail();
+        $block = $section->blocks()->firstOrFail();
+        $field = $block->fields()->firstOrFail();
+        $sectionIndex = $section->posicion - 1;
+
+        // El campo pasa a tabla; sin esquema propio expone la tabla mínima.
+        $this->actingAsAdministrator()
+            ->patch(route('admin.templates.fields.update', ['template' => $version, 'field' => $field]), [
+                'block_id' => $block->id,
+                'key' => $field->clave,
+                'label' => $field->etiqueta,
+                'content_type' => 'table',
+            ])
+            ->assertRedirect();
+        $this->actingAsAdministrator()
+            ->get(route('admin.templates.show', $version))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where("template.sections.$sectionIndex.blocks.0.table.columns.0.key", 'texto'));
+
+        $layout = [
+            'columns' => [
+                ['key' => 'contenidos', 'label' => 'Contenidos temáticos', 'type' => 'text'],
+                ['key' => 'acd', 'label' => 'ACD', 'type' => 'number', 'group' => 'docencia', 'band' => 'horas'],
+                ['key' => 'ape', 'label' => 'APE', 'type' => 'number', 'group' => 'estudiante', 'band' => 'horas'],
+                ['key' => 'aa', 'label' => 'AA', 'type' => 'number', 'group' => 'estudiante', 'band' => 'horas'],
+            ],
+            'groups' => [['key' => 'docencia', 'label' => 'Docencia'], ['key' => 'estudiante', 'label' => 'Estudiante']],
+            'bands' => [['key' => 'horas', 'label' => 'Horas por semana']],
+            'header_fields' => [['key' => 'nombre', 'label' => 'Nombre de la unidad']],
+            'totals' => ['enabled' => true, 'label' => 'Total, horas'],
+            'repeat' => ['enabled' => true, 'label' => 'Unidad'],
+        ];
+        $this->actingAsAdministrator()
+            ->patch(route('admin.templates.blocks.table', ['template' => $version, 'block' => $block]), $layout)
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $saved = $block->fresh()->configuracion['table'];
+        $this->assertSame('table', $block->fresh()->configuracion['content_type']);
+        $this->assertSame(['contenidos', 'acd', 'ape', 'aa'], array_column($saved['columns'], 'key'));
+        $this->assertTrue($saved['repeat']['enabled']);
+        $this->assertDatabaseHas('eventos_auditoria', ['accion' => 'plantilla.tabla_actualizada', 'recurso_id' => $block->id]);
+
+        // Un grupo partido por otra columna no es una cabecera posible.
+        $broken = $layout;
+        $broken['columns'][1]['group'] = 'estudiante';
+        $broken['columns'][2]['group'] = 'docencia';
+        $broken['columns'][3]['group'] = 'estudiante';
+        $this->actingAsAdministrator()
+            ->from(route('admin.templates.show', $version))
+            ->patch(route('admin.templates.blocks.table', ['template' => $version, 'block' => $block]), $broken)
+            ->assertSessionHasErrors('groups');
+
+        // Un campo de texto no acepta esquema de tabla.
+        $textBlock = $version->sections()->where('clave', 'descripcion')->firstOrFail()->blocks()->firstOrFail();
+        $this->actingAsAdministrator()
+            ->from(route('admin.templates.show', $version))
+            ->patch(route('admin.templates.blocks.table', ['template' => $version, 'block' => $textBlock]), $layout)
+            ->assertSessionHasErrors('table');
+    }
+
     public function test_administrator_manages_template_blocks_separately_from_their_fields(): void
     {
         $version = $this->createTemplate();

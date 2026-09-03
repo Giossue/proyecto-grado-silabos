@@ -3,6 +3,7 @@ import { Head } from '@inertiajs/vue3';
 import TemplateSheetEditor from '@/components/domain/configuration/TemplateSheetEditor.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
 import ProcessLockAlert from '@/components/domain/ProcessLockAlert.vue';
+import type { TableLayout } from '@/lib/tableLayout';
 import { index as templatesIndex } from '@/routes/admin/templates';
 
 type TemplateField = {
@@ -35,6 +36,7 @@ defineProps<{
                 key: string;
                 title: string;
                 content_type: string;
+                table: TableLayout | null;
                 fields: TemplateField[];
             }[];
         }[];
