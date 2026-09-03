@@ -177,7 +177,7 @@ const { setEdges, setNodes } = useVueFlow({ id: flowId });
 const laneHeight = 238;
 const laneInset = 16;
 // La tarjeta incluye la fila de modalidad sobre las horas.
-const subjectHeight = computed(() => 124);
+const subjectHeight = computed(() => 158);
 const addSubjectHeight = 36;
 const subjectOffset = computed(() =>
     Math.round((laneHeight - laneInset - subjectHeight.value) / 2),

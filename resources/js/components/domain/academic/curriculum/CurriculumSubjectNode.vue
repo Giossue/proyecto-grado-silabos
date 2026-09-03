@@ -128,7 +128,7 @@ const totalFields = computed(
                 </TableActionsMenu>
             </div>
 
-            <div class="flex min-h-20">
+            <div class="flex h-24">
                 <div
                     class="flex w-9 shrink-0 items-center justify-center border-r bg-muted px-1 py-2"
                 >
@@ -139,7 +139,7 @@ const totalFields = computed(
                     </span>
                 </div>
                 <div
-                    class="flex flex-1 flex-col items-center justify-center gap-2 p-3 pr-9 text-center"
+                    class="flex min-w-0 flex-1 flex-col items-center justify-center gap-1.5 p-2 pr-9 text-center"
                 >
                     <Badge
                         v-if="data.subject.organization_unit"
@@ -147,7 +147,9 @@ const totalFields = computed(
                     >
                         {{ data.subject.organization_unit }}
                     </Badge>
-                    <h3 class="text-xs leading-snug font-semibold uppercase">
+                    <h3
+                        class="line-clamp-3 text-xs leading-snug font-semibold uppercase"
+                    >
                         {{ data.subject.name }}
                     </h3>
                 </div>
