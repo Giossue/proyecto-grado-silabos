@@ -121,11 +121,15 @@ const submitBatch = (close: () => void): void => {
         },
     });
 };
+/*
+ * Errores que no pertenecen a periodo ni campus: los de la lista (`subject_ids`,
+ * `subject_ids.n`) y los que devuelve la herencia de modalidad (`subject_id`).
+ * Sin esto, un rechazo del servidor dejaría el panel abierto sin explicación.
+ */
 const subjectError = computed(
     () =>
-        batch.errors.subject_ids ??
-        Object.entries(batch.errors).find(([key]) =>
-            key.startsWith('subject_ids.'),
+        Object.entries(batch.errors).find(
+            ([key]) => key !== 'period_id' && key !== 'campus_id',
         )?.[1],
 );
 

@@ -164,9 +164,15 @@ const { setEdges, setNodes } = useVueFlow({ id: flowId });
 // sobrante, las tarjetas se centran en él en vez de colgar del borde superior.
 const laneHeight = 238;
 const laneInset = 16;
-const subjectHeight = 110;
+// En una carrera híbrida la tarjeta lleva además la etiqueta de modalidad: crece y se
+// vuelve a centrar en el carril para no colgar del borde inferior.
+const subjectHeight = computed(
+    () => 110 + (props.career.modality?.per_subject ? 24 : 0),
+);
 const addSubjectHeight = 36;
-const subjectOffset = Math.round((laneHeight - laneInset - subjectHeight) / 2);
+const subjectOffset = computed(() =>
+    Math.round((laneHeight - laneInset - subjectHeight.value) / 2),
+);
 const addSubjectOffset = Math.round(
     (laneHeight - laneInset - addSubjectHeight) / 2,
 );
@@ -273,7 +279,7 @@ const buildNodes = (): Node[] => {
                 type: 'subject',
                 position: {
                     x,
-                    y: (cycle - 1) * laneHeight + subjectOffset,
+                    y: (cycle - 1) * laneHeight + subjectOffset.value,
                 },
                 data: {
                     career: props.career,
@@ -318,7 +324,7 @@ const buildNodes = (): Node[] => {
                 type: 'subject',
                 position: {
                     x,
-                    y: (cycle - 1) * laneHeight + subjectOffset,
+                    y: (cycle - 1) * laneHeight + subjectOffset.value,
                 },
                 data: {
                     career: props.career,
@@ -617,7 +623,8 @@ const onNodeDragStop = ({ node }: NodeDragEvent): void => {
         props.curriculum.cycle_count,
         Math.max(
             1,
-            Math.round((node.position.y - subjectOffset) / laneHeight) + 1,
+            Math.round((node.position.y - subjectOffset.value) / laneHeight) +
+                1,
         ),
     );
     const position = Math.max(

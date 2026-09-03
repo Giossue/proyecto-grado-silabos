@@ -64,7 +64,7 @@ class OfferingModality
 
         if ($subject->modality === null) {
             throw ValidationException::withMessages([
-                'subject_id' => 'La carrera combina modalidades y esta materia no tiene la suya. Edítela en la malla.',
+                'subject_id' => "La carrera combina modalidades y {$subject->codigo_institucional} · {$subject->nombre} no tiene la suya. Indíquela en la malla antes de abrir la oferta.",
             ]);
         }
 

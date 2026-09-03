@@ -141,15 +141,20 @@ const totalFields = computed(
                 <div
                     class="flex flex-1 flex-col items-center justify-center gap-2 p-3 pr-9 text-center"
                 >
-                    <Badge
-                        v-if="data.subject.organization_unit"
-                        variant="secondary"
-                    >
-                        {{ data.subject.organization_unit }}
-                    </Badge>
-                    <Badge v-if="data.subject.modality_name" variant="outline">
-                        {{ data.subject.modality_name }}
-                    </Badge>
+                    <div class="flex flex-wrap justify-center gap-1">
+                        <Badge
+                            v-if="data.subject.organization_unit"
+                            variant="secondary"
+                        >
+                            {{ data.subject.organization_unit }}
+                        </Badge>
+                        <Badge
+                            v-if="data.subject.modality_name"
+                            variant="outline"
+                        >
+                            {{ data.subject.modality_name }}
+                        </Badge>
+                    </div>
                     <h3 class="text-xs leading-snug font-semibold uppercase">
                         {{ data.subject.name }}
                     </h3>
