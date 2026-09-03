@@ -41,6 +41,12 @@ if [ "${RUN_MIGRATIONS:-true}" = "true" ]; then
     php artisan migrate --force --isolated
 fi
 
+# El volumen montado en storage/app llega con el dueño del servidor (root), no con el de
+# la imagen: sin esto PHP-FPM (www-data) no puede guardar logos ni exportaciones.
+mkdir -p storage/app/private storage/app/public
+chown -R www-data:www-data storage/app
+chmod -R u+rwX,g+rwX storage/app
+
 # El enlace de almacenamiento público es idempotente y sobrevive a redespliegues.
 php artisan storage:link || true
 

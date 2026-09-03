@@ -75,6 +75,14 @@ cola también cambiaron (`critica`, `notificaciones`, `documentos`, `ia`,
 `integraciones`, `general`) y un worker viejo escucharía colas que ya no reciben
 trabajos.
 
+## Volumen de almacenamiento en el contenedor
+
+`storage/app` se monta como volumen en Dokploy para conservar logos y exportaciones entre
+despliegues. El volumen llega con el dueño del servidor, no con el de la imagen, así que
+el `entrypoint` crea `private/` y `public/` y los entrega a `www-data` en cada arranque;
+sin eso PHP-FPM no puede escribir y las subidas fallan. Tras cambiar un volumen en
+Dokploy hay que redesplegar.
+
 ## Redis y jobs
 
 - Redis no expuesto públicamente; autenticación/red privada.
