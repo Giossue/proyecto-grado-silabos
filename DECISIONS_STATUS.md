@@ -27,6 +27,11 @@ Fecha de corte: **30 de agosto de 2026**.
   conserva nombre, extracto y huella del contenido en el momento del análisis.
 - La plantilla de sílabo es única e institucional: no pertenece a una carrera y la usan
   las convocatorias de cualquier carrera tal como esté al abrir el proceso.
+- La plantilla se arma sobre la hoja impresa (I-33) y sus tablas complejas se describen
+  con un esquema plano: columnas, grupos y agrupamientos de cabecera (dos niveles),
+  datos de unidad, totales y repetición por unidad (I-34, 2 de septiembre de 2026). El
+  DOCX se genera con PhpWord a partir de la copia de cada revisión; el PDF sigue siendo
+  el respaldo de texto plano hasta decidir el motor de PDF.
 - La IA es asistencia explicable; no toma decisiones académicas ni bloquea el flujo.
 - Stack base: Laravel 13, Vue/Inertia, TypeScript, PostgreSQL y Redis.
 - Monolito modular y servicio local de IA desacoplado por HTTP.

@@ -42,7 +42,7 @@ real.
 | Revisión | sílabos, identidad |
 | Validación | sílabos/configuración mediante DTO/contratos |
 | IA | sílabos, configuración/fuentes mediante contratos |
-| Documentos | sílabos, configuración mediante snapshots/contratos |
+| Documentos | sílabos, configuración mediante snapshots/contratos; DOCX con PhpWord (`PhpWordDocumentRenderer`, I-34) y PDF de texto plano de respaldo |
 | Operaciones | eventos/DTO públicos de módulos |
 
 Evita ciclos. Si dos módulos se necesitan mutuamente, extrae un contrato público, un

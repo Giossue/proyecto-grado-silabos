@@ -295,6 +295,36 @@ class ConvocationAndDraftTest extends TestCase
         ]);
     }
 
+    public function test_teacher_fills_table_cells_by_column_and_unit(): void
+    {
+        $syllabus = $this->openConvocationAndGetSyllabus();
+        $this->actingAsTeacher()->post(route('syllabi.start', $syllabus));
+        $syllabus->refresh();
+        $field = FieldDefinition::query()
+            ->where('plantilla_id', $syllabus->plantilla_id)
+            ->where('tipo', 'repetible')
+            ->firstOrFail();
+
+        // I-34: una celda por columna, unidad y fila de cabecera de la unidad.
+        $saved = $this->actingAsTeacher()->patchJson(route('syllabi.fields.update', [$syllabus, $field]), [
+            'version_bloqueo' => $syllabus->version_bloqueo,
+            'rows' => [
+                ['data' => ['_unit' => 1, '_kind' => 'unit', 'nombre' => 'Fundamentos']],
+                ['data' => ['_unit' => 1, 'contenidos' => 'Socialización', 'acd' => 2, 'ape' => 1.5, 'aa' => '']],
+            ],
+        ])->assertOk();
+
+        $this->assertSame('unit', $saved->json('rows.0.datos._kind'));
+        $this->assertSame(2, $saved->json('rows.1.datos.acd'));
+        $this->assertSame(1.5, $saved->json('rows.1.datos.ape'));
+
+        // Una celda no puede ser una estructura anidada.
+        $this->actingAsTeacher()->patchJson(route('syllabi.fields.update', [$syllabus, $field]), [
+            'version_bloqueo' => $saved->json('version_bloqueo'),
+            'rows' => [['data' => ['contenidos' => ['no' => 'permitido']]]],
+        ])->assertUnprocessable()->assertJsonValidationErrors(['rows.0.data.contenidos']);
+    }
+
     public function test_role_navigation_endpoints_do_not_mix_coordinator_and_teacher_privileges(): void
     {
         $this->actingAsTeacher()->get(route('convocations.index'))->assertForbidden();

@@ -122,6 +122,11 @@
   numerados «1.» y campos «1.1» en negrita, márgenes de 2.5 cm, tablas con cabecera azul y
   filas alternas celestes. El formato lo pone la plantilla; el docente solo llena
   contenido.
+- Las tablas se diseñan sobre la misma hoja (I-34): «+ Columna», clic para renombrar,
+  arrastrar cabeceras para reordenar, «Agrupar» tras elegir columnas vecinas (crea un
+  grupo o, si ya hay grupos, el agrupamiento superior), tipo Texto o Número por menú,
+  «Dato de cabecera», «Totales» y «Por unidad». DOC-01 llena una cuadrícula con una
+  casilla por celda, unidades y totales calculados; COR-05 la muestra tal cual.
   Las fuentes son documentos editables: COR-11 abre el contenido en un editor Markdown con
   cinta de opciones y vista previa.
 - Los estados usan las mismas etiquetas y colores en todo el producto.

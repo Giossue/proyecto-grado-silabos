@@ -688,6 +688,8 @@ it('arma la plantilla sobre la hoja impresa, sin formularios por tarjeta', funct
         ->toContain('PROGRAMA DE ASIGNATURA (SÍLABO)')
         ->toContain('font-family: Arial')
         ->toContain("'table'")
+        // I-34: las tablas se diseñan sobre la hoja con su propio componente.
+        ->toContain('<TemplateTableDesigner')
         ->toContain("'bulleted_list'")
         ->toContain("'numbered_list'")
         ->toContain('Lorem ipsum');
