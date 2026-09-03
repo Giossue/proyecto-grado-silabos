@@ -147,6 +147,8 @@ const openSubject = (subject: CurriculumBuilderSubject): void => {
             </TabsContent>
             <TabsContent value="builder">
                 <CurriculumCanvas
+                    :career="career"
+                    :modalities="options.modalities"
                     :curriculum="curriculum"
                     :field-definitions="fieldDefinitions"
                     :field-totals="fieldTotals"

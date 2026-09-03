@@ -60,7 +60,11 @@ const props = defineProps<
         | 'fieldTotals'
         | 'subjects'
         | 'requirements'
-    > & { organizationUnits: string[] }
+        | 'career'
+    > & {
+        organizationUnits: string[];
+        modalities: CurriculumBuilderProps['options']['modalities'];
+    }
 >();
 
 // Paleta al estilo de la malla institucional: cada unidad de organización
@@ -272,6 +276,8 @@ const buildNodes = (): Node[] => {
                     y: (cycle - 1) * laneHeight + subjectOffset,
                 },
                 data: {
+                    career: props.career,
+                    modalities: props.modalities,
                     curriculum: props.curriculum,
                     fieldDefinitions: props.fieldDefinitions,
                     organizationUnits: props.organizationUnits,
@@ -315,6 +321,8 @@ const buildNodes = (): Node[] => {
                     y: (cycle - 1) * laneHeight + subjectOffset,
                 },
                 data: {
+                    career: props.career,
+                    modalities: props.modalities,
                     curriculum: props.curriculum,
                     fieldDefinitions: props.fieldDefinitions,
                     organizationUnits: props.organizationUnits,

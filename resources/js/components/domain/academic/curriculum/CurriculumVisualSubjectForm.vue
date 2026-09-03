@@ -13,6 +13,14 @@ import {
     FieldLabel,
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import {
+    Select,
+    SelectContent,
+    SelectGroup,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
 import { useCurriculumSubjectFieldValues } from '@/composables/useCurriculumSubjectFieldValues';
 import type {
@@ -22,6 +30,8 @@ import type {
 } from '@/types/academic';
 
 const props = defineProps<{
+    career: CurriculumBuilderProps['career'];
+    modalities: CurriculumBuilderProps['options']['modalities'];
     curriculum: CurriculumBuilderProps['curriculum'];
     fieldDefinitions: CurriculumFieldDefinition[];
     subject: CurriculumBuilderSubject | null;
@@ -29,6 +39,11 @@ const props = defineProps<{
     position: number;
     organizationUnits: string[];
 }>();
+
+/** Solo una carrera híbrida pide modalidad por materia; las demás heredan la suya. */
+const modalityPerSubject = computed(
+    () => props.career.modality?.per_subject === true,
+);
 
 const emit = defineEmits<{
     cancel: [];
@@ -137,6 +152,42 @@ watch(
                     :invalid="Boolean(errors.organization_unit)"
                 />
                 <FieldError :errors="[errors.organization_unit]" />
+            </Field>
+
+            <Field
+                v-if="modalityPerSubject"
+                :data-invalid="Boolean(errors.modality_id)"
+            >
+                <FieldLabel
+                    :for="`visual-subject-modality-${subject?.id ?? cycle}`"
+                    required
+                >
+                    Modalidad
+                </FieldLabel>
+                <Select
+                    name="modality_id"
+                    :default-value="subject?.modality_id ?? undefined"
+                    required
+                >
+                    <SelectTrigger
+                        :id="`visual-subject-modality-${subject?.id ?? cycle}`"
+                        :aria-invalid="Boolean(errors.modality_id)"
+                    >
+                        <SelectValue placeholder="Seleccione la modalidad" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectGroup>
+                            <SelectItem
+                                v-for="item in modalities"
+                                :key="item.id"
+                                :value="item.id"
+                            >
+                                {{ item.nombre }}
+                            </SelectItem>
+                        </SelectGroup>
+                    </SelectContent>
+                </Select>
+                <FieldError :errors="[errors.modality_id]" />
             </Field>
 
             <div
