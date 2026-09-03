@@ -14,6 +14,7 @@ use App\Modules\Syllabus\Application\Actions\RequestSyllabusCorrection;
 use App\Modules\Syllabus\Application\Actions\ResetSyllabus;
 use App\Modules\Syllabus\Application\Actions\TransferSyllabusTeacher;
 use App\Modules\Syllabus\Application\Actions\VerifyObservation;
+use App\Modules\Syllabus\Application\IdentificationCard;
 use App\Modules\Syllabus\Application\RevisionDiff;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\ReviewObservation;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\Syllabus;
@@ -241,7 +242,11 @@ class ReviewController extends Controller
                 'number' => $revision->numero_revision,
                 'submitted_at' => $revision->enviado_en->toIso8601String(),
                 'submitted_by' => $revision->submitter->nombre,
-                'fotografia' => $revision->fotografia,
+                'snapshot' => $revision->fotografia,
+                // Ficha de identificación dibujada desde la copia (I-34); nula en copias antiguas.
+                'identification' => is_array($revision->fotografia['identification'] ?? null)
+                    ? IdentificationCard::grid($revision->fotografia['identification'])
+                    : null,
                 'is_current' => $latest?->id === $revision->id,
             ],
             'history' => $syllabus->revisions->sortBy('numero_revision')->map(fn (SyllabusRevision $item): array => [

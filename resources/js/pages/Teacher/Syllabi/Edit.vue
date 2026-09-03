@@ -13,7 +13,7 @@ import AiAssistanceController from '@/actions/App/Modules/AiAssistance/Presentat
 import SyllabusController from '@/actions/App/Modules/Syllabus/Presentation/Http/Controllers/SyllabusController';
 import PageFrame from '@/components/domain/PageFrame.vue';
 import IdentificationCard from '@/components/domain/syllabus/IdentificationCard.vue';
-import type {IdentificationPair} from '@/components/domain/syllabus/IdentificationCard.vue';
+import type { IdentificationCell } from '@/components/domain/syllabus/IdentificationCard.vue';
 import SyllabusTableEditor from '@/components/domain/syllabus/SyllabusTableEditor.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -129,7 +129,7 @@ const props = defineProps<{
         guardado_en: string | null;
         parallels: string[];
         teachers: string[];
-        identification: IdentificationPair[][];
+        identification: IdentificationCell[][];
         sections: DraftSection[];
         validation: ValidationSummary | null;
         observations: ReviewObservation[];
@@ -746,7 +746,7 @@ onBeforeUnmount(() => {
                                         block.content_type === 'institutional'
                                     "
                                     :id="`field-${field.id}`"
-                                    :rows="syllabus.identification"
+                                    :grid="syllabus.identification"
                                 />
 
                                 <div

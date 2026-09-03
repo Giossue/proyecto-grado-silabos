@@ -110,7 +110,7 @@ class WordRendererTest extends TestCase
         return [
             'schema_version' => 2,
             'template_id' => '01a064a5-1d6d-7196-b189-05376ff0929d',
-            'identification' => IdentificationCard::rows(
+            'identification' => IdentificationCard::build(
                 [
                     'career' => ['name' => 'Software', 'faculty' => 'Ciencias Administrativas, Gestión Empresarial e Informática'],
                     'subject' => ['name' => 'Inteligencia Artificial', 'code' => 'SW-P7-037', 'cycle' => 7, 'prerequisites' => ['SW-P6-032'], 'corequisites' => []],

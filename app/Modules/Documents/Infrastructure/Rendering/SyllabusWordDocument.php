@@ -4,6 +4,7 @@ namespace App\Modules\Documents\Infrastructure\Rendering;
 
 use App\Modules\Configuration\Domain\TableLayout;
 use App\Modules\Documents\Domain\Data\DocumentRenderInput;
+use App\Modules\Syllabus\Application\IdentificationCard;
 use PhpOffice\PhpWord\Element\Section;
 use PhpOffice\PhpWord\Element\Table;
 use PhpOffice\PhpWord\PhpWord;
@@ -136,31 +137,77 @@ class SyllabusWordDocument
     }
 
     /**
-     * Ficha de identificación: pares etiqueta/valor, uno o dos por fila.
+     * Ficha de identificación calcada del formato: nueve columnas, combinaciones
+     * horizontales con `gridSpan` y verticales con `vMerge`. Las celdas tapadas por
+     * una combinación vertical se rellenan con continuaciones.
      *
-     * @param  list<list<array{label: string, value: string}>>  $rows
+     * @param  list<list<array{text: string, span: int, rows: int, style: string, bold: bool, small: bool, center: bool}>>  $grid
      */
-    private function identification(Section $section, array $rows): void
+    private function identification(Section $section, array $grid): void
     {
         $table = $section->addTable([
             'borderSize' => 4,
             'borderColor' => self::BORDER,
-            'cellMargin' => 60,
+            'cellMargin' => 50,
             'width' => 100 * 50,
             'unit' => TblWidth::PERCENT,
         ]);
-        $label = (int) (self::CONTENT_WIDTH * 0.22);
-        $value = (int) (self::CONTENT_WIDTH * 0.28);
-        foreach ($rows as $pairs) {
+        $widths = array_map(
+            fn (float $percent): int => (int) round(self::CONTENT_WIDTH * $percent / 100),
+            IdentificationCard::WIDTHS,
+        );
+        /** @var array<int, array{rows: int, span: int}> $merged columna => filas pendientes de continuación */
+        $merged = [];
+
+        foreach ($grid as $cells) {
             $row = $table->addRow();
-            foreach ($pairs as $pair) {
-                $row->addCell($label, ['bgColor' => self::LIGHT_BLUE, 'valign' => 'center'])
-                    ->addText(mb_strtoupper($pair['label']), ['bold' => true, 'size' => 8, 'color' => '1F497D'], ['spaceAfter' => 0]);
-                $options = count($pairs) === 1 ? ['gridSpan' => 3] : [];
-                $row->addCell(count($pairs) === 1 ? self::CONTENT_WIDTH - $label : $value, $options)
-                    ->addText($pair['value'], ['size' => 9], ['spaceAfter' => 0]);
+            $column = 0;
+            $queue = $cells;
+            while ($column < count($widths)) {
+                if (isset($merged[$column])) {
+                    $span = $merged[$column]['span'];
+                    $row->addCell($this->width($widths, $column, $span), ['vMerge' => 'continue', 'gridSpan' => $span]);
+                    $merged[$column]['rows']--;
+                    if ($merged[$column]['rows'] <= 0) {
+                        unset($merged[$column]);
+                    }
+                    $column += $span;
+
+                    continue;
+                }
+                $cell = array_shift($queue);
+                if ($cell === null) {
+                    break;
+                }
+                $options = ['valign' => 'center'];
+                if ($cell['span'] > 1) {
+                    $options['gridSpan'] = $cell['span'];
+                }
+                if ($cell['rows'] > 1) {
+                    $options['vMerge'] = 'restart';
+                    $merged[$column] = ['rows' => $cell['rows'] - 1, 'span' => $cell['span']];
+                }
+                if ($cell['style'] === 'blue') {
+                    $options['bgColor'] = self::BLUE;
+                } elseif ($cell['style'] === 'shade') {
+                    $options['bgColor'] = self::LIGHT_BLUE;
+                }
+                $font = [
+                    'bold' => $cell['bold'],
+                    'size' => $cell['small'] ? 7 : 9,
+                    'color' => $cell['style'] === 'blue' ? 'FFFFFF' : '000000',
+                ];
+                $row->addCell($this->width($widths, $column, $cell['span']), $options)
+                    ->addText($cell['text'], $font, ['spaceAfter' => 0, 'alignment' => $cell['center'] ? Jc::CENTER : Jc::START]);
+                $column += $cell['span'];
             }
         }
+    }
+
+    /** @param list<int> $widths */
+    private function width(array $widths, int $from, int $span): int
+    {
+        return (int) array_sum(array_slice($widths, $from, $span));
     }
 
     /** @param array<string, mixed> $container */
@@ -180,10 +227,8 @@ class SyllabusWordDocument
 
         // Bloque institucional: la ficha ya viene armada en la copia de la revisión.
         if ($contentType === 'institutional' || ($field['master_source'] ?? null) === 'asignaturas') {
-            $identification = $this->arrayList($this->snapshotIdentification);
-            if ($identification !== []) {
-                /** @var list<list<array{label: string, value: string}>> $identification */
-                $this->identification($section, $identification);
+            if (is_array($this->snapshotIdentification)) {
+                $this->identification($section, IdentificationCard::grid($this->snapshotIdentification));
 
                 return;
             }

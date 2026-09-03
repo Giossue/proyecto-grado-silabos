@@ -3,6 +3,7 @@ import { Head } from '@inertiajs/vue3';
 import TemplateSheetEditor from '@/components/domain/configuration/TemplateSheetEditor.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
 import ProcessLockAlert from '@/components/domain/ProcessLockAlert.vue';
+import type { IdentificationCell } from '@/components/domain/syllabus/IdentificationCard.vue';
 import type { TableLayout } from '@/lib/tableLayout';
 import { index as templatesIndex } from '@/routes/admin/templates';
 
@@ -44,6 +45,8 @@ defineProps<{
     blockTypes: { value: string; label: string }[];
     /** Motivo por el que la plantilla no se edita; nulo cuando sí se puede. */
     processLock: string | null;
+    /** Ficha de identificación con datos de muestra, ya en cuadrícula. */
+    identificationSample: IdentificationCell[][];
 }>();
 
 defineOptions({
@@ -72,6 +75,7 @@ defineOptions({
             :template-id="template.id"
             :sections="template.sections"
             :block-types="blockTypes"
+            :identification="identificationSample"
             :readonly="processLock !== null"
         />
     </PageFrame>

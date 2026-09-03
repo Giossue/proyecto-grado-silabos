@@ -24,6 +24,7 @@ use App\Modules\Configuration\Presentation\Http\Requests\ReorderTemplateSections
 use App\Modules\Configuration\Presentation\Http\Requests\SaveFieldDefinitionRequest;
 use App\Modules\Configuration\Presentation\Http\Requests\SaveTemplateSectionRequest;
 use App\Modules\Configuration\Presentation\Http\Requests\UpdateTableLayoutRequest;
+use App\Modules\Syllabus\Application\IdentificationCard;
 use App\Modules\Syllabus\Application\ProcessLocks;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
@@ -63,6 +64,7 @@ class TemplateController extends Controller
 
         return Inertia::render('Admin/Templates/Show', [
             'processLock' => $locks->templateLockReason(),
+            'identificationSample' => IdentificationCard::grid(IdentificationCard::sample()),
             'template' => [
                 'id' => $template->id,
                 'name' => $template->nombre,

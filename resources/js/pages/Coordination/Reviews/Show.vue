@@ -5,7 +5,7 @@ import { computed, ref } from 'vue';
 import ReviewController from '@/actions/App/Modules/Syllabus/Presentation/Http/Controllers/ReviewController';
 import PageFrame from '@/components/domain/PageFrame.vue';
 import IdentificationCard from '@/components/domain/syllabus/IdentificationCard.vue';
-import type {IdentificationPair} from '@/components/domain/syllabus/IdentificationCard.vue';
+import type { IdentificationCell } from '@/components/domain/syllabus/IdentificationCard.vue';
 import ReviewObservationSheet from '@/components/domain/syllabus/ReviewObservationSheet.vue';
 import SyllabusResetDialog from '@/components/domain/syllabus/SyllabusResetDialog.vue';
 import SyllabusTableView from '@/components/domain/syllabus/SyllabusTableView.vue';
@@ -105,11 +105,9 @@ const props = defineProps<{
         number: number;
         submitted_at: string;
         submitted_by: string;
-        snapshot: {
-            schema_version: number;
-            identification?: IdentificationPair[][];
-            sections: SnapshotSection[];
-        };
+        snapshot: { schema_version: number; sections: SnapshotSection[] };
+        /** Ficha de identificación en cuadrícula; nula en copias antiguas. */
+        identification: IdentificationCell[][] | null;
         is_current: boolean;
     };
     history: HistoryItem[];
@@ -324,14 +322,12 @@ const observationState = (value: string): string =>
                                         v-if="
                                             block.content_type ===
                                                 'institutional' &&
-                                            revision.snapshot.identification
+                                            revision.identification
                                         "
                                         class="mt-3"
                                     >
                                         <IdentificationCard
-                                            :rows="
-                                                revision.snapshot.identification
-                                            "
+                                            :grid="revision.identification"
                                         />
                                     </dd>
                                     <dd

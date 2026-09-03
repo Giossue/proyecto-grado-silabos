@@ -211,7 +211,7 @@ class SyllabusController extends Controller
             'guardado_en' => $syllabus->guardado_en?->toIso8601String(),
             'parallels' => $syllabus->scopes->pluck('parallel.codigo')->unique()->values(),
             'teachers' => $syllabus->teachers->pluck('nombre')->unique()->values(),
-            'identification' => IdentificationCard::fromSyllabus($syllabus),
+            'identification' => IdentificationCard::grid(IdentificationCard::fromSyllabus($syllabus)),
             'sections' => $syllabus->template->sections
                 ->map(fn (TemplateSection $section): array => $this->sectionPayload($section, $values, $rows))
                 ->values(),
