@@ -176,11 +176,8 @@ const { setEdges, setNodes } = useVueFlow({ id: flowId });
 // sobrante, las tarjetas se centran en él en vez de colgar del borde superior.
 const laneHeight = 238;
 const laneInset = 16;
-// En una carrera híbrida la tarjeta lleva además la etiqueta de modalidad: crece y se
-// vuelve a centrar en el carril para no colgar del borde inferior.
-const subjectHeight = computed(
-    () => 110 + (props.career.modality?.hybrid ? 24 : 0),
-);
+// La tarjeta incluye la fila de modalidad sobre las horas.
+const subjectHeight = computed(() => 124);
 const addSubjectHeight = 36;
 const subjectOffset = computed(() =>
     Math.round((laneHeight - laneInset - subjectHeight.value) / 2),

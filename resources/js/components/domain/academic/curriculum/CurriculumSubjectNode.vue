@@ -150,16 +150,19 @@ const totalFields = computed(
                     <h3 class="text-xs leading-snug font-semibold uppercase">
                         {{ data.subject.name }}
                     </h3>
-                    <!-- Solo las materias apartadas de la base de la carrera lo dicen;
-                         la base va una vez, en la leyenda. -->
-                    <p
-                        v-if="data.subject.modality_label"
-                        class="text-[0.65rem] tracking-wide text-muted-foreground uppercase"
-                    >
-                        {{ data.subject.modality_label }}
-                    </p>
                 </div>
             </div>
+
+            <!-- Modalidad efectiva: la propia de la materia o la base de la carrera. -->
+            <p
+                class="border-t px-2 py-0.5 text-center text-[0.65rem] tracking-wide text-muted-foreground uppercase"
+            >
+                {{
+                    data.subject.modality_label ??
+                    data.career.modality?.label ??
+                    'Sin modalidad'
+                }}
+            </p>
 
             <dl
                 v-if="data.subject.display_fields.length > 0"
