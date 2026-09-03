@@ -17,7 +17,6 @@ const props = defineProps<
         targetOffset: number;
         /** Correquisito del mismo nivel: la línea pasa por encima, no por debajo. */
         sameLevel: boolean;
-        sourceShared: boolean;
         targetShared: boolean;
     }>
 >();

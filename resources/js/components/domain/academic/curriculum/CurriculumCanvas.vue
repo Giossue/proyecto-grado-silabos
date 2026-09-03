@@ -385,89 +385,107 @@ const buildNodes = (): Node[] => {
 // apartan hacia un lado para no pisarla.
 const EDGE_SPACING = 18;
 
-const edgeOffsets = (): Map<string, { source: number; target: number }> => {
+type Requirement = (typeof props.requirements)[number];
+
+/*
+ * Reparto de las líneas en cada conector. Por abajo salen prerrequisitos y
+ * correquisitos hacia otros niveles; por arriba llegan todas las líneas y, además,
+ * apoyan sus dos extremos los correquisitos del mismo nivel (van por encima). Todo lo
+ * que toca el borde superior de una tarjeta se reparte en un mismo grupo: si el extremo
+ * de salida de un correquisito se repartiera aparte, caería sobre una llegada.
+ */
+const edgeOffsets = (
+    sameLevelIds: Set<string>,
+): Map<string, { source: number; target: number; topShared: boolean }> => {
     const orderKey = (subjectId: string): number => {
         const subject = subjectById.value.get(subjectId);
 
         return subject ? (subject.cycle ?? 0) * 1000 + subject.position : 0;
     };
-    const groupOffsets = (
-        groupBy: (requirement: (typeof props.requirements)[number]) => string,
-        counterpart: (
-            requirement: (typeof props.requirements)[number],
-        ) => string,
-    ): Map<string, number> => {
-        const groups = new Map<string, typeof props.requirements>();
-        props.requirements.forEach((requirement) => {
-            const key = groupBy(requirement);
-            groups.set(key, [...(groups.get(key) ?? []), requirement]);
-        });
-        const offsets = new Map<string, number>();
-        groups.forEach((group) => {
-            [...group]
-                .sort(
-                    (left, right) =>
-                        orderKey(counterpart(left)) -
-                        orderKey(counterpart(right)),
-                )
-                .forEach((requirement, index) => {
-                    offsets.set(requirement.id, index * EDGE_SPACING);
-                });
-        });
-
-        return offsets;
+    type End = { requirement: Requirement; end: 'source' | 'target' };
+    const bottom = new Map<string, End[]>();
+    const top = new Map<string, End[]>();
+    const push = (map: Map<string, End[]>, key: string, end: End): void => {
+        map.set(key, [...(map.get(key) ?? []), end]);
     };
+    props.requirements.forEach((requirement) => {
+        push(top, requirement.subject_id, { requirement, end: 'target' });
 
-    const sourceOffsets = groupOffsets(
-        (requirement) => requirement.requirement_id,
-        (requirement) => requirement.subject_id,
-    );
-    const targetOffsets = groupOffsets(
-        (requirement) => requirement.subject_id,
-        (requirement) => requirement.requirement_id,
-    );
+        if (sameLevelIds.has(requirement.id)) {
+            push(top, requirement.requirement_id, {
+                requirement,
+                end: 'source',
+            });
+        } else {
+            push(bottom, requirement.requirement_id, {
+                requirement,
+                end: 'source',
+            });
+        }
+    });
+    const counterpart = (end: End): string =>
+        end.end === 'target'
+            ? end.requirement.requirement_id
+            : end.requirement.subject_id;
+    const result = new Map<
+        string,
+        { source: number; target: number; topShared: boolean }
+    >();
+    const entry = (id: string) => {
+        const current = result.get(id) ?? {
+            source: 0,
+            target: 0,
+            topShared: false,
+        };
+        result.set(id, current);
 
-    return new Map(
-        props.requirements.map((requirement) => [
-            requirement.id,
-            {
-                source: sourceOffsets.get(requirement.id) ?? 0,
-                target: targetOffsets.get(requirement.id) ?? 0,
-            },
-        ]),
-    );
+        return current;
+    };
+    [bottom, top].forEach((map, index) => {
+        map.forEach((ends) => {
+            const sorted = [...ends].sort(
+                (left, right) =>
+                    orderKey(counterpart(left)) - orderKey(counterpart(right)),
+            );
+            sorted.forEach((end, slot) => {
+                const current = entry(end.requirement.id);
+                current[end.end] = slot * EDGE_SPACING;
+
+                if (index === 1 && sorted.length > 1) {
+                    current.topShared = true;
+                }
+            });
+        });
+    });
+
+    return result;
 };
 
 const buildEdges = (): Edge[] => {
-    const offsets = edgeOffsets();
-
     const cycleOf = new Map(
         props.subjects.map((subject) => [subject.id, subject.cycle]),
     );
-    const incoming = new Map<string, number>();
-    const outgoing = new Map<string, number>();
-    props.requirements.forEach((requirement) => {
-        incoming.set(
-            requirement.subject_id,
-            (incoming.get(requirement.subject_id) ?? 0) + 1,
-        );
-        outgoing.set(
-            requirement.requirement_id,
-            (outgoing.get(requirement.requirement_id) ?? 0) + 1,
-        );
-    });
+    // Un correquisito del mismo nivel se dibuja por encima de las tarjetas, como en la
+    // malla oficial, con punta en los dos extremos; por debajo cruzaba las horas.
+    const sameLevelIds = new Set(
+        props.requirements
+            .filter(
+                (requirement) =>
+                    requirement.type === 'correquisito' &&
+                    cycleOf.get(requirement.requirement_id) ===
+                        cycleOf.get(requirement.subject_id),
+            )
+            .map((requirement) => requirement.id),
+    );
+    const offsets = edgeOffsets(sameLevelIds);
 
     return props.requirements.map((requirement) => {
         const color =
             requirement.type === 'correquisito'
                 ? 'var(--primary)'
                 : 'var(--destructive)';
-        // Un correquisito del mismo nivel se dibuja por encima de las tarjetas, como en la
-        // malla oficial, con punta en los dos extremos; por debajo cruzaba las horas.
-        const sameLevel =
-            requirement.type === 'correquisito' &&
-            cycleOf.get(requirement.requirement_id) ===
-                cycleOf.get(requirement.subject_id);
+        const sameLevel = sameLevelIds.has(requirement.id);
+        const offset = offsets.get(requirement.id);
 
         return {
             id: requirement.id,
@@ -496,14 +514,12 @@ const buildEdges = (): Edge[] => {
                     requirement.type === 'correquisito'
                         ? 'Correquisito'
                         : 'Prerrequisito',
-                sourceOffset: offsets.get(requirement.id)?.source ?? 0,
-                targetOffset: offsets.get(requirement.id)?.target ?? 0,
+                sourceOffset: offset?.source ?? 0,
+                targetOffset: offset?.target ?? 0,
                 sameLevel,
-                // Con varias líneas en un conector, cada una conserva su reparto: si una
-                // se recentrara, caería sobre la vecina.
-                sourceShared:
-                    (outgoing.get(requirement.requirement_id) ?? 0) > 1,
-                targetShared: (incoming.get(requirement.subject_id) ?? 0) > 1,
+                // Con varias líneas en el borde superior, cada una conserva su reparto:
+                // si una se recentrara, caería sobre la vecina.
+                targetShared: offset?.topShared ?? false,
             },
         };
     });
