@@ -15,8 +15,13 @@ const props = defineProps<
         // se desplaza horizontalmente para que no se pisen en el conector.
         sourceOffset: number;
         targetOffset: number;
+        /** Correquisito del mismo nivel: la línea pasa por encima, no por debajo. */
+        sameLevel: boolean;
     }>
 >();
+
+// Cuánto sube la línea sobre el borde superior de las tarjetas del mismo nivel.
+const OVERPASS_RISE = 18;
 
 const { screenToFlowCoordinate } = useVueFlow();
 
@@ -38,16 +43,33 @@ const endpoints = computed(() => {
         : { sourceX, targetX };
 });
 
-const pathData = computed(() =>
-    getSmoothStepPath({
+const pathData = computed((): [string, number, number] => {
+    if (props.data.sameLevel) {
+        // Ambas tarjetas comparten altura: el borde superior de la salida está a la
+        // misma Y que el conector de llegada. Sube, cruza y baja, con punta en ambos.
+        const top = props.targetY;
+        const rise = top - OVERPASS_RISE;
+        const sourceX = props.sourceX;
+        const targetX = props.targetX + props.data.targetOffset;
+
+        return [
+            `M ${sourceX} ${top} V ${rise} H ${targetX} V ${top}`,
+            (sourceX + targetX) / 2,
+            rise,
+        ];
+    }
+
+    const [path, labelX, labelY] = getSmoothStepPath({
         sourceX: endpoints.value.sourceX,
         sourceY: props.sourceY,
         sourcePosition: props.sourcePosition,
         targetX: endpoints.value.targetX,
         targetY: props.targetY,
         targetPosition: props.targetPosition,
-    }),
-);
+    });
+
+    return [path, labelX, labelY];
+});
 const path = computed(() => pathData.value[0]);
 
 // La etiqueta sigue al cursor sobre la línea: en el punto medio fijo quedaba
@@ -81,6 +103,7 @@ const onFocusIn = (): void => {
             :path="path"
             :style="style"
             :marker-end="markerEnd"
+            :marker-start="markerStart"
             :interaction-width="24"
         />
     </g>

@@ -440,11 +440,21 @@ const edgeOffsets = (): Map<string, { source: number; target: number }> => {
 const buildEdges = (): Edge[] => {
     const offsets = edgeOffsets();
 
+    const cycleOf = new Map(
+        props.subjects.map((subject) => [subject.id, subject.cycle]),
+    );
+
     return props.requirements.map((requirement) => {
         const color =
             requirement.type === 'correquisito'
                 ? 'var(--primary)'
                 : 'var(--destructive)';
+        // Un correquisito del mismo nivel se dibuja por encima de las tarjetas, como en la
+        // malla oficial, con punta en los dos extremos; por debajo cruzaba las horas.
+        const sameLevel =
+            requirement.type === 'correquisito' &&
+            cycleOf.get(requirement.requirement_id) ===
+                cycleOf.get(requirement.subject_id);
 
         return {
             id: requirement.id,
@@ -457,6 +467,16 @@ const buildEdges = (): Edge[] => {
                 width: 16,
                 height: 16,
             },
+            ...(sameLevel
+                ? {
+                      markerStart: {
+                          type: MarkerType.ArrowClosed,
+                          color,
+                          width: 16,
+                          height: 16,
+                      },
+                  }
+                : {}),
             style: { stroke: color, strokeWidth: 2 },
             data: {
                 label:
@@ -465,6 +485,7 @@ const buildEdges = (): Edge[] => {
                         : 'Prerrequisito',
                 sourceOffset: offsets.get(requirement.id)?.source ?? 0,
                 targetOffset: offsets.get(requirement.id)?.target ?? 0,
+                sameLevel,
             },
         };
     });
