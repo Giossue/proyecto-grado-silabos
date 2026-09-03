@@ -5,6 +5,7 @@ namespace Tests\Feature\Documents;
 use App\Modules\Documents\Domain\Contracts\DocumentRenderer;
 use App\Modules\Documents\Domain\Data\DocumentRenderInput;
 use App\Modules\Documents\Infrastructure\Rendering\PhpWordDocumentRenderer;
+use App\Modules\Syllabus\Application\IdentificationCard;
 use Tests\TestCase;
 use ZipArchive;
 
@@ -43,10 +44,16 @@ class WordRendererTest extends TestCase
         @unlink($temporary);
         $this->assertIsString($document);
 
+        // Ficha de identificación institucional desde la copia de la revisión.
+        $this->assertStringContainsString('FACULTAD', $document);
+        $this->assertStringContainsString('Ciencias Administrativas', $document);
+        $this->assertStringContainsString('SW-P6-032', $document);
+        $this->assertStringContainsString('docente@ueb.edu.ec', $document);
+
         // Bloque y campo numerados, metadatos y texto libre.
-        $this->assertStringContainsString('1. Unidades y planificación', $document);
-        $this->assertStringContainsString('1.1 Planificación', $document);
-        $this->assertStringContainsString('2.1 Descripción', $document);
+        $this->assertStringContainsString('2. Unidades y planificación', $document);
+        $this->assertStringContainsString('2.1 Planificación', $document);
+        $this->assertStringContainsString('3.1 Descripción', $document);
         $this->assertStringContainsString('Descripción libre', $document);
         $this->assertStringContainsString(str_repeat('ab', 32), $document);
 
@@ -103,7 +110,28 @@ class WordRendererTest extends TestCase
         return [
             'schema_version' => 2,
             'template_id' => '01a064a5-1d6d-7196-b189-05376ff0929d',
+            'identification' => IdentificationCard::rows(
+                [
+                    'career' => ['name' => 'Software', 'faculty' => 'Ciencias Administrativas, Gestión Empresarial e Informática'],
+                    'subject' => ['name' => 'Inteligencia Artificial', 'code' => 'SW-P7-037', 'cycle' => 7, 'prerequisites' => ['SW-P6-032'], 'corequisites' => []],
+                    'offering' => ['period' => 'Marzo – Julio 2026', 'campus' => 'Matriz', 'modality' => 'Presencial'],
+                ],
+                ['A'],
+                ['PAUL GUARANGA'],
+                ['docente@ueb.edu.ec'],
+            ),
             'sections' => [
+                [
+                    'key' => 'identificacion',
+                    'title' => 'Identificación institucional',
+                    'blocks' => [[
+                        'key' => 'identificacion_principal',
+                        'title' => 'Identificación institucional',
+                        'content_type' => 'institutional',
+                        'table' => null,
+                        'fields' => [['key' => 'asignatura', 'label' => 'Identificación institucional', 'type' => 'repetible', 'inherited' => true, 'master_source' => 'asignaturas', 'value' => ['codigo' => 'SW-P7-037'], 'rows' => []]],
+                    ]],
+                ],
                 [
                     'key' => 'unidades',
                     'title' => 'Unidades y planificación',

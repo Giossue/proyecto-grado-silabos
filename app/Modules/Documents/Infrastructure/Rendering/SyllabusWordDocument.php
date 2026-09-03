@@ -37,9 +37,12 @@ class SyllabusWordDocument
     /** @var array<string, mixed> */
     private array $paragraph = ['spaceAfter' => 120, 'spaceBefore' => 0, 'lineHeight' => 1.15];
 
+    private mixed $snapshotIdentification = null;
+
     public function build(DocumentRenderInput $input): PhpWord
     {
         Settings::setOutputEscapingEnabled(true);
+        $this->snapshotIdentification = $input->snapshot['identification'] ?? null;
 
         $word = new PhpWord;
         $word->setDefaultFontName(self::FONT);
@@ -78,7 +81,6 @@ class SyllabusWordDocument
             ['bold' => true, 'size' => 16, 'color' => self::TITLE_BLUE],
             ['alignment' => Jc::CENTER, 'spaceBefore' => 240, 'spaceAfter' => 240],
         );
-        $this->metadata($section, $input);
 
         foreach ($this->arrayList($input->snapshot['sections'] ?? null) as $sectionIndex => $block) {
             $number = $sectionIndex + 1;
@@ -91,6 +93,8 @@ class SyllabusWordDocument
                 $this->field($section, $container, $number.'.'.($fieldIndex + 1));
             }
         }
+
+        $this->metadata($section, $input);
 
         return $word;
     }
@@ -115,14 +119,29 @@ class SyllabusWordDocument
         }
     }
 
+    /** Pie con la trazabilidad de la revisión: huella y fecha, en letra pequeña. */
     private function metadata(Section $section, DocumentRenderInput $input): void
     {
-        $lines = [
-            ['Asignatura', $input->subject.' ('.$input->subjectCode.')'],
-            ['Periodo académico', $input->academicPeriod],
-            ['Revisión', $input->revisionNumber.' · huella '.$input->revisionFingerprint],
-            ['Generado', $input->generatedAt],
-        ];
+        $section->addText(
+            sprintf(
+                'Revisión %d · %s · huella %s · generado %s',
+                $input->revisionNumber,
+                $input->subject.' ('.$input->subjectCode.')',
+                $input->revisionFingerprint,
+                $input->generatedAt,
+            ),
+            ['size' => 7, 'color' => '7F7F7F'],
+            ['spaceBefore' => 360, 'spaceAfter' => 0],
+        );
+    }
+
+    /**
+     * Ficha de identificación: pares etiqueta/valor, uno o dos por fila.
+     *
+     * @param  list<list<array{label: string, value: string}>>  $rows
+     */
+    private function identification(Section $section, array $rows): void
+    {
         $table = $section->addTable([
             'borderSize' => 4,
             'borderColor' => self::BORDER,
@@ -130,14 +149,18 @@ class SyllabusWordDocument
             'width' => 100 * 50,
             'unit' => TblWidth::PERCENT,
         ]);
-        foreach ($lines as [$label, $value]) {
+        $label = (int) (self::CONTENT_WIDTH * 0.22);
+        $value = (int) (self::CONTENT_WIDTH * 0.28);
+        foreach ($rows as $pairs) {
             $row = $table->addRow();
-            $row->addCell(2800, ['bgColor' => self::LIGHT_BLUE])
-                ->addText($label, ['bold' => true, 'size' => 9], ['spaceAfter' => 0]);
-            $row->addCell(self::CONTENT_WIDTH - 2800)
-                ->addText($value, ['size' => 9], ['spaceAfter' => 0]);
+            foreach ($pairs as $pair) {
+                $row->addCell($label, ['bgColor' => self::LIGHT_BLUE, 'valign' => 'center'])
+                    ->addText(mb_strtoupper($pair['label']), ['bold' => true, 'size' => 8, 'color' => '1F497D'], ['spaceAfter' => 0]);
+                $options = count($pairs) === 1 ? ['gridSpan' => 3] : [];
+                $row->addCell(count($pairs) === 1 ? self::CONTENT_WIDTH - $label : $value, $options)
+                    ->addText($pair['value'], ['size' => 9], ['spaceAfter' => 0]);
+            }
         }
-        $section->addTextBreak(1, [], ['spaceAfter' => 0]);
     }
 
     /** @param array<string, mixed> $container */
@@ -154,6 +177,17 @@ class SyllabusWordDocument
 
         $contentType = $this->string($container['content_type'] ?? null, 'text');
         $rows = $this->arrayList($field['rows'] ?? null);
+
+        // Bloque institucional: la ficha ya viene armada en la copia de la revisión.
+        if ($contentType === 'institutional' || ($field['master_source'] ?? null) === 'asignaturas') {
+            $identification = $this->arrayList($this->snapshotIdentification);
+            if ($identification !== []) {
+                /** @var list<list<array{label: string, value: string}>> $identification */
+                $this->identification($section, $identification);
+
+                return;
+            }
+        }
 
         if ($contentType === 'table' || ($rows !== [] && $contentType === 'text')) {
             $layout = is_array($container['table'] ?? null)

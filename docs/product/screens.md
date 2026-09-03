@@ -122,6 +122,8 @@
   numerados «1.» y campos «1.1» en negrita, márgenes de 2.5 cm, tablas con cabecera azul y
   filas alternas celestes. El formato lo pone la plantilla; el docente solo llena
   contenido.
+- La ficha de identificación institucional (bloque «Asignatura», heredado) se pinta fija
+  con datos de la malla, la oferta y los docentes; no se diseña ni se llena (I-34).
 - Las tablas se diseñan sobre la misma hoja (I-34), como en Word. Al soltar «Tabla» se
   elige un formato institucional listo (planificación por unidades, bibliografía, escala,
   perfil de egreso o tabla simple). Cada celda de cabecera tiene menú ⋯: insertar a la

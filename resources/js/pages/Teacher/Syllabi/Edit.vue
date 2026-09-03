@@ -12,6 +12,8 @@ import { computed, onBeforeUnmount, reactive, ref } from 'vue';
 import AiAssistanceController from '@/actions/App/Modules/AiAssistance/Presentation/Http/Controllers/AiAssistanceController';
 import SyllabusController from '@/actions/App/Modules/Syllabus/Presentation/Http/Controllers/SyllabusController';
 import PageFrame from '@/components/domain/PageFrame.vue';
+import IdentificationCard from '@/components/domain/syllabus/IdentificationCard.vue';
+import type {IdentificationPair} from '@/components/domain/syllabus/IdentificationCard.vue';
 import SyllabusTableEditor from '@/components/domain/syllabus/SyllabusTableEditor.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -127,6 +129,7 @@ const props = defineProps<{
         guardado_en: string | null;
         parallels: string[];
         teachers: string[];
+        identification: IdentificationPair[][];
         sections: DraftSection[];
         validation: ValidationSummary | null;
         observations: ReviewObservation[];
@@ -738,8 +741,16 @@ onBeforeUnmount(() => {
                                     {{ field.help }}
                                 </FieldDescription>
 
-                                <div
+                                <IdentificationCard
                                     v-if="
+                                        block.content_type === 'institutional'
+                                    "
+                                    :id="`field-${field.id}`"
+                                    :rows="syllabus.identification"
+                                />
+
+                                <div
+                                    v-else-if="
                                         field.inherited ||
                                         !field.teacher_editable
                                     "

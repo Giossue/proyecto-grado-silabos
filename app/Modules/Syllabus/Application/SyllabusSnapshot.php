@@ -34,6 +34,8 @@ class SyllabusSnapshot
             // sí misma aunque la plantilla haya cambiado después.
             'document_mapping' => $syllabus->template->mapeo_documento,
             'academic_context' => $syllabus->contexto_academico,
+            // Ficha de identificación ya armada: el documento no vuelve a consultar la malla.
+            'identification' => IdentificationCard::fromSyllabus($syllabus),
             'sections' => $syllabus->template->sections
                 ->map(fn (TemplateSection $section): array => [
                     'key' => $section->clave,
@@ -52,6 +54,7 @@ class SyllabusSnapshot
                             'label' => $field->etiqueta,
                             'type' => $field->tipo,
                             'inherited' => $field->heredado,
+                            'master_source' => $field->origen_maestro,
                             'document_marker' => $field->marcador_documento,
                             'value' => $values->get($field->id)?->valor,
                             'rows' => ($rows->get($field->id) ?? collect())->map(fn (RepeatableRow $row): array => [

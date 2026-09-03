@@ -17,6 +17,7 @@ import { toast } from 'vue-sonner';
 import TemplateController from '@/actions/App/Modules/Configuration/Presentation/Http/Controllers/TemplateController';
 import TemplateFieldSheet from '@/components/domain/configuration/TemplateFieldSheet.vue';
 import TemplateTableDesigner from '@/components/domain/configuration/TemplateTableDesigner.vue';
+import IdentificationCard from '@/components/domain/syllabus/IdentificationCard.vue';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -109,6 +110,53 @@ const PALETTE: { type: ContentType; label: string; icon: typeof Type }[] = [
 const LOREM_PARAGRAPHS = [
     'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.',
     'Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.',
+];
+
+/** La ficha de identificación se llena sola desde la malla y la oferta. */
+const SAMPLE_IDENTIFICATION = [
+    [
+        {
+            label: 'Facultad',
+            value: 'Ciencias Administrativas, Gestión Empresarial e Informática',
+        },
+    ],
+    [
+        { label: 'Carrera', value: 'Software' },
+        { label: 'Modalidad de estudio o aprendizaje', value: 'Presencial' },
+    ],
+    [{ label: 'Campus universitario', value: 'Matriz' }],
+    [
+        { label: 'Asignatura', value: 'Lorem ipsum' },
+        { label: 'Periodo académico', value: 'Marzo – Julio 2026' },
+    ],
+    [
+        { label: 'Ciclo', value: 'Séptimo' },
+        { label: 'Paralelo', value: 'A' },
+    ],
+    [
+        { label: 'Código', value: 'SW-P7-037' },
+        { label: 'Unidad de organización curricular', value: 'Profesional' },
+    ],
+    [
+        { label: 'Prerrequisitos', value: 'SW-P6-032' },
+        { label: 'Correquisitos', value: 'Ninguno' },
+    ],
+    [
+        { label: 'Horas de docencia (ACD)', value: '32' },
+        {
+            label: 'Horas de aprendizaje práctico-experimental (APE)',
+            value: '16',
+        },
+    ],
+    [
+        { label: 'Horas de aprendizaje autónomo (AA)', value: '48' },
+        { label: 'Total de horas por periodo', value: '96' },
+    ],
+    [{ label: 'Total de créditos', value: '2' }],
+    [
+        { label: 'Nombre del docente', value: 'NOMBRE DEL DOCENTE' },
+        { label: 'Correo institucional', value: 'docente@ueb.edu.ec' },
+    ],
 ];
 
 const LOREM_ITEMS = [
@@ -972,11 +1020,19 @@ const dropOnFieldZone = (section: TemplateSection, index: number): void => {
                                                 </Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
-                                                <DropdownMenuLabel>
+                                                <DropdownMenuLabel
+                                                    v-if="
+                                                        container.content_type !==
+                                                        'institutional'
+                                                    "
+                                                >
                                                     Tipo de contenido
                                                 </DropdownMenuLabel>
                                                 <DropdownMenuItem
-                                                    v-for="type in blockTypes"
+                                                    v-for="type in container.content_type ===
+                                                    'institutional'
+                                                        ? []
+                                                        : blockTypes"
                                                     :key="type.value"
                                                     @select="
                                                         changeType(
@@ -1096,8 +1152,18 @@ const dropOnFieldZone = (section: TemplateSection, index: number): void => {
                                     </div>
                                 </div>
 
+                                <IdentificationCard
+                                    v-if="
+                                        container.content_type ===
+                                        'institutional'
+                                    "
+                                    :rows="SAMPLE_IDENTIFICATION"
+                                />
+
                                 <TemplateTableDesigner
-                                    v-if="container.content_type === 'table'"
+                                    v-else-if="
+                                        container.content_type === 'table'
+                                    "
                                     :layout="
                                         container.table ?? defaultTableLayout()
                                     "

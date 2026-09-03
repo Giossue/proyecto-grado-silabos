@@ -14,6 +14,7 @@ use App\Modules\Syllabus\Application\Actions\StartDraft;
 use App\Modules\Syllabus\Application\Actions\SubmitSyllabus;
 use App\Modules\Syllabus\Application\Actions\UpdateDraftField;
 use App\Modules\Syllabus\Application\Actions\ValidateDraft;
+use App\Modules\Syllabus\Application\IdentificationCard;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\FieldValue;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\RepeatableRow;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\ReviewObservation;
@@ -210,6 +211,7 @@ class SyllabusController extends Controller
             'guardado_en' => $syllabus->guardado_en?->toIso8601String(),
             'parallels' => $syllabus->scopes->pluck('parallel.codigo')->unique()->values(),
             'teachers' => $syllabus->teachers->pluck('nombre')->unique()->values(),
+            'identification' => IdentificationCard::fromSyllabus($syllabus),
             'sections' => $syllabus->template->sections
                 ->map(fn (TemplateSection $section): array => $this->sectionPayload($section, $values, $rows))
                 ->values(),

@@ -52,6 +52,13 @@ defecto de las tablas sin esquema y de las listas.
 - [x] Cuadrícula del docente (`SyllabusTableEditor`): casilla por celda, unidades, totales
       calculados; validación de celdas escalares.
 - [x] Vista de revisión (`SyllabusTableView`) con el esquema copiado en la revisión.
+- [x] Ficha de identificación institucional (`IdentificationCard`): primera tabla del
+      formato, armada desde la malla, la oferta, los paralelos y los docentes
+      (facultad, carrera, modalidad, campus, asignatura, periodo, ciclo, paralelo, código,
+      unidad de organización, prerrequisitos, correquisitos, horas ACD/APE/AA, total,
+      créditos, docente, correo). El bloque heredado «Asignatura» pasa a
+      `content_type = institutional`; la hoja, el editor docente, la revisión y el Word
+      la pintan fija. Se copia armada en cada revisión (`snapshot.identification`).
 - [x] `PhpWordDocumentRenderer`: DOCX con el estándar del impreso y tablas con
       `gridSpan`/`vMerge`; bytes reproducibles (fechas y `nsid` fijos). PDF sigue en
       texto plano de respaldo (`PlainTextPdf`).

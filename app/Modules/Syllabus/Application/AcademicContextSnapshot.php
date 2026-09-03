@@ -4,6 +4,7 @@ namespace App\Modules\Syllabus\Application;
 
 use App\Modules\Academic\Infrastructure\Persistence\Models\CourseOffering;
 use App\Modules\Academic\Infrastructure\Persistence\Models\SubjectFieldValue;
+use App\Modules\Academic\Infrastructure\Persistence\Models\SubjectRequirement;
 
 class AcademicContextSnapshot
 {
@@ -11,7 +12,8 @@ class AcademicContextSnapshot
     public function build(CourseOffering $offering): array
     {
         $offering->loadMissing([
-            'subject.curriculum',
+            'subject.curriculum.career.faculty',
+            'subject.requirements.requirement',
             'subject.fieldValues.definition',
             'academicPeriod',
             'campus',
@@ -19,9 +21,23 @@ class AcademicContextSnapshot
         ]);
         $subject = $offering->subject;
         $curriculum = $subject->curriculum;
+        $career = $curriculum->career;
+        $requirementCodes = fn (string $type): array => $subject->requirements
+            ->where('tipo', $type)
+            ->map(fn (SubjectRequirement $requirement): string => $requirement->requirement->codigo_institucional)
+            ->sort()
+            ->values()
+            ->all();
 
         return [
             'schema_version' => 1,
+            // La ficha de identificación (I-34) sale de aquí: carrera, facultad y requisitos.
+            'career' => [
+                'id' => $career->id,
+                'code' => $career->codigo_institucional,
+                'name' => $career->nombre,
+                'faculty' => $career->faculty?->nombre,
+            ],
             'curriculum' => [
                 'id' => $curriculum->id,
                 'code' => $curriculum->codigo,
@@ -42,6 +58,8 @@ class AcademicContextSnapshot
                 'hours_pae' => $subject->horas_pae,
                 'hours_aa' => $subject->horas_aa,
                 'hours_paec' => $subject->horas_paec,
+                'prerequisites' => $requirementCodes('prerrequisito'),
+                'corequisites' => $requirementCodes('correquisito'),
                 'custom_fields' => $subject->fieldValues
                     ->map(fn (SubjectFieldValue $value): array => [
                         'key' => $value->definition->clave,
