@@ -123,12 +123,14 @@ class UpdateAcademicRecord
             ],
             'carrera' => [
                 'facultad_id' => $data['faculty_id'],
+                'modalidad_id' => $data['modality_id'],
                 'codigo_institucional' => $data['code'] ?? null,
                 'nombre' => $data['nombre'],
             ],
             'modalidad' => [
                 'codigo' => $data['code'],
                 'nombre' => $data['nombre'],
+                'combina_por_asignatura' => (bool) ($data['per_subject'] ?? false),
             ],
             'periodo' => [
                 'codigo' => $data['code'],

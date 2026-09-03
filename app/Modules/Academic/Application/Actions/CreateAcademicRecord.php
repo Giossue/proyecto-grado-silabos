@@ -3,6 +3,7 @@
 namespace App\Modules\Academic\Application\Actions;
 
 use App\Models\User;
+use App\Modules\Academic\Application\OfferingModality;
 use App\Modules\Academic\Domain\AcademicStructurePermissions;
 use App\Modules\Academic\Domain\CurriculumSystemFields;
 use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
@@ -40,6 +41,7 @@ class CreateAcademicRecord
         private readonly InProgressWork $work,
         private readonly SyncSubjectFieldValues $syncSubjectFieldValues,
         private readonly InstitutionalLogos $logos,
+        private readonly OfferingModality $modalities,
     ) {}
 
     /** @param array<string, mixed> $data */
@@ -97,6 +99,7 @@ class CreateAcademicRecord
             'facultad' => $this->createFaculty($data),
             'carrera' => Career::query()->create([
                 'facultad_id' => $data['faculty_id'],
+                'modalidad_id' => $data['modality_id'],
                 'codigo_institucional' => $data['code'] ?? null,
                 'nombre' => $data['nombre'],
                 'activo' => true,
@@ -109,6 +112,7 @@ class CreateAcademicRecord
             'modalidad' => Modality::query()->create([
                 'codigo' => $data['code'],
                 'nombre' => $data['nombre'],
+                'combina_por_asignatura' => (bool) ($data['per_subject'] ?? false),
                 'activo' => true,
             ]),
             'periodo' => AcademicPeriod::query()->create([
@@ -201,6 +205,7 @@ class CreateAcademicRecord
             'ciclo' => $data['cycle'] ?? null,
             'orden_en_ciclo' => $position,
             'unidad_organizacion_curricular' => $data['organization_unit'] ?? null,
+            'modalidad_id' => $this->modalities->subjectModalityId($curriculum->career, $data),
             'creditos' => $data['creditos'] ?? null,
             'horas_totales' => CurriculumSystemFields::totalHours($data, $activeSystemKeys),
             'horas_proyecto' => $data['hours_project'] ?? null,
@@ -248,7 +253,8 @@ class CreateAcademicRecord
             'periodo_academico_id' => $period->id,
             'asignatura_id' => $subject->id,
             'campus_id' => $data['campus_id'],
-            'modalidad_id' => $data['modality_id'],
+            // Heredada: la fija la carrera, o la materia si la carrera combina modalidades.
+            'modalidad_id' => $this->modalities->forSubject($subject)->id,
             'activo' => true,
         ]);
     }

@@ -112,8 +112,9 @@
   que funcionan como campos compuestos, como el selector de fecha.
 - Editor y revisión usan navegación por secciones, completitud, errores, observaciones y
   estado de guardado sin saturar la pantalla.
-- «Nueva plantilla» crea de una vez el formato oficial completo (doce secciones, campos,
-  tablas armadas y ficha de identificación); Administración solo ajusta sobre la hoja.
+- «Nueva plantilla» crea de inmediato el formato oficial completo (doce secciones,
+  campos, tablas armadas y ficha de identificación) y abre su constructor; no muestra un
+  `Sheet` porque no requiere datos. Administración solo ajusta sobre la hoja.
 - ADM-06 se arma sobre la hoja tal como se imprimirá (I-33). Una paleta fija ofrece
   Bloque, Texto, Tabla, Lista con viñetas y Lista numerada: se arrastran a la hoja (una
   línea azul marca dónde caerán) o se pulsan para agregar al final del bloque activo. Los
@@ -159,9 +160,14 @@ DOC-01 llena una cuadrícula con una casilla por celda, unidades y totales calcu
 - Los estados usan las mismas etiquetas y colores en todo el producto.
 - Los IDs internos y detalles de infraestructura no se muestran.
 - ADM-04 usa el submenú **Estructura académica** con rutas independientes para Facultades,
-  Carreras, Campus, Modalidades y Periodos académicos. Carreras muestra su Facultad y
-  Facultades muestra la cantidad relacionada; los catálogos no se mezclan ni se ocultan
-  en pestañas.
+  Carreras, Campus, Modalidades y Periodos académicos. Carreras muestra su Facultad y su
+  Modalidad, Facultades muestra la cantidad relacionada; los catálogos no se mezclan ni
+  se ocultan en pestañas.
+- La modalidad se fija por carrera (obligatoria al crearla; la aprueba el CES) y no por
+  oferta. Una modalidad con alcance «Por materia» (híbrida) hace que cada materia de la
+  malla pida la suya en COR-13 (campo, columna del desglose y etiqueta en la tarjeta).
+  COR-14 abre ofertas sin selector de modalidad: la hereda de la materia o de la carrera
+  y la muestra en el listado (I-35).
 - COR-13 usa una única entrada **Malla**. Si existe, la ruta abre directamente la página
   completa con **Desglose académico** y **Constructor visual**; si no existe, muestra el
   estado vacío universal y la acción para crearla. No presenta buscador, filtros, cards,
@@ -209,7 +215,7 @@ DOC-01 llena una cuadrícula con una casilla por celda, unidades y totales calcu
 
 | Rol           | Interfaces cubiertas                                       | Comportamiento                                                                                                                             |
 | ------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Administrador | ADM-02, ADM-03, ADM-04, ADM-05, ADM-06 y ADM-12            | Cuentas, roles, catálogos, coordinaciones, plantillas, campos y procesos de sílabos se crean desde una acción que abre el `Sheet` derecho. |
+| Administrador | ADM-02, ADM-03, ADM-04, ADM-05, ADM-06 y ADM-12            | Cuentas, roles, catálogos, coordinaciones, campos y procesos de sílabos se crean desde una acción que abre el `Sheet` derecho. La única plantilla institucional se crea de inmediato porque no pide datos. |
 | Coordinador   | COR-02, COR-06, COR-11, COR-13, COR-14 y COR-15            | Convocatorias, observaciones, fuentes, mallas, materias, ofertas, paralelos y asignaciones docentes usan el mismo patrón.                  |
 | Docente       | DOC-02 a DOC-10                                            | No administra colecciones maestras. Edición, IA, envío y respuestas son flujos académicos de página completa, no formularios de alta.      |
 

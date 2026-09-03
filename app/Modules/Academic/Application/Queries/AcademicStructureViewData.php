@@ -23,6 +23,7 @@ use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
 use App\Modules\Syllabus\Application\ProcessLocks;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\SyllabusCollaborator;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\SyllabusScope;
+use Illuminate\Database\Eloquent\Collection;
 
 class AcademicStructureViewData
 {
@@ -47,11 +48,14 @@ class AcademicStructureViewData
                         'logo_url' => route('logos.faculty', ['faculty' => $faculty->id, 'v' => $this->logos->version($this->logos->facultyPath($faculty))]),
                     ]),
                 'careers' => Career::query()
+                    ->with('modality:id,nombre')
                     ->orderBy('nombre')
-                    ->get(['id', 'facultad_id', 'codigo_institucional', 'nombre', 'activo'])
+                    ->get(['id', 'facultad_id', 'modalidad_id', 'codigo_institucional', 'nombre', 'activo'])
                     ->map(fn (Career $career) => [
                         'id' => $career->id,
                         'faculty_id' => $career->facultad_id,
+                        'modality_id' => $career->modalidad_id,
+                        'modality_name' => $career->modality?->nombre,
                         'code' => $career->codigo_institucional,
                         'name' => $career->nombre,
                         'active' => $career->activo,
@@ -61,7 +65,7 @@ class AcademicStructureViewData
                     ->get(['id', 'codigo_institucional', 'nombre', 'activo']),
                 'modalities' => Modality::query()
                     ->orderBy('nombre')
-                    ->get(['id', 'codigo', 'nombre', 'activo']),
+                    ->get(['id', 'codigo', 'nombre', 'combina_por_asignatura', 'activo']),
                 'periods' => AcademicPeriod::query()
                     ->orderByDesc('fecha_inicio')
                     ->get()
@@ -80,6 +84,7 @@ class AcademicStructureViewData
                     ->where('activo', true)
                     ->orderBy('nombre')
                     ->get(['id', 'nombre']),
+                'modalities' => $this->activeModalities(),
             ],
         ];
     }
@@ -150,7 +155,7 @@ class AcademicStructureViewData
                     ->orderBy('posicion')
                     ->orderBy('etiqueta'),
                 'subjects' => fn ($query) => $query
-                    ->with('fieldValues')
+                    ->with(['fieldValues', 'modality:id,nombre'])
                     ->orderBy('ciclo')
                     ->orderBy('orden_en_ciclo')
                     ->orderBy('nombre'),
@@ -161,9 +166,19 @@ class AcademicStructureViewData
         // La malla se congela mientras una convocatoria de la carrera está en curso; la
         // razón viaja a la pantalla para que explique el bloqueo con las mismas palabras.
         $lockReason = $this->locks->careerLockReason($careerId);
+        $career->loadMissing('modality');
 
         return [
-            'career' => ['id' => $career->id, 'name' => $career->nombre],
+            'career' => [
+                'id' => $career->id,
+                'name' => $career->nombre,
+                // Si la modalidad de la carrera combina por materia, cada materia lleva la suya.
+                'modality' => $career->modality === null ? null : [
+                    'id' => $career->modality->id,
+                    'name' => $career->modality->nombre,
+                    'per_subject' => $career->modality->combina_por_asignatura,
+                ],
+            ],
             'curriculum' => [
                 'id' => $curriculum->id,
                 'code' => $curriculum->codigo,
@@ -213,6 +228,8 @@ class AcademicStructureViewData
                     'cycle' => $subject->ciclo,
                     'position' => $subject->orden_en_ciclo,
                     'organization_unit' => $subject->unidad_organizacion_curricular,
+                    'modality_id' => $subject->modalidad_id,
+                    'modality_name' => $subject->modality?->nombre,
                     'credits' => $subject->creditos,
                     'total_hours' => $subject->horas_totales,
                     'active' => $subject->activo,
@@ -251,7 +268,7 @@ class AcademicStructureViewData
                     'label' => CurriculumSystemFields::LABELS[$key],
                 ])
                 ->values(),
-            'options' => $this->emptyOptions(),
+            'options' => [...$this->emptyOptions(), 'modalities' => $this->activeModalities()],
         ];
     }
 
@@ -323,7 +340,6 @@ class AcademicStructureViewData
                     ->orderByDesc('fecha_inicio')
                     ->get(['id', 'nombre']),
                 'campuses' => Campus::query()->where('activo', true)->orderBy('nombre')->get(['id', 'nombre']),
-                'modalities' => Modality::query()->where('activo', true)->orderBy('nombre')->get(['id', 'nombre']),
                 'activeSubjects' => Subject::query()
                     ->where('activo', true)
                     ->whereHas('curriculum', fn ($query) => $query
@@ -416,6 +432,12 @@ class AcademicStructureViewData
     private function career(string $careerId): Career
     {
         return Career::query()->where('activo', true)->findOrFail($careerId);
+    }
+
+    /** @return Collection<int, Modality> */
+    private function activeModalities(): Collection
+    {
+        return Modality::query()->where('activo', true)->orderBy('nombre')->get(['id', 'nombre', 'combina_por_asignatura']);
     }
 
     /** @return array<string, array<never, never>> */

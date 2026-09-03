@@ -265,6 +265,7 @@ const {
                     <TableRow>
                         <TableHead>Carrera</TableHead>
                         <TableHead>Facultad</TableHead>
+                        <TableHead>Modalidad</TableHead>
                         <TableHead>Código institucional</TableHead>
                         <TableHead>Estado</TableHead>
                         <TableHead class="text-right">Acciones</TableHead>
@@ -273,7 +274,7 @@ const {
                 <TableBody>
                     <TableEmpty
                         v-if="catalogs.careers.length === 0"
-                        :colspan="5"
+                        :colspan="6"
                     >
                         No existen carreras registradas.
                     </TableEmpty>
@@ -289,6 +290,9 @@ const {
                             {{ facultyName(career.faculty_id) }}
                         </TableCell>
                         <TableCell>
+                            {{ career.modality_name ?? 'Sin modalidad' }}
+                        </TableCell>
+                        <TableCell>
                             {{ career.code || 'Sin código institucional' }}
                         </TableCell>
                         <TableCell>
@@ -302,7 +306,9 @@ const {
                                 :record-code="career.code"
                                 :active="career.active"
                                 :faculty-id="career.faculty_id"
+                                :modality-id="career.modality_id"
                                 :faculties="catalogs.faculties"
+                                :modalities="catalogs.modalities"
                             />
                         </TableCell>
                     </TableRow>
@@ -449,6 +455,7 @@ const {
                     <TableRow>
                         <TableHead>Modalidad</TableHead>
                         <TableHead>Código estable</TableHead>
+                        <TableHead>Alcance</TableHead>
                         <TableHead>Estado</TableHead>
                         <TableHead class="text-right">Acciones</TableHead>
                     </TableRow>
@@ -456,7 +463,7 @@ const {
                 <TableBody>
                     <TableEmpty
                         v-if="catalogs.modalities.length === 0"
-                        :colspan="4"
+                        :colspan="5"
                     >
                         No existen modalidades registradas.
                     </TableEmpty>
@@ -472,6 +479,13 @@ const {
                             {{ modality.codigo || 'Sin código' }}
                         </TableCell>
                         <TableCell>
+                            {{
+                                modality.combina_por_asignatura
+                                    ? 'Por materia'
+                                    : 'Toda la carrera'
+                            }}
+                        </TableCell>
+                        <TableCell>
                             {{ modality.activo ? 'Activa' : 'Archivada' }}
                         </TableCell>
                         <TableCell class="text-right">
@@ -481,6 +495,7 @@ const {
                                 :record-name="modality.nombre"
                                 :record-code="modality.codigo ?? null"
                                 :active="modality.activo"
+                                :per-subject="modality.combina_por_asignatura"
                                 :faculties="catalogs.faculties"
                             />
                         </TableCell>

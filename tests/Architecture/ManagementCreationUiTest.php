@@ -1,6 +1,6 @@
 <?php
 
-it('mantiene todas las altas de gestion dentro del sheet derecho compartido', function (): void {
+it('mantiene las altas de gestión que requieren datos dentro del sheet derecho compartido', function (): void {
     $root = dirname(__DIR__, 2);
     $surfaces = [
         'Administrador · cuentas' => [
@@ -20,12 +20,6 @@ it('mantiene todas las altas de gestion dentro del sheet derecho compartido', fu
             'component' => 'CatalogRecordSheet',
             'component_file' => 'resources/js/components/domain/academic/CatalogRecordSheet.vue',
             'action' => 'AcademicGovernanceController.store.form',
-        ],
-        'Administrador · plantillas' => [
-            'page' => 'resources/js/pages/Admin/Templates/Index.vue',
-            'component' => 'TemplateCreationSheet',
-            'component_file' => 'resources/js/components/domain/configuration/TemplateCreationSheet.vue',
-            'action' => 'TemplateController.store.form',
         ],
         'Administrador · bloques de plantilla' => [
             'page' => 'resources/js/pages/Admin/Templates/Show.vue',
@@ -143,6 +137,22 @@ it('mantiene todas las altas de gestion dentro del sheet derecho compartido', fu
                 : $label.' no cierra el panel después del éxito.',
         );
     }
+});
+
+it('crea la plantilla institucional de inmediato y abre su constructor', function (): void {
+    $source = file_get_contents(
+        dirname(__DIR__, 2).'/resources/js/pages/Admin/Templates/Index.vue',
+    );
+
+    expect($source)
+        ->toBeString()
+        ->toContain('router.post(')
+        ->toContain('TemplateController.store.url()')
+        ->toContain('@click="createTemplate"')
+        ->toContain('Nueva plantilla')
+        ->toContain('Creando plantilla…')
+        ->not->toContain('TemplateCreationSheet')
+        ->not->toContain('<FormSheet');
 });
 
 it('protege la direccion y accesibilidad del sheet compartido', function (): void {
@@ -737,7 +747,7 @@ it('abre los detalles de los listados desde sus acciones', function (): void {
     }
 });
 
-it('presenta las plantillas como cards y navega versiones desde el detalle', function (): void {
+it('presenta la plantilla institucional única y abre su constructor', function (): void {
     $root = dirname(__DIR__, 2);
 
     // Una sola plantilla (I-32): la ruta abre directo su constructor y el listado solo
@@ -747,7 +757,10 @@ it('presenta las plantillas como cards y navega versiones desde el detalle', fun
         ->toBeString()
         ->toContain('<Empty')
         ->toContain('<Inbox')
-        ->toContain('<TemplateCreationSheet')
+        ->toContain('router.post(')
+        ->toContain('TemplateController.store.url()')
+        ->toContain('@click="createTemplate"')
+        ->not->toContain('TemplateCreationSheet')
         ->not->toContain('ClientFilterBar')
         ->not->toContain('TablePagination')
         ->not->toContain('<CardTitle')

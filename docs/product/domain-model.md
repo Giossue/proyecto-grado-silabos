@@ -32,9 +32,12 @@ la fuente institucional. Una carrera solo puede colgar de una escuela de su prop
 facultad, y la base lo impone con una clave ajena compuesta, no con validación de
 aplicación.
 
-`Campus` y `Modalidad` son catálogos institucionales independientes. La relación con un
-campus y una modalidad ocurre en `OfertaAcademica`, junto con la asignatura y el periodo,
-por lo que no se duplican esos valores dentro de facultades o carreras.
+`Campus` es un catálogo institucional independiente que se relaciona con la asignatura y
+el periodo en `OfertaAcademica`. `Modalidad` también es catálogo, pero la elige la norma
+y no la oferta: el CES aprueba cada carrera en una modalidad (`carreras.modalidad_id`),
+una modalidad marcada «combina por asignatura» (híbrida) deja que cada materia de la
+malla indique la suya (`asignaturas.modalidad_id`) y la oferta hereda una u otra al
+crearse (I-35). La oferta conserva la modalidad copiada porque el sílabo la toma de ahí.
 
 `PeriodoAcademico` no es un catálogo global: pertenece a una carrera. En la fuente el
 mismo nombre de periodo existe una vez por carrera con fechas propias, así que el código

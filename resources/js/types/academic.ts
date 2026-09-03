@@ -17,6 +17,8 @@ export type CatalogRecord = {
     activo: boolean;
     /** Solo facultades: logo que encabeza el sílabo de sus carreras. */
     logo_url?: string | null;
+    /** Solo modalidades: híbrida, cada materia de la malla indica la suya. */
+    combina_por_asignatura?: boolean;
 };
 
 export type GovernanceCatalogEntity =
@@ -35,6 +37,8 @@ export type AcademicStructureProps = {
         careers: {
             id: string;
             faculty_id: string;
+            modality_id: string | null;
+            modality_name: string | null;
             code: string | null;
             name: string;
             active: boolean;
@@ -142,6 +146,9 @@ export type CurriculumBuilderSubject = {
     cycle: number | null;
     position: number;
     organization_unit: string | null;
+    /** Solo cuando la carrera combina modalidades por materia. */
+    modality_id: string | null;
+    modality_name: string | null;
     credits: string | null;
     total_hours: number | null;
     active: boolean;
@@ -158,6 +165,8 @@ export type CurriculumBuilderProps = {
     career: {
         id: string;
         name: string;
+        /** Modalidad aprobada; `per_subject` = cada materia lleva la suya. */
+        modality: { id: string; name: string; per_subject: boolean } | null;
     };
     curriculum: {
         id: string;

@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int|null $ciclo
  * @property int $orden_en_ciclo
  * @property string|null $unidad_organizacion_curricular
+ * @property string|null $modalidad_id
  * @property string|null $creditos
  * @property int|null $horas_totales
  * @property string|null $horas_proyecto
@@ -46,6 +47,7 @@ class Subject extends Model
         'ciclo',
         'orden_en_ciclo',
         'unidad_organizacion_curricular',
+        'modalidad_id',
         'creditos',
         'horas_totales',
         'horas_proyecto',
@@ -80,6 +82,13 @@ class Subject extends Model
     public function curriculum(): BelongsTo
     {
         return $this->belongsTo(Curriculum::class, 'malla_id');
+    }
+
+    /** Solo cuando la carrera combina modalidades por materia (I-35). */
+    /** @return BelongsTo<Modality, $this> */
+    public function modality(): BelongsTo
+    {
+        return $this->belongsTo(Modality::class, 'modalidad_id');
     }
 
     /** @return HasMany<CourseOffering, $this> */

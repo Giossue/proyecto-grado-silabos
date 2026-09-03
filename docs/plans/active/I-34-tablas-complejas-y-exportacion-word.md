@@ -66,9 +66,9 @@ defecto de las tablas sin esquema y de las listas.
 - [x] Plantilla por defecto = formato oficial: «Nueva plantilla» crea las doce secciones
       con sus campos, las tablas ya armadas (`TablePresets`, espejo PHP de
       `tablePresets.ts`) y la ficha de identificación con lo que llena el docente
-      (`CreateSyllabusTemplate::BASELINE`). Las bases local y de producción se dejaron
-      solo con el administrador y el catálogo de roles (`temp/limpiar_bd.php`, con
-      respaldo previo) el 2026-09-02.
+      (`CreateSyllabusTemplate::BASELINE`) de inmediato, sin `Sheet`, y abre el
+      constructor. Las bases local y de producción se dejaron solo con el administrador
+      y el catálogo de roles (`temp/limpiar_bd.php`, con respaldo previo) el 2026-09-02.
 - [x] Logos del encabezado (`InstitutionalLogos`): el de la universidad se reemplaza
       desde la plantilla (`POST admin/plantilla/logo`); el de cada facultad es
       obligatorio al crearla (`facultades.logo_ruta`, migración `000031`) y opcional al

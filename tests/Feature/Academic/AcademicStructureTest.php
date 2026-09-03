@@ -210,6 +210,7 @@ class AcademicStructureTest extends TestCase
         $this->actingAsAdministrator()
             ->post(route('admin.academic.store', 'carrera'), [
                 'faculty_id' => $faculty->id,
+                'modality_id' => Modality::query()->firstOrFail()->id,
                 'code' => 'CARR-DEMO',
                 'nombre' => 'Carrera de demostración',
             ])
@@ -874,6 +875,112 @@ class AcademicStructureTest extends TestCase
         $this->assertTrue($otherSubject->fresh()->activo);
     }
 
+    /** I-35: la modalidad la aprueba el CES por carrera; la oferta no la elige. */
+    public function test_a_career_requires_its_approved_modality_and_offerings_inherit_it(): void
+    {
+        $faculty = Faculty::query()->firstOrFail();
+
+        $this->actingAsAdministrator()
+            ->from(route('admin.academic.index', 'carreras'))
+            ->post(route('admin.academic.store', 'carrera'), [
+                'faculty_id' => $faculty->id,
+                'code' => 'SIN-MODA',
+                'nombre' => 'Carrera sin modalidad',
+            ])
+            ->assertSessionHasErrors('modality_id');
+        $this->assertDatabaseMissing('carreras', ['codigo_institucional' => 'SIN-MODA']);
+
+        $career = Career::query()->findOrFail($this->coordinatorContext->carrera_id);
+        $curriculum = Curriculum::query()->active()->where('carrera_id', $career->id)->firstOrFail();
+        $subject = Subject::query()->create([
+            'malla_id' => $curriculum->id,
+            'codigo_institucional' => 'SW-MODA',
+            'nombre' => 'Materia que hereda modalidad',
+            'ciclo' => 2,
+            'activo' => true,
+        ]);
+        $reference = CourseOffering::query()->firstOrFail();
+
+        // Sin `modality_id` en el formulario: se copia la de la carrera.
+        $this->actingAsCoordinator()
+            ->post(route('coordination.academic.store', 'oferta'), [
+                'period_id' => $reference->periodo_academico_id,
+                'subject_id' => $subject->id,
+                'campus_id' => $reference->campus_id,
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+        $offering = CourseOffering::query()->where('asignatura_id', $subject->id)->firstOrFail();
+        $this->assertSame($career->modalidad_id, $offering->modalidad_id);
+
+        // Sin modalidad en la carrera no hay de dónde heredar: se explica, no se adivina.
+        $career->forceFill(['modalidad_id' => null])->save();
+        $another = Subject::query()->create([
+            'malla_id' => $curriculum->id,
+            'codigo_institucional' => 'SW-MODA-2',
+            'nombre' => 'Materia sin modalidad heredable',
+            'ciclo' => 2,
+            'activo' => true,
+        ]);
+        $this->actingAsCoordinator()
+            ->from(route('coordination.academic.offerings.index'))
+            ->post(route('coordination.academic.store', 'oferta'), [
+                'period_id' => $reference->periodo_academico_id,
+                'subject_id' => $another->id,
+                'campus_id' => $reference->campus_id,
+            ])
+            ->assertSessionHasErrors('subject_id');
+    }
+
+    /** I-35: una modalidad «por materia» (híbrida, RRA art. 74A) se indica en cada materia. */
+    public function test_a_hybrid_career_takes_the_modality_of_each_subject(): void
+    {
+        $hybrid = Modality::query()->create([
+            'codigo' => 'HIB',
+            'nombre' => 'Híbrida',
+            'combina_por_asignatura' => true,
+            'activo' => true,
+        ]);
+        $online = Modality::query()->create(['codigo' => 'ONL', 'nombre' => 'En línea', 'activo' => true]);
+        $career = Career::query()->findOrFail($this->coordinatorContext->carrera_id);
+        $career->forceFill(['modalidad_id' => $hybrid->id])->save();
+        $curriculum = Curriculum::query()->active()->where('carrera_id', $career->id)->firstOrFail();
+        $payload = [
+            'curriculum_id' => $curriculum->id,
+            'code' => 'SW-HIB',
+            'nombre' => 'Materia en línea de carrera híbrida',
+            'cycle' => 3,
+            'organization_unit' => 'Unidad profesional',
+            'horas_ac' => 32,
+            'horas_pae' => 32,
+            'horas_aa' => 32,
+            'creditos' => 2,
+        ];
+
+        $this->actingAsCoordinator()
+            ->from(route('coordination.academic.curricula.index'))
+            ->post(route('coordination.academic.store', 'asignatura'), $payload)
+            ->assertSessionHasErrors('modality_id');
+
+        $this->actingAsCoordinator()
+            ->post(route('coordination.academic.store', 'asignatura'), [...$payload, 'modality_id' => $online->id])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+        $subject = Subject::query()->where('codigo_institucional', 'SW-HIB')->firstOrFail();
+        $this->assertSame($online->id, $subject->modalidad_id);
+
+        $reference = CourseOffering::query()->firstOrFail();
+        $this->actingAsCoordinator()
+            ->post(route('coordination.academic.store', 'oferta'), [
+                'period_id' => $reference->periodo_academico_id,
+                'subject_id' => $subject->id,
+                'campus_id' => $reference->campus_id,
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+        $this->assertSame($online->id, CourseOffering::query()->where('asignatura_id', $subject->id)->value('modalidad_id'));
+    }
+
     public function test_duplicate_offering_is_reported_to_the_coordinator_as_a_validation_error(): void
     {
         $offering = CourseOffering::query()->firstOrFail();
@@ -1055,6 +1162,7 @@ class AcademicStructureTest extends TestCase
         $this->actingAsAdministrator()
             ->patch(route('admin.academic.update', ['entity' => 'carrera', 'record' => $career->id]), [
                 'faculty_id' => $destinationFaculty->id,
+                'modality_id' => $career->modalidad_id,
                 'code' => 'SOFTWARE-ACT',
                 'nombre' => 'Ingeniería de Software',
             ])
@@ -1134,6 +1242,7 @@ class AcademicStructureTest extends TestCase
         $this->actingAsAdministrator()
             ->patch(route('admin.academic.update', ['entity' => 'carrera', 'record' => $career->id]), [
                 'faculty_id' => $destinationFaculty->id,
+                'modality_id' => $career->modalidad_id,
                 'code' => 'SOFTWARE-ACT',
                 'nombre' => 'Ingeniería de Software',
             ])
@@ -1178,6 +1287,7 @@ class AcademicStructureTest extends TestCase
         $this->actingAsAdministrator()
             ->patch(route('admin.academic.update', ['entity' => 'carrera', 'record' => $career->id]), [
                 'faculty_id' => $archivedFaculty->id,
+                'modality_id' => $career->modalidad_id,
                 'code' => $career->codigo_institucional,
                 'nombre' => $career->nombre,
             ])

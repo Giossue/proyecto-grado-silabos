@@ -39,7 +39,7 @@ const title = computed(() =>
 );
 const description = computed(() =>
     props.entity === 'oferta'
-        ? 'Abra una materia de la malla activa para un periodo académico, campus y modalidad.'
+        ? 'Abra una materia de la malla activa para un periodo académico y campus. La modalidad la fija la carrera, o cada materia si la carrera combina modalidades.'
         : 'Agregue un paralelo a una oferta académica existente.',
 );
 </script>
@@ -143,33 +143,6 @@ const description = computed(() =>
                                 </SelectContent>
                             </Select>
                             <FieldError :errors="[errors.campus_id]" />
-                        </Field>
-                        <Field :data-invalid="Boolean(errors.modality_id)">
-                            <FieldLabel for="offering-modality" required>
-                                Modalidad
-                            </FieldLabel>
-                            <Select name="modality_id" required>
-                                <SelectTrigger
-                                    id="offering-modality"
-                                    :aria-invalid="Boolean(errors.modality_id)"
-                                >
-                                    <SelectValue
-                                        placeholder="Seleccione una modalidad"
-                                    />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectGroup>
-                                        <SelectItem
-                                            v-for="item in options.modalities"
-                                            :key="item.id"
-                                            :value="item.id"
-                                        >
-                                            {{ item.nombre }}
-                                        </SelectItem>
-                                    </SelectGroup>
-                                </SelectContent>
-                            </Select>
-                            <FieldError :errors="[errors.modality_id]" />
                         </Field>
                     </template>
 

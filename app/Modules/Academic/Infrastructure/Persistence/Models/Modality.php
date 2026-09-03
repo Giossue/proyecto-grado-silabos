@@ -16,5 +16,11 @@ class Modality extends Model
     protected $table = 'modalidades';
 
     /** @var list<string> */
-    protected $fillable = ['codigo', 'nombre', 'activo'];
+    protected $fillable = ['codigo', 'nombre', 'combina_por_asignatura', 'activo'];
+
+    /** @return array<string, string> */
+    protected function casts(): array
+    {
+        return ['combina_por_asignatura' => 'boolean', 'activo' => 'boolean'];
+    }
 }

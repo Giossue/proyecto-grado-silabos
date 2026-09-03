@@ -143,6 +143,12 @@ const totalFields = computed(
                     >
                         {{ data.subject.organization_unit }}
                     </Badge>
+                    <Badge
+                        v-if="data.subject.modality_name"
+                        variant="outline"
+                    >
+                        {{ data.subject.modality_name }}
+                    </Badge>
                     <h3 class="text-xs leading-snug font-semibold uppercase">
                         {{ data.subject.name }}
                     </h3>

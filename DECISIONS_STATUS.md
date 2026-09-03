@@ -32,6 +32,11 @@ Fecha de corte: **30 de agosto de 2026**.
   datos de unidad, totales y repetición por unidad (I-34, 2 de septiembre de 2026). El
   DOCX se genera con PhpWord a partir de la copia de cada revisión; el PDF sigue siendo
   el respaldo de texto plano hasta decidir el motor de PDF.
+- La modalidad de estudio es un dato de la carrera (la aprueba el CES); una modalidad
+  «por materia» (híbrida) se indica en cada materia de la malla y la oferta la hereda en
+  vez de elegirla (I-35, 3 de septiembre de 2026). La ley fija componentes ACD/APE/AA,
+  unidades de organización curricular y créditos de 48 h; el dibujo de la malla y el
+  formato del sílabo son institucionales, no ministeriales.
 - La IA es asistencia explicable; no toma decisiones académicas ni bloquea el flujo.
 - Stack base: Laravel 13, Vue/Inertia, TypeScript, PostgreSQL y Redis.
 - Monolito modular y servicio local de IA desacoplado por HTTP.

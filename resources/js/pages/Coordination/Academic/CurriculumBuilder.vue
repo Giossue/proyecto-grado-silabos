@@ -160,6 +160,8 @@ const openSubject = (subject: CurriculumBuilderSubject): void => {
 
     <CurriculumSubjectSheet
         v-model:open="subjectSheetOpen"
+        :career="career"
+        :modalities="options.modalities"
         :curriculum="curriculum"
         :field-definitions="fieldDefinitions"
         :subject="selectedSubject"

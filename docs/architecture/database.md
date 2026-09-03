@@ -45,6 +45,9 @@ Estos catálogos no comparten una tabla polimórfica. `carreras.facultad_id` imp
 relación uno-a-muchos Facultad → Carreras con clave foránea y borrado restringido.
 `campus`, `modalidades` y `periodos_academicos` conservan identidad propia;
 `ofertas_academicas` los relaciona con una asignatura mediante claves foráneas. La
+modalidad además cuelga de la carrera (`carreras.modalidad_id`) y, si
+`modalidades.combina_por_asignatura`, de cada materia (`asignaturas.modalidad_id`); la
+oferta guarda la heredada (migración `000032`, I-35). La
 jerarquía que presenta ADM-04 es una proyección de lectura y no una desnormalización de
 la persistencia.
 

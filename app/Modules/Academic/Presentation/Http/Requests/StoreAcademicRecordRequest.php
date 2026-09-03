@@ -61,9 +61,13 @@ class StoreAcademicRecordRequest extends FormRequest
             'modalidad' => [
                 'code' => ['required', 'string', 'max:40', Rule::unique('modalidades', 'codigo')],
                 'nombre' => ['required', 'string', 'max:100'],
+                // Híbrida: cada materia de la malla indica su modalidad (RRA art. 74A).
+                'per_subject' => ['nullable', 'boolean'],
             ],
             'carrera' => [
                 'faculty_id' => ['required', 'uuid', Rule::exists('facultades', 'id')->where('activo', true)],
+                // La modalidad la aprueba el CES por carrera; las ofertas la heredan (I-35).
+                'modality_id' => ['required', 'uuid', Rule::exists('modalidades', 'id')->where('activo', true)],
                 ...$this->namedCatalogRules('carreras', 180),
             ],
             'periodo' => [
@@ -110,11 +114,9 @@ class StoreAcademicRecordRequest extends FormRequest
                             ->where('estado', 'activa'))),
                     Rule::unique('ofertas_academicas', 'asignatura_id')
                         ->where('periodo_academico_id', $this->input('period_id'))
-                        ->where('campus_id', $this->input('campus_id'))
-                        ->where('modalidad_id', $this->input('modality_id')),
+                        ->where('campus_id', $this->input('campus_id')),
                 ],
                 'campus_id' => ['required', 'uuid', Rule::exists('campus', 'id')->where('activo', true)],
-                'modality_id' => ['required', 'uuid', Rule::exists('modalidades', 'id')->where('activo', true)],
             ],
             'paralelo' => [
                 'offering_id' => [
@@ -207,6 +209,7 @@ class StoreAcademicRecordRequest extends FormRequest
             'cycle' => ['required', 'integer', 'min:1', 'max:30'],
             'position' => ['nullable', 'integer', 'min:0', 'max:999'],
             'organization_unit' => ['required', 'string', 'max:80'],
+            'modality_id' => ['nullable', 'uuid', Rule::exists('modalidades', 'id')->where('activo', true)],
             'creditos' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
             'horas_totales' => ['nullable', 'integer', 'min:0', 'max:65535'],
             'hours_project' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],

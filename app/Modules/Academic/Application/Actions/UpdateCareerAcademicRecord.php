@@ -3,6 +3,7 @@
 namespace App\Modules\Academic\Application\Actions;
 
 use App\Models\User;
+use App\Modules\Academic\Application\OfferingModality;
 use App\Modules\Academic\Domain\AcademicStructurePermissions;
 use App\Modules\Academic\Domain\CurriculumSystemFields;
 use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
@@ -10,7 +11,6 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\Campus;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CourseOffering;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CurriculumFieldDefinition;
-use App\Modules\Academic\Infrastructure\Persistence\Models\Modality;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Subject;
 use App\Modules\Academic\Infrastructure\Persistence\Models\TeacherAssignment;
@@ -66,6 +66,7 @@ class UpdateCareerAcademicRecord
         'ciclo' => 'cycle',
         'orden_en_ciclo' => 'position',
         'unidad_organizacion_curricular' => 'organization_unit',
+        'modalidad_id' => 'modality',
         'creditos' => 'credits',
         'horas_totales' => 'total_hours',
         'vigente_desde' => 'valid_from',
@@ -78,6 +79,7 @@ class UpdateCareerAcademicRecord
         private readonly ProcessLocks $locks,
         private readonly InProgressWork $work,
         private readonly SyncSubjectFieldValues $syncSubjectFieldValues,
+        private readonly OfferingModality $modalities,
     ) {}
 
     /** @param array<string, mixed> $data */
@@ -236,10 +238,12 @@ class UpdateCareerAcademicRecord
             ->whereNotNull('clave_sistema')
             ->pluck('clave_sistema');
 
+        $record->loadMissing('curriculum.career');
         $attributes = [
             'codigo_institucional' => $data['code'],
             'nombre' => $data['nombre'],
             'ciclo' => $data['cycle'] ?? null,
+            'modalidad_id' => $this->modalities->subjectModalityId($record->curriculum->career, $data),
             'creditos' => $data['creditos'] ?? null,
             'horas_totales' => CurriculumSystemFields::totalHours($data, $activeSystemKeys),
         ];
@@ -279,13 +283,13 @@ class UpdateCareerAcademicRecord
             ->where(fn ($query) => $query->whereNull('carrera_id')->orWhere('carrera_id', $careerId))
             ->lockForUpdate()->firstOrFail();
         $campus = Campus::query()->whereKey($this->stringValue($data, 'campus_id'))->where('activo', true)->lockForUpdate()->firstOrFail();
-        $modality = Modality::query()->whereKey($this->stringValue($data, 'modality_id'))->where('activo', true)->lockForUpdate()->firstOrFail();
 
         return [
             'periodo_academico_id' => $period->id,
             'asignatura_id' => $subject->id,
             'campus_id' => $campus->id,
-            'modalidad_id' => $modality->id,
+            // Heredada: la fija la carrera, o la materia si la carrera combina modalidades.
+            'modalidad_id' => $this->modalities->forSubject($subject)->id,
         ];
     }
 

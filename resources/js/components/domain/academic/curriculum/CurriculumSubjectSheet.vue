@@ -15,20 +15,36 @@ import {
     FieldLabel,
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import {
+    Select,
+    SelectContent,
+    SelectGroup,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { useCurriculumSubjectFieldValues } from '@/composables/useCurriculumSubjectFieldValues';
 import { cn } from '@/lib/utils';
 import type {
     CurriculumBuilderProps,
     CurriculumBuilderSubject,
     CurriculumFieldDefinition,
+    Option,
 } from '@/types/academic';
 
 const props = defineProps<{
+    career: CurriculumBuilderProps['career'];
     curriculum: CurriculumBuilderProps['curriculum'];
     fieldDefinitions: CurriculumBuilderProps['fieldDefinitions'];
     subject: CurriculumBuilderSubject | null;
     organizationUnits: string[];
+    modalities: Option[];
 }>();
+
+/** Solo una carrera híbrida pide modalidad por materia; las demás heredan la suya. */
+const modalityPerSubject = computed(
+    () => props.career.modality?.per_subject === true,
+);
 
 const open = defineModel<boolean>('open', { default: false });
 const formRoute = computed(() =>
@@ -152,6 +168,44 @@ watch(
                             :invalid="Boolean(errors.organization_unit)"
                         />
                         <FieldError :errors="[errors.organization_unit]" />
+                    </Field>
+                    <Field
+                        v-if="modalityPerSubject"
+                        :data-invalid="Boolean(errors.modality_id)"
+                    >
+                        <FieldLabel for="builder-subject-modality" required>
+                            Modalidad
+                        </FieldLabel>
+                        <Select
+                            name="modality_id"
+                            :default-value="subject?.modality_id ?? undefined"
+                            required
+                        >
+                            <SelectTrigger
+                                id="builder-subject-modality"
+                                :aria-invalid="Boolean(errors.modality_id)"
+                            >
+                                <SelectValue
+                                    placeholder="Seleccione la modalidad"
+                                />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectGroup>
+                                    <SelectItem
+                                        v-for="item in modalities"
+                                        :key="item.id"
+                                        :value="item.id"
+                                    >
+                                        {{ item.nombre }}
+                                    </SelectItem>
+                                </SelectGroup>
+                            </SelectContent>
+                        </Select>
+                        <FieldDescription>
+                            La carrera combina modalidades: la oferta de esta
+                            materia se abrirá con la que indique aquí.
+                        </FieldDescription>
+                        <FieldError :errors="[errors.modality_id]" />
                     </Field>
 
                     <div class="grid grid-cols-2 gap-3 sm:grid-cols-5">

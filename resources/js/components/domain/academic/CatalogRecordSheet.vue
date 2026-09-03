@@ -172,6 +172,41 @@ const examples = computed(
                             </FieldDescription>
                             <FieldError :errors="[errors.faculty_id]" />
                         </Field>
+                        <Field
+                            v-if="entity === 'carrera'"
+                            :data-invalid="Boolean(errors.modality_id)"
+                        >
+                            <FieldLabel for="catalog-modality" required>
+                                Modalidad
+                            </FieldLabel>
+                            <Select name="modality_id" required>
+                                <SelectTrigger
+                                    id="catalog-modality"
+                                    :aria-invalid="Boolean(errors.modality_id)"
+                                >
+                                    <SelectValue
+                                        placeholder="Seleccione la modalidad aprobada"
+                                    />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectGroup>
+                                        <SelectItem
+                                            v-for="item in options.modalities"
+                                            :key="item.id"
+                                            :value="item.id"
+                                        >
+                                            {{ item.nombre }}
+                                        </SelectItem>
+                                    </SelectGroup>
+                                </SelectContent>
+                            </Select>
+                            <FieldDescription>
+                                La que aprobó el CES para la carrera. Sus
+                                ofertas la heredan; si combina modalidades,
+                                cada materia indica la suya en la malla.
+                            </FieldDescription>
+                            <FieldError :errors="[errors.modality_id]" />
+                        </Field>
 
                         <Field :data-invalid="Boolean(errors.nombre)">
                             <FieldLabel for="catalog-name" required>
@@ -208,6 +243,38 @@ const examples = computed(
                                 :aria-invalid="Boolean(errors.code)"
                             />
                             <FieldError :errors="[errors.code]" />
+                        </Field>
+
+                        <Field
+                            v-if="entity === 'modalidad'"
+                            :data-invalid="Boolean(errors.per_subject)"
+                        >
+                            <FieldLabel for="catalog-per-subject">
+                                Alcance
+                            </FieldLabel>
+                            <Select name="per_subject" default-value="0">
+                                <SelectTrigger
+                                    id="catalog-per-subject"
+                                    :aria-invalid="Boolean(errors.per_subject)"
+                                >
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectGroup>
+                                        <SelectItem value="0">
+                                            Toda la carrera
+                                        </SelectItem>
+                                        <SelectItem value="1">
+                                            Por materia (híbrida)
+                                        </SelectItem>
+                                    </SelectGroup>
+                                </SelectContent>
+                            </Select>
+                            <FieldDescription>
+                                «Por materia»: la carrera combina modalidades y
+                                cada materia de la malla indica la suya.
+                            </FieldDescription>
+                            <FieldError :errors="[errors.per_subject]" />
                         </Field>
 
                         <Field

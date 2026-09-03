@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3';
-import { Inbox } from '@lucide/vue';
-import TemplateCreationSheet from '@/components/domain/configuration/TemplateCreationSheet.vue';
+import { Head, router } from '@inertiajs/vue3';
+import { Inbox, LoaderCircle, Plus } from '@lucide/vue';
+import { ref } from 'vue';
+import TemplateController from '@/actions/App/Modules/Configuration/Presentation/Http/Controllers/TemplateController';
 import PageFrame from '@/components/domain/PageFrame.vue';
+import { Button } from '@/components/ui/button';
 import {
     Empty,
     EmptyHeader,
@@ -23,6 +25,25 @@ defineProps<{
 defineOptions({
     layout: { breadcrumbs: [{ title: 'Plantilla', href: templatesIndex() }] },
 });
+
+const creating = ref(false);
+
+const createTemplate = (): void => {
+    if (creating.value) {
+        return;
+    }
+
+    creating.value = true;
+    router.post(
+        TemplateController.store.url(),
+        {},
+        {
+            onFinish: () => {
+                creating.value = false;
+            },
+        },
+    );
+};
 </script>
 
 <template>
@@ -32,7 +53,19 @@ defineOptions({
         description="El formato del sílabo: qué campos tiene y en qué orden. Se edita en el sitio; cada sílabo entregado conserva su propia copia."
     >
         <template #actions>
-            <TemplateCreationSheet v-if="!processLock" />
+            <Button
+                v-if="!processLock"
+                :disabled="creating"
+                @click="createTemplate"
+            >
+                <LoaderCircle
+                    v-if="creating"
+                    class="animate-spin"
+                    aria-hidden="true"
+                />
+                <Plus v-else aria-hidden="true" />
+                {{ creating ? 'Creando plantilla…' : 'Nueva plantilla' }}
+            </Button>
         </template>
 
         <!-- Mismo vacío que las tablas: icono y una sola frase. -->

@@ -68,6 +68,9 @@ const {
                                 <TableHead>Materia</TableHead>
                                 <TableHead>Ciclo</TableHead>
                                 <TableHead>Unidad</TableHead>
+                                <TableHead v-if="career.modality?.per_subject">
+                                    Modalidad
+                                </TableHead>
                                 <TableHead
                                     v-for="field in fieldDefinitions"
                                     :key="field.id"
@@ -105,6 +108,12 @@ const {
                                 }}</TableCell>
                                 <TableCell data-card-hidden="true">
                                     {{ subject.organization_unit ?? '—' }}
+                                </TableCell>
+                                <TableCell
+                                    v-if="career.modality?.per_subject"
+                                    data-card-hidden="true"
+                                >
+                                    {{ subject.modality_name ?? '—' }}
                                 </TableCell>
                                 <TableCell
                                     v-for="field in subject.display_fields"

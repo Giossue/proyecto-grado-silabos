@@ -67,9 +67,9 @@ class SetupChecklist
             'En este orden. Cada paso habilita el siguiente; las coordinaciones no pueden empezar hasta que termine.',
             [
                 $this->step('faculties', 'Registrar las facultades', 'Con su logo: encabeza el sílabo de sus carreras.', Faculty::query()->where('activo', true)->exists(), route('admin.academic.index', 'facultades')),
-                $this->step('careers', 'Registrar las carreras', 'Cada carrera cuelga de una facultad.', $careerCount > 0, route('admin.academic.index', 'carreras')),
+                $this->step('modalities', 'Registrar las modalidades', 'Presencial, en línea, híbrida (esta combina modalidades por materia).', Modality::query()->where('activo', true)->exists(), route('admin.academic.index', 'modalidades')),
+                $this->step('careers', 'Registrar las carreras', 'Cada carrera cuelga de una facultad y tiene su modalidad aprobada.', $careerCount > 0, route('admin.academic.index', 'carreras')),
                 $this->step('campus', 'Registrar los campus', 'Matriz, Laguacoto, CENI, San Miguel… donde se dictan clases.', Campus::query()->where('activo', true)->exists(), route('admin.academic.index', 'campus')),
-                $this->step('modalities', 'Registrar las modalidades', 'Presencial, en línea, híbrida.', Modality::query()->where('activo', true)->exists(), route('admin.academic.index', 'modalidades')),
                 $this->step('periods', 'Registrar el periodo académico', 'El periodo que abrirá el primer proceso de sílabos.', AcademicPeriod::query()->where('activo', true)->exists(), route('admin.academic.index', 'periodos-academicos')),
                 $this->step('accounts', 'Crear las cuentas de coordinadores y docentes', 'Con su rol; el docente se asigna a paralelos desde Coordinación.', $accounts > 0, route('admin.users.index')),
                 $this->step('coordinators', 'Asignar un coordinador a cada carrera', $careerCount > 0 && $careersWithoutCoordinator > 0 ? "Faltan {$careersWithoutCoordinator} de {$careerCount} carreras." : 'Titular o encargado, con vigencia.', $careerCount > 0 && $careersWithoutCoordinator === 0, route('admin.academic.index', 'carreras')),

@@ -32,14 +32,19 @@ const props = withDefaults(
         recordName: string;
         recordCode: string | null;
         facultyId?: string | null;
+        modalityId?: string | null;
+        perSubject?: boolean;
         startsOn?: string | null;
         endsOn?: string | null;
         faculties: CatalogRecord[];
+        modalities?: CatalogRecord[];
         logoUrl?: string | null;
         showTrigger?: boolean;
     }>(),
     {
         showTrigger: true,
+        modalities: () => [],
+        perSubject: false,
     },
 );
 
@@ -173,6 +178,79 @@ const facultyOptions = computed(() =>
                             Reasignar una carrera exige otra facultad activa.
                         </FieldDescription>
                         <FieldError :errors="[errors.faculty_id]" />
+                    </Field>
+                    <Field
+                        v-if="entity === 'carrera'"
+                        :data-invalid="Boolean(errors.modality_id)"
+                    >
+                        <FieldLabel :for="`edit-modality-${recordId}`" required>
+                            Modalidad
+                        </FieldLabel>
+                        <Select
+                            name="modality_id"
+                            :default-value="modalityId ?? undefined"
+                            required
+                        >
+                            <SelectTrigger
+                                :id="`edit-modality-${recordId}`"
+                                :aria-invalid="Boolean(errors.modality_id)"
+                            >
+                                <SelectValue
+                                    placeholder="Seleccione la modalidad aprobada"
+                                />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectGroup>
+                                    <SelectItem
+                                        v-for="modality in modalities"
+                                        :key="modality.id"
+                                        :value="modality.id"
+                                    >
+                                        {{ modality.nombre }}
+                                        {{ modality.activo ? '' : '(archivada)' }}
+                                    </SelectItem>
+                                </SelectGroup>
+                            </SelectContent>
+                        </Select>
+                        <FieldDescription>
+                            Las ofertas nuevas la heredan; las ya abiertas no
+                            cambian.
+                        </FieldDescription>
+                        <FieldError :errors="[errors.modality_id]" />
+                    </Field>
+                    <Field
+                        v-if="entity === 'modalidad'"
+                        :data-invalid="Boolean(errors.per_subject)"
+                    >
+                        <FieldLabel :for="`edit-per-subject-${recordId}`">
+                            Alcance
+                        </FieldLabel>
+                        <Select
+                            name="per_subject"
+                            :default-value="perSubject ? '1' : '0'"
+                        >
+                            <SelectTrigger
+                                :id="`edit-per-subject-${recordId}`"
+                                :aria-invalid="Boolean(errors.per_subject)"
+                            >
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectGroup>
+                                    <SelectItem value="0">
+                                        Toda la carrera
+                                    </SelectItem>
+                                    <SelectItem value="1">
+                                        Por materia (híbrida)
+                                    </SelectItem>
+                                </SelectGroup>
+                            </SelectContent>
+                        </Select>
+                        <FieldDescription>
+                            «Por materia»: la carrera combina modalidades y cada
+                            materia de la malla indica la suya.
+                        </FieldDescription>
+                        <FieldError :errors="[errors.per_subject]" />
                     </Field>
 
                     <Field :data-invalid="Boolean(errors.nombre)">

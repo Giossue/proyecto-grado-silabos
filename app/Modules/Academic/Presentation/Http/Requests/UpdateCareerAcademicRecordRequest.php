@@ -82,11 +82,9 @@ class UpdateCareerAcademicRecordRequest extends FormRequest
                     Rule::unique('ofertas_academicas', 'asignatura_id')
                         ->where('periodo_academico_id', $this->input('period_id'))
                         ->where('campus_id', $this->input('campus_id'))
-                        ->where('modalidad_id', $this->input('modality_id'))
                         ->ignore($this->recordId()),
                 ],
                 'campus_id' => ['required', 'uuid', Rule::exists('campus', 'id')->where('activo', true)],
-                'modality_id' => ['required', 'uuid', Rule::exists('modalidades', 'id')->where('activo', true)],
             ],
             'paralelo' => [
                 'offering_id' => [
@@ -175,6 +173,7 @@ class UpdateCareerAcademicRecordRequest extends FormRequest
             'cycle' => ['required', 'integer', 'min:1', 'max:30'],
             'position' => ['nullable', 'integer', 'min:0', 'max:999'],
             'organization_unit' => ['required', 'string', 'max:80'],
+            'modality_id' => ['nullable', 'uuid', Rule::exists('modalidades', 'id')->where('activo', true)],
             'creditos' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
             'horas_totales' => ['nullable', 'integer', 'min:0', 'max:65535'],
             'hours_project' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],

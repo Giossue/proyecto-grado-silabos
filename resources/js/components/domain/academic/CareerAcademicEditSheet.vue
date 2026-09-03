@@ -318,37 +318,6 @@ const entityLabel = computed(
                             </Select>
                             <FieldError :errors="[errors.campus_id]" />
                         </Field>
-                        <Field :data-invalid="Boolean(errors.modality_id)">
-                            <FieldLabel
-                                :for="`edit-offering-modality-${record.id}`"
-                                required
-                                >Modalidad</FieldLabel
-                            >
-                            <Select
-                                name="modality_id"
-                                :default-value="record.modality_id"
-                                required
-                            >
-                                <SelectTrigger
-                                    :id="`edit-offering-modality-${record.id}`"
-                                    :aria-invalid="Boolean(errors.modality_id)"
-                                    ><SelectValue
-                                        placeholder="Seleccione una modalidad"
-                                /></SelectTrigger>
-                                <SelectContent
-                                    ><SelectGroup>
-                                        <SelectItem
-                                            v-for="item in options.modalities"
-                                            :key="item.id"
-                                            :value="item.id"
-                                        >
-                                            {{ item.nombre }}
-                                        </SelectItem>
-                                    </SelectGroup></SelectContent
-                                >
-                            </Select>
-                            <FieldError :errors="[errors.modality_id]" />
-                        </Field>
                     </template>
 
                     <template v-else-if="entity === 'paralelo'">
