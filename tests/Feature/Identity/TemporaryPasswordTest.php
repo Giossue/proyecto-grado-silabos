@@ -177,6 +177,22 @@ class TemporaryPasswordTest extends TestCase
         $this->actingAs($user)->get(route('notifications.index'))->assertRedirect(route('dashboard'));
     }
 
+    public function test_repeating_the_temporary_password_is_not_a_change(): void
+    {
+        $user = $this->userWithTemporaryPassword();
+
+        $this->actingAs($user)
+            ->put(route('user-password.update'), [
+                'current_password' => 'Temporal-2026!',
+                'password' => 'Temporal-2026!',
+                'password_confirmation' => 'Temporal-2026!',
+            ])
+            ->assertSessionHasErrors(['password' => 'La contraseña nueva debe ser distinta de la actual.']);
+
+        $this->assertTrue($user->refresh()->debe_cambiar_contrasena);
+        $this->assertDatabaseMissing('eventos_auditoria', ['accion' => 'usuario.contrasena_temporal_cambiada']);
+    }
+
     public function test_the_audit_event_never_carries_the_password(): void
     {
         $user = $this->userWithTemporaryPassword();

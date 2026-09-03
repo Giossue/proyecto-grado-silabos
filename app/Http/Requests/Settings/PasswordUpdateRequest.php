@@ -19,7 +19,17 @@ class PasswordUpdateRequest extends FormRequest
     {
         return [
             'current_password' => $this->currentPasswordRules(),
-            'password' => $this->passwordRules(),
+            // Repetir la actual (por ejemplo, la temporal que llegó por correo) no es
+            // cambiarla: la contraseña seguiría siendo conocida por quien la generó.
+            'password' => [...$this->passwordRules(), 'different:current_password'],
+        ];
+    }
+
+    /** @return array<string, string> */
+    public function messages(): array
+    {
+        return [
+            'password.different' => 'La contraseña nueva debe ser distinta de la actual.',
         ];
     }
 }
