@@ -186,8 +186,8 @@ DOC-01 llena una cuadrícula con una casilla por celda, unidades y totales calcu
   una distinta); si alguna se aparta, la carrera aparece como «Híbrida» sola (I-37).
   COR-14 abre ofertas sin selector de modalidad: la hereda de la materia o de la carrera
   y la muestra en el listado (I-35).
-- COR-14 no crea ofertas una a una: **Preparar período** abre una hoja de pantalla
-  completa con todas las materias activas. Coordinación selecciona las que se dictarán,
+- COR-14 no crea ofertas una a una: **Preparar período** abre una hoja lateral amplia
+  con todas las materias activas. Coordinación selecciona las que se dictarán,
   define sus códigos de paralelo y jornada por fila o de forma masiva; campus y
   modalidad vienen de la carrera (ADM-04 pide ambos al crearla). Repetirlo no duplica y
   omitir una materia no elimina una oferta existente. Los paralelos extra siguen

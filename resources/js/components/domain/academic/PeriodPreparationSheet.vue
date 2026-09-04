@@ -146,7 +146,7 @@ watch(open, (isOpen) => {
 <template>
     <FormSheet
         v-model:open="open"
-        full-screen
+        wide
         trigger-label="Preparar período"
         title="Preparar período académico"
         description="Seleccione las materias que se dictarán y configure sus paralelos. Campus y modalidad se heredan de la carrera; las ofertas o paralelos existentes se conservan."

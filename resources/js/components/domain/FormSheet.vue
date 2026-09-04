@@ -19,10 +19,12 @@ withDefaults(
         description: string;
         showTrigger?: boolean;
         fullScreen?: boolean;
+        wide?: boolean;
     }>(),
     {
         showTrigger: true,
         fullScreen: false,
+        wide: false,
     },
 );
 
@@ -62,7 +64,8 @@ const close = (): void => {
             :class="
                 cn('w-full', {
                     'h-dvh max-w-none border-0 sm:max-w-none': fullScreen,
-                    'sm:max-w-lg': !fullScreen,
+                    'sm:max-w-6xl': wide && !fullScreen,
+                    'sm:max-w-lg': !wide && !fullScreen,
                 })
             "
         >

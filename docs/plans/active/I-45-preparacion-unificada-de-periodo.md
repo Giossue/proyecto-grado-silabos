@@ -20,12 +20,12 @@ omitir una fila.
 ## Pasos
 
 - [x] Aceptar y validar la preparación por materia y paralelo en una sola transacción.
-- [x] Sustituir el panel mínimo por la hoja de pantalla completa con configuración masiva.
+- [x] Sustituir el panel mínimo por la hoja lateral amplia con configuración masiva.
 - [x] Mantener las tablas de Ofertas y Paralelos como consulta detallada.
 - [x] Cubrir la operación y la interfaz con pruebas y actualizar pantallas/trazabilidad.
 
 ## Verificación
 
-- `php artisan test --compact tests/Feature/Academic/AcademicStructureTest.php tests/Architecture/ManagementCreationUiTest.php`: 59 pruebas y 1.527 aserciones.
+- `php artisan test --compact tests/Feature/Academic/AcademicStructureTest.php tests/Architecture/ManagementCreationUiTest.php`: 59 pruebas y 1.528 aserciones.
 - `./vendor/bin/pint --test`, `npm run types:check`, ESLint focalizado,
   PHPStan focalizado y `npm run build` pasan.

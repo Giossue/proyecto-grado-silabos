@@ -442,7 +442,8 @@ it('prepara ofertas y paralelos en una hoja de pantalla completa', function (): 
 
     expect($sheet)
         ->toBeString()
-        ->toContain('full-screen')
+        ->toContain('wide')
+        ->not->toContain('full-screen')
         ->toContain('Aplicar a seleccionadas')
         ->toContain('Seleccionar todas')
         ->toContain('<Checkbox')
