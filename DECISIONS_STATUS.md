@@ -144,6 +144,11 @@ para corregir. El cambio estructural muestra sus consecuencias y, tras confirmac
 elimina únicamente sílabos sin envío ni evidencia de IA. No existe «Archivar» para
 catálogos académicos: se elimina lo que no tiene dependencias y se protege la historia.
 
+I-45 (3 de septiembre de 2026) unifica la preparación de ofertas y paralelos en una
+hoja de pantalla completa. Coordinación selecciona materias de su malla y define sus
+paralelos/jornadas por fila o de forma masiva; el envío agrega únicamente lo que falta,
+sin eliminar por omisión ni alterar la historia.
+
 I-12 renombra «contexto» a rol en todo el sistema —clases, props, rutas, vistas, columna
 de auditoría, documentación y pruebas— por decisión explícita del responsable del
 producto, que reserva la palabra «contexto» para las fuentes académicas que alimentan al

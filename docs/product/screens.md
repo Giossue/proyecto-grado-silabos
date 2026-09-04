@@ -131,9 +131,9 @@
   COR-14 (paralelos) muestra y edita la jornada. **Agregar varios** crea, para una
   oferta elegida, los códigos separados por coma o línea con una jornada compartida en
   una única operación; el lote se rechaza completo si algún código ya existe. La tabla
-  de ofertas muestra el rango de inicio y fin del período institucional, no su nombre;
-  la de paralelos separa materia, código, paralelo, jornada y ese mismo rango, sin una
-  columna de estado.
+  de ofertas muestra materia y código en columnas separadas, más el rango de inicio y
+  fin del período institucional, no su nombre. La de paralelos separa materia, código,
+  paralelo, jornada y ese mismo rango, sin una columna de estado.
 - Indicadores del Panel (UI-01), cuatro por rol y todos accionables: Administración ve
   avance del proceso (% aprobados), días para la entrega, carreras sin convocar y sílabos
   sin iniciar; Coordinación, avance, días, por revisar y sin iniciar; Docencia, sílabos
@@ -186,12 +186,12 @@ DOC-01 llena una cuadrícula con una casilla por celda, unidades y totales calcu
   una distinta); si alguna se aparta, la carrera aparece como «Híbrida» sola (I-37).
   COR-14 abre ofertas sin selector de modalidad: la hereda de la materia o de la carrera
   y la muestra en el listado (I-35).
-- COR-14 no crea ofertas una a una: **Preparar periodo** (I-36) deja toda la malla activa
-  con oferta y paralelo «A» para el periodo elegido; campus y modalidad vienen de la
-  carrera (ADM-04 pide ambos al crearla). Repetirlo no duplica; una oferta que no se
-  dicta se elimina junto con sus paralelos y asignaciones docentes, siempre que no tenga
-  sílabos relacionados. Luego solo quedan los paralelos extra —que se pueden agregar por
-  lote para una oferta— y la asignación docente.
+- COR-14 no crea ofertas una a una: **Preparar período** abre una hoja de pantalla
+  completa con todas las materias activas. Coordinación selecciona las que se dictarán,
+  define sus códigos de paralelo y jornada por fila o de forma masiva; campus y
+  modalidad vienen de la carrera (ADM-04 pide ambos al crearla). Repetirlo no duplica y
+  omitir una materia no elimina una oferta existente. Los paralelos extra siguen
+  disponibles por lote para una oferta concreta.
 - COR-13 usa una única entrada **Malla**. Si existe, la ruta abre directamente la página
   completa con **Interactivo** (pestaña principal, decisión de los coordinadores) y
   **Desglose académico** (`?modo=desglose`); si no existe, muestra el

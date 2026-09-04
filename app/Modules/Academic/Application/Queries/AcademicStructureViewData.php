@@ -331,6 +331,8 @@ class AcademicStructureViewData
                     'period_id' => $offering->periodo_academico_id,
                     'campus_id' => $offering->campus_id,
                     'label' => "{$offering->subject->codigo_institucional} · {$offering->subject->nombre}",
+                    'subject_code' => $offering->subject->codigo_institucional,
+                    'subject_name' => $offering->subject->nombre,
                     'period_starts_on' => $offering->academicPeriod->fecha_inicio->toDateString(),
                     'period_ends_on' => $offering->academicPeriod->fecha_fin->toDateString(),
                     'campus_name' => $offering->campus->nombre,
@@ -357,7 +359,13 @@ class AcademicStructureViewData
                 'periods' => AcademicPeriod::query()
                     ->where('activo', true)
                     ->orderByDesc('fecha_inicio')
-                    ->get(['id', 'nombre']),
+                    ->get(['id', 'nombre', 'fecha_inicio', 'fecha_fin'])
+                    ->map(fn (AcademicPeriod $period): array => [
+                        'id' => $period->id,
+                        'nombre' => $period->nombre,
+                        'starts_on' => $period->fecha_inicio->toDateString(),
+                        'ends_on' => $period->fecha_fin->toDateString(),
+                    ]),
                 'campuses' => Campus::query()->where('activo', true)->orderBy('nombre')->get(['id', 'nombre']),
                 'activeSubjects' => Subject::query()
                     ->where('activo', true)

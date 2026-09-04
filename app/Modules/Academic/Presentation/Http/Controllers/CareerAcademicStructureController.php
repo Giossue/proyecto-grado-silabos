@@ -138,20 +138,28 @@ class CareerAcademicStructureController extends Controller
         return back()->with('success', "Relevo aplicado en {$summary['parallels']} paralelos; {$summary['syllabi']} sílabos pasaron al docente entrante.");
     }
 
-    /** Un clic: ofertas y paralelo «A» de toda la malla activa para el periodo (I-36). */
+    /** Prepara de forma atómica las materias y paralelos seleccionados para un período. */
     public function preparePeriod(
         PreparePeriodRequest $request,
         PreparePeriod $action,
     ): RedirectResponse {
         $actor = $request->user();
         abort_unless($actor instanceof User, 401);
-        /** @var array{period_id: string} $data */
+        /** @var array{period_id: string, subjects?: list<array{id: string, codes: list<string>, shift?: string|null}>} $data */
         $data = $request->validated();
         $result = $action->execute($data, $actor, $request);
 
         $message = $result['offerings'] === 0 && $result['parallels'] === 0
             ? "El periodo ya estaba preparado: las {$result['subjects']} materias tienen oferta y paralelo."
-            : "Periodo preparado: {$result['offerings']} ofertas y {$result['parallels']} paralelos nuevos para {$result['subjects']} materias.";
+            : sprintf(
+                'Período preparado: %d %s y %d %s nuevos para %d %s.',
+                $result['offerings'],
+                $result['offerings'] === 1 ? 'oferta' : 'ofertas',
+                $result['parallels'],
+                $result['parallels'] === 1 ? 'paralelo' : 'paralelos',
+                $result['subjects'],
+                $result['subjects'] === 1 ? 'materia' : 'materias',
+            );
 
         return back()->with('success', $message);
     }

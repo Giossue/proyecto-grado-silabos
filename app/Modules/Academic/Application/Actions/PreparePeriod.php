@@ -19,11 +19,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Prepara un periodo con un clic: toda materia activa de la malla activa queda con su
- * oferta (campus y modalidad heredados de la carrera) y con un paralelo «A». Lo que ya
- * existía se respeta, así que repetirlo no duplica nada; lo que no se dicte se elimina
- * después. Es el estándar de los sistemas académicos: la oferta de un periodo es la
- * malla completa, y la excepción se quita, no se teclea (I-36).
+ * Prepara las materias seleccionadas de un período: cada una recibe su oferta (campus y
+ * modalidad heredados) y los paralelos indicados. Lo existente se respeta y solo se
+ * agregan códigos faltantes: omitir una materia nunca la elimina por sorpresa.
  */
 class PreparePeriod
 {
@@ -37,7 +35,7 @@ class PreparePeriod
     ) {}
 
     /**
-     * @param  array{period_id: string}  $data
+     * @param  array{period_id: string, subjects?: list<array{id: string, codes: list<string>, shift?: string|null}>}  $data
      * @return array{offerings: int, parallels: int, subjects: int}
      */
     public function execute(array $data, User $actor, Request $request): array
@@ -53,23 +51,31 @@ class PreparePeriod
             $career = Career::query()->whereKey($careerId)->with('campus')->lockForUpdate()->firstOrFail();
             $period = AcademicPeriod::query()->whereKey($data['period_id'])->lockForUpdate()->firstOrFail();
             $campus = $this->inheritance->campusFor($career);
-            $subjects = Subject::query()
+            $settingsBySubject = collect($data['subjects'] ?? [])->keyBy('id');
+            $subjectsQuery = Subject::query()
                 ->where('activo', true)
                 ->whereHas('curriculum', fn ($query) => $query->where('carrera_id', $careerId)->where('estado', 'activa'))
                 ->with('curriculum.career')
                 ->orderBy('ciclo')
-                ->orderBy('orden_en_ciclo')
-                ->get();
+                ->orderBy('orden_en_ciclo');
+            if ($settingsBySubject->isNotEmpty()) {
+                $subjectsQuery->whereIn('id', $settingsBySubject->keys());
+            }
+            $subjects = $subjectsQuery->get();
             if ($subjects->isEmpty()) {
                 throw ValidationException::withMessages([
-                    'period_id' => 'La carrera no tiene malla activa con materias. Ármela antes de preparar el periodo.',
+                    'period_id' => 'No hay materias activas seleccionadas en la malla de esta carrera.',
+                ]);
+            }
+            if ($settingsBySubject->isNotEmpty() && $subjects->count() !== $settingsBySubject->count()) {
+                throw ValidationException::withMessages([
+                    'subjects' => 'Todas las materias seleccionadas deben estar activas y pertenecer a la malla de esta carrera.',
                 ]);
             }
 
             $existing = CourseOffering::query()
                 ->where('periodo_academico_id', $period->id)
                 ->whereIn('asignatura_id', $subjects->pluck('id'))
-                ->withCount('parallels')
                 ->get()
                 ->keyBy('asignatura_id');
             $correlationId = $request->attributes->getString('correlation_id') ?: null;
@@ -86,7 +92,6 @@ class PreparePeriod
                         'modalidad' => $this->inheritance->modalityFor($subject),
                         'activo' => true,
                     ]);
-                    $offering->parallels_count = 0;
                     $this->audit->execute(
                         actorId: $actor->id,
                         roleAssignmentId: $activeRole->id,
@@ -99,10 +104,20 @@ class PreparePeriod
                     );
                     $offerings++;
                 }
-                if ((int) $offering->parallels_count === 0) {
+                /** @var array{codes: list<string>, shift?: string|null}|null $setting */
+                $setting = $settingsBySubject->get($subject->id);
+                $codes = $setting['codes'] ?? [self::DEFAULT_PARALLEL];
+                $existingCodes = Parallel::query()
+                    ->where('oferta_academica_id', $offering->id)
+                    ->whereIn('codigo', $codes)
+                    ->pluck('codigo')
+                    ->all();
+
+                foreach (array_diff($codes, $existingCodes) as $code) {
                     $parallel = Parallel::query()->create([
                         'oferta_academica_id' => $offering->id,
-                        'codigo' => self::DEFAULT_PARALLEL,
+                        'codigo' => $code,
+                        'jornada' => $setting['shift'] ?? null,
                         'activo' => true,
                     ]);
                     $this->audit->execute(
@@ -112,7 +127,7 @@ class PreparePeriod
                         resourceType: 'paralelo',
                         resourceId: $parallel->id,
                         result: 'exito',
-                        metadata: ['period_prepared' => true],
+                        metadata: ['period_prepared' => true, 'bulk' => $setting !== null],
                         correlationId: $correlationId,
                     );
                     $parallels++;

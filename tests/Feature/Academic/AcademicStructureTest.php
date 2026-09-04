@@ -155,6 +155,8 @@ class AcademicStructureTest extends TestCase
                 ->component('Coordination/Academic/Offerings')
                 ->has('offerings', 1)
                 ->has('parallels', 1)
+                ->where('offerings.0.subject_code', $offering->subject->codigo_institucional)
+                ->where('offerings.0.subject_name', $offering->subject->nombre)
                 ->where('offerings.0.period_starts_on', $offering->academicPeriod->fecha_inicio->toDateString())
                 ->where('offerings.0.period_ends_on', $offering->academicPeriod->fecha_fin->toDateString()));
 
@@ -1070,7 +1072,7 @@ class AcademicStructureTest extends TestCase
             ->post(route('coordination.academic.period.prepare'), ['period_id' => $reference->periodo_academico_id])
             ->assertRedirect()
             ->assertSessionHasNoErrors()
-            ->assertSessionHas('success', "Periodo preparado: 2 ofertas y 2 paralelos nuevos para {$subjectCount} materias.");
+            ->assertSessionHas('success', "Período preparado: 2 ofertas y 2 paralelos nuevos para {$subjectCount} materias.");
 
         $offerings = CourseOffering::query()->where('periodo_academico_id', $reference->periodo_academico_id)->get();
         $this->assertCount($subjectCount, $offerings);
@@ -1092,6 +1094,53 @@ class AcademicStructureTest extends TestCase
             ->from(route('coordination.academic.offerings.index'))
             ->post(route('coordination.academic.period.prepare'), ['period_id' => $reference->periodo_academico_id])
             ->assertSessionHasErrors('subject_id');
+    }
+
+    public function test_coordinator_prepares_only_selected_subjects_with_their_requested_parallels(): void
+    {
+        $career = Career::query()->findOrFail($this->coordinatorContext->carrera_id);
+        $curriculum = Curriculum::query()->active()->where('carrera_id', $career->id)->firstOrFail();
+        $reference = CourseOffering::query()->firstOrFail();
+        $subject = Subject::query()->create([
+            'malla_id' => $curriculum->id,
+            'codigo_institucional' => 'SW-PREPARACION-SELECTIVA',
+            'nombre' => 'Materia preparada selectivamente',
+            'ciclo' => 6,
+            'orden_en_ciclo' => 1,
+            'activo' => true,
+        ]);
+
+        $this->actingAsCoordinator()
+            ->post(route('coordination.academic.period.prepare'), [
+                'period_id' => $reference->periodo_academico_id,
+                'subjects' => [[
+                    'id' => $subject->id,
+                    'codes' => ['B', 'C'],
+                    'shift' => 'matutina',
+                ]],
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('success', 'Período preparado: 1 oferta y 2 paralelos nuevos para 1 materia.');
+
+        $offering = CourseOffering::query()
+            ->where('periodo_academico_id', $reference->periodo_academico_id)
+            ->where('asignatura_id', $subject->id)
+            ->firstOrFail();
+        $this->assertDatabaseHas('paralelos', [
+            'oferta_academica_id' => $offering->id,
+            'codigo' => 'B',
+            'jornada' => 'matutina',
+        ]);
+        $this->assertDatabaseHas('paralelos', [
+            'oferta_academica_id' => $offering->id,
+            'codigo' => 'C',
+            'jornada' => 'matutina',
+        ]);
+        $this->assertDatabaseMissing('paralelos', [
+            'oferta_academica_id' => $offering->id,
+            'codigo' => 'A',
+        ]);
     }
 
     public function test_duplicate_offering_is_reported_to_the_coordinator_as_a_validation_error(): void

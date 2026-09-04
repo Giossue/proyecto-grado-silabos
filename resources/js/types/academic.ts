@@ -8,6 +8,8 @@ export type Option = {
     codigo_institucional?: string;
     email?: string;
     correo_electronico?: string;
+    starts_on?: string;
+    ends_on?: string;
     /** Materias de la malla activa: para agruparlas por ciclo al abrir ofertas. */
     ciclo?: number | null;
 };
@@ -83,6 +85,8 @@ export type AcademicStructureProps = {
         period_id: string;
         campus_id: string;
         label: string;
+        subject_code: string;
+        subject_name: string;
         period_starts_on: string;
         period_ends_on: string;
         campus_name: string;

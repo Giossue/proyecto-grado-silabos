@@ -3,15 +3,6 @@ import CareerAcademicActions from '@/components/domain/academic/CareerAcademicAc
 import ClientFilterBar from '@/components/domain/ClientFilterBar.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
 import { Card, CardContent } from '@/components/ui/card';
-import { Field, FieldLabel } from '@/components/ui/field';
-import {
-    Select,
-    SelectContent,
-    SelectGroup,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
 import {
     Table,
     TableBody,
@@ -46,7 +37,8 @@ const formatPeriod = (startsOn: string, endsOn: string): string =>
 const offeringFilter = useClientFilter(
     () => props.offerings,
     (item) => [
-        item.label,
+        item.subject_name,
+        item.subject_code,
         formatPeriod(item.period_starts_on, item.period_ends_on),
         item.campus_name,
         item.modality_name,
@@ -88,48 +80,16 @@ const {
                     :filter="offeringFilter"
                     input-id="offerings-search"
                     label="Buscar oferta"
-                    placeholder="Buscar por asignatura, periodo, campus o modalidad"
-                >
-                    <template #filters>
-                        <Field>
-                            <FieldLabel
-                                for="offerings-search-state"
-                                class="sr-only"
-                                >Estado</FieldLabel
-                            >
-                            <Select
-                                v-model="offeringFilter.values.estado.value"
-                            >
-                                <SelectTrigger id="offerings-search-state">
-                                    <SelectValue
-                                        placeholder="Todos los estados"
-                                    />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectGroup>
-                                        <SelectItem value="all"
-                                            >Todos los estados</SelectItem
-                                        >
-                                        <SelectItem value="active"
-                                            >Activas</SelectItem
-                                        >
-                                        <SelectItem value="inactive"
-                                            >Inactivas</SelectItem
-                                        >
-                                    </SelectGroup>
-                                </SelectContent>
-                            </Select>
-                        </Field>
-                    </template>
-                </ClientFilterBar>
+                    placeholder="Buscar por materia, código, periodo, campus o modalidad"
+                />
                 <Table
                     ><TableHeader
                         ><TableRow
                             ><TableHead>Materia</TableHead
+                            ><TableHead>Código</TableHead
                             ><TableHead>Periodo</TableHead
                             ><TableHead>Ubicación</TableHead
                             ><TableHead>Paralelos</TableHead
-                            ><TableHead>Estado</TableHead
                             ><TableHead class="text-right"
                                 >Acciones</TableHead
                             ></TableRow
@@ -142,7 +102,8 @@ const {
                             v-for="item in offeringPage"
                             v-else
                             :key="item.id"
-                            ><TableCell>{{ item.label }}</TableCell
+                            ><TableCell>{{ item.subject_name }}</TableCell
+                            ><TableCell>{{ item.subject_code }}</TableCell
                             ><TableCell>{{
                                 formatPeriod(
                                     item.period_starts_on,
@@ -153,9 +114,6 @@ const {
                                 >{{ item.campus_name }} ·
                                 {{ item.modality_name }}</TableCell
                             ><TableCell>{{ item.parallel_count }}</TableCell
-                            ><TableCell>{{
-                                item.active ? 'Activa' : 'Inactiva'
-                            }}</TableCell
                             ><TableCell class="text-right"
                                 ><CareerAcademicActions
                                     entity="oferta"

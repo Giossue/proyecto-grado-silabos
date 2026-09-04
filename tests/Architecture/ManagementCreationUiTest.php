@@ -56,8 +56,8 @@ it('mantiene las altas de gestión que requieren datos dentro del sheet derecho 
         ],
         'Coordinador · ofertas' => [
             'page' => 'resources/js/pages/Coordination/Academic/Offerings.vue',
-            'component' => 'OfferingRecordSheet',
-            'component_file' => 'resources/js/components/domain/academic/OfferingRecordSheet.vue',
+            'component' => 'PeriodPreparationSheet',
+            'component_file' => 'resources/js/components/domain/academic/PeriodPreparationSheet.vue',
             'action' => 'CareerAcademicStructureController.preparePeriod.url',
             'success' => 'onSuccess: () => {',
         ],
@@ -294,7 +294,7 @@ it('presenta una sola malla por carrera sin buscador filtros cards ni versiones'
         ->not->toContain('Malla publicada')
         ->not->toContain('número de versión')
         ->not->toContain('version_number');
-    expect($offerings)->toBeString()->toContain('entity="oferta"');
+    expect($offerings)->toBeString()->toContain('<PeriodPreparationSheet');
     expect($parallels)->toBeString()->toContain('entity="paralelo"');
 });
 
@@ -432,6 +432,22 @@ it('evita repetir el encabezado de pagina dentro de las tablas academicas', func
         ->not->toContain('<CardHeader')
         ->not->toContain('<CardTitle')
         ->not->toContain('<CardDescription');
+});
+
+it('prepara ofertas y paralelos en una hoja de pantalla completa', function (): void {
+    $root = dirname(__DIR__, 2);
+    $sheet = file_get_contents(
+        $root.'/resources/js/components/domain/academic/PeriodPreparationSheet.vue',
+    );
+
+    expect($sheet)
+        ->toBeString()
+        ->toContain('full-screen')
+        ->toContain('Aplicar a seleccionadas')
+        ->toContain('Seleccionar todas')
+        ->toContain('<Checkbox')
+        ->toContain('<Table')
+        ->toContain('CareerAcademicStructureController.preparePeriod.url');
 });
 
 it('agrupa procesos y registro de actividad bajo auditoria', function (): void {
@@ -782,6 +798,12 @@ it('presenta la plantilla institucional única y abre su constructor', function 
 
 it('usa el mismo paginador en todas las superficies tabulares', function (): void {
     $root = dirname(__DIR__, 2);
+    // La tabla dentro de Preparar período es una matriz de configuración previa al
+    // guardado, no un listado navegable. Debe mostrar la malla completa para que la
+    // selección masiva no oculte materias en otras páginas.
+    $configurationTables = [
+        'resources/js/components/domain/academic/PeriodPreparationSheet.vue',
+    ];
     $iterator = new RecursiveIteratorIterator(
         new RecursiveDirectoryIterator($root.'/resources/js'),
     );
@@ -804,6 +826,10 @@ it('usa el mismo paginador en todas las superficies tabulares', function (): voi
         }
 
         $relativePath = str_replace($root.'/', '', $file->getPathname());
+        if (in_array($relativePath, $configurationTables, true)) {
+            continue;
+        }
+
         $this->assertSame(
             $tableCount,
             substr_count($source, '<TablePagination'),
