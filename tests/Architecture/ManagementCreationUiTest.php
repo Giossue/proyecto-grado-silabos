@@ -156,6 +156,7 @@ it('permite buscar docente y paralelo al crear una asignación docente', functio
     $this->assertStringContainsString('filteredOptions', $selector);
     $this->assertStringContainsString('type="hidden" :name="name" :value="selectedId"', $selector);
     $this->assertStringContainsString('@click="startSearch"', $selector);
+    $this->assertStringContainsString('if (open.value)', $selector);
     $this->assertStringContainsString('open.value = true;', $selector);
     $this->assertStringNotContainsString('@focus="startSearch"', $selector);
     $this->assertStringNotContainsString('ChevronDown', $selector);

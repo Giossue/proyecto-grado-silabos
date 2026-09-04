@@ -53,6 +53,10 @@ const inputValue = computed(() =>
 );
 
 const startSearch = (): void => {
+    if (open.value) {
+        return;
+    }
+
     query.value = '';
     searching.value = true;
     open.value = true;
