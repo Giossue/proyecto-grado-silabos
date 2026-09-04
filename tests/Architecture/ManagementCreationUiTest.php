@@ -155,8 +155,9 @@ it('permite buscar docente y paralelo al crear una asignación docente', functio
     $this->assertStringContainsString('Buscar materia, período o paralelo…', $sheet);
     $this->assertStringContainsString('filteredOptions', $selector);
     $this->assertStringContainsString('type="hidden" :name="name" :value="selectedId"', $selector);
-    $this->assertStringContainsString('@focus="startSearch"', $selector);
-    $this->assertStringContainsString("open = query.trim() !== '';", $selector);
+    $this->assertStringContainsString('@click="startSearch"', $selector);
+    $this->assertStringContainsString('open.value = true;', $selector);
+    $this->assertStringNotContainsString('@focus="startSearch"', $selector);
     $this->assertStringNotContainsString('ChevronDown', $selector);
 });
 

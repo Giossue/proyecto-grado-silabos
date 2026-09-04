@@ -55,7 +55,7 @@ const inputValue = computed(() =>
 const startSearch = (): void => {
     query.value = '';
     searching.value = true;
-    open.value = false;
+    open.value = true;
 };
 const selectOption = (option: Option): void => {
     selectedId.value = option.id;
@@ -77,11 +77,11 @@ const selectOption = (option: Option): void => {
                 :aria-invalid="invalid"
                 :aria-expanded="open"
                 aria-autocomplete="list"
-                @focus="startSearch"
+                @click="startSearch"
                 @update:model-value="
                     (value) => {
                         query = String(value);
-                        open = query.trim() !== '';
+                        open = true;
                     }
                 "
             />
