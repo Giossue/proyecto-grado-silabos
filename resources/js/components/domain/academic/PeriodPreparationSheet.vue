@@ -193,7 +193,7 @@ watch(open, (isOpen) => {
                     </Alert>
 
                     <div
-                        class="flex flex-col gap-3 rounded-lg border bg-muted/30 p-4 lg:flex-row lg:items-end"
+                        class="flex w-full max-w-5xl flex-col gap-3 rounded-lg border bg-muted/30 p-4 lg:flex-row lg:items-end"
                     >
                         <Field class="min-w-0 flex-1">
                             <FieldLabel for="period-preparation-codes">
@@ -281,8 +281,9 @@ watch(open, (isOpen) => {
                             <TableRow v-for="row in rows" :key="row.id">
                                 <TableCell>
                                     <Checkbox
-                                        v-model:checked="row.selected"
+                                        :model-value="row.selected"
                                         :aria-label="'Incluir ' + row.name"
+                                        @update:model-value="row.selected = $event === true"
                                     />
                                 </TableCell>
                                 <TableCell>{{ row.code }}</TableCell>

@@ -446,6 +446,7 @@ it('prepara ofertas y paralelos en una hoja de pantalla completa', function (): 
         ->toContain('Aplicar a seleccionadas')
         ->toContain('Seleccionar todas')
         ->toContain('<Checkbox')
+        ->toContain('@update:model-value="row.selected = $event === true"')
         ->toContain('<Table')
         ->toContain('CareerAcademicStructureController.preparePeriod.url');
 });
