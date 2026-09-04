@@ -3,6 +3,7 @@
 namespace Tests\Feature\Syllabus;
 
 use App\Models\User;
+use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CourseOffering;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
@@ -13,9 +14,12 @@ use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\Convocation;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\Syllabus;
+use App\Modules\Syllabus\Infrastructure\Persistence\Models\SyllabusProcess;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\ValidationRun;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\Support\CreatesSyllabusProcess;
 use Tests\TestCase;
@@ -98,7 +102,15 @@ class ConvocationAndDraftTest extends TestCase
 
         $this->assertSame($originalName, $existing->fresh()->academicSubjectName());
 
-        $convocation = $this->createPreparedConvocation('por_paralelo');
+        $existing->convocation->process->update(['estado' => SyllabusProcess::STATE_CLOSED]);
+        $otherPeriod = AcademicPeriod::query()->create([
+            'codigo' => 'I-46-MALLA-INACTIVA',
+            'nombre' => 'Período para malla inactiva',
+            'fecha_inicio' => '2027-01-01',
+            'fecha_fin' => '2027-05-31',
+            'activo' => true,
+        ]);
+        $convocation = $this->createPreparedConvocation('por_paralelo', $otherPeriod->id);
         $this->actingAsCoordinator()
             ->post(route('convocations.open', $convocation))
             ->assertSessionHasErrors('convocation');
@@ -340,22 +352,44 @@ class ConvocationAndDraftTest extends TestCase
         $this->actingAsTeacher()->get(route('syllabi.show', $syllabus))->assertRedirect(route('login'));
     }
 
-    private function createPreparedConvocation(string $groupingMode): Convocation
+    private function createPreparedConvocation(string $groupingMode, ?string $periodId = null): Convocation
     {
         [$template, $source] = $this->publishedConfiguration();
-        $periodId = CourseOffering::query()->firstOrFail()->periodo_academico_id;
+        $process = $periodId === null
+            ? $this->openSyllabusProcess($template->id, now()->subDay()->toIso8601String(), now()->addMonth()->toIso8601String())
+            : SyllabusProcess::query()->create([
+                'nombre' => 'Proceso institucional alterno de prueba',
+                'plantilla_id' => $template->id,
+                'periodo_academico_id' => $periodId,
+                'inicia_en' => now()->subDay(),
+                'entrega_en' => now()->addMonth(),
+                'estado' => SyllabusProcess::STATE_OPEN,
+                'creado_por' => $this->administrator->id,
+                'abierto_por' => $this->administrator->id,
+                'abierto_en' => now(),
+            ]);
 
-        $this->actingAsCoordinator()->post(route('convocations.store'), [
-            'nombre' => 'Convocatoria '.$groupingMode,
-            'period_id' => $periodId,
-            'process_id' => $this->openSyllabusProcess($template->id, now()->subDay()->toIso8601String(), now()->addMonth()->toIso8601String())->id,
-            'grouping_mode' => $groupingMode,
-            'source_ids' => [$source->id],
-        ])->assertRedirect();
+        // Esta ayuda prepara el estado previo para probar OpenConvocation en aislamiento.
+        // El alta real de una carrera siempre pasa por CreateConvocation y abre de forma atómica.
+        $convocation = Convocation::query()->create([
+            'carrera_id' => $this->coordinatorContext->carrera_id,
+            'proceso_id' => $process->id,
+            'periodo_academico_id' => $process->periodo_academico_id,
+            'plantilla_id' => $template->id,
+            'nombre' => 'Convocatoria de prueba '.Str::uuid(),
+            'estado' => 'preparacion',
+            'modo_agrupacion' => 'por_paralelo',
+            'creado_por' => $this->coordinator->id,
+        ]);
+        DB::table('fuentes_convocatoria')->insert([
+            'id' => (string) Str::uuid(),
+            'convocatoria_id' => $convocation->id,
+            'fuente_academica_id' => $source->id,
+            'creado_en' => now(),
+            'actualizado_en' => now(),
+        ]);
 
-        // Por nombre: dos convocatorias creadas en el mismo segundo empatan en
-        // `creado_en` y «la última» dejaría de ser la recién preparada.
-        return Convocation::query()->where('nombre', 'Convocatoria '.$groupingMode)->firstOrFail();
+        return $convocation;
     }
 
     /** @return array{SyllabusTemplate, AcademicSource} */

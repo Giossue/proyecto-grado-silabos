@@ -6,6 +6,7 @@ import PageFrame from '@/components/domain/PageFrame.vue';
 import ConvocationActions from '@/components/domain/syllabus/ConvocationActions.vue';
 import ConvocationCreationSheet from '@/components/domain/syllabus/ConvocationCreationSheet.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Card, CardContent } from '@/components/ui/card';
 import { Field, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -54,8 +55,8 @@ defineProps<{
         starts_at: string;
         due_at: string;
         period_name: string;
+        started_for_career: boolean;
     }[];
-    sources: { id: string; label: string }[];
 }>();
 
 defineOptions({
@@ -87,11 +88,17 @@ const processNote = (row: ConvocationRow): string | null =>
         description="Cada convocatoria abre los sílabos de un periodo y fija con qué formato se llenan."
     >
         <template #actions>
-            <ConvocationCreationSheet
-                :processes="processes"
-                :sources="sources"
-            />
+            <ConvocationCreationSheet :processes="processes" />
         </template>
+
+        <Alert v-if="processes.length > 0">
+            <AlertTitle>Convocatorias institucionales</AlertTitle>
+            <AlertDescription>
+                <span v-for="(process, index) in processes" :key="process.id">
+                    {{ process.label }} · {{ process.period_name }} · {{ stateLabel(process.state) }}{{ process.started_for_career ? ' · Iniciada para su carrera' : '' }}<span v-if="index < processes.length - 1">; </span>
+                </span>
+            </AlertDescription>
+        </Alert>
 
         <Card>
             <CardContent class="flex flex-col gap-4">
@@ -214,7 +221,6 @@ const processNote = (row: ConvocationRow): string | null =>
                             <TableCell class="text-right">
                                 <ConvocationActions
                                     :convocation="convocation"
-                                    :sources="sources"
                                 />
                             </TableCell>
                         </TableRow>

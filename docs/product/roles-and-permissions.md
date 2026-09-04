@@ -30,7 +30,8 @@ el permiso, pero no lo sustituyen.
 | Diseñar/publicar plantilla | Sí, salvo con proceso abierto | Consulta/aporte según política | No |
 | Gestionar fuentes (documentos) | No participa | Sí, en su carrera, salvo con convocatoria en curso | Consulta autorizada |
 | Abrir, pausar, reanudar y cerrar el proceso de sílabos | Sí | Consulta al convocar | No |
-| Crear/abrir convocatoria dentro del proceso | No | Sí, en su carrera | No |
+| Preparar convocatoria institucional | Sí, una por período | No | No |
+| Iniciar alcance de su carrera desde convocatoria institucional abierta | No | Sí, si su malla, ofertas/paralelos, docentes y fuentes están listos | No |
 | Pausar/reanudar convocatoria | No | Sí, en su carrera | No |
 | Cerrar (sobre el proceso; detiene a todas las convocatorias) | Sí | No | No |
 | Prorrogar plazo (sobre el proceso; alcanza a todas las convocatorias) | Sí | No | No |

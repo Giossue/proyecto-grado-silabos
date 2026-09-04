@@ -3,11 +3,13 @@
 namespace App\Modules\Syllabus\Application\Actions;
 
 use App\Models\User;
+use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
 use App\Modules\Configuration\Application\TemplateStructureValidator;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Identity\Domain\Enums\RoleCode;
 use App\Modules\Operations\Application\Actions\RecordAuditEvent;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\SyllabusProcess;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -76,6 +78,23 @@ class TransitionSyllabusProcess
                 }
                 // Lo que antes garantizaba «publicar»: la plantilla se usa completa o no se usa.
                 $this->templateStructure->assertUsable($locked->template, 'process');
+                $careers = Career::query()->where('activo', true);
+                if (! (clone $careers)->exists()) {
+                    throw ValidationException::withMessages(['process' => 'No existen carreras activas en la estructura institucional.']);
+                }
+                $withoutCampus = (clone $careers)->whereDoesntHave('campus', fn ($query) => $query->where('activo', true))->count();
+                $withoutCoordinator = (clone $careers)->whereDoesntHave(
+                    'coordinatorAssignments',
+                    fn (Builder $query) => $query
+                        ->where('activo', true)
+                        ->where('vigente_desde', '<=', now())
+                        ->where(fn (Builder $effective) => $effective
+                            ->whereNull('vigente_hasta')
+                            ->orWhere('vigente_hasta', '>', now())),
+                )->count();
+                if ($withoutCampus > 0 || $withoutCoordinator > 0) {
+                    throw ValidationException::withMessages(['process' => "La estructura institucional no está lista: {$withoutCampus} carrera(s) sin campus activo y {$withoutCoordinator} sin coordinación vigente."]);
+                }
                 $other = SyllabusProcess::query()->inProgress()->whereKeyNot($locked->id)->first(['nombre']);
                 if ($other !== null) {
                     throw ValidationException::withMessages([

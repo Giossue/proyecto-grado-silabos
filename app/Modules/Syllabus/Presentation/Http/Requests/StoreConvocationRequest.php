@@ -16,32 +16,12 @@ class StoreConvocationRequest extends FormRequest
     /** @return array<string, list<mixed>> */
     public function rules(): array
     {
-        return [
-            'nombre' => ['required', 'string', 'max:180'],
-            // La plantilla y las fechas vienen del proceso: aquí solo se elige cuál.
-            'process_id' => [
-                'required',
-                'uuid',
-                Rule::exists('procesos_silabos', 'id')->whereNot('estado', 'cerrado'),
-            ],
-            'grouping_mode' => ['required', Rule::in(['por_oferta', 'por_paralelo'])],
-            'source_ids' => ['required', 'array', 'min:1'],
-            'source_ids.*' => ['required', 'uuid', 'distinct', 'exists:fuentes_academicas,id'],
-        ];
+        return ['process_id' => ['required', 'uuid', Rule::exists('procesos_silabos', 'id')->where('estado', 'abierto')]];
     }
 
-    /** @return array{nombre: string, process_id: string, grouping_mode: string, source_ids: list<string>} */
+    /** @return array{process_id: string} */
     public function convocationData(): array
     {
-        $sourceIds = $this->input('source_ids', []);
-
-        return [
-            'nombre' => $this->string('nombre')->toString(),
-            'process_id' => $this->string('process_id')->toString(),
-            'grouping_mode' => $this->string('grouping_mode')->toString(),
-            'source_ids' => is_array($sourceIds)
-                ? array_values(array_filter($sourceIds, is_string(...)))
-                : [],
-        ];
+        return ['process_id' => $this->string('process_id')->toString()];
     }
 }

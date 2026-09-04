@@ -193,7 +193,6 @@ class ConvocationScheduleTest extends TestCase
     private function createValidDraft(?CarbonInterface $startsAt = null): Syllabus
     {
         $convocation = $this->prepareConvocation($startsAt);
-        $this->actingAsCoordinator()->post(route('convocations.open', $convocation))->assertRedirect();
         $syllabus = Syllabus::query()->firstOrFail();
         $this->actingAsTeacher()->post(route('syllabi.start', $syllabus))->assertRedirect();
 

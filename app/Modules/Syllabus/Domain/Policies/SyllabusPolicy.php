@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Identity\Domain\Enums\RoleCode;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\Syllabus;
+use Illuminate\Database\Eloquent\Builder;
 
 class SyllabusPolicy
 {
@@ -103,9 +104,13 @@ class SyllabusPolicy
     {
         return $syllabus->collaborators()
             ->where('usuario_id', $user->id)
-            ->whereHas('teacherAssignment', fn ($query) => $query
+            ->whereHas('teacherAssignment', fn (Builder $query) => $query
                 ->where('activo', true)
-                ->whereHas('user', fn ($userQuery) => $userQuery->where('activo', true)->laborallyEffective()))
+                ->whereHas('user', fn (Builder $userQuery) => $userQuery
+                    ->where('activo', true)
+                    ->where(fn (Builder $validity) => $validity->whereNull('vigente_desde')->orWhere('vigente_desde', '<=', now()->toDateString()))
+                    ->where(fn (Builder $validity) => $validity->whereNull('vigente_hasta')->orWhere('vigente_hasta', '>=', now()->toDateString())))
+            )
             ->exists();
     }
 }

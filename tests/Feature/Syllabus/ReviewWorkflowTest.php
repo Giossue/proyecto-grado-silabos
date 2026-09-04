@@ -548,7 +548,6 @@ class ReviewWorkflowTest extends TestCase
             'source_ids' => [$source->id],
         ])->assertRedirect();
         $convocation = Convocation::query()->latest('creado_en')->firstOrFail();
-        $this->actingAsCoordinator()->post(route('convocations.open', $convocation))->assertRedirect();
         $syllabus = Syllabus::query()->firstOrFail();
         $this->actingAsTeacher()->post(route('syllabi.start', $syllabus))->assertRedirect();
 

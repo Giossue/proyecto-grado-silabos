@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Identity\Domain\Enums\RoleCode;
 use App\Modules\Operations\Application\Actions\RecordAuditEvent;
+use App\Modules\Syllabus\Application\SyncConvocationSources;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\Convocation;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\SyllabusProcess;
 use Illuminate\Http\Request;
@@ -27,6 +28,7 @@ class TransitionConvocation
     public function __construct(
         private readonly ActiveRole $roles,
         private readonly RecordAuditEvent $audit,
+        private readonly SyncConvocationSources $sources,
     ) {}
 
     public function execute(
@@ -61,6 +63,9 @@ class TransitionConvocation
                 throw ValidationException::withMessages([
                     'convocation' => 'El proceso institucional no está abierto; la convocatoria se reanudará cuando Administración lo reanude.',
                 ]);
+            }
+            if ($to === Convocation::STATE_OPEN) {
+                $this->sources->execute($locked);
             }
 
             $locked->update(['estado' => $to]);

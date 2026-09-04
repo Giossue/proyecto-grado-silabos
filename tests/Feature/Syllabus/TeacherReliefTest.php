@@ -217,7 +217,6 @@ class TeacherReliefTest extends TestCase
             'source_ids' => [$source->id],
         ])->assertRedirect();
         $convocation = Convocation::query()->latest('creado_en')->firstOrFail();
-        $this->actingAsCoordinator()->post(route('convocations.open', $convocation))->assertRedirect();
 
         return Syllabus::query()->firstOrFail();
     }

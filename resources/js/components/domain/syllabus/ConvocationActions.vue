@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { Form, Link } from '@inertiajs/vue3';
-import { Eye, Lock, Pause, Pencil, Play } from '@lucide/vue';
+import { Eye, Lock, Pause, Play } from '@lucide/vue';
 import { ref } from 'vue';
 import ConvocationController from '@/actions/App/Modules/Syllabus/Presentation/Http/Controllers/ConvocationController';
-import ConvocationEditSheet from '@/components/domain/syllabus/ConvocationEditSheet.vue';
 import TableActionsMenu from '@/components/domain/TableActionsMenu.vue';
 import { Button } from '@/components/ui/button';
 import {
@@ -36,12 +35,9 @@ defineProps<{
         process_state: string;
         period_id: string;
         grouping_mode: string;
-        source_ids: string[];
     };
-    sources: { id: string; label: string }[];
 }>();
 
-const editOpen = ref(false);
 const pending = ref<Transition | null>(null);
 
 const dialogs: Record<
@@ -86,16 +82,6 @@ const transitionForm = (id: string, transition: Transition) =>
             </Link>
         </DropdownMenuItem>
         <DropdownMenuItem
-            v-if="
-                convocation.state === 'preparacion' ||
-                convocation.state === 'pausada'
-            "
-            @select="editOpen = true"
-        >
-            <Pencil aria-hidden="true" />
-            Editar
-        </DropdownMenuItem>
-        <DropdownMenuItem
             v-if="convocation.state === 'preparacion'"
             @select="pending = 'abrir'"
         >
@@ -121,12 +107,6 @@ const transitionForm = (id: string, transition: Transition) =>
             Convocatoria cerrada
         </DropdownMenuItem>
     </TableActionsMenu>
-
-    <ConvocationEditSheet
-        v-model:open="editOpen"
-        :convocation="convocation"
-        :sources="sources"
-    />
 
     <Dialog
         :open="pending !== null"

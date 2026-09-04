@@ -34,6 +34,11 @@ class CreateSyllabusProcess
         $template = self::institutionalTemplate();
 
         return DB::transaction(function () use ($actor, $activeRole, $data, $request, $template): SyllabusProcess {
+            if (SyllabusProcess::query()->where('periodo_academico_id', $data['period_id'])->exists()) {
+                throw ValidationException::withMessages([
+                    'period_id' => 'Ya existe una convocatoria institucional para este período académico.',
+                ]);
+            }
             $process = SyllabusProcess::query()->create([
                 'nombre' => $data['nombre'],
                 'plantilla_id' => $template->id,

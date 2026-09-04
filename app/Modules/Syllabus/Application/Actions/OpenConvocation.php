@@ -104,17 +104,10 @@ class OpenConvocation
 
             $generated = 0;
             foreach ($offerings as $offering) {
-                if ($convocation->modo_agrupacion === 'por_paralelo') {
-                    foreach ($offering->parallels as $parallel) {
-                        $this->generateSyllabus($convocation, $offering, new Collection([$parallel]));
-                        $generated++;
-                    }
-
-                    continue;
+                foreach ($offering->parallels as $parallel) {
+                    $this->generateSyllabus($convocation, $offering, new Collection([$parallel]));
+                    $generated++;
                 }
-
-                $this->generateSyllabus($convocation, $offering, $offering->parallels);
-                $generated++;
             }
 
             $convocation->update(['estado' => 'abierta', 'abierto_por' => $actor->id, 'abierto_en' => now()]);

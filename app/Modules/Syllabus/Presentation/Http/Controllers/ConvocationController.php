@@ -9,14 +9,12 @@ use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Syllabus\Application\Actions\CreateConvocation;
 use App\Modules\Syllabus\Application\Actions\OpenConvocation;
 use App\Modules\Syllabus\Application\Actions\TransitionConvocation;
-use App\Modules\Syllabus\Application\Actions\UpdateConvocation;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\Convocation;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\Syllabus;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\SyllabusProcess;
 use App\Modules\Syllabus\Presentation\Http\Requests\OpenConvocationRequest;
 use App\Modules\Syllabus\Presentation\Http\Requests\StoreConvocationRequest;
 use App\Modules\Syllabus\Presentation\Http\Requests\TransitionConvocationRequest;
-use App\Modules\Syllabus\Presentation\Http\Requests\UpdateConvocationRequest;
 use App\Modules\Syllabus\Presentation\Http\Requests\ViewConvocationsRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -63,8 +61,8 @@ class ConvocationController extends Controller
                     'template' => $convocation->template->nombre,
                     'syllabi_count' => $convocation->syllabi_count,
                 ]),
-            // El calendario lo fija Administración: la carrera elige a qué proceso
-            // convoca y hereda su plantilla y sus fechas.
+            // El calendario lo fija Administración: la carrera solo inicia su alcance
+            // desde uno de estos procesos y hereda plantilla, período y fechas.
             'processes' => SyllabusProcess::query()
                 ->whereNot('estado', SyllabusProcess::STATE_CLOSED)
                 ->with(['template:id,nombre', 'academicPeriod:id,nombre'])
@@ -77,12 +75,11 @@ class ConvocationController extends Controller
                     'period_name' => $process->academicPeriod->nombre,
                     'starts_at' => $process->inicia_en->toIso8601String(),
                     'due_at' => $process->entrega_en->toIso8601String(),
+                    'started_for_career' => Convocation::query()
+                        ->where('carrera_id', $careerId)
+                        ->where('proceso_id', $process->id)
+                        ->exists(),
                 ]),
-            'sources' => AcademicSource::query()
-                ->where('carrera_id', $careerId)
-                ->where('activo', true)
-                ->orderBy('nombre')->get()
-                ->map(fn (AcademicSource $source) => ['id' => $source->id, 'label' => $source->nombre]),
         ]);
     }
 
@@ -92,7 +89,7 @@ class ConvocationController extends Controller
         abort_unless($actor instanceof User, 401);
         $convocation = $action->execute($request->convocationData(), $actor, $request);
 
-        return to_route('convocations.show', $convocation)->with('success', 'Convocatoria preparada. Revisa el alcance antes de abrirla.');
+        return to_route('convocations.show', $convocation)->with('success', 'Convocatoria iniciada: se generó un sílabo por cada paralelo.');
     }
 
     public function show(Convocation $convocation, Request $request): Response
@@ -145,18 +142,6 @@ class ConvocationController extends Controller
         $action->execute($convocation->id, $actor, $request);
 
         return back()->with('success', 'Convocatoria abierta y expedientes generados sin duplicados.');
-    }
-
-    public function update(
-        Convocation $convocation,
-        UpdateConvocationRequest $request,
-        UpdateConvocation $action,
-    ): RedirectResponse {
-        $actor = $request->user();
-        abort_unless($actor instanceof User, 401);
-        $action->execute($convocation, $request->convocationData(), $actor, $request);
-
-        return back()->with('success', 'Convocatoria actualizada.');
     }
 
     public function transition(

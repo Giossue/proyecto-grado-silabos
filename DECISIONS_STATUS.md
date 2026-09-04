@@ -236,6 +236,15 @@ malla borra los sílabos en curso de ese alcance previa confirmación con la cif
 ya se enviaron a revisión o tienen análisis de IA no se borran —la base los protege— y en
 ese caso el cambio se rechaza. Los sílabos de procesos cerrados no se tocan.
 
+I-46 (4 de septiembre de 2026) precisa dos alcances del mismo ciclo: Administración
+prepara y abre un único proceso institucional por período académico; Coordinación no
+prepara ni configura otra convocatoria, sino que inicia o pausa el alcance de su carrera
+desde ese proceso visible. Iniciar exige malla activa, ofertas con paralelos y docentes
+vigentes, y fuentes académicas activas; genera atómicamente un sílabo por paralelo. Las
+fuentes activas de toda la carrera se fijan de forma automática y se sincronizan al
+reanudar. PostgreSQL impide más de un proceso por período y más de un alcance por
+carrera/período.
+
 ## Propuesto
 
 - PHP 8.3 o superior como mínimo del proyecto.

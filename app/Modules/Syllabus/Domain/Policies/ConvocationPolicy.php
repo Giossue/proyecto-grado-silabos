@@ -48,7 +48,6 @@ class ConvocationPolicy
     /** Se corrige antes de abrir o en pausa: nunca con los docentes trabajando. */
     public function update(User $user, Convocation $convocation): bool
     {
-        return $this->view($user, $convocation)
-            && in_array($convocation->estado, [Convocation::STATE_PREPARATION, Convocation::STATE_PAUSED], true);
+        return false;
     }
 }

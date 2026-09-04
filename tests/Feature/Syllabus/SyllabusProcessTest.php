@@ -112,7 +112,21 @@ class SyllabusProcessTest extends TestCase
     {
         $template = $this->publishedTemplate();
         $first = $this->preparedProcess($template, 'Primero');
-        $second = $this->preparedProcess($template, 'Segundo');
+
+        // Un período institucional identifica un único proceso, aun antes de abrirlo.
+        $this->actingAsAdministrator()->post(route('admin.processes.store'), [
+            ...$this->processPayload($template),
+            'nombre' => 'Duplicado del período',
+        ])->assertSessionHasErrors('period_id');
+
+        $otherPeriod = AcademicPeriod::query()->create([
+            'codigo' => 'I-46-ALTERNO',
+            'nombre' => 'Período institucional alterno',
+            'fecha_inicio' => '2027-01-01',
+            'fecha_fin' => '2027-05-31',
+            'activo' => true,
+        ]);
+        $second = $this->preparedProcess($template, 'Segundo', $otherPeriod->id);
 
         $this->transition($first, 'abrir')->assertRedirect()->assertSessionHas('success');
         $this->assertSame('abierto', $first->fresh()->estado);
@@ -144,7 +158,7 @@ class SyllabusProcessTest extends TestCase
         ]);
     }
 
-    public function test_convocation_inherits_template_and_dates_and_only_opens_with_an_open_process(): void
+    public function test_coordinator_starts_the_institutional_convocation_and_inherits_its_configuration(): void
     {
         $template = $this->publishedTemplate();
         $process = $this->preparedProcess($template, 'Elaboración 2026-2027');
@@ -158,9 +172,14 @@ class SyllabusProcessTest extends TestCase
         ]);
 
         $this->actingAsCoordinator()->post(route('convocations.store'), [
-            'nombre' => 'Convocatoria de Software',
             'process_id' => $process->id,
-            // Un cliente no puede sustituir el período que ya fijó el proceso.
+        ])->assertSessionHasErrors('process_id');
+        $this->assertDatabaseCount('convocatorias', 0);
+
+        $this->transition($process, 'abrir')->assertRedirect();
+        $this->actingAsCoordinator()->post(route('convocations.store'), [
+            // El cliente no puede sustituir el período, modo ni fuentes fijados por el flujo.
+            'process_id' => $process->id,
             'period_id' => $otherPeriod->id,
             'grouping_mode' => 'por_oferta',
             'source_ids' => [$source->id],
@@ -170,6 +189,9 @@ class SyllabusProcessTest extends TestCase
         $this->assertSame($process->id, $convocation->proceso_id);
         $this->assertSame($process->periodo_academico_id, $convocation->periodo_academico_id);
         $this->assertSame($template->id, $convocation->plantilla_id);
+        $this->assertSame('por_paralelo', $convocation->modo_agrupacion);
+        $this->assertSame('abierta', $convocation->estado);
+        $this->assertTrue($convocation->sources()->whereKey($source->id)->exists());
         $this->assertDatabaseHas('fechas_limite_convocatoria', [
             'convocatoria_id' => $convocation->id,
             'etapa' => 'inicio',
@@ -181,14 +203,6 @@ class SyllabusProcessTest extends TestCase
             'vence_en' => $process->entrega_en,
         ]);
 
-        // El proceso todavía se prepara: la carrera espera al calendario institucional.
-        $this->actingAsCoordinator()->post(route('convocations.open', $convocation))
-            ->assertSessionHasErrors('convocation');
-        $this->assertSame('preparacion', $convocation->fresh()->estado);
-
-        $this->transition($process, 'abrir')->assertRedirect();
-        $this->actingAsCoordinator()->post(route('convocations.open', $convocation))->assertRedirect();
-        $this->assertSame('abierta', $convocation->fresh()->estado);
         $this->assertDatabaseCount('silabos', 1);
 
         // La regla también vive en PostgreSQL, por si una mutación evita el caso de uso.
@@ -433,22 +447,19 @@ class SyllabusProcessTest extends TestCase
         $this->actingAsTeacher()->get(route('syllabi.edit', $syllabus))->assertOk();
     }
 
-    public function test_convocation_is_edited_only_in_preparation_or_pause_and_only_administration_closes(): void
+    public function test_coordinator_cannot_edit_a_convocation_and_only_administration_closes_the_process(): void
     {
         $convocation = $this->openedConvocation();
         $source = AcademicSource::query()->firstOrFail();
         $payload = ['nombre' => 'Convocatoria corregida', 'source_ids' => [$source->id]];
 
-        $this->actingAsCoordinator()->patch(route('convocations.update', $convocation), $payload)->assertForbidden();
+        $this->actingAsCoordinator()->patch('/coordinacion/convocatorias/'.$convocation->id, $payload)->assertMethodNotAllowed();
 
         $this->actingAsCoordinator()
-            ->post(route('convocations.transition', [$convocation, 'pausar']), ['reason' => 'Corrección del nombre y de las fuentes.'])
+            ->post(route('convocations.transition', [$convocation, 'pausar']), ['reason' => 'Corrección de la malla antes de continuar.'])
             ->assertRedirect();
-        $this->actingAsCoordinator()->patch(route('convocations.update', $convocation), $payload)
-            ->assertRedirect()
-            ->assertSessionHasNoErrors();
-        $this->assertSame('Convocatoria corregida', $convocation->fresh()->nombre);
-        $this->assertDatabaseHas('eventos_auditoria', ['accion' => 'convocatoria.actualizada', 'recurso_id' => $convocation->id]);
+        $this->actingAsCoordinator()->patch('/coordinacion/convocatorias/'.$convocation->id, $payload)->assertMethodNotAllowed();
+        $this->assertSame('Proceso abierto', $convocation->fresh()->nombre);
 
         // Cerrar no es de la carrera: lo decide Administración cerrando el proceso.
         $this->actingAsCoordinator()->post(route('convocations.transition', [$convocation, 'cerrar']))->assertNotFound();
@@ -477,12 +488,11 @@ class SyllabusProcessTest extends TestCase
     {
         $process = $this->preparedProcess($this->publishedTemplate(), 'Proceso con convocatoria');
         $source = $this->coordinatorSource();
+        $this->transition($process, 'abrir')->assertRedirect();
         $this->actingAsCoordinator()->post(route('convocations.store'), [
-            'nombre' => 'Convocatoria ligada',
             'process_id' => $process->id,
-            'grouping_mode' => 'por_oferta',
-            'source_ids' => [$source->id],
         ])->assertRedirect();
+        $this->transition($process, 'pausar', 'El período no puede reasignarse tras iniciar convocatorias.')->assertRedirect();
         $otherPeriod = AcademicPeriod::query()->create([
             'codigo' => 'I-41-NO-CAMBIAR',
             'nombre' => 'Período no reasignable',
@@ -508,10 +518,10 @@ class SyllabusProcessTest extends TestCase
         ];
     }
 
-    private function preparedProcess(SyllabusTemplate $template, string $name): SyllabusProcess
+    private function preparedProcess(SyllabusTemplate $template, string $name, ?string $periodId = null): SyllabusProcess
     {
         $this->actingAsAdministrator()
-            ->post(route('admin.processes.store'), [...$this->processPayload($template), 'nombre' => $name])
+            ->post(route('admin.processes.store'), [...$this->processPayload($template), 'nombre' => $name, ...($periodId === null ? [] : ['period_id' => $periodId])])
             ->assertRedirect();
 
         return SyllabusProcess::query()->where('nombre', $name)->firstOrFail();
@@ -531,13 +541,9 @@ class SyllabusProcessTest extends TestCase
         $source = $this->coordinatorSource();
 
         $this->actingAsCoordinator()->post(route('convocations.store'), [
-            'nombre' => 'Convocatoria en curso',
             'process_id' => $process->id,
-            'grouping_mode' => 'por_oferta',
-            'source_ids' => [$source->id],
         ])->assertRedirect();
-        $convocation = Convocation::query()->where('nombre', 'Convocatoria en curso')->firstOrFail();
-        $this->actingAsCoordinator()->post(route('convocations.open', $convocation))->assertRedirect();
+        $convocation = Convocation::query()->where('proceso_id', $process->id)->firstOrFail();
 
         return $convocation->fresh();
     }
