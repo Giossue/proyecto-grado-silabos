@@ -14,6 +14,9 @@ migración mediante el release remoto aprobado.
 
 ## Decisiones aplicadas
 
+- Ajuste del formulario institucional: nombre automático «Convocatoria {nombre del
+  período}» al crear y editar; se retiran el campo Nombre y la etiqueta Plantilla vacía.
+
 - Administración prepara y abre una sola convocatoria institucional (`procesos_silabos`)
   por período académico de toda la universidad.
 - Coordinación no prepara ni configura nombre, agrupación o fuentes. Ve los procesos

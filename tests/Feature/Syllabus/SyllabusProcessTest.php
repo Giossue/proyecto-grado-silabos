@@ -68,6 +68,7 @@ class SyllabusProcessTest extends TestCase
 
         $process = SyllabusProcess::query()->firstOrFail();
         $this->assertSame('preparacion', $process->estado);
+        $this->assertSame('Convocatoria '.$process->academicPeriod->nombre, $process->nombre);
         $this->assertDatabaseHas('eventos_auditoria', ['accion' => 'proceso_silabos.creado', 'recurso_id' => $process->id]);
 
         $this->actingAsAdministrator()->get(route('admin.processes.index'))
@@ -94,7 +95,7 @@ class SyllabusProcessTest extends TestCase
             ->assertRedirect()
             ->assertSessionHasNoErrors();
 
-        $process = SyllabusProcess::query()->where('nombre', 'Proceso por días')->firstOrFail();
+        $process = SyllabusProcess::query()->firstOrFail();
         $this->assertSame("{$start} 00:00:00", $process->inicia_en->format('Y-m-d H:i:s'));
         $this->assertSame("{$due} 23:59:59", $process->entrega_en->format('Y-m-d H:i:s'));
     }
@@ -459,7 +460,7 @@ class SyllabusProcessTest extends TestCase
             ->post(route('convocations.transition', [$convocation, 'pausar']), ['reason' => 'Corrección de la malla antes de continuar.'])
             ->assertRedirect();
         $this->actingAsCoordinator()->patch('/coordinacion/convocatorias/'.$convocation->id, $payload)->assertMethodNotAllowed();
-        $this->assertSame('Proceso abierto', $convocation->fresh()->nombre);
+        $this->assertSame('Convocatoria '.$convocation->academicPeriod->nombre, $convocation->fresh()->nombre);
 
         // Cerrar no es de la carrera: lo decide Administración cerrando el proceso.
         $this->actingAsCoordinator()->post(route('convocations.transition', [$convocation, 'cerrar']))->assertNotFound();
@@ -481,7 +482,7 @@ class SyllabusProcessTest extends TestCase
         $this->actingAsAdministrator()->patch(route('admin.processes.update', $process), $payload)
             ->assertRedirect()
             ->assertSessionHas('success');
-        $this->assertSame('Renombrado', $process->fresh()->nombre);
+        $this->assertSame('Convocatoria '.$process->academicPeriod->nombre, $process->fresh()->nombre);
     }
 
     public function test_period_of_a_process_with_convocations_cannot_change(): void
@@ -507,11 +508,10 @@ class SyllabusProcessTest extends TestCase
         ])->assertSessionHasErrors('period_id');
     }
 
-    /** @return array{nombre: string, period_id: string, starts_at: string, due_at: string} */
+    /** @return array{period_id: string, starts_at: string, due_at: string} */
     private function processPayload(SyllabusTemplate $template): array
     {
         return [
-            'nombre' => 'Elaboración de sílabos 2026-2027',
             'period_id' => AcademicPeriod::query()->where('activo', true)->valueOrFail('id'),
             'starts_at' => now()->subDay()->toIso8601String(),
             'due_at' => now()->addMonth()->toIso8601String(),
@@ -524,7 +524,7 @@ class SyllabusProcessTest extends TestCase
             ->post(route('admin.processes.store'), [...$this->processPayload($template), 'nombre' => $name, ...($periodId === null ? [] : ['period_id' => $periodId])])
             ->assertRedirect();
 
-        return SyllabusProcess::query()->where('nombre', $name)->firstOrFail();
+        return SyllabusProcess::query()->where('periodo_academico_id', $periodId ?? $this->processPayload($template)['period_id'])->firstOrFail();
     }
 
     private function openProcess(): SyllabusProcess

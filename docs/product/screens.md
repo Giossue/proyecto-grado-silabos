@@ -222,7 +222,9 @@ DOC-01 llena una cuadrícula con una casilla por celda, unidades y totales calcu
 - ADM-12 lista los procesos de sílabos con estado, período institucional, plantilla, inicio, entrega y
   convocatorias. El alta usa el `Sheet` derecho; **Editar** solo aparece en preparación o
   en pausa; **Abrir**, **Pausar**, **Reanudar** y **Cerrar** confirman en un diálogo que
-  explica la consecuencia y **Pausar** exige motivo. El alta exige elegir el período
+  explica la consecuencia y **Pausar** exige motivo. El nombre se genera al crear o guardar
+  como «Convocatoria {nombre del período}»; el formulario no pide nombre ni muestra una
+  etiqueta de plantilla vacía. La plantilla institucional se sigue heredando. El alta exige elegir el período
   académico institucional. COR-03 muestra las convocatorias institucionales visibles y
   permite iniciar únicamente el alcance de su carrera desde una abierta; hereda plantilla,
   período, fechas y todas las fuentes activas, sin campos de configuración. COR-02 concentra en el menú de tres puntos de cada

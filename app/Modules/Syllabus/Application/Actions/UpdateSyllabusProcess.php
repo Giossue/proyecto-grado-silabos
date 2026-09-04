@@ -3,6 +3,7 @@
 namespace App\Modules\Syllabus\Application\Actions;
 
 use App\Models\User;
+use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Identity\Domain\Enums\RoleCode;
 use App\Modules\Operations\Application\Actions\RecordAuditEvent;
@@ -22,7 +23,7 @@ class UpdateSyllabusProcess
         private readonly RecordAuditEvent $audit,
     ) {}
 
-    /** @param array{nombre: string, period_id: string, starts_at: string, due_at: string} $data */
+    /** @param array{period_id: string, starts_at: string, due_at: string} $data */
     public function execute(SyllabusProcess $process, array $data, User $actor, Request $request): SyllabusProcess
     {
         $activeRole = $this->roles->resolve($request);
@@ -50,7 +51,7 @@ class UpdateSyllabusProcess
                 ]);
             }
             $locked->update([
-                'nombre' => $data['nombre'],
+                'nombre' => 'Convocatoria '.AcademicPeriod::query()->findOrFail($data['period_id'])->nombre,
                 'periodo_academico_id' => $data['period_id'],
                 'inicia_en' => $data['starts_at'],
                 'entrega_en' => $data['due_at'],

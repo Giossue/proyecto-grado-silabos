@@ -12,7 +12,6 @@ import {
     FieldGroup,
     FieldLabel,
 } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
 import {
     Select,
     SelectContent,
@@ -70,25 +69,6 @@ const formRoute = computed(() =>
                     <Field v-if="errors.process" data-invalid>
                         <FieldError :errors="[errors.process]" />
                     </Field>
-                    <Field :data-invalid="Boolean(errors.nombre)">
-                        <FieldLabel for="process-name" required
-                            >Nombre</FieldLabel
-                        >
-                        <Input
-                            id="process-name"
-                            name="nombre"
-                            :default-value="process?.name"
-                            :aria-invalid="Boolean(errors.nombre)"
-                            placeholder="Ej. Elaboración de sílabos 2026-2027"
-                            required
-                        />
-                        <FieldError :errors="[errors.nombre]" />
-                    </Field>
-
-                    <Field>
-                        <p class="text-sm font-medium">Plantilla</p>
-                    </Field>
-
                     <Field :data-invalid="Boolean(errors.period_id)">
                         <FieldLabel for="process-period" required>
                             Periodo académico

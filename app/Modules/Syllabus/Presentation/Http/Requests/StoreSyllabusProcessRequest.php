@@ -31,7 +31,6 @@ class StoreSyllabusProcessRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'nombre' => ['required', 'string', 'max:180'],
             'period_id' => ['required', 'uuid', Rule::exists('periodos_academicos', 'id')->where('activo', true)],
             'starts_at' => ['required', 'date'],
             'due_at' => ['required', 'date', 'after:now', 'after:starts_at'],
@@ -46,11 +45,10 @@ class StoreSyllabusProcessRequest extends FormRequest
         ];
     }
 
-    /** @return array{nombre: string, period_id: string, starts_at: string, due_at: string} */
+    /** @return array{period_id: string, starts_at: string, due_at: string} */
     public function processData(): array
     {
         return [
-            'nombre' => $this->string('nombre')->toString(),
             'period_id' => $this->string('period_id')->toString(),
             'starts_at' => $this->string('starts_at')->toString(),
             'due_at' => $this->string('due_at')->toString(),

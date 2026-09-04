@@ -3,6 +3,7 @@
 namespace App\Modules\Syllabus\Application\Actions;
 
 use App\Models\User;
+use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Identity\Domain\Enums\RoleCode;
@@ -23,7 +24,7 @@ class CreateSyllabusProcess
         private readonly RecordAuditEvent $audit,
     ) {}
 
-    /** @param array{nombre: string, period_id: string, starts_at: string, due_at: string} $data */
+    /** @param array{period_id: string, starts_at: string, due_at: string} $data */
     public function execute(array $data, User $actor, Request $request): SyllabusProcess
     {
         $activeRole = $this->roles->resolve($request);
@@ -40,7 +41,7 @@ class CreateSyllabusProcess
                 ]);
             }
             $process = SyllabusProcess::query()->create([
-                'nombre' => $data['nombre'],
+                'nombre' => 'Convocatoria '.AcademicPeriod::query()->findOrFail($data['period_id'])->nombre,
                 'plantilla_id' => $template->id,
                 'periodo_academico_id' => $data['period_id'],
                 'inicia_en' => $data['starts_at'],
