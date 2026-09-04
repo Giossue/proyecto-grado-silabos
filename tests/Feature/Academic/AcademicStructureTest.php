@@ -127,6 +127,9 @@ class AcademicStructureTest extends TestCase
     public function test_coordinator_sees_only_their_career_and_subjects_live_inside_each_curriculum(): void
     {
         $curriculum = Curriculum::query()->firstOrFail();
+        $offering = CourseOffering::query()
+            ->with(['academicPeriod', 'subject'])
+            ->firstOrFail();
 
         $this->actingAsCoordinator()
             ->get(route('coordination.academic.curricula.index'))
@@ -151,14 +154,20 @@ class AcademicStructureTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Coordination/Academic/Offerings')
                 ->has('offerings', 1)
-                ->has('parallels', 1));
+                ->has('parallels', 1)
+                ->where('offerings.0.period_starts_on', $offering->academicPeriod->fecha_inicio->toDateString())
+                ->where('offerings.0.period_ends_on', $offering->academicPeriod->fecha_fin->toDateString()));
 
         $this->actingAsCoordinator()
             ->get(route('coordination.academic.parallels.index'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Coordination/Academic/Parallels')
-                ->has('parallels', 1));
+                ->has('parallels', 1)
+                ->where('parallels.0.subject_code', $offering->subject->codigo_institucional)
+                ->where('parallels.0.subject_name', $offering->subject->nombre)
+                ->where('parallels.0.period_starts_on', $offering->academicPeriod->fecha_inicio->toDateString())
+                ->where('parallels.0.period_ends_on', $offering->academicPeriod->fecha_fin->toDateString()));
 
         $this->actingAsCoordinator()
             ->get(route('coordination.academic.teacher-assignments.index'))

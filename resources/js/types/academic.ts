@@ -83,7 +83,8 @@ export type AcademicStructureProps = {
         period_id: string;
         campus_id: string;
         label: string;
-        period_name: string;
+        period_starts_on: string;
+        period_ends_on: string;
         campus_name: string;
         modality_name: string;
         parallel_count: number;
@@ -96,7 +97,10 @@ export type AcademicStructureProps = {
         code: string;
         shift: string | null;
         active: boolean;
-        offering_label: string;
+        subject_code: string;
+        subject_name: string;
+        period_starts_on: string;
+        period_ends_on: string;
         editable: boolean;
     }[];
     coordinatorAssignments: {

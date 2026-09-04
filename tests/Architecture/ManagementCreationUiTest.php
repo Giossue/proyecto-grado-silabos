@@ -425,6 +425,10 @@ it('evita repetir el encabezado de pagina dentro de las tablas academicas', func
 
     expect($offerings)
         ->toBeString()
+        ->toContain('period_starts_on')
+        ->toContain('<TableHead>Materia</TableHead')
+        ->toContain('<TableHead>Código</TableHead')
+        ->not->toContain('item.offering_label')
         ->not->toContain('<CardHeader')
         ->not->toContain('<CardTitle')
         ->not->toContain('<CardDescription');

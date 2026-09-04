@@ -130,7 +130,10 @@
   no se diseña ni se llena (I-34). Mapa de datos: `docs/product/identificacion-institucional.md`.
   COR-14 (paralelos) muestra y edita la jornada. **Agregar varios** crea, para una
   oferta elegida, los códigos separados por coma o línea con una jornada compartida en
-  una única operación; el lote se rechaza completo si algún código ya existe.
+  una única operación; el lote se rechaza completo si algún código ya existe. La tabla
+  de ofertas muestra el rango de inicio y fin del período institucional, no su nombre;
+  la de paralelos separa materia, código, paralelo, jornada y ese mismo rango, sin una
+  columna de estado.
 - Indicadores del Panel (UI-01), cuatro por rol y todos accionables: Administración ve
   avance del proceso (% aprobados), días para la entrega, carreras sin convocar y sílabos
   sin iniciar; Coordinación, avance, días, por revisar y sin iniciar; Docencia, sílabos

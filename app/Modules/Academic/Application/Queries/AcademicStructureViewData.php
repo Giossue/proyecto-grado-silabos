@@ -293,7 +293,7 @@ class AcademicStructureViewData
             ->whereHas('subject.curriculum', fn ($query) => $query
                 ->where('carrera_id', $careerId))
             ->with([
-                'academicPeriod:id,nombre',
+                'academicPeriod:id,fecha_inicio,fecha_fin',
                 'subject:id,nombre,codigo_institucional',
                 'campus:id,nombre',
             ])
@@ -303,7 +303,10 @@ class AcademicStructureViewData
         $parallels = Parallel::query()
             ->whereHas('offering.subject.curriculum', fn ($query) => $query
                 ->where('carrera_id', $careerId))
-            ->with(['offering.subject:id,nombre,codigo_institucional', 'offering.academicPeriod:id,nombre'])
+            ->with([
+                'offering.subject:id,nombre,codigo_institucional',
+                'offering.academicPeriod:id,fecha_inicio,fecha_fin',
+            ])
             ->orderBy('codigo')
             ->get();
         $usedOfferingIds = SyllabusScope::query()
@@ -328,7 +331,8 @@ class AcademicStructureViewData
                     'period_id' => $offering->periodo_academico_id,
                     'campus_id' => $offering->campus_id,
                     'label' => "{$offering->subject->codigo_institucional} · {$offering->subject->nombre}",
-                    'period_name' => $offering->academicPeriod->nombre,
+                    'period_starts_on' => $offering->academicPeriod->fecha_inicio->toDateString(),
+                    'period_ends_on' => $offering->academicPeriod->fecha_fin->toDateString(),
                     'campus_name' => $offering->campus->nombre,
                     'modality_name' => $offering->modalidad->label(),
                     'parallel_count' => $offering->parallels_count,
@@ -342,7 +346,10 @@ class AcademicStructureViewData
                     'code' => $parallel->codigo,
                     'shift' => $parallel->jornada,
                     'active' => $parallel->activo,
-                    'offering_label' => "{$parallel->offering->subject->codigo_institucional} · {$parallel->offering->academicPeriod->nombre}",
+                    'subject_code' => $parallel->offering->subject->codigo_institucional,
+                    'subject_name' => $parallel->offering->subject->nombre,
+                    'period_starts_on' => $parallel->offering->academicPeriod->fecha_inicio->toDateString(),
+                    'period_ends_on' => $parallel->offering->academicPeriod->fecha_fin->toDateString(),
                     'editable' => $lockReason === null && ! $usedParallelIds->has($parallel->id),
                 ]),
             'options' => [

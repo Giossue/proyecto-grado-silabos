@@ -32,11 +32,22 @@ const props = defineProps<
         lockReason?: string | null;
     }
 >();
+const dateFormatter = new Intl.DateTimeFormat('es-EC', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    timeZone: 'UTC',
+});
+const formatPeriod = (startsOn: string, endsOn: string): string =>
+    [
+        dateFormatter.format(new Date(startsOn + 'T00:00:00Z')),
+        dateFormatter.format(new Date(endsOn + 'T00:00:00Z')),
+    ].join(' – ');
 const offeringFilter = useClientFilter(
     () => props.offerings,
     (item) => [
         item.label,
-        item.period_name,
+        formatPeriod(item.period_starts_on, item.period_ends_on),
         item.campus_name,
         item.modality_name,
     ],
@@ -54,12 +65,12 @@ const {
 } = useClientPagination(() => offeringFilter.items.value);
 const parallelFilter = useClientFilter(
     () => props.parallels,
-    (item) => [item.code, item.offering_label],
-    {
-        estado: {
-            matches: (item, value) => item.active === (value === 'active'),
-        },
-    },
+    (item) => [
+        item.subject_name,
+        item.subject_code,
+        item.code,
+        formatPeriod(item.period_starts_on, item.period_ends_on),
+    ],
 );
 
 const {
@@ -132,7 +143,12 @@ const {
                             v-else
                             :key="item.id"
                             ><TableCell>{{ item.label }}</TableCell
-                            ><TableCell>{{ item.period_name }}</TableCell
+                            ><TableCell>{{
+                                formatPeriod(
+                                    item.period_starts_on,
+                                    item.period_ends_on,
+                                )
+                            }}</TableCell
                             ><TableCell
                                 >{{ item.campus_name }} ·
                                 {{ item.modality_name }}</TableCell
@@ -165,64 +181,37 @@ const {
                     :filter="parallelFilter"
                     input-id="parallels-search"
                     label="Buscar paralelo"
-                    placeholder="Buscar por código u oferta"
-                >
-                    <template #filters>
-                        <Field>
-                            <FieldLabel
-                                for="parallels-search-state"
-                                class="sr-only"
-                                >Estado</FieldLabel
-                            >
-                            <Select
-                                v-model="parallelFilter.values.estado.value"
-                            >
-                                <SelectTrigger id="parallels-search-state">
-                                    <SelectValue
-                                        placeholder="Todos los estados"
-                                    />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectGroup>
-                                        <SelectItem value="all"
-                                            >Todos los estados</SelectItem
-                                        >
-                                        <SelectItem value="active"
-                                            >Activos</SelectItem
-                                        >
-                                        <SelectItem value="inactive"
-                                            >Inactivos</SelectItem
-                                        >
-                                    </SelectGroup>
-                                </SelectContent>
-                            </Select>
-                        </Field>
-                    </template>
-                </ClientFilterBar>
+                    placeholder="Buscar por materia, código, paralelo o periodo"
+                />
                 <Table
                     ><TableHeader
                         ><TableRow
-                            ><TableHead>Oferta</TableHead
+                            ><TableHead>Materia</TableHead
+                            ><TableHead>Código</TableHead
                             ><TableHead>Paralelo</TableHead
                             ><TableHead>Jornada</TableHead
-                            ><TableHead>Estado</TableHead
+                            ><TableHead>Periodo</TableHead
                             ><TableHead class="text-right"
                                 >Acciones</TableHead
                             ></TableRow
                         ></TableHeader
                     ><TableBody>
-                        <TableEmpty v-if="parallels.length === 0" :colspan="5"
+                        <TableEmpty v-if="parallels.length === 0" :colspan="6"
                             >No existen paralelos.</TableEmpty
                         >
                         <TableRow
                             v-for="item in parallelPage"
                             v-else
                             :key="item.id"
-                            ><TableCell>{{ item.offering_label }}</TableCell
+                            ><TableCell>{{ item.subject_name }}</TableCell
+                            ><TableCell>{{ item.subject_code }}</TableCell
                             ><TableCell>{{ item.code }}</TableCell
                             ><TableCell>{{ shiftLabel(item.shift) }}</TableCell
                             ><TableCell>{{
-                                item.active ? 'Activo' : 'Inactivo'
+                                formatPeriod(
+                                    item.period_starts_on,
+                                    item.period_ends_on,
+                                )
                             }}</TableCell
                             ><TableCell class="text-right"
                                 ><CareerAcademicActions
