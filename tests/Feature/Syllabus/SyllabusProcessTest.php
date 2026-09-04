@@ -159,6 +159,11 @@ class SyllabusProcessTest extends TestCase
         $this->transition($first, 'abrir')->assertRedirect()->assertSessionHas('success');
         $this->assertSame('abierto', $first->fresh()->estado);
 
+        $this->actingAsAdministrator()->post(route('admin.processes.store'), [
+            ...$this->processPayload($template),
+            'period_id' => $second->periodo_academico_id,
+        ])->assertSessionHasErrors('process');
+
         $this->transition($second, 'abrir')->assertSessionHasErrors('process');
         $this->assertSame('preparacion', $second->fresh()->estado);
 

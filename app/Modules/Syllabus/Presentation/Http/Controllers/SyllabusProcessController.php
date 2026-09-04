@@ -24,6 +24,10 @@ class SyllabusProcessController extends Controller
 {
     public function index(ManageSyllabusProcessesRequest $request): Response
     {
+        $activeProcess = SyllabusProcess::query()->inProgress()
+            ->with('academicPeriod:id,nombre')
+            ->first(['id', 'nombre', 'periodo_academico_id', 'estado']);
+
         return Inertia::render('Admin/Processes/Index', [
             'processes' => SyllabusProcess::query()
                 ->with(['template:id,nombre', 'academicPeriod:id,nombre'])
@@ -51,6 +55,11 @@ class SyllabusProcessController extends Controller
                 ->where('activo', true)
                 ->orderByDesc('fecha_inicio')
                 ->get(['id', 'nombre']),
+            'active_process' => $activeProcess === null ? null : [
+                'name' => $activeProcess->nombre,
+                'period' => $activeProcess->academicPeriod->nombre,
+                'state' => $activeProcess->estado,
+            ],
         ]);
     }
 

@@ -19,6 +19,9 @@ migración mediante el release remoto aprobado.
   reanudación. La consulta, filtros y carga de convocatorias respetan la carrera activa.
   Se retiran el aviso institucional separado y el sheet de inicio.
 
+- ADM-12: no se prepara un nuevo proceso mientras exista uno abierto o pausado. La
+  pantalla explica el bloqueo y el caso de uso lo impone dentro de la transacción.
+
 - Ajuste del formulario institucional: nombre automático «Convocatoria {nombre del
   período}» al crear y editar; se retiran el campo Nombre y la etiqueta Plantilla vacía.
 

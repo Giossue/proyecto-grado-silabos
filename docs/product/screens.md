@@ -226,7 +226,9 @@ DOC-01 llena una cuadrícula con una casilla por celda, unidades y totales calcu
   explica la consecuencia y **Pausar** exige motivo. El nombre se genera al crear o guardar
   como «Convocatoria {nombre del período}»; el formulario no pide nombre ni muestra una
   etiqueta de plantilla vacía. La plantilla institucional se sigue heredando. El alta exige elegir el período
-  académico institucional. COR-03 muestra las convocatorias institucionales visibles y
+  académico institucional. ADM-12 oculta «Nuevo proceso» mientras haya uno abierto o
+  pausado y muestra el aviso enlazado a Convocatorias; el servidor rechaza igualmente
+  un alta forzada. COR-03 muestra las convocatorias institucionales visibles y
   permite iniciar únicamente el alcance de su carrera desde una abierta; hereda plantilla,
   período, fechas y todas las fuentes activas, sin campos de configuración. COR-02 lista
   los procesos institucionales desde antes de iniciar la carrera, con estado institucional

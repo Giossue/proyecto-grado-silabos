@@ -2,6 +2,7 @@
 import { Head } from '@inertiajs/vue3';
 import ClientFilterBar from '@/components/domain/ClientFilterBar.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
+import ProcessLockAlert from '@/components/domain/ProcessLockAlert.vue';
 import SyllabusProcessActions from '@/components/domain/syllabus/SyllabusProcessActions.vue';
 import SyllabusProcessSheet from '@/components/domain/syllabus/SyllabusProcessSheet.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
@@ -46,6 +47,7 @@ const props = defineProps<{
     /** Nombre de la plantilla institucional; nula si aún no existe. */
     template: string | null;
     periods: { id: string; nombre: string }[];
+    active_process: { name: string; period: string; state: string } | null;
 }>();
 
 defineOptions({
@@ -91,8 +93,18 @@ const {
         description="El proceso institucional que obliga a todas las carreras: con qué plantilla se elaboran los sílabos y entre qué fechas. Cada coordinación convoca a su carrera dentro de él."
     >
         <template #actions>
-            <SyllabusProcessSheet :template="template" :periods="periods" />
+            <SyllabusProcessSheet
+                v-if="active_process === null"
+                :template="template"
+                :periods="periods"
+            />
         </template>
+
+        <ProcessLockAlert
+            v-if="active_process !== null"
+            title="No se puede preparar otro proceso"
+            :reason="`El proceso «${active_process.name}» del período ${active_process.period} está ${active_process.state === 'abierto' ? 'abierto' : 'en pausa'}. Ciérrelo desde Convocatorias antes de crear otro.`"
+        />
 
         <Card>
             <CardContent class="flex flex-col gap-4">
