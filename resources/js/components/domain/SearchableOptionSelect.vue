@@ -92,17 +92,19 @@ const selectOption = (option: Option): void => {
             @mousedown.stop
             @keydown.stop
         >
-            <div v-if="filteredOptions.length > 0" class="flex flex-col gap-1">
-                <Button
+            <div v-if="filteredOptions.length > 0" class="flex flex-col">
+                <button
                     v-for="option in filteredOptions"
                     :key="option.id"
                     type="button"
-                    variant="ghost"
-                    class="w-full justify-start text-left font-normal whitespace-normal"
+                    role="option"
+                    :aria-selected="option.id === selectedId"
+                    class="focus:bg-accent focus:text-accent-foreground relative flex w-full cursor-default items-center gap-2 rounded-sm py-1.5 pr-2 pl-2 text-left text-sm outline-hidden select-none"
+                    @mousedown.prevent
                     @click="selectOption(option)"
                 >
                     {{ option.label }}
-                </Button>
+                </button>
             </div>
             <Empty v-else class="min-h-0 border-0 p-3">
                 <EmptyDescription>{{ emptyLabel }}</EmptyDescription>

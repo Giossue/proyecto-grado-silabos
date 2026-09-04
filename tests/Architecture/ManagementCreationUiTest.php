@@ -159,6 +159,8 @@ it('permite buscar docente y paralelo al crear una asignación docente', functio
     $this->assertStringContainsString('open.value = true;', $selector);
     $this->assertStringNotContainsString('@focus="startSearch"', $selector);
     $this->assertStringNotContainsString('ChevronDown', $selector);
+    $this->assertStringContainsString('focus:bg-accent focus:text-accent-foreground', $selector);
+    $this->assertStringNotContainsString('<Button', $selector);
 });
 
 it('crea la plantilla institucional de inmediato y abre su constructor', function (): void {
