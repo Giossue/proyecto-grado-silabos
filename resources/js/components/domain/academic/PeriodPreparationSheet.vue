@@ -273,8 +273,8 @@ watch(open, (isOpen) => {
                                 </TableHead>
                                 <TableHead>Código</TableHead>
                                 <TableHead>Materia</TableHead>
-                                <TableHead>Paralelos</TableHead>
-                                <TableHead>Jornada</TableHead>
+                                <TableHead class="w-40">Paralelos</TableHead>
+                                <TableHead class="w-36">Jornada</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
