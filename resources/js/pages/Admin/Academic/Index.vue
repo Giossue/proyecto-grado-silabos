@@ -76,7 +76,7 @@ const sectionContent = computed(() => sectionContents[props.section]);
 
         <ProcessLockAlert
             v-if="lock_reason"
-            title="Estructura institucional congelada"
+            title="Estructura institucional bloqueada"
             :reason="lock_reason"
         />
 

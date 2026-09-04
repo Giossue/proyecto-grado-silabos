@@ -45,7 +45,7 @@ defineProps<
 
         <ProcessLockAlert
             v-if="career.lock_reason"
-            title="Asignaciones docentes congeladas"
+            title="Asignaciones docentes bloqueadas"
             :reason="career.lock_reason"
         />
 
