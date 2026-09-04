@@ -12,8 +12,8 @@ RF-008..016, RN-005..008, CU-03, COR-14, UI-04.
 
 La oferta académica y sus paralelos permanecen como entidades distintas, pero
 Coordinación los configura en una misma operación de período. El panel de pantalla
-completa inicia con todas las materias activas seleccionadas, permite excluir materias
-sin borrarlas y asignar códigos/jornada por fila o de forma masiva. Solo se crean
+completa inicia sin materias seleccionadas, permite incluirlas sin borrar materias y
+asignar códigos/jornada por fila o de forma masiva. Solo se crean
 ofertas y paralelos faltantes; nunca se elimina una oferta, paralelo ni historia por
 omitir una fila.
 
@@ -26,6 +26,6 @@ omitir una fila.
 
 ## Verificación
 
-- `php artisan test --compact tests/Feature/Academic/AcademicStructureTest.php tests/Architecture/ManagementCreationUiTest.php`: 59 pruebas y 1.528 aserciones.
+- `php artisan test --compact tests/Feature/Academic/AcademicStructureTest.php tests/Architecture/ManagementCreationUiTest.php`: 59 pruebas y 1.529 aserciones.
 - `./vendor/bin/pint --test`, `npm run types:check`, ESLint focalizado,
   PHPStan focalizado y `npm run build` pasan.

@@ -86,7 +86,7 @@ const reset = (): void => {
         id: subject.id,
         code: subject.codigo_institucional ?? subject.code ?? 'Sin código',
         name: subject.nombre ?? subject.name ?? 'Materia sin nombre',
-        selected: true,
+        selected: false,
         codes: 'A',
         shift: '',
     }));
