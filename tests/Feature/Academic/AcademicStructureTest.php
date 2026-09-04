@@ -168,7 +168,9 @@ class AcademicStructureTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Coordination/Academic/TeacherAssignments')
                 ->has('teacherAssignments', 1)
-                ->has('options.teacherUsers', 1));
+                ->has('options.teacherUsers', 1)
+                ->where('options.teacherUsers.0.name', 'DOCENTE DEMO')
+                ->where('options.teacherUsers.0.email', 'docente@silabos.test'));
     }
 
     public function test_role_boundaries_reject_governance_or_career_mutations_from_the_wrong_context(): void

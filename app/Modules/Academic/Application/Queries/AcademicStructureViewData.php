@@ -431,7 +431,12 @@ class AcademicStructureViewData
                         ->where('carrera_id', $careerId)
                         ->whereHas('role', fn ($query) => $query->where('codigo', RoleCode::Teacher->value)))
                     ->orderBy('nombre')
-                    ->get(['id', 'nombre', 'correo_electronico']),
+                    ->get(['id', 'nombre', 'correo_electronico'])
+                    ->map(fn (User $user): array => [
+                        'id' => $user->id,
+                        'name' => $user->nombre,
+                        'email' => $user->correo_electronico,
+                    ]),
             ],
         ];
     }
