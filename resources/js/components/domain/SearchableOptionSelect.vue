@@ -1,7 +1,5 @@
 <script setup lang="ts">
-import { ChevronDown } from '@lucide/vue';
 import { computed, ref } from 'vue';
-import { Button } from '@/components/ui/button';
 import { Empty, EmptyDescription } from '@/components/ui/empty';
 import { Input } from '@/components/ui/input';
 import {
@@ -35,6 +33,7 @@ const props = withDefaults(
 const open = ref(false);
 const query = ref('');
 const selectedId = ref('');
+const searching = ref(false);
 const selectedOption = computed(() =>
     props.options.find((option) => option.id === selectedId.value),
 );
@@ -50,16 +49,18 @@ const filteredOptions = computed(() => {
     );
 });
 const inputValue = computed(() =>
-    open.value ? query.value : (selectedOption.value?.label ?? ''),
+    searching.value ? query.value : (selectedOption.value?.label ?? ''),
 );
 
-const openSearch = (): void => {
+const startSearch = (): void => {
     query.value = '';
-    open.value = true;
+    searching.value = true;
+    open.value = false;
 };
 const selectOption = (option: Option): void => {
     selectedId.value = option.id;
     query.value = '';
+    searching.value = false;
     open.value = false;
 };
 </script>
@@ -69,34 +70,21 @@ const selectOption = (option: Option): void => {
 
     <Popover v-model:open="open">
         <PopoverAnchor as-child>
-            <div class="relative">
-                <Input
-                    :id="id"
-                    :model-value="inputValue"
-                    :placeholder="open ? searchPlaceholder : placeholder"
-                    :aria-invalid="invalid"
-                    aria-autocomplete="list"
-                    @click="openSearch"
-                    @keydown.down.prevent="openSearch"
-                    @update:model-value="
-                        (value) => {
-                            query = String(value);
-                            open = true;
-                        }
-                    "
-                />
-                <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    class="absolute inset-y-0 right-0 my-auto"
-                    :aria-label="open ? 'Ocultar opciones' : 'Mostrar opciones'"
-                    :aria-expanded="open"
-                    @click="open ? (open = false) : openSearch()"
-                >
-                    <ChevronDown aria-hidden="true" />
-                </Button>
-            </div>
+            <Input
+                :id="id"
+                :model-value="inputValue"
+                :placeholder="searching ? searchPlaceholder : placeholder"
+                :aria-invalid="invalid"
+                :aria-expanded="open"
+                aria-autocomplete="list"
+                @focus="startSearch"
+                @update:model-value="
+                    (value) => {
+                        query = String(value);
+                        open = query.trim() !== '';
+                    }
+                "
+            />
         </PopoverAnchor>
         <PopoverContent
             class="w-(--reka-popover-trigger-width) max-h-72 overflow-y-auto p-1"
