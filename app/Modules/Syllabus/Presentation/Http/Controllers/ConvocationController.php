@@ -28,14 +28,13 @@ class ConvocationController extends Controller
         $careerId = $roles->resolve($request)?->carrera_id;
         $filters = $request->validated();
         $search = is_string($filters['q'] ?? null) ? trim($filters['q']) : null;
-        $state = in_array($filters['state'] ?? null, ['preparacion', 'abierta', 'pausada', 'cerrada'], true)
+        $state = in_array($filters['state'] ?? null, ['sin_iniciar', 'preparacion', 'abierta', 'pausada', 'cerrada'], true)
             ? $filters['state']
             : null;
 
         return Inertia::render('Coordination/Convocations/Index', [
             'filters' => ['q' => $search ?: null, 'state' => $state],
-            'convocations' => Convocation::query()
-                ->where('carrera_id', $careerId)
+            'convocations' => SyllabusProcess::query()
                 // Una convocatoria se recuerda por su nombre o por el periodo que abarca.
                 ->when($search, fn ($query, string $term) => $query->where(
                     fn ($outer) => $outer
@@ -43,43 +42,34 @@ class ConvocationController extends Controller
                         ->orWhereHas('academicPeriod', fn ($period) => $period
                             ->whereRaw('nombre ILIKE ?', ["%{$term}%"])),
                 ))
-                ->when($state, fn ($query, string $value) => $query->where('estado', $value))
-                ->with(['academicPeriod:id,nombre', 'template:id,nombre', 'process:id,nombre,estado', 'sources:id'])
-                ->withCount('syllabi')
+                ->when($state, function ($query, string $value) use ($careerId): void {
+                    if ($value === 'sin_iniciar') {
+                        $query->whereDoesntHave('convocations', fn ($career) => $career->where('carrera_id', $careerId));
+                    } else {
+                        $query->whereHas('convocations', fn ($career) => $career->where('carrera_id', $careerId)->where('estado', $value));
+                    }
+                })
+                ->with([
+                    'academicPeriod:id,nombre', 'template:id,nombre',
+                    'convocations' => fn ($career) => $career->where('carrera_id', $careerId)->withCount('syllabi'),
+                ])
                 ->orderByDesc('creado_en')
                 ->paginate(15)
-                ->through(fn (Convocation $convocation) => [
-                    'id' => $convocation->id,
-                    'name' => $convocation->nombre,
-                    'state' => $convocation->estado,
-                    'process' => $convocation->process->nombre,
-                    'process_state' => $convocation->process->estado,
-                    'grouping_mode' => $convocation->modo_agrupacion,
-                    'period' => $convocation->academicPeriod->nombre,
-                    'period_id' => $convocation->periodo_academico_id,
-                    'source_ids' => $convocation->sources->pluck('id')->values(),
-                    'template' => $convocation->template->nombre,
-                    'syllabi_count' => $convocation->syllabi_count,
-                ]),
-            // El calendario lo fija Administración: la carrera solo inicia su alcance
-            // desde uno de estos procesos y hereda plantilla, período y fechas.
-            'processes' => SyllabusProcess::query()
-                ->whereNot('estado', SyllabusProcess::STATE_CLOSED)
-                ->with(['template:id,nombre', 'academicPeriod:id,nombre'])
-                ->orderByDesc('inicia_en')->get()
-                ->map(fn (SyllabusProcess $process): array => [
-                    'id' => $process->id,
-                    'label' => $process->nombre,
-                    'state' => $process->estado,
-                    'template' => $process->template->nombre,
-                    'period_name' => $process->academicPeriod->nombre,
-                    'starts_at' => $process->inicia_en->toIso8601String(),
-                    'due_at' => $process->entrega_en->toIso8601String(),
-                    'started_for_career' => Convocation::query()
-                        ->where('carrera_id', $careerId)
-                        ->where('proceso_id', $process->id)
-                        ->exists(),
-                ]),
+                ->withQueryString()
+                ->through(function (SyllabusProcess $process): array {
+                    $convocation = $process->convocations->first();
+
+                    return [
+                        'id' => $convocation?->id,
+                        'process_id' => $process->id,
+                        'name' => $process->nombre,
+                        'state' => $convocation->estado ?? 'sin_iniciar',
+                        'process_state' => $process->estado,
+                        'period' => $process->academicPeriod->nombre,
+                        'template' => $process->template->nombre,
+                        'syllabi_count' => $convocation->syllabi_count ?? 0,
+                    ];
+                }),
         ]);
     }
 

@@ -109,6 +109,33 @@ class SyllabusProcessTest extends TestCase
             ->assertSessionHasErrors('period_id');
     }
 
+    public function test_coordination_lists_the_institutional_process_before_and_after_starting_its_career(): void
+    {
+        $process = $this->openProcess();
+        $this->coordinatorSource();
+
+        $this->actingAsCoordinator()->get(route('convocations.index', ['state' => 'sin_iniciar']))
+            ->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->has('convocations.data', 1)
+            ->where('convocations.data.0.process_id', $process->id)
+            ->where('convocations.data.0.id', null)
+            ->where('convocations.data.0.state', 'sin_iniciar')
+            ->where('convocations.data.0.process_state', 'abierto'));
+
+        $this->actingAsCoordinator()->post(route('convocations.store'), ['process_id' => $process->id])
+            ->assertSessionHasNoErrors();
+        $convocation = Convocation::query()->where('proceso_id', $process->id)->firstOrFail();
+
+        $this->actingAsCoordinator()->get(route('convocations.index', ['state' => 'abierta']))
+            ->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->has('convocations.data', 1)
+            ->where('convocations.data.0.process_id', $process->id)
+            ->where('convocations.data.0.id', $convocation->id)
+            ->where('convocations.data.0.syllabi_count', 1));
+        $this->actingAsCoordinator()->get(route('convocations.index', ['state' => 'sin_iniciar']))
+            ->assertOk()->assertInertia(fn (Assert $page) => $page->has('convocations.data', 0));
+    }
+
     public function test_only_one_process_can_be_in_progress(): void
     {
         $template = $this->publishedTemplate();

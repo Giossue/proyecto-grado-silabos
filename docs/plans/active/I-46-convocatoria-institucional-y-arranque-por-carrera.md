@@ -14,6 +14,11 @@ migración mediante el release remoto aprobado.
 
 ## Decisiones aplicadas
 
+- COR-02: una fila por proceso institucional, aunque la carrera aún no haya iniciado.
+  Iniciar vive en Acciones de esa fila; al iniciar aparecen seguimiento, pausa y
+  reanudación. La consulta, filtros y carga de convocatorias respetan la carrera activa.
+  Se retiran el aviso institucional separado y el sheet de inicio.
+
 - Ajuste del formulario institucional: nombre automático «Convocatoria {nombre del
   período}» al crear y editar; se retiran el campo Nombre y la etiqueta Plantilla vacía.
 
@@ -43,6 +48,10 @@ migración mediante el release remoto aprobado.
    migración remota.
 
 ## Verificación ejecutada
+
+- Ajuste de COR-02 a inicio desde tabla: 16 pruebas de `SyllabusProcessTest` sobre
+  PostgreSQL temporal aislado (incluye fila sin iniciar, inicio y filtros); 24 pruebas
+  de arquitectura UI, tipos Vue, ESLint y PHPStan del controlador correctos.
 
 - PostgreSQL local: migración aplicada en `migrate:fresh` y restricciones ejercitadas.
 - 155 pruebas relevantes: proceso, convocatoria, plazos, relevo, transferencia,

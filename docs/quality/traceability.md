@@ -13,6 +13,11 @@ Necesidad / hallazgo
 
 ## Fuentes de verdad
 
+COR-02 (I-46): el listado institucional incluye el alcance de la carrera activa y permite
+iniciarlo desde Acciones. `SyllabusProcessTest` comprueba la fila antes/después de iniciar
+y los filtros por estado de carrera; `ConvocationActions` conserva las validaciones del
+inicio atómico y las acciones de seguimiento, pausa y reanudación.
+
 - SRS v0.1: RF-001..075, RNF-001..036, RN-001..034, PV-01..20.
 - Modelado funcional: CU-01..18 y modelo de dominio.
 - Prototipos: UI/DOC/COR/ADM.

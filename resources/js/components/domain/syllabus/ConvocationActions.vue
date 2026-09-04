@@ -19,22 +19,21 @@ import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 
-type Transition = 'abrir' | 'pausar' | 'reanudar';
+type Transition = 'iniciar' | 'abrir' | 'pausar' | 'reanudar';
 
 /*
  * Todo lo que se hace con una convocatoria vive en su menú de tres puntos, como en
- * Administración: ver seguimiento, editar, abrir, pausar y reanudar. Prorrogar y cerrar
+ * Administración: iniciar, ver seguimiento, pausar y reanudar. Prorrogar y cerrar
  * son del calendario institucional y viven en Administración.
  * Cada acción explica su consecuencia antes de confirmarla.
  */
-defineProps<{
+const props = defineProps<{
     convocation: {
-        id: string;
+        id: string | null;
+        process_id: string;
         name: string;
         state: string;
         process_state: string;
-        period_id: string;
-        grouping_mode: string;
     };
 }>();
 
@@ -44,6 +43,12 @@ const dialogs: Record<
     Transition,
     { title: string; description: string; label: string; destructive?: boolean }
 > = {
+    iniciar: {
+        title: 'Iniciar convocatoria de la carrera',
+        description:
+            'Se comprobarán la malla, las ofertas, la asignación docente y las fuentes académicas de su carrera. Se generará un sílabo por paralelo usando la plantilla y las fechas institucionales. Si falta algún requisito, no se iniciará la convocatoria.',
+        label: 'Iniciar convocatoria',
+    },
     abrir: {
         title: 'Abrir la convocatoria',
         description:
@@ -64,18 +69,37 @@ const dialogs: Record<
     },
 };
 
-const transitionForm = (id: string, transition: Transition) =>
-    transition === 'abrir'
+const transitionForm = (transition: Transition) => {
+    if (transition === 'iniciar') {
+        return ConvocationController.store.form();
+    }
+
+    const id = props.convocation.id;
+
+    if (id === null) {
+        throw new Error('La convocatoria de carrera aún no existe.');
+    }
+
+    return transition === 'abrir'
         ? ConvocationController.open.form(id)
         : ConvocationController.transition.form({
               convocation: id,
               transition,
           });
+};
 </script>
 
 <template>
     <TableActionsMenu :label="`Acciones para ${convocation.name}`">
-        <DropdownMenuItem as-child>
+        <DropdownMenuItem
+            v-if="convocation.id === null"
+            :disabled="convocation.process_state !== 'abierto'"
+            @select="pending = 'iniciar'"
+        >
+            <Play aria-hidden="true" />
+            Iniciar
+        </DropdownMenuItem>
+        <DropdownMenuItem v-if="convocation.id !== null" as-child>
             <Link :href="ConvocationController.show(convocation.id)">
                 <Eye aria-hidden="true" />
                 Ver seguimiento
@@ -83,6 +107,7 @@ const transitionForm = (id: string, transition: Transition) =>
         </DropdownMenuItem>
         <DropdownMenuItem
             v-if="convocation.state === 'preparacion'"
+            :disabled="convocation.process_state !== 'abierto'"
             @select="pending = 'abrir'"
         >
             <Play aria-hidden="true" />
@@ -97,6 +122,7 @@ const transitionForm = (id: string, transition: Transition) =>
         </DropdownMenuItem>
         <DropdownMenuItem
             v-if="convocation.state === 'pausada'"
+            :disabled="convocation.process_state !== 'abierto'"
             @select="pending = 'reanudar'"
         >
             <Play aria-hidden="true" />
@@ -105,6 +131,19 @@ const transitionForm = (id: string, transition: Transition) =>
         <DropdownMenuItem v-if="convocation.state === 'cerrada'" disabled>
             <Lock aria-hidden="true" />
             Convocatoria cerrada
+        </DropdownMenuItem>
+        <DropdownMenuItem
+            v-if="convocation.process_state !== 'abierto'"
+            disabled
+        >
+            <Lock aria-hidden="true" />
+            {{
+                convocation.process_state === 'pausado'
+                    ? 'Proceso institucional en pausa'
+                    : convocation.process_state === 'cerrado'
+                      ? 'Proceso institucional cerrado'
+                      : 'Pendiente de apertura institucional'
+            }}
         </DropdownMenuItem>
     </TableActionsMenu>
 
@@ -124,11 +163,17 @@ const transitionForm = (id: string, transition: Transition) =>
                 }}</DialogDescription>
             </DialogHeader>
             <Form
-                v-bind="transitionForm(convocation.id, pending)"
+                v-bind="transitionForm(pending)"
                 v-slot="{ errors, processing }"
                 class="flex flex-col gap-4"
                 @success="pending = null"
             >
+                <input
+                    v-if="pending === 'iniciar'"
+                    type="hidden"
+                    name="process_id"
+                    :value="convocation.process_id"
+                />
                 <Field
                     v-if="pending === 'pausar'"
                     :data-invalid="Boolean(errors.reason)"
@@ -148,7 +193,13 @@ const transitionForm = (id: string, transition: Transition) =>
                     />
                     <FieldError :errors="[errors.reason]" />
                 </Field>
-                <FieldError :errors="[errors.convocation, errors.transition]" />
+                <FieldError
+                    :errors="[
+                        errors.process_id,
+                        errors.convocation,
+                        errors.transition,
+                    ]"
+                />
                 <DialogFooter>
                     <DialogClose as-child>
                         <Button type="button" variant="outline"

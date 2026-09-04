@@ -228,8 +228,10 @@ DOC-01 llena una cuadrícula con una casilla por celda, unidades y totales calcu
   etiqueta de plantilla vacía. La plantilla institucional se sigue heredando. El alta exige elegir el período
   académico institucional. COR-03 muestra las convocatorias institucionales visibles y
   permite iniciar únicamente el alcance de su carrera desde una abierta; hereda plantilla,
-  período, fechas y todas las fuentes activas, sin campos de configuración. COR-02 concentra en el menú de tres puntos de cada
-  fila las acciones —ver seguimiento, pausar y reanudar— con el mismo diálogo de
+  período, fechas y todas las fuentes activas, sin campos de configuración. COR-02 lista
+  los procesos institucionales desde antes de iniciar la carrera, con estado institucional
+  y estado de carrera separados; no tiene aviso ni botón de alta independientes. El menú
+  de tres puntos de cada fila reúne iniciar, ver seguimiento, pausar y reanudar, con el mismo diálogo de
   confirmación que ADM-12; COR-04 es solo seguimiento y avisa cuando la convocatoria o
   el proceso institucional están en pausa o cerrados. ADM-05,
   ADM-06, COR-11 y COR-13 muestran un aviso con la razón del bloqueo y ocultan las

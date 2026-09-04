@@ -4,9 +4,7 @@ import ConvocationController from '@/actions/App/Modules/Syllabus/Presentation/H
 import FilterToolbar from '@/components/domain/FilterToolbar.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
 import ConvocationActions from '@/components/domain/syllabus/ConvocationActions.vue';
-import ConvocationCreationSheet from '@/components/domain/syllabus/ConvocationCreationSheet.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Card, CardContent } from '@/components/ui/card';
 import { Field, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -31,15 +29,12 @@ import { index as convocationsIndex } from '@/routes/convocations';
 import type { Paginated } from '@/types/pagination';
 
 type ConvocationRow = {
-    id: string;
+    id: string | null;
+    process_id: string;
     name: string;
     state: string;
-    process: string;
     process_state: string;
-    grouping_mode: string;
     period: string;
-    period_id: string;
-    source_ids: string[];
     template: string;
     syllabi_count: number;
 };
@@ -47,16 +42,6 @@ type ConvocationRow = {
 defineProps<{
     convocations: Paginated<ConvocationRow>;
     filters: { q: string | null; state: string | null };
-    processes: {
-        id: string;
-        label: string;
-        state: string;
-        template: string;
-        starts_at: string;
-        due_at: string;
-        period_name: string;
-        started_for_career: boolean;
-    }[];
 }>();
 
 defineOptions({
@@ -67,6 +52,7 @@ defineOptions({
 
 const stateLabel = (state: string): string =>
     ({
+        sin_iniciar: 'Sin iniciar',
         preparacion: 'En preparación',
         abierto: 'Abierta',
         abierta: 'Abierta',
@@ -75,34 +61,14 @@ const stateLabel = (state: string): string =>
         cerrado: 'Cerrada',
         cerrada: 'Cerrada',
     })[state] ?? 'Estado no disponible';
-
-// Una convocatoria abierta cuyo proceso institucional está en pausa tampoco avanza:
-// se dice aquí, para no tener que abrirla a averiguarlo.
-const processNote = (row: ConvocationRow): string | null =>
-    row.state === 'abierta' && row.process_state === 'pausado'
-        ? 'Proceso institucional en pausa'
-        : null;
 </script>
 
 <template>
     <Head title="Convocatorias" />
     <PageFrame
         title="Convocatorias de sílabos"
-        description="Cada convocatoria abre los sílabos de un periodo y fija con qué formato se llenan."
+        description="Inicie la convocatoria de su carrera desde Acciones cuando su configuración académica esté lista."
     >
-        <template #actions>
-            <ConvocationCreationSheet :processes="processes" />
-        </template>
-
-        <Alert v-if="processes.length > 0">
-            <AlertTitle>Convocatorias institucionales</AlertTitle>
-            <AlertDescription>
-                <span v-for="(process, index) in processes" :key="process.id">
-                    {{ process.label }} · {{ process.period_name }} · {{ stateLabel(process.state) }}{{ process.started_for_career ? ' · Iniciada para su carrera' : '' }}<span v-if="index < processes.length - 1">; </span>
-                </span>
-            </AlertDescription>
-        </Alert>
-
         <Card>
             <CardContent class="flex flex-col gap-4">
                 <Form
@@ -154,6 +120,9 @@ const processNote = (row: ConvocationRow): string | null =>
                                             <SelectItem value="preparacion"
                                                 >En preparación</SelectItem
                                             >
+                                            <SelectItem value="sin_iniciar"
+                                                >Sin iniciar</SelectItem
+                                            >
                                             <SelectItem value="abierta"
                                                 >Abiertas</SelectItem
                                             >
@@ -175,8 +144,8 @@ const processNote = (row: ConvocationRow): string | null =>
                         <TableRow>
                             <TableHead>Convocatoria</TableHead>
                             <TableHead>Periodo</TableHead>
-                            <TableHead>Proceso y configuración</TableHead>
-                            <TableHead>Estado</TableHead>
+                            <TableHead>Estado institucional</TableHead>
+                            <TableHead>Estado de la carrera</TableHead>
                             <TableHead class="text-right"
                                 >Expedientes</TableHead
                             >
@@ -188,35 +157,20 @@ const processNote = (row: ConvocationRow): string | null =>
                             v-if="convocations.data.length === 0"
                             :colspan="6"
                         >
-                            No existen convocatorias con este rol.
+                            No hay convocatorias para los filtros actuales.
                         </TableEmpty>
                         <TableRow
                             v-for="convocation in convocations.data"
                             v-else
-                            :key="convocation.id"
+                            :key="convocation.process_id"
                         >
                             <TableCell>{{ convocation.name }}</TableCell>
                             <TableCell>{{ convocation.period }}</TableCell>
                             <TableCell>
-                                <div>{{ convocation.process }}</div>
-                                <div class="text-sm text-muted-foreground">
-                                    {{ convocation.template }} ·
-                                    {{
-                                        convocation.grouping_mode ===
-                                        'por_paralelo'
-                                            ? 'Por paralelo'
-                                            : 'Por oferta'
-                                    }}
-                                </div>
+                                {{ stateLabel(convocation.process_state) }}
                             </TableCell>
                             <TableCell>
                                 <div>{{ stateLabel(convocation.state) }}</div>
-                                <div
-                                    v-if="processNote(convocation)"
-                                    class="text-sm text-muted-foreground"
-                                >
-                                    {{ processNote(convocation) }}
-                                </div>
                             </TableCell>
                             <TableCell class="text-right">
                                 {{ convocation.syllabi_count }}

@@ -81,12 +81,6 @@ it('mantiene las altas de gestión que requieren datos dentro del sheet derecho 
             'component_file' => 'resources/js/components/domain/syllabus/SyllabusProcessSheet.vue',
             'action' => 'SyllabusProcessController.store.form',
         ],
-        'Coordinador · convocatorias' => [
-            'page' => 'resources/js/pages/Coordination/Convocations/Index.vue',
-            'component' => 'ConvocationCreationSheet',
-            'component_file' => 'resources/js/components/domain/syllabus/ConvocationCreationSheet.vue',
-            'action' => 'ConvocationController.store.form',
-        ],
         'Coordinador · observaciones de revision' => [
             'page' => 'resources/js/pages/Coordination/Reviews/Show.vue',
             'component' => 'ReviewObservationSheet',
