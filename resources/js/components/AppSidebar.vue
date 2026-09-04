@@ -125,16 +125,7 @@ const mainNavItems = computed<NavItem[]>(() => [
                   title: 'Auditoría',
                   href: auditIndex(),
                   icon: ScrollText,
-                  items: [
-                      {
-                          title: 'Procesos',
-                          href: jobsIndex(),
-                      },
-                      {
-                          title: 'Registro de actividad',
-                          href: auditIndex(),
-                      },
-                  ],
+                  isActive: page.url.split('?')[0] === jobsIndex.url(),
               },
           ]
         : []),

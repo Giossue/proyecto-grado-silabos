@@ -484,9 +484,7 @@ it('agrupa procesos y registro de actividad bajo auditoria', function (): void {
     expect($sidebar)
         ->toBeString()
         ->toContain("title: 'Auditoría'")
-        ->toContain("title: 'Procesos'")
-        ->toContain('href: jobsIndex()')
-        ->toContain("title: 'Registro de actividad'")
+        ->not->toContain("title: 'Registro de actividad'")
         ->toContain('href: auditIndex()');
 });
 

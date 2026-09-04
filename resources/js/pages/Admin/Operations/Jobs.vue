@@ -2,6 +2,7 @@
 import { Head, router } from '@inertiajs/vue3';
 import { RotateCw } from '@lucide/vue';
 import { ref } from 'vue';
+import AuditTabs from '@/components/domain/AuditTabs.vue';
 import FilterToolbar from '@/components/domain/FilterToolbar.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
 import TableActionsMenu from '@/components/domain/TableActionsMenu.vue';
@@ -67,7 +68,7 @@ const props = defineProps<{
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: 'Procesos', href: jobsIndex() }],
+        breadcrumbs: [{ title: 'Auditoría', href: jobsIndex() }],
     },
 });
 
@@ -133,209 +134,236 @@ const formatDate = (value: string | null): string =>
 </script>
 
 <template>
-    <Head title="Procesos" />
+    <Head title="Auditoría · Procesos" />
     <PageFrame
-        title="Procesos"
+        title="Auditoría"
         description="Lo que el sistema hace por detrás: correos, documentos y análisis. Aquí se ve qué terminó y qué falló."
     >
-        <Card>
-            <CardContent class="flex flex-col gap-4">
-                <form @submit.prevent="applyFilters">
-                    <FilterToolbar>
-                        <template #search>
-                            <Field>
-                                <FieldLabel for="jobs-search" class="sr-only">
-                                    Buscar procesos
-                                </FieldLabel>
-                                <Input
-                                    id="jobs-search"
-                                    v-model="search"
-                                    type="search"
-                                    placeholder="Buscar por proceso o cola"
-                                />
-                            </Field>
-                        </template>
-                        <template #filters>
-                            <Field>
-                                <FieldLabel for="jobs-status" class="sr-only">
-                                    Estado
-                                </FieldLabel>
-                                <Select v-model="status">
-                                    <SelectTrigger id="jobs-status">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectGroup>
-                                            <SelectItem value="all">
-                                                Todos los estados
-                                            </SelectItem>
-                                            <SelectItem value="pendiente">
-                                                En cola
-                                            </SelectItem>
-                                            <SelectItem value="en_ejecucion">
-                                                En ejecución
-                                            </SelectItem>
-                                            <SelectItem value="completada">
-                                                Completado
-                                            </SelectItem>
-                                            <SelectItem value="fallida">
-                                                Fallido
-                                            </SelectItem>
-                                        </SelectGroup>
-                                    </SelectContent>
-                                </Select>
-                            </Field>
-                            <Field>
-                                <FieldLabel for="jobs-type" class="sr-only">
-                                    Tipo
-                                </FieldLabel>
-                                <Select v-model="type">
-                                    <SelectTrigger id="jobs-type">
-                                        <SelectValue
-                                            placeholder="Todos los tipos"
-                                        />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectGroup>
-                                            <SelectItem value="all">
-                                                Todos los tipos
-                                            </SelectItem>
-                                            <SelectItem
-                                                v-for="option in type_options"
-                                                :key="option.value"
-                                                :value="option.value"
-                                            >
-                                                {{ option.label }}
-                                            </SelectItem>
-                                        </SelectGroup>
-                                    </SelectContent>
-                                </Select>
-                            </Field>
-                            <Field>
-                                <FieldLabel for="jobs-queue" class="sr-only">
-                                    Cola
-                                </FieldLabel>
-                                <Select v-model="queue">
-                                    <SelectTrigger id="jobs-queue">
-                                        <SelectValue
-                                            placeholder="Todas las colas"
-                                        />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectGroup>
-                                            <SelectItem value="all">
-                                                Todas las colas
-                                            </SelectItem>
-                                            <SelectItem
-                                                v-for="option in queue_options"
-                                                :key="option.value"
-                                                :value="option.value"
-                                            >
-                                                {{ option.label }}
-                                            </SelectItem>
-                                        </SelectGroup>
-                                    </SelectContent>
-                                </Select>
-                            </Field>
-                        </template>
-                    </FilterToolbar>
-                </form>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Proceso</TableHead>
-                            <TableHead>Cola</TableHead>
-                            <TableHead>Estado</TableHead>
-                            <TableHead>Intentos</TableHead>
-                            <TableHead>Inicio / fin</TableHead>
-                            <TableHead>Motivo del fallo</TableHead>
-                            <TableHead class="text-right">Acciones</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow
-                            v-for="execution in executions.data"
-                            :key="execution.id"
-                        >
-                            <TableCell>{{ execution.tipo }}</TableCell>
-                            <TableCell>{{ execution.cola }}</TableCell>
-                            <TableCell>
-                                <span
-                                    :class="
-                                        execution.estado === 'fallida'
-                                            ? 'text-destructive'
-                                            : execution.estado === 'completada'
-                                              ? ''
-                                              : ''
-                                    "
-                                    >{{ statusLabel(execution.estado) }}</span
-                                >
-                                <div
-                                    v-if="
-                                        ['pendiente', 'en_ejecucion'].includes(
-                                            execution.estado,
-                                        )
-                                    "
-                                    class="mt-1 text-xs text-muted-foreground"
-                                >
-                                    {{ execution.progreso }} %
-                                </div>
-                            </TableCell>
-                            <TableCell>
-                                {{ execution.intentos }} acumulado(s)
-                                <div class="text-xs text-muted-foreground">
-                                    máximo {{ execution.intentos_maximos }} por
-                                    ciclo
-                                </div>
-                            </TableCell>
-                            <TableCell class="text-xs">
-                                <div>
-                                    Inicio:
-                                    {{ formatDate(execution.iniciado_en) }}
-                                </div>
-                                <div>
-                                    Fin:
-                                    {{ formatDate(execution.finalizado_en) }}
-                                </div>
-                            </TableCell>
-                            <TableCell class="max-w-sm text-sm">
-                                {{ execution.mensaje_error ?? '—' }}
-                            </TableCell>
-                            <TableCell class="text-right">
-                                <TableActionsMenu
-                                    :label="`Acciones para ${execution.tipo}`"
-                                >
-                                    <DropdownMenuItem
-                                        v-if="execution.reintentable"
-                                        :disabled="retryingId !== null"
-                                        @select="retryCandidate = execution"
+        <AuditTabs active="jobs">
+            <Card>
+                <CardContent class="flex flex-col gap-4">
+                    <form @submit.prevent="applyFilters">
+                        <FilterToolbar>
+                            <template #search>
+                                <Field>
+                                    <FieldLabel
+                                        for="jobs-search"
+                                        class="sr-only"
                                     >
-                                        <Spinner
-                                            v-if="retryingId === execution.id"
-                                        />
-                                        <RotateCw v-else aria-hidden="true" />
-                                        Reintentar
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem v-else disabled>
-                                        No hay acciones disponibles
-                                    </DropdownMenuItem>
-                                </TableActionsMenu>
-                            </TableCell>
-                        </TableRow>
-                        <TableEmpty
-                            v-if="executions.data.length === 0"
-                            :colspan="7"
-                        >
-                            No hay procesos para los filtros actuales.
-                        </TableEmpty>
-                    </TableBody>
-                </Table>
-                <TablePagination
-                    :meta="executions"
-                    label="Paginación de procesos"
-                />
-            </CardContent>
-        </Card>
+                                        Buscar procesos
+                                    </FieldLabel>
+                                    <Input
+                                        id="jobs-search"
+                                        v-model="search"
+                                        type="search"
+                                        placeholder="Buscar por proceso o cola"
+                                    />
+                                </Field>
+                            </template>
+                            <template #filters>
+                                <Field>
+                                    <FieldLabel
+                                        for="jobs-status"
+                                        class="sr-only"
+                                    >
+                                        Estado
+                                    </FieldLabel>
+                                    <Select v-model="status">
+                                        <SelectTrigger id="jobs-status">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectGroup>
+                                                <SelectItem value="all">
+                                                    Todos los estados
+                                                </SelectItem>
+                                                <SelectItem value="pendiente">
+                                                    En cola
+                                                </SelectItem>
+                                                <SelectItem
+                                                    value="en_ejecucion"
+                                                >
+                                                    En ejecución
+                                                </SelectItem>
+                                                <SelectItem value="completada">
+                                                    Completado
+                                                </SelectItem>
+                                                <SelectItem value="fallida">
+                                                    Fallido
+                                                </SelectItem>
+                                            </SelectGroup>
+                                        </SelectContent>
+                                    </Select>
+                                </Field>
+                                <Field>
+                                    <FieldLabel for="jobs-type" class="sr-only">
+                                        Tipo
+                                    </FieldLabel>
+                                    <Select v-model="type">
+                                        <SelectTrigger id="jobs-type">
+                                            <SelectValue
+                                                placeholder="Todos los tipos"
+                                            />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectGroup>
+                                                <SelectItem value="all">
+                                                    Todos los tipos
+                                                </SelectItem>
+                                                <SelectItem
+                                                    v-for="option in type_options"
+                                                    :key="option.value"
+                                                    :value="option.value"
+                                                >
+                                                    {{ option.label }}
+                                                </SelectItem>
+                                            </SelectGroup>
+                                        </SelectContent>
+                                    </Select>
+                                </Field>
+                                <Field>
+                                    <FieldLabel
+                                        for="jobs-queue"
+                                        class="sr-only"
+                                    >
+                                        Cola
+                                    </FieldLabel>
+                                    <Select v-model="queue">
+                                        <SelectTrigger id="jobs-queue">
+                                            <SelectValue
+                                                placeholder="Todas las colas"
+                                            />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectGroup>
+                                                <SelectItem value="all">
+                                                    Todas las colas
+                                                </SelectItem>
+                                                <SelectItem
+                                                    v-for="option in queue_options"
+                                                    :key="option.value"
+                                                    :value="option.value"
+                                                >
+                                                    {{ option.label }}
+                                                </SelectItem>
+                                            </SelectGroup>
+                                        </SelectContent>
+                                    </Select>
+                                </Field>
+                            </template>
+                        </FilterToolbar>
+                    </form>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Proceso</TableHead>
+                                <TableHead>Cola</TableHead>
+                                <TableHead>Estado</TableHead>
+                                <TableHead>Intentos</TableHead>
+                                <TableHead>Inicio / fin</TableHead>
+                                <TableHead>Motivo del fallo</TableHead>
+                                <TableHead class="text-right"
+                                    >Acciones</TableHead
+                                >
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            <TableRow
+                                v-for="execution in executions.data"
+                                :key="execution.id"
+                            >
+                                <TableCell>{{ execution.tipo }}</TableCell>
+                                <TableCell>{{ execution.cola }}</TableCell>
+                                <TableCell>
+                                    <span
+                                        :class="
+                                            execution.estado === 'fallida'
+                                                ? 'text-destructive'
+                                                : execution.estado ===
+                                                    'completada'
+                                                  ? ''
+                                                  : ''
+                                        "
+                                        >{{
+                                            statusLabel(execution.estado)
+                                        }}</span
+                                    >
+                                    <div
+                                        v-if="
+                                            [
+                                                'pendiente',
+                                                'en_ejecucion',
+                                            ].includes(execution.estado)
+                                        "
+                                        class="mt-1 text-xs text-muted-foreground"
+                                    >
+                                        {{ execution.progreso }} %
+                                    </div>
+                                </TableCell>
+                                <TableCell>
+                                    {{ execution.intentos }} acumulado(s)
+                                    <div class="text-xs text-muted-foreground">
+                                        máximo
+                                        {{ execution.intentos_maximos }} por
+                                        ciclo
+                                    </div>
+                                </TableCell>
+                                <TableCell class="text-xs">
+                                    <div>
+                                        Inicio:
+                                        {{ formatDate(execution.iniciado_en) }}
+                                    </div>
+                                    <div>
+                                        Fin:
+                                        {{
+                                            formatDate(execution.finalizado_en)
+                                        }}
+                                    </div>
+                                </TableCell>
+                                <TableCell class="max-w-sm text-sm">
+                                    {{ execution.mensaje_error ?? '—' }}
+                                </TableCell>
+                                <TableCell class="text-right">
+                                    <TableActionsMenu
+                                        :label="`Acciones para ${execution.tipo}`"
+                                    >
+                                        <DropdownMenuItem
+                                            v-if="execution.reintentable"
+                                            :disabled="retryingId !== null"
+                                            @select="retryCandidate = execution"
+                                        >
+                                            <Spinner
+                                                v-if="
+                                                    retryingId === execution.id
+                                                "
+                                            />
+                                            <RotateCw
+                                                v-else
+                                                aria-hidden="true"
+                                            />
+                                            Reintentar
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem v-else disabled>
+                                            No hay acciones disponibles
+                                        </DropdownMenuItem>
+                                    </TableActionsMenu>
+                                </TableCell>
+                            </TableRow>
+                            <TableEmpty
+                                v-if="executions.data.length === 0"
+                                :colspan="7"
+                            >
+                                No hay procesos para los filtros actuales.
+                            </TableEmpty>
+                        </TableBody>
+                    </Table>
+                    <TablePagination
+                        :meta="executions"
+                        label="Paginación de procesos"
+                    />
+                </CardContent>
+            </Card>
+        </AuditTabs>
 
         <Dialog
             :open="retryCandidate !== null"

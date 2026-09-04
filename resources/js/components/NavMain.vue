@@ -46,6 +46,7 @@ const showsFlyout = computed(
 // comparación es por prefijo: la sección sigue marcada aunque la URL ya no sea
 // exactamente la del índice.
 const isItemActive = (item: NavItem): boolean =>
+    item.isActive === true ||
     isCurrentOrParentUrl(item.href) ||
     (item.items?.some((child) => isCurrentOrParentUrl(child.href)) ?? false);
 </script>

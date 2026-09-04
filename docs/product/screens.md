@@ -216,8 +216,9 @@ DOC-01 llena una cuadrícula con una casilla por celda, unidades y totales calcu
   nuevo; el orden dentro del ciclo se asigna automáticamente cuando no lo determina el
   constructor. Una reubicación correcta se guarda sin notificación repetitiva; un fallo
   sí explica la acción correctiva.
-- **Auditoría** agrupa las rutas administrativas **Procesos** (ADM-09) y **Registro de
-  actividad** (ADM-10). La primera permite diagnosticar y reintentar trabajos; la segunda
+- **Auditoría** es una entrada única del sidebar, sin submenú. Dentro, las pestañas
+  **Procesos** (ADM-09) y **Registro de actividad** (ADM-10) conservan sus rutas y filtros.
+  La primera permite diagnosticar y reintentar trabajos; la segunda
   reconstruye quién hizo qué y cuándo.
 - ADM-12 lista los procesos de sílabos con estado, período institucional, plantilla, inicio, entrega y
   convocatorias. El alta usa el `Sheet` derecho; **Editar** solo aparece en preparación o
