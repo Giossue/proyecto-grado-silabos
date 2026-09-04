@@ -1,26 +1,37 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3';
 import { UserPlus } from '@lucide/vue';
+import { computed, ref } from 'vue';
 import CareerAcademicStructureController from '@/actions/App/Modules/Academic/Presentation/Http/Controllers/CareerAcademicStructureController';
 import FormSheet from '@/components/domain/FormSheet.vue';
 import FormSheetActions from '@/components/domain/FormSheetActions.vue';
+import SearchableOptionSelect from '@/components/domain/SearchableOptionSelect.vue';
 import {
     Field,
     FieldError,
     FieldGroup,
     FieldLabel,
 } from '@/components/ui/field';
-import {
-    Select,
-    SelectContent,
-    SelectGroup,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
 import type { AcademicStructureProps } from '@/types/academic';
 
-defineProps<Pick<AcademicStructureProps, 'options'>>();
+const props = defineProps<Pick<AcademicStructureProps, 'options'>>();
+const selectionKey = ref(0);
+const teacherOptions = computed(() =>
+    props.options.teacherUsers.map((teacher) => ({
+        id: teacher.id,
+        label: `${teacher.name ?? teacher.nombre ?? ''} · ${teacher.email ?? teacher.correo_electronico ?? ''}`,
+    })),
+);
+const parallelOptions = computed(() =>
+    props.options.parallels.map((parallel) => ({
+        id: parallel.id,
+        label: parallel.label ?? '',
+    })),
+);
+const closeAfterSuccess = (close: () => void): void => {
+    selectionKey.value++;
+    close();
+};
 </script>
 
 <template>
@@ -38,61 +49,37 @@ defineProps<Pick<AcademicStructureProps, 'options'>>();
                 "
                 v-slot="{ errors, processing }"
                 reset-on-success
-                @success="close"
+                @success="closeAfterSuccess(close)"
             >
-                <FieldGroup>
+                <FieldGroup :key="selectionKey">
                     <Field :data-invalid="Boolean(errors.user_id)">
                         <FieldLabel for="teacher-user" required>
                             Docente
                         </FieldLabel>
-                        <Select name="user_id" required>
-                            <SelectTrigger
-                                id="teacher-user"
-                                :aria-invalid="Boolean(errors.user_id)"
-                            >
-                                <SelectValue
-                                    placeholder="Seleccione un docente"
-                                />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectGroup>
-                                    <SelectItem
-                                        v-for="item in options.teacherUsers"
-                                        :key="item.id"
-                                        :value="item.id"
-                                    >
-                                        {{ item.name }} · {{ item.email }}
-                                    </SelectItem>
-                                </SelectGroup>
-                            </SelectContent>
-                        </Select>
+                        <SearchableOptionSelect
+                            id="teacher-user"
+                            name="user_id"
+                            :options="teacherOptions"
+                            placeholder="Seleccione un docente"
+                            search-placeholder="Buscar por nombre o correo…"
+                            empty-label="No hay docentes que coincidan."
+                            :invalid="Boolean(errors.user_id)"
+                        />
                         <FieldError :errors="[errors.user_id]" />
                     </Field>
                     <Field :data-invalid="Boolean(errors.parallel_id)">
                         <FieldLabel for="teacher-parallel" required>
                             Materia, periodo y paralelo
                         </FieldLabel>
-                        <Select name="parallel_id" required>
-                            <SelectTrigger
-                                id="teacher-parallel"
-                                :aria-invalid="Boolean(errors.parallel_id)"
-                            >
-                                <SelectValue
-                                    placeholder="Seleccione un paralelo"
-                                />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectGroup>
-                                    <SelectItem
-                                        v-for="item in options.parallels"
-                                        :key="item.id"
-                                        :value="item.id"
-                                    >
-                                        {{ item.label }}
-                                    </SelectItem>
-                                </SelectGroup>
-                            </SelectContent>
-                        </Select>
+                        <SearchableOptionSelect
+                            id="teacher-parallel"
+                            name="parallel_id"
+                            :options="parallelOptions"
+                            placeholder="Seleccione un paralelo"
+                            search-placeholder="Buscar materia, período o paralelo…"
+                            empty-label="No hay paralelos que coincidan."
+                            :invalid="Boolean(errors.parallel_id)"
+                        />
                         <FieldError :errors="[errors.parallel_id]" />
                     </Field>
                     <FormSheetActions

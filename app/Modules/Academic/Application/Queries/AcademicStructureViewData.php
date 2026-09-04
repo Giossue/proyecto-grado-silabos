@@ -416,11 +416,14 @@ class AcademicStructureViewData
                             ->where('carrera_id', $careerId)
                             ->where('estado', 'activa'),
                     )
-                    ->with(['offering.subject:id,codigo_institucional,nombre', 'offering.academicPeriod:id,nombre'])
+                    ->with([
+                        'offering.subject:id,codigo_institucional,nombre',
+                        'offering.academicPeriod:id,codigo,fecha_inicio',
+                    ])
                     ->get()
                     ->map(fn (Parallel $parallel) => [
                         'id' => $parallel->id,
-                        'label' => "{$parallel->offering->subject->codigo_institucional} · {$parallel->offering->academicPeriod->nombre} · Paralelo {$parallel->codigo}",
+                        'label' => "{$parallel->offering->subject->nombre} · {$parallel->offering->academicPeriod->fecha_inicio->format('d/m/Y')} · {$parallel->offering->academicPeriod->codigo} · Paralelo {$parallel->codigo}",
                     ]),
                 'teacherUsers' => User::query()
                     ->where('activo', true)

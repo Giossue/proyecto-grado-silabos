@@ -73,6 +73,7 @@ it('mantiene las altas de gestión que requieren datos dentro del sheet derecho 
             'component' => 'TeacherAssignmentSheet',
             'component_file' => 'resources/js/components/domain/academic/TeacherAssignmentSheet.vue',
             'action' => 'CareerAcademicStructureController.store.form',
+            'success' => '@success="closeAfterSuccess(close)"',
         ],
         'Administrador · calendario de sílabos' => [
             'page' => 'resources/js/pages/Admin/Processes/Index.vue',
@@ -139,6 +140,21 @@ it('mantiene las altas de gestión que requieren datos dentro del sheet derecho 
                 : $label.' no cierra el panel después del éxito.',
         );
     }
+});
+
+it('permite buscar docente y paralelo al crear una asignación docente', function (): void {
+    $root = dirname(__DIR__, 2);
+    $sheet = file_get_contents($root.'/resources/js/components/domain/academic/TeacherAssignmentSheet.vue');
+    $selector = file_get_contents($root.'/resources/js/components/domain/SearchableOptionSelect.vue');
+
+    expect($sheet)->toBeString();
+    expect($selector)->toBeString();
+
+    $this->assertStringContainsString('SearchableOptionSelect', $sheet);
+    $this->assertStringContainsString('Buscar por nombre o correo…', $sheet);
+    $this->assertStringContainsString('Buscar materia, período o paralelo…', $sheet);
+    $this->assertStringContainsString('filteredOptions', $selector);
+    $this->assertStringContainsString('type="hidden" :name="name" :value="selectedId"', $selector);
 });
 
 it('crea la plantilla institucional de inmediato y abre su constructor', function (): void {

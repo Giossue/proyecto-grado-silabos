@@ -129,8 +129,9 @@ class AcademicStructureTest extends TestCase
     {
         $curriculum = Curriculum::query()->firstOrFail();
         $offering = CourseOffering::query()
-            ->with(['academicPeriod', 'subject'])
+            ->with(['academicPeriod', 'subject', 'parallels'])
             ->firstOrFail();
+        $parallel = $offering->parallels->firstOrFail();
 
         $this->actingAsCoordinator()
             ->get(route('coordination.academic.curricula.index'))
@@ -169,6 +170,11 @@ class AcademicStructureTest extends TestCase
                 ->component('Coordination/Academic/TeacherAssignments')
                 ->has('teacherAssignments', 1)
                 ->has('options.teacherUsers', 1)
+                ->has('options.parallels', 1)
+                ->where(
+                    'options.parallels.0.label',
+                    "{$offering->subject->nombre} · {$offering->academicPeriod->fecha_inicio->format('d/m/Y')} · {$offering->academicPeriod->codigo} · Paralelo {$parallel->codigo}",
+                )
                 ->where('options.teacherUsers.0.name', 'DOCENTE DEMO')
                 ->where('options.teacherUsers.0.email', 'docente@silabos.test'));
     }

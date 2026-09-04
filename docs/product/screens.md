@@ -244,7 +244,7 @@ DOC-01 llena una cuadrícula con una casilla por celda, unidades y totales calcu
 | Rol           | Interfaces cubiertas                                       | Comportamiento                                                                                                                             |
 | ------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | Administrador | ADM-02, ADM-03, ADM-04, ADM-05, ADM-06 y ADM-12            | Cuentas, roles, catálogos, coordinaciones, campos y procesos de sílabos se crean desde una acción que abre el `Sheet` derecho. La única plantilla institucional se crea de inmediato porque no pide datos. |
-| Coordinador   | COR-02, COR-06, COR-11, COR-13, COR-14 y COR-15            | Convocatorias, observaciones, fuentes, mallas, materias, ofertas, paralelos y asignaciones docentes usan el mismo patrón.                  |
+| Coordinador   | COR-02, COR-06, COR-11, COR-13, COR-14 y COR-15            | Convocatorias, observaciones, fuentes, mallas, materias, ofertas, paralelos y asignaciones docentes usan el mismo patrón. En COR-15, los selectores permiten buscar docentes por nombre o correo y paralelos por materia, período o código. |
 | Docente       | DOC-02 a DOC-10                                            | No administra colecciones maestras. Edición, IA, envío y respuestas son flujos académicos de página completa, no formularios de alta.      |
 
 Selección de rol, filtros, configuración personal, resolución de contradicciones y
