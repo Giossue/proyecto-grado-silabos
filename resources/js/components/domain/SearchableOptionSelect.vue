@@ -93,6 +93,7 @@ const selectOption = (option: Option): void => {
         <PopoverContent
             class="w-(--reka-popover-trigger-width) max-h-72 overflow-y-auto p-1"
             align="start"
+            @open-auto-focus.prevent
             @mousedown.stop
             @keydown.stop
         >

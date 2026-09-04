@@ -162,6 +162,7 @@ it('permite buscar docente y paralelo al crear una asignación docente', functio
     $this->assertStringNotContainsString('ChevronDown', $selector);
     $this->assertStringContainsString('focus:bg-accent focus:text-accent-foreground', $selector);
     $this->assertStringNotContainsString('<Button', $selector);
+    $this->assertStringContainsString('@open-auto-focus.prevent', $selector);
 });
 
 it('crea la plantilla institucional de inmediato y abre su constructor', function (): void {
