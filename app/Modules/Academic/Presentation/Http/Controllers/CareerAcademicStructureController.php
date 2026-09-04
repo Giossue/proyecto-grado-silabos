@@ -134,7 +134,7 @@ class CareerAcademicStructureController extends Controller
     ): RedirectResponse {
         $actor = $request->user();
         abort_unless($actor instanceof User, 401);
-        /** @var array{period_id: string, subjects: list<array{id: string, codes: list<string>, shift?: string|null}>} $data */
+        /** @var array{period_id: string, subjects: list<array{id: string, parallels: list<array{code: string, shift?: string|null}>}>} $data */
         $data = $request->validated();
         $result = $action->execute($data, $actor, $request);
 

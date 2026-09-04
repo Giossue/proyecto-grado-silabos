@@ -146,8 +146,8 @@ catálogos académicos: se elimina lo que no tiene dependencias y se protege la 
 
 I-45 (3 de septiembre de 2026) concentra la preparación inicial de ofertas en una
 hoja lateral amplia. Para el período elegido, Coordinación solo ve materias activas de
-su malla que aún no tienen oferta y define su primer paralelo/jornada. Los paralelos
-posteriores se agregan individualmente desde las acciones de cada oferta. El envío no
+su malla que aún no tienen oferta y define uno o más paralelos, cada uno con su propia
+jornada. La acción de cada oferta queda para agregar paralelos más tarde. El envío no
 elimina por omisión ni altera la historia.
 
 I-12 renombra «contexto» a rol en todo el sistema —clases, props, rutas, vistas, columna

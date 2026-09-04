@@ -33,7 +33,7 @@ class PreparePeriod
     ) {}
 
     /**
-     * @param  array{period_id: string, subjects: list<array{id: string, codes: list<string>, shift?: string|null}>}  $data
+     * @param  array{period_id: string, subjects: list<array{id: string, parallels: list<array{code: string, shift?: string|null}>}>}  $data
      * @return array{offerings: int, parallels: int, subjects: int}
      */
     public function execute(array $data, User $actor, Request $request): array
@@ -105,20 +105,13 @@ class PreparePeriod
                     );
                     $offerings++;
                 }
-                /** @var array{codes: list<string>, shift?: string|null} $setting */
+                /** @var array{parallels: list<array{code: string, shift?: string|null}>} $setting */
                 $setting = $settingsBySubject->get($subject->id);
-                $codes = $setting['codes'];
-                $existingCodes = Parallel::query()
-                    ->where('oferta_academica_id', $offering->id)
-                    ->whereIn('codigo', $codes)
-                    ->pluck('codigo')
-                    ->all();
-
-                foreach (array_diff($codes, $existingCodes) as $code) {
+                foreach ($setting['parallels'] as $parallelSetting) {
                     $parallel = Parallel::query()->create([
                         'oferta_academica_id' => $offering->id,
-                        'codigo' => $code,
-                        'jornada' => $setting['shift'] ?? null,
+                        'codigo' => $parallelSetting['code'],
+                        'jornada' => $parallelSetting['shift'] ?? null,
                         'activo' => true,
                     ]);
                     $this->audit->execute(

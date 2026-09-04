@@ -1065,7 +1065,7 @@ class AcademicStructureTest extends TestCase
                 'period_id' => $reference->periodo_academico_id,
                 'subjects' => collect($subjects)->map(fn (Subject $subject): array => [
                     'id' => $subject->id,
-                    'codes' => ['A'],
+                    'parallels' => [['code' => 'A']],
                 ])->all(),
             ])
             ->assertRedirect()
@@ -1079,13 +1079,13 @@ class AcademicStructureTest extends TestCase
         $this->assertSame($subjectCount, Parallel::query()->whereIn('oferta_academica_id', $offerings->pluck('id'))->count());
         $this->assertSame(2, AuditEvent::query()->where('accion', 'academico.paralelo.creacion')->count());
 
-        // No se vuelve a preparar una materia ya ofertada: los extras se agregan desde la oferta.
+        // No se vuelve a preparar una materia ya ofertada.
         $this->actingAsCoordinator()
             ->post(route('coordination.academic.period.prepare'), [
                 'period_id' => $reference->periodo_academico_id,
                 'subjects' => collect($subjects)->map(fn (Subject $subject): array => [
                     'id' => $subject->id,
-                    'codes' => ['B'],
+                    'parallels' => [['code' => 'B']],
                 ])->all(),
             ])
             ->assertRedirect()
@@ -1108,13 +1108,13 @@ class AcademicStructureTest extends TestCase
                 'period_id' => $reference->periodo_academico_id,
                 'subjects' => [[
                     'id' => $subjectWithoutCampus->id,
-                    'codes' => ['A'],
+                    'parallels' => [['code' => 'A']],
                 ]],
             ])
             ->assertSessionHasErrors('subject_id');
     }
 
-    public function test_coordinator_prepares_only_selected_subjects_with_their_requested_parallels(): void
+    public function test_coordinator_prepares_only_selected_subjects_with_each_requested_parallel_shift(): void
     {
         $career = Career::query()->findOrFail($this->coordinatorContext->carrera_id);
         $curriculum = Curriculum::query()->active()->where('carrera_id', $career->id)->firstOrFail();
@@ -1133,8 +1133,10 @@ class AcademicStructureTest extends TestCase
                 'period_id' => $reference->periodo_academico_id,
                 'subjects' => [[
                     'id' => $subject->id,
-                    'codes' => ['B', 'C'],
-                    'shift' => 'matutina',
+                    'parallels' => [
+                        ['code' => 'B', 'shift' => 'matutina'],
+                        ['code' => 'C', 'shift' => 'vespertina'],
+                    ],
                 ]],
             ])
             ->assertRedirect()
@@ -1153,7 +1155,7 @@ class AcademicStructureTest extends TestCase
         $this->assertDatabaseHas('paralelos', [
             'oferta_academica_id' => $offering->id,
             'codigo' => 'C',
-            'jornada' => 'matutina',
+            'jornada' => 'vespertina',
         ]);
         $this->assertDatabaseMissing('paralelos', [
             'oferta_academica_id' => $offering->id,

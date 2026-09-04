@@ -186,9 +186,10 @@ DOC-01 llena una cuadrícula con una casilla por celda, unidades y totales calcu
   y la muestra en el listado (I-35).
 - COR-14 no crea ofertas una a una: **Preparar período** abre una hoja lateral amplia
   con las materias activas que aún no tienen oferta en el período elegido. Coordinación
-  selecciona las que se dictarán y define su primer paralelo; campus y modalidad vienen
-  de la carrera (ADM-04 pide ambos al crearla). Una materia ya preparada no reaparece
-  aquí: sus paralelos extra se crean desde acciones de su oferta.
+  selecciona las que se dictarán y define uno o más paralelos, cada uno con su jornada;
+  campus y modalidad vienen de la carrera (ADM-04 pide ambos al crearla). Una materia
+  ya preparada no reaparece aquí: para cambios posteriores se usa la acción de su
+  oferta.
 - COR-13 usa una única entrada **Malla**. Si existe, la ruta abre directamente la página
   completa con **Interactivo** (pestaña principal, decisión de los coordinadores) y
   **Desglose académico** (`?modo=desglose`); si no existe, muestra el

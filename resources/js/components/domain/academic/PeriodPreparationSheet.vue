@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3';
-import { CalendarCheck, CheckCheck, ListChecks } from '@lucide/vue';
+import { CalendarCheck, CheckCheck, ListChecks, Plus, Trash2 } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import CareerAcademicStructureController from '@/actions/App/Modules/Academic/Presentation/Http/Controllers/CareerAcademicStructureController';
 import FormSheet from '@/components/domain/FormSheet.vue';
@@ -29,23 +29,30 @@ import {
 import { PARALLEL_SHIFTS as SHIFTS } from '@/lib/parallelShifts';
 import type { AcademicStructureProps, Option } from '@/types/academic';
 
+type ParallelDraft = {
+    code: string;
+    shift: string;
+};
+
 type PreparationRow = {
     id: string;
     code: string;
     name: string;
     selected: boolean;
-    codes: string;
-    shift: string;
+    parallels: ParallelDraft[];
 };
 
 const props = defineProps<Pick<AcademicStructureProps, 'offerings' | 'options'>>();
 const open = ref(false);
 const rows = ref<PreparationRow[]>([]);
-const bulkCodes = ref('A');
+const bulkCode = ref('A');
 const bulkShift = ref('');
 const prepare = useForm<{
     period_id: string;
-    subjects: { id: string; codes: string[]; shift: string | null }[];
+    subjects: {
+        id: string;
+        parallels: { code: string; shift: string | null }[];
+    }[];
 }>({
     period_id: '',
     subjects: [],
@@ -64,12 +71,6 @@ const dateRange = (period: Option): string =>
               dateFormatter.format(new Date(period.ends_on + 'T00:00:00Z')),
           ].join(' – ')
         : period.nombre ?? '';
-const codesFor = (value: string): string[] =>
-    value
-        .split(/[;,\n]/)
-        .map((code) => code.trim())
-        .filter(Boolean)
-        .filter((code, index, all) => all.indexOf(code) === index);
 const preparedSubjectIds = computed(
     () =>
         new Set(
@@ -87,7 +88,11 @@ const selectedRows = computed(() =>
     availableRows.value.filter((row) => row.selected),
 );
 const invalidRows = computed(() =>
-    selectedRows.value.filter((row) => codesFor(row.codes).length === 0),
+    selectedRows.value.filter(
+        (row) =>
+            row.parallels.length === 0 ||
+            row.parallels.some((parallel) => parallel.code.trim() === ''),
+    ),
 );
 const formError = computed(
     () =>
@@ -102,25 +107,31 @@ const reset = (): void => {
         code: subject.codigo_institucional ?? subject.code ?? 'Sin código',
         name: subject.nombre ?? subject.name ?? 'Materia sin nombre',
         selected: false,
-        codes: 'A',
-        shift: '',
+        parallels: [{ code: 'A', shift: '' }],
     }));
-    bulkCodes.value = 'A';
+    bulkCode.value = 'A';
     bulkShift.value = '';
     prepare.reset();
     prepare.clearErrors();
 };
 
 const applyToSelected = (): void => {
-    const codes = codesFor(bulkCodes.value).join(', ');
+    const code = bulkCode.value.trim();
 
-    if (codes === '') {
+    if (code === '') {
         return;
     }
 
     for (const row of selectedRows.value) {
-        row.codes = codes;
-        row.shift = bulkShift.value;
+        row.parallels[0] = { code, shift: bulkShift.value };
+    }
+};
+const addParallel = (row: PreparationRow): void => {
+    row.parallels.push({ code: '', shift: '' });
+};
+const removeParallel = (row: PreparationRow, index: number): void => {
+    if (row.parallels.length > 1) {
+        row.parallels.splice(index, 1);
     }
 };
 const selectAll = (selected: boolean): void => {
@@ -138,8 +149,10 @@ const submit = (close: () => void): void => {
             period_id: prepare.period_id,
             subjects: selectedRows.value.map((row) => ({
                 id: row.id,
-                codes: codesFor(row.codes),
-                shift: row.shift || null,
+                parallels: row.parallels.map((parallel) => ({
+                    code: parallel.code.trim(),
+                    shift: parallel.shift || null,
+                })),
             })),
         }))
         .post(CareerAcademicStructureController.preparePeriod.url(), {
@@ -164,7 +177,7 @@ watch(open, (isOpen) => {
         wide
         trigger-label="Preparar período"
         title="Preparar período académico"
-        description="Seleccione materias aún no preparadas y configure su primer paralelo. Campus y modalidad se heredan de la carrera; los paralelos extra se agregan desde cada oferta."
+        description="Seleccione materias aún no preparadas y configure sus paralelos. Campus y modalidad se heredan de la carrera."
     >
         <template #trigger>
             <Button>
@@ -227,18 +240,18 @@ watch(open, (isOpen) => {
                         class="flex w-full max-w-5xl flex-col gap-3 rounded-lg border bg-muted/30 p-4 lg:flex-row lg:items-end"
                     >
                         <Field class="min-w-0 flex-1">
-                            <FieldLabel for="period-preparation-codes">
-                                Paralelos para las seleccionadas
+                            <FieldLabel for="period-preparation-code">
+                                Paralelo inicial para las seleccionadas
                             </FieldLabel>
                             <Input
-                                id="period-preparation-codes"
-                                v-model="bulkCodes"
-                                placeholder="Ej. A, B, C"
+                                id="period-preparation-code"
+                                v-model="bulkCode"
+                                placeholder="Ej. A"
                             />
                         </Field>
                         <Field class="min-w-0 flex-1">
                             <FieldLabel for="period-preparation-shift">
-                                Jornada para las seleccionadas
+                                Jornada inicial para las seleccionadas
                             </FieldLabel>
                             <Select v-model="bulkShift">
                                 <SelectTrigger id="period-preparation-shift">
@@ -304,8 +317,7 @@ watch(open, (isOpen) => {
                                 </TableHead>
                                 <TableHead>Código</TableHead>
                                 <TableHead>Materia</TableHead>
-                                <TableHead class="w-40">Paralelos</TableHead>
-                                <TableHead class="w-36">Jornada</TableHead>
+                                <TableHead>Paralelos y jornada</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -320,37 +332,70 @@ watch(open, (isOpen) => {
                                 <TableCell>{{ row.code }}</TableCell>
                                 <TableCell>{{ row.name }}</TableCell>
                                 <TableCell>
-                                    <Input
-                                        v-model="row.codes"
-                                        :disabled="!row.selected"
-                                        :aria-label="'Paralelos de ' + row.name"
-                                        placeholder="A, B"
-                                    />
-                                </TableCell>
-                                <TableCell>
-                                    <Select
-                                        v-model="row.shift"
-                                        :disabled="!row.selected"
-                                    >
-                                        <SelectTrigger
-                                            :aria-label="'Jornada de ' + row.name"
+                                    <div class="flex flex-col gap-2">
+                                        <div
+                                            v-for="(parallel, index) in row.parallels"
+                                            :key="index"
+                                            class="flex flex-wrap items-center gap-2"
                                         >
-                                            <SelectValue
-                                                placeholder="Sin jornada"
+                                            <Input
+                                                v-model="parallel.code"
+                                                class="w-28"
+                                                :disabled="!row.selected"
+                                                :aria-label="`Código del paralelo ${index + 1} de ${row.name}`"
+                                                :placeholder="index === 0 ? 'Ej. A' : 'Ej. B'"
                                             />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectGroup>
-                                                <SelectItem
-                                                    v-for="shift in SHIFTS"
-                                                    :key="shift.value"
-                                                    :value="shift.value"
+                                            <Select
+                                                v-model="parallel.shift"
+                                                :disabled="!row.selected"
+                                            >
+                                                <SelectTrigger
+                                                    class="w-44"
+                                                    :aria-label="`Jornada del paralelo ${index + 1} de ${row.name}`"
                                                 >
-                                                    {{ shift.label }}
-                                                </SelectItem>
-                                            </SelectGroup>
-                                        </SelectContent>
-                                    </Select>
+                                                    <SelectValue
+                                                        placeholder="Sin jornada"
+                                                    />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectGroup>
+                                                        <SelectItem
+                                                            v-for="shift in SHIFTS"
+                                                            :key="shift.value"
+                                                            :value="shift.value"
+                                                        >
+                                                            {{ shift.label }}
+                                                        </SelectItem>
+                                                    </SelectGroup>
+                                                </SelectContent>
+                                            </Select>
+                                            <Button
+                                                v-if="row.parallels.length > 1"
+                                                type="button"
+                                                size="icon-sm"
+                                                variant="ghost"
+                                                :disabled="!row.selected"
+                                                :aria-label="`Quitar paralelo ${parallel.code || index + 1} de ${row.name}`"
+                                                @click="removeParallel(row, index)"
+                                            >
+                                                <Trash2 aria-hidden="true" />
+                                            </Button>
+                                        </div>
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            variant="outline"
+                                            class="w-fit"
+                                            :disabled="!row.selected"
+                                            @click="addParallel(row)"
+                                        >
+                                            <Plus
+                                                data-icon="inline-start"
+                                                aria-hidden="true"
+                                            />
+                                            Agregar paralelo
+                                        </Button>
+                                    </div>
                                 </TableCell>
                             </TableRow>
                         </TableBody>
@@ -361,8 +406,8 @@ watch(open, (isOpen) => {
                         variant="destructive"
                     >
                         <AlertDescription>
-                            Cada materia seleccionada debe tener al menos un
-                            código de paralelo.
+                            Cada materia seleccionada debe tener al menos un paralelo
+                            con código.
                         </AlertDescription>
                     </Alert>
                     </template>

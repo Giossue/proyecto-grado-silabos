@@ -445,6 +445,9 @@ it('prepara solo ofertas pendientes en una hoja lateral amplia', function (): vo
         ->toContain('selected: false')
         ->toContain('preparedSubjectIds')
         ->toContain('availableRows')
+        ->toContain('addParallel')
+        ->toContain('removeParallel')
+        ->toContain('parallel.shift')
         ->toContain('<Table')
         ->toContain('CareerAcademicStructureController.preparePeriod.url');
 });

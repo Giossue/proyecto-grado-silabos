@@ -9,7 +9,8 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 /**
- * «Preparar período» permite elegir materias y sus paralelos en un solo envío.
+ * «Preparar período» permite elegir materias y sus paralelos con jornada propia en un
+ * solo envío.
  * Solo admite materias que todavía no tienen una oferta en el período elegido.
  */
 class PreparePeriodRequest extends FormRequest
@@ -25,18 +26,24 @@ class PreparePeriodRequest extends FormRequest
             'subjects' => collect($subjects)
                 ->filter(fn (mixed $subject): bool => is_array($subject))
                 ->map(function (array $subject): array {
-                    $codes = is_array($subject['codes'] ?? null) ? $subject['codes'] : [];
+                    $parallels = is_array($subject['parallels'] ?? null)
+                        ? $subject['parallels']
+                        : [];
 
                     return [
                         'id' => $subject['id'] ?? null,
-                        'codes' => collect($codes)
-                            ->filter(fn (mixed $code): bool => is_string($code))
-                            ->map(fn (string $code): string => trim($code))
-                            ->filter(fn (string $code): bool => $code !== '')
-                            ->unique()
+                        'parallels' => collect($parallels)
+                            ->filter(fn (mixed $parallel): bool => is_array($parallel))
+                            ->map(fn (array $parallel): array => [
+                                'code' => is_string($parallel['code'] ?? null)
+                                    ? trim($parallel['code'])
+                                    : '',
+                                'shift' => $parallel['shift'] ?? null,
+                            ])
+                            ->filter(fn (array $parallel): bool => $parallel['code'] !== '')
+                            ->unique('code')
                             ->values()
                             ->all(),
-                        'shift' => $subject['shift'] ?? null,
                     ];
                 })
                 ->values()
@@ -64,9 +71,9 @@ class PreparePeriodRequest extends FormRequest
             ],
             'subjects' => ['required', 'array', 'min:1', 'max:200'],
             'subjects.*.id' => ['required', 'uuid', 'distinct'],
-            'subjects.*.codes' => ['required', 'array', 'min:1', 'max:50'],
-            'subjects.*.codes.*' => ['required', 'string', 'max:30'],
-            'subjects.*.shift' => ['nullable', 'string', Rule::in(Parallel::SHIFTS)],
+            'subjects.*.parallels' => ['required', 'array', 'min:1', 'max:50'],
+            'subjects.*.parallels.*.code' => ['required', 'string', 'max:30'],
+            'subjects.*.parallels.*.shift' => ['nullable', 'string', Rule::in(Parallel::SHIFTS)],
         ];
     }
 }
