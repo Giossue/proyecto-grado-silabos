@@ -190,8 +190,8 @@ DOC-01 llena una cuadrícula con una casilla por celda, unidades y totales calcu
   con todas las materias activas. Coordinación selecciona las que se dictarán,
   define sus códigos de paralelo y jornada por fila o de forma masiva; campus y
   modalidad vienen de la carrera (ADM-04 pide ambos al crearla). Repetirlo no duplica y
-  omitir una materia no elimina una oferta existente. Los paralelos extra siguen
-  disponibles por lote para una oferta concreta.
+  omitir una materia no elimina una oferta existente. Desde esta misma pantalla se
+  pueden agregar paralelos extra por lote para una oferta concreta.
 - COR-13 usa una única entrada **Malla**. Si existe, la ruta abre directamente la página
   completa con **Interactivo** (pestaña principal, decisión de los coordinadores) y
   **Desglose académico** (`?modo=desglose`); si no existe, muestra el

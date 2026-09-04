@@ -294,7 +294,10 @@ it('presenta una sola malla por carrera sin buscador filtros cards ni versiones'
         ->not->toContain('Malla publicada')
         ->not->toContain('número de versión')
         ->not->toContain('version_number');
-    expect($offerings)->toBeString()->toContain('<PeriodPreparationSheet');
+    expect($offerings)
+        ->toBeString()
+        ->toContain('<PeriodPreparationSheet')
+        ->toContain('entity="paralelo"');
     expect($parallels)->toBeString()->toContain('entity="paralelo"');
 });
 

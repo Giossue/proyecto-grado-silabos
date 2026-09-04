@@ -26,6 +26,6 @@ omitir una fila.
 
 ## Verificación
 
-- `php artisan test --compact tests/Feature/Academic/AcademicStructureTest.php tests/Architecture/ManagementCreationUiTest.php`: 59 pruebas y 1.529 aserciones.
+- `php artisan test --compact tests/Feature/Academic/AcademicStructureTest.php tests/Architecture/ManagementCreationUiTest.php`: 59 pruebas y 1.530 aserciones.
 - `./vendor/bin/pint --test`, `npm run types:check`, ESLint focalizado,
   PHPStan focalizado y `npm run build` pasan.
