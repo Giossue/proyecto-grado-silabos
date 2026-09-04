@@ -25,10 +25,11 @@ import { useClientFilter } from '@/composables/useClientFilter';
 import { useClientPagination } from '@/composables/useClientPagination';
 import type { AcademicStructureProps } from '@/types/academic';
 
-const props =
-    defineProps<
-        Pick<AcademicStructureProps, 'teacherAssignments' | 'options'>
-    >();
+const props = defineProps<
+    Pick<AcademicStructureProps, 'teacherAssignments' | 'options'> & {
+        lockReason?: string | null;
+    }
+>();
 
 const filter = useClientFilter(
     () => props.teacherAssignments,
@@ -86,7 +87,7 @@ const {
                                             Activas
                                         </SelectItem>
                                         <SelectItem value="inactive">
-                                            Archivadas
+                                            Finalizadas
                                         </SelectItem>
                                     </SelectGroup>
                                 </SelectContent>
@@ -128,7 +129,7 @@ const {
                             <TableCell>{{ item.period_name }}</TableCell>
                             <TableCell>{{ item.parallel_code }}</TableCell>
                             <TableCell>
-                                {{ item.active ? 'Activa' : 'Archivada' }}
+                                {{ item.active ? 'Activa' : 'Finalizada' }}
                             </TableCell>
                             <TableCell class="text-right">
                                 <CareerAcademicActions
@@ -137,6 +138,8 @@ const {
                                     :record-label="`la asignación de ${item.user_name}`"
                                     :editable="item.editable"
                                     :active="item.active"
+                                    :delete-supported="!lockReason"
+                                    :locked-label="lockReason ?? undefined"
                                     :options="options"
                                 />
                             </TableCell>

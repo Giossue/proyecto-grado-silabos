@@ -26,7 +26,7 @@ class SetUserStatus
 
         return DB::transaction(function () use ($active, $actor, $activeRole, $request, $target): User {
             if (! $active) {
-                $this->ensureMayArchive($target);
+                $this->ensureMayDeactivate($target);
             }
 
             $target->update([
@@ -43,7 +43,7 @@ class SetUserStatus
                 // la base no admite dos coordinaciones vigentes a la vez.
                 $closedMandates = $this->mandate->closeFor($target->id);
                 // Ningún paralelo queda a nombre de alguien que ya no está (I-39); los
-                // sílabos en curso se relevaron antes, porque `ensureMayArchive` lo exige.
+                // sílabos en curso se relevaron antes, porque `ensureMayDeactivate` lo exige.
                 $closedTeacherAssignments = DB::table('asignaciones_docente')
                     ->where('usuario_id', $target->id)
                     ->where('activo', true)
@@ -66,10 +66,10 @@ class SetUserStatus
     }
 
     /**
-     * Archivar no puede dejar huérfano nada: ni la administración de la institución ni
+     * Desactivar no puede dejar huérfano nada: ni la administración de la institución ni
      * un sílabo en curso. Lo segundo lo resuelve Coordinación con el relevo docente.
      */
-    private function ensureMayArchive(User $target): void
+    private function ensureMayDeactivate(User $target): void
     {
         $isAdministrator = RoleAssignment::query()
             ->effective()
@@ -85,7 +85,7 @@ class SetUserStatus
                 ->exists();
             if (! $otherAdministrators) {
                 throw ValidationException::withMessages([
-                    'active' => 'Es la única cuenta de administración activa. Nombre otra antes de archivarla.',
+                    'active' => 'Es la única cuenta de administración activa. Nombre otra antes de desactivarla.',
                 ]);
             }
         }
@@ -103,7 +103,7 @@ class SetUserStatus
         if ($inProgress->isNotEmpty()) {
             $detail = $inProgress->map(fn (object $row): string => "{$row->total} en {$row->carrera}")->implode(', ');
             throw ValidationException::withMessages([
-                'active' => "Tiene sílabos en curso ({$detail}). Coordinación debe relevar al docente antes de archivar la cuenta.",
+                'active' => "Tiene sílabos en curso ({$detail}). Coordinación debe relevar al docente antes de desactivar la cuenta.",
             ]);
         }
     }

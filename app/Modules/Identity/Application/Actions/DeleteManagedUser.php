@@ -12,7 +12,7 @@ use Illuminate\Validation\ValidationException;
 /**
  * Borra una cuenta que nunca se estrenó y no dejó rastro: solo su rol, su carrera y, si
  * acaso, un nombramiento de coordinación. Cualquier otra huella (sílabos, asignaciones
- * docentes, revisiones, auditoría como actor) la vuelve historia y entonces se archiva,
+ * docentes, revisiones, auditoría como actor) la vuelve historia y entonces se desactiva,
  * no se borra (I-38).
  */
 class DeleteManagedUser
@@ -43,13 +43,13 @@ class DeleteManagedUser
             $locked = User::query()->lockForUpdate()->findOrFail($target->id);
             if (! $locked->debe_cambiar_contrasena) {
                 throw ValidationException::withMessages([
-                    'user' => 'La cuenta ya fue activada por su titular. Archívela en lugar de eliminarla.',
+                    'user' => 'La cuenta ya fue activada por su titular. Desactívela en lugar de eliminarla.',
                 ]);
             }
             foreach (self::TRACES as $table => $column) {
                 if (DB::table($table)->where($column, $locked->id)->exists()) {
                     throw ValidationException::withMessages([
-                        'user' => 'La cuenta ya tiene actividad registrada. Archívela en lugar de eliminarla.',
+                        'user' => 'La cuenta ya tiene actividad registrada. Desactívela en lugar de eliminarla.',
                     ]);
                 }
             }

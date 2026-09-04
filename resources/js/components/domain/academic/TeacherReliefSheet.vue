@@ -67,7 +67,7 @@ const idempotencyKey = `relief-${Math.trunc(performance.now())}-${Math.random().
     <FormSheet
         trigger-label="Relevar docente"
         title="Relevar a un docente en todos sus paralelos"
-        description="Archiva las asignaciones de quien sale y asigna a quien entra en todos sus paralelos de la carrera, sílabos incluidos."
+        description="Finaliza las asignaciones de quien sale y asigna a quien entra en todos sus paralelos de la carrera, sílabos incluidos."
     >
         <template #trigger>
             <Button variant="outline">Relevar docente</Button>

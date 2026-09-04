@@ -40,10 +40,10 @@ class CreateConvocation
             throw ValidationException::withMessages(['process_id' => 'El proceso ya está cerrado; elija uno vigente.']);
         }
         if (! $process->template->activo || ! $process->template->es_institucional) {
-            throw ValidationException::withMessages(['process_id' => 'La plantilla del proceso está archivada; Administración debe corregirla.']);
+            throw ValidationException::withMessages(['process_id' => 'La plantilla del proceso está inactiva; Administración debe corregirla.']);
         }
         if (! $process->academicPeriod->activo) {
-            throw ValidationException::withMessages(['process_id' => 'El período del proceso está archivado; Administración debe corregir el proceso.']);
+            throw ValidationException::withMessages(['process_id' => 'El período del proceso está inactivo; Administración debe corregir el proceso.']);
         }
 
         $sources = AcademicSource::query()->whereIn('id', $data['source_ids'])->get();

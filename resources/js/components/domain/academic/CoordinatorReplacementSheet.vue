@@ -26,7 +26,7 @@ import type { Option } from '@/types/academic';
 /**
  * Nombrar o reemplazar la coordinación de una carrera en un paso (I-39): quien sale
  * pierde el nombramiento y el rol en esta carrera; quien entra recibe ambos. Si quien
- * sale ya no tiene otro rol, puede archivarse aquí mismo.
+ * sale ya no tiene otro rol, puede desactivarse aquí mismo.
  */
 const props = defineProps<{
     careerId: string;
@@ -105,26 +105,26 @@ const candidates = computed(() =>
                     <Field
                         v-if="coordinator"
                         orientation="horizontal"
-                        :data-invalid="Boolean(errors.archive_outgoing)"
+                        :data-invalid="Boolean(errors.deactivate_outgoing)"
                     >
                         <input
                             type="hidden"
-                            name="archive_outgoing"
+                            name="deactivate_outgoing"
                             value="0"
                         />
                         <Checkbox
-                            :id="`coordinator-archive-${careerId}`"
-                            name="archive_outgoing"
+                            :id="`coordinator-deactivate-${careerId}`"
+                            name="deactivate_outgoing"
                             value="1"
                         />
                         <FieldContent>
                             <FieldLabel
-                                :for="`coordinator-archive-${careerId}`"
+                                :for="`coordinator-deactivate-${careerId}`"
                             >
-                                Archivar la cuenta de {{ coordinator.name }} si
+                                Desactivar la cuenta de {{ coordinator.name }} si
                                 no le queda otro rol
                             </FieldLabel>
-                            <FieldError :errors="[errors.archive_outgoing]" />
+                            <FieldError :errors="[errors.deactivate_outgoing]" />
                         </FieldContent>
                     </Field>
                     <FormSheetActions

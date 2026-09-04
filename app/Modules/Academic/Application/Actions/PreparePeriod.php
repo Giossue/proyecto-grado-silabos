@@ -12,6 +12,7 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\Subject;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
 use App\Modules\Operations\Application\Actions\RecordAuditEvent;
+use App\Modules\Syllabus\Application\ProcessLocks;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -20,7 +21,7 @@ use Illuminate\Validation\ValidationException;
 /**
  * Prepara un periodo con un clic: toda materia activa de la malla activa queda con su
  * oferta (campus y modalidad heredados de la carrera) y con un paralelo «A». Lo que ya
- * existía se respeta, así que repetirlo no duplica nada; lo que no se dicte se archiva
+ * existía se respeta, así que repetirlo no duplica nada; lo que no se dicte se elimina
  * después. Es el estándar de los sistemas académicos: la oferta de un periodo es la
  * malla completa, y la excepción se quita, no se teclea (I-36).
  */
@@ -32,6 +33,7 @@ class PreparePeriod
         private readonly ActiveRole $roles,
         private readonly RecordAuditEvent $audit,
         private readonly OfferingInheritance $inheritance,
+        private readonly ProcessLocks $locks,
     ) {}
 
     /**
@@ -45,6 +47,7 @@ class PreparePeriod
             throw new AuthorizationException('No puede preparar periodos con el rol activo.');
         }
         $careerId = $activeRole->carrera_id;
+        $this->locks->assertCareerEditable($careerId);
 
         return DB::transaction(function () use ($actor, $activeRole, $careerId, $data, $request): array {
             $career = Career::query()->whereKey($careerId)->with('campus')->lockForUpdate()->firstOrFail();

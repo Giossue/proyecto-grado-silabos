@@ -36,7 +36,10 @@ class AcademicStructureViewData
     /** @return array<string, mixed> */
     public function governance(): array
     {
+        $lockReason = $this->locks->institutionalStructureLockReason();
+
         return [
+            'lock_reason' => $lockReason,
             'catalogs' => [
                 'faculties' => Faculty::query()
                     ->orderBy('nombre')
@@ -285,6 +288,7 @@ class AcademicStructureViewData
     public function offerings(string $careerId): array
     {
         $career = $this->career($careerId);
+        $lockReason = $this->locks->careerLockReason($careerId);
         $offerings = CourseOffering::query()
             ->whereHas('subject.curriculum', fn ($query) => $query
                 ->where('carrera_id', $careerId))
@@ -312,7 +316,11 @@ class AcademicStructureViewData
             ->flip();
 
         return [
-            'career' => ['id' => $career->id, 'name' => $career->nombre],
+            'career' => [
+                'id' => $career->id,
+                'name' => $career->nombre,
+                'lock_reason' => $lockReason,
+            ],
             'offerings' => $offerings
                 ->map(fn (CourseOffering $offering) => [
                     'id' => $offering->id,
@@ -325,7 +333,7 @@ class AcademicStructureViewData
                     'modality_name' => $offering->modalidad->label(),
                     'parallel_count' => $offering->parallels_count,
                     'active' => $offering->activo,
-                    'editable' => ! $usedOfferingIds->has($offering->id),
+                    'editable' => $lockReason === null && ! $usedOfferingIds->has($offering->id),
                 ]),
             'parallels' => $parallels
                 ->map(fn (Parallel $parallel) => [
@@ -335,7 +343,7 @@ class AcademicStructureViewData
                     'shift' => $parallel->jornada,
                     'active' => $parallel->activo,
                     'offering_label' => "{$parallel->offering->subject->codigo_institucional} · {$parallel->offering->academicPeriod->nombre}",
-                    'editable' => ! $usedParallelIds->has($parallel->id),
+                    'editable' => $lockReason === null && ! $usedParallelIds->has($parallel->id),
                 ]),
             'options' => [
                 ...$this->emptyOptions(),
@@ -372,6 +380,7 @@ class AcademicStructureViewData
     public function teacherAssignments(string $careerId): array
     {
         $career = $this->career($careerId);
+        $lockReason = $this->locks->careerLockReason($careerId);
         $teacherAssignments = TeacherAssignment::query()
             ->whereHas(
                 'parallel.offering.subject.curriculum',
@@ -390,7 +399,11 @@ class AcademicStructureViewData
             ->flip();
 
         return [
-            'career' => ['id' => $career->id, 'name' => $career->nombre],
+            'career' => [
+                'id' => $career->id,
+                'name' => $career->nombre,
+                'lock_reason' => $lockReason,
+            ],
             'teacherAssignments' => $teacherAssignments
                 ->map(fn (TeacherAssignment $assignment) => [
                     'id' => $assignment->id,
@@ -402,7 +415,7 @@ class AcademicStructureViewData
                     'subject_name' => $assignment->parallel->offering->subject->nombre,
                     'period_name' => $assignment->parallel->offering->academicPeriod->nombre,
                     'active' => $assignment->activo,
-                    'editable' => ! $usedAssignmentIds->has($assignment->id),
+                    'editable' => $lockReason === null && ! $usedAssignmentIds->has($assignment->id),
                 ]),
             'options' => [
                 ...$this->emptyOptions(),

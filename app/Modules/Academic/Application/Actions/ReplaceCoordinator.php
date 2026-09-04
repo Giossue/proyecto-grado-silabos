@@ -18,10 +18,10 @@ use Illuminate\Validation\ValidationException;
 /**
  * Cambia quién coordina una carrera en un solo paso (I-39): cierra el nombramiento y el
  * rol de quien sale, abre los de quien entra (concediéndole el rol si no lo tiene) y,
- * si se pide y ya no le queda ningún rol vigente, archiva la cuenta saliente. Sirve
+ * si se pide y ya no le queda ningún rol vigente, desactiva la cuenta saliente. Sirve
  * también para nombrar a la primera persona cuando la carrera no tiene coordinación.
  *
- * @phpstan-type Result array{previous_user_id: string|null, role_removed: bool, archived: bool}
+ * @phpstan-type Result array{previous_user_id: string|null, role_removed: bool, deactivated: bool}
  */
 class ReplaceCoordinator
 {
@@ -33,7 +33,7 @@ class ReplaceCoordinator
     ) {}
 
     /**
-     * @param  array{incoming_user_id: string, archive_outgoing?: bool}  $data
+     * @param  array{incoming_user_id: string, deactivate_outgoing?: bool}  $data
      * @return Result
      */
     public function execute(Career $career, array $data, User $actor, Request $request): array
@@ -42,7 +42,7 @@ class ReplaceCoordinator
         $incoming = User::query()->where('activo', true)->find($data['incoming_user_id']);
         if ($incoming === null) {
             throw ValidationException::withMessages([
-                'incoming_user_id' => 'La cuenta entrante no existe o está archivada.',
+                'incoming_user_id' => 'La cuenta entrante no existe o está desactivada.',
             ]);
         }
 
@@ -61,7 +61,7 @@ class ReplaceCoordinator
             }
 
             $roleRemoved = false;
-            $archived = false;
+            $deactivated = false;
             if ($current !== null) {
                 $current->update(['vigente_hasta' => now(), 'activo' => false]);
                 // El rol en esta carrera se cierra con el nombramiento; los roles en
@@ -80,12 +80,12 @@ class ReplaceCoordinator
                 'career_id' => $lockedCareer->id,
             ], $actor, $request);
 
-            if ($current !== null && (bool) ($data['archive_outgoing'] ?? false)) {
+            if ($current !== null && (bool) ($data['deactivate_outgoing'] ?? false)) {
                 $outgoing = User::query()->lockForUpdate()->find($current->usuario_id);
                 $hasOtherRoles = RoleAssignment::query()->effective()->where('usuario_id', $current->usuario_id)->exists();
                 if ($outgoing !== null && $outgoing->activo && ! $hasOtherRoles && $outgoing->id !== $actor->id) {
                     $this->setStatus->execute($outgoing, false, $actor, $request);
-                    $archived = true;
+                    $deactivated = true;
                 }
             }
 
@@ -100,12 +100,12 @@ class ReplaceCoordinator
                     'previous_user_id' => $current?->usuario_id,
                     'incoming_user_id' => $incoming->id,
                     'role_removed' => $roleRemoved,
-                    'archived' => $archived,
+                    'deactivated' => $deactivated,
                 ],
                 correlationId: $request->attributes->getString('correlation_id') ?: null,
             );
 
-            return ['previous_user_id' => $current?->usuario_id, 'role_removed' => $roleRemoved, 'archived' => $archived];
+            return ['previous_user_id' => $current?->usuario_id, 'role_removed' => $roleRemoved, 'deactivated' => $deactivated];
         });
     }
 }

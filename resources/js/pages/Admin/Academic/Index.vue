@@ -4,6 +4,7 @@ import { computed } from 'vue';
 import CatalogRecordSheet from '@/components/domain/academic/CatalogRecordSheet.vue';
 import CatalogSection from '@/components/domain/academic/CatalogSection.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
+import ProcessLockAlert from '@/components/domain/ProcessLockAlert.vue';
 import { index as academicIndex } from '@/routes/admin/academic';
 import type {
     AcademicStructureProps,
@@ -18,7 +19,7 @@ defineOptions({
 });
 
 const props = defineProps<
-    Pick<AcademicStructureProps, 'catalogs' | 'options'> & {
+    Pick<AcademicStructureProps, 'catalogs' | 'options' | 'lock_reason'> & {
         section: GovernanceSection;
     }
 >();
@@ -67,15 +68,23 @@ const sectionContent = computed(() => sectionContents[props.section]);
     >
         <template #actions>
             <CatalogRecordSheet
+                v-if="!lock_reason"
                 :entity="sectionContent.entity"
                 :options="options"
             />
         </template>
 
+        <ProcessLockAlert
+            v-if="lock_reason"
+            title="Estructura institucional congelada"
+            :reason="lock_reason"
+        />
+
         <CatalogSection
             :section="section"
             :catalogs="catalogs"
             :options="options"
+            :lock-reason="lock_reason"
         />
     </PageFrame>
 </template>

@@ -1316,6 +1316,38 @@ class AcademicStructureTest extends TestCase
             ->count());
     }
 
+    public function test_unreferenced_catalogs_parallels_and_teacher_assignments_are_deleted_instead_of_archived(): void
+    {
+        $campus = Campus::query()->create([
+            'codigo_institucional' => 'CAMPUS-ELIMINABLE',
+            'nombre' => 'Campus eliminable',
+            'activo' => true,
+        ]);
+        $this->actingAsAdministrator()
+            ->delete(route('admin.academic.destroy', ['entity' => 'campus', 'record' => $campus->id]))
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+        $this->assertDatabaseMissing('campus', ['id' => $campus->id]);
+        $this->assertDatabaseHas('eventos_auditoria', [
+            'accion' => 'academico.campus.eliminacion',
+            'recurso_id' => $campus->id,
+        ]);
+
+        $parallel = Parallel::query()->firstOrFail();
+        $assignment = TeacherAssignment::query()->where('paralelo_id', $parallel->id)->firstOrFail();
+        $this->actingAsCoordinator()
+            ->delete(route('coordination.academic.destroy', ['entity' => 'asignacion_docente', 'record' => $assignment->id]))
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+        $this->assertDatabaseMissing('asignaciones_docente', ['id' => $assignment->id]);
+
+        $this->actingAsCoordinator()
+            ->delete(route('coordination.academic.destroy', ['entity' => 'paralelo', 'record' => $parallel->id]))
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+        $this->assertDatabaseMissing('paralelos', ['id' => $parallel->id]);
+    }
+
     public function test_administrator_edits_all_global_catalogs_with_audited_before_and_after_values(): void
     {
         $faculty = Faculty::query()->where('codigo_institucional', 'FICAYA')->firstOrFail();

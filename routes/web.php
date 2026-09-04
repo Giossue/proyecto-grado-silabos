@@ -168,6 +168,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::patch('estructura-academica/{entity}/{record}/estado', [CareerAcademicStructureController::class, 'setStatus'])
             ->whereUuid('record')
             ->name('coordination.academic.status.update');
+        Route::delete('estructura-academica/{entity}/{record}', [CareerAcademicStructureController::class, 'destroy'])
+            ->whereUuid('record')
+            ->name('coordination.academic.destroy');
         Route::delete('ofertas/{offering}', [CareerAcademicStructureController::class, 'destroyOffering'])
             ->whereUuid('offering')
             ->name('coordination.academic.offerings.destroy');
@@ -226,6 +229,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::patch('gobierno-academico/{entity}/{record}/estado', [AcademicGovernanceController::class, 'setStatus'])
             ->whereUuid('record')
             ->name('academic.status.update');
+        Route::delete('gobierno-academico/{entity}/{record}', [AcademicGovernanceController::class, 'destroy'])
+            ->whereUuid('record')
+            ->name('academic.destroy');
         // El calendario institucional: Administración abre el proceso que obliga a todas
         // las carreras y lo pausa cuando hay que corregir la plantilla.
         Route::get('convocatorias', [SyllabusProcessController::class, 'index'])->name('processes.index');

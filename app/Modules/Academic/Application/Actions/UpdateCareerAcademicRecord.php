@@ -93,10 +93,10 @@ class UpdateCareerAcademicRecord
             || $activeRole->carrera_id === null) {
             throw new AuthorizationException('No puede editar este registro con el rol activo.');
         }
-        // Malla y materias se congelan mientras una convocatoria de la carrera está en
-        // curso; ofertas, paralelos y asignaciones siguen editables (relevo docente).
+        // Toda la estructura de carrera queda congelada mientras sus docentes trabajan.
+        // Un relevo no pasa por esta edición genérica: conserva el sílabo y su auditoría.
+        $this->locks->assertCareerEditable($activeRole->carrera_id);
         if (in_array($entity, ['malla', 'asignatura'], true)) {
-            $this->locks->assertCareerEditable($activeRole->carrera_id);
             // Lo que el sílabo copia de la malla cambia: el trabajo en curso se borra, con confirmación.
             $this->work->requireConfirmation($request, $activeRole->carrera_id);
         }
@@ -196,7 +196,7 @@ class UpdateCareerAcademicRecord
         if ($usedBySyllabus) {
             throw ValidationException::withMessages([
                 'record' => match ($entity) {
-                    default => 'Este registro ya forma parte del historial de un sílabo. Archívelo y cree otro para conservar la trazabilidad.',
+                    default => 'Este registro ya forma parte del historial de un sílabo. No puede modificarse ni eliminarse para conservar la trazabilidad.',
                 },
             ]);
         }

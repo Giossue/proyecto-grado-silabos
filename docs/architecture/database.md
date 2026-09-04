@@ -45,7 +45,7 @@ I-29 hace las asignaciones de rol manuales:
 
 `asignaciones_docente` vincula una persona con un paralelo y conserva el acto que la
 respalda; no tiene intervalo de vigencia laboral. Su identidad única es
-`usuario_id + paralelo_id`; un relevo archiva la relación anterior y crea la nueva.
+`usuario_id + paralelo_id`; un relevo finaliza la relación anterior y crea la nueva.
 
 Estos catálogos no comparten una tabla polimórfica. `carreras.facultad_id` implementa la
 relación uno-a-muchos Facultad → Carreras con clave foránea y borrado restringido.
@@ -150,7 +150,9 @@ protege mediante el contexto académico fijado en cada sílabo.
   constituyen evidencia publicada.
 - la malla actual solo se elimina cuando no tiene ofertas ni sílabos; con dependencias se
   deshabilita.
-- catálogos y usuarios con historia se desactivan/archivan.
+- un catálogo sin dependencias se elimina; si tiene historia, las claves foráneas lo
+  protegen y la aplicación muestra el motivo. Las cuentas con historia se desactivan,
+  porque su identidad participa en auditoría y revisiones.
 - migraciones destructivas requieren copia, verificación, rollback ensayado y aprobación.
 
 ## Índices y restricciones

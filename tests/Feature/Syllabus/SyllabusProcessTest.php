@@ -4,6 +4,7 @@ namespace Tests\Feature\Syllabus;
 
 use App\Models\User;
 use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
+use App\Modules\Academic\Infrastructure\Persistence\Models\CourseOffering;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\AcademicSource;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
@@ -342,6 +343,57 @@ class SyllabusProcessTest extends TestCase
             ->post(route('convocations.transition', [$convocation, 'reanudar']))
             ->assertRedirect();
         $this->assertSame('abierta', $convocation->fresh()->estado);
+    }
+
+    public function test_an_open_cycle_freezes_every_structure_change_until_its_scope_is_paused(): void
+    {
+        $convocation = $this->openedConvocation();
+        $offering = CourseOffering::query()->firstOrFail();
+
+        // Una convocatoria abierta no admite alterar su oferta ni añadir paralelos:
+        // los docentes ya recibieron los alcances generados al abrirla.
+        $this->actingAsCoordinator()
+            ->post(route('coordination.academic.parallels.store'), [
+                'offering_id' => $offering->id,
+                'codes' => ['B'],
+                'shift' => 'matutina',
+            ])
+            ->assertSessionHasErrors('process');
+
+        // El proceso abierto protege también los catálogos institucionales.
+        $this->actingAsAdministrator()
+            ->post(route('admin.academic.store', 'campus'), [
+                'code' => 'NUEVO-EN-CURSO',
+                'nombre' => 'Campus no permitido durante el proceso',
+            ])
+            ->assertSessionHasErrors('process');
+        $this->assertDatabaseMissing('campus', ['codigo_institucional' => 'NUEVO-EN-CURSO']);
+
+        // Pausar solo la convocatoria libera exclusivamente a esa carrera.
+        $this->actingAsCoordinator()
+            ->post(route('convocations.transition', [$convocation, 'pausar']), ['reason' => 'Corrección controlada de paralelos.'])
+            ->assertRedirect();
+        $this->actingAsCoordinator()
+            ->post(route('coordination.academic.parallels.store'), [
+                'offering_id' => $offering->id,
+                'codes' => ['B'],
+                'shift' => 'matutina',
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        // La estructura institucional sigue congelada hasta que Administración pause
+        // su proceso global.
+        $process = $convocation->process()->firstOrFail();
+        $this->transition($process, 'pausar', 'Corrección institucional autorizada.')->assertRedirect();
+        $this->actingAsAdministrator()
+            ->post(route('admin.academic.store', 'campus'), [
+                'code' => 'NUEVO-EN-PAUSA',
+                'nombre' => 'Campus creado durante la pausa',
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('campus', ['codigo_institucional' => 'NUEVO-EN-PAUSA']);
     }
 
     public function test_teachers_stop_working_while_the_career_or_the_institution_is_paused(): void

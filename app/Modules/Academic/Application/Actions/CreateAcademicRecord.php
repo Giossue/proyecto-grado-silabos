@@ -51,10 +51,15 @@ class CreateAcademicRecord
         if (! $activeRole instanceof RoleAssignment || ! AcademicStructurePermissions::mayCreate($activeRole, $entity)) {
             throw new AuthorizationException('No puede gestionar este tipo de registro con el rol activo.');
         }
-        // Malla y materias se congelan mientras una convocatoria de la carrera está en
-        // curso; ofertas, paralelos y asignaciones siguen editables (relevo docente).
-        if (in_array($entity, ['malla', 'asignatura'], true)) {
+        if (AcademicStructurePermissions::isGovernanceContext($activeRole)) {
+            $this->locks->assertInstitutionalStructureEditable();
+        }
+        // Una convocatoria en curso ya fijó su oferta, paralelos y colaboradores. El
+        // relevo docente es la única excepción y usa su propio caso de uso atómico.
+        if (AcademicStructurePermissions::isCareerContext($activeRole)) {
             $this->locks->assertCareerEditable($activeRole->carrera_id);
+        }
+        if (in_array($entity, ['malla', 'asignatura'], true)) {
             // Lo que el sílabo copia de la malla cambia: el trabajo en curso se borra, con confirmación.
             $this->work->requireConfirmation($request, $activeRole->carrera_id);
         }

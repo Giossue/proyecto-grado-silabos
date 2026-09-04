@@ -10,6 +10,7 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\TeacherAssignment;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
 use App\Modules\Operations\Application\Actions\RecordAuditEvent;
+use App\Modules\Syllabus\Application\ProcessLocks;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\SyllabusCollaborator;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\SyllabusScope;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -22,6 +23,7 @@ class DeleteCourseOffering
     public function __construct(
         private readonly ActiveRole $roles,
         private readonly RecordAuditEvent $audit,
+        private readonly ProcessLocks $locks,
     ) {}
 
     public function execute(string $offeringId, User $actor, Request $request): void
@@ -32,6 +34,7 @@ class DeleteCourseOffering
             || $role->carrera_id === null) {
             throw new AuthorizationException('Solo la coordinación vigente puede eliminar ofertas.');
         }
+        $this->locks->assertCareerEditable($role->carrera_id);
 
         DB::transaction(function () use ($actor, $offeringId, $request, $role): void {
             $offering = CourseOffering::query()

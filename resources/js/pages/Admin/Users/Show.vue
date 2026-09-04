@@ -171,7 +171,7 @@ const page = usePage();
                                             >Activos</SelectItem
                                         >
                                         <SelectItem value="inactive"
-                                            >Archivados</SelectItem
+                                            >Finalizados</SelectItem
                                         >
                                     </SelectGroup>
                                 </SelectContent>
@@ -201,7 +201,7 @@ const page = usePage();
                                 assignment.career_name ?? 'Institucional'
                             }}</TableCell
                             ><TableCell>{{
-                                assignment.active ? 'Activo' : 'Archivada'
+                                assignment.active ? 'Activo' : 'Finalizada'
                             }}</TableCell></TableRow
                         >
                     </TableBody></Table

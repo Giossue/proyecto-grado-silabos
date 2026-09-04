@@ -1,14 +1,13 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3';
 import { LockKeyhole, Pencil, Trash2 } from '@lucide/vue';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import CareerAcademicStructureController from '@/actions/App/Modules/Academic/Presentation/Http/Controllers/CareerAcademicStructureController';
 import CareerAcademicEditSheet from '@/components/domain/academic/CareerAcademicEditSheet.vue';
 import type {
     CareerAcademicEditableRecord,
     CareerAcademicEntity,
 } from '@/components/domain/academic/CareerAcademicEditSheet.vue';
-import RecordStatusForm from '@/components/domain/academic/RecordStatusForm.vue';
 import TableActionsMenu from '@/components/domain/TableActionsMenu.vue';
 import { Button } from '@/components/ui/button';
 import {
@@ -24,28 +23,38 @@ import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Spinner } from '@/components/ui/spinner';
 import type { AcademicStructureProps } from '@/types/academic';
 
-withDefaults(
+const props = withDefaults(
     defineProps<{
         entity: CareerAcademicEntity;
         record: CareerAcademicEditableRecord;
         recordLabel: string;
         editable: boolean;
         active?: boolean;
-        statusSupported?: boolean;
         deleteSupported?: boolean;
         lockedLabel?: string;
         options: AcademicStructureProps['options'];
     }>(),
     {
         active: true,
-        statusSupported: true,
         deleteSupported: false,
-        lockedLabel: 'Con historial: archive y cree otro registro',
+        lockedLabel: 'Con historial: este registro queda protegido',
     },
 );
 
 const editOpen = ref(false);
 const deleteOpen = ref(false);
+const deletionTitle = computed(() =>
+    props.entity === 'oferta'
+        ? 'Eliminar oferta académica'
+        : props.entity === 'paralelo'
+          ? 'Eliminar paralelo'
+          : 'Eliminar asignación docente',
+);
+const deletionDescription = computed(() =>
+    props.entity === 'oferta'
+        ? 'Se eliminarán también sus paralelos y asignaciones docentes. La operación se rechazará si existe algún sílabo relacionado, para conservar su historial.'
+        : 'La operación se rechazará si el registro ya forma parte de un sílabo. Use el relevo docente para cambiar responsables de expedientes existentes.',
+);
 </script>
 
 <template>
@@ -62,16 +71,8 @@ const deleteOpen = ref(false);
 
             <slot />
 
-            <RecordStatusForm
-                v-if="statusSupported"
-                display="menu"
-                scope="career"
-                :entity="entity"
-                :record-id="record.id"
-                :active="active"
-            />
             <DropdownMenuItem
-                v-if="deleteSupported && entity === 'oferta'"
+                v-if="deleteSupported && editable"
                 variant="destructive"
                 @select="deleteOpen = true"
             >
@@ -91,26 +92,29 @@ const deleteOpen = ref(false);
         <Dialog v-model:open="deleteOpen">
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Eliminar oferta académica</DialogTitle>
+                    <DialogTitle>{{ deletionTitle }}</DialogTitle>
                     <DialogDescription>
-                        Se eliminarán también sus paralelos y asignaciones
-                        docentes. La operación se rechazará si existe algún
-                        sílabo relacionado, para conservar su historial.
+                        {{ deletionDescription }}
                     </DialogDescription>
                 </DialogHeader>
                 <Form
                     v-bind="
-                        CareerAcademicStructureController.destroyOffering.form(
-                            record.id,
-                        )
+                        entity === 'oferta'
+                            ? CareerAcademicStructureController.destroyOffering.form(
+                                  record.id,
+                              )
+                            : CareerAcademicStructureController.destroy.form({
+                                  entity,
+                                  record: record.id,
+                              })
                     "
                     v-slot="{ errors, processing }"
                 >
                     <p
-                        v-if="errors.offering"
+                        v-if="errors.offering || errors.record || errors.process"
                         class="mb-4 text-sm text-destructive"
                     >
-                        {{ errors.offering }}
+                        {{ errors.offering || errors.record || errors.process }}
                     </p>
                     <DialogFooter>
                         <DialogClose as-child>
@@ -124,7 +128,7 @@ const deleteOpen = ref(false);
                             :disabled="processing"
                         >
                             <Spinner v-if="processing" />
-                            Eliminar oferta
+                            {{ deletionTitle }}
                         </Button>
                     </DialogFooter>
                 </Form>

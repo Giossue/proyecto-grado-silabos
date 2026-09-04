@@ -36,7 +36,7 @@ const title = computed(() =>
 );
 const description = computed(() =>
     props.entity === 'oferta'
-        ? 'Toda materia de la malla activa queda con su oferta y un paralelo A. Campus y modalidad vienen de la carrera. Lo que no se dicte este periodo se archiva después.'
+        ? 'Toda materia de la malla activa queda con su oferta y un paralelo A. Campus y modalidad vienen de la carrera. Lo que no se dicte este periodo se elimina después.'
         : 'Agregue varios paralelos a una oferta. Escriba un código por línea o sepárelos con comas; todos tendrán la misma jornada.',
 );
 

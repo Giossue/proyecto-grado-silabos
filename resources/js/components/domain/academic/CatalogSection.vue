@@ -30,7 +30,7 @@ import type {
 } from '@/types/academic';
 
 const props = defineProps<
-    Pick<AcademicStructureProps, 'catalogs' | 'options'> & {
+    Pick<AcademicStructureProps, 'catalogs' | 'options' | 'lock_reason'> & {
         section: GovernanceSection;
     }
 >();
@@ -141,7 +141,7 @@ const {
                                         >Activos</SelectItem
                                     >
                                     <SelectItem value="inactive"
-                                        >Archivados</SelectItem
+                                        >Inactivos</SelectItem
                                     >
                                 </SelectGroup>
                             </SelectContent>
@@ -184,7 +184,7 @@ const {
                             {{ careerCount(faculty.id) }}
                         </TableCell>
                         <TableCell>
-                            {{ faculty.activo ? 'Activa' : 'Archivada' }}
+                            {{ faculty.activo ? 'Activa' : 'Inactiva' }}
                         </TableCell>
                         <TableCell class="text-right">
                             <CatalogActions
@@ -197,6 +197,7 @@ const {
                                 :active="faculty.activo"
                                 :logo-url="faculty.logo_url"
                                 :faculties="catalogs.faculties"
+                                :lock-reason="lock_reason"
                             />
                         </TableCell>
                     </TableRow>
@@ -237,7 +238,7 @@ const {
                                         >Activos</SelectItem
                                     >
                                     <SelectItem value="inactive"
-                                        >Archivados</SelectItem
+                                        >Inactivos</SelectItem
                                     >
                                 </SelectGroup>
                             </SelectContent>
@@ -289,7 +290,7 @@ const {
                             {{ career.code || 'Sin código institucional' }}
                         </TableCell>
                         <TableCell>
-                            {{ career.active ? 'Activa' : 'Archivada' }}
+                            {{ career.active ? 'Activa' : 'Inactiva' }}
                         </TableCell>
                         <TableCell class="text-right">
                             <CatalogActions
@@ -306,6 +307,7 @@ const {
                                 :campuses="catalogs.campuses"
                                 :coordinator="career.coordinator"
                                 :coordinator-users="options.coordinatorUsers"
+                                :lock-reason="lock_reason"
                             />
                         </TableCell>
                     </TableRow>
@@ -346,7 +348,7 @@ const {
                                         >Activos</SelectItem
                                     >
                                     <SelectItem value="inactive"
-                                        >Archivados</SelectItem
+                                        >Inactivos</SelectItem
                                     >
                                 </SelectGroup>
                             </SelectContent>
@@ -385,7 +387,7 @@ const {
                             }}
                         </TableCell>
                         <TableCell>
-                            {{ campus.activo ? 'Activo' : 'Archivado' }}
+                            {{ campus.activo ? 'Activo' : 'Inactivo' }}
                         </TableCell>
                         <TableCell class="text-right">
                             <CatalogActions
@@ -397,6 +399,7 @@ const {
                                 "
                                 :active="campus.activo"
                                 :faculties="catalogs.faculties"
+                                :lock-reason="lock_reason"
                             />
                         </TableCell>
                     </TableRow>
@@ -437,7 +440,7 @@ const {
                                         >Activos</SelectItem
                                     >
                                     <SelectItem value="inactive"
-                                        >Archivados</SelectItem
+                                        >Inactivos</SelectItem
                                     >
                                 </SelectGroup>
                             </SelectContent>
@@ -481,7 +484,7 @@ const {
                             </time>
                         </TableCell>
                         <TableCell>
-                            {{ period.active ? 'Activo' : 'Archivado' }}
+                            {{ period.active ? 'Activo' : 'Inactivo' }}
                         </TableCell>
                         <TableCell class="text-right">
                             <CatalogActions
@@ -493,6 +496,7 @@ const {
                                 :starts-on="period.starts_on"
                                 :ends-on="period.ends_on"
                                 :faculties="catalogs.faculties"
+                                :lock-reason="lock_reason"
                             />
                         </TableCell>
                     </TableRow>

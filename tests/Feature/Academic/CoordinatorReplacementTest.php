@@ -62,7 +62,7 @@ class CoordinatorReplacementTest extends TestCase
         $this->assertDatabaseHas('asignaciones_rol', ['usuario_id' => $this->coordinator->id, 'rol_id' => $coordinatorRole->id, 'carrera_id' => $this->career->id, 'activo' => false]);
         $this->assertDatabaseHas('asignaciones_rol', ['usuario_id' => $incoming->id, 'rol_id' => $coordinatorRole->id, 'carrera_id' => $this->career->id, 'activo' => true]);
         $this->assertSame(2, RoleAssignment::query()->effective()->where('usuario_id', $incoming->id)->count());
-        // Sin `archive_outgoing`, la cuenta saliente sigue activa (puede seguir como docente).
+        // Sin `deactivate_outgoing`, la cuenta saliente sigue activa (puede seguir como docente).
         $this->assertTrue($this->coordinator->fresh()->activo);
         $this->assertDatabaseHas('eventos_auditoria', ['accion' => 'academico.coordinacion.reemplazada', 'recurso_id' => $this->career->id]);
 
@@ -73,26 +73,26 @@ class CoordinatorReplacementTest extends TestCase
             ->assertSessionHasErrors('incoming_user_id');
     }
 
-    public function test_archiving_the_outgoing_coordinator_only_happens_when_no_other_role_remains(): void
+    public function test_deactivating_the_outgoing_coordinator_only_happens_when_no_other_role_remains(): void
     {
         $incoming = $this->activeTeacher('entrante@silabos.test');
-        // La coordinadora sembrada también da clases: al reemplazarla no se archiva.
+        // La coordinadora sembrada también da clases: al reemplazarla no se desactiva.
         $teacherRole = Role::query()->where('codigo', RoleCode::Teacher->value)->firstOrFail();
         RoleAssignment::query()->create(['usuario_id' => $this->coordinator->id, 'rol_id' => $teacherRole->id, 'carrera_id' => $this->career->id, 'activo' => true]);
 
         $this->actingAsAdministrator()
-            ->post(route('admin.academic.careers.coordinator.replace', $this->career), ['incoming_user_id' => $incoming->id, 'archive_outgoing' => 1])
+            ->post(route('admin.academic.careers.coordinator.replace', $this->career), ['incoming_user_id' => $incoming->id, 'deactivate_outgoing' => 1])
             ->assertRedirect()
             ->assertSessionHasNoErrors();
         $this->assertTrue($this->coordinator->fresh()->activo);
 
-        // Ahora sale el entrante, que solo coordina: sí se archiva.
+        // Ahora sale el entrante, que solo coordina: sí se desactiva.
         $third = $this->activeTeacher('tercero@silabos.test');
         RoleAssignment::query()->where('usuario_id', $incoming->id)->where('rol_id', $teacherRole->id)->update(['activo' => false]);
         $this->actingAsAdministrator()
-            ->post(route('admin.academic.careers.coordinator.replace', $this->career), ['incoming_user_id' => $third->id, 'archive_outgoing' => 1])
+            ->post(route('admin.academic.careers.coordinator.replace', $this->career), ['incoming_user_id' => $third->id, 'deactivate_outgoing' => 1])
             ->assertRedirect()
-            ->assertSessionHas('success', 'Coordinación de Software reemplazada; la cuenta saliente quedó archivada.');
+            ->assertSessionHas('success', 'Coordinación de Software reemplazada; la cuenta saliente quedó desactivada.');
         $this->assertFalse($incoming->fresh()->activo);
         $this->assertDatabaseHas('eventos_auditoria', ['accion' => 'usuario.desactivado', 'recurso_id' => $incoming->id]);
     }

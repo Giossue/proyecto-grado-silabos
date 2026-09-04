@@ -29,6 +29,7 @@ import type { AcademicStructureProps } from '@/types/academic';
 const props = defineProps<
     Pick<AcademicStructureProps, 'offerings' | 'parallels' | 'options'> & {
         section: 'offerings' | 'parallels';
+        lockReason?: string | null;
     }
 >();
 const offeringFilter = useClientFilter(
@@ -102,7 +103,7 @@ const {
                                             >Activas</SelectItem
                                         >
                                         <SelectItem value="inactive"
-                                            >Archivadas</SelectItem
+                                            >Inactivas</SelectItem
                                         >
                                     </SelectGroup>
                                 </SelectContent>
@@ -137,7 +138,7 @@ const {
                                 {{ item.modality_name }}</TableCell
                             ><TableCell>{{ item.parallel_count }}</TableCell
                             ><TableCell>{{
-                                item.active ? 'Activa' : 'Archivada'
+                                item.active ? 'Activa' : 'Inactiva'
                             }}</TableCell
                             ><TableCell class="text-right"
                                 ><CareerAcademicActions
@@ -146,8 +147,8 @@ const {
                                     :record-label="item.label"
                                     :editable="item.editable"
                                     :active="item.active"
-                                    :status-supported="false"
-                                    delete-supported
+                                    :delete-supported="!lockReason"
+                                    :locked-label="lockReason ?? undefined"
                                     :options="options" /></TableCell
                         ></TableRow> </TableBody></Table
                 ><TablePagination
@@ -190,7 +191,7 @@ const {
                                             >Activos</SelectItem
                                         >
                                         <SelectItem value="inactive"
-                                            >Archivados</SelectItem
+                                            >Inactivos</SelectItem
                                         >
                                     </SelectGroup>
                                 </SelectContent>
@@ -221,7 +222,7 @@ const {
                             ><TableCell>{{ item.code }}</TableCell
                             ><TableCell>{{ shiftLabel(item.shift) }}</TableCell
                             ><TableCell>{{
-                                item.active ? 'Activo' : 'Archivado'
+                                item.active ? 'Activo' : 'Inactivo'
                             }}</TableCell
                             ><TableCell class="text-right"
                                 ><CareerAcademicActions
@@ -230,6 +231,8 @@ const {
                                     :record-label="`el paralelo ${item.code}`"
                                     :editable="item.editable"
                                     :active="item.active"
+                                    :delete-supported="!lockReason"
+                                    :locked-label="lockReason ?? undefined"
                                     :options="options" /></TableCell
                         ></TableRow> </TableBody></Table
                 ><TablePagination

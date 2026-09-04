@@ -9,6 +9,7 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
 use App\Modules\Operations\Application\Actions\RecordAuditEvent;
+use App\Modules\Syllabus\Application\ProcessLocks;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -20,6 +21,7 @@ class CreateParallels
     public function __construct(
         private readonly ActiveRole $roles,
         private readonly RecordAuditEvent $audit,
+        private readonly ProcessLocks $locks,
     ) {}
 
     /**
@@ -33,6 +35,7 @@ class CreateParallels
             || ! AcademicStructurePermissions::mayCreate($activeRole, 'paralelo')) {
             throw new AuthorizationException('No puede crear paralelos con el rol activo.');
         }
+        $this->locks->assertCareerEditable($activeRole->carrera_id);
 
         return DB::transaction(function () use ($data, $actor, $request, $activeRole): int {
             $offering = CourseOffering::query()

@@ -51,8 +51,9 @@ Una `Asignatura` tiene dos identificadores institucionales con papeles distintos
 código oculto es la identidad canónica con la que se reconcilia, y el código visible es
 el que leen las personas. Solo el primero identifica.
 
-Las relaciones históricas se archivan o desactivan; no se eliminan si ya respaldan un
-sílabo.
+Las relaciones que ya respaldan un sílabo se protegen y no se eliminan. Las que aún no
+tienen dependencias se eliminan; las vigencias personales y los nombramientos terminan
+sin borrar su evidencia.
 
 El Administrador gobierna las entidades institucionales globales y asigna la coordinación
 de una carrera. El Coordinador mantiene la malla, asignaturas, ofertas, paralelos y
@@ -107,13 +108,13 @@ abierto; al abrirla, la plantilla debe estar completa y las fuentes activas.
 
 Una convocatoria está **en curso** cuando ella está abierta y su proceso también. Esa
 condición habilita a los docentes y, por lo mismo, congela lo que sostiene su trabajo:
-con el proceso abierto no se edita ni publica la plantilla; con una convocatoria en
-curso no se editan la malla ni las fuentes de esa carrera. Ofertas, paralelos y
-asignaciones docentes siguen editables, porque el relevo docente los necesita. Para
-corregir se pausa: Administración el proceso —detiene a toda la universidad—,
-Coordinación su convocatoria —solo su carrera—. Los expedientes ya creados conservan
-la plantilla con la que nacieron; cambiar la del proceso solo alcanza a las
-convocatorias que se abran después.
+con el proceso abierto no se edita la plantilla ni la estructura institucional; con una
+convocatoria en curso no se editan malla, fuentes, ofertas, paralelos ni asignaciones
+genéricas de esa carrera. El relevo docente es la única excepción, porque traslada de
+forma atómica la responsabilidad y el historial. Para corregir se pausa: Administración
+el proceso —detiene a toda la universidad—, Coordinación su convocatoria —solo su
+carrera—. Los expedientes ya creados conservan la plantilla con la que nacieron; cambiar
+la del proceso solo alcanza a las convocatorias que se abran después.
 
 ### Sílabo
 

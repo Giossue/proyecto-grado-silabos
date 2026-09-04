@@ -22,11 +22,11 @@ el permiso, pero no lo sustituyen.
 |---|---:|---:|---:|
 | Gestionar usuarios/roles | Sí | No | No |
 | Corregir nombre o correo de una cuenta | Sí | No | No |
-| Crear, editar, archivar y reactivar facultades, carreras y catálogos globales | Sí | Consulta de alcance | Consulta asignada |
+| Crear, editar y eliminar sin dependencias facultades, carreras y catálogos globales | Sí, salvo con proceso abierto | Consulta de alcance | Consulta asignada |
 | Asignar coordinación a una carrera | Sí | No | No |
 | Gestionar mallas y materias | No por defecto | Sí, en su carrera, salvo con convocatoria en curso | Consulta asignada |
-| Gestionar ofertas y paralelos | No por defecto | Sí, en su carrera | Consulta asignada |
-| Asignar docentes a paralelos | No por defecto | Sí, en su carrera | Consulta propia |
+| Gestionar ofertas y paralelos | No por defecto | Sí, en su carrera, salvo con convocatoria en curso | Consulta asignada |
+| Asignar docentes a paralelos | No por defecto | Sí, en su carrera, salvo con convocatoria en curso | Consulta propia |
 | Diseñar/publicar plantilla | Sí, salvo con proceso abierto | Consulta/aporte según política | No |
 | Gestionar fuentes (documentos) | No participa | Sí, en su carrera, salvo con convocatoria en curso | Consulta autorizada |
 | Abrir, pausar, reanudar y cerrar el proceso de sílabos | Sí | Consulta al convocar | No |
@@ -60,7 +60,7 @@ no concede al Administrador permisos sobre mallas, materias o contenido docente.
 ## Acumulación de roles
 
 Una persona puede ser coordinadora de varias carreras y también docente. Cada asignación
-de rol conserva su propia carrera y se retira manualmente al archivarla. Al iniciar como
+de rol conserva su propia carrera y se retira manualmente al finalizarla. Al iniciar como
 Coordinador debe elegir una carrera incluso si solo tiene una coordinación vigente; durante la sesión puede cambiar
 de carrera o rol desde el menú de usuario. Solo existe un ámbito activo a la vez.
 

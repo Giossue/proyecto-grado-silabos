@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import RecordStatusForm from '@/components/domain/academic/RecordStatusForm.vue';
 import ClientFilterBar from '@/components/domain/ClientFilterBar.vue';
 import TableActionsMenu from '@/components/domain/TableActionsMenu.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
 import { Card, CardContent } from '@/components/ui/card';
+import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Field, FieldLabel } from '@/components/ui/field';
 import {
     Select,
@@ -80,7 +80,7 @@ const {
                                             >Activas</SelectItem
                                         >
                                         <SelectItem value="inactive"
-                                            >Archivadas</SelectItem
+                                            >Finalizadas</SelectItem
                                         >
                                     </SelectGroup>
                                 </SelectContent>
@@ -119,19 +119,16 @@ const {
                                 {{ item.valid_until ?? 'Sin fecha de fin' }}
                             </TableCell>
                             <TableCell>
-                                {{ item.active ? 'Activa' : 'Archivada' }}
+                                {{ item.active ? 'Activa' : 'Finalizada' }}
                             </TableCell>
                             <TableCell class="text-right">
                                 <TableActionsMenu
                                     :label="`Acciones para ${item.user_name}`"
                                 >
-                                    <RecordStatusForm
-                                        display="menu"
-                                        scope="governance"
-                                        entity="asignacion_coordinador"
-                                        :record-id="item.id"
-                                        :active="item.active"
-                                    />
+                                    <DropdownMenuItem disabled>
+                                        La coordinación se reemplaza desde la
+                                        carrera; su vigencia anterior se conserva.
+                                    </DropdownMenuItem>
                                 </TableActionsMenu>
                             </TableCell>
                         </TableRow>

@@ -13,6 +13,7 @@ use App\Modules\Configuration\Application\InstitutionalLogos;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
 use App\Modules\Operations\Application\Actions\RecordAuditEvent;
+use App\Modules\Syllabus\Application\ProcessLocks;
 use DateTimeInterface;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Model;
@@ -55,6 +56,7 @@ class UpdateAcademicRecord
         private readonly RecordAuditEvent $audit,
         private readonly InstitutionalLogos $logos,
         private readonly OfferingInheritance $inheritance,
+        private readonly ProcessLocks $locks,
     ) {}
 
     /** @param array<string, mixed> $data */
@@ -73,6 +75,7 @@ class UpdateAcademicRecord
             || ! AcademicStructurePermissions::mayUpdate($activeRole, $entity)) {
             throw new AuthorizationException('No puede editar este registro con el rol activo.');
         }
+        $this->locks->assertInstitutionalStructureEditable();
 
         return DB::transaction(function () use ($actor, $activeRole, $data, $entity, $modelClass, $recordId, $request): Model {
             $record = $modelClass::query()->lockForUpdate()->findOrFail($recordId);

@@ -32,7 +32,11 @@ export type AcademicStructureProps = {
     career: {
         id: string;
         name: string;
+        /** Convocatoria abierta: la estructura queda congelada hasta pausarla. */
+        lock_reason?: string | null;
     };
+    /** Proceso institucional abierto: catálogos globales congelados hasta pausarlo. */
+    lock_reason?: string | null;
     catalogs: {
         faculties: CatalogRecord[];
         careers: {

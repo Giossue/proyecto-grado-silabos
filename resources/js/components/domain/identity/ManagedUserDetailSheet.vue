@@ -41,7 +41,7 @@ export type ManagedUserRow = {
     roles: { name: string; career_name: string | null }[];
     /** Carreras en el mismo orden que los roles, para que ambas columnas casen fila a fila. */
     careers: (string | null)[];
-    /** Vigentes y archivadas: el panel de lectura muestra el historial completo. */
+    /** Vigentes y finalizadas: el panel de lectura muestra el historial completo. */
     assignments: ManagedUserRoleAssignment[];
 };
 
@@ -97,7 +97,7 @@ const scopeOf = (assignment: ManagedUserRoleAssignment): string =>
 const currentAssignments = computed(() =>
     props.user.assignments.filter((assignment) => assignment.active),
 );
-const archivedAssignments = computed(() =>
+const completedAssignments = computed(() =>
     props.user.assignments.filter((assignment) => !assignment.active),
 );
 </script>
@@ -246,9 +246,9 @@ const archivedAssignments = computed(() =>
                 </Card>
 
                 <!-- Las asignaciones retiradas se conservan para trazabilidad. -->
-                <Card v-if="archivedAssignments.length > 0">
+                <Card v-if="completedAssignments.length > 0">
                     <CardHeader>
-                        <CardTitle>Roles archivados</CardTitle>
+                        <CardTitle>Roles finalizados</CardTitle>
                         <CardDescription>
                             Asignaciones retiradas que se conservan como
                             historial.
@@ -257,7 +257,7 @@ const archivedAssignments = computed(() =>
                     <CardContent>
                         <ul class="flex flex-col gap-3 text-sm">
                             <li
-                                v-for="assignment in archivedAssignments"
+                                v-for="assignment in completedAssignments"
                                 :key="assignment.id"
                                 class="flex flex-col gap-1"
                             >

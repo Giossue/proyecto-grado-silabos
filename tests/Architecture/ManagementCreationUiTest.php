@@ -468,9 +468,6 @@ it('ofrece edicion y ciclo de vida en cada catalogo institucional', function ():
     $editSheet = file_get_contents(
         $root.'/resources/js/components/domain/academic/CatalogEditSheet.vue',
     );
-    $status = file_get_contents(
-        $root.'/resources/js/components/domain/academic/RecordStatusForm.vue',
-    );
 
     expect($catalogs)
         ->toBeString()
@@ -482,16 +479,15 @@ it('ofrece edicion y ciclo de vida en cada catalogo institucional', function ():
     expect($actions)
         ->toBeString()
         ->toContain('<CatalogEditSheet')
-        ->toContain('<RecordStatusForm');
+        ->toContain('AcademicGovernanceController.destroy.form')
+        ->toContain('Eliminar registro institucional')
+        ->not->toContain('<RecordStatusForm');
     expect($editSheet)
         ->toBeString()
         ->toContain('<FormSheet')
         ->toContain('AcademicGovernanceController.update.form')
         ->toContain('@success="close"')
         ->toContain('Guardar cambios');
-    expect($status)
-        ->toBeString()
-        ->toContain("active ? 'Archivar' : 'Reactivar'");
 });
 
 it('agrupa las acciones de tabla en menus accesibles de tres puntos', function (): void {
@@ -631,7 +627,7 @@ it('edita cuentas desde una sola accion del listado de usuarios', function (): v
     expect($detailSheet)
         ->toBeString()
         ->toContain('<DropdownMenuItem')
-        ->toContain('Roles archivados')
+        ->toContain('Roles finalizados')
         ->not->toContain('<Form')
         ->not->toContain('<FormSheetActions');
     expect($editSheet)

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Modules\Academic\Application\Actions\CreateAcademicRecord;
 use App\Modules\Academic\Application\Actions\CreateParallels;
+use App\Modules\Academic\Application\Actions\DeleteAcademicRecord;
 use App\Modules\Academic\Application\Actions\DeleteCourseOffering;
 use App\Modules\Academic\Application\Actions\DeleteCurriculum;
 use App\Modules\Academic\Application\Actions\MutateCurriculumBuilder;
@@ -174,7 +175,7 @@ class CareerAcademicStructureController extends Controller
 
         return back()->with('success', $active
             ? 'Registro activado.'
-            : 'Registro archivado sin borrar su historial.');
+            : 'Registro desactivado sin borrar su historial.');
     }
 
     public function update(
@@ -213,6 +214,19 @@ class CareerAcademicStructureController extends Controller
         $action->execute($offering, $actor, $request);
 
         return back()->with('success', 'Oferta eliminada junto con sus paralelos y asignaciones sin historial.');
+    }
+
+    public function destroy(
+        string $entity,
+        string $record,
+        ManageCareerAcademicStructureRequest $request,
+        DeleteAcademicRecord $action,
+    ): RedirectResponse {
+        $actor = $request->user();
+        abort_unless($actor instanceof User, 401);
+        $action->execute($entity, $record, $actor, $request);
+
+        return back()->with('success', 'Registro académico eliminado.');
     }
 
     public function updateCurriculumConfiguration(

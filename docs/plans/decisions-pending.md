@@ -24,7 +24,7 @@
 | PV-18 | Umbrales de utilidad y precisión de IA | Coordinación/docentes expertos | P1 aceptación IA |
 | PV-19 | Navegadores y dispositivos reales | Técnico/usuarios | P1 matriz UX |
 | PV-20 | Línea, sublínea, director, pares y fechas académicas | Integración Curricular | P1 documentación |
-| PV-21 | Salida de docentes y coordinadores (reemplazo, relevo, archivo) | Responsable del producto | Resuelta el 2026-09-03: I-39 (reemplazo de coordinación y relevo docente en un paso; archivo bloqueado con sílabos en curso; cuentas no se reutilizan) |
+| PV-21 | Salida de docentes y coordinadores (reemplazo, relevo, desactivación) | Responsable del producto | Resuelta el 2026-09-03: I-39 (reemplazo de coordinación y relevo docente en un paso; desactivación bloqueada con sílabos en curso; cuentas no se reutilizan) |
 
 ## Decisiones técnicas adicionales
 
@@ -43,7 +43,7 @@ Estas no reemplazan los PV de la SRS:
 | DT-09 | Coordinación encargada como figura propia | Se construye, con duración y sustento documental | Cerrada el 2026-08-26 |
 | DT-10 | Autoaprobación del sílabo por quien lo redactó | Permitida, marcada de forma distinguible en auditoría | Cerrada el 2026-08-26 |
 | DT-11 | Destino del modo `por_oferta` tras cerrar PV-06 | Conservado; `por_paralelo` es el valor por defecto | Cerrada el 2026-08-26 en I-15 |
-| DT-12 | Efecto de alcanzar la fecha de fin de un período sobre sus ofertas, paralelos, asignaciones y sílabos | Por ahora, la fecha es informativa: no hay cierre ni archivo automático; Coordinación archiva las ofertas que no continúan y Administración no puede archivar el período mientras tenga ofertas activas. Definir si se automatiza y cómo se preservan convocatorias/sílabos históricos. | Antes de automatizar el cierre de período |
+| DT-12 | Efecto de alcanzar la fecha de fin de un período sobre sus ofertas, paralelos, asignaciones y sílabos | Por ahora, la fecha es informativa: no hay cierre ni eliminación automática. Coordinación elimina, tras confirmación, solo ofertas que no tengan dependencias; un período con ofertas, procesos o convocatorias no se elimina. Definir si se automatiza un cierre futuro sin alterar la historia. | Antes de automatizar el cierre de período |
 
 ## Entrevistas pendientes
 

@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Relevar a un docente son dos cosas que deben ocurrir juntas: archivar su asignación y
+ * Relevar a un docente son dos cosas que deben ocurrir juntas: finalizar su asignación y
  * abrir la del reemplazo sobre los mismos paralelos. Hacerlas por separado deja una ventana en
  * la que el expediente no tiene responsable, y la apertura de convocatoria ya rechaza los
  * paralelos sin docente vigente.

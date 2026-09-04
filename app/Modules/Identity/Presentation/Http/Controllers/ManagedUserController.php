@@ -222,7 +222,7 @@ class ManagedUserController extends Controller
         return back()->with('success', "Acceso reenviado a {$user->correo_electronico}.");
     }
 
-    /** Borra una cuenta pendiente de activación sin actividad; con historia, se archiva. */
+    /** Borra una cuenta pendiente de activación sin actividad; con historia, se desactiva. */
     public function destroy(User $user, Request $request, DeleteManagedUser $action): RedirectResponse
     {
         Gate::authorize('managePending', $user);

@@ -66,9 +66,13 @@ class SetAcademicRecordStatus
         if (! $activeRole instanceof RoleAssignment || ! AcademicStructurePermissions::mayChangeStatus($activeRole, $entity)) {
             throw new AuthorizationException('No puede cambiar este registro con el rol activo.');
         }
-        // Malla y materias se congelan mientras una convocatoria de la carrera está en curso.
-        if (in_array($entity, ['malla', 'asignatura'], true) && AcademicStructurePermissions::isCareerContext($activeRole)) {
+        if (AcademicStructurePermissions::isGovernanceContext($activeRole)) {
+            $this->locks->assertInstitutionalStructureEditable();
+        }
+        if (AcademicStructurePermissions::isCareerContext($activeRole)) {
             $this->locks->assertCareerEditable($activeRole->carrera_id);
+        }
+        if (in_array($entity, ['malla', 'asignatura'], true) && AcademicStructurePermissions::isCareerContext($activeRole)) {
             $this->work->requireConfirmation($request, $activeRole->carrera_id);
         }
 
@@ -147,7 +151,7 @@ class SetAcademicRecordStatus
 
         if ($hasActiveDependants) {
             throw ValidationException::withMessages([
-                'record' => 'Archive primero los registros activos que dependen de este elemento.',
+                'record' => 'Elimine primero los registros activos que dependen de este elemento.',
             ]);
         }
     }

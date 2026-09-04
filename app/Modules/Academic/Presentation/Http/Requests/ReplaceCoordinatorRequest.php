@@ -21,7 +21,7 @@ class ReplaceCoordinatorRequest extends FormRequest
     {
         return [
             'incoming_user_id' => ['required', 'uuid', Rule::exists('usuarios', 'id')->where('activo', true)],
-            'archive_outgoing' => ['nullable', 'boolean'],
+            'deactivate_outgoing' => ['nullable', 'boolean'],
         ];
     }
 

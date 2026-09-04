@@ -5,6 +5,7 @@ namespace App\Modules\Academic\Presentation\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Modules\Academic\Application\Actions\CreateAcademicRecord;
+use App\Modules\Academic\Application\Actions\DeleteAcademicRecord;
 use App\Modules\Academic\Application\Actions\ReplaceCoordinator;
 use App\Modules\Academic\Application\Actions\SetAcademicRecordStatus;
 use App\Modules\Academic\Application\Actions\UpdateAcademicRecord;
@@ -60,14 +61,14 @@ class AcademicGovernanceController extends Controller
     ): RedirectResponse {
         $actor = $request->user();
         abort_unless($actor instanceof User, 401);
-        /** @var array{incoming_user_id: string, archive_outgoing?: bool} $data */
+        /** @var array{incoming_user_id: string, deactivate_outgoing?: bool} $data */
         $data = $request->validated();
         $result = $action->execute($career, $data, $actor, $request);
 
         $message = $result['previous_user_id'] === null
             ? "Coordinación de {$career->nombre} asignada."
-            : ($result['archived']
-                ? "Coordinación de {$career->nombre} reemplazada; la cuenta saliente quedó archivada."
+            : ($result['deactivated']
+                ? "Coordinación de {$career->nombre} reemplazada; la cuenta saliente quedó desactivada."
                 : "Coordinación de {$career->nombre} reemplazada.");
 
         return back()->with('success', $message);
@@ -86,7 +87,7 @@ class AcademicGovernanceController extends Controller
 
         return back()->with('success', $active
             ? 'Registro reactivado.'
-            : 'Registro archivado sin borrar su historial.');
+            : 'Registro desactivado sin borrar su historial.');
     }
 
     public function update(
@@ -100,5 +101,18 @@ class AcademicGovernanceController extends Controller
         $action->execute($entity, $record, $request->validated(), $actor, $request);
 
         return back()->with('success', 'Datos institucionales actualizados y auditados.');
+    }
+
+    public function destroy(
+        string $entity,
+        string $record,
+        ManageAcademicGovernanceRequest $request,
+        DeleteAcademicRecord $action,
+    ): RedirectResponse {
+        $actor = $request->user();
+        abort_unless($actor instanceof User, 401);
+        $action->execute($entity, $record, $actor, $request);
+
+        return back()->with('success', 'Registro institucional eliminado.');
     }
 }

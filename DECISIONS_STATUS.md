@@ -41,9 +41,9 @@ Fecha de corte: **30 de agosto de 2026**.
   formato del sílabo son institucionales, no ministeriales.
 - Las personas no son dueñas de nada: tienen vigencias (rol, nombramiento, asignación
   docente) sobre lo que es de la carrera o del sílabo. Salir = cerrar vigencias y, si no
-  queda ninguna, archivar; nunca borrar cuentas con historia ni reutilizarlas. Reemplazo
-  de coordinación y relevo docente en un paso; archivo bloqueado con sílabos en curso
-  (I-38, I-39, 3 de septiembre de 2026).
+  queda ninguna, desactivar la cuenta; nunca borrar cuentas con historia ni reutilizarlas.
+  Reemplazo de coordinación y relevo docente en un paso; la desactivación se bloquea con
+  sílabos en curso (I-38, I-39, I-44, 3 de septiembre de 2026).
 - La IA es asistencia explicable; no toma decisiones académicas ni bloquea el flujo.
 - Stack base: Laravel 13, Vue/Inertia, TypeScript, PostgreSQL y Redis.
 - Monolito modular y servicio local de IA desacoplado por HTTP.
@@ -60,9 +60,10 @@ Fecha de corte: **30 de agosto de 2026**.
   mezcla ni se duplica como facultad o carrera. El período académico es un catálogo
   institucional único (I-41, decisión explícita del responsable del producto del
   2026-09-03), aunque la fuente histórica lo repita por carrera.
-- Administración puede corregir los metadatos de esos catálogos, reasignar una carrera a
-  otra facultad activa y archivar o reactivar registros. Cada edición conserva valores
-  anterior/nuevo en auditoría; no existe borrado físico de catálogos con historia.
+- Administración puede corregir los metadatos de esos catálogos y reasignar una carrera a
+  otra facultad activa antes de abrir el proceso institucional. Un registro sin
+  dependencias se elimina; con historia se protege y explica sus consecuencias. Cada
+  edición conserva valores anterior/nuevo en auditoría.
 - La posición curricular visible de una materia se denomina ciclo; periodo académico
   continúa siendo la ventana temporal con fechas.
 - Cada carrera tiene cero o una sola malla actual, configurable en ciclos y campos. El
@@ -75,8 +76,8 @@ Fecha de corte: **30 de agosto de 2026**.
 - El calendario académico oficial obliga a toda la universidad (I-31, 2 de septiembre
   de 2026): Administración abre el **proceso de sílabos** con plantilla y fechas;
   Coordinación convoca a su carrera dentro de ese proceso y hereda ambas. Con el
-  proceso abierto la plantilla no se edita; con una convocatoria en curso la malla y las
-  fuentes de esa carrera no se editan. Para corregir se pausa: Administración el
+  proceso abierto no se edita la plantilla ni la estructura institucional; con una
+  convocatoria en curso no se edita la estructura de esa carrera. Para corregir se pausa: Administración el
   proceso —toda la universidad—, Coordinación su convocatoria —solo su carrera—.
 
 ## Actualizado para esta entrega
@@ -107,7 +108,8 @@ responsable del producto: las entidades institucionales y las cuentas permanecen
 Administración, mientras la operación académica pertenece a la Coordinación vigente de
 cada carrera. ADM-04 refleja la jerarquía Facultad → Carreras y separa campus,
 modalidades y periodos en vistas propias, sin modificar el esquema normalizado. Sus filas
-permiten editar, archivar y reactivar con autorización y auditoría en servidor. Este cambio
+permiten editar y eliminar registros sin dependencias, con autorización y auditoría en
+servidor. Este cambio
 no resuelve ni modifica `PV-16`, que trata la edición excepcional de contenido docente.
 
 I-10 unifica la presentación de listados por decisión explícita del responsable del
@@ -134,6 +136,13 @@ conservan su autoridad y estado `POR VALIDAR`.
 I-41 reemplaza específicamente esa pertenencia por carrera: en el producto el período es
 institucional, de código único, y un proceso de sílabos lo fija para todas las convocatorias
 que cuelgan de él.
+
+I-44 (3 de septiembre de 2026) congela la estructura que sostiene el trabajo docente:
+proceso y convocatoria abiertos bloquean cambios institucionales y de carrera,
+respectivamente. Administración pausa el proceso y Coordinación pausa su convocatoria
+para corregir. El cambio estructural muestra sus consecuencias y, tras confirmación,
+elimina únicamente sílabos sin envío ni evidencia de IA. No existe «Archivar» para
+catálogos académicos: se elimina lo que no tiene dependencias y se protege la historia.
 
 I-12 renombra «contexto» a rol en todo el sistema —clases, props, rutas, vistas, columna
 de auditoría, documentación y pruebas— por decisión explícita del responsable del

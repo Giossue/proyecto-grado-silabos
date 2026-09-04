@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3';
-import { Archive, ArchiveRestore } from '@lucide/vue';
+import { CircleOff, RotateCcw } from '@lucide/vue';
 import { computed } from 'vue';
 import AcademicGovernanceController from '@/actions/App/Modules/Academic/Presentation/Http/Controllers/AcademicGovernanceController';
 import CareerAcademicStructureController from '@/actions/App/Modules/Academic/Presentation/Http/Controllers/CareerAcademicStructureController';
@@ -26,7 +26,7 @@ const actionLabel = computed(() => {
         return props.active ? 'Deshabilitar' : 'Reactivar';
     }
 
-    return props.active ? 'Archivar' : 'Reactivar';
+    return props.active ? 'Desactivar' : 'Reactivar';
 });
 </script>
 
@@ -53,8 +53,8 @@ const actionLabel = computed(() => {
             @select="submit()"
         >
             <Spinner v-if="processing" />
-            <Archive v-else-if="active" aria-hidden="true" />
-            <ArchiveRestore v-else aria-hidden="true" />
+            <CircleOff v-else-if="active" aria-hidden="true" />
+            <RotateCcw v-else aria-hidden="true" />
             {{ actionLabel }}
         </DropdownMenuItem>
         <Button

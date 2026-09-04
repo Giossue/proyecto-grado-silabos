@@ -161,16 +161,16 @@ DOC-01 llena una cuadrícula con una casilla por celda, unidades y totales calcu
   cinta de opciones y vista previa.
 - ADM-02: una cuenta «Pendiente de activación» (contraseña temporal sin cambiar) tiene en
   su menú **Reenviar acceso** (nueva contraseña temporal al correo actual) y
-  **Eliminar** (solo sin actividad; con historia, archivar). Corregir su correo reenvía
+  **Eliminar** (solo sin actividad; con historia, desactivar). Corregir su correo reenvía
   el acceso al nuevo correo sin pedirlo (I-38).
 - Salida de personas (I-39): en ADM-04 Carreras muestra la coordinación vigente y su menú
   tiene **Reemplazar coordinador** (o **Asignar coordinador** si no hay): cierra
   nombramiento y rol de quien sale, abre los de quien entra y, si se marca y no le
-  queda otro rol, archiva la cuenta saliente. En COR-15 **Relevar docente** mueve todos
+  queda otro rol, desactiva la cuenta saliente. En COR-15 **Relevar docente** mueve todos
   los paralelos y sílabos de un docente al entrante con el mismo sustento documental
-  (borrador se descarta, aprobado se reabre, en revisión bloquea). Archivar una cuenta
+  (borrador se descarta, aprobado se reabre, en revisión bloquea). Desactivar una cuenta
   (ADM-02) se rechaza si tiene sílabos en curso o es la única administración; al
-  archivar se cierran sus asignaciones docentes vigentes.
+  desactivar se cierran sus asignaciones docentes vigentes.
 - Los estados usan las mismas etiquetas y colores en todo el producto.
 - Los IDs internos y detalles de infraestructura no se muestran.
 - ADM-04 usa el submenú **Estructura académica** con rutas independientes para Facultades,
@@ -230,9 +230,11 @@ DOC-01 llena una cuadrícula con una casilla por celda, unidades y totales calcu
   el proceso institucional están en pausa o cerrados. ADM-05,
   ADM-06, COR-11 y COR-13 muestran un aviso con la razón del bloqueo y ocultan las
   acciones de edición mientras dure; el servidor rechaza igual aunque se fuerce la
-  petición.
-- El menú de acciones de ADM-04 distingue edición y ciclo de vida: **Editar** abre un
-  `Sheet` precargado; **Archivar/Reactivar** cambia disponibilidad sin borrar historia.
+  petición. I-44 extiende ese candado a catálogos institucionales, ofertas, paralelos y
+  asignaciones genéricas: solo el relevo docente sigue disponible durante la convocatoria.
+- El menú de acciones de ADM-04 distingue edición y eliminación: **Editar** abre un
+  `Sheet` precargado; **Eliminar** pide confirmación y explica si una dependencia o
+  historial institucional protege el registro.
 - El fondo de página y las superficies de trabajo usan tokens distintos en claro y
   oscuro; tarjetas, paneles laterales y popovers conservan contraste semántico común.
 

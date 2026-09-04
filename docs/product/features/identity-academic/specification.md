@@ -28,23 +28,27 @@
   rutas hijas del submenú Estructura académica. Carreras identifica su Facultad y
   Facultades cuenta sus carreras; no se combinan en una tabla genérica ni se infiere una
   dependencia campus-facultad que no existe en el modelo.
-- Cada fila de ADM-04 permite editar sus datos en un `Sheet`, archivar y reactivar. La
-  carrera permite cambiar de facultad únicamente hacia otra activa; los códigos conservan
-  unicidad y las fechas de periodo deben mantener un intervalo válido.
+- Cada fila de ADM-04 permite editar sus datos en un `Sheet` y eliminarla únicamente
+  cuando no tiene dependencias ni historia. Un proceso institucional abierto congela
+  esas acciones hasta que Administración lo pause. La carrera permite cambiar de
+  facultad únicamente hacia otra activa; los códigos conservan unicidad y las fechas de
+  periodo deben mantener un intervalo válido.
 - La actualización se autoriza y valida en servidor, se ejecuta dentro de una transacción
   y registra campos modificados y valores anterior/nuevo en auditoría. Un envío sin cambios
   no inventa un evento.
 - El Coordinador mantiene la malla, materias, ofertas, paralelos y asignaciones docentes
   únicamente para la carrera de su rol.
-- Cada fila editable de esas colecciones ofrece Editar. La autorización vuelve a comprobar
-  el alcance por registro y la actualización conserva antes/después en auditoría.
+- Cada fila editable de esas colecciones ofrece Editar o Eliminar cuando no tiene
+  dependencias. Una convocatoria abierta congela ofertas, paralelos y asignaciones de su
+  carrera; Coordinación debe pausarla para corregir y el servidor vuelve a comprobar el
+  alcance por registro. Las actualizaciones conservan antes/después en auditoría.
 - COR-14 puede crear varios paralelos de una misma oferta en un lote atómico: los códigos
   separados por coma o línea comparten jornada; una duplicación o un código inválido no
   crea una parte del lote. Cada paralelo creado queda auditado por separado.
 - Cada carrera tiene cero o una malla actual, editable activa o inactiva. Coordinación
   puede deshabilitarla/reactivarla y solo eliminarla cuando no tiene ofertas ni sílabos.
-  Una oferta, paralelo o asignación ya incorporada a un sílabo se archiva y reemplaza
-  para no alterar el expediente.
+  Una oferta, paralelo o asignación ya incorporada a un sílabo queda protegida y no se
+  elimina; para sustituir un responsable existente se usa el relevo con sustento.
 - La navegación del Coordinador concentra Materias dentro de **Malla**. La ruta abre el
   agregado actual directamente o muestra su estado vacío; no usa buscador, filtros,
   cards, paginación, publicación ni número de versión. Ofertas y Paralelos conservan
@@ -65,6 +69,7 @@
 - Dos coordinaciones activas no se superponen para la misma carrera.
 - Un Coordinador o Docente no puede actualizar catálogos globales aunque construya la
   solicitud fuera de la interfaz.
-- Archivar no elimina referencias históricas; reactivar vuelve a habilitar usos futuros.
+- No hay archivado de catálogos académicos: los registros sin dependencias se eliminan
+  con confirmación y auditoría; las referencias históricas bloquean la eliminación.
 - Sin una malla activa no se crean ofertas ni se abren procesos nuevos. Los sílabos
   existentes conservan su fotografía académica aunque la malla se edite o deshabilite.

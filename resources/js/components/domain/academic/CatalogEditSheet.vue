@@ -161,7 +161,7 @@ const facultyOptions = computed(() =>
                                     >
                                         {{ faculty.nombre }}
                                         {{
-                                            faculty.activo ? '' : '(archivada)'
+                                            faculty.activo ? '' : '(inactiva)'
                                         }}
                                     </SelectItem>
                                 </SelectGroup>
@@ -231,7 +231,7 @@ const facultyOptions = computed(() =>
                                         :value="campus.id"
                                     >
                                         {{ campus.nombre }}
-                                        {{ campus.activo ? '' : '(archivado)' }}
+                                        {{ campus.activo ? '' : '(inactivo)' }}
                                     </SelectItem>
                                 </SelectGroup>
                             </SelectContent>

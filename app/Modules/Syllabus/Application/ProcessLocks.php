@@ -43,6 +43,31 @@ class ProcessLocks
         }
     }
 
+    /**
+     * Los catálogos institucionales también quedan congelados mientras la universidad
+     * trabaja con un proceso abierto. Sus cambios no deben aparecer a mitad del ciclo.
+     * Al pausar el proceso, Administración vuelve a tener el espacio de corrección.
+     */
+    public function assertInstitutionalStructureEditable(): void
+    {
+        $reason = $this->institutionalStructureLockReason();
+
+        if ($reason !== null) {
+            throw ValidationException::withMessages(['process' => $reason]);
+        }
+    }
+
+    public function institutionalStructureLockReason(): ?string
+    {
+        $process = SyllabusProcess::query()
+            ->where('estado', SyllabusProcess::STATE_OPEN)
+            ->first(['nombre']);
+
+        return $process === null
+            ? null
+            : "El proceso institucional «{$process->nombre}» está abierto. Pause el proceso desde Convocatorias antes de modificar la estructura institucional.";
+    }
+
     public function careerLockReason(?string $careerId): ?string
     {
         if ($careerId === null) {
