@@ -68,8 +68,11 @@ defineOptions({
 const stateLabel = (state: string): string =>
     ({
         preparacion: 'En preparación',
+        abierto: 'Abierta',
         abierta: 'Abierta',
+        pausado: 'En pausa',
         pausada: 'En pausa',
+        cerrado: 'Cerrada',
         cerrada: 'Cerrada',
     })[state] ?? 'Estado no disponible';
 
