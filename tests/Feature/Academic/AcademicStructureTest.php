@@ -173,7 +173,7 @@ class AcademicStructureTest extends TestCase
                 ->has('options.parallels', 1)
                 ->where(
                     'options.parallels.0.label',
-                    "{$offering->subject->nombre} · {$offering->academicPeriod->fecha_inicio->format('d/m/Y')} · {$offering->academicPeriod->codigo} · Paralelo {$parallel->codigo}",
+                    "{$offering->subject->nombre} · {$offering->academicPeriod->nombre} · Paralelo {$parallel->codigo}",
                 )
                 ->where('options.teacherUsers.0.name', 'DOCENTE DEMO')
                 ->where('options.teacherUsers.0.email', 'docente@silabos.test'));

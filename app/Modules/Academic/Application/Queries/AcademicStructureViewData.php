@@ -418,12 +418,12 @@ class AcademicStructureViewData
                     )
                     ->with([
                         'offering.subject:id,codigo_institucional,nombre',
-                        'offering.academicPeriod:id,codigo,fecha_inicio',
+                        'offering.academicPeriod:id,nombre',
                     ])
                     ->get()
                     ->map(fn (Parallel $parallel) => [
                         'id' => $parallel->id,
-                        'label' => "{$parallel->offering->subject->nombre} · {$parallel->offering->academicPeriod->fecha_inicio->format('d/m/Y')} · {$parallel->offering->academicPeriod->codigo} · Paralelo {$parallel->codigo}",
+                        'label' => "{$parallel->offering->subject->nombre} · {$parallel->offering->academicPeriod->nombre} · Paralelo {$parallel->codigo}",
                     ]),
                 'teacherUsers' => User::query()
                     ->where('activo', true)

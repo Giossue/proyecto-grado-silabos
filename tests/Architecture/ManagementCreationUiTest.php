@@ -155,6 +155,8 @@ it('permite buscar docente y paralelo al crear una asignación docente', functio
     $this->assertStringContainsString('Buscar materia, período o paralelo…', $sheet);
     $this->assertStringContainsString('filteredOptions', $selector);
     $this->assertStringContainsString('type="hidden" :name="name" :value="selectedId"', $selector);
+    $this->assertStringContainsString('@click="openSearch"', $selector);
+    $this->assertStringNotContainsString('@focus="openSearch"', $selector);
 });
 
 it('crea la plantilla institucional de inmediato y abre su constructor', function (): void {

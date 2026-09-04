@@ -76,7 +76,8 @@ const selectOption = (option: Option): void => {
                     :placeholder="open ? searchPlaceholder : placeholder"
                     :aria-invalid="invalid"
                     aria-autocomplete="list"
-                    @focus="openSearch"
+                    @click="openSearch"
+                    @keydown.down.prevent="openSearch"
                     @update:model-value="
                         (value) => {
                             query = String(value);
@@ -109,7 +110,7 @@ const selectOption = (option: Option): void => {
                     :key="option.id"
                     type="button"
                     variant="ghost"
-                    class="w-full justify-start text-left whitespace-normal"
+                    class="w-full justify-start text-left font-normal whitespace-normal"
                     @click="selectOption(option)"
                 >
                     {{ option.label }}
