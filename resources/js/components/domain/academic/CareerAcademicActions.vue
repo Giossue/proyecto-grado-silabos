@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3';
-import { LockKeyhole, Pencil, Trash2 } from '@lucide/vue';
+import { LockKeyhole, Pencil, Plus, Trash2 } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import CareerAcademicStructureController from '@/actions/App/Modules/Academic/Presentation/Http/Controllers/CareerAcademicStructureController';
 import CareerAcademicEditSheet from '@/components/domain/academic/CareerAcademicEditSheet.vue';
@@ -8,6 +8,7 @@ import type {
     CareerAcademicEditableRecord,
     CareerAcademicEntity,
 } from '@/components/domain/academic/CareerAcademicEditSheet.vue';
+import ParallelCreationSheet from '@/components/domain/academic/ParallelCreationSheet.vue';
 import TableActionsMenu from '@/components/domain/TableActionsMenu.vue';
 import { Button } from '@/components/ui/button';
 import {
@@ -31,18 +32,21 @@ const props = withDefaults(
         editable: boolean;
         active?: boolean;
         deleteSupported?: boolean;
+        parallelCreationSupported?: boolean;
         lockedLabel?: string;
         options: AcademicStructureProps['options'];
     }>(),
     {
         active: true,
         deleteSupported: false,
+        parallelCreationSupported: false,
         lockedLabel: 'Con historial: este registro queda protegido',
     },
 );
 
 const editOpen = ref(false);
 const deleteOpen = ref(false);
+const parallelCreationOpen = ref(false);
 const deletionTitle = computed(() =>
     props.entity === 'oferta'
         ? 'Eliminar oferta académica'
@@ -72,6 +76,14 @@ const deletionDescription = computed(() =>
             <slot />
 
             <DropdownMenuItem
+                v-if="entity === 'oferta' && parallelCreationSupported"
+                @select="parallelCreationOpen = true"
+            >
+                <Plus aria-hidden="true" />
+                Agregar paralelo
+            </DropdownMenuItem>
+
+            <DropdownMenuItem
                 v-if="deleteSupported && editable"
                 variant="destructive"
                 @select="deleteOpen = true"
@@ -87,6 +99,14 @@ const deletionDescription = computed(() =>
             :entity="entity"
             :record="record"
             :options="options"
+        />
+
+        <ParallelCreationSheet
+            v-if="entity === 'oferta'"
+            :key="`parallel-${record.id}`"
+            v-model:open="parallelCreationOpen"
+            :offering-id="record.id"
+            :offering-label="recordLabel"
         />
 
         <Dialog v-model:open="deleteOpen">

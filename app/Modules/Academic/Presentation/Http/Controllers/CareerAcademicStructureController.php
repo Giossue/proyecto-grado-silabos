@@ -73,17 +73,6 @@ class CareerAcademicStructureController extends Controller
         );
     }
 
-    public function parallels(
-        ManageCareerAcademicStructureRequest $request,
-        ActiveRole $roles,
-        AcademicStructureViewData $viewData,
-    ): Response {
-        return Inertia::render(
-            'Coordination/Academic/Parallels',
-            $viewData->offerings($this->careerId($request, $roles)),
-        );
-    }
-
     public function teacherAssignments(
         ManageCareerAcademicStructureRequest $request,
         ActiveRole $roles,
@@ -145,21 +134,19 @@ class CareerAcademicStructureController extends Controller
     ): RedirectResponse {
         $actor = $request->user();
         abort_unless($actor instanceof User, 401);
-        /** @var array{period_id: string, subjects?: list<array{id: string, codes: list<string>, shift?: string|null}>} $data */
+        /** @var array{period_id: string, subjects: list<array{id: string, codes: list<string>, shift?: string|null}>} $data */
         $data = $request->validated();
         $result = $action->execute($data, $actor, $request);
 
-        $message = $result['offerings'] === 0 && $result['parallels'] === 0
-            ? "El periodo ya estaba preparado: las {$result['subjects']} materias tienen oferta y paralelo."
-            : sprintf(
-                'Período preparado: %d %s y %d %s nuevos para %d %s.',
-                $result['offerings'],
-                $result['offerings'] === 1 ? 'oferta' : 'ofertas',
-                $result['parallels'],
-                $result['parallels'] === 1 ? 'paralelo' : 'paralelos',
-                $result['subjects'],
-                $result['subjects'] === 1 ? 'materia' : 'materias',
-            );
+        $message = sprintf(
+            'Período preparado: %d %s y %d %s nuevos para %d %s.',
+            $result['offerings'],
+            $result['offerings'] === 1 ? 'oferta' : 'ofertas',
+            $result['parallels'],
+            $result['parallels'] === 1 ? 'paralelo' : 'paralelos',
+            $result['subjects'],
+            $result['subjects'] === 1 ? 'materia' : 'materias',
+        );
 
         return back()->with('success', $message);
     }

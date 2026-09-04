@@ -150,8 +150,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::redirect('oferta-paralelos', '/coordinacion/ofertas');
         Route::get('ofertas', [CareerAcademicStructureController::class, 'offerings'])
             ->name('coordination.academic.offerings.index');
-        Route::get('paralelos', [CareerAcademicStructureController::class, 'parallels'])
-            ->name('coordination.academic.parallels.index');
         Route::get('asignaciones-docentes', [CareerAcademicStructureController::class, 'teacherAssignments'])
             ->name('coordination.academic.teacher-assignments.index');
         Route::post('estructura-academica/periodo/preparar', [CareerAcademicStructureController::class, 'preparePeriod'])

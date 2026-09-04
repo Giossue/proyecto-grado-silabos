@@ -14,12 +14,10 @@ import {
 } from '@/components/ui/table';
 import { useClientFilter } from '@/composables/useClientFilter';
 import { useClientPagination } from '@/composables/useClientPagination';
-import { shiftLabel } from '@/lib/parallelShifts';
 import type { AcademicStructureProps } from '@/types/academic';
 
 const props = defineProps<
-    Pick<AcademicStructureProps, 'offerings' | 'parallels' | 'options'> & {
-        section: 'offerings' | 'parallels';
+    Pick<AcademicStructureProps, 'offerings' | 'options'> & {
         lockReason?: string | null;
     }
 >();
@@ -55,139 +53,65 @@ const {
     meta: offeringMeta,
     setPage: setOfferingPage,
 } = useClientPagination(() => offeringFilter.items.value);
-const parallelFilter = useClientFilter(
-    () => props.parallels,
-    (item) => [
-        item.subject_name,
-        item.subject_code,
-        item.code,
-        formatPeriod(item.period_starts_on, item.period_ends_on),
-    ],
-);
-
-const {
-    items: parallelPage,
-    meta: parallelMeta,
-    setPage: setParallelPage,
-} = useClientPagination(() => parallelFilter.items.value);
 </script>
 
 <template>
-    <div class="flex flex-col gap-6">
-        <Card v-if="section === 'offerings'">
-            <CardContent class="flex flex-col gap-4">
-                <ClientFilterBar
-                    :filter="offeringFilter"
-                    input-id="offerings-search"
-                    label="Buscar oferta"
-                    placeholder="Buscar por materia, código, periodo, campus o modalidad"
-                />
-                <Table
-                    ><TableHeader
-                        ><TableRow
-                            ><TableHead>Materia</TableHead
-                            ><TableHead>Código</TableHead
-                            ><TableHead>Periodo</TableHead
-                            ><TableHead>Ubicación</TableHead
-                            ><TableHead>Paralelos</TableHead
-                            ><TableHead class="text-right"
-                                >Acciones</TableHead
-                            ></TableRow
-                        ></TableHeader
-                    ><TableBody>
-                        <TableEmpty v-if="offerings.length === 0" :colspan="6"
-                            >No existen ofertas.</TableEmpty
-                        >
-                        <TableRow
-                            v-for="item in offeringPage"
-                            v-else
-                            :key="item.id"
-                            ><TableCell>{{ item.subject_name }}</TableCell
-                            ><TableCell>{{ item.subject_code }}</TableCell
-                            ><TableCell>{{
-                                formatPeriod(
-                                    item.period_starts_on,
-                                    item.period_ends_on,
-                                )
-                            }}</TableCell
-                            ><TableCell
-                                >{{ item.campus_name }} ·
-                                {{ item.modality_name }}</TableCell
-                            ><TableCell>{{ item.parallel_count }}</TableCell
-                            ><TableCell class="text-right"
-                                ><CareerAcademicActions
-                                    entity="oferta"
-                                    :record="item"
-                                    :record-label="item.label"
-                                    :editable="item.editable"
-                                    :active="item.active"
-                                    :delete-supported="!lockReason"
-                                    :locked-label="lockReason ?? undefined"
-                                    :options="options" /></TableCell
-                        ></TableRow> </TableBody></Table
-                ><TablePagination
-                    :meta="offeringMeta"
-                    mode="client"
-                    label="Paginación de ofertas académicas"
-                    @update:page="setOfferingPage"
-            /></CardContent>
-        </Card>
-
-        <Card v-if="section === 'parallels'">
-            <CardContent class="flex flex-col gap-4">
-                <ClientFilterBar
-                    :filter="parallelFilter"
-                    input-id="parallels-search"
-                    label="Buscar paralelo"
-                    placeholder="Buscar por materia, código, paralelo o periodo"
-                />
-                <Table
-                    ><TableHeader
-                        ><TableRow
-                            ><TableHead>Materia</TableHead
-                            ><TableHead>Código</TableHead
-                            ><TableHead>Paralelo</TableHead
-                            ><TableHead>Jornada</TableHead
-                            ><TableHead>Periodo</TableHead
-                            ><TableHead class="text-right"
-                                >Acciones</TableHead
-                            ></TableRow
-                        ></TableHeader
-                    ><TableBody>
-                        <TableEmpty v-if="parallels.length === 0" :colspan="6"
-                            >No existen paralelos.</TableEmpty
-                        >
-                        <TableRow
-                            v-for="item in parallelPage"
-                            v-else
-                            :key="item.id"
-                            ><TableCell>{{ item.subject_name }}</TableCell
-                            ><TableCell>{{ item.subject_code }}</TableCell
-                            ><TableCell>{{ item.code }}</TableCell
-                            ><TableCell>{{ shiftLabel(item.shift) }}</TableCell
-                            ><TableCell>{{
-                                formatPeriod(
-                                    item.period_starts_on,
-                                    item.period_ends_on,
-                                )
-                            }}</TableCell
-                            ><TableCell class="text-right"
-                                ><CareerAcademicActions
-                                    entity="paralelo"
-                                    :record="item"
-                                    :record-label="`el paralelo ${item.code}`"
-                                    :editable="item.editable"
-                                    :active="item.active"
-                                    :delete-supported="!lockReason"
-                                    :locked-label="lockReason ?? undefined"
-                                    :options="options" /></TableCell
-                        ></TableRow> </TableBody></Table
-                ><TablePagination
-                    :meta="parallelMeta"
-                    mode="client"
-                    label="Paginación de paralelos"
-                    @update:page="setParallelPage"
-            /></CardContent>
-        </Card>
-    </div>
+    <Card>
+        <CardContent class="flex flex-col gap-4">
+            <ClientFilterBar
+                :filter="offeringFilter"
+                input-id="offerings-search"
+                label="Buscar oferta"
+                placeholder="Buscar por materia, código, periodo, campus o modalidad"
+            />
+            <Table
+                ><TableHeader
+                    ><TableRow
+                        ><TableHead>Materia</TableHead
+                        ><TableHead>Código</TableHead
+                        ><TableHead>Periodo</TableHead
+                        ><TableHead>Ubicación</TableHead
+                        ><TableHead>Paralelos</TableHead
+                        ><TableHead class="text-right"
+                            >Acciones</TableHead
+                        ></TableRow
+                    ></TableHeader
+                ><TableBody>
+                    <TableEmpty v-if="offerings.length === 0" :colspan="6"
+                        >No existen ofertas.</TableEmpty
+                    >
+                    <TableRow v-for="item in offeringPage" v-else :key="item.id"
+                        ><TableCell>{{ item.subject_name }}</TableCell
+                        ><TableCell>{{ item.subject_code }}</TableCell
+                        ><TableCell>{{
+                            formatPeriod(
+                                item.period_starts_on,
+                                item.period_ends_on,
+                            )
+                        }}</TableCell
+                        ><TableCell
+                            >{{ item.campus_name }} ·
+                            {{ item.modality_name }}</TableCell
+                        ><TableCell>{{ item.parallel_count }}</TableCell
+                        ><TableCell class="text-right"
+                            ><CareerAcademicActions
+                                entity="oferta"
+                                :record="item"
+                                :record-label="item.label"
+                                :editable="item.editable"
+                                :active="item.active"
+                                :delete-supported="!lockReason"
+                                :parallel-creation-supported="
+                                    !lockReason && item.active
+                                "
+                                :locked-label="lockReason ?? undefined"
+                                :options="options" /></TableCell
+                    ></TableRow> </TableBody></Table
+            ><TablePagination
+                :meta="offeringMeta"
+                mode="client"
+                label="Paginación de ofertas académicas"
+                @update:page="setOfferingPage"
+        /></CardContent>
+    </Card>
 </template>

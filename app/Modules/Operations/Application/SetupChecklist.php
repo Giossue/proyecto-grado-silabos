@@ -96,7 +96,7 @@ class SetupChecklist
             [
                 $this->step('curriculum', 'Armar la malla con sus materias', 'Ciclos, materias, horas, créditos y prerrequisitos.', $curriculum !== null && $curriculum->subjects_count > 0, route('coordination.academic.curricula.index')),
                 $this->step('offerings', 'Abrir las ofertas del periodo', 'Materia, periodo, campus y modalidad.', (clone $offerings)->exists(), route('coordination.academic.offerings.index')),
-                $this->step('parallels', 'Crear los paralelos', 'Con su jornada: matutina, vespertina o nocturna.', (clone $parallels)->exists(), route('coordination.academic.parallels.index')),
+                $this->step('parallels', 'Crear los paralelos', 'Desde Ofertas, con su jornada: matutina, vespertina o nocturna.', (clone $parallels)->exists(), route('coordination.academic.offerings.index')),
                 $this->step('teachers', 'Asignar un docente a cada paralelo', 'Los docentes ya deben tener cuenta (los crea Administración).', (clone $assignments)->exists(), route('coordination.academic.teacher-assignments.index')),
                 $this->step('sources', 'Registrar al menos una fuente académica', 'Documento de apoyo que la convocatoria fija para los docentes.', AcademicSource::query()->where('carrera_id', $careerId)->where('activo', true)->exists(), route('sources.index')),
                 $this->step('convocation', 'Crear y abrir la convocatoria', $processOpen ? 'El proceso institucional está abierto: ya puede convocar.' : 'Espera a que Administración abra el proceso de sílabos.', Convocation::query()->where('carrera_id', $careerId)->exists(), route('convocations.index')),

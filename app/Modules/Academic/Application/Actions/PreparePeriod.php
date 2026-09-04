@@ -20,13 +20,11 @@ use Illuminate\Validation\ValidationException;
 
 /**
  * Prepara las materias seleccionadas de un período: cada una recibe su oferta (campus y
- * modalidad heredados) y los paralelos indicados. Lo existente se respeta y solo se
- * agregan códigos faltantes: omitir una materia nunca la elimina por sorpresa.
+ * modalidad heredados) y los paralelos indicados. Una materia ya ofertada en el
+ * período no vuelve a entrar por este flujo: sus paralelos se agregan desde la oferta.
  */
 class PreparePeriod
 {
-    public const DEFAULT_PARALLEL = 'A';
-
     public function __construct(
         private readonly ActiveRole $roles,
         private readonly RecordAuditEvent $audit,
@@ -35,7 +33,7 @@ class PreparePeriod
     ) {}
 
     /**
-     * @param  array{period_id: string, subjects?: list<array{id: string, codes: list<string>, shift?: string|null}>}  $data
+     * @param  array{period_id: string, subjects: list<array{id: string, codes: list<string>, shift?: string|null}>}  $data
      * @return array{offerings: int, parallels: int, subjects: int}
      */
     public function execute(array $data, User $actor, Request $request): array
@@ -51,23 +49,21 @@ class PreparePeriod
             $career = Career::query()->whereKey($careerId)->with('campus')->lockForUpdate()->firstOrFail();
             $period = AcademicPeriod::query()->whereKey($data['period_id'])->lockForUpdate()->firstOrFail();
             $campus = $this->inheritance->campusFor($career);
-            $settingsBySubject = collect($data['subjects'] ?? [])->keyBy('id');
+            $settingsBySubject = collect($data['subjects'])->keyBy('id');
             $subjectsQuery = Subject::query()
                 ->where('activo', true)
                 ->whereHas('curriculum', fn ($query) => $query->where('carrera_id', $careerId)->where('estado', 'activa'))
                 ->with('curriculum.career')
                 ->orderBy('ciclo')
                 ->orderBy('orden_en_ciclo');
-            if ($settingsBySubject->isNotEmpty()) {
-                $subjectsQuery->whereIn('id', $settingsBySubject->keys());
-            }
+            $subjectsQuery->whereIn('id', $settingsBySubject->keys());
             $subjects = $subjectsQuery->get();
             if ($subjects->isEmpty()) {
                 throw ValidationException::withMessages([
                     'period_id' => 'No hay materias activas seleccionadas en la malla de esta carrera.',
                 ]);
             }
-            if ($settingsBySubject->isNotEmpty() && $subjects->count() !== $settingsBySubject->count()) {
+            if ($subjects->count() !== $settingsBySubject->count()) {
                 throw ValidationException::withMessages([
                     'subjects' => 'Todas las materias seleccionadas deben estar activas y pertenecer a la malla de esta carrera.',
                 ]);
@@ -78,6 +74,11 @@ class PreparePeriod
                 ->whereIn('asignatura_id', $subjects->pluck('id'))
                 ->get()
                 ->keyBy('asignatura_id');
+            if ($existing->isNotEmpty()) {
+                throw ValidationException::withMessages([
+                    'subjects' => 'Las materias ya preparadas no se pueden volver a incluir. Agregue sus paralelos desde la oferta académica.',
+                ]);
+            }
             $correlationId = $request->attributes->getString('correlation_id') ?: null;
             $offerings = 0;
             $parallels = 0;
@@ -104,9 +105,9 @@ class PreparePeriod
                     );
                     $offerings++;
                 }
-                /** @var array{codes: list<string>, shift?: string|null}|null $setting */
+                /** @var array{codes: list<string>, shift?: string|null} $setting */
                 $setting = $settingsBySubject->get($subject->id);
-                $codes = $setting['codes'] ?? [self::DEFAULT_PARALLEL];
+                $codes = $setting['codes'];
                 $existingCodes = Parallel::query()
                     ->where('oferta_academica_id', $offering->id)
                     ->whereIn('codigo', $codes)
@@ -127,7 +128,7 @@ class PreparePeriod
                         resourceType: 'paralelo',
                         resourceId: $parallel->id,
                         result: 'exito',
-                        metadata: ['period_prepared' => true, 'bulk' => $setting !== null],
+                        metadata: ['period_prepared' => true, 'bulk' => true],
                         correlationId: $correlationId,
                     );
                     $parallels++;

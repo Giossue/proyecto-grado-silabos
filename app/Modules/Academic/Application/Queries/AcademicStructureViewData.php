@@ -300,22 +300,9 @@ class AcademicStructureViewData
             ->withCount('parallels')
             ->orderByDesc('creado_en')
             ->get();
-        $parallels = Parallel::query()
-            ->whereHas('offering.subject.curriculum', fn ($query) => $query
-                ->where('carrera_id', $careerId))
-            ->with([
-                'offering.subject:id,nombre,codigo_institucional',
-                'offering.academicPeriod:id,fecha_inicio,fecha_fin',
-            ])
-            ->orderBy('codigo')
-            ->get();
         $usedOfferingIds = SyllabusScope::query()
             ->whereIn('oferta_academica_id', $offerings->pluck('id'))
             ->pluck('oferta_academica_id')
-            ->flip();
-        $usedParallelIds = SyllabusScope::query()
-            ->whereIn('paralelo_id', $parallels->pluck('id'))
-            ->pluck('paralelo_id')
             ->flip();
 
         return [
@@ -340,19 +327,6 @@ class AcademicStructureViewData
                     'parallel_count' => $offering->parallels_count,
                     'active' => $offering->activo,
                     'editable' => $lockReason === null && ! $usedOfferingIds->has($offering->id),
-                ]),
-            'parallels' => $parallels
-                ->map(fn (Parallel $parallel) => [
-                    'id' => $parallel->id,
-                    'offering_id' => $parallel->oferta_academica_id,
-                    'code' => $parallel->codigo,
-                    'shift' => $parallel->jornada,
-                    'active' => $parallel->activo,
-                    'subject_code' => $parallel->offering->subject->codigo_institucional,
-                    'subject_name' => $parallel->offering->subject->nombre,
-                    'period_starts_on' => $parallel->offering->academicPeriod->fecha_inicio->toDateString(),
-                    'period_ends_on' => $parallel->offering->academicPeriod->fecha_fin->toDateString(),
-                    'editable' => $lockReason === null && ! $usedParallelIds->has($parallel->id),
                 ]),
             'options' => [
                 ...$this->emptyOptions(),

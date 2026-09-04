@@ -10,8 +10,7 @@ use Illuminate\Validation\Rule;
 
 /**
  * «Preparar período» permite elegir materias y sus paralelos en un solo envío.
- * Si un cliente antiguo solo manda el período, se conserva el comportamiento de incluir
- * toda la malla activa con el paralelo A.
+ * Solo admite materias que todavía no tienen una oferta en el período elegido.
  */
 class PreparePeriodRequest extends FormRequest
 {
@@ -63,7 +62,7 @@ class PreparePeriodRequest extends FormRequest
                 'uuid',
                 Rule::exists('periodos_academicos', 'id')->where('activo', true),
             ],
-            'subjects' => ['nullable', 'array', 'min:1', 'max:200'],
+            'subjects' => ['required', 'array', 'min:1', 'max:200'],
             'subjects.*.id' => ['required', 'uuid', 'distinct'],
             'subjects.*.codes' => ['required', 'array', 'min:1', 'max:50'],
             'subjects.*.codes.*' => ['required', 'string', 'max:30'],

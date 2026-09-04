@@ -40,7 +40,6 @@ import { index as convocationsIndex } from '@/routes/convocations';
 import { dashboard as coordinationDashboard } from '@/routes/coordination';
 import { index as curriculaIndex } from '@/routes/coordination/academic/curricula';
 import { index as offeringsIndex } from '@/routes/coordination/academic/offerings';
-import { index as parallelsIndex } from '@/routes/coordination/academic/parallels';
 import { index as teacherAssignmentsIndex } from '@/routes/coordination/academic/teacher-assignments';
 import { index as coordinationSourcesIndex } from '@/routes/coordination/sources';
 import { index as reportsIndex } from '@/routes/reports';
@@ -147,19 +146,9 @@ const mainNavItems = computed<NavItem[]>(() => [
                   icon: BookOpenCheck,
               },
               {
-                  title: 'Ofertas y paralelos',
+                  title: 'Ofertas',
                   href: offeringsIndex(),
                   icon: Building2,
-                  items: [
-                      {
-                          title: 'Ofertas',
-                          href: offeringsIndex(),
-                      },
-                      {
-                          title: 'Paralelos',
-                          href: parallelsIndex(),
-                      },
-                  ],
               },
               {
                   title: 'Asignación docente',

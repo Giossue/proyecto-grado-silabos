@@ -25,6 +25,7 @@ use Database\Seeders\DatabaseSeeder;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -154,22 +155,12 @@ class AcademicStructureTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Coordination/Academic/Offerings')
                 ->has('offerings', 1)
-                ->has('parallels', 1)
                 ->where('offerings.0.subject_code', $offering->subject->codigo_institucional)
                 ->where('offerings.0.subject_name', $offering->subject->nombre)
                 ->where('offerings.0.period_starts_on', $offering->academicPeriod->fecha_inicio->toDateString())
                 ->where('offerings.0.period_ends_on', $offering->academicPeriod->fecha_fin->toDateString()));
 
-        $this->actingAsCoordinator()
-            ->get(route('coordination.academic.parallels.index'))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('Coordination/Academic/Parallels')
-                ->has('parallels', 1)
-                ->where('parallels.0.subject_code', $offering->subject->codigo_institucional)
-                ->where('parallels.0.subject_name', $offering->subject->nombre)
-                ->where('parallels.0.period_starts_on', $offering->academicPeriod->fecha_inicio->toDateString())
-                ->where('parallels.0.period_ends_on', $offering->academicPeriod->fecha_fin->toDateString()));
+        $this->assertFalse(Route::has('coordination.academic.parallels.index'));
 
         $this->actingAsCoordinator()
             ->get(route('coordination.academic.teacher-assignments.index'))
@@ -1050,14 +1041,15 @@ class AcademicStructureTest extends TestCase
             ->assertSessionHasNoErrors();
     }
 
-    /** I-36: un clic deja toda la malla con oferta y paralelo «A»; repetirlo no duplica. */
-    public function test_coordinator_prepares_a_period_for_the_whole_curriculum_in_one_click(): void
+    /** I-36: preparar solo acepta materias que aún no tienen oferta en el período. */
+    public function test_coordinator_prepares_only_subjects_without_an_offering_in_the_period(): void
     {
         $career = Career::query()->findOrFail($this->coordinatorContext->carrera_id);
         $curriculum = Curriculum::query()->active()->where('carrera_id', $career->id)->firstOrFail();
         $reference = CourseOffering::query()->firstOrFail();
+        $subjects = [];
         foreach (['SW-P1', 'SW-P2'] as $index => $code) {
-            Subject::query()->create([
+            $subjects[] = Subject::query()->create([
                 'malla_id' => $curriculum->id,
                 'codigo_institucional' => $code,
                 'nombre' => "Materia preparada {$index}",
@@ -1069,10 +1061,16 @@ class AcademicStructureTest extends TestCase
         $subjectCount = Subject::query()->where('malla_id', $curriculum->id)->where('activo', true)->count();
 
         $this->actingAsCoordinator()
-            ->post(route('coordination.academic.period.prepare'), ['period_id' => $reference->periodo_academico_id])
+            ->post(route('coordination.academic.period.prepare'), [
+                'period_id' => $reference->periodo_academico_id,
+                'subjects' => collect($subjects)->map(fn (Subject $subject): array => [
+                    'id' => $subject->id,
+                    'codes' => ['A'],
+                ])->all(),
+            ])
             ->assertRedirect()
             ->assertSessionHasNoErrors()
-            ->assertSessionHas('success', "Período preparado: 2 ofertas y 2 paralelos nuevos para {$subjectCount} materias.");
+            ->assertSessionHas('success', 'Período preparado: 2 ofertas y 2 paralelos nuevos para 2 materias.');
 
         $offerings = CourseOffering::query()->where('periodo_academico_id', $reference->periodo_academico_id)->get();
         $this->assertCount($subjectCount, $offerings);
@@ -1081,18 +1079,38 @@ class AcademicStructureTest extends TestCase
         $this->assertSame($subjectCount, Parallel::query()->whereIn('oferta_academica_id', $offerings->pluck('id'))->count());
         $this->assertSame(2, AuditEvent::query()->where('accion', 'academico.paralelo.creacion')->count());
 
-        // Segunda vez: nada nuevo, y se dice.
+        // No se vuelve a preparar una materia ya ofertada: los extras se agregan desde la oferta.
         $this->actingAsCoordinator()
-            ->post(route('coordination.academic.period.prepare'), ['period_id' => $reference->periodo_academico_id])
+            ->post(route('coordination.academic.period.prepare'), [
+                'period_id' => $reference->periodo_academico_id,
+                'subjects' => collect($subjects)->map(fn (Subject $subject): array => [
+                    'id' => $subject->id,
+                    'codes' => ['B'],
+                ])->all(),
+            ])
             ->assertRedirect()
-            ->assertSessionHas('success', "El periodo ya estaba preparado: las {$subjectCount} materias tienen oferta y paralelo.");
+            ->assertSessionHasErrors('subjects');
         $this->assertSame($subjectCount, CourseOffering::query()->where('periodo_academico_id', $reference->periodo_academico_id)->count());
 
         // Sin campus en la carrera no hay de dónde heredar.
         $career->forceFill(['campus_id' => null])->save();
+        $subjectWithoutCampus = Subject::query()->create([
+            'malla_id' => $curriculum->id,
+            'codigo_institucional' => 'SW-SIN-CAMPUS',
+            'nombre' => 'Materia sin campus',
+            'ciclo' => 5,
+            'orden_en_ciclo' => 3,
+            'activo' => true,
+        ]);
         $this->actingAsCoordinator()
             ->from(route('coordination.academic.offerings.index'))
-            ->post(route('coordination.academic.period.prepare'), ['period_id' => $reference->periodo_academico_id])
+            ->post(route('coordination.academic.period.prepare'), [
+                'period_id' => $reference->periodo_academico_id,
+                'subjects' => [[
+                    'id' => $subjectWithoutCampus->id,
+                    'codes' => ['A'],
+                ]],
+            ])
             ->assertSessionHasErrors('subject_id');
     }
 

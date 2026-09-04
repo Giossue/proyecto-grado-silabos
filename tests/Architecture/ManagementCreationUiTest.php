@@ -61,10 +61,10 @@ it('mantiene las altas de gestión que requieren datos dentro del sheet derecho 
             'action' => 'CareerAcademicStructureController.preparePeriod.url',
             'success' => 'onSuccess: () => {',
         ],
-        'Coordinador · paralelos' => [
-            'page' => 'resources/js/pages/Coordination/Academic/Parallels.vue',
-            'component' => 'OfferingRecordSheet',
-            'component_file' => 'resources/js/components/domain/academic/OfferingRecordSheet.vue',
+        'Coordinador · paralelo desde una oferta' => [
+            'page' => 'resources/js/components/domain/academic/CareerAcademicActions.vue',
+            'component' => 'ParallelCreationSheet',
+            'component_file' => 'resources/js/components/domain/academic/ParallelCreationSheet.vue',
             'action' => 'CareerAcademicStructureController.storeParallels.url',
             'success' => 'onSuccess: () => {',
         ],
@@ -249,21 +249,16 @@ it('presenta una sola malla por carrera sin buscador filtros cards ni versiones'
     $offerings = file_get_contents(
         $root.'/resources/js/pages/Coordination/Academic/Offerings.vue',
     );
-    $parallels = file_get_contents(
-        $root.'/resources/js/pages/Coordination/Academic/Parallels.vue',
-    );
-
     expect($sidebar)
         ->toBeString()
         ->toContain("title: 'Malla'")
         ->toContain('href: curriculaIndex()')
         ->not->toContain("title: 'Mallas y materias'")
         ->not->toContain('subjectsIndex')
-        ->toContain("title: 'Ofertas y paralelos'")
         ->toContain("title: 'Ofertas'")
         ->toContain('href: offeringsIndex()')
-        ->toContain("title: 'Paralelos'")
-        ->toContain('href: parallelsIndex()');
+        ->not->toContain("title: 'Ofertas y paralelos'")
+        ->not->toContain('parallelsIndex');
     expect($curricula)
         ->toBeString()
         ->toContain('entity="malla"')
@@ -294,11 +289,7 @@ it('presenta una sola malla por carrera sin buscador filtros cards ni versiones'
         ->not->toContain('Malla publicada')
         ->not->toContain('número de versión')
         ->not->toContain('version_number');
-    expect($offerings)
-        ->toBeString()
-        ->toContain('<PeriodPreparationSheet')
-        ->toContain('entity="paralelo"');
-    expect($parallels)->toBeString()->toContain('entity="paralelo"');
+    expect($offerings)->toBeString()->toContain('<PeriodPreparationSheet');
 });
 
 it('ofrece desglose y constructor visual sobre el mismo contrato de malla', function (): void {
@@ -437,7 +428,7 @@ it('evita repetir el encabezado de pagina dentro de las tablas academicas', func
         ->not->toContain('<CardDescription');
 });
 
-it('prepara ofertas y paralelos en una hoja de pantalla completa', function (): void {
+it('prepara solo ofertas pendientes en una hoja lateral amplia', function (): void {
     $root = dirname(__DIR__, 2);
     $sheet = file_get_contents(
         $root.'/resources/js/components/domain/academic/PeriodPreparationSheet.vue',
@@ -452,6 +443,8 @@ it('prepara ofertas y paralelos en una hoja de pantalla completa', function (): 
         ->toContain('<Checkbox')
         ->toContain('@update:model-value="row.selected = $event === true"')
         ->toContain('selected: false')
+        ->toContain('preparedSubjectIds')
+        ->toContain('availableRows')
         ->toContain('<Table')
         ->toContain('CareerAcademicStructureController.preparePeriod.url');
 });
@@ -562,7 +555,7 @@ it('agrupa las acciones de tabla en menus accesibles de tres puntos', function (
     $this->assertSame(4, substr_count($catalogs, '<CatalogActions'));
 
     foreach ([
-        'resources/js/components/domain/academic/OfferingsTab.vue' => 2,
+        'resources/js/components/domain/academic/OfferingsTab.vue' => 1,
         'resources/js/components/domain/academic/TeacherAssignmentsPanel.vue' => 1,
     ] as $surface => $expected) {
         $source = file_get_contents($root.'/'.$surface);
@@ -575,7 +568,7 @@ it('agrupa las acciones de tabla en menus accesibles de tres puntos', function (
         $checked += $expected;
     }
 
-    $this->assertSame(13, $checked);
+    $this->assertSame(12, $checked);
 
     $vueFiles = new RecursiveIteratorIterator(
         new RecursiveDirectoryIterator($root.'/resources/js'),
@@ -844,7 +837,7 @@ it('usa el mismo paginador en todas las superficies tabulares', function (): voi
         $checked += $tableCount;
     }
 
-    $this->assertSame(23, $checked);
+    $this->assertSame(22, $checked);
 });
 
 it('ordena busqueda filtros y accion mediante una barra compartida', function (): void {
@@ -942,7 +935,6 @@ it('normaliza los encabezados de todos los modulos autenticados', function (): v
         'resources/js/pages/Coordination/Academic/Curricula.vue',
         'resources/js/pages/Coordination/Academic/CurriculumBuilder.vue',
         'resources/js/pages/Coordination/Academic/Offerings.vue',
-        'resources/js/pages/Coordination/Academic/Parallels.vue',
         'resources/js/pages/Coordination/Academic/TeacherAssignments.vue',
         'resources/js/pages/Coordination/Convocations/Index.vue',
         'resources/js/pages/Coordination/Convocations/Show.vue',
@@ -1059,8 +1051,8 @@ it('normaliza los encabezados de todos los modulos autenticados', function (): v
         );
     }
 
-    $this->assertCount(30, $declaredPages);
-    $this->assertCount(31, $pages);
+    $this->assertCount(29, $declaredPages);
+    $this->assertCount(30, $pages);
 });
 
 it('mantiene explicitamente clasificadas las mutaciones store que permanecen en paginas completas', function (): void {

@@ -41,7 +41,7 @@
 | COR-11 | Fuentes académicas                                               |
 | COR-12 | Informes                                                         |
 | COR-13 | Malla, constructor visual/formulario y materias de la carrera    |
-| COR-14 | Ofertas académicas y paralelos de la carrera, en rutas separadas |
+| COR-14 | Ofertas académicas de la carrera y sus paralelos                 |
 | COR-15 | Asignaciones docentes de la carrera                              |
 
 ## Administrador
@@ -128,19 +128,17 @@
 - La ficha de identificación institucional (bloque «Asignatura», heredado) se pinta fija
   con datos de la malla, la oferta, los paralelos (incluida su jornada) y los docentes;
   no se diseña ni se llena (I-34). Mapa de datos: `docs/product/identificacion-institucional.md`.
-  COR-14 (paralelos) muestra y edita la jornada. **Agregar varios** crea, para una
-  oferta elegida, los códigos separados por coma o línea con una jornada compartida en
-  una única operación; el lote se rechaza completo si algún código ya existe. La tabla
-  de ofertas muestra materia y código en columnas separadas, más el rango de inicio y
-  fin del período institucional, no su nombre. La de paralelos separa materia, código,
-  paralelo, jornada y ese mismo rango, sin una columna de estado.
+  COR-14 concentra sus paralelos dentro de Ofertas. Desde acciones de cada oferta se
+  crea un paralelo con su código y jornada; el servidor rechaza códigos repetidos. La
+  tabla de ofertas muestra materia y código en columnas separadas, más el rango de
+  inicio y fin del período institucional, no su nombre.
 - Indicadores del Panel (UI-01), cuatro por rol y todos accionables: Administración ve
   avance del proceso (% aprobados), días para la entrega, carreras sin convocar y sílabos
   sin iniciar; Coordinación, avance, días, por revisar y sin iniciar; Docencia, sílabos
   por entregar, días, avance de sus borradores y por corregir. Sin conteos de catálogo.
 - El Panel de cada rol abre con «Puesta en marcha»: barra de progreso y los pasos en
   orden (Administración: facultades, carreras, campus, modalidades, periodo, cuentas,
-  coordinadores, plantilla, proceso; Coordinación: malla, ofertas, paralelos, docentes,
+  coordinadores, plantilla, proceso; Coordinación: malla, ofertas (y sus paralelos), docentes,
   fuentes, convocatoria; Docencia: recibir, iniciar, enviar). Cada paso se calcula con
   datos reales; el siguiente lleva su botón y la tarjeta desaparece al completarse. El
   encabezado repite el avance en miniatura (barra con color y «n/m», tooltip
@@ -187,18 +185,17 @@ DOC-01 llena una cuadrícula con una casilla por celda, unidades y totales calcu
   COR-14 abre ofertas sin selector de modalidad: la hereda de la materia o de la carrera
   y la muestra en el listado (I-35).
 - COR-14 no crea ofertas una a una: **Preparar período** abre una hoja lateral amplia
-  con todas las materias activas. Coordinación selecciona las que se dictarán,
-  define sus códigos de paralelo y jornada por fila o de forma masiva; campus y
-  modalidad vienen de la carrera (ADM-04 pide ambos al crearla). Repetirlo no duplica y
-  omitir una materia no elimina una oferta existente. Desde esta misma pantalla se
-  pueden agregar paralelos extra por lote para una oferta concreta.
+  con las materias activas que aún no tienen oferta en el período elegido. Coordinación
+  selecciona las que se dictarán y define su primer paralelo; campus y modalidad vienen
+  de la carrera (ADM-04 pide ambos al crearla). Una materia ya preparada no reaparece
+  aquí: sus paralelos extra se crean desde acciones de su oferta.
 - COR-13 usa una única entrada **Malla**. Si existe, la ruta abre directamente la página
   completa con **Interactivo** (pestaña principal, decisión de los coordinadores) y
   **Desglose académico** (`?modo=desglose`); si no existe, muestra el
   estado vacío universal y la acción para crearla. No presenta buscador, filtros, cards,
   paginación, publicación ni número de versión. Materias, campos y relaciones se
-  consultan y mantienen dentro de esa malla. COR-14 conserva el submenú **Ofertas y
-  paralelos** con una ruta por colección.
+  consultan y mantienen dentro de esa malla. COR-14 conserva una única entrada
+  **Ofertas**; sus paralelos se agregan desde las acciones de cada oferta.
 - COR-13 agrupa **Editar**, **Deshabilitar/Reactivar**, **Eliminar** y **Configurar** en un
   menú de tres puntos, con el mismo patrón de la columna de acciones de las tablas. La
   malla activa o inactiva sigue siendo editable; eliminar se rechaza cuando existen

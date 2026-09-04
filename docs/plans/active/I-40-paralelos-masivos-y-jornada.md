@@ -2,8 +2,9 @@
 
 ## Estado
 
-En verificación: implementación y verificaciones automáticas completas; falta la
-revisión manual de COR-14 indicada por la Definition of Done.
+Sustituido en interfaz por I-45: ya no hay alta masiva visible. El contrato conserva
+la operación atómica para usos internos ya cubiertos, pero Coordinación agrega un
+paralelo por vez desde la acción de su oferta.
 
 ## Trazabilidad
 
@@ -12,14 +13,16 @@ una decisión `POR VALIDAR`.
 
 ## Resultado demostrable
 
-Coordinación puede agregar varios paralelos a una misma oferta en una sola operación,
-indicando sus códigos y una jornada común. La edición de un paralelo vuelve a mostrar su
-jornada. Cada alta conserva alcance por carrera y un evento de auditoría por paralelo.
+El contrato permite altas atómicas de varios paralelos para usos internos. La interfaz
+actual crea un solo paralelo con jornada desde cada oferta; la edición vuelve a mostrar
+la jornada. Cada alta conserva alcance por carrera y un evento de auditoría por
+paralelo.
 
 ## Decisiones y supuestos
 
-- La acción masiva corresponde a paralelos de **una oferta**: una carga para varias
-  ofertas requeriría decidir cómo se emparejan códigos, jornadas y docentes.
+- La operación atómica, si se usa internamente, corresponde a paralelos de **una
+  oferta**: una carga para varias ofertas requeriría decidir cómo se emparejan códigos,
+  jornadas y docentes.
 - Los códigos se escriben separados por coma, punto y coma o salto de línea. Un lote es
   atómico: si un código es inválido o ya existe, no se crea ninguno.
 - «Preparar período» conserva su paralelo inicial `A`, decisión vigente de I-36; no es
@@ -53,9 +56,9 @@ jornada. Cada alta conserva alcance por carrera y un evento de auditoría por pa
 
 ## Riesgos y reversión
 
-La operación puede crear varios registros; la transacción evita estados parciales y cada
-registro puede archivarse desde su menú. No se modifica historia ni datos ya usados por
-un sílabo.
+La operación interna puede crear varios registros; la transacción evita estados
+parciales. Un paralelo sin dependencias puede eliminarse desde su menú; no se modifica
+historia ni datos ya usados por un sílabo.
 
 ## Evidencia de cierre
 

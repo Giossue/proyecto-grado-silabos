@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import OfferingRecordSheet from '@/components/domain/academic/OfferingRecordSheet.vue';
 import OfferingsTab from '@/components/domain/academic/OfferingsTab.vue';
 import PeriodPreparationSheet from '@/components/domain/academic/PeriodPreparationSheet.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
@@ -15,10 +14,7 @@ defineOptions({
 });
 
 defineProps<
-    Pick<
-        AcademicStructureProps,
-        'career' | 'offerings' | 'parallels' | 'options'
-    >
+    Pick<AcademicStructureProps, 'career' | 'offerings' | 'options'>
 >();
 </script>
 
@@ -32,11 +28,7 @@ defineProps<
         <template #actions>
             <PeriodPreparationSheet
                 v-if="!career.lock_reason"
-                :options="options"
-            />
-            <OfferingRecordSheet
-                v-if="!career.lock_reason"
-                entity="paralelo"
+                :offerings="offerings"
                 :options="options"
             />
         </template>
@@ -48,9 +40,7 @@ defineProps<
         />
 
         <OfferingsTab
-            section="offerings"
             :offerings="offerings"
-            :parallels="parallels"
             :options="options"
             :lock-reason="career.lock_reason"
         />

@@ -38,7 +38,7 @@ type PreparationRow = {
     shift: string;
 };
 
-const props = defineProps<Pick<AcademicStructureProps, 'options'>>();
+const props = defineProps<Pick<AcademicStructureProps, 'offerings' | 'options'>>();
 const open = ref(false);
 const rows = ref<PreparationRow[]>([]);
 const bulkCodes = ref('A');
@@ -70,7 +70,22 @@ const codesFor = (value: string): string[] =>
         .map((code) => code.trim())
         .filter(Boolean)
         .filter((code, index, all) => all.indexOf(code) === index);
-const selectedRows = computed(() => rows.value.filter((row) => row.selected));
+const preparedSubjectIds = computed(
+    () =>
+        new Set(
+            props.offerings
+                .filter((offering) => offering.period_id === prepare.period_id)
+                .map((offering) => offering.subject_id),
+        ),
+);
+const availableRows = computed(() =>
+    prepare.period_id === ''
+        ? []
+        : rows.value.filter((row) => !preparedSubjectIds.value.has(row.id)),
+);
+const selectedRows = computed(() =>
+    availableRows.value.filter((row) => row.selected),
+);
 const invalidRows = computed(() =>
     selectedRows.value.filter((row) => codesFor(row.codes).length === 0),
 );
@@ -109,7 +124,7 @@ const applyToSelected = (): void => {
     }
 };
 const selectAll = (selected: boolean): void => {
-    for (const row of rows.value) {
+    for (const row of availableRows.value) {
         row.selected = selected;
     }
 };
@@ -149,7 +164,7 @@ watch(open, (isOpen) => {
         wide
         trigger-label="Preparar período"
         title="Preparar período académico"
-        description="Seleccione las materias que se dictarán y configure sus paralelos. Campus y modalidad se heredan de la carrera; las ofertas o paralelos existentes se conservan."
+        description="Seleccione materias aún no preparadas y configure su primer paralelo. Campus y modalidad se heredan de la carrera; los paralelos extra se agregan desde cada oferta."
     >
         <template #trigger>
             <Button>
@@ -192,6 +207,22 @@ watch(open, (isOpen) => {
                         <AlertDescription>{{ formError }}</AlertDescription>
                     </Alert>
 
+                    <Alert v-if="prepare.period_id === ''">
+                        <AlertDescription>
+                            Seleccione un período para ver las materias que aún no
+                            tienen oferta.
+                        </AlertDescription>
+                    </Alert>
+
+                    <Alert v-else-if="availableRows.length === 0">
+                        <AlertDescription>
+                            Todas las materias activas ya tienen una oferta en este
+                            período. Agregue paralelos desde las acciones de cada
+                            oferta.
+                        </AlertDescription>
+                    </Alert>
+
+                    <template v-else>
                     <div
                         class="flex w-full max-w-5xl flex-col gap-3 rounded-lg border bg-muted/30 p-4 lg:flex-row lg:items-end"
                     >
@@ -260,7 +291,7 @@ watch(open, (isOpen) => {
                             Ninguna
                         </Button>
                         <p class="text-sm text-muted-foreground">
-                            {{ selectedRows.length }} de {{ rows.length }}
+                            {{ selectedRows.length }} de {{ availableRows.length }}
                             materias seleccionadas.
                         </p>
                     </div>
@@ -278,7 +309,7 @@ watch(open, (isOpen) => {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            <TableRow v-for="row in rows" :key="row.id">
+                            <TableRow v-for="row in availableRows" :key="row.id">
                                 <TableCell>
                                     <Checkbox
                                         :model-value="row.selected"
@@ -334,6 +365,7 @@ watch(open, (isOpen) => {
                             código de paralelo.
                         </AlertDescription>
                     </Alert>
+                    </template>
 
                     <FormSheetActions
                         :close="close"
