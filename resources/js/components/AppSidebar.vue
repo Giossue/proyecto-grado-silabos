@@ -132,26 +132,6 @@ const mainNavItems = computed<NavItem[]>(() => [
     ...(activeRole.value?.role === 'coordinador'
         ? [
               {
-                  title: 'Malla',
-                  href: curriculaIndex(),
-                  icon: BookOpenCheck,
-              },
-              {
-                  title: 'Ofertas',
-                  href: offeringsIndex(),
-                  icon: Building2,
-              },
-              {
-                  title: 'Asignación docente',
-                  href: teacherAssignmentsIndex(),
-                  icon: UsersRound,
-              },
-              {
-                  title: 'Fuentes académicas',
-                  href: coordinationSourcesIndex(),
-                  icon: LibraryBig,
-              },
-              {
                   title: 'Convocatorias',
                   href: convocationsIndex(),
                   icon: CalendarRange,
@@ -160,6 +140,26 @@ const mainNavItems = computed<NavItem[]>(() => [
                   title: 'Revisión',
                   href: reviewsIndex(),
                   icon: ClipboardCheck,
+              },
+              {
+                  title: 'Asignación docente',
+                  href: teacherAssignmentsIndex(),
+                  icon: UsersRound,
+              },
+              {
+                  title: 'Ofertas',
+                  href: offeringsIndex(),
+                  icon: Building2,
+              },
+              {
+                  title: 'Malla',
+                  href: curriculaIndex(),
+                  icon: BookOpenCheck,
+              },
+              {
+                  title: 'Fuentes académicas',
+                  href: coordinationSourcesIndex(),
+                  icon: LibraryBig,
               },
               {
                   title: 'Informes',
