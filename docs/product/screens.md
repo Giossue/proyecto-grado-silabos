@@ -158,8 +158,9 @@
   «Elegir otro formato». Un formato nuevo se agrega en código (`tablePresets.ts`).
 DOC-01 llena una cuadrícula con una casilla por celda, unidades y totales calculados;
   COR-05 la muestra tal cual.
-  Las fuentes son documentos editables: COR-11 abre el contenido en un editor Markdown con
-  cinta de opciones y vista previa.
+  Las fuentes son documentos editables: COR-11 abre el contenido como una hoja visual
+  con cinta de opciones; el formato se aplica en tiempo real y el sistema conserva el
+  resultado como Markdown seguro sin mostrar su sintaxis.
 - ADM-02: una cuenta «Pendiente de activación» (contraseña temporal sin cambiar) tiene en
   su menú **Reenviar acceso** (nueva contraseña temporal al correo actual) y
   **Eliminar** (solo sin actividad; con historia, desactivar). Corregir su correo reenvía
