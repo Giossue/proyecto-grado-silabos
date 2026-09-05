@@ -41,8 +41,8 @@ const props = defineProps<{
 }>();
 
 /*
- * Modalidad de la materia: por defecto la de la carrera. Apartarla (tres materias en
- * línea en una carrera presencial) vuelve híbrida la carrera sin que Admin toque nada.
+ * Modalidad de la materia: por defecto la de la carrera. Una excepción (por ejemplo,
+ * una materia en línea en una carrera presencial) no cambia la modalidad de la carrera.
  */
 const modality = ref(props.subject?.modality ?? INHERITED_MODALITY);
 watch(

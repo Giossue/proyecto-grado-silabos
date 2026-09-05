@@ -12,8 +12,8 @@ use Illuminate\Validation\ValidationException;
  * Lo que la oferta hereda en vez de preguntar. El CES aprueba cada carrera para una
  * sede y una modalidad (RRA arts. 70-74): campus y modalidad viven en la carrera.
  * Cualquier materia puede apartarse de la modalidad base (tres materias en línea en
- * una carrera presencial); cuando eso pasa, la carrera es híbrida (art. 74A) sin que
- * nadie lo marque. El sílabo copia ambos datos de la oferta (I-35, I-36, I-37).
+ * una carrera presencial) sin cambiar la modalidad aprobada de la carrera. El sílabo
+ * copia ambos datos de la oferta (I-35, I-36, I-37).
  */
 class OfferingInheritance
 {
@@ -59,30 +59,5 @@ class OfferingInheritance
         }
 
         return $career->campus;
-    }
-
-    /** La carrera combina modalidades: alguna materia activa de la malla activa se aparta de la base. */
-    public function isHybrid(Career $career): bool
-    {
-        if (! $career->modalidad instanceof StudyModality) {
-            return false;
-        }
-
-        return Subject::query()
-            ->where('activo', true)
-            ->whereNotNull('modalidad')
-            ->where('modalidad', '!=', $career->modalidad->value)
-            ->whereHas('curriculum', fn ($query) => $query->where('carrera_id', $career->id)->where('estado', 'activa'))
-            ->exists();
-    }
-
-    /** Etiqueta que ve la gente: la base, o «Híbrida» cuando hay materias apartadas. */
-    public function labelFor(Career $career): ?string
-    {
-        if (! $career->modalidad instanceof StudyModality) {
-            return null;
-        }
-
-        return $this->isHybrid($career) ? StudyModality::HYBRID_LABEL : $career->modalidad->label();
     }
 }

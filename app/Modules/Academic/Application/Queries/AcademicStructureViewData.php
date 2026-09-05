@@ -3,7 +3,6 @@
 namespace App\Modules\Academic\Application\Queries;
 
 use App\Models\User;
-use App\Modules\Academic\Application\OfferingInheritance;
 use App\Modules\Academic\Domain\CurriculumSystemFields;
 use App\Modules\Academic\Domain\StudyModality;
 use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
@@ -30,7 +29,6 @@ class AcademicStructureViewData
     public function __construct(
         private readonly ProcessLocks $locks,
         private readonly InstitutionalLogos $logos,
-        private readonly OfferingInheritance $inheritance,
     ) {}
 
     /** @return array<string, mixed> */
@@ -63,10 +61,10 @@ class AcademicStructureViewData
                             'id' => $career->coordinatorAssignments->first()->user->id,
                             'name' => $career->coordinatorAssignments->first()->user->nombre,
                         ],
-                        // Base elegida por Administración y etiqueta real («Híbrida» si hay materias apartadas).
+                        // Modalidad base aprobada por Administración; las excepciones de
+                        // materias no modifican este dato de la carrera.
                         'modality' => $career->modalidad?->value,
-                        'modality_label' => $this->inheritance->labelFor($career),
-                        'hybrid' => $this->inheritance->isHybrid($career),
+                        'modality_label' => $career->modalidad?->label(),
                         'campus_id' => $career->campus_id,
                         'campus_name' => $career->campus?->nombre,
                         'code' => $career->codigo_institucional,
@@ -183,11 +181,10 @@ class AcademicStructureViewData
             'career' => [
                 'id' => $career->id,
                 'name' => $career->nombre,
-                // Base de la carrera; `hybrid` cuando alguna materia se aparta de ella.
+                // Base aprobada de la carrera; una materia puede tener una excepción.
                 'modality' => $career->modalidad === null ? null : [
                     'value' => $career->modalidad->value,
                     'label' => $career->modalidad->label(),
-                    'hybrid' => $this->inheritance->isHybrid($career),
                 ],
             ],
             'curriculum' => [

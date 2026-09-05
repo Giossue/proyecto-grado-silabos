@@ -1,7 +1,7 @@
 /**
  * Modalidades del Reglamento de Régimen Académico (arts. 70-74). Espejo de
- * `StudyModality` en PHP. «Híbrida» no se elige: aparece sola cuando alguna materia
- * se aparta de la modalidad base de la carrera.
+ * `StudyModality` en PHP. La modalidad base de la carrera permanece visible aunque
+ * una materia tenga una modalidad distinta.
  */
 export const STUDY_MODALITIES = [
     { value: 'presencial', label: 'Presencial' },
@@ -9,8 +9,6 @@ export const STUDY_MODALITIES = [
     { value: 'en_linea', label: 'En línea' },
     { value: 'a_distancia', label: 'A distancia' },
 ] as const;
-
-export const HYBRID_LABEL = 'Híbrida';
 
 /** Valor del selector de materia que significa «la de la carrera». */
 export const INHERITED_MODALITY = 'heredada';

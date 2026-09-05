@@ -178,12 +178,12 @@ DOC-01 llena una cuadrícula con una casilla por celda, unidades y totales calcu
   Carreras, Campus y Periodos académicos. Carreras muestra su Facultad, su Modalidad y
   su Campus, Facultades muestra la cantidad relacionada; los catálogos no se mezclan ni
   se ocultan en pestañas.
-- La modalidad se fija por carrera (obligatoria al crearla; la aprueba el CES) y no por
-  oferta. No hay catálogo: son las del reglamento (presencial, semipresencial, en línea,
-  a distancia). Cualquier materia puede apartarse en COR-13 («Igual que la carrera» o
-  una distinta); si alguna se aparta, la carrera aparece como «Híbrida» sola (I-37).
-  COR-14 abre ofertas sin selector de modalidad: la hereda de la materia o de la carrera
-  y la muestra en el listado (I-35).
+- La modalidad base se fija por carrera (obligatoria al crearla; la aprueba el CES) y
+  no por oferta. No hay catálogo: son las del reglamento (presencial, semipresencial, en
+  línea, a distancia). Cualquier materia puede apartarse en COR-13 («Igual que la
+  carrera» o una distinta), sin cambiar la modalidad visible de la carrera. COR-14 abre
+  ofertas sin selector de modalidad: hereda la de la materia o, si no hay excepción, la
+  de la carrera y la muestra en el listado (I-35).
 - COR-14 no crea ofertas una a una: **Preparar período** abre una hoja lateral amplia
   con las materias activas que aún no tienen oferta en el período elegido. Coordinación
   selecciona las que se dictarán y define uno o más paralelos, cada uno con su jornada;

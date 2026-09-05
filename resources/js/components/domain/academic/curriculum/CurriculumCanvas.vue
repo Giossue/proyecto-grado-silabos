@@ -144,18 +144,11 @@ const legendUnits = computed(() =>
         style: unitStyleFor(unit),
     })),
 );
-const apartedCount = computed(
-    () => props.subjects.filter((subject) => subject.modality !== null).length,
-);
 const summaryRows = computed(() => [
     {
         id: 'modality',
         label: 'Modalidad',
-        value: props.career.modality
-            ? props.career.modality.hybrid
-                ? `Híbrida · ${apartedCount.value} apartadas`
-                : props.career.modality.label
-            : '—',
+        value: props.career.modality?.label ?? '—',
     },
     {
         id: 'subjects',

@@ -3,7 +3,6 @@
 namespace App\Modules\Academic\Application\Actions;
 
 use App\Models\User;
-use App\Modules\Academic\Application\OfferingInheritance;
 use App\Modules\Academic\Domain\AcademicStructurePermissions;
 use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Campus;
@@ -55,7 +54,6 @@ class UpdateAcademicRecord
         private readonly ActiveRole $roles,
         private readonly RecordAuditEvent $audit,
         private readonly InstitutionalLogos $logos,
-        private readonly OfferingInheritance $inheritance,
         private readonly ProcessLocks $locks,
     ) {}
 
@@ -86,13 +84,6 @@ class UpdateAcademicRecord
             }
 
             $record->fill($attributes);
-            if ($record instanceof Career && $record->isDirty('modalidad') && $this->inheritance->isHybrid($record->fresh() ?? $record)) {
-                // Ver «Híbrida» y querer «arreglarlo» desde aquí borraría lo que decidió
-                // Coordinación materia por materia: la base solo cambia con la malla alineada.
-                throw ValidationException::withMessages([
-                    'modality' => 'La carrera es híbrida porque Coordinación apartó materias de la modalidad base. Para cambiar la base, Coordinación debe alinear primero esas materias en la malla.',
-                ]);
-            }
             if ($record instanceof Faculty && ($data['logo'] ?? null) instanceof UploadedFile) {
                 $record->logo_ruta = $this->logos->storeFaculty($record, $data['logo']);
             }

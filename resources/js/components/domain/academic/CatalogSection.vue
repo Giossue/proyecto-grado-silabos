@@ -301,7 +301,6 @@ const {
                                 :active="career.active"
                                 :faculty-id="career.faculty_id"
                                 :modality="career.modality"
-                                :hybrid="career.hybrid"
                                 :campus-id="career.campus_id"
                                 :faculties="catalogs.faculties"
                                 :campuses="catalogs.campuses"

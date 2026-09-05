@@ -1,15 +1,23 @@
-# Auditoría de esquema sin uso
+# Auditoría estática de esquema sin uso
 
-## Tablas sin referencia en código de producción
-- (ninguna)
+Generado por `python3 temp/audit_unused_schema.py`. No consultó una base de datos ni registros.
+El esquema se obtuvo de los métodos `up` de las migraciones; migraciones, documentación y artefactos no cuentan como uso.
 
-## Columnas sin referencia (tablas usadas)
-- (ninguna)
+## Resultado
+- Tablas de dominio reconstruidas: **52**
+- Modelos Eloquent mapeados: **50**
+- Tablas candidatas: **0**
+- Columnas candidatas: **0**
 
-## $fillable declara columnas que no existen (error real)
-- (ninguna)
+## Tablas sin consumidor de producción identificable
+- Ninguna.
 
-## Columnas fuera de $fillable (informativo: relación/solo lectura)
-- (ninguna)
+## Columnas sin lectura/escritura identificable
+- Ninguna.
 
-Tablas de dominio analizadas: 56 · modelos con $table: 54
+## Cómo interpretar
+
+- **sin referencia**: no apareció en `app`, `routes`, `config` ni `resources/js`; es el candidato de mayor prioridad para revisión.
+- **solo soporte**: aparece únicamente en pruebas, factories o seeders; puede ser deuda de esquema o una ruta aún no implementada.
+- El análisis no demuestra que una columna sea eliminable: una clave foránea, historial, SQL dinámico, JSON o integración pueden necesitarla aunque no aparezca como palabra literal.
+- Antes de eliminar: verificar restricciones/FK, migrar en una copia y conservar una migración reversible según `docs/security/hardening.md`.

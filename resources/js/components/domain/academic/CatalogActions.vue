@@ -33,7 +33,6 @@ defineProps<{
     active: boolean;
     facultyId?: string | null;
     modality?: string | null;
-    hybrid?: boolean;
     campusId?: string | null;
     startsOn?: string | null;
     endsOn?: string | null;
@@ -105,7 +104,6 @@ const deleteOpen = ref(false);
             :record-code="recordCode"
             :faculty-id="facultyId"
             :modality="modality"
-            :hybrid="hybrid"
             :campus-id="campusId"
             :campuses="campuses"
             :logo-url="logoUrl"

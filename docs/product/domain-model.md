@@ -39,9 +39,9 @@ aplicación.
 `Campus` es catálogo; la modalidad no: son los valores fijos del Reglamento de Régimen
 Académico (`StudyModality`). La oferta no elige ninguno de los dos: hereda el campus de
 la carrera (`carreras.campus_id`, I-36) y la modalidad de la materia si se apartó
-(`asignaturas.modalidad`) o de la base de la carrera (`carreras.modalidad`, I-35, I-37).
-Si alguna materia se aparta, la carrera es híbrida sin marcarlo. La oferta conserva las
-copias porque el sílabo toma de ahí campus y modalidad.
+(`asignaturas.modalidad`) o de la base aprobada de la carrera (`carreras.modalidad`,
+I-35, I-37). La excepción de una materia no cambia ni recalifica la modalidad de la
+carrera. La oferta conserva las copias porque el sílabo toma de ahí campus y modalidad.
 
 `PeriodoAcademico` es un catálogo institucional único: su código no se repite entre
 carreras. Aunque la fuente histórica lo replique por carrera, el producto lo consolida

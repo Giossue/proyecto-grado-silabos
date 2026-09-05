@@ -4,9 +4,8 @@ namespace App\Modules\Academic\Domain;
 
 /**
  * Modalidades de estudio del Reglamento de Régimen Académico (arts. 70-74). Son las
- * únicas que existen en Ecuador, así que van en código y no en un catálogo. «Híbrida»
- * (art. 74A) no se elige: es lo que resulta cuando alguna materia de la malla se aparta
- * de la modalidad base de la carrera (I-35, I-37).
+ * únicas que existen en Ecuador, así que van en código y no en un catálogo. La
+ * modalidad aprobada de la carrera se conserva aunque una materia use otra distinta.
  */
 enum StudyModality: string
 {
@@ -14,8 +13,6 @@ enum StudyModality: string
     case Semipresencial = 'semipresencial';
     case EnLinea = 'en_linea';
     case ADistancia = 'a_distancia';
-
-    public const HYBRID_LABEL = 'Híbrida';
 
     public function label(): string
     {

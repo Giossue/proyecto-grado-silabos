@@ -972,8 +972,8 @@ class AcademicStructureTest extends TestCase
             ->assertSessionHasErrors('subject_id');
     }
 
-    /** I-37: una materia apartada de la base vuelve híbrida la carrera (RRA art. 74A) sin marcar nada. */
-    public function test_a_subject_with_its_own_modality_makes_the_career_hybrid(): void
+    /** I-37: una excepción de materia no cambia la modalidad base de la carrera. */
+    public function test_a_subject_can_override_the_base_modality_without_changing_the_career(): void
     {
         $career = Career::query()->findOrFail($this->coordinatorContext->carrera_id);
         $curriculum = Curriculum::query()->active()->where('carrera_id', $career->id)->firstOrFail();
@@ -999,8 +999,7 @@ class AcademicStructureTest extends TestCase
         $this->actingAsAdministrator()
             ->get(route('admin.academic.index', 'carreras'))
             ->assertInertia(fn (Assert $page) => $page
-                ->where('catalogs.careers.0.modality_label', 'Presencial')
-                ->where('catalogs.careers.0.hybrid', false));
+                ->where('catalogs.careers.0.modality_label', 'Presencial'));
 
         $this->actingAsCoordinator()
             ->patch(route('coordination.academic.update', ['entity' => 'asignatura', 'record' => $subject->id]), [...$payload, 'modality' => 'en_linea'])
@@ -1011,8 +1010,7 @@ class AcademicStructureTest extends TestCase
             ->get(route('admin.academic.index', 'carreras'))
             ->assertInertia(fn (Assert $page) => $page
                 ->where('catalogs.careers.0.modality', 'presencial')
-                ->where('catalogs.careers.0.modality_label', 'Híbrida')
-                ->where('catalogs.careers.0.hybrid', true));
+                ->where('catalogs.careers.0.modality_label', 'Presencial'));
 
         $reference = CourseOffering::query()->firstOrFail();
         $this->actingAsCoordinator()
@@ -1024,7 +1022,7 @@ class AcademicStructureTest extends TestCase
             ->assertSessionHasNoErrors();
         $this->assertSame(StudyModality::EnLinea, CourseOffering::query()->where('asignatura_id', $subject->id)->firstOrFail()->modalidad);
 
-        // Admin ve «Híbrida» y quiere «corregirla»: no puede pisar lo que decidió Coordinación.
+        // La excepción de la materia no convierte ni bloquea la modalidad de la carrera.
         $this->actingAsAdministrator()
             ->from(route('admin.academic.index', 'carreras'))
             ->patch(route('admin.academic.update', ['entity' => 'carrera', 'record' => $career->id]), [
@@ -1034,19 +1032,9 @@ class AcademicStructureTest extends TestCase
                 'code' => $career->codigo_institucional,
                 'nombre' => $career->nombre,
             ])
-            ->assertSessionHasErrors('modality');
-        $this->assertSame(StudyModality::Presencial, $career->fresh()->modalidad);
-        // Dejarla igual sigue siendo válido (renombrar, mover de facultad).
-        $this->actingAsAdministrator()
-            ->patch(route('admin.academic.update', ['entity' => 'carrera', 'record' => $career->id]), [
-                'faculty_id' => $career->facultad_id,
-                'modality' => 'presencial',
-                'campus_id' => $career->campus_id,
-                'code' => $career->codigo_institucional,
-                'nombre' => 'Software renombrada',
-            ])
             ->assertRedirect()
             ->assertSessionHasNoErrors();
+        $this->assertSame(StudyModality::EnLinea, $career->fresh()->modalidad);
     }
 
     /** I-36: preparar solo acepta materias que aún no tienen oferta en el período. */

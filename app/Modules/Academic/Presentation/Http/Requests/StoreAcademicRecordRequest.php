@@ -197,7 +197,7 @@ class StoreAcademicRecordRequest extends FormRequest
             'cycle' => ['required', 'integer', 'min:1', 'max:30'],
             'position' => ['nullable', 'integer', 'min:0', 'max:999'],
             'organization_unit' => ['required', 'string', 'max:80'],
-            // Vacío = la de la carrera; otra cosa aparta la materia y vuelve híbrida la carrera.
+            // Vacío = la de la carrera; otra modalidad es una excepción de la materia.
             'modality' => ['nullable', 'string', Rule::in(StudyModality::values())],
             'creditos' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
             'horas_totales' => ['nullable', 'integer', 'min:0', 'max:65535'],

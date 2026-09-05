@@ -33,7 +33,6 @@ const props = withDefaults(
         recordCode: string | null;
         facultyId?: string | null;
         modality?: string | null;
-        hybrid?: boolean;
         campusId?: string | null;
         startsOn?: string | null;
         endsOn?: string | null;
@@ -45,7 +44,6 @@ const props = withDefaults(
     {
         showTrigger: true,
         campuses: () => [],
-        hybrid: false,
     },
 );
 

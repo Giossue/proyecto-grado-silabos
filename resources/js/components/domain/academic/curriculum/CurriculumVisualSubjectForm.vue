@@ -41,7 +41,7 @@ const props = defineProps<{
     organizationUnits: string[];
 }>();
 
-/** Por defecto la de la carrera; apartarla vuelve híbrida la carrera. */
+/** Por defecto la de la carrera; una excepción no modifica la modalidad base. */
 const modality = ref(props.subject?.modality ?? INHERITED_MODALITY);
 watch(
     () => props.subject?.modality,

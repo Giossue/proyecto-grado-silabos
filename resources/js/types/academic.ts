@@ -44,10 +44,9 @@ export type AcademicStructureProps = {
         careers: {
             id: string;
             faculty_id: string;
-            /** Base elegida por Administración; `modality_label` dice «Híbrida» si hay materias apartadas. */
+            /** Modalidad base elegida por Administración. */
             modality: string | null;
             modality_label: string | null;
-            hybrid: boolean;
             /** Quién coordina hoy; nulo si la carrera no tiene coordinación vigente. */
             coordinator: { id: string; name: string } | null;
             campus_id: string | null;
@@ -160,7 +159,7 @@ export type CurriculumBuilderSubject = {
     cycle: number | null;
     position: number;
     organization_unit: string | null;
-    /** Vacío = la de la carrera. Con valor, la materia se aparta y la carrera es híbrida. */
+    /** Vacío = la de la carrera. Con valor, la materia tiene una excepción de modalidad. */
     modality: string | null;
     modality_label: string | null;
     credits: string | null;
@@ -179,8 +178,8 @@ export type CurriculumBuilderProps = {
     career: {
         id: string;
         name: string;
-        /** Base aprobada; `hybrid` cuando alguna materia se aparta de ella. */
-        modality: { value: string; label: string; hybrid: boolean } | null;
+        /** Modalidad base aprobada por Administración. */
+        modality: { value: string; label: string } | null;
     };
     curriculum: {
         id: string;
