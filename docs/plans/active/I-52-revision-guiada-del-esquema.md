@@ -26,14 +26,19 @@ decisión de producto antes de modificar código o persistencia.
 |---|---|---|
 | `usuarios` | Retirar `desactivado_en`, `actualizado_en` y `documento_identidad`; el estado presente es `activo` y la historia queda en auditoría. | I-50, migración `000040`, aplicada local y remotamente. |
 | `usuarios` | Retirar `vigente_desde` y `vigente_hasta`; esas fechas no se conocen de modo estable. La disponibilidad depende de cuenta activa y rol/asignación. | I-51, migración `000041`, aplicada local y remotamente. |
+| `convocatorias_universidad` | Renombrar `procesos_silabos` para expresar que representa la convocatoria institucional administrada por la Universidad. | Migración `000042`, aplicada local y remotamente. |
+| `convocatorias_carreras` | Renombrar `convocatorias` para distinguir el alcance operativo de cada carrera. | Migración `000042`, aplicada local y remotamente. |
+| `convocatorias_universidad` y `convocatorias_carreras` | Retirar `nombre`; se deriva del período y, para la carrera, de la carrera relacionada. | Migración `000043`, aplicada local y remotamente. |
+| `convocatorias_carreras` | Retirar `modo_agrupacion`; la regla universal confirmada es un sílabo por paralelo. | Migración `000044`, aplicada local y remotamente. |
+| `convocatorias_universidad` | Retirar `creado_por`, `abierto_por`, `abierto_en`, `pausado_en`, `cerrado_en` y `actualizado_en`; el estado actual permanece y la historia de actores/transiciones vive en auditoría. | Migración `000045`, con respaldos verificados y aplicada local y remotamente. |
+| `convocatorias_carreras` | Retirar `periodo_academico_id` y `plantilla_id`, heredados mediante `proceso_id`; retirar además actores, marcas de transición y `actualizado_en`, conservados en auditoría. La unicidad pasa a `carrera_id + proceso_id`. | Migración `000045`, con respaldos verificados y aplicada local y remotamente. |
+| Trigger `validar_evidencia_ia` | Sustituir la referencia histórica a `convocatorias` por `convocatorias_carreras` para mantener la validación de alcance de fuentes. | Incluido en migración `000045`, verificado local y remotamente. |
 
 ## Hallazgos pendientes de decisión
 
 | Tabla | Función actual | Recomendación inicial |
 |---|---|---|
 | `sesiones` | Sesiones web de Laravel con driver `database`; permite cerrar todas las sesiones de una cuenta al desactivarla o reenviar credenciales. | Conservar mientras `SESSION_DRIVER=database`. Solo desaparecería al migrar el driver a Redis u otro almacenamiento, con una decisión explícita de operación y persistencia. |
-| `convocatorias_universidad` | Calendario institucional: un proceso por período, con plantilla, fechas y estado global; Administración lo abre/pausa/cierra. | Renombrada desde `procesos_silabos`; revisar después si `nombre` es redundante. |
-| `convocatorias_carreras` | Alcance operativo de una carrera dentro de una convocatoria institucional; permite iniciar o pausar su propio trabajo y genera un sílabo por paralelo cuando cumple requisitos. | Renombrada desde `convocatorias`; conservar mientras las carreras operen de forma independiente. |
 
 ## Pendiente de revisión
 

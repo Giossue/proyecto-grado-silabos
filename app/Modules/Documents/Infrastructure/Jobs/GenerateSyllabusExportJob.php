@@ -69,7 +69,7 @@ class GenerateSyllabusExportJob implements ShouldQueue
         $artifact = ExportArtifact::query()->with([
             'revision',
             'syllabus.subject',
-            'syllabus.convocation.academicPeriod',
+            'syllabus.convocation.process.academicPeriod',
         ])->findOrFail($this->artifactId);
         if (! Approval::query()->where('revision_silabo_id', $artifact->revision_silabo_id)->exists()) {
             throw new RuntimeException('La revisión dejó de estar aprobada.');
@@ -80,7 +80,7 @@ class GenerateSyllabusExportJob implements ShouldQueue
         $bundle = $renderer->render(new DocumentRenderInput(
             subject: $syllabus->academicSubjectName(),
             subjectCode: $syllabus->academicSubjectCode(),
-            academicPeriod: $syllabus->convocation->academicPeriod->nombre,
+            academicPeriod: $syllabus->convocation->process->academicPeriod->nombre,
             revisionNumber: $revision->numero_revision,
             revisionFingerprint: $revision->huella_sha256,
             templateId: $artifact->plantilla_id,

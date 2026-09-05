@@ -210,10 +210,7 @@ class TeacherReliefTest extends TestCase
     {
         [$template, $source] = $this->publishedConfiguration();
         $this->actingAsCoordinator()->post(route('convocations.store'), [
-            'nombre' => 'Convocatoria de relevo',
-            'period_id' => CourseOffering::query()->firstOrFail()->periodo_academico_id,
             'process_id' => $this->openSyllabusProcess($template->id, now()->subDay()->toIso8601String(), now()->addMonth()->toIso8601String())->id,
-            'grouping_mode' => 'por_paralelo',
             'source_ids' => [$source->id],
         ])->assertRedirect();
         $convocation = Convocation::query()->latest('creado_en')->firstOrFail();

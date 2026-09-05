@@ -45,7 +45,7 @@ class ReviewController extends Controller
             ->whereHas('convocation', fn ($convocation) => $convocation->where('carrera_id', $activeRole?->carrera_id))
             ->whereHas('revisions')
             ->with([
-                'convocation.academicPeriod:id,nombre',
+                'convocation.process.academicPeriod:id,nombre',
                 'subject:id,nombre,codigo_institucional',
                 'teachers:id,nombre',
                 'revisions' => fn ($revision) => $revision
@@ -77,7 +77,7 @@ class ReviewController extends Controller
                         'revision_number' => $revision?->numero_revision,
                         'subject' => $syllabus->academicSubjectName(),
                         'code' => $syllabus->academicSubjectCode(),
-                        'period' => $syllabus->convocation->academicPeriod->nombre,
+                        'period' => $syllabus->convocation->process->academicPeriod->nombre,
                         'state' => $syllabus->estado,
                         'teachers' => $syllabus->teachers->pluck('nombre')->values(),
                         'unresolved_observations' => (int) $syllabus->unresolved_observations_count,
@@ -196,14 +196,14 @@ class ReviewController extends Controller
         if ($before->numero_revision > $after->numero_revision) {
             [$before, $after] = [$after, $before];
         }
-        $syllabus = $before->syllabus()->with(['subject', 'convocation.academicPeriod'])->firstOrFail();
+        $syllabus = $before->syllabus()->with(['subject', 'convocation.process.academicPeriod'])->firstOrFail();
 
         return Inertia::render('Syllabi/Compare', [
             'syllabus' => [
                 'id' => $syllabus->id,
                 'subject' => $syllabus->academicSubjectName(),
                 'code' => $syllabus->academicSubjectCode(),
-                'period' => $syllabus->convocation->academicPeriod->nombre,
+                'period' => $syllabus->convocation->process->academicPeriod->nombre,
             ],
             'comparison' => $diff->compare($before, $after),
         ]);
@@ -215,7 +215,7 @@ class ReviewController extends Controller
         $revision->load([
             'submitter:id,nombre',
             'syllabus.subject',
-            'syllabus.convocation.academicPeriod',
+            'syllabus.convocation.process.academicPeriod',
             'syllabus.teachers:id,nombre',
             'syllabus.revisions.submitter:id,nombre',
             'syllabus.revisions.observations.creator:id,nombre',
@@ -233,7 +233,7 @@ class ReviewController extends Controller
                 'id' => $syllabus->id,
                 'subject' => $syllabus->academicSubjectName(),
                 'code' => $syllabus->academicSubjectCode(),
-                'period' => $syllabus->convocation->academicPeriod->nombre,
+                'period' => $syllabus->convocation->process->academicPeriod->nombre,
                 'state' => $syllabus->estado,
                 'teachers' => $syllabus->teachers->pluck('nombre')->values(),
             ],

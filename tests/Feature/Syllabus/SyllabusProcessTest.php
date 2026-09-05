@@ -15,6 +15,7 @@ use App\Modules\Syllabus\Infrastructure\Persistence\Models\SyllabusProcess;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -40,6 +41,19 @@ class SyllabusProcessTest extends TestCase
     private User $teacher;
 
     private RoleAssignment $teacherContext;
+
+    public function test_convocation_tables_store_only_current_state_and_non_redundant_configuration(): void
+    {
+        foreach (['periodo_academico_id', 'plantilla_id', 'creado_por', 'abierto_por', 'abierto_en', 'cerrado_en', 'actualizado_en'] as $column) {
+            $this->assertFalse(Schema::hasColumn('convocatorias_carreras', $column));
+        }
+        foreach (['creado_por', 'abierto_por', 'abierto_en', 'pausado_en', 'cerrado_en', 'actualizado_en'] as $column) {
+            $this->assertFalse(Schema::hasColumn('convocatorias_universidad', $column));
+        }
+
+        $this->assertTrue(Schema::hasColumns('convocatorias_carreras', ['id', 'carrera_id', 'proceso_id', 'estado', 'creado_en']));
+        $this->assertTrue(Schema::hasColumns('convocatorias_universidad', ['id', 'periodo_academico_id', 'plantilla_id', 'inicia_en', 'entrega_en', 'estado', 'creado_en']));
+    }
 
     protected function setUp(): void
     {
@@ -219,8 +233,8 @@ class SyllabusProcessTest extends TestCase
 
         $convocation = Convocation::query()->firstOrFail();
         $this->assertSame($process->id, $convocation->proceso_id);
-        $this->assertSame($process->periodo_academico_id, $convocation->periodo_academico_id);
-        $this->assertSame($template->id, $convocation->plantilla_id);
+        $this->assertSame($process->periodo_academico_id, $convocation->process->periodo_academico_id);
+        $this->assertSame($template->id, $convocation->process->plantilla_id);
         $this->assertSame('abierta', $convocation->estado);
         $this->assertTrue($convocation->sources()->whereKey($source->id)->exists());
         $this->assertDatabaseHas('fechas_limite_convocatoria', [
@@ -236,9 +250,13 @@ class SyllabusProcessTest extends TestCase
 
         $this->assertDatabaseCount('silabos', 1);
 
-        // La regla también vive en PostgreSQL, por si una mutación evita el caso de uso.
+        // La unicidad también vive en PostgreSQL, por si una mutación evita el caso de uso.
         $this->expectException(QueryException::class);
-        $convocation->update(['periodo_academico_id' => $otherPeriod->id]);
+        Convocation::query()->create([
+            'carrera_id' => $convocation->carrera_id,
+            'proceso_id' => $process->id,
+            'estado' => Convocation::STATE_PREPARATION,
+        ]);
     }
 
     public function test_an_open_process_freezes_the_template_until_it_is_paused(): void
@@ -490,7 +508,7 @@ class SyllabusProcessTest extends TestCase
             ->post(route('convocations.transition', [$convocation, 'pausar']), ['reason' => 'Corrección de la malla antes de continuar.'])
             ->assertRedirect();
         $this->actingAsCoordinator()->patch('/coordinacion/convocatorias/'.$convocation->id, $payload)->assertMethodNotAllowed();
-        $this->assertSame($convocation->career->nombre.' · '.$convocation->academicPeriod->nombre, $convocation->fresh()->nombre);
+        $this->assertSame($convocation->career->nombre.' · '.$convocation->process->academicPeriod->nombre, $convocation->fresh()->nombre);
 
         // Cerrar no es de la carrera: lo decide Administración cerrando el proceso.
         $this->actingAsCoordinator()->post(route('convocations.transition', [$convocation, 'cerrar']))->assertNotFound();

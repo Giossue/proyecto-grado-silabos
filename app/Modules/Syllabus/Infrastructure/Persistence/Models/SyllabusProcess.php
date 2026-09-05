@@ -2,7 +2,6 @@
 
 namespace App\Modules\Syllabus\Infrastructure\Persistence\Models;
 
-use App\Models\User;
 use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
 use Carbon\CarbonImmutable;
@@ -23,11 +22,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property CarbonImmutable $inicia_en
  * @property CarbonImmutable $entrega_en
  * @property string $estado
- * @property string $creado_por
- * @property string|null $abierto_por
- * @property CarbonImmutable|null $abierto_en
- * @property CarbonImmutable|null $pausado_en
- * @property CarbonImmutable|null $cerrado_en
+ * @property-read string $nombre
  * @property-read SyllabusTemplate $template
  */
 class SyllabusProcess extends Model
@@ -36,7 +31,7 @@ class SyllabusProcess extends Model
 
     public const CREATED_AT = 'creado_en';
 
-    public const UPDATED_AT = 'actualizado_en';
+    public const UPDATED_AT = null;
 
     public const STATE_PREPARATION = 'preparacion';
 
@@ -59,7 +54,6 @@ class SyllabusProcess extends Model
     /** @var list<string> */
     protected $fillable = [
         'plantilla_id', 'periodo_academico_id', 'inicia_en', 'entrega_en', 'estado',
-        'creado_por', 'abierto_por', 'abierto_en', 'pausado_en', 'cerrado_en',
     ];
 
     /** @return array<string, string> */
@@ -68,16 +62,14 @@ class SyllabusProcess extends Model
         return [
             'inicia_en' => 'immutable_datetime',
             'entrega_en' => 'immutable_datetime',
-            'abierto_en' => 'immutable_datetime',
-            'pausado_en' => 'immutable_datetime',
-            'cerrado_en' => 'immutable_datetime',
         ];
     }
 
+    /** @return Attribute<string, never> */
     protected function nombre(): Attribute
     {
         return Attribute::get(fn (): string => $this->relationLoaded('academicPeriod')
-            ? ($this->academicPeriod?->nombre ?? 'Período')
+            ? $this->academicPeriod->nombre
             : ($this->academicPeriod()->value('nombre') ?? 'Período'));
     }
 
@@ -112,12 +104,6 @@ class SyllabusProcess extends Model
     public function academicPeriod(): BelongsTo
     {
         return $this->belongsTo(AcademicPeriod::class, 'periodo_academico_id');
-    }
-
-    /** @return BelongsTo<User, $this> */
-    public function creator(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'creado_por');
     }
 
     /** @return HasMany<Convocation, $this> */

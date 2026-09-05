@@ -55,7 +55,6 @@ class CreateSyllabusProcess
                 'inicia_en' => $data['starts_at'],
                 'entrega_en' => $data['due_at'],
                 'estado' => SyllabusProcess::STATE_PREPARATION,
-                'creado_por' => $actor->id,
             ]);
 
             $this->audit->execute(

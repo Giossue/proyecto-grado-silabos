@@ -3,7 +3,6 @@
 namespace Tests\Feature\Documents;
 
 use App\Models\User;
-use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Faculty;
@@ -184,7 +183,7 @@ class DocumentOperationsTest extends TestCase
         $input = new DocumentRenderInput(
             subject: $syllabus->subject()->valueOrFail('nombre'),
             subjectCode: $syllabus->subject()->valueOrFail('codigo_institucional'),
-            academicPeriod: $syllabus->convocation->academicPeriod()->valueOrFail('nombre'),
+            academicPeriod: $syllabus->convocation->process->academicPeriod()->valueOrFail('nombre'),
             revisionNumber: $revision->numero_revision,
             revisionFingerprint: $revision->huella_sha256,
             templateId: $syllabus->plantilla_id,
@@ -414,7 +413,6 @@ class DocumentOperationsTest extends TestCase
     private function approvedRevision(): array
     {
         $career = Career::query()->firstOrFail();
-        $period = AcademicPeriod::query()->firstOrFail();
         $subject = Subject::query()->firstOrFail();
         $version = SyllabusTemplate::query()->create([
             'nombre' => 'Plantilla documental CP-F',
@@ -424,15 +422,8 @@ class DocumentOperationsTest extends TestCase
         ]);
         $convocation = Convocation::query()->create([
             'carrera_id' => $career->id,
-            'periodo_academico_id' => $period->id,
-            'plantilla_id' => $version->id,
             'proceso_id' => $this->openSyllabusProcess($version->id)->id,
-            'nombre' => 'Convocatoria documental CP-F',
             'estado' => 'abierta',
-            'modo_agrupacion' => 'por_oferta',
-            'creado_por' => $this->coordinator->id,
-            'abierto_por' => $this->coordinator->id,
-            'abierto_en' => now(),
         ]);
         $syllabus = Syllabus::query()->create([
             'convocatoria_id' => $convocation->id,
@@ -515,15 +506,8 @@ class DocumentOperationsTest extends TestCase
         ]);
         $convocation = Convocation::query()->create([
             'carrera_id' => $career->id,
-            'periodo_academico_id' => AcademicPeriod::query()->valueOrFail('id'),
-            'plantilla_id' => $template->id,
             'proceso_id' => $this->openSyllabusProcess($template->id)->id,
-            'nombre' => 'Convocatoria fuera de alcance',
             'estado' => 'abierta',
-            'modo_agrupacion' => 'por_oferta',
-            'creado_por' => $this->coordinator->id,
-            'abierto_por' => $this->coordinator->id,
-            'abierto_en' => now(),
         ]);
 
         return Syllabus::query()->create([

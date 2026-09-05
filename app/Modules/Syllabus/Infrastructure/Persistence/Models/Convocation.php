@@ -2,12 +2,8 @@
 
 namespace App\Modules\Syllabus\Infrastructure\Persistence\Models;
 
-use App\Models\User;
-use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\AcademicSource;
-use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
-use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -20,14 +16,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $id
  * @property string $carrera_id
  * @property string $proceso_id
- * @property string $periodo_academico_id
- * @property string $plantilla_id
  * @property string $estado
- * @property CarbonImmutable|null $abierto_en
+ * @property-read string $nombre
  * @property-read Career $career
  * @property-read SyllabusProcess $process
- * @property-read AcademicPeriod $academicPeriod
- * @property-read SyllabusTemplate $template
  */
 class Convocation extends Model
 {
@@ -35,7 +27,7 @@ class Convocation extends Model
 
     public const CREATED_AT = 'creado_en';
 
-    public const UPDATED_AT = 'actualizado_en';
+    public const UPDATED_AT = null;
 
     public const STATE_PREPARATION = 'preparacion';
 
@@ -49,8 +41,7 @@ class Convocation extends Model
 
     /** @var list<string> */
     protected $fillable = [
-        'carrera_id', 'proceso_id', 'periodo_academico_id', 'plantilla_id', 'estado',
-        'creado_por', 'abierto_por', 'abierto_en', 'cerrado_en',
+        'carrera_id', 'proceso_id', 'estado',
     ];
 
     /**
@@ -78,21 +69,19 @@ class Convocation extends Model
         return $this->belongsTo(SyllabusProcess::class, 'proceso_id');
     }
 
-    /** @return array<string, string> */
-    protected function casts(): array
-    {
-        return ['abierto_en' => 'immutable_datetime', 'cerrado_en' => 'immutable_datetime'];
-    }
-
+    /** @return Attribute<string, never> */
     protected function nombre(): Attribute
     {
         return Attribute::get(function (): string {
             $career = $this->relationLoaded('career')
-                ? $this->career?->nombre
+                ? $this->career->nombre
                 : $this->career()->value('nombre');
-            $period = $this->relationLoaded('academicPeriod')
-                ? $this->academicPeriod?->nombre
-                : $this->academicPeriod()->value('nombre');
+            $process = $this->relationLoaded('process')
+                ? $this->process
+                : $this->process()->with('academicPeriod:id,nombre')->firstOrFail();
+            $period = $process->relationLoaded('academicPeriod')
+                ? $process->academicPeriod->nombre
+                : $process->academicPeriod()->value('nombre');
 
             return trim(($career ?? 'Carrera').' · '.($period ?? 'Período'));
         });
@@ -102,24 +91,6 @@ class Convocation extends Model
     public function career(): BelongsTo
     {
         return $this->belongsTo(Career::class, 'carrera_id');
-    }
-
-    /** @return BelongsTo<AcademicPeriod, $this> */
-    public function academicPeriod(): BelongsTo
-    {
-        return $this->belongsTo(AcademicPeriod::class, 'periodo_academico_id');
-    }
-
-    /** @return BelongsTo<SyllabusTemplate, $this> */
-    public function template(): BelongsTo
-    {
-        return $this->belongsTo(SyllabusTemplate::class, 'plantilla_id');
-    }
-
-    /** @return BelongsTo<User, $this> */
-    public function creator(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'creado_por');
     }
 
     /** @return BelongsToMany<AcademicSource, $this> */

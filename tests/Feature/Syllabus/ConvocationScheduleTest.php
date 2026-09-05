@@ -3,7 +3,6 @@
 namespace Tests\Feature\Syllabus;
 
 use App\Models\User;
-use App\Modules\Academic\Infrastructure\Persistence\Models\CourseOffering;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\AcademicSource;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\FieldDefinition;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
@@ -216,10 +215,7 @@ class ConvocationScheduleTest extends TestCase
         [$template, $source] = $this->publishedConfiguration();
 
         $this->actingAsCoordinator()->post(route('convocations.store'), [
-            'nombre' => 'Convocatoria de plazos',
             'process_id' => $this->openSyllabusProcess($template->id, $startsAt ?? now()->subDay(), now()->addMonth())->id,
-            'period_id' => CourseOffering::query()->firstOrFail()->periodo_academico_id,
-            'grouping_mode' => 'por_paralelo',
             'source_ids' => [$source->id],
         ])->assertRedirect();
 

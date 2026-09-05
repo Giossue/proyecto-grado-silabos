@@ -83,7 +83,7 @@ class ConvocationController extends Controller
     public function show(Convocation $convocation, Request $request): Response
     {
         abort_unless($request->user()?->can('view', $convocation) === true, 403);
-        $convocation->load(['academicPeriod', 'template', 'sources', 'deadlines', 'process']);
+        $convocation->load(['career', 'sources', 'deadlines', 'process.academicPeriod', 'process.template']);
         $syllabi = $convocation->syllabi()
             ->with(['subject:id,nombre,codigo_institucional', 'scopes.parallel:id,codigo', 'teachers:id,nombre'])
             ->orderBy('asignatura_id')->get();
@@ -97,8 +97,8 @@ class ConvocationController extends Controller
                     'name' => $convocation->process->nombre,
                     'state' => $convocation->process->estado,
                 ],
-                'period' => $convocation->academicPeriod->nombre,
-                'template' => $convocation->template->nombre,
+                'period' => $convocation->process->academicPeriod->nombre,
+                'template' => $convocation->process->template->nombre,
                 'sources' => $convocation->sources->map(fn (AcademicSource $source) => $source->nombre)->values(),
                 'start_date' => $convocation->deadlines->firstWhere('etapa', 'inicio')?->vence_en->toIso8601String(),
                 'draft_deadline' => $convocation->deadlines->firstWhere('etapa', 'borrador')?->vence_en->toIso8601String(),

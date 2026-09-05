@@ -37,7 +37,10 @@ class OpenConvocation
         $activeRole = $this->roles->resolve($request);
 
         return DB::transaction(function () use ($actor, $convocationId, $activeRole, $request): Convocation {
-            $convocation = Convocation::query()->lockForUpdate()->with(['sources', 'template.sections.blocks.fields', 'process'])->findOrFail($convocationId);
+            $convocation = Convocation::query()
+                ->lockForUpdate()
+                ->with(['sources', 'process.template.sections.blocks.fields'])
+                ->findOrFail($convocationId);
             if ($activeRole?->carrera_id !== $convocation->carrera_id || $activeRole->role->codigo !== 'coordinador') {
                 abort(403);
             }
@@ -52,10 +55,11 @@ class OpenConvocation
                     default => 'El proceso institucional todavía no se abre. Podrá abrir cuando Administración lo inicie.',
                 }]);
             }
-            if (! $convocation->template->activo) {
+            $template = $convocation->process->template;
+            if (! $template->activo) {
                 throw ValidationException::withMessages(['convocation' => 'La plantilla institucional está inactiva.']);
             }
-            $this->templateStructure->assertUsable($convocation->template, 'convocation');
+            $this->templateStructure->assertUsable($template, 'convocation');
             if ($convocation->sources->isEmpty()
                 || $convocation->sources->contains(fn ($source): bool => ! $source->activo)) {
                 throw ValidationException::withMessages(['convocation' => 'Las fuentes fijadas deben continuar activas al abrir.']);
@@ -71,7 +75,7 @@ class OpenConvocation
             }
 
             $offerings = CourseOffering::query()
-                ->where('periodo_academico_id', $convocation->periodo_academico_id)
+                ->where('periodo_academico_id', $convocation->process->periodo_academico_id)
                 ->where('activo', true)
                 ->whereHas('subject.curriculum', fn ($query) => $query
                     ->where('carrera_id', $convocation->carrera_id)
@@ -110,7 +114,7 @@ class OpenConvocation
                 }
             }
 
-            $convocation->update(['estado' => 'abierta', 'abierto_por' => $actor->id, 'abierto_en' => now()]);
+            $convocation->update(['estado' => 'abierta']);
             $this->audit->execute(
                 actorId: $actor->id,
                 roleAssignmentId: $activeRole->id,
@@ -141,7 +145,7 @@ class OpenConvocation
             'convocatoria_id' => $convocation->id,
             'asignatura_id' => $offering->subject->id,
             'malla_id' => $offering->subject->malla_id,
-            'plantilla_id' => $convocation->plantilla_id,
+            'plantilla_id' => $convocation->process->plantilla_id,
             'contexto_academico' => $this->academicContext->build($offering),
             'estado' => 'sin_iniciar',
         ]);
@@ -157,6 +161,6 @@ class OpenConvocation
                 $this->addCollaborator($syllabus, $assignment);
             }
         }
-        $this->inherit->execute($syllabus, $convocation->template->sections->flatMap(fn ($section) => $section->blocks->flatMap(fn ($block) => $block->fields)), $offering);
+        $this->inherit->execute($syllabus, $convocation->process->template->sections->flatMap(fn ($section) => $section->blocks->flatMap(fn ($block) => $block->fields)), $offering);
     }
 }

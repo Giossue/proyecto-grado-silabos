@@ -56,7 +56,7 @@ class ConvocationAndDraftTest extends TestCase
 
     public function test_coordinator_opens_convocation_and_generates_scoped_syllabus_with_master_values(): void
     {
-        $convocation = $this->createPreparedConvocation('por_oferta');
+        $convocation = $this->createPreparedConvocation();
 
         $this->actingAsCoordinator()
             ->post(route('convocations.open', $convocation))
@@ -110,7 +110,7 @@ class ConvocationAndDraftTest extends TestCase
             'fecha_fin' => '2027-05-31',
             'activo' => true,
         ]);
-        $convocation = $this->createPreparedConvocation('por_paralelo', $otherPeriod->id);
+        $convocation = $this->createPreparedConvocation($otherPeriod->id);
         $this->actingAsCoordinator()
             ->post(route('convocations.open', $convocation))
             ->assertSessionHasErrors('convocation');
@@ -131,7 +131,7 @@ class ConvocationAndDraftTest extends TestCase
             'paralelo_id' => $parallel->id,
             'activo' => true,
         ]);
-        $convocation = $this->createPreparedConvocation('por_paralelo');
+        $convocation = $this->createPreparedConvocation();
 
         $this->actingAsCoordinator()->post(route('convocations.open', $convocation))->assertRedirect();
 
@@ -143,7 +143,7 @@ class ConvocationAndDraftTest extends TestCase
     {
         $offering = CourseOffering::query()->firstOrFail();
         Parallel::query()->create(['oferta_academica_id' => $offering->id, 'codigo' => 'B', 'activo' => true]);
-        $convocation = $this->createPreparedConvocation('por_oferta');
+        $convocation = $this->createPreparedConvocation();
 
         $this->actingAsCoordinator()
             ->post(route('convocations.open', $convocation))
@@ -156,7 +156,7 @@ class ConvocationAndDraftTest extends TestCase
 
     public function test_archived_source_blocks_convocation_opening(): void
     {
-        $convocation = $this->createPreparedConvocation('por_oferta');
+        $convocation = $this->createPreparedConvocation();
         AcademicSource::query()
             ->whereIn('id', $convocation->sources()->pluck('fuentes_academicas.id'))
             ->update(['activo' => false]);
@@ -344,21 +344,17 @@ class ConvocationAndDraftTest extends TestCase
         $this->actingAsCoordinator()->get(route('syllabi.index'))->assertForbidden();
     }
 
-    private function createPreparedConvocation(string $groupingMode, ?string $periodId = null): Convocation
+    private function createPreparedConvocation(?string $periodId = null): Convocation
     {
         [$template, $source] = $this->publishedConfiguration();
         $process = $periodId === null
             ? $this->openSyllabusProcess($template->id, now()->subDay()->toIso8601String(), now()->addMonth()->toIso8601String())
             : SyllabusProcess::query()->create([
-                'nombre' => 'Proceso institucional alterno de prueba',
                 'plantilla_id' => $template->id,
                 'periodo_academico_id' => $periodId,
                 'inicia_en' => now()->subDay(),
                 'entrega_en' => now()->addMonth(),
                 'estado' => SyllabusProcess::STATE_OPEN,
-                'creado_por' => $this->administrator->id,
-                'abierto_por' => $this->administrator->id,
-                'abierto_en' => now(),
             ]);
 
         // Esta ayuda prepara el estado previo para probar OpenConvocation en aislamiento.
@@ -366,12 +362,7 @@ class ConvocationAndDraftTest extends TestCase
         $convocation = Convocation::query()->create([
             'carrera_id' => $this->coordinatorContext->carrera_id,
             'proceso_id' => $process->id,
-            'periodo_academico_id' => $process->periodo_academico_id,
-            'plantilla_id' => $template->id,
-            'nombre' => 'Convocatoria de prueba '.Str::uuid(),
             'estado' => 'preparacion',
-            'modo_agrupacion' => 'por_paralelo',
-            'creado_por' => $this->coordinator->id,
         ]);
         DB::table('fuentes_convocatoria')->insert([
             'id' => (string) Str::uuid(),
@@ -404,7 +395,7 @@ class ConvocationAndDraftTest extends TestCase
 
     private function openConvocationAndGetSyllabus(): Syllabus
     {
-        $convocation = $this->createPreparedConvocation('por_oferta');
+        $convocation = $this->createPreparedConvocation();
         $this->actingAsCoordinator()->post(route('convocations.open', $convocation))->assertRedirect();
 
         return Syllabus::query()->firstOrFail();

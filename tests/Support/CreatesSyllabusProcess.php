@@ -2,7 +2,6 @@
 
 namespace Tests\Support;
 
-use App\Models\User;
 use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\SyllabusProcess;
 use Carbon\CarbonInterface;
@@ -28,20 +27,14 @@ trait CreatesSyllabusProcess
         $existing = SyllabusProcess::query()->inProgress()->first();
 
         if ($existing !== null) {
-            $existing->update([...$attributes, 'estado' => SyllabusProcess::STATE_OPEN, 'pausado_en' => null]);
+            $existing->update([...$attributes, 'estado' => SyllabusProcess::STATE_OPEN]);
 
             return $existing->fresh();
         }
 
-        $administrator = User::query()->where('correo_electronico', 'admin@silabos.test')->firstOrFail();
-
         return SyllabusProcess::query()->create([
             ...$attributes,
-            'nombre' => 'Proceso institucional de prueba',
             'estado' => SyllabusProcess::STATE_OPEN,
-            'creado_por' => $administrator->id,
-            'abierto_por' => $administrator->id,
-            'abierto_en' => now(),
         ]);
     }
 }

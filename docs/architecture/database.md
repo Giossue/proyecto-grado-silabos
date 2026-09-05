@@ -97,11 +97,14 @@ migración `000020`; la evidencia de IA conserva su propia copia del contenido c
 `revisiones_silabo`, `filas_repetibles`, `valores_campo`, `transiciones_estado`.
 
 `convocatorias_universidad` (I-31, I-41) es el calendario institucional: período académico,
-plantilla publicada, inicio, entrega y estado. Un índice parcial único sobre
+plantilla institucional, inicio, entrega y estado. Conserva solo `creado_en`; los actores
+y momentos de sus transiciones viven en `eventos_auditoria`. Un índice parcial único sobre
 `estado IN ('abierto', 'pausado')` garantiza un solo proceso en curso.
-`convocatorias_carreras.proceso_id` es obligatorio y su `periodo_academico_id` debe coincidir con
-el del proceso: triggers PostgreSQL protegen esa consistencia y bloquean cambiar el
-período de un proceso que ya tiene convocatorias. La
+`convocatorias_carreras.proceso_id` es obligatorio y permite heredar el período y la
+plantilla sin copiarlos en la tabla de carrera. Su identidad única es
+`carrera_id + proceso_id`; solo conserva el estado actual y `creado_en`, mientras los
+actores y momentos de transición viven en auditoría. Un trigger PostgreSQL bloquea cambiar
+el período de una convocatoria universitaria que ya tiene convocatorias de carrera. La
 migración `000027` creó un proceso por cada convocatoria existente con su propia
 plantilla y fechas. El estado `pausada` de la convocatoria y `pausado` del proceso
 detienen el trabajo docente sin borrar nada.

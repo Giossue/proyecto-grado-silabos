@@ -79,8 +79,8 @@ class ProcessLocks
         $convocation = Convocation::query()
             ->where('carrera_id', $careerId)
             ->running()
-            ->with(['career:id,nombre', 'academicPeriod:id,nombre'])
-            ->first(['id', 'carrera_id', 'periodo_academico_id']);
+            ->with(['career:id,nombre', 'process.academicPeriod:id,nombre'])
+            ->first(['id', 'carrera_id', 'proceso_id']);
 
         if ($convocation === null) {
             return null;

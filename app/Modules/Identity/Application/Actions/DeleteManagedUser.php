@@ -22,8 +22,6 @@ class DeleteManagedUser
         'asignaciones_docente' => 'usuario_id',
         'colaboradores_silabo' => 'usuario_id',
         'eventos_auditoria' => 'actor_usuario_id',
-        'convocatorias_carreras' => 'creado_por',
-        'convocatorias_universidad' => 'creado_por',
         'observaciones_revision' => 'creado_por',
         'revisiones_silabo' => 'enviado_por',
         'artefactos_exportacion' => 'solicitado_por',

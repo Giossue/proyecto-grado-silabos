@@ -104,8 +104,7 @@ class DeleteAcademicRecord
             'campus' => Career::query()->where('campus_id', $record->getKey())->exists()
                 || CourseOffering::query()->where('campus_id', $record->getKey())->exists(),
             'periodo' => CourseOffering::query()->where('periodo_academico_id', $record->getKey())->exists()
-                || DB::table('convocatorias_universidad')->where('periodo_academico_id', $record->getKey())->exists()
-                || DB::table('convocatorias_carreras')->where('periodo_academico_id', $record->getKey())->exists(),
+                || DB::table('convocatorias_universidad')->where('periodo_academico_id', $record->getKey())->exists(),
             'paralelo' => SyllabusScope::query()->where('paralelo_id', $record->getKey())->exists()
                 || SyllabusCollaborator::query()->whereHas('teacherAssignment', fn ($query) => $query->where('paralelo_id', $record->getKey()))->exists(),
             'asignacion_docente' => SyllabusCollaborator::query()->where('asignacion_docente_id', $record->getKey())->exists(),

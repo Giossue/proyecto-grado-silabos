@@ -110,16 +110,16 @@ class ManagedUserController extends Controller
                     'roles' => $effective->map(fn ($assignment) => [
                         'name' => $assignment->role->nombre,
                         'career_name' => $assignment->career?->nombre,
-                    ])->values(),
+                    ])->values()->all(),
                     'careers' => $effective
                         ->map(fn ($assignment) => $assignment->career?->nombre)
-                        ->values(),
+                        ->values()->all(),
                     'assignments' => $user->roleAssignments->map(fn ($assignment) => [
                         'id' => $assignment->id,
                         'role_name' => $assignment->role->nombre,
                         'career_name' => $assignment->career?->nombre,
                         'active' => $assignment->activo,
-                    ])->values(),
+                    ])->values()->all(),
                 ];
             });
 

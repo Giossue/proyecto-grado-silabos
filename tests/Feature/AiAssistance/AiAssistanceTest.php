@@ -555,15 +555,8 @@ class AiAssistanceTest extends TestCase
         ]);
         $convocation = Convocation::query()->create([
             'carrera_id' => $career->id,
-            'periodo_academico_id' => $period->id,
-            'plantilla_id' => $templateVersion->id,
             'proceso_id' => $this->openSyllabusProcess($templateVersion->id)->id,
-            'nombre' => 'Convocatoria IA',
             'estado' => 'abierta',
-            'modo_agrupacion' => 'por_paralelo',
-            'creado_por' => User::query()->where('correo_electronico', 'coordinador@silabos.test')->valueOrFail('id'),
-            'abierto_por' => User::query()->where('correo_electronico', 'coordinador@silabos.test')->valueOrFail('id'),
-            'abierto_en' => now(),
         ]);
         $syllabus = Syllabus::query()->create([
             'convocatoria_id' => $convocation->id,

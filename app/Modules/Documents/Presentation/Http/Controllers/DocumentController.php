@@ -27,7 +27,7 @@ class DocumentController extends Controller
         $revision->load([
             'approval.approver:id,nombre',
             'syllabus.subject:id,nombre,codigo_institucional',
-            'syllabus.convocation.academicPeriod:id,nombre',
+            'syllabus.convocation.process.academicPeriod:id,nombre',
         ]);
         abort_unless($revision->approval !== null, 404);
         $artifacts = ExportArtifact::query()
@@ -41,7 +41,7 @@ class DocumentController extends Controller
                 'id' => $revision->syllabus->id,
                 'subject' => $revision->syllabus->academicSubjectName(),
                 'code' => $revision->syllabus->academicSubjectCode(),
-                'period' => $revision->syllabus->convocation->academicPeriod->nombre,
+                'period' => $revision->syllabus->convocation->process->academicPeriod->nombre,
             ],
             'revision' => [
                 'id' => $revision->id,

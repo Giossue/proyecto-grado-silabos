@@ -38,17 +38,14 @@ class CreateConvocation
             if ($process->estado !== SyllabusProcess::STATE_OPEN) {
                 throw ValidationException::withMessages(['process_id' => 'La convocatoria institucional todavía no está abierta.']);
             }
-            if (Convocation::query()->where('carrera_id', $activeRole->carrera_id)->where('periodo_academico_id', $process->periodo_academico_id)->exists()) {
+            if (Convocation::query()->where('carrera_id', $activeRole->carrera_id)->where('proceso_id', $process->id)->exists()) {
                 throw ValidationException::withMessages(['process_id' => 'Esta carrera ya tiene una convocatoria para el período institucional.']);
             }
 
             $convocation = Convocation::query()->create([
                 'carrera_id' => $activeRole->carrera_id,
                 'proceso_id' => $process->id,
-                'periodo_academico_id' => $process->periodo_academico_id,
-                'plantilla_id' => $process->plantilla_id,
                 'estado' => Convocation::STATE_PREPARATION,
-                'creado_por' => $actor->id,
             ]);
             $sourceCount = $this->sources->execute($convocation);
             foreach ([ConvocationSchedule::STAGE_START => $process->inicia_en, ConvocationSchedule::STAGE_DRAFT => $process->entrega_en] as $stage => $dueAt) {

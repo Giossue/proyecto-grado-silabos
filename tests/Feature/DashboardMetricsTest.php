@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Models\User;
-use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Faculty;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Subject;
@@ -96,8 +95,8 @@ class DashboardMetricsTest extends TestCase
         $coordinator = User::query()->where('correo_electronico', 'coordinador@silabos.test')->firstOrFail();
         $propia = $coordinator->roleAssignments()->firstOrFail()->carrera_id;
 
-        $this->abrirConvocatoria($propia, 'Convocatoria propia');
-        $this->abrirConvocatoria($this->otraCarrera()->id, 'Convocatoria ajena');
+        $this->abrirConvocatoria($propia);
+        $this->abrirConvocatoria($this->otraCarrera()->id);
 
         $this->actingAs($coordinator)
             ->withSession([
@@ -117,7 +116,7 @@ class DashboardMetricsTest extends TestCase
     {
         $teacher = User::query()->where('correo_electronico', 'docente@silabos.test')->firstOrFail();
         $career = $teacher->roleAssignments()->firstOrFail()->carrera_id;
-        $convocation = $this->abrirConvocatoria($career, 'Convocatoria con expedientes');
+        $convocation = $this->abrirConvocatoria($career);
 
         $propio = $this->crearSilabo($convocation);
         $this->crearSilabo($convocation); // de otra persona: nunca se le cuenta
@@ -139,17 +138,14 @@ class DashboardMetricsTest extends TestCase
                 ->where('metrics.2.suffix', '%'));
     }
 
-    private function abrirConvocatoria(?string $careerId, string $nombre): Convocation
+    private function abrirConvocatoria(?string $careerId): Convocation
     {
+        $template = $this->plantillaPublicada();
+
         return Convocation::query()->create([
             'carrera_id' => $careerId,
-            'periodo_academico_id' => AcademicPeriod::query()->firstOrFail()->id,
-            'plantilla_id' => $this->plantillaPublicada()->id,
-            'proceso_id' => $this->openSyllabusProcess($this->plantillaPublicada()->id)->id,
-            'nombre' => $nombre,
+            'proceso_id' => $this->openSyllabusProcess($template->id)->id,
             'estado' => 'abierta',
-            'modo_agrupacion' => 'por_oferta',
-            'creado_por' => User::query()->where('correo_electronico', 'coordinador@silabos.test')->firstOrFail()->id,
         ]);
     }
 
@@ -161,7 +157,7 @@ class DashboardMetricsTest extends TestCase
             'convocatoria_id' => $convocation->id,
             'asignatura_id' => $subject->id,
             'malla_id' => $subject->malla_id,
-            'plantilla_id' => $convocation->plantilla_id,
+            'plantilla_id' => $convocation->process->plantilla_id,
             'estado' => 'borrador',
         ]);
     }

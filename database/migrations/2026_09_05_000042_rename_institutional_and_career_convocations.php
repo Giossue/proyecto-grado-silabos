@@ -26,5 +26,9 @@ return new class extends Migration
             CREATE TRIGGER convocatorias_universidad_periodo_protegido BEFORE UPDATE OF periodo_academico_id ON convocatorias_universidad FOR EACH ROW EXECUTE FUNCTION impedir_cambio_periodo_proceso_con_convocatorias();
             SQL);
     }
-    public function down(): void { throw new RuntimeException('I-52 no admite reversión automática.'); }
+
+    public function down(): void
+    {
+        throw new RuntimeException('I-52 no admite reversión automática.');
+    }
 };

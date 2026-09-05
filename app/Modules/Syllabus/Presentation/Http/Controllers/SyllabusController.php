@@ -58,11 +58,11 @@ class SyllabusController extends Controller
                     fn ($outer) => $outer
                         ->whereRaw("contexto_academico->'subject'->>'name' ILIKE ?", ["%{$term}%"])
                         ->orWhereRaw("contexto_academico->'subject'->>'code' ILIKE ?", ["%{$term}%"])
-                        ->orWhereHas('convocation.academicPeriod', fn ($period) => $period
+                        ->orWhereHas('convocation.process.academicPeriod', fn ($period) => $period
                             ->whereRaw('nombre ILIKE ?', ["%{$term}%"])),
                 ))
                 ->when($state, fn ($query, string $value) => $query->where('estado', $value))
-                ->with(['convocation:id,carrera_id,periodo_academico_id', 'convocation.career:id,nombre', 'convocation.academicPeriod:id,nombre', 'subject:id,nombre,codigo_institucional', 'scopes.parallel:id,codigo'])
+                ->with(['convocation:id,carrera_id,proceso_id', 'convocation.career:id,nombre', 'convocation.process:id,periodo_academico_id', 'convocation.process.academicPeriod:id,nombre', 'subject:id,nombre,codigo_institucional', 'scopes.parallel:id,codigo'])
                 ->orderByDesc('actualizado_en')
                 ->paginate(15)
                 ->withQueryString()
@@ -71,7 +71,7 @@ class SyllabusController extends Controller
                     'subject' => $syllabus->academicSubjectName(),
                     'code' => $syllabus->academicSubjectCode(),
                     'convocation' => $syllabus->convocation->nombre,
-                    'period' => $syllabus->convocation->academicPeriod->nombre,
+                    'period' => $syllabus->convocation->process->academicPeriod->nombre,
                     'state' => $syllabus->estado,
                     'completion' => (float) $syllabus->porcentaje_completitud,
                     'parallels' => $syllabus->scopes->pluck('parallel.codigo')->unique()->values(),
@@ -186,7 +186,7 @@ class SyllabusController extends Controller
     private function syllabusPayload(Syllabus $syllabus): array
     {
         $syllabus->load([
-            'convocation.academicPeriod', 'subject', 'scopes.parallel', 'teachers:id,nombre',
+            'convocation.career', 'convocation.process.academicPeriod', 'subject', 'scopes.parallel', 'teachers:id,nombre',
             'template.sections.blocks.fields', 'values', 'rows',
             'validationRuns' => fn ($query) => $query->with('results')->latest('completado_en')->limit(1),
             'revisions' => fn ($query) => $query->with([
@@ -204,7 +204,7 @@ class SyllabusController extends Controller
             'subject' => $syllabus->academicSubjectName(),
             'code' => $syllabus->academicSubjectCode(),
             'convocation' => $syllabus->convocation->nombre,
-            'period' => $syllabus->convocation->academicPeriod->nombre,
+            'period' => $syllabus->convocation->process->academicPeriod->nombre,
             'state' => $syllabus->estado,
             'version_bloqueo' => $syllabus->version_bloqueo,
             'completion' => (float) $syllabus->porcentaje_completitud,

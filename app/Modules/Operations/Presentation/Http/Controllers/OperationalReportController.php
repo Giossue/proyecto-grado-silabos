@@ -35,12 +35,13 @@ class OperationalReportController extends Controller
         $averageCompletion = (float) ((clone $query)->avg('porcentaje_completitud') ?? 0);
         $convocations = Convocation::query()
             ->where('carrera_id', $careerId)
-            ->with(['career:id,nombre', 'academicPeriod:id,nombre'])
+            ->with(['career:id,nombre', 'process.academicPeriod:id,nombre'])
             ->latest('creado_en')
-            ->get(['id', 'carrera_id', 'periodo_academico_id', 'estado']);
+            ->get(['id', 'carrera_id', 'proceso_id', 'estado']);
         $convocationBreakdown = (clone $query)
             ->join('convocatorias_carreras', 'convocatorias_carreras.id', '=', 'silabos.convocatoria_id')
-            ->join('periodos_academicos', 'periodos_academicos.id', '=', 'convocatorias_carreras.periodo_academico_id')
+            ->join('convocatorias_universidad', 'convocatorias_universidad.id', '=', 'convocatorias_carreras.proceso_id')
+            ->join('periodos_academicos', 'periodos_academicos.id', '=', 'convocatorias_universidad.periodo_academico_id')
             ->selectRaw(<<<'SQL'
                 convocatorias_carreras.id,
                 periodos_academicos.nombre,
@@ -66,7 +67,7 @@ class OperationalReportController extends Controller
             ]);
         $detail = (clone $query)
             ->with([
-                'convocation.academicPeriod:id,nombre',
+                'convocation.process.academicPeriod:id,nombre',
                 'subject:id,nombre,codigo_institucional',
                 'teachers:id,nombre',
                 'revisions' => fn ($revision) => $revision->orderByDesc('numero_revision')->limit(1),
@@ -81,7 +82,7 @@ class OperationalReportController extends Controller
                 'subject' => $syllabus->subject->nombre,
                 'code' => $syllabus->subject->codigo_institucional,
                 'convocation' => $syllabus->convocation->nombre,
-                'period' => $syllabus->convocation->academicPeriod->nombre,
+                'period' => $syllabus->convocation->process->academicPeriod->nombre,
                 'state' => $syllabus->estado,
                 'completion' => (float) $syllabus->porcentaje_completitud,
                 'teachers' => $syllabus->teachers->pluck('nombre')->values(),
@@ -95,7 +96,7 @@ class OperationalReportController extends Controller
             'convocations' => $convocations->map(fn (Convocation $convocation): array => [
                 'id' => $convocation->id,
                 'name' => $convocation->nombre,
-                'period' => $convocation->academicPeriod->nombre,
+                'period' => $convocation->process->academicPeriod->nombre,
                 'state' => $convocation->estado,
             ]),
             'indicators' => [

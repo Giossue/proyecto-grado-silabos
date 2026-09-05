@@ -62,7 +62,7 @@ class TransitionSyllabusProcess
             throw ValidationException::withMessages(['transition' => 'La acción sobre el proceso no existe.']);
         }
 
-        return DB::transaction(function () use ($activeRole, $actor, $process, $reason, $request, $rule, $transition): SyllabusProcess {
+        return DB::transaction(function () use ($activeRole, $actor, $process, $reason, $request, $rule): SyllabusProcess {
             $locked = SyllabusProcess::query()->lockForUpdate()->with('template')->findOrFail($process->id);
             if (! in_array($locked->estado, $rule['from'], true)) {
                 throw ValidationException::withMessages([
@@ -110,13 +110,6 @@ class TransitionSyllabusProcess
             $previous = $locked->estado;
             $locked->update([
                 'estado' => $rule['to'],
-                ...match ($transition) {
-                    self::OPEN => ['abierto_por' => $actor->id, 'abierto_en' => now(), 'pausado_en' => null],
-                    self::PAUSE => ['pausado_en' => now()],
-                    self::RESUME => ['pausado_en' => null],
-                    self::CLOSE => ['cerrado_en' => now()],
-                    default => [],
-                },
             ]);
 
             $this->audit->execute(

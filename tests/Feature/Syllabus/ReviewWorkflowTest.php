@@ -5,7 +5,6 @@ namespace Tests\Feature\Syllabus;
 use App\Models\User;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CoordinatorAssignment;
-use App\Modules\Academic\Infrastructure\Persistence\Models\CourseOffering;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\AcademicSource;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\FieldDefinition;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
@@ -539,12 +538,8 @@ class ReviewWorkflowTest extends TestCase
     private function createStartedDraft(): Syllabus
     {
         [$template, $source] = $this->publishedConfiguration();
-        $periodId = CourseOffering::query()->firstOrFail()->periodo_academico_id;
         $this->actingAsCoordinator()->post(route('convocations.store'), [
-            'nombre' => 'Convocatoria I-04',
-            'period_id' => $periodId,
             'process_id' => $this->openSyllabusProcess($template->id, now()->subDay()->toIso8601String(), now()->addMonth()->toIso8601String())->id,
-            'grouping_mode' => 'por_oferta',
             'source_ids' => [$source->id],
         ])->assertRedirect();
         $convocation = Convocation::query()->latest('creado_en')->firstOrFail();
