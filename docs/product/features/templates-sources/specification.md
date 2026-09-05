@@ -25,9 +25,10 @@
 - Una fuente académica es un documento de la Coordinación de la carrera (I-26): nombre,
   descripción, notas internas y un contenido en Markdown. No tiene versiones, fragmentos
   ni conflictos, y Administración no participa.
-- El contenido se redacta en COR-11 con un editor Markdown de cinta de opciones
-  (encabezados, énfasis, listas, cita, tabla con selector de tamaño, código, enlace y
-  divisor) y vista previa del resultado.
+- El contenido se redacta en COR-11 como una hoja de documento visual con cinta de
+  opciones (encabezados, énfasis, listas, cita, tabla con selector de tamaño, código,
+  enlace y divisor). Se guarda como Markdown seguro, pero la Coordinación no ve ni
+  alterna a sintaxis Markdown: el formato se aplica y se renderiza en tiempo real.
 - Una convocatoria fija fuentes activas de la carrera; al abrirla deben continuar
   activas. La evidencia de IA guarda su propia fotografía (nombre, extracto y huella del
   contenido), por lo que editar la fuente después no reescribe análisis pasados.

@@ -5,7 +5,6 @@ import AcademicSourceEditSheet from '@/components/domain/configuration/AcademicS
 import MarkdownEditor from '@/components/domain/MarkdownEditor.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
 import ProcessLockAlert from '@/components/domain/ProcessLockAlert.vue';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -26,7 +25,6 @@ const props = defineProps<{
         description: string | null;
         internal_notes: string | null;
         content: string | null;
-        actualizado_en: string | null;
     };
     /** Motivo por el que no se edita la fuente; nulo cuando sí se puede. */
     processLock: string | null;
@@ -63,11 +61,6 @@ defineOptions({
                 <Link :href="sourcesIndex()">← Volver a fuentes</Link>
             </Button>
         </template>
-        <template #meta>
-            <Badge v-if="source.actualizado_en" variant="outline">
-                Actualizada el {{ source.actualizado_en }}
-            </Badge>
-        </template>
         <template #actions>
             <AcademicSourceEditSheet v-if="!processLock" :source="source" />
         </template>
@@ -98,14 +91,15 @@ defineOptions({
                     <CardTitle>Contenido del documento</CardTitle>
                     <CardDescription>
                         Redáctelo con la cinta de opciones, como en un
-                        procesador de textos. La vista previa muestra el
-                        resultado final.
+                        procesador de textos. El formato se ve directamente
+                        mientras escribe.
                     </CardDescription>
                 </CardHeader>
                 <CardContent class="flex flex-col gap-3">
                     <MarkdownEditor
                         v-model="form.content"
-                        label="Contenido del documento en Markdown"
+                        label="Contenido del documento"
+                        :disabled="Boolean(processLock)"
                     />
                     <FieldError :errors="[form.errors.content]" />
                     <div class="flex items-center justify-end gap-3">

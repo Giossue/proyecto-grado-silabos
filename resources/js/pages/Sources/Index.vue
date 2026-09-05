@@ -27,7 +27,6 @@ const props = defineProps<{
         description: string | null;
         internal_notes: string | null;
         has_content: boolean;
-        actualizado_en: string | null;
     }[];
     /** Motivo por el que no se editan las fuentes; nulo cuando sí se puede. */
     processLock: string | null;
@@ -76,13 +75,12 @@ defineOptions({
                         ><TableRow
                             ><TableHead>Fuente</TableHead
                             ><TableHead>Contenido</TableHead
-                            ><TableHead>Última actualización</TableHead
                             ><TableHead class="text-right"
                                 >Acciones</TableHead
                             ></TableRow
                         ></TableHeader
                     ><TableBody>
-                        <TableEmpty v-if="sourcePage.length === 0" :colspan="4"
+                        <TableEmpty v-if="sourcePage.length === 0" :colspan="3"
                             >No existen fuentes.</TableEmpty
                         >
                         <TableRow
@@ -101,9 +99,6 @@ defineOptions({
                                 source.has_content
                                     ? 'Redactado'
                                     : 'Sin contenido'
-                            }}</TableCell
-                            ><TableCell>{{
-                                source.actualizado_en ?? '—'
                             }}</TableCell
                             ><TableCell class="text-right"
                                 ><AcademicSourceActions

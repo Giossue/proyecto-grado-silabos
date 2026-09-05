@@ -2,7 +2,6 @@
 import {
     Bold,
     Code,
-    Eye,
     Heading2,
     Heading3,
     Italic,
@@ -10,7 +9,6 @@ import {
     List,
     ListOrdered,
     Minus,
-    Pencil,
     Strikethrough,
     Table as TableIcon,
     TextQuote,
@@ -18,7 +16,7 @@ import {
 import DOMPurify from 'dompurify';
 import { marked } from 'marked';
 import type { Component } from 'vue';
-import { computed, nextTick, ref } from 'vue';
+import { nextTick, onMounted, ref, watch } from 'vue';
 import { Button } from '@/components/ui/button';
 import {
     Popover,
@@ -26,7 +24,6 @@ import {
     PopoverTrigger,
 } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
-import { Textarea } from '@/components/ui/textarea';
 import {
     Tooltip,
     TooltipContent,
@@ -34,105 +31,312 @@ import {
     TooltipTrigger,
 } from '@/components/ui/tooltip';
 
-withDefaults(
+const props = withDefaults(
     defineProps<{
         label: string;
         placeholder?: string;
+        disabled?: boolean;
     }>(),
     {
-        placeholder: 'Escriba el contenido en Markdown…',
+        placeholder: 'Empiece a redactar el documento…',
+        disabled: false,
     },
 );
 
 const model = defineModel<string>({ default: '' });
-const mode = ref<'write' | 'preview'>('write');
-const textareaRef = ref<InstanceType<typeof Textarea> | null>(null);
+const editorRef = ref<HTMLElement | null>(null);
+const lastEmitted = ref<string | null>(null);
 
-const textareaElement = (): HTMLTextAreaElement | null => {
-    const element = textareaRef.value?.$el as HTMLTextAreaElement | undefined;
+const renderMarkdown = (markdown: string): string =>
+    DOMPurify.sanitize(
+        marked.parse(markdown, {
+            async: false,
+            gfm: true,
+            breaks: true,
+        }),
+    );
 
-    return element ?? null;
-};
+const normaliseMarkdown = (markdown: string): string =>
+    markdown
+        .replace(/\u00a0/g, ' ')
+        .replace(/[ \t]+\n/g, '\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
 
-/** Reemplaza el documento y devuelve el foco al punto editado. */
-const apply = (next: string, selectStart: number, selectEnd: number): void => {
-    model.value = next;
-    void nextTick(() => {
-        const element = textareaElement();
-        element?.focus();
-        element?.setSelectionRange(selectStart, selectEnd);
-    });
-};
+const nodesToMarkdown = (nodes: NodeListOf<ChildNode> | ChildNode[]): string =>
+    Array.from(nodes)
+        .map((node) => nodeToMarkdown(node))
+        .join('');
 
-const selection = (): { start: number; end: number; value: string } => {
-    const element = textareaElement();
-    const value = model.value;
+const listToMarkdown = (list: HTMLElement, ordered: boolean): string => {
+    const items = Array.from(list.children).filter(
+        (child): child is HTMLLIElement => child.tagName === 'LI',
+    );
 
-    return {
-        start: element?.selectionStart ?? value.length,
-        end: element?.selectionEnd ?? value.length,
-        value,
-    };
-};
+    return (
+        items
+            .map((item, index) => {
+                const content = nodesToMarkdown(
+                    Array.from(item.childNodes).filter(
+                        (node) =>
+                            !(
+                                node instanceof HTMLElement &&
+                                ['OL', 'UL'].includes(node.tagName)
+                            ),
+                    ),
+                ).trim();
+                const nested = Array.from(item.children)
+                    .filter((child) => ['OL', 'UL'].includes(child.tagName))
+                    .map((child) =>
+                        listToMarkdown(
+                            child as HTMLElement,
+                            child.tagName === 'OL',
+                        )
+                            .trim()
+                            .split('\n')
+                            .map((line) => `  ${line}`)
+                            .join('\n'),
+                    )
+                    .join('\n');
+                const marker = ordered ? `${index + 1}.` : '-';
 
-/** Negrita, cursiva, código…: envuelve la selección o un texto de ejemplo. */
-const wrapSelection = (
-    prefix: string,
-    suffix: string,
-    placeholder: string,
-): void => {
-    const { start, end, value } = selection();
-    const selected = value.slice(start, end) || placeholder;
-    const next =
-        value.slice(0, start) + prefix + selected + suffix + value.slice(end);
-    apply(next, start + prefix.length, start + prefix.length + selected.length);
-};
-
-/** Encabezados, citas y listas: antepone el marcador a cada línea seleccionada. */
-const prefixLines = (marker: string, numbered = false): void => {
-    const { start, end, value } = selection();
-    const lineStart = value.lastIndexOf('\n', start - 1) + 1;
-    const lineEndIndex = value.indexOf('\n', end);
-    const lineEnd = lineEndIndex === -1 ? value.length : lineEndIndex;
-    const block = value
-        .slice(lineStart, lineEnd)
-        .split('\n')
-        .map((line, index) =>
-            numbered ? `${index + 1}. ${line}` : marker + line,
-        )
-        .join('\n');
-    apply(
-        next(value, lineStart, lineEnd, block),
-        lineStart,
-        lineStart + block.length,
+                return `${marker} ${content}${nested ? `\n${nested}` : ''}`;
+            })
+            .join('\n') + '\n\n'
     );
 };
 
-const next = (
-    value: string,
-    from: number,
-    to: number,
-    replacement: string,
-): string => value.slice(0, from) + replacement + value.slice(to);
+const tableToMarkdown = (table: HTMLTableElement): string => {
+    const rows = Array.from(table.rows)
+        .map((row) =>
+            Array.from(row.cells).map((cell) =>
+                nodesToMarkdown(cell.childNodes)
+                    .replace(/\|/g, '\\|')
+                    .replace(/\n+/g, ' ')
+                    .trim(),
+            ),
+        )
+        .filter((cells) => cells.length > 0);
 
-/** Tablas y divisores: bloques que necesitan aire (línea en blanco) alrededor. */
-const insertBlock = (block: string): void => {
-    const { start, end, value } = selection();
-    const before = value.slice(0, start);
-    const after = value.slice(end);
-    const padBefore =
-        before === '' || before.endsWith('\n\n')
-            ? ''
-            : before.endsWith('\n')
-              ? '\n'
-              : '\n\n';
-    const padAfter = after.startsWith('\n') || after === '' ? '\n' : '\n\n';
-    const inserted = padBefore + block + padAfter;
-    const caret = start + inserted.length;
-    apply(next(value, start, end, inserted), caret, caret);
+    if (rows.length === 0) {
+        return '';
+    }
+
+    const line = (cells: string[]): string => `| ${cells.join(' | ')} |`;
+    const header = rows[0];
+    const body = rows.slice(1);
+
+    return (
+        [line(header), line(header.map(() => '---')), ...body.map(line)].join(
+            '\n',
+        ) + '\n\n'
+    );
 };
 
-// --- Tabla con selector de tamaño, como en un procesador de textos -------------
+const nodeToMarkdown = (node: ChildNode): string => {
+    if (node.nodeType === Node.TEXT_NODE) {
+        return node.textContent ?? '';
+    }
+
+    if (!(node instanceof HTMLElement)) {
+        return '';
+    }
+
+    const content = nodesToMarkdown(node.childNodes);
+
+    switch (node.tagName) {
+        case 'BR':
+            return '\n';
+        case 'H1':
+            return `# ${content.trim()}\n\n`;
+        case 'H2':
+            return `## ${content.trim()}\n\n`;
+        case 'H3':
+            return `### ${content.trim()}\n\n`;
+        case 'H4':
+            return `#### ${content.trim()}\n\n`;
+        case 'H5':
+            return `##### ${content.trim()}\n\n`;
+        case 'H6':
+            return `###### ${content.trim()}\n\n`;
+        case 'P':
+        case 'DIV':
+            return `${content.trim()}\n\n`;
+        case 'STRONG':
+        case 'B':
+            return `**${content}**`;
+        case 'EM':
+        case 'I':
+            return `_${content}_`;
+        case 'S':
+        case 'STRIKE':
+        case 'DEL':
+            return `~~${content}~~`;
+        case 'CODE':
+            return node.parentElement?.tagName === 'PRE'
+                ? content
+                : `\`${content}\``;
+        case 'PRE':
+            return `\`\`\`\n${node.textContent?.trim() ?? ''}\n\`\`\`\n\n`;
+        case 'BLOCKQUOTE':
+            return `${content
+                .trim()
+                .split('\n')
+                .filter((line) => line.trim() !== '')
+                .map((line) => `> ${line}`)
+                .join('\n')}\n\n`;
+        case 'UL':
+            return listToMarkdown(node, false);
+        case 'OL':
+            return listToMarkdown(node, true);
+        case 'A': {
+            const href = node.getAttribute('href');
+
+            return href ? `[${content}](${href})` : content;
+        }
+        case 'HR':
+            return '---\n\n';
+        case 'TABLE':
+            return tableToMarkdown(node as HTMLTableElement);
+        default:
+            return content;
+    }
+};
+
+const syncModel = (): void => {
+    const editor = editorRef.value;
+
+    if (!editor) {
+        return;
+    }
+
+    const markdown = normaliseMarkdown(nodesToMarkdown(editor.childNodes));
+    lastEmitted.value = markdown;
+    model.value = markdown;
+};
+
+const selectedRange = (): Range | null => {
+    const editor = editorRef.value;
+    const selection = window.getSelection();
+
+    if (!editor || !selection || selection.rangeCount === 0) {
+        return null;
+    }
+
+    const range = selection.getRangeAt(0);
+
+    return editor.contains(range.commonAncestorContainer) ? range : null;
+};
+
+const focusEditor = (): void => {
+    editorRef.value?.focus();
+
+    if (selectedRange() || !editorRef.value) {
+        return;
+    }
+
+    const range = document.createRange();
+    range.selectNodeContents(editorRef.value);
+    range.collapse(false);
+    const selection = window.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+};
+
+const runCommand = (command: string, value?: string): void => {
+    if (props.disabled) {
+        return;
+    }
+
+    focusEditor();
+    document.execCommand(command, false, value);
+    syncModel();
+};
+
+const insertBlock = (node: HTMLElement): void => {
+    if (props.disabled) {
+        return;
+    }
+
+    focusEditor();
+    const editor = editorRef.value;
+    const range = selectedRange();
+
+    if (!editor || !range) {
+        return;
+    }
+
+    range.deleteContents();
+    range.insertNode(node);
+    const paragraph = document.createElement('p');
+    paragraph.append(document.createElement('br'));
+    node.after(paragraph);
+
+    const selection = window.getSelection();
+    const caret = document.createRange();
+    caret.setStart(paragraph, 0);
+    caret.collapse(true);
+    selection?.removeAllRanges();
+    selection?.addRange(caret);
+    syncModel();
+};
+
+const pastePlainText = (event: ClipboardEvent): void => {
+    if (props.disabled) {
+        return;
+    }
+
+    const text = event.clipboardData?.getData('text/plain') ?? '';
+    focusEditor();
+    document.execCommand('insertText', false, text);
+    syncModel();
+};
+
+const insertLink = (): void => {
+    if (props.disabled) {
+        return;
+    }
+
+    const value = window.prompt('Dirección del enlace (https://…):');
+
+    if (!value) {
+        return;
+    }
+
+    let url: URL;
+
+    try {
+        url = new URL(value);
+    } catch {
+        return;
+    }
+
+    if (!['http:', 'https:', 'mailto:'].includes(url.protocol)) {
+        return;
+    }
+
+    focusEditor();
+    const range = selectedRange();
+
+    if (!range) {
+        return;
+    }
+
+    const link = document.createElement('a');
+    link.href = url.href;
+    link.textContent = range.toString().trim() || 'Texto del enlace';
+    range.deleteContents();
+    range.insertNode(link);
+
+    const selection = window.getSelection();
+    const caret = document.createRange();
+    caret.setStartAfter(link);
+    caret.collapse(true);
+    selection?.removeAllRanges();
+    selection?.addRange(caret);
+    syncModel();
+};
+
 const GRID_COLUMNS = 6;
 const GRID_ROWS = 5;
 const tableOpen = ref(false);
@@ -152,21 +356,26 @@ const cellHighlighted = (cell: number): boolean => {
 };
 
 const insertTable = (rows: number, columns: number): void => {
-    const header = Array.from(
-        { length: columns },
-        (_, index) => `Columna ${index + 1}`,
-    );
-    const line = (cells: string[]): string => `| ${cells.join(' | ')} |`;
-    const body = Array.from({ length: Math.max(rows - 1, 1) }, () =>
-        line(Array.from({ length: columns }, () => '   ')),
-    );
     tableOpen.value = false;
-    insertBlock(
-        [line(header), line(header.map(() => '---')), ...body].join('\n'),
-    );
+    const table = document.createElement('table');
+    const head = table.createTHead();
+    const header = head.insertRow();
+    const body = table.createTBody();
+
+    Array.from({ length: columns }, (_, index) => {
+        const cell = document.createElement('th');
+        cell.textContent = `Columna ${index + 1}`;
+        header.append(cell);
+    });
+
+    Array.from({ length: Math.max(rows - 1, 1) }, () => {
+        const row = body.insertRow();
+        Array.from({ length: columns }, () => row.insertCell());
+    });
+
+    insertBlock(table);
 };
 
-// --- Cinta de opciones ---------------------------------------------------------
 type ToolbarAction = {
     label: string;
     icon: Component;
@@ -178,87 +387,82 @@ const toolbarGroups: ToolbarAction[][] = [
         {
             label: 'Título',
             icon: Heading2,
-            run: () => prefixLines('## '),
+            run: () => runCommand('formatBlock', '<h2>'),
         },
         {
             label: 'Subtítulo',
             icon: Heading3,
-            run: () => prefixLines('### '),
+            run: () => runCommand('formatBlock', '<h3>'),
         },
     ],
     [
-        {
-            label: 'Negrita',
-            icon: Bold,
-            run: () => wrapSelection('**', '**', 'texto en negrita'),
-        },
-        {
-            label: 'Cursiva',
-            icon: Italic,
-            run: () => wrapSelection('_', '_', 'texto en cursiva'),
-        },
+        { label: 'Negrita', icon: Bold, run: () => runCommand('bold') },
+        { label: 'Cursiva', icon: Italic, run: () => runCommand('italic') },
         {
             label: 'Tachado',
             icon: Strikethrough,
-            run: () => wrapSelection('~~', '~~', 'texto tachado'),
+            run: () => runCommand('strikeThrough'),
         },
     ],
     [
         {
             label: 'Cita',
             icon: TextQuote,
-            run: () => prefixLines('> '),
+            run: () => runCommand('formatBlock', '<blockquote>'),
         },
         {
             label: 'Lista',
             icon: List,
-            run: () => prefixLines('- '),
+            run: () => runCommand('insertUnorderedList'),
         },
         {
             label: 'Lista numerada',
             icon: ListOrdered,
-            run: () => prefixLines('', true),
+            run: () => runCommand('insertOrderedList'),
         },
     ],
     [
         {
             label: 'Código',
             icon: Code,
-            run: () => wrapSelection('`', '`', 'código'),
+            run: () => runCommand('formatBlock', '<pre>'),
         },
-        {
-            label: 'Enlace',
-            icon: Link,
-            run: () => wrapSelection('[', '](https://)', 'texto del enlace'),
-        },
+        { label: 'Enlace', icon: Link, run: insertLink },
         {
             label: 'Línea divisoria',
             icon: Minus,
-            run: () => insertBlock('---'),
+            run: () => insertBlock(document.createElement('hr')),
         },
     ],
 ];
 
-// La vista previa pasa por DOMPurify: el Markdown admite HTML incrustado y este
-// documento se comparte entre cuentas, así que nunca se inyecta sin desinfectar.
-const previewHtml = computed(() =>
-    DOMPurify.sanitize(
-        marked.parse(model.value, {
-            async: false,
-            gfm: true,
-            breaks: true,
-        }),
-    ),
-);
+onMounted(() => {
+    if (editorRef.value) {
+        editorRef.value.innerHTML = renderMarkdown(model.value);
+    }
+});
+
+watch(model, (markdown) => {
+    if (markdown === lastEmitted.value || !editorRef.value) {
+        return;
+    }
+
+    void nextTick(() => {
+        if (editorRef.value) {
+            editorRef.value.innerHTML = renderMarkdown(markdown);
+        }
+    });
+});
 </script>
 
 <template>
-    <div class="flex flex-col overflow-hidden rounded-md border">
+    <div class="overflow-hidden rounded-lg border bg-muted/30">
         <TooltipProvider>
             <div
-                class="flex flex-wrap items-center gap-1 border-b bg-muted/40 p-1"
+                class="flex flex-wrap items-center gap-1 border-b bg-background/90 p-1.5"
                 role="toolbar"
                 aria-label="Formato del documento"
+                @mousedown.prevent
             >
                 <template
                     v-for="(group, groupIndex) in toolbarGroups"
@@ -276,7 +480,7 @@ const previewHtml = computed(() =>
                                 variant="ghost"
                                 size="icon-sm"
                                 :aria-label="action.label"
-                                :disabled="mode === 'preview'"
+                                :disabled="props.disabled"
                                 @click="action.run"
                             >
                                 <component
@@ -297,7 +501,7 @@ const previewHtml = computed(() =>
                                             variant="ghost"
                                             size="icon-sm"
                                             aria-label="Insertar tabla"
-                                            :disabled="mode === 'preview'"
+                                            :disabled="props.disabled"
                                         >
                                             <TableIcon aria-hidden="true" />
                                         </Button>
@@ -336,167 +540,135 @@ const previewHtml = computed(() =>
                                         />
                                     </div>
                                     <p class="text-xs text-muted-foreground">
-                                        {{ hoveredRows }} ×
-                                        {{ hoveredColumns }}
+                                        {{ hoveredRows }} × {{ hoveredColumns }}
                                     </p>
                                 </div>
                             </PopoverContent>
                         </Popover>
                     </template>
                 </template>
-
-                <div
-                    class="ml-auto flex items-center gap-1"
-                    role="group"
-                    aria-label="Modo del editor"
-                >
-                    <Button
-                        type="button"
-                        size="sm"
-                        :variant="mode === 'write' ? 'secondary' : 'ghost'"
-                        :aria-pressed="mode === 'write'"
-                        @click="mode = 'write'"
-                    >
-                        <Pencil data-icon="inline-start" aria-hidden="true" />
-                        Editar
-                    </Button>
-                    <Button
-                        type="button"
-                        size="sm"
-                        :variant="mode === 'preview' ? 'secondary' : 'ghost'"
-                        :aria-pressed="mode === 'preview'"
-                        @click="mode = 'preview'"
-                    >
-                        <Eye data-icon="inline-start" aria-hidden="true" />
-                        Vista previa
-                    </Button>
-                </div>
             </div>
         </TooltipProvider>
 
-        <Textarea
-            v-if="mode === 'write'"
-            ref="textareaRef"
-            v-model="model"
-            :aria-label="label"
-            :placeholder="placeholder"
-            class="min-h-[26rem] rounded-none border-0 font-mono text-sm shadow-none focus-visible:ring-0"
-        />
-        <div
-            v-else
-            class="markdown-preview min-h-[26rem] px-4 py-3"
-            aria-label="Vista previa del documento"
-        >
-            <!-- eslint-disable-next-line vue/no-v-html -->
-            <div v-if="model.trim() !== ''" v-html="previewHtml" />
-            <p v-else class="text-sm text-muted-foreground">
-                Nada que previsualizar todavía.
-            </p>
+        <div class="overflow-auto p-3 sm:p-8">
+            <div
+                ref="editorRef"
+                class="document-page min-h-[42rem] w-full bg-background px-6 py-8 shadow-sm outline-none sm:mx-auto sm:max-w-[52rem] sm:px-12 sm:py-12"
+                :contenteditable="!props.disabled"
+                role="textbox"
+                aria-multiline="true"
+                :aria-label="label"
+                :aria-disabled="props.disabled"
+                :data-placeholder="placeholder"
+                spellcheck="true"
+                @input="syncModel"
+                @paste.prevent="pastePlainText"
+                @drop.prevent
+            />
         </div>
     </div>
 </template>
 
 <style scoped>
-/* Tipografía del documento renderizado; el contenido llega por v-html. */
-.markdown-preview {
-    font-size: var(--text-sm);
-    line-height: 1.65;
+.document-page {
+    color: var(--foreground);
+    font-family: Georgia, Cambria, 'Times New Roman', serif;
+    font-size: 1rem;
+    line-height: 1.7;
 }
-
-.markdown-preview :deep(h1),
-.markdown-preview :deep(h2),
-.markdown-preview :deep(h3),
-.markdown-preview :deep(h4) {
-    font-weight: 600;
-    margin-block: 1.25em 0.5em;
+.document-page:empty::before {
+    color: var(--muted-foreground);
+    content: attr(data-placeholder);
+    pointer-events: none;
 }
-
-.markdown-preview :deep(h1) {
-    font-size: 1.5em;
+.document-page[contenteditable='true']:focus-visible {
+    box-shadow: 0 0 0 2px var(--ring);
 }
-
-.markdown-preview :deep(h2) {
-    font-size: 1.3em;
+.document-page :deep(h1),
+.document-page :deep(h2),
+.document-page :deep(h3),
+.document-page :deep(h4),
+.document-page :deep(h5),
+.document-page :deep(h6) {
+    font-family: var(--font-sans);
+    font-weight: 650;
+    line-height: 1.25;
+    margin-block: 1.25em 0.55em;
+}
+.document-page :deep(h1) {
+    font-size: 1.75em;
+}
+.document-page :deep(h2) {
     border-bottom: 1px solid var(--border);
+    font-size: 1.4em;
     padding-bottom: 0.25em;
 }
-
-.markdown-preview :deep(h3) {
-    font-size: 1.15em;
+.document-page :deep(h3) {
+    font-size: 1.18em;
 }
-
-.markdown-preview :deep(p) {
-    margin-block: 0.75em;
+.document-page :deep(p) {
+    margin-block: 0.8em;
 }
-
-.markdown-preview :deep(ul),
-.markdown-preview :deep(ol) {
-    margin-block: 0.75em;
-    padding-inline-start: 1.5em;
+.document-page :deep(ul),
+.document-page :deep(ol) {
+    margin-block: 0.8em;
+    padding-inline-start: 1.6em;
 }
-
-.markdown-preview :deep(ul) {
+.document-page :deep(ul) {
     list-style: disc;
 }
-
-.markdown-preview :deep(ol) {
+.document-page :deep(ol) {
     list-style: decimal;
 }
-
-.markdown-preview :deep(blockquote) {
+.document-page :deep(blockquote) {
     border-inline-start: 3px solid var(--border);
     color: var(--muted-foreground);
-    margin-block: 0.75em;
+    margin-block: 0.8em;
     padding-inline-start: 1em;
 }
-
-.markdown-preview :deep(code) {
+.document-page :deep(code) {
     background: var(--muted);
     border-radius: var(--radius-sm);
     font-family: var(--font-mono);
     font-size: 0.9em;
     padding: 0.15em 0.35em;
 }
-
-.markdown-preview :deep(pre) {
+.document-page :deep(pre) {
     background: var(--muted);
     border-radius: var(--radius-md);
-    margin-block: 0.75em;
+    margin-block: 0.8em;
     overflow-x: auto;
-    padding: 0.75em 1em;
+    padding: 0.8em 1em;
 }
-
-.markdown-preview :deep(pre code) {
+.document-page :deep(pre code) {
     background: transparent;
     padding: 0;
 }
-
-.markdown-preview :deep(table) {
+.document-page :deep(table) {
     border-collapse: collapse;
-    margin-block: 0.75em;
+    margin-block: 1em;
     width: 100%;
 }
-
-.markdown-preview :deep(th),
-.markdown-preview :deep(td) {
+.document-page :deep(th),
+.document-page :deep(td) {
     border: 1px solid var(--border);
-    padding: 0.4em 0.75em;
+    min-width: 7rem;
+    padding: 0.45em 0.7em;
     text-align: start;
+    vertical-align: top;
 }
-
-.markdown-preview :deep(th) {
+.document-page :deep(th) {
     background: var(--muted);
+    font-family: var(--font-sans);
     font-weight: 600;
 }
-
-.markdown-preview :deep(a) {
+.document-page :deep(a) {
     color: var(--primary);
     text-decoration: underline;
     text-underline-offset: 4px;
 }
-
-.markdown-preview :deep(hr) {
+.document-page :deep(hr) {
     border-color: var(--border);
-    margin-block: 1.5em;
+    margin-block: 1.75em;
 }
 </style>
