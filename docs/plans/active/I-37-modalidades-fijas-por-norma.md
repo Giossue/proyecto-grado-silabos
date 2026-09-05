@@ -7,7 +7,8 @@ Implementado el 2026-09-03 y ajustado el 2026-09-05. Verificación al pie.
 ## Objetivo
 
 Quitar el catálogo de modalidades: el Reglamento de Régimen Académico (arts. 70-74A)
-define las únicas que existen (presencial, semipresencial, en línea y a distancia), así
+define las únicas que existen (presencial, semipresencial, en línea, a distancia e
+híbrida), así
 que no hay nada que Administración deba registrar. La modalidad aprobada
 por Administración es el dato base permanente de la carrera. Coordinación puede marcar
 una modalidad distinta en una materia cuando corresponda, pero esa excepción no cambia
@@ -21,7 +22,7 @@ Sustituye la parte de catálogo de I-35.
 
 ## Diseño
 
-- `StudyModality` (enum PHP, espejo en `resources/js/lib/studyModalities.ts`): cuatro
+- `StudyModality` (enum PHP, espejo en `resources/js/lib/studyModalities.ts`): cinco
   valores elegibles.
 - Migración `000034`: columna `modalidad` (texto, valores fijos) en `carreras`
   (base aprobada), `asignaturas` (vacía = la de la carrera) y `ofertas_academicas`

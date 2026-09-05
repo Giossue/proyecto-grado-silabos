@@ -33,7 +33,7 @@ Fecha de corte: **30 de agosto de 2026**.
   DOCX se genera con PhpWord a partir de la copia de cada revisión; el PDF sigue siendo
   el respaldo de texto plano hasta decidir el motor de PDF.
 - La modalidad de estudio es un dato base de la carrera (la aprueba el CES) y no un
-  catálogo: presencial, semipresencial, en línea o a distancia, fijas por reglamento.
+  catálogo: presencial, semipresencial, en línea, a distancia o híbrida, fijas por reglamento.
   Una materia puede usar una modalidad distinta, sin cambiar ni recalificar la modalidad
   de la carrera. La oferta hereda la excepción de la materia o, si no existe, la base de
   la carrera (I-35, I-36, I-37, 5 de septiembre de 2026). La ley fija componentes ACD/APE/AA,

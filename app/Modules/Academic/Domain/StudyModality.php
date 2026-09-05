@@ -13,6 +13,7 @@ enum StudyModality: string
     case Semipresencial = 'semipresencial';
     case EnLinea = 'en_linea';
     case ADistancia = 'a_distancia';
+    case Hibrida = 'hibrida';
 
     public function label(): string
     {
@@ -21,6 +22,7 @@ enum StudyModality: string
             self::Semipresencial => 'Semipresencial',
             self::EnLinea => 'En línea',
             self::ADistancia => 'A distancia',
+            self::Hibrida => 'Híbrida',
         };
     }
 

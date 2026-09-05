@@ -8,6 +8,7 @@ export const STUDY_MODALITIES = [
     { value: 'semipresencial', label: 'Semipresencial' },
     { value: 'en_linea', label: 'En línea' },
     { value: 'a_distancia', label: 'A distancia' },
+    { value: 'hibrida', label: 'Híbrida' },
 ] as const;
 
 /** Valor del selector de materia que significa «la de la carrera». */

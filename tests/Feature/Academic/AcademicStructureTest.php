@@ -933,6 +933,21 @@ class AcademicStructureTest extends TestCase
             ->assertSessionHasErrors('modality');
         $this->assertDatabaseMissing('carreras', ['codigo_institucional' => 'SIN-MODA']);
 
+        $this->actingAsAdministrator()
+            ->post(route('admin.academic.store', 'carrera'), [
+                'faculty_id' => $faculty->id,
+                'campus_id' => Campus::query()->firstOrFail()->id,
+                'modality' => 'hibrida',
+                'code' => 'CARR-HIBRIDA',
+                'nombre' => 'Carrera híbrida',
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('carreras', [
+            'codigo_institucional' => 'CARR-HIBRIDA',
+            'modalidad' => StudyModality::Hibrida->value,
+        ]);
+
         $career = Career::query()->findOrFail($this->coordinatorContext->carrera_id);
         $curriculum = Curriculum::query()->active()->where('carrera_id', $career->id)->firstOrFail();
         $subject = Subject::query()->create([
