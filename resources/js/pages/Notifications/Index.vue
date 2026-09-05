@@ -15,7 +15,7 @@ type Notification = {
     titulo: string;
     mensaje: string;
     leido_en: string | null;
-    creado_en: string;
+    notificado_en: string;
     url_recurso: string | null;
 };
 
@@ -117,7 +117,7 @@ const paginationLabel = (value: string): string =>
                                 {{ notification.mensaje }}
                             </p>
                             <p class="mt-2 text-xs text-muted-foreground">
-                                {{ formatDate(notification.creado_en) }}
+                                {{ formatDate(notification.notificado_en) }}
                             </p>
                         </div>
                         <div class="flex shrink-0 flex-wrap gap-2">

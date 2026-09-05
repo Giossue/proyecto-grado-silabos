@@ -328,7 +328,7 @@ class AnalyzeSyllabusFieldJob implements ShouldQueue
                     : 'La ayuda no produjo recomendaciones verificables. Puede continuar trabajando normalmente.',
                 'tipo_recurso' => 'ejecucion_ia',
                 'recurso_id' => $execution->id,
-                'creado_en' => now(),
+                'notificado_en' => now(),
             ],
         );
     }

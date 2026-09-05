@@ -44,7 +44,7 @@ class SetUserStatus
                 $closedTeacherAssignments = DB::table('asignaciones_docente')
                     ->where('usuario_id', $target->id)
                     ->where('activo', true)
-                    ->update(['activo' => false, 'actualizado_en' => now()]);
+                    ->update(['activo' => false]);
             }
 
             $this->audit->execute(

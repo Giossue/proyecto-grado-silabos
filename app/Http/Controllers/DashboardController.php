@@ -110,7 +110,10 @@ class DashboardController extends Controller
         $convocation = Convocation::query()
             ->where('carrera_id', $careerId)
             ->whereIn('estado', ['abierta', 'pausada'])
-            ->latest('creado_en')
+            ->orderByDesc(
+                SyllabusProcess::query()->select('inicia_en')
+                    ->whereColumn('convocatorias_universidad.id', 'convocatorias_carreras.proceso_id'),
+            )
             ->first();
         $syllabi = Syllabus::query()->when(
             $convocation !== null,

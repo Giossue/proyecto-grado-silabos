@@ -51,8 +51,10 @@ class SyllabusProcessTest extends TestCase
             $this->assertFalse(Schema::hasColumn('convocatorias_universidad', $column));
         }
 
-        $this->assertTrue(Schema::hasColumns('convocatorias_carreras', ['id', 'carrera_id', 'proceso_id', 'estado', 'creado_en']));
-        $this->assertTrue(Schema::hasColumns('convocatorias_universidad', ['id', 'periodo_academico_id', 'plantilla_id', 'inicia_en', 'entrega_en', 'estado', 'creado_en']));
+        $this->assertTrue(Schema::hasColumns('convocatorias_carreras', ['id', 'carrera_id', 'proceso_id', 'estado']));
+        $this->assertTrue(Schema::hasColumns('convocatorias_universidad', ['id', 'periodo_academico_id', 'plantilla_id', 'inicia_en', 'entrega_en', 'estado']));
+        $this->assertFalse(Schema::hasColumn('convocatorias_carreras', 'creado_en'));
+        $this->assertFalse(Schema::hasColumn('convocatorias_universidad', 'creado_en'));
     }
 
     protected function setUp(): void
@@ -607,7 +609,7 @@ class SyllabusProcessTest extends TestCase
     private function publishedTemplate(): SyllabusTemplate
     {
         $this->actingAsAdministrator()->post(route('admin.templates.store'), ['nombre' => 'Plantilla I-31']);
-        $template = SyllabusTemplate::query()->latest('creado_en')->firstOrFail();
+        $template = SyllabusTemplate::query()->firstOrFail();
 
         return $template->fresh();
     }
@@ -618,7 +620,7 @@ class SyllabusProcessTest extends TestCase
             'nombre' => 'Fuente I-31',
             'description' => 'Documento de apoyo del periodo.',
         ])->assertRedirect();
-        $source = AcademicSource::query()->latest('creado_en')->firstOrFail();
+        $source = AcademicSource::query()->firstOrFail();
         $this->actingAsCoordinator()->put(route('sources.content.update', $source), [
             'content' => "## Perfil\n\nEvidencia académica autorizada.",
         ])->assertRedirect();

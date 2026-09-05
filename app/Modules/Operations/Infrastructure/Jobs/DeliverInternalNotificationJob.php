@@ -90,7 +90,7 @@ class DeliverInternalNotificationJob implements ShouldQueue
                         'mensaje' => $message,
                         'tipo_recurso' => 'silabo',
                         'recurso_id' => $syllabus->id,
-                        'creado_en' => now(),
+                        'notificado_en' => now(),
                     ],
                 );
             }

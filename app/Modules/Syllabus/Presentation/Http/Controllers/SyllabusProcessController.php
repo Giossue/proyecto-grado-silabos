@@ -32,7 +32,7 @@ class SyllabusProcessController extends Controller
             'processes' => SyllabusProcess::query()
                 ->with(['template:id,nombre', 'academicPeriod:id,nombre'])
                 ->withCount('convocations')
-                ->orderByDesc('creado_en')
+                ->orderByDesc('inicia_en')
                 ->get()
                 ->map(fn (SyllabusProcess $process): array => [
                     'id' => $process->id,

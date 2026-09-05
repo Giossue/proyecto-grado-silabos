@@ -69,13 +69,11 @@ class RequestSyllabusCorrection
                 'solicitado_por' => $actor->id,
                 'solicitado_en' => now(),
             ]);
-            $createdAt = now();
             foreach ($observations as $observation) {
                 DB::table('solicitud_correccion_observaciones')->insert([
                     'id' => (string) Str::uuid(),
                     'solicitud_correccion_id' => $correction->id,
                     'observacion_revision_id' => $observation->id,
-                    'creado_en' => $createdAt,
                 ]);
             }
 

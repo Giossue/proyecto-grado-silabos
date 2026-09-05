@@ -11,9 +11,7 @@ class Role extends Model
 {
     use HasUuids;
 
-    public const CREATED_AT = 'creado_en';
-
-    public const UPDATED_AT = 'actualizado_en';
+    public $timestamps = false;
 
     protected $table = 'roles';
 
@@ -24,7 +22,6 @@ class Role extends Model
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'asignaciones_rol', 'rol_id', 'usuario_id')
-            ->withPivot(['id', 'carrera_id', 'activo'])
-            ->withTimestamps('creado_en', 'actualizado_en');
+            ->withPivot(['id', 'carrera_id', 'activo', 'asignado_en']);
     }
 }

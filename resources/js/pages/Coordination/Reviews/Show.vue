@@ -74,7 +74,7 @@ type Observation = {
     requested: boolean;
     can_verify: boolean;
     created_by: string;
-    creado_en: string;
+    observado_en: string;
     response: {
         content: string;
         responded_by: string;
@@ -415,7 +415,7 @@ const observationState = (value: string): string =>
                                 {{ observation.created_by }} ·
                                 {{
                                     new Date(
-                                        observation.creado_en,
+                                        observation.observado_en,
                                     ).toLocaleString('es-EC')
                                 }}
                             </p>

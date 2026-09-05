@@ -51,7 +51,7 @@ class ConvocationController extends Controller
                     'academicPeriod:id,nombre', 'template:id,nombre',
                     'convocations' => fn ($career) => $career->where('carrera_id', $careerId)->withCount('syllabi'),
                 ])
-                ->orderByDesc('creado_en')
+                ->orderByDesc('inicia_en')
                 ->paginate(15)
                 ->withQueryString()
                 ->through(function (SyllabusProcess $process): array {

@@ -46,8 +46,6 @@ class ManagedUserController extends Controller
             ? $filters['career']
             : null;
         $users = User::query()
-            // El listado envía además los datos que solo se leen en el panel «Ver
-            // cuenta»: fechas y segundo factor.
             ->select([
                 'id',
                 'nombre',
@@ -55,7 +53,6 @@ class ManagedUserController extends Controller
                 'activo',
                 'debe_cambiar_contrasena',
                 'dos_factores_confirmado_en',
-                'creado_en',
             ])
             ->when($search, fn (Builder $query, string $term) => $query->where(
                 fn (Builder $searchQuery) => $searchQuery
@@ -89,7 +86,7 @@ class ManagedUserController extends Controller
             // mostrando solo las vigentes y el panel de lectura muestra el historial.
             ->with(['roleAssignments' => fn ($query) => $query
                 ->with(['role:id,codigo,nombre', 'career:id,nombre'])
-                ->orderByDesc('creado_en')])
+                ->orderByDesc('asignado_en')])
             ->orderBy('nombre')
             ->paginate(20)
             ->withQueryString()
@@ -105,7 +102,6 @@ class ManagedUserController extends Controller
                     // nunca. Sin esto se ve igual que una en uso y nadie sabe a quién
                     // recordarle que revise su correo.
                     'pending_first_login' => $user->debe_cambiar_contrasena,
-                    'created_at' => $user->creado_en?->toIso8601String(),
                     'two_factor_enabled' => $user->dos_factores_confirmado_en !== null,
                     'roles' => $effective->map(fn ($assignment) => [
                         'name' => $assignment->role->nombre,
@@ -155,7 +151,7 @@ class ManagedUserController extends Controller
     {
         $user->load(['roleAssignments' => fn ($query) => $query
             ->with(['role:id,codigo,nombre', 'career:id,nombre'])
-            ->orderByDesc('creado_en')]);
+            ->orderByDesc('asignado_en')]);
 
         return Inertia::render('Admin/Users/Show', [
             'managedUser' => [

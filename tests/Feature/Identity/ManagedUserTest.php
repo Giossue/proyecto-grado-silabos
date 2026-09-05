@@ -159,7 +159,7 @@ class ManagedUserTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->has('users.data', 1)
-                ->has('users.data.0.created_at')
+                ->missing('users.data.0.created_at')
                 ->where('users.data.0.two_factor_enabled', false)
                 ->has('users.data.0.roles', 0)
                 ->has('users.data.0.assignments', 1)
@@ -455,8 +455,7 @@ class ManagedUserTest extends TestCase
             'usuario_id' => $assigned->id,
             'paralelo_id' => $parallel->id,
             'activo' => true,
-            'creado_en' => now(),
-            'actualizado_en' => now(),
+            'asignado_en' => now(),
         ]);
         $this->actingAsAdministrator()
             ->from(route('admin.users.index'))

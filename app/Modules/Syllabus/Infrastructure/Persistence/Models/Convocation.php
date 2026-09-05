@@ -25,9 +25,7 @@ class Convocation extends Model
 {
     use HasUuids;
 
-    public const CREATED_AT = 'creado_en';
-
-    public const UPDATED_AT = null;
+    public $timestamps = false;
 
     public const STATE_PREPARATION = 'preparacion';
 
@@ -97,7 +95,7 @@ class Convocation extends Model
     public function sources(): BelongsToMany
     {
         return $this->belongsToMany(AcademicSource::class, 'fuentes_convocatoria', 'convocatoria_id', 'fuente_academica_id')
-            ->withTimestamps('creado_en', 'actualizado_en');
+            ->withPivot('id');
     }
 
     /** @return HasMany<Syllabus, $this> */

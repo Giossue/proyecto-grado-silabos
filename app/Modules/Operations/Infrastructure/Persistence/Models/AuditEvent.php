@@ -28,9 +28,7 @@ class AuditEvent extends Model
 {
     use HasUuids;
 
-    public const CREATED_AT = 'creado_en';
-
-    public const UPDATED_AT = null;
+    public $timestamps = false;
 
     protected $table = 'eventos_auditoria';
 

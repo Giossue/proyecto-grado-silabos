@@ -1,5 +1,9 @@
 # I-28: Esquema de base de datos 100 % en español
 
+> Nota posterior: I-52 reemplazó únicamente la convención de timestamps descrita aquí;
+> eliminó las marcas genéricas de auditoría y conservó fechas funcionales con nombres de
+> dominio. Este documento mantiene el historial de la migración I-28.
+
 ## Estado
 
 En curso — iniciado el 2026-09-01. (Renumerado de I-27 a I-28: el commit `829cd31` del

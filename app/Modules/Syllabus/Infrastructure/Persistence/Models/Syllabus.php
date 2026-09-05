@@ -23,7 +23,6 @@ use Illuminate\Database\Eloquent\Relations\HasManyThrough;
  * @property int $unresolved_observations_count
  * @property array<string, mixed> $contexto_academico
  * @property CarbonImmutable|null $guardado_en
- * @property CarbonImmutable|null $actualizado_en
  * @property-read Convocation $convocation
  * @property-read Subject $subject
  * @property string $plantilla_id
@@ -34,9 +33,7 @@ class Syllabus extends Model
 {
     use HasUuids;
 
-    public const CREATED_AT = 'creado_en';
-
-    public const UPDATED_AT = 'actualizado_en';
+    public $timestamps = false;
 
     protected $table = 'silabos';
 

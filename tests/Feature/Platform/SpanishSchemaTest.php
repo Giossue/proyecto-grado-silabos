@@ -79,3 +79,15 @@ it('I-28 no conserva valores en inglés en los CHECK de estados', function () {
 
     expect($violaciones)->toBe([]);
 });
+
+it('I-52 no conserva marcas genéricas de auditoría en tablas de dominio', function () use ($tablasDeFramework) {
+    $columnas = DB::table('information_schema.columns')
+        ->where('table_schema', 'public')
+        ->whereNotIn('table_name', $tablasDeFramework)
+        ->whereIn('column_name', ['creado_en', 'actualizado_en', 'registrado_en'])
+        ->get(['table_name', 'column_name'])
+        ->map(fn ($column) => "{$column->table_name}.{$column->column_name}")
+        ->all();
+
+    expect($columnas)->toBe([]);
+});

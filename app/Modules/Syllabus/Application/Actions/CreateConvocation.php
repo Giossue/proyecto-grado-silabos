@@ -51,7 +51,7 @@ class CreateConvocation
             foreach ([ConvocationSchedule::STAGE_START => $process->inicia_en, ConvocationSchedule::STAGE_DRAFT => $process->entrega_en] as $stage => $dueAt) {
                 DB::table('fechas_limite_convocatoria')->insert([
                     'id' => (string) Str::uuid(), 'convocatoria_id' => $convocation->id, 'etapa' => $stage,
-                    'vence_en' => $dueAt, 'creado_en' => now(), 'actualizado_en' => now(),
+                    'vence_en' => $dueAt,
                 ]);
             }
             $this->audit->execute(

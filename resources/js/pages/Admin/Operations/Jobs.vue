@@ -53,7 +53,7 @@ type Execution = {
     intentos_maximos: number;
     progreso: number;
     mensaje_error: string | null;
-    creado_en: string | null;
+    encolado_en: string | null;
     iniciado_en: string | null;
     finalizado_en: string | null;
     reintentable: boolean;

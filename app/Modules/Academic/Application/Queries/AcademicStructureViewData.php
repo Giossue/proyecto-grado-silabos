@@ -261,7 +261,8 @@ class AcademicStructureViewData
             'requirements' => SubjectRequirement::query()
                 ->whereIn('asignatura_id', $subjectIds)
                 ->whereIn('requisito_id', $subjectIds)
-                ->orderBy('creado_en')
+                ->orderBy('tipo')
+                ->orderBy('id')
                 ->get(['id', 'asignatura_id', 'requisito_id', 'tipo'])
                 ->map(fn (SubjectRequirement $requirement) => [
                     'id' => $requirement->id,
@@ -295,7 +296,7 @@ class AcademicStructureViewData
                 'campus:id,nombre',
             ])
             ->withCount('parallels')
-            ->orderByDesc('creado_en')
+            ->orderBy('asignatura_id')
             ->get();
         $usedOfferingIds = SyllabusScope::query()
             ->whereIn('oferta_academica_id', $offerings->pluck('id'))
@@ -377,7 +378,7 @@ class AcademicStructureViewData
                 'parallel.offering.subject:id,nombre,codigo_institucional',
                 'parallel.offering.academicPeriod:id,nombre',
             ])
-            ->orderByDesc('creado_en')
+            ->orderByDesc('asignado_en')
             ->get();
         $usedAssignmentIds = SyllabusCollaborator::query()
             ->whereIn('asignacion_docente_id', $teacherAssignments->pluck('id'))

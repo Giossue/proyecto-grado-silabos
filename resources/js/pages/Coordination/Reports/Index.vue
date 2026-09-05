@@ -67,7 +67,7 @@ type SyllabusRow = {
     completion: number;
     teachers: string[];
     unresolved_observations: number;
-    actualizado_en: string | null;
+    guardado_en: string | null;
     latest_revision_id: string | null;
 };
 

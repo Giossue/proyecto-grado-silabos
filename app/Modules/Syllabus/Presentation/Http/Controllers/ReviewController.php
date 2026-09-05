@@ -67,7 +67,7 @@ class ReviewController extends Controller
 
         return Inertia::render('Coordination/Reviews/Index', [
             'filters' => ['state' => $state, 'search' => $search],
-            'syllabi' => $query->orderByDesc('actualizado_en')->paginate(15)->withQueryString()
+            'syllabi' => $query->orderByRaw('guardado_en DESC NULLS LAST')->paginate(15)->withQueryString()
                 ->through(function (Syllabus $syllabus): array {
                     $revision = $syllabus->revisions->first();
 
@@ -330,7 +330,7 @@ class ReviewController extends Controller
                         && (! $requestedIds->contains($observation->id)
                             || $response?->revision_respuesta_id === $latest?->id),
                     'created_by' => $observation->creator->nombre,
-                    'creado_en' => $observation->creado_en->toIso8601String(),
+                    'observado_en' => $observation->observado_en->toIso8601String(),
                     'response' => $response === null ? null : [
                         'content' => $response->contenido,
                         'responded_by' => $response->respondent->nombre,

@@ -23,16 +23,15 @@ use Illuminate\Database\Eloquent\Model;
  * @property string|null $mensaje_error
  * @property CarbonImmutable|null $iniciado_en
  * @property CarbonImmutable|null $finalizado_en
- * @property CarbonImmutable|null $creado_en
- * @property CarbonImmutable|null $actualizado_en
+ * @property CarbonImmutable|null $encolado_en
  */
 class JobExecution extends Model
 {
     use HasUuids;
 
-    public const CREATED_AT = 'creado_en';
+    public const CREATED_AT = 'encolado_en';
 
-    public const UPDATED_AT = 'actualizado_en';
+    public const UPDATED_AT = null;
 
     protected $table = 'ejecuciones_trabajo';
 
@@ -65,6 +64,7 @@ class JobExecution extends Model
             'resultado' => 'array',
             'iniciado_en' => 'immutable_datetime',
             'finalizado_en' => 'immutable_datetime',
+            'encolado_en' => 'immutable_datetime',
         ];
     }
 }

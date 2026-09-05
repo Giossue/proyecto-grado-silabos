@@ -49,7 +49,7 @@ class JobExecutionController extends Controller
             'filters' => ['q' => $search, 'status' => $status, 'type' => $type, 'queue' => $queue],
             'type_options' => $this->typeOptions(),
             'queue_options' => $this->queueOptions(),
-            'executions' => $query->latest('creado_en')->paginate(25)->withQueryString()
+            'executions' => $query->latest('encolado_en')->paginate(25)->withQueryString()
                 ->through(fn (JobExecution $execution): array => [
                     'id' => $execution->id,
                     'tipo' => $this->typeLabel($execution->tipo),
@@ -59,7 +59,7 @@ class JobExecutionController extends Controller
                     'intentos_maximos' => $execution->intentos_maximos,
                     'progreso' => $execution->progreso,
                     'mensaje_error' => $this->safeError($execution),
-                    'creado_en' => $execution->creado_en?->toIso8601String(),
+                    'encolado_en' => $execution->encolado_en?->toIso8601String(),
                     'iniciado_en' => $execution->iniciado_en?->toIso8601String(),
                     'finalizado_en' => $execution->finalizado_en?->toIso8601String(),
                     'reintentable' => $execution->estado === 'fallida'

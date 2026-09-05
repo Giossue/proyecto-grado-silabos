@@ -8,8 +8,8 @@ use ReflectionClass;
 
 /**
  * I-28: los identificadores del esquema son 100 % español. Todo modelo Eloquent debe
- * declarar sus marcas de tiempo en español y no puede volver a introducir claves
- * inglesas en `$fillable`. Las siglas técnicas (id, uuid, mime, url, ip) no cuentan.
+ * no puede volver a introducir marcas técnicas genéricas ni claves inglesas en
+ * `$fillable`. Las siglas técnicas (id, uuid, mime, url, ip) no cuentan.
  */
 class SpanishModelColumnsTest extends TestCase
 {
@@ -23,25 +23,20 @@ class SpanishModelColumnsTest extends TestCase
         'gateway', 'renderer', 'message', 'code', 'last', 'read',
     ];
 
-    public function test_todos_los_modelos_declaran_marcas_de_tiempo_en_espanol(): void
+    public function test_los_modelos_solo_automatizan_fechas_funcionales_explicitas(): void
     {
+        $fechasFuncionales = ['asignado_en', 'encolado_en', 'notificado_en', 'almacenado_en', 'observado_en'];
+
         foreach ($this->modelos() as $modelo) {
             $instancia = $modelo->newInstanceWithoutConstructor();
             \assert($instancia instanceof Model);
 
-            $creado = $instancia->getCreatedAtColumn();
-            $actualizado = $instancia->getUpdatedAtColumn();
+            if (! $instancia->usesTimestamps()) {
+                continue;
+            }
 
-            $this->assertContains(
-                $creado,
-                ['creado_en', 'registrado_en'],
-                $modelo->getName().' debe declarar CREATED_AT en español.',
-            );
-            $this->assertContains(
-                $actualizado,
-                ['actualizado_en', null],
-                $modelo->getName().' debe declarar UPDATED_AT en español o nulo.',
-            );
+            $this->assertContains($instancia->getCreatedAtColumn(), $fechasFuncionales);
+            $this->assertNull($instancia->getUpdatedAtColumn());
         }
     }
 

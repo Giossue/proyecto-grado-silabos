@@ -219,7 +219,7 @@ class ConvocationScheduleTest extends TestCase
             'source_ids' => [$source->id],
         ])->assertRedirect();
 
-        return Convocation::query()->latest('creado_en')->firstOrFail();
+        return Convocation::query()->firstOrFail();
     }
 
     /** @return array<string, mixed> */
@@ -248,13 +248,13 @@ class ConvocationScheduleTest extends TestCase
     private function publishedConfiguration(): array
     {
         $this->actingAsAdministrator()->post(route('admin.templates.store'), ['nombre' => 'Plantilla I-15']);
-        $template = SyllabusTemplate::query()->latest('creado_en')->firstOrFail();
+        $template = SyllabusTemplate::query()->firstOrFail();
 
         $this->actingAsCoordinator()->post(route('sources.store'), [
             'nombre' => 'Fuente I-15',
             'description' => 'Documento de apoyo del periodo.',
         ]);
-        $source = AcademicSource::query()->latest('creado_en')->firstOrFail();
+        $source = AcademicSource::query()->firstOrFail();
         $this->actingAsCoordinator()->put(route('sources.content.update', $source), [
             'content' => '## Perfil base
 

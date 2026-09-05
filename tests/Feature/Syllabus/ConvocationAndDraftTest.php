@@ -368,8 +368,6 @@ class ConvocationAndDraftTest extends TestCase
             'id' => (string) Str::uuid(),
             'convocatoria_id' => $convocation->id,
             'fuente_academica_id' => $source->id,
-            'creado_en' => now(),
-            'actualizado_en' => now(),
         ]);
 
         return $convocation;
@@ -379,13 +377,13 @@ class ConvocationAndDraftTest extends TestCase
     private function publishedConfiguration(): array
     {
         $this->actingAsAdministrator()->post(route('admin.templates.store'), ['nombre' => 'Plantilla I-03']);
-        $template = SyllabusTemplate::query()->latest('creado_en')->firstOrFail();
+        $template = SyllabusTemplate::query()->firstOrFail();
 
         $this->actingAsCoordinator()->post(route('sources.store'), [
             'nombre' => 'Fuente I-03',
             'description' => 'Documento de apoyo del periodo.',
         ]);
-        $source = AcademicSource::query()->latest('creado_en')->firstOrFail();
+        $source = AcademicSource::query()->firstOrFail();
         $this->actingAsCoordinator()->put(route('sources.content.update', $source), [
             'content' => "## Perfil base\n\nEvidencia académica autorizada.",
         ]);

@@ -22,9 +22,9 @@ class RoleAssignment extends Model
 {
     use HasUuids;
 
-    public const CREATED_AT = 'creado_en';
+    public const CREATED_AT = 'asignado_en';
 
-    public const UPDATED_AT = 'actualizado_en';
+    public const UPDATED_AT = null;
 
     protected $table = 'asignaciones_rol';
 

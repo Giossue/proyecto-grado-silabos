@@ -11,11 +11,13 @@
   `trabajos_fallidos`, `restablecimientos_contrasena`, `migraciones`) — registrada como
   deuda técnica. Las clases y rutas de código siguen en inglés (precedente I-14).
   `SpanishSchemaTest` y `SpanishModelColumnsTest` hacen cumplir la regla.
-- timestamps de Eloquent: `creado_en`/`actualizado_en` cuando el agregado necesita
-  ambas marcas; `usuarios` conserva solo `creado_en` porque su historial se consulta en
-  auditoría. Donde `creado_en` ya es una marca de dominio (`notificaciones_internas`,
-  `objetos_almacenados`, `observaciones_revision`), la marca de inserción de Eloquent se
-  llama `registrado_en`.
+- fechas: las tablas de dominio no conservan los metadatos genéricos `creado_en`,
+  `actualizado_en` ni `registrado_en` (I-52). Solo persisten fechas que participan en el
+  comportamiento o explican un hecho del dominio, con nombre explícito: por ejemplo
+  `asignado_en`, `guardado_en`, `observado_en`, `notificado_en`, `encolado_en` y
+  `almacenado_en`. La historia técnica se consulta en `eventos_auditoria`; crear en el
+  futuro una auditoría automática mediante triggers requiere una decisión y migración
+  separadas.
 - tablas/columnas: plural y `snake_case`;
 - claves primarias internas: UUID generados por aplicación;
 - claves foráneas e índices explícitos;
@@ -37,8 +39,9 @@ I-50 deja `activo` como estado actual y registra toda activación/desactivación
 `eventos_auditoria`, sin duplicar fecha de baja o cédula de la integración retirada.
 I-51 retira la vigencia laboral de la cuenta: su disponibilidad se expresa con `activo`
 y sus asignaciones operativas. El modelo `User` declara los puentes que Fortify y el
-guard exigen. I-29 hace las asignaciones de rol manuales:
-`asignaciones_rol.activo` determina su efectividad y no guarda fechas de inicio o fin.
+guard exigen. I-29 hace las asignaciones de rol manuales: `asignaciones_rol.activo`
+determina su efectividad, `asignado_en` ordena el historial y no existen fechas
+programadas de inicio o fin.
 
 ### Académico
 
@@ -47,8 +50,8 @@ guard exigen. I-29 hace las asignaciones de rol manuales:
 `definiciones_campo_malla`, `valores_campo_asignatura`, `ofertas_academicas`,
 `paralelos`, `asignaciones_docente`.
 
-`asignaciones_docente` vincula una persona con un paralelo y conserva el acto que la
-respalda; no tiene intervalo de vigencia laboral. Su identidad única es
+`asignaciones_docente` vincula una persona con un paralelo, conserva en `asignado_en` el
+momento efectivo y el acto que la respalda; no tiene intervalo de vigencia laboral. Su identidad única es
 `usuario_id + paralelo_id`; un relevo finaliza la relación anterior y crea la nueva.
 
 Estos catálogos no comparten una tabla polimórfica. `carreras.facultad_id` implementa la
@@ -97,13 +100,13 @@ migración `000020`; la evidencia de IA conserva su propia copia del contenido c
 `revisiones_silabo`, `filas_repetibles`, `valores_campo`, `transiciones_estado`.
 
 `convocatorias_universidad` (I-31, I-41) es el calendario institucional: período académico,
-plantilla institucional, inicio, entrega y estado. Conserva solo `creado_en`; los actores
-y momentos de sus transiciones viven en `eventos_auditoria`. Un índice parcial único sobre
+plantilla institucional, inicio, entrega y estado. Los actores y momentos de sus
+transiciones viven en `eventos_auditoria`. Un índice parcial único sobre
 `estado IN ('abierto', 'pausado')` garantiza un solo proceso en curso.
 `convocatorias_carreras.proceso_id` es obligatorio y permite heredar el período y la
 plantilla sin copiarlos en la tabla de carrera. Su identidad única es
-`carrera_id + proceso_id`; solo conserva el estado actual y `creado_en`, mientras los
-actores y momentos de transición viven en auditoría. Un trigger PostgreSQL bloquea cambiar
+`carrera_id + proceso_id`; solo conserva el estado actual, mientras los actores y
+momentos de transición viven en auditoría. Un trigger PostgreSQL bloquea cambiar
 el período de una convocatoria universitaria que ya tiene convocatorias de carrera. La
 migración `000027` creó un proceso por cada convocatoria existente con su propia
 plantilla y fechas. El estado `pausada` de la convocatoria y `pausado` del proceso
@@ -121,6 +124,8 @@ detienen el trabajo docente sin borrar nada.
 
 `objetos_almacenados`, `artefactos_exportacion`, `notificaciones_internas`,
 `eventos_auditoria`, `eventos_salientes` (outbox transaccional), `ejecuciones_trabajo`.
+Los momentos funcionales se llaman respectivamente `almacenado_en`, `notificado_en`,
+`ocurrido_en` y `encolado_en`; no se duplican con timestamps técnicos de Eloquent.
 Las tablas de importación institucional (`ejecuciones_importacion`, `items_importacion`,
 `conflictos_importacion`, `alias_institucionales`) se retiraron el 2026-08-27 junto con
 el módulo que las usaba.

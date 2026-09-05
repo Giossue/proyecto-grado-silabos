@@ -199,7 +199,8 @@ contexto académico y lo incorpora a sus revisiones inmutables.
 
 I-28 (1 de septiembre de 2026) deja el esquema físico y los valores almacenados 100 %
 en español por decisión explícita del responsable del producto, en la línea de I-12 e
-I-14: timestamps `creado_en`/`actualizado_en`, columnas de `usuarios`
+I-14: los timestamps se tradujeron inicialmente a `creado_en`/`actualizado_en` (convención
+reemplazada después por I-52), columnas de `usuarios`
 (`correo_electronico`, `contrasena`…), `ejecuciones_trabajo` completa,
 `eventos_salientes` (antes `eventos_outbox`), familia `version_bloqueo`, estados y
 discriminadores (`pendiente`, `borrador`, `administrador`…), colas Redis y CHECK
@@ -264,6 +265,14 @@ I-51 (5 de septiembre de 2026) retira `vigente_desde` y `vigente_hasta` de las c
 esas fechas no se conocen de forma estable al administrarlas. La disponibilidad depende
 de la cuenta activa y de sus roles/asignaciones; los períodos de nombramiento de
 Coordinación no cambian. La migración es irreversible y exige un respaldo lógico previo.
+
+I-52 (5 de septiembre de 2026) retira de todas las tablas propias las marcas genéricas
+`creado_en`, `actualizado_en` y `registrado_en` cuando solo duplican auditoría técnica.
+Las fechas funcionales permanecen con nombres de dominio: `asignado_en`, `encolado_en`,
+`notificado_en`, `almacenado_en` y `observado_en`, además de las ya explícitas como
+`guardado_en`, `ocurrido_en` o `aprobado_en`. No crea triggers de auditoría todavía; esa
+decisión queda para una revisión posterior. La migración `000046` es irreversible, tuvo
+respaldos lógicos verificados y fue aplicada local y remotamente.
 
 ## Propuesto
 

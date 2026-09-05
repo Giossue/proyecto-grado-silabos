@@ -542,7 +542,7 @@ class ReviewWorkflowTest extends TestCase
             'process_id' => $this->openSyllabusProcess($template->id, now()->subDay()->toIso8601String(), now()->addMonth()->toIso8601String())->id,
             'source_ids' => [$source->id],
         ])->assertRedirect();
-        $convocation = Convocation::query()->latest('creado_en')->firstOrFail();
+        $convocation = Convocation::query()->firstOrFail();
         $syllabus = Syllabus::query()->firstOrFail();
         $this->actingAsTeacher()->post(route('syllabi.start', $syllabus))->assertRedirect();
 
@@ -553,13 +553,13 @@ class ReviewWorkflowTest extends TestCase
     private function publishedConfiguration(): array
     {
         $this->actingAsAdministrator()->post(route('admin.templates.store'), ['nombre' => 'Plantilla I-04']);
-        $template = SyllabusTemplate::query()->latest('creado_en')->firstOrFail();
+        $template = SyllabusTemplate::query()->firstOrFail();
 
         $this->actingAsCoordinator()->post(route('sources.store'), [
             'nombre' => 'Fuente I-04',
             'description' => 'Documento de apoyo del periodo.',
         ])->assertRedirect();
-        $source = AcademicSource::query()->latest('creado_en')->firstOrFail();
+        $source = AcademicSource::query()->firstOrFail();
         $this->actingAsCoordinator()->put(route('sources.content.update', $source), [
             'content' => "## Perfil I-04\n\nEvidencia I-04.",
         ])->assertRedirect();

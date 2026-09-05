@@ -1,5 +1,9 @@
 # I-28 — Mapa canónico de renombrado (anexo)
 
+> Nota posterior: la regla transversal de timestamps quedó reemplazada por I-52. Las
+> tablas propias ya no conservan `creado_en`, `actualizado_en` ni `registrado_en`; las
+> fechas funcionales usan nombres específicos del dominio.
+
 Referencia única para el barrido de código. Todo lo que no esté aquí **no** se renombra.
 
 ## Reglas transversales

@@ -259,7 +259,7 @@ class TeacherTransferTest extends TestCase
             'process_id' => $this->openSyllabusProcess($template->id, now()->subDay()->toIso8601String(), now()->addMonth()->toIso8601String())->id,
             'source_ids' => [$source->id],
         ])->assertRedirect();
-        $convocation = Convocation::query()->latest('creado_en')->firstOrFail();
+        $convocation = Convocation::query()->firstOrFail();
 
         return Syllabus::query()->firstOrFail();
     }
@@ -290,13 +290,13 @@ class TeacherTransferTest extends TestCase
     private function publishedConfiguration(): array
     {
         $this->actingAsAdministrator()->post(route('admin.templates.store'), ['nombre' => 'Plantilla relevo']);
-        $template = SyllabusTemplate::query()->latest('creado_en')->firstOrFail();
+        $template = SyllabusTemplate::query()->firstOrFail();
 
         $this->actingAsCoordinator()->post(route('sources.store'), [
             'nombre' => 'Fuente relevo',
             'description' => 'Documento de apoyo del periodo.',
         ]);
-        $source = AcademicSource::query()->latest('creado_en')->firstOrFail();
+        $source = AcademicSource::query()->firstOrFail();
         $this->actingAsCoordinator()->put(route('sources.content.update', $source), [
             'content' => '## Perfil base
 

@@ -429,7 +429,7 @@ class TemplateAndSourceTest extends TestCase
     {
         $this->actingAsAdministrator()->post(route('admin.templates.store'), ['nombre' => 'Plantilla verificable']);
 
-        return SyllabusTemplate::query()->latest('creado_en')->firstOrFail();
+        return SyllabusTemplate::query()->firstOrFail();
     }
 
     private function createSourceAsCoordinator(string $name): AcademicSource

@@ -133,7 +133,7 @@ class GenerateSyllabusExportJob implements ShouldQueue
                     'mensaje' => "Los documentos del sílabo {$syllabus->academicSubjectName()}, revisión {$revision->numero_revision}, están disponibles.",
                     'tipo_recurso' => 'artefacto_exportacion',
                     'recurso_id' => $locked->id,
-                    'creado_en' => now(),
+                    'notificado_en' => now(),
                 ],
             );
             $audit->execute(
@@ -200,7 +200,7 @@ class GenerateSyllabusExportJob implements ShouldQueue
             'estado' => 'activo',
             'propietario_usuario_id' => $artifact->solicitado_por,
             'carrera_id' => $careerId,
-            'creado_en' => now(),
+            'almacenado_en' => now(),
         ];
         $existing = StoredObject::query()->where('disco', 'private')->where('ruta_interna', $path)->first();
         if ($existing !== null) {

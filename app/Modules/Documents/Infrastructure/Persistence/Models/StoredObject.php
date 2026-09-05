@@ -15,15 +15,15 @@ use LogicException;
  * @property string $mime
  * @property int $tamano_bytes
  * @property string $huella_sha256
- * @property CarbonImmutable $creado_en
+ * @property CarbonImmutable $almacenado_en
  */
 class StoredObject extends Model
 {
     use HasUuids;
 
-    public const CREATED_AT = 'registrado_en';
+    public const CREATED_AT = 'almacenado_en';
 
-    public const UPDATED_AT = 'actualizado_en';
+    public const UPDATED_AT = null;
 
     protected $table = 'objetos_almacenados';
 
@@ -31,13 +31,13 @@ class StoredObject extends Model
     protected $fillable = [
         'disco', 'ruta_interna', 'nombre_logico', 'mime', 'tamano_bytes',
         'huella_sha256', 'clasificacion', 'estado', 'propietario_usuario_id',
-        'carrera_id', 'creado_en',
+        'carrera_id', 'almacenado_en',
     ];
 
     /** @return array<string, string> */
     protected function casts(): array
     {
-        return ['tamano_bytes' => 'integer', 'creado_en' => 'immutable_datetime'];
+        return ['tamano_bytes' => 'integer', 'almacenado_en' => 'immutable_datetime'];
     }
 
     protected static function booted(): void

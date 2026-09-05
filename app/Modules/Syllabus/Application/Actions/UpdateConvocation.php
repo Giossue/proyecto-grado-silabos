@@ -58,8 +58,6 @@ class UpdateConvocation
                     'id' => (string) Str::uuid(),
                     'convocatoria_id' => $locked->id,
                     'fuente_academica_id' => $sourceId,
-                    'creado_en' => now(),
-                    'actualizado_en' => now(),
                 ]);
             }
 

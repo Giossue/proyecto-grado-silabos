@@ -33,7 +33,6 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property string|null $codigos_recuperacion_dos_factores
  * @property Carbon|null $dos_factores_confirmado_en
  * @property string|null $codigo_recordarme
- * @property Carbon|null $creado_en
  * @property string|null $two_factor_secret
  * @property string|null $two_factor_recovery_codes
  * @property mixed $two_factor_confirmed_at
@@ -45,9 +44,7 @@ class User extends Authenticatable
     /** @use HasFactory<UserFactory> */
     use HasFactory, HasUuids, Notifiable, TwoFactorAuthenticatable;
 
-    public const CREATED_AT = 'creado_en';
-
-    public const UPDATED_AT = null;
+    public $timestamps = false;
 
     protected $table = 'usuarios';
 

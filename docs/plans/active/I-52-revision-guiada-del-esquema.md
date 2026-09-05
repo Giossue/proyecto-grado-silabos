@@ -33,6 +33,25 @@ decisión de producto antes de modificar código o persistencia.
 | `convocatorias_universidad` | Retirar `creado_por`, `abierto_por`, `abierto_en`, `pausado_en`, `cerrado_en` y `actualizado_en`; el estado actual permanece y la historia de actores/transiciones vive en auditoría. | Migración `000045`, con respaldos verificados y aplicada local y remotamente. |
 | `convocatorias_carreras` | Retirar `periodo_academico_id` y `plantilla_id`, heredados mediante `proceso_id`; retirar además actores, marcas de transición y `actualizado_en`, conservados en auditoría. La unicidad pasa a `carrera_id + proceso_id`. | Migración `000045`, con respaldos verificados y aplicada local y remotamente. |
 | Trigger `validar_evidencia_ia` | Sustituir la referencia histórica a `convocatorias` por `convocatorias_carreras` para mantener la validación de alcance de fuentes. | Incluido en migración `000045`, verificado local y remotamente. |
+| Todas las tablas de dominio | Retirar `creado_en`, `actualizado_en` y `registrado_en` cuando solo duplicaban auditoría técnica. Conservar las fechas que sí gobiernan o explican el negocio. | Migración `000046`, con respaldos verificados y aplicada local y remotamente. |
+| Asignaciones, trabajos, notificaciones, objetos y observaciones | Conservar sus momentos funcionales renombrándolos a `asignado_en`, `encolado_en`, `notificado_en`, `almacenado_en` y `observado_en`. | Migración `000046`; modelos, consultas, interfaz, índices y triggers actualizados. |
+
+## Evidencia de la migración `000046`
+
+- Respaldo local: `/tmp/silabos-i52-000046-l5rs7x/local-pre-000046.dump`.
+- Respaldo remoto: `/tmp/silabos-i52-000046-l5rs7x/remote-pre-000046.dump`.
+- Ambos catálogos fueron validados con `pg_restore -l` antes de migrar.
+- La base local y la remota devuelven cero columnas de dominio llamadas `creado_en`,
+  `actualizado_en` o `registrado_en`.
+- Las funciones PostgreSQL activas devuelven cero referencias `NEW`/`OLD` a esos nombres.
+- 188 pruebas de los módulos afectados pasan antes de la aplicación remota.
+- PHPStan, Vue TypeScript, ESLint sobre los archivos afectados, Prettier, Pint, el escaneo
+  de secretos y la compilación Vite pasan.
+- La suite completa deja 359 de 362 pruebas en verde; las tres fallas restantes son las
+  comprobaciones de interfaz ya existentes sobre fuentes automáticas, iconos y estado
+  vacío de `PeriodPreparationSheet`, ajenas a esta migración.
+- El hash del inventario completo de tablas, columnas, tipos y nulabilidad coincide entre
+  la base local y la remota después de migrar.
 
 ## Hallazgos pendientes de decisión
 

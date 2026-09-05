@@ -5,7 +5,6 @@ export type User = {
     avatar?: string;
     correo_verificado_en: string | null;
     debe_cambiar_contrasena?: boolean;
-    creado_en: string;
     [key: string]: unknown;
 };
 

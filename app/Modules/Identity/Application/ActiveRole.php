@@ -73,7 +73,7 @@ class ActiveRole
             ->effective()
             ->where('usuario_id', $user->id)
             ->with(['role:id,codigo,nombre', 'career:id,nombre,activo'])
-            ->orderBy('creado_en')
+            ->orderBy('asignado_en')
             ->orderBy('id')
             ->get()
             ->filter(fn (RoleAssignment $assignment): bool => $this->isEligible($assignment))

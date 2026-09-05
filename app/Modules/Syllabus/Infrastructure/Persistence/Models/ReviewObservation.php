@@ -18,28 +18,28 @@ use LogicException;
  * @property string $contenido
  * @property string $estado
  * @property string $creado_por
- * @property CarbonImmutable $creado_en
+ * @property CarbonImmutable $observado_en
  */
 class ReviewObservation extends Model
 {
     use HasUuids;
 
-    public const CREATED_AT = 'registrado_en';
+    public const CREATED_AT = 'observado_en';
 
-    public const UPDATED_AT = 'actualizado_en';
+    public const UPDATED_AT = null;
 
     protected $table = 'observaciones_revision';
 
     /** @var list<string> */
     protected $fillable = [
         'revision_silabo_id', 'clave_seccion', 'clave_campo', 'contenido',
-        'estado', 'creado_por', 'creado_en',
+        'estado', 'creado_por', 'observado_en',
     ];
 
     /** @return array<string, string> */
     protected function casts(): array
     {
-        return ['creado_en' => 'immutable_datetime'];
+        return ['observado_en' => 'immutable_datetime'];
     }
 
     /** @return BelongsTo<SyllabusRevision, $this> */
@@ -63,7 +63,7 @@ class ReviewObservation extends Model
     protected static function booted(): void
     {
         static::updating(function (ReviewObservation $observation): void {
-            if (array_diff(array_keys($observation->getDirty()), ['estado', 'actualizado_en']) !== []) {
+            if (array_diff(array_keys($observation->getDirty()), ['estado']) !== []) {
                 throw new LogicException('El contenido de una observación es inmutable.');
             }
         });

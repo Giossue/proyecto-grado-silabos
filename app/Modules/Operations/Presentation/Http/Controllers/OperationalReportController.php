@@ -7,6 +7,7 @@ use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Operations\Presentation\Http\Requests\ViewOperationalReportsRequest;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\Convocation;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\Syllabus;
+use App\Modules\Syllabus\Infrastructure\Persistence\Models\SyllabusProcess;
 use Illuminate\Database\Eloquent\Builder;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -36,7 +37,10 @@ class OperationalReportController extends Controller
         $convocations = Convocation::query()
             ->where('carrera_id', $careerId)
             ->with(['career:id,nombre', 'process.academicPeriod:id,nombre'])
-            ->latest('creado_en')
+            ->orderByDesc(
+                SyllabusProcess::query()->select('inicia_en')
+                    ->whereColumn('convocatorias_universidad.id', 'convocatorias_carreras.proceso_id'),
+            )
             ->get(['id', 'carrera_id', 'proceso_id', 'estado']);
         $convocationBreakdown = (clone $query)
             ->join('convocatorias_carreras', 'convocatorias_carreras.id', '=', 'silabos.convocatoria_id')
@@ -74,7 +78,7 @@ class OperationalReportController extends Controller
             ])
             ->withCount(['reviewObservations as unresolved_observations_count' => fn ($observation) => $observation
                 ->where('estado', '!=', 'verificada')])
-            ->orderByDesc('actualizado_en')
+            ->orderByRaw('guardado_en DESC NULLS LAST')
             ->paginate(20)
             ->withQueryString()
             ->through(fn (Syllabus $syllabus): array => [
@@ -87,7 +91,7 @@ class OperationalReportController extends Controller
                 'completion' => (float) $syllabus->porcentaje_completitud,
                 'teachers' => $syllabus->teachers->pluck('nombre')->values(),
                 'unresolved_observations' => (int) $syllabus->unresolved_observations_count,
-                'actualizado_en' => $syllabus->actualizado_en?->toIso8601String(),
+                'guardado_en' => $syllabus->guardado_en?->toIso8601String(),
                 'latest_revision_id' => $syllabus->revisions->first()?->id,
             ]);
 

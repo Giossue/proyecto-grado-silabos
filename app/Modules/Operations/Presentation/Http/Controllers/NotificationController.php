@@ -29,14 +29,14 @@ class NotificationController extends Controller
 
         return Inertia::render('Notifications/Index', [
             'filters' => ['status' => $status],
-            'notifications' => $query->latest('creado_en')->paginate(20)->withQueryString()
+            'notifications' => $query->latest('notificado_en')->paginate(20)->withQueryString()
                 ->through(fn (InternalNotification $notification): array => [
                     'id' => $notification->id,
                     'tipo' => $notification->tipo,
                     'titulo' => $notification->titulo,
                     'mensaje' => $notification->mensaje,
                     'leido_en' => $notification->leido_en?->toIso8601String(),
-                    'creado_en' => $notification->creado_en->toIso8601String(),
+                    'notificado_en' => $notification->notificado_en->toIso8601String(),
                     'url_recurso' => $this->resourceUrl($notification, $actor),
                 ]),
         ]);

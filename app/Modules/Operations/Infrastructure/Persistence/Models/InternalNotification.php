@@ -16,14 +16,13 @@ use LogicException;
  * @property string|null $tipo_recurso
  * @property string|null $recurso_id
  * @property CarbonImmutable|null $leido_en
- * @property CarbonImmutable $creado_en
+ * @property CarbonImmutable $notificado_en
  */
 class InternalNotification extends Model
 {
     use HasUuids;
 
-    /** La marca de dominio `creado_en` ya existía: la de Eloquent es `registrado_en`. */
-    public const CREATED_AT = 'registrado_en';
+    public const CREATED_AT = 'notificado_en';
 
     public const UPDATED_AT = null;
 
@@ -32,13 +31,13 @@ class InternalNotification extends Model
     /** @var list<string> */
     protected $fillable = [
         'usuario_id', 'clave_deduplicacion', 'tipo', 'titulo', 'mensaje',
-        'tipo_recurso', 'recurso_id', 'leido_en', 'creado_en',
+        'tipo_recurso', 'recurso_id', 'leido_en', 'notificado_en',
     ];
 
     /** @return array<string, string> */
     protected function casts(): array
     {
-        return ['leido_en' => 'immutable_datetime', 'creado_en' => 'immutable_datetime'];
+        return ['leido_en' => 'immutable_datetime', 'notificado_en' => 'immutable_datetime'];
     }
 
     protected static function booted(): void

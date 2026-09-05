@@ -32,7 +32,6 @@ export type ManagedUserRow = {
     active: boolean;
     /** Sigue con la contraseña temporal: la cuenta se creó y nadie la ha estrenado. */
     pending_first_login: boolean;
-    created_at: string | null;
     two_factor_enabled: boolean;
     roles: { name: string; career_name: string | null }[];
     /** Carreras en el mismo orden que los roles, para que ambas columnas casen fila a fila. */
@@ -46,14 +45,6 @@ const props = defineProps<{
 }>();
 
 const open = defineModel<boolean>('open', { default: false });
-
-const formatDate = (value: string | null): string =>
-    value === null
-        ? '—'
-        : new Intl.DateTimeFormat('es-EC', {
-              dateStyle: 'medium',
-              timeStyle: 'short',
-          }).format(new Date(value));
 
 const status = computed(() => {
     if (!props.user.active) {
@@ -136,14 +127,6 @@ const completedAssignments = computed(() =>
                                 </dt>
                                 <dd class="font-medium">
                                     {{ props.user.correo_electronico }}
-                                </dd>
-                            </div>
-                            <div class="flex flex-col gap-1">
-                                <dt class="text-muted-foreground">
-                                    Cuenta creada
-                                </dt>
-                                <dd class="font-medium">
-                                    {{ formatDate(props.user.created_at) }}
                                 </dd>
                             </div>
                             <div class="flex flex-col gap-1">

@@ -105,7 +105,7 @@ class SubmitSyllabus
             ObservationResponse::query()
                 ->where('silabo_id', $locked->id)
                 ->whereNull('revision_respuesta_id')
-                ->update(['revision_respuesta_id' => $revision->id, 'actualizado_en' => now()]);
+                ->update(['revision_respuesta_id' => $revision->id]);
             $from = $locked->estado;
             $action = $from === 'borrador' ? 'enviar' : 'reenviar';
             $locked->update([

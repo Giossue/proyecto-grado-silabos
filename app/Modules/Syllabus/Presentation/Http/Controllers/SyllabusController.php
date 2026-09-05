@@ -63,7 +63,7 @@ class SyllabusController extends Controller
                 ))
                 ->when($state, fn ($query, string $value) => $query->where('estado', $value))
                 ->with(['convocation:id,carrera_id,proceso_id', 'convocation.career:id,nombre', 'convocation.process:id,periodo_academico_id', 'convocation.process.academicPeriod:id,nombre', 'subject:id,nombre,codigo_institucional', 'scopes.parallel:id,codigo'])
-                ->orderByDesc('actualizado_en')
+                ->orderByRaw('guardado_en DESC NULLS LAST')
                 ->paginate(15)
                 ->withQueryString()
                 ->through(fn (Syllabus $syllabus) => [

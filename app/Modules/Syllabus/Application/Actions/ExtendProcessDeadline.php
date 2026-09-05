@@ -75,7 +75,7 @@ class ExtendProcessDeadline
                 ->where('etapa', $stage)
                 ->where('vence_en', '<', $requested)
                 ->whereIn('convocatoria_id', Convocation::query()->where('proceso_id', $locked->id)->select('id'))
-                ->update(['vence_en' => $requested, 'actualizado_en' => now()]);
+                ->update(['vence_en' => $requested]);
 
             $this->audit->execute(
                 actorId: $actor->id,

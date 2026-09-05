@@ -20,7 +20,7 @@ class SyncConvocationSources
         foreach ($sourceIds as $sourceId) {
             DB::table('fuentes_convocatoria')->insertOrIgnore([
                 'id' => (string) Str::uuid(), 'convocatoria_id' => $convocation->id,
-                'fuente_academica_id' => $sourceId, 'creado_en' => now(), 'actualizado_en' => now(),
+                'fuente_academica_id' => $sourceId,
             ]);
         }
 

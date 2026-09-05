@@ -39,7 +39,7 @@ class AddReviewObservation
                 'contenido' => $content,
                 'estado' => 'abierta',
                 'creado_por' => $actor->id,
-                'creado_en' => now(),
+                'observado_en' => now(),
             ]);
             $activeRole = $this->roles->resolve($request);
             $this->audit->execute(

@@ -22,9 +22,7 @@ class OutboxEvent extends Model
 {
     use HasUuids;
 
-    public const CREATED_AT = 'creado_en';
-
-    public const UPDATED_AT = 'actualizado_en';
+    public $timestamps = false;
 
     protected $table = 'eventos_salientes';
 
@@ -50,7 +48,7 @@ class OutboxEvent extends Model
     protected static function booted(): void
     {
         static::updating(function (OutboxEvent $event): void {
-            $mutable = ['estado', 'intentos', 'disponible_en', 'procesado_en', 'codigo_error', 'mensaje_error', 'actualizado_en'];
+            $mutable = ['estado', 'intentos', 'disponible_en', 'procesado_en', 'codigo_error', 'mensaje_error'];
             if (array_diff(array_keys($event->getDirty()), $mutable) !== []) {
                 throw new LogicException('La identidad y contenido del evento saliente son inmutables.');
             }

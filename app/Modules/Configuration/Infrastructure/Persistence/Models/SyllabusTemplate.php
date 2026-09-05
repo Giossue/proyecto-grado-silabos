@@ -2,7 +2,6 @@
 
 namespace App\Modules\Configuration\Infrastructure\Persistence\Models;
 
-use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -17,7 +16,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property bool $activo
  * @property bool $es_institucional
  * @property array<string, mixed>|null $mapeo_documento
- * @property CarbonImmutable|null $actualizado_en
  * @property int $sections_count
  */
 class SyllabusTemplate extends Model
@@ -27,9 +25,7 @@ class SyllabusTemplate extends Model
     /** Nombre universal: no se elige ni se cambia, porque solo hay una. */
     public const INSTITUTIONAL_NAME = 'Plantilla institucional de sílabo';
 
-    public const CREATED_AT = 'creado_en';
-
-    public const UPDATED_AT = 'actualizado_en';
+    public $timestamps = false;
 
     protected $table = 'plantillas_silabo';
 

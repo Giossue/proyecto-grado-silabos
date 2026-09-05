@@ -22,9 +22,7 @@ class AiEvidence extends Model
 {
     use HasUuids, ImmutableRecord;
 
-    public const CREATED_AT = 'creado_en';
-
-    public const UPDATED_AT = null;
+    public $timestamps = false;
 
     protected $table = 'evidencias_ia';
 
