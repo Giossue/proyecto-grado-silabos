@@ -26,7 +26,7 @@ class SyllabusProcessController extends Controller
     {
         $activeProcess = SyllabusProcess::query()->inProgress()
             ->with('academicPeriod:id,nombre')
-            ->first(['id', 'nombre', 'periodo_academico_id', 'estado']);
+            ->first(['id', 'periodo_academico_id', 'estado']);
 
         return Inertia::render('Admin/Processes/Index', [
             'processes' => SyllabusProcess::query()

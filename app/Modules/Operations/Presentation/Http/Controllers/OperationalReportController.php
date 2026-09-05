@@ -35,14 +35,15 @@ class OperationalReportController extends Controller
         $averageCompletion = (float) ((clone $query)->avg('porcentaje_completitud') ?? 0);
         $convocations = Convocation::query()
             ->where('carrera_id', $careerId)
-            ->with('academicPeriod:id,nombre')
+            ->with(['career:id,nombre', 'academicPeriod:id,nombre'])
             ->latest('creado_en')
-            ->get(['id', 'periodo_academico_id', 'nombre', 'estado']);
+            ->get(['id', 'carrera_id', 'periodo_academico_id', 'estado']);
         $convocationBreakdown = (clone $query)
             ->join('convocatorias_carreras', 'convocatorias_carreras.id', '=', 'silabos.convocatoria_id')
+            ->join('periodos_academicos', 'periodos_academicos.id', '=', 'convocatorias_carreras.periodo_academico_id')
             ->selectRaw(<<<'SQL'
                 convocatorias_carreras.id,
-                convocatorias_carreras.nombre,
+                periodos_academicos.nombre,
                 COUNT(*) AS total,
                 COUNT(*) FILTER (WHERE silabos.estado = 'sin_iniciar') AS not_started,
                 COUNT(*) FILTER (WHERE silabos.estado = 'borrador') AS draft,
@@ -50,8 +51,8 @@ class OperationalReportController extends Controller
                 COUNT(*) FILTER (WHERE silabos.estado = 'correccion_solicitada') AS correction_requested,
                 COUNT(*) FILTER (WHERE silabos.estado = 'aprobado') AS approved
                 SQL)
-            ->groupBy('convocatorias_carreras.id', 'convocatorias_carreras.nombre')
-            ->orderBy('convocatorias_carreras.nombre')
+            ->groupBy('convocatorias_carreras.id', 'periodos_academicos.nombre')
+            ->orderBy('periodos_academicos.nombre')
             ->get()
             ->map(fn (Syllabus $row): array => [
                 'id' => $row->getAttribute('id'),

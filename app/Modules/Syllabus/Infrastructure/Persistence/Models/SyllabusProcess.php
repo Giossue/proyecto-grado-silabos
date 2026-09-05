@@ -7,8 +7,8 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -74,7 +74,12 @@ class SyllabusProcess extends Model
         ];
     }
 
-    protected function nombre(): Attribute { return Attribute::get(fn (): string => $this->academicPeriod()->value('nombre') ?? 'Período'); }
+    protected function nombre(): Attribute
+    {
+        return Attribute::get(fn (): string => $this->relationLoaded('academicPeriod')
+            ? ($this->academicPeriod?->nombre ?? 'Período')
+            : ($this->academicPeriod()->value('nombre') ?? 'Período'));
+    }
 
     /**
      * Abierto o pausado: ocupa el único lugar de proceso vigente.

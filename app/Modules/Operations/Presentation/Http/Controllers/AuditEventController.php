@@ -238,7 +238,6 @@ class AuditEventController extends Controller
             'key' => 'Clave del campo',
             'format' => 'Formato',
             'generated_count' => 'Expedientes generados',
-            'grouping_mode' => 'Agrupación',
             'initial_role' => 'Rol inicial',
             'job_type' => 'Tipo de trabajo',
             'lock_version' => 'Versión de edición',

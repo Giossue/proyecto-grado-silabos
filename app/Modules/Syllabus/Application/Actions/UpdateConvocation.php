@@ -25,7 +25,7 @@ class UpdateConvocation
         private readonly RecordAuditEvent $audit,
     ) {}
 
-    /** @param array{nombre: string, grouping_mode?: string|null, source_ids: list<string>} $data */
+    /** @param array{source_ids: list<string>} $data */
     public function execute(Convocation $convocation, array $data, User $actor, Request $request): Convocation
     {
         $activeRole = $this->roles->resolve($request);

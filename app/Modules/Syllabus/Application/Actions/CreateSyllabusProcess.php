@@ -3,7 +3,6 @@
 namespace App\Modules\Syllabus\Application\Actions;
 
 use App\Models\User;
-use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Identity\Domain\Enums\RoleCode;
@@ -35,7 +34,11 @@ class CreateSyllabusProcess
         $template = self::institutionalTemplate();
 
         return DB::transaction(function () use ($actor, $activeRole, $data, $request, $template): SyllabusProcess {
-            $active = SyllabusProcess::query()->inProgress()->lockForUpdate()->first(['nombre']);
+            $active = SyllabusProcess::query()
+                ->inProgress()
+                ->with('academicPeriod:id,nombre')
+                ->lockForUpdate()
+                ->first(['id', 'periodo_academico_id']);
             if ($active !== null) {
                 throw ValidationException::withMessages([
                     'process' => "El proceso «{$active->nombre}» sigue en curso. Ciérrelo antes de preparar otro proceso institucional.",

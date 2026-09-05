@@ -58,11 +58,11 @@ class SyllabusController extends Controller
                     fn ($outer) => $outer
                         ->whereRaw("contexto_academico->'subject'->>'name' ILIKE ?", ["%{$term}%"])
                         ->orWhereRaw("contexto_academico->'subject'->>'code' ILIKE ?", ["%{$term}%"])
-                        ->orWhereHas('convocation', fn ($convocation) => $convocation
+                        ->orWhereHas('convocation.academicPeriod', fn ($period) => $period
                             ->whereRaw('nombre ILIKE ?', ["%{$term}%"])),
                 ))
                 ->when($state, fn ($query, string $value) => $query->where('estado', $value))
-                ->with(['convocation:id,nombre,periodo_academico_id', 'convocation.academicPeriod:id,nombre', 'subject:id,nombre,codigo_institucional', 'scopes.parallel:id,codigo'])
+                ->with(['convocation:id,carrera_id,periodo_academico_id', 'convocation.career:id,nombre', 'convocation.academicPeriod:id,nombre', 'subject:id,nombre,codigo_institucional', 'scopes.parallel:id,codigo'])
                 ->orderByDesc('actualizado_en')
                 ->paginate(15)
                 ->withQueryString()

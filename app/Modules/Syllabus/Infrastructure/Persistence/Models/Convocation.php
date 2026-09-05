@@ -9,8 +9,8 @@ use App\Modules\Configuration\Infrastructure\Persistence\Models\AcademicSource;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -84,7 +84,19 @@ class Convocation extends Model
         return ['abierto_en' => 'immutable_datetime', 'cerrado_en' => 'immutable_datetime'];
     }
 
-    protected function nombre(): Attribute { return Attribute::get(fn (): string => trim(($this->career()->value('nombre') ?? 'Carrera').' · '.($this->academicPeriod()->value('nombre') ?? 'Período'))); }
+    protected function nombre(): Attribute
+    {
+        return Attribute::get(function (): string {
+            $career = $this->relationLoaded('career')
+                ? $this->career?->nombre
+                : $this->career()->value('nombre');
+            $period = $this->relationLoaded('academicPeriod')
+                ? $this->academicPeriod?->nombre
+                : $this->academicPeriod()->value('nombre');
+
+            return trim(($career ?? 'Carrera').' · '.($period ?? 'Período'));
+        });
+    }
 
     /** @return BelongsTo<Career, $this> */
     public function career(): BelongsTo

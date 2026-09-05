@@ -95,7 +95,11 @@ class TransitionSyllabusProcess
                 if ($withoutCampus > 0 || $withoutCoordinator > 0) {
                     throw ValidationException::withMessages(['process' => "La estructura institucional no está lista: {$withoutCampus} carrera(s) sin campus activo y {$withoutCoordinator} sin coordinación vigente."]);
                 }
-                $other = SyllabusProcess::query()->inProgress()->whereKeyNot($locked->id)->first(['nombre']);
+                $other = SyllabusProcess::query()
+                    ->inProgress()
+                    ->whereKeyNot($locked->id)
+                    ->with('academicPeriod:id,nombre')
+                    ->first(['id', 'periodo_academico_id']);
                 if ($other !== null) {
                     throw ValidationException::withMessages([
                         'process' => "Ya existe un proceso en curso: «{$other->nombre}». Ciérrelo antes de abrir otro.",

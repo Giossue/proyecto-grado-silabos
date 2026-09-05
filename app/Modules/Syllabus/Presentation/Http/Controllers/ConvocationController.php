@@ -35,12 +35,10 @@ class ConvocationController extends Controller
         return Inertia::render('Coordination/Convocations/Index', [
             'filters' => ['q' => $search ?: null, 'state' => $state],
             'convocations' => SyllabusProcess::query()
-                // Una convocatoria se recuerda por su nombre o por el periodo que abarca.
+                // La convocatoria se identifica por el período institucional que abarca.
                 ->when($search, fn ($query, string $term) => $query->where(
-                    fn ($outer) => $outer
-                        ->whereRaw('nombre ILIKE ?', ["%{$term}%"])
-                        ->orWhereHas('academicPeriod', fn ($period) => $period
-                            ->whereRaw('nombre ILIKE ?', ["%{$term}%"])),
+                    fn ($outer) => $outer->whereHas('academicPeriod', fn ($period) => $period
+                        ->whereRaw('nombre ILIKE ?', ["%{$term}%"])),
                 ))
                 ->when($state, function ($query, string $value) use ($careerId): void {
                     if ($value === 'sin_iniciar') {

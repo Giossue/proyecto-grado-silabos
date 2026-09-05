@@ -68,7 +68,7 @@ class SyllabusProcessTest extends TestCase
 
         $process = SyllabusProcess::query()->firstOrFail();
         $this->assertSame('preparacion', $process->estado);
-        $this->assertSame('Convocatoria '.$process->academicPeriod->nombre, $process->nombre);
+        $this->assertSame($process->academicPeriod->nombre, $process->nombre);
         $this->assertDatabaseHas('eventos_auditoria', ['accion' => 'proceso_silabos.creado', 'recurso_id' => $process->id]);
 
         $this->actingAsAdministrator()->get(route('admin.processes.index'))
@@ -211,10 +211,9 @@ class SyllabusProcessTest extends TestCase
 
         $this->transition($process, 'abrir')->assertRedirect();
         $this->actingAsCoordinator()->post(route('convocations.store'), [
-            // El cliente no puede sustituir el período, modo ni fuentes fijados por el flujo.
+            // El cliente no puede sustituir el período ni las fuentes fijadas por el flujo.
             'process_id' => $process->id,
             'period_id' => $otherPeriod->id,
-            'grouping_mode' => 'por_oferta',
             'source_ids' => [$source->id],
         ])->assertRedirect();
 
@@ -222,7 +221,6 @@ class SyllabusProcessTest extends TestCase
         $this->assertSame($process->id, $convocation->proceso_id);
         $this->assertSame($process->periodo_academico_id, $convocation->periodo_academico_id);
         $this->assertSame($template->id, $convocation->plantilla_id);
-        $this->assertSame('por_paralelo', $convocation->modo_agrupacion);
         $this->assertSame('abierta', $convocation->estado);
         $this->assertTrue($convocation->sources()->whereKey($source->id)->exists());
         $this->assertDatabaseHas('fechas_limite_convocatoria', [
@@ -484,7 +482,7 @@ class SyllabusProcessTest extends TestCase
     {
         $convocation = $this->openedConvocation();
         $source = AcademicSource::query()->firstOrFail();
-        $payload = ['nombre' => 'Convocatoria corregida', 'source_ids' => [$source->id]];
+        $payload = ['source_ids' => [$source->id]];
 
         $this->actingAsCoordinator()->patch('/coordinacion/convocatorias/'.$convocation->id, $payload)->assertMethodNotAllowed();
 
@@ -492,7 +490,7 @@ class SyllabusProcessTest extends TestCase
             ->post(route('convocations.transition', [$convocation, 'pausar']), ['reason' => 'Corrección de la malla antes de continuar.'])
             ->assertRedirect();
         $this->actingAsCoordinator()->patch('/coordinacion/convocatorias/'.$convocation->id, $payload)->assertMethodNotAllowed();
-        $this->assertSame('Convocatoria '.$convocation->academicPeriod->nombre, $convocation->fresh()->nombre);
+        $this->assertSame($convocation->career->nombre.' · '.$convocation->academicPeriod->nombre, $convocation->fresh()->nombre);
 
         // Cerrar no es de la carrera: lo decide Administración cerrando el proceso.
         $this->actingAsCoordinator()->post(route('convocations.transition', [$convocation, 'cerrar']))->assertNotFound();
@@ -505,16 +503,16 @@ class SyllabusProcessTest extends TestCase
     public function test_process_configuration_changes_only_in_preparation_or_pause(): void
     {
         $process = $this->openProcess();
-        $payload = [...$this->processPayload($process->template), 'nombre' => 'Renombrado'];
+        $payload = $this->processPayload($process->template);
 
         $this->actingAsAdministrator()->patch(route('admin.processes.update', $process), $payload)
             ->assertForbidden();
 
-        $this->transition($process, 'pausar', 'Se corrige el nombre y la fecha de entrega.')->assertRedirect();
+        $this->transition($process, 'pausar', 'Se corrige la fecha de entrega.')->assertRedirect();
         $this->actingAsAdministrator()->patch(route('admin.processes.update', $process), $payload)
             ->assertRedirect()
             ->assertSessionHas('success');
-        $this->assertSame('Convocatoria '.$process->academicPeriod->nombre, $process->fresh()->nombre);
+        $this->assertSame($process->academicPeriod->nombre, $process->fresh()->nombre);
     }
 
     public function test_period_of_a_process_with_convocations_cannot_change(): void

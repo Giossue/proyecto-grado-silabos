@@ -24,7 +24,8 @@ class ProcessLocks
     {
         $process = SyllabusProcess::query()
             ->where('estado', SyllabusProcess::STATE_OPEN)
-            ->first(['nombre']);
+            ->with('academicPeriod:id,nombre')
+            ->first(['id', 'periodo_academico_id']);
 
         if ($process === null) {
             return null;
@@ -61,7 +62,8 @@ class ProcessLocks
     {
         $process = SyllabusProcess::query()
             ->where('estado', SyllabusProcess::STATE_OPEN)
-            ->first(['nombre']);
+            ->with('academicPeriod:id,nombre')
+            ->first(['id', 'periodo_academico_id']);
 
         return $process === null
             ? null
@@ -77,7 +79,8 @@ class ProcessLocks
         $convocation = Convocation::query()
             ->where('carrera_id', $careerId)
             ->running()
-            ->first(['nombre']);
+            ->with(['career:id,nombre', 'academicPeriod:id,nombre'])
+            ->first(['id', 'carrera_id', 'periodo_academico_id']);
 
         if ($convocation === null) {
             return null;
