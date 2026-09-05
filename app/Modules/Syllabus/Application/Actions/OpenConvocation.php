@@ -118,7 +118,7 @@ class OpenConvocation
                 resourceType: 'convocatoria',
                 resourceId: $convocation->id,
                 result: 'exito',
-                metadata: ['generated_count' => $generated, 'grouping_mode' => $convocation->modo_agrupacion],
+                metadata: ['generated_count' => $generated],
                 correlationId: $request->attributes->getString('correlation_id') ?: null,
             );
 

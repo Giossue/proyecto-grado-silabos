@@ -47,9 +47,7 @@ class CreateConvocation
                 'proceso_id' => $process->id,
                 'periodo_academico_id' => $process->periodo_academico_id,
                 'plantilla_id' => $process->plantilla_id,
-                'nombre' => $process->nombre,
                 'estado' => Convocation::STATE_PREPARATION,
-                'modo_agrupacion' => 'por_paralelo',
                 'creado_por' => $actor->id,
             ]);
             $sourceCount = $this->sources->execute($convocation);
@@ -63,7 +61,7 @@ class CreateConvocation
                 actorId: $actor->id, roleAssignmentId: $activeRole->id,
                 action: 'convocatoria.iniciada', resourceType: 'convocatoria', resourceId: $convocation->id,
                 result: 'exito',
-                metadata: ['process_id' => $process->id, 'period_id' => $process->periodo_academico_id, 'source_count' => $sourceCount, 'grouping_mode' => 'por_paralelo'],
+                metadata: ['process_id' => $process->id, 'period_id' => $process->periodo_academico_id, 'source_count' => $sourceCount],
                 correlationId: $request->attributes->getString('correlation_id') ?: null,
             );
 

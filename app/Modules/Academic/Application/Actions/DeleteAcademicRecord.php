@@ -98,14 +98,14 @@ class DeleteAcademicRecord
             'facultad' => Career::query()->where('facultad_id', $record->getKey())->exists(),
             'carrera' => DB::table('mallas')->where('carrera_id', $record->getKey())->exists()
                 || DB::table('fuentes_academicas')->where('carrera_id', $record->getKey())->exists()
-                || DB::table('convocatorias')->where('carrera_id', $record->getKey())->exists()
+                || DB::table('convocatorias_carreras')->where('carrera_id', $record->getKey())->exists()
                 || DB::table('asignaciones_coordinador')->where('carrera_id', $record->getKey())->exists()
                 || DB::table('asignaciones_rol')->where('carrera_id', $record->getKey())->exists(),
             'campus' => Career::query()->where('campus_id', $record->getKey())->exists()
                 || CourseOffering::query()->where('campus_id', $record->getKey())->exists(),
             'periodo' => CourseOffering::query()->where('periodo_academico_id', $record->getKey())->exists()
-                || DB::table('procesos_silabos')->where('periodo_academico_id', $record->getKey())->exists()
-                || DB::table('convocatorias')->where('periodo_academico_id', $record->getKey())->exists(),
+                || DB::table('convocatorias_universidad')->where('periodo_academico_id', $record->getKey())->exists()
+                || DB::table('convocatorias_carreras')->where('periodo_academico_id', $record->getKey())->exists(),
             'paralelo' => SyllabusScope::query()->where('paralelo_id', $record->getKey())->exists()
                 || SyllabusCollaborator::query()->whereHas('teacherAssignment', fn ($query) => $query->where('paralelo_id', $record->getKey()))->exists(),
             'asignacion_docente' => SyllabusCollaborator::query()->where('asignacion_docente_id', $record->getKey())->exists(),

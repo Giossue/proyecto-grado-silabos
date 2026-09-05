@@ -39,10 +39,10 @@ class OperationalReportController extends Controller
             ->latest('creado_en')
             ->get(['id', 'periodo_academico_id', 'nombre', 'estado']);
         $convocationBreakdown = (clone $query)
-            ->join('convocatorias', 'convocatorias.id', '=', 'silabos.convocatoria_id')
+            ->join('convocatorias_carreras', 'convocatorias_carreras.id', '=', 'silabos.convocatoria_id')
             ->selectRaw(<<<'SQL'
-                convocatorias.id,
-                convocatorias.nombre,
+                convocatorias_carreras.id,
+                convocatorias_carreras.nombre,
                 COUNT(*) AS total,
                 COUNT(*) FILTER (WHERE silabos.estado = 'sin_iniciar') AS not_started,
                 COUNT(*) FILTER (WHERE silabos.estado = 'borrador') AS draft,
@@ -50,8 +50,8 @@ class OperationalReportController extends Controller
                 COUNT(*) FILTER (WHERE silabos.estado = 'correccion_solicitada') AS correction_requested,
                 COUNT(*) FILTER (WHERE silabos.estado = 'aprobado') AS approved
                 SQL)
-            ->groupBy('convocatorias.id', 'convocatorias.nombre')
-            ->orderBy('convocatorias.nombre')
+            ->groupBy('convocatorias_carreras.id', 'convocatorias_carreras.nombre')
+            ->orderBy('convocatorias_carreras.nombre')
             ->get()
             ->map(fn (Syllabus $row): array => [
                 'id' => $row->getAttribute('id'),

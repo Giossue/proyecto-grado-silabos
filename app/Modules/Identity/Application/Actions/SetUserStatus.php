@@ -89,11 +89,11 @@ class SetUserStatus
 
         $inProgress = DB::table('colaboradores_silabo')
             ->join('silabos', 'silabos.id', '=', 'colaboradores_silabo.silabo_id')
-            ->join('convocatorias', 'convocatorias.id', '=', 'silabos.convocatoria_id')
-            ->join('carreras', 'carreras.id', '=', 'convocatorias.carrera_id')
+            ->join('convocatorias_carreras', 'convocatorias_carreras.id', '=', 'silabos.convocatoria_id')
+            ->join('carreras', 'carreras.id', '=', 'convocatorias_carreras.carrera_id')
             ->where('colaboradores_silabo.usuario_id', $target->id)
             ->whereIn('silabos.estado', ['borrador', 'en_revision', 'correccion_solicitada'])
-            ->where('convocatorias.estado', 'abierta')
+            ->where('convocatorias_carreras.estado', 'abierta')
             ->groupBy('carreras.nombre')
             ->selectRaw('carreras.nombre AS carrera, COUNT(*) AS total')
             ->get();

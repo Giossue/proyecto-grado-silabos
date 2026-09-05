@@ -41,7 +41,6 @@ const props = defineProps<{
         name: string;
         state: string;
         process: { name: string; state: string };
-        grouping_mode: string;
         period: string;
         template: string;
         sources: string[];
@@ -302,16 +301,6 @@ const {
                     </CardDescription>
                 </CardHeader>
                 <CardContent class="flex flex-col gap-4 text-sm">
-                    <div>
-                        <div class="font-medium">Agrupación</div>
-                        <div class="text-muted-foreground">
-                            {{
-                                convocation.grouping_mode === 'por_paralelo'
-                                    ? 'Un sílabo por paralelo'
-                                    : 'Un sílabo por oferta'
-                            }}
-                        </div>
-                    </div>
                     <div>
                         <div class="font-medium">Proceso institucional</div>
                         <div class="text-muted-foreground">

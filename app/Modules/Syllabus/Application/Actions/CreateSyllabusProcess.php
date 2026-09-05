@@ -47,7 +47,6 @@ class CreateSyllabusProcess
                 ]);
             }
             $process = SyllabusProcess::query()->create([
-                'nombre' => 'Convocatoria '.AcademicPeriod::query()->findOrFail($data['period_id'])->nombre,
                 'plantilla_id' => $template->id,
                 'periodo_academico_id' => $data['period_id'],
                 'inicia_en' => $data['starts_at'],

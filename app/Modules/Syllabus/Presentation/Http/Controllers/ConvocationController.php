@@ -99,7 +99,6 @@ class ConvocationController extends Controller
                     'name' => $convocation->process->nombre,
                     'state' => $convocation->process->estado,
                 ],
-                'grouping_mode' => $convocation->modo_agrupacion,
                 'period' => $convocation->academicPeriod->nombre,
                 'template' => $convocation->template->nombre,
                 'sources' => $convocation->sources->map(fn (AcademicSource $source) => $source->nombre)->values(),

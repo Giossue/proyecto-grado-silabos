@@ -16,7 +16,7 @@ class StoreConvocationRequest extends FormRequest
     /** @return array<string, list<mixed>> */
     public function rules(): array
     {
-        return ['process_id' => ['required', 'uuid', Rule::exists('procesos_silabos', 'id')->where('estado', 'abierto')]];
+        return ['process_id' => ['required', 'uuid', Rule::exists('convocatorias_universidad', 'id')->where('estado', 'abierto')]];
     }
 
     /** @return array{process_id: string} */

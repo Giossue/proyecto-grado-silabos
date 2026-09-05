@@ -50,16 +50,7 @@ class UpdateConvocation
                 throw ValidationException::withMessages(['source_ids' => 'Todas las fuentes deben estar activas y pertenecer a la carrera.']);
             }
 
-            $before = [
-                'nombre' => $locked->nombre,
-                'grouping_mode' => $locked->modo_agrupacion,
-                'source_ids' => $locked->sources()->pluck('fuentes_academicas.id')->sort()->values()->all(),
-            ];
-            $attributes = ['nombre' => $data['nombre']];
-            if ($locked->estado === Convocation::STATE_PREPARATION) {
-                $attributes['modo_agrupacion'] = $data['grouping_mode'] ?? $locked->modo_agrupacion;
-            }
-            $locked->update($attributes);
+            $before = ['source_ids' => $locked->sources()->pluck('fuentes_academicas.id')->sort()->values()->all()];
 
             DB::table('fuentes_convocatoria')->where('convocatoria_id', $locked->id)->delete();
             foreach ($sourceIds as $sourceId) {
@@ -80,10 +71,6 @@ class UpdateConvocation
                 resourceId: $locked->id,
                 result: 'exito',
                 metadata: [
-                    'before_nombre' => $before['nombre'],
-                    'after_nombre' => $locked->nombre,
-                    'before_grouping_mode' => $before['grouping_mode'],
-                    'after_grouping_mode' => $locked->modo_agrupacion,
                     'before_source_ids' => implode(',', $before['source_ids']),
                     'after_source_ids' => implode(',', collect($sourceIds)->sort()->values()->all()),
                 ],

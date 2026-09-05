@@ -8,6 +8,7 @@ use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -17,7 +18,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * carreras. Fija la plantilla y las fechas; cada convocatoria de carrera cuelga de él.
  *
  * @property string $id
- * @property string $nombre
  * @property string $plantilla_id
  * @property string $periodo_academico_id
  * @property CarbonImmutable $inicia_en
@@ -54,11 +54,11 @@ class SyllabusProcess extends Model
         self::STATE_CLOSED,
     ];
 
-    protected $table = 'procesos_silabos';
+    protected $table = 'convocatorias_universidad';
 
     /** @var list<string> */
     protected $fillable = [
-        'nombre', 'plantilla_id', 'periodo_academico_id', 'inicia_en', 'entrega_en', 'estado',
+        'plantilla_id', 'periodo_academico_id', 'inicia_en', 'entrega_en', 'estado',
         'creado_por', 'abierto_por', 'abierto_en', 'pausado_en', 'cerrado_en',
     ];
 
@@ -73,6 +73,8 @@ class SyllabusProcess extends Model
             'cerrado_en' => 'immutable_datetime',
         ];
     }
+
+    protected function nombre(): Attribute { return Attribute::get(fn (): string => $this->academicPeriod()->value('nombre') ?? 'Período'); }
 
     /**
      * Abierto o pausado: ocupa el único lugar de proceso vigente.

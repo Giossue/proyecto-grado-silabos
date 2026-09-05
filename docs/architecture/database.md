@@ -92,14 +92,14 @@ migración `000020`; la evidencia de IA conserva su propia copia del contenido c
 
 ### Convocatorias y sílabos
 
-`procesos_silabos`, `convocatorias`, `fuentes_convocatoria`,
+`convocatorias_universidad`, `convocatorias_carreras`, `fuentes_convocatoria`,
 `fechas_limite_convocatoria`, `silabos`, `alcances_silabo`, `colaboradores_silabo`,
 `revisiones_silabo`, `filas_repetibles`, `valores_campo`, `transiciones_estado`.
 
-`procesos_silabos` (I-31, I-41) es el calendario institucional: período académico,
+`convocatorias_universidad` (I-31, I-41) es el calendario institucional: período académico,
 plantilla publicada, inicio, entrega y estado. Un índice parcial único sobre
 `estado IN ('abierto', 'pausado')` garantiza un solo proceso en curso.
-`convocatorias.proceso_id` es obligatorio y su `periodo_academico_id` debe coincidir con
+`convocatorias_carreras.proceso_id` es obligatorio y su `periodo_academico_id` debe coincidir con
 el del proceso: triggers PostgreSQL protegen esa consistencia y bloquean cambiar el
 período de un proceso que ya tiene convocatorias. La
 migración `000027` creó un proceso por cada convocatoria existente con su propia

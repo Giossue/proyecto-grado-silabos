@@ -207,7 +207,7 @@ class SyllabusProcessTest extends TestCase
         $this->actingAsCoordinator()->post(route('convocations.store'), [
             'process_id' => $process->id,
         ])->assertSessionHasErrors('process_id');
-        $this->assertDatabaseCount('convocatorias', 0);
+        $this->assertDatabaseCount('convocatorias_carreras', 0);
 
         $this->transition($process, 'abrir')->assertRedirect();
         $this->actingAsCoordinator()->post(route('convocations.store'), [

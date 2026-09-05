@@ -27,6 +27,14 @@ decisión de producto antes de modificar código o persistencia.
 | `usuarios` | Retirar `desactivado_en`, `actualizado_en` y `documento_identidad`; el estado presente es `activo` y la historia queda en auditoría. | I-50, migración `000040`, aplicada local y remotamente. |
 | `usuarios` | Retirar `vigente_desde` y `vigente_hasta`; esas fechas no se conocen de modo estable. La disponibilidad depende de cuenta activa y rol/asignación. | I-51, migración `000041`, aplicada local y remotamente. |
 
+## Hallazgos pendientes de decisión
+
+| Tabla | Función actual | Recomendación inicial |
+|---|---|---|
+| `sesiones` | Sesiones web de Laravel con driver `database`; permite cerrar todas las sesiones de una cuenta al desactivarla o reenviar credenciales. | Conservar mientras `SESSION_DRIVER=database`. Solo desaparecería al migrar el driver a Redis u otro almacenamiento, con una decisión explícita de operación y persistencia. |
+| `convocatorias_universidad` | Calendario institucional: un proceso por período, con plantilla, fechas y estado global; Administración lo abre/pausa/cierra. | Renombrada desde `procesos_silabos`; revisar después si `nombre` es redundante. |
+| `convocatorias_carreras` | Alcance operativo de una carrera dentro de una convocatoria institucional; permite iniciar o pausar su propio trabajo y genera un sílabo por paralelo cuando cumple requisitos. | Renombrada desde `convocatorias`; conservar mientras las carreras operen de forma independiente. |
+
 ## Pendiente de revisión
 
 - Continuar por la siguiente tabla que indique el responsable del producto.

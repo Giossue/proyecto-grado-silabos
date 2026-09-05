@@ -10,6 +10,7 @@ use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -21,9 +22,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $proceso_id
  * @property string $periodo_academico_id
  * @property string $plantilla_id
- * @property string $nombre
  * @property string $estado
- * @property string $modo_agrupacion
  * @property CarbonImmutable|null $abierto_en
  * @property-read Career $career
  * @property-read SyllabusProcess $process
@@ -46,12 +45,12 @@ class Convocation extends Model
 
     public const STATE_CLOSED = 'cerrada';
 
-    protected $table = 'convocatorias';
+    protected $table = 'convocatorias_carreras';
 
     /** @var list<string> */
     protected $fillable = [
-        'carrera_id', 'proceso_id', 'periodo_academico_id', 'plantilla_id', 'nombre', 'estado',
-        'modo_agrupacion', 'creado_por', 'abierto_por', 'abierto_en', 'cerrado_en',
+        'carrera_id', 'proceso_id', 'periodo_academico_id', 'plantilla_id', 'estado',
+        'creado_por', 'abierto_por', 'abierto_en', 'cerrado_en',
     ];
 
     /**
@@ -84,6 +83,8 @@ class Convocation extends Model
     {
         return ['abierto_en' => 'immutable_datetime', 'cerrado_en' => 'immutable_datetime'];
     }
+
+    protected function nombre(): Attribute { return Attribute::get(fn (): string => trim(($this->career()->value('nombre') ?? 'Carrera').' · '.($this->academicPeriod()->value('nombre') ?? 'Período'))); }
 
     /** @return BelongsTo<Career, $this> */
     public function career(): BelongsTo
