@@ -25,16 +25,14 @@ al entrar y puede sustituirla desde el menú, sin sumar alcances ni privilegios.
 
 ### Estructura académica
 
-- `Facultad`, `Escuela`, `Carrera`, `Campus`, `Modalidad`, `PeriodoAcademico`.
+- `Facultad`, `Carrera`, `Campus`, `Modalidad`, `PeriodoAcademico`.
 - `Malla`, `DefinicionCampoMalla`, `Asignatura` con ciclo/orden,
   `ValorCampoAsignatura` y `RequisitoAsignatura`.
 - `OfertaAcademica`, `Paralelo`, `AsignacionDocente`.
 - `AliasInstitucional` traduce el texto libre de la fuente hacia un catálogo normalizado.
 
-Una `Facultad` agrupa muchas `Escuela` y cada `Escuela` agrupa muchas `Carrera`, como en
-la fuente institucional. Una carrera solo puede colgar de una escuela de su propia
-facultad, y la base lo impone con una clave ajena compuesta, no con validación de
-aplicación.
+Una `Facultad` agrupa muchas `Carrera`. `Campus` representa la ubicación física donde se
+dicta una oferta; no es una subdivisión de la facultad.
 
 `Campus` es catálogo; la modalidad no: son los valores fijos del Reglamento de Régimen
 Académico (`StudyModality`). La oferta no elige ninguno de los dos: hereda el campus de

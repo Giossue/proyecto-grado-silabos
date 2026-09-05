@@ -38,7 +38,7 @@ I-29 hace las asignaciones de rol manuales:
 
 ### Académico
 
-`facultades`, `escuelas`, `carreras`, `campus`, `asignaciones_coordinador`,
+`facultades`, `carreras`, `campus`, `asignaciones_coordinador`,
 `periodos_academicos`, `mallas`, `asignaturas`, `requisitos_asignatura`,
 `definiciones_campo_malla`, `valores_campo_asignatura`, `ofertas_academicas`,
 `paralelos`, `asignaciones_docente`.
@@ -47,9 +47,8 @@ I-29 hace las asignaciones de rol manuales:
 respalda; no tiene intervalo de vigencia laboral. Su identidad única es
 `usuario_id + paralelo_id`; un relevo finaliza la relación anterior y crea la nueva.
 
-Estos catálogos no comparten una tabla polimórfica. Una escuela pertenece a una facultad
-y una carrera puede enlazarse solo con una escuela de esa misma facultad: la clave ajena
-compuesta `carreras(escuela_id, facultad_id)` lo impone con borrado restringido.
+Estos catálogos no comparten una tabla polimórfica. `carreras.facultad_id` implementa la
+relación uno-a-muchos Facultad → Carreras con clave foránea y borrado restringido.
 `campus` y `periodos_academicos` conservan identidad propia; el período es institucional
 y de código único, no depende de una carrera. `ofertas_academicas` los
 relaciona con una asignatura mediante claves foráneas. La modalidad no es tabla sino

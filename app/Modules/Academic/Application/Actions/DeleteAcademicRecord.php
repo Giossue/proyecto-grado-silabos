@@ -10,7 +10,6 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CourseOffering;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Faculty;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
-use App\Modules\Academic\Infrastructure\Persistence\Models\School;
 use App\Modules\Academic\Infrastructure\Persistence\Models\TeacherAssignment;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
@@ -96,8 +95,7 @@ class DeleteAcademicRecord
     private function assertDeletable(string $entity, Model $record): void
     {
         $hasDependencies = match ($entity) {
-            'facultad' => School::query()->where('facultad_id', $record->getKey())->exists()
-                || Career::query()->where('facultad_id', $record->getKey())->exists(),
+            'facultad' => Career::query()->where('facultad_id', $record->getKey())->exists(),
             'carrera' => DB::table('mallas')->where('carrera_id', $record->getKey())->exists()
                 || DB::table('fuentes_academicas')->where('carrera_id', $record->getKey())->exists()
                 || DB::table('convocatorias')->where('carrera_id', $record->getKey())->exists()

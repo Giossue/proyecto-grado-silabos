@@ -29,7 +29,7 @@ class Career extends Model
     protected $table = 'carreras';
 
     /** @var list<string> */
-    protected $fillable = ['facultad_id', 'escuela_id', 'modalidad', 'campus_id', 'codigo_institucional', 'nombre', 'activo'];
+    protected $fillable = ['facultad_id', 'modalidad', 'campus_id', 'codigo_institucional', 'nombre', 'activo'];
 
     /** @return array<string, string> */
     protected function casts(): array
@@ -54,11 +54,5 @@ class Career extends Model
     public function campus(): BelongsTo
     {
         return $this->belongsTo(Campus::class, 'campus_id');
-    }
-
-    /** @return BelongsTo<School, $this> */
-    public function school(): BelongsTo
-    {
-        return $this->belongsTo(School::class, 'escuela_id');
     }
 }

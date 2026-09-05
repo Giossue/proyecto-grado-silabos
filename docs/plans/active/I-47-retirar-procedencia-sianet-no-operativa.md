@@ -7,8 +7,8 @@ de procedencia SIANET que no intervienen en los flujos actuales. La integración
 lectura/importación no forma parte del producto y el sistema ya opera con sus propios
 códigos visibles y relaciones normalizadas.
 
-La jerarquía Facultad → Escuela → Carrera se conserva: solo se retira el código externo
-de la escuela, no la tabla `escuelas` ni `carreras.escuela_id`.
+I-48 reemplaza la parte de esta decisión relativa a `escuelas`: el nivel completo se
+retira del producto junto con `carreras.escuela_id`.
 
 ## Alcance
 

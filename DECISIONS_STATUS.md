@@ -54,12 +54,11 @@ Fecha de corte: **30 de agosto de 2026**.
 - La identidad de las cuentas se administra de forma centralizada: solo el Administrador
   puede corregir nombre o correo. Coordinadores y Docentes solicitan esos cambios a
   Administración, incluso cuando se trata de la cuenta propia.
-- La estructura institucional se presenta y persiste como Facultad → Escuela → Carrera,
-  según el esquema real de la fuente verificado en I-11. Campus y modalidades siguen
-  siendo catálogos independientes; un campus participa en una oferta académica y no se
-  mezcla ni se duplica como facultad o carrera. El período académico es un catálogo
-  institucional único (I-41, decisión explícita del responsable del producto del
-  2026-09-03), aunque la fuente histórica lo repita por carrera.
+- La estructura institucional se presenta y persiste como Facultad → Carrera. Campus y
+  modalidades siguen siendo catálogos independientes; un campus participa en una oferta
+  académica y no se mezcla ni se duplica como facultad o carrera. El período académico es
+  un catálogo institucional único (I-41, decisión explícita del responsable del producto
+  del 2026-09-03), aunque la fuente histórica lo repita por carrera.
 - Administración puede corregir los metadatos de esos catálogos y reasignar una carrera a
   otra facultad activa antes de abrir el proceso institucional. Un registro sin
   dependencias se elimina; con historia se protege y explica sus consecuencias. Cada
@@ -247,9 +246,14 @@ carrera/período.
 
 I-47 (5 de septiembre de 2026) retira la procedencia SIANET que no interviene en los
 casos de uso actuales: código externo de escuela, período, malla y asignación docente;
-año del período, descripción externa de malla y código oculto de asignatura. Se conserva
-la estructura Facultad → Escuela → Carrera y los códigos visibles que usa el producto.
-La migración es irreversible y exige un respaldo lógico previo.
+año del período, descripción externa de malla y código oculto de asignatura. Se conservan
+los códigos visibles que usa el producto. La migración es irreversible y exige un
+respaldo lógico previo.
+
+I-48 (5 de septiembre de 2026) retira el nivel `escuelas` que provenía de SIANET: no
+representa una extensión ni una entidad operativa de sílabos. El producto queda como
+Facultad → Carrera; `campus` conserva la ubicación física de las ofertas. La migración
+es irreversible y exige un respaldo lógico previo.
 
 ## Propuesto
 
