@@ -3,7 +3,6 @@ import { Form, usePage } from '@inertiajs/vue3';
 import { Check, Pencil } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import ManagedUserController from '@/actions/App/Modules/Identity/Presentation/Http/Controllers/ManagedUserController';
-import DatePicker from '@/components/DatePicker.vue';
 import FormSheet from '@/components/domain/FormSheet.vue';
 import FormSheetActions from '@/components/domain/FormSheetActions.vue';
 import { Button } from '@/components/ui/button';
@@ -32,8 +31,6 @@ const props = defineProps<{
         nombre: string;
         correo_electronico: string;
         active: boolean;
-        valid_from: string | null;
-        valid_until: string | null;
     };
     roles: { codigo: string; nombre: string }[];
     careers: { id: string; nombre: string }[];
@@ -52,7 +49,7 @@ const editingSelf = computed(() => page.props.auth.user.id === props.user.id);
 const description = computed(() =>
     editingSelf.value
         ? 'Corrija su nombre o su correo. El estado y los roles de la propia cuenta se gestionan desde otra cuenta de administración.'
-        : `Corrija el nombre o el correo de ${props.user.nombre}, su vigencia laboral, el estado de la cuenta o asigne otro rol. El correo es con el que inicia sesión.`,
+        : `Corrija el nombre o el correo de ${props.user.nombre}, el estado de la cuenta o asigne otro rol. El correo es con el que inicia sesión.`,
 );
 
 // Asignar un rol solo se envía cuando la persona lo pide expresamente, para que guardar
@@ -124,34 +121,6 @@ watch(open, (isOpen) => {
                     </Field>
 
                     <template v-if="!editingSelf">
-                        <Field :data-invalid="Boolean(errors.valid_from)">
-                            <FieldLabel
-                                :for="`user-edit-valid-from-${props.user.id}`"
-                            >
-                                Vigente desde
-                            </FieldLabel>
-                            <DatePicker
-                                :id="`user-edit-valid-from-${props.user.id}`"
-                                name="valid_from"
-                                :default-value="props.user.valid_from ?? ''"
-                                :aria-invalid="Boolean(errors.valid_from)"
-                            />
-                            <FieldError :errors="[errors.valid_from]" />
-                        </Field>
-                        <Field :data-invalid="Boolean(errors.valid_until)">
-                            <FieldLabel
-                                :for="`user-edit-valid-until-${props.user.id}`"
-                            >
-                                Vigente hasta
-                            </FieldLabel>
-                            <DatePicker
-                                :id="`user-edit-valid-until-${props.user.id}`"
-                                name="valid_until"
-                                :default-value="props.user.valid_until ?? ''"
-                                :aria-invalid="Boolean(errors.valid_until)"
-                            />
-                            <FieldError :errors="[errors.valid_until]" />
-                        </Field>
                         <Field
                             orientation="horizontal"
                             :data-invalid="Boolean(errors.active)"

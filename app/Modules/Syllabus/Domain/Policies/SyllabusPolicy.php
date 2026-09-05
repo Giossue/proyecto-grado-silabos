@@ -106,10 +106,7 @@ class SyllabusPolicy
             ->where('usuario_id', $user->id)
             ->whereHas('teacherAssignment', fn (Builder $query) => $query
                 ->where('activo', true)
-                ->whereHas('user', fn (Builder $userQuery) => $userQuery
-                    ->where('activo', true)
-                    ->where(fn (Builder $validity) => $validity->whereNull('vigente_desde')->orWhere('vigente_desde', '<=', now()->toDateString()))
-                    ->where(fn (Builder $validity) => $validity->whereNull('vigente_hasta')->orWhere('vigente_hasta', '>=', now()->toDateString())))
+                ->whereHas('user', fn (Builder $userQuery) => $userQuery->where('activo', true))
             )
             ->exists();
     }

@@ -255,6 +255,16 @@ representa una extensión ni una entidad operativa de sílabos. El producto qued
 Facultad → Carrera; `campus` conserva la ubicación física de las ofertas. La migración
 es irreversible y exige un respaldo lógico previo.
 
+I-50 (5 de septiembre de 2026) simplifica la cuenta gestionada: `activo` conserva el
+estado presente, mientras activaciones y desactivaciones se preservan como eventos de
+auditoría. Se retiran `desactivado_en`, `actualizado_en` y la cédula de la integración
+SIANET ya eliminada. La migración es irreversible y exige un respaldo lógico previo.
+
+I-51 (5 de septiembre de 2026) retira `vigente_desde` y `vigente_hasta` de las cuentas:
+esas fechas no se conocen de forma estable al administrarlas. La disponibilidad depende
+de la cuenta activa y de sus roles/asignaciones; los períodos de nombramiento de
+Coordinación no cambian. La migración es irreversible y exige un respaldo lógico previo.
+
 ## Propuesto
 
 - PHP 8.3 o superior como mínimo del proyecto.

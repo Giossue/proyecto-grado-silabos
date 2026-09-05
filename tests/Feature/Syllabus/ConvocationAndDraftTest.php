@@ -344,14 +344,6 @@ class ConvocationAndDraftTest extends TestCase
         $this->actingAsCoordinator()->get(route('syllabi.index'))->assertForbidden();
     }
 
-    public function test_expired_laboral_validity_revokes_record_access(): void
-    {
-        $syllabus = $this->openConvocationAndGetSyllabus();
-        $this->teacher->update(['vigente_hasta' => now()->subDay()->toDateString()]);
-
-        $this->actingAsTeacher()->get(route('syllabi.show', $syllabus))->assertRedirect(route('login'));
-    }
-
     private function createPreparedConvocation(string $groupingMode, ?string $periodId = null): Convocation
     {
         [$template, $source] = $this->publishedConfiguration();

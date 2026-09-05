@@ -22,8 +22,6 @@ class CreateManagedUserRequest extends FormRequest
         return [
             'nombre' => ['required', 'string', 'max:180'],
             'correo_electronico' => ['required', 'string', 'email', 'max:255', Rule::unique('usuarios', 'correo_electronico')],
-            'valid_from' => ['required', 'date'],
-            'valid_until' => ['nullable', 'date', 'after_or_equal:valid_from'],
             // La contraseña la genera la interfaz y se muestra en claro a quien crea la
             // cuenta, así que no hay nada que confirmar: no se escribe a ciegas.
             'password' => ['required', Password::min(12)->letters()->mixedCase()->numbers()->symbols()],

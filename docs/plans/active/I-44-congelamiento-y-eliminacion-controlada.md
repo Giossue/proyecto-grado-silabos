@@ -37,4 +37,4 @@ de vigencia, no un archivo ni un borrado histórico.
 - `php artisan test --compact tests/Feature/Academic tests/Feature/Syllabus tests/Feature/Identity tests/Architecture/ManagementCreationUiTest.php`: 184 pruebas y 3.020 aserciones.
 - `./vendor/bin/pint --test`, `npm run types:check`, ESLint focalizado y `npm run build` pasan.
 - `composer types:check` conserva 12 errores preexistentes de I-42 en consultas
-  `laborallyEffective` y contratos de identidad; no pertenecen a este cambio.
+  disponibilidad de las cuentas y contratos de identidad; no pertenecen a este cambio.

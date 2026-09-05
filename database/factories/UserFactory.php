@@ -30,7 +30,6 @@ class UserFactory extends Factory
             'correo_verificado_en' => now(),
             'contrasena' => static::$password ??= Hash::make('password'),
             'activo' => true,
-            'desactivado_en' => null,
             'codigo_recordarme' => Str::random(10),
             'secreto_dos_factores' => null,
             'codigos_recuperacion_dos_factores' => null,
@@ -55,7 +54,6 @@ class UserFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'activo' => false,
-            'desactivado_en' => now(),
         ]);
     }
 

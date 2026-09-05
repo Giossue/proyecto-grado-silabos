@@ -126,7 +126,6 @@ class DatabaseSeeder extends Seeder
                         'contrasena' => Hash::make('Demo-2026!'),
                         'correo_verificado_en' => now(),
                         'activo' => true,
-                        'desactivado_en' => null,
                     ],
                 );
 

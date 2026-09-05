@@ -29,10 +29,7 @@ class SetUserStatus
                 $this->ensureMayDeactivate($target);
             }
 
-            $target->update([
-                'activo' => $active,
-                'desactivado_en' => $active ? null : now(),
-            ]);
+            $target->update(['activo' => $active]);
 
             $closedMandates = 0;
             $closedTeacherAssignments = 0;

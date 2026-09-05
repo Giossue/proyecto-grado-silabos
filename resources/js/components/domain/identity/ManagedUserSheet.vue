@@ -3,7 +3,6 @@ import { Form } from '@inertiajs/vue3';
 import { Check, Copy, Eye, EyeOff, RefreshCw, UserPlus } from '@lucide/vue';
 import { ref, watch } from 'vue';
 import ManagedUserController from '@/actions/App/Modules/Identity/Presentation/Http/Controllers/ManagedUserController';
-import DatePicker from '@/components/DatePicker.vue';
 import FormSheet from '@/components/domain/FormSheet.vue';
 import FormSheetActions from '@/components/domain/FormSheetActions.vue';
 import { Button } from '@/components/ui/button';
@@ -110,29 +109,6 @@ watch(open, (isOpen) => {
                             :aria-invalid="Boolean(errors.correo_electronico)"
                         />
                         <FieldError :errors="[errors.correo_electronico]" />
-                    </Field>
-                    <Field :data-invalid="Boolean(errors.valid_from)">
-                        <FieldLabel for="managed-valid-from" required>
-                            Vigente desde
-                        </FieldLabel>
-                        <DatePicker
-                            id="managed-valid-from"
-                            name="valid_from"
-                            required
-                            :aria-invalid="Boolean(errors.valid_from)"
-                        />
-                        <FieldError :errors="[errors.valid_from]" />
-                    </Field>
-                    <Field :data-invalid="Boolean(errors.valid_until)">
-                        <FieldLabel for="managed-valid-until">
-                            Vigente hasta
-                        </FieldLabel>
-                        <DatePicker
-                            id="managed-valid-until"
-                            name="valid_until"
-                            :aria-invalid="Boolean(errors.valid_until)"
-                        />
-                        <FieldError :errors="[errors.valid_until]" />
                     </Field>
                     <Field :data-invalid="Boolean(errors.password)">
                         <FieldLabel for="managed-password" required>

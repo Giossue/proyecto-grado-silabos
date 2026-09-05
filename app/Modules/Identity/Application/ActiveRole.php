@@ -24,7 +24,7 @@ class ActiveRole
         $user = $request->user();
         $assignmentId = $request->session()->get('active_role_assignment_id');
 
-        if (! $user instanceof User || ! $user->isLaborallyEffective()) {
+        if (! $user instanceof User || ! $user->activo) {
             return null;
         }
 
@@ -65,7 +65,7 @@ class ActiveRole
      */
     public function eligible(User $user): Collection
     {
-        if (! $user->isLaborallyEffective()) {
+        if (! $user->activo) {
             return collect();
         }
 

@@ -23,7 +23,7 @@ class CreateManagedUser
         private readonly RecordAuditEvent $audit,
     ) {}
 
-    /** @param array{nombre: string, correo_electronico: string, password: string, valid_from: string, valid_until?: string|null, role_code: string, career_id?: string|null} $data */
+    /** @param array{nombre: string, correo_electronico: string, password: string, role_code: string, career_id?: string|null} $data */
     public function execute(array $data, User $actor, Request $request): User
     {
         $activeRole = $this->roles->resolve($request);
@@ -34,8 +34,6 @@ class CreateManagedUser
                 'correo_electronico' => mb_strtolower($data['correo_electronico']),
                 'contrasena' => $data['password'],
                 'activo' => true,
-                'vigente_desde' => $data['valid_from'],
-                'vigente_hasta' => $data['valid_until'] ?? null,
                 // Quien crea la cuenta conoce la contraseña, así que deja de ser secreta
                 // en cuanto se entrega: su titular la cambia antes de operar.
                 'debe_cambiar_contrasena' => true,
@@ -68,8 +66,6 @@ class CreateManagedUser
                 result: 'exito',
                 metadata: [
                     'initial_role' => $data['role_code'],
-                    'valid_from' => $data['valid_from'],
-                    'valid_until' => $data['valid_until'] ?? null,
                 ],
                 correlationId: $request->attributes->getString('correlation_id') ?: null,
             );

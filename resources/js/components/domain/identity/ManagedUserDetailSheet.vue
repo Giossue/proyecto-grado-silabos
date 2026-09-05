@@ -29,15 +29,11 @@ export type ManagedUserRow = {
     id: string;
     nombre: string;
     correo_electronico: string;
-    identity_document: string | null;
     active: boolean;
     /** Sigue con la contraseña temporal: la cuenta se creó y nadie la ha estrenado. */
     pending_first_login: boolean;
     created_at: string | null;
-    deactivated_at: string | null;
     two_factor_enabled: boolean;
-    valid_from: string | null;
-    valid_until: string | null;
     roles: { name: string; career_name: string | null }[];
     /** Carreras en el mismo orden que los roles, para que ambas columnas casen fila a fila. */
     careers: (string | null)[];
@@ -58,13 +54,6 @@ const formatDate = (value: string | null): string =>
               dateStyle: 'medium',
               timeStyle: 'short',
           }).format(new Date(value));
-
-const formatDay = (value: string | null, empty: string): string =>
-    value === null
-        ? empty
-        : new Intl.DateTimeFormat('es-EC', { dateStyle: 'medium' }).format(
-              new Date(`${value}T12:00:00`),
-          );
 
 const status = computed(() => {
     if (!props.user.active) {
@@ -135,26 +124,6 @@ const completedAssignments = computed(() =>
                             </div>
                             <div class="flex flex-col gap-1">
                                 <dt class="text-muted-foreground">
-                                    Vigencia laboral
-                                </dt>
-                                <dd class="font-medium">
-                                    {{
-                                        formatDay(
-                                            props.user.valid_from,
-                                            'Sin fecha de inicio',
-                                        )
-                                    }}
-                                    →
-                                    {{
-                                        formatDay(
-                                            props.user.valid_until,
-                                            'Sin fecha de fin',
-                                        )
-                                    }}
-                                </dd>
-                            </div>
-                            <div class="flex flex-col gap-1">
-                                <dt class="text-muted-foreground">
                                     Nombre completo
                                 </dt>
                                 <dd class="font-medium">
@@ -169,32 +138,12 @@ const completedAssignments = computed(() =>
                                     {{ props.user.correo_electronico }}
                                 </dd>
                             </div>
-                            <div
-                                v-if="props.user.identity_document"
-                                class="flex flex-col gap-1"
-                            >
-                                <dt class="text-muted-foreground">Cédula</dt>
-                                <dd class="font-medium">
-                                    {{ props.user.identity_document }}
-                                </dd>
-                            </div>
                             <div class="flex flex-col gap-1">
                                 <dt class="text-muted-foreground">
                                     Cuenta creada
                                 </dt>
                                 <dd class="font-medium">
                                     {{ formatDate(props.user.created_at) }}
-                                </dd>
-                            </div>
-                            <div
-                                v-if="props.user.deactivated_at"
-                                class="flex flex-col gap-1"
-                            >
-                                <dt class="text-muted-foreground">
-                                    Desactivada
-                                </dt>
-                                <dd class="font-medium">
-                                    {{ formatDate(props.user.deactivated_at) }}
                                 </dd>
                             </div>
                             <div class="flex flex-col gap-1">

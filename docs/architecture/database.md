@@ -11,9 +11,11 @@
   `trabajos_fallidos`, `restablecimientos_contrasena`, `migraciones`) — registrada como
   deuda técnica. Las clases y rutas de código siguen en inglés (precedente I-14).
   `SpanishSchemaTest` y `SpanishModelColumnsTest` hacen cumplir la regla.
-- timestamps de Eloquent: `creado_en`/`actualizado_en`; donde `creado_en` ya es una
-  marca de dominio (`notificaciones_internas`, `objetos_almacenados`,
-  `observaciones_revision`), la marca de inserción de Eloquent se llama `registrado_en`.
+- timestamps de Eloquent: `creado_en`/`actualizado_en` cuando el agregado necesita
+  ambas marcas; `usuarios` conserva solo `creado_en` porque su historial se consulta en
+  auditoría. Donde `creado_en` ya es una marca de dominio (`notificaciones_internas`,
+  `objetos_almacenados`, `observaciones_revision`), la marca de inserción de Eloquent se
+  llama `registrado_en`.
 - tablas/columnas: plural y `snake_case`;
 - claves primarias internas: UUID generados por aplicación;
 - claves foráneas e índices explícitos;
@@ -30,10 +32,12 @@
 
 `usuarios`, `roles`, `asignaciones_rol`. Las columnas de `usuarios` heredadas del
 starter quedaron en español en I-28 (`nombre`, `correo_electronico`, `contrasena`,
-`activo`, `vigente_desde`, `vigente_hasta`, `codigo_recordarme`, `secreto_dos_factores`…);
-`vigente_desde` y `vigente_hasta` describen la relación laboral general de la persona,
-para todos sus roles. El modelo `User` declara los puentes que Fortify y el guard exigen.
-I-29 hace las asignaciones de rol manuales:
+`activo`, `codigo_recordarme`, `secreto_dos_factores`…);
+I-50 deja `activo` como estado actual y registra toda activación/desactivación en
+`eventos_auditoria`, sin duplicar fecha de baja o cédula de la integración retirada.
+I-51 retira la vigencia laboral de la cuenta: su disponibilidad se expresa con `activo`
+y sus asignaciones operativas. El modelo `User` declara los puentes que Fortify y el
+guard exigen. I-29 hace las asignaciones de rol manuales:
 `asignaciones_rol.activo` determina su efectividad y no guarda fechas de inicio o fin.
 
 ### Académico

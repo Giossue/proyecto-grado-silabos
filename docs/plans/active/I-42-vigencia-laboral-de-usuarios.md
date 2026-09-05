@@ -2,7 +2,7 @@
 
 ## Estado
 
-Terminado.
+Retirado por I-51 el 5 de septiembre de 2026.
 
 ## Trazabilidad
 
@@ -11,17 +11,16 @@ ADM-02, ADM-03, COR-15, CP-F identidad y estructura.
 
 ## Decisión
 
-La vigencia laboral pertenece a `usuarios`, no a una asignación docente. La indicación
-explícita del responsable del producto (2026-09-03) reemplaza las fechas por paralelo:
-una misma persona trabaja desde/hasta una fecha para todos sus roles. Las fechas de
-nombramiento de Coordinación se conservan porque describen el cargo y su carrera, no la
-relación laboral general.
+La vigencia laboral perteneció transitoriamente a `usuarios`, no a una asignación
+docente. I-51 la retira porque esas fechas no se conocen de manera estable al gestionar
+una cuenta. Las fechas de nombramiento de Coordinación se conservan porque describen el
+cargo y su carrera, no una relación laboral general.
 
 ## Resultado demostrable
 
-Administración registra la vigencia laboral al crear o editar cualquier cuenta. Un usuario
-fuera de ella no puede operar ni ser elegido como docente; las asignaciones docentes solo
-vinculan persona y paralelo, y se archivan al producirse un relevo.
+Este comportamiento fue sustituido: Administración activa o desactiva la cuenta; los
+roles y asignaciones determinan su disponibilidad operativa. Las asignaciones docentes
+solo vinculan persona y paralelo, y se desactivan al producirse un relevo.
 
 ## Migración
 

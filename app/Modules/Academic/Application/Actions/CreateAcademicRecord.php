@@ -345,7 +345,7 @@ class CreateAcademicRecord
             ->where('usuario_id', $userId)
             ->where('carrera_id', $careerId)
             ->whereHas('role', fn ($query) => $query->where('codigo', $role->value))
-            ->whereHas('user', fn ($query) => $query->where('activo', true)->laborallyEffective())
+            ->whereHas('user', fn ($query) => $query->where('activo', true))
             ->exists();
 
         if (! $hasRole) {

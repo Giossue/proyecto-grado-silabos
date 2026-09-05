@@ -63,7 +63,7 @@ class TransferSyllabusTeacher
             ]);
         }
 
-        $incoming = User::query()->where('activo', true)->laborallyEffective()->find($incomingUserId);
+        $incoming = User::query()->where('activo', true)->find($incomingUserId);
         if ($incoming === null) {
             throw ValidationException::withMessages([
                 'incoming_user_id' => 'La cuenta del docente entrante no existe o está inactiva.',
@@ -178,10 +178,7 @@ class TransferSyllabusTeacher
             ->where('usuario_id', $userId)
             ->where('carrera_id', $careerId)
             ->whereHas('role', fn ($query) => $query->where('codigo', RoleCode::Teacher->value))
-            ->whereHas('user', fn (Builder $query) => $query
-                ->where('activo', true)
-                ->where(fn (Builder $validity) => $validity->whereNull('vigente_desde')->orWhere('vigente_desde', '<=', now()->toDateString()))
-                ->where(fn (Builder $validity) => $validity->whereNull('vigente_hasta')->orWhere('vigente_hasta', '>=', now()->toDateString())))
+            ->whereHas('user', fn (Builder $query) => $query->where('activo', true))
             ->effective()
             ->exists();
     }

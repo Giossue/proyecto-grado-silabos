@@ -373,7 +373,7 @@ class AcademicStructureViewData
                 fn ($query) => $query->where('carrera_id', $careerId),
             )
             ->with([
-                'user:id,nombre,correo_electronico,vigente_desde,vigente_hasta',
+                'user:id,nombre,correo_electronico',
                 'parallel.offering.subject:id,nombre,codigo_institucional',
                 'parallel.offering.academicPeriod:id,nombre',
             ])
@@ -424,7 +424,6 @@ class AcademicStructureViewData
                     ]),
                 'teacherUsers' => User::query()
                     ->where('activo', true)
-                    ->laborallyEffective()
                     ->whereIn('id', RoleAssignment::query()
                         ->select('usuario_id')
                         ->effective()

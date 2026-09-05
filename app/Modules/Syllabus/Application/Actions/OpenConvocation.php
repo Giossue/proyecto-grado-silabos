@@ -81,7 +81,7 @@ class OpenConvocation
                     'parallels' => fn ($query) => $query->where('activo', true)->lockForUpdate()->with([
                         'teacherAssignments' => fn ($assignmentQuery) => $assignmentQuery
                             ->where('activo', true)
-                            ->whereHas('user', fn ($userQuery) => $userQuery->where('activo', true)->laborallyEffective())
+                            ->whereHas('user', fn ($userQuery) => $userQuery->where('activo', true))
                             ->lockForUpdate(),
                     ]),
                 ])

@@ -24,8 +24,7 @@ class UpdateManagedUserRequest extends FormRequest
             return false;
         }
 
-        $touchesGovernance = $this->has('active') || $this->has('role_code')
-            || $this->has('valid_from') || $this->has('valid_until');
+        $touchesGovernance = $this->has('active') || $this->has('role_code');
 
         return ! $touchesGovernance || $this->user()->can('update', $target);
     }
@@ -49,8 +48,6 @@ class UpdateManagedUserRequest extends FormRequest
                 ),
             ],
             'active' => ['sometimes', 'required', 'boolean'],
-            'valid_from' => ['sometimes', 'nullable', 'date'],
-            'valid_until' => ['sometimes', 'nullable', 'date', 'after_or_equal:valid_from'],
             // El bloque de rol es opcional, pero si llega, llega completo.
             'role_code' => ['sometimes', 'required', Rule::enum(RoleCode::class)],
             'career_id' => [
@@ -71,21 +68,13 @@ class UpdateManagedUserRequest extends FormRequest
         ];
     }
 
-    /** @return array{nombre: string, correo_electronico: string, valid_from?: string|null, valid_until?: string|null} */
+    /** @return array{nombre: string, correo_electronico: string} */
     public function profileData(): array
     {
         $data = [
             'nombre' => $this->string('nombre')->toString(),
             'correo_electronico' => $this->string('correo_electronico')->toString(),
         ];
-
-        if ($this->has('valid_from')) {
-            $data['valid_from'] = $this->filled('valid_from') ? $this->string('valid_from')->toString() : null;
-        }
-
-        if ($this->has('valid_until')) {
-            $data['valid_until'] = $this->filled('valid_until') ? $this->string('valid_until')->toString() : null;
-        }
 
         return $data;
     }

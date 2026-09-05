@@ -126,10 +126,7 @@ class RelieveTeacher
             ->where('usuario_id', $userId)
             ->where('carrera_id', $careerId)
             ->whereHas('role', fn ($query) => $query->where('codigo', RoleCode::Teacher->value))
-            ->whereHas('user', fn (Builder $query) => $query
-                ->where('activo', true)
-                ->where(fn (Builder $validity) => $validity->whereNull('vigente_desde')->orWhere('vigente_desde', '<=', now()->toDateString()))
-                ->where(fn (Builder $validity) => $validity->whereNull('vigente_hasta')->orWhere('vigente_hasta', '>=', now()->toDateString())))
+            ->whereHas('user', fn (Builder $query) => $query->where('activo', true))
             ->exists();
     }
 }

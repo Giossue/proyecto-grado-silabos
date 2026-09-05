@@ -1,16 +1,14 @@
-# *** Remember to change! (HOST_NAME, PORT, USER_NAME, DATABASE_NAME) *** 
-psql -h HOST_NAME -p PORT -U USER_NAME -d DATABASE_NAME -c "
 /* PostgreSQL edition */
 WITH fk_info AS (
-    SELECT array_to_string(array_agg(CONCAT('{\"schema\":\"', replace(schema_name, '\"', ''), '\"',
-                                            ',\"table\":\"', replace(table_name::text, '\"', ''), '\"',
-                                            ',\"column\":\"', replace(fk_column::text, '\"', ''), '\"',
-                                            ',\"foreign_key_name\":\"', foreign_key_name, '\"',
-                                            ',\"reference_schema\":\"', COALESCE(replace(reference_schema, '\"', ''), 'public'), '\"',
-                                            ',\"reference_table\":\"', replace(reference_table, '\"', ''), '\"',
-                                            ',\"reference_column\":\"', replace(reference_column, '\"', ''), '\"',
-                                            ',\"fk_def\":\"', replace(fk_def, '\"', ''),
-                                            '\"}')), ',') as fk_metadata
+    SELECT array_to_string(array_agg(CONCAT('{"schema":"', replace(schema_name, '"', ''), '"',
+                                            ',"table":"', replace(table_name::text, '"', ''), '"',
+                                            ',"column":"', replace(fk_column::text, '"', ''), '"',
+                                            ',"foreign_key_name":"', foreign_key_name, '"',
+                                            ',"reference_schema":"', COALESCE(replace(reference_schema, '"', ''), 'public'), '"',
+                                            ',"reference_table":"', replace(reference_table, '"', ''), '"',
+                                            ',"reference_column":"', replace(reference_column, '"', ''), '"',
+                                            ',"fk_def":"', replace(fk_def, '"', ''),
+                                            '"}')), ',') as fk_metadata
     FROM (
             SELECT c.conname AS foreign_key_name,
                     n.nspname AS schema_name,
@@ -47,11 +45,11 @@ WITH fk_info AS (
                     AND connamespace::regnamespace::text NOT IN ('information_schema', 'pg_catalog')
     ) AS x
 ), pk_info AS (
-    SELECT array_to_string(array_agg(CONCAT('{\"schema\":\"', replace(schema_name, '\"', ''), '\"',
-                                            ',\"table\":\"', replace(pk_table, '\"', ''), '\"',
-                                            ',\"column\":\"', replace(pk_column, '\"', ''), '\"',
-                                            ',\"pk_def\":\"', replace(pk_def, '\"', ''),
-                                            '\"}')), ',') AS pk_metadata
+    SELECT array_to_string(array_agg(CONCAT('{"schema":"', replace(schema_name, '"', ''), '"',
+                                            ',"table":"', replace(pk_table, '"', ''), '"',
+                                            ',"column":"', replace(pk_column, '"', ''), '"',
+                                            ',"pk_def":"', replace(pk_def, '"', ''),
+                                            '"}')), ',') AS pk_metadata
     FROM (
             SELECT connamespace::regnamespace::text AS schema_name,
                 CASE
@@ -71,7 +69,7 @@ WITH fk_info AS (
 indexes_cols AS (
     SELECT  tnsp.nspname                                                                AS schema_name,
         trel.relname                                                                    AS table_name,
-            pg_relation_size('\"' || tnsp.nspname || '\".' || '\"' || irel.relname || '\"') AS index_size,
+            pg_relation_size('"' || tnsp.nspname || '".' || '"' || irel.relname || '"') AS index_size,
             irel.relname                                                                AS index_name,
             am.amname                                                                   AS index_type,
             a.attname                                                                   AS col_name,
@@ -92,42 +90,42 @@ indexes_cols AS (
     GROUP BY tnsp.nspname, trel.relname, irel.relname, am.amname, i.indisunique, i.indexrelid, irel.reltuples, a.attname, Array_position(i.indkey, a.attnum), o.OPTION, i.indpred
 ),
 cols AS (
-    SELECT array_to_string(array_agg(CONCAT('{\"schema\":\"', cols.table_schema,
-                                            '\",\"table\":\"', cols.table_name,
-                                            '\",\"name\":\"', cols.column_name,
-                                            '\",\"ordinal_position\":', cols.ordinal_position,
-                                            ',\"type\":\"', CASE WHEN cols.column_default IS NOT NULL AND cols.column_default LIKE 'nextval(%' THEN
+    SELECT array_to_string(array_agg(CONCAT('{"schema":"', cols.table_schema,
+                                            '","table":"', cols.table_name,
+                                            '","name":"', cols.column_name,
+                                            '","ordinal_position":', cols.ordinal_position,
+                                            ',"type":"', CASE WHEN cols.column_default IS NOT NULL AND cols.column_default LIKE 'nextval(%' THEN
                                                                 CASE
-                                                                    WHEN LOWER(replace(cols.data_type, '\"', '')) = 'smallint' THEN 'smallserial'
-                                                                    WHEN LOWER(replace(cols.data_type, '\"', '')) = 'integer' THEN 'serial'
-                                                                    WHEN LOWER(replace(cols.data_type, '\"', '')) = 'bigint' THEN 'bigserial'
-                                                                    ELSE LOWER(replace(cols.data_type, '\"', ''))
+                                                                    WHEN LOWER(replace(cols.data_type, '"', '')) = 'smallint' THEN 'smallserial'
+                                                                    WHEN LOWER(replace(cols.data_type, '"', '')) = 'integer' THEN 'serial'
+                                                                    WHEN LOWER(replace(cols.data_type, '"', '')) = 'bigint' THEN 'bigserial'
+                                                                    ELSE LOWER(replace(cols.data_type, '"', ''))
                                                                 END
                                                             WHEN cols.data_type = 'ARRAY' THEN
                                                                 format_type(pg_type.typelem, NULL)
-                                                            WHEN LOWER(replace(cols.data_type, '\"', '')) = 'user-defined' THEN
+                                                            WHEN LOWER(replace(cols.data_type, '"', '')) = 'user-defined' THEN
                                                                 format_type(pg_type.oid, NULL)
                                                             ELSE
-                                                                LOWER(replace(cols.data_type, '\"', ''))
+                                                                LOWER(replace(cols.data_type, '"', ''))
                                                         END,
-                                            '\",\"character_maximum_length\":\"', COALESCE(cols.character_maximum_length::text, 'null'),
-                                            '\",\"precision\":',
+                                            '","character_maximum_length":"', COALESCE(cols.character_maximum_length::text, 'null'),
+                                            '","precision":',
                                                 CASE
                                                     WHEN cols.data_type = 'numeric' OR cols.data_type = 'decimal'
-                                                    THEN CONCAT('{\"precision\":', COALESCE(cols.numeric_precision::text, 'null'),
-                                                                ',\"scale\":', COALESCE(cols.numeric_scale::text, 'null'), '}')
+                                                    THEN CONCAT('{"precision":', COALESCE(cols.numeric_precision::text, 'null'),
+                                                                ',"scale":', COALESCE(cols.numeric_scale::text, 'null'), '}')
                                                     ELSE 'null'
                                                 END,
-                                            ',\"nullable\":', CASE WHEN (cols.IS_NULLABLE = 'YES') THEN 'true' ELSE 'false' END,
-                                            ',\"default\":\"', CASE WHEN cols.column_default IS NOT NULL AND cols.column_default LIKE 'nextval(%' THEN '' ELSE COALESCE(replace(replace(cols.column_default, '\"', '\\\"'), '\\x', '\\\\x'), '') END,
-                                            '\",\"collation\":\"', COALESCE(cols.COLLATION_NAME, ''),
-                                            '\",\"comment\":\"', null,
-                                            '\",\"is_identity\":', CASE
+                                            ',"nullable":', CASE WHEN (cols.IS_NULLABLE = 'YES') THEN 'true' ELSE 'false' END,
+                                            ',"default":"', CASE WHEN cols.column_default IS NOT NULL AND cols.column_default LIKE 'nextval(%' THEN '' ELSE COALESCE(replace(replace(cols.column_default, '"', '\"'), '\x', '\\x'), '') END,
+                                            '","collation":"', COALESCE(cols.COLLATION_NAME, ''),
+                                            '","comment":"', null,
+                                            '","is_identity":', CASE
                                                 WHEN cols.is_identity = 'YES' THEN 'true'
                                                 WHEN cols.column_default IS NOT NULL AND cols.column_default LIKE 'nextval(%' THEN 'true'
                                                 ELSE 'false'
                                             END,
-                                            ',\"is_array\":', CASE
+                                            ',"is_array":', CASE
                                                 WHEN cols.data_type = 'ARRAY' OR pg_type.typelem > 0 THEN 'true'
                                                 ELSE 'false'
                                             END,
@@ -147,28 +145,28 @@ cols AS (
         ON elem_type.oid = pg_type.typelem
     WHERE cols.table_schema NOT IN ('information_schema', 'pg_catalog')
 ), indexes_metadata AS (
-    SELECT array_to_string(array_agg(CONCAT('{\"schema\":\"', schema_name,
-                                            '\",\"table\":\"', table_name,
-                                            '\",\"name\":\"', index_name,
-                                            '\",\"column\":\"', replace(col_name :: TEXT, '\"', E'\"'),
-                                            '\",\"index_type\":\"', index_type,
-                                            '\",\"cardinality\":', cardinality,
-                                            ',\"size\":', index_size,
-                                            ',\"unique\":', is_unique,
-                                            ',\"column_position\":', column_position,
-                                            ',\"direction\":\"', LOWER(direction),
-                                            '\"}')), ',') AS indexes_metadata
-    FROM indexes_cols x 
+    SELECT array_to_string(array_agg(CONCAT('{"schema":"', schema_name,
+                                            '","table":"', table_name,
+                                            '","name":"', index_name,
+                                            '","column":"', replace(col_name :: TEXT, '"', E'"'),
+                                            '","index_type":"', index_type,
+                                            '","cardinality":', cardinality,
+                                            ',"size":', index_size,
+                                            ',"unique":', is_unique,
+                                            ',"column_position":', column_position,
+                                            ',"direction":"', LOWER(direction),
+                                            '"}')), ',') AS indexes_metadata
+    FROM indexes_cols x
 ), tbls AS (
     SELECT array_to_string(array_agg(CONCAT('{',
-                        '\"schema\":\"', tbls.TABLE_SCHEMA, '\",',
-                        '\"table\":\"', tbls.TABLE_NAME, '\",',
-                        '\"rows\":', COALESCE((SELECT s.n_live_tup
+                        '"schema":"', tbls.TABLE_SCHEMA, '",',
+                        '"table":"', tbls.TABLE_NAME, '",',
+                        '"rows":', COALESCE((SELECT s.n_live_tup
                                                 FROM pg_stat_user_tables s
                                                 WHERE tbls.TABLE_SCHEMA = s.schemaname AND tbls.TABLE_NAME = s.relname),
-                                                0), ', \"type\":\"', tbls.TABLE_TYPE, '\",', '\"engine\":\"\",', '\"collation\":\"\",',
-                        '\"comment\":\"', null,
-                        '\"}'
+                                                0), ', "type":"', tbls.TABLE_TYPE, '",', '"engine":"",', '"collation":"",',
+                        '"comment":"', null,
+                        '"}'
                 )),
                 ',') AS tbls_metadata
         FROM information_schema.tables tbls
@@ -177,50 +175,50 @@ cols AS (
                                             AND n.nspname = tbls.TABLE_SCHEMA
         LEFT JOIN pg_catalog.pg_description dsc ON dsc.objoid = c.oid
                                                 AND dsc.objsubid = 0
-        WHERE tbls.TABLE_SCHEMA NOT IN ('information_schema', 'pg_catalog') 
+        WHERE tbls.TABLE_SCHEMA NOT IN ('information_schema', 'pg_catalog')
 ), config AS (
     SELECT array_to_string(
-                      array_agg(CONCAT('{\"name\":\"', conf.name, '\",\"value\":\"', replace(conf.setting, '\"', E'\"'), '\"}')),
+                      array_agg(CONCAT('{"name":"', conf.name, '","value":"', replace(conf.setting, '"', E'"'), '"}')),
                       ',') AS config_metadata
     FROM pg_settings conf
 ), views AS (
-    SELECT array_to_string(array_agg(CONCAT('{\"schema\":\"', views.schemaname,
-                      '\",\"view_name\":\"', viewname,
-                      '\",\"view_definition\":\"\"}')),
+    SELECT array_to_string(array_agg(CONCAT('{"schema":"', views.schemaname,
+                      '","view_name":"', viewname,
+                      '","view_definition":""}')),
                       ',') AS views_metadata
     FROM pg_views views
-    WHERE views.schemaname NOT IN ('information_schema', 'pg_catalog') 
+    WHERE views.schemaname NOT IN ('information_schema', 'pg_catalog')
 ), custom_types AS (
     SELECT array_to_string(array_agg(type_json), ',') AS custom_types_metadata
     FROM (
         -- ENUM types
         SELECT CONCAT(
-            '{\"schema\":\"', n.nspname,
-            '\",\"type\":\"', t.typname,
-            '\",\"kind\":\"enum\"',
-            ',\"values\":[', string_agg('\"' || e.enumlabel || '\"', ',' ORDER BY e.enumsortorder), ']}'
+            '{"schema":"', n.nspname,
+            '","type":"', t.typname,
+            '","kind":"enum"',
+            ',"values":[', string_agg('"' || e.enumlabel || '"', ',' ORDER BY e.enumsortorder), ']}'
         ) AS type_json
         FROM pg_type t
         JOIN pg_enum e ON t.oid = e.enumtypid
         JOIN pg_namespace n ON n.oid = t.typnamespace
-        WHERE n.nspname NOT IN ('pg_catalog', 'information_schema') 
+        WHERE n.nspname NOT IN ('pg_catalog', 'information_schema')
         GROUP BY n.nspname, t.typname
 
         UNION ALL
 
         -- COMPOSITE types
         SELECT CONCAT(
-            '{\"schema\":\"', schema_name,
-            '\",\"type\":\"', type_name,
-            '\",\"kind\":\"composite\"',
-            ',\"fields\":[', fields_json, ']}'
+            '{"schema":"', schema_name,
+            '","type":"', type_name,
+            '","kind":"composite"',
+            ',"fields":[', fields_json, ']}'
         ) AS type_json
         FROM (
             SELECT
                 n.nspname AS schema_name,
                 t.typname AS type_name,
                 string_agg(
-                    CONCAT('{\"field\":\"', a.attname, '\",\"type\":\"', format_type(a.atttypid, a.atttypmod), '\"}'),
+                    CONCAT('{"field":"', a.attname, '","type":"', format_type(a.atttypid, a.atttypmod), '"}'),
                     ',' ORDER BY a.attnum
                 ) AS fields_json
             FROM pg_type t
@@ -230,15 +228,15 @@ cols AS (
             WHERE t.typtype = 'c'
               AND c.relkind = 'c'  -- Only user-defined composite types
               AND a.attnum > 0 AND NOT a.attisdropped
-              AND n.nspname NOT IN ('pg_catalog', 'information_schema') 
+              AND n.nspname NOT IN ('pg_catalog', 'information_schema')
             GROUP BY n.nspname, t.typname
         ) AS comp
     ) AS all_types
 ), check_constraints AS (
-    SELECT array_to_string(array_agg(CONCAT('{\"schema\":\"', replace(schema_name, '\"', ''), '\"',
-                                            ',\"table\":\"', replace(table_name, '\"', ''), '\"',
-                                            ',\"expression\":\"', replace(replace(check_expr, '\"', '\\\"'), E'\n', ' '),
-                                            '\"}')), ',') AS check_constraints_metadata
+    SELECT array_to_string(array_agg(CONCAT('{"schema":"', replace(schema_name, '"', ''), '"',
+                                            ',"table":"', replace(table_name, '"', ''), '"',
+                                            ',"expression":"', replace(replace(check_expr, '"', '\"'), E'\n', ' '),
+                                            '"}')), ',') AS check_constraints_metadata
     FROM (
         SELECT
             n.nspname AS schema_name,
@@ -255,16 +253,14 @@ cols AS (
           AND n.nspname NOT IN ('information_schema', 'pg_catalog')
     ) AS chk
 )
-SELECT CONCAT('{    \"fk_info\": [', COALESCE(fk_metadata, ''),
-                    '], \"pk_info\": [', COALESCE(pk_metadata, ''),
-                    '], \"columns\": [', COALESCE(cols_metadata, ''),
-                    '], \"indexes\": [', COALESCE(indexes_metadata, ''),
-                    '], \"tables\":[', COALESCE(tbls_metadata, ''),
-                    '], \"views\":[', COALESCE(views_metadata, ''),
-                    '], \"check_constraints\": [', COALESCE(check_constraints_metadata, ''),
-                    '], \"custom_types\": [', COALESCE(custom_types_metadata, ''),
-                    '], \"database_name\": \"', CURRENT_DATABASE(), '', '\", \"version\": \"', '',
-              '\"}') AS metadata_json_to_import
+SELECT CONCAT('{    "fk_info": [', COALESCE(fk_metadata, ''),
+                    '], "pk_info": [', COALESCE(pk_metadata, ''),
+                    '], "columns": [', COALESCE(cols_metadata, ''),
+                    '], "indexes": [', COALESCE(indexes_metadata, ''),
+                    '], "tables":[', COALESCE(tbls_metadata, ''),
+                    '], "views":[', COALESCE(views_metadata, ''),
+                    '], "check_constraints": [', COALESCE(check_constraints_metadata, ''),
+                    '], "custom_types": [', COALESCE(custom_types_metadata, ''),
+                    '], "database_name": "', CURRENT_DATABASE(), '', '", "version": "', '',
+              '"}') AS metadata_json_to_import
 FROM fk_info, pk_info, cols, indexes_metadata, tbls, config, views, check_constraints, custom_types;
-    
-" -t -A > output.json;

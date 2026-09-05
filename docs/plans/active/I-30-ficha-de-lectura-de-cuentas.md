@@ -15,7 +15,7 @@ En curso.
 El menú de tres puntos de cada fila de `admin/usuarios` ofrece «Ver» además de
 «Editar». «Ver» abre un panel derecho de solo lectura con la ficha completa de la
 cuenta: estado y su explicación, nombre, correo, cédula cuando existe, fecha de
-creación, fecha de desactivación cuando aplica, acceso en dos pasos, roles vigentes con
+creación, acceso en dos pasos, roles vigentes con
 su alcance y los roles archivados que se conservan como historial.
 
 ## Cambios previstos
