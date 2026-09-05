@@ -11,7 +11,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 /**
  * @property string $id
  * @property string $codigo_institucional
- * @property int|null $codigo_oculto_institucional
  * @property string $nombre
  * @property int|null $ciclo
  * @property int $orden_en_ciclo
@@ -43,7 +42,6 @@ class Subject extends Model
     protected $fillable = [
         'malla_id',
         'codigo_institucional',
-        'codigo_oculto_institucional',
         'nombre',
         'ciclo',
         'orden_en_ciclo',
@@ -69,7 +67,6 @@ class Subject extends Model
             'orden_en_ciclo' => 'integer',
             'creditos' => 'decimal:2',
             'horas_totales' => 'integer',
-            'codigo_oculto_institucional' => 'integer',
             'horas_proyecto' => 'decimal:2',
             'horas_ap' => 'decimal:2',
             'horas_ac' => 'decimal:2',

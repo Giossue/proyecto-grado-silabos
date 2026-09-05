@@ -4,18 +4,15 @@ namespace Tests\Feature\Academic;
 
 use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
-use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Faculty;
 use App\Modules\Academic\Infrastructure\Persistence\Models\School;
-use App\Modules\Academic\Infrastructure\Persistence\Models\Subject;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Verifica la alineación del esquema con la fuente institucional SIANET.
- * Las cotas de cada caso provienen del respaldo del 23 de junio de 2025.
+ * Verifica las relaciones institucionales que conserva el producto.
  */
 class InstitutionalSchemaAlignmentTest extends TestCase
 {
@@ -37,7 +34,6 @@ class InstitutionalSchemaAlignmentTest extends TestCase
         ]);
         $escuela = School::query()->create([
             'facultad_id' => $otraFacultad->id,
-            'codigo_institucional' => 'ES-OTRA',
             'nombre' => 'Escuela de otra facultad',
             'activo' => true,
         ]);
@@ -57,7 +53,6 @@ class InstitutionalSchemaAlignmentTest extends TestCase
         $facultad = Faculty::query()->firstOrFail();
         $escuela = School::query()->create([
             'facultad_id' => $facultad->id,
-            'codigo_institucional' => 'ES-1',
             'nombre' => 'Sistemas',
             'activo' => true,
         ]);
@@ -89,30 +84,5 @@ class InstitutionalSchemaAlignmentTest extends TestCase
 
         $this->expectException(QueryException::class);
         AcademicPeriod::query()->create($atributos);
-    }
-
-    public function test_la_identidad_oculta_de_una_asignatura_es_unica(): void
-    {
-        $malla = Curriculum::query()->firstOrFail();
-        Subject::query()->create([
-            'malla_id' => $malla->id,
-            'codigo_institucional' => 'SW-900',
-            'codigo_oculto_institucional' => 9900,
-            'nombre' => 'Materia con identidad institucional',
-            'ciclo' => 3,
-            'creditos' => 3,
-            'activo' => true,
-        ]);
-
-        $this->expectException(QueryException::class);
-        Subject::query()->create([
-            'malla_id' => $malla->id,
-            'codigo_institucional' => 'SW-901',
-            'codigo_oculto_institucional' => 9900,
-            'nombre' => 'Materia que repite la identidad',
-            'ciclo' => 4,
-            'creditos' => 3,
-            'activo' => true,
-        ]);
     }
 }

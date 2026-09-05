@@ -26,7 +26,7 @@ al entrar y puede sustituirla desde el menú, sin sumar alcances ni privilegios.
 ### Estructura académica
 
 - `Facultad`, `Escuela`, `Carrera`, `Campus`, `Modalidad`, `PeriodoAcademico`.
-- `Malla` —persistida internamente en `VersionMalla`—, `DefinicionCampoMalla`, `Asignatura` con ciclo/orden,
+- `Malla`, `DefinicionCampoMalla`, `Asignatura` con ciclo/orden,
   `ValorCampoAsignatura` y `RequisitoAsignatura`.
 - `OfertaAcademica`, `Paralelo`, `AsignacionDocente`.
 - `AliasInstitucional` traduce el texto libre de la fuente hacia un catálogo normalizado.
@@ -47,9 +47,8 @@ carrera. La oferta conserva las copias porque el sílabo toma de ahí campus y m
 carreras. Aunque la fuente histórica lo replique por carrera, el producto lo consolida
 como la ventana temporal común de la universidad (I-41).
 
-Una `Asignatura` tiene dos identificadores institucionales con papeles distintos: el
-código oculto es la identidad canónica con la que se reconcilia, y el código visible es
-el que leen las personas. Solo el primero identifica.
+Una `Asignatura` se identifica dentro de su malla por su código visible, que es el que
+leen las personas y el que usa el producto en ofertas, sílabos y documentos.
 
 Las relaciones que ya respaldan un sílabo se protegen y no se eliminan. Las que aún no
 tienen dependencias se eliminan; las vigencias personales y los nombramientos terminan
@@ -74,8 +73,8 @@ la regla. El desglose académico y el constructor visual son dos proyecciones de
 agregado; las asignaturas se mantienen dentro de la malla y no como una
 colección de navegación independiente. La malla actual se edita sobre sí misma tanto
 activa como inactiva. Deshabilitarla bloquea ofertas y procesos nuevos; eliminarla solo
-es posible cuando no tiene ofertas ni sílabos. Las filas anteriores de `VersionMalla`
-ya no existen: `mallas` tiene una fila por carrera (I-32).
+es posible cuando no tiene ofertas ni sílabos. `mallas` tiene una sola fila por carrera
+(I-32).
 
 ### Configuración
 

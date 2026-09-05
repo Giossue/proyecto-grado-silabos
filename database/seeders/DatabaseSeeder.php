@@ -92,7 +92,6 @@ class DatabaseSeeder extends Seeder
             $subject = Subject::query()->firstOrCreate(
                 ['malla_id' => $curriculum->id, 'codigo_institucional' => 'SW-601'],
                 [
-                    'codigo_oculto_institucional' => 2601,
                     'nombre' => 'Arquitectura de Software',
                     'ciclo' => 6,
                     'creditos' => 4,

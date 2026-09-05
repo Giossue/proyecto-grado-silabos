@@ -9,7 +9,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * @property string $id
- * @property string|null $codigo_institucional
  * @property string|null $sustento_tipo
  * @property string|null $sustento_numero
  * @property bool $activo
@@ -30,7 +29,6 @@ class TeacherAssignment extends Model
     protected $fillable = [
         'usuario_id',
         'paralelo_id',
-        'codigo_institucional',
         'activo',
         'sustento_tipo',
         'sustento_numero',

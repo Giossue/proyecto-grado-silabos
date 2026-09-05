@@ -13,7 +13,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  *
  * @property string $id
  * @property string $facultad_id
- * @property string|null $codigo_institucional
  * @property string $nombre
  * @property bool $activo
  * @property-read Faculty $faculty
@@ -29,7 +28,7 @@ class School extends Model
     protected $table = 'escuelas';
 
     /** @var list<string> */
-    protected $fillable = ['facultad_id', 'codigo_institucional', 'nombre', 'activo'];
+    protected $fillable = ['facultad_id', 'nombre', 'activo'];
 
     /** @return array<string, string> */
     protected function casts(): array

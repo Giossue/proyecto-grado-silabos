@@ -245,6 +245,12 @@ fuentes activas de toda la carrera se fijan de forma automática y se sincroniza
 reanudar. PostgreSQL impide más de un proceso por período y más de un alcance por
 carrera/período.
 
+I-47 (5 de septiembre de 2026) retira la procedencia SIANET que no interviene en los
+casos de uso actuales: código externo de escuela, período, malla y asignación docente;
+año del período, descripción externa de malla y código oculto de asignatura. Se conserva
+la estructura Facultad → Escuela → Carrera y los códigos visibles que usa el producto.
+La migración es irreversible y exige un respaldo lógico previo.
+
 ## Propuesto
 
 - PHP 8.3 o superior como mínimo del proyecto.

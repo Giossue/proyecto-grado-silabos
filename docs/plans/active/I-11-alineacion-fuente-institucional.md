@@ -5,6 +5,11 @@
 > el producto usa un período institucional único, por indicación explícita del responsable
 > del producto. El hallazgo de la fuente se conserva solo como antecedente histórico.
 >
+> **Nota del 2026-09-05 (I-47).** Se retiran los metadatos de procedencia que la
+> aplicación ya no usa: códigos externos de escuela, período, malla y asignación docente,
+> año del período, descripción externa de malla y código oculto de asignatura. Se conserva
+> la jerarquía Facultad → Escuela → Carrera y los identificadores operativos visibles.
+>
 > **Nota del 2026-08-27.** El módulo de importación que motivaba este incremento se
 > retiró. Lo que aquí se decidió sobre la estructura académica —escuelas, periodo por
 > carrera, ciclo en la malla, identidad del docente— se conserva: describe cómo se

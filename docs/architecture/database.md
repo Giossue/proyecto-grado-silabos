@@ -38,8 +38,8 @@ I-29 hace las asignaciones de rol manuales:
 
 ### Académico
 
-`facultades`, `carreras`, `campus`, `asignaciones_coordinador`,
-`periodos_academicos`, `versiones_malla`, `asignaturas`, `requisitos_asignatura`,
+`facultades`, `escuelas`, `carreras`, `campus`, `asignaciones_coordinador`,
+`periodos_academicos`, `mallas`, `asignaturas`, `requisitos_asignatura`,
 `definiciones_campo_malla`, `valores_campo_asignatura`, `ofertas_academicas`,
 `paralelos`, `asignaciones_docente`.
 
@@ -47,8 +47,9 @@ I-29 hace las asignaciones de rol manuales:
 respalda; no tiene intervalo de vigencia laboral. Su identidad única es
 `usuario_id + paralelo_id`; un relevo finaliza la relación anterior y crea la nueva.
 
-Estos catálogos no comparten una tabla polimórfica. `carreras.facultad_id` implementa la
-relación uno-a-muchos Facultad → Carreras con clave foránea y borrado restringido.
+Estos catálogos no comparten una tabla polimórfica. Una escuela pertenece a una facultad
+y una carrera puede enlazarse solo con una escuela de esa misma facultad: la clave ajena
+compuesta `carreras(escuela_id, facultad_id)` lo impone con borrado restringido.
 `campus` y `periodos_academicos` conservan identidad propia; el período es institucional
 y de código único, no depende de una carrera. `ofertas_academicas` los
 relaciona con una asignatura mediante claves foráneas. La modalidad no es tabla sino
@@ -59,15 +60,13 @@ guarda la copia. La
 jerarquía que presenta ADM-04 es una proyección de lectura y no una desnormalización de
 la persistencia.
 
-`versiones_malla` es el nombre físico histórico del agregado **Malla**. `es_actual`
-identifica como máximo una fila actual por carrera mediante un índice parcial único; las
-filas anteriores quedan como historia interna y no se exponen como versiones. La malla
-actual puede estar `active` o `inactive` y define su cantidad de ciclos y sus campos de
-tarjeta. Una definición puede enlazarse con una columna académica estructurada o almacenar
-un valor tipado por asignatura en `valores_campo_asignatura`; nunca altera el DDL por
-carrera. `asignaturas.ciclo` y `orden_en_ciclo` determinan la posición reproducible del
-lienzo. Las coordenadas de pantalla no se persisten. `requisitos_asignatura.tipo`
-conserva la semántica explícita de cada flecha.
+`mallas` contiene una sola fila por carrera y define su cantidad de ciclos y sus campos
+de tarjeta. Su estado puede ser `activa` o `inactiva`. Una definición puede enlazarse con
+una columna académica estructurada o almacenar un valor tipado por asignatura en
+`valores_campo_asignatura`; nunca altera el DDL por carrera. `asignaturas.ciclo` y
+`orden_en_ciclo` determinan la posición reproducible del lienzo. Las coordenadas de
+pantalla no se persisten. `requisitos_asignatura.tipo` conserva la semántica explícita de
+cada flecha.
 
 `silabos.contexto_academico` conserva una fotografía JSON de la malla, la asignatura y la
 oferta al crear el expediente. Es evidencia histórica de lectura y exportación; no

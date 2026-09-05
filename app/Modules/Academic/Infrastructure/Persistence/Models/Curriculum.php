@@ -15,8 +15,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $id
  * @property string $carrera_id
  * @property string $codigo
- * @property string|null $codigo_institucional
- * @property string|null $descripcion
  * @property int $numero_ciclos
  * @property string $estado
  * @property int $subjects_count
@@ -36,8 +34,6 @@ class Curriculum extends Model
     protected $fillable = [
         'carrera_id',
         'codigo',
-        'codigo_institucional',
-        'descripcion',
         'numero_ciclos',
         'estado',
     ];
