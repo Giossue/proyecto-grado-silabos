@@ -1,5 +1,10 @@
 # I-25 — Plantilla institucional única
 
+> Nota posterior: I-32 eliminó el versionado de plantilla e I-52 eliminó
+> `es_institucional`. `plantillas_silabo` admite directamente una sola fila y cada
+> revisión enviada conserva su propia fotografía. El texto restante documenta la
+> decisión original de I-25.
+
 ## Decisión de producto
 
 La UEB utilizará una única plantilla institucional de sílabo para todas sus carreras.

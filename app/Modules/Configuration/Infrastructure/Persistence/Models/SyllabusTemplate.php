@@ -14,7 +14,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $nombre
  * @property string|null $descripcion
  * @property bool $activo
- * @property bool $es_institucional
  * @property array<string, mixed>|null $mapeo_documento
  * @property int $sections_count
  */
@@ -30,12 +29,12 @@ class SyllabusTemplate extends Model
     protected $table = 'plantillas_silabo';
 
     /** @var list<string> */
-    protected $fillable = ['nombre', 'descripcion', 'activo', 'es_institucional', 'mapeo_documento'];
+    protected $fillable = ['nombre', 'descripcion', 'activo', 'mapeo_documento'];
 
     /** @return array<string, string> */
     protected function casts(): array
     {
-        return ['activo' => 'boolean', 'es_institucional' => 'boolean', 'mapeo_documento' => 'array'];
+        return ['activo' => 'boolean', 'mapeo_documento' => 'array'];
     }
 
     /** @return HasMany<TemplateSection, $this> */

@@ -274,6 +274,11 @@ Las fechas funcionales permanecen con nombres de dominio: `asignado_en`, `encola
 decisión queda para una revisión posterior. La migración `000046` es irreversible, tuvo
 respaldos lógicos verificados y fue aplicada local y remotamente.
 
+La misma revisión I-52 retira `plantillas_silabo.es_institucional`: el producto admite
+una única plantilla, por lo que el campo no distinguía estados posibles. El índice
+`plantillas_silabo_unica` garantiza directamente como máximo una fila. La migración
+`000047` es irreversible, tuvo respaldos verificados y fue aplicada local y remotamente.
+
 ## Propuesto
 
 - PHP 8.3 o superior como mínimo del proyecto.

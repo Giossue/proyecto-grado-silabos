@@ -48,7 +48,6 @@ class SyllabusProcessController extends Controller
                 ]),
             // La plantilla es una sola: se informa cuál es, no se elige.
             'template' => SyllabusTemplate::query()
-                ->where('es_institucional', true)
                 ->where('activo', true)
                 ->value('nombre'),
             'periods' => AcademicPeriod::query()

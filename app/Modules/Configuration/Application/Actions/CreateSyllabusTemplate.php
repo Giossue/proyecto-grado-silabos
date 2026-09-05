@@ -96,7 +96,7 @@ class CreateSyllabusTemplate
         $this->locks->assertTemplateEditable();
 
         return DB::transaction(function () use ($actor, $activeRole, $request): SyllabusTemplate {
-            if (SyllabusTemplate::query()->where('es_institucional', true)->lockForUpdate()->exists()) {
+            if (SyllabusTemplate::query()->lockForUpdate()->exists()) {
                 throw ValidationException::withMessages([
                     'template' => 'La plantilla institucional ya existe. Edítela en lugar de crear otra.',
                 ]);
@@ -106,7 +106,6 @@ class CreateSyllabusTemplate
                 'nombre' => SyllabusTemplate::INSTITUTIONAL_NAME,
                 'descripcion' => null,
                 'activo' => true,
-                'es_institucional' => true,
             ]);
 
             foreach (self::BASELINE as $sectionPosition => [$sectionKey, $sectionTitle, $fields]) {

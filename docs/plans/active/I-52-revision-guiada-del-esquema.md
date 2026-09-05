@@ -35,6 +35,7 @@ decisión de producto antes de modificar código o persistencia.
 | Trigger `validar_evidencia_ia` | Sustituir la referencia histórica a `convocatorias` por `convocatorias_carreras` para mantener la validación de alcance de fuentes. | Incluido en migración `000045`, verificado local y remotamente. |
 | Todas las tablas de dominio | Retirar `creado_en`, `actualizado_en` y `registrado_en` cuando solo duplicaban auditoría técnica. Conservar las fechas que sí gobiernan o explican el negocio. | Migración `000046`, con respaldos verificados y aplicada local y remotamente. |
 | Asignaciones, trabajos, notificaciones, objetos y observaciones | Conservar sus momentos funcionales renombrándolos a `asignado_en`, `encolado_en`, `notificado_en`, `almacenado_en` y `observado_en`. | Migración `000046`; modelos, consultas, interfaz, índices y triggers actualizados. |
+| `plantillas_silabo` | Retirar `es_institucional`: con una sola plantilla posible, el atributo siempre sería verdadero. | Migración `000047`, aplicada local y remotamente; `plantillas_silabo_unica` garantiza como máximo una fila. |
 
 ## Evidencia de la migración `000046`
 
@@ -52,6 +53,15 @@ decisión de producto antes de modificar código o persistencia.
   vacío de `PeriodPreparationSheet`, ajenas a esta migración.
 - El hash del inventario completo de tablas, columnas, tipos y nulabilidad coincide entre
   la base local y la remota después de migrar.
+
+## Evidencia de la migración `000047`
+
+- Respaldos verificados:
+  `/tmp/silabos-i52-000047-RW9EB0/local-pre-000047.dump` y
+  `/tmp/silabos-i52-000047-RW9EB0/remote-pre-000047.dump`.
+- `es_institucional` no existe en ninguna de las dos bases.
+- Ambas conservan el índice único `plantillas_silabo_unica` sobre una constante.
+- 50 pruebas de plantilla, procesos, panel, IA y documentos pasan.
 
 ## Hallazgos pendientes de decisión
 

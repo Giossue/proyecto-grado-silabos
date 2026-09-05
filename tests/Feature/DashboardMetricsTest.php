@@ -167,7 +167,6 @@ class DashboardMetricsTest extends TestCase
         return SyllabusTemplate::query()->firstOr(fn (): SyllabusTemplate => SyllabusTemplate::query()->create([
             'nombre' => 'Plantilla para indicadores',
             'activo' => true,
-            'es_institucional' => true,
         ]));
     }
 

@@ -81,7 +81,6 @@ class CreateSyllabusProcess
     public static function institutionalTemplate(): SyllabusTemplate
     {
         $template = SyllabusTemplate::query()
-            ->where('es_institucional', true)
             ->where('activo', true)
             ->first();
 

@@ -511,7 +511,6 @@ class AiAssistanceTest extends TestCase
         $templateVersion = SyllabusTemplate::query()->create([
             'nombre' => 'Plantilla IA',
             'activo' => true,
-            'es_institucional' => true,
         ]);
         $section = TemplateSection::query()->create([
             'plantilla_id' => $templateVersion->id,

@@ -71,7 +71,7 @@ class SetupChecklist
                 $this->step('periods', 'Registrar el periodo académico', 'El periodo que abrirá el primer proceso de sílabos.', AcademicPeriod::query()->where('activo', true)->exists(), route('admin.academic.index', 'periodos-academicos')),
                 $this->step('accounts', 'Crear las cuentas de coordinadores y docentes', 'Con su rol; el docente se asigna a paralelos desde Coordinación.', $accounts > 0, route('admin.users.index')),
                 $this->step('coordinators', 'Asignar un coordinador a cada carrera', $careerCount > 0 && $careersWithoutCoordinator > 0 ? "Faltan {$careersWithoutCoordinator} de {$careerCount} carreras." : 'Titular o encargado, con vigencia.', $careerCount > 0 && $careersWithoutCoordinator === 0, route('admin.academic.index', 'carreras')),
-                $this->step('template', 'Crear la plantilla de sílabo', 'Trae el formato oficial completo; solo hay que revisarla.', SyllabusTemplate::query()->where('es_institucional', true)->where('activo', true)->exists(), route('admin.templates.index')),
+                $this->step('template', 'Crear la plantilla de sílabo', 'Trae el formato oficial completo; solo hay que revisarla.', SyllabusTemplate::query()->where('activo', true)->exists(), route('admin.templates.index')),
                 $this->step('process', 'Crear y abrir el proceso de sílabos', 'Fechas de inicio y entrega; al abrirlo, las coordinaciones pueden convocar.', SyllabusProcess::query()->exists(), route('admin.processes.index')),
             ],
         );

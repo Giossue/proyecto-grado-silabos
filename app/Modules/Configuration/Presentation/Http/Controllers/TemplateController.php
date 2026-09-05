@@ -43,7 +43,7 @@ class TemplateController extends Controller
      */
     public function index(ManageTemplatesRequest $request, ProcessLocks $locks): Response|RedirectResponse
     {
-        $template = SyllabusTemplate::query()->where('es_institucional', true)->first();
+        $template = SyllabusTemplate::query()->first();
         if ($template !== null) {
             return to_route('admin.templates.show', $template);
         }
@@ -64,7 +64,6 @@ class TemplateController extends Controller
 
     public function show(SyllabusTemplate $template, ManageTemplatesRequest $request, ProcessLocks $locks, InstitutionalLogos $logos): Response
     {
-        $this->ensureInstitutional($template);
         $template->load('sections.blocks.fields');
 
         return Inertia::render('Admin/Templates/Show', [
@@ -132,17 +131,11 @@ class TemplateController extends Controller
         return 'text';
     }
 
-    private function ensureInstitutional(SyllabusTemplate $template): void
-    {
-        abort_unless($template->es_institucional, 404);
-    }
-
     public function storeField(
         SyllabusTemplate $template,
         SaveFieldDefinitionRequest $request,
         SaveFieldDefinition $action,
     ): RedirectResponse {
-        $this->ensureInstitutional($template);
         $actor = $request->user();
         abort_unless($actor instanceof User, 401);
         $action->create($template->id, $request->validated(), $actor, $request);
@@ -156,7 +149,6 @@ class TemplateController extends Controller
         SaveFieldDefinitionRequest $request,
         SaveFieldDefinition $action,
     ): RedirectResponse {
-        $this->ensureInstitutional($template);
         abort_unless($field->plantilla_id === $template->id, 404);
         $actor = $request->user();
         abort_unless($actor instanceof User, 401);
@@ -170,7 +162,6 @@ class TemplateController extends Controller
         SaveTemplateSectionRequest $request,
         SaveTemplateSection $action,
     ): RedirectResponse {
-        $this->ensureInstitutional($template);
         $actor = $request->user();
         abort_unless($actor instanceof User, 401);
         $action->create($template->id, $request->validated(), $actor, $request);
@@ -184,7 +175,6 @@ class TemplateController extends Controller
         SaveTemplateSectionRequest $request,
         SaveTemplateSection $action,
     ): RedirectResponse {
-        $this->ensureInstitutional($template);
         abort_unless($section->plantilla_id === $template->id, 404);
         $actor = $request->user();
         abort_unless($actor instanceof User, 401);
@@ -198,7 +188,6 @@ class TemplateController extends Controller
         ReorderTemplateBlocksRequest $request,
         ReorderTemplateBlocks $action,
     ): RedirectResponse {
-        $this->ensureInstitutional($template);
         $actor = $request->user();
         abort_unless($actor instanceof User, 401);
         $action->execute(
@@ -217,7 +206,6 @@ class TemplateController extends Controller
         ReorderTemplateSectionsRequest $request,
         ReorderTemplateSections $action,
     ): RedirectResponse {
-        $this->ensureInstitutional($template);
         $actor = $request->user();
         abort_unless($actor instanceof User, 401);
         $action->execute(
@@ -238,7 +226,7 @@ class TemplateController extends Controller
         $file = $request->file('logo');
         abort_unless($file instanceof UploadedFile, 422);
         $logos->storeInstitution($file);
-        $template = SyllabusTemplate::query()->where('es_institucional', true)->first();
+        $template = SyllabusTemplate::query()->first();
         $audit->execute(
             actorId: $actor->id,
             roleAssignmentId: $roles->resolve($request)?->id,
@@ -258,7 +246,6 @@ class TemplateController extends Controller
         UpdateTableLayoutRequest $request,
         UpdateTableLayout $action,
     ): RedirectResponse {
-        $this->ensureInstitutional($template);
         abort_unless($block->plantilla_id === $template->id, 404);
         $actor = $request->user();
         abort_unless($actor instanceof User, 401);
@@ -273,7 +260,6 @@ class TemplateController extends Controller
         ManageTemplatesRequest $request,
         DeleteTemplateBlock $action,
     ): RedirectResponse {
-        $this->ensureInstitutional($template);
         abort_unless($block->plantilla_id === $template->id, 404);
         $actor = $request->user();
         abort_unless($actor instanceof User, 401);
@@ -288,7 +274,6 @@ class TemplateController extends Controller
         ManageTemplatesRequest $request,
         DeleteTemplateSection $action,
     ): RedirectResponse {
-        $this->ensureInstitutional($template);
         abort_unless($section->plantilla_id === $template->id, 404);
         $actor = $request->user();
         abort_unless($actor instanceof User, 401);

@@ -9,7 +9,9 @@ use App\Modules\Configuration\Infrastructure\Persistence\Models\AcademicSource;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
 use Database\Seeders\DatabaseSeeder;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -46,7 +48,7 @@ class TemplateAndSourceTest extends TestCase
             ->assertRedirect();
 
         $template = SyllabusTemplate::query()->firstOrFail();
-        $this->assertTrue($template->es_institucional);
+        $this->assertFalse(Schema::hasColumn('plantillas_silabo', 'es_institucional'));
         $this->assertCount(12, $template->sections()->get());
         $this->assertCount(24, $template->fields()->get(), 'Doce campos base más los cuatro de la ficha y los extra del formato.');
 
@@ -71,20 +73,15 @@ class TemplateAndSourceTest extends TestCase
             ->assertRedirect(route('admin.templates.index'))
             ->assertSessionHasErrors('template');
 
-        $this->assertSame(1, SyllabusTemplate::query()->where('es_institucional', true)->count());
+        $this->assertSame(1, SyllabusTemplate::query()->count());
     }
 
-    public function test_legacy_template_is_not_available_for_new_template_operations(): void
+    public function test_database_rejects_a_second_template(): void
     {
-        $legacy = SyllabusTemplate::query()->create([
-            'nombre' => 'Plantilla anterior',
-            'activo' => true,
-            'es_institucional' => false,
-        ]);
+        SyllabusTemplate::query()->create(['nombre' => 'Plantilla oficial', 'activo' => true]);
 
-        $this->actingAsAdministrator()
-            ->get(route('admin.templates.show', $legacy))
-            ->assertNotFound();
+        $this->expectException(QueryException::class);
+        SyllabusTemplate::query()->create(['nombre' => 'Plantilla duplicada', 'activo' => true]);
     }
 
     public function test_non_administrator_cannot_manage_templates(): void
