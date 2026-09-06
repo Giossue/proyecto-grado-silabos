@@ -12,9 +12,8 @@
 - `AsignacionCoordinador` y `AsignacionDocente`: vinculan responsabilidad académica.
   La asignación docente guarda la referencia del acto que la respalda —tipo, número y
   fecha— y conecta al docente con el paralelo. La coordinación no almacena documentos y
-  distingue titular de encargado. Ninguna de las dos relaciones programa inicio o fin:
-  `activo` expresa su estado actual. Las atribuciones del encargado son las mismas que
-  las del titular.
+  no distingue tipos de designación. Ninguna de las dos relaciones programa inicio o fin:
+  `activo` expresa su estado actual.
 
 Una persona puede coordinar más de una carrera mediante asignaciones independientes. La
 sesión conserva una sola `AsignacionRol` activa: Coordinación siempre confirma la carrera

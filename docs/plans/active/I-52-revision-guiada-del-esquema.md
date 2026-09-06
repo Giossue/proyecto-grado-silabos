@@ -97,6 +97,18 @@ decisión de producto antes de modificar código o persistencia.
 
 ## Hallazgos pendientes de decisión
 
+### Actualización del 6 de septiembre: migración `000050`
+
+La decisión posterior retira también `calidad`, sus selectores y validaciones de
+titular/encargado. Sustituye la conservación de ese campo registrada en `000048` y
+`000049`. La tabla queda con `id`, `usuario_id`, `carrera_id` y `activo`; solo
+Administración asigna o reemplaza la coordinación. Recuperación: respaldo previo.
+
+Aplicada local y remotamente. Respaldos con catálogo verificado en
+`/tmp/silabos-i52-000050-tdQfee/local.dump` y `remote.dump`. Pasan 62 pruebas
+relacionadas, PHPStan, Vue TypeScript y formato. El plan de revisión sigue abierto.
+
+
 | Tabla | Función actual | Recomendación inicial |
 |---|---|---|
 | `sesiones` | Sesiones web de Laravel con driver `database`; permite cerrar todas las sesiones de una cuenta al desactivarla o reenviar credenciales. | Conservar mientras `SESSION_DRIVER=database`. Solo desaparecería al migrar el driver a Redis u otro almacenamiento, con una decisión explícita de operación y persistencia. |

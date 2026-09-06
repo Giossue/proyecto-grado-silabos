@@ -102,33 +102,6 @@ const candidates = computed(() =>
                         </Select>
                         <FieldError :errors="[errors.incoming_user_id]" />
                     </Field>
-                    <Field :data-invalid="Boolean(errors.quality)">
-                        <FieldLabel
-                            :for="`coordinator-quality-${careerId}`"
-                            required
-                        >
-                            Calidad de la coordinación
-                        </FieldLabel>
-                        <Select name="quality" default-value="titular" required>
-                            <SelectTrigger
-                                :id="`coordinator-quality-${careerId}`"
-                                :aria-invalid="Boolean(errors.quality)"
-                            >
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectGroup>
-                                    <SelectItem value="titular">
-                                        Titular
-                                    </SelectItem>
-                                    <SelectItem value="encargado">
-                                        Encargado
-                                    </SelectItem>
-                                </SelectGroup>
-                            </SelectContent>
-                        </Select>
-                        <FieldError :errors="[errors.quality]" />
-                    </Field>
                     <Field
                         v-if="coordinator"
                         orientation="horizontal"

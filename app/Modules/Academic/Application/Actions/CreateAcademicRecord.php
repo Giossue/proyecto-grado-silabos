@@ -288,10 +288,6 @@ class CreateAcademicRecord
             'usuario_id' => $userId,
             'carrera_id' => $careerId,
             'activo' => true,
-            // Las atribuciones del encargado son las mismas que las del titular: sus
-            // aprobaciones siguen valiendo cuando este vuelve. La distinción es de
-            // nombramiento, no de permisos.
-            'calidad' => $data['quality'],
         ]);
     }
 

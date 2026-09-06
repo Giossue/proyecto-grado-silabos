@@ -198,7 +198,6 @@ it('conserva en el servidor las obligaciones minimas y condicionales', function 
     $requests = [
         'Academic/Presentation/Http/Requests/StoreAcademicRecordRequest.php' => [
             "'user_id' => ['required'",
-            "'quality' => ['required'",
         ],
         'Configuration/Presentation/Http/Requests/CreateSourceRequest.php' => [
             "'nombre' => [",

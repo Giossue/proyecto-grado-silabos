@@ -93,7 +93,6 @@ const {
                         <TableRow>
                             <TableHead>Persona</TableHead>
                             <TableHead>Carrera</TableHead>
-                            <TableHead>Calidad</TableHead>
                             <TableHead>Estado</TableHead>
                             <TableHead class="text-right">Acciones</TableHead>
                         </TableRow>
@@ -101,7 +100,7 @@ const {
                     <TableBody>
                         <TableEmpty
                             v-if="coordinatorAssignments.length === 0"
-                            :colspan="5"
+                            :colspan="4"
                         >
                             No existen asignaciones de coordinación.
                         </TableEmpty>
@@ -114,9 +113,6 @@ const {
                                 {{ item.user_name }}
                             </TableCell>
                             <TableCell>{{ item.career_name }}</TableCell>
-                            <TableCell class="capitalize">
-                                {{ item.quality }}
-                            </TableCell>
                             <TableCell>
                                 {{ item.active ? 'Activa' : 'Finalizada' }}
                             </TableCell>

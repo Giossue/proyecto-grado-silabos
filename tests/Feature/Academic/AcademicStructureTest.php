@@ -232,7 +232,6 @@ class AcademicStructureTest extends TestCase
             ->post(route('admin.academic.store', 'asignacion_coordinador'), [
                 'user_id' => $candidate->id,
                 'career_id' => $career->id,
-                'quality' => 'titular',
             ])
             ->assertRedirect();
 
@@ -245,19 +244,18 @@ class AcademicStructureTest extends TestCase
             'accion' => 'academico.asignacion_coordinador.creacion',
             'tipo_recurso' => 'asignacion_coordinador',
         ]);
-        // Sin declararlo, una coordinación es titular: es el caso normal.
+        // La persona queda vinculada a la coordinación.
         $this->assertDatabaseHas('asignaciones_coordinador', [
             'usuario_id' => $candidate->id,
-            'calidad' => 'titular',
         ]);
     }
 
-    public function test_administration_can_assign_an_acting_coordination_without_document_data(): void
+    public function test_administration_can_assign_coordination_without_designation_or_document_data(): void
     {
         $career = Career::query()->where('codigo_institucional', 'SOFTWARE')->firstOrFail();
         $acting = $this->userWithRole(RoleCode::Coordinator, $career);
 
-        // La coordinación titular se cierra primero: la base impide dos activas en la
+        // La coordinación anterior se cierra primero: la base impide dos activas en la
         // misma carrera.
         CoordinatorAssignment::query()
             ->where('carrera_id', $career->id)
@@ -267,14 +265,12 @@ class AcademicStructureTest extends TestCase
             ->post(route('admin.academic.store', 'asignacion_coordinador'), [
                 'user_id' => $acting->id,
                 'career_id' => $career->id,
-                'quality' => 'encargado',
             ])
             ->assertRedirect();
 
         $this->assertDatabaseHas('asignaciones_coordinador', [
             'usuario_id' => $acting->id,
             'carrera_id' => $career->id,
-            'calidad' => 'encargado',
         ]);
     }
 

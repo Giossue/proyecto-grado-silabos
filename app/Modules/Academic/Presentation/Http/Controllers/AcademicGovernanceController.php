@@ -61,7 +61,7 @@ class AcademicGovernanceController extends Controller
     ): RedirectResponse {
         $actor = $request->user();
         abort_unless($actor instanceof User, 401);
-        /** @var array{incoming_user_id: string, quality: string, deactivate_outgoing?: bool} $data */
+        /** @var array{incoming_user_id: string, deactivate_outgoing?: bool} $data */
         $data = $request->validated();
         $result = $action->execute($career, $data, $actor, $request);
 

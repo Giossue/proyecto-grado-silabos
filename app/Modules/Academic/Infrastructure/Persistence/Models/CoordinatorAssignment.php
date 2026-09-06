@@ -11,7 +11,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /**
  * @property string $id
  * @property bool $activo
- * @property string $calidad
  * @property-read User $user
  * @property-read Career $career
  */
@@ -26,7 +25,6 @@ class CoordinatorAssignment extends Model
     /** @var list<string> */
     protected $fillable = [
         'usuario_id', 'carrera_id', 'activo',
-        'calidad',
     ];
 
     /** @return array<string, string> */

@@ -26,7 +26,6 @@ class CoordinationMandate
         string $userId,
         string $roleCode,
         ?string $careerId,
-        string $quality = 'titular',
     ): ?CoordinatorAssignment {
         if ($roleCode !== RoleCode::Coordinator->value || $careerId === null) {
             return null;
@@ -54,7 +53,6 @@ class CoordinationMandate
             'usuario_id' => $userId,
             'carrera_id' => $careerId,
             'activo' => true,
-            'calidad' => $quality,
         ]);
     }
 

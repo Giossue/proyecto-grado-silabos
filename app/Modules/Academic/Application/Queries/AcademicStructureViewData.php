@@ -112,7 +112,6 @@ class AcademicStructureViewData
                     'id' => $assignment->id,
                     'user_name' => $assignment->user->nombre,
                     'career_name' => $assignment->career->nombre,
-                    'quality' => $assignment->calidad,
                     'active' => $assignment->activo,
                 ]),
             'options' => [

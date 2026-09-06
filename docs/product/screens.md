@@ -168,8 +168,8 @@ DOC-01 llena una cuadrícula con una casilla por celda, unidades y totales calcu
 - Salida de personas (I-39): en ADM-04 Carreras muestra la coordinación activa y su menú
   tiene **Reemplazar coordinador** (o **Asignar coordinador** si no hay): cierra
   nombramiento y rol de quien sale, abre los de quien entra y, si se marca y no le
-  queda otro rol, desactiva la cuenta saliente. Administración elige si la nueva
-  coordinación es titular o encargada; no captura sustento documental. En COR-15
+  queda otro rol, desactiva la cuenta saliente. Administración elige a la persona
+  coordinadora sin tipo de designación ni sustento documental. En COR-15
   **Relevar docente** mueve todos
   los paralelos y sílabos de un docente al entrante con el mismo sustento documental
   (borrador se descarta, aprobado se reabre, en revisión bloquea). Desactivar una cuenta

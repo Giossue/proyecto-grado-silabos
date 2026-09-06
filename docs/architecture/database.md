@@ -55,9 +55,9 @@ momento efectivo y el acto que la respalda; no tiene intervalo de vigencia labor
 `usuario_id + paralelo_id`; un relevo finaliza la relación anterior y crea la nueva.
 
 `asignaciones_coordinador` conserva quién ejerce la coordinación de una carrera y la
-calidad de su nombramiento (`titular` o `encargado`). No almacena documentos ni programa
+relación con la persona asignada. No almacena tipos de designación, documentos ni programa
 un intervalo: `activo` expresa el estado actual y un índice parcial garantiza como máximo
-una coordinación activa por carrera. La designación y su calidad las administra
+una coordinación activa por carrera. La designación la administra
 exclusivamente Administración.
 
 Estos catálogos no comparten una tabla polimórfica. `carreras.facultad_id` implementa la

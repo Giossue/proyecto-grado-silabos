@@ -130,7 +130,6 @@ class StoreAcademicRecordRequest extends FormRequest
             ],
             'asignacion_coordinador' => [
                 ...$this->assignmentRules('carreras', 'career_id'),
-                'quality' => ['required', Rule::in(['titular', 'encargado'])],
             ],
             'asignacion_docente' => [
                 'user_id' => ['required', 'uuid', Rule::exists('usuarios', 'id')->where('activo', true)],

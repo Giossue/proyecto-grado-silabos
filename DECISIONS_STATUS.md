@@ -291,6 +291,11 @@ aplicada local y remotamente.
 
 ## Propuesto
 
+I-52, actualización del 6 de septiembre: se retira `calidad` de las asignaciones de
+coordinación mediante `000050`, sustituyendo la decisión anterior de conservarla.
+Administración asigna a la persona sin distinguir titular de encargado.
+
+
 - PHP 8.3 o superior como mínimo del proyecto.
 - UUID generados por la aplicación para claves primarias internas.
 - PostgreSQL con `timestamptz` en UTC; presentación en `America/Guayaquil`.

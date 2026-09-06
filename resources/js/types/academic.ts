@@ -110,7 +110,6 @@ export type AcademicStructureProps = {
         id: string;
         user_name: string;
         career_name: string;
-        quality: 'titular' | 'encargado';
         active: boolean;
     }[];
     teacherAssignments: {
