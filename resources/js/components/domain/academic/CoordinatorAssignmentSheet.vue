@@ -95,6 +95,30 @@ defineProps<Pick<AcademicStructureProps, 'options'>>();
                         </Select>
                         <FieldError :errors="[errors.career_id]" />
                     </Field>
+                    <Field :data-invalid="Boolean(errors.quality)">
+                        <FieldLabel for="coordinator-quality" required>
+                            Calidad de la coordinación
+                        </FieldLabel>
+                        <Select name="quality" default-value="titular" required>
+                            <SelectTrigger
+                                id="coordinator-quality"
+                                :aria-invalid="Boolean(errors.quality)"
+                            >
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectGroup>
+                                    <SelectItem value="titular">
+                                        Titular
+                                    </SelectItem>
+                                    <SelectItem value="encargado">
+                                        Encargado
+                                    </SelectItem>
+                                </SelectGroup>
+                            </SelectContent>
+                        </Select>
+                        <FieldError :errors="[errors.quality]" />
+                    </Field>
                     <FormSheetActions
                         :close="close"
                         :processing="processing"

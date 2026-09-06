@@ -282,9 +282,12 @@ una única plantilla, por lo que el campo no distinguía estados posibles. El í
 I-52 también retira
 `asignaciones_coordinador.vigente_desde` y `vigente_hasta`: `activo` expresa quién
 coordina actualmente y un índice parcial garantiza una sola coordinación activa por
-carrera. `calidad` y los datos del sustento se conservan como evidencia funcional del
-nombramiento. La migración `000048` fue aplicada local y remotamente después de respaldos
-verificados.
+carrera. `calidad` distingue si la designación administrativa es titular o encargada.
+La migración `000048` fue aplicada local y remotamente después de respaldos verificados.
+El 6 de septiembre I-52 retira además `sustento_tipo`, `sustento_numero` y
+`sustento_fecha` de esa asignación: la coordinación no conserva información documental y
+solo Administración designa y define la calidad. La migración `000049` fue respaldada y
+aplicada local y remotamente.
 
 ## Propuesto
 

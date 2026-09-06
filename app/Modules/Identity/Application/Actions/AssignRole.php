@@ -20,7 +20,7 @@ class AssignRole
         private readonly RecordAuditEvent $audit,
     ) {}
 
-    /** @param array{role_code: string, career_id?: string|null} $data */
+    /** @param array{role_code: string, career_id?: string|null, quality?: string} $data */
     public function execute(User $target, array $data, User $actor, Request $request): RoleAssignment
     {
         $activeRole = $this->roles->resolve($request);
@@ -51,6 +51,7 @@ class AssignRole
                 $target->id,
                 $data['role_code'],
                 $careerId,
+                $data['quality'] ?? 'titular',
             );
 
             $this->audit->execute(

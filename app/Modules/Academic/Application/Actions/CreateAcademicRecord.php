@@ -284,11 +284,6 @@ class CreateAcademicRecord
         $careerId = $this->stringValue($data, 'career_id');
         $this->ensureScopedRole($userId, $careerId, RoleCode::Coordinator);
 
-        // `quality` es opcional: sin él la asignación es titular, que es el caso normal.
-        $quality = is_string($data['quality'] ?? null) && $data['quality'] !== ''
-            ? $data['quality']
-            : 'titular';
-
         return CoordinatorAssignment::query()->create([
             'usuario_id' => $userId,
             'carrera_id' => $careerId,
@@ -296,10 +291,7 @@ class CreateAcademicRecord
             // Las atribuciones del encargado son las mismas que las del titular: sus
             // aprobaciones siguen valiendo cuando este vuelve. La distinción es de
             // nombramiento, no de permisos.
-            'calidad' => $quality,
-            'sustento_tipo' => $data['backing_type'] ?? null,
-            'sustento_numero' => $data['backing_number'] ?? null,
-            'sustento_fecha' => $data['backing_date'] ?? null,
+            'calidad' => $data['quality'],
         ]);
     }
 

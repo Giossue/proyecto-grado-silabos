@@ -90,8 +90,8 @@ y abrir otra:
 
 ### 5. Coordinación encargada
 
-- La asignación de coordinador distingue titular de encargado y guarda el sustento
-  documental, según DT-09 y D2.
+- La asignación de coordinador distingue titular de encargado. I-52 retiró después el
+  sustento documental de esta tabla por decisión del responsable del producto.
 - Las atribuciones son las mismas: D3 fijó que sus aprobaciones siguen siendo válidas sin
   condición cuando vuelve el titular. No se añade ninguna restricción de permisos.
 - I-52 sustituyó la restricción temporal de no solapamiento por un índice parcial que

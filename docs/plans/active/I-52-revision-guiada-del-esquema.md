@@ -36,7 +36,8 @@ decisión de producto antes de modificar código o persistencia.
 | Todas las tablas de dominio | Retirar `creado_en`, `actualizado_en` y `registrado_en` cuando solo duplicaban auditoría técnica. Conservar las fechas que sí gobiernan o explican el negocio. | Migración `000046`, con respaldos verificados y aplicada local y remotamente. |
 | Asignaciones, trabajos, notificaciones, objetos y observaciones | Conservar sus momentos funcionales renombrándolos a `asignado_en`, `encolado_en`, `notificado_en`, `almacenado_en` y `observado_en`. | Migración `000046`; modelos, consultas, interfaz, índices y triggers actualizados. |
 | `plantillas_silabo` | Retirar `es_institucional`: con una sola plantilla posible, el atributo siempre sería verdadero. | Migración `000047`, aplicada local y remotamente; `plantillas_silabo_unica` garantiza como máximo una fila. |
-| `asignaciones_coordinador` | Retirar `vigente_desde` y `vigente_hasta`: el nombramiento no se programa con fechas conocidas; `activo` representa quién ejerce hoy. Conservar `calidad` y `sustento_tipo`, `sustento_numero`, `sustento_fecha` porque describen el acto institucional que respalda la designación. | Migración `000048`, aplicada local y remotamente; reemplaza rangos y solapamiento por una unicidad parcial de una coordinación activa por carrera. |
+| `asignaciones_coordinador` | Retirar `vigente_desde` y `vigente_hasta`: el nombramiento no se programa con fechas conocidas; `activo` representa quién ejerce hoy. Conservar `calidad` para distinguir titular de encargado. | Migración `000048`, aplicada local y remotamente; reemplaza rangos y solapamiento por una unicidad parcial de una coordinación activa por carrera. |
+| `asignaciones_coordinador` | Retirar `sustento_tipo`, `sustento_numero` y `sustento_fecha`; la coordinación no almacenará información documental. Administración sigue siendo la única que designa y define la `calidad`. | Migración `000049`, aplicada local y remotamente; retiro vertical de persistencia, validación e interfaz. |
 
 ## Evidencia de la migración `000046`
 
@@ -78,6 +79,21 @@ decisión de producto antes de modificar código o persistencia.
   Vue TypeScript, ESLint, Prettier, Pint y la compilación Vite.
 - El JSON actualizado para ChartDB quedó en `/tmp/chartdb-000048.json` y fue copiado al
   portapapeles cuando el entorno gráfico estuvo disponible.
+
+## Evidencia de la migración `000049`
+
+- Antes del retiro, local y remoto tenían una asignación y ninguna contenía sustento.
+- Respaldos verificados:
+  `/tmp/silabos-i52-000049-DRMY4F/local-pre-000049.dump` y
+  `/tmp/silabos-i52-000049-DRMY4F/remote-pre-000049.dump`.
+- Ambas bases conservan la asignación activa y dejan `asignaciones_coordinador` con
+  `id`, `usuario_id`, `carrera_id`, `activo` y `calidad`.
+- El inventario lógico local y remoto coincide
+  (`f608ad56e765cf953c9d7b4691b20df7`).
+- 93 pruebas relacionadas pasan; también PHPStan, Vue TypeScript, ESLint, Prettier,
+  Pint y la compilación Vite.
+- El JSON actualizado para ChartDB quedó en `/tmp/chartdb-000049.json` y fue copiado al
+  portapapeles cuando estuvo disponible.
 
 ## Hallazgos pendientes de decisión
 

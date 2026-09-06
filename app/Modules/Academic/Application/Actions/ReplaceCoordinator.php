@@ -33,7 +33,7 @@ class ReplaceCoordinator
     ) {}
 
     /**
-     * @param  array{incoming_user_id: string, deactivate_outgoing?: bool}  $data
+     * @param  array{incoming_user_id: string, quality: string, deactivate_outgoing?: bool}  $data
      * @return Result
      */
     public function execute(Career $career, array $data, User $actor, Request $request): array
@@ -78,6 +78,7 @@ class ReplaceCoordinator
             $this->assignRole->execute($incoming, [
                 'role_code' => RoleCode::Coordinator->value,
                 'career_id' => $lockedCareer->id,
+                'quality' => $data['quality'],
             ], $actor, $request);
 
             if ($current !== null && (bool) ($data['deactivate_outgoing'] ?? false)) {

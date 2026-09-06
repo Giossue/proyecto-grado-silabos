@@ -130,10 +130,7 @@ class StoreAcademicRecordRequest extends FormRequest
             ],
             'asignacion_coordinador' => [
                 ...$this->assignmentRules('carreras', 'career_id'),
-                'quality' => ['nullable', Rule::in(['titular', 'encargado'])],
-                'backing_type' => ['nullable', Rule::in(['accion_personal', 'resolucion', 'oficio'])],
-                'backing_number' => ['nullable', 'string', 'max:80', 'required_if:quality,encargado'],
-                'backing_date' => ['nullable', 'date', 'before_or_equal:today', 'required_if:quality,encargado'],
+                'quality' => ['required', Rule::in(['titular', 'encargado'])],
             ],
             'asignacion_docente' => [
                 'user_id' => ['required', 'uuid', Rule::exists('usuarios', 'id')->where('activo', true)],

@@ -12,8 +12,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $id
  * @property bool $activo
  * @property string $calidad
- * @property string|null $sustento_tipo
- * @property string|null $sustento_numero
  * @property-read User $user
  * @property-read Career $career
  */
@@ -28,7 +26,7 @@ class CoordinatorAssignment extends Model
     /** @var list<string> */
     protected $fillable = [
         'usuario_id', 'carrera_id', 'activo',
-        'calidad', 'sustento_tipo', 'sustento_numero', 'sustento_fecha',
+        'calidad',
     ];
 
     /** @return array<string, string> */
@@ -36,7 +34,6 @@ class CoordinatorAssignment extends Model
     {
         return [
             'activo' => 'boolean',
-            'sustento_fecha' => 'immutable_date',
         ];
     }
 
