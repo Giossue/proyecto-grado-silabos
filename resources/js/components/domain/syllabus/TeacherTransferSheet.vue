@@ -52,7 +52,7 @@ const idempotencyKey = `transfer-${props.syllabusId}-${Math.trunc(performance.no
     <FormSheet
         trigger-label="Relevar docente"
         title="Relevar al docente responsable"
-        description="Cierra la vigencia de quien sale y abre la de quien entra sobre los mismos paralelos, en una sola operación."
+        description="Releva a quien sale y asigna a quien entra sobre los mismos paralelos, en una sola operación."
     >
         <template #trigger>
             <Button>

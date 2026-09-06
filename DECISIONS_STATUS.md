@@ -39,9 +39,10 @@ Fecha de corte: **30 de agosto de 2026**.
   la carrera (I-35, I-36, I-37, 5 de septiembre de 2026). La ley fija componentes ACD/APE/AA,
   unidades de organización curricular y créditos de 48 h; el dibujo de la malla y el
   formato del sílabo son institucionales, no ministeriales.
-- Las personas no son dueñas de nada: tienen vigencias (rol, nombramiento, asignación
-  docente) sobre lo que es de la carrera o del sílabo. Salir = cerrar vigencias y, si no
-  queda ninguna, desactivar la cuenta; nunca borrar cuentas con historia ni reutilizarlas.
+- Las personas no son dueñas de nada: tienen relaciones activas de rol, coordinación y
+  asignación docente sobre lo que es de la carrera o del sílabo. Salir = desactivar esas
+  relaciones y, si no queda ninguna, desactivar la cuenta; nunca borrar cuentas con
+  historia ni reutilizarlas.
   Reemplazo de coordinación y relevo docente en un paso; la desactivación se bloquea con
   sílabos en curso (I-38, I-39, I-44, 3 de septiembre de 2026).
 - La IA es asistencia explicable; no toma decisiones académicas ni bloquea el flujo.
@@ -214,8 +215,8 @@ escuchaba las colas nombradas.
 
 I-29 (2 de septiembre de 2026) elimina la vigencia programada de los roles de cuenta:
 `asignaciones_rol` queda efectiva únicamente mientras `activo` sea verdadero y su retiro
-es manual. Las vigencias de asignaciones docentes y nombramientos de coordinación no
-cambian, pues representan relaciones académicas distintas.
+es manual. I-52 extendió después esa misma regla a las asignaciones docentes y de
+coordinación, conservando por separado su evidencia funcional.
 
 I-31 (2 de septiembre de 2026) traslada el calendario a Administración por decisión
 explícita del responsable del producto: `procesos_silabos` fija plantilla, inicio y
@@ -263,8 +264,8 @@ SIANET ya eliminada. La migración es irreversible y exige un respaldo lógico p
 
 I-51 (5 de septiembre de 2026) retira `vigente_desde` y `vigente_hasta` de las cuentas:
 esas fechas no se conocen de forma estable al administrarlas. La disponibilidad depende
-de la cuenta activa y de sus roles/asignaciones; los períodos de nombramiento de
-Coordinación no cambian. La migración es irreversible y exige un respaldo lógico previo.
+de la cuenta activa y de sus roles/asignaciones. I-52 aplicó después el mismo criterio a
+la coordinación. La migración es irreversible y exige un respaldo lógico previo.
 
 I-52 (5 de septiembre de 2026) retira de todas las tablas propias las marcas genéricas
 `creado_en`, `actualizado_en` y `registrado_en` cuando solo duplican auditoría técnica.
@@ -278,6 +279,12 @@ La misma revisión I-52 retira `plantillas_silabo.es_institucional`: el producto
 una única plantilla, por lo que el campo no distinguía estados posibles. El índice
 `plantillas_silabo_unica` garantiza directamente como máximo una fila. La migración
 `000047` es irreversible, tuvo respaldos verificados y fue aplicada local y remotamente.
+I-52 también retira
+`asignaciones_coordinador.vigente_desde` y `vigente_hasta`: `activo` expresa quién
+coordina actualmente y un índice parcial garantiza una sola coordinación activa por
+carrera. `calidad` y los datos del sustento se conservan como evidencia funcional del
+nombramiento. La migración `000048` fue aplicada local y remotamente después de respaldos
+verificados.
 
 ## Propuesto
 

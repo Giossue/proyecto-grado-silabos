@@ -158,13 +158,11 @@ class DatabaseSeeder extends Seeder
             ];
             $coordinatorAssignment = CoordinatorAssignment::query()
                 ->where($coordinatorScope)
-                ->whereNull('vigente_hasta')
+                ->where('activo', true)
                 ->first();
             if ($coordinatorAssignment === null) {
                 CoordinatorAssignment::query()->create([
                     ...$coordinatorScope,
-                    'vigente_desde' => '2026-01-01 00:00:00',
-                    'vigente_hasta' => null,
                     'activo' => true,
                 ]);
             } elseif (! $coordinatorAssignment->activo) {

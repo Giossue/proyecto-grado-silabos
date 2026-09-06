@@ -31,7 +31,7 @@ class DeleteCurriculum
         if (! $role instanceof RoleAssignment
             || ! AcademicStructurePermissions::isCareerContext($role)
             || $role->carrera_id === null) {
-            throw new AuthorizationException('Solo la coordinación vigente puede eliminar la malla.');
+            throw new AuthorizationException('Solo la coordinación activa puede eliminar la malla.');
         }
         $this->locks->assertCareerEditable($role->carrera_id);
 

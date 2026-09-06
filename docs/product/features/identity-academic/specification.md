@@ -13,12 +13,12 @@
 - El administrador conserva historial al desactivar usuarios.
 - El perfil no permite autoeliminar la cuenta; una baja se representa mediante
   desactivación administrativa para conservar asignaciones y auditoría histórica.
-- Una persona acumula roles con alcance y vigencia, incluida la coordinación de varias
+- Una persona acumula roles activos con alcance, incluida la coordinación de varias
   carreras mediante asignaciones independientes.
 - Coordinación elige explícitamente la carrera al iniciar, aunque solo tenga una opción,
   y puede cambiar el ámbito activo desde el menú de usuario. Administrador y Docente
   conservan la activación automática cuando solo tienen un rol elegible.
-- El rol Coordinador exige rol y asignación de coordinación vigentes para la misma
+- El rol Coordinador exige rol y asignación de coordinación activos para la misma
   carrera; perder cualquiera de los dos invalida ese rol.
 - El Administrador mantiene facultades, carreras y catálogos globales, crea cuentas y
   asigna coordinaciones.
@@ -66,7 +66,7 @@
 - Un usuario fuera de alcance no puede inferir ni descargar el recurso.
 - Un ID de malla, materia, oferta, paralelo o asignación de otra carrera no concede acceso
   ni permite una mutación aunque se envíe fuera de la interfaz.
-- Dos coordinaciones activas no se superponen para la misma carrera.
+- Cada carrera tiene como máximo una coordinación activa.
 - Un Coordinador o Docente no puede actualizar catálogos globales aunque construya la
   solicitud fuera de la interfaz.
 - No hay archivado de catálogos académicos: los registros sin dependencias se eliminan

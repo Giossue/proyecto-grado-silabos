@@ -105,14 +105,14 @@ class AcademicStructureViewData
         return [
             'coordinatorAssignments' => CoordinatorAssignment::query()
                 ->with(['user:id,nombre,correo_electronico', 'career:id,nombre'])
-                ->orderByDesc('vigente_desde')
+                ->orderByDesc('activo')
+                ->orderBy('carrera_id')
                 ->get()
                 ->map(fn (CoordinatorAssignment $assignment) => [
                     'id' => $assignment->id,
                     'user_name' => $assignment->user->nombre,
                     'career_name' => $assignment->career->nombre,
-                    'valid_from' => $assignment->vigente_desde->toDateString(),
-                    'valid_until' => $assignment->vigente_hasta?->toDateString(),
+                    'quality' => $assignment->calidad,
                     'active' => $assignment->activo,
                 ]),
             'options' => [

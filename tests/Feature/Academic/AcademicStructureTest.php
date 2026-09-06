@@ -232,7 +232,6 @@ class AcademicStructureTest extends TestCase
             ->post(route('admin.academic.store', 'asignacion_coordinador'), [
                 'user_id' => $candidate->id,
                 'career_id' => $career->id,
-                'valid_from' => now()->toDateString(),
             ])
             ->assertRedirect();
 
@@ -252,25 +251,22 @@ class AcademicStructureTest extends TestCase
         ]);
     }
 
-    public function test_an_acting_coordination_records_its_duration_and_the_act_that_backs_it(): void
+    public function test_an_acting_coordination_records_the_act_that_backs_it(): void
     {
         $career = Career::query()->where('codigo_institucional', 'SOFTWARE')->firstOrFail();
         $acting = $this->userWithRole(RoleCode::Coordinator, $career);
 
-        // La coordinación titular vigente se cierra primero: la base impide dos activas
-        // superpuestas en la misma carrera.
+        // La coordinación titular se cierra primero: la base impide dos activas en la
+        // misma carrera.
         CoordinatorAssignment::query()
             ->where('carrera_id', $career->id)
-            ->whereNull('vigente_hasta')
-            ->update(['vigente_hasta' => now(), 'activo' => false]);
+            ->update(['activo' => false]);
 
         $this->actingAsAdministrator()
             ->post(route('admin.academic.store', 'asignacion_coordinador'), [
                 'user_id' => $acting->id,
                 'career_id' => $career->id,
                 'quality' => 'encargado',
-                'valid_from' => now()->addDay()->toDateString(),
-                'valid_until' => now()->addMonths(3)->toDateString(),
                 'backing_type' => 'accion_personal',
                 'backing_number' => 'UEB-RECT-2026-0311-R',
                 'backing_date' => now()->subDay()->toDateString(),
@@ -286,25 +282,6 @@ class AcademicStructureTest extends TestCase
         ]);
     }
 
-    public function test_an_acting_coordination_without_an_end_date_is_rejected(): void
-    {
-        $career = Career::query()->where('codigo_institucional', 'SOFTWARE')->firstOrFail();
-        $acting = $this->userWithRole(RoleCode::Coordinator, $career);
-
-        // Un encargo sin fecha de fin sería una titularidad sin nombrar.
-        $this->actingAsAdministrator()
-            ->post(route('admin.academic.store', 'asignacion_coordinador'), [
-                'user_id' => $acting->id,
-                'career_id' => $career->id,
-                'quality' => 'encargado',
-                'valid_from' => now()->addDay()->toDateString(),
-                'backing_type' => 'accion_personal',
-                'backing_number' => 'UEB-RECT-2026-0312-R',
-                'backing_date' => now()->subDay()->toDateString(),
-            ])
-            ->assertSessionHasErrors('valid_until');
-    }
-
     public function test_each_career_can_create_only_one_current_curriculum_without_a_visible_version(): void
     {
         $career = $this->createCareer('MALLA-UNICA');
@@ -313,7 +290,6 @@ class AcademicStructureTest extends TestCase
         CoordinatorAssignment::query()->create([
             'usuario_id' => $coordinator->id,
             'carrera_id' => $career->id,
-            'vigente_desde' => now()->subDay(),
             'activo' => true,
         ]);
 
@@ -779,7 +755,6 @@ class AcademicStructureTest extends TestCase
         CoordinatorAssignment::query()->create([
             'usuario_id' => $coordinator->id,
             'carrera_id' => $career->id,
-            'vigente_desde' => now()->subDay(),
             'activo' => true,
         ]);
         $curriculum = Curriculum::query()->create([
@@ -1320,7 +1295,6 @@ class AcademicStructureTest extends TestCase
             ->post(route('coordination.academic.store', 'asignacion_docente'), [
                 'user_id' => $teacher->id,
                 'parallel_id' => $parallel->id,
-                'valid_from' => now()->toDateString(),
             ])
             ->assertRedirect();
 
@@ -1350,7 +1324,6 @@ class AcademicStructureTest extends TestCase
             ->post(route('coordination.academic.store', 'asignacion_docente'), [
                 'user_id' => $otherTeacher->id,
                 'parallel_id' => $parallel->id,
-                'valid_from' => now()->toDateString(),
             ])
             ->assertSessionHasErrors('user_id');
 
@@ -1649,7 +1622,6 @@ class AcademicStructureTest extends TestCase
             'usuario_id' => $user->id,
             'rol_id' => $role->id,
             'carrera_id' => $career->id,
-            'vigente_desde' => now()->subDay(),
             'activo' => true,
         ]);
 

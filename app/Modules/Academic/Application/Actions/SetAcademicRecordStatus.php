@@ -107,7 +107,7 @@ class SetAcademicRecordStatus
     private function findCareerRecord(string $entity, string $recordId, ?string $careerId): Model
     {
         if ($careerId === null) {
-            throw new AuthorizationException('Seleccione una coordinación vigente con carrera.');
+            throw new AuthorizationException('Seleccione una coordinación activa con carrera.');
         }
 
         return match ($entity) {

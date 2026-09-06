@@ -38,7 +38,7 @@ const closeAfterSuccess = (close: () => void): void => {
     <FormSheet
         trigger-label="Asignar docente"
         title="Asignar docente"
-        description="Seleccione una cuenta con rol Docente y vigencia laboral actual, y un paralelo perteneciente a esta carrera."
+        description="Seleccione una cuenta activa con rol Docente y un paralelo perteneciente a esta carrera."
     >
         <template #default="{ close }">
             <Form

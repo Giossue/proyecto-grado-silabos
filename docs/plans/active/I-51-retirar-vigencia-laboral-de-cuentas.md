@@ -4,9 +4,11 @@
 
 La relación laboral no se conoce de forma estable al crear ni administrar una cuenta, por
 lo que `usuarios` no almacena fechas de inicio o fin. La disponibilidad actual depende de
-`usuarios.activo` y del rol/asignación operativa que corresponda. Las fechas de un
-nombramiento de coordinación se conservan: describen el cargo en una carrera, no la
-cuenta.
+`usuarios.activo` y del rol/asignación operativa que corresponda.
+
+> Actualización I-52 (5 de septiembre de 2026): la revisión guiada aplicó el mismo
+> criterio a `asignaciones_coordinador`; su estado actual depende de `activo` y ya no de
+> fechas programadas.
 
 ## Alcance
 
@@ -14,8 +16,8 @@ cuenta.
   `usuarios.vigente_hasta`, junto con su `CHECK`.
 - Sin fechas en la creación, edición, ficha, filtros de sesión, selección de docentes ni
   notificaciones.
-- La auditoría conserva los cambios administrativos de la cuenta; las vigencias de
-  coordinaciones no cambian.
+- La auditoría conserva los cambios administrativos de la cuenta. El retiro posterior de
+  fechas de coordinación pertenece a I-52.
 
 ## Trazabilidad
 

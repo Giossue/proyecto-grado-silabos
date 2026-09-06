@@ -130,11 +130,7 @@ class StoreAcademicRecordRequest extends FormRequest
             ],
             'asignacion_coordinador' => [
                 ...$this->assignmentRules('carreras', 'career_id'),
-                // Un encargo es un cargo distinto del titular, con duración propia y un
-                // acto que lo respalda. La base exige la fecha de fin: un encargo sin ella
-                // sería una titularidad sin nombrar.
                 'quality' => ['nullable', Rule::in(['titular', 'encargado'])],
-                'valid_until' => ['nullable', 'date', 'after:valid_from', 'required_if:quality,encargado'],
                 'backing_type' => ['nullable', Rule::in(['accion_personal', 'resolucion', 'oficio'])],
                 'backing_number' => ['nullable', 'string', 'max:80', 'required_if:quality,encargado'],
                 'backing_date' => ['nullable', 'date', 'before_or_equal:today', 'required_if:quality,encargado'],
@@ -256,8 +252,6 @@ class StoreAcademicRecordRequest extends FormRequest
         return [
             'user_id' => ['required', 'uuid', Rule::exists('usuarios', 'id')->where('activo', true)],
             $scope => ['required', 'uuid', Rule::exists($table, 'id')->where('activo', true)],
-            'valid_from' => ['required', 'date'],
-            'valid_until' => ['nullable', 'date', 'after:valid_from'],
         ];
     }
 

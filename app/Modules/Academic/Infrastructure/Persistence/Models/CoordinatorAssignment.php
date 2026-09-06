@@ -3,17 +3,13 @@
 namespace App\Modules\Academic\Infrastructure\Persistence\Models;
 
 use App\Models\User;
-use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Carbon;
 
 /**
  * @property string $id
- * @property CarbonImmutable $vigente_desde
- * @property CarbonImmutable|null $vigente_hasta
  * @property bool $activo
  * @property string $calidad
  * @property string|null $sustento_tipo
@@ -31,7 +27,7 @@ class CoordinatorAssignment extends Model
 
     /** @var list<string> */
     protected $fillable = [
-        'usuario_id', 'carrera_id', 'vigente_desde', 'vigente_hasta', 'activo',
+        'usuario_id', 'carrera_id', 'activo',
         'calidad', 'sustento_tipo', 'sustento_numero', 'sustento_fecha',
     ];
 
@@ -39,8 +35,6 @@ class CoordinatorAssignment extends Model
     protected function casts(): array
     {
         return [
-            'vigente_desde' => 'immutable_datetime',
-            'vigente_hasta' => 'immutable_datetime',
             'activo' => 'boolean',
             'sustento_fecha' => 'immutable_date',
         ];
@@ -59,15 +53,8 @@ class CoordinatorAssignment extends Model
     }
 
     /** @param Builder<CoordinatorAssignment> $query */
-    public function scopeEffective(Builder $query, ?Carbon $at = null): void
+    public function scopeEffective(Builder $query): void
     {
-        $instant = $at ?? now();
-
-        $query
-            ->where('activo', true)
-            ->where('vigente_desde', '<=', $instant)
-            ->where(fn (Builder $builder) => $builder
-                ->whereNull('vigente_hasta')
-                ->orWhere('vigente_hasta', '>', $instant));
+        $query->where('activo', true);
     }
 }

@@ -63,7 +63,7 @@ class ReplaceCoordinator
             $roleRemoved = false;
             $deactivated = false;
             if ($current !== null) {
-                $current->update(['vigente_hasta' => now(), 'activo' => false]);
+                $current->update(['activo' => false]);
                 // El rol en esta carrera se cierra con el nombramiento; los roles en
                 // otras carreras (o el de docente aquí) no se tocan.
                 $roleRemoved = RoleAssignment::query()

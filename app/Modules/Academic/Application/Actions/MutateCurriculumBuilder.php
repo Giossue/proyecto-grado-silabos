@@ -289,7 +289,7 @@ class MutateCurriculumBuilder
         if (! $role instanceof RoleAssignment
             || ! AcademicStructurePermissions::isCareerContext($role)
             || $role->carrera_id === null) {
-            throw new AuthorizationException('Solo la coordinación vigente puede modificar la malla.');
+            throw new AuthorizationException('Solo la coordinación activa puede modificar la malla.');
         }
         // Con una convocatoria en curso los sílabos se apoyan en la malla: se pausa antes.
         $this->locks->assertCareerEditable($role->carrera_id);

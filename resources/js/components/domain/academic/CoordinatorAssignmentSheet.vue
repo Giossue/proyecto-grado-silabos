@@ -2,7 +2,6 @@
 import { Form } from '@inertiajs/vue3';
 import { UserPlus } from '@lucide/vue';
 import AcademicGovernanceController from '@/actions/App/Modules/Academic/Presentation/Http/Controllers/AcademicGovernanceController';
-import DatePicker from '@/components/DatePicker.vue';
 import FormSheet from '@/components/domain/FormSheet.vue';
 import FormSheetActions from '@/components/domain/FormSheetActions.vue';
 import {
@@ -28,7 +27,7 @@ defineProps<Pick<AcademicStructureProps, 'options'>>();
     <FormSheet
         trigger-label="Asignar coordinación"
         title="Asignar coordinación de carrera"
-        description="La cuenta debe tener un rol Coordinador vigente en la misma carrera. La nueva vigencia conservará el historial institucional."
+        description="Seleccione la persona y la carrera que coordinará. La asignación anterior se conserva como inactiva."
     >
         <template #default="{ close }">
             <Form
@@ -95,29 +94,6 @@ defineProps<Pick<AcademicStructureProps, 'options'>>();
                             </SelectContent>
                         </Select>
                         <FieldError :errors="[errors.career_id]" />
-                    </Field>
-                    <Field :data-invalid="Boolean(errors.valid_from)">
-                        <FieldLabel for="coordinator-valid-from" required>
-                            Vigente desde
-                        </FieldLabel>
-                        <DatePicker
-                            id="coordinator-valid-from"
-                            name="valid_from"
-                            required
-                            :aria-invalid="Boolean(errors.valid_from)"
-                        />
-                        <FieldError :errors="[errors.valid_from]" />
-                    </Field>
-                    <Field :data-invalid="Boolean(errors.valid_until)">
-                        <FieldLabel for="coordinator-valid-until">
-                            Vigente hasta
-                        </FieldLabel>
-                        <DatePicker
-                            id="coordinator-valid-until"
-                            name="valid_until"
-                            :aria-invalid="Boolean(errors.valid_until)"
-                        />
-                        <FieldError :errors="[errors.valid_until]" />
                     </Field>
                     <FormSheetActions
                         :close="close"

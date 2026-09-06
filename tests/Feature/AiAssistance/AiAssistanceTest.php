@@ -426,7 +426,6 @@ class AiAssistanceTest extends TestCase
             'usuario_id' => $outsider->id,
             'rol_id' => Role::query()->where('codigo', 'docente')->valueOrFail('id'),
             'carrera_id' => $this->teacherContext->carrera_id,
-            'vigente_desde' => now()->subDay(),
             'activo' => true,
         ]);
         $this->actingAs($outsider)

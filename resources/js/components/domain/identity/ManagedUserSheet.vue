@@ -73,7 +73,7 @@ watch(open, (isOpen) => {
         v-model:open="open"
         trigger-label="Crear cuenta"
         title="Crear cuenta institucional"
-        description="Registre una cuenta con su rol inicial, vigencia laboral, carrera y contraseña temporal. La contraseña no se guarda en auditoría ni logs."
+        description="Registre una cuenta con su rol inicial, carrera y contraseña temporal. La contraseña no se guarda en auditoría ni logs."
     >
         <template #default="{ close }">
             <Form

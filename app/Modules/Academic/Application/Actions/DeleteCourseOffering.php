@@ -32,7 +32,7 @@ class DeleteCourseOffering
         if (! $role instanceof RoleAssignment
             || ! AcademicStructurePermissions::isCareerContext($role)
             || $role->carrera_id === null) {
-            throw new AuthorizationException('Solo la coordinación vigente puede eliminar ofertas.');
+            throw new AuthorizationException('Solo la coordinación activa puede eliminar ofertas.');
         }
         $this->locks->assertCareerEditable($role->carrera_id);
 

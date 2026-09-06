@@ -260,7 +260,6 @@ class ActiveRoleTest extends TestCase
         CoordinatorAssignment::query()->create([
             'usuario_id' => $user->id,
             'carrera_id' => $career->id,
-            'vigente_desde' => now()->subMonth(),
             'activo' => true,
         ]);
     }

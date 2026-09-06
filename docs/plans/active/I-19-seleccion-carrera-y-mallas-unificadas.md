@@ -19,7 +19,7 @@ concentrar materias, desglose y constructor dentro de cada versión de malla.
 
 El responsable del producto confirmó el 2026-08-30 que una persona puede coordinar más
 de una carrera. Al iniciar una sesión como Coordinador debe elegir la carrera mediante
-cards, aunque solo tenga una coordinación vigente. Durante la sesión puede cambiar a
+cards, aunque solo tenga una coordinación activa. Durante la sesión puede cambiar a
 otra carrera o rol elegible desde el menú de usuario.
 
 La colección independiente `/coordinacion/materias` deja de ser una pantalla de trabajo:

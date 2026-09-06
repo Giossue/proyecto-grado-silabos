@@ -5,6 +5,10 @@
 Implementado el 2026-09-03 de madrugada por encargo del responsable del producto
 («analiza todos los casos y hazlo»). Resuelve `PV-21`. Verificación al pie.
 
+> Actualización I-52 (5 de septiembre de 2026): los intervalos programados se retiraron
+> de roles y asignaciones. Donde este plan histórico dice «vigencia» o
+> `vigente_hasta`, la implementación actual conserva la fila y cambia `activo` a falso.
+
 ## Punto de partida
 
 Nada del sistema pertenece a una persona: malla, ofertas, paralelos y convocatorias son
@@ -38,13 +42,13 @@ cuenta. La historia (revisiones, aprobaciones, auditoría) no se toca ni se reas
 
 - **`ReplaceCoordinator`** (Academic/Application/Actions; `POST
   admin/gobierno-academico/carreras/{career}/coordinador`, `ReplaceCoordinatorRequest`):
-  en una transacción cierra el nombramiento vigente (`vigente_hasta = ahora`,
-  `activo = false`) y desactiva el rol de coordinador del saliente en esa carrera;
+  en una transacción cierra el nombramiento activo (`activo = false`) y desactiva el rol
+  de coordinador del saliente en esa carrera;
   concede el rol al entrante si no lo tiene (`AssignRole`) y abre su nombramiento
   (`CoordinationMandate::open`). Con `archive_outgoing` y sin más roles vigentes, archiva
   al saliente (`SetUserStatus`, que ya cierra sesiones). Rechaza entrante = saliente y
   entrante inactivo. Audita `academico.coordinacion.reemplazada` con ambos ids y lo que
-  se hizo. La tabla de Carreras muestra la coordinación vigente y la acción se llama
+  se hizo. La tabla de Carreras muestra la coordinación activa y la acción se llama
   «Asignar coordinador» cuando no hay nadie.
 - **`RelieveTeacher`** (Syllabus/Application/Actions; `POST
   coordinacion/estructura-academica/docentes/relevar`, `RelieveTeacherRequest`): para

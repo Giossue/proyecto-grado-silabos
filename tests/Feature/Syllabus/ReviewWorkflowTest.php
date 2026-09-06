@@ -180,8 +180,6 @@ class ReviewWorkflowTest extends TestCase
         CoordinatorAssignment::query()->create([
             'usuario_id' => $this->coordinator->id,
             'carrera_id' => $career->id,
-            'vigente_desde' => now()->subDay(),
-            'vigente_hasta' => null,
             'activo' => true,
         ]);
         $this->actingAsCoordinator()->get(route('reviews.show', $revision))->assertForbidden();

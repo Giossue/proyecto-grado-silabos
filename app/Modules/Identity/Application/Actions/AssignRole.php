@@ -51,7 +51,6 @@ class AssignRole
                 $target->id,
                 $data['role_code'],
                 $careerId,
-                now()->subSecond()->toDateTimeString(),
             );
 
             $this->audit->execute(

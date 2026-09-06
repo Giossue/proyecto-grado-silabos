@@ -93,7 +93,7 @@ const {
                         <TableRow>
                             <TableHead>Persona</TableHead>
                             <TableHead>Carrera</TableHead>
-                            <TableHead>Vigencia</TableHead>
+                            <TableHead>Calidad</TableHead>
                             <TableHead>Estado</TableHead>
                             <TableHead class="text-right">Acciones</TableHead>
                         </TableRow>
@@ -114,9 +114,8 @@ const {
                                 {{ item.user_name }}
                             </TableCell>
                             <TableCell>{{ item.career_name }}</TableCell>
-                            <TableCell>
-                                {{ item.valid_from }} →
-                                {{ item.valid_until ?? 'Sin fecha de fin' }}
+                            <TableCell class="capitalize">
+                                {{ item.quality }}
                             </TableCell>
                             <TableCell>
                                 {{ item.active ? 'Activa' : 'Finalizada' }}
@@ -127,7 +126,8 @@ const {
                                 >
                                     <DropdownMenuItem disabled>
                                         La coordinación se reemplaza desde la
-                                        carrera; su vigencia anterior se conserva.
+                                        carrera; la asignación anterior se
+                                        conserva.
                                     </DropdownMenuItem>
                                 </TableActionsMenu>
                             </TableCell>

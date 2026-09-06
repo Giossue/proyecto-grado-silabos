@@ -54,6 +54,11 @@ programadas de inicio o fin.
 momento efectivo y el acto que la respalda; no tiene intervalo de vigencia laboral. Su identidad única es
 `usuario_id + paralelo_id`; un relevo finaliza la relación anterior y crea la nueva.
 
+`asignaciones_coordinador` conserva quién ejerce la coordinación de una carrera y la
+calidad de su nombramiento (`titular` o `encargado`), junto con el tipo, número y fecha
+del acto de sustento. No programa un intervalo: `activo` expresa el estado actual y un
+índice parcial garantiza como máximo una coordinación activa por carrera.
+
 Estos catálogos no comparten una tabla polimórfica. `carreras.facultad_id` implementa la
 relación uno-a-muchos Facultad → Carreras con clave foránea y borrado restringido.
 `campus` y `periodos_academicos` conservan identidad propia; el período es institucional
@@ -170,7 +175,7 @@ protege mediante el contexto académico fijado en cada sílabo.
 Como mínimo, prueba/define:
 
 - unicidad de identificadores institucionales no nulos;
-- no solapamiento de coordinador activo por carrera;
+- una sola coordinación activa por carrera mediante índice parcial único;
 - identidad del sílabo canónico;
 - número de revisión único por sílabo;
 - versión única por plantilla y nombre de fuente único por carrera;
@@ -186,8 +191,7 @@ Usa índices parciales o constraints de exclusión PostgreSQL cuando expresen me
 regla. Acompáñalos con pruebas en PostgreSQL real.
 
 `DatabaseBootstrapTest` comprueba la zona efectiva de la sesión PostgreSQL y ejecuta el
-seeder dos veces. Las asignaciones abiertas se reutilizan sin cambiar su fecha histórica;
-esto evita que una diferencia de representación temporal intente crear rangos solapados.
+seeder dos veces. Las asignaciones activas se reutilizan para conservar la idempotencia.
 
 ### Invariantes de IA implementados
 

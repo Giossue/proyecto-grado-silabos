@@ -37,7 +37,7 @@ class SetUserStatus
             if (! $active) {
                 DB::table('sesiones')->where('user_id', $target->id)->delete();
                 // Un nombramiento abierto de una cuenta desactivada bloquea la carrera:
-                // la base no admite dos coordinaciones vigentes a la vez.
+                // la base no admite dos coordinaciones activas a la vez.
                 $closedMandates = $this->mandate->closeFor($target->id);
                 // Ningún paralelo queda a nombre de alguien que ya no está (I-39); los
                 // sílabos en curso se relevaron antes, porque `ensureMayDeactivate` lo exige.

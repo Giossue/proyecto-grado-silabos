@@ -204,7 +204,6 @@ class TeacherTransferTest extends TestCase
             'usuario_id' => $user->id,
             'rol_id' => $role->id,
             'carrera_id' => $career->id,
-            'vigente_desde' => now()->subMonth(),
             'activo' => true,
         ]);
 

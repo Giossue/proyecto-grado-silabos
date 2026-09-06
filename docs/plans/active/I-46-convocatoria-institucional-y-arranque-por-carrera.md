@@ -35,7 +35,7 @@ migración mediante el release remoto aprobado.
 - Todas las fuentes académicas activas de la carrera se fijan automáticamente al iniciar
   y se vuelven a sincronizar al reanudar tras una pausa. No hay selección manual.
 - Abrir el proceso institucional exige plantilla utilizable y estructura institucional
-  lista: carreras activas con campus y coordinación vigente. Iniciar el alcance exige,
+  lista: carreras activas con campus y coordinación activa. Iniciar el alcance exige,
   además, malla activa, ofertas/paralelos del período y docentes vigentes en cada
   paralelo.
 

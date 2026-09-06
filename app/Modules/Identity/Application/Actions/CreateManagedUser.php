@@ -54,7 +54,6 @@ class CreateManagedUser
                 $user->id,
                 $data['role_code'],
                 $careerId,
-                now()->toDateTimeString(),
             );
 
             $this->audit->execute(

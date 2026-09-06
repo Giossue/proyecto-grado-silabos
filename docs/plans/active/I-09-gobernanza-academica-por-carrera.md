@@ -31,7 +31,7 @@ Materias ahora se gestiona dentro del detalle de la malla y la URL anterior redi
 - El Coordinador, desde un rol explícito, gestiona únicamente su carrera: mallas en
   borrador, materias, ofertas, paralelos y asignaciones docentes.
 - Un rol de Coordinador solo es seleccionable mientras coincidan un rol y una
-  asignación de coordinación vigentes para la misma carrera.
+  asignación de coordinación activas para la misma carrera.
 - El Coordinador puede publicar una malla de su carrera; una vez publicada permanece
   inmutable.
 - El Coordinador solo puede asignar una cuenta con rol Docente vigente en esa misma

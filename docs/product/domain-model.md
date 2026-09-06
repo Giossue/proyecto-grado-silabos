@@ -12,10 +12,9 @@
 - `AsignacionCoordinador` y `AsignacionDocente`: vinculan responsabilidad académica.
   Ambas guardan la referencia del acto que las respalda —tipo, número y fecha—. La
   asignación docente no duplica vigencia laboral: solo conecta al docente con el paralelo.
-  La
-  coordinación distingue además titular de encargado; un encargo exige fecha de fin, que
-  la base impone, porque sin ella sería una titularidad sin nombrar. Las atribuciones del
-  encargado son las mismas que las del titular.
+  La coordinación distingue además titular de encargado. Ninguna de las dos relaciones
+  programa inicio o fin: `activo` expresa su estado actual. Las atribuciones del encargado
+  son las mismas que las del titular.
 
 Una persona puede coordinar más de una carrera mediante asignaciones independientes. La
 sesión conserva una sola `AsignacionRol` activa: Coordinación siempre confirma la carrera
@@ -47,8 +46,8 @@ Una `Asignatura` se identifica dentro de su malla por su código visible, que es
 leen las personas y el que usa el producto en ofertas, sílabos y documentos.
 
 Las relaciones que ya respaldan un sílabo se protegen y no se eliminan. Las que aún no
-tienen dependencias se eliminan; las vigencias personales y los nombramientos terminan
-sin borrar su evidencia.
+tienen dependencias se eliminan; roles, nombramientos y asignaciones se desactivan sin
+borrar su evidencia.
 
 El Administrador gobierna las entidades institucionales globales y asigna la coordinación
 de una carrera. El Coordinador mantiene la malla, asignaturas, ofertas, paralelos y

@@ -36,6 +36,7 @@ decisión de producto antes de modificar código o persistencia.
 | Todas las tablas de dominio | Retirar `creado_en`, `actualizado_en` y `registrado_en` cuando solo duplicaban auditoría técnica. Conservar las fechas que sí gobiernan o explican el negocio. | Migración `000046`, con respaldos verificados y aplicada local y remotamente. |
 | Asignaciones, trabajos, notificaciones, objetos y observaciones | Conservar sus momentos funcionales renombrándolos a `asignado_en`, `encolado_en`, `notificado_en`, `almacenado_en` y `observado_en`. | Migración `000046`; modelos, consultas, interfaz, índices y triggers actualizados. |
 | `plantillas_silabo` | Retirar `es_institucional`: con una sola plantilla posible, el atributo siempre sería verdadero. | Migración `000047`, aplicada local y remotamente; `plantillas_silabo_unica` garantiza como máximo una fila. |
+| `asignaciones_coordinador` | Retirar `vigente_desde` y `vigente_hasta`: el nombramiento no se programa con fechas conocidas; `activo` representa quién ejerce hoy. Conservar `calidad` y `sustento_tipo`, `sustento_numero`, `sustento_fecha` porque describen el acto institucional que respalda la designación. | Migración `000048`, aplicada local y remotamente; reemplaza rangos y solapamiento por una unicidad parcial de una coordinación activa por carrera. |
 
 ## Evidencia de la migración `000046`
 
@@ -62,6 +63,21 @@ decisión de producto antes de modificar código o persistencia.
 - `es_institucional` no existe en ninguna de las dos bases.
 - Ambas conservan el índice único `plantillas_silabo_unica` sobre una constante.
 - 50 pruebas de plantilla, procesos, panel, IA y documentos pasan.
+
+## Evidencia de la migración `000048`
+
+- Respaldos verificados:
+  `/tmp/silabos-i52-000048-ZYoZgL/local-pre-000048.dump` y
+  `/tmp/silabos-i52-000048-ZYoZgL/remote-pre-000048.dump`.
+- `vigente_desde` y `vigente_hasta` ya no existen en ninguna de las dos bases.
+- Ambas conservan la misma asignación activa y el índice único parcial
+  `asignaciones_coordinador_una_activa_por_carrera`.
+- El inventario lógico de columnas, tipos, restricciones, índices y triggers coincide
+  entre local y remoto (`852d541ef421d76b0649c054335e4538`).
+- 106 pruebas de estructura, identidad, sílabos, IA y documentos pasan; también PHPStan,
+  Vue TypeScript, ESLint, Prettier, Pint y la compilación Vite.
+- El JSON actualizado para ChartDB quedó en `/tmp/chartdb-000048.json` y fue copiado al
+  portapapeles cuando el entorno gráfico estuvo disponible.
 
 ## Hallazgos pendientes de decisión
 

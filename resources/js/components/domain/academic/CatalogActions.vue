@@ -38,7 +38,7 @@ defineProps<{
     endsOn?: string | null;
     faculties: CatalogRecord[];
     campuses?: CatalogRecord[];
-    /** Solo carreras: coordinación vigente y cuentas que pueden asumirla. */
+    /** Solo carreras: coordinación activa y cuentas que pueden asumirla. */
     coordinator?: { id: string; name: string } | null;
     coordinatorUsers?: Option[];
     lockReason?: string | null;

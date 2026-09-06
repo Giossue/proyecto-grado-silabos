@@ -9,7 +9,6 @@ use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Identity\Domain\Enums\RoleCode;
 use App\Modules\Operations\Application\Actions\RecordAuditEvent;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\SyllabusProcess;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -85,15 +84,10 @@ class TransitionSyllabusProcess
                 $withoutCampus = (clone $careers)->whereDoesntHave('campus', fn ($query) => $query->where('activo', true))->count();
                 $withoutCoordinator = (clone $careers)->whereDoesntHave(
                     'coordinatorAssignments',
-                    fn (Builder $query) => $query
-                        ->where('activo', true)
-                        ->where('vigente_desde', '<=', now())
-                        ->where(fn (Builder $effective) => $effective
-                            ->whereNull('vigente_hasta')
-                            ->orWhere('vigente_hasta', '>', now())),
+                    fn ($query) => $query->where('activo', true),
                 )->count();
                 if ($withoutCampus > 0 || $withoutCoordinator > 0) {
-                    throw ValidationException::withMessages(['process' => "La estructura institucional no está lista: {$withoutCampus} carrera(s) sin campus activo y {$withoutCoordinator} sin coordinación vigente."]);
+                    throw ValidationException::withMessages(['process' => "La estructura institucional no está lista: {$withoutCampus} carrera(s) sin campus activo y {$withoutCoordinator} sin coordinación activa."]);
                 }
                 $other = SyllabusProcess::query()
                     ->inProgress()

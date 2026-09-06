@@ -99,7 +99,7 @@ class CoordinatorReplacementTest extends TestCase
 
     public function test_a_career_without_coordination_gets_one_assigned_with_the_same_action(): void
     {
-        CoordinatorAssignment::query()->where('carrera_id', $this->career->id)->update(['activo' => false, 'vigente_hasta' => now()]);
+        CoordinatorAssignment::query()->where('carrera_id', $this->career->id)->update(['activo' => false]);
         $incoming = $this->activeTeacher('primera@silabos.test');
 
         $this->actingAsAdministrator()

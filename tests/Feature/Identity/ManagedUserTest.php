@@ -275,7 +275,7 @@ class ManagedUserTest extends TestCase
         $career = Career::query()->where('codigo_institucional', 'SOFTWARE')->firstOrFail();
         $previousAssignmentId = $teacher->roleAssignments()->firstOrFail()->id;
 
-        // Conceder la coordinación abre el nombramiento, y la base no admite dos vigentes
+        // Conceder la coordinación abre el nombramiento, y la base no admite dos activos
         // en la misma carrera: primero se retira a quien la ejerce.
         $this->actingAsAdministrator()
             ->patch(route('admin.users.status.update', $this->coordinatorHolder()), ['active' => false])

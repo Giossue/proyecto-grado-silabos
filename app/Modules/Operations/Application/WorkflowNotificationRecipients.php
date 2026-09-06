@@ -18,11 +18,7 @@ class WorkflowNotificationRecipients
 
         $ids = CoordinatorAssignment::query()
             ->where('carrera_id', $careerId)
-            ->where('activo', true)
-            ->where('vigente_desde', '<=', now())
-            ->where(fn ($query) => $query
-                ->whereNull('vigente_hasta')
-                ->orWhere('vigente_hasta', '>', now()))
+            ->effective()
             ->whereHas('user', fn ($query) => $query->where('activo', true))
             ->pluck('usuario_id')
             ->all();

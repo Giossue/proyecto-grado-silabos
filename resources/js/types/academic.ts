@@ -47,7 +47,7 @@ export type AcademicStructureProps = {
             /** Modalidad base elegida por Administración. */
             modality: string | null;
             modality_label: string | null;
-            /** Quién coordina hoy; nulo si la carrera no tiene coordinación vigente. */
+            /** Quién coordina hoy; nulo si la carrera no tiene coordinación activa. */
             coordinator: { id: string; name: string } | null;
             campus_id: string | null;
             campus_name: string | null;
@@ -110,8 +110,7 @@ export type AcademicStructureProps = {
         id: string;
         user_name: string;
         career_name: string;
-        valid_from: string;
-        valid_until: string | null;
+        quality: 'titular' | 'encargado';
         active: boolean;
     }[];
     teacherAssignments: {

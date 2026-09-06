@@ -94,8 +94,9 @@ y abrir otra:
   documental, según DT-09 y D2.
 - Las atribuciones son las mismas: D3 fijó que sus aprobaciones siguen siendo válidas sin
   condición cuando vuelve el titular. No se añade ninguna restricción de permisos.
-- La restricción de no solapamiento por carrera se conserva tal cual: para designar a un
-  encargado hay que cerrar la vigencia del titular.
+- I-52 sustituyó la restricción temporal de no solapamiento por un índice parcial que
+  admite como máximo una coordinación activa por carrera: para designar a un
+  encargado hay que desactivar el nombramiento del titular.
 
 ### 6. Marca de autoaprobación
 

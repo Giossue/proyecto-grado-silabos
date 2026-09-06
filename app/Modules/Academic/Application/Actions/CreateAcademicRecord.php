@@ -292,8 +292,6 @@ class CreateAcademicRecord
         return CoordinatorAssignment::query()->create([
             'usuario_id' => $userId,
             'carrera_id' => $careerId,
-            'vigente_desde' => $data['valid_from'],
-            'vigente_hasta' => $data['valid_until'] ?? null,
             'activo' => true,
             // Las atribuciones del encargado son las mismas que las del titular: sus
             // aprobaciones siguen valiendo cuando este vuelve. La distinción es de
@@ -332,7 +330,7 @@ class CreateAcademicRecord
     private function careerId(RoleAssignment $activeRole): string
     {
         if (! AcademicStructurePermissions::isCareerContext($activeRole) || $activeRole->carrera_id === null) {
-            throw new AuthorizationException('Seleccione una coordinación vigente con carrera.');
+            throw new AuthorizationException('Seleccione una coordinación activa con carrera.');
         }
 
         return $activeRole->carrera_id;

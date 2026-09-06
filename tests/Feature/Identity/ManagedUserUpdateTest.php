@@ -182,7 +182,7 @@ class ManagedUserUpdateTest extends TestCase
     {
         $career = Career::query()->where('codigo_institucional', 'SOFTWARE')->firstOrFail();
 
-        // La carrera solo admite una coordinación vigente: se retira antes a quien la ejerce.
+        // La carrera solo admite una coordinación activa: se retira antes a quien la ejerce.
         $this->actingAsAdministrator()
             ->patch(route('admin.users.status.update', $this->coordinator), ['active' => false])
             ->assertRedirect();
