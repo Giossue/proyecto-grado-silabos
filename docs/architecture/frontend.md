@@ -107,6 +107,11 @@ Es presentación de la muestra administrativa, no un motor de impresión ni un c
 del formulario docente. Una unidad indivisible excepcionalmente más alta que el área
 útil se conserva visible; no se recorta ni se descarta contenido.
 
+`AppSidebarLayout` y `PageFrame` recortan el exceso horizontal con `overflow-x-clip`:
+no deben crear un contenedor de scroll mediante `overflow-x-hidden`, que desvincularía
+las paletas `sticky` del desplazamiento de la ventana. La hoja mantiene su scroll
+horizontal local; la paleta ADM-06 queda bajo el encabezado con altura máxima disponible.
+
 ## Feedback y acciones sensibles
 
 - Toda mutación tiene pendiente, éxito y error.

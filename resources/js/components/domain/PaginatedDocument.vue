@@ -78,9 +78,7 @@ onBeforeUnmount(() => {
     >
         <div class="paged-document-papers" aria-hidden="true">
             <div v-for="page in pages" :key="page" class="paged-document-paper">
-                <span class="paged-document-number"
-                    >{{ page }} / {{ pages }}</span
-                >
+                <span class="paged-document-number">{{ page }}</span>
             </div>
         </div>
         <div ref="content" class="paged-document-content">

@@ -88,7 +88,7 @@ test(
                             (_request, response) => {
                                 response.setHeader('Content-Type', 'text/html');
                                 response.end(
-                                    '<!doctype html><html><body><main id="app" style="padding:24px"></main><script type="module" src="/@vite/client"></script><script type="module" src="/@id/virtual:pagination-fixture"></script></body></html>',
+                                    '<!doctype html><html><body><div class="overflow-x-clip"><header class="sticky top-0 z-30 h-16 bg-background">Plantilla</header><main id="app" class="overflow-x-clip p-6"></main></div><script type="module" src="/@vite/client"></script><script type="module" src="/@id/virtual:pagination-fixture"></script></body></html>',
                                 );
                             },
                         );
@@ -164,6 +164,45 @@ test(
                 [],
                 'Every unit belongs inside a page’s margins',
             );
+
+            const paperBackground = await page
+                .locator('.paged-document')
+                .evaluate(
+                    (node) =>
+                        getComputedStyle(node.parentElement).backgroundColor,
+                );
+            assert.equal(
+                paperBackground,
+                'rgba(0, 0, 0, 0)',
+                'No panel behind the sheets',
+            );
+
+            for (const width of [1440, 360]) {
+                await page.setViewportSize({ width, height: 1000 });
+                await page.evaluate(() => window.scrollTo(0, 1500));
+                await page.waitForFunction(() => {
+                    const rect = document
+                        .querySelector('[aria-label="Piezas de la plantilla"]')
+                        .getBoundingClientRect();
+
+                    return (
+                        rect.top >= 64 &&
+                        rect.top <= 96 &&
+                        rect.bottom <= innerHeight
+                    );
+                });
+                assert.equal(
+                    await page
+                        .getByText('Arrastre a la hoja o pulse para agregar', {
+                            exact: true,
+                        })
+                        .isVisible(),
+                    true,
+                );
+            }
+
+            await page.setViewportSize({ width: 1440, height: 1000 });
+            await page.evaluate(() => window.scrollTo(0, 0));
 
             if (process.env.PAGINATION_SCREENSHOT) {
                 await page.screenshot({

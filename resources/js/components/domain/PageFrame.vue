@@ -96,7 +96,7 @@ const floatingHidden = computed(() => hidden.value && !expanded.value);
     <div
         :class="
             cn(
-                'flex min-w-0 flex-col gap-6 overflow-x-hidden p-4 sm:p-6',
+                'flex min-w-0 flex-col gap-6 overflow-x-clip p-4 sm:p-6',
                 // Sitio para que el botón flotante no tape la última fila de una tabla.
                 $slots.actions &&
                     'max-sm:pb-[calc(6rem+env(safe-area-inset-bottom))]',

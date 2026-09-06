@@ -47,6 +47,18 @@ pendiente según I-34. La vista no promete coincidencia exacta con Word/PDF.
   (`SecondaryButtonAppearanceTest` y `TableEmptyStateTest`). Esos archivos y el
   entorno virtual no se modificaron. La puerta completa no se declara aprobada.
 
+## Ajuste visual solicitado el 2026-09-06
+
+Se retira el panel gris alrededor de las hojas. La paleta queda sticky bajo el
+encabezado, con texto visible también en móvil y altura acotada al viewport.
+`AppSidebarLayout` y `PageFrame` usan recorte horizontal `clip` en lugar de `hidden`
+para no interceptar el scroll que necesita sticky. Se amplía la regresión existente
+con fondo transparente y desplazamiento de 1500 px a 1440 y 360 px de ancho.
+Misma trazabilidad de ADM-06; sin cambios de datos, permisos ni nuevas puertas PV.
+Verificación: navegador en ambos anchos, ESLint de los archivos afectados y las
+24 pruebas de `ManagementCreationUiTest` pasan. Sin build ni puerta completa por
+tratarse de un ajuste de clases de presentación.
+
 ## Límites y recuperación
 
 No hay migraciones ni cambios de persistencia, permisos o exportación. La paginación

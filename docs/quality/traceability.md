@@ -57,6 +57,10 @@ Estados: `No iniciado`, `En desarrollo`, `Verificado`, `Bloqueado PV`, `Reemplaz
 
 ### Paginación de la plantilla (I-53)
 
+El ajuste visual del 2026-09-06 conserva esta trazabilidad: hojas sin panel gris y
+paleta sticky bajo el encabezado. La misma regresión de navegador comprueba el fondo
+transparente y la paleta visible al desplazar 1500 px, a 1440 y 360 px de ancho.
+
 | Capacidad | RF/RNF | RN/CU/UI | Evidencia | Estado |
 |---|---|---|---|---|
 | Hojas carta dinámicas, márgenes y cortes entre grupos de celdas | RF-017..026; RNF-018..023 | RN-009..012; CU-04; ADM-06 | `PaginatedDocument`, `documentPagination`, `tests/Browser/document-pagination.mjs`: crecimiento/reducción, foco al renombrar, solo lectura, 360 px y tabla de 120 filas con rowspan | Verificado en Chromium con datos sintéticos; PV-07 y PV-19 siguen abiertas |

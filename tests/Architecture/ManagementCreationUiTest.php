@@ -1022,7 +1022,7 @@ it('normaliza los encabezados de todos los modulos autenticados', function (): v
     expect($frame)
         ->toBeString()
         ->toContain("size?: 'full' | 'wide' | 'narrow'")
-        ->toContain('gap-6 overflow-x-hidden p-4 sm:p-6')
+        ->toContain('gap-6 overflow-x-clip p-4 sm:p-6')
         // Sin icono: el nombre de la pantalla ya esta arriba y el dibujo no anadia nada
         // que no dijera la propia frase.
         ->not->toContain('<component :is="icon"')

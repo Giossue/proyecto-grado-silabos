@@ -646,12 +646,10 @@ const dropOnFieldZone = (section: TemplateSection, index: number): void => {
         <!-- Paleta: arrastre a la hoja o clic para agregar al final del bloque activo. -->
         <aside
             v-if="!readonly"
-            class="flex shrink-0 gap-1 overflow-x-auto rounded-xl border bg-card p-2 lg:sticky lg:top-4 lg:w-52 lg:flex-col"
+            class="sticky top-[calc(5rem+env(safe-area-inset-top))] z-20 flex max-h-[calc(100dvh-6rem-env(safe-area-inset-top))] w-full shrink-0 flex-wrap gap-1 overflow-auto rounded-xl border bg-card p-2 lg:w-52 lg:flex-col lg:flex-nowrap"
             aria-label="Piezas de la plantilla"
         >
-            <p
-                class="hidden px-2 pt-1 pb-2 text-xs text-muted-foreground lg:block"
-            >
+            <p class="w-full px-2 pt-1 pb-2 text-xs text-muted-foreground">
                 Arrastre a la hoja o pulse para agregar
             </p>
             <Button
@@ -692,7 +690,7 @@ const dropOnFieldZone = (section: TemplateSection, index: number): void => {
         </aside>
 
         <div
-            class="min-w-0 flex-1 overflow-x-auto rounded-xl bg-muted p-4 sm:p-8"
+            class="min-w-0 flex-1 overflow-x-auto p-1"
             :aria-label="
                 readonly
                     ? 'Plantilla del sílabo, solo lectura'
