@@ -55,6 +55,12 @@ Mantén una fila por relación relevante:
 
 Estados: `No iniciado`, `En desarrollo`, `Verificado`, `Bloqueado PV`, `Reemplazado`.
 
+### Paginación de la plantilla (I-53)
+
+| Capacidad | RF/RNF | RN/CU/UI | Evidencia | Estado |
+|---|---|---|---|---|
+| Hojas carta dinámicas, márgenes y cortes entre grupos de celdas | RF-017..026; RNF-018..023 | RN-009..012; CU-04; ADM-06 | `PaginatedDocument`, `documentPagination`, `tests/Browser/document-pagination.mjs`: crecimiento/reducción, foco al renombrar, solo lectura, 360 px y tabla de 120 filas con rowspan | Verificado en Chromium con datos sintéticos; PV-07 y PV-19 siguen abiertas |
+
 ## Cambio de requisito
 
 1. registrar origen y autoridad del cambio;

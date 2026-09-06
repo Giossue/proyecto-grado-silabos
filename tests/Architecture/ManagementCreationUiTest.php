@@ -734,13 +734,26 @@ it('arma la plantilla sobre la hoja impresa, sin formularios por tarjeta', funct
         ->not->toContain('structuredClone')
         // La hoja: estándar del impreso y relleno por tipo de contenido.
         ->toContain('PROGRAMA DE ASIGNATURA (SÍLABO)')
-        ->toContain('font-family: Arial')
+        ->toContain('<PaginatedDocument>')
         ->toContain("'table'")
         // I-34: las tablas se diseñan sobre la hoja con su propio componente.
         ->toContain('<TemplateTableDesigner')
         ->toContain("'bulleted_list'")
         ->toContain("'numbered_list'")
         ->toContain('Lorem ipsum');
+
+    // I-53: el marco compartido conserva el estándar y calcula hojas dinámicas.
+    $paper = file_get_contents(
+        $root.'/resources/js/components/domain/PaginatedDocument.vue',
+    );
+
+    expect($paper)
+        ->toContain('font-family: Arial')
+        ->toContain('font-size: 11pt')
+        ->toContain('createDocumentPaginator')
+        ->toContain('v-for="page in pages"')
+        ->toContain('ResizeObserver')
+        ->toContain('MutationObserver');
 
     $properties = file_get_contents(
         $root.'/resources/js/components/domain/configuration/TemplateFieldSheet.vue',

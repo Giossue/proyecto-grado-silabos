@@ -166,7 +166,7 @@ const widths = computed(() => columnWidths(draft.value));
 <template>
     <div class="dt">
         <!-- Tabla recién soltada: se elige un formato institucional, no se arma a mano. -->
-        <div v-if="unformatted && !readonly" class="dt-gallery">
+        <div v-if="unformatted && !readonly" class="dt-gallery" data-page-unit>
             <p class="dt-gallery-title">Elija el formato de la tabla</p>
             <div class="dt-gallery-grid">
                 <button
@@ -384,7 +384,7 @@ const widths = computed(() => columnWidths(draft.value));
                     </tr>
                 </tbody>
             </table>
-            <p v-if="draft.repeat.enabled" class="dt-note">
+            <p v-if="draft.repeat.enabled" class="dt-note" data-page-unit>
                 Se repite por cada {{ draft.repeat.label.toLowerCase() }}.
             </p>
         </template>

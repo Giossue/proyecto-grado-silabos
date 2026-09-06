@@ -125,6 +125,13 @@
   numerados «1.» y campos «1.1» en negrita, márgenes de 2.5 cm, tablas con cabecera azul y
   filas alternas celestes. El formato lo pone la plantilla; el docente solo llena
   contenido.
+- ADM-06 muestra hojas carta separadas y numeradas (I-53). La cantidad se recalcula
+  según el contenido de muestra al agregar, retirar, reordenar o renombrar piezas.
+  Los títulos acompañan al primer contenido y las tablas se dividen entre grupos de
+  filas que no atraviesen celdas combinadas. Cada hoja conserva los márgenes de 2.5 cm.
+  En pantallas pequeñas, la hoja mantiene su ancho y se desplaza dentro de su área.
+  Estos saltos no se guardan: cada sílabo puede ocupar más o menos páginas según lo
+  que redacte el docente. La muestra no garantiza los mismos cortes que Word o PDF.
 - La ficha de identificación institucional (bloque «Asignatura», heredado) se pinta fija
   con datos de la malla, la oferta, los paralelos (incluida su jornada) y los docentes;
   no se diseña ni se llena (I-34). Mapa de datos: `docs/product/identificacion-institucional.md`.

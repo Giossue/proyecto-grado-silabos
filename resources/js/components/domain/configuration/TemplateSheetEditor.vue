@@ -17,6 +17,7 @@ import { toast } from 'vue-sonner';
 import TemplateController from '@/actions/App/Modules/Configuration/Presentation/Http/Controllers/TemplateController';
 import TemplateFieldSheet from '@/components/domain/configuration/TemplateFieldSheet.vue';
 import TemplateTableDesigner from '@/components/domain/configuration/TemplateTableDesigner.vue';
+import PaginatedDocument from '@/components/domain/PaginatedDocument.vue';
 import IdentificationCard from '@/components/domain/syllabus/IdentificationCard.vue';
 import type { IdentificationCell } from '@/components/domain/syllabus/IdentificationCard.vue';
 import { Button } from '@/components/ui/button';
@@ -698,8 +699,8 @@ const dropOnFieldZone = (section: TemplateSection, index: number): void => {
                     : 'Hoja del sílabo: arrastre piezas y pulse un título para renombrarlo'
             "
         >
-            <div class="doc-page mx-auto">
-                <header class="doc-header">
+            <PaginatedDocument>
+                <header class="doc-header" data-page-unit data-page-keep-next>
                     <img
                         :src="institutionLogo"
                         alt="Universidad Estatal de Bolívar"
@@ -711,12 +712,22 @@ const dropOnFieldZone = (section: TemplateSection, index: number): void => {
                     </span>
                 </header>
 
-                <h1 class="doc-title">PROGRAMA DE ASIGNATURA (SÍLABO)</h1>
+                <h1 class="doc-title" data-page-unit>
+                    PROGRAMA DE ASIGNATURA (SÍLABO)
+                </h1>
 
-                <p v-if="doc.length === 0 && readonly" class="doc-empty">
+                <p
+                    v-if="doc.length === 0 && readonly"
+                    class="doc-empty"
+                    data-page-unit
+                >
                     La plantilla no tiene bloques.
                 </p>
-                <p v-else-if="doc.length === 0" class="doc-empty">
+                <p
+                    v-else-if="doc.length === 0"
+                    class="doc-empty"
+                    data-page-unit
+                >
                     Arrastre «Bloque» desde la paleta para empezar.
                 </p>
 
@@ -745,7 +756,11 @@ const dropOnFieldZone = (section: TemplateSection, index: number): void => {
                         @mouseenter="activeSectionId = section.id"
                         @focusin="activeSectionId = section.id"
                     >
-                        <div class="doc-heading-row">
+                        <div
+                            class="doc-heading-row"
+                            data-page-unit
+                            data-page-keep-next
+                        >
                             <Input
                                 v-if="isEditing('section', section.id)"
                                 :ref="setEditorRef"
@@ -833,7 +848,11 @@ const dropOnFieldZone = (section: TemplateSection, index: number): void => {
                             </div>
                         </div>
 
-                        <p v-if="section.blocks.length === 0" class="doc-empty">
+                        <p
+                            v-if="section.blocks.length === 0"
+                            class="doc-empty"
+                            data-page-unit
+                        >
                             {{
                                 readonly
                                     ? 'Este bloque no tiene campos.'
@@ -876,6 +895,8 @@ const dropOnFieldZone = (section: TemplateSection, index: number): void => {
                             >
                                 <div
                                     class="doc-heading-row"
+                                    data-page-unit
+                                    data-page-keep-next
                                     :class="{
                                         'doc-heading-row-compact':
                                             section.blocks.length === 1 &&
@@ -1079,7 +1100,11 @@ const dropOnFieldZone = (section: TemplateSection, index: number): void => {
                                     "
                                     class="doc-list doc-list-bullets"
                                 >
-                                    <li v-for="item in LOREM_ITEMS" :key="item">
+                                    <li
+                                        v-for="item in LOREM_ITEMS"
+                                        :key="item"
+                                        data-page-unit
+                                    >
                                         {{ item }}
                                     </li>
                                 </ul>
@@ -1091,7 +1116,11 @@ const dropOnFieldZone = (section: TemplateSection, index: number): void => {
                                     "
                                     class="doc-list doc-list-numbers"
                                 >
-                                    <li v-for="item in LOREM_ITEMS" :key="item">
+                                    <li
+                                        v-for="item in LOREM_ITEMS"
+                                        :key="item"
+                                        data-page-unit
+                                    >
                                         {{ item }}
                                     </li>
                                 </ol>
@@ -1101,6 +1130,7 @@ const dropOnFieldZone = (section: TemplateSection, index: number): void => {
                                         v-for="paragraph in LOREM_PARAGRAPHS"
                                         :key="paragraph"
                                         class="doc-p"
+                                        data-page-unit
                                     >
                                         {{ paragraph }}
                                     </p>
@@ -1149,7 +1179,7 @@ const dropOnFieldZone = (section: TemplateSection, index: number): void => {
                     @dragleave="hoveredZone = null"
                     @drop.prevent="dropOnSectionZone(doc.length)"
                 />
-            </div>
+            </PaginatedDocument>
         </div>
 
         <TemplateFieldSheet
@@ -1209,19 +1239,6 @@ const dropOnFieldZone = (section: TemplateSection, index: number): void => {
  * títulos numerados en negrita y tablas con cabecera azul institucional.
  * Los colores son fijos porque representan papel, no la interfaz.
  */
-.doc-page {
-    background: #fff;
-    box-shadow: 0 1px 3px rgb(0 0 0 / 0.2);
-    box-sizing: border-box;
-    color: #000;
-    font-family: Arial, 'Liberation Sans', Helvetica, sans-serif;
-    font-size: 11pt;
-    line-height: 1.15;
-    min-height: 27.94cm;
-    padding: clamp(1rem, 6vw, 2.5cm);
-    width: min(21.59cm, 100%);
-}
-
 .doc-header {
     align-items: center;
     display: flex;

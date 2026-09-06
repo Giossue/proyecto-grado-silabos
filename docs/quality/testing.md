@@ -54,6 +54,20 @@ superficies operativas. Además inventaría las 29 páginas operativas y el layo
 Configuración, exige un único `PageFrame` con icono, título y descripción, e impide que
 las subsecciones de ajustes dupliquen el `h1` principal.
 
+## Regresión de paginación en navegador
+
+La regresión de paginación ADM-06 vive en `tests/Browser/document-pagination.mjs` y se
+ejecuta con `node --test tests/Browser/document-pagination.mjs`. Requiere Playwright y
+Chromium disponibles en la estación; una instalación externa puede indicarse mediante
+`PLAYWRIGHT_MODULE` (ruta a `playwright/index.mjs`) y `CHROMIUM_PATH` (ejecutable).
+Levanta Vite en loopback con un puerto efímero y monta el componente real con datos
+sintéticos, sin Laravel ni base de datos. Comprueba aumento/reducción de páginas,
+márgenes, renombrado con Escape/foco, zonas de arrastre, menú y reordenamiento reactivo,
+solo lectura, scroll local a 360 px y una tabla
+de 120 filas con celdas combinadas. `PAGINATION_SCREENSHOT` permite guardar una captura
+de esa muestra. Esta prueba de navegador complementa `composer verify` y no forma
+parte de esa puerta; la aceptación con documentos/dispositivos reales sigue pendiente.
+
 ## Base de datos de prueba
 
 Usa PostgreSQL para suites que validan producción. SQLite no puede probar semántica de

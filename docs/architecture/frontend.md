@@ -96,6 +96,17 @@ No crees una variante visual por módulo si el significado es el mismo.
 - Tablas repetibles conservan claves de fila estables; reordenamiento es accesible.
 - Campos heredados muestran origen y no aceptan edición docente.
 
+`PaginatedDocument` presenta el constructor ADM-06 en carta con márgenes de 2.5 cm.
+`documentPagination` mide el DOM y agrega separadores transitorios entre unidades
+marcadas con `data-page-unit`; `data-page-keep-next` mantiene títulos con contenido.
+Las tablas se recorren por grupos completos de `rowspan`. Se conservan los nodos Vue y
+sus controles; los separadores se retiran antes de recalcular. `MutationObserver`,
+`ResizeObserver` y la carga de fuentes/imágenes disparan un cálculo agrupado por frame,
+sin observar sus propias inserciones. Ninguna página o posición se persiste.
+Es presentación de la muestra administrativa, no un motor de impresión ni un cambio
+del formulario docente. Una unidad indivisible excepcionalmente más alta que el área
+útil se conserva visible; no se recorta ni se descarta contenido.
+
 ## Feedback y acciones sensibles
 
 - Toda mutación tiene pendiente, éxito y error.

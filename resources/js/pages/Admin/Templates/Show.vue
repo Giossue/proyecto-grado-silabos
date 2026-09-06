@@ -66,7 +66,7 @@ defineOptions({
         title="Plantilla"
         :description="
             template.description ??
-            'El sílabo tal como se imprimirá: arrastre piezas a la hoja y pulse un título para renombrarlo.'
+            'Vista con contenido de ejemplo: las páginas se ajustarán a lo que escriba cada docente. Arrastre piezas y pulse un título para renombrarlo.'
         "
         size="wide"
     >
