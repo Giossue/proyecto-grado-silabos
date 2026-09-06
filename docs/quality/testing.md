@@ -65,7 +65,11 @@ sintéticos, sin Laravel ni base de datos. Comprueba aumento/reducción de pági
 márgenes, renombrado con Escape/foco, zonas de arrastre, menú y reordenamiento reactivo,
 solo lectura, scroll local a 360 px y una tabla
 de 120 filas con celdas combinadas. `PAGINATION_SCREENSHOT` permite guardar una captura
-de esa muestra. Esta prueba de navegador complementa `composer verify` y no forma
+de esa muestra. El mismo caso cubre arrastre nativo con orden previo al drop,
+cancelación sin petición, recuperación ante rechazo y elección del primer campo antes
+del alta; sustituye el transporte Inertia con un registro de peticiones sintéticas.
+`TemplateAndSourceTest` comprueba el alta y reordenamiento en el servidor.
+Esta prueba de navegador complementa `composer verify` y no forma
 parte de esa puerta; la aceptación con documentos/dispositivos reales sigue pendiente.
 
 ## Base de datos de prueba

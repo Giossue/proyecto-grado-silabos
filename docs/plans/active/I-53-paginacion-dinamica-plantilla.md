@@ -61,6 +61,27 @@ tratarse de un ajuste de clases de presentación.
 
 ## Límites y recuperación
 
+### Arrastre en vivo y primer campo (solicitud del 2026-09-06)
+
+ADM-06 / RF-017..026 / RN-009..012 / CU-04: mostrar el nuevo orden durante el arrastre,
+guardar solo al soltar y recuperar el orden al cancelar o fallar. Un campo sigue dentro
+de su bloque (I-33). «Bloque» abre la elección de Texto, Tabla o Lista como primer
+campo; cancelar no crea nada. Reutiliza el alta atómica existente y las mismas puertas
+de pausa/confirmación. No introduce dependencias ni modifica permisos o esquema.
+
+- [x] Previsualización del orden y cancelación sin persistencia.
+- [x] Elección del campo inicial antes del alta, respetando posición de inserción.
+- [x] Regresión de navegador, comprobaciones y documentación.
+
+Verificado en Chromium con ratón nativo: el orden cambia antes del drop y se envía
+una sola petición después; dragend sin drop revierte sin enviar. El rechazo de un
+reordenamiento de campos recupera el orden confirmado. La elección de Tabla envía
+el tipo y la posición esperados y deja el título nuevo listo para renombrar; cancelar
+la elección no envía nada. Pasan las 38 pruebas de `ManagementCreationUiTest` y
+`TemplateAndSourceTest` (1207 aserciones), lint/formato de los archivos afectados,
+tipos y build. `composer verify` sigue detenido por el archivo de terceros bajo
+`temp/.venv` ya documentado; no se declara aprobada esa puerta.
+
 No hay migraciones ni cambios de persistencia, permisos o exportación. La paginación
 se calcula por unidades visuales (párrafos de muestra, elementos de lista y grupos de
 filas); una unidad indivisible excepcionalmente mayor que una página conserva todo

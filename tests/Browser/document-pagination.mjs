@@ -12,15 +12,40 @@ const root = fileURLToPath(new URL('../../', import.meta.url));
 
 const fixture = `
 import { createApp, h, ref } from 'vue';
+import { router } from '@inertiajs/vue3';
 import TemplateSheetEditor from '/resources/js/components/domain/configuration/TemplateSheetEditor.vue';
 import '/resources/css/app.css';
 const sections = ref([]);
 const readonly = ref(false);
 const identification = ref([]);
+const requests = [];
+let failOrder = false;
+router.post = (url, data, options) => {
+    requests.push({ method: 'post', url, data });
+    if (data.first_field_content_type) {
+        const next = [...sections.value];
+        next.splice(data.position - 1, 0, {
+            id: 'created-section', key: data.key, title: data.title, description: null,
+            blocks: [{ id: 'created-block', key: data.first_field_key, title: data.first_field_label,
+                content_type: data.first_field_content_type, table: null,
+                fields: [{id: 'created-field', key: data.first_field_key, label: data.first_field_label}],
+            }],
+        });
+        sections.value = next;
+    }
+    options?.onFinish?.();
+};
+router.patch = (url, data, options) => {
+    requests.push({ method: 'patch', url, data });
+    if (failOrder) { failOrder = false; options?.onError?.({ order: 'No se pudo guardar el orden.' }); }
+    options?.onFinish?.();
+};
 window.fixture = {
     setSections(value) { sections.value = value; },
     setReadonly(value) { readonly.value = value; },
     setIdentification(value) { identification.value = value; },
+    requests,
+    failOrder() { failOrder = true; },
 };
 createApp({ render: () => h(TemplateSheetEditor, {
     templateId: 'synthetic-template', sections: sections.value, readonly: readonly.value,
@@ -267,6 +292,210 @@ test(
                 1,
             );
             await page.keyboard.press('Escape');
+
+            // Choosing/cancelling a new block must not create an implicit text field.
+            await page
+                .getByRole('button', { name: 'Bloque', exact: true })
+                .click();
+            const creation = page.getByRole('dialog', {
+                name: 'Primer campo del bloque',
+            });
+            await creation.waitFor();
+            assert.equal(
+                await page.evaluate(() => window.fixture.requests.length),
+                0,
+            );
+            await creation
+                .getByRole('button', { name: 'Cancelar', exact: true })
+                .click();
+            assert.equal(
+                await page.evaluate(() => window.fixture.requests.length),
+                0,
+            );
+            await page
+                .getByRole('button', { name: 'Bloque', exact: true })
+                .click();
+            await creation
+                .getByRole('button', { name: 'Tabla', exact: true })
+                .click();
+            const created = await page.evaluate(() =>
+                window.fixture.requests.splice(0),
+            );
+            assert.equal(created.length, 1);
+            assert.equal(created[0].data.first_field_content_type, 'table');
+            assert.equal(created[0].data.position, 15);
+            await page
+                .getByRole('textbox', { name: 'Nombre del bloque' })
+                .waitFor();
+            await page.waitForFunction(
+                () =>
+                    document.activeElement?.getAttribute('aria-label') ===
+                    'Nombre del bloque',
+            );
+            await page
+                .getByRole('textbox', { name: 'Nombre del bloque' })
+                .press('Escape');
+
+            // Native pointer drag: observe live order before releasing, then persist once.
+            await page.evaluate(
+                (value) => window.fixture.setSections(value),
+                sections(3),
+            );
+            await page.evaluate(() => window.scrollTo(0, 0));
+            const sourceHandle = page.getByRole('button', {
+                name: 'Arrastrar Descripción 1',
+                exact: true,
+            });
+            await sourceHandle.hover();
+            const sourceBox = await sourceHandle.boundingBox();
+            const targetBox = await page
+                .locator('section[aria-label="Bloque Descripción 2"]')
+                .boundingBox();
+            await page.mouse.move(sourceBox.x + 5, sourceBox.y + 5);
+            await page.mouse.down();
+            await page.mouse.move(sourceBox.x + 10, sourceBox.y + 20, {
+                steps: 4,
+            });
+            await page.mouse.move(
+                targetBox.x + 80,
+                targetBox.y + targetBox.height - 10,
+                { steps: 10 },
+            );
+            await page.waitForFunction(
+                () =>
+                    document
+                        .querySelector('.doc-section')
+                        ?.getAttribute('aria-label') === 'Bloque Descripción 2',
+            );
+            assert.equal(
+                await page.evaluate(() => window.fixture.requests.length),
+                0,
+            );
+            await page.mouse.up();
+            await page.waitForFunction(
+                () => window.fixture.requests.length === 1,
+            );
+            assert.deepEqual(
+                await page.evaluate(
+                    () => window.fixture.requests.splice(0)[0].data.section_ids,
+                ),
+                ['section-1', 'section-0', 'section-2'],
+            );
+
+            // Escape/dragend restores the pre-drag order without a write.
+            const transfer = await page.evaluateHandle(
+                () => new DataTransfer(),
+            );
+            const cancelHandle = page.getByRole('button', {
+                name: 'Arrastrar Descripción 2',
+                exact: true,
+            });
+            await cancelHandle.dispatchEvent('dragstart', {
+                dataTransfer: transfer,
+            });
+            const cancelTarget = page.locator(
+                'section[aria-label="Bloque Descripción 3"]',
+            );
+            const cancelBox = await cancelTarget.boundingBox();
+            await cancelTarget.dispatchEvent('dragover', {
+                dataTransfer: transfer,
+                clientY: cancelBox.y + cancelBox.height - 5,
+            });
+            await page.waitForFunction(
+                () =>
+                    document
+                        .querySelector('.doc-section')
+                        ?.getAttribute('aria-label') === 'Bloque Descripción 1',
+            );
+            await cancelHandle.dispatchEvent('dragend', {
+                dataTransfer: transfer,
+            });
+            await page.waitForFunction(
+                () =>
+                    document
+                        .querySelector('.doc-section')
+                        ?.getAttribute('aria-label') === 'Bloque Descripción 2',
+            );
+            assert.equal(
+                await page.evaluate(() => window.fixture.requests.length),
+                0,
+            );
+
+            // Fields move only within their block; a rejected save restores server order.
+            const multi = sections(2);
+            multi[0].blocks = Array.from({ length: 3 }, (_, index) => ({
+                ...multi[0].blocks[0],
+                id: `multi-${index}`,
+                title: `Campo ${index + 1}`,
+                fields: [
+                    {
+                        id: `multi-field-${index}`,
+                        key: `multi_field_${index}`,
+                        label: `Campo ${index + 1}`,
+                    },
+                ],
+            }));
+            await page.evaluate(
+                (value) => window.fixture.setSections(value),
+                multi,
+            );
+            const fieldHandle = page.getByRole('button', {
+                name: 'Arrastrar Campo 1',
+                exact: true,
+            });
+            const fieldTarget = page.locator(
+                'article[aria-label="Campo Campo 2"]',
+            );
+            await fieldHandle.dispatchEvent('dragstart', {
+                dataTransfer: transfer,
+            });
+            const fieldBox = await fieldTarget.boundingBox();
+            await fieldTarget.dispatchEvent('dragover', {
+                dataTransfer: transfer,
+                clientY: fieldBox.y + fieldBox.height - 5,
+            });
+            await page.waitForFunction(
+                () =>
+                    document
+                        .querySelector('.doc-field')
+                        ?.getAttribute('aria-label') === 'Campo Campo 2',
+            );
+            const otherSection = page.locator(
+                'section[aria-label="Bloque Descripción 2"] article',
+            );
+            const otherBox = await otherSection.boundingBox();
+            await otherSection.dispatchEvent('dragover', {
+                dataTransfer: transfer,
+                clientY: otherBox.y + 5,
+            });
+            assert.equal(
+                await page
+                    .locator(
+                        'section[aria-label="Bloque Descripción 2"] article',
+                    )
+                    .count(),
+                1,
+            );
+            await page.evaluate(() => window.fixture.failOrder());
+            await fieldTarget.dispatchEvent('drop', { dataTransfer: transfer });
+            await page.waitForFunction(
+                () =>
+                    document
+                        .querySelector('.doc-field')
+                        ?.getAttribute('aria-label') === 'Campo Campo 1',
+            );
+            const failed = await page.evaluate(() =>
+                window.fixture.requests.splice(0),
+            );
+            assert.equal(failed.length, 1);
+            assert.deepEqual(failed[0].data.block_ids, [
+                'multi-1',
+                'multi-0',
+                'multi-2',
+            ]);
+            await fieldHandle.dispatchEvent('dragend', {
+                dataTransfer: transfer,
+            });
 
             await page.evaluate(
                 (value) => window.fixture.setSections(value),

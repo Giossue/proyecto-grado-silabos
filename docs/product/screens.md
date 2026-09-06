@@ -117,7 +117,11 @@
   `Sheet` porque no requiere datos. Administración solo ajusta sobre la hoja.
 - ADM-06 se arma sobre la hoja tal como se imprimirá (I-33). Una paleta fija ofrece
   Bloque, Texto, Tabla, Lista con viñetas y Lista numerada: se arrastran a la hoja (una
-  línea azul marca dónde caerán) o se pulsan para agregar al final del bloque activo. Los
+  previsualización del orden cambia al pasar sobre otras piezas) o se pulsan para
+  agregar al final del bloque activo. El nuevo orden se guarda solo al soltar;
+  cancelar el arrastre restaura el anterior y un error recupera el orden del servidor.
+  «Bloque», tanto al pulsarlo como al soltarlo, pide elegir su primer campo (Texto,
+  Tabla, Lista con viñetas o Lista numerada) antes de crearlo; cancelar no crea nada. Los
   títulos se renombran con un clic; el asa reordena; el menú de tres puntos cambia el
   tipo, abre Propiedades en un `Sheet` o elimina con confirmación. Todo se guarda solo,
   con un aviso corto. Con el proceso abierto la hoja se muestra sin paleta ni asas.

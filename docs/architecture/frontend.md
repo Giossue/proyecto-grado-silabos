@@ -112,6 +112,13 @@ no deben crear un contenedor de scroll mediante `overflow-x-hidden`, que desvinc
 las paletas `sticky` del desplazamiento de la ventana. La hoja mantiene su scroll
 horizontal local; la paleta ADM-06 queda bajo el encabezado con altura máxima disponible.
 
+En ADM-06 el arrastre conserva una copia del orden inicial y cambia la colección local
+al pasar por la mitad superior/inferior de otra pieza. Solo el drop envía la mutación;
+dragend sin drop revierte, y el rechazo del servidor recupera las props confirmadas.
+Los campos permanecen en su sección. El alta de bloque elige el primer tipo de campo
+en un `Dialog` y reutiliza `storeSection` para crearlos atómicamente. Los índices de
+inserción del cliente son base cero; `position` del caso de uso se envía en base uno.
+
 ## Feedback y acciones sensibles
 
 - Toda mutación tiene pendiente, éxito y error.

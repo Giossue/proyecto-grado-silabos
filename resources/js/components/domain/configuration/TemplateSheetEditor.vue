@@ -123,6 +123,10 @@ const LOREM_ITEMS = [
 const doc = ref<TemplateSection[]>([]);
 const dragging = ref<Drag | null>(null);
 const hoveredZone = ref<string | null>(null);
+const newSectionPosition = ref<number | null>(null);
+const creatingSection = ref(false);
+let beforeDrag: TemplateSection[] | null = null;
+let lastPreviewY: number | null = null;
 const editing = ref<Editing | null>(null);
 const renameValue = ref('');
 const editorInput = ref<HTMLInputElement | null>(null);
@@ -168,9 +172,19 @@ const focusEditor = async (): Promise<void> => {
     editorInput.value?.select();
 };
 
+const restoreCreationFocus = (event: Event): void => {
+    if (editing.value) {
+        event.preventDefault();
+        void focusEditor();
+    }
+};
+
 watch(
     () => props.sections,
     (value) => {
+        beforeDrag = null;
+        dragging.value = null;
+        hoveredZone.value = null;
         doc.value = copySections(value);
 
         // Una pieza recién soltada nace con el nombre listo para escribirse.
@@ -239,6 +253,22 @@ const requestOptions = (success: string) => ({
 });
 
 const addSection = (position: number): void => {
+    if (props.readonly || creatingSection.value) {
+        return;
+    }
+
+    newSectionPosition.value = position;
+};
+
+const createSection = (contentType: ContentType): void => {
+    const position = newSectionPosition.value;
+
+    if (position === null || props.readonly || creatingSection.value) {
+        return;
+    }
+
+    newSectionPosition.value = null;
+    creatingSection.value = true;
     const key = keyFor('bloque');
     pendingFocus.value = { kind: 'section', key };
     router.post(
@@ -246,12 +276,19 @@ const addSection = (position: number): void => {
         {
             title: 'Nuevo bloque',
             key,
-            first_field_label: 'Nuevo campo',
+            first_field_label: PALETTE.find(
+                (piece) => piece.type === contentType,
+            )!.label,
             first_field_key: keyFor('campo'),
-            first_field_content_type: 'text',
-            position,
+            first_field_content_type: contentType,
+            position: position + 1,
         },
-        requestOptions('Bloque agregado.'),
+        {
+            ...requestOptions('Bloque agregado.'),
+            onFinish: () => {
+                creatingSection.value = false;
+            },
+        },
     );
 };
 
@@ -266,7 +303,7 @@ const addField = (
         TemplateController.storeField.url(props.templateId),
         {
             section_id: sectionId,
-            position,
+            position: position + 1,
             key,
             label: 'Nuevo campo',
             content_type: contentType,
@@ -473,11 +510,22 @@ const confirmDeletion = (): void => {
     );
 };
 
+const orderRequestOptions = () => ({
+    ...requestOptions('Orden guardado.'),
+    onError: (errors: Record<string, string>) => {
+        doc.value = copySections(props.sections);
+        requestOptions('Orden guardado.').onError(errors);
+    },
+    onCancel: () => {
+        doc.value = copySections(props.sections);
+    },
+});
+
 const persistSectionOrder = (): void => {
     router.patch(
         TemplateController.reorderSections.url(props.templateId),
         { section_ids: doc.value.map((section) => section.id) },
-        requestOptions('Orden guardado.'),
+        orderRequestOptions(),
     );
 };
 
@@ -488,11 +536,19 @@ const persistFieldOrder = (section: TemplateSection): void => {
             section_id: section.id,
             block_ids: section.blocks.map((block) => block.id),
         },
-        requestOptions('Orden guardado.'),
+        orderRequestOptions(),
     );
 };
 
 const startDrag = (event: DragEvent, drag: Drag, ghost?: HTMLElement): void => {
+    if (props.readonly) {
+        event.preventDefault();
+
+        return;
+    }
+
+    beforeDrag = copySections(doc.value);
+    lastPreviewY = null;
     dragging.value = drag;
     event.dataTransfer?.setData('text/plain', drag.kind);
 
@@ -528,6 +584,12 @@ const startFieldDrag = (
 };
 
 const endDrag = (): void => {
+    if (beforeDrag) {
+        doc.value = beforeDrag;
+    }
+
+    beforeDrag = null;
+    lastPreviewY = null;
     dragging.value = null;
     hoveredZone.value = null;
 };
@@ -542,7 +604,6 @@ const acceptsSectionZone = computed(
         dragging.value?.kind === 'section',
 );
 
-/** Un campo cae en cualquier bloque; el servidor lo muda y compacta el origen. */
 /** Un campo se reordena dentro de su bloque; los bloques, entre sí. */
 const acceptsFieldZone = (sectionId: string): boolean =>
     dragging.value?.kind === 'new-field' ||
@@ -557,6 +618,7 @@ const overSectionZone = (event: DragEvent, index: number): void => {
 
     event.preventDefault();
     hoveredZone.value = sectionZoneId(index);
+    previewSection(index);
 };
 
 const overFieldZone = (
@@ -570,6 +632,160 @@ const overFieldZone = (
 
     event.preventDefault();
     hoveredZone.value = fieldZoneId(sectionId, index);
+    const section = doc.value.find((item) => item.id === sectionId);
+
+    if (section) {
+        previewField(section, index);
+    }
+};
+
+const previewSection = (index: number): void => {
+    const drag = dragging.value;
+
+    if (drag?.kind !== 'section') {
+        return;
+    }
+
+    const from = doc.value.findIndex((section) => section.id === drag.id);
+    const to = index > from ? index - 1 : index;
+
+    if (from < 0 || from === to) {
+        return;
+    }
+
+    const [section] = doc.value.splice(from, 1);
+    doc.value.splice(to, 0, section);
+};
+
+const previewField = (section: TemplateSection, index: number): void => {
+    const drag = dragging.value;
+
+    if (drag?.kind !== 'field' || drag.sectionId !== section.id) {
+        return;
+    }
+
+    const from = section.blocks.findIndex((block) => block.id === drag.id);
+    const to = index > from ? index - 1 : index;
+
+    if (from < 0 || from === to) {
+        return;
+    }
+
+    const [block] = section.blocks.splice(from, 1);
+    section.blocks.splice(to, 0, block);
+};
+
+/** Whole pieces are targets; no need to aim at a thin line. */
+const overPiece = (
+    event: DragEvent,
+    section: TemplateSection,
+    container?: FieldContainer,
+): void => {
+    const drag = dragging.value;
+    const compatible = container
+        ? acceptsFieldZone(section.id)
+        : acceptsSectionZone.value;
+
+    if (!compatible || !drag) {
+        return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (
+        (drag.kind === 'section' && drag.id === section.id) ||
+        (drag.kind === 'field' && drag.id === container?.id)
+    ) {
+        return;
+    }
+
+    // Reflow under a stationary pointer must not alternate the order indefinitely.
+    if (lastPreviewY !== null && Math.abs(event.clientY - lastPreviewY) < 4) {
+        return;
+    }
+
+    lastPreviewY = event.clientY;
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    const after = event.clientY > rect.top + rect.height / 2 ? 1 : 0;
+
+    if (container) {
+        overFieldZone(
+            event,
+            section.id,
+            section.blocks.findIndex((item) => item.id === container.id) +
+                after,
+        );
+    } else {
+        overSectionZone(
+            event,
+            doc.value.findIndex((item) => item.id === section.id) + after,
+        );
+    }
+};
+
+const commitPreview = (): void => {
+    const drag = dragging.value;
+    const original = beforeDrag;
+    beforeDrag = null;
+    endDrag();
+
+    if (!original) {
+        return;
+    }
+
+    if (drag?.kind === 'section') {
+        if (
+            doc.value.some(
+                (section, index) => section.id !== original[index]?.id,
+            )
+        ) {
+            persistSectionOrder();
+        }
+    } else if (drag?.kind === 'field') {
+        const section = doc.value.find((item) => item.id === drag.sectionId);
+        const previous = original.find((item) => item.id === drag.sectionId);
+
+        if (
+            section &&
+            section.blocks.some(
+                (block, index) => block.id !== previous?.blocks[index]?.id,
+            )
+        ) {
+            persistFieldOrder(section);
+        }
+    }
+};
+
+const dropOnPiece = (
+    event: DragEvent,
+    section: TemplateSection,
+    container?: FieldContainer,
+): void => {
+    if (
+        !(container ? acceptsFieldZone(section.id) : acceptsSectionZone.value)
+    ) {
+        return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    const zone = hoveredZone.value;
+
+    if (dragging.value?.kind === 'new-section') {
+        dropOnSectionZone(
+            zone
+                ? Number(zone.split(':').at(-1))
+                : doc.value.findIndex((item) => item.id === section.id),
+        );
+    } else if (dragging.value?.kind === 'new-field') {
+        dropOnFieldZone(
+            section,
+            zone ? Number(zone.split(':').at(-1)) : section.blocks.length,
+        );
+    } else {
+        commitPreview();
+    }
 };
 
 const closeDeletion = (open: boolean): void => {
@@ -580,69 +796,40 @@ const closeDeletion = (open: boolean): void => {
 
 const dropOnSectionZone = (index: number): void => {
     const drag = dragging.value;
-    endDrag();
 
     if (drag?.kind === 'new-section') {
+        endDrag();
         addSection(index);
 
         return;
     }
 
-    if (drag?.kind !== 'section') {
-        return;
-    }
-
-    const from = doc.value.findIndex((section) => section.id === drag.id);
-
-    if (from < 0) {
-        return;
-    }
-
-    const to = index > from ? index - 1 : index;
-
-    if (to === from) {
-        return;
-    }
-
-    const [section] = doc.value.splice(from, 1);
-    doc.value.splice(to, 0, section);
-    persistSectionOrder();
+    commitPreview();
 };
 
 const dropOnFieldZone = (section: TemplateSection, index: number): void => {
     const drag = dragging.value;
-    endDrag();
 
     if (drag?.kind === 'new-field') {
+        endDrag();
         addField(section.id, index, drag.contentType);
 
         return;
     }
 
-    if (drag?.kind !== 'field' || drag.sectionId !== section.id) {
-        return;
-    }
-
-    const from = section.blocks.findIndex((block) => block.id === drag.id);
-
-    if (from < 0) {
-        return;
-    }
-
-    const to = index > from ? index - 1 : index;
-
-    if (to === from) {
-        return;
-    }
-
-    const [container] = section.blocks.splice(from, 1);
-    section.blocks.splice(to, 0, container);
-    persistFieldOrder(section);
+    commitPreview();
 };
 </script>
 
 <template>
-    <div class="flex flex-col gap-4 lg:flex-row lg:items-start">
+    <div
+        class="flex flex-col gap-4 lg:flex-row lg:items-start"
+        :class="{
+            'doc-new-piece':
+                dragging?.kind === 'new-section' ||
+                dragging?.kind === 'new-field',
+        }"
+    >
         <!-- Paleta: arrastre a la hoja o clic para agregar al final del bloque activo. -->
         <aside
             v-if="!readonly"
@@ -657,6 +844,7 @@ const dropOnFieldZone = (section: TemplateSection, index: number): void => {
                 variant="ghost"
                 class="justify-start"
                 draggable="true"
+                :disabled="creatingSection"
                 @dragstart="startDrag($event, { kind: 'new-section' })"
                 @dragend="endDrag"
                 @click="addSection(doc.length)"
@@ -750,7 +938,14 @@ const dropOnFieldZone = (section: TemplateSection, index: number): void => {
                     <!-- eslint-disable-next-line vuejs-accessibility/no-static-element-interactions -->
                     <section
                         class="doc-section group/section"
+                        :class="{
+                            'doc-drag-source':
+                                dragging?.kind === 'section' &&
+                                dragging.id === section.id,
+                        }"
                         :aria-label="`Bloque ${section.title}`"
+                        @dragover="overPiece($event, section)"
+                        @drop="dropOnPiece($event, section)"
                         @mouseenter="activeSectionId = section.id"
                         @focusin="activeSectionId = section.id"
                     >
@@ -887,9 +1082,19 @@ const dropOnFieldZone = (section: TemplateSection, index: number): void => {
                                 "
                             />
 
+                            <!-- eslint-disable-next-line vuejs-accessibility/no-static-element-interactions -->
                             <article
                                 class="doc-field group/field"
+                                :class="{
+                                    'doc-drag-source':
+                                        dragging?.kind === 'field' &&
+                                        dragging.id === container.id,
+                                }"
                                 :aria-label="`Campo ${fieldLabel(container)}`"
+                                @dragover="
+                                    overPiece($event, section, container)
+                                "
+                                @drop="dropOnPiece($event, section, container)"
                             >
                                 <div
                                     class="doc-heading-row"
@@ -1186,6 +1391,46 @@ const dropOnFieldZone = (section: TemplateSection, index: number): void => {
             :template-id="templateId"
         />
 
+        <Dialog
+            :open="newSectionPosition !== null"
+            @update:open="
+                (open) => {
+                    if (!open) newSectionPosition = null;
+                }
+            "
+        >
+            <DialogContent @close-auto-focus="restoreCreationFocus">
+                <DialogHeader>
+                    <DialogTitle>Primer campo del bloque</DialogTitle>
+                    <DialogDescription
+                        >Elija con qué contenido empezará el bloque. Después
+                        podrá agregar más campos y cambiar su
+                        nombre.</DialogDescription
+                    >
+                </DialogHeader>
+                <div class="grid gap-2 sm:grid-cols-2">
+                    <Button
+                        v-for="piece in PALETTE"
+                        :key="piece.type"
+                        type="button"
+                        variant="outline"
+                        :disabled="creatingSection"
+                        @click="createSection(piece.type)"
+                    >
+                        {{ piece.label }}
+                    </Button>
+                </div>
+                <DialogFooter>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        @click="newSectionPosition = null"
+                        >Cancelar</Button
+                    >
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
         <Dialog :open="deletion !== null" @update:open="closeDeletion">
             <DialogContent>
                 <DialogHeader>
@@ -1397,15 +1642,31 @@ const dropOnFieldZone = (section: TemplateSection, index: number): void => {
 }
 
 .doc-zone-open {
-    border-top-color: #bcd3ef;
-    border-top-style: dashed;
-    height: 1.25rem;
-    margin: 2pt 0;
+    height: 8px;
 }
 
 .doc-zone-hover {
-    border-top-color: #0070c0;
-    border-top-style: solid;
+    border-top-color: transparent;
+}
+
+.doc-new-piece .doc-zone-hover {
+    align-items: center;
+    background: #e8f0fe;
+    border: 1px dashed #0070c0;
+    border-radius: 4px;
+    display: flex;
+    height: 80px;
+    justify-content: center;
+}
+
+.doc-new-piece .doc-zone-hover::after {
+    color: #365f91;
+    content: 'Soltar aquí';
+    font-size: 10pt;
+}
+
+.doc-drag-source {
+    opacity: 0.35;
 }
 
 .doc-p {

@@ -60,6 +60,11 @@ Estados: `No iniciado`, `En desarrollo`, `Verificado`, `Bloqueado PV`, `Reemplaz
 El ajuste visual del 2026-09-06 conserva esta trazabilidad: hojas sin panel gris y
 paleta sticky bajo el encabezado. La misma regresión de navegador comprueba el fondo
 transparente y la paleta visible al desplazar 1500 px, a 1440 y 360 px de ancho.
+La ampliación de ADM-06 cubre elección/cancelación del primer campo sin alta anticipada,
+posición de inserción base uno, cambio de orden antes del drop con ratón nativo,
+una sola mutación al soltar, cancelación sin escritura, alcance del campo a su bloque
+y recuperación del orden ante rechazo. `document-pagination.mjs` monta el editor real
+con transporte Inertia sustituido por un registro de peticiones para estas comprobaciones.
 
 | Capacidad | RF/RNF | RN/CU/UI | Evidencia | Estado |
 |---|---|---|---|---|
