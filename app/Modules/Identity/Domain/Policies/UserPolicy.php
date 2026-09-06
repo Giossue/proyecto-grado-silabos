@@ -20,6 +20,16 @@ class UserPolicy
         return $this->viewAny($actor);
     }
 
+    /** Alta delegada: no concede administración de cuentas ni elección de otro rol. */
+    public function createCareerTeacher(User $actor): bool
+    {
+        $activeRole = $this->roles->resolve(request());
+
+        return $actor->activo
+            && $activeRole?->role->codigo === RoleCode::Coordinator->value
+            && $activeRole->career?->activo === true;
+    }
+
     public function view(User $actor, User $target): bool
     {
         return $this->viewAny($actor);

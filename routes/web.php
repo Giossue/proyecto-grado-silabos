@@ -11,6 +11,7 @@ use App\Modules\Configuration\Presentation\Http\Controllers\LogoController;
 use App\Modules\Configuration\Presentation\Http\Controllers\TemplateController;
 use App\Modules\Documents\Presentation\Http\Controllers\DocumentController;
 use App\Modules\Identity\Presentation\Http\Controllers\ActiveRoleController;
+use App\Modules\Identity\Presentation\Http\Controllers\CareerTeacherController;
 use App\Modules\Identity\Presentation\Http\Controllers\ManagedUserController;
 use App\Modules\Operations\Presentation\Http\Controllers\AuditEventController;
 use App\Modules\Operations\Presentation\Http\Controllers\JobExecutionController;
@@ -151,6 +152,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('coordination.academic.offerings.index');
         Route::get('asignaciones-docentes', [CareerAcademicStructureController::class, 'teacherAssignments'])
             ->name('coordination.academic.teacher-assignments.index');
+        Route::post('docentes', [CareerTeacherController::class, 'store'])
+            ->name('coordination.teachers.store');
         Route::post('estructura-academica/periodo/preparar', [CareerAcademicStructureController::class, 'preparePeriod'])
             ->name('coordination.academic.period.prepare');
         Route::post('estructura-academica/docentes/relevar', [CareerAcademicStructureController::class, 'relieveTeacher'])

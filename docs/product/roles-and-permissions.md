@@ -21,6 +21,7 @@ el permiso, pero no lo sustituyen.
 | Capacidad | Administrador | Coordinador | Docente |
 |---|---:|---:|---:|
 | Gestionar usuarios/roles | Sí | No | No |
+| Crear/incorporar docentes (I-54) | Sí, sin cambios | Solo rol Docente en su carrera activa | No |
 | Corregir nombre o correo de una cuenta | Sí | No | No |
 | Crear, editar y eliminar sin dependencias facultades, carreras y catálogos globales | Sí, salvo con proceso abierto | Consulta de alcance | Consulta asignada |
 | Asignar coordinación a una carrera | Sí | No | No |
@@ -50,8 +51,11 @@ resolverlo, la implementación debe negar esa edición. Si se autoriza, exigirá
 permiso específico, señal visible y auditoría detallada.
 
 Gestionar materias o asignaciones docentes no concede permiso para alterar el contenido
-de un sílabo. El Administrador crea las cuentas y asigna roles; el Coordinador selecciona
-docentes ya vigentes en su carrera y conserva el historial de cada asignación.
+de un sílabo. El Administrador conserva la creación de cuentas y gestión de roles. Como
+excepción acotada (I-54), el Coordinador puede crear o incorporar docentes a su carrera
+activa desde COR-15. El servidor fija rol y carrera. Si el correo ya existe, conserva
+identidad, contraseña y otros roles; no reactiva cuentas ni accesos docentes retirados.
+El alta no asigna paralelos: esa acción mantiene sus bloqueos e historial actuales.
 El nombre y el correo son datos administrativos de la cuenta: solo el Administrador puede
 corregirlos. Ni el Coordinador por dirigir a una persona ni el Docente sobre su propio
 perfil puede modificarlos; el cambio se solicita a Administración.

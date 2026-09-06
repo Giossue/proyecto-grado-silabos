@@ -82,6 +82,13 @@ Fecha de corte: **30 de agosto de 2026**.
 
 ## Actualizado para esta entrega
 
+I-54 (2026-09-06), por solicitud explícita del responsable del producto, permite al
+Coordinador crear o incorporar cuentas como Docente exclusivamente en su carrera activa.
+Administración conserva todas sus capacidades. No delega corrección de nombre/correo,
+otros roles, reactivaciones ni gestión global de cuentas. La incorporación reutiliza
+cuentas activas por correo, sin sobrescribir identidad o acceso; asignar paralelos sigue
+siendo otra operación con sus bloqueos académicos.
+
 El starter oficial vigente de Laravel 13 usa Inertia 3, Vue 3 Composition API,
 TypeScript, Tailwind y shadcn-vue. Esta entrega adopta esa línea base para no iniciar el
 proyecto con instrucciones obsoletas.

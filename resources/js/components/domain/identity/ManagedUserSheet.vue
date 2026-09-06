@@ -2,12 +2,14 @@
 import { Form } from '@inertiajs/vue3';
 import { Check, Copy, Eye, EyeOff, RefreshCw, UserPlus } from '@lucide/vue';
 import { ref, watch } from 'vue';
+import CareerTeacherController from '@/actions/App/Modules/Identity/Presentation/Http/Controllers/CareerTeacherController';
 import ManagedUserController from '@/actions/App/Modules/Identity/Presentation/Http/Controllers/ManagedUserController';
 import FormSheet from '@/components/domain/FormSheet.vue';
 import FormSheetActions from '@/components/domain/FormSheetActions.vue';
 import { Button } from '@/components/ui/button';
 import {
     Field,
+    FieldDescription,
     FieldError,
     FieldGroup,
     FieldLabel,
@@ -28,10 +30,14 @@ import {
 } from '@/components/ui/tooltip';
 import { generateTemporaryPassword } from '@/lib/temporaryPassword';
 
-defineProps<{
-    roles: { codigo: string; nombre: string }[];
-    careers: { id: string; nombre: string }[];
-}>();
+withDefaults(
+    defineProps<{
+        roles?: { codigo: string; nombre: string }[];
+        careers?: { id: string; nombre: string }[];
+        teacherCareer?: { id: string; name: string };
+    }>(),
+    { roles: () => [], careers: () => [] },
+);
 
 const initialRole = ref('docente');
 
@@ -71,18 +77,40 @@ watch(open, (isOpen) => {
 <template>
     <FormSheet
         v-model:open="open"
-        trigger-label="Crear cuenta"
-        title="Crear cuenta institucional"
-        description="Registre una cuenta con su rol inicial, carrera y contraseña temporal. La contraseña no se guarda en auditoría ni logs."
+        :trigger-label="teacherCareer ? 'Crear docente' : 'Crear cuenta'"
+        :title="
+            teacherCareer
+                ? 'Crear docente para su carrera'
+                : 'Crear cuenta institucional'
+        "
+        :description="
+            teacherCareer
+                ? `Registre un docente para ${teacherCareer.name}. Si el correo ya tiene una cuenta, se incorporará conservando su nombre y acceso actuales.`
+                : 'Registre una cuenta con su rol inicial, carrera y contraseña temporal. La contraseña no se guarda en auditoría ni logs.'
+        "
     >
         <template #default="{ close }">
             <Form
-                v-bind="ManagedUserController.store.form()"
+                v-bind="
+                    teacherCareer
+                        ? CareerTeacherController.store.form()
+                        : ManagedUserController.store.form()
+                "
                 v-slot="{ errors, processing }"
                 reset-on-success
                 @success="close"
             >
                 <FieldGroup>
+                    <Field v-if="teacherCareer">
+                        <FieldLabel for="teacher-scope"
+                            >Rol y carrera</FieldLabel
+                        >
+                        <Input
+                            id="teacher-scope"
+                            :model-value="`Docente · ${teacherCareer.name}`"
+                            readonly
+                        />
+                    </Field>
                     <Field :data-invalid="Boolean(errors.nombre)">
                         <FieldLabel for="managed-name" required>
                             Nombre completo
@@ -190,8 +218,15 @@ watch(open, (isOpen) => {
                             </Tooltip>
                         </div>
                         <FieldError :errors="[errors.password]" />
+                        <FieldDescription v-if="teacherCareer">
+                            La contraseña temporal solo se usará si la cuenta es
+                            nueva.
+                        </FieldDescription>
                     </Field>
-                    <Field :data-invalid="Boolean(errors.role_code)">
+                    <Field
+                        v-if="!teacherCareer"
+                        :data-invalid="Boolean(errors.role_code)"
+                    >
                         <FieldLabel for="managed-role" required>
                             Rol inicial
                         </FieldLabel>
@@ -217,7 +252,7 @@ watch(open, (isOpen) => {
                         <FieldError :errors="[errors.role_code]" />
                     </Field>
                     <Field
-                        v-if="initialRole !== 'administrador'"
+                        v-if="!teacherCareer && initialRole !== 'administrador'"
                         :data-invalid="Boolean(errors.career_id)"
                     >
                         <FieldLabel for="managed-career" required>
@@ -250,7 +285,11 @@ watch(open, (isOpen) => {
                         :close="close"
                         :processing="processing"
                         :icon="UserPlus"
-                        label="Crear cuenta"
+                        :label="
+                            teacherCareer
+                                ? 'Crear o incorporar docente'
+                                : 'Crear cuenta'
+                        "
                     />
                 </FieldGroup>
             </Form>

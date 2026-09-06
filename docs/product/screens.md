@@ -44,6 +44,11 @@
 | COR-14 | Ofertas académicas de la carrera y sus paralelos                 |
 | COR-15 | Asignaciones docentes de la carrera                              |
 
+En COR-15, **Crear docente** abre el formulario compartido de cuentas en modo docente
+de la carrera activa (I-54): rol y carrera se muestran fijos. Un correo existente se
+incorpora sin cambiar su identidad ni contraseña. Administración conserva su formulario
+completo. El alta está separada de asignar paralelos y no levanta sus bloqueos.
+
 ## Administrador
 
 | ID     | Pantalla                                                   |

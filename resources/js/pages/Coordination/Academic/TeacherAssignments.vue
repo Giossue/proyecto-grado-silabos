@@ -3,6 +3,7 @@ import { Head } from '@inertiajs/vue3';
 import TeacherAssignmentSheet from '@/components/domain/academic/TeacherAssignmentSheet.vue';
 import TeacherAssignmentsPanel from '@/components/domain/academic/TeacherAssignmentsPanel.vue';
 import TeacherReliefSheet from '@/components/domain/academic/TeacherReliefSheet.vue';
+import ManagedUserSheet from '@/components/domain/identity/ManagedUserSheet.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
 import ProcessLockAlert from '@/components/domain/ProcessLockAlert.vue';
 import { index as teacherAssignmentsIndex } from '@/routes/coordination/academic/teacher-assignments';
@@ -20,7 +21,10 @@ defineOptions({
 });
 
 defineProps<
-    Pick<AcademicStructureProps, 'career' | 'teacherAssignments' | 'options'>
+    Pick<
+        AcademicStructureProps,
+        'career' | 'teacherAssignments' | 'options'
+    > & { canCreateTeacher: boolean }
 >();
 </script>
 
@@ -32,6 +36,11 @@ defineProps<
         :description="`Quién dicta cada paralelo en ${career.name}.`"
     >
         <template #actions>
+            <ManagedUserSheet
+                v-if="canCreateTeacher"
+                :key="career.id"
+                :teacher-career="career"
+            />
             <TeacherReliefSheet
                 v-if="!career.lock_reason"
                 :teacher-assignments="teacherAssignments"

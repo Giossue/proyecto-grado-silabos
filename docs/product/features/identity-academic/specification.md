@@ -5,6 +5,7 @@
 - RF-001 a RF-016; CU-01 a CU-03.
 - RN-001 a RN-008.
 - UI-01 a UI-04; ADM-02 a ADM-04.
+- COR-15 (I-54): alta delegada de docentes.
 - PV-05, PV-06, PV-09, PV-10, PV-12 y PV-15.
 
 ## Comportamiento
@@ -22,6 +23,13 @@
   carrera; perder cualquiera de los dos invalida ese rol.
 - El Administrador mantiene facultades, carreras y catálogos globales, crea cuentas y
   asigna coordinaciones.
+- Coordinación puede crear/incorporar únicamente docentes en su carrera activa (I-54).
+  Un correo existente conserva los datos y credenciales de la cuenta; una cuenta inactiva
+  o un acceso docente retirado requiere Administración. Solo las cuentas nuevas reciben
+  contraseña temporal y correo después del commit. Repetir el alta no duplica rol ni correo.
+  La operación es transaccional y auditada, no asigna paralelos ni altera los permisos
+  administrativos. Puede realizarse con convocatoria en curso sin levantar el bloqueo
+  de las asignaciones académicas.
 - Solo el Administrador puede corregir el nombre o el correo de una cuenta. Coordinadores
   y Docentes consultan esos datos en su perfil y solicitan la corrección a Administración.
 - ADM-04 presenta Facultades, Carreras, Campus, Modalidades y Periodos académicos como

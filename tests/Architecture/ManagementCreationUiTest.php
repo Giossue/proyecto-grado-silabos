@@ -3,6 +3,12 @@
 it('mantiene las altas de gestión que requieren datos dentro del sheet derecho compartido', function (): void {
     $root = dirname(__DIR__, 2);
     $surfaces = [
+        'Coordinador · docentes de su carrera' => [
+            'page' => 'resources/js/pages/Coordination/Academic/TeacherAssignments.vue',
+            'component' => 'ManagedUserSheet',
+            'component_file' => 'resources/js/components/domain/identity/ManagedUserSheet.vue',
+            'action' => 'CareerTeacherController.store.form',
+        ],
         'Administrador · cuentas' => [
             'page' => 'resources/js/pages/Admin/Users/Index.vue',
             'component' => 'ManagedUserSheet',

@@ -80,7 +80,10 @@ class CareerAcademicStructureController extends Controller
     ): Response {
         return Inertia::render(
             'Coordination/Academic/TeacherAssignments',
-            $viewData->teacherAssignments($this->careerId($request, $roles)),
+            [
+                ...$viewData->teacherAssignments($this->careerId($request, $roles)),
+                'canCreateTeacher' => $request->user()?->can('createCareerTeacher', User::class) === true,
+            ],
         );
     }
 
