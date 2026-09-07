@@ -252,3 +252,13 @@ de Propiedades a 360 px. Sin migraciones, commit ni push.
       ciclos de renderizado y paginación.
 - [x] Evitar repaginaciones por clases transitorias de selección, foco y arrastre; la
       regresión confirma cero reconstrucciones de espaciadores al seleccionar un campo.
+
+## Reinicio de la interacción de plantilla (2026-09-07)
+
+Por indicación del usuario, ADM-06 queda temporalmente como una página vacía para diseñar
+la nueva interacción desde cero. La ruta y los datos existentes se conservan; no se
+eliminan plantillas de PostgreSQL ni se reutiliza todavía el editor anterior.
+
+- [x] Retirar de la pantalla el constructor, encabezado, acciones y alertas.
+- [x] Conservar únicamente el título del documento y el layout autenticado global.
+- [ ] Definir e implementar la nueva interacción con la siguiente indicación del usuario.

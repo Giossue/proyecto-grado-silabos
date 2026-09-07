@@ -27,15 +27,6 @@ it('mantiene las altas de gestión que requieren datos dentro del sheet derecho 
             'component_file' => 'resources/js/components/domain/academic/CatalogRecordSheet.vue',
             'action' => 'AcademicGovernanceController.store.form',
         ],
-        'Administrador · bloques de plantilla' => [
-            'page' => 'resources/js/pages/Admin/Templates/Show.vue',
-            'component' => 'TemplateSheetEditor',
-            'component_file' => 'resources/js/components/domain/configuration/TemplateSheetEditor.vue',
-            'action' => 'TemplateController.storeSection',
-            'inline' => true,
-            // I-33: la pieza recién soltada queda con el nombre listo para escribirse.
-            'success' => "pendingFocus.value = { kind: 'section', key }",
-        ],
         'Coordinador · fuentes' => [
             'page' => 'resources/js/pages/Sources/Index.vue',
             'component' => 'AcademicSourceCreationSheet',
@@ -685,21 +676,19 @@ it('edita cuentas desde una sola accion del listado de usuarios', function (): v
         ->toContain("display === 'menu'");
 });
 
-it('arma la plantilla sobre la hoja impresa, sin formularios por tarjeta', function (): void {
+it('deja vacía temporalmente la pantalla de la plantilla para su rediseño', function (): void {
     $root = dirname(__DIR__, 2);
     $source = file_get_contents($root.'/resources/js/pages/Admin/Templates/Show.vue');
 
-    // I-32: sin versiones ni publicación. I-33: una sola superficie, la hoja.
     expect($source)
         ->toBeString()
-        ->not->toContain('Publicar')
-        ->not->toContain('TemplateController.publish')
-        ->not->toContain('TemplateController.clone')
-        ->not->toContain('Vista previa')
-        ->not->toContain('<Card')
-        ->toContain('size="wide"')
-        ->toContain('<TemplateSheetEditor')
-        ->toContain(':readonly="processLock !== null"');
+        ->toContain('<Head title="Plantilla" />')
+        ->not->toContain('<PageFrame')
+        ->not->toContain('<TemplateSheetEditor')
+        ->not->toContain('<InstitutionLogoSheet')
+        ->not->toContain('<ProcessLockAlert');
+
+    // El editor anterior queda desacoplado mientras se define la nueva interacción.
 
     $editor = file_get_contents(
         $root.'/resources/js/components/domain/configuration/TemplateSheetEditor.vue',
@@ -865,13 +854,14 @@ it('presenta la plantilla institucional única y abre su constructor', function 
         ->not->toContain('<CardTitle')
         ->not->toContain('<TableActionsMenu');
 
-    // Una sola plantilla: el detalle no navega versiones (I-32).
+    // La ruta se conserva, pero su contenido espera el nuevo diseño confirmado.
     $show = file_get_contents($root.'/resources/js/pages/Admin/Templates/Show.vue');
     expect($show)
         ->toBeString()
         ->not->toContain('Versiones')
         ->not->toContain('sibling.id')
-        ->toContain(':template-id="template.id"');
+        ->toContain('<Head title="Plantilla" />')
+        ->not->toContain('<TemplateSheetEditor');
 
 });
 
@@ -1008,7 +998,6 @@ it('normaliza los encabezados de todos los modulos autenticados', function (): v
         'resources/js/pages/Admin/Operations/Jobs.vue',
         'resources/js/pages/Admin/Processes/Index.vue',
         'resources/js/pages/Admin/Templates/Index.vue',
-        'resources/js/pages/Admin/Templates/Show.vue',
         'resources/js/pages/Admin/Users/Index.vue',
         'resources/js/pages/Admin/Users/Show.vue',
         'resources/js/pages/Role/Select.vue',
@@ -1100,6 +1089,7 @@ it('normaliza los encabezados de todos los modulos autenticados', function (): v
         $relativePath = str_replace($root.'/', '', $file->getPathname());
         if (
             $relativePath === 'resources/js/pages/Welcome.vue'
+            || $relativePath === 'resources/js/pages/Admin/Templates/Show.vue'
             || str_starts_with($relativePath, 'resources/js/pages/auth/')
             || str_starts_with($relativePath, 'resources/js/pages/settings/')
         ) {
@@ -1131,8 +1121,8 @@ it('normaliza los encabezados de todos los modulos autenticados', function (): v
         );
     }
 
-    $this->assertCount(29, $declaredPages);
-    $this->assertCount(30, $pages);
+    $this->assertCount(28, $declaredPages);
+    $this->assertCount(29, $pages);
 });
 
 it('mantiene explicitamente clasificadas las mutaciones store que permanecen en paginas completas', function (): void {
