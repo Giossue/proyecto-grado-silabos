@@ -9,14 +9,6 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
-import {
     Field,
     FieldContent,
     FieldDescription,
@@ -36,7 +28,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { registerLocalPurgeConfirmation } from '@/composables/usePurgeConfirmation';
 import type { TableLayout } from '@/lib/tableLayout';
-import { defaultDocument } from '@/lib/templateDocument';
+import { defaultDocument, nodesOfType } from '@/lib/templateDocument';
 import type {
     DocumentNode,
     DocumentField,
@@ -61,13 +53,16 @@ const props = defineProps<{
     identification: DocumentNode;
     variables: TemplateVariable[];
     readonly: boolean;
+    editing?: boolean;
 }>();
-const open = ref(false);
+const emit = defineEmits<{
+    dirty: [value: boolean];
+}>();
 const propertiesOpen = ref(false);
 const designDirty = ref(false);
 const initialProperties = ref('');
 const isFlow = computed(() => props.block.content_type === 'flow');
-const discard = ref(false);
+const open = computed(() => Boolean(props.editing) && !isFlow.value);
 const submitting = ref(false);
 const editor = ref<InstanceType<typeof TemplateDocumentEditor> | null>(null);
 const draft = ref<DocumentNode>({ type: 'doc', content: [] });
@@ -121,21 +116,29 @@ const edit = () => {
     }));
     initialProperties.value = propertiesSnapshot();
     designDirty.value = false;
-    open.value = !isFlow.value;
-    propertiesOpen.value = isFlow.value;
 };
-defineExpose({ edit });
-const close = () => {
-    if (form.processing) {
-        return;
+const openProperties = () => {
+    const current = editor.value?.prepareDocument();
+
+    if (current && !isFlow.value) {
+        for (const node of nodesOfType(current, 'field')) {
+            const key = String(node.attrs?.key ?? '');
+
+            if (
+                key &&
+                !form.properties.some((property) => property.key === key)
+            ) {
+                form.properties.push({
+                    key,
+                    label: String(node.attrs?.label ?? 'Respuesta del docente'),
+                    help: '',
+                    ai_enabled: false,
+                });
+            }
+        }
     }
 
-    if (dirty.value) {
-        discard.value = true;
-    } else {
-        open.value = false;
-        propertiesOpen.value = false;
-    }
+    propertiesOpen.value = true;
 };
 const closeProperties = (value: boolean) => {
     if (value) {
@@ -144,46 +147,51 @@ const closeProperties = (value: boolean) => {
         return;
     }
 
-    if (isFlow.value && dirty.value) {
-        discard.value = true;
-
-        return;
-    }
-
     propertiesOpen.value = false;
 };
-const save = (value: DocumentNode | null) => {
+const persist = (
+    value: DocumentNode | null,
+    silent = false,
+): Promise<boolean> => {
     form.document = value;
     submitting.value = true;
-    form.patch(
-        TemplateController.updateDocument.url({
-            template: props.templateId,
-            block: props.block.id,
-        }),
-        {
-            preserveScroll: true,
-            onSuccess: () => {
-                designDirty.value = false;
-                initialProperties.value = propertiesSnapshot();
-                open.value = false;
-                propertiesOpen.value = false;
-                toast.success('Diseño guardado.');
+
+    return new Promise((resolve) => {
+        let succeeded = false;
+        form.patch(
+            TemplateController.updateDocument.url({
+                template: props.templateId,
+                block: props.block.id,
+            }),
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    succeeded = true;
+                    designDirty.value = false;
+                    initialProperties.value = propertiesSnapshot();
+                    editor.value?.markClean();
+
+                    if (!silent) {
+                        toast.success('Diseño guardado.');
+                    }
+                },
+                onError: (errors) => {
+                    if (
+                        Object.keys(errors).some(
+                            (key) =>
+                                key === 'title' || key.startsWith('properties'),
+                        )
+                    ) {
+                        propertiesOpen.value = true;
+                    }
+                },
+                onFinish: () => {
+                    submitting.value = false;
+                    resolve(succeeded);
+                },
             },
-            onError: (errors) => {
-                if (
-                    Object.keys(errors).some(
-                        (key) =>
-                            key === 'title' || key.startsWith('properties'),
-                    )
-                ) {
-                    propertiesOpen.value = true;
-                }
-            },
-            onFinish: () => {
-                submitting.value = false;
-            },
-        },
-    );
+        );
+    });
 };
 const error = computed(() =>
     Object.entries(form.errors)
@@ -212,7 +220,7 @@ const updatePrimaryName = (value: string | number) => {
 };
 const stopNavigation = router.on('before', (event) => {
     if (
-        (open.value || propertiesOpen.value) &&
+        (props.editing || propertiesOpen.value) &&
         dirty.value &&
         !submitting.value &&
         !window.confirm(
@@ -225,7 +233,7 @@ const stopNavigation = router.on('before', (event) => {
 onBeforeUnmount(stopNavigation);
 const unsaved = (event: BeforeUnloadEvent) => {
     if (
-        (open.value || propertiesOpen.value) &&
+        (props.editing || propertiesOpen.value) &&
         dirty.value &&
         !form.processing
     ) {
@@ -234,9 +242,43 @@ const unsaved = (event: BeforeUnloadEvent) => {
 };
 onMounted(() => window.addEventListener('beforeunload', unsaved));
 onBeforeUnmount(() => window.removeEventListener('beforeunload', unsaved));
-const submit = () => (isFlow.value ? save(null) : editor.value?.save());
+const saveCurrent = (silent = false): Promise<boolean> => {
+    if (!dirty.value) {
+        return Promise.resolve(true);
+    }
+
+    const value = isFlow.value ? null : editor.value?.prepareDocument();
+
+    if (!isFlow.value && !value) {
+        return Promise.resolve(false);
+    }
+
+    return persist(value ?? null, silent);
+};
+const submit = () => void saveCurrent();
+defineExpose({ edit, openProperties, save: saveCurrent });
+watch(dirty, (value) => emit('dirty', value), { immediate: true });
 watch(
-    () => open.value || propertiesOpen.value,
+    () => props.editing,
+    (value) => {
+        if (value) {
+            edit();
+        } else {
+            propertiesOpen.value = false;
+        }
+    },
+    { immediate: true },
+);
+watch(
+    () => props.block.fingerprint,
+    (value) => {
+        if (!dirty.value) {
+            form.fingerprint = value ?? '';
+        }
+    },
+);
+watch(
+    () => Boolean(props.editing) || propertiesOpen.value,
     (isActive, _previous, onCleanup) => {
         if (!isActive) {
             return;
@@ -266,76 +308,20 @@ watch(
         />
         <div
             v-else
-            class="relative flex min-h-96 flex-col gap-3 rounded-lg border bg-background p-3 shadow-sm"
+            class="relative flex flex-col gap-2"
             role="region"
             :aria-label="`Editar diseño de ${block.title}`"
         >
-            <div
-                class="flex flex-wrap items-center gap-2 rounded-lg border bg-background/95 p-2 shadow-sm"
-            >
-                <div class="min-w-0 flex-1">
-                    <p class="truncate text-sm font-medium">
-                        Editando {{ block.title }}
-                    </p>
-                    <p class="text-xs text-muted-foreground" role="status">
-                        {{
-                            form.processing
-                                ? 'Guardando…'
-                                : dirty
-                                  ? 'Cambios sin guardar'
-                                  : 'Sin cambios pendientes'
-                        }}
-                    </p>
-                </div>
-                <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    :disabled="form.processing"
-                    @click="propertiesOpen = true"
-                >
-                    Propiedades
-                </Button>
-                <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    :disabled="form.processing"
-                    @click="close"
-                >
-                    Cancelar
-                </Button>
-                <Button
-                    v-if="purge"
-                    type="button"
-                    variant="destructive"
-                    size="sm"
-                    :disabled="form.processing"
-                    @click="
-                        form.confirm_purge = true;
-                        submit();
-                    "
-                >
-                    Guardar y reiniciar
-                </Button>
-                <Button
-                    v-else
-                    type="button"
-                    size="sm"
-                    :disabled="form.processing"
-                    @click="submit"
-                >
-                    Guardar diseño
-                </Button>
-            </div>
             <TemplateDocumentEditor
                 ref="editor"
                 :document="draft"
                 :variables="props.variables"
                 :pending="form.processing"
                 :field-keys="block.fields.map((field) => field.key)"
+                embedded
                 @dirty="designDirty = $event"
-                @save="save"
+                @properties="openProperties"
+                @save="persist"
             />
             <Alert v-if="error" variant="destructive"
                 ><AlertTitle>No se pudo guardar</AlertTitle
@@ -343,9 +329,21 @@ watch(
             >
             <Alert v-if="purge" variant="destructive"
                 ><AlertTitle>Confirmación necesaria</AlertTitle
-                ><AlertDescription
-                    >{{ purge }} Guardar y reiniciar elimina ese trabajo en
-                    curso.</AlertDescription
+                ><AlertDescription class="flex flex-wrap items-center gap-2"
+                    ><span
+                        >{{ purge }} Guardar y reiniciar elimina ese trabajo en
+                        curso.</span
+                    ><Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        :disabled="form.processing"
+                        @click="
+                            form.confirm_purge = true;
+                            submit();
+                        "
+                        >Guardar y reiniciar</Button
+                    ></AlertDescription
                 ></Alert
             >
         </div>
@@ -559,34 +557,5 @@ watch(
                 </SheetFooter>
             </SheetContent>
         </Sheet>
-        <Dialog v-model:open="discard">
-            <DialogContent
-                ><DialogHeader
-                    ><DialogTitle>¿Descartar el diseño sin guardar?</DialogTitle
-                    ><DialogDescription
-                        >Se conserva el último diseño guardado de este
-                        bloque.</DialogDescription
-                    ></DialogHeader
-                ><DialogFooter
-                    ><Button
-                        type="button"
-                        variant="outline"
-                        @click="discard = false"
-                        >Seguir editando</Button
-                    ><Button
-                        type="button"
-                        variant="destructive"
-                        @click="
-                            designDirty = false;
-                            initialProperties = propertiesSnapshot();
-                            discard = false;
-                            open = false;
-                            propertiesOpen = false;
-                        "
-                        >Descartar cambios</Button
-                    ></DialogFooter
-                ></DialogContent
-            >
-        </Dialog>
     </div>
 </template>

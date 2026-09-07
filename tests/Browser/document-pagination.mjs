@@ -67,6 +67,10 @@ router.post = (url, data, options) => {
 router.patch = (url, data, options) => {
     requests.push({ method: 'patch', url, data });
     if (failOrder) { failOrder = false; options?.onError?.({ order: 'No se pudo guardar el orden.' }); }
+    else if (Object.prototype.hasOwnProperty.call(data, 'document')) {
+        sections.value = sections.value.map(section => ({...section, blocks: section.blocks.map(block => url.includes(block.id) ? {...block, title:data.title, document:JSON.parse(JSON.stringify(data.document)), fingerprint:'b'.repeat(64)} : block)}));
+        options?.onSuccess?.({});
+    }
     options?.onFinish?.();
 };
 window.fixture = {
@@ -432,6 +436,46 @@ test(
                 'No panel behind the sheets',
             );
 
+            assert.equal(
+                await page
+                    .getByRole('button', {
+                        name: 'Editar documento',
+                        exact: true,
+                    })
+                    .count(),
+                1,
+            );
+            await page
+                .getByRole('button', {
+                    name: 'Editar documento',
+                    exact: true,
+                })
+                .click();
+            await page.locator('.tiptap').first().click();
+            await page.keyboard.press('Control+End');
+            await page.keyboard.type(' Cambio global');
+            await page
+                .getByText('Hay cambios sin guardar', { exact: true })
+                .waitFor();
+            await page
+                .getByRole('button', { name: 'Guardar', exact: true })
+                .click();
+            await page.waitForFunction(
+                () => window.fixture.requests.length === 1,
+            );
+            await page
+                .getByText(
+                    'Clic derecho sobre el contenido para ver sus herramientas',
+                    { exact: true },
+                )
+                .waitFor();
+            assert.equal(
+                await page.evaluate(
+                    () => window.fixture.requests.splice(0).length,
+                ),
+                1,
+            );
+
             for (const width of [1440, 360]) {
                 await page.setViewportSize({ width, height: 1000 });
                 await page.evaluate(() => window.scrollTo(0, 1500));
@@ -544,17 +588,17 @@ test(
                 0,
             );
             await page
-                .getByRole('menuitem', { name: 'Editar diseño', exact: true })
+                .getByRole('menuitem', { name: 'Propiedades', exact: true })
                 .click();
-            const design = page.getByRole('dialog', {
-                name: 'Diseño: Contenido',
+            const properties = page.getByRole('dialog', {
+                name: 'Propiedades de Contenido',
                 exact: true,
             });
-            await design.waitFor();
-            await design
-                .getByRole('button', { name: 'Cancelar', exact: true })
+            await properties.waitFor();
+            await properties
+                .getByRole('button', { name: 'Cerrar', exact: true })
                 .click();
-            await design.waitFor({ state: 'hidden' });
+            await properties.waitFor({ state: 'hidden' });
             await page
                 .getByRole('button', { name: 'Bloque', exact: true })
                 .click();

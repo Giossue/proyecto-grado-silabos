@@ -115,11 +115,12 @@ La misma regresión comprueba que una tabla libre absorbe el único campo inicia
 primera celda, no crea campos «Dato…» y alterna «Respuesta del docente» con las
 etiquetas descriptivas según exista uno o varios campos, sin el carácter `▧`.
 
-El seguimiento de edición directa conserva todas esas operaciones sin exponerlas a la
-vez: `TemplateDesignBlock` edita en la hoja y abre Propiedades en un panel lateral;
-`TemplateDocumentEditor` mantiene Insertar/deshacer/rehacer y muestra una barra
-flotante distinta para texto, tabla o campo. La prueba Chromium cubre los tres
-contextos, el guardado atómico, los errores, el reinicio confirmado y el ancho móvil.
+El seguimiento de edición documental conserva todas esas operaciones sin exponerlas a
+la vez: `TemplateSheetEditor` ofrece un único modo de edición para la hoja completa;
+`TemplateDocumentEditor` abre por clic derecho un menú distinto para texto, tabla o
+campo, y `TemplateDesignBlock` mantiene Propiedades en un panel lateral. La prueba
+Chromium cubre los tres contextos, el guardado coordinado, los errores, el reinicio
+confirmado y el ancho móvil.
 
 El ajuste posterior con la referencia `temp/silabo.pdf` conserva el diseño guardado
 y añade indicadores de ambos parciales solo a la plantilla inicial. No carga datos

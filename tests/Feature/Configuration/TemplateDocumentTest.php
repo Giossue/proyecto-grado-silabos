@@ -41,13 +41,26 @@ class TemplateDocumentTest extends TestCase
         $doc = $this->document();
         $fingerprint = SaveTemplateDocument::fingerprint($block);
         $url = route('admin.templates.blocks.document', [$template, $block]);
-        $this->patch($url, ['document' => $doc, 'fingerprint' => $fingerprint, 'heredado' => true])
+        $this->patch($url, [
+            'document' => $doc,
+            'fingerprint' => $fingerprint,
+            'heredado' => true,
+            'properties' => [[
+                'key' => 'respuesta_extra',
+                'label' => 'Cantidad configurada',
+                'help' => 'Indique una cantidad.',
+                'ai_enabled' => true,
+            ]],
+        ])
             ->assertRedirect()->assertSessionHasNoErrors();
         $new = $block->fields()->where('clave', 'respuesta_extra')->firstOrFail();
         $this->assertTrue($new->editable_docente);
         $this->assertFalse($new->heredado);
         $this->assertTrue($new->obligatorio);
         $this->assertSame('numero', $new->tipo);
+        $this->assertSame('Cantidad configurada', $new->etiqueta);
+        $this->assertSame('Indique una cantidad.', $new->ayuda);
+        $this->assertTrue($new->ia_habilitada);
         $this->patch(route('admin.templates.fields.update', [$template, $new]), [
             'block_id' => $block->id, 'key' => $new->clave, 'label' => $new->etiqueta,
             'content_type' => 'text', 'help' => 'Indique una cantidad.', 'ai_enabled' => false,

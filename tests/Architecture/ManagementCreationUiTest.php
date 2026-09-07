@@ -726,11 +726,11 @@ it('arma la plantilla sobre la hoja impresa, sin formularios por tarjeta', funct
         ->toContain('startRename')
         ->toContain('@keydown.enter.prevent="commitRename"')
         ->toContain('@keydown.esc.prevent="cancelRename"')
-        // Propiedades vive dentro del diálogo de diseño, no en otro Sheet.
+        // Un modo global coordina la edición y Propiedades queda en el panel lateral.
         ->not->toContain('changeType')
         ->toContain('designEditors')
-        ->toContain('?.edit()')
-        ->not->toContain('openProperties')
+        ->toContain('startDocumentEditing')
+        ->toContain('openProperties')
         ->toContain('Eliminar campo')
         ->toContain('Eliminar bloque')
         ->not->toContain('<TemplateFieldSheet')
@@ -790,15 +790,16 @@ it('arma la plantilla sobre la hoja impresa, sin formularios por tarjeta', funct
         $root.'/resources/js/components/domain/configuration/TemplateDocumentEditor.vue',
     );
     expect($documentEditor)
-        ->toContain('<BubbleMenu')
-        ->toContain('contextualTool')
-        ->toContain('<Popover v-model:open="insertOpen"')
+        ->toContain('<ContextMenu>')
+        ->toContain('prepareContextMenu')
+        ->toContain("context === 'text'")
+        ->toContain("context === 'table'")
         ->toContain('insertTeacherField')
         ->toContain('insertVariable')
-        ->toContain('Combinar celdas')
+        ->toContain('Unir celdas')
         ->toContain('Color de fuente')
         ->toContain('selectedPersistedField')
-        ->toContain('Para renombrar este campo, use Propiedades.')
+        ->toContain('Propiedades del campo')
         ->toContain('initialOnlyField')
         ->toContain('Respuesta del docente')
         ->toContain('template-document-editor-single-field')
@@ -808,7 +809,11 @@ it('arma la plantilla sobre la hoja impresa, sin formularios por tarjeta', funct
         $root.'/resources/js/components/domain/configuration/TemplateSheetEditor.vue',
     );
     expect(preg_replace('/\s+/', ' ', $sheetEditor))
-        ->toContain('v-else-if="section.blocks.length > 1"');
+        ->toContain('section.blocks.length > 1')
+        ->toContain('Editar documento')
+        ->toContain('saveDocument')
+        ->toContain(':editing="canDesign"')
+        ->not->toContain('Editar diseño');
 });
 
 it('abre los detalles de los listados desde sus acciones', function (): void {

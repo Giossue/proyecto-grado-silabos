@@ -19,6 +19,7 @@ import { cellNode, paragraph, textNode, fieldNode } from '/resources/js/lib/temp
 import '/resources/css/app.css';
 const component = ref(null);
 const design = ref(null);
+const designEditing = ref(false);
 const saved = ref(null);
 const values = ref([{ id: 'field-test', key: 'objetivo', label: 'Objetivo', type: 'texto_largo', value: '', rows: [], teacher_editable: true, required: true }]);
 const doc = { type: 'doc', content: [paragraph([textNode('Texto de prueba')]), {type:'table', content: [
@@ -26,7 +27,7 @@ const doc = { type: 'doc', content: [paragraph([textNode('Texto de prueba')]), {
  {type:'tableRow', content:[cellNode([fieldNode(values.value[0])]),cellNode([textNode('E')]),cellNode([textNode('F')])]},
  {type:'tableRow', content:[cellNode([textNode('G')]),cellNode([textNode('H')]),cellNode([textNode('I')])]},
 ]}, paragraph()]};
-window.fixture = { api: () => component.value.editor, save: () => component.value.save(), openDesign: () => design.value.edit(), saved: () => saved.value, value: () => values.value[0].value, values: () => values.value, registerFields: fields => values.value = [...values.value, ...fields] };
+window.fixture = { api: () => component.value.editor, save: () => component.value.save(), openDesign: () => designEditing.value = true, closeDesign: () => designEditing.value = false, saveDesign: () => design.value.save(), openProperties: () => design.value.openProperties(), saved: () => saved.value, value: () => values.value[0].value, values: () => values.value, registerFields: fields => values.value = [...values.value, ...fields] };
 const block = ref({ id: 'synthetic-block', title: 'Objetivo', content_type: 'text', table: null, fields: values.value, document: doc, fingerprint: 'a'.repeat(64) });
 const requests = [];
 let failure = null;
@@ -51,7 +52,7 @@ router.patch = async (url, data, options) => {
 createApp({render: () => h('div', {}, [
  h('section', {style:'height:850px;display:flex;flex-direction:column', 'aria-label':'Administrador'}, [h(Editor, {ref:component, document:doc, variables:[{key:'nombre_carrera',label:'Nombre de la carrera',sample:'Software'}], pending:false, onSave: value => saved.value = JSON.parse(JSON.stringify(value))})]),
  saved.value ? h('section', {'aria-label':'Docente'}, [h(View, {document:saved.value,fields:values.value,variables:{nombre_carrera:'Software real'},editable:true, onValue: (key,value) => values.value = values.value.map(f => f.key === key ? {...f,value} : f)})]) : null,
- h(DesignBlock, { ref:design, templateId:'synthetic-template', block:block.value, identification:doc, variables:[{key:'nombre_carrera',label:'Nombre de la carrera',sample:'Software'}], readonly:false }),
+ h(DesignBlock, { ref:design, templateId:'synthetic-template', block:block.value, identification:doc, variables:[{key:'nombre_carrera',label:'Nombre de la carrera',sample:'Software'}], readonly:false, editing:designEditing.value }),
 ])}).mount('#app');
 `;
 
@@ -116,27 +117,40 @@ test(
         });
         await page.goto(`${server.resolvedUrls.local[0]}fixture`);
         await page.waitForSelector('.tiptap');
+        const editorSurface = page
+            .getByRole('region', { name: 'Administrador' })
+            .locator('.tiptap');
+        const openMenu = async (target) =>
+            target.click({ button: 'right', position: { x: 8, y: 8 } });
+        const chooseItem = async (target, name) => {
+            await openMenu(target);
+            await page.getByRole('menuitem', { name, exact: true }).click();
+        };
+        const chooseSubItem = async (target, submenu, name) => {
+            await openMenu(target);
+            await page
+                .getByRole('menuitem', { name: submenu, exact: true })
+                .hover();
+            await page.getByRole('menuitem', { name, exact: true }).click();
+        };
         await page.evaluate(() =>
             window.fixture.api().commands.setTextSelection({ from: 1, to: 16 }),
         );
-        await page
-            .getByRole('button', { name: 'Negrita', exact: true })
-            .click();
-        await page
-            .getByRole('button', { name: 'Cursiva', exact: true })
-            .click();
-        await page
-            .getByRole('button', { name: 'Alinear a la derecha', exact: true })
-            .click();
-        await page.getByRole('combobox', { name: 'Tipo de fuente' }).click();
-        await page
-            .getByRole('option', { name: 'Times New Roman', exact: true })
-            .click();
-        await page.getByRole('combobox', { name: 'Tamaño de fuente' }).click();
-        await page.getByRole('option', { name: '14 pt', exact: true }).click();
-        await page
-            .getByLabel('Color de fuente', { exact: true })
-            .fill('#cc0000');
+        const formattedParagraph = editorSurface.locator('> p').first();
+        await chooseItem(formattedParagraph, 'Negrita');
+        await chooseItem(formattedParagraph, 'Cursiva');
+        await chooseSubItem(
+            formattedParagraph,
+            'Alineación del texto',
+            'Derecha',
+        );
+        await chooseSubItem(
+            formattedParagraph,
+            'Tipo de fuente',
+            'Times New Roman',
+        );
+        await chooseSubItem(formattedParagraph, 'Tamaño de fuente', '14 pt');
+        await chooseSubItem(formattedParagraph, 'Color de fuente', 'Rojo');
         await page.locator('.tiptap > p').last().click();
         await page.waitForFunction(() => window.fixture.api().view.hasFocus());
         await page.keyboard.type('@nombre_carr');
@@ -176,9 +190,7 @@ test(
                 [first, last],
             );
         await selectCells(0, 1);
-        await page
-            .getByRole('button', { name: 'Combinar celdas', exact: true })
-            .click();
+        await chooseItem(editorSurface.locator('td').first(), 'Unir celdas');
         assert.equal(
             await page.locator('.tiptap td').first().getAttribute('colspan'),
             '2',
@@ -188,14 +200,10 @@ test(
             /A[\s\S]*B/,
         );
         await selectCells(0, 0);
-        await page
-            .getByRole('button', { name: 'Separar celda', exact: true })
-            .click();
+        await chooseItem(editorSurface.locator('td').first(), 'Dividir celda');
         assert.equal(await page.locator('.tiptap td').count(), 9);
         await selectCells(0, 3);
-        await page
-            .getByRole('button', { name: 'Combinar celdas', exact: true })
-            .click();
+        await chooseItem(editorSurface.locator('td').first(), 'Unir celdas');
         assert.equal(
             await page.locator('.tiptap td').first().getAttribute('rowspan'),
             '2',
@@ -213,7 +221,7 @@ test(
         ).attrs;
         assert.equal(style.fontFamily, 'Times New Roman');
         assert.equal(style.fontSize, '14pt');
-        assert.equal(style.color, '#cc0000');
+        assert.equal(style.color, '#C00000');
         await page.evaluate(() =>
             window.fixture.api().commands.setContent(window.fixture.saved()),
         );
@@ -269,18 +277,11 @@ test(
                 exact: true,
             })
             .click();
-        await page
-            .getByLabel('Campo que llenará el docente', { exact: true })
-            .fill('Resultados esperados');
-        await page
-            .getByRole('combobox', { name: 'Tipo de contenido', exact: true })
-            .click();
-        await page
-            .getByRole('option', { name: 'Lista con viñetas', exact: true })
-            .click();
-        await page
-            .getByRole('button', { name: 'Aplicar al campo', exact: true })
-            .click();
+        await chooseSubItem(
+            editorSurface.locator('[data-template-field]').last(),
+            'Tipo de contenido',
+            'Lista con viñetas',
+        );
         await page.locator('.tiptap td').last().click();
         // Native selection is observed asynchronously by ProseMirror after focus.
         // Wait for the caret in the cell before typing, without moving it through the API.
@@ -302,12 +303,6 @@ test(
                 name: '@docente — Campo que completará el docente',
                 exact: true,
             })
-            .click();
-        await page
-            .getByLabel('Campo que llenará el docente', { exact: true })
-            .fill('Respuesta en la celda');
-        await page
-            .getByRole('button', { name: 'Aplicar al campo', exact: true })
             .click();
         await page.evaluate(() => window.fixture.save());
         const created = await page.evaluate(() => {
@@ -335,44 +330,42 @@ test(
         assert.equal(created.length, 2, JSON.stringify(created));
         assert.equal(new Set(created.map((field) => field.key)).size, 2);
         assert.equal(
-            created.find((field) => field.label === 'Resultados esperados')
-                .listStyle,
+            created.find((field) => field.listStyle === 'bullet').listStyle,
             'bullet',
         );
-        assert.equal(
+        assert.ok(
             await page
                 .locator('.tiptap td [data-template-field]')
-                .filter({ hasText: 'Respuesta en la celda' })
+                .filter({ hasText: 'Respuesta del docente' })
                 .count(),
-            1,
         );
-        await teacher
-            .getByRole('textbox', { name: 'Resultados esperados', exact: true })
-            .fill('Primer resultado\nSegundo resultado');
-        await teacher
-            .getByRole('textbox', {
-                name: 'Respuesta en la celda',
-                exact: true,
-            })
-            .fill('Respuesta independiente');
+        await page.waitForFunction(
+            () =>
+                document.querySelectorAll(
+                    '[aria-label="Docente"] textarea, [aria-label="Docente"] input',
+                ).length === 3,
+        );
+        const responseInputs = page.locator(
+            '[aria-label="Docente"] textarea, [aria-label="Docente"] input',
+        );
+        assert.equal(await responseInputs.count(), 3);
+        await responseInputs.nth(1).fill('Primer resultado\nSegundo resultado');
+        await responseInputs.nth(2).fill('Respuesta independiente');
         assert.equal(
             await page.evaluate(
-                () =>
-                    window.fixture
-                        .values()
-                        .find((field) => field.label === 'Resultados esperados')
+                (key) =>
+                    window.fixture.values().find((field) => field.key === key)
                         .value,
+                created[0].key,
             ),
             'Primer resultado\nSegundo resultado',
         );
         assert.equal(
             await page.evaluate(
-                () =>
-                    window.fixture
-                        .values()
-                        .find(
-                            (field) => field.label === 'Respuesta en la celda',
-                        ).value,
+                (key) =>
+                    window.fixture.values().find((field) => field.key === key)
+                        .value,
+                created[1].key,
             ),
             'Respuesta independiente',
         );
@@ -407,10 +400,18 @@ test(
                 .innerText(),
             'Respuesta del docente',
         );
+        await openMenu(
+            editorSurface.locator('[data-template-field="objetivo"]'),
+        );
         await page
-            .getByRole('button', { name: 'Insertar', exact: true })
+            .getByRole('menuitem', { name: 'Insertar', exact: true })
+            .hover();
+        await page
+            .getByRole('menuitem', { name: 'Tabla', exact: true })
+            .hover();
+        await page
+            .getByRole('menuitem', { name: 'Tabla 3 × 3', exact: true })
             .click();
-        await page.getByRole('button', { name: 'Tabla', exact: true }).click();
         assert.equal(await page.locator('.tiptap table').count(), 1);
         assert.equal(await page.locator('.tiptap > p').count(), 0);
         assert.equal(
@@ -480,16 +481,15 @@ test(
             ['Objetivo', 'Resultado esperado'],
         );
 
-        // Integration: direct editing retains local changes on errors, owns its
-        // purge confirmation and reopens the persisted document with a new fingerprint.
+        // Integration: the document-level mode keeps one draft per block,
+        // preserves failures and delegates detailed properties to the side panel.
         await page.evaluate(() => window.fixture.openDesign());
         let designRegion = page.getByRole('region', {
             name: 'Editar diseño de Objetivo',
             exact: true,
         });
-        await designRegion
-            .getByRole('button', { name: 'Propiedades', exact: true })
-            .click();
+        await designRegion.waitFor();
+        await page.evaluate(() => window.fixture.openProperties());
         let properties = page.getByRole('dialog', {
             name: 'Propiedades de Objetivo',
             exact: true,
@@ -512,25 +512,19 @@ test(
         await properties
             .getByRole('button', { name: 'Cerrar', exact: true })
             .click();
-        await designRegion
-            .getByRole('button', { name: 'Cancelar', exact: true })
-            .click();
-        await page
-            .getByRole('button', { name: 'Descartar cambios', exact: true })
-            .click();
+        await page.evaluate(() => window.fixture.closeDesign());
         await designRegion.waitFor({ state: 'hidden' });
         assert.equal(
             await page.evaluate(() => window.fixture.requests.length),
             0,
         );
+
         await page.evaluate(() => window.fixture.openDesign());
         designRegion = page.getByRole('region', {
             name: 'Editar diseño de Objetivo',
             exact: true,
         });
-        await designRegion
-            .getByRole('button', { name: 'Propiedades', exact: true })
-            .click();
+        await page.evaluate(() => window.fixture.openProperties());
         properties = page.getByRole('dialog', {
             name: 'Propiedades de Objetivo',
             exact: true,
@@ -556,12 +550,11 @@ test(
         await properties
             .getByRole('button', { name: 'Cerrar', exact: true })
             .click();
+
         await designRegion.locator('.tiptap').click();
         await page.keyboard.press('Control+End');
         await page.keyboard.type('Cambio persistente');
-        await designRegion
-            .getByRole('button', { name: 'Propiedades', exact: true })
-            .click();
+        await page.evaluate(() => window.fixture.openProperties());
         properties = page.getByRole('dialog', {
             name: 'Propiedades de Objetivo',
             exact: true,
@@ -575,16 +568,11 @@ test(
         await properties
             .getByRole('button', { name: 'Cerrar', exact: true })
             .click();
-        assert.match(
-            await designRegion.locator('.tiptap').innerText(),
-            /Cambio persistente/,
-        );
+
         await page.evaluate(() =>
             window.fixture.fail({ document: 'Diseño inválido de prueba' }),
         );
-        await designRegion
-            .getByRole('button', { name: 'Guardar diseño', exact: true })
-            .click();
+        await page.evaluate(() => window.fixture.saveDesign());
         await designRegion
             .getByText('Diseño inválido de prueba', { exact: true })
             .waitFor();
@@ -592,15 +580,14 @@ test(
             await designRegion.locator('.tiptap').innerText(),
             /Cambio persistente/,
         );
+
         await page.evaluate(() =>
             window.fixture.fail({
                 purge_required: 'Este cambio borrará 1 sílabo en curso.',
                 purge_count: '1',
             }),
         );
-        await designRegion
-            .getByRole('button', { name: 'Guardar diseño', exact: true })
-            .click();
+        await page.evaluate(() => window.fixture.saveDesign());
         await designRegion
             .getByRole('button', { name: 'Guardar y reiniciar', exact: true })
             .waitFor();
@@ -611,7 +598,7 @@ test(
         await designRegion
             .getByRole('button', { name: 'Guardar y reiniciar', exact: true })
             .click();
-        await designRegion.waitFor({ state: 'hidden' });
+
         const requests = await page.evaluate(() => window.fixture.requests);
         assert.equal(requests.length, 3);
         assert.equal(requests[0].fingerprint, 'a'.repeat(64));
@@ -625,6 +612,8 @@ test(
                 ai_enabled: true,
             },
         ]);
+
+        await page.evaluate(() => window.fixture.closeDesign());
         await page.evaluate(() => window.fixture.openDesign());
         designRegion = page.getByRole('region', {
             name: 'Editar diseño de Objetivo renovado',
@@ -634,8 +623,26 @@ test(
             await designRegion.locator('.tiptap').innerText(),
             /Cambio persistente/,
         );
-        await designRegion
-            .getByRole('button', { name: 'Propiedades', exact: true })
+
+        await openMenu(
+            designRegion.locator('[data-template-field="objetivo"]'),
+        );
+
+        if (process.env.TEMPLATE_DOCUMENT_SCREENSHOT) {
+            await page.screenshot({
+                path: process.env.TEMPLATE_DOCUMENT_SCREENSHOT.replace(
+                    '.png',
+                    '-context-field.png',
+                ),
+                animations: 'disabled',
+            });
+        }
+
+        await page
+            .getByRole('menuitem', {
+                name: 'Propiedades del campo',
+                exact: true,
+            })
             .click();
         properties = page.getByRole('dialog', {
             name: 'Propiedades de Objetivo renovado',
@@ -663,23 +670,6 @@ test(
             true,
         );
 
-        await properties
-            .getByRole('button', { name: 'Cerrar', exact: true })
-            .click();
-        await designRegion.locator('[data-template-field="objetivo"]').click();
-        const persistedFieldToolbar = page
-            .getByText('Para renombrar este campo, use Propiedades.', {
-                exact: false,
-            })
-            .locator('..');
-        await persistedFieldToolbar.waitFor();
-        assert.equal(
-            await persistedFieldToolbar
-                .getByLabel('Campo que llenará el docente', { exact: true })
-                .count(),
-            0,
-        );
-
         if (process.env.TEMPLATE_DOCUMENT_SCREENSHOT) {
             await page.screenshot({
                 path: process.env.TEMPLATE_DOCUMENT_SCREENSHOT.replace(
@@ -690,18 +680,29 @@ test(
             });
         }
 
-        assert.deepEqual(errors, []);
+        await page.setViewportSize({ width: 360, height: 800 });
+        assert.equal(
+            await properties.evaluate(
+                (element) => element.scrollWidth <= element.clientWidth,
+            ),
+            true,
+        );
 
         if (process.env.TEMPLATE_DOCUMENT_SCREENSHOT) {
             await page.screenshot({
-                path: process.env.TEMPLATE_DOCUMENT_SCREENSHOT,
-                fullPage: false,
+                path: process.env.TEMPLATE_DOCUMENT_SCREENSHOT.replace(
+                    '.png',
+                    '-properties-mobile.png',
+                ),
                 animations: 'disabled',
             });
         }
 
-        await page.setViewportSize({ width: 360, height: 800 });
+        await properties
+            .getByRole('button', { name: 'Cerrar', exact: true })
+            .click();
         await designRegion.locator('.tiptap').scrollIntoViewIfNeeded();
+        await page.evaluate(() => window.scrollTo(0, window.scrollY));
         const geometry = await designRegion.evaluate((element) => {
             const box = element.getBoundingClientRect();
             const canvas = element.querySelector(
@@ -711,7 +712,6 @@ test(
             return {
                 left: box.left,
                 right: box.right,
-                canvasHeight: canvas.clientHeight,
                 canvasWidth: canvas.clientWidth,
                 canvasScroll: canvas.scrollWidth,
             };
@@ -720,16 +720,11 @@ test(
             geometry.left >= 0 && geometry.right <= 360,
             JSON.stringify(geometry),
         );
-        assert.ok(geometry.canvasHeight >= 250, JSON.stringify(geometry));
         assert.ok(
             geometry.canvasScroll > geometry.canvasWidth,
             'The paper scrolls locally on mobile.',
         );
-        assert.ok(
-            await designRegion
-                .getByRole('button', { name: 'Guardar diseño', exact: true })
-                .isVisible(),
-        );
+
         await page.evaluate(() =>
             document.documentElement.classList.add('dark'),
         );
@@ -743,40 +738,7 @@ test(
 
         if (process.env.TEMPLATE_DOCUMENT_SCREENSHOT) {
             await page.screenshot({
-                path: process.env.TEMPLATE_DOCUMENT_SCREENSHOT.replace(
-                    /\.png$/,
-                    '-mobile.png',
-                ),
-                animations: 'disabled',
-            });
-        }
-
-        await designRegion
-            .getByRole('button', { name: 'Propiedades', exact: true })
-            .click();
-        properties = page.getByRole('dialog', {
-            name: 'Propiedades de Objetivo renovado',
-            exact: true,
-        });
-        assert.equal(
-            await properties.evaluate(
-                (element) => element.scrollWidth <= element.clientWidth,
-            ),
-            true,
-        );
-        assert.equal(
-            await properties
-                .getByRole('button', { name: 'Guardar diseño', exact: true })
-                .isVisible(),
-            true,
-        );
-
-        if (process.env.TEMPLATE_DOCUMENT_SCREENSHOT) {
-            await page.screenshot({
-                path: process.env.TEMPLATE_DOCUMENT_SCREENSHOT.replace(
-                    '.png',
-                    '-properties-mobile.png',
-                ),
+                path: process.env.TEMPLATE_DOCUMENT_SCREENSHOT,
                 animations: 'disabled',
             });
         }

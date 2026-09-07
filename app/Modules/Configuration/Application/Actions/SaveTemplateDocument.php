@@ -50,12 +50,19 @@ final class SaveTemplateDocument
                 TemplateDocument::fail($flow ? 'El estado de revisión pertenece al flujo del sistema.' : 'El diseño del bloque es obligatorio.');
             }
             $fields = $block->fields->keyBy('clave');
+            $documentFieldKeys = $normalized === null
+                ? []
+                : array_map(
+                    static fn (array $node): string => $node['attrs']['key'],
+                    TemplateDocument::nodes($normalized, 'field'),
+                );
             foreach ($request->input('properties', []) as $index => $property) {
                 $field = $fields->get($property['key']);
-                if ($field === null || isset($block->configuracion['detached_fields'][$field->clave])) {
+                if (($field === null && ! in_array($property['key'], $documentFieldKeys, true))
+                    || ($field !== null && isset($block->configuracion['detached_fields'][$field->clave]))) {
                     throw ValidationException::withMessages(["properties.$index.key" => 'El campo no pertenece al diseño actual.']);
                 }
-                if (($property['ai_enabled'] ?? false) && ($field->heredado || in_array($block->configuredContentType(), ['institutional', 'flow'], true))) {
+                if (($property['ai_enabled'] ?? false) && (($field?->heredado ?? false) || in_array($block->configuredContentType(), ['institutional', 'flow'], true))) {
                     throw ValidationException::withMessages(["properties.$index.ai_enabled" => 'Este campo no admite asistencia de IA.']);
                 }
             }

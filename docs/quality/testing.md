@@ -88,8 +88,8 @@ componentes compartidos: familia/tamaño/color, marcas, alineación, mención co
 combinación horizontal/vertical y separación, serialización, formulario docente sin
 diseño, guardado/reapertura y errores conservados. El transporte sintético dispara
 eventos Inertia para comprobar que la edición directa conserva el borrador y que su
-confirmación local es la única que gestiona reinicios. También prueba la barra flotante
-por selección y el panel lateral de Propiedades.
+confirmación local es la única que gestiona reinicios. También prueba el menú de clic
+derecho por contexto, el modo global de edición y el panel lateral de Propiedades.
 `TEMPLATE_DOCUMENT_SCREENSHOT` guarda una captura de la muestra. Las dos suites de
 navegador tienen cachés Vite separadas para no interferir al ejecutarse en paralelo.
 

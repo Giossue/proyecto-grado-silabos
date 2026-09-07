@@ -1,14 +1,19 @@
 <script setup lang="ts">
 import { router } from '@inertiajs/vue3';
 import {
+    Check,
     GripVertical,
     Heading,
     List,
     ListOrdered,
+    LoaderCircle,
     MoreHorizontal,
+    PencilLine,
+    Save,
     Table,
     Trash2,
     Type,
+    X,
 } from '@lucide/vue';
 import { computed, nextTick, ref, watch } from 'vue';
 import type { ComponentPublicInstance } from 'vue';
@@ -130,6 +135,12 @@ const pendingFocus = ref<{ kind: 'section' | 'field'; key: string } | null>(
     null,
 );
 const deletion = ref<Deletion | null>(null);
+const documentEditing = ref(false);
+const savingDocument = ref(false);
+const discardDocument = ref(false);
+const dirtyDesigns = ref<Set<string>>(new Set());
+const canDesign = computed(() => !props.readonly && documentEditing.value);
+const hasDesignChanges = computed(() => dirtyDesigns.value.size > 0);
 
 const copySections = (value: TemplateSection[]): TemplateSection[] =>
     value.map((section) => ({
@@ -238,7 +249,7 @@ const requestOptions = (success: string) => ({
 });
 
 const addSection = (position: number): void => {
-    if (props.readonly || creatingSection.value) {
+    if (!canDesign.value || creatingSection.value) {
         return;
     }
 
@@ -248,7 +259,7 @@ const addSection = (position: number): void => {
 const createSection = (contentType: ContentType): void => {
     const position = newSectionPosition.value;
 
-    if (position === null || props.readonly || creatingSection.value) {
+    if (position === null || !canDesign.value || creatingSection.value) {
         return;
     }
 
@@ -321,7 +332,7 @@ const startRename = (
     id: string,
     value: string,
 ): void => {
-    if (props.readonly) {
+    if (!canDesign.value) {
         return;
     }
 
@@ -460,6 +471,82 @@ const setDesignEditor = (
     }
 };
 
+const setDesignDirty = (id: string, value: boolean): void => {
+    const next = new Set(dirtyDesigns.value);
+
+    if (value) {
+        next.add(id);
+    } else {
+        next.delete(id);
+    }
+
+    dirtyDesigns.value = next;
+};
+
+const startDocumentEditing = (): void => {
+    if (props.readonly) {
+        return;
+    }
+
+    dirtyDesigns.value = new Set();
+    documentEditing.value = true;
+};
+
+const saveDocument = async (): Promise<boolean> => {
+    if (savingDocument.value) {
+        return false;
+    }
+
+    savingDocument.value = true;
+
+    for (const id of [...dirtyDesigns.value]) {
+        const saved = await designEditors.get(id)?.save(true);
+
+        if (!saved) {
+            savingDocument.value = false;
+            toast.error(
+                'No se guardaron todos los cambios. Revise el campo señalado.',
+            );
+
+            return false;
+        }
+    }
+
+    savingDocument.value = false;
+    dirtyDesigns.value = new Set();
+    toast.success('Documento guardado.');
+
+    return true;
+};
+
+const finishDocumentEditing = async (): Promise<void> => {
+    if (hasDesignChanges.value && !(await saveDocument())) {
+        return;
+    }
+
+    documentEditing.value = false;
+};
+
+const cancelDocumentEditing = (): void => {
+    if (savingDocument.value) {
+        return;
+    }
+
+    if (hasDesignChanges.value) {
+        discardDocument.value = true;
+
+        return;
+    }
+
+    documentEditing.value = false;
+};
+
+const confirmDiscardDocument = (): void => {
+    dirtyDesigns.value = new Set();
+    discardDocument.value = false;
+    documentEditing.value = false;
+};
+
 const confirmDeletion = (): void => {
     const target = deletion.value;
     deletion.value = null;
@@ -520,7 +607,7 @@ const persistFieldOrder = (section: TemplateSection): void => {
 };
 
 const startDrag = (event: DragEvent, drag: Drag, ghost?: HTMLElement): void => {
-    if (props.readonly) {
+    if (!canDesign.value) {
         event.preventDefault();
 
         return;
@@ -801,244 +888,518 @@ const dropOnFieldZone = (section: TemplateSection, index: number): void => {
 </script>
 
 <template>
-    <div
-        class="flex flex-col gap-4 lg:flex-row lg:items-start"
-        :class="{
-            'doc-new-piece':
-                dragging?.kind === 'new-section' ||
-                dragging?.kind === 'new-field',
-        }"
-    >
-        <!-- Paleta: arrastre a la hoja o clic para agregar al final del bloque activo. -->
-        <aside
+    <div class="flex flex-col gap-4">
+        <div
             v-if="!readonly"
-            class="sticky top-[calc(5rem+env(safe-area-inset-top))] z-20 flex max-h-[calc(100dvh-6rem-env(safe-area-inset-top))] w-full shrink-0 flex-wrap gap-1 overflow-auto rounded-xl border bg-card p-2 lg:w-52 lg:flex-col lg:flex-nowrap"
-            aria-label="Piezas de la plantilla"
+            class="sticky top-[calc(4rem+env(safe-area-inset-top))] z-20 flex flex-wrap items-center gap-2 rounded-xl border bg-background/95 p-2 shadow-sm backdrop-blur"
+            role="toolbar"
+            aria-label="Edición de la plantilla"
         >
-            <p class="w-full px-2 pt-1 pb-2 text-xs text-muted-foreground">
-                Arrastre a la hoja o pulse para agregar
-            </p>
-            <Button
-                type="button"
-                variant="ghost"
-                class="justify-start"
-                draggable="true"
-                :disabled="creatingSection"
-                @dragstart="startDrag($event, { kind: 'new-section' })"
-                @dragend="endDrag"
-                @click="addSection(doc.length)"
-            >
-                <Heading data-icon="inline-start" aria-hidden="true" />
-                Bloque
-            </Button>
-            <Button
-                v-for="piece in PALETTE"
-                :key="piece.type"
-                type="button"
-                variant="ghost"
-                class="justify-start"
-                draggable="true"
-                @dragstart="
-                    startDrag($event, {
-                        kind: 'new-field',
-                        contentType: piece.type,
-                    })
-                "
-                @dragend="endDrag"
-                @click="addFromPalette(piece.type)"
-            >
-                <component
-                    :is="piece.icon"
-                    data-icon="inline-start"
-                    aria-hidden="true"
-                />
-                {{ piece.label }}
-            </Button>
-        </aside>
+            <template v-if="!documentEditing">
+                <div class="min-w-0 flex-1">
+                    <p class="text-sm font-medium">Diseño de la plantilla</p>
+                    <p class="text-xs text-muted-foreground">
+                        Active la edición para modificar toda la hoja.
+                    </p>
+                </div>
+                <Button type="button" @click="startDocumentEditing">
+                    <PencilLine data-icon="inline-start" />
+                    Editar documento
+                </Button>
+            </template>
+            <template v-else>
+                <div class="min-w-48 flex-1">
+                    <p class="text-sm font-medium">Editando el documento</p>
+                    <p class="text-xs text-muted-foreground" role="status">
+                        {{
+                            savingDocument
+                                ? 'Guardando cambios…'
+                                : hasDesignChanges
+                                  ? 'Hay cambios sin guardar'
+                                  : 'Clic derecho sobre el contenido para ver sus herramientas'
+                        }}
+                    </p>
+                </div>
+                <Button
+                    type="button"
+                    variant="outline"
+                    :disabled="savingDocument"
+                    @click="cancelDocumentEditing"
+                >
+                    <X data-icon="inline-start" />
+                    Cancelar
+                </Button>
+                <Button
+                    type="button"
+                    variant="outline"
+                    :disabled="savingDocument || !hasDesignChanges"
+                    @click="saveDocument"
+                >
+                    <LoaderCircle
+                        v-if="savingDocument"
+                        data-icon="inline-start"
+                        class="animate-spin"
+                    />
+                    <Save v-else data-icon="inline-start" />
+                    Guardar
+                </Button>
+                <Button
+                    type="button"
+                    :disabled="savingDocument"
+                    @click="finishDocumentEditing"
+                >
+                    <Check data-icon="inline-start" />
+                    Finalizar edición
+                </Button>
+            </template>
+        </div>
 
         <div
-            class="min-w-0 flex-1 overflow-x-auto p-1"
-            :aria-label="
-                readonly
-                    ? 'Plantilla del sílabo, solo lectura'
-                    : 'Hoja del sílabo: arrastre piezas y pulse un título para renombrarlo'
-            "
+            class="flex flex-col gap-4 lg:flex-row lg:items-start"
+            :class="{
+                'doc-new-piece':
+                    dragging?.kind === 'new-section' ||
+                    dragging?.kind === 'new-field',
+            }"
         >
-            <PaginatedDocument>
-                <header class="doc-header" data-page-unit data-page-keep-next>
-                    <img
-                        :src="institutionLogo"
-                        alt="Universidad Estatal de Bolívar"
-                        class="doc-logo-ueb"
-                    />
-                    <!-- El logo de la facultad lo pone cada carrera en su sílabo. -->
-                    <span class="doc-logo-facultad-placeholder">
-                        Logo de la facultad de la carrera
-                    </span>
-                </header>
-
-                <h1 class="doc-title" data-page-unit>
-                    PROGRAMA DE ASIGNATURA (SÍLABO)
-                </h1>
-
-                <p
-                    v-if="doc.length === 0 && readonly"
-                    class="doc-empty"
-                    data-page-unit
-                >
-                    La plantilla no tiene bloques.
+            <!-- Paleta: arrastre a la hoja o clic para agregar al final del bloque activo. -->
+            <aside
+                v-if="canDesign"
+                class="sticky top-[calc(5rem+env(safe-area-inset-top))] z-20 flex max-h-[calc(100dvh-6rem-env(safe-area-inset-top))] w-full shrink-0 flex-wrap gap-1 overflow-auto rounded-xl border bg-card p-2 lg:w-52 lg:flex-col lg:flex-nowrap"
+                aria-label="Piezas de la plantilla"
+            >
+                <p class="w-full px-2 pt-1 pb-2 text-xs text-muted-foreground">
+                    Arrastre a la hoja o pulse para agregar
                 </p>
-                <p
-                    v-else-if="doc.length === 0"
-                    class="doc-empty"
-                    data-page-unit
+                <Button
+                    type="button"
+                    variant="ghost"
+                    class="justify-start"
+                    draggable="true"
+                    :disabled="creatingSection"
+                    @dragstart="startDrag($event, { kind: 'new-section' })"
+                    @dragend="endDrag"
+                    @click="addSection(doc.length)"
                 >
-                    Arrastre «Bloque» desde la paleta para empezar.
-                </p>
-
-                <template
-                    v-for="(section, sectionIndex) in doc"
-                    :key="section.id"
+                    <Heading data-icon="inline-start" aria-hidden="true" />
+                    Bloque
+                </Button>
+                <Button
+                    v-for="piece in PALETTE"
+                    :key="piece.type"
+                    type="button"
+                    variant="ghost"
+                    class="justify-start"
+                    draggable="true"
+                    @dragstart="
+                        startDrag($event, {
+                            kind: 'new-field',
+                            contentType: piece.type,
+                        })
+                    "
+                    @dragend="endDrag"
+                    @click="addFromPalette(piece.type)"
                 >
-                    <!-- eslint-disable-next-line vuejs-accessibility/no-static-element-interactions -->
-                    <div
-                        v-if="!readonly"
-                        class="doc-zone"
-                        :class="{
-                            'doc-zone-open': acceptsSectionZone,
-                            'doc-zone-hover':
-                                hoveredZone === sectionZoneId(sectionIndex),
-                        }"
-                        @dragover="overSectionZone($event, sectionIndex)"
-                        @dragleave="hoveredZone = null"
-                        @drop.prevent="dropOnSectionZone(sectionIndex)"
+                    <component
+                        :is="piece.icon"
+                        data-icon="inline-start"
+                        aria-hidden="true"
                     />
+                    {{ piece.label }}
+                </Button>
+            </aside>
 
-                    <!-- eslint-disable-next-line vuejs-accessibility/no-static-element-interactions -->
-                    <section
-                        class="doc-section group/section"
-                        :class="{
-                            'doc-drag-source':
-                                dragging?.kind === 'section' &&
-                                dragging.id === section.id,
-                        }"
-                        :aria-label="`Bloque ${section.title}`"
-                        @dragover="overPiece($event, section)"
-                        @drop="dropOnPiece($event, section)"
-                        @mouseenter="activeSectionId = section.id"
-                        @focusin="activeSectionId = section.id"
+            <div
+                class="min-w-0 flex-1 overflow-x-auto p-1"
+                :aria-label="
+                    readonly
+                        ? 'Plantilla del sílabo, solo lectura'
+                        : canDesign
+                          ? 'Documento del sílabo en edición'
+                          : 'Vista previa de la plantilla del sílabo'
+                "
+            >
+                <PaginatedDocument>
+                    <header
+                        class="doc-header"
+                        data-page-unit
+                        data-page-keep-next
                     >
+                        <img
+                            :src="institutionLogo"
+                            alt="Universidad Estatal de Bolívar"
+                            class="doc-logo-ueb"
+                        />
+                        <!-- El logo de la facultad lo pone cada carrera en su sílabo. -->
+                        <span class="doc-logo-facultad-placeholder">
+                            Logo de la facultad de la carrera
+                        </span>
+                    </header>
+
+                    <h1 class="doc-title" data-page-unit>
+                        PROGRAMA DE ASIGNATURA (SÍLABO)
+                    </h1>
+
+                    <p
+                        v-if="doc.length === 0 && readonly"
+                        class="doc-empty"
+                        data-page-unit
+                    >
+                        La plantilla no tiene bloques.
+                    </p>
+                    <p
+                        v-else-if="doc.length === 0"
+                        class="doc-empty"
+                        data-page-unit
+                    >
+                        Arrastre «Bloque» desde la paleta para empezar.
+                    </p>
+
+                    <template
+                        v-for="(section, sectionIndex) in doc"
+                        :key="section.id"
+                    >
+                        <!-- eslint-disable-next-line vuejs-accessibility/no-static-element-interactions -->
                         <div
-                            class="doc-heading-row"
-                            data-page-unit
-                            data-page-keep-next
+                            v-if="canDesign"
+                            class="doc-zone"
+                            :class="{
+                                'doc-zone-open': acceptsSectionZone,
+                                'doc-zone-hover':
+                                    hoveredZone === sectionZoneId(sectionIndex),
+                            }"
+                            @dragover="overSectionZone($event, sectionIndex)"
+                            @dragleave="hoveredZone = null"
+                            @drop.prevent="dropOnSectionZone(sectionIndex)"
+                        />
+
+                        <!-- eslint-disable-next-line vuejs-accessibility/no-static-element-interactions -->
+                        <section
+                            class="doc-section group/section"
+                            :class="{
+                                'doc-drag-source':
+                                    dragging?.kind === 'section' &&
+                                    dragging.id === section.id,
+                            }"
+                            :aria-label="`Bloque ${section.title}`"
+                            @dragover="overPiece($event, section)"
+                            @drop="dropOnPiece($event, section)"
+                            @mouseenter="activeSectionId = section.id"
+                            @focusin="activeSectionId = section.id"
                         >
-                            <Input
-                                v-if="isEditing('section', section.id)"
-                                :ref="setEditorRef"
-                                v-model="renameValue"
-                                class="doc-h2-input"
-                                aria-label="Nombre del bloque"
-                                placeholder="Ej. Evaluación"
-                                @keydown.enter.prevent="commitRename"
-                                @keydown.esc.prevent="cancelRename"
-                                @blur="commitRename"
-                            />
-                            <h2 v-else class="doc-h2">
-                                <button
-                                    v-if="!readonly"
-                                    type="button"
-                                    class="doc-rename"
-                                    :aria-label="`Renombrar ${section.title}`"
-                                    @click="
-                                        startRename(
-                                            'section',
+                            <div
+                                class="doc-heading-row"
+                                data-page-unit
+                                data-page-keep-next
+                            >
+                                <Input
+                                    v-if="isEditing('section', section.id)"
+                                    :ref="setEditorRef"
+                                    v-model="renameValue"
+                                    class="doc-h2-input"
+                                    aria-label="Nombre del bloque"
+                                    placeholder="Ej. Evaluación"
+                                    @keydown.enter.prevent="commitRename"
+                                    @keydown.esc.prevent="cancelRename"
+                                    @blur="commitRename"
+                                />
+                                <h2 v-else class="doc-h2">
+                                    <button
+                                        v-if="canDesign"
+                                        type="button"
+                                        class="doc-rename"
+                                        :aria-label="`Renombrar ${section.title}`"
+                                        @click="
+                                            startRename(
+                                                'section',
+                                                section.id,
+                                                section.title,
+                                            )
+                                        "
+                                    >
+                                        {{ sectionIndex + 1 }}.
+                                        {{ section.title }}
+                                    </button>
+                                    <template v-else>
+                                        {{ sectionIndex + 1 }}.
+                                        {{ section.title }}
+                                    </template>
+                                </h2>
+
+                                <div v-if="canDesign" class="doc-tools">
+                                    <button
+                                        type="button"
+                                        class="doc-handle"
+                                        draggable="true"
+                                        :aria-label="`Arrastrar ${section.title}`"
+                                        @dragstart="
+                                            startSectionDrag($event, section)
+                                        "
+                                        @dragend="endDrag"
+                                    >
+                                        <GripVertical aria-hidden="true" />
+                                    </button>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger as-child>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="icon-sm"
+                                                :aria-label="`Acciones de ${section.title}`"
+                                            >
+                                                <MoreHorizontal
+                                                    aria-hidden="true"
+                                                />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuItem
+                                                @select="
+                                                    startRename(
+                                                        'section',
+                                                        section.id,
+                                                        section.title,
+                                                    )
+                                                "
+                                            >
+                                                Renombrar
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem
+                                                variant="destructive"
+                                                @select="
+                                                    deletion = {
+                                                        kind: 'section',
+                                                        section,
+                                                    }
+                                                "
+                                            >
+                                                <Trash2 aria-hidden="true" />
+                                                Eliminar bloque
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </div>
+                            </div>
+
+                            <p
+                                v-if="section.blocks.length === 0"
+                                class="doc-empty"
+                                data-page-unit
+                            >
+                                {{
+                                    readonly
+                                        ? 'Este bloque no tiene campos.'
+                                        : 'Suelte aquí un Texto, una Tabla o una Lista.'
+                                }}
+                            </p>
+
+                            <template
+                                v-for="(
+                                    container, fieldIndex
+                                ) in section.blocks"
+                                :key="container.id"
+                            >
+                                <!-- eslint-disable-next-line vuejs-accessibility/no-static-element-interactions -->
+                                <div
+                                    v-if="canDesign"
+                                    class="doc-zone"
+                                    :class="{
+                                        'doc-zone-open': acceptsFieldZone(
                                             section.id,
-                                            section.title,
+                                        ),
+                                        'doc-zone-hover':
+                                            hoveredZone ===
+                                            fieldZoneId(section.id, fieldIndex),
+                                    }"
+                                    @dragover="
+                                        overFieldZone(
+                                            $event,
+                                            section.id,
+                                            fieldIndex,
                                         )
                                     "
-                                >
-                                    {{ sectionIndex + 1 }}. {{ section.title }}
-                                </button>
-                                <template v-else>
-                                    {{ sectionIndex + 1 }}. {{ section.title }}
-                                </template>
-                            </h2>
-
-                            <div v-if="!readonly" class="doc-tools">
-                                <button
-                                    type="button"
-                                    class="doc-handle"
-                                    draggable="true"
-                                    :aria-label="`Arrastrar ${section.title}`"
-                                    @dragstart="
-                                        startSectionDrag($event, section)
+                                    @dragleave="hoveredZone = null"
+                                    @drop.prevent="
+                                        dropOnFieldZone(section, fieldIndex)
                                     "
-                                    @dragend="endDrag"
+                                />
+
+                                <!-- eslint-disable-next-line vuejs-accessibility/no-static-element-interactions -->
+                                <article
+                                    class="doc-field group/field"
+                                    :class="{
+                                        'doc-drag-source':
+                                            dragging?.kind === 'field' &&
+                                            dragging.id === container.id,
+                                    }"
+                                    :aria-label="`Campo ${fieldLabel(container)}`"
+                                    @dragover="
+                                        overPiece($event, section, container)
+                                    "
+                                    @drop="
+                                        dropOnPiece($event, section, container)
+                                    "
                                 >
-                                    <GripVertical aria-hidden="true" />
-                                </button>
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger as-child>
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="icon-sm"
-                                            :aria-label="`Acciones de ${section.title}`"
+                                    <div
+                                        class="doc-heading-row"
+                                        data-page-unit
+                                        data-page-keep-next
+                                        :class="{
+                                            'doc-heading-row-compact':
+                                                section.blocks.length === 1 &&
+                                                !isEditing(
+                                                    'field',
+                                                    container.id,
+                                                ),
+                                        }"
+                                    >
+                                        <Input
+                                            v-if="
+                                                isEditing('field', container.id)
+                                            "
+                                            :ref="setEditorRef"
+                                            v-model="renameValue"
+                                            class="doc-h3-input"
+                                            aria-label="Nombre del campo"
+                                            placeholder="Ej. Criterios de evaluación"
+                                            @keydown.enter.prevent="
+                                                commitRename
+                                            "
+                                            @keydown.esc.prevent="cancelRename"
+                                            @blur="commitRename"
+                                        />
+                                        <!-- Un solo campo en la sección: basta el título de la sección. -->
+                                        <h3
+                                            v-else-if="
+                                                section.blocks.length > 1
+                                            "
+                                            class="doc-h3"
                                         >
-                                            <MoreHorizontal
-                                                aria-hidden="true"
-                                            />
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                        <DropdownMenuItem
-                                            @select="
-                                                startRename(
-                                                    'section',
-                                                    section.id,
-                                                    section.title,
+                                            <button
+                                                v-if="canDesign"
+                                                type="button"
+                                                class="doc-rename"
+                                                :aria-label="`Renombrar ${fieldLabel(container)}`"
+                                                @click="
+                                                    startRename(
+                                                        'field',
+                                                        container.id,
+                                                        fieldLabel(container),
+                                                    )
+                                                "
+                                            >
+                                                {{ sectionIndex + 1 }}.{{
+                                                    fieldIndex + 1
+                                                }}
+                                                {{ fieldLabel(container) }}
+                                            </button>
+                                            <template v-else>
+                                                {{ sectionIndex + 1 }}.{{
+                                                    fieldIndex + 1
+                                                }}
+                                                {{ fieldLabel(container) }}
+                                            </template>
+                                        </h3>
+                                        <span v-else class="doc-h3-spacer" />
+
+                                        <div v-if="canDesign" class="doc-tools">
+                                            <button
+                                                type="button"
+                                                class="doc-handle"
+                                                draggable="true"
+                                                :aria-label="`Arrastrar ${fieldLabel(container)}`"
+                                                @dragstart="
+                                                    startFieldDrag(
+                                                        $event,
+                                                        section,
+                                                        container,
+                                                    )
+                                                "
+                                                @dragend="endDrag"
+                                            >
+                                                <GripVertical
+                                                    aria-hidden="true"
+                                                />
+                                            </button>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger as-child>
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="icon-sm"
+                                                        :aria-label="`Acciones de ${fieldLabel(container)}`"
+                                                    >
+                                                        <MoreHorizontal
+                                                            aria-hidden="true"
+                                                        />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent
+                                                    align="end"
+                                                >
+                                                    <DropdownMenuItem
+                                                        @select="
+                                                            designEditors
+                                                                .get(
+                                                                    container.id,
+                                                                )
+                                                                ?.openProperties()
+                                                        "
+                                                    >
+                                                        Propiedades
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem
+                                                        variant="destructive"
+                                                        @select="
+                                                            deletion = {
+                                                                kind: 'field',
+                                                                section,
+                                                                container,
+                                                            }
+                                                        "
+                                                    >
+                                                        <Trash2
+                                                            aria-hidden="true"
+                                                        />
+                                                        Eliminar campo
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </div>
+                                    </div>
+
+                                    <TemplateDesignBlock
+                                        :ref="
+                                            (component) =>
+                                                setDesignEditor(
+                                                    container.id,
+                                                    component,
                                                 )
-                                            "
-                                        >
-                                            Renombrar
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem
-                                            variant="destructive"
-                                            @select="
-                                                deletion = {
-                                                    kind: 'section',
-                                                    section,
-                                                }
-                                            "
-                                        >
-                                            <Trash2 aria-hidden="true" />
-                                            Eliminar bloque
-                                        </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                            </div>
-                        </div>
+                                        "
+                                        :template-id="templateId"
+                                        :block="container"
+                                        :identification="
+                                            identificationDesign ?? {
+                                                type: 'doc',
+                                                content: [
+                                                    { type: 'paragraph' },
+                                                ],
+                                            }
+                                        "
+                                        :variables="variables ?? []"
+                                        :readonly="readonly"
+                                        :editing="canDesign"
+                                        @dirty="
+                                            setDesignDirty(container.id, $event)
+                                        "
+                                    />
+                                </article>
+                            </template>
 
-                        <p
-                            v-if="section.blocks.length === 0"
-                            class="doc-empty"
-                            data-page-unit
-                        >
-                            {{
-                                readonly
-                                    ? 'Este bloque no tiene campos.'
-                                    : 'Suelte aquí un Texto, una Tabla o una Lista.'
-                            }}
-                        </p>
-
-                        <template
-                            v-for="(container, fieldIndex) in section.blocks"
-                            :key="container.id"
-                        >
                             <!-- eslint-disable-next-line vuejs-accessibility/no-static-element-interactions -->
                             <div
-                                v-if="!readonly"
+                                v-if="canDesign"
                                 class="doc-zone"
                                 :class="{
                                     'doc-zone-open': acceptsFieldZone(
@@ -1046,213 +1407,44 @@ const dropOnFieldZone = (section: TemplateSection, index: number): void => {
                                     ),
                                     'doc-zone-hover':
                                         hoveredZone ===
-                                        fieldZoneId(section.id, fieldIndex),
+                                        fieldZoneId(
+                                            section.id,
+                                            section.blocks.length,
+                                        ),
                                 }"
                                 @dragover="
                                     overFieldZone(
                                         $event,
                                         section.id,
-                                        fieldIndex,
+                                        section.blocks.length,
                                     )
                                 "
                                 @dragleave="hoveredZone = null"
                                 @drop.prevent="
-                                    dropOnFieldZone(section, fieldIndex)
+                                    dropOnFieldZone(
+                                        section,
+                                        section.blocks.length,
+                                    )
                                 "
                             />
+                        </section>
+                    </template>
 
-                            <!-- eslint-disable-next-line vuejs-accessibility/no-static-element-interactions -->
-                            <article
-                                class="doc-field group/field"
-                                :class="{
-                                    'doc-drag-source':
-                                        dragging?.kind === 'field' &&
-                                        dragging.id === container.id,
-                                }"
-                                :aria-label="`Campo ${fieldLabel(container)}`"
-                                @dragover="
-                                    overPiece($event, section, container)
-                                "
-                                @drop="dropOnPiece($event, section, container)"
-                            >
-                                <div
-                                    class="doc-heading-row"
-                                    data-page-unit
-                                    data-page-keep-next
-                                    :class="{
-                                        'doc-heading-row-compact':
-                                            section.blocks.length === 1 &&
-                                            !isEditing('field', container.id),
-                                    }"
-                                >
-                                    <Input
-                                        v-if="isEditing('field', container.id)"
-                                        :ref="setEditorRef"
-                                        v-model="renameValue"
-                                        class="doc-h3-input"
-                                        aria-label="Nombre del campo"
-                                        placeholder="Ej. Criterios de evaluación"
-                                        @keydown.enter.prevent="commitRename"
-                                        @keydown.esc.prevent="cancelRename"
-                                        @blur="commitRename"
-                                    />
-                                    <!-- Un solo campo en la sección: basta el título de la sección. -->
-                                    <h3
-                                        v-else-if="section.blocks.length > 1"
-                                        class="doc-h3"
-                                    >
-                                        <button
-                                            v-if="!readonly"
-                                            type="button"
-                                            class="doc-rename"
-                                            :aria-label="`Renombrar ${fieldLabel(container)}`"
-                                            @click="
-                                                startRename(
-                                                    'field',
-                                                    container.id,
-                                                    fieldLabel(container),
-                                                )
-                                            "
-                                        >
-                                            {{ sectionIndex + 1 }}.{{
-                                                fieldIndex + 1
-                                            }}
-                                            {{ fieldLabel(container) }}
-                                        </button>
-                                        <template v-else>
-                                            {{ sectionIndex + 1 }}.{{
-                                                fieldIndex + 1
-                                            }}
-                                            {{ fieldLabel(container) }}
-                                        </template>
-                                    </h3>
-                                    <span v-else class="doc-h3-spacer" />
-
-                                    <div v-if="!readonly" class="doc-tools">
-                                        <button
-                                            type="button"
-                                            class="doc-handle"
-                                            draggable="true"
-                                            :aria-label="`Arrastrar ${fieldLabel(container)}`"
-                                            @dragstart="
-                                                startFieldDrag(
-                                                    $event,
-                                                    section,
-                                                    container,
-                                                )
-                                            "
-                                            @dragend="endDrag"
-                                        >
-                                            <GripVertical aria-hidden="true" />
-                                        </button>
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger as-child>
-                                                <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="icon-sm"
-                                                    :aria-label="`Acciones de ${fieldLabel(container)}`"
-                                                >
-                                                    <MoreHorizontal
-                                                        aria-hidden="true"
-                                                    />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuItem
-                                                    @select="
-                                                        designEditors
-                                                            .get(container.id)
-                                                            ?.edit()
-                                                    "
-                                                >
-                                                    Editar diseño
-                                                </DropdownMenuItem>
-                                                <DropdownMenuSeparator />
-                                                <DropdownMenuItem
-                                                    variant="destructive"
-                                                    @select="
-                                                        deletion = {
-                                                            kind: 'field',
-                                                            section,
-                                                            container,
-                                                        }
-                                                    "
-                                                >
-                                                    <Trash2
-                                                        aria-hidden="true"
-                                                    />
-                                                    Eliminar campo
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </div>
-                                </div>
-
-                                <TemplateDesignBlock
-                                    :ref="
-                                        (component) =>
-                                            setDesignEditor(
-                                                container.id,
-                                                component,
-                                            )
-                                    "
-                                    :template-id="templateId"
-                                    :block="container"
-                                    :identification="
-                                        identificationDesign ?? {
-                                            type: 'doc',
-                                            content: [{ type: 'paragraph' }],
-                                        }
-                                    "
-                                    :variables="variables ?? []"
-                                    :readonly="readonly"
-                                />
-                            </article>
-                        </template>
-
-                        <!-- eslint-disable-next-line vuejs-accessibility/no-static-element-interactions -->
-                        <div
-                            v-if="!readonly"
-                            class="doc-zone"
-                            :class="{
-                                'doc-zone-open': acceptsFieldZone(section.id),
-                                'doc-zone-hover':
-                                    hoveredZone ===
-                                    fieldZoneId(
-                                        section.id,
-                                        section.blocks.length,
-                                    ),
-                            }"
-                            @dragover="
-                                overFieldZone(
-                                    $event,
-                                    section.id,
-                                    section.blocks.length,
-                                )
-                            "
-                            @dragleave="hoveredZone = null"
-                            @drop.prevent="
-                                dropOnFieldZone(section, section.blocks.length)
-                            "
-                        />
-                    </section>
-                </template>
-
-                <!-- eslint-disable-next-line vuejs-accessibility/no-static-element-interactions -->
-                <div
-                    v-if="!readonly"
-                    class="doc-zone"
-                    :class="{
-                        'doc-zone-open': acceptsSectionZone,
-                        'doc-zone-hover':
-                            hoveredZone === sectionZoneId(doc.length),
-                    }"
-                    @dragover="overSectionZone($event, doc.length)"
-                    @dragleave="hoveredZone = null"
-                    @drop.prevent="dropOnSectionZone(doc.length)"
-                />
-            </PaginatedDocument>
+                    <!-- eslint-disable-next-line vuejs-accessibility/no-static-element-interactions -->
+                    <div
+                        v-if="canDesign"
+                        class="doc-zone"
+                        :class="{
+                            'doc-zone-open': acceptsSectionZone,
+                            'doc-zone-hover':
+                                hoveredZone === sectionZoneId(doc.length),
+                        }"
+                        @dragover="overSectionZone($event, doc.length)"
+                        @dragleave="hoveredZone = null"
+                        @drop.prevent="dropOnSectionZone(doc.length)"
+                    />
+                </PaginatedDocument>
+            </div>
         </div>
 
         <Dialog
@@ -1291,6 +1483,37 @@ const dropOnFieldZone = (section: TemplateSection, index: number): void => {
                         @click="newSectionPosition = null"
                         >Cancelar</Button
                     >
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        <Dialog v-model:open="discardDocument">
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle
+                        >¿Descartar los cambios del documento?</DialogTitle
+                    >
+                    <DialogDescription>
+                        Se recuperará el último diseño guardado. Los cambios
+                        estructurales que ya se enviaron al servidor se
+                        conservan.
+                    </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        @click="discardDocument = false"
+                    >
+                        Seguir editando
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="destructive"
+                        @click="confirmDiscardDocument"
+                    >
+                        Descartar cambios
+                    </Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

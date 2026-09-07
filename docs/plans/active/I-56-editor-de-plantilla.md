@@ -218,3 +218,26 @@ revisión visual cubre edición directa y barra contextual en escritorio, ademá
 panel lateral a 360 px en modo oscuro sin desbordamiento. La regresión conserva
 formato, tablas complejas, campos, variables, cancelación, error, confirmación de
 reinicio y reapertura persistida. Sin migraciones, commit ni push.
+
+## Seguimiento — modo de edición documental y menú contextual (2026-09-07)
+
+La edición directa por bloque no corresponde a la interacción confirmada. ADM-06 debe
+presentar la plantilla limpia y ofrecer un único modo «Editar documento». Dentro de ese
+modo, el clic derecho abre acciones según el punto del documento, como en un procesador
+de texto. PHPWord permanece exclusivamente en exportación DOCX.
+
+- [x] Sustituir los accesos de diseño por bloque por un único control de edición para
+      toda la hoja, ocultando paleta, arrastre y herramientas fuera de ese modo.
+- [x] Reemplazar la barra flotante por un menú contextual accesible para texto, tablas
+      y campos, con submenús de inserción, eliminación y formato.
+- [x] Mantener variables `@`, campos docentes, tablas complejas, propiedades laterales,
+      errores, conflictos y confirmación de reinicio.
+- [x] Coordinar cambios pendientes y guardado desde el nivel del documento sin alterar
+      autorización, snapshots ni el contrato JSON persistido.
+- [x] Actualizar pruebas, documentación y revisión visual en escritorio y móvil.
+
+Verificación: build de producción, TypeScript, ESLint y Prettier del incremento; Pint;
+**37 pruebas / 1264 aserciones** entre el contrato de arquitectura y
+`TemplateDocumentTest`; y **2/2 suites Chromium** para editor y paginación. La revisión
+visual cubre el documento global en tres páginas, el menú contextual de campo y el panel
+de Propiedades a 360 px. Sin migraciones, commit ni push.

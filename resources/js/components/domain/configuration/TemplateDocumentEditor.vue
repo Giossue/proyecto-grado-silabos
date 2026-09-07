@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import {
+    ClipboardPaste,
+    Copy,
     Bold,
     Italic,
     Underline,
@@ -11,7 +13,10 @@ import {
     Redo2,
     Braces,
     Plus,
+    Scissors,
+    Settings2,
     TableProperties,
+    Trash2,
     UserRoundPlus,
 } from '@lucide/vue';
 import { Node, mergeAttributes } from '@tiptap/core';
@@ -29,12 +34,12 @@ import {
     FontSize,
     Color,
 } from '@tiptap/extension-text-style';
-import { NodeSelection } from '@tiptap/pm/state';
+import { NodeSelection, TextSelection } from '@tiptap/pm/state';
+import type { Selection } from '@tiptap/pm/state';
 import { CellSelection } from '@tiptap/pm/tables';
 import StarterKit from '@tiptap/starter-kit';
 import type { SuggestionProps } from '@tiptap/suggestion';
 import { EditorContent, useEditor } from '@tiptap/vue-3';
-import { BubbleMenu } from '@tiptap/vue-3/menus';
 import {
     computed,
     onBeforeUnmount,
@@ -45,26 +50,16 @@ import {
 } from 'vue';
 import { Button } from '@/components/ui/button';
 import {
-    Field,
-    FieldError,
-    FieldGroup,
-    FieldLabel,
-} from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from '@/components/ui/popover';
-import {
-    Select,
-    SelectContent,
-    SelectGroup,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
+    ContextMenu,
+    ContextMenuContent,
+    ContextMenuGroup,
+    ContextMenuItem,
+    ContextMenuSeparator,
+    ContextMenuSub,
+    ContextMenuSubContent,
+    ContextMenuSubTrigger,
+    ContextMenuTrigger,
+} from '@/components/ui/context-menu';
 import {
     DOCUMENT_FONTS,
     cellNode,
@@ -79,19 +74,20 @@ const props = defineProps<{
     variables: TemplateVariable[];
     pending: boolean;
     fieldKeys?: string[];
+    embedded?: boolean;
 }>();
 const emit = defineEmits<{
     save: [document: DocumentNode];
     dirty: [value: boolean];
+    properties: [];
 }>();
 const suggestions = shallowRef<SuggestionProps<TemplateVariable> | null>(null);
 const selectedSuggestion = ref(0);
 const fieldLabel = ref('');
 const fieldType = ref('texto_largo');
-const insertOpen = ref(false);
 const rows = ref(3);
 const columns = ref(3);
-const initial = JSON.stringify(props.document);
+const initial = ref(JSON.stringify(props.document));
 const persistedKeys = new Set([
     ...(props.fieldKeys ??
         nodesOfType(props.document, 'field').map((node) =>
@@ -319,7 +315,7 @@ const editor = useEditor({
         }),
     ],
     onUpdate: ({ editor: current }) => {
-        dirty.value = JSON.stringify(current.getJSON()) !== initial;
+        dirty.value = JSON.stringify(current.getJSON()) !== initial.value;
     },
     onTransaction: () => {
         toolbarVersion.value++;
@@ -357,37 +353,24 @@ const selectedPersistedField = computed(() =>
         ? persistedKeys.has(String(selectedField.value.attrs.key))
         : false,
 );
-const contextualTool = computed<'format' | 'table' | 'field' | null>(() => {
-    void toolbarVersion.value;
-    const current = editor.value;
-    const selection = current?.state.selection;
-
-    if (!current || !selection) {
-        return null;
-    }
-
-    if (
-        selection instanceof NodeSelection &&
-        ['field', 'column'].includes(selection.node.type.name)
-    ) {
-        return 'field';
-    }
-
-    if (!(selection instanceof CellSelection) && !selection.empty) {
-        return 'format';
-    }
-
-    return current.isActive('table') ? 'table' : null;
-});
-const showContextMenu = () => contextualTool.value !== null;
-const bubbleOptions = {
-    strategy: 'fixed' as const,
-    placement: 'top' as const,
-    offset: 8,
-    flip: {},
-    shift: { padding: 8 },
-};
-const appendMenuTo = () => document.body;
+const context = ref<'text' | 'table' | 'field'>('text');
+const fontSizes = [8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 32, 36];
+const textColors = [
+    { label: 'Negro', value: '#000000' },
+    { label: 'Azul institucional', value: '#0070C0' },
+    { label: 'Azul oscuro', value: '#1F4E78' },
+    { label: 'Rojo', value: '#C00000' },
+    { label: 'Verde', value: '#548235' },
+    { label: 'Gris', value: '#595959' },
+];
+const cellColors = [
+    { label: 'Sin fondo', value: null },
+    { label: 'Blanco', value: '#FFFFFF' },
+    { label: 'Azul claro', value: '#DBE5F1' },
+    { label: 'Azul institucional', value: '#4F81BD' },
+    { label: 'Gris claro', value: '#E7E6E6' },
+];
+let preservedContextSelection: Selection | null = null;
 watch(selectedField, (node) => {
     if (node) {
         fieldLabel.value = String(node.attrs.label);
@@ -528,21 +511,6 @@ const updateField = () => {
     );
     editor.value.view.dispatch(transaction);
 };
-const addField = () => {
-    if (
-        !editor.value ||
-        !fieldLabel.value.trim() ||
-        props.pending ||
-        (repeatTable.value && rowRole.value === 'total')
-    ) {
-        return;
-    }
-
-    const node = teacherNode(fieldLabel.value.trim(), fieldType.value);
-
-    editor.value.chain().focus().insertContent(node).run();
-    fieldLabel.value = '';
-};
 const insertTeacherField = () => {
     const current = editor.value;
 
@@ -557,7 +525,6 @@ const insertTeacherField = () => {
         .insertContent(teacherNode('Respuesta del docente', 'texto_largo'))
         .setNodeSelection(position)
         .run();
-    insertOpen.value = false;
 };
 const insertVariable = (variable: TemplateVariable) => {
     editor.value
@@ -571,7 +538,6 @@ const insertVariable = (variable: TemplateVariable) => {
             { type: 'text', text: ' ' },
         ])
         .run();
-    insertOpen.value = false;
 };
 const initialOnlyField = (document: DocumentNode): DocumentNode | null => {
     const content = (document.content ?? []).filter(
@@ -586,9 +552,15 @@ const initialOnlyField = (document: DocumentNode): DocumentNode | null => {
         ? paragraphContent[0]
         : null;
 };
-const insertTable = () => {
-    const rowCount = Math.max(1, Math.min(20, Number(rows.value) || 3));
-    const columnCount = Math.max(1, Math.min(12, Number(columns.value) || 3));
+const insertTable = (
+    requestedRows: number = rows.value,
+    requestedColumns: number = columns.value,
+) => {
+    const rowCount = Math.max(1, Math.min(20, Number(requestedRows) || 3));
+    const columnCount = Math.max(
+        1,
+        Math.min(12, Number(requestedColumns) || 3),
+    );
     const current = editor.value?.getJSON() as DocumentNode | undefined;
     const initialField = current ? initialOnlyField(current) : null;
     const firstResponseRow = rowCount > 1 ? 1 : 0;
@@ -618,22 +590,127 @@ const insertTable = () => {
 
     if (initialField) {
         editor.value?.commands.setContent({ type: 'doc', content: [table] });
-        insertOpen.value = false;
 
         return;
     }
 
     editor.value?.chain().focus().insertContent(table).run();
-    insertOpen.value = false;
 };
-const save = () => {
+const prepareDocument = (): DocumentNode | null => {
     if (selectedField.value && !fieldLabel.value.trim()) {
-        return;
+        return null;
     }
 
     if (editor.value) {
         updateField();
-        emit('save', editor.value.getJSON() as DocumentNode);
+
+        return editor.value.getJSON() as DocumentNode;
+    }
+
+    return null;
+};
+const save = () => {
+    const value = prepareDocument();
+
+    if (value) {
+        emit('save', value);
+    }
+};
+const markClean = () => {
+    if (!editor.value) {
+        return;
+    }
+
+    initial.value = JSON.stringify(editor.value.getJSON());
+    dirty.value = false;
+};
+const setFieldPresentation = (value: string) => {
+    fieldType.value = value;
+    updateField();
+};
+const preserveContextSelection = (event: PointerEvent) => {
+    if (event.button === 2 && editor.value) {
+        preservedContextSelection = editor.value.state.selection;
+    }
+};
+const prepareContextMenu = (event: MouseEvent) => {
+    const current = editor.value;
+    const target = event.target as Element | null;
+
+    if (!current || !target) {
+        return;
+    }
+
+    const field = target.closest(
+        '[data-template-field], [data-template-column]',
+    );
+    const preserved = preservedContextSelection;
+    preservedContextSelection = null;
+
+    if (field) {
+        const position = current.view.posAtDOM(field, 0);
+        current.view.dispatch(
+            current.state.tr.setSelection(
+                NodeSelection.create(current.state.doc, position),
+            ),
+        );
+        context.value = 'field';
+
+        return;
+    }
+
+    const position = current.view.posAtCoords({
+        left: event.clientX,
+        top: event.clientY,
+    });
+    const tableCell = target.closest('td, th');
+
+    if (
+        preserved &&
+        ((tableCell && preserved instanceof CellSelection) ||
+            (!tableCell && !preserved.empty))
+    ) {
+        current.view.dispatch(current.state.tr.setSelection(preserved));
+    }
+
+    const selection = current.state.selection;
+
+    if (
+        position &&
+        !(tableCell && current.state.selection instanceof CellSelection) &&
+        (selection.empty ||
+            position.pos < selection.from ||
+            position.pos > selection.to)
+    ) {
+        current.view.dispatch(
+            current.state.tr.setSelection(
+                TextSelection.near(current.state.doc.resolve(position.pos)),
+            ),
+        );
+    }
+
+    context.value = tableCell ? 'table' : 'text';
+};
+const clipboard = async (action: 'cut' | 'copy' | 'paste') => {
+    const current = editor.value;
+
+    if (!current) {
+        return;
+    }
+
+    current.view.focus();
+
+    if (action !== 'paste') {
+        document.execCommand(action);
+
+        return;
+    }
+
+    try {
+        const value = await navigator.clipboard.readText();
+        current.chain().focus().insertContent(value).run();
+    } catch {
+        // El navegador puede negar lectura del portapapeles; Ctrl+V sigue disponible.
     }
 };
 const unsaved = (event: BeforeUnloadEvent) => {
@@ -654,542 +731,563 @@ const fieldCount = computed(() => {
         ? nodesOfType(editor.value.getJSON() as DocumentNode, 'field').length
         : 0;
 });
-defineExpose({ save, editor });
+defineExpose({ save, editor, markClean, prepareDocument });
 </script>
 
 <template>
-    <div class="flex min-h-0 flex-1 flex-col gap-3 max-sm:overflow-y-auto">
-        <div
-            v-if="state"
-            class="sticky top-2 flex shrink-0 flex-wrap items-center gap-1 rounded-lg border bg-background/95 p-2 shadow-sm backdrop-blur"
-            :data-pending="pending"
-            role="toolbar"
-            aria-label="Acciones del documento"
-        >
-            <Popover v-model:open="insertOpen">
-                <PopoverTrigger as-child>
-                    <Button type="button" variant="outline" size="sm">
-                        <Plus data-icon="inline-start" />
-                        Insertar
-                    </Button>
-                </PopoverTrigger>
-                <PopoverContent align="start" class="w-80">
-                    <div class="flex flex-col gap-4">
-                        <Button
-                            type="button"
-                            variant="outline"
-                            class="justify-start"
-                            :disabled="pending"
-                            @click="insertTeacherField"
-                        >
-                            <UserRoundPlus data-icon="inline-start" />
-                            Respuesta del docente
-                        </Button>
-                        <Separator />
-                        <FieldGroup class="gap-2">
-                            <p class="text-sm font-medium">Nueva tabla</p>
-                            <div class="flex items-center gap-2">
-                                <Input
-                                    v-model="rows"
-                                    type="number"
-                                    :min="1"
-                                    :max="20"
-                                    class="w-16"
-                                    aria-label="Filas de la nueva tabla"
-                                />
-                                <span aria-hidden="true">×</span>
-                                <Input
-                                    v-model="columns"
-                                    type="number"
-                                    :min="1"
-                                    :max="12"
-                                    class="w-16"
-                                    aria-label="Columnas de la nueva tabla"
-                                />
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    :disabled="pending"
-                                    @click="insertTable"
-                                >
-                                    <TableProperties data-icon="inline-start" />
-                                    Tabla
-                                </Button>
-                            </div>
-                        </FieldGroup>
-                        <Separator />
-                        <div class="flex flex-col gap-2">
-                            <p
-                                class="flex items-center gap-2 text-sm font-medium"
-                            >
-                                <Braces aria-hidden="true" />
-                                Datos automáticos
-                            </p>
-                            <div
-                                class="flex max-h-44 flex-col gap-1 overflow-y-auto"
-                            >
-                                <Button
-                                    v-for="variable in variables"
-                                    :key="variable.key"
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    class="h-auto justify-start text-left"
-                                    :disabled="pending"
-                                    @click="insertVariable(variable)"
-                                >
-                                    <span>
-                                        <span class="block font-medium"
-                                            >@{{ variable.key }}</span
-                                        >
-                                        <span
-                                            class="block text-xs text-muted-foreground"
-                                            >{{ variable.label }}</span
-                                        >
-                                    </span>
-                                </Button>
-                            </div>
-                        </div>
-                    </div>
-                </PopoverContent>
-            </Popover>
-            <Separator orientation="vertical" class="h-7" />
-            <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                aria-label="Deshacer"
-                :disabled="pending || !state.can().undo()"
-                @mousedown.prevent
-                @click="state.chain().focus().undo().run()"
+    <div class="min-h-0">
+        <ContextMenu>
+            <ContextMenuTrigger as-child>
+                <EditorContent
+                    :editor="editor"
+                    class="template-document-editor overflow-auto rounded-md border border-transparent p-1 focus-within:border-ring"
+                    :class="{
+                        'template-document-editor-single-field':
+                            fieldCount === 1,
+                        'template-document-editor-embedded': embedded,
+                    }"
+                    @pointerdown.capture="preserveContextSelection"
+                    @contextmenu.capture="prepareContextMenu"
+                />
+            </ContextMenuTrigger>
+            <ContextMenuContent
+                v-if="state"
+                class="w-64"
+                aria-label="Herramientas del documento"
             >
-                <Undo2 />
-            </Button>
-            <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                aria-label="Rehacer"
-                :disabled="pending || !state.can().redo()"
-                @mousedown.prevent
-                @click="state.chain().focus().redo().run()"
-            >
-                <Redo2 />
-            </Button>
-            <span class="ml-auto text-xs text-muted-foreground">
-                Seleccione texto, una celda o un campo para editarlo
-            </span>
-        </div>
-
-        <BubbleMenu
-            v-if="state"
-            :editor="state"
-            plugin-key="template-context-menu"
-            :options="bubbleOptions"
-            :append-to="appendMenuTo"
-            :should-show="showContextMenu"
-        >
-            <div
-                class="max-w-[calc(100vw-1rem)] rounded-lg border bg-popover p-2 text-popover-foreground shadow-md"
-                :data-pending="pending"
-            >
-                <div
-                    v-if="contextualTool === 'format'"
-                    class="flex flex-wrap items-center gap-1"
-                    role="group"
-                    aria-label="Formato del texto"
-                >
-                    <Select
-                        :model-value="
-                            state.getAttributes('textStyle').fontFamily ??
-                            'Arial'
-                        "
-                        :disabled="pending"
-                        @update:model-value="
-                            state
-                                .chain()
-                                .focus()
-                                .setFontFamily(String($event))
-                                .run()
-                        "
+                <ContextMenuGroup>
+                    <ContextMenuItem
+                        :disabled="state.state.selection.empty"
+                        @select="clipboard('cut')"
                     >
-                        <SelectTrigger class="w-40" aria-label="Tipo de fuente"
-                            ><SelectValue
-                        /></SelectTrigger>
-                        <SelectContent
-                            ><SelectGroup
-                                ><SelectItem
+                        <Scissors />
+                        Cortar
+                    </ContextMenuItem>
+                    <ContextMenuItem
+                        :disabled="state.state.selection.empty"
+                        @select="clipboard('copy')"
+                    >
+                        <Copy />
+                        Copiar
+                    </ContextMenuItem>
+                    <ContextMenuItem @select="clipboard('paste')">
+                        <ClipboardPaste />
+                        Pegar
+                    </ContextMenuItem>
+                </ContextMenuGroup>
+
+                <ContextMenuSeparator />
+
+                <ContextMenuGroup v-if="context === 'text'">
+                    <ContextMenuItem
+                        @select="state.chain().focus().toggleBold().run()"
+                    >
+                        <Bold />
+                        Negrita
+                    </ContextMenuItem>
+                    <ContextMenuItem
+                        @select="state.chain().focus().toggleItalic().run()"
+                    >
+                        <Italic />
+                        Cursiva
+                    </ContextMenuItem>
+                    <ContextMenuItem
+                        @select="state.chain().focus().toggleUnderline().run()"
+                    >
+                        <Underline />
+                        Subrayado
+                    </ContextMenuItem>
+                    <ContextMenuSub>
+                        <ContextMenuSubTrigger>
+                            Tipo de fuente
+                        </ContextMenuSubTrigger>
+                        <ContextMenuSubContent>
+                            <ContextMenuGroup>
+                                <ContextMenuItem
                                     v-for="font in DOCUMENT_FONTS"
                                     :key="font"
-                                    :value="font"
-                                    >{{ font }}</SelectItem
-                                ></SelectGroup
-                            ></SelectContent
-                        >
-                    </Select>
-                    <Select
-                        :model-value="
-                            state.getAttributes('textStyle').fontSize ?? '11pt'
-                        "
-                        :disabled="pending"
-                        @update:model-value="
-                            state
-                                .chain()
-                                .focus()
-                                .setFontSize(String($event))
-                                .run()
-                        "
-                    >
-                        <SelectTrigger
-                            class="w-24"
-                            aria-label="Tamaño de fuente"
-                            ><SelectValue
-                        /></SelectTrigger>
-                        <SelectContent
-                            ><SelectGroup
-                                ><SelectItem
-                                    v-for="size in [
-                                        7, 8, 9, 10, 11, 12, 14, 16, 18, 20, 24,
-                                        28, 32, 36,
-                                    ]"
+                                    @select="
+                                        state
+                                            .chain()
+                                            .focus()
+                                            .setFontFamily(font)
+                                            .run()
+                                    "
+                                >
+                                    {{ font }}
+                                </ContextMenuItem>
+                            </ContextMenuGroup>
+                        </ContextMenuSubContent>
+                    </ContextMenuSub>
+                    <ContextMenuSub>
+                        <ContextMenuSubTrigger>
+                            Tamaño de fuente
+                        </ContextMenuSubTrigger>
+                        <ContextMenuSubContent>
+                            <ContextMenuGroup>
+                                <ContextMenuItem
+                                    v-for="size in fontSizes"
                                     :key="size"
-                                    :value="`${size}pt`"
-                                    >{{ size }} pt</SelectItem
-                                ></SelectGroup
-                            ></SelectContent
-                        >
-                    </Select>
-                    <Input
-                        type="color"
-                        class="w-12"
-                        aria-label="Color de fuente"
-                        :model-value="
-                            state.getAttributes('textStyle').color ?? '#000000'
-                        "
-                        :disabled="pending"
-                        @update:model-value="
-                            state.chain().focus().setColor(String($event)).run()
-                        "
-                    />
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        aria-label="Negrita"
-                        :aria-pressed="state.isActive('bold')"
-                        :disabled="pending"
-                        @mousedown.prevent
-                        @click="state.chain().focus().toggleBold().run()"
-                        ><Bold
-                    /></Button>
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        aria-label="Cursiva"
-                        :aria-pressed="state.isActive('italic')"
-                        :disabled="pending"
-                        @mousedown.prevent
-                        @click="state.chain().focus().toggleItalic().run()"
-                        ><Italic
-                    /></Button>
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        aria-label="Subrayado"
-                        :aria-pressed="state.isActive('underline')"
-                        :disabled="pending"
-                        @mousedown.prevent
-                        @click="state.chain().focus().toggleUnderline().run()"
-                        ><Underline
-                    /></Button>
-                    <Button
-                        v-for="item in [
-                            {
-                                value: 'left',
-                                label: 'Alinear a la izquierda',
-                                icon: AlignLeft,
-                            },
-                            {
-                                value: 'center',
-                                label: 'Centrar',
-                                icon: AlignCenter,
-                            },
-                            {
-                                value: 'right',
-                                label: 'Alinear a la derecha',
-                                icon: AlignRight,
-                            },
-                            {
-                                value: 'justify',
-                                label: 'Justificar',
-                                icon: AlignJustify,
-                            },
-                        ]"
-                        :key="item.value"
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        :aria-label="item.label"
-                        :disabled="pending"
-                        @mousedown.prevent
-                        @click="
-                            state.chain().focus().setTextAlign(item.value).run()
-                        "
-                        ><component :is="item.icon"
-                    /></Button>
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        :disabled="pending"
-                        @mousedown.prevent
-                        @click="state.chain().focus().unsetAllMarks().run()"
-                        >Quitar formato</Button
+                                    @select="
+                                        state
+                                            .chain()
+                                            .focus()
+                                            .setFontSize(size + 'pt')
+                                            .run()
+                                    "
+                                >
+                                    {{ size }} pt
+                                </ContextMenuItem>
+                            </ContextMenuGroup>
+                        </ContextMenuSubContent>
+                    </ContextMenuSub>
+                    <ContextMenuSub>
+                        <ContextMenuSubTrigger>
+                            Color de fuente
+                        </ContextMenuSubTrigger>
+                        <ContextMenuSubContent>
+                            <ContextMenuGroup>
+                                <ContextMenuItem
+                                    v-for="color in textColors"
+                                    :key="color.value"
+                                    @select="
+                                        state
+                                            .chain()
+                                            .focus()
+                                            .setColor(color.value)
+                                            .run()
+                                    "
+                                >
+                                    <span
+                                        class="size-3 rounded-full border"
+                                        :style="{
+                                            backgroundColor: color.value,
+                                        }"
+                                    />
+                                    {{ color.label }}
+                                </ContextMenuItem>
+                            </ContextMenuGroup>
+                        </ContextMenuSubContent>
+                    </ContextMenuSub>
+                    <ContextMenuSub>
+                        <ContextMenuSubTrigger>
+                            Alineación del texto
+                        </ContextMenuSubTrigger>
+                        <ContextMenuSubContent>
+                            <ContextMenuGroup>
+                                <ContextMenuItem
+                                    @select="
+                                        state
+                                            .chain()
+                                            .focus()
+                                            .setTextAlign('left')
+                                            .run()
+                                    "
+                                >
+                                    <AlignLeft />
+                                    Izquierda
+                                </ContextMenuItem>
+                                <ContextMenuItem
+                                    @select="
+                                        state
+                                            .chain()
+                                            .focus()
+                                            .setTextAlign('center')
+                                            .run()
+                                    "
+                                >
+                                    <AlignCenter />
+                                    Centro
+                                </ContextMenuItem>
+                                <ContextMenuItem
+                                    @select="
+                                        state
+                                            .chain()
+                                            .focus()
+                                            .setTextAlign('right')
+                                            .run()
+                                    "
+                                >
+                                    <AlignRight />
+                                    Derecha
+                                </ContextMenuItem>
+                                <ContextMenuItem
+                                    @select="
+                                        state
+                                            .chain()
+                                            .focus()
+                                            .setTextAlign('justify')
+                                            .run()
+                                    "
+                                >
+                                    <AlignJustify />
+                                    Justificar
+                                </ContextMenuItem>
+                            </ContextMenuGroup>
+                        </ContextMenuSubContent>
+                    </ContextMenuSub>
+                    <ContextMenuSub>
+                        <ContextMenuSubTrigger> Lista </ContextMenuSubTrigger>
+                        <ContextMenuSubContent>
+                            <ContextMenuGroup>
+                                <ContextMenuItem
+                                    @select="
+                                        state
+                                            .chain()
+                                            .focus()
+                                            .toggleBulletList()
+                                            .run()
+                                    "
+                                >
+                                    Lista con viñetas
+                                </ContextMenuItem>
+                                <ContextMenuItem
+                                    @select="
+                                        state
+                                            .chain()
+                                            .focus()
+                                            .toggleOrderedList()
+                                            .run()
+                                    "
+                                >
+                                    Lista numerada
+                                </ContextMenuItem>
+                            </ContextMenuGroup>
+                        </ContextMenuSubContent>
+                    </ContextMenuSub>
+                    <ContextMenuItem
+                        @select="state.chain().focus().unsetAllMarks().run()"
                     >
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        :disabled="pending"
-                        @mousedown.prevent
-                        @click="state.chain().focus().toggleBulletList().run()"
-                        >Viñetas</Button
+                        Quitar formato
+                    </ContextMenuItem>
+                </ContextMenuGroup>
+
+                <ContextMenuGroup v-else-if="context === 'table'">
+                    <ContextMenuSub>
+                        <ContextMenuSubTrigger>Insertar</ContextMenuSubTrigger>
+                        <ContextMenuSubContent>
+                            <ContextMenuGroup>
+                                <ContextMenuItem
+                                    @select="
+                                        state
+                                            .chain()
+                                            .focus()
+                                            .addColumnBefore()
+                                            .run()
+                                    "
+                                >
+                                    Columna izquierda
+                                </ContextMenuItem>
+                                <ContextMenuItem
+                                    @select="
+                                        state
+                                            .chain()
+                                            .focus()
+                                            .addColumnAfter()
+                                            .run()
+                                    "
+                                >
+                                    Columna derecha
+                                </ContextMenuItem>
+                                <ContextMenuItem
+                                    @select="
+                                        state
+                                            .chain()
+                                            .focus()
+                                            .addRowBefore()
+                                            .run()
+                                    "
+                                >
+                                    Fila arriba
+                                </ContextMenuItem>
+                                <ContextMenuItem
+                                    @select="
+                                        state
+                                            .chain()
+                                            .focus()
+                                            .addRowAfter()
+                                            .run()
+                                    "
+                                >
+                                    Fila debajo
+                                </ContextMenuItem>
+                            </ContextMenuGroup>
+                        </ContextMenuSubContent>
+                    </ContextMenuSub>
+                    <ContextMenuSub>
+                        <ContextMenuSubTrigger>Eliminar</ContextMenuSubTrigger>
+                        <ContextMenuSubContent>
+                            <ContextMenuGroup>
+                                <ContextMenuItem
+                                    variant="destructive"
+                                    @select="
+                                        state
+                                            .chain()
+                                            .focus()
+                                            .deleteColumn()
+                                            .run()
+                                    "
+                                >
+                                    Eliminar columna
+                                </ContextMenuItem>
+                                <ContextMenuItem
+                                    variant="destructive"
+                                    @select="
+                                        state.chain().focus().deleteRow().run()
+                                    "
+                                >
+                                    Eliminar fila
+                                </ContextMenuItem>
+                                <ContextMenuItem
+                                    variant="destructive"
+                                    @select="
+                                        state
+                                            .chain()
+                                            .focus()
+                                            .deleteTable()
+                                            .run()
+                                    "
+                                >
+                                    Eliminar tabla
+                                </ContextMenuItem>
+                            </ContextMenuGroup>
+                        </ContextMenuSubContent>
+                    </ContextMenuSub>
+                    <ContextMenuItem
+                        :disabled="!state.can().mergeCells()"
+                        @select="state.chain().focus().mergeCells().run()"
                     >
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        :disabled="pending"
-                        @mousedown.prevent
-                        @click="state.chain().focus().toggleOrderedList().run()"
-                        >Numeración</Button
+                        Unir celdas
+                    </ContextMenuItem>
+                    <ContextMenuItem
+                        :disabled="!state.can().splitCell()"
+                        @select="state.chain().focus().splitCell().run()"
                     >
-                </div>
-                <div
-                    v-else-if="contextualTool === 'table'"
-                    class="flex flex-wrap items-center gap-2"
-                    role="group"
-                    aria-label="Diseño de tablas"
-                >
-                    <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        :disabled="pending || !state.can().mergeCells()"
-                        @mousedown.prevent
-                        @click="state.chain().focus().mergeCells().run()"
-                        >Combinar celdas</Button
+                        Dividir celda
+                    </ContextMenuItem>
+                    <ContextMenuSub>
+                        <ContextMenuSubTrigger>
+                            Fondo de celda
+                        </ContextMenuSubTrigger>
+                        <ContextMenuSubContent>
+                            <ContextMenuGroup>
+                                <ContextMenuItem
+                                    v-for="color in cellColors"
+                                    :key="color.label"
+                                    @select="
+                                        state
+                                            .chain()
+                                            .focus()
+                                            .setCellAttribute(
+                                                'backgroundColor',
+                                                color.value,
+                                            )
+                                            .run()
+                                    "
+                                >
+                                    <span
+                                        class="size-3 rounded-sm border"
+                                        :style="{
+                                            backgroundColor:
+                                                color.value ?? '#FFFFFF',
+                                        }"
+                                    />
+                                    {{ color.label }}
+                                </ContextMenuItem>
+                            </ContextMenuGroup>
+                        </ContextMenuSubContent>
+                    </ContextMenuSub>
+                    <ContextMenuSub v-if="repeatTable">
+                        <ContextMenuSubTrigger>
+                            Función de la fila
+                        </ContextMenuSubTrigger>
+                        <ContextMenuSubContent>
+                            <ContextMenuGroup>
+                                <ContextMenuItem
+                                    @select="
+                                        state
+                                            .chain()
+                                            .focus()
+                                            .updateAttributes('tableRow', {
+                                                rowRole: 'fixed',
+                                            })
+                                            .run()
+                                    "
+                                >
+                                    Texto fijo
+                                </ContextMenuItem>
+                                <ContextMenuItem
+                                    @select="
+                                        state
+                                            .chain()
+                                            .focus()
+                                            .updateAttributes('tableRow', {
+                                                rowRole: 'record',
+                                            })
+                                            .run()
+                                    "
+                                >
+                                    Datos que se repiten
+                                </ContextMenuItem>
+                                <ContextMenuItem
+                                    @select="
+                                        state
+                                            .chain()
+                                            .focus()
+                                            .updateAttributes('tableRow', {
+                                                rowRole: 'unit',
+                                            })
+                                            .run()
+                                    "
+                                >
+                                    Datos de la unidad
+                                </ContextMenuItem>
+                                <ContextMenuItem
+                                    @select="
+                                        state
+                                            .chain()
+                                            .focus()
+                                            .updateAttributes('tableRow', {
+                                                rowRole: 'total',
+                                            })
+                                            .run()
+                                    "
+                                >
+                                    Totales automáticos
+                                </ContextMenuItem>
+                            </ContextMenuGroup>
+                        </ContextMenuSubContent>
+                    </ContextMenuSub>
+                </ContextMenuGroup>
+
+                <ContextMenuGroup v-else>
+                    <ContextMenuSub>
+                        <ContextMenuSubTrigger>
+                            Tipo de contenido
+                        </ContextMenuSubTrigger>
+                        <ContextMenuSubContent>
+                            <ContextMenuGroup>
+                                <ContextMenuItem
+                                    v-for="kind in fieldTypes"
+                                    :key="kind.value"
+                                    @select="setFieldPresentation(kind.value)"
+                                >
+                                    {{ kind.label }}
+                                </ContextMenuItem>
+                            </ContextMenuGroup>
+                        </ContextMenuSubContent>
+                    </ContextMenuSub>
+                    <ContextMenuItem @select="emit('properties')">
+                        <Settings2 />
+                        Propiedades del campo
+                    </ContextMenuItem>
+                    <ContextMenuItem
+                        variant="destructive"
+                        @select="state.chain().focus().deleteSelection().run()"
                     >
-                    <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        :disabled="pending || !state.can().splitCell()"
-                        @mousedown.prevent
-                        @click="state.chain().focus().splitCell().run()"
-                        >Separar celda</Button
+                        <Trash2 />
+                        Eliminar del diseño
+                    </ContextMenuItem>
+                </ContextMenuGroup>
+
+                <ContextMenuSeparator />
+
+                <ContextMenuGroup>
+                    <ContextMenuSub>
+                        <ContextMenuSubTrigger>
+                            <Plus />
+                            Insertar
+                        </ContextMenuSubTrigger>
+                        <ContextMenuSubContent class="max-h-80">
+                            <ContextMenuGroup>
+                                <ContextMenuItem @select="insertTeacherField">
+                                    <UserRoundPlus />
+                                    Respuesta del docente
+                                </ContextMenuItem>
+                                <ContextMenuSub>
+                                    <ContextMenuSubTrigger>
+                                        <TableProperties />
+                                        Tabla
+                                    </ContextMenuSubTrigger>
+                                    <ContextMenuSubContent>
+                                        <ContextMenuGroup>
+                                            <ContextMenuItem
+                                                @select="insertTable(2, 2)"
+                                            >
+                                                Tabla 2 × 2
+                                            </ContextMenuItem>
+                                            <ContextMenuItem
+                                                @select="insertTable(3, 3)"
+                                            >
+                                                Tabla 3 × 3
+                                            </ContextMenuItem>
+                                            <ContextMenuItem
+                                                @select="insertTable(4, 4)"
+                                            >
+                                                Tabla 4 × 4
+                                            </ContextMenuItem>
+                                            <ContextMenuItem
+                                                @select="insertTable(5, 5)"
+                                            >
+                                                Tabla 5 × 5
+                                            </ContextMenuItem>
+                                        </ContextMenuGroup>
+                                    </ContextMenuSubContent>
+                                </ContextMenuSub>
+                                <ContextMenuSub>
+                                    <ContextMenuSubTrigger>
+                                        <Braces />
+                                        Dato automático
+                                    </ContextMenuSubTrigger>
+                                    <ContextMenuSubContent class="max-h-72">
+                                        <ContextMenuGroup>
+                                            <ContextMenuItem
+                                                v-for="variable in variables"
+                                                :key="variable.key"
+                                                @select="
+                                                    insertVariable(variable)
+                                                "
+                                            >
+                                                <span>
+                                                    <span
+                                                        class="block font-medium"
+                                                    >
+                                                        @{{ variable.key }}
+                                                    </span>
+                                                    <span
+                                                        class="block text-xs text-muted-foreground"
+                                                    >
+                                                        {{ variable.label }}
+                                                    </span>
+                                                </span>
+                                            </ContextMenuItem>
+                                        </ContextMenuGroup>
+                                    </ContextMenuSubContent>
+                                </ContextMenuSub>
+                            </ContextMenuGroup>
+                        </ContextMenuSubContent>
+                    </ContextMenuSub>
+                    <ContextMenuItem
+                        :disabled="!state.can().undo()"
+                        @select="state.chain().focus().undo().run()"
                     >
-                    <template v-if="state.isActive('table')">
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            :disabled="pending"
-                            @mousedown.prevent
-                            @click="state.chain().focus().addRowAfter().run()"
-                            >Agregar fila</Button
-                        >
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            :disabled="pending"
-                            @mousedown.prevent
-                            @click="
-                                state.chain().focus().addColumnAfter().run()
-                            "
-                            >Agregar columna</Button
-                        >
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            :disabled="pending"
-                            @mousedown.prevent
-                            @click="state.chain().focus().deleteRow().run()"
-                            >Eliminar fila</Button
-                        >
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            :disabled="pending"
-                            @mousedown.prevent
-                            @click="state.chain().focus().deleteColumn().run()"
-                            >Eliminar columna</Button
-                        >
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            :disabled="pending"
-                            @mousedown.prevent
-                            @click="state.chain().focus().deleteTable().run()"
-                            >Eliminar tabla</Button
-                        >
-                        <Input
-                            type="color"
-                            class="w-12"
-                            aria-label="Color de celda"
-                            :disabled="pending"
-                            :model-value="
-                                state.getAttributes('tableCell')
-                                    .backgroundColor ?? '#FFFFFF'
-                            "
-                            @update:model-value="
-                                state
-                                    .chain()
-                                    .focus()
-                                    .setCellAttribute(
-                                        'backgroundColor',
-                                        String($event),
-                                    )
-                                    .run()
-                            "
-                        />
-                    </template>
-                    <Select
-                        v-if="repeatTable"
-                        :model-value="rowRole"
-                        :disabled="pending"
-                        @update:model-value="
-                            state
-                                .chain()
-                                .focus()
-                                .updateAttributes('tableRow', {
-                                    rowRole: String($event),
-                                })
-                                .run()
-                        "
+                        <Undo2 />
+                        Deshacer
+                    </ContextMenuItem>
+                    <ContextMenuItem
+                        :disabled="!state.can().redo()"
+                        @select="state.chain().focus().redo().run()"
                     >
-                        <SelectTrigger
-                            class="w-44"
-                            aria-label="Función de la fila"
-                            ><SelectValue
-                        /></SelectTrigger>
-                        <SelectContent
-                            ><SelectGroup
-                                ><SelectItem value="fixed"
-                                    >Texto fijo</SelectItem
-                                ><SelectItem value="record"
-                                    >Datos que se repiten</SelectItem
-                                ><SelectItem value="unit"
-                                    >Datos de la unidad</SelectItem
-                                ><SelectItem value="total"
-                                    >Totales automáticos</SelectItem
-                                ></SelectGroup
-                            ></SelectContent
-                        >
-                    </Select>
-                </div>
-                <div v-else class="flex flex-col gap-3">
-                    <p class="text-sm text-muted-foreground">
-                        {{
-                            selectedPersistedField
-                                ? 'Cambie aquí la presentación. Para renombrar este campo, use Propiedades.'
-                                : selectedField
-                                  ? 'Defina el nombre y la presentación del campo nuevo.'
-                                  : 'Escriba @docente en el documento o inserte aquí un nuevo campo.'
-                        }}
-                    </p>
-                    <FieldGroup class="flex flex-row flex-wrap items-end gap-2">
-                        <Field
-                            v-if="!selectedPersistedField"
-                            class="w-56"
-                            :data-invalid="
-                                Boolean(selectedField && !fieldLabel.trim())
-                            "
-                            ><FieldLabel for="design-field-name"
-                                >Campo que llenará el docente</FieldLabel
-                            ><Input
-                                id="design-field-name"
-                                v-model="fieldLabel"
-                                @update:model-value="
-                                    selectedField && updateField()
-                                "
-                                :disabled="pending"
-                                maxlength="180"
-                                :aria-invalid="
-                                    Boolean(selectedField && !fieldLabel.trim())
-                                "
-                                placeholder="Ej. Objetivo de la unidad"
-                                @keydown.enter.prevent="
-                                    selectedField ? updateField() : addField()
-                                " /><FieldError
-                                v-if="selectedField && !fieldLabel.trim()"
-                                :errors="['Escriba un nombre para el campo.']"
-                        /></Field>
-                        <Field class="w-36"
-                            ><FieldLabel for="design-field-type"
-                                >Tipo de contenido</FieldLabel
-                            ><Select
-                                v-model="fieldType"
-                                :disabled="pending"
-                                @update:model-value="
-                                    selectedField && updateField()
-                                "
-                                ><SelectTrigger id="design-field-type"
-                                    ><SelectValue /></SelectTrigger
-                                ><SelectContent
-                                    ><SelectGroup>
-                                        <SelectItem
-                                            v-for="kind in fieldTypes"
-                                            :key="kind.value"
-                                            :value="kind.value"
-                                            >{{ kind.label }}</SelectItem
-                                        >
-                                    </SelectGroup></SelectContent
-                                ></Select
-                            ></Field
-                        >
-                        <Button
-                            type="button"
-                            variant="outline"
-                            :disabled="
-                                pending ||
-                                !fieldLabel.trim() ||
-                                (!selectedField &&
-                                    Boolean(repeatTable) &&
-                                    rowRole === 'total')
-                            "
-                            @click="selectedField ? updateField() : addField()"
-                            >{{
-                                selectedField
-                                    ? 'Aplicar al campo'
-                                    : 'Insertar campo'
-                            }}</Button
-                        >
-                    </FieldGroup>
-                    <p
-                        v-if="
-                            ['bulleted_list', 'numbered_list'].includes(
-                                fieldType,
-                            )
-                        "
-                        class="text-sm text-muted-foreground"
-                    >
-                        El docente escribe un elemento por línea. El diseño
-                        aplica las viñetas o la numeración.
-                    </p>
-                </div>
-            </div>
-        </BubbleMenu>
+                        <Redo2 />
+                        Rehacer
+                    </ContextMenuItem>
+                </ContextMenuGroup>
+            </ContextMenuContent>
+        </ContextMenu>
+
         <div
             v-if="suggestions"
-            class="flex shrink-0 flex-col gap-1 rounded-md border bg-popover p-2 text-popover-foreground"
+            class="mt-2 flex flex-col gap-1 rounded-md border bg-popover p-2 text-popover-foreground"
             role="listbox"
             aria-label="Variables disponibles"
         >
@@ -1213,21 +1311,7 @@ defineExpose({ save, editor });
                 @{{ item.key }} — {{ item.label }}
             </Button>
         </div>
-        <p class="shrink-0 text-sm text-muted-foreground">
-            Use Insertar o escriba @ para añadir contenido. Seleccione texto,
-            celdas o campos para mostrar sus herramientas.
-        </p>
-        <div
-            class="min-h-0 flex-1 overflow-auto rounded-md border p-4 max-sm:min-h-64 max-sm:shrink-0"
-        >
-            <EditorContent
-                :editor="editor"
-                class="template-document-editor"
-                :class="{
-                    'template-document-editor-single-field': fieldCount === 1,
-                }"
-            />
-        </div>
+
         <p class="sr-only" aria-live="polite">
             {{ fieldCount }} espacios de contenido.
             {{ dirty ? 'Cambios sin guardar.' : 'Sin cambios pendientes.' }}
@@ -1247,6 +1331,10 @@ defineExpose({ save, editor });
     min-height: 300px;
     outline: none;
     padding: 12px;
+}
+.template-document-editor-embedded .tiptap {
+    min-height: 1.5em;
+    padding: 2px;
 }
 .template-document-editor p {
     margin: 0 0 8px;

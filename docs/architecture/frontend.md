@@ -121,26 +121,27 @@ inserción del cliente son base cero; `position` del caso de uso se envía en ba
 
 ## Diseño integrado de la plantilla (I-56)
 
-`TemplateSheetEditor` conserva bloques, arrastre, paleta y paginación. Cada
-`TemplateDesignBlock` sustituye su vista por el editor directo dentro del mismo bloque;
-no abre un diálogo de diseño. Propiedades vive en un `Sheet` lateral y el editor se
-mantiene montado al abrirlo o cerrarlo. Ambos controlan un solo borrador conjunto
-(nombre, ayuda, IA y documento), incluido el aviso de salida. Un solo PATCH de
+`TemplateSheetEditor` conserva bloques, arrastre, paleta y paginación, pero los activa
+solo después de «Editar documento». Es el dueño del modo global, el estado agregado de
+cambios y el guardado secuencial de los bloques modificados. Cada
+`TemplateDesignBlock` sustituye entonces su vista por un Tiptap compacto dentro de la
+misma hoja; no abre un diálogo ni muestra acciones propias. Propiedades vive en un
+`Sheet` lateral. Cada bloque controla un borrador conjunto (nombre, ayuda, IA y
+documento), incluido el aviso de salida. Un PATCH de
 `SaveTemplateDocument` verifica la huella y persiste todo en la misma transacción;
 solo el bloque de flujo envía documento nulo para editar sus propiedades, nunca
 su estructura. Los campos heredados y los bloques fijos no ofrecen asistencia de IA.
 Se retiró `TemplateFieldSheet`; las propiedades ya no tienen un guardado separado.
 
-`TemplateDesignBlock` ofrece `TemplateDocumentEditor` (Tiptap Vue 3, ADR-0007) en la
-hoja, con guardado explícito. Una fila fija reúne Insertar y el historial; `BubbleMenu`
-presenta una barra flotante según la selección: formato para texto, operaciones para
-tablas y presentación para campos. La interfaz reutiliza Button, Popover, Select,
-FieldGroup, Input, Alert y Sheet compartidos; los colores libres pertenecen al
-documento, no al tema de la aplicación. El documento JSON contiene solo nodos/marcas
-del contrato PHP `TemplateDocument`; no se persiste HTML ni se acepta HTML arbitrario
-en el servidor.
+`TemplateDocumentEditor` (Tiptap Vue 3, ADR-0007) mantiene el lienzo completo y usa el
+`ContextMenu` compartido. Conserva la selección antes del clic derecho y ofrece un menú
+distinto para texto, tabla o campo, con submenús de formato, inserción y eliminación.
+La interfaz reutiliza Button, ContextMenu, FieldGroup, Input, Alert y Sheet; los colores
+libres pertenecen al documento, no al tema de la aplicación. El documento JSON contiene
+solo nodos/marcas del contrato PHP `TemplateDocument`; no se persiste HTML ni se acepta
+HTML arbitrario en el servidor.
 
-«Insertar» agrupa tabla, variables automáticas y respuesta docente. La sugerencia
+El menú contextual «Insertar» agrupa tabla, variables automáticas y respuesta docente. La sugerencia
 `@docente` ofrece el mismo alta desde el teclado: crea un nodo `field`
 con referencia independiente, o `column` dentro de filas de datos/unidad repetibles.
 No se añade al catálogo de variables automáticas ni se guarda como nodo `variable`.
