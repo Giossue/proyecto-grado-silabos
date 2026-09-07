@@ -754,10 +754,14 @@ it('arma la plantilla sobre la hoja impresa, sin formularios por tarjeta', funct
         ->toContain('templatePreviewFields')
         ->toContain('<TemplateDocumentEditor')
         ->toContain('<TemplateDocumentView')
-        ->not->toContain('Editar diseño de ${block.title}')
+        ->toContain('Editar diseño de ${block.title}')
+        ->toContain('role="region"')
+        ->toContain('<Sheet')
+        ->toContain('propertiesOpen')
         ->toContain('Guardar diseño')
         ->toContain('fingerprint')
-        ->toContain('registerLocalPurgeConfirmation');
+        ->toContain('registerLocalPurgeConfirmation')
+        ->not->toContain('Diseño: {{ block.title }}');
 
     // I-53: el marco compartido conserva el estándar y calcula hojas dinámicas.
     $paper = file_get_contents(
@@ -773,13 +777,12 @@ it('arma la plantilla sobre la hoja impresa, sin formularios por tarjeta', funct
         ->toContain('MutationObserver');
 
     expect(preg_replace('/\s+/', ' ', $design))
-        ->toContain('value="properties"')
         ->toContain('Ayuda para el docente')
         ->toContain('Nombre del bloque')
         ->toContain('Nombre del campo')
         ->toContain('v-if="!isFlow && !singleField"')
         ->toContain('Permite asistencia de IA')
-        ->toContain('force-mount')
+        ->toContain('sm:max-w-md')
         ->toContain('propertiesSnapshot')
         ->not->toContain('Código de referencia');
 
@@ -787,6 +790,13 @@ it('arma la plantilla sobre la hoja impresa, sin formularios por tarjeta', funct
         $root.'/resources/js/components/domain/configuration/TemplateDocumentEditor.vue',
     );
     expect($documentEditor)
+        ->toContain('<BubbleMenu')
+        ->toContain('contextualTool')
+        ->toContain('<Popover v-model:open="insertOpen"')
+        ->toContain('insertTeacherField')
+        ->toContain('insertVariable')
+        ->toContain('Combinar celdas')
+        ->toContain('Color de fuente')
         ->toContain('selectedPersistedField')
         ->toContain('Para renombrar este campo, use Propiedades.')
         ->toContain('initialOnlyField')

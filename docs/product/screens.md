@@ -195,12 +195,17 @@ completo. El alta está separada de asignar paralelos y no levanta sus bloqueos.
 - Si una sección tiene un solo campo, no lleva subtítulo «n.1»: basta el título de la
   sección, en la hoja, el editor docente, la revisión y el Word. Con varios campos sí
   se numeran.
-- «Editar diseño» abre un diálogo amplio sobre el bloque, con familia, tamaño y color
-  de fuente, negrita, cursiva, subrayado, alineación, listas y deshacer/rehacer. La
-  tabla permite agregar/quitar filas y columnas, ajustar anchos, fondo y combinar o
-  separar celdas horizontal y verticalmente; se seleccionan arrastrando o con Mayús
-    - clic. No hay galería obligatoria de formatos. Los formatos iniciales oficiales
-      siguen disponibles al crear la plantilla y no se reescriben simplemente por abrirla.
+- «Editar diseño» sustituye la vista del bloque por edición directa en la hoja, sin
+  abrir un diálogo grande. «Insertar» reúne tablas, respuestas del docente y variables
+  automáticas; deshacer y rehacer permanecen visibles. Al seleccionar texto aparece
+  una barra flotante con familia, tamaño y color de fuente, negrita, cursiva,
+  subrayado, alineación y listas; al seleccionar una celda muestra las acciones de
+  tabla, y al seleccionar un campo muestra su tipo. La tabla permite agregar/quitar
+  filas y columnas, ajustar anchos, fondo y combinar o separar celdas horizontal y
+  verticalmente; se seleccionan arrastrando o con Mayús + clic. «Propiedades» abre un
+  panel lateral para nombre, ayuda e IA. No hay galería obligatoria de formatos. Los
+  formatos iniciales oficiales siguen disponibles al crear la plantilla y no se
+  reescriben simplemente por abrirla.
 - En el diseño, texto normal es fijo; «Insertar campo» pide nombre y tipo de respuesta
   del docente; `@` ofrece variables descriptivas con búsqueda y teclado. Solo los
   campos se llenan manualmente. «Guardar diseño» conserva errores y borrador ante

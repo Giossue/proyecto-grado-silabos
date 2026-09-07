@@ -196,3 +196,25 @@ Pint y PHPStan del incremento. La revisión visual confirma una sola entrada, ro
 Verificación: TypeScript, Prettier y ESLint puntual; **24 pruebas / 1116
 aserciones** del contrato de arquitectura y **1/1 suite Chromium** del editor.
 No se hicieron commit ni push.
+
+## Seguimiento — edición directa y herramientas contextuales (2026-09-07)
+
+Petición confirmada: retirar el diálogo grande y editar el diseño en la propia hoja,
+con una experiencia progresiva similar a un procesador de texto. Se conservan ADM-06,
+CU-04, RF-017..026, RN-009..012 y RNF-018..023, sin ampliar permisos.
+
+- [x] Reemplazar el diálogo de diseño por edición directa en el bloque, con guardar,
+      cancelar, estado y confirmaciones existentes.
+- [x] Mostrar formato al seleccionar texto, herramientas de tabla al seleccionar una
+      celda y configuración del campo al seleccionar su marcador.
+- [x] Reunir tabla, `@docente` y variables automáticas bajo «Insertar».
+- [x] Mover propiedades del bloque y de sus campos a un panel lateral, conservando
+      ayuda, IA, validación y guardado atómico.
+- [x] Actualizar regresiones, documentación y revisión visual responsive.
+
+Verificación: TypeScript, ESLint y Prettier del incremento; **24 pruebas / 1126
+aserciones** del contrato de arquitectura y **1/1 suite Chromium** del editor. La
+revisión visual cubre edición directa y barra contextual en escritorio, además del
+panel lateral a 360 px en modo oscuro sin desbordamiento. La regresión conserva
+formato, tablas complejas, campos, variables, cancelación, error, confirmación de
+reinicio y reapertura persistida. Sin migraciones, commit ni push.

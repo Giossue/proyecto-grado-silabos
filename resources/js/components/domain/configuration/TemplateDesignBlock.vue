@@ -25,7 +25,14 @@ import {
     FieldLabel,
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+    Sheet,
+    SheetContent,
+    SheetDescription,
+    SheetFooter,
+    SheetHeader,
+    SheetTitle,
+} from '@/components/ui/sheet';
 import { Textarea } from '@/components/ui/textarea';
 import { registerLocalPurgeConfirmation } from '@/composables/usePurgeConfirmation';
 import type { TableLayout } from '@/lib/tableLayout';
@@ -56,8 +63,8 @@ const props = defineProps<{
     readonly: boolean;
 }>();
 const open = ref(false);
+const propertiesOpen = ref(false);
 const designDirty = ref(false);
-const tab = ref('design');
 const initialProperties = ref('');
 const isFlow = computed(() => props.block.content_type === 'flow');
 const discard = ref(false);
@@ -114,12 +121,12 @@ const edit = () => {
     }));
     initialProperties.value = propertiesSnapshot();
     designDirty.value = false;
-    tab.value = isFlow.value ? 'properties' : 'design';
-    open.value = true;
+    open.value = !isFlow.value;
+    propertiesOpen.value = isFlow.value;
 };
 defineExpose({ edit });
-const close = (value: boolean) => {
-    if (value || form.processing) {
+const close = () => {
+    if (form.processing) {
         return;
     }
 
@@ -127,7 +134,23 @@ const close = (value: boolean) => {
         discard.value = true;
     } else {
         open.value = false;
+        propertiesOpen.value = false;
     }
+};
+const closeProperties = (value: boolean) => {
+    if (value) {
+        propertiesOpen.value = true;
+
+        return;
+    }
+
+    if (isFlow.value && dirty.value) {
+        discard.value = true;
+
+        return;
+    }
+
+    propertiesOpen.value = false;
 };
 const save = (value: DocumentNode | null) => {
     form.document = value;
@@ -143,6 +166,7 @@ const save = (value: DocumentNode | null) => {
                 designDirty.value = false;
                 initialProperties.value = propertiesSnapshot();
                 open.value = false;
+                propertiesOpen.value = false;
                 toast.success('Diseño guardado.');
             },
             onError: (errors) => {
@@ -152,7 +176,7 @@ const save = (value: DocumentNode | null) => {
                             key === 'title' || key.startsWith('properties'),
                     )
                 ) {
-                    tab.value = 'properties';
+                    propertiesOpen.value = true;
                 }
             },
             onFinish: () => {
@@ -188,7 +212,7 @@ const updatePrimaryName = (value: string | number) => {
 };
 const stopNavigation = router.on('before', (event) => {
     if (
-        open.value &&
+        (open.value || propertiesOpen.value) &&
         dirty.value &&
         !submitting.value &&
         !window.confirm(
@@ -200,15 +224,24 @@ const stopNavigation = router.on('before', (event) => {
 });
 onBeforeUnmount(stopNavigation);
 const unsaved = (event: BeforeUnloadEvent) => {
-    if (open.value && dirty.value && !form.processing) {
+    if (
+        (open.value || propertiesOpen.value) &&
+        dirty.value &&
+        !form.processing
+    ) {
         event.preventDefault();
     }
 };
 onMounted(() => window.addEventListener('beforeunload', unsaved));
 onBeforeUnmount(() => window.removeEventListener('beforeunload', unsaved));
 const submit = () => (isFlow.value ? save(null) : editor.value?.save());
-watch(open, (isOpen, _previous, onCleanup) => {
-    if (isOpen) {
+watch(
+    () => open.value || propertiesOpen.value,
+    (isActive, _previous, onCleanup) => {
+        if (!isActive) {
+            return;
+        }
+
         onCleanup(
             registerLocalPurgeConfirmation(
                 TemplateController.updateDocument.url({
@@ -217,245 +250,292 @@ watch(open, (isOpen, _previous, onCleanup) => {
                 }),
             ),
         );
-    }
-});
+    },
+);
 </script>
 
 <template>
     <div>
         <TemplateDocumentView
+            v-if="!open"
             :document="document"
             :fields="sampleFields"
             :variables="variables"
             :layout="block.table"
             preview
         />
-        <Dialog :open="open" @update:open="close">
-            <DialogContent
-                class="flex h-[92dvh] max-w-[calc(100%-1rem)] flex-col sm:max-w-6xl"
-                :show-close-button="!form.processing"
-                @interact-outside.prevent
+        <div
+            v-else
+            class="relative flex min-h-96 flex-col gap-3 rounded-lg border bg-background p-3 shadow-sm"
+            role="region"
+            :aria-label="`Editar diseño de ${block.title}`"
+        >
+            <div
+                class="flex flex-wrap items-center gap-2 rounded-lg border bg-background/95 p-2 shadow-sm"
             >
-                <DialogHeader>
-                    <DialogTitle>Diseño: {{ block.title }}</DialogTitle>
-                    <DialogDescription
-                        >Solo el administrador cambia este formato. El docente
-                        completa los campos; las variables se llenan
-                        automáticamente.</DialogDescription
-                    >
-                </DialogHeader>
-                <Tabs v-if="open" v-model="tab" class="min-h-0 flex-1">
-                    <TabsList aria-label="Configuración del diseño">
-                        <TabsTrigger v-if="!isFlow" value="design"
-                            >Diseño</TabsTrigger
+                <div class="min-w-0 flex-1">
+                    <p class="truncate text-sm font-medium">
+                        Editando {{ block.title }}
+                    </p>
+                    <p class="text-xs text-muted-foreground" role="status">
+                        {{
+                            form.processing
+                                ? 'Guardando…'
+                                : dirty
+                                  ? 'Cambios sin guardar'
+                                  : 'Sin cambios pendientes'
+                        }}
+                    </p>
+                </div>
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    :disabled="form.processing"
+                    @click="propertiesOpen = true"
+                >
+                    Propiedades
+                </Button>
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    :disabled="form.processing"
+                    @click="close"
+                >
+                    Cancelar
+                </Button>
+                <Button
+                    v-if="purge"
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    :disabled="form.processing"
+                    @click="
+                        form.confirm_purge = true;
+                        submit();
+                    "
+                >
+                    Guardar y reiniciar
+                </Button>
+                <Button
+                    v-else
+                    type="button"
+                    size="sm"
+                    :disabled="form.processing"
+                    @click="submit"
+                >
+                    Guardar diseño
+                </Button>
+            </div>
+            <TemplateDocumentEditor
+                ref="editor"
+                :document="draft"
+                :variables="props.variables"
+                :pending="form.processing"
+                :field-keys="block.fields.map((field) => field.key)"
+                @dirty="designDirty = $event"
+                @save="save"
+            />
+            <Alert v-if="error" variant="destructive"
+                ><AlertTitle>No se pudo guardar</AlertTitle
+                ><AlertDescription>{{ error }}</AlertDescription></Alert
+            >
+            <Alert v-if="purge" variant="destructive"
+                ><AlertTitle>Confirmación necesaria</AlertTitle
+                ><AlertDescription
+                    >{{ purge }} Guardar y reiniciar elimina ese trabajo en
+                    curso.</AlertDescription
+                ></Alert
+            >
+        </div>
+
+        <Sheet :open="propertiesOpen" @update:open="closeProperties">
+            <SheetContent class="w-full overflow-y-auto sm:max-w-md">
+                <SheetHeader>
+                    <SheetTitle>Propiedades de {{ block.title }}</SheetTitle>
+                    <SheetDescription>
+                        Configure el bloque y los campos que completará el
+                        docente.
+                    </SheetDescription>
+                </SheetHeader>
+                <div class="px-4 pb-4">
+                    <FieldGroup class="mx-auto max-w-2xl">
+                        <Field :data-invalid="Boolean(primaryNameError)">
+                            <FieldLabel for="design-title"
+                                >Nombre del bloque</FieldLabel
+                            >
+                            <Input
+                                id="design-title"
+                                :model-value="form.title"
+                                @update:model-value="updatePrimaryName"
+                                maxlength="180"
+                                :disabled="form.processing"
+                                :aria-invalid="Boolean(primaryNameError)"
+                            />
+                            <FieldError
+                                v-if="primaryNameError"
+                                :errors="[primaryNameError]"
+                            />
+                            <FieldDescription>
+                                <template v-if="singleField">
+                                    Al tener un solo campo, basta este nombre.
+                                    Si agrega otro, aparecerá el nombre de cada
+                                    campo.
+                                </template>
+                                <template v-else>
+                                    Identifica el bloque completo; cada campo
+                                    conserva su propio nombre.
+                                </template>
+                            </FieldDescription>
+                        </Field>
+                        <p v-if="isFlow" class="text-sm text-muted-foreground">
+                            El estado de revisión lo determina el sistema. Aquí
+                            solo se ajustan el nombre y la ayuda.
+                        </p>
+                        <FieldGroup
+                            v-for="(property, index) in form.properties"
+                            :key="property.key"
+                            class="gap-4 rounded-lg border p-4"
                         >
-                        <TabsTrigger value="properties"
-                            >Propiedades</TabsTrigger
-                        >
-                    </TabsList>
-                    <TabsContent
-                        v-if="!isFlow"
-                        v-show="tab === 'design'"
-                        value="design"
-                        force-mount
-                        class="flex min-h-0 flex-col"
-                    >
-                        <TemplateDocumentEditor
-                            ref="editor"
-                            :document="draft"
-                            :variables="props.variables"
-                            :pending="form.processing"
-                            :field-keys="block.fields.map((field) => field.key)"
-                            @dirty="designDirty = $event"
-                            @save="save"
-                        />
-                    </TabsContent>
-                    <TabsContent
-                        value="properties"
-                        class="min-h-0 overflow-y-auto rounded-lg border p-4"
-                    >
-                        <FieldGroup class="mx-auto max-w-2xl">
-                            <Field :data-invalid="Boolean(primaryNameError)">
-                                <FieldLabel for="design-title"
-                                    >Nombre del bloque</FieldLabel
+                            <Field
+                                v-if="!isFlow && !singleField"
+                                :data-invalid="
+                                    Boolean(
+                                        propertyError(
+                                            `properties.${index}.label`,
+                                        ),
+                                    )
+                                "
+                            >
+                                <FieldLabel :for="`design-label-${index}`"
+                                    >Nombre del campo</FieldLabel
                                 >
                                 <Input
-                                    id="design-title"
-                                    :model-value="form.title"
-                                    @update:model-value="updatePrimaryName"
+                                    :id="`design-label-${index}`"
+                                    v-model="property.label"
                                     maxlength="180"
+                                    placeholder="Ej. Objetivo general"
                                     :disabled="form.processing"
-                                    :aria-invalid="Boolean(primaryNameError)"
+                                    :aria-invalid="
+                                        Boolean(
+                                            propertyError(
+                                                `properties.${index}.label`,
+                                            ),
+                                        )
+                                    "
                                 />
                                 <FieldError
-                                    v-if="primaryNameError"
-                                    :errors="[primaryNameError]"
+                                    v-if="
+                                        propertyError(
+                                            `properties.${index}.label`,
+                                        )
+                                    "
+                                    :errors="[
+                                        propertyError(
+                                            `properties.${index}.label`,
+                                        ),
+                                    ]"
                                 />
-                                <FieldDescription>
-                                    <template v-if="singleField">
-                                        Al tener un solo campo, basta este
-                                        nombre. Si agrega otro, aparecerá el
-                                        nombre de cada campo.
-                                    </template>
-                                    <template v-else>
-                                        Identifica el bloque completo; cada
-                                        campo conserva su propio nombre.
-                                    </template>
-                                </FieldDescription>
                             </Field>
-                            <p
-                                v-if="isFlow"
-                                class="text-sm text-muted-foreground"
+                            <Field
+                                :data-invalid="
+                                    Boolean(
+                                        propertyError(
+                                            `properties.${index}.help`,
+                                        ),
+                                    )
+                                "
                             >
-                                El estado de revisión lo determina el sistema.
-                                Aquí solo se ajustan el nombre y la ayuda.
-                            </p>
-                            <FieldGroup
-                                v-for="(property, index) in form.properties"
-                                :key="property.key"
-                                class="gap-4 rounded-lg border p-4"
-                            >
-                                <Field
-                                    v-if="!isFlow && !singleField"
-                                    :data-invalid="
-                                        Boolean(
-                                            propertyError(
-                                                `properties.${index}.label`,
-                                            ),
-                                        )
-                                    "
+                                <FieldLabel :for="`design-help-${index}`"
+                                    >Ayuda para el docente</FieldLabel
                                 >
-                                    <FieldLabel :for="`design-label-${index}`"
-                                        >Nombre del campo</FieldLabel
-                                    >
-                                    <Input
-                                        :id="`design-label-${index}`"
-                                        v-model="property.label"
-                                        maxlength="180"
-                                        placeholder="Ej. Objetivo general"
-                                        :disabled="form.processing"
-                                        :aria-invalid="
-                                            Boolean(
-                                                propertyError(
-                                                    `properties.${index}.label`,
-                                                ),
-                                            )
-                                        "
-                                    />
-                                    <FieldError
-                                        v-if="
-                                            propertyError(
-                                                `properties.${index}.label`,
-                                            )
-                                        "
-                                        :errors="[
-                                            propertyError(
-                                                `properties.${index}.label`,
-                                            ),
-                                        ]"
-                                    />
-                                </Field>
-                                <Field
-                                    :data-invalid="
+                                <Textarea
+                                    :id="`design-help-${index}`"
+                                    v-model="property.help"
+                                    maxlength="2000"
+                                    placeholder="Ej. Describa los resultados en infinitivo"
+                                    :disabled="form.processing"
+                                    :aria-invalid="
                                         Boolean(
                                             propertyError(
                                                 `properties.${index}.help`,
                                             ),
                                         )
                                     "
-                                >
-                                    <FieldLabel :for="`design-help-${index}`"
-                                        >Ayuda para el docente</FieldLabel
-                                    >
-                                    <Textarea
-                                        :id="`design-help-${index}`"
-                                        v-model="property.help"
-                                        maxlength="2000"
-                                        placeholder="Ej. Describa los resultados en infinitivo"
-                                        :disabled="form.processing"
-                                        :aria-invalid="
-                                            Boolean(
-                                                propertyError(
-                                                    `properties.${index}.help`,
-                                                ),
-                                            )
-                                        "
-                                    />
-                                    <FieldError
-                                        v-if="
-                                            propertyError(
-                                                `properties.${index}.help`,
-                                            )
-                                        "
-                                        :errors="[
-                                            propertyError(
-                                                `properties.${index}.help`,
-                                            ),
-                                        ]"
-                                    />
-                                </Field>
-                                <Field
-                                    v-if="property.ai_enabled !== undefined"
-                                    orientation="horizontal"
-                                >
-                                    <Checkbox
-                                        :id="`design-ai-${index}`"
-                                        v-model="property.ai_enabled"
-                                        :disabled="form.processing"
-                                    />
-                                    <FieldContent>
-                                        <FieldLabel :for="`design-ai-${index}`"
-                                            >Permite asistencia de
-                                            IA</FieldLabel
-                                        >
-                                        <FieldDescription
-                                            >Habilita la ayuda de IA; el docente
-                                            sigue siendo responsable del
-                                            contenido.</FieldDescription
-                                        >
-                                    </FieldContent>
-                                </Field>
-                            </FieldGroup>
-                            <p
-                                v-if="!isFlow"
-                                class="text-sm text-muted-foreground"
+                                />
+                                <FieldError
+                                    v-if="
+                                        propertyError(
+                                            `properties.${index}.help`,
+                                        )
+                                    "
+                                    :errors="[
+                                        propertyError(
+                                            `properties.${index}.help`,
+                                        ),
+                                    ]"
+                                />
+                            </Field>
+                            <Field
+                                v-if="property.ai_enabled !== undefined"
+                                orientation="horizontal"
                             >
-                                Para configurar la ayuda de un campo nuevo,
-                                primero guarde su diseño.
-                            </p>
+                                <Checkbox
+                                    :id="`design-ai-${index}`"
+                                    v-model="property.ai_enabled"
+                                    :disabled="form.processing"
+                                />
+                                <FieldContent>
+                                    <FieldLabel :for="`design-ai-${index}`"
+                                        >Permite asistencia de IA</FieldLabel
+                                    >
+                                    <FieldDescription
+                                        >Habilita la ayuda de IA; el docente
+                                        sigue siendo responsable del
+                                        contenido.</FieldDescription
+                                    >
+                                </FieldContent>
+                            </Field>
                         </FieldGroup>
-                    </TabsContent>
-                </Tabs>
-                <Alert v-if="error" variant="destructive"
+                        <p v-if="!isFlow" class="text-sm text-muted-foreground">
+                            Para configurar la ayuda de un campo nuevo, primero
+                            guarde su diseño.
+                        </p>
+                    </FieldGroup>
+                </div>
+                <Alert v-if="error" variant="destructive" class="mx-4"
                     ><AlertTitle>No se pudo guardar</AlertTitle
                     ><AlertDescription>{{ error }}</AlertDescription></Alert
                 >
-                <Alert v-if="purge" variant="destructive"
+                <Alert v-if="purge" variant="destructive" class="mx-4"
                     ><AlertTitle>Confirmación necesaria</AlertTitle
                     ><AlertDescription
                         >{{ purge }} Guardar y reiniciar elimina ese trabajo en
                         curso.</AlertDescription
                     ></Alert
                 >
-                <DialogFooter>
+                <SheetFooter class="mt-auto">
                     <span
                         class="mr-auto text-sm text-muted-foreground"
                         role="status"
-                        >{{
+                    >
+                        {{
                             form.processing
                                 ? 'Guardando…'
                                 : dirty
                                   ? 'Cambios sin guardar'
                                   : 'Sin cambios pendientes'
-                        }}</span
-                    >
+                        }}
+                    </span>
                     <Button
                         type="button"
                         variant="outline"
                         :disabled="form.processing"
-                        @click="close(false)"
-                        >Cancelar</Button
+                        @click="closeProperties(false)"
                     >
+                        {{ isFlow ? 'Cancelar' : 'Cerrar' }}
+                    </Button>
                     <Button
                         v-if="purge"
                         type="button"
@@ -465,18 +545,20 @@ watch(open, (isOpen, _previous, onCleanup) => {
                             form.confirm_purge = true;
                             submit();
                         "
-                        >Guardar y reiniciar</Button
                     >
+                        Guardar y reiniciar
+                    </Button>
                     <Button
                         v-else
                         type="button"
                         :disabled="form.processing"
                         @click="submit"
-                        >Guardar diseño</Button
                     >
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+                        Guardar diseño
+                    </Button>
+                </SheetFooter>
+            </SheetContent>
+        </Sheet>
         <Dialog v-model:open="discard">
             <DialogContent
                 ><DialogHeader
@@ -499,6 +581,7 @@ watch(open, (isOpen, _previous, onCleanup) => {
                             initialProperties = propertiesSnapshot();
                             discard = false;
                             open = false;
+                            propertiesOpen = false;
                         "
                         >Descartar cambios</Button
                     ></DialogFooter

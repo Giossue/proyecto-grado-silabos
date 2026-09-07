@@ -9,6 +9,10 @@ import {
     AlignJustify,
     Undo2,
     Redo2,
+    Braces,
+    Plus,
+    TableProperties,
+    UserRoundPlus,
 } from '@lucide/vue';
 import { Node, mergeAttributes } from '@tiptap/core';
 import Mention from '@tiptap/extension-mention';
@@ -26,9 +30,11 @@ import {
     Color,
 } from '@tiptap/extension-text-style';
 import { NodeSelection } from '@tiptap/pm/state';
+import { CellSelection } from '@tiptap/pm/tables';
 import StarterKit from '@tiptap/starter-kit';
 import type { SuggestionProps } from '@tiptap/suggestion';
 import { EditorContent, useEditor } from '@tiptap/vue-3';
+import { BubbleMenu } from '@tiptap/vue-3/menus';
 import {
     computed,
     onBeforeUnmount,
@@ -46,6 +52,11 @@ import {
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from '@/components/ui/popover';
+import {
     Select,
     SelectContent,
     SelectGroup,
@@ -53,7 +64,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Separator } from '@/components/ui/separator';
 import {
     DOCUMENT_FONTS,
     cellNode,
@@ -77,7 +88,7 @@ const suggestions = shallowRef<SuggestionProps<TemplateVariable> | null>(null);
 const selectedSuggestion = ref(0);
 const fieldLabel = ref('');
 const fieldType = ref('texto_largo');
-const tool = ref('format');
+const insertOpen = ref(false);
 const rows = ref(3);
 const columns = ref(3);
 const initial = JSON.stringify(props.document);
@@ -245,7 +256,6 @@ const editor = useEditor({
                             )
                             .setNodeSelection(range.from)
                             .run();
-                        tool.value = 'fields';
 
                         return;
                     }
@@ -314,14 +324,6 @@ const editor = useEditor({
     onTransaction: () => {
         toolbarVersion.value++;
     },
-    onSelectionUpdate: ({ editor: current }) => {
-        if (
-            current.state.selection instanceof NodeSelection &&
-            ['field', 'column'].includes(current.state.selection.node.type.name)
-        ) {
-            tool.value = 'fields';
-        }
-    },
 });
 const chooseVariable = (item: TemplateVariable) =>
     suggestions.value?.command({ id: item.key, label: item.key });
@@ -355,6 +357,37 @@ const selectedPersistedField = computed(() =>
         ? persistedKeys.has(String(selectedField.value.attrs.key))
         : false,
 );
+const contextualTool = computed<'format' | 'table' | 'field' | null>(() => {
+    void toolbarVersion.value;
+    const current = editor.value;
+    const selection = current?.state.selection;
+
+    if (!current || !selection) {
+        return null;
+    }
+
+    if (
+        selection instanceof NodeSelection &&
+        ['field', 'column'].includes(selection.node.type.name)
+    ) {
+        return 'field';
+    }
+
+    if (!(selection instanceof CellSelection) && !selection.empty) {
+        return 'format';
+    }
+
+    return current.isActive('table') ? 'table' : null;
+});
+const showContextMenu = () => contextualTool.value !== null;
+const bubbleOptions = {
+    strategy: 'fixed' as const,
+    placement: 'top' as const,
+    offset: 8,
+    flip: {},
+    shift: { padding: 8 },
+};
+const appendMenuTo = () => document.body;
 watch(selectedField, (node) => {
     if (node) {
         fieldLabel.value = String(node.attrs.label);
@@ -510,6 +543,36 @@ const addField = () => {
     editor.value.chain().focus().insertContent(node).run();
     fieldLabel.value = '';
 };
+const insertTeacherField = () => {
+    const current = editor.value;
+
+    if (!current || props.pending) {
+        return;
+    }
+
+    const position = current.state.selection.from;
+    current
+        .chain()
+        .focus()
+        .insertContent(teacherNode('Respuesta del docente', 'texto_largo'))
+        .setNodeSelection(position)
+        .run();
+    insertOpen.value = false;
+};
+const insertVariable = (variable: TemplateVariable) => {
+    editor.value
+        ?.chain()
+        .focus()
+        .insertContent([
+            {
+                type: 'variable',
+                attrs: { id: variable.key, label: variable.key },
+            },
+            { type: 'text', text: ' ' },
+        ])
+        .run();
+    insertOpen.value = false;
+};
 const initialOnlyField = (document: DocumentNode): DocumentNode | null => {
     const content = (document.content ?? []).filter(
         (node) => node.type !== 'paragraph' || (node.content?.length ?? 0) > 0,
@@ -555,16 +618,16 @@ const insertTable = () => {
 
     if (initialField) {
         editor.value?.commands.setContent({ type: 'doc', content: [table] });
+        insertOpen.value = false;
 
         return;
     }
 
     editor.value?.chain().focus().insertContent(table).run();
+    insertOpen.value = false;
 };
 const save = () => {
     if (selectedField.value && !fieldLabel.value.trim()) {
-        tool.value = 'fields';
-
         return;
     }
 
@@ -596,437 +659,534 @@ defineExpose({ save, editor });
 
 <template>
     <div class="flex min-h-0 flex-1 flex-col gap-3 max-sm:overflow-y-auto">
-        <Tabs
+        <div
             v-if="state"
-            v-model="tool"
-            class="shrink-0 rounded-lg border bg-muted/30 p-3"
+            class="sticky top-2 flex shrink-0 flex-wrap items-center gap-1 rounded-lg border bg-background/95 p-2 shadow-sm backdrop-blur"
             :data-pending="pending"
+            role="toolbar"
+            aria-label="Acciones del documento"
         >
-            <TabsList aria-label="Herramientas del editor">
-                <TabsTrigger value="format">Formato</TabsTrigger>
-                <TabsTrigger value="tables">Tablas</TabsTrigger>
-                <TabsTrigger value="fields">Campos</TabsTrigger>
-            </TabsList>
-            <TabsContent
-                value="format"
-                class="flex flex-wrap items-center gap-1"
-                role="group"
-                aria-label="Formato del texto"
+            <Popover v-model:open="insertOpen">
+                <PopoverTrigger as-child>
+                    <Button type="button" variant="outline" size="sm">
+                        <Plus data-icon="inline-start" />
+                        Insertar
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent align="start" class="w-80">
+                    <div class="flex flex-col gap-4">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            class="justify-start"
+                            :disabled="pending"
+                            @click="insertTeacherField"
+                        >
+                            <UserRoundPlus data-icon="inline-start" />
+                            Respuesta del docente
+                        </Button>
+                        <Separator />
+                        <FieldGroup class="gap-2">
+                            <p class="text-sm font-medium">Nueva tabla</p>
+                            <div class="flex items-center gap-2">
+                                <Input
+                                    v-model="rows"
+                                    type="number"
+                                    :min="1"
+                                    :max="20"
+                                    class="w-16"
+                                    aria-label="Filas de la nueva tabla"
+                                />
+                                <span aria-hidden="true">×</span>
+                                <Input
+                                    v-model="columns"
+                                    type="number"
+                                    :min="1"
+                                    :max="12"
+                                    class="w-16"
+                                    aria-label="Columnas de la nueva tabla"
+                                />
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    :disabled="pending"
+                                    @click="insertTable"
+                                >
+                                    <TableProperties data-icon="inline-start" />
+                                    Tabla
+                                </Button>
+                            </div>
+                        </FieldGroup>
+                        <Separator />
+                        <div class="flex flex-col gap-2">
+                            <p
+                                class="flex items-center gap-2 text-sm font-medium"
+                            >
+                                <Braces aria-hidden="true" />
+                                Datos automáticos
+                            </p>
+                            <div
+                                class="flex max-h-44 flex-col gap-1 overflow-y-auto"
+                            >
+                                <Button
+                                    v-for="variable in variables"
+                                    :key="variable.key"
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    class="h-auto justify-start text-left"
+                                    :disabled="pending"
+                                    @click="insertVariable(variable)"
+                                >
+                                    <span>
+                                        <span class="block font-medium"
+                                            >@{{ variable.key }}</span
+                                        >
+                                        <span
+                                            class="block text-xs text-muted-foreground"
+                                            >{{ variable.label }}</span
+                                        >
+                                    </span>
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </PopoverContent>
+            </Popover>
+            <Separator orientation="vertical" class="h-7" />
+            <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Deshacer"
+                :disabled="pending || !state.can().undo()"
+                @mousedown.prevent
+                @click="state.chain().focus().undo().run()"
             >
-                <Select
-                    :model-value="
-                        state.getAttributes('textStyle').fontFamily ?? 'Arial'
-                    "
-                    :disabled="pending"
-                    @update:model-value="
-                        state
-                            .chain()
-                            .focus()
-                            .setFontFamily(String($event))
-                            .run()
-                    "
-                >
-                    <SelectTrigger class="w-40" aria-label="Tipo de fuente"
-                        ><SelectValue
-                    /></SelectTrigger>
-                    <SelectContent
-                        ><SelectGroup
-                            ><SelectItem
-                                v-for="font in DOCUMENT_FONTS"
-                                :key="font"
-                                :value="font"
-                                >{{ font }}</SelectItem
-                            ></SelectGroup
-                        ></SelectContent
-                    >
-                </Select>
-                <Select
-                    :model-value="
-                        state.getAttributes('textStyle').fontSize ?? '11pt'
-                    "
-                    :disabled="pending"
-                    @update:model-value="
-                        state.chain().focus().setFontSize(String($event)).run()
-                    "
-                >
-                    <SelectTrigger class="w-24" aria-label="Tamaño de fuente"
-                        ><SelectValue
-                    /></SelectTrigger>
-                    <SelectContent
-                        ><SelectGroup
-                            ><SelectItem
-                                v-for="size in [
-                                    7, 8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28,
-                                    32, 36,
-                                ]"
-                                :key="size"
-                                :value="`${size}pt`"
-                                >{{ size }} pt</SelectItem
-                            ></SelectGroup
-                        ></SelectContent
-                    >
-                </Select>
-                <Input
-                    type="color"
-                    class="w-12"
-                    aria-label="Color de fuente"
-                    :model-value="
-                        state.getAttributes('textStyle').color ?? '#000000'
-                    "
-                    :disabled="pending"
-                    @update:model-value="
-                        state.chain().focus().setColor(String($event)).run()
-                    "
-                />
-                <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    aria-label="Negrita"
-                    :aria-pressed="state.isActive('bold')"
-                    :disabled="pending"
-                    @mousedown.prevent
-                    @click="state.chain().focus().toggleBold().run()"
-                    ><Bold
-                /></Button>
-                <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    aria-label="Cursiva"
-                    :aria-pressed="state.isActive('italic')"
-                    :disabled="pending"
-                    @mousedown.prevent
-                    @click="state.chain().focus().toggleItalic().run()"
-                    ><Italic
-                /></Button>
-                <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    aria-label="Subrayado"
-                    :aria-pressed="state.isActive('underline')"
-                    :disabled="pending"
-                    @mousedown.prevent
-                    @click="state.chain().focus().toggleUnderline().run()"
-                    ><Underline
-                /></Button>
-                <Button
-                    v-for="item in [
-                        {
-                            value: 'left',
-                            label: 'Alinear a la izquierda',
-                            icon: AlignLeft,
-                        },
-                        {
-                            value: 'center',
-                            label: 'Centrar',
-                            icon: AlignCenter,
-                        },
-                        {
-                            value: 'right',
-                            label: 'Alinear a la derecha',
-                            icon: AlignRight,
-                        },
-                        {
-                            value: 'justify',
-                            label: 'Justificar',
-                            icon: AlignJustify,
-                        },
-                    ]"
-                    :key="item.value"
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    :aria-label="item.label"
-                    :disabled="pending"
-                    @mousedown.prevent
-                    @click="
-                        state.chain().focus().setTextAlign(item.value).run()
-                    "
-                    ><component :is="item.icon"
-                /></Button>
-                <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    aria-label="Deshacer"
-                    :disabled="pending || !state.can().undo()"
-                    @mousedown.prevent
-                    @click="state.chain().focus().undo().run()"
-                    ><Undo2
-                /></Button>
-                <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    aria-label="Rehacer"
-                    :disabled="pending || !state.can().redo()"
-                    @mousedown.prevent
-                    @click="state.chain().focus().redo().run()"
-                    ><Redo2
-                /></Button>
-                <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    :disabled="pending"
-                    @mousedown.prevent
-                    @click="state.chain().focus().unsetAllMarks().run()"
-                    >Quitar formato</Button
-                >
-                <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    :disabled="pending"
-                    @mousedown.prevent
-                    @click="state.chain().focus().toggleBulletList().run()"
-                    >Viñetas</Button
-                >
-                <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    :disabled="pending"
-                    @mousedown.prevent
-                    @click="state.chain().focus().toggleOrderedList().run()"
-                    >Numeración</Button
-                >
-            </TabsContent>
-            <TabsContent
-                value="tables"
-                class="flex flex-wrap items-center gap-2"
-                role="group"
-                aria-label="Diseño de tablas"
+                <Undo2 />
+            </Button>
+            <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Rehacer"
+                :disabled="pending || !state.can().redo()"
+                @mousedown.prevent
+                @click="state.chain().focus().redo().run()"
             >
-                <Input
-                    v-model="rows"
-                    type="number"
-                    :min="1"
-                    :max="20"
-                    class="w-16"
-                    aria-label="Filas de la nueva tabla"
-                />
-                <span aria-hidden="true">×</span>
-                <Input
-                    v-model="columns"
-                    type="number"
-                    :min="1"
-                    :max="12"
-                    class="w-16"
-                    aria-label="Columnas de la nueva tabla"
-                />
-                <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    :disabled="pending"
-                    @mousedown.prevent
-                    @click="insertTable"
-                    >Insertar tabla</Button
+                <Redo2 />
+            </Button>
+            <span class="ml-auto text-xs text-muted-foreground">
+                Seleccione texto, una celda o un campo para editarlo
+            </span>
+        </div>
+
+        <BubbleMenu
+            v-if="state"
+            :editor="state"
+            plugin-key="template-context-menu"
+            :options="bubbleOptions"
+            :append-to="appendMenuTo"
+            :should-show="showContextMenu"
+        >
+            <div
+                class="max-w-[calc(100vw-1rem)] rounded-lg border bg-popover p-2 text-popover-foreground shadow-md"
+                :data-pending="pending"
+            >
+                <div
+                    v-if="contextualTool === 'format'"
+                    class="flex flex-wrap items-center gap-1"
+                    role="group"
+                    aria-label="Formato del texto"
                 >
-                <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    :disabled="pending || !state.can().mergeCells()"
-                    @mousedown.prevent
-                    @click="state.chain().focus().mergeCells().run()"
-                    >Combinar celdas</Button
-                >
-                <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    :disabled="pending || !state.can().splitCell()"
-                    @mousedown.prevent
-                    @click="state.chain().focus().splitCell().run()"
-                    >Separar celda</Button
-                >
-                <template v-if="state.isActive('table')">
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        :disabled="pending"
-                        @mousedown.prevent
-                        @click="state.chain().focus().addRowAfter().run()"
-                        >Agregar fila</Button
-                    >
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        :disabled="pending"
-                        @mousedown.prevent
-                        @click="state.chain().focus().addColumnAfter().run()"
-                        >Agregar columna</Button
-                    >
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        :disabled="pending"
-                        @mousedown.prevent
-                        @click="state.chain().focus().deleteRow().run()"
-                        >Eliminar fila</Button
-                    >
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        :disabled="pending"
-                        @mousedown.prevent
-                        @click="state.chain().focus().deleteColumn().run()"
-                        >Eliminar columna</Button
-                    >
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        :disabled="pending"
-                        @mousedown.prevent
-                        @click="state.chain().focus().deleteTable().run()"
-                        >Eliminar tabla</Button
-                    >
-                    <Input
-                        type="color"
-                        class="w-12"
-                        aria-label="Color de celda"
-                        :disabled="pending"
+                    <Select
                         :model-value="
-                            state.getAttributes('tableCell').backgroundColor ??
-                            '#FFFFFF'
+                            state.getAttributes('textStyle').fontFamily ??
+                            'Arial'
                         "
+                        :disabled="pending"
                         @update:model-value="
                             state
                                 .chain()
                                 .focus()
-                                .setCellAttribute(
-                                    'backgroundColor',
-                                    String($event),
-                                )
+                                .setFontFamily(String($event))
                                 .run()
                         "
-                    />
-                </template>
-                <Select
-                    v-if="repeatTable"
-                    :model-value="rowRole"
-                    :disabled="pending"
-                    @update:model-value="
-                        state
-                            .chain()
-                            .focus()
-                            .updateAttributes('tableRow', {
-                                rowRole: String($event),
-                            })
-                            .run()
-                    "
-                >
-                    <SelectTrigger class="w-44" aria-label="Función de la fila"
-                        ><SelectValue
-                    /></SelectTrigger>
-                    <SelectContent
-                        ><SelectGroup
-                            ><SelectItem value="fixed">Texto fijo</SelectItem
-                            ><SelectItem value="record"
-                                >Datos que se repiten</SelectItem
-                            ><SelectItem value="unit"
-                                >Datos de la unidad</SelectItem
-                            ><SelectItem value="total"
-                                >Totales automáticos</SelectItem
-                            ></SelectGroup
-                        ></SelectContent
                     >
-                </Select>
-            </TabsContent>
-            <TabsContent value="fields" class="flex flex-col gap-3">
-                <p class="text-sm text-muted-foreground">
-                    {{
-                        selectedPersistedField
-                            ? 'Cambie aquí la presentación. Para renombrar este campo, use Propiedades.'
-                            : selectedField
-                              ? 'Defina el nombre y la presentación del campo nuevo.'
-                              : 'Escriba @docente en el documento o inserte aquí un nuevo campo.'
-                    }}
-                </p>
-                <FieldGroup class="flex flex-row flex-wrap items-end gap-2">
-                    <Field
-                        v-if="!selectedPersistedField"
-                        class="w-56"
-                        :data-invalid="
-                            Boolean(selectedField && !fieldLabel.trim())
+                        <SelectTrigger class="w-40" aria-label="Tipo de fuente"
+                            ><SelectValue
+                        /></SelectTrigger>
+                        <SelectContent
+                            ><SelectGroup
+                                ><SelectItem
+                                    v-for="font in DOCUMENT_FONTS"
+                                    :key="font"
+                                    :value="font"
+                                    >{{ font }}</SelectItem
+                                ></SelectGroup
+                            ></SelectContent
+                        >
+                    </Select>
+                    <Select
+                        :model-value="
+                            state.getAttributes('textStyle').fontSize ?? '11pt'
                         "
-                        ><FieldLabel for="design-field-name"
-                            >Campo que llenará el docente</FieldLabel
-                        ><Input
-                            id="design-field-name"
-                            v-model="fieldLabel"
-                            @update:model-value="selectedField && updateField()"
-                            :disabled="pending"
-                            maxlength="180"
-                            :aria-invalid="
-                                Boolean(selectedField && !fieldLabel.trim())
-                            "
-                            placeholder="Ej. Objetivo de la unidad"
-                            @keydown.enter.prevent="
-                                selectedField ? updateField() : addField()
-                            " /><FieldError
-                            v-if="selectedField && !fieldLabel.trim()"
-                            :errors="['Escriba un nombre para el campo.']"
-                    /></Field>
-                    <Field class="w-36"
-                        ><FieldLabel for="design-field-type"
-                            >Tipo de contenido</FieldLabel
-                        ><Select
-                            v-model="fieldType"
-                            :disabled="pending"
-                            @update:model-value="selectedField && updateField()"
-                            ><SelectTrigger id="design-field-type"
-                                ><SelectValue /></SelectTrigger
-                            ><SelectContent
-                                ><SelectGroup>
-                                    <SelectItem
-                                        v-for="kind in fieldTypes"
-                                        :key="kind.value"
-                                        :value="kind.value"
-                                        >{{ kind.label }}</SelectItem
-                                    >
-                                </SelectGroup></SelectContent
-                            ></Select
-                        ></Field
+                        :disabled="pending"
+                        @update:model-value="
+                            state
+                                .chain()
+                                .focus()
+                                .setFontSize(String($event))
+                                .run()
+                        "
+                    >
+                        <SelectTrigger
+                            class="w-24"
+                            aria-label="Tamaño de fuente"
+                            ><SelectValue
+                        /></SelectTrigger>
+                        <SelectContent
+                            ><SelectGroup
+                                ><SelectItem
+                                    v-for="size in [
+                                        7, 8, 9, 10, 11, 12, 14, 16, 18, 20, 24,
+                                        28, 32, 36,
+                                    ]"
+                                    :key="size"
+                                    :value="`${size}pt`"
+                                    >{{ size }} pt</SelectItem
+                                ></SelectGroup
+                            ></SelectContent
+                        >
+                    </Select>
+                    <Input
+                        type="color"
+                        class="w-12"
+                        aria-label="Color de fuente"
+                        :model-value="
+                            state.getAttributes('textStyle').color ?? '#000000'
+                        "
+                        :disabled="pending"
+                        @update:model-value="
+                            state.chain().focus().setColor(String($event)).run()
+                        "
+                    />
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Negrita"
+                        :aria-pressed="state.isActive('bold')"
+                        :disabled="pending"
+                        @mousedown.prevent
+                        @click="state.chain().focus().toggleBold().run()"
+                        ><Bold
+                    /></Button>
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Cursiva"
+                        :aria-pressed="state.isActive('italic')"
+                        :disabled="pending"
+                        @mousedown.prevent
+                        @click="state.chain().focus().toggleItalic().run()"
+                        ><Italic
+                    /></Button>
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Subrayado"
+                        :aria-pressed="state.isActive('underline')"
+                        :disabled="pending"
+                        @mousedown.prevent
+                        @click="state.chain().focus().toggleUnderline().run()"
+                        ><Underline
+                    /></Button>
+                    <Button
+                        v-for="item in [
+                            {
+                                value: 'left',
+                                label: 'Alinear a la izquierda',
+                                icon: AlignLeft,
+                            },
+                            {
+                                value: 'center',
+                                label: 'Centrar',
+                                icon: AlignCenter,
+                            },
+                            {
+                                value: 'right',
+                                label: 'Alinear a la derecha',
+                                icon: AlignRight,
+                            },
+                            {
+                                value: 'justify',
+                                label: 'Justificar',
+                                icon: AlignJustify,
+                            },
+                        ]"
+                        :key="item.value"
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        :aria-label="item.label"
+                        :disabled="pending"
+                        @mousedown.prevent
+                        @click="
+                            state.chain().focus().setTextAlign(item.value).run()
+                        "
+                        ><component :is="item.icon"
+                    /></Button>
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        :disabled="pending"
+                        @mousedown.prevent
+                        @click="state.chain().focus().unsetAllMarks().run()"
+                        >Quitar formato</Button
+                    >
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        :disabled="pending"
+                        @mousedown.prevent
+                        @click="state.chain().focus().toggleBulletList().run()"
+                        >Viñetas</Button
+                    >
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        :disabled="pending"
+                        @mousedown.prevent
+                        @click="state.chain().focus().toggleOrderedList().run()"
+                        >Numeración</Button
+                    >
+                </div>
+                <div
+                    v-else-if="contextualTool === 'table'"
+                    class="flex flex-wrap items-center gap-2"
+                    role="group"
+                    aria-label="Diseño de tablas"
+                >
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        :disabled="pending || !state.can().mergeCells()"
+                        @mousedown.prevent
+                        @click="state.chain().focus().mergeCells().run()"
+                        >Combinar celdas</Button
                     >
                     <Button
                         type="button"
                         variant="outline"
-                        :disabled="
-                            pending ||
-                            !fieldLabel.trim() ||
-                            (!selectedField &&
-                                Boolean(repeatTable) &&
-                                rowRole === 'total')
-                        "
-                        @click="selectedField ? updateField() : addField()"
-                        >{{
-                            selectedField
-                                ? 'Aplicar al campo'
-                                : 'Insertar campo'
-                        }}</Button
+                        size="sm"
+                        :disabled="pending || !state.can().splitCell()"
+                        @mousedown.prevent
+                        @click="state.chain().focus().splitCell().run()"
+                        >Separar celda</Button
                     >
-                </FieldGroup>
-                <p
-                    v-if="
-                        ['bulleted_list', 'numbered_list'].includes(fieldType)
-                    "
-                    class="text-sm text-muted-foreground"
-                >
-                    El docente escribe un elemento por línea. El diseño aplica
-                    las viñetas o la numeración.
-                </p>
-            </TabsContent>
-        </Tabs>
+                    <template v-if="state.isActive('table')">
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            :disabled="pending"
+                            @mousedown.prevent
+                            @click="state.chain().focus().addRowAfter().run()"
+                            >Agregar fila</Button
+                        >
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            :disabled="pending"
+                            @mousedown.prevent
+                            @click="
+                                state.chain().focus().addColumnAfter().run()
+                            "
+                            >Agregar columna</Button
+                        >
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            :disabled="pending"
+                            @mousedown.prevent
+                            @click="state.chain().focus().deleteRow().run()"
+                            >Eliminar fila</Button
+                        >
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            :disabled="pending"
+                            @mousedown.prevent
+                            @click="state.chain().focus().deleteColumn().run()"
+                            >Eliminar columna</Button
+                        >
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            :disabled="pending"
+                            @mousedown.prevent
+                            @click="state.chain().focus().deleteTable().run()"
+                            >Eliminar tabla</Button
+                        >
+                        <Input
+                            type="color"
+                            class="w-12"
+                            aria-label="Color de celda"
+                            :disabled="pending"
+                            :model-value="
+                                state.getAttributes('tableCell')
+                                    .backgroundColor ?? '#FFFFFF'
+                            "
+                            @update:model-value="
+                                state
+                                    .chain()
+                                    .focus()
+                                    .setCellAttribute(
+                                        'backgroundColor',
+                                        String($event),
+                                    )
+                                    .run()
+                            "
+                        />
+                    </template>
+                    <Select
+                        v-if="repeatTable"
+                        :model-value="rowRole"
+                        :disabled="pending"
+                        @update:model-value="
+                            state
+                                .chain()
+                                .focus()
+                                .updateAttributes('tableRow', {
+                                    rowRole: String($event),
+                                })
+                                .run()
+                        "
+                    >
+                        <SelectTrigger
+                            class="w-44"
+                            aria-label="Función de la fila"
+                            ><SelectValue
+                        /></SelectTrigger>
+                        <SelectContent
+                            ><SelectGroup
+                                ><SelectItem value="fixed"
+                                    >Texto fijo</SelectItem
+                                ><SelectItem value="record"
+                                    >Datos que se repiten</SelectItem
+                                ><SelectItem value="unit"
+                                    >Datos de la unidad</SelectItem
+                                ><SelectItem value="total"
+                                    >Totales automáticos</SelectItem
+                                ></SelectGroup
+                            ></SelectContent
+                        >
+                    </Select>
+                </div>
+                <div v-else class="flex flex-col gap-3">
+                    <p class="text-sm text-muted-foreground">
+                        {{
+                            selectedPersistedField
+                                ? 'Cambie aquí la presentación. Para renombrar este campo, use Propiedades.'
+                                : selectedField
+                                  ? 'Defina el nombre y la presentación del campo nuevo.'
+                                  : 'Escriba @docente en el documento o inserte aquí un nuevo campo.'
+                        }}
+                    </p>
+                    <FieldGroup class="flex flex-row flex-wrap items-end gap-2">
+                        <Field
+                            v-if="!selectedPersistedField"
+                            class="w-56"
+                            :data-invalid="
+                                Boolean(selectedField && !fieldLabel.trim())
+                            "
+                            ><FieldLabel for="design-field-name"
+                                >Campo que llenará el docente</FieldLabel
+                            ><Input
+                                id="design-field-name"
+                                v-model="fieldLabel"
+                                @update:model-value="
+                                    selectedField && updateField()
+                                "
+                                :disabled="pending"
+                                maxlength="180"
+                                :aria-invalid="
+                                    Boolean(selectedField && !fieldLabel.trim())
+                                "
+                                placeholder="Ej. Objetivo de la unidad"
+                                @keydown.enter.prevent="
+                                    selectedField ? updateField() : addField()
+                                " /><FieldError
+                                v-if="selectedField && !fieldLabel.trim()"
+                                :errors="['Escriba un nombre para el campo.']"
+                        /></Field>
+                        <Field class="w-36"
+                            ><FieldLabel for="design-field-type"
+                                >Tipo de contenido</FieldLabel
+                            ><Select
+                                v-model="fieldType"
+                                :disabled="pending"
+                                @update:model-value="
+                                    selectedField && updateField()
+                                "
+                                ><SelectTrigger id="design-field-type"
+                                    ><SelectValue /></SelectTrigger
+                                ><SelectContent
+                                    ><SelectGroup>
+                                        <SelectItem
+                                            v-for="kind in fieldTypes"
+                                            :key="kind.value"
+                                            :value="kind.value"
+                                            >{{ kind.label }}</SelectItem
+                                        >
+                                    </SelectGroup></SelectContent
+                                ></Select
+                            ></Field
+                        >
+                        <Button
+                            type="button"
+                            variant="outline"
+                            :disabled="
+                                pending ||
+                                !fieldLabel.trim() ||
+                                (!selectedField &&
+                                    Boolean(repeatTable) &&
+                                    rowRole === 'total')
+                            "
+                            @click="selectedField ? updateField() : addField()"
+                            >{{
+                                selectedField
+                                    ? 'Aplicar al campo'
+                                    : 'Insertar campo'
+                            }}</Button
+                        >
+                    </FieldGroup>
+                    <p
+                        v-if="
+                            ['bulleted_list', 'numbered_list'].includes(
+                                fieldType,
+                            )
+                        "
+                        class="text-sm text-muted-foreground"
+                    >
+                        El docente escribe un elemento por línea. El diseño
+                        aplica las viñetas o la numeración.
+                    </p>
+                </div>
+            </div>
+        </BubbleMenu>
         <div
             v-if="suggestions"
             class="flex shrink-0 flex-col gap-1 rounded-md border bg-popover p-2 text-popover-foreground"
@@ -1054,15 +1214,8 @@ defineExpose({ save, editor });
             </Button>
         </div>
         <p class="shrink-0 text-sm text-muted-foreground">
-            <template v-if="tool === 'tables'"
-                >Seleccione celdas arrastrando o con Mayús + clic para
-                combinarlas. Se conserva su contenido.</template
-            >
-            <template v-else
-                >@docente: respuesta del docente · @nombre_carrera y otras
-                variables: datos automáticos. Pulse un campo para
-                editarlo.</template
-            >
+            Use Insertar o escriba @ para añadir contenido. Seleccione texto,
+            celdas o campos para mostrar sus herramientas.
         </p>
         <div
             class="min-h-0 flex-1 overflow-auto rounded-md border p-4 max-sm:min-h-64 max-sm:shrink-0"

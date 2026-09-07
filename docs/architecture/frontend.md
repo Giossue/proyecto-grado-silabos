@@ -122,22 +122,26 @@ inserción del cliente son base cero; `position` del caso de uso se envía en ba
 ## Diseño integrado de la plantilla (I-56)
 
 `TemplateSheetEditor` conserva bloques, arrastre, paleta y paginación. Cada
-`TemplateDesignBlock` reúne Diseño y Propiedades usando las pestañas compartidas.
-Mantiene montado el editor al cambiar de pestaña y controla el borrador conjunto
+`TemplateDesignBlock` sustituye su vista por el editor directo dentro del mismo bloque;
+no abre un diálogo de diseño. Propiedades vive en un `Sheet` lateral y el editor se
+mantiene montado al abrirlo o cerrarlo. Ambos controlan un solo borrador conjunto
 (nombre, ayuda, IA y documento), incluido el aviso de salida. Un solo PATCH de
 `SaveTemplateDocument` verifica la huella y persiste todo en la misma transacción;
 solo el bloque de flujo envía documento nulo para editar sus propiedades, nunca
 su estructura. Los campos heredados y los bloques fijos no ofrecen asistencia de IA.
 Se retiró `TemplateFieldSheet`; las propiedades ya no tienen un guardado separado.
 
-`TemplateDesignBlock` ofrece `TemplateDocumentEditor` (Tiptap Vue 3, ADR-0007) en un
-diálogo amplio con guardado explícito. La cinta reutiliza Button, Select, FieldGroup,
-Input, Alert y Dialog compartidos; los colores libres pertenecen al documento, no al
-tema de la aplicación. El documento JSON contiene solo nodos/marcas del contrato PHP
-`TemplateDocument`; no se persiste HTML ni se acepta HTML arbitrario en el servidor.
+`TemplateDesignBlock` ofrece `TemplateDocumentEditor` (Tiptap Vue 3, ADR-0007) en la
+hoja, con guardado explícito. Una fila fija reúne Insertar y el historial; `BubbleMenu`
+presenta una barra flotante según la selección: formato para texto, operaciones para
+tablas y presentación para campos. La interfaz reutiliza Button, Popover, Select,
+FieldGroup, Input, Alert y Sheet compartidos; los colores libres pertenecen al
+documento, no al tema de la aplicación. El documento JSON contiene solo nodos/marcas
+del contrato PHP `TemplateDocument`; no se persiste HTML ni se acepta HTML arbitrario
+en el servidor.
 
-La cinta agrupa Formato, Tablas y Campos mediante Tabs, sin ocultar ni desmontar
-Tiptap. La sugerencia `@docente` es un comando de inserción: crea un nodo `field`
+«Insertar» agrupa tabla, variables automáticas y respuesta docente. La sugerencia
+`@docente` ofrece el mismo alta desde el teclado: crea un nodo `field`
 con referencia independiente, o `column` dentro de filas de datos/unidad repetibles.
 No se añade al catálogo de variables automáticas ni se guarda como nodo `variable`.
 NodeSelection enlaza el recuadro con su formato, y se conserva al actualizar sus

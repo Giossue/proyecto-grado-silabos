@@ -89,14 +89,14 @@ del expediente, reinicio explícito e historia intacta tras cambiar la base futu
 `document-pagination.mjs` conserva la regresión de hojas. PV-07/PV-08/PV-19 permanecen
 abiertas y la evidencia detallada de comandos queda en el plan I-56.
 
-El seguimiento de propiedades reúne nombre, ayuda e IA en el diálogo de diseño
+El seguimiento de propiedades reúne nombre, ayuda e IA en el mismo borrador de diseño
 (ADM-06; RNF-018..023). `TemplateDocumentTest` verifica guardado conjunto,
 rechazo de propiedades ajenas y conflictos, IA restringida, campos retirados y
 propiedades del flujo sin modificar su documento. La suite de navegador comprueba
-borrador entre pestañas, cancelación sin peticiones, aviso de salida, guardado desde
-Propiedades y reapertura persistida; `ManagementCreationUiTest` verifica que ya no
-existe el acceso al Sheet independiente. Se mantienen permisos, bloqueo del proceso,
-confirmación de reinicio y revisión enviada intacta.
+borrador entre el editor directo y el panel lateral, cancelación sin peticiones, aviso
+de salida, guardado desde Propiedades y reapertura persistida;
+`ManagementCreationUiTest` verifica que no reaparezca el diálogo grande. Se mantienen
+permisos, bloqueo del proceso, confirmación de reinicio y revisión enviada intacta.
 
 La reorganización posterior de I-56 cubre Formato/Tablas/Campos, el comando
 `@docente` y formato de listas dentro del diseño. `template-document-editor.mjs`
@@ -114,6 +114,12 @@ y nodos se actualicen juntos; la prueba Chromium comprueba edición, envío y re
 La misma regresión comprueba que una tabla libre absorbe el único campo inicial en su
 primera celda, no crea campos «Dato…» y alterna «Respuesta del docente» con las
 etiquetas descriptivas según exista uno o varios campos, sin el carácter `▧`.
+
+El seguimiento de edición directa conserva todas esas operaciones sin exponerlas a la
+vez: `TemplateDesignBlock` edita en la hoja y abre Propiedades en un panel lateral;
+`TemplateDocumentEditor` mantiene Insertar/deshacer/rehacer y muestra una barra
+flotante distinta para texto, tabla o campo. La prueba Chromium cubre los tres
+contextos, el guardado atómico, los errores, el reinicio confirmado y el ancho móvil.
 
 El ajuste posterior con la referencia `temp/silabo.pdf` conserva el diseño guardado
 y añade indicadores de ambos parciales solo a la plantilla inicial. No carga datos

@@ -176,7 +176,6 @@ test(
                 [first, last],
             );
         await selectCells(0, 1);
-        await page.getByRole('tab', { name: 'Tablas', exact: true }).click();
         await page
             .getByRole('button', { name: 'Combinar celdas', exact: true })
             .click();
@@ -408,10 +407,10 @@ test(
                 .innerText(),
             'Respuesta del docente',
         );
-        await page.getByRole('tab', { name: 'Tablas', exact: true }).click();
         await page
-            .getByRole('button', { name: 'Insertar tabla', exact: true })
+            .getByRole('button', { name: 'Insertar', exact: true })
             .click();
+        await page.getByRole('button', { name: 'Tabla', exact: true }).click();
         assert.equal(await page.locator('.tiptap table').count(), 1);
         assert.equal(await page.locator('.tiptap > p').count(), 0);
         assert.equal(
@@ -481,20 +480,24 @@ test(
             ['Objetivo', 'Resultado esperado'],
         );
 
-        // Integration: the actual dialog retains local edits on errors, owns its
+        // Integration: direct editing retains local changes on errors, owns its
         // purge confirmation and reopens the persisted document with a new fingerprint.
         await page.evaluate(() => window.fixture.openDesign());
-        let dialog = page.getByRole('dialog', {
-            name: 'Diseño: Objetivo',
+        let designRegion = page.getByRole('region', {
+            name: 'Editar diseño de Objetivo',
             exact: true,
         });
-        await dialog
-            .getByRole('tab', { name: 'Propiedades', exact: true })
+        await designRegion
+            .getByRole('button', { name: 'Propiedades', exact: true })
             .click();
-        await dialog
+        let properties = page.getByRole('dialog', {
+            name: 'Propiedades de Objetivo',
+            exact: true,
+        });
+        await properties
             .getByLabel('Ayuda para el docente', { exact: true })
             .fill('Cambio descartado');
-        await dialog
+        await properties
             .getByText('Cambios sin guardar', { exact: true })
             .waitFor();
         assert.equal(
@@ -506,68 +509,87 @@ test(
             }),
             true,
         );
-        await dialog
+        await properties
+            .getByRole('button', { name: 'Cerrar', exact: true })
+            .click();
+        await designRegion
             .getByRole('button', { name: 'Cancelar', exact: true })
             .click();
         await page
             .getByRole('button', { name: 'Descartar cambios', exact: true })
             .click();
-        await dialog.waitFor({ state: 'hidden' });
+        await designRegion.waitFor({ state: 'hidden' });
         assert.equal(
             await page.evaluate(() => window.fixture.requests.length),
             0,
         );
         await page.evaluate(() => window.fixture.openDesign());
-        await dialog
-            .getByRole('tab', { name: 'Propiedades', exact: true })
+        designRegion = page.getByRole('region', {
+            name: 'Editar diseño de Objetivo',
+            exact: true,
+        });
+        await designRegion
+            .getByRole('button', { name: 'Propiedades', exact: true })
             .click();
+        properties = page.getByRole('dialog', {
+            name: 'Propiedades de Objetivo',
+            exact: true,
+        });
         assert.equal(
-            await dialog
+            await properties
                 .getByLabel('Ayuda para el docente', { exact: true })
                 .inputValue(),
             '',
         );
-        await dialog
+        await properties
             .getByLabel('Ayuda para el docente', { exact: true })
             .fill('Indique el objetivo con claridad.');
-        await dialog
+        await properties
             .getByLabel('Nombre del bloque', { exact: true })
             .fill('Objetivo renovado');
-        await dialog
+        await properties
             .getByRole('checkbox', {
                 name: 'Permite asistencia de IA',
                 exact: true,
             })
             .check();
-        await dialog.getByRole('tab', { name: 'Diseño', exact: true }).click();
-        await dialog.locator('.tiptap').click();
+        await properties
+            .getByRole('button', { name: 'Cerrar', exact: true })
+            .click();
+        await designRegion.locator('.tiptap').click();
         await page.keyboard.press('Control+End');
         await page.keyboard.type('Cambio persistente');
-        await dialog
-            .getByRole('tab', { name: 'Propiedades', exact: true })
+        await designRegion
+            .getByRole('button', { name: 'Propiedades', exact: true })
             .click();
+        properties = page.getByRole('dialog', {
+            name: 'Propiedades de Objetivo',
+            exact: true,
+        });
         assert.equal(
-            await dialog
+            await properties
                 .getByLabel('Ayuda para el docente', { exact: true })
                 .inputValue(),
             'Indique el objetivo con claridad.',
         );
-        await dialog.getByRole('tab', { name: 'Diseño', exact: true }).click();
+        await properties
+            .getByRole('button', { name: 'Cerrar', exact: true })
+            .click();
         assert.match(
-            await dialog.locator('.tiptap').innerText(),
+            await designRegion.locator('.tiptap').innerText(),
             /Cambio persistente/,
         );
         await page.evaluate(() =>
             window.fixture.fail({ document: 'Diseño inválido de prueba' }),
         );
-        await dialog
+        await designRegion
             .getByRole('button', { name: 'Guardar diseño', exact: true })
             .click();
-        await dialog
+        await designRegion
             .getByText('Diseño inválido de prueba', { exact: true })
             .waitFor();
         assert.match(
-            await dialog.locator('.tiptap').innerText(),
+            await designRegion.locator('.tiptap').innerText(),
             /Cambio persistente/,
         );
         await page.evaluate(() =>
@@ -576,23 +598,20 @@ test(
                 purge_count: '1',
             }),
         );
-        await dialog
-            .getByRole('tab', { name: 'Propiedades', exact: true })
-            .click();
-        await dialog
+        await designRegion
             .getByRole('button', { name: 'Guardar diseño', exact: true })
             .click();
-        await dialog
+        await designRegion
             .getByRole('button', { name: 'Guardar y reiniciar', exact: true })
             .waitFor();
         assert.equal(
             await page.evaluate(() => window.fixture.globalPurgeOpen()),
             false,
         );
-        await dialog
+        await designRegion
             .getByRole('button', { name: 'Guardar y reiniciar', exact: true })
             .click();
-        await dialog.waitFor({ state: 'hidden' });
+        await designRegion.waitFor({ state: 'hidden' });
         const requests = await page.evaluate(() => window.fixture.requests);
         assert.equal(requests.length, 3);
         assert.equal(requests[0].fingerprint, 'a'.repeat(64));
@@ -607,31 +626,35 @@ test(
             },
         ]);
         await page.evaluate(() => window.fixture.openDesign());
-        dialog = page.getByRole('dialog', {
-            name: 'Diseño: Objetivo renovado',
+        designRegion = page.getByRole('region', {
+            name: 'Editar diseño de Objetivo renovado',
             exact: true,
         });
         assert.match(
-            await dialog.locator('.tiptap').innerText(),
+            await designRegion.locator('.tiptap').innerText(),
             /Cambio persistente/,
         );
-        await dialog
-            .getByRole('tab', { name: 'Propiedades', exact: true })
+        await designRegion
+            .getByRole('button', { name: 'Propiedades', exact: true })
             .click();
+        properties = page.getByRole('dialog', {
+            name: 'Propiedades de Objetivo renovado',
+            exact: true,
+        });
         assert.equal(
-            await dialog
+            await properties
                 .getByLabel('Ayuda para el docente', { exact: true })
                 .inputValue(),
             'Indique el objetivo con claridad.',
         );
         assert.equal(
-            await dialog
+            await properties
                 .getByLabel('Nombre del bloque', { exact: true })
                 .inputValue(),
             'Objetivo renovado',
         );
         assert.equal(
-            await dialog
+            await properties
                 .getByRole('checkbox', {
                     name: 'Permite asistencia de IA',
                     exact: true,
@@ -640,16 +663,18 @@ test(
             true,
         );
 
-        await dialog.getByRole('tab', { name: 'Diseño', exact: true }).click();
-        await dialog.locator('[data-template-field="objetivo"]').click();
-        await dialog.getByRole('tab', { name: 'Campos', exact: true }).click();
-        await dialog
+        await properties
+            .getByRole('button', { name: 'Cerrar', exact: true })
+            .click();
+        await designRegion.locator('[data-template-field="objetivo"]').click();
+        const persistedFieldToolbar = page
             .getByText('Para renombrar este campo, use Propiedades.', {
                 exact: false,
             })
-            .waitFor();
+            .locator('..');
+        await persistedFieldToolbar.waitFor();
         assert.equal(
-            await dialog
+            await persistedFieldToolbar
                 .getByLabel('Campo que llenará el docente', { exact: true })
                 .count(),
             0,
@@ -665,7 +690,6 @@ test(
             });
         }
 
-        await dialog.getByRole('tab', { name: 'Diseño', exact: true }).click();
         assert.deepEqual(errors, []);
 
         if (process.env.TEMPLATE_DOCUMENT_SCREENSHOT) {
@@ -677,8 +701,8 @@ test(
         }
 
         await page.setViewportSize({ width: 360, height: 800 });
-        await dialog.locator('.tiptap').scrollIntoViewIfNeeded();
-        const geometry = await dialog.evaluate((element) => {
+        await designRegion.locator('.tiptap').scrollIntoViewIfNeeded();
+        const geometry = await designRegion.evaluate((element) => {
             const box = element.getBoundingClientRect();
             const canvas = element.querySelector(
                 '.template-document-editor',
@@ -702,7 +726,7 @@ test(
             'The paper scrolls locally on mobile.',
         );
         assert.ok(
-            await dialog
+            await designRegion
                 .getByRole('button', { name: 'Guardar diseño', exact: true })
                 .isVisible(),
         );
@@ -727,21 +751,21 @@ test(
             });
         }
 
-        await dialog
-            .getByRole('tab', { name: 'Propiedades', exact: true })
+        await designRegion
+            .getByRole('button', { name: 'Propiedades', exact: true })
             .click();
-        const propertiesPanel = dialog.getByRole('tabpanel', {
-            name: 'Propiedades',
+        properties = page.getByRole('dialog', {
+            name: 'Propiedades de Objetivo renovado',
             exact: true,
         });
         assert.equal(
-            await propertiesPanel.evaluate(
+            await properties.evaluate(
                 (element) => element.scrollWidth <= element.clientWidth,
             ),
             true,
         );
         assert.equal(
-            await dialog
+            await properties
                 .getByRole('button', { name: 'Guardar diseño', exact: true })
                 .isVisible(),
             true,
