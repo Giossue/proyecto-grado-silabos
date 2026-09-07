@@ -116,6 +116,26 @@ class TemplateDocumentTest extends TestCase
         $this->assertCount(2, TemplateDocument::nodes($resolved, 'listItem'));
     }
 
+    public function test_text_field_list_format_preserves_values_and_exports_lines_as_items(): void
+    {
+        $template = $this->template();
+        $field = $template->fields()->where('clave', 'objetivo_general')->firstOrFail();
+        $block = $field->block;
+        $doc = ['type' => 'doc', 'content' => [['type' => 'paragraph', 'content' => [[
+            'type' => 'field', 'attrs' => ['key' => $field->clave, 'label' => 'Resultados esperados', 'kind' => $field->tipo, 'listStyle' => 'bullet'],
+        ]]]]];
+        $this->patch(route('admin.templates.blocks.document', [$template, $block]), ['document' => $doc, 'fingerprint' => SaveTemplateDocument::fingerprint($block)])
+            ->assertSessionHasNoErrors();
+        $this->assertSame('Resultados esperados', $field->fresh()->etiqueta);
+        $this->assertSame($field->tipo, $field->fresh()->tipo);
+        foreach (['bullet' => 'bulletList', 'number' => 'orderedList'] as $style => $type) {
+            $doc['content'][0]['content'][0]['attrs']['listStyle'] = $style;
+            $resolved = TemplateDocumentResolver::resolve($doc, [['key' => $field->clave, 'value' => "Primero\r\n\nSegundo", 'rows' => []]], [], null);
+            $this->assertSame($type, $resolved['content'][0]['type']);
+            $this->assertSame(['Primero', 'Segundo'], array_column(TemplateDocument::nodes($resolved, 'text'), 'text'));
+        }
+    }
+
     public function test_removing_and_restoring_a_field_preserves_its_definition_without_hidden_requirements(): void
     {
         $template = $this->template();

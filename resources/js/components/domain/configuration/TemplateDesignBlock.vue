@@ -105,6 +105,7 @@ const edit = () => {
     tab.value = isFlow.value ? 'properties' : 'design';
     open.value = true;
 };
+defineExpose({ edit });
 const close = (value: boolean) => {
     if (value || form.processing) {
         return;
@@ -248,6 +249,7 @@ watch(open, (isOpen, _previous, onCleanup) => {
                             :document="draft"
                             :variables="props.variables"
                             :pending="form.processing"
+                            :field-keys="block.fields.map((field) => field.key)"
                             @dirty="designDirty = $event"
                             @save="save"
                         />

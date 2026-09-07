@@ -98,6 +98,14 @@ Propiedades y reapertura persistida; `ManagementCreationUiTest` verifica que ya 
 existe el acceso al Sheet independiente. Se mantienen permisos, bloqueo del proceso,
 confirmación de reinicio y revisión enviada intacta.
 
+La reorganización posterior de I-56 cubre Formato/Tablas/Campos, el comando
+`@docente` y formato de listas dentro del diseño. `template-document-editor.mjs`
+inserta dos referencias independientes con teclado/ratón, una en celda, cambia
+nombre/formato y prueba respuestas docentes separadas. `document-pagination.mjs`
+comprueba el acceso a Editar diseño desde el menú del campo. `TemplateDocumentTest`
+comprueba renombrado persistido y listas a partir de texto sin cambiar el tipo
+almacenado; el resolvedor conserva las filas de las listas repetibles previas.
+
 El ajuste posterior con la referencia `temp/silabo.pdf` conserva el diseño guardado
 y añade indicadores de ambos parciales solo a la plantilla inicial. No carga datos
 personales, notas ni fórmulas. `templatePreviewFields` separa muestras breves y

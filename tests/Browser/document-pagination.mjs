@@ -515,15 +515,46 @@ test(
                     exact: true,
                 })
                 .click();
+            await page
+                .getByRole('menuitem', { name: 'Renombrar', exact: true })
+                .waitFor();
             assert.equal(
                 await page
-                    .getByRole('menuitem', { name: 'Renombrar', exact: true })
+                    .getByRole('menuitem', {
+                        name: 'Renombrar',
+                        exact: true,
+                    })
                     .count(),
                 1,
             );
             await page.keyboard.press('Escape');
 
             // Choosing/cancelling a new block must not create an implicit text field.
+            await page
+                .getByRole('button', {
+                    name: 'Acciones de Contenido',
+                    exact: true,
+                })
+                .first()
+                .click();
+            assert.equal(
+                await page
+                    .getByRole('menuitem', { name: 'Renombrar', exact: true })
+                    .count(),
+                0,
+            );
+            await page
+                .getByRole('menuitem', { name: 'Editar diseño', exact: true })
+                .click();
+            const design = page.getByRole('dialog', {
+                name: 'Diseño: Contenido',
+                exact: true,
+            });
+            await design.waitFor();
+            await design
+                .getByRole('button', { name: 'Cancelar', exact: true })
+                .click();
+            await design.waitFor({ state: 'hidden' });
             await page
                 .getByRole('button', { name: 'Bloque', exact: true })
                 .click();

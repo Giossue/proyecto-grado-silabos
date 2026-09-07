@@ -25,7 +25,7 @@ const doc = { type: 'doc', content: [paragraph([textNode('Texto de prueba')]), {
  {type:'tableRow', content:[cellNode([fieldNode(values.value[0])]),cellNode([textNode('E')]),cellNode([textNode('F')])]},
  {type:'tableRow', content:[cellNode([textNode('G')]),cellNode([textNode('H')]),cellNode([textNode('I')])]},
 ]}, paragraph()]};
-window.fixture = { api: () => component.value.editor, save: () => component.value.save(), saved: () => saved.value, value: () => values.value[0].value };
+window.fixture = { api: () => component.value.editor, save: () => component.value.save(), saved: () => saved.value, value: () => values.value[0].value, values: () => values.value, registerFields: fields => values.value = [...values.value, ...fields] };
 const block = ref({ id: 'synthetic-block', title: 'Objetivo', content_type: 'text', table: null, fields: values.value, document: doc, fingerprint: 'a'.repeat(64) });
 const requests = [];
 let failure = null;
@@ -175,6 +175,7 @@ test(
                 [first, last],
             );
         await selectCells(0, 1);
+        await page.getByRole('tab', { name: 'Tablas', exact: true }).click();
         await page
             .getByRole('button', { name: 'Combinar celdas', exact: true })
             .click();
@@ -256,6 +257,125 @@ test(
         await page
             .locator('.tiptap [data-variable="nombre_carrera"]')
             .waitFor();
+
+        // @docente creates independent inputs, in paragraphs and complex table cells.
+        await page.locator('.tiptap > p').last().click();
+        await page.keyboard.press('Control+End');
+        await page.keyboard.press('Enter');
+        await page.keyboard.type('@docente');
+        await page
+            .getByRole('option', {
+                name: '@docente — Campo que completará el docente',
+                exact: true,
+            })
+            .click();
+        await page
+            .getByLabel('Campo que llenará el docente', { exact: true })
+            .fill('Resultados esperados');
+        await page
+            .getByRole('combobox', { name: 'Tipo de contenido', exact: true })
+            .click();
+        await page
+            .getByRole('option', { name: 'Lista con viñetas', exact: true })
+            .click();
+        await page
+            .getByRole('button', { name: 'Aplicar al campo', exact: true })
+            .click();
+        await page.locator('.tiptap td').last().click();
+        // Native selection is observed asynchronously by ProseMirror after focus.
+        // Wait for the caret in the cell before typing, without moving it through the API.
+        await page.waitForFunction(() => {
+            const selection = window.fixture.api().state.selection;
+
+            return (
+                selection.empty &&
+                Array.from(
+                    { length: selection.$from.depth },
+                    (_, index) => selection.$from.node(index + 1).type.name,
+                ).includes('tableCell')
+            );
+        });
+        await page.keyboard.press('End');
+        await page.keyboard.type(' @docente');
+        await page
+            .getByRole('option', {
+                name: '@docente — Campo que completará el docente',
+                exact: true,
+            })
+            .click();
+        await page
+            .getByLabel('Campo que llenará el docente', { exact: true })
+            .fill('Respuesta en la celda');
+        await page
+            .getByRole('button', { name: 'Aplicar al campo', exact: true })
+            .click();
+        await page.evaluate(() => window.fixture.save());
+        const created = await page.evaluate(() => {
+            const fields = [];
+            const walk = (node) => {
+                if (node.type === 'field' && node.attrs.key !== 'objetivo') {
+                    fields.push(node.attrs);
+                }
+
+                (node.content ?? []).forEach(walk);
+            };
+            walk(window.fixture.saved());
+            window.fixture.registerFields(
+                fields.map((attrs) => ({
+                    key: attrs.key,
+                    label: attrs.label,
+                    type: attrs.kind,
+                    value: '',
+                    teacher_editable: true,
+                })),
+            );
+
+            return fields;
+        });
+        assert.equal(created.length, 2, JSON.stringify(created));
+        assert.equal(new Set(created.map((field) => field.key)).size, 2);
+        assert.equal(
+            created.find((field) => field.label === 'Resultados esperados')
+                .listStyle,
+            'bullet',
+        );
+        assert.equal(
+            await page
+                .locator('.tiptap td [data-template-field]')
+                .filter({ hasText: 'Respuesta en la celda' })
+                .count(),
+            1,
+        );
+        await teacher
+            .getByRole('textbox', { name: 'Resultados esperados', exact: true })
+            .fill('Primer resultado\nSegundo resultado');
+        await teacher
+            .getByRole('textbox', {
+                name: 'Respuesta en la celda',
+                exact: true,
+            })
+            .fill('Respuesta independiente');
+        assert.equal(
+            await page.evaluate(
+                () =>
+                    window.fixture
+                        .values()
+                        .find((field) => field.label === 'Resultados esperados')
+                        .value,
+            ),
+            'Primer resultado\nSegundo resultado',
+        );
+        assert.equal(
+            await page.evaluate(
+                () =>
+                    window.fixture
+                        .values()
+                        .find(
+                            (field) => field.label === 'Respuesta en la celda',
+                        ).value,
+            ),
+            'Respuesta independiente',
+        );
 
         // Integration: the actual dialog retains local edits on errors, owns its
         // purge confirmation and reopens the persisted document with a new fingerprint.

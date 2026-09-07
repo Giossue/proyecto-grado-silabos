@@ -127,15 +127,23 @@ completo. El alta está separada de asignar paralelos y no levanta sus bloqueos.
   cancelar el arrastre restaura el anterior y un error recupera el orden del servidor.
   «Bloque», tanto al pulsarlo como al soltarlo, pide elegir su primer campo (Texto,
   Tabla, Lista con viñetas o Lista numerada) antes de crearlo; cancelar no crea nada. Los
-  títulos se renombran con un clic; el asa reordena; el menú de tres puntos cambia el
-  tipo mientras no tenga un diseño personalizado o elimina con confirmación. Estas
-  operaciones se guardan solas. «Editar diseño» reúne las pestañas Diseño y
+  títulos se renombran con un clic; el asa reordena; el menú del campo ofrece
+  «Editar diseño» y eliminar con confirmación. El menú del bloque conserva su
+  renombrado. «Editar diseño» reúne las pestañas Diseño y
   Propiedades: nombre, ayuda de cada campo guardado y asistencia de IA cuando
   corresponde. Un único guardado persiste diseño y propiedades; cambiar de pestaña
   conserva el borrador y cancelar permite descartarlo todo. Los campos nuevos deben
   guardarse antes de configurar su ayuda. El bloque de estado solo ofrece Propiedades,
   sin permitir editar datos ni formato del flujo. Con el proceso abierto la hoja se muestra
   sin paleta, asas ni edición de diseño.
+  Dentro de Diseño, la cinta separa Formato, Tablas y Campos; solo muestra las
+  herramientas del grupo activo. `@docente` inserta una respuesta independiente en
+  el cursor, también dentro de una celda; no es una variable automática. Seleccionar
+  su recuadro abre Campos para ajustar nombre y tipo de contenido. Texto, viñetas y
+  numeración cambian la presentación sin convertir datos existentes; para una tabla
+  se usa Tablas. Los tipos numéricos/fechas existentes conservan su tipo. Un campo de
+  texto con formato de lista pide un elemento por línea; las listas repetibles
+  existentes conservan sus filas. El docente nunca accede a la cinta de diseño.
   Estándar del impreso: logos institucionales, título azul centrado, Arial 11 pt, bloques
   numerados «1.» y campos «1.1» en negrita, márgenes de 2.5 cm, tablas con cabecera azul y
   filas alternas celestes. El formato lo pone la plantilla; el docente solo llena

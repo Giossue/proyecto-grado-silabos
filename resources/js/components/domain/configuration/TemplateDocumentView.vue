@@ -214,12 +214,19 @@ const input = (
     const text = displayDocumentValue(value);
 
     if (!canEdit) {
-        if (field?.type === 'repetible' && !isColumn && attrs.listStyle) {
+        if (attrs.listStyle) {
+            const items =
+                field?.type === 'repetible' && !isColumn
+                    ? (field.rows ?? []).map((row) =>
+                          displayDocumentValue(row.data.texto),
+                      )
+                    : text.split(/\r?\n/).filter((line) => line.trim());
+
             return h(
                 attrs.listStyle === 'number' ? 'ol' : 'ul',
                 { style },
-                (field.rows ?? []).map((row) =>
-                    h('li', {}, displayDocumentValue(row.data.texto)),
+                (items.length || !props.preview ? items : [`⟦${label}⟧`]).map(
+                    (item) => h('li', {}, item),
                 ),
             );
         }
@@ -351,15 +358,18 @@ const input = (
         );
     }
 
-    const control = ['numero', 'fecha', 'texto_corto'].includes(kind)
-        ? Input
-        : Textarea;
+    const control =
+        !attrs.listStyle && ['numero', 'fecha', 'texto_corto'].includes(kind)
+            ? Input
+            : Textarea;
 
     return h(control, {
         ...attributes,
         modelValue: text,
         type: kind === 'numero' ? 'number' : kind === 'fecha' ? 'date' : 'text',
-        placeholder: `Ej. ${label}`,
+        placeholder: attrs.listStyle
+            ? `Ej. ${label}: un elemento por línea`
+            : `Ej. ${label}`,
         'onUpdate:modelValue': change,
     });
 };

@@ -23,15 +23,17 @@ final class TemplateDocumentResolver
                     $value = $variables[$attrs['id']] ?? '';
                 } elseif ($type === 'column') {
                     $value = self::display($data[$attrs['key']] ?? null);
+                    if (($attrs['listStyle'] ?? null) !== null) {
+                        return [self::listNode($node, preg_split('/\R/u', $value) ?: [])];
+                    }
                 } else {
                     $field = $byKey[$attrs['key']] ?? [];
                     if (($attrs['listStyle'] ?? null) !== null) {
-                        return [['type' => $attrs['listStyle'] === 'number' ? 'orderedList' : 'bulletList', 'content' => array_map(
-                            fn ($row) => ['type' => 'listItem', 'content' => [['type' => 'paragraph', 'content' => [[
-                                'type' => 'text', 'text' => self::display($row['data']['texto'] ?? ''), 'marks' => $node['marks'] ?? [],
-                            ]]]]],
-                            $field['rows'] ?? [],
-                        )]];
+                        $items = ($field['type'] ?? null) === 'repetible' || ($field['rows'] ?? []) !== []
+                            ? array_map(fn ($row) => self::display($row['data']['texto'] ?? ''), $field['rows'] ?? [])
+                            : (preg_split('/\R/u', self::display($field['value'] ?? null)) ?: []);
+
+                        return [self::listNode($node, array_values($items))];
                     }
                     $value = self::display($field['value'] ?? null);
                     if (($field['rows'] ?? []) !== []) {
@@ -127,6 +129,20 @@ final class TemplateDocumentResolver
         };
 
         return $visit($document)[0];
+    }
+
+    /** @param array<string, mixed> $node
+     * @param  list<string>  $items
+     * @return array<string, mixed>
+     */
+    private static function listNode(array $node, array $items): array
+    {
+        return ['type' => $node['attrs']['listStyle'] === 'number' ? 'orderedList' : 'bulletList', 'content' => array_values(array_map(
+            fn ($text) => ['type' => 'listItem', 'content' => [['type' => 'paragraph', 'content' => [[
+                'type' => 'text', 'text' => $text, 'marks' => $node['marks'] ?? [],
+            ]]]]],
+            array_filter($items, fn ($item) => trim($item) !== ''),
+        ))];
     }
 
     public static function display(mixed $value): string

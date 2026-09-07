@@ -727,7 +727,9 @@ it('arma la plantilla sobre la hoja impresa, sin formularios por tarjeta', funct
         ->toContain('@keydown.enter.prevent="commitRename"')
         ->toContain('@keydown.esc.prevent="cancelRename"')
         // Propiedades vive dentro del diálogo de diseño, no en otro Sheet.
-        ->toContain('Tipo de contenido')
+        ->not->toContain('changeType')
+        ->toContain('designEditors')
+        ->toContain('?.edit()')
         ->not->toContain('openProperties')
         ->toContain('Eliminar campo')
         ->toContain('Eliminar bloque')

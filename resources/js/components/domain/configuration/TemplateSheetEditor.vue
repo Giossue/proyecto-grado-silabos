@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { router } from '@inertiajs/vue3';
 import {
-    Check,
     GripVertical,
     Heading,
     List,
@@ -12,6 +11,7 @@ import {
     Type,
 } from '@lucide/vue';
 import { computed, nextTick, ref, watch } from 'vue';
+import type { ComponentPublicInstance } from 'vue';
 import { toast } from 'vue-sonner';
 import TemplateController from '@/actions/App/Modules/Configuration/Presentation/Http/Controllers/TemplateController';
 import TemplateDesignBlock from '@/components/domain/configuration/TemplateDesignBlock.vue';
@@ -30,7 +30,6 @@ import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
-    DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
@@ -148,9 +147,6 @@ const fieldLabel = (container: FieldContainer): string =>
     container.document
         ? container.title
         : (firstField(container)?.label ?? container.title);
-
-const typeLabel = (value: string): string =>
-    props.blockTypes.find((type) => type.value === value)?.label ?? value;
 
 const isEditing = (kind: Editing['kind'], id: string): boolean =>
     editing.value?.kind === kind && editing.value.id === id;
@@ -446,16 +442,22 @@ const commitRename = (): void => {
     }
 };
 
-const changeType = (container: FieldContainer, contentType: string): void => {
-    if (container.content_type === contentType) {
-        return;
+const designEditors = new Map<
+    string,
+    InstanceType<typeof TemplateDesignBlock>
+>();
+const setDesignEditor = (
+    id: string,
+    component: Element | ComponentPublicInstance | null,
+) => {
+    if (component) {
+        designEditors.set(
+            id,
+            component as InstanceType<typeof TemplateDesignBlock>,
+        );
+    } else {
+        designEditors.delete(id);
     }
-
-    saveField(
-        container,
-        { content_type: contentType },
-        `Ahora es ${typeLabel(contentType).toLowerCase()}.`,
-    );
 };
 
 const confirmDeletion = (): void => {
@@ -1157,52 +1159,14 @@ const dropOnFieldZone = (section: TemplateSection, index: number): void => {
                                                 </Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
-                                                <DropdownMenuLabel
-                                                    v-if="
-                                                        !container.document &&
-                                                        container.content_type !==
-                                                            'institutional'
-                                                    "
-                                                >
-                                                    Tipo de contenido
-                                                </DropdownMenuLabel>
-                                                <DropdownMenuItem
-                                                    v-for="type in container.document ||
-                                                    container.content_type ===
-                                                        'institutional'
-                                                        ? []
-                                                        : blockTypes"
-                                                    :key="type.value"
-                                                    @select="
-                                                        changeType(
-                                                            container,
-                                                            type.value,
-                                                        )
-                                                    "
-                                                >
-                                                    <Check
-                                                        aria-hidden="true"
-                                                        :class="{
-                                                            invisible:
-                                                                container.content_type !==
-                                                                type.value,
-                                                        }"
-                                                    />
-                                                    {{ type.label }}
-                                                </DropdownMenuItem>
-                                                <DropdownMenuSeparator />
                                                 <DropdownMenuItem
                                                     @select="
-                                                        startRename(
-                                                            'field',
-                                                            container.id,
-                                                            fieldLabel(
-                                                                container,
-                                                            ),
-                                                        )
+                                                        designEditors
+                                                            .get(container.id)
+                                                            ?.edit()
                                                     "
                                                 >
-                                                    Renombrar
+                                                    Editar diseño
                                                 </DropdownMenuItem>
                                                 <DropdownMenuSeparator />
                                                 <DropdownMenuItem
@@ -1226,6 +1190,13 @@ const dropOnFieldZone = (section: TemplateSection, index: number): void => {
                                 </div>
 
                                 <TemplateDesignBlock
+                                    :ref="
+                                        (component) =>
+                                            setDesignEditor(
+                                                container.id,
+                                                component,
+                                            )
+                                    "
                                     :template-id="templateId"
                                     :block="container"
                                     :identification="

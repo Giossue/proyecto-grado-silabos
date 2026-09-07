@@ -68,9 +68,14 @@ final class SaveTemplateDocument
             }
             $used = [];
             $toCreate = [];
+            $labels = [];
             foreach (TemplateDocument::nodes($normalized, 'field') as $node) {
                 $attrs = $node['attrs'];
                 $key = $attrs['key'];
+                if (isset($labels[$key]) && $labels[$key] !== $attrs['label']) {
+                    TemplateDocument::fail('Un campo debe conservar el mismo nombre en todas sus apariciones.');
+                }
+                $labels[$key] = $attrs['label'];
                 $used[] = $key;
                 if (isset($fields[$key])) {
                     continue;
@@ -157,6 +162,9 @@ final class SaveTemplateDocument
                 ]);
             }
             $this->work->requireConfirmation($request);
+            foreach ($labels as $key => $label) {
+                $fields->get($key)?->update(['etiqueta' => $label]);
+            }
             $position = $block->fields->count();
             foreach ($toCreate as $key => $attrs) {
                 $block->fields()->create([

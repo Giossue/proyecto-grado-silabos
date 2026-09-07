@@ -25,6 +25,7 @@ import {
     FontSize,
     Color,
 } from '@tiptap/extension-text-style';
+import { NodeSelection } from '@tiptap/pm/state';
 import StarterKit from '@tiptap/starter-kit';
 import type { SuggestionProps } from '@tiptap/suggestion';
 import { EditorContent, useEditor } from '@tiptap/vue-3';
@@ -37,7 +38,12 @@ import {
     watch,
 } from 'vue';
 import { Button } from '@/components/ui/button';
-import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
+import {
+    Field,
+    FieldError,
+    FieldGroup,
+    FieldLabel,
+} from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import {
     Select,
@@ -47,6 +53,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
     DOCUMENT_FONTS,
     cellNode,
@@ -60,6 +67,7 @@ const props = defineProps<{
     document: DocumentNode;
     variables: TemplateVariable[];
     pending: boolean;
+    fieldKeys?: string[];
 }>();
 const emit = defineEmits<{
     save: [document: DocumentNode];
@@ -69,9 +77,19 @@ const suggestions = shallowRef<SuggestionProps<TemplateVariable> | null>(null);
 const selectedSuggestion = ref(0);
 const fieldLabel = ref('');
 const fieldType = ref('texto_largo');
+const tool = ref('format');
 const rows = ref(3);
 const columns = ref(3);
 const initial = JSON.stringify(props.document);
+const persistedKeys = new Set([
+    ...(props.fieldKeys ??
+        nodesOfType(props.document, 'field').map((node) =>
+            String(node.attrs?.key),
+        )),
+    ...nodesOfType(props.document, 'column').map((node) =>
+        String(node.attrs?.key),
+    ),
+]);
 const dirty = ref(false);
 const toolbarVersion = ref(0);
 
@@ -177,7 +195,20 @@ const editor = useEditor({
             suggestion: {
                 char: '@',
                 items: ({ query }) =>
-                    props.variables
+                    [
+                        {
+                            key: 'docente',
+                            label: 'Campo que completará el docente',
+                            sample: '',
+                        },
+                        ...props.variables,
+                    ]
+                        .filter(
+                            (item) =>
+                                item.key !== 'docente' ||
+                                !repeatTable.value ||
+                                rowRole.value !== 'total',
+                        )
                         .filter((item) =>
                             `${item.key} ${item.label}`
                                 .normalize('NFD')
@@ -192,6 +223,24 @@ const editor = useEditor({
                         )
                         .slice(0, 8),
                 command: ({ editor: target, range, props: item }) => {
+                    if (item.id === 'docente') {
+                        target
+                            .chain()
+                            .focus()
+                            .insertContentAt(
+                                range,
+                                teacherNode(
+                                    'Respuesta del docente',
+                                    'texto_largo',
+                                ),
+                            )
+                            .setNodeSelection(range.from)
+                            .run();
+                        tool.value = 'fields';
+
+                        return;
+                    }
+
                     target
                         .chain()
                         .focus()
@@ -252,10 +301,17 @@ const editor = useEditor({
     ],
     onUpdate: ({ editor: current }) => {
         dirty.value = JSON.stringify(current.getJSON()) !== initial;
-        emit('dirty', dirty.value);
     },
     onTransaction: () => {
         toolbarVersion.value++;
+    },
+    onSelectionUpdate: ({ editor: current }) => {
+        if (
+            current.state.selection instanceof NodeSelection &&
+            ['field', 'column'].includes(current.state.selection.node.type.name)
+        ) {
+            tool.value = 'fields';
+        }
     },
 });
 const chooseVariable = (item: TemplateVariable) =>
@@ -276,29 +332,163 @@ const rowRole = computed(() => {
 
     return String(editor.value?.getAttributes('tableRow').rowRole ?? 'fixed');
 });
-const makeField = (label: string) =>
-    fieldNode({
-        key: `campo_${crypto.randomUUID().replaceAll('-', '')}`,
-        label,
-        type: fieldType.value,
-    });
-const addField = () => {
-    if (!editor.value || !fieldLabel.value.trim()) {
-        return;
+const selectedField = computed(() => {
+    void toolbarVersion.value;
+    const selection = editor.value?.state.selection;
+
+    return selection instanceof NodeSelection &&
+        ['field', 'column'].includes(selection.node.type.name)
+        ? selection.node
+        : null;
+});
+watch(selectedField, (node) => {
+    if (node) {
+        fieldLabel.value = String(node.attrs.label);
+        fieldType.value =
+            node.attrs.listStyle === 'bullet'
+                ? 'bulleted_list'
+                : node.attrs.listStyle === 'number'
+                  ? 'numbered_list'
+                  : ['markdown', 'repetible', 'texto_corto'].includes(
+                          node.attrs.kind,
+                      )
+                    ? 'texto_largo'
+                    : String(node.attrs.kind);
+    } else {
+        fieldLabel.value = '';
+        fieldType.value = 'texto_largo';
+    }
+});
+const fieldDraftDirty = computed(
+    () =>
+        selectedField.value !== null &&
+        (fieldLabel.value !== selectedField.value.attrs.label ||
+            fieldType.value !==
+                (selectedField.value.attrs.listStyle === 'bullet'
+                    ? 'bulleted_list'
+                    : selectedField.value.attrs.listStyle === 'number'
+                      ? 'numbered_list'
+                      : ['markdown', 'repetible', 'texto_corto'].includes(
+                              selectedField.value.attrs.kind,
+                          )
+                        ? 'texto_largo'
+                        : selectedField.value.attrs.kind)),
+);
+watch([dirty, fieldDraftDirty], ([documentChanged, fieldChanged]) =>
+    emit('dirty', documentChanged || fieldChanged),
+);
+const fieldTypes = computed(() => {
+    const all = [
+        { value: 'texto_largo', label: 'Texto' },
+        { value: 'bulleted_list', label: 'Lista con viñetas' },
+        { value: 'numbered_list', label: 'Lista numerada' },
+        { value: 'numero', label: 'Número' },
+        { value: 'fecha', label: 'Fecha' },
+    ];
+    const node = selectedField.value;
+
+    if (!node || !persistedKeys.has(String(node.attrs.key))) {
+        return selectedField.value?.type.name === 'column'
+            ? all.filter((item) => item.value !== 'fecha')
+            : all;
     }
 
-    const node = makeField(fieldLabel.value.trim());
+    if (
+        ['texto_corto', 'texto_largo', 'markdown', 'repetible'].includes(
+            node.attrs.kind,
+        )
+    ) {
+        return all.slice(0, 3);
+    }
+
+    return [
+        {
+            value: String(node.attrs.kind),
+            label:
+                node.attrs.kind === 'numero'
+                    ? 'Número'
+                    : node.attrs.kind === 'fecha'
+                      ? 'Fecha'
+                      : 'Dato del sistema',
+        },
+    ];
+});
+const makeField = (label: string, format = 'texto_largo') => {
+    const node = fieldNode({
+        key: `campo_${crypto.randomUUID().replaceAll('-', '')}`,
+        label,
+        type: ['bulleted_list', 'numbered_list'].includes(format)
+            ? 'texto_largo'
+            : format,
+    });
+    node.attrs!.listStyle =
+        format === 'bulleted_list'
+            ? 'bullet'
+            : format === 'numbered_list'
+              ? 'number'
+              : null;
+
+    return node;
+};
+const teacherNode = (label: string, format: string) => {
+    const node = makeField(label, format);
 
     if (repeatTable.value && ['record', 'unit'].includes(rowRole.value)) {
         node.type = 'column';
 
         if (
             rowRole.value === 'unit' ||
-            !['numero', 'texto_largo'].includes(fieldType.value)
+            !['numero', 'texto_largo'].includes(String(node.attrs!.kind))
         ) {
             node.attrs!.kind = 'texto_largo';
         }
     }
+
+    return node;
+};
+const updateField = () => {
+    const node = selectedField.value;
+
+    if (!node || !editor.value || !fieldLabel.value.trim() || props.pending) {
+        return;
+    }
+
+    const attrs = makeField(fieldLabel.value.trim(), fieldType.value).attrs!;
+    const transaction = editor.value.state.tr;
+    editor.value.state.doc.descendants((child, position) => {
+        if (
+            child.type.name === node.type.name &&
+            child.attrs.key === node.attrs.key
+        ) {
+            transaction.setNodeMarkup(position, undefined, {
+                ...child.attrs,
+                label: attrs.label,
+                listStyle: attrs.listStyle,
+                kind: persistedKeys.has(String(node.attrs.key))
+                    ? child.attrs.kind
+                    : attrs.kind,
+            });
+        }
+    });
+    transaction.setSelection(
+        NodeSelection.create(
+            transaction.doc,
+            editor.value.state.selection.from,
+        ),
+    );
+    editor.value.view.dispatch(transaction);
+};
+const addField = () => {
+    if (
+        !editor.value ||
+        !fieldLabel.value.trim() ||
+        props.pending ||
+        (repeatTable.value && rowRole.value === 'total')
+    ) {
+        return;
+    }
+
+    const node = teacherNode(fieldLabel.value.trim(), fieldType.value);
 
     editor.value.chain().focus().insertContent(node).run();
     fieldLabel.value = '';
@@ -330,12 +520,19 @@ const insertTable = () => {
         .run();
 };
 const save = () => {
+    if (selectedField.value && !fieldLabel.value.trim()) {
+        tool.value = 'fields';
+
+        return;
+    }
+
     if (editor.value) {
+        updateField();
         emit('save', editor.value.getJSON() as DocumentNode);
     }
 };
 const unsaved = (event: BeforeUnloadEvent) => {
-    if (dirty.value && !props.pending) {
+    if ((dirty.value || fieldDraftDirty.value) && !props.pending) {
         event.preventDefault();
     }
 };
@@ -357,12 +554,19 @@ defineExpose({ save, editor });
 
 <template>
     <div class="flex min-h-0 flex-1 flex-col gap-3 max-sm:overflow-y-auto">
-        <div
+        <Tabs
             v-if="state"
-            class="flex shrink-0 flex-col gap-2"
+            v-model="tool"
+            class="shrink-0 rounded-lg border bg-muted/30 p-3"
             :data-pending="pending"
         >
-            <div
+            <TabsList aria-label="Herramientas del editor">
+                <TabsTrigger value="format">Formato</TabsTrigger>
+                <TabsTrigger value="tables">Tablas</TabsTrigger>
+                <TabsTrigger value="fields">Campos</TabsTrigger>
+            </TabsList>
+            <TabsContent
+                value="format"
                 class="flex flex-wrap items-center gap-1"
                 role="group"
                 aria-label="Formato del texto"
@@ -529,8 +733,27 @@ defineExpose({ save, editor });
                     @click="state.chain().focus().unsetAllMarks().run()"
                     >Quitar formato</Button
                 >
-            </div>
-            <div
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    :disabled="pending"
+                    @mousedown.prevent
+                    @click="state.chain().focus().toggleBulletList().run()"
+                    >Viñetas</Button
+                >
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    :disabled="pending"
+                    @mousedown.prevent
+                    @click="state.chain().focus().toggleOrderedList().run()"
+                    >Numeración</Button
+                >
+            </TabsContent>
+            <TabsContent
+                value="tables"
                 class="flex flex-wrap items-center gap-2"
                 role="group"
                 aria-label="Diseño de tablas"
@@ -676,49 +899,89 @@ defineExpose({ save, editor });
                         ></SelectContent
                     >
                 </Select>
-            </div>
-            <FieldGroup class="flex flex-row flex-wrap items-end gap-2">
-                <Field class="w-56"
-                    ><FieldLabel for="design-field-name"
-                        >Campo que llenará el docente</FieldLabel
-                    ><Input
-                        id="design-field-name"
-                        v-model="fieldLabel"
-                        :disabled="pending"
-                        placeholder="Ej. Objetivo de la unidad"
-                        @keydown.enter.prevent="addField"
-                /></Field>
-                <Field class="w-36"
-                    ><FieldLabel for="design-field-type"
-                        >Tipo de dato</FieldLabel
-                    ><Select v-model="fieldType" :disabled="pending"
-                        ><SelectTrigger id="design-field-type"
-                            ><SelectValue /></SelectTrigger
-                        ><SelectContent
-                            ><SelectGroup
-                                ><SelectItem value="texto_largo"
-                                    >Texto</SelectItem
-                                ><SelectItem value="numero">Número</SelectItem
-                                ><SelectItem value="fecha"
-                                    >Fecha</SelectItem
-                                ></SelectGroup
-                            ></SelectContent
-                        ></Select
-                    ></Field
+            </TabsContent>
+            <TabsContent value="fields" class="flex flex-col gap-3">
+                <p class="text-sm text-muted-foreground">
+                    {{
+                        selectedField
+                            ? 'Edite el campo seleccionado. Los cambios se guardan con el diseño.'
+                            : 'Escriba @docente en el documento o inserte aquí un nuevo campo.'
+                    }}
+                </p>
+                <FieldGroup class="flex flex-row flex-wrap items-end gap-2">
+                    <Field
+                        class="w-56"
+                        :data-invalid="
+                            Boolean(selectedField && !fieldLabel.trim())
+                        "
+                        ><FieldLabel for="design-field-name"
+                            >Campo que llenará el docente</FieldLabel
+                        ><Input
+                            id="design-field-name"
+                            v-model="fieldLabel"
+                            @update:model-value="selectedField && updateField()"
+                            :disabled="pending"
+                            maxlength="180"
+                            :aria-invalid="
+                                Boolean(selectedField && !fieldLabel.trim())
+                            "
+                            placeholder="Ej. Objetivo de la unidad"
+                            @keydown.enter.prevent="
+                                selectedField ? updateField() : addField()
+                            " /><FieldError
+                            v-if="selectedField && !fieldLabel.trim()"
+                            :errors="['Escriba un nombre para el campo.']"
+                    /></Field>
+                    <Field class="w-36"
+                        ><FieldLabel for="design-field-type"
+                            >Tipo de contenido</FieldLabel
+                        ><Select
+                            v-model="fieldType"
+                            :disabled="pending"
+                            @update:model-value="selectedField && updateField()"
+                            ><SelectTrigger id="design-field-type"
+                                ><SelectValue /></SelectTrigger
+                            ><SelectContent
+                                ><SelectGroup>
+                                    <SelectItem
+                                        v-for="kind in fieldTypes"
+                                        :key="kind.value"
+                                        :value="kind.value"
+                                        >{{ kind.label }}</SelectItem
+                                    >
+                                </SelectGroup></SelectContent
+                            ></Select
+                        ></Field
+                    >
+                    <Button
+                        type="button"
+                        variant="outline"
+                        :disabled="
+                            pending ||
+                            !fieldLabel.trim() ||
+                            (!selectedField &&
+                                Boolean(repeatTable) &&
+                                rowRole === 'total')
+                        "
+                        @click="selectedField ? updateField() : addField()"
+                        >{{
+                            selectedField
+                                ? 'Aplicar al campo'
+                                : 'Insertar campo'
+                        }}</Button
+                    >
+                </FieldGroup>
+                <p
+                    v-if="
+                        ['bulleted_list', 'numbered_list'].includes(fieldType)
+                    "
+                    class="text-sm text-muted-foreground"
                 >
-                <Button
-                    type="button"
-                    variant="outline"
-                    :disabled="pending || !fieldLabel.trim()"
-                    @click="addField"
-                    >Insertar campo</Button
-                >
-                <span class="text-sm text-muted-foreground"
-                    >Para datos automáticos, escriba @ dentro del
-                    documento.</span
-                >
-            </FieldGroup>
-        </div>
+                    El docente escribe un elemento por línea. El diseño aplica
+                    las viñetas o la numeración.
+                </p>
+            </TabsContent>
+        </Tabs>
         <div
             v-if="suggestions"
             class="flex shrink-0 flex-col gap-1 rounded-md border bg-popover p-2 text-popover-foreground"
@@ -746,9 +1009,15 @@ defineExpose({ save, editor });
             </Button>
         </div>
         <p class="shrink-0 text-sm text-muted-foreground">
-            Seleccione varias celdas arrastrando entre ellas o con Mayús + clic.
-            Combinar conserva su contenido. Los recuadros ▧ son campos del
-            docente; el resto es texto fijo.
+            <template v-if="tool === 'tables'"
+                >Seleccione celdas arrastrando o con Mayús + clic para
+                combinarlas. Se conserva su contenido.</template
+            >
+            <template v-else
+                >@docente: respuesta del docente · @nombre_carrera y otras
+                variables: datos automáticos. Pulse un recuadro ▧ para
+                editarlo.</template
+            >
         </p>
         <div
             class="min-h-0 flex-1 overflow-auto rounded-md border p-4 max-sm:min-h-64 max-sm:shrink-0"

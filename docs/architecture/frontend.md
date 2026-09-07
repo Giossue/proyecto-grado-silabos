@@ -136,6 +136,16 @@ Input, Alert y Dialog compartidos; los colores libres pertenecen al documento, n
 tema de la aplicación. El documento JSON contiene solo nodos/marcas del contrato PHP
 `TemplateDocument`; no se persiste HTML ni se acepta HTML arbitrario en el servidor.
 
+La cinta agrupa Formato, Tablas y Campos mediante Tabs, sin ocultar ni desmontar
+Tiptap. La sugerencia `@docente` es un comando de inserción: crea un nodo `field`
+con referencia independiente, o `column` dentro de filas de datos/unidad repetibles.
+No se añade al catálogo de variables automáticas ni se guarda como nodo `variable`.
+NodeSelection enlaza el recuadro con su nombre y formato, y se conserva al actualizar
+sus atributos. Las referencias guardadas mantienen su tipo; `listStyle` representa
+viñetas/numeración sin convertir su almacenamiento. `TemplateDocumentView` y
+`TemplateDocumentResolver` interpretan líneas de texto o filas repetibles como
+elementos, por lo que la lectura y la exportación comparten la presentación.
+
 `TemplateDocumentView` proyecta ese contrato sin `v-html`: celdas con spans y anchos,
 texto fijo, variables de servidor y controles docentes. Docencia conserva autoguardado,
 control de versión, validación e IA por campo; no monta Tiptap ni recibe controles de

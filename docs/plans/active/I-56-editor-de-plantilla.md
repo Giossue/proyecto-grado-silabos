@@ -137,3 +137,28 @@ con pie visible y contenido desplazable. El transporte del navegador es sintéti
 la persistencia y autorización se prueban en PostgreSQL local aislado. Sin
 migraciones, cambios a datos institucionales, commit ni push. No se repitió la
 puerta global ni se consideran resueltos sus pendientes anteriores.
+
+## Seguimiento — completar reorganización y @docente (2026-09-07)
+
+Petición confirmada: completar lo pendiente, no solo trasladar Propiedades.
+Alcance ADM-06/DOC-01, CU-04/06/15, RF-017..026/037..044/066..074,
+RN-009..012/031..034 y RNF-018..023. Sin nuevas dependencias ni cambios de roles.
+
+- [x] Agrupar herramientas en Formato, Tablas y Campos, manteniendo el lienzo visible.
+- [x] Insertar con `@docente` una referencia independiente editable por el docente,
+      también dentro de celdas; editar nombre/formato desde el mismo panel.
+- [x] Retirar tipo/renombrado del menú externo; gestionar texto, listas y tablas
+      dentro del diseño sin convertir ni perder los datos existentes.
+- [x] Comprobar listas en lectura/exportación, guardado, teclado y móvil; actualizar
+      documentación y verificaciones. Las variables automáticas siguen separadas.
+
+Verificación: **102 pruebas / 1656 aserciones** de Configuración, Sílabos y
+Documentos en PostgreSQL local aislado; contrato de arquitectura de la hoja y
+**2/2 suites Chromium**. Pasan TypeScript, ESLint/Prettier del incremento, Pint,
+PHPStan de las clases modificadas y el escaneo de secretos. Revisión visual del
+diálogo en escritorio claro y móvil oscuro. La prueba observa que ProseMirror haya
+colocado el cursor en la celda después del foco nativo antes de escribir; no mueve
+la selección con una API para insertar `@docente`. Se conserva NodeSelection al
+renombrar o cambiar el formato, sin conversiones de tipos existentes. Sin
+migraciones ni modificaciones de datos institucionales. No se repite la puerta
+global ni se dan por cerrados sus pendientes previos.
