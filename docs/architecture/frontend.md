@@ -150,6 +150,12 @@ viñetas/numeración sin convertir su almacenamiento. `TemplateDocumentView` y
 `TemplateDocumentResolver` interpretan líneas de texto o filas repetibles como
 elementos, por lo que la lectura y la exportación comparten la presentación.
 
+Las tablas libres no crean definiciones por celda. Si el documento solo contiene el
+campo inicial, `insertTable` reutiliza ese nodo en la primera celda de contenido y
+reemplaza el párrafo de arranque; el resto queda vacío. El recuadro se presenta como
+«Respuesta del docente» mientras sea el único campo, y recupera su etiqueta cuando
+existen dos o más.
+
 `TemplateDocumentView` proyecta ese contrato sin `v-html`: celdas con spans y anchos,
 texto fijo, variables de servidor y controles docentes. Docencia conserva autoguardado,
 control de versión, validación e IA por campo; no monta Tiptap ni recibe controles de

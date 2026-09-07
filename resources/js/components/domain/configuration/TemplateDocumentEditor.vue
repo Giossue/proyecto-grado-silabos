@@ -114,7 +114,16 @@ const token = (name: 'field' | 'column') =>
                 class: 'template-input-token',
                 contenteditable: 'false',
             }),
-            `▧ ${node.attrs.label}${node.attrs.choice ? ` (${node.attrs.choice})` : ''}`,
+            [
+                'span',
+                { class: 'template-input-token-generic' },
+                '▧ Respuesta del docente',
+            ],
+            [
+                'span',
+                { class: 'template-input-token-label' },
+                `▧ ${node.attrs.label}${node.attrs.choice ? ` (${node.attrs.choice})` : ''}`,
+            ],
         ],
     });
 const cellAttributes = () => ({
@@ -501,31 +510,56 @@ const addField = () => {
     editor.value.chain().focus().insertContent(node).run();
     fieldLabel.value = '';
 };
+const initialOnlyField = (document: DocumentNode): DocumentNode | null => {
+    const content = (document.content ?? []).filter(
+        (node) => node.type !== 'paragraph' || (node.content?.length ?? 0) > 0,
+    );
+    const paragraphContent = content[0]?.content ?? [];
+
+    return content.length === 1 &&
+        content[0]?.type === 'paragraph' &&
+        paragraphContent.length === 1 &&
+        paragraphContent[0]?.type === 'field'
+        ? paragraphContent[0]
+        : null;
+};
 const insertTable = () => {
     const rowCount = Math.max(1, Math.min(20, Number(rows.value) || 3));
     const columnCount = Math.max(1, Math.min(12, Number(columns.value) || 3));
-    editor.value
-        ?.chain()
-        .focus()
-        .insertContent({
-            type: 'table',
-            attrs: { repeatKey: null },
-            content: Array.from({ length: rowCount }, (_, r) => ({
-                type: 'tableRow',
-                attrs: { rowRole: 'fixed' },
-                content: Array.from({ length: columnCount }, (_, c) =>
-                    cellNode(
-                        r === 0
-                            ? [textNode(`Columna ${c + 1}`)]
-                            : [makeField(`Dato ${r}, columna ${c + 1}`)],
-                        1,
-                        1,
-                        r === 0 ? '#DBE5F1' : null,
-                    ),
-                ),
-            })),
-        })
-        .run();
+    const current = editor.value?.getJSON() as DocumentNode | undefined;
+    const initialField = current ? initialOnlyField(current) : null;
+    const firstResponseRow = rowCount > 1 ? 1 : 0;
+    const table: DocumentNode = {
+        type: 'table',
+        attrs: { repeatKey: null },
+        content: Array.from({ length: rowCount }, (_, r) => ({
+            type: 'tableRow',
+            attrs: { rowRole: 'fixed' },
+            content: Array.from({ length: columnCount }, (_, c) => {
+                const isInitialResponse =
+                    initialField && r === firstResponseRow && c === 0;
+
+                return cellNode(
+                    isInitialResponse
+                        ? [initialField]
+                        : r === 0 && firstResponseRow !== 0
+                          ? [textNode(`Columna ${c + 1}`)]
+                          : [],
+                    1,
+                    1,
+                    r === 0 && firstResponseRow !== 0 ? '#DBE5F1' : null,
+                );
+            }),
+        })),
+    };
+
+    if (initialField) {
+        editor.value?.commands.setContent({ type: 'doc', content: [table] });
+
+        return;
+    }
+
+    editor.value?.chain().focus().insertContent(table).run();
 };
 const save = () => {
     if (selectedField.value && !fieldLabel.value.trim()) {
@@ -1033,7 +1067,13 @@ defineExpose({ save, editor });
         <div
             class="min-h-0 flex-1 overflow-auto rounded-md border p-4 max-sm:min-h-64 max-sm:shrink-0"
         >
-            <EditorContent :editor="editor" class="template-document-editor" />
+            <EditorContent
+                :editor="editor"
+                class="template-document-editor"
+                :class="{
+                    'template-document-editor-single-field': fieldCount === 1,
+                }"
+            />
         </div>
         <p class="sr-only" aria-live="polite">
             {{ fieldCount }} espacios de contenido.
@@ -1102,6 +1142,15 @@ defineExpose({ save, editor });
     outline: 1px dashed #4f81bd;
     border-radius: 2px;
     padding: 1px 3px;
+}
+.template-input-token-generic {
+    display: none;
+}
+.template-document-editor-single-field .template-input-token-generic {
+    display: inline;
+}
+.template-document-editor-single-field .template-input-token-label {
+    display: none;
 }
 .template-variable-token {
     background: #edf8ee;

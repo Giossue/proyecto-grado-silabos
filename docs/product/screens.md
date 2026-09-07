@@ -145,7 +145,11 @@ completo. El alta está separada de asignar paralelos y no levanta sus bloqueos.
   renombran únicamente en Propiedades. Durante el alta, Campos sí pide un nombre
   inicial para la nueva referencia. Texto, viñetas y
   numeración cambian la presentación sin convertir datos existentes; para una tabla
-  se usa Tablas. Los tipos numéricos/fechas existentes conservan su tipo. Un campo de
+  se usa Tablas. Una tabla nueva no inventa respuestas para cada celda: si el bloque
+  solo contiene su respuesta inicial, la mueve a la primera celda de contenido y deja
+  las demás libres para texto, variables o nuevos `@docente`. En el lienzo, una única
+  respuesta se identifica como «Respuesta del docente»; desde dos campos se muestran
+  sus nombres. Los tipos numéricos/fechas existentes conservan su tipo. Un campo de
   texto con formato de lista pide un elemento por línea; las listas repetibles
   existentes conservan sus filas. El docente nunca accede a la cinta de diseño.
   Estándar del impreso: logos institucionales, título azul centrado, Arial 11 pt, bloques

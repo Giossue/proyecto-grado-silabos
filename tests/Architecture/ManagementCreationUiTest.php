@@ -788,7 +788,11 @@ it('arma la plantilla sobre la hoja impresa, sin formularios por tarjeta', funct
     );
     expect($documentEditor)
         ->toContain('selectedPersistedField')
-        ->toContain('Para renombrar este campo, use Propiedades.');
+        ->toContain('Para renombrar este campo, use Propiedades.')
+        ->toContain('initialOnlyField')
+        ->toContain('Respuesta del docente')
+        ->toContain('template-document-editor-single-field')
+        ->not->toContain('makeField(`Dato ${r}, columna ${c + 1}`)');
 
     $sheetEditor = file_get_contents(
         $root.'/resources/js/components/domain/configuration/TemplateSheetEditor.vue',

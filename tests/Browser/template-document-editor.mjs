@@ -378,6 +378,107 @@ test(
             'Respuesta independiente',
         );
 
+        // A blank block reuses its initial response inside a new table. It does
+        // not leave an orphan token above it or invent fields for every cell.
+        await page.evaluate(() => {
+            window.fixture.api().commands.setContent({
+                type: 'doc',
+                content: [
+                    {
+                        type: 'paragraph',
+                        content: [
+                            {
+                                type: 'field',
+                                attrs: {
+                                    key: 'objetivo',
+                                    label: 'Objetivo',
+                                    kind: 'texto_largo',
+                                    choice: null,
+                                    listStyle: null,
+                                },
+                            },
+                        ],
+                    },
+                ],
+            });
+        });
+        assert.equal(
+            await page
+                .locator('.tiptap [data-template-field="objetivo"]')
+                .innerText(),
+            '▧ Respuesta del docente',
+        );
+        await page.getByRole('tab', { name: 'Tablas', exact: true }).click();
+        await page
+            .getByRole('button', { name: 'Insertar tabla', exact: true })
+            .click();
+        assert.equal(await page.locator('.tiptap table').count(), 1);
+        assert.equal(await page.locator('.tiptap > p').count(), 0);
+        assert.equal(
+            await page.locator('.tiptap [data-template-field]').count(),
+            1,
+        );
+        assert.equal(
+            await page
+                .locator('.tiptap')
+                .getByText(/^Dato \d/)
+                .count(),
+            0,
+        );
+        assert.equal(
+            await page
+                .locator('.tiptap tr')
+                .nth(1)
+                .locator('td')
+                .first()
+                .innerText()
+                .then((text) => text.trim()),
+            '▧ Respuesta del docente',
+        );
+        if (process.env.TEMPLATE_DOCUMENT_SCREENSHOT) {
+            await page
+                .getByRole('region', { name: 'Administrador' })
+                .screenshot({
+                    path: process.env.TEMPLATE_DOCUMENT_SCREENSHOT.replace(
+                        '.png',
+                        '-new-table.png',
+                    ),
+                    animations: 'disabled',
+                });
+        }
+        await page.evaluate(() => {
+            window.fixture.api().commands.setContent({
+                type: 'doc',
+                content: [
+                    {
+                        type: 'paragraph',
+                        content: [
+                            {
+                                type: 'field',
+                                attrs: {
+                                    key: 'objetivo',
+                                    label: 'Objetivo',
+                                    kind: 'texto_largo',
+                                },
+                            },
+                            {
+                                type: 'field',
+                                attrs: {
+                                    key: 'resultado',
+                                    label: 'Resultado esperado',
+                                    kind: 'texto_largo',
+                                },
+                            },
+                        ],
+                    },
+                ],
+            });
+        });
+        assert.deepEqual(
+            await page.locator('.tiptap [data-template-field]').allInnerTexts(),
+            ['▧ Objetivo', '▧ Resultado esperado'],
+        );
+
         // Integration: the actual dialog retains local edits on errors, owns its
         // purge confirmation and reopens the persisted document with a new fingerprint.
         await page.evaluate(() => window.fixture.openDesign());

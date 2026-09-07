@@ -181,3 +181,17 @@ Documentos en PostgreSQL local aislado; contrato ADM-06 puntual, **14 pruebas /
 188 aserciones**; y **2/2 suites Chromium**. Pasan TypeScript, ESLint/Prettier,
 Pint y PHPStan del incremento. La revisión visual confirma una sola entrada, rotulada
 «Nombre del bloque», en bloques de un campo. No se hicieron commit ni push.
+
+## Seguimiento — respuesta inicial en tablas libres (2026-09-07)
+
+- [x] Presentar el único recuadro como «Respuesta del docente» y mostrar etiquetas
+      descriptivas solo al existir varios campos.
+- [x] Al insertar una tabla sobre el documento inicial, trasladar ese campo a la
+      primera celda de contenido y no dejar una copia fuera.
+- [x] Dejar las demás celdas libres; los campos adicionales se crean explícitamente
+      con `@docente`.
+- [x] Verificar TypeScript, formato, lint, contrato de arquitectura y Chromium.
+
+Verificación: TypeScript, Prettier y ESLint puntual; **24 pruebas / 1116
+aserciones** del contrato de arquitectura y **1/1 suite Chromium** del editor.
+No se hicieron commit ni push.
