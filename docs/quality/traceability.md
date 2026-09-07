@@ -89,9 +89,16 @@ del expediente, reinicio explícito e historia intacta tras cambiar la base futu
 `document-pagination.mjs` conserva la regresión de hojas. PV-07/PV-08/PV-19 permanecen
 abiertas y la evidencia detallada de comandos queda en el plan I-56.
 
+El ajuste posterior con la referencia `temp/silabo.pdf` conserva el diseño guardado
+y añade indicadores de ambos parciales solo a la plantilla inicial. No carga datos
+personales, notas ni fórmulas. `templatePreviewFields` separa muestras breves y
+tipadas de los valores docentes; la vista paginada deja transparente el fondo entre
+hojas, manteniendo el papel blanco y los colores de las celdas.
+
 | Capacidad | RF/RNF | RN/CU/UI | Evidencia | Estado |
 |---|---|---|---|---|
 | Hojas carta dinámicas, márgenes y cortes entre grupos de celdas | RF-017..026; RNF-018..023 | RN-009..012; CU-04; ADM-06 | `PaginatedDocument`, `documentPagination`, `tests/Browser/document-pagination.mjs`: crecimiento/reducción, foco al renombrar, solo lectura, 360 px y tabla de 120 filas con rowspan | Verificado en Chromium con datos sintéticos; PV-07 y PV-19 siguen abiertas |
+| Referencia de plantilla, muestras compactas y separación visible | RF-017..026; RNF-018..023 | RN-009..012; CU-04; ADM-06 | `TemplateAndSourceTest`, `IdentificationCardTest`, `document-pagination.mjs`: indicadores editables sin respuestas precargadas, ficha de 18 filas en una hoja, ejemplos tipados, cabeceras/totales y ausencia de fondos opacos entre páginas en ambos temas; `template-document-editor.mjs`: documento docente blanco en modo oscuro | Verificado local; PV-07/PV-08/PV-19 siguen abiertas |
 
 ## Cambio de requisito
 

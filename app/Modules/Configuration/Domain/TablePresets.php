@@ -3,9 +3,8 @@
 namespace App\Modules\Configuration\Domain;
 
 /**
- * Formatos de tabla del sílabo institucional, espejo de `tablePresets.ts` (la galería
- * de la hoja). Aquí los usa la plantilla por defecto; allá el administrador al soltar
- * una tabla nueva. Si se cambia uno, cambiar el otro.
+ * Formatos iniciales del sílabo institucional. Administración puede modificarlos
+ * con el editor; insertar una tabla nueva no muestra una galería de presets (I-56).
  */
 final class TablePresets
 {
@@ -46,6 +45,17 @@ final class TablePresets
                     $col('autor', 'Autor'), $col('titulo', 'Título'), $col('anio', 'Año', 'number'),
                     $col('ciudad', 'Ciudad'), $col('editorial', 'Editorial'), $col('isbn', 'ISBN'), $col('codigo', 'Código'),
                 ],
+            ],
+            // Referencia aportada en I-56: sin puntajes ni fórmulas predeterminados.
+            'indicadores' => [
+                'columns' => [
+                    $col('indicador', 'Indicadores', width: 3),
+                    $col('primer_parcial', 'Puntos', 'number', 'primer_parcial', sum: false, width: 1),
+                    $col('ponderacion_primer_parcial', 'Ponderación', 'number', 'primer_parcial', sum: false, width: 1),
+                    $col('segundo_parcial', 'Puntos', 'number', 'segundo_parcial', sum: false, width: 1),
+                    $col('ponderacion_segundo_parcial', 'Ponderación', 'number', 'segundo_parcial', sum: false, width: 1),
+                ],
+                'groups' => [['key' => 'primer_parcial', 'label' => 'Primer parcial'], ['key' => 'segundo_parcial', 'label' => 'Segundo parcial']],
             ],
             'escala' => [
                 'columns' => [

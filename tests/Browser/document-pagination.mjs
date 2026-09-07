@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import vue from '@vitejs/plugin-vue';
@@ -10,15 +11,42 @@ const { chromium } = await import(
 );
 const root = fileURLToPath(new URL('../../', import.meta.url));
 
+// Read the real defaults without booting Laravel, loading .env or connecting to a DB.
+const baseline = JSON.parse(
+    execFileSync(
+        'php',
+        [
+            '-r',
+            String.raw`
+                require 'vendor/autoload.php';
+                $container = new Illuminate\Container\Container;
+                Illuminate\Container\Container::setInstance($container);
+                $container->instance('config', new Illuminate\Config\Repository([
+                    'syllabus_variables' => require 'config/syllabus_variables.php',
+                ]));
+                echo json_encode([
+                    'identification' => App\Modules\Configuration\Application\TemplateDocumentDefaults::identification(),
+                    'variables' => App\Modules\Configuration\Application\TemplateVariables::catalog(),
+                    'planning' => App\Modules\Configuration\Domain\TablePresets::layout('planificacion'),
+                    'evaluation' => App\Modules\Configuration\Domain\TablePresets::layout('indicadores'),
+                ], JSON_THROW_ON_ERROR);
+            `,
+        ],
+        { cwd: root, encoding: 'utf8' },
+    ),
+);
+
 const fixture = `
 import { createApp, h, ref } from 'vue';
 import { router } from '@inertiajs/vue3';
 import TemplateSheetEditor from '/resources/js/components/domain/configuration/TemplateSheetEditor.vue';
+import { templatePreviewFields } from '/resources/js/lib/templatePreview.ts';
 import '/resources/css/app.css';
 const sections = ref([]);
 const readonly = ref(false);
 const identification = ref([]);
 const identificationDesign = ref({ type: 'doc', content: [{ type: 'paragraph' }] });
+const variables = ref([]);
 const requests = [];
 let failOrder = false;
 router.post = (url, data, options) => {
@@ -44,6 +72,11 @@ router.patch = (url, data, options) => {
 window.fixture = {
     setSections(value) { sections.value = value; },
     setReadonly(value) { readonly.value = value; },
+    setDefaults(value) {
+        identificationDesign.value = value.identification;
+        variables.value = value.variables;
+    },
+    previewFields: templatePreviewFields,
     setIdentification(value) {
         identification.value = value;
         identificationDesign.value = { type: 'doc', content: value.length ? [{ type: 'table', attrs: { repeatKey: null }, content: value.map(cells => ({ type: 'tableRow', content: cells.map(cell => ({ type: 'tableCell', attrs: { colspan: cell.span, rowspan: cell.rows }, content: [{ type: 'paragraph', content: [{ type: 'text', text: cell.text }] }] })) })) }] : [{ type: 'paragraph' }] };
@@ -54,12 +87,12 @@ window.fixture = {
 createApp({ render: () => h(TemplateSheetEditor, {
     templateId: 'synthetic-template', sections: sections.value, readonly: readonly.value,
     blockTypes: [{value:'text',label:'Texto'}], identification: identification.value,
-    identificationDesign: identificationDesign.value, variables: [],
+    identificationDesign: identificationDesign.value, variables: variables.value,
     institutionLogo: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="110" height="45"><text x="0" y="30">UEB</text></svg>',
 }) }).mount('#app');
 `;
 
-function sections(count) {
+function sections(count, longContent = false) {
     return Array.from({ length: count }, (_, index) => ({
         id: `section-${index}`,
         key: `section_${index}`,
@@ -77,8 +110,30 @@ function sections(count) {
                         id: `field-${index}`,
                         key: `field_${index}`,
                         label: 'Contenido',
+                        type: 'texto_largo',
                     },
                 ],
+                // Stress pagination with explicit long content, not inflated previews.
+                ...(longContent
+                    ? {
+                          document: {
+                              type: 'doc',
+                              content: [
+                                  {
+                                      type: 'paragraph',
+                                      content: [
+                                          {
+                                              type: 'text',
+                                              text: 'Contenido extenso de prueba para comprobar los saltos de página. '.repeat(
+                                                  8,
+                                              ),
+                                          },
+                                      ],
+                                  },
+                              ],
+                          },
+                      }
+                    : {}),
             },
         ],
     }));
@@ -158,9 +213,178 @@ test(
                 .boundingBox();
             assert.ok(Math.abs(dimensions.width - 816) < 1);
             assert.ok(Math.abs(dimensions.height - 1056) < 1);
+
+            const institutional = sections(1);
+            institutional[0].title = 'Identificación institucional';
+            institutional[0].blocks[0].content_type = 'institutional';
+            institutional[0].blocks[0].fields = [
+                [
+                    'discapacidad_tiene',
+                    'Estudiantes con discapacidad',
+                    'seleccion_unica',
+                ],
+                ['discapacidad_tipo', 'Tipo de discapacidad', 'texto_corto'],
+                [
+                    'discapacidad_adaptacion',
+                    'Adaptación curricular',
+                    'texto_corto',
+                ],
+                [
+                    'formacion_experiencia',
+                    'Formación y experiencia',
+                    'markdown',
+                ],
+            ].map(([key, label, type]) => ({ id: key, key, label, type }));
+            await page.evaluate(
+                ({ baseline, sections }) => {
+                    window.fixture.setDefaults(baseline);
+                    window.fixture.setSections(sections);
+                },
+                { baseline, sections: institutional },
+            );
+            await page
+                .getByText(
+                    'Formación y experiencia en el área de la asignatura.',
+                    { exact: true },
+                )
+                .waitFor();
+
+            await page.waitForFunction(() => {
+                const table = document.querySelector('.document-table');
+                const paper = document.querySelector('.paged-document-paper');
+
+                return (
+                    table &&
+                    table.getBoundingClientRect().bottom <=
+                        paper.getBoundingClientRect().bottom -
+                            (2.5 * 96) / 2.54 +
+                            1 &&
+                    document.querySelectorAll('.paged-document-paper')
+                        .length === 1
+                );
+            });
+            assert.equal(
+                await page
+                    .locator('.document-table tr:not([data-page-spacer])')
+                    .count(),
+                18,
+            );
+            assert.equal(
+                await page.getByText('No aplica.', { exact: true }).count(),
+                2,
+            );
+            assert.equal(
+                await page
+                    .getByText('Asignatura de ejemplo', { exact: true })
+                    .count(),
+                1,
+            );
+            assert.ok(
+                (await page.locator('.document-value').allTextContents()).every(
+                    (text) => text.length < 80,
+                ),
+            );
+
+            if (process.env.PAGINATION_REFERENCE_SCREENSHOT) {
+                await page.screenshot({
+                    path: process.env.PAGINATION_REFERENCE_SCREENSHOT,
+                    fullPage: true,
+                });
+            }
+
+            const samples = await page.evaluate(
+                (baseline) => ({
+                    planning: window.fixture.previewFields(
+                        [
+                            {
+                                key: 'unidades',
+                                label: 'Unidades',
+                                type: 'repetible',
+                            },
+                        ],
+                        baseline.planning,
+                    )[0],
+                    typed: window.fixture.previewFields(
+                        [
+                            { key: 'numero', label: 'Número', type: 'numero' },
+                            { key: 'fecha', label: 'Fecha', type: 'fecha' },
+                            {
+                                key: 'activo',
+                                label: 'Activo',
+                                type: 'booleano',
+                            },
+                            {
+                                key: 'opcion',
+                                label: 'Opción',
+                                type: 'seleccion_unica',
+                                options: [{ value: 'a', label: 'A' }],
+                            },
+                        ],
+                        null,
+                    ),
+                }),
+                baseline,
+            );
+            assert.equal(
+                samples.planning.rows.filter((row) => row.data._kind !== 'unit')
+                    .length,
+                1,
+            );
+            assert.equal(
+                samples.planning.rows[0].data.nombre,
+                'Unidad de ejemplo',
+            );
+            assert.equal(samples.planning.rows[1].data.semana, 1);
+            assert.deepEqual(
+                samples.typed.map((field) => field.value),
+                [2, '2026-03-01', false, 'a'],
+            );
+
+            const planning = sections(1);
+            planning[0].blocks[0].content_type = 'table';
+            planning[0].blocks[0].table = baseline.planning;
+            planning[0].blocks[0].fields[0].type = 'repetible';
             await page.evaluate(
                 (value) => window.fixture.setSections(value),
-                sections(14),
+                planning,
+            );
+            await page
+                .getByText('Introducción a la unidad.', { exact: true })
+                .waitFor();
+            assert.equal(
+                await page
+                    .getByText('Unidad de ejemplo', { exact: true })
+                    .count(),
+                1,
+            );
+            assert.equal(
+                await page.getByText('Total, horas', { exact: true }).count(),
+                1,
+            );
+
+            const evaluation = sections(1);
+            evaluation[0].blocks[0].content_type = 'table';
+            evaluation[0].blocks[0].table = baseline.evaluation;
+            evaluation[0].blocks[0].fields[0].type = 'repetible';
+            await page.evaluate(
+                (value) => window.fixture.setSections(value),
+                evaluation,
+            );
+            await page.getByText('Primer parcial', { exact: true }).waitFor();
+            assert.equal(
+                await page
+                    .getByText('Segundo parcial', { exact: true })
+                    .count(),
+                1,
+            );
+            assert.equal(
+                await page.getByText('Ponderación', { exact: true }).count(),
+                2,
+            );
+
+            await page.evaluate(
+                (value) => window.fixture.setSections(value),
+                sections(14, true),
             );
             await page.waitForFunction(
                 () =>
@@ -352,32 +576,35 @@ test(
                 name: 'Arrastrar Descripción 1',
                 exact: true,
             });
-            await sourceHandle.hover();
-            const sourceBox = await sourceHandle.boundingBox();
-            const targetBox = await page
-                .locator('section[aria-label="Bloque Descripción 2"]')
-                .boundingBox();
-            await page.mouse.move(sourceBox.x + 5, sourceBox.y + 5);
-            await page.mouse.down();
-            await page.mouse.move(sourceBox.x + 10, sourceBox.y + 20, {
-                steps: 4,
+            const target = page.locator(
+                'section[aria-label="Bloque Descripción 2"]',
+            );
+            await page.evaluate(() => {
+                document.addEventListener(
+                    'drop',
+                    () => {
+                        window.fixture.beforeDrop = {
+                            first: document
+                                .querySelector('.doc-section')
+                                ?.getAttribute('aria-label'),
+                            requests: window.fixture.requests.length,
+                        };
+                    },
+                    { once: true, capture: true },
+                );
             });
-            await page.mouse.move(
-                targetBox.x + 80,
-                targetBox.y + targetBox.height - 10,
-                { steps: 10 },
+            const targetBox = await target.boundingBox();
+            await sourceHandle.dragTo(target, {
+                targetPosition: { x: 80, y: targetBox.height - 10 },
+            });
+            assert.deepEqual(
+                await page.evaluate(() => window.fixture.beforeDrop),
+                {
+                    first: 'Bloque Descripción 2',
+                    requests: 0,
+                },
+                'The live order changes before the drop handler or transport runs',
             );
-            await page.waitForFunction(
-                () =>
-                    document
-                        .querySelector('.doc-section')
-                        ?.getAttribute('aria-label') === 'Bloque Descripción 2',
-            );
-            assert.equal(
-                await page.evaluate(() => window.fixture.requests.length),
-                0,
-            );
-            await page.mouse.up();
             await page.waitForFunction(
                 () => window.fixture.requests.length === 1,
             );
@@ -505,7 +732,7 @@ test(
 
             await page.evaluate(
                 (value) => window.fixture.setSections(value),
-                sections(14).reverse(),
+                sections(14, true).reverse(),
             );
             await page.waitForFunction(() =>
                 document
@@ -605,6 +832,68 @@ test(
                     .count(),
                 120,
             );
+
+            // A transparent spacer is insufficient if any ancestor paints over it.
+            for (const dark of [false, true]) {
+                await page.evaluate(
+                    (dark) =>
+                        document.documentElement.classList.toggle('dark', dark),
+                    dark,
+                );
+                await page.evaluate(
+                    () =>
+                        new Promise((resolve) =>
+                            requestAnimationFrame(() =>
+                                requestAnimationFrame(resolve),
+                            ),
+                        ),
+                );
+                assert.equal(
+                    await page
+                        .locator('.document-table td')
+                        .first()
+                        .evaluate((node) => getComputedStyle(node).color),
+                    'rgb(0, 0, 0)',
+                );
+                const paintedGap = await page.evaluate(() => {
+                    const spacer = document.querySelector(
+                        '.document-table [data-page-spacer] td',
+                    );
+                    const painted = [];
+
+                    for (
+                        let node = spacer;
+                        node && !node.classList.contains('paged-document');
+                        node = node.parentElement
+                    ) {
+                        const style = getComputedStyle(node);
+
+                        if (
+                            style.backgroundColor !== 'rgba(0, 0, 0, 0)' ||
+                            style.backgroundImage !== 'none'
+                        ) {
+                            painted.push(node.className || node.tagName);
+                        }
+                    }
+
+                    return painted;
+                });
+                assert.deepEqual(
+                    paintedGap,
+                    [],
+                    'No opaque rectangle covers the gap between sheets',
+                );
+
+                if (process.env.PAGINATION_GAP_SCREENSHOT) {
+                    await page.evaluate(() => window.scrollTo(0, 0));
+                    await page.screenshot({
+                        path: `${process.env.PAGINATION_GAP_SCREENSHOT}-${dark ? 'dark' : 'light'}.png`,
+                        animations: 'disabled',
+                        fullPage: true,
+                    });
+                }
+            }
+
             await page.evaluate(() => window.fixture.setIdentification([]));
             await page.waitForFunction(
                 () =>

@@ -789,7 +789,7 @@ defineExpose({ save, editor });
 .template-document-editor th {
     border: 1px solid #7f7f7f;
     min-width: 20px;
-    padding: 4px;
+    padding: 2px 4px;
     vertical-align: top;
     position: relative;
     overflow-wrap: anywhere;

@@ -16,8 +16,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Crea la plantilla institucional con el formato oficial del sílabo (calcado del
- * sílabo IA-SW-2026): doce secciones, sus campos y las tablas ya armadas. Después
+ * Crea la plantilla institucional con el formato de referencia del sílabo
+ * IA-SW-2026: doce secciones, sus campos y las tablas ya armadas. Después
  * Administración solo renombra o ajusta sobre la hoja.
  */
 class CreateSyllabusTemplate
@@ -56,6 +56,7 @@ class CreateSyllabusTemplate
             ['ambientes_aprendizaje', 'Ambientes o escenarios de aprendizaje', 'text', true, null],
         ]],
         ['evaluacion', 'Evaluación de los aprendizajes', [
+            ['indicadores_evaluacion', 'Indicadores de evaluación', 'table', true, 'indicadores'],
             ['componentes_evaluacion', 'Escala de valoración', 'table', true, 'escala'],
             ['recuperacion', 'Recuperación y aprobación', 'text', true, null],
         ]],

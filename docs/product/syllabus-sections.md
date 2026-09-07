@@ -20,6 +20,20 @@ como mínimo las doce áreas identificadas en la línea base.
 
 ## Reglas de modelado
 
+La referencia visual aportada el 2026-09-06 (`temp/silabo.pdf`) conserva estas doce
+áreas. La plantilla inicial incluye en Evaluación una tabla de indicadores con
+puntos y ponderación para cada uno de los dos parciales, seguida de la escala de
+valoración y la recuperación. Son campos que llena el docente: no se precargan
+notas ni se incorporan fórmulas o porcentajes del PDF. PV-07/PV-08 siguen abiertas.
+Este ajuste se aplica al crear la plantilla, no sobrescribe diseños guardados ni
+altera revisiones enviadas.
+
+La vista administrativa usa ejemplos sintéticos breves, separados de los datos
+reales: una frase por campo y una fila por tabla. En planificación se muestran
+también el encabezado de una unidad y sus totales. No son respuestas iniciales del
+docente. Se usa papel Carta con paginación dinámica; las ocho páginas del PDF no
+son una cantidad fija del formato.
+
 - La plantilla decide orden, etiquetas, visibilidad y obligatoriedad sin ejecutar DDL.
 - Datos heredados muestran la fuente y se bloquean para el docente.
 - Cálculos guardan la regla/versión utilizada y se vuelven a validar en servidor.
@@ -40,4 +54,3 @@ como mínimo las doce áreas identificadas en la línea base.
 6. Permisos no permiten editar evidencia o campos institucionales.
 7. Marcadores DOCX obligatorios tienen correspondencia.
 8. La previsualización cubre vacío, valores largos y máximos representativos.
-

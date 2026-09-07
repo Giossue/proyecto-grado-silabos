@@ -136,7 +136,7 @@ test(
         await page
             .getByLabel('Color de fuente', { exact: true })
             .fill('#cc0000');
-        await page.evaluate(() => window.fixture.api().commands.focus('end'));
+        await page.locator('.tiptap > p').last().click();
         await page.waitForFunction(() => window.fixture.api().view.hasFocus());
         await page.keyboard.type('@nombre_carr');
         await page
@@ -356,6 +356,13 @@ test(
         );
         await page.evaluate(() =>
             document.documentElement.classList.add('dark'),
+        );
+        assert.equal(
+            await page
+                .locator('[aria-label="Docente"] .template-document-view')
+                .evaluate((node) => getComputedStyle(node).backgroundColor),
+            'rgb(255, 255, 255)',
+            'The teacher document keeps its white surface in dark mode.',
         );
 
         if (process.env.TEMPLATE_DOCUMENT_SCREENSHOT) {

@@ -73,7 +73,7 @@ class IdentificationCardTest extends TestCase
         $texts = array_map(fn (array $cells): array => array_column($cells, 'text'), $grid);
         $this->assertSame('FACULTAD: Ciencias Administrativas, Gestión Empresarial e Informática', $texts[0][0]);
         $this->assertSame(['ASIGNATURA', 'PERIODO ACADÉMICO', 'CICLO', 'PARALELO', 'JORNADA'], $texts[3]);
-        $this->assertSame(['Lorem ipsum', 'Marzo – Julio 2026', 'Séptimo', 'A', 'Matutina'], $texts[4]);
+        $this->assertSame(['Asignatura de ejemplo', 'Marzo – Julio 2026', 'Séptimo', 'A', 'Matutina'], $texts[4]);
         $this->assertSame('X', $texts[7][1], 'La unidad profesional debe quedar marcada.');
         $this->assertSame('', $texts[6][2], 'La unidad básica no debe marcarse.');
         $this->assertSame(['32', '16', '48', '96'], $texts[14]);

@@ -749,7 +749,7 @@ it('arma la plantilla sobre la hoja impresa, sin formularios por tarjeta', funct
 
     $design = file_get_contents($root.'/resources/js/components/domain/configuration/TemplateDesignBlock.vue');
     expect($design)
-        ->toContain('Lorem ipsum')
+        ->toContain('templatePreviewFields')
         ->toContain('<TemplateDocumentEditor')
         ->toContain('<TemplateDocumentView')
         ->toContain('Guardar diseño')

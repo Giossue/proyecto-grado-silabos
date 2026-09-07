@@ -72,6 +72,14 @@ del alta; sustituye el transporte Inertia con un registro de peticiones sintéti
 Esta prueba de navegador complementa `composer verify` y no forma
 parte de esa puerta; la aceptación con documentos/dispositivos reales sigue pendiente.
 
+La suite también lee los diseños iniciales de PHP con el autoloader y un contenedor
+de configuración aislado (sin arrancar Laravel, leer `.env` ni consultar bases).
+Comprueba la ficha institucional compacta, muestras breves y tipadas, una fila de
+planificación con encabezado/totales y las cabeceras de ambos parciales. Revisa que
+ningún ancestro del separador pinte un rectángulo entre hojas, en claro y oscuro.
+`PAGINATION_REFERENCE_SCREENSHOT` guarda la ficha y `PAGINATION_GAP_SCREENSHOT`
+es el prefijo de las capturas `-light.png`/`-dark.png` del corte de tabla.
+
 ## Regresión del editor de plantilla
 
 `node --test tests/Browser/template-document-editor.mjs` usa la misma instalación de

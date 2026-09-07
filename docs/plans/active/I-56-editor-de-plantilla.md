@@ -79,3 +79,38 @@ no borrar datos para volver al lector anterior. Las revisiones enviadas llevan s
 y los artefactos existentes permanecen intactos. Los dos archivos de la galería antigua
 se retiraron por sustitución funcional y son recuperables desde Git; el laboratorio
 previamente retirado no se reintrodujo.
+
+## Ajuste de la vista previa y referencia de formato (2026-09-06)
+
+El responsable aporta una captura de un fondo blanco que tapa el espacio entre
+hojas y `temp/silabo.pdf` como referencia para la plantilla estándar. El PDF tiene
+ocho páginas Carta; esa cantidad depende de su contenido y no se fija en el editor.
+Se conserva el formato editable, las variables y los campos docentes. No se copian
+datos personales, notas, fórmulas ni valores académicos del documento a las muestras;
+PV-07/PV-08/PV-19 siguen abiertas. Alcance: ADM-06, CU-04, RF-017..026,
+RN-009..012, RNF-018..023 y CP-F plantilla/CP-N interfaz.
+
+- [x] Corregir el fondo de la vista previa paginada sin alterar la superficie del
+      formulario docente ni los colores de las celdas; compactar el relleno vertical
+      de las celdas en editor y lector sin reducir la fuente elegida.
+- [x] Sustituir el relleno extenso por ejemplos breves y tipados; una fila de ejemplo
+      por tabla, conservando encabezados y totales de las unidades.
+- [x] Contrastar las secciones y tablas iniciales con el PDF, sin sobrescribir
+      plantillas guardadas ni importar datos de docentes. Añadir la tabla faltante
+      de indicadores de ambos parciales, sin fórmulas ni valores predeterminados.
+- [x] Cubrir separación entre hojas y ejemplos en navegador real; ejecutar las
+      verificaciones puntuales y actualizar trazabilidad.
+
+Verificación puntual: Configuración + Sílabos + Documentos, **98 pruebas y 1619
+aserciones**, pasan en PostgreSQL local aislado. El contrato de hoja de
+`ManagementCreationUiTest` pasa (1 prueba, 61 aserciones). ESLint/Prettier del
+incremento, tipos Vue, Pint y PHPStan de las clases afectadas pasan. No hay
+migraciones ni escrituras sobre la plantilla existente. No se repite la puerta
+global para este ajuste acotado ni se dan por resueltos sus pendientes anteriores.
+
+Las dos suites Chromium pasan juntas (**2/2**). Se inspeccionaron la ficha de
+ejemplo en una página y la tabla de 120 filas en claro/oscuro, con sus separaciones
+y números de página visibles. El arrastre nativo observa el orden en la fase de
+captura de `drop`, antes de la mutación; la mención usa foco por clic como el usuario,
+sin competir con el foco diferido de Tiptap. No se cambiaron esos comportamientos de
+producción para acomodar la prueba.

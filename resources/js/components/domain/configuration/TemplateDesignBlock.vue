@@ -23,6 +23,7 @@ import type {
     DocumentField,
     TemplateVariable,
 } from '@/lib/templateDocument';
+import { templatePreviewFields } from '@/lib/templatePreview';
 
 const props = defineProps<{
     templateId: string;
@@ -59,31 +60,7 @@ const variables = computed(() =>
     Object.fromEntries(props.variables.map((item) => [item.key, item.sample])),
 );
 const sampleFields = computed(() =>
-    props.block.fields.map((field) => ({
-        ...field,
-        value:
-            field.key === 'discapacidad_tiene'
-                ? 'No'
-                : field.type === 'numero'
-                  ? '16'
-                  : 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.\n\nDuis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.',
-        rows:
-            field.type === 'repetible'
-                ? Array.from({ length: 3 }, (_, index) => ({
-                      id: `sample-${index}`,
-                      data: props.block.table
-                          ? Object.fromEntries(
-                                props.block.table.columns.map((column) => [
-                                    column.key,
-                                    column.type === 'number'
-                                        ? 2
-                                        : 'Lorem ipsum',
-                                ]),
-                            )
-                          : { texto: 'Lorem ipsum dolor sit amet.' },
-                  }))
-                : [],
-    })),
+    templatePreviewFields(props.block.fields, props.block.table),
 );
 const edit = () => {
     draft.value = JSON.parse(JSON.stringify(document.value)) as DocumentNode;

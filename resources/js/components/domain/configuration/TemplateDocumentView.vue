@@ -592,7 +592,9 @@ const Content = defineComponent({ setup: () => () => draw(props.document) });
 </script>
 
 <template>
-    <div class="template-document-view"><Content /></div>
+    <div class="template-document-view" :data-preview="preview || undefined">
+        <Content />
+    </div>
 </template>
 
 <style scoped>
@@ -603,6 +605,10 @@ const Content = defineComponent({ setup: () => () => draw(props.document) });
         11pt Arial,
         sans-serif;
     overflow-wrap: anywhere;
+}
+.template-document-view[data-preview] {
+    /* The page surfaces supply white; the space between them stays transparent. */
+    background: transparent;
 }
 .template-document-view :deep(.document-paragraph) {
     margin: 0 0 8px;
@@ -618,7 +624,7 @@ const Content = defineComponent({ setup: () => () => draw(props.document) });
 .template-document-view :deep(td),
 .template-document-view :deep(th) {
     border: 1px solid #7f7f7f;
-    padding: 4px;
+    padding: 2px 4px;
     vertical-align: middle;
     font-weight: normal;
 }

@@ -50,7 +50,21 @@ class TemplateAndSourceTest extends TestCase
         $template = SyllabusTemplate::query()->firstOrFail();
         $this->assertFalse(Schema::hasColumn('plantillas_silabo', 'es_institucional'));
         $this->assertCount(12, $template->sections()->get());
-        $this->assertCount(24, $template->fields()->get(), 'Doce campos base más los cuatro de la ficha y los extra del formato.');
+        $this->assertCount(25, $template->fields()->get(), 'Incluye la ficha y las dos tablas de evaluación del PDF de referencia.');
+
+        $evaluation = $template->sections()->where('clave', 'evaluacion')->firstOrFail();
+        $blocks = $evaluation->blocks()->orderBy('posicion')->get();
+        $this->assertSame(['Indicadores de evaluación', 'Escala de valoración', 'Recuperación y aprobación'], $blocks->pluck('titulo')->all());
+        $indicators = $blocks->first()->configuracion['table'];
+        $this->assertSame(['indicador', 'primer_parcial', 'ponderacion_primer_parcial', 'segundo_parcial', 'ponderacion_segundo_parcial'], array_column($indicators['columns'], 'key'));
+        $this->assertFalse($indicators['totals']['enabled'], 'No se incorpora una fórmula o ponderación pendiente de validación.');
+        $this->assertSame([false], array_values(array_unique(array_column($indicators['columns'], 'sum'))));
+        $indicatorField = $template->fields()->where('clave', 'indicadores_evaluacion')->firstOrFail();
+        $this->assertTrue($indicatorField->editable_docente);
+        $this->assertFalse($indicatorField->heredado);
+        $this->assertSame('repetible', $indicatorField->tipo);
+        $this->assertDatabaseCount('valores_campo', 0);
+        $this->assertDatabaseCount('filas_repetibles', 0);
 
         $this->actingAsAdministrator()
             ->get(route('admin.templates.show', $template))

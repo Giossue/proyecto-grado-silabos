@@ -103,7 +103,7 @@ final class IdentificationCard
             [
                 'career' => ['name' => 'Software', 'faculty' => 'Ciencias Administrativas, Gestión Empresarial e Informática'],
                 'subject' => [
-                    'name' => 'Lorem ipsum', 'code' => 'SW-P7-037', 'cycle' => 7, 'organization_unit' => 'profesional',
+                    'name' => 'Asignatura de ejemplo', 'code' => 'SW-P7-037', 'cycle' => 7, 'organization_unit' => 'Unidad Profesional',
                     'prerequisites' => ['SW-P6-032'], 'corequisites' => [],
                     'hours_ac' => 32, 'hours_pae' => 16, 'hours_aa' => 48, 'total_hours' => 96, 'credits' => 2,
                 ],
@@ -114,7 +114,7 @@ final class IdentificationCard
             ['docente@ueb.edu.ec'],
             [
                 'discapacidad_tiene' => 'No',
-                'formacion_experiencia' => 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
+                'formacion_experiencia' => 'Formación y experiencia en el área de la asignatura.',
             ],
         );
         $data['shift'] = 'Matutina';
