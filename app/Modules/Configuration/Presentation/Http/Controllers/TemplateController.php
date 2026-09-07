@@ -10,9 +10,12 @@ use App\Modules\Configuration\Application\Actions\DeleteTemplateSection;
 use App\Modules\Configuration\Application\Actions\ReorderTemplateBlocks;
 use App\Modules\Configuration\Application\Actions\ReorderTemplateSections;
 use App\Modules\Configuration\Application\Actions\SaveFieldDefinition;
+use App\Modules\Configuration\Application\Actions\SaveTemplateDocument;
 use App\Modules\Configuration\Application\Actions\SaveTemplateSection;
 use App\Modules\Configuration\Application\Actions\UpdateTableLayout;
 use App\Modules\Configuration\Application\InstitutionalLogos;
+use App\Modules\Configuration\Application\TemplateDocumentDefaults;
+use App\Modules\Configuration\Application\TemplateVariables;
 use App\Modules\Configuration\Domain\TableLayout;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\FieldDefinition;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
@@ -23,6 +26,7 @@ use App\Modules\Configuration\Presentation\Http\Requests\ManageTemplatesRequest;
 use App\Modules\Configuration\Presentation\Http\Requests\ReorderTemplateBlocksRequest;
 use App\Modules\Configuration\Presentation\Http\Requests\ReorderTemplateSectionsRequest;
 use App\Modules\Configuration\Presentation\Http\Requests\SaveFieldDefinitionRequest;
+use App\Modules\Configuration\Presentation\Http\Requests\SaveTemplateDocumentRequest;
 use App\Modules\Configuration\Presentation\Http\Requests\SaveTemplateSectionRequest;
 use App\Modules\Configuration\Presentation\Http\Requests\StoreInstitutionLogoRequest;
 use App\Modules\Configuration\Presentation\Http\Requests\UpdateTableLayoutRequest;
@@ -53,6 +57,16 @@ class TemplateController extends Controller
         ]);
     }
 
+    public function updateDocument(SyllabusTemplate $template, TemplateBlock $block, SaveTemplateDocumentRequest $request, SaveTemplateDocument $action): RedirectResponse
+    {
+        abort_unless($block->plantilla_id === $template->id, 404);
+        $actor = $request->user();
+        abort_unless($actor instanceof User, 401);
+        $action->execute($block, $request->validated('document'), $request->validated('fingerprint'), $actor, $request);
+
+        return back()->with('success', 'Diseño de la plantilla guardado.');
+    }
+
     public function store(CreateTemplateRequest $request, CreateSyllabusTemplate $action): RedirectResponse
     {
         $actor = $request->user();
@@ -69,6 +83,8 @@ class TemplateController extends Controller
         return Inertia::render('Admin/Templates/Show', [
             'processLock' => $locks->templateLockReason(),
             'identificationSample' => IdentificationCard::grid(IdentificationCard::sample()),
+            'variables' => TemplateVariables::catalog(),
+            'identificationDesign' => TemplateDocumentDefaults::identification(),
             'logos' => [
                 'institution' => route('logos.institution', ['v' => $logos->version($logos->institutionPath())]),
                 'institution_size' => InstitutionalLogos::INSTITUTION,
@@ -89,21 +105,25 @@ class TemplateController extends Controller
                         'type' => $block->tipo,
                         'content_type' => $this->contentType($block, $block->fields->first()),
                         'table' => TableLayout::fromBlock($block),
-                        'fields' => $block->fields->map(fn (FieldDefinition $field) => [
-                            'id' => $field->id,
-                            'block_id' => $block->id,
-                            'key' => $field->clave,
-                            'label' => $field->etiqueta,
-                            'help' => $field->ayuda,
-                            'type' => $field->tipo,
-                            'required' => $field->obligatorio,
-                            'inherited' => $field->heredado,
-                            'master_source' => $field->origen_maestro,
-                            'teacher_editable' => $field->editable_docente,
-                            'ai_enabled' => $field->ia_habilitada,
-                            'document_marker' => $field->marcador_documento,
-                            'content_type' => $this->contentType($block, $field),
-                        ])->values()->all(),
+                        'document' => $block->configuracion['document'] ?? null,
+                        'fingerprint' => SaveTemplateDocument::fingerprint($block),
+                        'fields' => $block->fields
+                            ->reject(fn (FieldDefinition $field) => isset($block->configuracion['detached_fields'][$field->clave]))
+                            ->map(fn (FieldDefinition $field) => [
+                                'id' => $field->id,
+                                'block_id' => $block->id,
+                                'key' => $field->clave,
+                                'label' => $field->etiqueta,
+                                'help' => $field->ayuda,
+                                'type' => $field->tipo,
+                                'required' => $field->obligatorio,
+                                'inherited' => $field->heredado,
+                                'master_source' => $field->origen_maestro,
+                                'teacher_editable' => $field->editable_docente,
+                                'ai_enabled' => $field->ia_habilitada,
+                                'document_marker' => $field->marcador_documento,
+                                'content_type' => $this->contentType($block, $field),
+                            ])->values()->all(),
                     ])->values()->all(),
                 ])->values()->all(),
             ],

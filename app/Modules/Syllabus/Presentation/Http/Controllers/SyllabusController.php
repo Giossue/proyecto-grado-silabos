@@ -4,6 +4,7 @@ namespace App\Modules\Syllabus\Presentation\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Modules\Configuration\Application\TemplateVariables;
 use App\Modules\Configuration\Domain\TableLayout;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\FieldDefinition;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateBlock;
@@ -186,7 +187,7 @@ class SyllabusController extends Controller
     private function syllabusPayload(Syllabus $syllabus): array
     {
         $syllabus->load([
-            'convocation.career', 'convocation.process.academicPeriod', 'subject', 'scopes.parallel', 'teachers:id,nombre',
+            'convocation.career', 'convocation.process.academicPeriod', 'subject', 'scopes.parallel', 'teachers:id,nombre,correo_electronico',
             'template.sections.blocks.fields', 'values', 'rows',
             'validationRuns' => fn ($query) => $query->with('results')->latest('completado_en')->limit(1),
             'revisions' => fn ($query) => $query->with([
@@ -212,6 +213,7 @@ class SyllabusController extends Controller
             'parallels' => $syllabus->scopes->pluck('parallel.codigo')->unique()->values(),
             'teachers' => $syllabus->teachers->pluck('nombre')->unique()->values(),
             'identification' => IdentificationCard::grid(IdentificationCard::fromSyllabus($syllabus)),
+            'template_variables' => TemplateVariables::resolve(['identification' => IdentificationCard::fromSyllabus($syllabus), 'academic_context' => $syllabus->contexto_academico]),
             'sections' => $syllabus->template->sections
                 ->map(fn (TemplateSection $section): array => $this->sectionPayload($section, $values, $rows))
                 ->values(),
@@ -330,6 +332,7 @@ class SyllabusController extends Controller
             'content_type' => $block->configuredContentType()
                 ?? ($block->tipo === 'repetible' ? 'table' : 'text'),
             'table' => TableLayout::fromBlock($block),
+            'document' => $block->configuracion['document'] ?? null,
             'fields' => $fields,
         ];
     }

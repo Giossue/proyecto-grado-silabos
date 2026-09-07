@@ -17,7 +17,7 @@ use ZipArchive;
  */
 class PhpWordDocumentRenderer implements DocumentRenderer
 {
-    public const VERSION = 'phpword-docx-v2+text-pdf-v1';
+    public const VERSION = 'phpword-docx-v3+text-pdf-v2';
 
     /** Marca de tiempo fija para las entradas del ZIP (1980-01-01, la mínima válida). */
     private const ZIP_MTIME = 315532800;

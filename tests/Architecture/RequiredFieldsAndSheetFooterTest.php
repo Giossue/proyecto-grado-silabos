@@ -147,6 +147,7 @@ it('presenta el ciclo académico sin detalles de implementación', function (): 
         'resources/js/pages/Teacher/Syllabi/Submit.vue',
         'resources/js/pages/Syllabi/Compare.vue',
         'resources/js/components/domain/configuration/TemplateFieldSheet.vue',
+        'resources/js/components/domain/configuration/TemplateDesignBlock.vue',
         'resources/js/components/domain/configuration/AcademicSourceEditSheet.vue',
     ];
 
@@ -178,7 +179,6 @@ it('presenta el ciclo académico sin detalles de implementación', function (): 
     expect($review)->not->toContain('revision.fingerprint');
 
     foreach ([
-        'app/Modules/Configuration/Presentation/Http/Controllers/TemplateController.php',
         'app/Modules/Configuration/Presentation/Http/Controllers/AcademicSourceController.php',
         'app/Modules/Syllabus/Presentation/Http/Controllers/ReviewController.php',
         'app/Modules/Documents/Presentation/Http/Controllers/DocumentController.php',
@@ -186,6 +186,12 @@ it('presenta el ciclo académico sin detalles de implementación', function (): 
         $source = (string) file_get_contents($root.'/'.$controller);
         expect($source)->not->toContain("'fingerprint' =>");
     }
+
+    // I-56 necesita un token opaco de concurrencia, no una huella visible al usuario.
+    $design = (string) file_get_contents($root.'/resources/js/components/domain/configuration/TemplateDesignBlock.vue');
+    $visibleDesign = substr($design, strpos($design, '<template>'));
+    expect($design)->toContain('form.fingerprint = props.block.fingerprint');
+    expect($visibleDesign)->not->toContain('fingerprint');
 
     $publishTemplate = (string) file_get_contents(
         $root.'/app/Modules/Configuration/Application/TemplateStructureValidator.php',

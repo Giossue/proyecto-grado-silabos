@@ -3,6 +3,7 @@ import { Form, Head, Link } from '@inertiajs/vue3';
 import { LockKeyhole, RotateCcw, ShieldCheck, Undo2 } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import ReviewController from '@/actions/App/Modules/Syllabus/Presentation/Http/Controllers/ReviewController';
+import TemplateDocumentView from '@/components/domain/configuration/TemplateDocumentView.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
 import IdentificationCard from '@/components/domain/syllabus/IdentificationCard.vue';
 import type { IdentificationCell } from '@/components/domain/syllabus/IdentificationCard.vue';
@@ -31,6 +32,7 @@ import {
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 import type { TableLayout, TableRowData } from '@/lib/tableLayout';
+import type { DocumentNode, DocumentField } from '@/lib/templateDocument';
 import { show as documentsShow } from '@/routes/documents';
 import { index as reviewsIndex } from '@/routes/reviews';
 
@@ -60,6 +62,7 @@ type SnapshotSection = {
         content_type?: string;
         /** Esquema de tabla copiado en la revisión (I-34); ausente en copias antiguas. */
         table?: TableLayout | null;
+        document?: DocumentNode | null;
         fields: SnapshotField[];
     }[];
 };
@@ -105,7 +108,11 @@ const props = defineProps<{
         number: number;
         submitted_at: string;
         submitted_by: string;
-        snapshot: { schema_version: number; sections: SnapshotSection[] };
+        snapshot: {
+            schema_version: number;
+            sections: SnapshotSection[];
+            template_variables?: Record<string, string>;
+        };
         /** Ficha de identificación en cuadrícula; nula en copias antiguas. */
         identification: IdentificationCell[][] | null;
         is_current: boolean;
@@ -185,6 +192,9 @@ const tableRows = (
                 !Array.isArray(row.data),
         )
         .map((row) => ({ id: row.id, data: row.data as TableRowData }));
+
+const documentFields = (fields: SnapshotField[]): DocumentField[] =>
+    fields.map((field) => ({ ...field, rows: tableRows(field) }));
 
 const formatValue = (value: JsonValue): string => {
     if (value === null || value === '') {
@@ -306,7 +316,16 @@ const observationState = (value: string): string =>
                             >
                                 {{ block.title }}
                             </h3>
-                            <dl class="grid gap-4">
+                            <TemplateDocumentView
+                                v-if="block.document"
+                                :document="block.document"
+                                :fields="documentFields(block.fields)"
+                                :variables="
+                                    revision.snapshot.template_variables ?? {}
+                                "
+                                :layout="block.table"
+                            />
+                            <dl v-else class="grid gap-4">
                                 <div
                                     v-for="field in block.fields"
                                     :key="field.key"

@@ -1,7 +1,23 @@
 # Trabajo pendiente
 
-Corte del 30 de agosto de 2026. Este documento separa lo que falta según de quién
+Corte histórico del 30 de agosto de 2026, con actualización I-56 a continuación.
+Este documento separa lo que falta según de quién
 depende, porque son cosas de naturaleza distinta y no se resuelven igual.
+
+## Actualización del editor, 2026-09-06 (I-56)
+
+Implementado el editor acotado de plantilla: formato, celdas combinadas, variables,
+campos, formulario docente y exportación DOCX. Sin laboratorio ni servidor de oficina.
+La evidencia está en `active/I-56-editor-de-plantilla.md`. No se cierra la aceptación
+institucional ni se certifican Word/PDF o dispositivos reales (PV-07/PV-19).
+
+La puerta global actual no está verde: ESLint encuentra un archivo externo dentro de
+`temp/.venv`; Prettier señala nueve archivos de otros módulos. La suite completa tiene
+tres fallos de interfaz ajenos al incremento (placeholder de `ManagedUserSheet`,
+iconos secundarios y estado vacío de `PeriodPreparationSheet`). Esos archivos no se
+modificaron. Corresponde resolverlos en el mantenimiento de calidad general; no debilitar
+sus pruebas ni borrar la carpeta externa. Los estados y conteos que siguen son el corte
+histórico, no una afirmación sobre la puerta actual.
 
 ## 1. Código: sin deuda funcional conocida
 

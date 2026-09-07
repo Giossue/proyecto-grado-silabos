@@ -72,6 +72,22 @@ del alta; sustituye el transporte Inertia con un registro de peticiones sintéti
 Esta prueba de navegador complementa `composer verify` y no forma
 parte de esa puerta; la aceptación con documentos/dispositivos reales sigue pendiente.
 
+## Regresión del editor de plantilla
+
+`node --test tests/Browser/template-document-editor.mjs` usa la misma instalación de
+Playwright/Chromium indicada arriba, sin aplicación ni base real. Prueba Tiptap y los
+componentes compartidos: familia/tamaño/color, marcas, alineación, mención con teclado,
+combinación horizontal/vertical y separación, serialización, formulario docente sin
+diseño, guardado/reapertura y errores conservados. El transporte sintético dispara
+eventos Inertia para comprobar que el diálogo local es el único que confirma reinicios.
+`TEMPLATE_DOCUMENT_SCREENSHOT` guarda una captura de la muestra. Las dos suites de
+navegador tienen cachés Vite separadas para no interferir al ejecutarse en paralelo.
+
+La persistencia real se verifica con `TemplateDocumentTest` y `ReviewWorkflowTest`
+sobre PostgreSQL: permisos, fingerprint, saneamiento, spans completos, datos tipados,
+reinicio de borradores, retiro/restauración de campos e historia inmutable. La prueba
+de exportación inspecciona OOXML generado; no certifica visualmente Microsoft Word.
+
 ## Base de datos de prueba
 
 Usa PostgreSQL para suites que validan producción. SQLite no puede probar semántica de

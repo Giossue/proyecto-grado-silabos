@@ -57,6 +57,25 @@ class SaveFieldDefinition
 
             $contentType = $this->stringValue($data, 'content_type');
 
+            $customBlock = $field?->block()->first();
+            if ($field !== null && $customBlock !== null && is_array($customBlock->configuracion['document'] ?? null)) {
+                abort_unless($customBlock->id === $this->stringValue($data, 'block_id'), 404);
+                if ($contentType !== $customBlock->configuredContentType() || $data['key'] !== $field->clave) {
+                    throw ValidationException::withMessages(['content_type' => 'Use Editar diseño para modificar la estructura y los campos de este bloque.']);
+                }
+                if (isset($customBlock->configuracion['detached_fields'][$field->clave])) {
+                    throw ValidationException::withMessages(['field' => 'Este campo se retiró del diseño; no es parte del formulario actual.']);
+                }
+                // Las propiedades no convierten un número o fecha en texto ni alteran su referencia.
+                $field->update([
+                    'etiqueta' => $data['label'], 'ayuda' => $data['help'] ?? null,
+                    'ia_habilitada' => ! $field->heredado && (bool) ($data['ai_enabled'] ?? $field->ia_habilitada),
+                ]);
+                $this->auditField($field, 'plantilla.campo_actualizado', $actor, $activeRole?->id, $request);
+
+                return $field;
+            }
+
             // Bloques fijos (ficha de identificación, estado de revisión): su estructura no
             // se toca; solo cambian etiqueta y ayuda.
             if ($field !== null && in_array($contentType, ['institutional', 'flow'], true)) {
@@ -177,6 +196,10 @@ class SaveFieldDefinition
         abort_unless($block->id === $field->bloque_plantilla_id, 404);
 
         $configuration = $block->getAttribute('configuracion');
+
+        if (is_array($configuration) && isset($configuration['document']) && ($configuration['content_type'] ?? null) !== $contentType) {
+            throw ValidationException::withMessages(['content_type' => 'Este campo tiene un diseño personalizado. Use Editar diseño para cambiar su contenido sin perder sus espacios.']);
+        }
 
         $block->update([
             'tipo' => $this->blockType($contentType),

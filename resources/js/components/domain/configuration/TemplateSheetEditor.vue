@@ -15,10 +15,9 @@ import {
 import { computed, nextTick, ref, watch } from 'vue';
 import { toast } from 'vue-sonner';
 import TemplateController from '@/actions/App/Modules/Configuration/Presentation/Http/Controllers/TemplateController';
+import TemplateDesignBlock from '@/components/domain/configuration/TemplateDesignBlock.vue';
 import TemplateFieldSheet from '@/components/domain/configuration/TemplateFieldSheet.vue';
-import TemplateTableDesigner from '@/components/domain/configuration/TemplateTableDesigner.vue';
 import PaginatedDocument from '@/components/domain/PaginatedDocument.vue';
-import IdentificationCard from '@/components/domain/syllabus/IdentificationCard.vue';
 import type { IdentificationCell } from '@/components/domain/syllabus/IdentificationCard.vue';
 import { Button } from '@/components/ui/button';
 import {
@@ -38,14 +37,15 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
-import { defaultTableLayout } from '@/lib/tableLayout';
 import type { TableLayout } from '@/lib/tableLayout';
+import type { DocumentNode, TemplateVariable } from '@/lib/templateDocument';
 
 type TemplateField = {
     id: string;
     block_id: string;
     key: string;
     label: string;
+    type?: string;
     help: string | null;
     required: boolean;
     inherited: boolean;
@@ -64,6 +64,8 @@ type FieldContainer = {
     content_type: string;
     /** Esquema de la tabla; nulo cuando el campo no es una tabla. */
     table: TableLayout | null;
+    document?: DocumentNode | null;
+    fingerprint?: string;
     fields: TemplateField[];
 };
 
@@ -99,6 +101,8 @@ const props = defineProps<{
     identification: IdentificationCell[][];
     /** Logo de la universidad vigente; el de la facultad depende de cada carrera. */
     institutionLogo: string;
+    variables?: TemplateVariable[];
+    identificationDesign?: DocumentNode;
 }>();
 
 const PALETTE: { type: ContentType; label: string; icon: typeof Type }[] = [
@@ -106,18 +110,6 @@ const PALETTE: { type: ContentType; label: string; icon: typeof Type }[] = [
     { type: 'table', label: 'Tabla', icon: Table },
     { type: 'bulleted_list', label: 'Lista con viñetas', icon: List },
     { type: 'numbered_list', label: 'Lista numerada', icon: ListOrdered },
-];
-
-/** Texto de relleno: muestra cómo se verá el sílabo impreso, no contenido real. */
-const LOREM_PARAGRAPHS = [
-    'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.',
-    'Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.',
-];
-
-const LOREM_ITEMS = [
-    'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
-    'Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
-    'Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.',
 ];
 
 const doc = ref<TemplateSection[]>([]);
@@ -158,7 +150,9 @@ const firstField = (container: FieldContainer): TemplateField | null =>
     container.fields[0] ?? null;
 
 const fieldLabel = (container: FieldContainer): string =>
-    firstField(container)?.label ?? container.title;
+    container.document
+        ? container.title
+        : (firstField(container)?.label ?? container.title);
 
 const typeLabel = (value: string): string =>
     props.blockTypes.find((type) => type.value === value)?.label ?? value;
@@ -377,7 +371,22 @@ const saveField = (
 ): void => {
     const field = firstField(container);
 
-    if (!field) {
+    if (!field || (container.document && overrides.label)) {
+        if (container.document && overrides.label) {
+            router.patch(
+                TemplateController.updateDocument.url({
+                    template: props.templateId,
+                    block: container.id,
+                }),
+                {
+                    document: container.document,
+                    fingerprint: container.fingerprint,
+                    title: overrides.label,
+                },
+                requestOptions(success),
+            );
+        }
+
         return;
     }
 
@@ -452,25 +461,6 @@ const changeType = (container: FieldContainer, contentType: string): void => {
         { content_type: contentType },
         `Ahora es ${typeLabel(contentType).toLowerCase()}.`,
     );
-};
-
-const saveTableLayout = (
-    container: FieldContainer,
-    layout: TableLayout,
-): void => {
-    router.patch(
-        TemplateController.updateTableLayout.url({
-            template: props.templateId,
-            block: container.id,
-        }),
-        layout,
-        requestOptions('Tabla guardada.'),
-    );
-};
-
-/** Vuelve a la galería de formatos; las columnas actuales se reemplazan. */
-const resetTableFormat = (container: FieldContainer): void => {
-    saveTableLayout(container, defaultTableLayout());
 };
 
 const openProperties = (container: FieldContainer): void => {
@@ -1182,15 +1172,17 @@ const dropOnFieldZone = (section: TemplateSection, index: number): void => {
                                             <DropdownMenuContent align="end">
                                                 <DropdownMenuLabel
                                                     v-if="
+                                                        !container.document &&
                                                         container.content_type !==
-                                                        'institutional'
+                                                            'institutional'
                                                     "
                                                 >
                                                     Tipo de contenido
                                                 </DropdownMenuLabel>
                                                 <DropdownMenuItem
-                                                    v-for="type in container.content_type ===
-                                                    'institutional'
+                                                    v-for="type in container.document ||
+                                                    container.content_type ===
+                                                        'institutional'
                                                         ? []
                                                         : blockTypes"
                                                     :key="type.value"
@@ -1237,23 +1229,6 @@ const dropOnFieldZone = (section: TemplateSection, index: number): void => {
                                                     />
                                                     Propiedades
                                                 </DropdownMenuItem>
-                                                <template
-                                                    v-if="
-                                                        container.content_type ===
-                                                        'table'
-                                                    "
-                                                >
-                                                    <DropdownMenuSeparator />
-                                                    <DropdownMenuItem
-                                                        @select="
-                                                            resetTableFormat(
-                                                                container,
-                                                            )
-                                                        "
-                                                    >
-                                                        Elegir otro formato
-                                                    </DropdownMenuItem>
-                                                </template>
                                                 <DropdownMenuSeparator />
                                                 <DropdownMenuItem
                                                     variant="destructive"
@@ -1275,69 +1250,18 @@ const dropOnFieldZone = (section: TemplateSection, index: number): void => {
                                     </div>
                                 </div>
 
-                                <IdentificationCard
-                                    v-if="
-                                        container.content_type ===
-                                        'institutional'
+                                <TemplateDesignBlock
+                                    :template-id="templateId"
+                                    :block="container"
+                                    :identification="
+                                        identificationDesign ?? {
+                                            type: 'doc',
+                                            content: [{ type: 'paragraph' }],
+                                        }
                                     "
-                                    :grid="identification"
-                                />
-
-                                <TemplateTableDesigner
-                                    v-else-if="
-                                        container.content_type === 'table'
-                                    "
-                                    :layout="
-                                        container.table ?? defaultTableLayout()
-                                    "
+                                    :variables="variables ?? []"
                                     :readonly="readonly"
-                                    @update:layout="
-                                        saveTableLayout(container, $event)
-                                    "
                                 />
-
-                                <ul
-                                    v-else-if="
-                                        container.content_type ===
-                                        'bulleted_list'
-                                    "
-                                    class="doc-list doc-list-bullets"
-                                >
-                                    <li
-                                        v-for="item in LOREM_ITEMS"
-                                        :key="item"
-                                        data-page-unit
-                                    >
-                                        {{ item }}
-                                    </li>
-                                </ul>
-
-                                <ol
-                                    v-else-if="
-                                        container.content_type ===
-                                        'numbered_list'
-                                    "
-                                    class="doc-list doc-list-numbers"
-                                >
-                                    <li
-                                        v-for="item in LOREM_ITEMS"
-                                        :key="item"
-                                        data-page-unit
-                                    >
-                                        {{ item }}
-                                    </li>
-                                </ol>
-
-                                <template v-else>
-                                    <p
-                                        v-for="paragraph in LOREM_PARAGRAPHS"
-                                        :key="paragraph"
-                                        class="doc-p"
-                                        data-page-unit
-                                    >
-                                        {{ paragraph }}
-                                    </p>
-                                </template>
                             </article>
                         </template>
 
@@ -1669,57 +1593,9 @@ const dropOnFieldZone = (section: TemplateSection, index: number): void => {
     opacity: 0.35;
 }
 
-.doc-p {
-    margin: 0 0 6pt;
-    text-align: left;
-}
-
 .doc-empty {
     color: #595959;
     font-style: italic;
     margin: 0 0 6pt;
-}
-
-.doc-list {
-    margin: 0 0 6pt;
-    padding-inline-start: 0.63cm;
-}
-
-.doc-list li {
-    margin-bottom: 3pt;
-    padding-inline-start: 0.1cm;
-}
-
-.doc-list-bullets {
-    list-style: disc;
-}
-
-.doc-list-numbers {
-    list-style: decimal;
-}
-
-.doc-table {
-    border-collapse: collapse;
-    font-size: 9pt;
-    margin: 0 0 6pt;
-    width: 100%;
-}
-
-.doc-table th,
-.doc-table td {
-    border: 1px solid #7f7f7f;
-    padding: 3pt 5pt;
-    text-align: left;
-    vertical-align: top;
-}
-
-.doc-table th {
-    background: #4f81bd;
-    color: #fff;
-    font-weight: 700;
-}
-
-.doc-table tbody tr:nth-child(even) td {
-    background: #dbe5f1;
 }
 </style>

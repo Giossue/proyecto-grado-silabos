@@ -119,6 +119,26 @@ Los campos permanecen en su sección. El alta de bloque elige el primer tipo de 
 en un `Dialog` y reutiliza `storeSection` para crearlos atómicamente. Los índices de
 inserción del cliente son base cero; `position` del caso de uso se envía en base uno.
 
+## Diseño integrado de la plantilla (I-56)
+
+`TemplateSheetEditor` conserva bloques, arrastre, paleta y paginación. Cada
+`TemplateDesignBlock` ofrece `TemplateDocumentEditor` (Tiptap Vue 3, ADR-0007) en un
+diálogo amplio con guardado explícito. La cinta reutiliza Button, Select, FieldGroup,
+Input, Alert y Dialog compartidos; los colores libres pertenecen al documento, no al
+tema de la aplicación. El documento JSON contiene solo nodos/marcas del contrato PHP
+`TemplateDocument`; no se persiste HTML ni se acepta HTML arbitrario en el servidor.
+
+`TemplateDocumentView` proyecta ese contrato sin `v-html`: celdas con spans y anchos,
+texto fijo, variables de servidor y controles docentes. Docencia conserva autoguardado,
+control de versión, validación e IA por campo; no monta Tiptap ni recibe controles de
+diseño. Las tablas repetibles expanden grupos de filas con claves tipadas, unidades y
+sumas de `TableLayout`. Los diseños sin documento mantienen el lector anterior.
+
+El guardado administra su confirmación local de reinicio para conservar callbacks,
+errores y borrador. `registerLocalPurgeConfirmation` evita un segundo diálogo global
+para esa ruta y se desregistra al desmontar. El fingerprint incluye título, definición
+de campos y configuración; otra sesión no se sobrescribe silenciosamente.
+
 ## Feedback y acciones sensibles
 
 - Toda mutación tiene pendiente, éxito y error.

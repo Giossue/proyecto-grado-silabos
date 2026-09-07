@@ -11,7 +11,9 @@ use Illuminate\Validation\ValidationException;
  * Una tabla compleja se descompone en piezas simples: columnas planas (un valor por
  * celda), agrupaciones de cabecera en dos niveles (`group` dentro de `band`), campos de
  * cabecera por unidad, fila de totales y repetición por unidad. Las celdas combinadas
- * solo existen en la cabecera y en los totales; el cuerpo siempre es rectangular.
+ * solo existen en la cabecera y en los totales en el lector anterior. Con I-56,
+ * TemplateDocument controla las combinaciones del diseño (incluidas filas de datos);
+ * este esquema sigue definiendo las claves, tipos y sumas, no la geometría visual.
  *
  * @phpstan-type Column array{key: string, label: string, type: 'text'|'number', group: string|null, band: string|null, sum: bool, width: int|null}
  * @phpstan-type Named array{key: string, label: string}

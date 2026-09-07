@@ -260,6 +260,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::patch('plantilla/{template}/campos/{field}', [TemplateController::class, 'updateField'])->name('templates.fields.update');
         Route::patch('plantilla/{template}/bloques/orden', [TemplateController::class, 'reorderBlocks'])->name('templates.blocks.reorder');
         Route::patch('plantilla/{template}/bloques/{block}/tabla', [TemplateController::class, 'updateTableLayout'])->name('templates.blocks.table');
+        Route::patch('plantilla/{template}/bloques/{block}/diseno', [TemplateController::class, 'updateDocument'])->name('templates.blocks.document');
         Route::delete('plantilla/{template}/bloques/{block}', [TemplateController::class, 'destroyBlock'])->name('templates.blocks.destroy');
     });
 });

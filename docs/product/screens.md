@@ -128,8 +128,10 @@ completo. El alta está separada de asignar paralelos y no levanta sus bloqueos.
   «Bloque», tanto al pulsarlo como al soltarlo, pide elegir su primer campo (Texto,
   Tabla, Lista con viñetas o Lista numerada) antes de crearlo; cancelar no crea nada. Los
   títulos se renombran con un clic; el asa reordena; el menú de tres puntos cambia el
-  tipo, abre Propiedades en un `Sheet` o elimina con confirmación. Todo se guarda solo,
-  con un aviso corto. Con el proceso abierto la hoja se muestra sin paleta ni asas.
+  tipo mientras no tenga un diseño personalizado, abre Propiedades en un `Sheet` o
+  elimina con confirmación. Estas operaciones se guardan solas; el contenido de
+  «Editar diseño» se guarda explícitamente. Con el proceso abierto la hoja se muestra
+  sin paleta, asas ni edición de diseño.
   Estándar del impreso: logos institucionales, título azul centrado, Arial 11 pt, bloques
   numerados «1.» y campos «1.1» en negrita, márgenes de 2.5 cm, tablas con cabecera azul y
   filas alternas celestes. El formato lo pone la plantilla; el docente solo llena
@@ -145,9 +147,10 @@ completo. El alta está separada de asignar paralelos y no levanta sus bloqueos.
   Las hojas se muestran directamente sobre el fondo de la pantalla, sin panel gris.
   La paleta acompaña el desplazamiento bajo el encabezado, también en móvil; si su
   altura excede el espacio disponible, sus opciones se desplazan dentro de la paleta.
-- La ficha de identificación institucional (bloque «Asignatura», heredado) se pinta fija
-  con datos de la malla, la oferta, los paralelos (incluida su jornada) y los docentes;
-  no se diseña ni se llena (I-34). Mapa de datos: `docs/product/identificacion-institucional.md`.
+- La ficha institucional parte del formato oficial y Administración puede editar su
+  diseño (I-56). Sus variables muestran datos de malla, oferta, paralelos y docentes;
+  no son campos de escritura. Discapacidad y formación son campos que completa el
+  docente en su lugar dentro de la tabla. Mapa: `docs/product/identificacion-institucional.md`.
   COR-14 concentra sus paralelos dentro de Ofertas. Desde acciones de cada oferta se
   crea un paralelo con su código y jornada; el servidor rechaza códigos repetidos. La
   tabla de ofertas muestra materia y código en columnas separadas, más el rango de
@@ -172,12 +175,22 @@ completo. El alta está separada de asignar paralelos y no levanta sus bloqueos.
 - Si una sección tiene un solo campo, no lleva subtítulo «n.1»: basta el título de la
   sección, en la hoja, el editor docente, la revisión y el Word. Con varios campos sí
   se numeran.
-- Las tablas se eligen, no se diseñan (I-34). Al soltar «Tabla» se escoge un formato
-  institucional listo (planificación por unidades, bibliografía, escala, perfil de egreso
-  o tabla simple); las cabeceras se renombran con un clic y el menú ⋯ del campo ofrece
-  «Elegir otro formato». Un formato nuevo se agrega en código (`tablePresets.ts`).
-DOC-01 llena una cuadrícula con una casilla por celda, unidades y totales calculados;
-  COR-05 la muestra tal cual.
+- «Editar diseño» abre un diálogo amplio sobre el bloque, con familia, tamaño y color
+  de fuente, negrita, cursiva, subrayado, alineación, listas y deshacer/rehacer. La
+  tabla permite agregar/quitar filas y columnas, ajustar anchos, fondo y combinar o
+  separar celdas horizontal y verticalmente; se seleccionan arrastrando o con Mayús
+  + clic. No hay galería obligatoria de formatos. Los formatos iniciales oficiales
+  siguen disponibles al crear la plantilla y no se reescriben simplemente por abrirla.
+- En el diseño, texto normal es fijo; «Insertar campo» pide nombre y tipo de respuesta
+  del docente; `@` ofrece variables descriptivas con búsqueda y teclado. Solo los
+  campos se llenan manualmente. «Guardar diseño» conserva errores y borrador ante
+  rechazo; salir con cambios advierte. Un conflicto pide recargar y no sobrescribe.
+  El aviso de reinicio durante una pausa requiere «Guardar y reiniciar» explícito.
+- Las tablas repetibles conservan sus unidades, columnas tipadas y sumas. El diseño
+  distingue cabecera fija, datos, datos de unidad y total: se combinan celdas dentro
+  de cada grupo, sin atravesar grupos que se repiten distintas cantidades de veces.
+  Docencia agrega filas/unidades y completa las casillas, sin herramientas de diseño;
+  la revisión muestra el diseño y las variables congelados al enviar.
   Las fuentes son documentos editables: COR-11 abre el contenido como una hoja visual
   con cinta de opciones; el formato se aplica en tiempo real y el sistema conserva el
   resultado como Markdown seguro sin mostrar su sintaxis.

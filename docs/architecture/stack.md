@@ -10,6 +10,7 @@
 | Tipos frontend | TypeScript | Confirmado |
 | Estilos/componentes | Tailwind + shadcn-vue | Confirmado en diagnóstico y starter oficial |
 | Lienzo de mallas | Vue Flow | Confirmado para presentación; ADR-0006 |
+| Diseño de plantilla | Tiptap 3 para Vue, núcleo/extensiones MIT | I-56; ADR-0007; sin servicios ni extensiones comerciales |
 | Compilación | Vite del starter Laravel | Base oficial |
 | Rutas tipadas | Wayfinder del starter oficial | Mantener salvo ADR |
 | Autenticación | Laravel Fortify mediante starter | Base técnica; política de cuentas por validar |
@@ -41,6 +42,11 @@ actualices dependencias principales de forma incidental dentro de una feature.
 | PostgreSQL local/CI | 18 |
 | Redis local/CI | 8 |
 | Vue Flow core / controles / minimapa / toolbar | 1.48.2 / 1.1.3 / 1.5.4 / 1.1.1 |
+
+I-56 (2026-09-06) fija Tiptap y sus extensiones en **3.31.3** con npm. Reutiliza
+ProseMirror para selección, historial y combinación de celdas, encapsulado en un
+componente; PHPWord sigue siendo el exportador, no un editor incrustado. No cambia
+las versiones de Laravel/Vue ni requiere servidor de documentos. Véase ADR-0007.
 
 ## Decisiones deliberadamente abiertas
 

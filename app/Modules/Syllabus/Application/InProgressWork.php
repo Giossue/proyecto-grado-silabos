@@ -4,6 +4,7 @@ namespace App\Modules\Syllabus\Application;
 
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\Convocation;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\Syllabus;
+use App\Modules\Syllabus\Infrastructure\Persistence\Models\SyllabusProcess;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -95,6 +96,7 @@ class InProgressWork
     {
         return Syllabus::query()->whereHas('convocation', fn (Builder $query) => $query
             ->whereIn('estado', [Convocation::STATE_OPEN, Convocation::STATE_PAUSED])
+            ->whereHas('process', fn (Builder $process) => $process->whereIn('estado', [SyllabusProcess::STATE_OPEN, SyllabusProcess::STATE_PAUSED]))
             ->when($careerId !== null, fn (Builder $scoped) => $scoped->where('carrera_id', $careerId)));
     }
 }

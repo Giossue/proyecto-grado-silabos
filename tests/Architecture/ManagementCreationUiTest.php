@@ -742,11 +742,19 @@ it('arma la plantilla sobre la hoja impresa, sin formularios por tarjeta', funct
         ->toContain('PROGRAMA DE ASIGNATURA (SÍLABO)')
         ->toContain('<PaginatedDocument>')
         ->toContain("'table'")
-        // I-34: las tablas se diseñan sobre la hoja con su propio componente.
-        ->toContain('<TemplateTableDesigner')
+        // I-56: diseño libre sin perder paleta, bloques ni paginación.
+        ->toContain('<TemplateDesignBlock')
         ->toContain("'bulleted_list'")
-        ->toContain("'numbered_list'")
-        ->toContain('Lorem ipsum');
+        ->toContain("'numbered_list'");
+
+    $design = file_get_contents($root.'/resources/js/components/domain/configuration/TemplateDesignBlock.vue');
+    expect($design)
+        ->toContain('Lorem ipsum')
+        ->toContain('<TemplateDocumentEditor')
+        ->toContain('<TemplateDocumentView')
+        ->toContain('Guardar diseño')
+        ->toContain('fingerprint')
+        ->toContain('registerLocalPurgeConfirmation');
 
     // I-53: el marco compartido conserva el estándar y calcula hojas dinámicas.
     $paper = file_get_contents(

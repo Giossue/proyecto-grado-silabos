@@ -14,6 +14,23 @@ const message = ref('');
 const count = ref(0);
 let lastVisit: PendingVisit | null = null;
 let installed = false;
+const localConfirmations = new Map<string, number>();
+
+/** Un editor con borrador local debe reintentar con sus callbacks de guardado. */
+export function registerLocalPurgeConfirmation(url: string): () => void {
+    const path = new URL(url, 'http://localhost').pathname;
+    localConfirmations.set(path, (localConfirmations.get(path) ?? 0) + 1);
+
+    return () => {
+        const remaining = (localConfirmations.get(path) ?? 1) - 1;
+
+        if (remaining === 0) {
+            localConfirmations.delete(path);
+        } else {
+            localConfirmations.set(path, remaining);
+        }
+    };
+}
 
 const withConfirmation = (data: PendingVisit['data']): PendingVisit['data'] => {
     if (data instanceof FormData) {
@@ -34,7 +51,10 @@ export function usePurgeConfirmation() {
         router.on('error', (event) => {
             const errors = event.detail.errors as Record<string, string>;
 
-            if (!errors.purge_required) {
+            if (
+                !errors.purge_required ||
+                (lastVisit && localConfirmations.has(lastVisit.url.pathname))
+            ) {
                 return;
             }
 

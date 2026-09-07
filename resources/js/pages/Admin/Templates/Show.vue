@@ -6,6 +6,7 @@ import PageFrame from '@/components/domain/PageFrame.vue';
 import ProcessLockAlert from '@/components/domain/ProcessLockAlert.vue';
 import type { IdentificationCell } from '@/components/domain/syllabus/IdentificationCard.vue';
 import type { TableLayout } from '@/lib/tableLayout';
+import type { DocumentNode, TemplateVariable } from '@/lib/templateDocument';
 import { index as templatesIndex } from '@/routes/admin/templates';
 
 type TemplateField = {
@@ -13,6 +14,7 @@ type TemplateField = {
     block_id: string;
     key: string;
     label: string;
+    type: string;
     help: string | null;
     required: boolean;
     inherited: boolean;
@@ -39,6 +41,8 @@ defineProps<{
                 title: string;
                 content_type: string;
                 table: TableLayout | null;
+                document: DocumentNode | null;
+                fingerprint: string;
                 fields: TemplateField[];
             }[];
         }[];
@@ -48,6 +52,8 @@ defineProps<{
     processLock: string | null;
     /** Ficha de identificación con datos de muestra, ya en cuadrícula. */
     identificationSample: IdentificationCell[][];
+    identificationDesign: DocumentNode;
+    variables: TemplateVariable[];
     logos: {
         institution: string;
         institution_size: { width: number; height: number };
@@ -88,6 +94,8 @@ defineOptions({
             :sections="template.sections"
             :block-types="blockTypes"
             :identification="identificationSample"
+            :identification-design="identificationDesign"
+            :variables="variables"
             :institution-logo="logos.institution"
             :readonly="processLock !== null"
         />

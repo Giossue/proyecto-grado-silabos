@@ -2,6 +2,7 @@
 
 namespace App\Modules\Syllabus\Application;
 
+use App\Modules\Configuration\Application\TemplateVariables;
 use App\Modules\Configuration\Domain\TableLayout;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\FieldDefinition;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateBlock;
@@ -26,8 +27,10 @@ class SyllabusSnapshot
             ))
             ->groupBy('definicion_campo_id');
 
+        $identification = IdentificationCard::fromSyllabus($syllabus);
+
         return [
-            'schema_version' => 2,
+            'schema_version' => 3,
             'template_id' => $syllabus->plantilla_id,
             'template_name' => $syllabus->template->nombre,
             // La copia lleva también el mapa del documento: la revisión se exporta desde
@@ -35,7 +38,8 @@ class SyllabusSnapshot
             'document_mapping' => $syllabus->template->mapeo_documento,
             'academic_context' => $syllabus->contexto_academico,
             // Ficha de identificación ya armada: el documento no vuelve a consultar la malla.
-            'identification' => IdentificationCard::fromSyllabus($syllabus),
+            'identification' => $identification,
+            'template_variables' => TemplateVariables::resolve(['identification' => $identification, 'academic_context' => $syllabus->contexto_academico]),
             'sections' => $syllabus->template->sections
                 ->map(fn (TemplateSection $section): array => [
                     'key' => $section->clave,
@@ -48,6 +52,7 @@ class SyllabusSnapshot
                         // El esquema de la tabla viaja con la copia: el documento se
                         // exporta con las columnas que el docente llenó.
                         'table' => TableLayout::fromBlock($block),
+                        'document' => $block->configuracion['document'] ?? null,
                         'fields' => $block->fields->map(fn (FieldDefinition $field): array => [
                             'definition_id' => $field->id,
                             'key' => $field->clave,

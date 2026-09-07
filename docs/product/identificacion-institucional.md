@@ -1,11 +1,11 @@
 # Ficha de identificación institucional
 
-La primera tabla del sílabo se llena sola. Nadie la diseña ni la escribe: el código la
-arma desde la información académica y la pinta igual en la plantilla, el editor del
-docente, la revisión y el Word. Este documento existe para que quien deba cambiarla
-(un estudiante o docente en el futuro) sepa exactamente dónde tocar.
+La primera tabla parte del formato institucional. Administración puede modificarla
+desde «Editar diseño» (I-56), sin cambiar código para mover celdas o etiquetas. Las
+variables se llenan automáticamente; los espacios de discapacidad y formación los
+completa Docencia. El diseño queda guardado dentro de la plantilla única.
 
-## Un solo archivo
+## Fuentes de datos y formato inicial
 
 `app/Modules/Syllabus/Application/IdentificationCard.php`
 
@@ -15,9 +15,10 @@ docente, la revisión y el Word. Este documento existe para que quien deba cambi
   (`span`), filas que abarca (`rows`) y estilo.
 - `WIDTHS`: anchos de las 9 columnas, medidos del documento original.
 
-Los tres dibujantes (`IdentificationCard.vue`, `SyllabusWordDocument::identification`,
-y la hoja de la plantilla) solo leen la cuadrícula. No hay que tocarlos para mover una
-celda o cambiar una etiqueta.
+`TemplateDocumentDefaults::identification` adapta esa cuadrícula inicial a un documento
+editable, reemplazando datos por variables y campos. Se usa sin escritura cuando no
+hay diseño guardado. Los lectores anteriores (`IdentificationCard.vue` y el lector
+Word de identificación) se conservan para sílabos y revisiones anteriores sin diseño.
 
 ## De dónde sale cada dato
 
@@ -47,21 +48,29 @@ celda o cambiar una etiqueta.
 | Formación y experiencia académica-investigativa | `formation` | Lo escribe el docente: campo `formacion_experiencia` del mismo bloque; última fila de la tabla |
 
 Los campos que llena el docente viven en el mismo bloque «Identificación institucional»
-de la plantilla (`IdentificationCard::INPUT_KEYS`): el editor los muestra debajo de la
-ficha y la ficha impresa los coloca en sus filas.
+de la plantilla (`IdentificationCard::INPUT_KEYS`). Con diseño guardado se completan
+dentro de sus celdas; el lector anterior los sigue mostrando debajo de la ficha.
 
 Los datos de la malla y la oferta llegan por `contexto_academico` (copiado al abrir la
 convocatoria por `AcademicContextSnapshot`). Paralelos y docentes se leen del
 expediente en el momento. Al enviar una revisión, la ficha ya armada se guarda dentro
-de la copia (`fotografia.identification`), y el Word se genera desde esa copia.
+de la copia (`fotografia.identification`). Además se guardan el diseño de cada bloque
+y `fotografia.template_variables`; la revisión y el Word no consultan el catálogo vivo
+para reemplazar las variables de una revisión histórica.
 
 ## Cómo cambiar algo
 
-- **Renombrar una etiqueta**: editar el texto en `grid`.
-- **Mover o combinar celdas**: cambiar `span` y `rows` en la fila correspondiente. La
-  suma de `span` por fila debe dar 9 contando las celdas que vienen combinadas desde
-  arriba.
-- **Nuevo dato**: agregar la clave en `build` (y en `AcademicContextSnapshot` si sale
-  de la malla o la oferta), luego una celda en `grid`.
-- **Verificar**: `php artisan test tests/Feature/Syllabus/IdentificationCardTest.php`
-  fija la cuadrícula; si el cambio es intencional, actualizar la prueba.
+- **Etiqueta, color o celdas**: Administración abre «Editar diseño», cambia el contenido
+  o combina/separa celdas y pulsa «Guardar diseño».
+- **Dato automático**: escribir `@` y elegir, por ejemplo, `nombre_carrera`,
+  `nombre_facultad`, `nombre_docente` o `correo_docente`. El docente no los escribe.
+- **Respuesta manual**: insertar un campo con nombre descriptivo y tipo de respuesta.
+- **Nueva variable disponible**: editar únicamente `config/syllabus_variables.php` si
+  la fuente ya está en la identificación o en el contexto académico. Cada entrada
+  define clave descriptiva, etiqueta y `source`, por ejemplo `identification.career`.
+  `equals` permite marcas X de opciones ya existentes. Reconstruir la caché de
+  configuración en despliegue si está habilitada. No se cambia código Vue.
+- **Nuevo dato aún inexistente**: primero incorporarlo a la fuente y a su snapshot;
+  agregarlo al catálogo no inventa información ni autoriza consultas arbitrarias.
+- **Verificar**: `TemplateDocumentTest`, `IdentificationCardTest` y `ReviewWorkflowTest`
+  cubren cuadrícula inicial, datos, guardado y copias históricas.

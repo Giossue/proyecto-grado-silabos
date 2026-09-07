@@ -2,6 +2,8 @@
 
 namespace App\Modules\Documents\Application;
 
+use App\Modules\Configuration\Application\TemplateDocumentResolver;
+use App\Modules\Configuration\Domain\TemplateDocument;
 use App\Modules\Documents\Domain\Data\DocumentRenderInput;
 
 class SyllabusDocumentContent
@@ -23,6 +25,14 @@ class SyllabusDocumentContent
             $lines[] = $this->string($section['title'] ?? null, 'Sección');
             foreach ($this->arrayList($section['blocks'] ?? null) as $block) {
                 $lines[] = '  '.$this->string($block['title'] ?? null, 'Bloque');
+                if (is_array($block['document'] ?? null)) {
+                    $resolved = TemplateDocumentResolver::resolve($block['document'], $this->arrayList($block['fields'] ?? null), $input->snapshot['template_variables'] ?? [], $block['table'] ?? null);
+                    foreach (TemplateDocument::nodes($resolved, 'paragraph') as $paragraph) {
+                        $lines[] = implode('', array_column(TemplateDocument::nodes($paragraph, 'text'), 'text'));
+                    }
+
+                    continue;
+                }
                 foreach ($this->arrayList($block['fields'] ?? null) as $field) {
                     $label = $this->string($field['label'] ?? null, 'Campo');
                     $rows = $this->arrayList($field['rows'] ?? null);

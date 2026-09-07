@@ -1,0 +1,839 @@
+<script setup lang="ts">
+import {
+    Bold,
+    Italic,
+    Underline,
+    AlignLeft,
+    AlignCenter,
+    AlignRight,
+    AlignJustify,
+    Undo2,
+    Redo2,
+} from '@lucide/vue';
+import { Node, mergeAttributes } from '@tiptap/core';
+import Mention from '@tiptap/extension-mention';
+import {
+    Table,
+    TableCell,
+    TableHeader,
+    TableRow,
+} from '@tiptap/extension-table';
+import TextAlign from '@tiptap/extension-text-align';
+import {
+    TextStyle,
+    FontFamily,
+    FontSize,
+    Color,
+} from '@tiptap/extension-text-style';
+import StarterKit from '@tiptap/starter-kit';
+import type { SuggestionProps } from '@tiptap/suggestion';
+import { EditorContent, useEditor } from '@tiptap/vue-3';
+import {
+    computed,
+    onBeforeUnmount,
+    onMounted,
+    ref,
+    shallowRef,
+    watch,
+} from 'vue';
+import { Button } from '@/components/ui/button';
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import {
+    Select,
+    SelectContent,
+    SelectGroup,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import {
+    DOCUMENT_FONTS,
+    cellNode,
+    fieldNode,
+    nodesOfType,
+    textNode,
+} from '@/lib/templateDocument';
+import type { DocumentNode, TemplateVariable } from '@/lib/templateDocument';
+
+const props = defineProps<{
+    document: DocumentNode;
+    variables: TemplateVariable[];
+    pending: boolean;
+}>();
+const emit = defineEmits<{
+    save: [document: DocumentNode];
+    dirty: [value: boolean];
+}>();
+const suggestions = shallowRef<SuggestionProps<TemplateVariable> | null>(null);
+const selectedSuggestion = ref(0);
+const fieldLabel = ref('');
+const fieldType = ref('texto_largo');
+const rows = ref(3);
+const columns = ref(3);
+const initial = JSON.stringify(props.document);
+const dirty = ref(false);
+const toolbarVersion = ref(0);
+
+const token = (name: 'field' | 'column') =>
+    Node.create({
+        name,
+        group: 'inline',
+        inline: true,
+        atom: true,
+        addAttributes: () => ({
+            key: { default: null },
+            label: { default: '' },
+            kind: { default: 'texto_largo' },
+            choice: { default: null },
+            listStyle: { default: null },
+        }),
+        parseHTML: () => [{ tag: `span[data-template-${name}]` }],
+        renderHTML: ({ node, HTMLAttributes }) => [
+            'span',
+            mergeAttributes(HTMLAttributes, {
+                [`data-template-${name}`]: node.attrs.key,
+                class: 'template-input-token',
+                contenteditable: 'false',
+            }),
+            `▧ ${node.attrs.label}${node.attrs.choice ? ` (${node.attrs.choice})` : ''}`,
+        ],
+    });
+const cellAttributes = () => ({
+    backgroundColor: {
+        default: null,
+        parseHTML: (element: HTMLElement) =>
+            element.getAttribute('data-background-color'),
+        renderHTML: (attributes: Record<string, unknown>) =>
+            attributes.backgroundColor
+                ? {
+                      'data-background-color': attributes.backgroundColor,
+                      style: `background-color: ${attributes.backgroundColor}`,
+                  }
+                : {},
+    },
+});
+const editor = useEditor({
+    content: props.document,
+    editorProps: {
+        attributes: {
+            'aria-label': 'Diseño del contenido de la plantilla',
+            role: 'textbox',
+            'aria-multiline': 'true',
+            spellcheck: 'true',
+        },
+    },
+    extensions: [
+        StarterKit.configure({
+            heading: false,
+            blockquote: false,
+            code: false,
+            codeBlock: false,
+            horizontalRule: false,
+            link: false,
+            strike: false,
+            trailingNode: false,
+        }),
+        TextStyle,
+        FontFamily,
+        FontSize,
+        Color,
+        TextAlign.configure({ types: ['paragraph'] }),
+        Table.extend({
+            addAttributes() {
+                return { ...this.parent?.(), repeatKey: { default: null } };
+            },
+        }).configure({
+            resizable: true,
+            cellMinWidth: 20,
+            lastColumnResizable: false,
+        }),
+        TableRow.extend({
+            addAttributes() {
+                return { ...this.parent?.(), rowRole: { default: 'fixed' } };
+            },
+        }),
+        TableCell.extend({
+            addAttributes() {
+                return { ...this.parent?.(), ...cellAttributes() };
+            },
+        }),
+        TableHeader.extend({
+            addAttributes() {
+                return { ...this.parent?.(), ...cellAttributes() };
+            },
+        }),
+        token('field'),
+        token('column'),
+        Mention.extend({ name: 'variable' }).configure({
+            renderHTML: ({ node, options }) => [
+                'span',
+                mergeAttributes(options.HTMLAttributes, {
+                    class: 'template-variable-token',
+                    'data-variable': node.attrs.id,
+                }),
+                `@${node.attrs.id}`,
+            ],
+            suggestion: {
+                char: '@',
+                items: ({ query }) =>
+                    props.variables
+                        .filter((item) =>
+                            `${item.key} ${item.label}`
+                                .normalize('NFD')
+                                .replace(/[\u0300-\u036f]/g, '')
+                                .toLowerCase()
+                                .includes(
+                                    query
+                                        .normalize('NFD')
+                                        .replace(/[\u0300-\u036f]/g, '')
+                                        .toLowerCase(),
+                                ),
+                        )
+                        .slice(0, 8),
+                command: ({ editor: target, range, props: item }) => {
+                    target
+                        .chain()
+                        .focus()
+                        .insertContentAt(range, [
+                            {
+                                type: 'variable',
+                                attrs: { id: item.id, label: item.id },
+                            },
+                            { type: 'text', text: ' ' },
+                        ])
+                        .run();
+                },
+                render: () => ({
+                    onStart: (value) => {
+                        suggestions.value = value;
+                        selectedSuggestion.value = 0;
+                    },
+                    onUpdate: (value) => {
+                        suggestions.value = value;
+                        selectedSuggestion.value = 0;
+                    },
+                    onExit: () => {
+                        suggestions.value = null;
+                    },
+                    onKeyDown: ({ event }) => {
+                        const list = suggestions.value?.items ?? [];
+
+                        if (event.key === 'Escape') {
+                            suggestions.value = null;
+
+                            return true;
+                        }
+
+                        if (
+                            event.key === 'ArrowDown' ||
+                            event.key === 'ArrowUp'
+                        ) {
+                            selectedSuggestion.value =
+                                (selectedSuggestion.value +
+                                    (event.key === 'ArrowDown' ? 1 : -1) +
+                                    list.length) %
+                                Math.max(1, list.length);
+
+                            return true;
+                        }
+
+                        if (event.key === 'Enter' && list.length) {
+                            chooseVariable(list[selectedSuggestion.value]);
+
+                            return true;
+                        }
+
+                        return false;
+                    },
+                }),
+            },
+        }),
+    ],
+    onUpdate: ({ editor: current }) => {
+        dirty.value = JSON.stringify(current.getJSON()) !== initial;
+        emit('dirty', dirty.value);
+    },
+    onTransaction: () => {
+        toolbarVersion.value++;
+    },
+});
+const chooseVariable = (item: TemplateVariable) =>
+    suggestions.value?.command({ id: item.key, label: item.key });
+const state = computed(() => {
+    void toolbarVersion.value;
+
+    return editor.value;
+});
+const repeatTable = computed(() => {
+    void toolbarVersion.value;
+
+    return editor.value?.getAttributes('table').repeatKey as
+        string | null | undefined;
+});
+const rowRole = computed(() => {
+    void toolbarVersion.value;
+
+    return String(editor.value?.getAttributes('tableRow').rowRole ?? 'fixed');
+});
+const makeField = (label: string) =>
+    fieldNode({
+        key: `campo_${crypto.randomUUID().replaceAll('-', '')}`,
+        label,
+        type: fieldType.value,
+    });
+const addField = () => {
+    if (!editor.value || !fieldLabel.value.trim()) {
+        return;
+    }
+
+    const node = makeField(fieldLabel.value.trim());
+
+    if (repeatTable.value && ['record', 'unit'].includes(rowRole.value)) {
+        node.type = 'column';
+
+        if (
+            rowRole.value === 'unit' ||
+            !['numero', 'texto_largo'].includes(fieldType.value)
+        ) {
+            node.attrs!.kind = 'texto_largo';
+        }
+    }
+
+    editor.value.chain().focus().insertContent(node).run();
+    fieldLabel.value = '';
+};
+const insertTable = () => {
+    const rowCount = Math.max(1, Math.min(20, Number(rows.value) || 3));
+    const columnCount = Math.max(1, Math.min(12, Number(columns.value) || 3));
+    editor.value
+        ?.chain()
+        .focus()
+        .insertContent({
+            type: 'table',
+            attrs: { repeatKey: null },
+            content: Array.from({ length: rowCount }, (_, r) => ({
+                type: 'tableRow',
+                attrs: { rowRole: 'fixed' },
+                content: Array.from({ length: columnCount }, (_, c) =>
+                    cellNode(
+                        r === 0
+                            ? [textNode(`Columna ${c + 1}`)]
+                            : [makeField(`Dato ${r}, columna ${c + 1}`)],
+                        1,
+                        1,
+                        r === 0 ? '#DBE5F1' : null,
+                    ),
+                ),
+            })),
+        })
+        .run();
+};
+const save = () => {
+    if (editor.value) {
+        emit('save', editor.value.getJSON() as DocumentNode);
+    }
+};
+const unsaved = (event: BeforeUnloadEvent) => {
+    if (dirty.value && !props.pending) {
+        event.preventDefault();
+    }
+};
+onMounted(() => window.addEventListener('beforeunload', unsaved));
+onBeforeUnmount(() => window.removeEventListener('beforeunload', unsaved));
+watch(
+    () => props.pending,
+    (value) => editor.value?.setEditable(!value),
+);
+const fieldCount = computed(() => {
+    void toolbarVersion.value;
+
+    return editor.value
+        ? nodesOfType(editor.value.getJSON() as DocumentNode, 'field').length
+        : 0;
+});
+defineExpose({ save, editor });
+</script>
+
+<template>
+    <div class="flex min-h-0 flex-1 flex-col gap-3 max-sm:overflow-y-auto">
+        <div
+            v-if="state"
+            class="flex shrink-0 flex-col gap-2"
+            :data-pending="pending"
+        >
+            <div
+                class="flex flex-wrap items-center gap-1"
+                role="group"
+                aria-label="Formato del texto"
+            >
+                <Select
+                    :model-value="
+                        state.getAttributes('textStyle').fontFamily ?? 'Arial'
+                    "
+                    :disabled="pending"
+                    @update:model-value="
+                        state
+                            .chain()
+                            .focus()
+                            .setFontFamily(String($event))
+                            .run()
+                    "
+                >
+                    <SelectTrigger class="w-40" aria-label="Tipo de fuente"
+                        ><SelectValue
+                    /></SelectTrigger>
+                    <SelectContent
+                        ><SelectGroup
+                            ><SelectItem
+                                v-for="font in DOCUMENT_FONTS"
+                                :key="font"
+                                :value="font"
+                                >{{ font }}</SelectItem
+                            ></SelectGroup
+                        ></SelectContent
+                    >
+                </Select>
+                <Select
+                    :model-value="
+                        state.getAttributes('textStyle').fontSize ?? '11pt'
+                    "
+                    :disabled="pending"
+                    @update:model-value="
+                        state.chain().focus().setFontSize(String($event)).run()
+                    "
+                >
+                    <SelectTrigger class="w-24" aria-label="Tamaño de fuente"
+                        ><SelectValue
+                    /></SelectTrigger>
+                    <SelectContent
+                        ><SelectGroup
+                            ><SelectItem
+                                v-for="size in [
+                                    7, 8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28,
+                                    32, 36,
+                                ]"
+                                :key="size"
+                                :value="`${size}pt`"
+                                >{{ size }} pt</SelectItem
+                            ></SelectGroup
+                        ></SelectContent
+                    >
+                </Select>
+                <Input
+                    type="color"
+                    class="w-12"
+                    aria-label="Color de fuente"
+                    :model-value="
+                        state.getAttributes('textStyle').color ?? '#000000'
+                    "
+                    :disabled="pending"
+                    @update:model-value="
+                        state.chain().focus().setColor(String($event)).run()
+                    "
+                />
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Negrita"
+                    :aria-pressed="state.isActive('bold')"
+                    :disabled="pending"
+                    @mousedown.prevent
+                    @click="state.chain().focus().toggleBold().run()"
+                    ><Bold
+                /></Button>
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Cursiva"
+                    :aria-pressed="state.isActive('italic')"
+                    :disabled="pending"
+                    @mousedown.prevent
+                    @click="state.chain().focus().toggleItalic().run()"
+                    ><Italic
+                /></Button>
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Subrayado"
+                    :aria-pressed="state.isActive('underline')"
+                    :disabled="pending"
+                    @mousedown.prevent
+                    @click="state.chain().focus().toggleUnderline().run()"
+                    ><Underline
+                /></Button>
+                <Button
+                    v-for="item in [
+                        {
+                            value: 'left',
+                            label: 'Alinear a la izquierda',
+                            icon: AlignLeft,
+                        },
+                        {
+                            value: 'center',
+                            label: 'Centrar',
+                            icon: AlignCenter,
+                        },
+                        {
+                            value: 'right',
+                            label: 'Alinear a la derecha',
+                            icon: AlignRight,
+                        },
+                        {
+                            value: 'justify',
+                            label: 'Justificar',
+                            icon: AlignJustify,
+                        },
+                    ]"
+                    :key="item.value"
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    :aria-label="item.label"
+                    :disabled="pending"
+                    @mousedown.prevent
+                    @click="
+                        state.chain().focus().setTextAlign(item.value).run()
+                    "
+                    ><component :is="item.icon"
+                /></Button>
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Deshacer"
+                    :disabled="pending || !state.can().undo()"
+                    @mousedown.prevent
+                    @click="state.chain().focus().undo().run()"
+                    ><Undo2
+                /></Button>
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Rehacer"
+                    :disabled="pending || !state.can().redo()"
+                    @mousedown.prevent
+                    @click="state.chain().focus().redo().run()"
+                    ><Redo2
+                /></Button>
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    :disabled="pending"
+                    @mousedown.prevent
+                    @click="state.chain().focus().unsetAllMarks().run()"
+                    >Quitar formato</Button
+                >
+            </div>
+            <div
+                class="flex flex-wrap items-center gap-2"
+                role="group"
+                aria-label="Diseño de tablas"
+            >
+                <Input
+                    v-model="rows"
+                    type="number"
+                    :min="1"
+                    :max="20"
+                    class="w-16"
+                    aria-label="Filas de la nueva tabla"
+                />
+                <span aria-hidden="true">×</span>
+                <Input
+                    v-model="columns"
+                    type="number"
+                    :min="1"
+                    :max="12"
+                    class="w-16"
+                    aria-label="Columnas de la nueva tabla"
+                />
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    :disabled="pending"
+                    @mousedown.prevent
+                    @click="insertTable"
+                    >Insertar tabla</Button
+                >
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    :disabled="pending || !state.can().mergeCells()"
+                    @mousedown.prevent
+                    @click="state.chain().focus().mergeCells().run()"
+                    >Combinar celdas</Button
+                >
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    :disabled="pending || !state.can().splitCell()"
+                    @mousedown.prevent
+                    @click="state.chain().focus().splitCell().run()"
+                    >Separar celda</Button
+                >
+                <template v-if="state.isActive('table')">
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        :disabled="pending"
+                        @mousedown.prevent
+                        @click="state.chain().focus().addRowAfter().run()"
+                        >Agregar fila</Button
+                    >
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        :disabled="pending"
+                        @mousedown.prevent
+                        @click="state.chain().focus().addColumnAfter().run()"
+                        >Agregar columna</Button
+                    >
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        :disabled="pending"
+                        @mousedown.prevent
+                        @click="state.chain().focus().deleteRow().run()"
+                        >Eliminar fila</Button
+                    >
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        :disabled="pending"
+                        @mousedown.prevent
+                        @click="state.chain().focus().deleteColumn().run()"
+                        >Eliminar columna</Button
+                    >
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        :disabled="pending"
+                        @mousedown.prevent
+                        @click="state.chain().focus().deleteTable().run()"
+                        >Eliminar tabla</Button
+                    >
+                    <Input
+                        type="color"
+                        class="w-12"
+                        aria-label="Color de celda"
+                        :disabled="pending"
+                        :model-value="
+                            state.getAttributes('tableCell').backgroundColor ??
+                            '#FFFFFF'
+                        "
+                        @update:model-value="
+                            state
+                                .chain()
+                                .focus()
+                                .setCellAttribute(
+                                    'backgroundColor',
+                                    String($event),
+                                )
+                                .run()
+                        "
+                    />
+                </template>
+                <Select
+                    v-if="repeatTable"
+                    :model-value="rowRole"
+                    :disabled="pending"
+                    @update:model-value="
+                        state
+                            .chain()
+                            .focus()
+                            .updateAttributes('tableRow', {
+                                rowRole: String($event),
+                            })
+                            .run()
+                    "
+                >
+                    <SelectTrigger class="w-44" aria-label="Función de la fila"
+                        ><SelectValue
+                    /></SelectTrigger>
+                    <SelectContent
+                        ><SelectGroup
+                            ><SelectItem value="fixed">Texto fijo</SelectItem
+                            ><SelectItem value="record"
+                                >Datos que se repiten</SelectItem
+                            ><SelectItem value="unit"
+                                >Datos de la unidad</SelectItem
+                            ><SelectItem value="total"
+                                >Totales automáticos</SelectItem
+                            ></SelectGroup
+                        ></SelectContent
+                    >
+                </Select>
+            </div>
+            <FieldGroup class="flex flex-row flex-wrap items-end gap-2">
+                <Field class="w-56"
+                    ><FieldLabel for="design-field-name"
+                        >Campo que llenará el docente</FieldLabel
+                    ><Input
+                        id="design-field-name"
+                        v-model="fieldLabel"
+                        :disabled="pending"
+                        placeholder="Ej. Objetivo de la unidad"
+                        @keydown.enter.prevent="addField"
+                /></Field>
+                <Field class="w-36"
+                    ><FieldLabel for="design-field-type"
+                        >Tipo de dato</FieldLabel
+                    ><Select v-model="fieldType" :disabled="pending"
+                        ><SelectTrigger id="design-field-type"
+                            ><SelectValue /></SelectTrigger
+                        ><SelectContent
+                            ><SelectGroup
+                                ><SelectItem value="texto_largo"
+                                    >Texto</SelectItem
+                                ><SelectItem value="numero">Número</SelectItem
+                                ><SelectItem value="fecha"
+                                    >Fecha</SelectItem
+                                ></SelectGroup
+                            ></SelectContent
+                        ></Select
+                    ></Field
+                >
+                <Button
+                    type="button"
+                    variant="outline"
+                    :disabled="pending || !fieldLabel.trim()"
+                    @click="addField"
+                    >Insertar campo</Button
+                >
+                <span class="text-sm text-muted-foreground"
+                    >Para datos automáticos, escriba @ dentro del
+                    documento.</span
+                >
+            </FieldGroup>
+        </div>
+        <div
+            v-if="suggestions"
+            class="flex shrink-0 flex-col gap-1 rounded-md border bg-popover p-2 text-popover-foreground"
+            role="listbox"
+            aria-label="Variables disponibles"
+        >
+            <p
+                v-if="!suggestions.items.length"
+                class="text-sm text-muted-foreground"
+            >
+                No se encontraron variables.
+            </p>
+            <Button
+                v-for="(item, index) in suggestions.items"
+                :key="item.key"
+                type="button"
+                :variant="selectedSuggestion === index ? 'secondary' : 'ghost'"
+                class="justify-start"
+                role="option"
+                :aria-selected="selectedSuggestion === index"
+                @mousedown.prevent
+                @click="chooseVariable(item)"
+            >
+                @{{ item.key }} — {{ item.label }}
+            </Button>
+        </div>
+        <p class="shrink-0 text-sm text-muted-foreground">
+            Seleccione varias celdas arrastrando entre ellas o con Mayús + clic.
+            Combinar conserva su contenido. Los recuadros ▧ son campos del
+            docente; el resto es texto fijo.
+        </p>
+        <div
+            class="min-h-0 flex-1 overflow-auto rounded-md border p-4 max-sm:min-h-64 max-sm:shrink-0"
+        >
+            <EditorContent :editor="editor" class="template-document-editor" />
+        </div>
+        <p class="sr-only" aria-live="polite">
+            {{ fieldCount }} espacios de contenido.
+            {{ dirty ? 'Cambios sin guardar.' : 'Sin cambios pendientes.' }}
+        </p>
+    </div>
+</template>
+
+<style>
+.template-document-editor {
+    background: white;
+    color: black;
+    font-family: Arial, sans-serif;
+    font-size: 11pt;
+    min-width: 580px;
+}
+.template-document-editor .tiptap {
+    min-height: 300px;
+    outline: none;
+    padding: 12px;
+}
+.template-document-editor p {
+    margin: 0 0 8px;
+    min-height: 1em;
+}
+.template-document-editor table {
+    border-collapse: collapse;
+    table-layout: fixed;
+    width: 100%;
+    margin: 10px 0;
+}
+.template-document-editor td,
+.template-document-editor th {
+    border: 1px solid #7f7f7f;
+    min-width: 20px;
+    padding: 4px;
+    vertical-align: top;
+    position: relative;
+    overflow-wrap: anywhere;
+}
+.template-document-editor td p,
+.template-document-editor th p {
+    margin: 0;
+}
+.template-document-editor .selectedCell::after {
+    background: rgb(0 112 192 / 20%);
+    content: '';
+    inset: 0;
+    pointer-events: none;
+    position: absolute;
+}
+.template-document-editor .column-resize-handle {
+    position: absolute;
+    right: -2px;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: #0070c0;
+    pointer-events: none;
+}
+.template-document-editor .resize-cursor {
+    cursor: col-resize;
+}
+.template-input-token {
+    background: #edf6ff;
+    outline: 1px dashed #4f81bd;
+    border-radius: 2px;
+    padding: 1px 3px;
+}
+.template-variable-token {
+    background: #edf8ee;
+    border-radius: 2px;
+    padding: 1px 3px;
+}
+.template-document-editor ul {
+    list-style: disc;
+    padding-left: 24px;
+}
+.template-document-editor ol {
+    list-style: decimal;
+    padding-left: 24px;
+}
+</style>

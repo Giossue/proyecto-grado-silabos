@@ -18,6 +18,7 @@ import '/resources/css/app.css';
 const sections = ref([]);
 const readonly = ref(false);
 const identification = ref([]);
+const identificationDesign = ref({ type: 'doc', content: [{ type: 'paragraph' }] });
 const requests = [];
 let failOrder = false;
 router.post = (url, data, options) => {
@@ -43,13 +44,17 @@ router.patch = (url, data, options) => {
 window.fixture = {
     setSections(value) { sections.value = value; },
     setReadonly(value) { readonly.value = value; },
-    setIdentification(value) { identification.value = value; },
+    setIdentification(value) {
+        identification.value = value;
+        identificationDesign.value = { type: 'doc', content: value.length ? [{ type: 'table', attrs: { repeatKey: null }, content: value.map(cells => ({ type: 'tableRow', content: cells.map(cell => ({ type: 'tableCell', attrs: { colspan: cell.span, rowspan: cell.rows }, content: [{ type: 'paragraph', content: [{ type: 'text', text: cell.text }] }] })) })) }] : [{ type: 'paragraph' }] };
+    },
     requests,
     failOrder() { failOrder = true; },
 };
 createApp({ render: () => h(TemplateSheetEditor, {
     templateId: 'synthetic-template', sections: sections.value, readonly: readonly.value,
     blockTypes: [{value:'text',label:'Texto'}], identification: identification.value,
+    identificationDesign: identificationDesign.value, variables: [],
     institutionLogo: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="110" height="45"><text x="0" y="30">UEB</text></svg>',
 }) }).mount('#app');
 `;
@@ -85,6 +90,7 @@ test(
     async (context) => {
         const server = await createServer({
             root,
+            cacheDir: 'node_modules/.vite-pagination-test',
             configFile: false,
             resolve: { alias: { '@': `${root}resources/js` } },
             optimizeDeps: {
@@ -574,7 +580,7 @@ test(
 
                 return [
                     ...document.querySelectorAll(
-                        '.id-card tr:not([data-page-spacer]) td',
+                        '.document-table tr:not([data-page-spacer]) td',
                     ),
                 ]
                     .filter((node) => {
@@ -595,7 +601,7 @@ test(
             );
             assert.equal(
                 await page
-                    .locator('.id-card tr:not([data-page-spacer])')
+                    .locator('.document-table tr:not([data-page-spacer])')
                     .count(),
                 120,
             );

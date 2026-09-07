@@ -11,6 +11,7 @@ import {
 import { computed, onBeforeUnmount, reactive, ref } from 'vue';
 import AiAssistanceController from '@/actions/App/Modules/AiAssistance/Presentation/Http/Controllers/AiAssistanceController';
 import SyllabusController from '@/actions/App/Modules/Syllabus/Presentation/Http/Controllers/SyllabusController';
+import TemplateDocumentView from '@/components/domain/configuration/TemplateDocumentView.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
 import IdentificationCard from '@/components/domain/syllabus/IdentificationCard.vue';
 import type { IdentificationCell } from '@/components/domain/syllabus/IdentificationCard.vue';
@@ -47,6 +48,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 import { defaultTableLayout } from '@/lib/tableLayout';
 import type { TableLayout, TableRowData } from '@/lib/tableLayout';
+import type { DocumentNode } from '@/lib/templateDocument';
 import { index as syllabiIndex } from '@/routes/syllabi';
 
 type JsonValue =
@@ -87,6 +89,7 @@ type DraftSection = {
         title: string;
         content_type: string;
         table: TableLayout | null;
+        document?: DocumentNode | null;
         fields: DraftField[];
     }[];
 };
@@ -130,6 +133,7 @@ const props = defineProps<{
         parallels: string[];
         teachers: string[];
         identification: IdentificationCell[][];
+        template_variables: Record<string, string>;
         sections: DraftSection[];
         validation: ValidationSummary | null;
         observations: ReviewObservation[];
@@ -329,6 +333,35 @@ const updateRow = (
 const replaceRows = (field: DraftField, rows: DraftRow[]): void => {
     fieldStates[field.id].rows = rows;
     scheduleSave(field);
+};
+
+const designFields = (fields: DraftField[]) =>
+    fields.map((field) => ({
+        ...field,
+        value: fieldStates[field.id].value,
+        rows: fieldStates[field.id].rows,
+    }));
+const updateDesignValue = (
+    fields: DraftField[],
+    key: string,
+    value: string | number | boolean,
+) => {
+    const field = fields.find((field) => field.key === key);
+
+    if (field) {
+        updateValue(field, value);
+    }
+};
+const updateDesignRows = (
+    fields: DraftField[],
+    key: string,
+    rows: DraftRow[],
+) => {
+    const field = fields.find((field) => field.key === key);
+
+    if (field) {
+        replaceRows(field, rows);
+    }
 };
 
 const addRow = (field: DraftField): void => {
@@ -717,8 +750,92 @@ onBeforeUnmount(() => {
                             >
                                 {{ block.title }}
                             </h3>
+                            <TemplateDocumentView
+                                v-if="block.document"
+                                :document="block.document"
+                                :fields="designFields(block.fields)"
+                                :variables="syllabus.template_variables"
+                                :layout="block.table"
+                                :editable="!conflict"
+                                @value="
+                                    (key, value) =>
+                                        updateDesignValue(
+                                            block.fields,
+                                            key,
+                                            value,
+                                        )
+                                "
+                                @rows="
+                                    (key, rows) =>
+                                        updateDesignRows(
+                                            block.fields,
+                                            key,
+                                            rows,
+                                        )
+                                "
+                            />
+                            <div
+                                v-if="block.document"
+                                class="flex flex-col gap-2"
+                                aria-live="polite"
+                            >
+                                <div
+                                    v-for="field in block.fields.filter(
+                                        (item) =>
+                                            !item.inherited &&
+                                            item.teacher_editable,
+                                    )"
+                                    :key="field.id"
+                                    class="flex flex-wrap items-center gap-2 text-sm text-muted-foreground"
+                                >
+                                    <span
+                                        >{{ field.label }}:
+                                        {{
+                                            {
+                                                idle: 'Sin cambios',
+                                                pending: 'Cambio pendiente',
+                                                saving: 'Guardando…',
+                                                saved: 'Guardado',
+                                                error: 'Error al guardar',
+                                                conflict:
+                                                    'Conflicto de edición',
+                                            }[fieldStates[field.id].status]
+                                        }}</span
+                                    >
+                                    <FieldError
+                                        :errors="[
+                                            fieldStates[field.id].error ??
+                                                undefined,
+                                            ...validationFor(field.id).map(
+                                                (item) => item.message,
+                                            ),
+                                        ]"
+                                    />
+                                    <Button
+                                        v-if="field.ai_enabled"
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        :disabled="globalSaving || conflict"
+                                        @click="openAi(field)"
+                                    >
+                                        Asistencia IA
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        :disabled="globalSaving || conflict"
+                                        @click="queueNow(field)"
+                                    >
+                                        Guardar ahora
+                                    </Button>
+                                </div>
+                            </div>
                             <Field
-                                v-for="field in block.fields"
+                                v-for="field in block.document
+                                    ? []
+                                    : block.fields"
                                 :key="field.id"
                                 :data-invalid="
                                     fieldStates[field.id].status === 'error' ||

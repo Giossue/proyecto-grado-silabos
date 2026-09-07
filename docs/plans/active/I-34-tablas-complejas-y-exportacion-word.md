@@ -4,6 +4,12 @@
 
 Implementado el 2026-09-02. Verificación al pie.
 
+Actualización del 2026-09-06: I-56 sustituye expresamente la restricción a presets y a
+identificación fija. El administrador edita formato y celdas libremente; se retiraron
+`TemplateTableDesigner.vue` y `tablePresets.ts`. Se conservan aquí como historia del
+incremento, no como instrucciones vigentes. `TableLayout`, plantillas iniciales del
+servidor, lectores históricos y PHPWord continúan en uso.
+
 ## Objetivo
 
 Que el administrador arme tablas como la de «Distribución y planificación de las unidades

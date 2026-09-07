@@ -30,7 +30,7 @@ El nombre físico no concede acceso.
 Entrada inmutable:
 
 ```text
-revision_id + template_version_id + renderer_version + locale
+revision_id + huella_del_snapshot + renderer_version + locale
 ```
 
 Proceso:
@@ -51,6 +51,18 @@ El motor de generación se seleccionará después de una prueba con el DOCX ofic
 I-05 incorpora `baseline-ooxml-pdf-v1` como implementación técnica reversible del
 puerto. Valida estructura OOXML, XML principal y marcadores PDF antes de publicar; su
 salida se rotula como provisional y no demuestra fidelidad visual institucional.
+
+I-34 incorporó PHPWord. I-56 usa `phpword-docx-v3+text-pdf-v2`: el snapshot de esquema 3
+conserva `blocks[].document` y `template_variables`. `TemplateDocumentResolver` sustituye
+tokens y expande filas/unidades/totales exclusivamente con esa fotografía.
+`TemplateDocumentWord` traduce nodos permitidos a PHPWord: fuentes, marcas, alineación,
+listas, fondos, anchos, `gridSpan` y `vMerge`. No importa HTML ni recursos externos.
+Las revisiones anteriores sin documento mantienen su lector. Los artefactos existentes
+no se modifican; la versión del motor participa en la idempotencia.
+
+El PDF continúa como respaldo de texto (ahora incluye texto fijo y variables del diseño);
+no se promete maquetación de tablas, colores ni cortes iguales al DOCX. La fidelidad
+institucional y el motor PDF siguen sujetos a PV-07.
 
 ## Fidelidad
 

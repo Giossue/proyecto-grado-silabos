@@ -5,6 +5,8 @@ namespace Tests\Feature\Syllabus;
 use App\Models\User;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CoordinatorAssignment;
+use App\Modules\Configuration\Application\Actions\SaveTemplateDocument;
+use App\Modules\Configuration\Application\TemplateDocumentDefaults;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\AcademicSource;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\FieldDefinition;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
@@ -45,6 +47,8 @@ class ReviewWorkflowTest extends TestCase
 
     private RoleAssignment $teacherContext;
 
+    private bool $useCustomDesign = false;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -56,6 +60,65 @@ class ReviewWorkflowTest extends TestCase
         $this->coordinatorContext = $this->coordinator->roleAssignments()->firstOrFail();
         $this->teacher = User::query()->where('correo_electronico', 'docente@silabos.test')->firstOrFail();
         $this->teacherContext = $this->teacher->roleAssignments()->firstOrFail();
+    }
+
+    public function test_custom_design_and_variables_are_frozen_with_the_submitted_revision(): void
+    {
+        $this->useCustomDesign = true;
+        $syllabus = $this->createValidDraft();
+        $block = $syllabus->template->fields()->where('clave', 'asignatura')->firstOrFail()->block;
+        $this->actingAsTeacher()->get(route('syllabi.edit', $syllabus))->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('syllabus.template_variables.nombre_asignatura', 'Arquitectura de Software')
+                ->where('syllabus.template_variables.correo_docente', 'docente@silabos.test')
+                ->has('syllabus.sections.0.blocks.0.document'));
+        $this->actingAsTeacher()->post(route('syllabi.submit.store', $syllabus), [
+            'version_bloqueo' => $syllabus->version_bloqueo, 'idempotency_key' => (string) Str::uuid(),
+        ])->assertRedirect();
+        $revision = SyllabusRevision::query()->firstOrFail();
+        $snapshot = $revision->fotografia;
+        $this->assertSame($block->configuracion['document'], $snapshot['sections'][0]['blocks'][0]['document']);
+        $this->assertSame('Arquitectura de Software', $snapshot['template_variables']['nombre_asignatura']);
+        $this->assertSame('docente@silabos.test', $snapshot['template_variables']['correo_docente']);
+        $fingerprint = $revision->huella_sha256;
+        $this->actingAsAdministrator()->post(route('admin.processes.transition', [$syllabus->convocation->process, 'cerrar']))
+            ->assertSessionHasNoErrors();
+        $changed = TemplateDocumentDefaults::identification();
+        $changed['content'][] = ['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => 'Cambio futuro']]];
+        $this->actingAsAdministrator()->patch(route('admin.templates.blocks.document', [$syllabus->template, $block]), [
+            'document' => $changed, 'fingerprint' => SaveTemplateDocument::fingerprint($block),
+        ])->assertSessionHasNoErrors();
+        $this->assertSame($snapshot, $revision->fresh()->fotografia);
+        $this->assertSame($fingerprint, $revision->fresh()->huella_sha256);
+        // Retirar un campo tampoco borra sus valores ni sus referencias históricas.
+        $objective = $syllabus->template->fields()->where('clave', 'objetivo_general')->firstOrFail();
+        $objectiveBlock = $objective->block;
+        $this->patch(route('admin.templates.blocks.document', [$syllabus->template, $objectiveBlock]), [
+            'document' => ['type' => 'doc', 'content' => [['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => 'Texto fijo futuro']]]]],
+            'fingerprint' => SaveTemplateDocument::fingerprint($objectiveBlock),
+        ])->assertSessionHasNoErrors();
+        $this->assertFalse($objective->fresh()->obligatorio);
+        $this->assertFalse($objective->fresh()->editable_docente);
+        $this->assertTrue($syllabus->values()->where('definicion_campo_id', $objective->id)->exists());
+        $this->assertSame($snapshot, $revision->fresh()->fotografia);
+    }
+
+    public function test_custom_design_respects_open_process_and_explicit_paused_draft_purge(): void
+    {
+        $this->useCustomDesign = true;
+        $syllabus = $this->createValidDraft();
+        $block = $syllabus->template->fields()->where('clave', 'asignatura')->firstOrFail()->block;
+        $url = route('admin.templates.blocks.document', [$syllabus->template, $block]);
+        $document = $block->configuracion['document'];
+        $document['content'][] = ['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => 'Nueva instrucción']]];
+        $payload = ['document' => $document, 'fingerprint' => SaveTemplateDocument::fingerprint($block)];
+        $this->actingAsAdministrator()->patch($url, $payload)->assertSessionHasErrors('process');
+        $this->post(route('admin.processes.transition', [$syllabus->convocation->process, 'pausar']), ['reason' => 'Ajustar el diseño de la plantilla'])->assertSessionHasNoErrors();
+        $this->patch($url, $payload)->assertSessionHasErrors('purge_required');
+        $this->assertDatabaseHas('silabos', ['id' => $syllabus->id]);
+        $this->assertSame($block->configuracion['document'], $block->fresh()->configuracion['document']);
+        $this->patch($url, [...$payload, 'confirm_purge' => true])->assertSessionHasNoErrors();
+        $this->assertDatabaseMissing('silabos', ['id' => $syllabus->id]);
     }
 
     public function test_cp_f_revision_submission_is_validated_idempotent_and_immutable(): void
@@ -553,6 +616,14 @@ class ReviewWorkflowTest extends TestCase
         $this->actingAsAdministrator()->post(route('admin.templates.store'), ['nombre' => 'Plantilla I-04']);
         $template = SyllabusTemplate::query()->firstOrFail();
 
+        if ($this->useCustomDesign) {
+            $block = $template->fields()->where('clave', 'asignatura')->firstOrFail()->block;
+            $this->actingAsAdministrator()->patch(route('admin.templates.blocks.document', [$template, $block]), [
+                'document' => TemplateDocumentDefaults::identification(),
+                'fingerprint' => SaveTemplateDocument::fingerprint($block),
+            ])->assertSessionHasNoErrors();
+        }
+
         $this->actingAsCoordinator()->post(route('sources.store'), [
             'nombre' => 'Fuente I-04',
             'description' => 'Documento de apoyo del periodo.',
@@ -571,7 +642,8 @@ class ReviewWorkflowTest extends TestCase
             ->where('plantilla_id', $syllabus->plantilla_id)
             ->where('heredado', false)
             ->where('editable_docente', true)
-            ->where('tipo', '!=', 'repetible')
+            // Este helper escribe texto libre: una selección Sí/No no es intercambiable.
+            ->where('clave', 'objetivo_general')
             ->firstOrFail();
     }
 

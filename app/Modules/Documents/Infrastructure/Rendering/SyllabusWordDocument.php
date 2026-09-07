@@ -3,6 +3,7 @@
 namespace App\Modules\Documents\Infrastructure\Rendering;
 
 use App\Modules\Configuration\Application\InstitutionalLogos;
+use App\Modules\Configuration\Application\TemplateDocumentResolver;
 use App\Modules\Configuration\Domain\TableLayout;
 use App\Modules\Documents\Domain\Data\DocumentRenderInput;
 use App\Modules\Syllabus\Application\IdentificationCard;
@@ -47,10 +48,14 @@ class SyllabusWordDocument
 
     private mixed $snapshotIdentification = null;
 
+    /** @var array<string, string> */
+    private array $templateVariables = [];
+
     public function build(DocumentRenderInput $input): PhpWord
     {
         Settings::setOutputEscapingEnabled(true);
         $this->snapshotIdentification = $input->snapshot['identification'] ?? null;
+        $this->templateVariables = $input->snapshot['template_variables'] ?? [];
 
         $word = new PhpWord;
         $word->setDefaultFontName(self::FONT);
@@ -245,6 +250,12 @@ class SyllabusWordDocument
         }
 
         $contentType = $this->string($container['content_type'] ?? null, 'text');
+        if (is_array($container['document'] ?? null)) {
+            $resolved = TemplateDocumentResolver::resolve($container['document'], $fields, $this->templateVariables, $container['table'] ?? null);
+            (new TemplateDocumentWord)->append($section, $resolved);
+
+            return;
+        }
         $rows = $this->arrayList($field['rows'] ?? null);
 
         // Bloque institucional: la ficha ya viene armada en la copia de la revisión.

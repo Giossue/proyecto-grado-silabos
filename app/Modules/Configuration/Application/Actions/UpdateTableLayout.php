@@ -42,6 +42,10 @@ class UpdateTableLayout
 
         return DB::transaction(function () use ($actor, $activeRole, $block, $normalized, $request): array {
             SyllabusTemplate::query()->whereKey($block->plantilla_id)->lockForUpdate()->firstOrFail();
+            $block->refresh();
+            if (is_array($block->configuracion['document'] ?? null)) {
+                throw ValidationException::withMessages(['table' => 'Esta tabla tiene un diseño personalizado. Use Editar diseño para cambiar sus columnas y celdas.']);
+            }
             // Cambiar columnas altera lo que los docentes están llenando.
             $this->work->requireConfirmation($request);
 
