@@ -740,6 +740,7 @@ defineExpose({ save, editor, markClean, prepareDocument });
             <ContextMenuTrigger as-child>
                 <EditorContent
                     :editor="editor"
+                    data-page-unit
                     class="template-document-editor overflow-auto rounded-md border border-transparent p-1 focus-within:border-ring"
                     :class="{
                         'template-document-editor-single-field':

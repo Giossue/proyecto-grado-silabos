@@ -805,6 +805,99 @@ test(
                 dataTransfer: transfer,
             });
 
+            await page
+                .getByRole('button', {
+                    name: 'Finalizar edición',
+                    exact: true,
+                })
+                .click();
+            const editableTable = sections(1);
+            editableTable[0].blocks[0].document = {
+                type: 'doc',
+                content: [
+                    {
+                        type: 'table',
+                        attrs: { repeatKey: null },
+                        content: Array.from({ length: 24 }, (_, index) => ({
+                            type: 'tableRow',
+                            attrs: { rowRole: 'fixed' },
+                            content: [
+                                {
+                                    type: 'tableCell',
+                                    attrs: {
+                                        colspan: 1,
+                                        rowspan: 1,
+                                        backgroundColor: null,
+                                        colwidth: null,
+                                    },
+                                    content: [
+                                        {
+                                            type: 'paragraph',
+                                            content: [
+                                                {
+                                                    type: 'text',
+                                                    text: `Fila editable ${index + 1}`,
+                                                },
+                                            ],
+                                        },
+                                    ],
+                                },
+                            ],
+                        })),
+                    },
+                ],
+            };
+            await page.evaluate(
+                (value) => window.fixture.setSections(value),
+                editableTable,
+            );
+            await page
+                .getByRole('button', {
+                    name: 'Editar documento',
+                    exact: true,
+                })
+                .click();
+            const editableRows = page
+                .locator('.tiptap table')
+                .first()
+                .locator('tr');
+            await editableRows.first().waitFor();
+            assert.equal(await editableRows.count(), 24);
+            await page.evaluate(
+                () =>
+                    new Promise((resolve) => {
+                        let remaining = 20;
+                        const frame = () => {
+                            remaining -= 1;
+
+                            if (remaining === 0) {
+                                resolve();
+
+                                return;
+                            }
+
+                            requestAnimationFrame(frame);
+                        };
+
+                        requestAnimationFrame(frame);
+                    }),
+            );
+            assert.equal(
+                await editableRows.count(),
+                24,
+                'Pagination never inserts rows into a live Tiptap table',
+            );
+            assert.equal(
+                await page.locator('.tiptap [data-page-spacer]').count(),
+                0,
+            );
+            await page
+                .getByRole('button', {
+                    name: 'Finalizar edición',
+                    exact: true,
+                })
+                .click();
+
             await page.evaluate(
                 (value) => window.fixture.setSections(value),
                 sections(14, true).reverse(),

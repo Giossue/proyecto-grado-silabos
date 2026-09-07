@@ -136,6 +136,8 @@ Se retiró `TemplateFieldSheet`; las propiedades ya no tienen un guardado separa
 `TemplateDocumentEditor` (Tiptap Vue 3, ADR-0007) mantiene el lienzo completo y usa el
 `ContextMenu` compartido. Conserva la selección antes del clic derecho y ofrece un menú
 distinto para texto, tabla o campo, con submenús de formato, inserción y eliminación.
+Mientras está activo se declara como una sola unidad de paginación: el paginador puede
+ubicarla, pero nunca inserta filas espaciadoras dentro del DOM que administra Tiptap.
 La interfaz reutiliza Button, ContextMenu, FieldGroup, Input, Alert y Sheet; los colores
 libres pertenecen al documento, no al tema de la aplicación. El documento JSON contiene
 solo nodos/marcas del contrato PHP `TemplateDocument`; no se persiste HTML ni se acepta

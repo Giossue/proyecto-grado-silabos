@@ -241,3 +241,12 @@ Verificación: build de producción, TypeScript, ESLint y Prettier del increment
 `TemplateDocumentTest`; y **2/2 suites Chromium** para editor y paginación. La revisión
 visual cubre el documento global en tres páginas, el menú contextual de campo y el panel
 de Propiedades a 360 px. Sin migraciones, commit ni push.
+
+## Corrección — tablas crecientes durante la edición (2026-09-07)
+
+- [x] Impedir que los espaciadores visuales de página se inserten dentro del DOM de
+      una tabla administrada por Tiptap.
+- [x] Mantener cada editor activo como unidad de paginación sin cambiar el documento
+      JSON ni la exportación.
+- [x] Cubrir la regresión con una tabla editable de 24 filas estable durante múltiples
+      ciclos de renderizado y paginación.
