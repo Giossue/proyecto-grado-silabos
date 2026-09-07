@@ -754,6 +754,7 @@ it('arma la plantilla sobre la hoja impresa, sin formularios por tarjeta', funct
         ->toContain('templatePreviewFields')
         ->toContain('<TemplateDocumentEditor')
         ->toContain('<TemplateDocumentView')
+        ->not->toContain('Editar diseño de ${block.title}')
         ->toContain('Guardar diseño')
         ->toContain('fingerprint')
         ->toContain('registerLocalPurgeConfirmation');

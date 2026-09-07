@@ -127,8 +127,9 @@ completo. El alta está separada de asignar paralelos y no levanta sus bloqueos.
   cancelar el arrastre restaura el anterior y un error recupera el orden del servidor.
   «Bloque», tanto al pulsarlo como al soltarlo, pide elegir su primer campo (Texto,
   Tabla, Lista con viñetas o Lista numerada) antes de crearlo; cancelar no crea nada. Los
-  títulos se renombran con un clic; el asa reordena; el menú del campo ofrece
-  «Editar diseño» y eliminar con confirmación. El menú del bloque conserva su
+  títulos se renombran con un clic; el asa reordena; el menú del campo es el único
+  acceso a «Editar diseño» y también ofrece eliminar con confirmación; no se repite
+  un botón sobre el contenido. El menú del bloque conserva su
   renombrado. «Editar diseño» reúne las pestañas Diseño y
   Propiedades: nombre, ayuda de cada campo guardado y asistencia de IA cuando
   corresponde. Un único guardado persiste diseño y propiedades; cambiar de pestaña

@@ -197,16 +197,6 @@ watch(open, (isOpen, _previous, onCleanup) => {
 
 <template>
     <div>
-        <div v-if="!readonly" class="mb-2 flex justify-end">
-            <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                :aria-label="`Editar diseño de ${block.title}`"
-                @click="edit"
-                >Editar diseño</Button
-            >
-        </div>
         <TemplateDocumentView
             :document="document"
             :fields="sampleFields"

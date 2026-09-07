@@ -18,6 +18,7 @@ import { usePurgeConfirmation } from '/resources/js/composables/usePurgeConfirma
 import { cellNode, paragraph, textNode, fieldNode } from '/resources/js/lib/templateDocument.ts';
 import '/resources/css/app.css';
 const component = ref(null);
+const design = ref(null);
 const saved = ref(null);
 const values = ref([{ id: 'field-test', key: 'objetivo', label: 'Objetivo', type: 'texto_largo', value: '', rows: [], teacher_editable: true, required: true }]);
 const doc = { type: 'doc', content: [paragraph([textNode('Texto de prueba')]), {type:'table', content: [
@@ -25,7 +26,7 @@ const doc = { type: 'doc', content: [paragraph([textNode('Texto de prueba')]), {
  {type:'tableRow', content:[cellNode([fieldNode(values.value[0])]),cellNode([textNode('E')]),cellNode([textNode('F')])]},
  {type:'tableRow', content:[cellNode([textNode('G')]),cellNode([textNode('H')]),cellNode([textNode('I')])]},
 ]}, paragraph()]};
-window.fixture = { api: () => component.value.editor, save: () => component.value.save(), saved: () => saved.value, value: () => values.value[0].value, values: () => values.value, registerFields: fields => values.value = [...values.value, ...fields] };
+window.fixture = { api: () => component.value.editor, save: () => component.value.save(), openDesign: () => design.value.edit(), saved: () => saved.value, value: () => values.value[0].value, values: () => values.value, registerFields: fields => values.value = [...values.value, ...fields] };
 const block = ref({ id: 'synthetic-block', title: 'Objetivo', content_type: 'text', table: null, fields: values.value, document: doc, fingerprint: 'a'.repeat(64) });
 const requests = [];
 let failure = null;
@@ -50,7 +51,7 @@ router.patch = async (url, data, options) => {
 createApp({render: () => h('div', {}, [
  h('section', {style:'height:850px;display:flex;flex-direction:column', 'aria-label':'Administrador'}, [h(Editor, {ref:component, document:doc, variables:[{key:'nombre_carrera',label:'Nombre de la carrera',sample:'Software'}], pending:false, onSave: value => saved.value = JSON.parse(JSON.stringify(value))})]),
  saved.value ? h('section', {'aria-label':'Docente'}, [h(View, {document:saved.value,fields:values.value,variables:{nombre_carrera:'Software real'},editable:true, onValue: (key,value) => values.value = values.value.map(f => f.key === key ? {...f,value} : f)})]) : null,
- h(DesignBlock, { templateId:'synthetic-template', block:block.value, identification:doc, variables:[{key:'nombre_carrera',label:'Nombre de la carrera',sample:'Software'}], readonly:false }),
+ h(DesignBlock, { ref:design, templateId:'synthetic-template', block:block.value, identification:doc, variables:[{key:'nombre_carrera',label:'Nombre de la carrera',sample:'Software'}], readonly:false }),
 ])}).mount('#app');
 `;
 
@@ -379,9 +380,7 @@ test(
 
         // Integration: the actual dialog retains local edits on errors, owns its
         // purge confirmation and reopens the persisted document with a new fingerprint.
-        await page
-            .getByRole('button', { name: 'Editar diseño de Objetivo' })
-            .click();
+        await page.evaluate(() => window.fixture.openDesign());
         const dialog = page.getByRole('dialog', {
             name: 'Diseño: Objetivo',
             exact: true,
@@ -415,9 +414,7 @@ test(
             await page.evaluate(() => window.fixture.requests.length),
             0,
         );
-        await page
-            .getByRole('button', { name: 'Editar diseño de Objetivo' })
-            .click();
+        await page.evaluate(() => window.fixture.openDesign());
         await dialog
             .getByRole('tab', { name: 'Propiedades', exact: true })
             .click();
@@ -502,9 +499,7 @@ test(
                 ai_enabled: true,
             },
         ]);
-        await page
-            .getByRole('button', { name: 'Editar diseño de Objetivo' })
-            .click();
+        await page.evaluate(() => window.fixture.openDesign());
         assert.match(
             await dialog.locator('.tiptap').innerText(),
             /Cambio persistente/,
