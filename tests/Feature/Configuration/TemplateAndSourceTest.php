@@ -5,6 +5,7 @@ namespace Tests\Feature\Configuration;
 use App\Models\User;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Faculty;
+use App\Modules\Configuration\Domain\TemplateAppearance;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\AcademicSource;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
@@ -65,6 +66,10 @@ class TemplateAndSourceTest extends TestCase
         $this->assertSame('repetible', $indicatorField->tipo);
         $this->assertDatabaseCount('valores_campo', 0);
         $this->assertDatabaseCount('filas_repetibles', 0);
+        $this->assertEquals(
+            TemplateAppearance::defaults(),
+            $template->mapeo_documento['appearance'],
+        );
 
         $this->actingAsAdministrator()
             ->get(route('admin.templates.show', $template))
@@ -72,7 +77,106 @@ class TemplateAndSourceTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Admin/Templates/Show')
                 ->has('template.sections', 12)
+                ->where('template.appearance.font_family', 'Arial')
+                ->has('appearanceOptions.colors', count(TemplateAppearance::COLORS))
                 ->where('processLock', null));
+    }
+
+    public function test_administrator_creates_a_block_as_a_container_of_typed_fields(): void
+    {
+        $template = $this->createTemplate();
+
+        $this->actingAsAdministrator()
+            ->post(route('admin.templates.sections.store', $template), [
+                'title' => 'Resultados y evidencias',
+                'key' => 'bloque_resultados',
+                'position' => 2,
+                'fields' => [
+                    ['key' => 'resumen_resultados', 'label' => 'Resumen', 'content_type' => 'text'],
+                    ['key' => 'matriz_evidencias', 'label' => 'Matriz de evidencias', 'content_type' => 'table'],
+                    ['key' => 'acciones_mejora', 'label' => 'Acciones de mejora', 'content_type' => 'numbered_list'],
+                ],
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $section = $template->fresh()->sections()
+            ->where('clave', 'bloque_resultados')
+            ->firstOrFail();
+        $blocks = $section->blocks()->with('fields')->orderBy('posicion')->get();
+
+        $this->assertSame(2, $section->posicion);
+        $this->assertSame(
+            ['Resumen', 'Matriz de evidencias', 'Acciones de mejora'],
+            $blocks->pluck('titulo')->all(),
+        );
+        $this->assertSame(
+            ['text', 'table', 'numbered_list'],
+            $blocks->pluck('configuracion')->map(fn (array $configuration): string => $configuration['content_type'])->all(),
+        );
+        $this->assertSame(['resumen_resultados', 'matriz_evidencias', 'acciones_mejora'], $blocks->pluck('clave')->all());
+        $this->assertSame('texto', $blocks[1]->configuracion['table']['columns'][0]['key']);
+        $this->assertTrue($blocks->every(fn ($block): bool => $block->fields->firstOrFail()->obligatorio));
+
+        $this->actingAsAdministrator()
+            ->from(route('admin.templates.show', $template))
+            ->post(route('admin.templates.sections.store', $template), [
+                'title' => 'Bloque inválido',
+                'key' => 'bloque_invalido',
+                'fields' => [
+                    ['key' => 'resumen_resultados', 'label' => 'Clave repetida', 'content_type' => 'text'],
+                ],
+            ])
+            ->assertSessionHasErrors('fields.0.key');
+
+        $this->assertDatabaseMissing('secciones_plantilla', ['clave' => 'bloque_invalido']);
+    }
+
+    public function test_only_administrator_updates_controlled_template_appearance(): void
+    {
+        $template = $this->createTemplate();
+        $appearance = [
+            ...TemplateAppearance::defaults(),
+            'font_family' => 'Georgia',
+            'body_font_size' => 12,
+            'title_font_size' => 18,
+            'section_font_size' => 14,
+            'field_font_size' => 12,
+            'text_color' => '#1F4E78',
+            'accent_color' => '#C00000',
+            'table_header_background' => '#548235',
+            'table_header_color' => '#FFFFFF',
+            'margin_cm' => 2.0,
+            'orientation' => 'landscape',
+            'title_italic' => true,
+            'section_alignment' => 'center',
+            'body_alignment' => 'justify',
+        ];
+
+        $this->actingAsAdministrator()
+            ->patch(route('admin.templates.appearance.update', $template), $appearance)
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertEquals($appearance, $template->fresh()->mapeo_documento['appearance']);
+        $this->assertDatabaseHas('eventos_auditoria', [
+            'accion' => 'plantilla.apariencia_actualizada',
+            'recurso_id' => $template->id,
+        ]);
+
+        $this->actingAsAdministrator()
+            ->from(route('admin.templates.show', $template))
+            ->patch(route('admin.templates.appearance.update', $template), [
+                ...$appearance,
+                'font_family' => 'Comic Sans MS',
+                'accent_color' => 'url(https://example.com)',
+            ])
+            ->assertSessionHasErrors(['font_family', 'accent_color']);
+        $this->assertEquals($appearance, $template->fresh()->mapeo_documento['appearance']);
+
+        $this->actingAsCoordinator()
+            ->patch(route('admin.templates.appearance.update', $template), TemplateAppearance::defaults())
+            ->assertForbidden();
     }
 
     public function test_administrator_can_only_create_one_institutional_template(): void

@@ -6,6 +6,8 @@ export const LETTER_PAGE = {
     gap: 24,
 };
 
+export type DocumentPageMetrics = typeof LETTER_PAGE;
+
 type Unit = {
     first: HTMLElement;
     last: HTMLElement;
@@ -75,7 +77,10 @@ function collectUnits(root: HTMLElement): Unit[] {
  * inputs and their selection stay in place. Cleanup before each measurement
  * means pages also disappear when content shrinks.
  */
-export function createDocumentPaginator(root: HTMLElement) {
+export function createDocumentPaginator(
+    root: HTMLElement,
+    metrics: () => DocumentPageMetrics = () => LETTER_PAGE,
+) {
     const inserted: HTMLElement[] = [];
 
     const reset = () => {
@@ -116,7 +121,7 @@ export function createDocumentPaginator(root: HTMLElement) {
 
     const paginate = () => {
         reset();
-        const { height, margin, gap } = LETTER_PAGE;
+        const { height, margin, gap } = metrics();
         const pitch = height + gap;
         const usable = height - 2 * margin;
         const origin = root.getBoundingClientRect().top;

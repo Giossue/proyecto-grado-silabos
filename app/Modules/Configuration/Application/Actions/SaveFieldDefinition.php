@@ -3,6 +3,7 @@
 namespace App\Modules\Configuration\Application\Actions;
 
 use App\Models\User;
+use App\Modules\Configuration\Domain\TableLayout;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\FieldDefinition;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateBlock;
@@ -170,13 +171,18 @@ class SaveFieldDefinition
             ]);
         }
 
+        $configuration = ['content_type' => $contentType];
+        if ($contentType === 'table') {
+            $configuration['table'] = TableLayout::default();
+        }
+
         return TemplateBlock::query()->create([
             'plantilla_id' => $template->id,
             'seccion_plantilla_id' => $section->id,
             'clave' => $data['key'],
             'tipo' => $this->blockType($contentType),
             'titulo' => $data['label'],
-            'configuracion' => ['content_type' => $contentType],
+            'configuracion' => $configuration,
             'posicion' => $position,
         ]);
     }

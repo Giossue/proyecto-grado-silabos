@@ -676,7 +676,7 @@ it('edita cuentas desde una sola accion del listado de usuarios', function (): v
         ->toContain("display === 'menu'");
 });
 
-it('muestra temporalmente una hoja vacía en la pantalla de la plantilla', function (): void {
+it('construye la plantilla desde bloques que contienen campos tipados', function (): void {
     $root = dirname(__DIR__, 2);
     $source = file_get_contents($root.'/resources/js/pages/Admin/Templates/Show.vue');
 
@@ -684,75 +684,65 @@ it('muestra temporalmente una hoja vacía en la pantalla de la plantilla', funct
         ->toBeString()
         ->toContain('<Head title="Plantilla" />')
         ->toContain('<PageFrame')
-        ->toContain('<PaginatedDocument />')
-        ->toContain('aria-label="Hoja en blanco de la plantilla"')
+        ->toContain('<TemplateVisualBuilder')
+        ->toContain('<TemplateAppearanceSheet')
+        ->toContain('Personalizar')
+        ->toContain('<ProcessLockAlert')
         ->not->toContain('<TemplateSheetEditor')
-        ->not->toContain('<InstitutionLogoSheet')
-        ->not->toContain('<ProcessLockAlert');
+        ->not->toContain('<InstitutionLogoSheet');
 
-    // El editor anterior queda desacoplado mientras se define la nueva interacción.
-
-    $editor = file_get_contents(
-        $root.'/resources/js/components/domain/configuration/TemplateSheetEditor.vue',
+    $builder = file_get_contents(
+        $root.'/resources/js/components/domain/configuration/TemplateVisualBuilder.vue',
     );
-
-    expect($editor)
+    expect($builder)
         ->toBeString()
-        // Paleta: cinco piezas, arrastrables y con clic.
-        ->toContain('Bloque')
-        ->toContain("label: 'Texto'")
-        ->toContain("label: 'Tabla'")
-        ->toContain("label: 'Lista con viñetas'")
-        ->toContain("label: 'Lista numerada'")
-        ->toContain('draggable="true"')
-        ->toContain('addFromPalette')
-        // Zonas de soltado y reordenamiento por arrastre.
-        ->toContain('doc-zone')
-        ->toContain('dropOnSectionZone')
-        ->toContain('dropOnFieldZone')
-        ->toContain('persistSectionOrder')
-        ->toContain('persistFieldOrder')
-        ->toContain('copySections')
-        // Renombrar con un clic; Enter guarda, Escape cancela.
-        ->toContain('startRename')
-        ->toContain('@keydown.enter.prevent="commitRename"')
-        ->toContain('@keydown.esc.prevent="cancelRename"')
-        // Un modo global coordina la edición y Propiedades queda en el panel lateral.
-        ->not->toContain('changeType')
-        ->toContain('designEditors')
-        ->toContain('startDocumentEditing')
-        ->toContain('openProperties')
-        ->toContain('Eliminar campo')
-        ->toContain('Eliminar bloque')
-        ->not->toContain('<TemplateFieldSheet')
-        ->toContain('preserveScroll: true')
-        ->not->toContain('Guardar bloque')
-        ->not->toContain('Guardar campo')
-        ->not->toContain('<Form')
-        ->not->toContain('Clave estable')
-        ->not->toContain('structuredClone')
-        // La hoja: estándar del impreso y relleno por tipo de contenido.
+        ->toContain('<PaginatedDocument')
         ->toContain('PROGRAMA DE ASIGNATURA (SÍLABO)')
-        ->toContain('<PaginatedDocument>')
-        ->toContain("'table'")
-        // I-56: diseño libre sin perder paleta, bloques ni paginación.
-        ->toContain('<TemplateDesignBlock')
-        ->toContain("'bulleted_list'")
-        ->toContain("'numbered_list'");
-
-    $design = file_get_contents($root.'/resources/js/components/domain/configuration/TemplateDesignBlock.vue');
-    expect($design)
-        ->toContain('templatePreviewFields')
-        ->toContain('<TemplateDocumentEditor')
+        ->toContain('<TemplateBlockCreator')
+        ->toContain('<TemplateFieldCreator')
         ->toContain('<TemplateDocumentView')
-        ->toContain('Editar diseño de ${block.title}')
-        ->toContain('role="region"')
+        ->toContain('section.blocks.length > 1')
+        ->toContain('appearance.table_header_background')
+        ->toContain('appearance.body_alignment');
+
+    $creator = file_get_contents(
+        $root.'/resources/js/components/domain/configuration/TemplateBlockCreator.vue',
+    );
+    expect($creator)
+        ->toBeString()
+        ->toContain('<Popover')
+        ->toContain('El bloque agrupa los campos')
+        ->toContain('Nombre del bloque')
+        ->toContain('form.fields')
+        ->toContain('Tipo de contenido')
+        ->toContain('Agregar otro campo')
+        ->toContain('Crear bloque')
+        ->not->toContain('draggable="true"');
+
+    $fieldCreator = file_get_contents(
+        $root.'/resources/js/components/domain/configuration/TemplateFieldCreator.vue',
+    );
+    expect($fieldCreator)
+        ->toBeString()
+        ->toContain('<Popover')
+        ->toContain('Se añadirá dentro de este bloque')
+        ->toContain('Tipo de contenido')
+        ->toContain('Agregar campo');
+
+    $appearance = file_get_contents(
+        $root.'/resources/js/components/domain/configuration/TemplateAppearanceSheet.vue',
+    );
+    expect($appearance)
+        ->toBeString()
         ->toContain('<Sheet')
-        ->toContain('propertiesOpen')
-        ->toContain('Guardar diseño')
-        ->toContain('fingerprint')
-        ->toContain('registerLocalPurgeConfirmation')
-        ->not->toContain('Diseño: {{ block.title }}');
+        ->toContain('Personalizar plantilla')
+        ->toContain('Orientación')
+        ->toContain('Márgenes')
+        ->toContain('Fuente general')
+        ->toContain('Título principal')
+        ->toContain('Títulos de bloque')
+        ->toContain('Fondo de cabecera de tabla')
+        ->toContain('Guardar apariencia');
 
     // I-53: el marco compartido conserva el estándar y calcula hojas dinámicas.
     $paper = file_get_contents(
@@ -760,51 +750,14 @@ it('muestra temporalmente una hoja vacía en la pantalla de la plantilla', funct
     );
 
     expect($paper)
-        ->toContain('font-family: Arial')
-        ->toContain('font-size: 11pt')
+        ->toContain("orientation: 'portrait'")
+        ->toContain("fontFamily: 'Arial'")
+        ->toContain('fontSize: 11')
+        ->toContain('props.marginCm')
         ->toContain('createDocumentPaginator')
         ->toContain('v-for="page in pages"')
         ->toContain('ResizeObserver')
         ->toContain('MutationObserver');
-
-    expect(preg_replace('/\s+/', ' ', $design))
-        ->toContain('Ayuda para el docente')
-        ->toContain('Nombre del bloque')
-        ->toContain('Nombre del campo')
-        ->toContain('v-if="!isFlow && !singleField"')
-        ->toContain('Permite asistencia de IA')
-        ->toContain('sm:max-w-md')
-        ->toContain('propertiesSnapshot')
-        ->not->toContain('Código de referencia');
-
-    $documentEditor = file_get_contents(
-        $root.'/resources/js/components/domain/configuration/TemplateDocumentEditor.vue',
-    );
-    expect($documentEditor)
-        ->toContain('<ContextMenu>')
-        ->toContain('prepareContextMenu')
-        ->toContain("context === 'text'")
-        ->toContain("context === 'table'")
-        ->toContain('insertTeacherField')
-        ->toContain('insertVariable')
-        ->toContain('Unir celdas')
-        ->toContain('Color de fuente')
-        ->toContain('selectedPersistedField')
-        ->toContain('Propiedades del campo')
-        ->toContain('initialOnlyField')
-        ->toContain('Respuesta del docente')
-        ->toContain('template-document-editor-single-field')
-        ->not->toContain('makeField(`Dato ${r}, columna ${c + 1}`)');
-
-    $sheetEditor = file_get_contents(
-        $root.'/resources/js/components/domain/configuration/TemplateSheetEditor.vue',
-    );
-    expect(preg_replace('/\s+/', ' ', $sheetEditor))
-        ->toContain('section.blocks.length > 1')
-        ->toContain('Editar documento')
-        ->toContain('saveDocument')
-        ->toContain(':editing="canDesign"')
-        ->not->toContain('Editar diseño');
 });
 
 it('abre los detalles de los listados desde sus acciones', function (): void {
@@ -856,14 +809,15 @@ it('presenta la plantilla institucional única y abre su constructor', function 
         ->not->toContain('<CardTitle')
         ->not->toContain('<TableActionsMenu');
 
-    // La ruta conserva una hoja carta vacía mientras espera el nuevo diseño confirmado.
+    // La ruta abre el constructor visual de la única plantilla institucional.
     $show = file_get_contents($root.'/resources/js/pages/Admin/Templates/Show.vue');
     expect($show)
         ->toBeString()
         ->not->toContain('Versiones')
         ->not->toContain('sibling.id')
         ->toContain('<Head title="Plantilla" />')
-        ->toContain('<PaginatedDocument />')
+        ->toContain('<TemplateVisualBuilder')
+        ->toContain('<TemplateAppearanceSheet')
         ->not->toContain('<TemplateSheetEditor');
 
 });

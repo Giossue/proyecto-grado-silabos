@@ -3,6 +3,7 @@
 namespace App\Modules\Configuration\Application\Actions;
 
 use App\Models\User;
+use App\Modules\Configuration\Domain\TableLayout;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\FieldDefinition;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateBlock;
@@ -64,28 +65,38 @@ class SaveTemplateSection
                 'titulo' => $this->stringValue($data, 'title'),
                 'posicion' => $position,
             ]);
-            $contentType = $this->stringValue($data, 'first_field_content_type');
-            $block = TemplateBlock::query()->create([
-                'plantilla_id' => $template->id,
-                'seccion_plantilla_id' => $section->id,
-                'clave' => $section->clave.'_campos',
-                'tipo' => $contentType === 'text' ? 'narrativa' : 'repetible',
-                'titulo' => $this->stringValue($data, 'first_field_label'),
-                'configuracion' => ['content_type' => $contentType],
-                'posicion' => 1,
-            ]);
-            FieldDefinition::query()->create([
-                'plantilla_id' => $template->id,
-                'bloque_plantilla_id' => $block->id,
-                'clave' => $this->stringValue($data, 'first_field_key'),
-                'etiqueta' => $this->stringValue($data, 'first_field_label'),
-                'tipo' => $contentType === 'text' ? 'markdown' : 'repetible',
-                'obligatorio' => false,
-                'heredado' => false,
-                'editable_docente' => true,
-                'ia_habilitada' => false,
-                'posicion' => 1,
-            ]);
+            foreach ($this->fields($data) as $fieldPosition => $fieldData) {
+                $contentType = $this->stringValue($fieldData, 'content_type');
+                $configuration = ['content_type' => $contentType];
+                if ($contentType === 'table') {
+                    $configuration['table'] = TableLayout::default();
+                }
+                $fieldKey = $this->stringValue($fieldData, 'key');
+                $fieldLabel = $this->stringValue($fieldData, 'label');
+                $block = TemplateBlock::query()->create([
+                    'plantilla_id' => $template->id,
+                    'seccion_plantilla_id' => $section->id,
+                    // La clave del campo ya es única dentro de la plantilla y cabe en
+                    // la columna de 100 caracteres de bloques_plantilla.
+                    'clave' => $fieldKey,
+                    'tipo' => $contentType === 'text' ? 'narrativa' : 'repetible',
+                    'titulo' => $fieldLabel,
+                    'configuracion' => $configuration,
+                    'posicion' => $fieldPosition + 1,
+                ]);
+                FieldDefinition::query()->create([
+                    'plantilla_id' => $template->id,
+                    'bloque_plantilla_id' => $block->id,
+                    'clave' => $fieldKey,
+                    'etiqueta' => $fieldLabel,
+                    'tipo' => $contentType === 'text' ? 'markdown' : 'repetible',
+                    'obligatorio' => true,
+                    'heredado' => false,
+                    'editable_docente' => true,
+                    'ia_habilitada' => false,
+                    'posicion' => 1,
+                ]);
+            }
 
             $this->audit->execute(
                 actorId: $actor->id,
@@ -135,5 +146,22 @@ class SaveTemplateSection
         }
 
         return $value;
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return list<array<string, mixed>>
+     */
+    private function fields(array $data): array
+    {
+        if (is_array($data['fields'] ?? null) && $data['fields'] !== []) {
+            return array_values(array_filter($data['fields'], is_array(...)));
+        }
+
+        return [[
+            'key' => $this->stringValue($data, 'first_field_key'),
+            'label' => $this->stringValue($data, 'first_field_label'),
+            'content_type' => $this->stringValue($data, 'first_field_content_type'),
+        ]];
     }
 }

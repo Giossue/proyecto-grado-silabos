@@ -96,7 +96,9 @@ No crees una variante visual por módulo si el significado es el mismo.
 - Tablas repetibles conservan claves de fila estables; reordenamiento es accesible.
 - Campos heredados muestran origen y no aceptan edición docente.
 
-`PaginatedDocument` presenta el constructor ADM-06 en carta con márgenes de 2.5 cm.
+`PaginatedDocument` presenta el constructor ADM-06 en papel carta. Recibe orientación,
+margen, fuente, tamaño y color; intercambia ancho/alto en horizontal y entrega las
+métricas vigentes a `documentPagination` sin persistir saltos.
 `documentPagination` mide el DOM y agrega separadores transitorios entre unidades
 marcadas con `data-page-unit`; `data-page-keep-next` mantiene títulos con contenido.
 Las tablas se recorren por grupos completos de `rowspan`. Se conservan los nodos Vue y
@@ -107,19 +109,34 @@ Es presentación de la muestra administrativa, no un motor de impresión ni un c
 del formulario docente. Una unidad indivisible excepcionalmente más alta que el área
 útil se conserva visible; no se recorta ni se descarta contenido.
 
-`AppSidebarLayout` y `PageFrame` recortan el exceso horizontal con `overflow-x-clip`:
-no deben crear un contenedor de scroll mediante `overflow-x-hidden`, que desvincularía
-las paletas `sticky` del desplazamiento de la ventana. La hoja mantiene su scroll
-horizontal local; la paleta ADM-06 queda bajo el encabezado con altura máxima disponible.
+`AppSidebarLayout` y `PageFrame` recortan el exceso horizontal con `overflow-x-clip`;
+la hoja mantiene su propio desplazamiento horizontal en pantallas estrechas.
 
-En ADM-06 el arrastre conserva una copia del orden inicial y cambia la colección local
-al pasar por la mitad superior/inferior de otra pieza. Solo el drop envía la mutación;
-dragend sin drop revierte, y el rechazo del servidor recupera las props confirmadas.
-Los campos permanecen en su sección. El alta de bloque elige el primer tipo de campo
-en un `Dialog` y reutiliza `storeSection` para crearlos atómicamente. Los índices de
-inserción del cliente son base cero; `position` del caso de uso se envía en base uno.
+## Constructor progresivo de plantilla (I-56, vigente)
 
-## Diseño integrado de la plantilla (I-56)
+`TemplateVisualBuilder` proyecta las secciones persistidas como bloques de producto y
+los `TemplateBlock` internos como campos. Esa traducción permite conservar el esquema
+existente sin una migración destructiva: para Administración, un bloque es siempre un
+contenedor y cada campo elige su presentación. `TemplateBlockCreator` abre un `Popover`
+con nombre y una colección de uno a veinte campos; `SaveTemplateSection` crea sección,
+bloques técnicos y definiciones dentro de una sola transacción. `TemplateFieldCreator`
+añade después un campo al mismo contenedor. Los identificadores técnicos se generan en
+cliente, se validan como opacos y nunca se muestran.
+
+`TemplateAppearanceSheet` trabaja con un catálogo entregado por
+`TemplateAppearance`: fuentes, tamaños, colores, márgenes, orientación, alineaciones,
+negrita y cursiva admitidos. La previsualización es local y el PATCH guarda únicamente
+valores normalizados en `plantillas_silabo.mapeo_documento.appearance`. Un snapshot de
+revisión ya copia ese mapa; `SyllabusWordDocument` interpreta los mismos valores para
+DOCX. No se persisten CSS, clases ni colores libres. `ProcessLocks` y `InProgressWork`
+siguen protegiendo tanto estructura como apariencia.
+
+Los componentes documentales anteriores permanecen como lectores compatibles para
+diseños ya guardados, pero ADM-06 no monta Tiptap, menú contextual, paleta ni arrastre.
+Las tablas nuevas nacen con `TableLayout::default()`; su configuración estructural
+detallada se decidirá en una iteración posterior del constructor.
+
+## Editor documental anterior (I-56, reemplazado)
 
 `TemplateSheetEditor` conserva bloques, arrastre, paleta y paginación, pero los activa
 solo después de «Editar documento». Es el dueño del modo global, el estado agregado de

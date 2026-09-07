@@ -8,6 +8,12 @@ use PhpOffice\PhpWord\SimpleType\TblWidth;
 /** Renderiza el contrato validado; no importa HTML, recursos remotos ni estilos arbitrarios. */
 final class TemplateDocumentWord
 {
+    public function __construct(
+        private readonly ?string $paragraphAlignment = null,
+        private readonly ?string $tableHeaderBackground = null,
+        private readonly ?string $tableHeaderColor = null,
+    ) {}
+
     /** @param array<string, mixed> $node */
     public function append(AbstractContainer $target, array $node, int $width = 9406, ?string $list = null): void
     {
@@ -17,7 +23,8 @@ final class TemplateDocumentWord
             return;
         }
         if ($node['type'] === 'paragraph') {
-            $style = ['spaceAfter' => 80, 'alignment' => ($node['attrs']['textAlign'] ?? 'left') === 'justify' ? 'both' : ($node['attrs']['textAlign'] ?? 'left')];
+            $alignment = $this->paragraphAlignment ?? ($node['attrs']['textAlign'] ?? 'left');
+            $style = ['spaceAfter' => 80, 'alignment' => $alignment === 'justify' ? 'both' : $alignment];
             if ($list !== null) {
                 $style['numStyle'] = $list;
                 $style['numLevel'] = 0;
@@ -95,7 +102,10 @@ final class TemplateDocumentWord
         $widths = array_map(fn ($weight) => (int) round($width * $weight / array_sum($weights)), $weights);
         $table = $target->addTable(['borderSize' => 4, 'borderColor' => '7F7F7F', 'cellMargin' => 50, 'width' => 5000, 'unit' => TblWidth::PERCENT]);
         $merged = [];
-        foreach ($rows as $source) {
+        foreach ($rows as $rowIndex => $source) {
+            $role = $source['attrs']['rowRole'] ?? null;
+            $isHeader = in_array($role, ['fixed', 'unit'], true)
+                || ($role === null && $rowIndex === 0);
             $row = $table->addRow();
             $cells = $source['content'];
             $column = 0;
@@ -126,12 +136,57 @@ final class TemplateDocumentWord
                 if (($attrs['backgroundColor'] ?? null) !== null) {
                     $options['bgColor'] = ltrim($attrs['backgroundColor'], '#');
                 }
+                if ($isHeader && $this->tableHeaderBackground !== null) {
+                    $options['bgColor'] = $this->tableHeaderBackground;
+                }
                 $destination = $row->addCell($cellWidth, $options);
                 foreach ($cell['content'] as $child) {
-                    $this->append($destination, $child, $cellWidth);
+                    $this->append(
+                        $destination,
+                        $isHeader && $this->tableHeaderColor !== null
+                            ? $this->withTextColor($child, $this->tableHeaderColor)
+                            : $child,
+                        $cellWidth,
+                    );
                 }
                 $column += $span;
             }
         }
+    }
+
+    /**
+     * @param  array<string, mixed>  $node
+     * @return array<string, mixed>
+     */
+    private function withTextColor(array $node, string $color): array
+    {
+        if ($node['type'] === 'text') {
+            $marks = $node['marks'] ?? [];
+            $hasTextStyle = false;
+            foreach ($marks as $index => $mark) {
+                if ($mark['type'] !== 'textStyle') {
+                    continue;
+                }
+
+                $marks[$index]['attrs'] = [
+                    ...($mark['attrs'] ?? []),
+                    'color' => '#'.$color,
+                ];
+                $hasTextStyle = true;
+            }
+            if (! $hasTextStyle) {
+                $marks[] = ['type' => 'textStyle', 'attrs' => ['color' => '#'.$color]];
+            }
+            $node['marks'] = $marks;
+        }
+
+        if (is_array($node['content'] ?? null)) {
+            $node['content'] = array_map(
+                fn (array $child): array => $this->withTextColor($child, $color),
+                $node['content'],
+            );
+        }
+
+        return $node;
     }
 }

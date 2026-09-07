@@ -5,25 +5,23 @@ namespace App\Modules\Documents\Infrastructure\Rendering;
 use App\Modules\Configuration\Application\InstitutionalLogos;
 use App\Modules\Configuration\Application\TemplateDocumentResolver;
 use App\Modules\Configuration\Domain\TableLayout;
+use App\Modules\Configuration\Domain\TemplateAppearance;
 use App\Modules\Documents\Domain\Data\DocumentRenderInput;
 use App\Modules\Syllabus\Application\IdentificationCard;
 use PhpOffice\PhpWord\Element\Section;
 use PhpOffice\PhpWord\Element\Table;
 use PhpOffice\PhpWord\PhpWord;
 use PhpOffice\PhpWord\Settings;
+use PhpOffice\PhpWord\Shared\Converter;
 use PhpOffice\PhpWord\SimpleType\Jc;
 use PhpOffice\PhpWord\SimpleType\TblWidth;
 
 /**
- * Arma el sílabo en Word con el estándar del impreso (I-33/I-34): hoja carta,
- * márgenes 2.5 cm, Arial 11, títulos numerados, tablas con cabecera azul y filas
- * alternas celestes. Las tablas complejas se dibujan desde el esquema copiado en la
- * revisión: agrupaciones en dos niveles, cabecera por unidad y totales.
+ * Arma el sílabo en Word con hoja carta, títulos numerados y tablas complejas. La
+ * apariencia acotada se lee de la copia de la plantilla incluida en la revisión.
  */
 class SyllabusWordDocument
 {
-    private const FONT = 'Arial';
-
     private const BLUE = '4F81BD';
 
     private const LIGHT_BLUE = 'DBE5F1';
@@ -31,20 +29,21 @@ class SyllabusWordDocument
     /** Fila de totales del formato oficial. */
     private const TOTAL_BLUE = 'B8CCE4';
 
-    /** Texto de las cabeceras de tabla del formato oficial. */
     private const HEADER_TEXT = '365F91';
-
-    private const TITLE_BLUE = '0070C0';
 
     private const BORDER = '7F7F7F';
 
-    /** Ancho útil en twips: carta (12240) menos dos márgenes de 2.5 cm (1417). */
-    private const CONTENT_WIDTH = 9406;
-
-    private const MARGIN = 1417;
-
     /** @var array<string, mixed> */
     private array $paragraph = ['spaceAfter' => 120, 'spaceBefore' => 0, 'lineHeight' => 1.15];
+
+    /** @var array<string, mixed> */
+    private array $appearance = [];
+
+    /** Ancho útil de la hoja en twips, según orientación y márgenes. */
+    private int $contentWidth = 9406;
+
+    /** Los snapshots anteriores a la personalización conservan su formato local. */
+    private bool $hasAppearance = false;
 
     private mixed $snapshotIdentification = null;
 
@@ -56,10 +55,25 @@ class SyllabusWordDocument
         Settings::setOutputEscapingEnabled(true);
         $this->snapshotIdentification = $input->snapshot['identification'] ?? null;
         $this->templateVariables = $input->snapshot['template_variables'] ?? [];
+        $mapping = is_array($input->snapshot['document_mapping'] ?? null)
+            ? $input->snapshot['document_mapping']
+            : null;
+        $this->hasAppearance = is_array($mapping['appearance'] ?? null);
+        $this->appearance = TemplateAppearance::fromMapping($mapping);
+        $margin = (int) round(Converter::cmToTwip((float) $this->appearance['margin_cm']));
+        $pageWidth = $this->appearance['orientation'] === 'landscape' ? 15840 : 12240;
+        $this->contentWidth = $pageWidth - (2 * $margin);
+        $this->paragraph = [
+            'spaceAfter' => 120,
+            'spaceBefore' => 0,
+            'lineHeight' => 1.15,
+            'alignment' => $this->alignment($this->appearance['body_alignment']),
+        ];
 
         $word = new PhpWord;
-        $word->setDefaultFontName(self::FONT);
-        $word->setDefaultFontSize(11);
+        $word->setDefaultFontName((string) $this->appearance['font_family']);
+        $word->setDefaultFontSize((int) $this->appearance['body_font_size']);
+        $word->setDefaultFontColor($this->color('text_color'));
         $word->setDefaultParagraphStyle($this->paragraph);
 
         // Fechas fijas: el mismo contenido produce los mismos bytes (huella estable).
@@ -82,25 +96,45 @@ class SyllabusWordDocument
 
         $section = $word->addSection([
             'paperSize' => 'Letter',
-            'marginTop' => self::MARGIN,
-            'marginBottom' => self::MARGIN,
-            'marginLeft' => self::MARGIN,
-            'marginRight' => self::MARGIN,
+            'orientation' => $this->appearance['orientation'],
+            'marginTop' => $margin,
+            'marginBottom' => $margin,
+            'marginLeft' => $margin,
+            'marginRight' => $margin,
         ]);
 
         $this->logos($section, $input);
         $section->addText(
             'PROGRAMA DE ASIGNATURA (SÍLABO)',
-            ['bold' => true, 'size' => 16, 'color' => self::TITLE_BLUE],
-            ['alignment' => Jc::CENTER, 'spaceBefore' => 240, 'spaceAfter' => 240],
+            [
+                'bold' => $this->appearance['title_bold'],
+                'italic' => $this->appearance['title_italic'],
+                'size' => $this->appearance['title_font_size'],
+                'color' => $this->color('accent_color'),
+            ],
+            [
+                'alignment' => $this->alignment($this->appearance['title_alignment']),
+                'spaceBefore' => 240,
+                'spaceAfter' => 240,
+            ],
         );
 
         foreach ($this->arrayList($input->snapshot['sections'] ?? null) as $sectionIndex => $block) {
             $number = $sectionIndex + 1;
             $section->addText(
                 $number.'. '.$this->string($block['title'] ?? null, 'Bloque'),
-                ['bold' => true, 'size' => 12],
-                ['spaceBefore' => 240, 'spaceAfter' => 120, 'keepNext' => true],
+                [
+                    'bold' => $this->appearance['section_bold'],
+                    'italic' => $this->appearance['section_italic'],
+                    'size' => $this->appearance['section_font_size'],
+                    'color' => $this->color('text_color'),
+                ],
+                [
+                    'alignment' => $this->alignment($this->appearance['section_alignment']),
+                    'spaceBefore' => 240,
+                    'spaceAfter' => 120,
+                    'keepNext' => true,
+                ],
             );
             $containers = $this->arrayList($block['blocks'] ?? null);
             foreach ($containers as $fieldIndex => $container) {
@@ -128,11 +162,12 @@ class SyllabusWordDocument
 
         $table = $section->addTable(['width' => 100 * 50, 'unit' => TblWidth::PERCENT]);
         $row = $table->addRow();
-        $left = $row->addCell(6000, ['valign' => 'center']);
+        $leftWidth = (int) round($this->contentWidth * 0.638);
+        $left = $row->addCell($leftWidth, ['valign' => 'center']);
         if (is_file($ueb)) {
             $left->addImage($ueb, ['height' => 28]);
         }
-        $right = $row->addCell(3406, ['valign' => 'center']);
+        $right = $row->addCell($this->contentWidth - $leftWidth, ['valign' => 'center']);
         if (is_file($faculty)) {
             $right->addImage($faculty, ['height' => 40, 'alignment' => Jc::END]);
         }
@@ -171,7 +206,7 @@ class SyllabusWordDocument
             'unit' => TblWidth::PERCENT,
         ]);
         $widths = array_map(
-            fn (float $percent): int => (int) round(self::CONTENT_WIDTH * $percent / 100),
+            fn (float $percent): int => (int) round($this->contentWidth * $percent / 100),
             IdentificationCard::WIDTHS,
         );
         /** @var array<int, array{rows: int, span: int}> $merged columna => filas pendientes de continuación */
@@ -206,14 +241,16 @@ class SyllabusWordDocument
                     $merged[$column] = ['rows' => $cell['rows'] - 1, 'span' => $cell['span']];
                 }
                 if ($cell['style'] === 'blue') {
-                    $options['bgColor'] = self::BLUE;
+                    $options['bgColor'] = $this->identificationHeaderBackground();
                 } elseif ($cell['style'] === 'shade') {
                     $options['bgColor'] = self::LIGHT_BLUE;
                 }
                 $font = [
                     'bold' => $cell['bold'],
                     'size' => $cell['small'] ? 7 : 9,
-                    'color' => $cell['style'] === 'blue' ? 'FFFFFF' : '000000',
+                    'color' => $cell['style'] === 'blue'
+                        ? $this->identificationHeaderColor()
+                        : $this->color('text_color'),
                 ];
                 $target = $row->addCell($this->width($widths, $column, $cell['span']), $options);
                 $lines = preg_split('/\R/u', $cell['text']) ?: [''];
@@ -244,7 +281,11 @@ class SyllabusWordDocument
         if ($number !== null) {
             $section->addText(
                 $number.' '.$label,
-                ['bold' => true, 'size' => 11],
+                [
+                    'bold' => true,
+                    'size' => $this->appearance['field_font_size'],
+                    'color' => $this->color('text_color'),
+                ],
                 ['spaceBefore' => 160, 'spaceAfter' => 80, 'keepNext' => true],
             );
         }
@@ -252,7 +293,11 @@ class SyllabusWordDocument
         $contentType = $this->string($container['content_type'] ?? null, 'text');
         if (is_array($container['document'] ?? null)) {
             $resolved = TemplateDocumentResolver::resolve($container['document'], $fields, $this->templateVariables, $container['table'] ?? null);
-            (new TemplateDocumentWord)->append($section, $resolved);
+            (new TemplateDocumentWord(
+                $this->hasAppearance ? (string) $this->appearance['body_alignment'] : null,
+                $this->hasAppearance ? $this->color('table_header_background') : null,
+                $this->hasAppearance ? $this->color('table_header_color') : null,
+            ))->append($section, $resolved, $this->contentWidth);
 
             return;
         }
@@ -339,39 +384,47 @@ class SyllabusWordDocument
                 // Cabecera de unidad como en el formato oficial: «Unidad No.» y su número a la
                 // izquierda (combinados hacia abajo), y a la derecha cada dato con su etiqueta.
                 $header = $unit['header'];
-                $labelStyle = ['bold' => true, 'size' => 9, 'color' => self::HEADER_TEXT];
+                $labelStyle = ['bold' => true, 'size' => 9, 'color' => $this->headerColor()];
                 $first = $widths[0];
                 $numberWidth = $layout['repeat']['enabled'] ? (int) floor($first * 0.32) : 0;
                 $unitWidth = $first - $numberWidth;
                 $labelSpan = max(1, min(4, $columnCount - 2));
                 $labelWidth = $columnCount > 2 ? (int) array_sum(array_slice($widths, 1, $labelSpan)) : 0;
                 $valueSpan = max(1, $columnCount - 1 - $labelSpan);
-                $valueWidth = self::CONTENT_WIDTH - $first - $labelWidth;
+                $valueWidth = $this->contentWidth - $first - $labelWidth;
                 $fields = $layout['header_fields'] !== [] ? $layout['header_fields'] : [['key' => '', 'label' => '']];
                 foreach ($fields as $fieldIndex => $headerField) {
                     $row = $table->addRow();
                     $value = $headerField['key'] === '' ? '' : $this->cell($header, $headerField['key']);
                     if ($layout['repeat']['enabled']) {
                         $merge = $fieldIndex === 0 ? 'restart' : 'continue';
-                        $unitCell = $row->addCell($unitWidth, ['vMerge' => $merge, 'valign' => 'center']);
-                        $numberCell = $row->addCell($numberWidth, ['vMerge' => $merge, 'valign' => 'center']);
+                        $unitCell = $row->addCell($unitWidth, [
+                            'vMerge' => $merge,
+                            'valign' => 'center',
+                            ...($this->hasAppearance ? ['bgColor' => $this->headerBackground()] : []),
+                        ]);
+                        $numberCell = $row->addCell($numberWidth, [
+                            'vMerge' => $merge,
+                            'valign' => 'center',
+                            ...($this->hasAppearance ? ['bgColor' => $this->headerBackground()] : []),
+                        ]);
                         if ($fieldIndex === 0) {
                             $unitCell->addText($layout['repeat']['label'].' No.', $labelStyle, ['spaceAfter' => 0]);
                             $numberCell->addText((string) ($index + 1), $labelStyle, ['spaceAfter' => 0, 'alignment' => Jc::CENTER]);
                         }
                         if ($columnCount > 2) {
-                            $row->addCell($labelWidth, ['bgColor' => self::LIGHT_BLUE, 'gridSpan' => $labelSpan])
+                            $row->addCell($labelWidth, ['bgColor' => $this->headerBackground(), 'gridSpan' => $labelSpan])
                                 ->addText($headerField['label'], $labelStyle, ['spaceAfter' => 0]);
                             $row->addCell($valueWidth, ['gridSpan' => $valueSpan])
                                 ->addText($value, ['size' => 9], ['spaceAfter' => 0]);
                         } else {
-                            $row->addCell(self::CONTENT_WIDTH - $first, ['gridSpan' => max(1, $columnCount - 1)])
+                            $row->addCell($this->contentWidth - $first, ['gridSpan' => max(1, $columnCount - 1)])
                                 ->addText($headerField['label'].($value === '' ? '' : ': '.$value), ['size' => 9], ['spaceAfter' => 0]);
                         }
                     } else {
-                        $row->addCell($first, ['bgColor' => self::LIGHT_BLUE])
+                        $row->addCell($first, ['bgColor' => $this->headerBackground()])
                             ->addText($headerField['label'], $labelStyle, ['spaceAfter' => 0]);
-                        $row->addCell(self::CONTENT_WIDTH - $first, ['gridSpan' => max(1, $columnCount - 1)])
+                        $row->addCell($this->contentWidth - $first, ['gridSpan' => max(1, $columnCount - 1)])
                             ->addText($value, ['size' => 9], ['spaceAfter' => 0]);
                     }
                 }
@@ -392,7 +445,7 @@ class SyllabusWordDocument
             }
             if ($unit['rows'] === []) {
                 $row = $table->addRow();
-                $row->addCell(self::CONTENT_WIDTH, ['gridSpan' => $columnCount])
+                $row->addCell($this->contentWidth, ['gridSpan' => $columnCount])
                     ->addText('Sin filas', ['italic' => true, 'size' => 9, 'color' => '595959'], ['spaceAfter' => 0]);
             }
 
@@ -405,7 +458,7 @@ class SyllabusWordDocument
                         : ($column['type'] === 'number' && ($column['sum'] ?? true) === true ? $this->sum($unit['rows'], $column['key']) : '');
                     $cell->addText(
                         $text,
-                        ['bold' => true, 'size' => 9, 'color' => self::HEADER_TEXT],
+                        ['bold' => true, 'size' => 9, 'color' => $this->hasAppearance ? $this->color('text_color') : self::HEADER_TEXT],
                         ['spaceAfter' => 0, 'alignment' => $columnIndex === 0 ? Jc::END : Jc::CENTER],
                     );
                 }
@@ -448,7 +501,7 @@ class SyllabusWordDocument
             $matrix[$row][$index] = ['id' => 'leaf:'.$column['key'], 'label' => $column['label'], 'span' => $depth - $row];
         }
 
-        $style = ['bold' => true, 'size' => 8, 'color' => self::HEADER_TEXT];
+        $style = ['bold' => true, 'size' => 8, 'color' => $this->headerColor()];
         $paragraph = ['spaceAfter' => 0, 'alignment' => Jc::CENTER];
         for ($rowIndex = 0; $rowIndex < $depth; $rowIndex++) {
             $row = $table->addRow(null, ['tblHeader' => true]);
@@ -457,7 +510,7 @@ class SyllabusWordDocument
                 $cell = $matrix[$rowIndex][$columnIndex];
                 if ($cell === null) {
                     // Continuación vertical de una celda que empezó arriba.
-                    $row->addCell($widths[$columnIndex], ['bgColor' => self::LIGHT_BLUE, 'vMerge' => 'continue']);
+                    $row->addCell($widths[$columnIndex], ['bgColor' => $this->headerBackground(), 'vMerge' => 'continue']);
                     $columnIndex++;
 
                     continue;
@@ -472,7 +525,7 @@ class SyllabusWordDocument
                     $width += $widths[$columnIndex + $span];
                     $span++;
                 }
-                $options = ['bgColor' => self::LIGHT_BLUE, 'valign' => 'center'];
+                $options = ['bgColor' => $this->headerBackground(), 'valign' => 'center'];
                 if ($span > 1) {
                     $options['gridSpan'] = $span;
                 }
@@ -530,7 +583,7 @@ class SyllabusWordDocument
             : array_map('intval', $declared);
         $total = max(1, array_sum($weights));
 
-        return array_map(fn (int $weight): int => (int) floor(self::CONTENT_WIDTH * $weight / $total), $weights);
+        return array_map(fn (int $weight): int => (int) floor($this->contentWidth * $weight / $total), $weights);
     }
 
     /** @param list<array<string, mixed>> $rows */
@@ -588,6 +641,41 @@ class SyllabusWordDocument
     private function string(mixed $value, string $fallback): string
     {
         return is_string($value) && trim($value) !== '' ? trim($value) : $fallback;
+    }
+
+    private function color(string $key): string
+    {
+        return ltrim((string) $this->appearance[$key], '#');
+    }
+
+    private function identificationHeaderBackground(): string
+    {
+        return $this->hasAppearance ? $this->color('table_header_background') : self::BLUE;
+    }
+
+    private function identificationHeaderColor(): string
+    {
+        return $this->hasAppearance ? $this->color('table_header_color') : 'FFFFFF';
+    }
+
+    private function headerBackground(): string
+    {
+        return $this->hasAppearance ? $this->color('table_header_background') : self::LIGHT_BLUE;
+    }
+
+    private function headerColor(): string
+    {
+        return $this->hasAppearance ? $this->color('table_header_color') : self::HEADER_TEXT;
+    }
+
+    private function alignment(mixed $alignment): string
+    {
+        return match ($alignment) {
+            'center' => Jc::CENTER,
+            'right' => Jc::END,
+            'justify' => Jc::BOTH,
+            default => Jc::START,
+        };
     }
 
     /** @return list<array<string, mixed>> */

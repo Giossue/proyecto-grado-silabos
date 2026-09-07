@@ -261,4 +261,33 @@ no se eliminan plantillas de PostgreSQL ni se reutiliza todavía el editor anter
 
 - [x] Retirar de la pantalla el constructor, sus acciones y alertas.
 - [x] Conservar el encabezado compartido, el layout autenticado y una hoja carta vacía.
-- [ ] Definir e implementar la nueva interacción con la siguiente indicación del usuario.
+- [x] Definir la nueva interacción: el bloque agrupa campos y cada campo elige su
+      presentación (texto, tabla, lista con viñetas o lista numerada).
+
+## Constructor progresivo desde la hoja (2026-09-07)
+
+Nueva indicación del responsable: tomar de la malla el patrón de alta progresiva, no su
+motor de grafos. ADM-06 parte de la hoja; «Agregar bloque» abre un `Popover` para nombrar
+el bloque y declarar uno o varios campos con su tipo antes de escribir. La creación es
+atómica y no deja bloques vacíos si se cancela o falla. Se conservan los datos ya
+persistidos; este cambio no autoriza a borrar la plantilla existente.
+
+La personalización es deliberadamente acotada y se guarda en
+`plantillas_silabo.mapeo_documento`: familia y jerarquía tipográfica, colores de texto,
+acento y cabecera de tabla, negrita/cursiva/alineación de títulos, márgenes y orientación.
+La estructura y la apariencia siguen separadas; las revisiones conservan el mapa en su
+fotografía y PHPWord lo usa al exportar.
+
+- [x] Crear bloques con múltiples campos tipados desde la hoja.
+- [x] Mostrar y personalizar la hoja sin recuperar el editor documental anterior.
+- [x] Aplicar la apariencia guardada a la paginación y al DOCX.
+- [x] Cubrir autorización, validación, creación atómica, snapshot e interfaz.
+
+Verificación: Configuración, Sílabos, Documentos y contrato de arquitectura,
+**129 pruebas / 2801 aserciones** en PostgreSQL local aislado; la suite Chromium
+`template-visual-builder.mjs`, **1/1**, crea un bloque con campos de texto y tabla,
+comprueba la previsualización horizontal, tipografía y color, guarda la apariencia y
+revisa el ancho móvil. Pasan TypeScript, ESLint y Prettier del incremento, build de
+producción, Pint y PHPStan de las clases modificadas. Sin migraciones ni modificaciones
+de los diseños persistidos, commit o push. La configuración estructural detallada de
+tablas queda fuera de este primer incremento, tal como se documenta en ADM-06.

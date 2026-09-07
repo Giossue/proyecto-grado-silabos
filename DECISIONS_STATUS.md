@@ -27,13 +27,15 @@ Fecha de corte: **30 de agosto de 2026**.
   conserva nombre, extracto y huella del contenido en el momento del análisis.
 - La plantilla de sílabo es única e institucional: no pertenece a una carrera y la usan
   las convocatorias de cualquier carrera tal como esté al abrir el proceso.
-- La plantilla se arma sobre hojas y bloques (I-33/I-53). Solo Administración diseña
-  su contenido con formato acotado, celdas combinadas libremente, texto fijo, campos
-  docentes y variables descriptivas `@nombre_carrera` (I-56, 6 de septiembre de 2026).
-  Esto sustituye la restricción visual de I-34 a formatos prefabricados. Sus columnas
-  tipadas, datos de unidad, sumas y repetición se conservan. Docencia solo completa
-  campos; las variables se resuelven en servidor. El DOCX se genera con PHPWord desde
-  la copia de cada revisión; el PDF sigue siendo el respaldo de texto plano.
+- La plantilla se arma sobre hojas y bloques (I-33/I-53). Solo Administración cambia
+  la estructura: un bloque agrupa campos y cada campo define si el docente completa
+  texto, tabla, lista con viñetas o lista numerada. La apariencia global es acotada a
+  catálogos institucionales de fuente, tamaños, colores, alineación, márgenes y
+  orientación (I-56, ajuste del 7 de septiembre de 2026). Los diseños complejos ya
+  guardados, variables descriptivas como `@nombre_carrera`, columnas tipadas, unidades,
+  sumas y repetición se conservan. Docencia solo completa campos; las variables se
+  resuelven en servidor. El DOCX se genera con PHPWord desde la copia de cada revisión;
+  el PDF sigue siendo el respaldo de texto plano.
 - La modalidad de estudio es un dato base de la carrera (la aprueba el CES) y no un
   catálogo: presencial, semipresencial, en línea, a distancia o híbrida, fijas por reglamento.
   Una materia puede usar una modalidad distinta, sin cambiar ni recalificar la modalidad
@@ -303,7 +305,6 @@ aplicada local y remotamente.
 I-52, actualización del 6 de septiembre: se retira `calidad` de las asignaciones de
 coordinación mediante `000050`, sustituyendo la decisión anterior de conservarla.
 Administración asigna a la persona sin distinguir titular de encargado.
-
 
 - PHP 8.3 o superior como mínimo del proyecto.
 - UUID generados por la aplicación para claves primarias internas.

@@ -252,6 +252,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // Una sola plantilla que se edita en el sitio (I-32): sin versiones, sin publicar.
         Route::redirect('plantillas', '/admin/plantilla');
         Route::get('plantilla/{template}', [TemplateController::class, 'show'])->name('templates.show');
+        Route::patch('plantilla/{template}/apariencia', [TemplateController::class, 'updateAppearance'])->name('templates.appearance.update');
         Route::post('plantilla/{template}/secciones', [TemplateController::class, 'storeSection'])->name('templates.sections.store');
         Route::patch('plantilla/{template}/secciones/orden', [TemplateController::class, 'reorderSections'])->name('templates.sections.reorder');
         Route::patch('plantilla/{template}/secciones/{section}', [TemplateController::class, 'updateSection'])->name('templates.sections.update');

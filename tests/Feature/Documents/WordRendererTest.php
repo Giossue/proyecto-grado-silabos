@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Documents;
 
+use App\Modules\Configuration\Domain\TemplateAppearance;
 use App\Modules\Documents\Domain\Contracts\DocumentRenderer;
 use App\Modules\Documents\Domain\Data\DocumentRenderInput;
 use App\Modules\Documents\Infrastructure\Rendering\PhpWordDocumentRenderer;
@@ -12,6 +13,63 @@ use ZipArchive;
 /** I-34: el DOCX reproduce tablas complejas (agrupaciones, unidades, totales) y es reproducible. */
 class WordRendererTest extends TestCase
 {
+    public function test_applies_the_frozen_template_appearance_to_docx(): void
+    {
+        $snapshot = $this->snapshot();
+        $snapshot['document_mapping'] = ['appearance' => [
+            ...TemplateAppearance::defaults(),
+            'font_family' => 'Georgia',
+            'body_font_size' => 12,
+            'title_font_size' => 18,
+            'section_font_size' => 14,
+            'field_font_size' => 12,
+            'text_color' => '#1F4E78',
+            'accent_color' => '#C00000',
+            'table_header_background' => '#548235',
+            'table_header_color' => '#FFFFFF',
+            'margin_cm' => 2.0,
+            'orientation' => 'landscape',
+            'title_italic' => true,
+            'section_alignment' => 'center',
+            'body_alignment' => 'justify',
+        ]];
+        $input = new DocumentRenderInput(
+            subject: 'Inteligencia Artificial',
+            subjectCode: 'SW-P7-037',
+            academicPeriod: 'Marzo – Julio 2026',
+            revisionNumber: 3,
+            revisionFingerprint: str_repeat('cd', 32),
+            templateId: '01a064a5-1d6d-7196-b189-05376ff0929d',
+            generatedAt: '2026-09-07T20:00:00-05:00',
+            locale: 'es-EC',
+            snapshot: $snapshot,
+        );
+
+        $document = app(DocumentRenderer::class)->render($input)->docx;
+        $temporary = tempnam(sys_get_temp_dir(), 'silabos-appearance-test-');
+        $this->assertNotFalse($temporary);
+        file_put_contents($temporary, $document->bytes);
+        $zip = new ZipArchive;
+        $this->assertTrue($zip->open($temporary) === true);
+        $documentXml = $zip->getFromName('word/document.xml');
+        $stylesXml = $zip->getFromName('word/styles.xml');
+        $zip->close();
+        @unlink($temporary);
+
+        $this->assertIsString($documentXml);
+        $this->assertIsString($stylesXml);
+        $this->assertStringContainsString('w:orient="landscape"', $documentXml);
+        $this->assertStringContainsString('w:top="1134"', $documentXml);
+        $this->assertStringContainsString('w:fill="548235"', $documentXml);
+        $this->assertStringContainsString('w:color w:val="FFFFFF"', $documentXml);
+        $this->assertStringContainsString('w:color w:val="C00000"', $documentXml);
+        $this->assertStringContainsString('w:sz w:val="36"', $documentXml);
+        $this->assertStringContainsString('<w:i w:val="1"/>', $documentXml);
+        $this->assertStringContainsString('Georgia', $stylesXml);
+        $this->assertStringContainsString('w:color w:val="1F4E78"', $stylesXml);
+        $this->assertStringContainsString('w:sz w:val="24"', $stylesXml);
+    }
+
     public function test_renders_grouped_headers_units_and_totals_deterministically(): void
     {
         $renderer = app(DocumentRenderer::class);

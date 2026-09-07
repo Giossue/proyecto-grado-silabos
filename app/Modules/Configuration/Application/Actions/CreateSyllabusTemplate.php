@@ -4,6 +4,7 @@ namespace App\Modules\Configuration\Application\Actions;
 
 use App\Models\User;
 use App\Modules\Configuration\Domain\TablePresets;
+use App\Modules\Configuration\Domain\TemplateAppearance;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\FieldDefinition;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateBlock;
@@ -107,6 +108,7 @@ class CreateSyllabusTemplate
                 'nombre' => SyllabusTemplate::INSTITUTIONAL_NAME,
                 'descripcion' => null,
                 'activo' => true,
+                'mapeo_documento' => ['appearance' => TemplateAppearance::defaults()],
             ]);
 
             foreach (self::BASELINE as $sectionPosition => [$sectionKey, $sectionTitle, $fields]) {

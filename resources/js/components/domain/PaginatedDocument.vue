@@ -1,6 +1,36 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { createDocumentPaginator, LETTER_PAGE } from '@/lib/documentPagination';
+
+const props = withDefaults(
+    defineProps<{
+        orientation?: 'portrait' | 'landscape';
+        marginCm?: number;
+        fontFamily?: string;
+        fontSize?: number;
+        textColor?: string;
+    }>(),
+    {
+        orientation: 'portrait',
+        marginCm: 2.5,
+        fontFamily: 'Arial',
+        fontSize: 11,
+        textColor: '#000000',
+    },
+);
+
+const page = computed(() => ({
+    width:
+        props.orientation === 'landscape'
+            ? LETTER_PAGE.height
+            : LETTER_PAGE.width,
+    height:
+        props.orientation === 'landscape'
+            ? LETTER_PAGE.width
+            : LETTER_PAGE.height,
+    margin: (props.marginCm * 96) / 2.54,
+    gap: LETTER_PAGE.gap,
+}));
 
 const content = ref<HTMLElement | null>(null);
 const pages = ref(1);
@@ -45,7 +75,7 @@ onMounted(() => {
         return;
     }
 
-    paginator = createDocumentPaginator(content.value);
+    paginator = createDocumentPaginator(content.value, () => page.value);
     mutations = new MutationObserver(schedule);
     observeContent();
     resize = new ResizeObserver(schedule);
@@ -55,6 +85,8 @@ onMounted(() => {
     document.fonts.addEventListener('loadingdone', schedule);
     schedule();
 });
+
+watch(page, schedule);
 
 onBeforeUnmount(() => {
     disposed = true;
@@ -71,11 +103,15 @@ onBeforeUnmount(() => {
     <div
         class="paged-document mx-auto"
         :style="{
-            '--page-width': `${LETTER_PAGE.width}px`,
-            '--page-height': `${LETTER_PAGE.height}px`,
-            '--page-margin': `${LETTER_PAGE.margin}px`,
-            '--page-gap': `${LETTER_PAGE.gap}px`,
-            minHeight: `${pages * (LETTER_PAGE.height + LETTER_PAGE.gap) - LETTER_PAGE.gap}px`,
+            '--page-width': `${page.width}px`,
+            '--page-height': `${page.height}px`,
+            '--page-margin': `${page.margin}px`,
+            '--page-gap': `${page.gap}px`,
+            width: `${page.width}px`,
+            minHeight: `${pages * (page.height + page.gap) - page.gap}px`,
+            color: textColor,
+            fontFamily,
+            fontSize: `${fontSize}pt`,
         }"
     >
         <div class="paged-document-papers" aria-hidden="true">
@@ -96,9 +132,6 @@ onBeforeUnmount(() => {
     width: var(--page-width);
     padding: var(--page-margin);
     box-sizing: border-box;
-    color: #000;
-    font-family: Arial, 'Liberation Sans', Helvetica, sans-serif;
-    font-size: 11pt;
     line-height: 1.15;
 }
 

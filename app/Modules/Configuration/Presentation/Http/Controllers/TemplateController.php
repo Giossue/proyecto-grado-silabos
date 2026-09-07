@@ -10,6 +10,7 @@ use App\Modules\Configuration\Application\Actions\DeleteTemplateSection;
 use App\Modules\Configuration\Application\Actions\ReorderTemplateBlocks;
 use App\Modules\Configuration\Application\Actions\ReorderTemplateSections;
 use App\Modules\Configuration\Application\Actions\SaveFieldDefinition;
+use App\Modules\Configuration\Application\Actions\SaveTemplateAppearance;
 use App\Modules\Configuration\Application\Actions\SaveTemplateDocument;
 use App\Modules\Configuration\Application\Actions\SaveTemplateSection;
 use App\Modules\Configuration\Application\Actions\UpdateTableLayout;
@@ -17,6 +18,7 @@ use App\Modules\Configuration\Application\InstitutionalLogos;
 use App\Modules\Configuration\Application\TemplateDocumentDefaults;
 use App\Modules\Configuration\Application\TemplateVariables;
 use App\Modules\Configuration\Domain\TableLayout;
+use App\Modules\Configuration\Domain\TemplateAppearance;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\FieldDefinition;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateBlock;
@@ -26,6 +28,7 @@ use App\Modules\Configuration\Presentation\Http\Requests\ManageTemplatesRequest;
 use App\Modules\Configuration\Presentation\Http\Requests\ReorderTemplateBlocksRequest;
 use App\Modules\Configuration\Presentation\Http\Requests\ReorderTemplateSectionsRequest;
 use App\Modules\Configuration\Presentation\Http\Requests\SaveFieldDefinitionRequest;
+use App\Modules\Configuration\Presentation\Http\Requests\SaveTemplateAppearanceRequest;
 use App\Modules\Configuration\Presentation\Http\Requests\SaveTemplateDocumentRequest;
 use App\Modules\Configuration\Presentation\Http\Requests\SaveTemplateSectionRequest;
 use App\Modules\Configuration\Presentation\Http\Requests\StoreInstitutionLogoRequest;
@@ -93,6 +96,7 @@ class TemplateController extends Controller
                 'id' => $template->id,
                 'name' => $template->nombre,
                 'description' => $template->descripcion,
+                'appearance' => TemplateAppearance::fromMapping($template->mapeo_documento),
                 'sections' => $template->sections->map(fn (TemplateSection $section) => [
                     'id' => $section->id,
                     'key' => $section->clave,
@@ -133,7 +137,20 @@ class TemplateController extends Controller
                 ['value' => 'bulleted_list', 'label' => 'Lista con viñetas'],
                 ['value' => 'numbered_list', 'label' => 'Lista numerada'],
             ],
+            'appearanceOptions' => TemplateAppearance::catalog(),
         ]);
+    }
+
+    public function updateAppearance(
+        SyllabusTemplate $template,
+        SaveTemplateAppearanceRequest $request,
+        SaveTemplateAppearance $action,
+    ): RedirectResponse {
+        $actor = $request->user();
+        abort_unless($actor instanceof User, 401);
+        $action->execute($template, $request->safe()->except('confirm_purge'), $actor, $request);
+
+        return back()->with('success', 'Apariencia de la plantilla guardada.');
     }
 
     private function contentType(TemplateBlock $block, ?FieldDefinition $field): string

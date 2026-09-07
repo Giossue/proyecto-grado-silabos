@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { defineComponent, h, useId } from 'vue';
+import { computed } from 'vue';
 import type { VNodeChild, CSSProperties } from 'vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,14 +34,38 @@ const props = withDefaults(
         layout?: TableLayout | null;
         editable?: boolean;
         preview?: boolean;
+        fontFamily?: string;
+        fontSize?: number;
+        textColor?: string;
+        textAlign?: 'left' | 'center' | 'right' | 'justify';
+        tableHeaderBackground?: string;
+        tableHeaderColor?: string;
     }>(),
-    { layout: null, editable: false, preview: false },
+    {
+        layout: null,
+        editable: false,
+        preview: false,
+        fontFamily: 'Arial',
+        fontSize: 11,
+        textColor: '#000000',
+        textAlign: 'left',
+        tableHeaderBackground: '#4F81BD',
+        tableHeaderColor: '#FFFFFF',
+    },
 );
 const emit = defineEmits<{
     value: [key: string, value: string | number | boolean];
     rows: [key: string, rows: Row[]];
 }>();
 const prefix = useId();
+const documentStyle = computed((): CSSProperties & Record<string, string> => ({
+    fontFamily: props.fontFamily,
+    fontSize: `${props.fontSize}pt`,
+    color: props.textColor,
+    '--document-text-align': props.textAlign,
+    '--document-table-header-background': props.tableHeaderBackground,
+    '--document-table-header-color': props.tableHeaderColor,
+}));
 const columnGroup = (table: DocumentNode): VNodeChild => {
     const occupied: boolean[][] = [];
     const widths: number[] = [];
@@ -225,8 +250,8 @@ const input = (
             return h(
                 attrs.listStyle === 'number' ? 'ol' : 'ul',
                 { style },
-                (items.length || !props.preview ? items : [`⟦${label}⟧`]).map(
-                    (item) => h('li', {}, item),
+                (items.length || !props.preview ? items : [label]).map((item) =>
+                    h('li', {}, item),
                 ),
             );
         }
@@ -244,7 +269,7 @@ const input = (
         return h(
             'span',
             { style, class: 'document-value' },
-            content || (props.preview && !choice ? `⟦${label}⟧` : ''),
+            content || (props.preview && !choice ? label : ''),
         );
     }
 
@@ -575,7 +600,11 @@ const draw = (
     }
 
     if (node.type === 'tableRow') {
-        return h('tr', {}, children());
+        return h(
+            'tr',
+            attrs.rowRole ? { 'data-row-role': String(attrs.rowRole) } : {},
+            children(),
+        );
     }
 
     if (node.type === 'tableCell' || node.type === 'tableHeader') {
@@ -602,7 +631,12 @@ const Content = defineComponent({ setup: () => () => draw(props.document) });
 </script>
 
 <template>
-    <div class="template-document-view" :data-preview="preview || undefined">
+    <div
+        class="template-document-view"
+        :data-preview="preview || undefined"
+        :data-themed="preview || undefined"
+        :style="documentStyle"
+    >
         <Content />
     </div>
 </template>
@@ -611,9 +645,6 @@ const Content = defineComponent({ setup: () => () => draw(props.document) });
 .template-document-view {
     color: #000;
     background: #fff;
-    font:
-        11pt Arial,
-        sans-serif;
     overflow-wrap: anywhere;
 }
 .template-document-view[data-preview] {
@@ -624,6 +655,9 @@ const Content = defineComponent({ setup: () => () => draw(props.document) });
     margin: 0 0 8px;
     min-height: 1em;
     white-space: pre-wrap;
+}
+.template-document-view[data-themed] :deep(.document-paragraph) {
+    text-align: var(--document-text-align) !important;
 }
 .template-document-view :deep(.document-table) {
     border-collapse: collapse;
@@ -641,6 +675,15 @@ const Content = defineComponent({ setup: () => () => draw(props.document) });
 .template-document-view :deep(td .document-paragraph),
 .template-document-view :deep(th .document-paragraph) {
     margin: 0;
+}
+.template-document-view[data-themed]
+    :deep(.document-table > tbody > tr[data-row-role='fixed'] > *),
+.template-document-view[data-themed]
+    :deep(.document-table > tbody > tr[data-row-role='unit'] > *),
+.template-document-view[data-themed]
+    :deep(.document-table > tbody > tr:first-child:not([data-row-role]) > *) {
+    color: var(--document-table-header-color) !important;
+    background-color: var(--document-table-header-background) !important;
 }
 .template-document-view :deep(.document-input) {
     font: inherit;

@@ -1,0 +1,302 @@
+<script setup lang="ts">
+import { useForm } from '@inertiajs/vue3';
+import { Plus, Trash2 } from '@lucide/vue';
+import { ref } from 'vue';
+import { toast } from 'vue-sonner';
+import TemplateController from '@/actions/App/Modules/Configuration/Presentation/Http/Controllers/TemplateController';
+import { Button } from '@/components/ui/button';
+import {
+    Field,
+    FieldError,
+    FieldGroup,
+    FieldLabel,
+} from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import {
+    NativeSelect,
+    NativeSelectOption,
+} from '@/components/ui/native-select';
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from '@/components/ui/popover';
+import type { TemplateContentType } from '@/types/configuration';
+
+type EditableContentType = Exclude<
+    TemplateContentType,
+    'institutional' | 'flow'
+>;
+
+const props = withDefaults(
+    defineProps<{
+        templateId: string;
+        position: number;
+        blockTypes: { value: EditableContentType; label: string }[];
+        empty?: boolean;
+    }>(),
+    { empty: false },
+);
+
+let sequence = 0;
+const technicalKey = (prefix: string): string => {
+    sequence += 1;
+
+    return `${prefix}_${Date.now().toString(36)}_${sequence}`;
+};
+
+const newField = () => ({
+    key: technicalKey('campo'),
+    label: '',
+    content_type: 'text' as EditableContentType,
+});
+
+const open = ref(false);
+const form = useForm({
+    title: '',
+    key: technicalKey('bloque'),
+    position: props.position + 1,
+    fields: [newField()],
+});
+
+const reset = (): void => {
+    form.clearErrors();
+    form.title = '';
+    form.key = technicalKey('bloque');
+    form.position = props.position + 1;
+    form.fields = [newField()];
+};
+
+const addField = (): void => {
+    if (form.fields.length >= 20) {
+        return;
+    }
+
+    form.fields.push(newField());
+};
+
+const removeField = (index: number): void => {
+    if (form.fields.length === 1) {
+        return;
+    }
+
+    form.fields.splice(index, 1);
+};
+
+const errorFor = (path: string): string | undefined =>
+    (form.errors as Record<string, string>)[path];
+
+const submit = (): void => {
+    form.position = props.position + 1;
+    form.post(TemplateController.storeSection.url(props.templateId), {
+        preserveScroll: true,
+        onSuccess: () => {
+            toast.success('Bloque agregado.');
+            open.value = false;
+            reset();
+        },
+        onError: (errors) => {
+            if (!('purge_required' in errors)) {
+                toast.error(
+                    Object.values(errors)[0] ?? 'No se pudo agregar el bloque.',
+                );
+            }
+        },
+    });
+};
+
+const updateOpen = (value: boolean): void => {
+    open.value = value;
+
+    if (!value && !form.processing) {
+        reset();
+    }
+};
+</script>
+
+<template>
+    <Popover :open="open" @update:open="updateOpen">
+        <PopoverTrigger as-child>
+            <Button
+                type="button"
+                :variant="empty ? 'default' : 'outline'"
+                :class="empty ? '' : 'border-dashed bg-background'"
+            >
+                <Plus
+                    v-if="empty"
+                    data-icon="inline-start"
+                    aria-hidden="true"
+                />
+                {{ empty ? 'Agregar primer bloque' : 'Agregar bloque' }}
+            </Button>
+        </PopoverTrigger>
+        <PopoverContent
+            align="center"
+            class="max-h-[var(--reka-popover-content-available-height)] w-[min(30rem,calc(100vw-2rem))] overflow-hidden p-0"
+        >
+            <form
+                class="flex max-h-[var(--reka-popover-content-available-height)] flex-col"
+                @submit.prevent="submit"
+            >
+                <div class="flex flex-col gap-1 border-b px-4 py-3">
+                    <p class="font-medium">Nuevo bloque</p>
+                    <p class="text-sm text-muted-foreground">
+                        El bloque agrupa los campos que completará el docente.
+                    </p>
+                </div>
+
+                <div class="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+                    <FieldGroup>
+                        <Field :data-invalid="Boolean(errorFor('title'))">
+                            <FieldLabel for="new-template-block-title" required>
+                                Nombre del bloque
+                            </FieldLabel>
+                            <Input
+                                id="new-template-block-title"
+                                v-model="form.title"
+                                maxlength="180"
+                                placeholder="Ej. Objetivos de la asignatura"
+                                :disabled="form.processing"
+                                :aria-invalid="Boolean(errorFor('title'))"
+                            />
+                            <FieldError
+                                v-if="errorFor('title')"
+                                :errors="[errorFor('title')]"
+                            />
+                        </Field>
+
+                        <FieldGroup
+                            v-for="(field, index) in form.fields"
+                            :key="field.key"
+                            class="gap-3 rounded-lg border p-3"
+                        >
+                            <div
+                                class="flex items-center justify-between gap-2"
+                            >
+                                <p class="text-sm font-medium">
+                                    Campo {{ index + 1 }}
+                                </p>
+                                <Button
+                                    v-if="form.fields.length > 1"
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon-sm"
+                                    :disabled="form.processing"
+                                    :aria-label="`Quitar campo ${index + 1}`"
+                                    @click="removeField(index)"
+                                >
+                                    <Trash2 aria-hidden="true" />
+                                </Button>
+                            </div>
+
+                            <Field
+                                :data-invalid="
+                                    Boolean(errorFor(`fields.${index}.label`))
+                                "
+                            >
+                                <FieldLabel
+                                    :for="`new-template-field-${index}`"
+                                    required
+                                >
+                                    Nombre
+                                </FieldLabel>
+                                <Input
+                                    :id="`new-template-field-${index}`"
+                                    v-model="field.label"
+                                    maxlength="180"
+                                    placeholder="Ej. Objetivo general"
+                                    :disabled="form.processing"
+                                    :aria-invalid="
+                                        Boolean(
+                                            errorFor(`fields.${index}.label`),
+                                        )
+                                    "
+                                />
+                                <FieldError
+                                    v-if="errorFor(`fields.${index}.label`)"
+                                    :errors="[
+                                        errorFor(`fields.${index}.label`),
+                                    ]"
+                                />
+                            </Field>
+
+                            <Field
+                                :data-invalid="
+                                    Boolean(
+                                        errorFor(
+                                            `fields.${index}.content_type`,
+                                        ),
+                                    )
+                                "
+                            >
+                                <FieldLabel
+                                    :for="`new-template-field-type-${index}`"
+                                    required
+                                >
+                                    Tipo de contenido
+                                </FieldLabel>
+                                <NativeSelect
+                                    v-model="field.content_type"
+                                    class="w-full"
+                                    :disabled="form.processing"
+                                    :id="`new-template-field-type-${index}`"
+                                    :aria-invalid="
+                                        Boolean(
+                                            errorFor(
+                                                `fields.${index}.content_type`,
+                                            ),
+                                        )
+                                    "
+                                >
+                                    <NativeSelectOption
+                                        v-for="type in blockTypes"
+                                        :key="type.value"
+                                        :value="type.value"
+                                    >
+                                        {{ type.label }}
+                                    </NativeSelectOption>
+                                </NativeSelect>
+                                <FieldError
+                                    v-if="
+                                        errorFor(`fields.${index}.content_type`)
+                                    "
+                                    :errors="[
+                                        errorFor(
+                                            `fields.${index}.content_type`,
+                                        ),
+                                    ]"
+                                />
+                            </Field>
+                        </FieldGroup>
+                    </FieldGroup>
+
+                    <Button
+                        type="button"
+                        variant="outline"
+                        class="mt-4 w-full"
+                        :disabled="form.processing || form.fields.length >= 20"
+                        @click="addField"
+                    >
+                        Agregar otro campo
+                    </Button>
+                </div>
+
+                <div
+                    class="flex justify-end gap-2 border-t bg-muted/30 px-4 py-3"
+                >
+                    <Button
+                        type="button"
+                        variant="outline"
+                        :disabled="form.processing"
+                        @click="updateOpen(false)"
+                    >
+                        Cancelar
+                    </Button>
+                    <Button type="submit" :disabled="form.processing">
+                        Crear bloque
+                    </Button>
+                </div>
+            </form>
+        </PopoverContent>
+    </Popover>
+</template>

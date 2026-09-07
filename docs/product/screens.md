@@ -120,42 +120,20 @@ completo. El alta está separada de asignar paralelos y no levanta sus bloqueos.
 - «Nueva plantilla» crea de inmediato el formato oficial completo (doce secciones,
   campos, tablas armadas y ficha de identificación) y abre su constructor; no muestra un
   `Sheet` porque no requiere datos. Administración solo ajusta sobre la hoja.
-- ADM-06 se arma sobre la hoja tal como se imprimirá (I-33). Una paleta fija ofrece
-  Bloque, Texto, Tabla, Lista con viñetas y Lista numerada: se arrastran a la hoja (una
-  previsualización del orden cambia al pasar sobre otras piezas) o se pulsan para
-  agregar al final del bloque activo. El nuevo orden se guarda solo al soltar;
-  cancelar el arrastre restaura el anterior y un error recupera el orden del servidor.
-  «Bloque», tanto al pulsarlo como al soltarlo, pide elegir su primer campo (Texto,
-  Tabla, Lista con viñetas o Lista numerada) antes de crearlo; cancelar no crea nada. Los
-  títulos se renombran con un clic; el asa reordena; el menú del campo es el único
-  acceso a «Editar diseño» y también ofrece eliminar con confirmación; no se repite
-  un botón sobre el contenido. El menú del bloque conserva su
-  renombrado. «Editar diseño» reúne las pestañas Diseño y
-  Propiedades: nombre del bloque, ayuda de cada campo guardado y asistencia de IA cuando
-  corresponde. Si el bloque tiene un solo campo, no se duplica su nombre; al tener dos
-  o más, se muestra además el nombre de cada campo. Un único guardado persiste diseño y propiedades; cambiar de pestaña
-  conserva el borrador y cancelar permite descartarlo todo. Los campos nuevos deben
-  guardarse antes de configurar su ayuda. El bloque de estado solo ofrece Propiedades,
-  sin permitir editar datos ni formato del flujo. Con el proceso abierto la hoja se muestra
-  sin paleta, asas ni edición de diseño.
-  Dentro de Diseño, la cinta separa Formato, Tablas y Campos; solo muestra las
-  herramientas del grupo activo. `@docente` inserta una respuesta independiente en
-  el cursor, también dentro de una celda; no es una variable automática. Seleccionar
-  su recuadro abre Campos para ajustar su presentación; los campos ya guardados se
-  renombran únicamente en Propiedades. Durante el alta, Campos sí pide un nombre
-  inicial para la nueva referencia. Texto, viñetas y
-  numeración cambian la presentación sin convertir datos existentes; para una tabla
-  se usa Tablas. Una tabla nueva no inventa respuestas para cada celda: si el bloque
-  solo contiene su respuesta inicial, la mueve a la primera celda de contenido y deja
-  las demás libres para texto, variables o nuevos `@docente`. En el lienzo, una única
-  respuesta se identifica como «Respuesta del docente»; desde dos campos se muestran
-  sus nombres, siempre sin símbolos añadidos al texto. Los tipos numéricos/fechas existentes conservan su tipo. Un campo de
-  texto con formato de lista pide un elemento por línea; las listas repetibles
-  existentes conservan sus filas. El docente nunca accede a la cinta de diseño.
-  Estándar del impreso: logos institucionales, título azul centrado, Arial 11 pt, bloques
-  numerados «1.» y campos «1.1» en negrita, márgenes de 2.5 cm, tablas con cabecera azul y
-  filas alternas celestes. El formato lo pone la plantilla; el docente solo llena
-  contenido.
+- ADM-06 se construye directamente sobre la hoja (I-33). Un **bloque** es únicamente
+  el contenedor que agrupa uno o varios campos. «Agregar bloque» abre un `Popover` que
+  pide su nombre y permite declarar todos sus campos antes de guardar; cada campo elige
+  Texto, Tabla, Lista con viñetas o Lista numerada. Cancelar o recibir un rechazo no
+  deja un contenedor vacío. Dentro de un bloque existente, «Agregar campo» usa el mismo
+  vocabulario y lo coloca al final. Con un solo campo basta el título del bloque; desde
+  dos campos aparecen subtítulos numerados. Con el proceso abierto, estos controles se
+  ocultan y la hoja queda en solo lectura.
+- **Personalizar** abre un panel lateral con ajustes deliberadamente acotados para todo
+  el documento: orientación, márgenes, fuente general, tamaños de título/bloque/campo/
+  contenido, paleta institucional para texto, acento y cabecera de tabla, además de
+  negrita, cursiva y alineación de los títulos. Los cambios se previsualizan en la hoja
+  antes de guardar. No se admiten CSS, fuentes o colores arbitrarios. La apariencia se
+  copia en cada revisión y se aplica también al DOCX; el docente nunca la modifica.
 - ADM-06 muestra hojas carta separadas y numeradas (I-53). El pie derecho muestra
   únicamente el número de página (1, 2, 3…), sin el total. La cantidad se recalcula
   según el contenido de muestra al agregar, retirar, reordenar o renombrar piezas.
@@ -164,11 +142,10 @@ completo. El alta está separada de asignar paralelos y no levanta sus bloqueos.
   En pantallas pequeñas, la hoja mantiene su ancho y se desplaza dentro de su área.
   Estos saltos no se guardan: cada sílabo puede ocupar más o menos páginas según lo
   que redacte el docente. La muestra no garantiza los mismos cortes que Word o PDF.
-  Las hojas se muestran directamente sobre el fondo de la pantalla, sin panel gris.
-  La paleta acompaña el desplazamiento bajo el encabezado, también en móvil; si su
-  altura excede el espacio disponible, sus opciones se desplazan dentro de la paleta.
-- La ficha institucional parte del formato oficial y Administración puede editar su
-  diseño (I-56). Sus variables muestran datos de malla, oferta, paralelos y docentes;
+  Las hojas se muestran directamente sobre el fondo de la pantalla, sin panel gris;
+  los controles de alta aparecen en el punto del documento donde actuarán.
+- La ficha institucional parte del formato oficial y conserva su diseño al mostrarse en
+  el constructor. Sus variables muestran datos de malla, oferta, paralelos y docentes;
   no son campos de escritura. Discapacidad y formación son campos que completa el
   docente en su lugar dentro de la tabla. Mapa: `docs/product/identificacion-institucional.md`.
   COR-14 concentra sus paralelos dentro de Ofertas. Desde acciones de cada oferta se
@@ -195,28 +172,17 @@ completo. El alta está separada de asignar paralelos y no levanta sus bloqueos.
 - Si una sección tiene un solo campo, no lleva subtítulo «n.1»: basta el título de la
   sección, en la hoja, el editor docente, la revisión y el Word. Con varios campos sí
   se numeran.
-- Un único «Editar documento» activa el diseño de toda la plantilla; fuera de ese modo
-  la hoja queda limpia, sin paleta, controles ni zonas de arrastre. En edición, el clic
-  derecho abre herramientas según el punto: formato cuando está sobre texto,
-  insertar/eliminar/unir/dividir y fondo cuando está en una tabla, o tipo y Propiedades
-  cuando está sobre un campo. El menú Insertar reúne tablas, respuestas del docente y
-  variables automáticas; deshacer y rehacer permanecen en el mismo menú contextual.
-  Las tablas permiten agregar o quitar filas y columnas, ajustar anchos y combinar o
-  separar celdas horizontal y verticalmente; se seleccionan arrastrando o con Mayús +
-  clic. «Propiedades» abre un panel lateral para nombre, ayuda e IA, también para un
-  campo recién insertado. No hay galería obligatoria de formatos. Los formatos
-  iniciales oficiales siguen disponibles al crear la plantilla y no se reescriben
-  simplemente por abrirla.
-- En el diseño, texto normal es fijo; «Insertar campo» pide nombre y tipo de respuesta
-  del docente; `@` ofrece variables descriptivas con búsqueda y teclado. Solo los
-  campos se llenan manualmente. «Guardar diseño» conserva errores y borrador ante
-  rechazo; salir con cambios advierte. Un conflicto pide recargar y no sobrescribe.
-  El aviso de reinicio durante una pausa requiere «Guardar y reiniciar» explícito.
+- La interacción vigente no activa un procesador de texto global ni usa clic derecho,
+  paleta o arrastre. La estructura crece con altas explícitas de bloque y campo, y la
+  apariencia global vive en Personalizar. Los documentos detallados ya guardados se
+  siguen interpretando sin reescribirlos al abrir la pantalla.
 - Las tablas repetibles conservan sus unidades, columnas tipadas y sumas. El diseño
   distingue cabecera fija, datos, datos de unidad y total: se combinan celdas dentro
   de cada grupo, sin atravesar grupos que se repiten distintas cantidades de veces.
   Docencia agrega filas/unidades y completa las casillas, sin herramientas de diseño;
-  la revisión muestra el diseño y las variables congelados al enviar.
+  la revisión muestra el diseño y las variables congelados al enviar. Una tabla nueva
+  nace con el esquema mínimo; la configuración detallada de columnas y combinaciones
+  no forma parte de este primer incremento del constructor progresivo.
   Las fuentes son documentos editables: COR-11 abre el contenido como una hoja visual
   con cinta de opciones; el formato se aplica en tiempo real y el sistema conserva el
   resultado como Markdown seguro sin mostrar su sintaxis.
