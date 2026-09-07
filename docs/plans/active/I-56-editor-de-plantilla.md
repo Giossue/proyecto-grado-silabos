@@ -255,10 +255,10 @@ de Propiedades a 360 px. Sin migraciones, commit ni push.
 
 ## Reinicio de la interacción de plantilla (2026-09-07)
 
-Por indicación del usuario, ADM-06 queda temporalmente como una página vacía para diseñar
-la nueva interacción desde cero. La ruta y los datos existentes se conservan; no se
-eliminan plantillas de PostgreSQL ni se reutiliza todavía el editor anterior.
+Por indicación del usuario, ADM-06 queda temporalmente con una hoja carta vacía para
+diseñar la nueva interacción desde cero. La ruta y los datos existentes se conservan;
+no se eliminan plantillas de PostgreSQL ni se reutiliza todavía el editor anterior.
 
-- [x] Retirar de la pantalla el constructor, encabezado, acciones y alertas.
-- [x] Conservar únicamente el título del documento y el layout autenticado global.
+- [x] Retirar de la pantalla el constructor, sus acciones y alertas.
+- [x] Conservar el encabezado compartido, el layout autenticado y una hoja carta vacía.
 - [ ] Definir e implementar la nueva interacción con la siguiente indicación del usuario.

@@ -676,14 +676,16 @@ it('edita cuentas desde una sola accion del listado de usuarios', function (): v
         ->toContain("display === 'menu'");
 });
 
-it('deja vacía temporalmente la pantalla de la plantilla para su rediseño', function (): void {
+it('muestra temporalmente una hoja vacía en la pantalla de la plantilla', function (): void {
     $root = dirname(__DIR__, 2);
     $source = file_get_contents($root.'/resources/js/pages/Admin/Templates/Show.vue');
 
     expect($source)
         ->toBeString()
         ->toContain('<Head title="Plantilla" />')
-        ->not->toContain('<PageFrame')
+        ->toContain('<PageFrame')
+        ->toContain('<PaginatedDocument />')
+        ->toContain('aria-label="Hoja en blanco de la plantilla"')
         ->not->toContain('<TemplateSheetEditor')
         ->not->toContain('<InstitutionLogoSheet')
         ->not->toContain('<ProcessLockAlert');
@@ -854,13 +856,14 @@ it('presenta la plantilla institucional única y abre su constructor', function 
         ->not->toContain('<CardTitle')
         ->not->toContain('<TableActionsMenu');
 
-    // La ruta se conserva, pero su contenido espera el nuevo diseño confirmado.
+    // La ruta conserva una hoja carta vacía mientras espera el nuevo diseño confirmado.
     $show = file_get_contents($root.'/resources/js/pages/Admin/Templates/Show.vue');
     expect($show)
         ->toBeString()
         ->not->toContain('Versiones')
         ->not->toContain('sibling.id')
         ->toContain('<Head title="Plantilla" />')
+        ->toContain('<PaginatedDocument />')
         ->not->toContain('<TemplateSheetEditor');
 
 });
@@ -998,6 +1001,7 @@ it('normaliza los encabezados de todos los modulos autenticados', function (): v
         'resources/js/pages/Admin/Operations/Jobs.vue',
         'resources/js/pages/Admin/Processes/Index.vue',
         'resources/js/pages/Admin/Templates/Index.vue',
+        'resources/js/pages/Admin/Templates/Show.vue',
         'resources/js/pages/Admin/Users/Index.vue',
         'resources/js/pages/Admin/Users/Show.vue',
         'resources/js/pages/Role/Select.vue',
@@ -1089,7 +1093,6 @@ it('normaliza los encabezados de todos los modulos autenticados', function (): v
         $relativePath = str_replace($root.'/', '', $file->getPathname());
         if (
             $relativePath === 'resources/js/pages/Welcome.vue'
-            || $relativePath === 'resources/js/pages/Admin/Templates/Show.vue'
             || str_starts_with($relativePath, 'resources/js/pages/auth/')
             || str_starts_with($relativePath, 'resources/js/pages/settings/')
         ) {
@@ -1121,8 +1124,8 @@ it('normaliza los encabezados de todos los modulos autenticados', function (): v
         );
     }
 
-    $this->assertCount(28, $declaredPages);
-    $this->assertCount(29, $pages);
+    $this->assertCount(29, $declaredPages);
+    $this->assertCount(30, $pages);
 });
 
 it('mantiene explicitamente clasificadas las mutaciones store que permanecen en paginas completas', function (): void {
