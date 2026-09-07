@@ -113,7 +113,7 @@ los bloques con varios campos conservan nombre de bloque y una ficha por campo. 
 y nodos se actualicen juntos; la prueba Chromium comprueba edición, envío y reapertura.
 La misma regresión comprueba que una tabla libre absorbe el único campo inicial en su
 primera celda, no crea campos «Dato…» y alterna «Respuesta del docente» con las
-etiquetas descriptivas según exista uno o varios campos.
+etiquetas descriptivas según exista uno o varios campos, sin el carácter `▧`.
 
 El ajuste posterior con la referencia `temp/silabo.pdf` conserva el diseño guardado
 y añade indicadores de ambos parciales solo a la plantilla inicial. No carga datos

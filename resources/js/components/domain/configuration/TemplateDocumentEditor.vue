@@ -117,12 +117,12 @@ const token = (name: 'field' | 'column') =>
             [
                 'span',
                 { class: 'template-input-token-generic' },
-                '▧ Respuesta del docente',
+                'Respuesta del docente',
             ],
             [
                 'span',
                 { class: 'template-input-token-label' },
-                `▧ ${node.attrs.label}${node.attrs.choice ? ` (${node.attrs.choice})` : ''}`,
+                `${node.attrs.label}${node.attrs.choice ? ` (${node.attrs.choice})` : ''}`,
             ],
         ],
     });
@@ -1060,7 +1060,7 @@ defineExpose({ save, editor });
             >
             <template v-else
                 >@docente: respuesta del docente · @nombre_carrera y otras
-                variables: datos automáticos. Pulse un recuadro ▧ para
+                variables: datos automáticos. Pulse un campo para
                 editarlo.</template
             >
         </p>

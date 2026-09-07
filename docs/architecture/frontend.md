@@ -154,7 +154,7 @@ Las tablas libres no crean definiciones por celda. Si el documento solo contiene
 campo inicial, `insertTable` reutiliza ese nodo en la primera celda de contenido y
 reemplaza el párrafo de arranque; el resto queda vacío. El recuadro se presenta como
 «Respuesta del docente» mientras sea el único campo, y recupera su etiqueta cuando
-existen dos o más.
+existen dos o más. Las etiquetas se renderizan como texto, sin prefijos decorativos.
 
 `TemplateDocumentView` proyecta ese contrato sin `v-html`: celdas con spans y anchos,
 texto fijo, variables de servidor y controles docentes. Docencia conserva autoguardado,

@@ -186,6 +186,7 @@ Pint y PHPStan del incremento. La revisión visual confirma una sola entrada, ro
 
 - [x] Presentar el único recuadro como «Respuesta del docente» y mostrar etiquetas
       descriptivas solo al existir varios campos.
+- [x] Retirar el carácter decorativo `▧` de todos los campos y de las instrucciones.
 - [x] Al insertar una tabla sobre el documento inicial, trasladar ese campo a la
       primera celda de contenido y no dejar una copia fuera.
 - [x] Dejar las demás celdas libres; los campos adicionales se crean explícitamente

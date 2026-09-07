@@ -406,7 +406,7 @@ test(
             await page
                 .locator('.tiptap [data-template-field="objetivo"]')
                 .innerText(),
-            '▧ Respuesta del docente',
+            'Respuesta del docente',
         );
         await page.getByRole('tab', { name: 'Tablas', exact: true }).click();
         await page
@@ -433,8 +433,9 @@ test(
                 .first()
                 .innerText()
                 .then((text) => text.trim()),
-            '▧ Respuesta del docente',
+            'Respuesta del docente',
         );
+
         if (process.env.TEMPLATE_DOCUMENT_SCREENSHOT) {
             await page
                 .getByRole('region', { name: 'Administrador' })
@@ -446,6 +447,7 @@ test(
                     animations: 'disabled',
                 });
         }
+
         await page.evaluate(() => {
             window.fixture.api().commands.setContent({
                 type: 'doc',
@@ -476,7 +478,7 @@ test(
         });
         assert.deepEqual(
             await page.locator('.tiptap [data-template-field]').allInnerTexts(),
-            ['▧ Objetivo', '▧ Resultado esperado'],
+            ['Objetivo', 'Resultado esperado'],
         );
 
         // Integration: the actual dialog retains local edits on errors, owns its
