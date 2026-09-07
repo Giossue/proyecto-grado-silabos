@@ -114,3 +114,26 @@ y números de página visibles. El arrastre nativo observa el orden en la fase d
 captura de `drop`, antes de la mutación; la mención usa foco por clic como el usuario,
 sin competir con el foco diferido de Tiptap. No se cambiaron esos comportamientos de
 producción para acomodar la prueba.
+
+## Seguimiento — propiedades dentro de Editar diseño (2026-09-07)
+
+Petición del responsable: reunir las propiedades con el diseño. Alcance: ADM-06,
+CU-04, RF-017–026, RN-009–012 y RNF-018–023; sin cambiar roles ni decisiones PV.
+
+- [x] Separar Diseño y Propiedades en el mismo diálogo, con nombre, ayuda e IA.
+- [x] Guardar conjuntamente y conservar borradores entre pestañas; cancelar descarta
+      ambos. Retirar el Sheet de propiedades y mantener protegidos los datos del flujo.
+- [x] Validar alcance, concurrencia y retirada de campos en servidor; probar interfaz
+      y persistencia, y actualizar documentación/trazabilidad.
+
+Este incremento se centra en propiedades; no da por implementado el atajo
+`@docente` ni el traslado de los tipos de contenido propuestos anteriormente.
+
+Verificado: Configuración y contratos de interfaz afectados, **28 pruebas y 359
+aserciones**; las dos suites Chromium, **2/2**; Vue TypeScript, ESLint y formato
+del incremento, Pint y PHPStan de las clases afectadas. Revisión visual de
+Propiedades en escritorio claro y a 360 px en oscuro, sin desbordamiento horizontal,
+con pie visible y contenido desplazable. El transporte del navegador es sintético;
+la persistencia y autorización se prueban en PostgreSQL local aislado. Sin
+migraciones, cambios a datos institucionales, commit ni push. No se repitió la
+puerta global ni se consideran resueltos sus pendientes anteriores.

@@ -146,7 +146,6 @@ it('presenta el ciclo académico sin detalles de implementación', function (): 
         'resources/js/pages/Teacher/Syllabi/Edit.vue',
         'resources/js/pages/Teacher/Syllabi/Submit.vue',
         'resources/js/pages/Syllabi/Compare.vue',
-        'resources/js/components/domain/configuration/TemplateFieldSheet.vue',
         'resources/js/components/domain/configuration/TemplateDesignBlock.vue',
         'resources/js/components/domain/configuration/AcademicSourceEditSheet.vue',
     ];

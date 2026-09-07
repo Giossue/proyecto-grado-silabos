@@ -33,11 +33,11 @@ final class SaveTemplateDocument
         return hash('sha256', json_encode([$block->titulo, $block->configuracion, $block->fields->toArray()], JSON_THROW_ON_ERROR));
     }
 
-    /** @param array<string, mixed> $document */
-    public function execute(TemplateBlock $block, array $document, string $fingerprint, User $actor, Request $request): void
+    /** @param array<string, mixed>|null $document */
+    public function execute(TemplateBlock $block, ?array $document, string $fingerprint, User $actor, Request $request): void
     {
         abort_unless($actor->can('manage-templates'), 403);
-        $normalized = TemplateDocument::normalize($document, array_keys(TemplateVariables::definitions()));
+        $normalized = $document === null ? null : TemplateDocument::normalize($document, array_keys(TemplateVariables::definitions()));
         DB::transaction(function () use ($block, $normalized, $fingerprint, $actor, $request): void {
             SyllabusTemplate::query()->whereKey($block->plantilla_id)->lockForUpdate()->firstOrFail();
             $this->locks->assertTemplateEditable();
@@ -45,10 +45,27 @@ final class SaveTemplateDocument
             if (! hash_equals(self::fingerprint($block), $fingerprint)) {
                 throw ValidationException::withMessages(['fingerprint' => 'La plantilla cambió en otra sesión. Recargue antes de guardar; su diseño no fue sobrescrito.']);
             }
-            if ($block->configuredContentType() === 'flow') {
-                TemplateDocument::fail('El estado de revisión pertenece al flujo del sistema.');
+            $flow = $block->configuredContentType() === 'flow';
+            if ($flow !== ($normalized === null)) {
+                TemplateDocument::fail($flow ? 'El estado de revisión pertenece al flujo del sistema.' : 'El diseño del bloque es obligatorio.');
             }
             $fields = $block->fields->keyBy('clave');
+            foreach ($request->input('properties', []) as $index => $property) {
+                $field = $fields->get($property['key']);
+                if ($field === null || isset($block->configuracion['detached_fields'][$field->clave])) {
+                    throw ValidationException::withMessages(["properties.$index.key" => 'El campo no pertenece al diseño actual.']);
+                }
+                if (($property['ai_enabled'] ?? false) && ($field->heredado || in_array($block->configuredContentType(), ['institutional', 'flow'], true))) {
+                    throw ValidationException::withMessages(["properties.$index.ai_enabled" => 'Este campo no admite asistencia de IA.']);
+                }
+            }
+            if ($normalized === null) {
+                $this->work->requireConfirmation($request);
+                $this->saveProperties($block, $request, []);
+                $this->auditDesign($block, $actor, $request, $fields->count());
+
+                return;
+            }
             $used = [];
             $toCreate = [];
             foreach (TemplateDocument::nodes($normalized, 'field') as $node) {
@@ -168,14 +185,45 @@ final class SaveTemplateDocument
                 'titulo' => $request->has('title') ? $request->string('title')->trim()->value() : $block->titulo,
                 'configuracion' => [...$configuration, 'document' => $normalized],
             ]);
-            $this->audit->execute(
-                actorId: $actor->id,
-                roleAssignmentId: $this->roles->resolve($request)?->id,
-                action: 'plantilla.diseno_actualizado', resourceType: 'bloque_plantilla',
-                resourceId: $block->id, result: 'exito',
-                correlationId: $request->attributes->getString('correlation_id') ?: null,
-                metadata: ['fields' => count(array_unique($used))],
-            );
+            $this->saveProperties($block, $request, $detached);
+            $this->auditDesign($block, $actor, $request, count(array_unique($used)));
         });
+    }
+
+    /** @param array<string, mixed> $detached */
+    private function saveProperties(TemplateBlock $block, Request $request, array $detached): void
+    {
+        foreach ($request->input('properties', []) as $property) {
+            $attributes = ['ayuda' => $property['help']];
+            if (array_key_exists('ai_enabled', $property) && ! in_array($block->configuredContentType(), ['institutional', 'flow'], true)) {
+                // Un campo retirado conserva su configuración para una futura restauración,
+                // pero no vuelve a habilitarse en el formulario actual.
+                if (isset($detached[$property['key']])) {
+                    $detached[$property['key']]['ia_habilitada'] = $property['ai_enabled'];
+                } else {
+                    $attributes['ia_habilitada'] = $property['ai_enabled'];
+                }
+            }
+            $block->fields()->where('clave', $property['key'])->update($attributes);
+        }
+        $block->update([
+            'titulo' => $request->has('title') ? $request->string('title')->trim()->value() : $block->titulo,
+            'configuracion' => [...($block->configuracion ?? []), 'detached_fields' => $detached],
+        ]);
+        if ($block->configuredContentType() === 'flow' && $request->has('title')) {
+            $block->fields()->first()?->update(['etiqueta' => $block->titulo]);
+        }
+    }
+
+    private function auditDesign(TemplateBlock $block, User $actor, Request $request, int $fields): void
+    {
+        $this->audit->execute(
+            actorId: $actor->id,
+            roleAssignmentId: $this->roles->resolve($request)?->id,
+            action: 'plantilla.diseno_actualizado', resourceType: 'bloque_plantilla',
+            resourceId: $block->id, result: 'exito',
+            correlationId: $request->attributes->getString('correlation_id') ?: null,
+            metadata: ['fields' => $fields],
+        );
     }
 }

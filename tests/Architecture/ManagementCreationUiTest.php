@@ -726,12 +726,12 @@ it('arma la plantilla sobre la hoja impresa, sin formularios por tarjeta', funct
         ->toContain('startRename')
         ->toContain('@keydown.enter.prevent="commitRename"')
         ->toContain('@keydown.esc.prevent="cancelRename"')
-        // Menú del campo: tipo, propiedades y eliminar. Sin botones «Guardar».
+        // Propiedades vive dentro del diálogo de diseño, no en otro Sheet.
         ->toContain('Tipo de contenido')
-        ->toContain('Propiedades')
+        ->not->toContain('openProperties')
         ->toContain('Eliminar campo')
         ->toContain('Eliminar bloque')
-        ->toContain('<TemplateFieldSheet')
+        ->not->toContain('<TemplateFieldSheet')
         ->toContain('preserveScroll: true')
         ->not->toContain('Guardar bloque')
         ->not->toContain('Guardar campo')
@@ -769,16 +769,12 @@ it('arma la plantilla sobre la hoja impresa, sin formularios por tarjeta', funct
         ->toContain('ResizeObserver')
         ->toContain('MutationObserver');
 
-    $properties = file_get_contents(
-        $root.'/resources/js/components/domain/configuration/TemplateFieldSheet.vue',
-    );
-
-    expect($properties)
-        ->toBeString()
-        ->toContain('Propiedades del campo')
-        ->toContain(':show-trigger="false"')
-        ->toContain('defineExpose({ edit })')
-        ->toContain('name="content_type"')
+    expect(preg_replace('/\s+/', ' ', $design))
+        ->toContain('value="properties"')
+        ->toContain('Ayuda para el docente')
+        ->toContain('Permite asistencia de IA')
+        ->toContain('force-mount')
+        ->toContain('propertiesSnapshot')
         ->not->toContain('Código de referencia');
 });
 

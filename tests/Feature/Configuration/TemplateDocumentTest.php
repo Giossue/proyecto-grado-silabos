@@ -208,6 +208,64 @@ class TemplateDocumentTest extends TestCase
             ->assertSessionHasErrors('document');
     }
 
+    public function test_design_properties_save_atomically_and_reject_foreign_fields_and_stale_edits(): void
+    {
+        $template = $this->template();
+        $field = $template->fields()->where('clave', 'objetivo_general')->firstOrFail();
+        $block = $field->block;
+        $url = route('admin.templates.blocks.document', [$template, $block]);
+        $fingerprint = SaveTemplateDocument::fingerprint($block);
+        $payload = ['document' => $this->document(), 'fingerprint' => $fingerprint, 'title' => 'Nuevo título',
+            'properties' => [['key' => $field->clave, 'help' => 'Ayuda actualizada.', 'ai_enabled' => true]]];
+        $this->patch($url, [...$payload, 'properties' => [...$payload['properties'], ['key' => 'descripcion', 'help' => 'No debe guardarse.']]])
+            ->assertSessionHasErrors('properties.1.key');
+        $this->assertSame($fingerprint, SaveTemplateDocument::fingerprint($block->fresh()));
+        $this->patch($url, [...$payload, 'properties' => [['key' => $field->clave, 'help' => str_repeat('x', 2001)]]])
+            ->assertSessionHasErrors('properties.0.help');
+        $this->assertSame($fingerprint, SaveTemplateDocument::fingerprint($block->fresh()));
+        $this->patch($url, $payload)->assertSessionHasNoErrors();
+        $this->assertSame('Nuevo título', $block->fresh()->titulo);
+        $this->assertSame('Ayuda actualizada.', $field->fresh()->ayuda);
+        $this->assertTrue($field->fresh()->ia_habilitada);
+        $this->assertSame($field->tipo, $field->fresh()->tipo);
+        $this->patch($url, [...$payload, 'title' => 'Cambio obsoleto'])->assertSessionHasErrors('fingerprint');
+        $this->assertSame('Nuevo título', $block->fresh()->titulo);
+    }
+
+    public function test_properties_cannot_enable_ai_on_inherited_fields_or_reactivate_removed_fields(): void
+    {
+        $template = $this->template();
+        $field = $template->fields()->where('clave', 'objetivo_general')->firstOrFail();
+        $block = $field->block;
+        $url = route('admin.templates.blocks.document', [$template, $block]);
+        $field->update(['heredado' => true]);
+        $payload = ['document' => $this->document(), 'fingerprint' => SaveTemplateDocument::fingerprint($block->fresh()),
+            'properties' => [['key' => $field->clave, 'help' => null, 'ai_enabled' => true]]];
+        $this->patch($url, $payload)->assertSessionHasErrors('properties.0.ai_enabled');
+        $field->update(['heredado' => false]);
+        $payload['fingerprint'] = SaveTemplateDocument::fingerprint($block->fresh());
+        $payload['document'] = ['type' => 'doc', 'content' => [['type' => 'paragraph']]];
+        $this->patch($url, $payload)->assertSessionHasNoErrors();
+        $this->assertFalse($field->fresh()->ia_habilitada);
+        $this->assertFalse($field->fresh()->editable_docente);
+        $this->assertTrue($block->fresh()->configuracion['detached_fields'][$field->clave]['ia_habilitada']);
+    }
+
+    public function test_flow_accepts_only_properties_and_never_a_document(): void
+    {
+        $template = $this->template();
+        $block = $template->sections()->with('blocks')->get()->flatMap->blocks->first(fn ($block) => $block->configuredContentType() === 'flow');
+        $this->assertNotNull($block);
+        $field = $block->fields()->firstOrFail();
+        $url = route('admin.templates.blocks.document', [$template, $block]);
+        $payload = ['document' => null, 'fingerprint' => SaveTemplateDocument::fingerprint($block),
+            'properties' => [['key' => $field->clave, 'help' => 'Estado determinado por el sistema.']]];
+        $this->patch($url, [...$payload, 'document' => $this->document()])->assertSessionHasErrors('document');
+        $this->patch($url, $payload)->assertSessionHasNoErrors();
+        $this->assertSame('Estado determinado por el sistema.', $field->fresh()->ayuda);
+        $this->assertArrayNotHasKey('document', $block->fresh()->configuracion);
+    }
+
     private function template(): SyllabusTemplate
     {
         $this->seed(DatabaseSeeder::class);

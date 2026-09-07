@@ -7,7 +7,6 @@ import {
     List,
     ListOrdered,
     MoreHorizontal,
-    Settings2,
     Table,
     Trash2,
     Type,
@@ -16,7 +15,6 @@ import { computed, nextTick, ref, watch } from 'vue';
 import { toast } from 'vue-sonner';
 import TemplateController from '@/actions/App/Modules/Configuration/Presentation/Http/Controllers/TemplateController';
 import TemplateDesignBlock from '@/components/domain/configuration/TemplateDesignBlock.vue';
-import TemplateFieldSheet from '@/components/domain/configuration/TemplateFieldSheet.vue';
 import PaginatedDocument from '@/components/domain/PaginatedDocument.vue';
 import type { IdentificationCell } from '@/components/domain/syllabus/IdentificationCard.vue';
 import { Button } from '@/components/ui/button';
@@ -133,9 +131,6 @@ const pendingFocus = ref<{ kind: 'section' | 'field'; key: string } | null>(
     null,
 );
 const deletion = ref<Deletion | null>(null);
-const propertiesSheet = ref<InstanceType<typeof TemplateFieldSheet> | null>(
-    null,
-);
 
 const copySections = (value: TemplateSection[]): TemplateSection[] =>
     value.map((section) => ({
@@ -461,14 +456,6 @@ const changeType = (container: FieldContainer, contentType: string): void => {
         { content_type: contentType },
         `Ahora es ${typeLabel(contentType).toLowerCase()}.`,
     );
-};
-
-const openProperties = (container: FieldContainer): void => {
-    const field = firstField(container);
-
-    if (field) {
-        propertiesSheet.value?.edit(field, container.id);
-    }
 };
 
 const confirmDeletion = (): void => {
@@ -1217,18 +1204,6 @@ const dropOnFieldZone = (section: TemplateSection, index: number): void => {
                                                 >
                                                     Renombrar
                                                 </DropdownMenuItem>
-                                                <DropdownMenuItem
-                                                    @select="
-                                                        openProperties(
-                                                            container,
-                                                        )
-                                                    "
-                                                >
-                                                    <Settings2
-                                                        aria-hidden="true"
-                                                    />
-                                                    Propiedades
-                                                </DropdownMenuItem>
                                                 <DropdownMenuSeparator />
                                                 <DropdownMenuItem
                                                     variant="destructive"
@@ -1308,12 +1283,6 @@ const dropOnFieldZone = (section: TemplateSection, index: number): void => {
                 />
             </PaginatedDocument>
         </div>
-
-        <TemplateFieldSheet
-            v-if="!readonly"
-            ref="propertiesSheet"
-            :template-id="templateId"
-        />
 
         <Dialog
             :open="newSectionPosition !== null"

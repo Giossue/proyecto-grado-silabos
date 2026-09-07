@@ -122,6 +122,14 @@ inserción del cliente son base cero; `position` del caso de uso se envía en ba
 ## Diseño integrado de la plantilla (I-56)
 
 `TemplateSheetEditor` conserva bloques, arrastre, paleta y paginación. Cada
+`TemplateDesignBlock` reúne Diseño y Propiedades usando las pestañas compartidas.
+Mantiene montado el editor al cambiar de pestaña y controla el borrador conjunto
+(nombre, ayuda, IA y documento), incluido el aviso de salida. Un solo PATCH de
+`SaveTemplateDocument` verifica la huella y persiste todo en la misma transacción;
+solo el bloque de flujo envía documento nulo para editar sus propiedades, nunca
+su estructura. Los campos heredados y los bloques fijos no ofrecen asistencia de IA.
+Se retiró `TemplateFieldSheet`; las propiedades ya no tienen un guardado separado.
+
 `TemplateDesignBlock` ofrece `TemplateDocumentEditor` (Tiptap Vue 3, ADR-0007) en un
 diálogo amplio con guardado explícito. La cinta reutiliza Button, Select, FieldGroup,
 Input, Alert y Dialog compartidos; los colores libres pertenecen al documento, no al

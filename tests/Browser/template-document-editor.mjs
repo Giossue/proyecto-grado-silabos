@@ -42,7 +42,7 @@ router.patch = async (url, data, options) => {
   options.onError?.(errors);
   document.dispatchEvent(new CustomEvent('inertia:error', {detail: {errors}}));
  } else {
-  block.value = {...block.value, document: JSON.parse(JSON.stringify(data.document)), fingerprint: 'b'.repeat(64)};
+  block.value = {...block.value, title: data.title, fields: block.value.fields.map(field => ({...field, ...data.properties.find(property => property.key === field.key)})), document: JSON.parse(JSON.stringify(data.document)), fingerprint: 'b'.repeat(64)};
   await options.onSuccess?.({});
  }
  options.onFinish?.(visit);
@@ -266,9 +266,74 @@ test(
             name: 'Diseño: Objetivo',
             exact: true,
         });
+        await dialog
+            .getByRole('tab', { name: 'Propiedades', exact: true })
+            .click();
+        await dialog
+            .getByLabel('Ayuda para el docente', { exact: true })
+            .fill('Cambio descartado');
+        await dialog
+            .getByText('Cambios sin guardar', { exact: true })
+            .waitFor();
+        assert.equal(
+            await page.evaluate(() => {
+                const event = new Event('beforeunload', { cancelable: true });
+                window.dispatchEvent(event);
+
+                return event.defaultPrevented;
+            }),
+            true,
+        );
+        await dialog
+            .getByRole('button', { name: 'Cancelar', exact: true })
+            .click();
+        await page
+            .getByRole('button', { name: 'Descartar cambios', exact: true })
+            .click();
+        await dialog.waitFor({ state: 'hidden' });
+        assert.equal(
+            await page.evaluate(() => window.fixture.requests.length),
+            0,
+        );
+        await page
+            .getByRole('button', { name: 'Editar diseño de Objetivo' })
+            .click();
+        await dialog
+            .getByRole('tab', { name: 'Propiedades', exact: true })
+            .click();
+        assert.equal(
+            await dialog
+                .getByLabel('Ayuda para el docente', { exact: true })
+                .inputValue(),
+            '',
+        );
+        await dialog
+            .getByLabel('Ayuda para el docente', { exact: true })
+            .fill('Indique el objetivo con claridad.');
+        await dialog
+            .getByRole('checkbox', {
+                name: 'Permite asistencia de IA',
+                exact: true,
+            })
+            .check();
+        await dialog.getByRole('tab', { name: 'Diseño', exact: true }).click();
         await dialog.locator('.tiptap').click();
         await page.keyboard.press('Control+End');
         await page.keyboard.type('Cambio persistente');
+        await dialog
+            .getByRole('tab', { name: 'Propiedades', exact: true })
+            .click();
+        assert.equal(
+            await dialog
+                .getByLabel('Ayuda para el docente', { exact: true })
+                .inputValue(),
+            'Indique el objetivo con claridad.',
+        );
+        await dialog.getByRole('tab', { name: 'Diseño', exact: true }).click();
+        assert.match(
+            await dialog.locator('.tiptap').innerText(),
+            /Cambio persistente/,
+        );
         await page.evaluate(() =>
             window.fixture.fail({ document: 'Diseño inválido de prueba' }),
         );
@@ -289,6 +354,9 @@ test(
             }),
         );
         await dialog
+            .getByRole('tab', { name: 'Propiedades', exact: true })
+            .click();
+        await dialog
             .getByRole('button', { name: 'Guardar diseño', exact: true })
             .click();
         await dialog
@@ -307,6 +375,13 @@ test(
         assert.equal(requests[0].fingerprint, 'a'.repeat(64));
         assert.equal(requests[0].confirm_purge, false);
         assert.equal(requests[2].confirm_purge, true);
+        assert.deepEqual(requests[2].properties, [
+            {
+                key: 'objetivo',
+                help: 'Indique el objetivo con claridad.',
+                ai_enabled: true,
+            },
+        ]);
         await page
             .getByRole('button', { name: 'Editar diseño de Objetivo' })
             .click();
@@ -314,6 +389,36 @@ test(
             await dialog.locator('.tiptap').innerText(),
             /Cambio persistente/,
         );
+        await dialog
+            .getByRole('tab', { name: 'Propiedades', exact: true })
+            .click();
+        assert.equal(
+            await dialog
+                .getByLabel('Ayuda para el docente', { exact: true })
+                .inputValue(),
+            'Indique el objetivo con claridad.',
+        );
+        assert.equal(
+            await dialog
+                .getByRole('checkbox', {
+                    name: 'Permite asistencia de IA',
+                    exact: true,
+                })
+                .isChecked(),
+            true,
+        );
+
+        if (process.env.TEMPLATE_DOCUMENT_SCREENSHOT) {
+            await page.screenshot({
+                path: process.env.TEMPLATE_DOCUMENT_SCREENSHOT.replace(
+                    '.png',
+                    '-properties.png',
+                ),
+                animations: 'disabled',
+            });
+        }
+
+        await dialog.getByRole('tab', { name: 'Diseño', exact: true }).click();
         assert.deepEqual(errors, []);
 
         if (process.env.TEMPLATE_DOCUMENT_SCREENSHOT) {
@@ -370,6 +475,36 @@ test(
                 path: process.env.TEMPLATE_DOCUMENT_SCREENSHOT.replace(
                     /\.png$/,
                     '-mobile.png',
+                ),
+                animations: 'disabled',
+            });
+        }
+
+        await dialog
+            .getByRole('tab', { name: 'Propiedades', exact: true })
+            .click();
+        const propertiesPanel = dialog.getByRole('tabpanel', {
+            name: 'Propiedades',
+            exact: true,
+        });
+        assert.equal(
+            await propertiesPanel.evaluate(
+                (element) => element.scrollWidth <= element.clientWidth,
+            ),
+            true,
+        );
+        assert.equal(
+            await dialog
+                .getByRole('button', { name: 'Guardar diseño', exact: true })
+                .isVisible(),
+            true,
+        );
+
+        if (process.env.TEMPLATE_DOCUMENT_SCREENSHOT) {
+            await page.screenshot({
+                path: process.env.TEMPLATE_DOCUMENT_SCREENSHOT.replace(
+                    '.png',
+                    '-properties-mobile.png',
                 ),
                 animations: 'disabled',
             });

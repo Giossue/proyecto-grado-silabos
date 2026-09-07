@@ -26,23 +26,23 @@
 
 ## Coordinador
 
-| ID     | Pantalla                                                         |
-| ------ | ---------------------------------------------------------------- |
-| COR-01 | Panel de coordinación                                            |
-| COR-02 | Convocatorias                                                    |
-| COR-03 | Asistente de convocatoria                                        |
-| COR-04 | Seguimiento de convocatoria                                      |
-| COR-05 | Cola de revisión                                                 |
-| COR-06 | Espacio de revisión                                              |
-| COR-07 | Comparar revisiones                                              |
-| COR-08 | Solicitar corrección                                             |
-| COR-09 | Aprobar                                                          |
-| COR-10 | Reabrir aprobado                                                 |
-| COR-11 | Fuentes académicas                                               |
-| COR-12 | Informes                                                         |
-| COR-13 | Malla, constructor visual/formulario y materias de la carrera    |
-| COR-14 | Ofertas académicas de la carrera y sus paralelos                 |
-| COR-15 | Asignaciones docentes de la carrera                              |
+| ID     | Pantalla                                                      |
+| ------ | ------------------------------------------------------------- |
+| COR-01 | Panel de coordinación                                         |
+| COR-02 | Convocatorias                                                 |
+| COR-03 | Asistente de convocatoria                                     |
+| COR-04 | Seguimiento de convocatoria                                   |
+| COR-05 | Cola de revisión                                              |
+| COR-06 | Espacio de revisión                                           |
+| COR-07 | Comparar revisiones                                           |
+| COR-08 | Solicitar corrección                                          |
+| COR-09 | Aprobar                                                       |
+| COR-10 | Reabrir aprobado                                              |
+| COR-11 | Fuentes académicas                                            |
+| COR-12 | Informes                                                      |
+| COR-13 | Malla, constructor visual/formulario y materias de la carrera |
+| COR-14 | Ofertas académicas de la carrera y sus paralelos              |
+| COR-15 | Asignaciones docentes de la carrera                           |
 
 En COR-15, **Crear docente** abre el formulario compartido de cuentas en modo docente
 de la carrera activa (I-54): rol y carrera se muestran fijos. Un correo existente se
@@ -128,9 +128,13 @@ completo. El alta está separada de asignar paralelos y no levanta sus bloqueos.
   «Bloque», tanto al pulsarlo como al soltarlo, pide elegir su primer campo (Texto,
   Tabla, Lista con viñetas o Lista numerada) antes de crearlo; cancelar no crea nada. Los
   títulos se renombran con un clic; el asa reordena; el menú de tres puntos cambia el
-  tipo mientras no tenga un diseño personalizado, abre Propiedades en un `Sheet` o
-  elimina con confirmación. Estas operaciones se guardan solas; el contenido de
-  «Editar diseño» se guarda explícitamente. Con el proceso abierto la hoja se muestra
+  tipo mientras no tenga un diseño personalizado o elimina con confirmación. Estas
+  operaciones se guardan solas. «Editar diseño» reúne las pestañas Diseño y
+  Propiedades: nombre, ayuda de cada campo guardado y asistencia de IA cuando
+  corresponde. Un único guardado persiste diseño y propiedades; cambiar de pestaña
+  conserva el borrador y cancelar permite descartarlo todo. Los campos nuevos deben
+  guardarse antes de configurar su ayuda. El bloque de estado solo ofrece Propiedades,
+  sin permitir editar datos ni formato del flujo. Con el proceso abierto la hoja se muestra
   sin paleta, asas ni edición de diseño.
   Estándar del impreso: logos institucionales, título azul centrado, Arial 11 pt, bloques
   numerados «1.» y campos «1.1» en negrita, márgenes de 2.5 cm, tablas con cabecera azul y
@@ -179,8 +183,8 @@ completo. El alta está separada de asignar paralelos y no levanta sus bloqueos.
   de fuente, negrita, cursiva, subrayado, alineación, listas y deshacer/rehacer. La
   tabla permite agregar/quitar filas y columnas, ajustar anchos, fondo y combinar o
   separar celdas horizontal y verticalmente; se seleccionan arrastrando o con Mayús
-  + clic. No hay galería obligatoria de formatos. Los formatos iniciales oficiales
-  siguen disponibles al crear la plantilla y no se reescriben simplemente por abrirla.
+    - clic. No hay galería obligatoria de formatos. Los formatos iniciales oficiales
+      siguen disponibles al crear la plantilla y no se reescriben simplemente por abrirla.
 - En el diseño, texto normal es fijo; «Insertar campo» pide nombre y tipo de respuesta
   del docente; `@` ofrece variables descriptivas con búsqueda y teclado. Solo los
   campos se llenan manualmente. «Guardar diseño» conserva errores y borrador ante
@@ -284,11 +288,11 @@ completo. El alta está separada de asignar paralelos y no levanta sus bloqueos.
 
 ### Cobertura del patrón de altas
 
-| Rol           | Interfaces cubiertas                                       | Comportamiento                                                                                                                             |
-| ------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Administrador | ADM-02, ADM-03, ADM-04, ADM-05, ADM-06 y ADM-12            | Cuentas, roles, catálogos, coordinaciones, campos y procesos de sílabos se crean desde una acción que abre el `Sheet` derecho. La única plantilla institucional se crea de inmediato porque no pide datos. |
-| Coordinador   | COR-02, COR-06, COR-11, COR-13, COR-14 y COR-15            | Convocatorias, observaciones, fuentes, mallas, materias, ofertas, paralelos y asignaciones docentes usan el mismo patrón. En COR-15, los selectores permiten buscar docentes por nombre o correo y paralelos por materia, período o código. |
-| Docente       | DOC-02 a DOC-10                                            | No administra colecciones maestras. Edición, IA, envío y respuestas son flujos académicos de página completa, no formularios de alta.      |
+| Rol           | Interfaces cubiertas                            | Comportamiento                                                                                                                                                                                                                              |
+| ------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Administrador | ADM-02, ADM-03, ADM-04, ADM-05, ADM-06 y ADM-12 | Cuentas, roles, catálogos, coordinaciones, campos y procesos de sílabos se crean desde una acción que abre el `Sheet` derecho. La única plantilla institucional se crea de inmediato porque no pide datos.                                  |
+| Coordinador   | COR-02, COR-06, COR-11, COR-13, COR-14 y COR-15 | Convocatorias, observaciones, fuentes, mallas, materias, ofertas, paralelos y asignaciones docentes usan el mismo patrón. En COR-15, los selectores permiten buscar docentes por nombre o correo y paralelos por materia, período o código. |
+| Docente       | DOC-02 a DOC-10                                 | No administra colecciones maestras. Edición, IA, envío y respuestas son flujos académicos de página completa, no formularios de alta.                                                                                                       |
 
 Selección de rol, filtros, configuración personal, resolución de contradicciones y
 acciones de ciclo de vida como publicar, activar, aprobar o reabrir permanecen en su
