@@ -34,7 +34,9 @@ const observeContent = () => {
         childList: true,
         characterData: true,
         attributes: true,
-        attributeFilter: ['class', 'style', 'src', 'rowspan', 'colspan'],
+        // Selection, focus and drag classes never change document geometry.
+        // Observing them caused a full repagination on every editor click.
+        attributeFilter: ['style', 'src', 'rowspan', 'colspan'],
     });
 };
 

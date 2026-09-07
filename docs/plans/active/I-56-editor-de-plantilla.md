@@ -250,3 +250,5 @@ de Propiedades a 360 px. Sin migraciones, commit ni push.
       JSON ni la exportación.
 - [x] Cubrir la regresión con una tabla editable de 24 filas estable durante múltiples
       ciclos de renderizado y paginación.
+- [x] Evitar repaginaciones por clases transitorias de selección, foco y arrastre; la
+      regresión confirma cero reconstrucciones de espaciadores al seleccionar un campo.

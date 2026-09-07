@@ -386,9 +386,24 @@ test(
                 2,
             );
 
+            const pagedSections = sections(14, true);
+            pagedSections[0].blocks[0].document.content.push({
+                type: 'paragraph',
+                content: [
+                    {
+                        type: 'field',
+                        attrs: {
+                            key: 'field_0',
+                            label: 'Escala cualitativa',
+                            kind: 'texto_largo',
+                            listStyle: null,
+                        },
+                    },
+                ],
+            });
             await page.evaluate(
                 (value) => window.fixture.setSections(value),
-                sections(14, true),
+                pagedSections,
             );
             await page.waitForFunction(
                 () =>
@@ -451,6 +466,42 @@ test(
                     exact: true,
                 })
                 .click();
+            await page.evaluate(() => {
+                const state = { count: 0 };
+                const observer = new MutationObserver((records) => {
+                    state.count += records.filter((record) =>
+                        [...record.addedNodes, ...record.removedNodes].some(
+                            (node) =>
+                                node instanceof HTMLElement &&
+                                (node.hasAttribute('data-page-spacer') ||
+                                    node.querySelector?.('[data-page-spacer]')),
+                        ),
+                    ).length;
+                });
+                observer.observe(
+                    document.querySelector('.paged-document-content'),
+                    { childList: true, subtree: true },
+                );
+                window.paginationSelectionCheck = { observer, state };
+            });
+            await page.locator('[data-template-field="field_0"]').click();
+            const selectionPaginationChanges = await page.evaluate(
+                () =>
+                    new Promise((resolve) => {
+                        requestAnimationFrame(() =>
+                            requestAnimationFrame(() => {
+                                const check = window.paginationSelectionCheck;
+                                check.observer.disconnect();
+                                resolve(check.state.count);
+                            }),
+                        );
+                    }),
+            );
+            assert.equal(
+                selectionPaginationChanges,
+                0,
+                'Selecting a field must not rebuild pagination spacers',
+            );
             await page.locator('.tiptap').first().click();
             await page.keyboard.press('Control+End');
             await page.keyboard.type(' Cambio global');

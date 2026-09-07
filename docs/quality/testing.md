@@ -90,7 +90,8 @@ diseño, guardado/reapertura y errores conservados. El transporte sintético dis
 eventos Inertia para comprobar que la edición directa conserva el borrador y que su
 confirmación local es la única que gestiona reinicios. También prueba el menú de clic
 derecho por contexto, el modo global de edición, el panel lateral de Propiedades y que
-los ciclos de paginación no agreguen filas a una tabla Tiptap activa.
+los ciclos de paginación no agreguen filas a una tabla Tiptap activa ni se reconstruyan
+al seleccionar un campo sin alterar contenido.
 `TEMPLATE_DOCUMENT_SCREENSHOT` guarda una captura de la muestra. Las dos suites de
 navegador tienen cachés Vite separadas para no interferir al ejecutarse en paralelo.
 
