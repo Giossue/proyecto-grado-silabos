@@ -341,6 +341,11 @@ const selectedField = computed(() => {
         ? selection.node
         : null;
 });
+const selectedPersistedField = computed(() =>
+    selectedField.value
+        ? persistedKeys.has(String(selectedField.value.attrs.key))
+        : false,
+);
 watch(selectedField, (node) => {
     if (node) {
         fieldLabel.value = String(node.attrs.label);
@@ -362,7 +367,8 @@ watch(selectedField, (node) => {
 const fieldDraftDirty = computed(
     () =>
         selectedField.value !== null &&
-        (fieldLabel.value !== selectedField.value.attrs.label ||
+        ((!selectedPersistedField.value &&
+            fieldLabel.value !== selectedField.value.attrs.label) ||
             fieldType.value !==
                 (selectedField.value.attrs.listStyle === 'bullet'
                     ? 'bulleted_list'
@@ -462,7 +468,9 @@ const updateField = () => {
         ) {
             transaction.setNodeMarkup(position, undefined, {
                 ...child.attrs,
-                label: attrs.label,
+                label: persistedKeys.has(String(node.attrs.key))
+                    ? child.attrs.label
+                    : attrs.label,
                 listStyle: attrs.listStyle,
                 kind: persistedKeys.has(String(node.attrs.key))
                     ? child.attrs.kind
@@ -903,13 +911,16 @@ defineExpose({ save, editor });
             <TabsContent value="fields" class="flex flex-col gap-3">
                 <p class="text-sm text-muted-foreground">
                     {{
-                        selectedField
-                            ? 'Edite el campo seleccionado. Los cambios se guardan con el diseño.'
-                            : 'Escriba @docente en el documento o inserte aquí un nuevo campo.'
+                        selectedPersistedField
+                            ? 'Cambie aquí la presentación. Para renombrar este campo, use Propiedades.'
+                            : selectedField
+                              ? 'Defina el nombre y la presentación del campo nuevo.'
+                              : 'Escriba @docente en el documento o inserte aquí un nuevo campo.'
                     }}
                 </p>
                 <FieldGroup class="flex flex-row flex-wrap items-end gap-2">
                     <Field
+                        v-if="!selectedPersistedField"
                         class="w-56"
                         :data-invalid="
                             Boolean(selectedField && !fieldLabel.trim())

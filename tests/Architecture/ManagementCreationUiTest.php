@@ -775,10 +775,26 @@ it('arma la plantilla sobre la hoja impresa, sin formularios por tarjeta', funct
     expect(preg_replace('/\s+/', ' ', $design))
         ->toContain('value="properties"')
         ->toContain('Ayuda para el docente')
+        ->toContain('Nombre del bloque')
+        ->toContain('Nombre del campo')
+        ->toContain('v-if="!isFlow && !singleField"')
         ->toContain('Permite asistencia de IA')
         ->toContain('force-mount')
         ->toContain('propertiesSnapshot')
         ->not->toContain('Código de referencia');
+
+    $documentEditor = file_get_contents(
+        $root.'/resources/js/components/domain/configuration/TemplateDocumentEditor.vue',
+    );
+    expect($documentEditor)
+        ->toContain('selectedPersistedField')
+        ->toContain('Para renombrar este campo, use Propiedades.');
+
+    $sheetEditor = file_get_contents(
+        $root.'/resources/js/components/domain/configuration/TemplateSheetEditor.vue',
+    );
+    expect(preg_replace('/\s+/', ' ', $sheetEditor))
+        ->toContain('v-else-if="section.blocks.length > 1"');
 });
 
 it('abre los detalles de los listados desde sus acciones', function (): void {

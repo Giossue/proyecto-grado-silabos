@@ -381,7 +381,7 @@ test(
         // Integration: the actual dialog retains local edits on errors, owns its
         // purge confirmation and reopens the persisted document with a new fingerprint.
         await page.evaluate(() => window.fixture.openDesign());
-        const dialog = page.getByRole('dialog', {
+        let dialog = page.getByRole('dialog', {
             name: 'Diseño: Objetivo',
             exact: true,
         });
@@ -427,6 +427,9 @@ test(
         await dialog
             .getByLabel('Ayuda para el docente', { exact: true })
             .fill('Indique el objetivo con claridad.');
+        await dialog
+            .getByLabel('Nombre del bloque', { exact: true })
+            .fill('Objetivo renovado');
         await dialog
             .getByRole('checkbox', {
                 name: 'Permite asistencia de IA',
@@ -495,11 +498,16 @@ test(
         assert.deepEqual(requests[2].properties, [
             {
                 key: 'objetivo',
+                label: 'Objetivo renovado',
                 help: 'Indique el objetivo con claridad.',
                 ai_enabled: true,
             },
         ]);
         await page.evaluate(() => window.fixture.openDesign());
+        dialog = page.getByRole('dialog', {
+            name: 'Diseño: Objetivo renovado',
+            exact: true,
+        });
         assert.match(
             await dialog.locator('.tiptap').innerText(),
             /Cambio persistente/,
@@ -515,12 +523,33 @@ test(
         );
         assert.equal(
             await dialog
+                .getByLabel('Nombre del bloque', { exact: true })
+                .inputValue(),
+            'Objetivo renovado',
+        );
+        assert.equal(
+            await dialog
                 .getByRole('checkbox', {
                     name: 'Permite asistencia de IA',
                     exact: true,
                 })
                 .isChecked(),
             true,
+        );
+
+        await dialog.getByRole('tab', { name: 'Diseño', exact: true }).click();
+        await dialog.locator('[data-template-field="objetivo"]').click();
+        await dialog.getByRole('tab', { name: 'Campos', exact: true }).click();
+        await dialog
+            .getByText('Para renombrar este campo, use Propiedades.', {
+                exact: false,
+            })
+            .waitFor();
+        assert.equal(
+            await dialog
+                .getByLabel('Campo que llenará el docente', { exact: true })
+                .count(),
+            0,
         );
 
         if (process.env.TEMPLATE_DOCUMENT_SCREENSHOT) {

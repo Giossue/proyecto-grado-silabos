@@ -162,3 +162,22 @@ la selección con una API para insertar `@docente`. Se conserva NodeSelection al
 renombrar o cambiar el formato, sin conversiones de tipos existentes. Sin
 migraciones ni modificaciones de datos institucionales. No se repite la puerta
 global ni se dan por cerrados sus pendientes previos.
+
+## Seguimiento — renombrado en Propiedades (2026-09-07)
+
+Petición confirmada: los campos existentes se renombran junto a su ayuda e IA en
+Propiedades, no al seleccionarlos dentro del lienzo. Alcance ADM-06, CU-04,
+RF-017..026, RN-009..012 y RNF-018..023; sin cambios de rol ni de tipo persistido.
+
+- [x] Mostrar solo «Nombre del bloque» cuando contiene un campo; con dos o más,
+      mostrar además «Nombre del campo» en cada ficha de Propiedades.
+- [x] Mantener en Campos el nombre solo durante el alta de `@docente`; un campo ya
+      guardado permite cambiar su presentación, pero remite a Propiedades para renombrar.
+- [x] Guardar etiqueta, documento y propiedades en la misma transacción, con alcance,
+      concurrencia y validación; cubrir interfaz, servidor y documentación.
+
+Verificación: **102 pruebas / 1658 aserciones** de Configuración, Sílabos y
+Documentos en PostgreSQL local aislado; contrato ADM-06 puntual, **14 pruebas /
+188 aserciones**; y **2/2 suites Chromium**. Pasan TypeScript, ESLint/Prettier,
+Pint y PHPStan del incremento. La revisión visual confirma una sola entrada, rotulada
+«Nombre del bloque», en bloques de un campo. No se hicieron commit ni push.

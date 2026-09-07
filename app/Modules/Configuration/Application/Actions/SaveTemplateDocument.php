@@ -66,6 +66,7 @@ final class SaveTemplateDocument
 
                 return;
             }
+            $normalized = $this->applyPropertyLabels($normalized, $request->input('properties', []));
             $used = [];
             $toCreate = [];
             $labels = [];
@@ -202,7 +203,7 @@ final class SaveTemplateDocument
     private function saveProperties(TemplateBlock $block, Request $request, array $detached): void
     {
         foreach ($request->input('properties', []) as $property) {
-            $attributes = ['ayuda' => $property['help']];
+            $attributes = ['etiqueta' => $property['label'], 'ayuda' => $property['help']];
             if (array_key_exists('ai_enabled', $property) && ! in_array($block->configuredContentType(), ['institutional', 'flow'], true)) {
                 // Un campo retirado conserva su configuración para una futura restauración,
                 // pero no vuelve a habilitarse en el formulario actual.
@@ -221,6 +222,31 @@ final class SaveTemplateDocument
         if ($block->configuredContentType() === 'flow' && $request->has('title')) {
             $block->fields()->first()?->update(['etiqueta' => $block->titulo]);
         }
+    }
+
+    /** @param array<string, mixed> $document
+     * @param  list<array<string, mixed>>  $properties
+     * @return array<string, mixed>
+     */
+    private function applyPropertyLabels(array $document, array $properties): array
+    {
+        $labels = [];
+        foreach ($properties as $property) {
+            $labels[$property['key']] = trim($property['label']);
+        }
+        $visit = function (array $node) use (&$visit, $labels): array {
+            if (in_array($node['type'] ?? null, ['field', 'column'], true)
+                && isset($labels[$node['attrs']['key'] ?? null])) {
+                $node['attrs']['label'] = $labels[$node['attrs']['key']];
+            }
+            if (isset($node['content'])) {
+                $node['content'] = array_map($visit, $node['content']);
+            }
+
+            return $node;
+        };
+
+        return $visit($document);
     }
 
     private function auditDesign(TemplateBlock $block, User $actor, Request $request, int $fields): void

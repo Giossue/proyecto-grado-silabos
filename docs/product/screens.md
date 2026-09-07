@@ -131,8 +131,9 @@ completo. El alta está separada de asignar paralelos y no levanta sus bloqueos.
   acceso a «Editar diseño» y también ofrece eliminar con confirmación; no se repite
   un botón sobre el contenido. El menú del bloque conserva su
   renombrado. «Editar diseño» reúne las pestañas Diseño y
-  Propiedades: nombre, ayuda de cada campo guardado y asistencia de IA cuando
-  corresponde. Un único guardado persiste diseño y propiedades; cambiar de pestaña
+  Propiedades: nombre del bloque, ayuda de cada campo guardado y asistencia de IA cuando
+  corresponde. Si el bloque tiene un solo campo, no se duplica su nombre; al tener dos
+  o más, se muestra además el nombre de cada campo. Un único guardado persiste diseño y propiedades; cambiar de pestaña
   conserva el borrador y cancelar permite descartarlo todo. Los campos nuevos deben
   guardarse antes de configurar su ayuda. El bloque de estado solo ofrece Propiedades,
   sin permitir editar datos ni formato del flujo. Con el proceso abierto la hoja se muestra
@@ -140,7 +141,9 @@ completo. El alta está separada de asignar paralelos y no levanta sus bloqueos.
   Dentro de Diseño, la cinta separa Formato, Tablas y Campos; solo muestra las
   herramientas del grupo activo. `@docente` inserta una respuesta independiente en
   el cursor, también dentro de una celda; no es una variable automática. Seleccionar
-  su recuadro abre Campos para ajustar nombre y tipo de contenido. Texto, viñetas y
+  su recuadro abre Campos para ajustar su presentación; los campos ya guardados se
+  renombran únicamente en Propiedades. Durante el alta, Campos sí pide un nombre
+  inicial para la nueva referencia. Texto, viñetas y
   numeración cambian la presentación sin convertir datos existentes; para una tabla
   se usa Tablas. Los tipos numéricos/fechas existentes conservan su tipo. Un campo de
   texto con formato de lista pide un elemento por línea; las listas repetibles

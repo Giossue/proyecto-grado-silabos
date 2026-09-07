@@ -106,6 +106,12 @@ comprueba el acceso a Editar diseño desde el menú del campo. `TemplateDocument
 comprueba renombrado persistido y listas a partir de texto sin cambiar el tipo
 almacenado; el resolvedor conserva las filas de las listas repetibles previas.
 
+El seguimiento de renombrado de I-56 sitúa «Nombre del campo» en Propiedades solo
+cuando el bloque contiene dos o más campos. Con uno solo se muestra «Nombre del
+bloque» y su etiqueta se sincroniza internamente, evitando dos nombres duplicados;
+los bloques con varios campos conservan nombre de bloque y una ficha por campo. `TemplateDocumentTest` verifica que etiqueta
+y nodos se actualicen juntos; la prueba Chromium comprueba edición, envío y reapertura.
+
 El ajuste posterior con la referencia `temp/silabo.pdf` conserva el diseño guardado
 y añade indicadores de ambos parciales solo a la plantilla inicial. No carga datos
 personales, notas ni fórmulas. `templatePreviewFields` separa muestras breves y

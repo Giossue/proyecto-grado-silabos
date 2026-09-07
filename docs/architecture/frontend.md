@@ -140,8 +140,12 @@ La cinta agrupa Formato, Tablas y Campos mediante Tabs, sin ocultar ni desmontar
 Tiptap. La sugerencia `@docente` es un comando de inserción: crea un nodo `field`
 con referencia independiente, o `column` dentro de filas de datos/unidad repetibles.
 No se añade al catálogo de variables automáticas ni se guarda como nodo `variable`.
-NodeSelection enlaza el recuadro con su nombre y formato, y se conserva al actualizar
-sus atributos. Las referencias guardadas mantienen su tipo; `listStyle` representa
+NodeSelection enlaza el recuadro con su formato, y se conserva al actualizar sus
+atributos. Solo una referencia nueva recibe su nombre inicial en Campos; las
+definiciones guardadas se renombran en Propiedades cuando el bloque contiene más de
+un campo. Con uno solo, la interfaz muestra únicamente el nombre del bloque y sincroniza
+internamente la etiqueta del campo. El servidor aplica esa etiqueta
+al documento y a `FieldDefinition` dentro de la misma transacción. Las referencias guardadas mantienen su tipo; `listStyle` representa
 viñetas/numeración sin convertir su almacenamiento. `TemplateDocumentView` y
 `TemplateDocumentResolver` interpretan líneas de texto o filas repetibles como
 elementos, por lo que la lectura y la exportación comparten la presentación.

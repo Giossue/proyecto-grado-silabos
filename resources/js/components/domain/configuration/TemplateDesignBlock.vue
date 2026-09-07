@@ -67,10 +67,18 @@ const draft = ref<DocumentNode>({ type: 'doc', content: [] });
 const form = useForm({
     document: draft.value as DocumentNode | null,
     title: '',
-    properties: [] as { key: string; help: string; ai_enabled?: boolean }[],
+    properties: [] as {
+        key: string;
+        label: string;
+        help: string;
+        ai_enabled?: boolean;
+    }[],
     fingerprint: '',
     confirm_purge: false,
 });
+const singleField = computed(
+    () => !isFlow.value && form.properties.length === 1,
+);
 const propertiesSnapshot = () => JSON.stringify([form.title, form.properties]);
 const dirty = computed(
     () => designDirty.value || propertiesSnapshot() !== initialProperties.value,
@@ -94,6 +102,10 @@ const edit = () => {
     form.title = props.block.title;
     form.properties = props.block.fields.map((field) => ({
         key: field.key,
+        label:
+            !isFlow.value && props.block.fields.length === 1
+                ? props.block.title
+                : field.label,
         help: field.help ?? '',
         ...(!field.inherited &&
         !['institutional', 'flow'].includes(props.block.content_type)
@@ -160,6 +172,20 @@ const purge = computed(
 );
 const propertyError = (key: string) =>
     (form.errors as Record<string, string>)[key];
+const primaryNameError = computed(
+    () =>
+        form.errors.title ??
+        (singleField.value ? propertyError('properties.0.label') : undefined),
+);
+const updatePrimaryName = (value: string | number) => {
+    const name = String(value);
+
+    if (singleField.value) {
+        form.properties[0].label = name;
+    }
+
+    form.title = name;
+};
 const stopNavigation = router.on('before', (event) => {
     if (
         open.value &&
@@ -249,25 +275,33 @@ watch(open, (isOpen, _previous, onCleanup) => {
                         class="min-h-0 overflow-y-auto rounded-lg border p-4"
                     >
                         <FieldGroup class="mx-auto max-w-2xl">
-                            <Field :data-invalid="Boolean(form.errors.title)">
+                            <Field :data-invalid="Boolean(primaryNameError)">
                                 <FieldLabel for="design-title"
-                                    >Nombre en la plantilla</FieldLabel
+                                    >Nombre del bloque</FieldLabel
                                 >
                                 <Input
                                     id="design-title"
-                                    v-model="form.title"
+                                    :model-value="form.title"
+                                    @update:model-value="updatePrimaryName"
                                     maxlength="180"
                                     :disabled="form.processing"
-                                    :aria-invalid="Boolean(form.errors.title)"
+                                    :aria-invalid="Boolean(primaryNameError)"
                                 />
                                 <FieldError
-                                    v-if="form.errors.title"
-                                    :errors="[form.errors.title]"
+                                    v-if="primaryNameError"
+                                    :errors="[primaryNameError]"
                                 />
-                                <FieldDescription
-                                    >El nombre y las propiedades se guardan
-                                    junto con el diseño.</FieldDescription
-                                >
+                                <FieldDescription>
+                                    <template v-if="singleField">
+                                        Al tener un solo campo, basta este
+                                        nombre. Si agrega otro, aparecerá el
+                                        nombre de cada campo.
+                                    </template>
+                                    <template v-else>
+                                        Identifica el bloque completo; cada
+                                        campo conserva su propio nombre.
+                                    </template>
+                                </FieldDescription>
                             </Field>
                             <p
                                 v-if="isFlow"
@@ -281,9 +315,46 @@ watch(open, (isOpen, _previous, onCleanup) => {
                                 :key="property.key"
                                 class="gap-4 rounded-lg border p-4"
                             >
-                                <h3 class="text-sm font-medium">
-                                    {{ block.fields[index]?.label }}
-                                </h3>
+                                <Field
+                                    v-if="!isFlow && !singleField"
+                                    :data-invalid="
+                                        Boolean(
+                                            propertyError(
+                                                `properties.${index}.label`,
+                                            ),
+                                        )
+                                    "
+                                >
+                                    <FieldLabel :for="`design-label-${index}`"
+                                        >Nombre del campo</FieldLabel
+                                    >
+                                    <Input
+                                        :id="`design-label-${index}`"
+                                        v-model="property.label"
+                                        maxlength="180"
+                                        placeholder="Ej. Objetivo general"
+                                        :disabled="form.processing"
+                                        :aria-invalid="
+                                            Boolean(
+                                                propertyError(
+                                                    `properties.${index}.label`,
+                                                ),
+                                            )
+                                        "
+                                    />
+                                    <FieldError
+                                        v-if="
+                                            propertyError(
+                                                `properties.${index}.label`,
+                                            )
+                                        "
+                                        :errors="[
+                                            propertyError(
+                                                `properties.${index}.label`,
+                                            ),
+                                        ]"
+                                    />
+                                </Field>
                                 <Field
                                     :data-invalid="
                                         Boolean(
