@@ -261,6 +261,7 @@ test(
             ),
             true,
         );
+        await page.locator('.document-table-container').hover();
         await editTableButton.click();
         const tableDialog = page.getByRole('dialog', {
             name: 'Editar tabla: Matriz',

@@ -748,6 +748,16 @@ const Content = defineComponent({ setup: () => () => draw(props.document) });
     top: 4px;
     right: 4px;
     z-index: 1;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 150ms ease;
+}
+.template-document-view
+    :deep(.document-table-container:hover .document-table-action),
+.template-document-view
+    :deep(.document-table-container:focus-within .document-table-action) {
+    pointer-events: auto;
+    opacity: 1;
 }
 .template-document-view :deep(td),
 .template-document-view :deep(th) {

@@ -224,7 +224,7 @@ watch(
 
         <Dialog v-if="editing" :open="editing" @update:open="updateDialogOpen">
             <DialogContent
-                class="flex h-[min(90vh,60rem)] max-w-[min(96vw,80rem)] flex-col gap-0 p-0"
+                class="flex h-[calc(100vh-2rem)] max-h-[70rem] w-[calc(100vw-2rem)] max-w-[80rem] flex-col gap-0 p-0 sm:max-w-[80rem]"
             >
                 <DialogHeader class="shrink-0 border-b px-6 py-4 pr-12">
                     <DialogTitle>Editar tabla: {{ blockTitle }}</DialogTitle>
