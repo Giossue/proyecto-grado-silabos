@@ -33,7 +33,7 @@ const helpOpen = ref(false);
 </script>
 
 <template>
-    <Tooltip v-model:open="helpOpen">
+    <Tooltip v-model:open="helpOpen" :disable-hoverable-content="true">
         <TooltipTrigger as-child>
             <span class="inline-flex">
                 <Popover
@@ -57,6 +57,8 @@ const helpOpen = ref(false);
                 </Popover>
             </span>
         </TooltipTrigger>
-        <TooltipContent>{{ label }}</TooltipContent>
+        <TooltipContent side="left" :side-offset="8">
+            {{ label }}
+        </TooltipContent>
     </Tooltip>
 </template>
