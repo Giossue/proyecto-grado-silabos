@@ -270,36 +270,39 @@ test(
         const section = page.locator(
             'section[aria-label="Bloque Resultados y evidencias"]',
         );
-        const addFieldButton = section.getByRole('button', {
-            name: 'Agregar campo',
-            exact: true,
-        });
-        const addBlockButton = section.getByRole('button', {
-            name: 'Agregar bloque',
-            exact: true,
-        });
-        const [fieldBox, blockBox] = await Promise.all([
-            addFieldButton.boundingBox(),
-            addBlockButton.boundingBox(),
-        ]);
-        assert.ok(fieldBox && blockBox);
-        assert.ok(fieldBox.y < blockBox.y);
-        assert.equal((await addFieldButton.textContent())?.trim(), '');
-        assert.equal((await addBlockButton.textContent())?.trim(), '');
-        await addFieldButton.focus();
-        await page
-            .locator('[data-slot="tooltip-content"]')
-            .filter({ hasText: 'Agregar campo' })
-            .waitFor();
-
-        const blockActions = page.getByRole('button', {
-            name: 'Acciones del bloque Resultados y evidencias',
+        const sectionMenu = section.getByRole('button', {
+            name: 'Opciones de Resultados y evidencias',
         });
         await section.hover();
-        const blockActionsBox = await blockActions.boundingBox();
-        assert.ok(blockActionsBox);
-        assert.ok(blockActionsBox.x < fieldBox.x);
-        await blockActions.click();
+        assert.equal(
+            await section
+                .getByRole('button', { name: /^Opciones de / })
+                .count(),
+            1,
+        );
+        assert.equal(
+            await section
+                .getByRole('button', { name: 'Agregar campo' })
+                .count(),
+            0,
+        );
+        assert.equal(
+            await section
+                .getByRole('button', { name: 'Agregar bloque' })
+                .count(),
+            0,
+        );
+        await sectionMenu.focus();
+        await page
+            .locator('[data-slot="tooltip-content"]')
+            .filter({ hasText: 'Opciones del bloque' })
+            .waitFor();
+        await sectionMenu.click();
+        await page.getByRole('menuitem', { name: 'Agregar campo' }).click();
+        await page.getByRole('heading', { name: 'Nuevo campo' }).waitFor();
+        await page.getByRole('button', { name: 'Cancelar' }).click();
+        await section.hover();
+        await sectionMenu.click();
         await page.getByRole('menuitem', { name: 'Editar bloque' }).click();
         const blockDialog = page.getByRole('dialog', {
             name: 'Editar bloque',
@@ -318,11 +321,16 @@ test(
         );
         assert.equal(blockUpdate.data.title, 'Resultados actualizados');
 
-        const summary = page.locator('article[aria-label="Campo Resumen"]');
-        await summary.hover();
-        await page
-            .getByRole('button', { name: 'Acciones del campo Resumen' })
-            .click();
+        const renamedSection = page.locator(
+            'section[aria-label="Bloque Resultados actualizados"]',
+        );
+        const renamedSectionMenu = page.getByRole('button', {
+            name: 'Opciones de Resultados actualizados',
+        });
+        await renamedSection.hover();
+        await renamedSectionMenu.click();
+        await page.getByRole('menuitem', { name: 'Campos' }).hover();
+        await page.getByRole('menuitem', { name: 'Resumen' }).hover();
         await page.getByRole('menuitem', { name: 'Editar campo' }).click();
         const fieldDialog = page.getByRole('dialog', { name: 'Editar campo' });
         await fieldDialog
@@ -449,15 +457,12 @@ test(
         assert.equal(header.attrs.bold, true);
         assert.equal(header.attrs.borderStyle, 'thick');
 
-        const renamedSummary = page.locator(
-            'article[aria-label="Campo Resumen actualizado"]',
-        );
-        await renamedSummary.hover();
+        await renamedSection.hover();
+        await renamedSectionMenu.click();
+        await page.getByRole('menuitem', { name: 'Campos' }).hover();
         await page
-            .getByRole('button', {
-                name: 'Acciones del campo Resumen actualizado',
-            })
-            .click();
+            .getByRole('menuitem', { name: 'Resumen actualizado' })
+            .hover();
         await page.getByRole('menuitem', { name: 'Eliminar campo' }).click();
         const deleteFieldDialog = page.getByRole('dialog', {
             name: 'Eliminar campo',
@@ -475,15 +480,8 @@ test(
         );
         assert.ok(fieldDeletion);
 
-        const renamedSection = page.locator(
-            'section[aria-label="Bloque Resultados actualizados"]',
-        );
         await renamedSection.hover();
-        await page
-            .getByRole('button', {
-                name: 'Acciones del bloque Resultados actualizados',
-            })
-            .click();
+        await renamedSectionMenu.click();
         await page.getByRole('menuitem', { name: 'Eliminar bloque' }).click();
         const deleteBlockDialog = page.getByRole('dialog', {
             name: 'Eliminar bloque',

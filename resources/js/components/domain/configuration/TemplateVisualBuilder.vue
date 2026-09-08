@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
+import { MoreHorizontal, Pencil, Trash2 } from '@lucide/vue';
 import type { CSSProperties } from 'vue';
 import TemplateBlockCreator from '@/components/domain/configuration/TemplateBlockCreator.vue';
 import TemplateDocumentView from '@/components/domain/configuration/TemplateDocumentView.vue';
@@ -8,6 +9,23 @@ import TemplateFieldCreator from '@/components/domain/configuration/TemplateFiel
 import TemplateSectionActions from '@/components/domain/configuration/TemplateSectionActions.vue';
 import TemplateTableDesigner from '@/components/domain/configuration/TemplateTableDesigner.vue';
 import PaginatedDocument from '@/components/domain/PaginatedDocument.vue';
+import { Button } from '@/components/ui/button';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuSub,
+    DropdownMenuSubContent,
+    DropdownMenuSubTrigger,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { defaultDocument, nodesOfType } from '@/lib/templateDocument';
 import { templatePreviewFields } from '@/lib/templatePreview';
 import type {
@@ -64,6 +82,26 @@ const fieldsFor = (block: TemplateFieldContainer) =>
 
 const hasTable = (block: TemplateFieldContainer): boolean =>
     nodesOfType(documentFor(block), 'table').length > 0;
+
+type Editable = { openEdit: () => void; openDelete: () => void };
+
+const sectionActions = ref<Record<string, Editable>>({});
+const fieldActions = ref<Record<string, Editable>>({});
+const openSectionMenu = ref<string | null>(null);
+
+const bindHandle = <T,>(
+    collection: Record<string, T>,
+    id: string,
+    instance: unknown,
+): void => {
+    if (instance) {
+        collection[id] = instance as T;
+
+        return;
+    }
+
+    delete collection[id];
+};
 </script>
 
 <template>
@@ -121,38 +159,168 @@ const hasTable = (block: TemplateFieldContainer): boolean =>
                         data-page-unit
                         data-page-keep-next
                     >
-                        <h2
-                            class="min-w-0 pe-10 leading-snug"
-                            :style="sectionStyle"
-                        >
+                        <h2 class="min-w-0 leading-snug" :style="sectionStyle">
                             {{ sectionIndex + 1 }}. {{ section.title }}
                         </h2>
                         <div
                             v-if="!readonly"
-                            class="template-section-actions absolute top-0 z-10 opacity-0 transition-opacity group-focus-within/template-section:opacity-100 group-hover/template-section:opacity-100"
-                            :aria-label="`Acciones del bloque ${section.title}`"
+                            class="template-section-menu absolute top-0 z-10 opacity-0 transition-opacity group-focus-within/template-section:opacity-100 group-hover/template-section:opacity-100"
                         >
-                            <TemplateSectionActions
-                                :template-id="template.id"
-                                :section="section"
-                            />
-                        </div>
-                        <div
-                            v-if="!readonly"
-                            class="template-section-creators absolute top-0 z-10 flex flex-col gap-1 opacity-0 transition-opacity group-focus-within/template-section:opacity-100 group-hover/template-section:opacity-100"
-                            :aria-label="`Agregar contenido a ${section.title}`"
-                        >
-                            <TemplateFieldCreator
-                                :template-id="template.id"
-                                :section-id="section.id"
-                                :position="section.blocks.length"
-                                :block-types="blockTypes"
-                            />
-                            <TemplateBlockCreator
-                                :template-id="template.id"
-                                :position="sectionIndex + 1"
-                                :block-types="blockTypes"
-                            />
+                            <div class="hidden" aria-hidden="true">
+                                <TemplateSectionActions
+                                    :ref="
+                                        (instance) =>
+                                            bindHandle(
+                                                sectionActions,
+                                                section.id,
+                                                instance,
+                                            )
+                                    "
+                                    :template-id="template.id"
+                                    :section="section"
+                                />
+                                <TemplateFieldActions
+                                    v-for="block in section.blocks"
+                                    :key="block.id"
+                                    :ref="
+                                        (instance) =>
+                                            bindHandle(
+                                                fieldActions,
+                                                block.id,
+                                                instance,
+                                            )
+                                    "
+                                    :template-id="template.id"
+                                    :section-title="section.title"
+                                    :field="block"
+                                    :block-types="blockTypes"
+                                />
+                            </div>
+                            <Tooltip :disable-hoverable-content="true">
+                                <DropdownMenu
+                                    :open="openSectionMenu === section.id"
+                                    @update:open="
+                                        openSectionMenu = $event
+                                            ? section.id
+                                            : null
+                                    "
+                                >
+                                    <TooltipTrigger as-child>
+                                        <DropdownMenuTrigger as-child>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="icon-sm"
+                                                class="size-7 text-foreground"
+                                                :aria-label="`Opciones de ${section.title}`"
+                                            >
+                                                <MoreHorizontal
+                                                    aria-hidden="true"
+                                                />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                    </TooltipTrigger>
+                                    <DropdownMenuContent
+                                        align="end"
+                                        side="left"
+                                    >
+                                        <DropdownMenuLabel>
+                                            Opciones del bloque
+                                        </DropdownMenuLabel>
+                                        <TemplateFieldCreator
+                                            menu
+                                            :template-id="template.id"
+                                            :section-id="section.id"
+                                            :position="section.blocks.length"
+                                            :block-types="blockTypes"
+                                            @closed="openSectionMenu = null"
+                                        />
+                                        <TemplateBlockCreator
+                                            menu
+                                            :template-id="template.id"
+                                            :position="sectionIndex + 1"
+                                            :block-types="blockTypes"
+                                            @closed="openSectionMenu = null"
+                                        />
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem
+                                            @select="
+                                                sectionActions[
+                                                    section.id
+                                                ]?.openEdit()
+                                            "
+                                        >
+                                            <Pencil aria-hidden="true" />
+                                            Editar bloque
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                            variant="destructive"
+                                            @select="
+                                                sectionActions[
+                                                    section.id
+                                                ]?.openDelete()
+                                            "
+                                        >
+                                            <Trash2 aria-hidden="true" />
+                                            Eliminar bloque
+                                        </DropdownMenuItem>
+                                        <DropdownMenuSeparator
+                                            v-if="section.blocks.length > 0"
+                                        />
+                                        <DropdownMenuSub
+                                            v-if="section.blocks.length > 0"
+                                        >
+                                            <DropdownMenuSubTrigger>
+                                                Campos
+                                            </DropdownMenuSubTrigger>
+                                            <DropdownMenuSubContent>
+                                                <DropdownMenuSub
+                                                    v-for="block in section.blocks"
+                                                    :key="block.id"
+                                                >
+                                                    <DropdownMenuSubTrigger>
+                                                        {{ block.title }}
+                                                    </DropdownMenuSubTrigger>
+                                                    <DropdownMenuSubContent>
+                                                        <DropdownMenuItem
+                                                            @select="
+                                                                fieldActions[
+                                                                    block.id
+                                                                ]?.openEdit()
+                                                            "
+                                                        >
+                                                            <Pencil
+                                                                aria-hidden="true"
+                                                            />
+                                                            Editar campo
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem
+                                                            variant="destructive"
+                                                            @select="
+                                                                fieldActions[
+                                                                    block.id
+                                                                ]?.openDelete()
+                                                            "
+                                                        >
+                                                            <Trash2
+                                                                aria-hidden="true"
+                                                            />
+                                                            Eliminar campo
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuSubContent>
+                                                </DropdownMenuSub>
+                                            </DropdownMenuSubContent>
+                                        </DropdownMenuSub>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                                <TooltipContent
+                                    paper
+                                    side="left"
+                                    :side-offset="8"
+                                >
+                                    Opciones del bloque
+                                </TooltipContent>
+                            </Tooltip>
                         </div>
                     </div>
 
@@ -170,20 +338,6 @@ const hasTable = (block: TemplateFieldContainer): boolean =>
                         class="group/template-field relative mb-4"
                         :aria-label="`Campo ${block.title}`"
                     >
-                        <div
-                            v-if="!readonly"
-                            :class="[
-                                'template-field-actions absolute top-0 z-10 opacity-0 transition-opacity group-focus-within/template-field:opacity-100 group-hover/template-field:opacity-100',
-                                hasTable(block) ? 'right-9' : 'right-0',
-                            ]"
-                        >
-                            <TemplateFieldActions
-                                :template-id="template.id"
-                                :section-title="section.title"
-                                :field="block"
-                                :block-types="blockTypes"
-                            />
-                        </div>
                         <h3
                             v-if="section.blocks.length > 1"
                             class="mb-2 leading-snug font-semibold"
@@ -232,12 +386,7 @@ const hasTable = (block: TemplateFieldContainer): boolean =>
 </template>
 
 <style scoped>
-.template-section-creators {
+.template-section-menu {
     right: calc(-1 * var(--page-margin) + 2rem);
-}
-
-.template-section-actions,
-.template-field-actions {
-    right: 0;
 }
 </style>

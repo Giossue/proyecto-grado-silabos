@@ -121,20 +121,16 @@ completo. El alta está separada de asignar paralelos y no levanta sus bloqueos.
   campos, tablas armadas y ficha de identificación) y abre su constructor; no muestra un
   `Sheet` porque no requiere datos. Administración solo ajusta sobre la hoja.
 - ADM-06 se construye directamente sobre la hoja (I-33). Un **bloque** es únicamente
-  el contenedor que agrupa uno o varios campos. «Agregar bloque» abre un `Popover` que
-  pide su nombre y permite declarar todos sus campos antes de guardar; cada campo elige
-  Texto, Tabla, Lista con viñetas o Lista numerada. Cancelar o recibir un rechazo no
-  deja un contenedor vacío. Dentro de un bloque existente, «Agregar campo» usa el mismo
-  vocabulario y lo coloca al final. Con un solo campo basta el título del bloque; desde
-  dos campos aparecen subtítulos numerados. Con el proceso abierto, estos controles se
-  ocultan y la hoja queda en solo lectura. En cada bloque, los accesos compactos se
-  ordenan verticalmente con **Agregar campo** arriba y **Agregar bloque** abajo; ambos
-  conservan nombre accesible y explican su icono mediante `Tooltip`.
-  Sobre la hoja blanca, esos tooltips usan fondo negro y texto blanco en ambos temas.
-- Cada bloque y campo muestra, al pasar sobre él o enfocarlo, un menú compacto de
-  acciones. Desde ahí Administración puede editar el nombre del bloque, o el nombre y
-  tipo de presentación del campo cuando su diseño todavía no lo fija; ambos se eliminan
-  tras confirmación. Eliminar un bloque indica cuántos campos contiene. Si el cambio
+  el contenedor que agrupa uno o varios campos. Cada bloque muestra un único botón de
+  tres puntos en el margen. Su menú reúne **Agregar campo**, **Agregar bloque** y las
+  acciones del bloque; al elegir alta se abre un diálogo que pide el nombre y el tipo
+  antes de guardar. Un bloque puede declarar varios campos; cada uno elige Texto, Tabla,
+  Lista con viñetas o Lista numerada. Cancelar o recibir un rechazo no deja un contenedor
+  vacío. El submenú **Campos** reúne editar nombre/tipo —cuando el diseño no lo fija— y
+  eliminar cada campo tras confirmación. Con un solo campo basta el título del bloque;
+  desde dos campos aparecen subtítulos numerados. Con el proceso abierto, estos controles
+  se ocultan y la hoja queda en solo lectura. El botón conserva nombre accesible y su
+  `Tooltip` usa fondo negro y texto blanco sobre la hoja, en ambos temas. Si el cambio
   implica borrar sílabos en curso, el diálogo institucional de reinicio conserva la
   última confirmación; los sílabos enviados mantienen su copia.
 - **Personalizar** abre un panel lateral con ajustes deliberadamente acotados para todo

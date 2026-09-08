@@ -33,7 +33,15 @@ const helpOpen = ref(false);
 </script>
 
 <template>
-    <Tooltip v-model:open="helpOpen" :disable-hoverable-content="true">
+    <Popover
+        v-if="$slots.trigger"
+        :open="open"
+        @update:open="emit('update:open', $event)"
+    >
+        <slot name="trigger" />
+        <slot />
+    </Popover>
+    <Tooltip v-else v-model:open="helpOpen" :disable-hoverable-content="true">
         <TooltipTrigger as-child>
             <span class="inline-flex">
                 <Popover

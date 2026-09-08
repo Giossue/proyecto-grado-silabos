@@ -7,6 +7,13 @@ import TemplateController from '@/actions/App/Modules/Configuration/Presentation
 import TemplateIconPopover from '@/components/domain/configuration/TemplateIconPopover.vue';
 import { Button } from '@/components/ui/button';
 import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
+import {
     Field,
     FieldError,
     FieldGroup,
@@ -14,6 +21,7 @@ import {
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { PopoverContent } from '@/components/ui/popover';
+import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import {
     Select,
     SelectContent,
@@ -29,14 +37,19 @@ type EditableContentType = Exclude<
     'institutional' | 'flow'
 >;
 
-const props = defineProps<{
-    templateId: string;
-    sectionId: string;
-    position: number;
-    blockTypes: { value: EditableContentType; label: string }[];
-}>();
+const props = withDefaults(
+    defineProps<{
+        templateId: string;
+        sectionId: string;
+        position: number;
+        blockTypes: { value: EditableContentType; label: string }[];
+        menu?: boolean;
+    }>(),
+    { menu: false },
+);
 
 const open = ref(false);
+const emit = defineEmits<{ closed: [] }>();
 const form = useForm({
     section_id: props.sectionId,
     position: props.position + 1,
@@ -70,6 +83,7 @@ const submit = (): void => {
             toast.success('Campo agregado.');
             open.value = false;
             reset();
+            emit('closed');
         },
         onError: (errors) => {
             if (!('purge_required' in errors)) {
@@ -86,21 +100,38 @@ const updateOpen = (value: boolean): void => {
 
     if (!value && !form.processing) {
         reset();
+        emit('closed');
     }
 };
 </script>
 
 <template>
-    <TemplateIconPopover
+    <component
+        :is="menu ? Dialog : TemplateIconPopover"
         :open="open"
-        label="Agregar campo"
-        button-class="size-7"
+        v-bind="menu ? {} : { label: 'Agregar campo', buttonClass: 'size-7' }"
         @update:open="updateOpen"
     >
-        <template #icon>
-            <ListPlus aria-hidden="true" />
+        <template v-if="menu">
+            <DialogTrigger as-child>
+                <DropdownMenuItem @select.prevent>
+                    <ListPlus aria-hidden="true" />
+                    Agregar campo
+                </DropdownMenuItem>
+            </DialogTrigger>
         </template>
-        <PopoverContent align="end" class="w-[min(24rem,calc(100vw-2rem))]">
+        <template #icon>
+            <ListPlus v-if="!menu" aria-hidden="true" />
+        </template>
+        <component
+            :is="menu ? DialogContent : PopoverContent"
+            v-bind="menu ? {} : { align: 'end' }"
+            class="w-[min(24rem,calc(100vw-2rem))]"
+        >
+            <DialogTitle v-if="menu" class="sr-only"> Nuevo campo </DialogTitle>
+            <DialogDescription v-if="menu" class="sr-only">
+                Se añadirá dentro de este bloque.
+            </DialogDescription>
             <form class="flex flex-col gap-4" @submit.prevent="submit">
                 <div class="flex flex-col gap-1">
                     <p class="font-medium">Nuevo campo</p>
@@ -175,6 +206,6 @@ const updateOpen = (value: boolean): void => {
                     </Button>
                 </div>
             </form>
-        </PopoverContent>
-    </TemplateIconPopover>
+        </component>
+    </component>
 </template>

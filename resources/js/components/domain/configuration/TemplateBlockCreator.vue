@@ -7,6 +7,13 @@ import TemplateController from '@/actions/App/Modules/Configuration/Presentation
 import TemplateIconPopover from '@/components/domain/configuration/TemplateIconPopover.vue';
 import { Button } from '@/components/ui/button';
 import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
+import {
     Field,
     FieldError,
     FieldGroup,
@@ -14,6 +21,7 @@ import {
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { PopoverContent } from '@/components/ui/popover';
+import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import {
     Select,
     SelectContent,
@@ -35,8 +43,9 @@ const props = withDefaults(
         position: number;
         blockTypes: { value: EditableContentType; label: string }[];
         empty?: boolean;
+        menu?: boolean;
     }>(),
-    { empty: false },
+    { empty: false, menu: false },
 );
 
 let sequence = 0;
@@ -53,6 +62,7 @@ const newField = () => ({
 });
 
 const open = ref(false);
+const emit = defineEmits<{ closed: [] }>();
 const form = useForm({
     title: '',
     key: technicalKey('bloque'),
@@ -95,6 +105,7 @@ const submit = (): void => {
             toast.success('Bloque agregado.');
             open.value = false;
             reset();
+            emit('closed');
         },
         onError: (errors) => {
             if (!('purge_required' in errors)) {
@@ -111,28 +122,61 @@ const updateOpen = (value: boolean): void => {
 
     if (!value && !form.processing) {
         reset();
+        emit('closed');
     }
 };
 </script>
 
 <template>
-    <TemplateIconPopover
+    <component
+        :is="menu ? Dialog : TemplateIconPopover"
         :open="open"
-        :label="empty ? 'Agregar primer bloque' : 'Agregar bloque'"
-        :variant="empty ? 'default' : 'outline'"
-        :size="empty ? 'icon' : 'icon-sm'"
-        :button-class="empty ? undefined : 'size-7 border-dashed bg-background'"
+        v-bind="
+            menu
+                ? {}
+                : {
+                      label: empty ? 'Agregar primer bloque' : 'Agregar bloque',
+                      variant: empty ? 'default' : 'outline',
+                      size: empty ? 'icon' : 'icon-sm',
+                      buttonClass: empty
+                          ? undefined
+                          : 'size-7 border-dashed bg-background',
+                  }
+        "
         @update:open="updateOpen"
     >
-        <template #icon>
-            <Blocks aria-hidden="true" />
+        <template v-if="menu">
+            <DialogTrigger as-child>
+                <DropdownMenuItem @select.prevent>
+                    <Blocks aria-hidden="true" />
+                    Agregar bloque
+                </DropdownMenuItem>
+            </DialogTrigger>
         </template>
-        <PopoverContent
-            :align="empty ? 'center' : 'end'"
-            class="max-h-[var(--reka-popover-content-available-height)] w-[min(30rem,calc(100vw-2rem))] overflow-hidden p-0"
+        <template #icon>
+            <Blocks v-if="!menu" aria-hidden="true" />
+        </template>
+        <component
+            :is="menu ? DialogContent : PopoverContent"
+            v-bind="menu ? {} : { align: empty ? 'center' : 'end' }"
+            :class="
+                menu
+                    ? 'max-h-[calc(100vh-2rem)] w-[min(30rem,calc(100vw-2rem))] overflow-hidden p-0'
+                    : 'max-h-[var(--reka-popover-content-available-height)] w-[min(30rem,calc(100vw-2rem))] overflow-hidden p-0'
+            "
         >
+            <DialogTitle v-if="menu" class="sr-only">
+                Nuevo bloque
+            </DialogTitle>
+            <DialogDescription v-if="menu" class="sr-only">
+                El bloque agrupa los campos que completará el docente.
+            </DialogDescription>
             <form
-                class="flex max-h-[var(--reka-popover-content-available-height)] flex-col"
+                :class="
+                    menu
+                        ? 'flex max-h-[calc(100vh-2rem)] flex-col'
+                        : 'flex max-h-[var(--reka-popover-content-available-height)] flex-col'
+                "
                 @submit.prevent="submit"
             >
                 <div class="flex flex-col gap-1 border-b px-4 py-3">
@@ -302,6 +346,6 @@ const updateOpen = (value: boolean): void => {
                     </Button>
                 </div>
             </form>
-        </PopoverContent>
-    </TemplateIconPopover>
+        </component>
+    </component>
 </template>

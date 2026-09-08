@@ -96,6 +96,13 @@ const destroy = (): void => {
         },
     );
 };
+
+defineExpose({
+    openEdit,
+    openDelete: () => {
+        deleteOpen.value = true;
+    },
+});
 </script>
 
 <template>

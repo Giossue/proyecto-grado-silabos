@@ -267,10 +267,10 @@ no se eliminan plantillas de PostgreSQL ni se reutiliza todavía el editor anter
 ## Constructor progresivo desde la hoja (2026-09-07)
 
 Nueva indicación del responsable: tomar de la malla el patrón de alta progresiva, no su
-motor de grafos. ADM-06 parte de la hoja; «Agregar bloque» abre un `Popover` para nombrar
-el bloque y declarar uno o varios campos con su tipo antes de escribir. La creación es
-atómica y no deja bloques vacíos si se cancela o falla. Se conservan los datos ya
-persistidos; este cambio no autoriza a borrar la plantilla existente.
+motor de grafos. ADM-06 parte de la hoja; el menú único de cada bloque abre un diálogo
+para nombrar el bloque y declarar uno o varios campos con su tipo antes de escribir. La
+creación es atómica y no deja bloques vacíos si se cancela o falla. Se conservan los datos
+ya persistidos; este cambio no autoriza a borrar la plantilla existente.
 
 La personalización es deliberadamente acotada y se guarda en
 `plantillas_silabo.mapeo_documento`: familia y jerarquía tipográfica, colores de texto,
@@ -321,8 +321,8 @@ commit ni push.
 
 - [x] Compactar las herramientas de celda con iconos, nombres accesibles y `Tooltip` de
       shadcn-vue, conservando los `Select` y menús existentes.
-- [x] Sustituir los accesos textuales de alta por iconos y ordenar **Agregar campo** sobre
-      **Agregar bloque** dentro del encabezado de cada bloque.
+- [x] Reunir altas y acciones en el menú único de tres puntos de cada bloque; **Campos**
+      conserva las acciones por campo sin añadir botones sobre la hoja.
 - [x] Cubrir apertura de `Popover`/`Select`, ayudas, orden visual y guardado de estilos en
       la regresión Chromium del constructor.
 
@@ -375,9 +375,9 @@ modificaciones de datos, commit ni push.
 ## Seguimiento — acciones de bloques y campos (2026-09-08)
 
 ADM-06 conserva la edición de tabla para su geometría, pero no la usa como única vía de
-gestión. Cada bloque y campo recibe un menú contextual que no mueve la hoja: editar
-nombre de bloque; editar nombre y tipo del campo mientras no tenga diseño propio; y
-eliminar con confirmación. El servidor existente conserva autorización, bloqueo del
+gestión. Un menú contextual por bloque reúne altas, editar/eliminar bloque y un submenú
+por campo para editar nombre/tipo mientras no tenga diseño propio o eliminar con
+confirmación. El servidor existente conserva autorización, bloqueo del
 proceso, purga confirmada, transacción y auditoría; no se crean rutas ni cambios de
 esquema.
 
