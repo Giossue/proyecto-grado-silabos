@@ -122,8 +122,9 @@ la hoja mantiene su propio desplazamiento horizontal en pantallas estrechas.
 los `TemplateBlock` internos como campos. Esa traducción permite conservar el esquema
 existente sin una migración destructiva: para Administración, un bloque es siempre un
 contenedor y cada campo elige su presentación. El índice de `Show.vue` observa los
-anclajes de `TemplateVisualBuilder`, marca la sección visible y permite saltar a ella;
-en móvil lo sustituye un `Select`. El único menú de tres puntos por bloque abre los
+encabezados anclados de `TemplateVisualBuilder`, marca el bloque visible y permite saltar
+tanto a ese bloque como a sus campos; en móvil lo sustituye un `Select`. El único menú de
+tres puntos por bloque abre los
 diálogos de `TemplateBlockCreator` y `TemplateFieldCreator`, además de las acciones
 estructurales. `SaveTemplateSection` crea sección, bloques técnicos y definiciones dentro
 de una sola transacción. Los identificadores técnicos se generan en cliente, se validan

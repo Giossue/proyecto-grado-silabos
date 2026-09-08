@@ -1,6 +1,13 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import {
+    computed,
+    nextTick,
+    onBeforeUnmount,
+    onMounted,
+    ref,
+    watch,
+} from 'vue';
 import TemplateAppearanceSheet from '@/components/domain/configuration/TemplateAppearanceSheet.vue';
 import TemplateVisualBuilder from '@/components/domain/configuration/TemplateVisualBuilder.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
@@ -33,18 +40,50 @@ const activeSectionId = ref(props.template.sections[0]?.id ?? '');
 let sectionObserver: IntersectionObserver | undefined;
 
 const sectionAnchor = (id: string): string => `template-section-${id}`;
+const fieldAnchor = (id: string): string => `template-field-${id}`;
 
-const navigateToSection = (id: string): void => {
-    activeSectionId.value = id;
-    document.getElementById(sectionAnchor(id))?.scrollIntoView({
-        behavior: 'smooth',
+const navigationItems = computed(() =>
+    props.template.sections.flatMap((section, sectionIndex) => [
+        {
+            value: `section:${section.id}`,
+            target: sectionAnchor(section.id),
+            sectionId: section.id,
+            label: `${sectionIndex + 1}. ${section.title}`,
+        },
+        ...section.blocks.map((block, fieldIndex) => ({
+            value: `field:${block.id}`,
+            target: fieldAnchor(block.id),
+            sectionId: section.id,
+            label: `${sectionIndex + 1}.${fieldIndex + 1} ${block.title}`,
+        })),
+    ]),
+);
+
+const navigateTo = (target: string, sectionId: string): void => {
+    activeSectionId.value = sectionId;
+    document.getElementById(target)?.scrollIntoView({
+        behavior: 'auto',
         block: 'start',
     });
 };
 
+const navigateToSection = (id: string): void => {
+    navigateTo(sectionAnchor(id), id);
+};
+
+const navigateToField = (fieldId: string, sectionId: string): void => {
+    navigateTo(fieldAnchor(fieldId), sectionId);
+};
+
 const updateSectionSelect = (value: unknown): void => {
-    if (typeof value === 'string') {
-        navigateToSection(value);
+    if (typeof value !== 'string') {
+        return;
+    }
+
+    const item = navigationItems.value.find((item) => item.value === value);
+
+    if (item) {
+        navigateTo(item.target, item.sectionId);
     }
 };
 
@@ -142,7 +181,7 @@ onBeforeUnmount(() => sectionObserver?.disconnect());
             aria-label="Índice de la plantilla"
         >
             <Select
-                :model-value="activeSectionId"
+                :model-value="`section:${activeSectionId}`"
                 @update:model-value="updateSectionSelect($event)"
             >
                 <SelectTrigger class="w-full">
@@ -150,11 +189,14 @@ onBeforeUnmount(() => sectionObserver?.disconnect());
                 </SelectTrigger>
                 <SelectContent>
                     <SelectItem
-                        v-for="(section, index) in template.sections"
-                        :key="section.id"
-                        :value="section.id"
+                        v-for="item in navigationItems"
+                        :key="item.value"
+                        :value="item.value"
+                        :class="
+                            item.value.startsWith('field:') ? 'ps-7' : undefined
+                        "
                     >
-                        {{ index + 1 }}. {{ section.title }}
+                        {{ item.label }}
                     </SelectItem>
                 </SelectContent>
             </Select>
@@ -192,6 +234,33 @@ onBeforeUnmount(() => sectionObserver?.disconnect());
                                 </span>
                                 {{ section.title }}
                             </button>
+                            <ol
+                                v-if="section.blocks.length > 0"
+                                class="mt-1 space-y-1"
+                            >
+                                <li
+                                    v-for="(
+                                        block, fieldIndex
+                                    ) in section.blocks"
+                                    :key="block.id"
+                                >
+                                    <button
+                                        type="button"
+                                        class="w-full border-s-2 border-transparent py-1 ps-7 pe-2 text-left text-xs leading-snug text-muted-foreground transition-colors hover:border-border hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+                                        @click="
+                                            navigateToField(
+                                                block.id,
+                                                section.id,
+                                            )
+                                        "
+                                    >
+                                        <span class="me-1 tabular-nums">
+                                            {{ index + 1 }}.{{ fieldIndex + 1 }}
+                                        </span>
+                                        {{ block.title }}
+                                    </button>
+                                </li>
+                            </ol>
                         </li>
                     </ol>
                 </nav>

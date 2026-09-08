@@ -403,12 +403,13 @@ commit ni push.
 
 ## Seguimiento — índice de navegación (2026-09-08)
 
-ADM-06 usa el margen libre de escritorio para un índice fijo de sus bloques. Cada enlace
-desplaza suavemente al anclaje de sección y el bloque visible queda marcado; en pantallas
-estrechas el mismo índice es un selector, sin crear desbordamiento horizontal global. No
-se persiste la posición ni se modifica el documento, sus permisos o su exportación.
+ADM-06 usa el margen libre de escritorio para un índice fijo de sus bloques y campos.
+Cada enlace se posiciona directamente en el encabezado real, sin depender del contenedor
+paginado; el bloque visible queda marcado. En pantallas estrechas el mismo índice es un
+selector, sin crear desbordamiento horizontal global. No se persiste la posición ni se
+modifica el documento, sus permisos o su exportación.
 
-- [x] Añadir anclajes estables a las secciones de la hoja.
-- [x] Mostrar índice lateral en escritorio y selector equivalente en móvil.
+- [x] Añadir anclajes estables a los encabezados de bloques y campos de la hoja.
+- [x] Mostrar índice lateral anidado en escritorio y selector equivalente en móvil.
 - [x] Actualizar el enlace activo mediante `IntersectionObserver` y conservar nombres
       accesibles.

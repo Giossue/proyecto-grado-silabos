@@ -133,6 +133,9 @@ completo. El alta está separada de asignar paralelos y no levanta sus bloqueos.
   `Tooltip` usa fondo negro y texto blanco sobre la hoja, en ambos temas. Si el cambio
   implica borrar sílabos en curso, el diálogo institucional de reinicio conserva la
   última confirmación; los sílabos enviados mantienen su copia.
+- El margen libre de ADM-06 muestra un índice fijo: enumera los bloques y anida sus
+  campos para navegar al encabezado real de cada uno. El bloque visible queda marcado; en
+  móvil, el mismo listado se ofrece en un selector sin desbordar la hoja.
 - **Personalizar** abre un panel lateral con ajustes deliberadamente acotados para todo
   el documento: orientación, márgenes, fuente general, tamaños de título/bloque/campo/
   contenido, paleta institucional para texto, acento y cabecera de tabla, además de

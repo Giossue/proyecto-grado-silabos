@@ -151,17 +151,20 @@ const bindHandle = <T,>(
                 :key="section.id"
             >
                 <section
-                    :id="`template-section-${section.id}`"
                     class="group/template-section mb-6"
                     :aria-label="`Bloque ${section.title}`"
-                    tabindex="-1"
                 >
                     <div
                         class="relative mb-3"
                         data-page-unit
                         data-page-keep-next
                     >
-                        <h2 class="min-w-0 leading-snug" :style="sectionStyle">
+                        <h2
+                            :id="`template-section-${section.id}`"
+                            class="min-w-0 scroll-mt-6 leading-snug"
+                            :style="sectionStyle"
+                            tabindex="-1"
+                        >
                             {{ sectionIndex + 1 }}. {{ section.title }}
                         </h2>
                         <div
@@ -337,15 +340,22 @@ const bindHandle = <T,>(
                     <article
                         v-for="(block, fieldIndex) in section.blocks"
                         :key="block.id"
-                        class="group/template-field relative mb-4"
+                        :id="
+                            section.blocks.length === 1
+                                ? `template-field-${block.id}`
+                                : undefined
+                        "
+                        class="group/template-field relative mb-4 scroll-mt-6"
                         :aria-label="`Campo ${block.title}`"
                     >
                         <h3
                             v-if="section.blocks.length > 1"
-                            class="mb-2 leading-snug font-semibold"
+                            :id="`template-field-${block.id}`"
+                            class="mb-2 scroll-mt-6 leading-snug font-semibold"
                             :style="fieldStyle"
                             data-page-unit
                             data-page-keep-next
+                            tabindex="-1"
                         >
                             {{ sectionIndex + 1 }}.{{ fieldIndex + 1 }}
                             {{ block.title }}
