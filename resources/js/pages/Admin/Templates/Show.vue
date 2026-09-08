@@ -1,11 +1,18 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import { ref, watch } from 'vue';
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import TemplateAppearanceSheet from '@/components/domain/configuration/TemplateAppearanceSheet.vue';
 import TemplateVisualBuilder from '@/components/domain/configuration/TemplateVisualBuilder.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
 import ProcessLockAlert from '@/components/domain/ProcessLockAlert.vue';
 import { Button } from '@/components/ui/button';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { index as templatesIndex } from '@/routes/admin/templates';
 import type {
     TemplateAppearance,
@@ -22,6 +29,70 @@ const appearanceOpen = ref(false);
 const previewAppearance = ref<TemplateAppearance>({
     ...props.template.appearance,
 });
+const activeSectionId = ref(props.template.sections[0]?.id ?? '');
+let sectionObserver: IntersectionObserver | undefined;
+
+const sectionAnchor = (id: string): string => `template-section-${id}`;
+
+const navigateToSection = (id: string): void => {
+    activeSectionId.value = id;
+    document.getElementById(sectionAnchor(id))?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+    });
+};
+
+const updateSectionSelect = (value: unknown): void => {
+    if (typeof value === 'string') {
+        navigateToSection(value);
+    }
+};
+
+const observeSections = async (): Promise<void> => {
+    sectionObserver?.disconnect();
+    await nextTick();
+
+    const sections = props.template.sections
+        .map((section) => document.getElementById(sectionAnchor(section.id)))
+        .filter((section): section is HTMLElement => section !== null);
+
+    if (sections.length === 0) {
+        activeSectionId.value = '';
+
+        return;
+    }
+
+    if (
+        !sections.some(
+            (section) => section.id === sectionAnchor(activeSectionId.value),
+        )
+    ) {
+        activeSectionId.value = props.template.sections[0]?.id ?? '';
+    }
+
+    sectionObserver = new IntersectionObserver(
+        (entries) => {
+            const visible = entries
+                .filter((entry) => entry.isIntersecting)
+                .sort(
+                    (left, right) =>
+                        left.boundingClientRect.top -
+                        right.boundingClientRect.top,
+                );
+            const current = visible[0]?.target.id.replace(
+                'template-section-',
+                '',
+            );
+
+            if (current) {
+                activeSectionId.value = current;
+            }
+        },
+        { rootMargin: '-12% 0px -72%', threshold: 0 },
+    );
+
+    sections.forEach((section) => sectionObserver?.observe(section));
+};
 
 watch(
     () => props.template.appearance,
@@ -30,6 +101,15 @@ watch(
     },
     { deep: true },
 );
+
+watch(
+    () => props.template.sections.map((section) => section.id).join(','),
+    () => void observeSections(),
+    { flush: 'post' },
+);
+
+onMounted(() => void observeSections());
+onBeforeUnmount(() => sectionObserver?.disconnect());
 </script>
 
 <template>
@@ -56,15 +136,77 @@ watch(
             :reason="processLock"
         />
 
-        <TemplateVisualBuilder
-            :template="template"
-            :appearance="previewAppearance"
-            :block-types="blockTypes"
-            :variables="variables"
-            :identification-design="identificationDesign"
-            :color-options="appearanceOptions.colors"
-            :readonly="Boolean(processLock)"
-        />
+        <nav
+            v-if="template.sections.length > 0"
+            class="mb-4 xl:hidden"
+            aria-label="Índice de la plantilla"
+        >
+            <Select
+                :model-value="activeSectionId"
+                @update:model-value="updateSectionSelect($event)"
+            >
+                <SelectTrigger class="w-full">
+                    <SelectValue placeholder="Ir a una sección" />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem
+                        v-for="(section, index) in template.sections"
+                        :key="section.id"
+                        :value="section.id"
+                    >
+                        {{ index + 1 }}. {{ section.title }}
+                    </SelectItem>
+                </SelectContent>
+            </Select>
+        </nav>
+
+        <div class="xl:grid xl:grid-cols-[15rem_minmax(0,1fr)] xl:gap-6">
+            <aside v-if="template.sections.length > 0" class="hidden xl:block">
+                <nav
+                    class="sticky top-6 max-h-[calc(100vh-3rem)] overflow-y-auto border-e pe-4"
+                    aria-label="Índice de la plantilla"
+                >
+                    <p class="mb-3 text-sm font-medium">Índice</p>
+                    <ol class="space-y-1">
+                        <li
+                            v-for="(section, index) in template.sections"
+                            :key="section.id"
+                        >
+                            <button
+                                type="button"
+                                class="w-full border-s-2 px-3 py-2 text-left text-sm leading-snug transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+                                :class="
+                                    activeSectionId === section.id
+                                        ? 'border-primary bg-accent font-medium text-foreground'
+                                        : 'border-transparent text-muted-foreground hover:border-border hover:bg-muted hover:text-foreground'
+                                "
+                                :aria-current="
+                                    activeSectionId === section.id
+                                        ? 'location'
+                                        : undefined
+                                "
+                                @click="navigateToSection(section.id)"
+                            >
+                                <span class="me-1 tabular-nums">
+                                    {{ index + 1 }}.
+                                </span>
+                                {{ section.title }}
+                            </button>
+                        </li>
+                    </ol>
+                </nav>
+            </aside>
+
+            <TemplateVisualBuilder
+                :template="template"
+                :appearance="previewAppearance"
+                :block-types="blockTypes"
+                :variables="variables"
+                :identification-design="identificationDesign"
+                :color-options="appearanceOptions.colors"
+                :readonly="Boolean(processLock)"
+            />
+        </div>
     </PageFrame>
 
     <TemplateAppearanceSheet

@@ -400,3 +400,15 @@ abren hacia la izquierda y no retienen el puntero, para no superponerse al contr
 vecino. La barra del diálogo de tabla mantiene su tema semántico propio. Chromium comprueba el color del tooltip de
 «Editar tabla»; pasan Prettier, ESLint puntual y TypeScript. Sin migraciones, datos,
 commit ni push.
+
+## Seguimiento — índice de navegación (2026-09-08)
+
+ADM-06 usa el margen libre de escritorio para un índice fijo de sus bloques. Cada enlace
+desplaza suavemente al anclaje de sección y el bloque visible queda marcado; en pantallas
+estrechas el mismo índice es un selector, sin crear desbordamiento horizontal global. No
+se persiste la posición ni se modifica el documento, sus permisos o su exportación.
+
+- [x] Añadir anclajes estables a las secciones de la hoja.
+- [x] Mostrar índice lateral en escritorio y selector equivalente en móvil.
+- [x] Actualizar el enlace activo mediante `IntersectionObserver` y conservar nombres
+      accesibles.

@@ -151,8 +151,10 @@ const bindHandle = <T,>(
                 :key="section.id"
             >
                 <section
+                    :id="`template-section-${section.id}`"
                     class="group/template-section mb-6"
                     :aria-label="`Bloque ${section.title}`"
+                    tabindex="-1"
                 >
                     <div
                         class="relative mb-3"

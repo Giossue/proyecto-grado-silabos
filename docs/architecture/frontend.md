@@ -121,11 +121,13 @@ la hoja mantiene su propio desplazamiento horizontal en pantallas estrechas.
 `TemplateVisualBuilder` proyecta las secciones persistidas como bloques de producto y
 los `TemplateBlock` internos como campos. Esa traducción permite conservar el esquema
 existente sin una migración destructiva: para Administración, un bloque es siempre un
-contenedor y cada campo elige su presentación. `TemplateBlockCreator` abre un `Popover`
-con nombre y una colección de uno a veinte campos; `SaveTemplateSection` crea sección,
-bloques técnicos y definiciones dentro de una sola transacción. `TemplateFieldCreator`
-añade después un campo al mismo contenedor. Los identificadores técnicos se generan en
-cliente, se validan como opacos y nunca se muestran.
+contenedor y cada campo elige su presentación. El índice de `Show.vue` observa los
+anclajes de `TemplateVisualBuilder`, marca la sección visible y permite saltar a ella;
+en móvil lo sustituye un `Select`. El único menú de tres puntos por bloque abre los
+diálogos de `TemplateBlockCreator` y `TemplateFieldCreator`, además de las acciones
+estructurales. `SaveTemplateSection` crea sección, bloques técnicos y definiciones dentro
+de una sola transacción. Los identificadores técnicos se generan en cliente, se validan
+como opacos y nunca se muestran.
 
 `TemplateAppearanceSheet` trabaja con un catálogo entregado por
 `TemplateAppearance`: fuentes, tamaños, colores, márgenes, orientación, alineaciones,
@@ -149,14 +151,12 @@ sin rol; un estilo explícito de celda tiene precedencia.
 
 `TemplateToolbarSelect` y `TemplateToolbarButton` componen los controles icónicos de
 estilo con ayuda de `Tooltip`, sin sustituir sus nombres accesibles y manteniendo la ayuda
-de acciones deshabilitadas. En cada encabezado de bloque, `TemplateVisualBuilder` agrupa
-en una columna las altas contextuales: primero campo y después bloque.
-`TemplateIconPopover` comparte ese patrón sin quitar a cada `Popover` la responsabilidad
-de su propio formulario.
+de acciones deshabilitadas. El menú único conserva los nombres accesibles y concentra sus
+submenús para que la hoja no reciba controles duplicados.
 
 `TemplateBlockCreator` y `TemplateFieldCreator` reutilizan el `Select` de shadcn-vue para
-el tipo de contenido. `SelectContent` admite `portalDisabled` para permanecer dentro del
-`Popover` que posee el formulario; el valor predeterminado conserva el portal en todos
+el tipo de contenido dentro de sus diálogos. `SelectContent` admite `portalDisabled` para
+mantener el foco dentro de ese flujo; el valor predeterminado conserva el portal en todos
 los demás usos. Las tablas nuevas siguen naciendo con `TableLayout::default()` y después
 pueden ajustarse en la hoja.
 

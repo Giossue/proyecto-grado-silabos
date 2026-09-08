@@ -257,6 +257,10 @@ test(
             1,
         );
         assert.equal(
+            await page.locator('#template-section-section-1').count(),
+            1,
+        );
+        assert.equal(
             await page.getByRole('heading', { name: '1.2 Matriz' }).count(),
             1,
         );
