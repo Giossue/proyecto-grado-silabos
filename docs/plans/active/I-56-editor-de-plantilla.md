@@ -350,3 +350,24 @@ Verificación puntual: TypeScript, ESLint, Pint y el contrato de arquitectura
 (`ManagementCreationUiTest`, **1 prueba / 100 aserciones**) pasan; Chromium
 `template-visual-builder.mjs`, **1/1**, abre el diálogo, combina y estiliza celdas,
 guarda y comprueba su cierre. Sin migraciones, modificaciones de datos, commit ni push.
+
+## Seguimiento — contraste y descarte de tablas (2026-09-08)
+
+El descarte al cancelar la edición de una tabla ocurre en un diálogo de la aplicación,
+no en `window.confirm`. El aviso nativo de abandonar o recargar la página se conserva,
+porque los navegadores no permiten reemplazarlo por una interfaz personalizada. El
+lienzo de la tabla representa papel blanco también en modo oscuro, mientras que sus
+controles usan los colores del tema; las referencias de campo y las variables tienen
+texto oscuro propio para que no desaparezcan sobre cabeceras de color.
+
+- [x] Sustituir el descarte local por un diálogo accesible, con opción de continuar
+      editando o descartar.
+- [x] Mantener una superficie de documento legible en tema oscuro y contraste propio
+      para fichas de campos y variables, incluida la barra y las acciones contextuales.
+- [x] Ejecutar la regresión Chromium y los controles estáticos puntuales.
+
+Verificación puntual: `npm run types:check`, Prettier y ESLint de los componentes
+afectados, compilación Vite y `ManagementCreationUiTest` (**24 pruebas / 1156
+aserciones**) pasan. Chromium `template-visual-builder.mjs` (**1/1**) modifica una
+tabla, solicita cancelar, conserva su borrador al continuar y guarda. Sin migraciones,
+modificaciones de datos, commit ni push.

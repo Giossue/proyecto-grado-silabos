@@ -447,7 +447,7 @@ defineExpose({ getDocument });
         data-page-unit
     >
         <div
-            class="flex flex-wrap items-center gap-2 bg-muted/40 p-2"
+            class="flex flex-wrap items-center gap-2 bg-muted/40 p-2 text-foreground"
             role="toolbar"
             aria-label="Formato de celdas"
         >
@@ -713,7 +713,10 @@ defineExpose({ getDocument });
             Seleccione una celda. Use Mayús + clic para ampliar la selección.
         </p>
 
-        <EditorContent :editor="editor" class="min-w-0 overflow-x-auto p-2" />
+        <EditorContent
+            :editor="editor"
+            class="template-table-canvas min-w-0 overflow-x-auto p-2"
+        />
     </div>
 </template>
 
@@ -721,6 +724,10 @@ defineExpose({ getDocument });
 .template-table-editor .tiptap {
     min-width: 580px;
     outline: none;
+}
+.template-table-editor .template-table-canvas {
+    /* El documento se edita sobre papel, independientemente del tema de la interfaz. */
+    background: #fff;
 }
 .template-table-editor table {
     border-collapse: collapse;
@@ -779,15 +786,17 @@ defineExpose({ getDocument });
     top: 0;
     width: 4px;
 }
-.template-table-field {
+.template-table-editor .template-table-field {
     background: #edf6ff;
     border-radius: 2px;
+    color: #111827 !important;
     outline: 1px dashed #4f81bd;
     padding: 1px 3px;
 }
-.template-table-variable {
+.template-table-editor .template-table-variable {
     background: #edf8ee;
     border-radius: 2px;
+    color: #111827 !important;
     padding: 1px 3px;
 }
 </style>

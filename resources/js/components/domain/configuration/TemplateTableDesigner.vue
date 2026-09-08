@@ -47,6 +47,7 @@ const props = defineProps<{
 
 const editing = ref(false);
 const dirty = ref(false);
+const discardOpen = ref(false);
 const draft = ref<DocumentNode>({ type: 'doc', content: [] });
 const editor = ref<InstanceType<typeof TemplateTableEditor> | null>(null);
 const form = useForm({
@@ -91,19 +92,25 @@ const close = (force = false): void => {
         return;
     }
 
-    if (
-        !force &&
-        dirty.value &&
-        !window.confirm(
-            'Hay cambios de tabla sin guardar. ¿Desea descartarlos?',
-        )
-    ) {
+    if (!force && dirty.value) {
+        draft.value = editor.value?.getDocument() ?? draft.value;
+        editing.value = false;
+        discardOpen.value = true;
+
         return;
     }
 
+    discardOpen.value = false;
     editing.value = false;
     dirty.value = false;
     form.clearErrors();
+};
+
+const discardChanges = (): void => close(true);
+
+const continueEditing = (): void => {
+    discardOpen.value = false;
+    editing.value = true;
 };
 
 const updateDialogOpen = (open: boolean): void => {
@@ -209,7 +216,7 @@ watch(
                                 type="button"
                                 variant="outline"
                                 size="icon-sm"
-                                class="size-7"
+                                class="size-7 text-foreground"
                                 :aria-label="`Editar tabla: ${blockTitle}`"
                                 @click="start"
                             >
@@ -300,6 +307,33 @@ watch(
                             aria-hidden="true"
                         />
                         Guardar tabla
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        <Dialog v-model:open="discardOpen">
+            <DialogContent class="sm:max-w-md" :show-close-button="false">
+                <DialogHeader>
+                    <DialogTitle>Descartar cambios de tabla</DialogTitle>
+                    <DialogDescription>
+                        Hay cambios de tabla sin guardar. ¿Desea descartarlos?
+                    </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        @click="continueEditing"
+                    >
+                        Seguir editando
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="destructive"
+                        @click="discardChanges"
+                    >
+                        Descartar cambios
                     </Button>
                 </DialogFooter>
             </DialogContent>

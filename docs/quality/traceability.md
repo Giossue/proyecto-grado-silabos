@@ -106,6 +106,12 @@ shadcn-vue dentro del `Popover`, sin volver al control nativo. La regresión tam
 comprueba controles exclusivamente icónicos con `Tooltip`, nombres accesibles y el orden
 vertical campo-bloque en cada contenedor.
 
+Al cancelar una tabla modificada, el diálogo de confirmación conserva el borrador o lo
+descarta explícitamente; no invoca una alerta del navegador. El lienzo de edición se
+mantiene como papel blanco bajo tema oscuro y los marcadores de campos/variables fijan
+un texto contrastado. Las barras y acciones contextuales usan el color semántico del
+tema, sin alterar los colores configurables de las celdas.
+
 El seguimiento de propiedades reúne nombre, ayuda e IA en el mismo borrador de diseño
 (ADM-06; RNF-018..023). `TemplateDocumentTest` verifica guardado conjunto,
 rechazo de propiedades ajenas y conflictos, IA restringida, campos retirados y

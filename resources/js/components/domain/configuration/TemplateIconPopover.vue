@@ -45,7 +45,7 @@ const helpOpen = ref(false);
                             type="button"
                             :variant="variant"
                             :size="size"
-                            :class="buttonClass"
+                            :class="['text-foreground', buttonClass]"
                             :aria-label="label"
                             @focus="helpOpen = true"
                             @blur="helpOpen = false"

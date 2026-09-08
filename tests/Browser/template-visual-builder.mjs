@@ -311,6 +311,16 @@ test(
                 name: 'Negrita en las celdas seleccionadas',
             })
             .click();
+        await tableDialog.getByRole('button', { name: 'Cancelar' }).click();
+        const discardDialog = page.getByRole('dialog', {
+            name: 'Descartar cambios de tabla',
+        });
+        await discardDialog.waitFor();
+        await discardDialog
+            .getByRole('button', { name: 'Seguir editando' })
+            .click();
+        await discardDialog.waitFor({ state: 'hidden' });
+        await tableDialog.waitFor();
         await page.getByRole('button', { name: 'Guardar tabla' }).click();
         await tableDialog.waitFor({ state: 'hidden' });
         await page
