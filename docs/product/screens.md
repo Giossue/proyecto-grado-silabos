@@ -204,9 +204,8 @@ completo. El alta está separada de asignar paralelos y no levanta sus bloqueos.
   totales por unidad y generales, y compara ACD/APE/AA con la malla. Un desajuste se
   guarda como borrador, pero bloquea validar y enviar. Créditos y total de horas son de
   solo lectura; una incoherencia con 48 horas por crédito se reporta como configuración.
-  En ADM-06 aún no existe una materia contra la cual comparar: el resumen muestra solo
-  los valores de muestra con tono informativo y explica que la comparación se activará
-  al usar la plantilla en un sílabo; nunca presenta esa ausencia como error.
+  En ADM-06 aún no existe una materia contra la cual comparar, por lo que el resumen no
+  se muestra. Aparece únicamente dentro de un sílabo real con contexto de malla.
   Las fuentes son documentos editables: COR-11 abre el contenido como una hoja visual
   con cinta de opciones; el formato se aplica en tiempo real y el sistema conserva el
   resultado como Markdown seguro sin mostrar su sintaxis.

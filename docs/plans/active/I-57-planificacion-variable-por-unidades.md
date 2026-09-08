@@ -150,7 +150,8 @@ la revisión; no se acepta CSS ni dimensiones arbitrarias.
 - `document-pagination.mjs`, `template-visual-builder.mjs` y
   `template-document-editor.mjs`: 3/3 aprobadas en Chromium temporal sin modificar las
   dependencias del proyecto. Cubren teclado, 360 px, superficies blancas en tema oscuro,
-  paginación y el resumen neutral de la plantilla cuando aún no existe contexto de malla.
+  paginación y la ausencia del resumen en la plantilla cuando aún no existe contexto de
+  malla.
 - Suite PHP completa: 389 pruebas aprobadas; la puerta global conserva tres fallos de
   arquitectura de interfaz ajenos a I-57 y no pudo completar la comprobación dependiente
   de Redis porque el servicio local no estaba disponible en `127.0.0.1:56379`.

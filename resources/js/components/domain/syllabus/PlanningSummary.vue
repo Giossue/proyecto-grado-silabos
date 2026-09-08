@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { AlertCircle, CheckCircle2, Info } from '@lucide/vue';
+import { AlertCircle, CheckCircle2 } from '@lucide/vue';
 import { computed } from 'vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -17,7 +17,6 @@ const props = defineProps<{
 }>();
 
 const summary = computed(() => summarizePlanning(props.layout, props.rows));
-const hasExpectations = computed(() => props.expectations != null);
 const comparisons = computed(() => {
     if (!summary.value || !props.expectations) {
         return [];
@@ -110,31 +109,14 @@ const valid = computed(
 
 <template>
     <Alert
-        v-if="summary"
-        :variant="!hasExpectations || valid ? 'default' : 'destructive'"
+        v-if="summary && expectations"
+        :variant="valid ? 'default' : 'destructive'"
     >
         <CheckCircle2 v-if="valid" aria-hidden="true" />
-        <AlertCircle v-else-if="hasExpectations" aria-hidden="true" />
-        <Info v-else aria-hidden="true" />
+        <AlertCircle v-else aria-hidden="true" />
         <AlertTitle>Resumen automático de planificación</AlertTitle>
         <AlertDescription class="flex flex-col gap-2">
-            <div v-if="!hasExpectations" class="flex flex-wrap gap-2">
-                <Badge variant="secondary">
-                    Semanas planificadas: {{ new Set(summary.weeks).size }}
-                </Badge>
-                <Badge variant="outline">
-                    ACD planificadas:
-                    {{ formatSum(summary.totals.hours_acd) }}
-                </Badge>
-                <Badge variant="outline">
-                    APE planificadas:
-                    {{ formatSum(summary.totals.hours_ape) }}
-                </Badge>
-                <Badge variant="outline">
-                    AA planificadas: {{ formatSum(summary.totals.hours_aa) }}
-                </Badge>
-            </div>
-            <div v-else class="flex flex-wrap gap-2">
+            <div class="flex flex-wrap gap-2">
                 <Badge :variant="weeksOk ? 'secondary' : 'destructive'">
                     Semanas: {{ new Set(summary.weeks).size }} /
                     {{ expectations?.teaching_weeks ?? '—' }}
@@ -175,11 +157,7 @@ const valid = computed(
                     {{ configuration.creditHours ?? '—' }}
                 </Badge>
             </div>
-            <span v-if="!hasExpectations">
-                Las semanas, horas y créditos se compararán con la malla cuando
-                esta plantilla se utilice en un sílabo.
-            </span>
-            <span v-else-if="!valid">
+            <span v-if="!valid">
                 Puede guardar el borrador, pero deberá completar las semanas y
                 hacer coincidir las horas con la malla antes de enviarlo.
             </span>

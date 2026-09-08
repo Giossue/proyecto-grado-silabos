@@ -367,15 +367,10 @@ test(
             );
             assert.equal(
                 await page
-                    .getByText(
-                        'Las semanas, horas y créditos se compararán con la malla cuando esta plantilla se utilice en un sílabo.',
-                        { exact: true },
-                    )
+                    .getByText('Resumen automático de planificación', {
+                        exact: true,
+                    })
                     .count(),
-                1,
-            );
-            assert.equal(
-                await page.getByText('Créditos de malla: —').count(),
                 0,
             );
 
