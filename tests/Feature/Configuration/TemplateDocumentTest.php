@@ -266,12 +266,23 @@ class TemplateDocumentTest extends TestCase
         $this->patch(route('admin.templates.blocks.document', [$template, $block]), ['document' => $doc, 'fingerprint' => SaveTemplateDocument::fingerprint($block)])
             ->assertSessionHasNoErrors();
         $configuration = $block->fresh()->configuracion;
-        $this->patch(route('admin.templates.blocks.table', [$template, $block]), $configuration['table'])
-            ->assertSessionHasErrors('table');
-        $this->assertSame($configuration, $block->fresh()->configuracion);
+        $layoutPayload = [
+            ...$configuration['table'],
+            'fingerprint' => SaveTemplateDocument::fingerprint($block->fresh()),
+        ];
+        $this->patch(route('admin.templates.blocks.table', [$template, $block]), $layoutPayload)
+            ->assertSessionHasNoErrors();
+        $rebuiltConfiguration = $block->fresh()->configuracion;
+        $this->assertArrayNotHasKey('document', $rebuiltConfiguration);
+        $this->assertSame(
+            ['contenido', 'acd'],
+            array_column($rebuiltConfiguration['table']['columns'], 'key'),
+        );
         $this->assertCount(2, $configuration['table']['columns']);
         $this->assertSame('number', $configuration['table']['columns'][1]['type']);
         $this->assertTrue($configuration['table']['columns'][1]['sum']);
+        $this->patch(route('admin.templates.blocks.table', [$template, $block]), $layoutPayload)
+            ->assertSessionHasErrors('fingerprint');
         $fields = [['key' => 'unidades', 'rows' => [
             ['data' => ['_unit' => 1, 'contenido' => 'Tema A', 'acd' => 2]],
             ['data' => ['_unit' => 1, 'contenido' => 'Tema B', 'acd' => 3]],
@@ -287,6 +298,46 @@ class TemplateDocumentTest extends TestCase
         $doc['content'][0]['content'][0]['content'][0]['attrs']['rowspan'] = 2;
         $this->patch(route('admin.templates.blocks.document', [$template, $block]), ['document' => $doc, 'fingerprint' => SaveTemplateDocument::fingerprint($block->fresh())])
             ->assertSessionHasErrors('document');
+    }
+
+    public function test_visual_table_save_preserves_custom_semantic_column_roles(): void
+    {
+        $template = $this->template();
+        $block = $template->fields()->where('clave', 'unidades')->firstOrFail()->block;
+        $layout = $block->configuracion['table'];
+        $layout['columns'] = [[
+            'key' => 'horas_clase', 'label' => 'Horas de clase', 'type' => 'number',
+            'group' => null, 'band' => null, 'sum' => true, 'width' => null,
+            'role' => 'hours_acd',
+        ]];
+        $layout['groups'] = [];
+        $layout['bands'] = [];
+
+        $this->patch(route('admin.templates.blocks.table', [$template, $block]), [
+            ...$layout,
+            'fingerprint' => SaveTemplateDocument::fingerprint($block),
+        ])->assertSessionHasNoErrors();
+
+        $column = ['type' => 'column', 'attrs' => [
+            'key' => 'horas_clase', 'label' => 'Horas de clase', 'kind' => 'numero',
+        ]];
+        $document = ['type' => 'doc', 'content' => [[
+            'type' => 'table', 'attrs' => ['repeatKey' => 'unidades'], 'content' => [[
+                'type' => 'tableRow', 'attrs' => ['rowRole' => 'record'], 'content' => [[
+                    'type' => 'tableCell', 'content' => [[
+                        'type' => 'paragraph', 'content' => [$column],
+                    ]],
+                ]],
+            ]],
+        ]]];
+        $this->patch(route('admin.templates.blocks.document', [$template, $block]), [
+            'document' => $document,
+            'fingerprint' => SaveTemplateDocument::fingerprint($block->fresh()),
+        ])->assertSessionHasNoErrors();
+
+        $savedColumn = $block->fresh()->configuracion['table']['columns'][0];
+        $this->assertSame('hours_acd', $savedColumn['role']);
+        $this->assertTrue($savedColumn['sum']);
     }
 
     public function test_design_properties_save_atomically_and_reject_foreign_fields_and_stale_edits(): void

@@ -43,6 +43,12 @@ Fecha de corte: **30 de agosto de 2026**.
   ACD, APE y AA se suman y comparan exactamente con la malla al validar o enviar. El
   borrador incompleto se conserva. Los créditos son de solo lectura y el total de la
   malla debe equivaler a `créditos × 48`; una incoherencia es un error de configuración.
+- I-58 (8 de septiembre de 2026) separa los marcadores del constructor: `@clave`
+  identifica exclusivamente datos automáticos y `$clave` un dato repetible de tabla.
+  Administración configura unidades, datos de cabecera, columnas, tipos, usos
+  semánticos y totales sin escribir roles técnicos. Un cambio estructural reconstruye
+  el molde visual de esa tabla previa advertencia; las revisiones enviadas permanecen
+  intactas.
 - La modalidad de estudio es un dato base de la carrera (la aprueba el CES) y no un
   catálogo: presencial, semipresencial, en línea, a distancia o híbrida, fijas por reglamento.
   Una materia puede usar una modalidad distinta, sin cambiar ni recalificar la modalidad

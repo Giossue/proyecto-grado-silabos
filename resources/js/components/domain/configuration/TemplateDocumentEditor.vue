@@ -124,12 +124,16 @@ const token = (name: 'field' | 'column') =>
             [
                 'span',
                 { class: 'template-input-token-generic' },
-                'Respuesta del docente',
+                name === 'column'
+                    ? `$${node.attrs.key}`
+                    : 'Respuesta del docente',
             ],
             [
                 'span',
                 { class: 'template-input-token-label' },
-                `${node.attrs.label}${node.attrs.choice ? ` (${node.attrs.choice})` : ''}`,
+                name === 'column'
+                    ? `$${node.attrs.key}`
+                    : `${node.attrs.label}${node.attrs.choice ? ` (${node.attrs.choice})` : ''}`,
             ],
         ],
     });

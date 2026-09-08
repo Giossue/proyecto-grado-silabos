@@ -147,7 +147,12 @@ completo. El alta está separada de asignar paralelos y no levanta sus bloqueos.
   nombre accesible para los colores del catálogo, alineación, negrita, cursiva y borde por
   celda; combinar/separar celdas y agregar o retirar filas y columnas. Guardar conserva
   las protecciones de conflicto, bloqueo y reinicio. Docencia ve y completa el resultado,
-  pero nunca recibe esas herramientas.
+  pero nunca recibe esas herramientas. Desde ese diálogo, **Configurar estructura**
+  permite definir si la tabla se organiza por unidades, sus datos de cabecera, columnas,
+  tipos, usos de planificación y totales. No expone `unit`, `record` ni `total`. Advierte
+  que guardar la estructura reconstruye el molde y restablece sus combinaciones y estilos
+  particulares. En el constructor, `@clave` representa un dato automático y `$clave` un
+  dato repetible de la tabla.
 - ADM-06 muestra hojas carta separadas y numeradas (I-53). El pie derecho muestra
   únicamente el número de página (1, 2, 3…), sin el total. La cantidad se recalcula
   según el contenido de muestra al agregar, retirar, reordenar o renombrar piezas.

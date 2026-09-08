@@ -7,6 +7,7 @@ import { toast } from 'vue-sonner';
 import TemplateController from '@/actions/App/Modules/Configuration/Presentation/Http/Controllers/TemplateController';
 import TemplateDocumentView from '@/components/domain/configuration/TemplateDocumentView.vue';
 import TemplateTableEditor from '@/components/domain/configuration/TemplateTableEditor.vue';
+import TemplateTableStructureDialog from '@/components/domain/configuration/TemplateTableStructureDialog.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
@@ -297,11 +298,26 @@ watch(
                 class="flex h-[calc(100vh-2rem)] max-h-[70rem] w-[calc(100vw-2rem)] max-w-[80rem] flex-col gap-0 p-0 sm:max-w-[80rem]"
             >
                 <DialogHeader class="shrink-0 border-b px-6 py-4 pr-12">
-                    <DialogTitle>Editar tabla: {{ blockTitle }}</DialogTitle>
-                    <DialogDescription>
-                        Seleccione celdas para aplicar formato, combinar o
-                        modificar filas y columnas.
-                    </DialogDescription>
+                    <div
+                        class="flex flex-wrap items-start justify-between gap-3"
+                    >
+                        <div class="flex min-w-0 flex-col gap-1">
+                            <DialogTitle
+                                >Editar tabla: {{ blockTitle }}</DialogTitle
+                            >
+                            <DialogDescription>
+                                Seleccione celdas para aplicar formato, combinar
+                                o modificar filas y columnas.
+                            </DialogDescription>
+                        </div>
+                        <TemplateTableStructureDialog
+                            :template-id="templateId"
+                            :block-id="blockId"
+                            :fingerprint="fingerprint"
+                            :layout="layout"
+                            @saved="close(true)"
+                        />
+                    </div>
                 </DialogHeader>
 
                 <div class="min-h-0 flex-1 overflow-auto p-6">

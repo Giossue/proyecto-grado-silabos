@@ -18,6 +18,7 @@ class UpdateTableLayoutRequest extends ManageTemplatesRequest
         $label = ['required', 'string', 'max:180'];
 
         return [
+            'fingerprint' => ['required', 'string', 'size:64'],
             'columns' => ['required', 'array', 'min:1', 'max:24'],
             'columns.*.key' => $key,
             'columns.*.label' => $label,

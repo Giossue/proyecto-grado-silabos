@@ -160,13 +160,15 @@ final class SaveTemplateDocument
                     }
                     $columns[] = [
                         'key' => $key, 'label' => $attrs['label'], 'type' => $type,
-                        'group' => null, 'band' => null,
+                        'group' => $known[$key]['group'] ?? null,
+                        'band' => $known[$key]['band'] ?? null,
                         'sum' => $known[$key]['sum'] ?? false,
                         'width' => $known[$key]['width'] ?? null,
+                        'role' => $known[$key]['role'] ?? null,
                     ];
                 }
                 $configuration['table'] = TableLayout::normalize([
-                    ...$layout, 'columns' => $columns, 'groups' => [], 'bands' => [],
+                    ...$layout, 'columns' => $columns,
                     'header_fields' => array_values($headerKeys),
                 ]);
             }

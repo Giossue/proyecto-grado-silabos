@@ -42,17 +42,20 @@ class UpdateTableLayout
 
         return DB::transaction(function () use ($actor, $activeRole, $block, $normalized, $request): array {
             SyllabusTemplate::query()->whereKey($block->plantilla_id)->lockForUpdate()->firstOrFail();
-            $block->refresh();
-            if (is_array($block->configuracion['document'] ?? null)) {
-                throw ValidationException::withMessages(['table' => 'Esta tabla tiene un diseño personalizado. Use Editar diseño para cambiar sus columnas y celdas.']);
+            $block->refresh()->load('fields');
+            if (! hash_equals(SaveTemplateDocument::fingerprint($block), $request->string('fingerprint')->toString())) {
+                throw ValidationException::withMessages(['fingerprint' => 'La plantilla cambió en otra sesión. Recargue antes de guardar; su estructura no fue sobrescrita.']);
             }
             // Cambiar columnas altera lo que los docentes están llenando.
             $this->work->requireConfirmation($request);
 
             $configuration = $block->getAttribute('configuracion');
+            $configuration = is_array($configuration) ? $configuration : [];
+            $hadDocument = is_array($configuration['document'] ?? null);
+            unset($configuration['document']);
             $block->update([
                 'configuracion' => [
-                    ...(is_array($configuration) ? $configuration : []),
+                    ...$configuration,
                     'table' => $normalized,
                 ],
             ]);
@@ -65,7 +68,12 @@ class UpdateTableLayout
                 resourceId: $block->id,
                 result: 'exito',
                 correlationId: $request->attributes->getString('correlation_id') ?: null,
-                metadata: ['columns' => count($normalized['columns'])],
+                metadata: [
+                    'columns' => count($normalized['columns']),
+                    'unit_fields' => count($normalized['header_fields']),
+                    'repeats_by_unit' => $normalized['repeat']['enabled'],
+                    'visual_design_reset' => $hadDocument,
+                ],
             );
 
             return $normalized;

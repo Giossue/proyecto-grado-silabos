@@ -233,9 +233,11 @@ const inlineNode = (name: 'field' | 'column' | 'variable') =>
             const label =
                 name === 'variable'
                     ? `@${node.attrs.id}`
-                    : node.attrs.choice
-                      ? `${node.attrs.label} (${node.attrs.choice})`
-                      : node.attrs.label;
+                    : name === 'column'
+                      ? `$${node.attrs.key}`
+                      : node.attrs.choice
+                        ? `${node.attrs.label} (${node.attrs.choice})`
+                        : node.attrs.label;
 
             return [
                 'span',

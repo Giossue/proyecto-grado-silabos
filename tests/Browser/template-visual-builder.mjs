@@ -93,7 +93,18 @@ router.post = async (url, data, visit) => {
 router.patch = async (url, data, visit) => {
     requests.push({method:'patch',url,data:JSON.parse(JSON.stringify(data))});
     visit?.onStart?.({});
-    if (url.includes('/diseno')) {
+    if (url.includes('/tabla')) {
+        const {fingerprint, confirm_purge, ...table} = data;
+        template.value = {
+            ...template.value,
+            sections: template.value.sections.map(section => ({
+                ...section,
+                blocks: section.blocks.map(block => url.includes(block.id)
+                    ? {...block, table, document: null, fingerprint: 'c'.repeat(64)}
+                    : block),
+            })),
+        };
+    } else if (url.includes('/diseno')) {
         template.value = {
             ...template.value,
             sections: template.value.sections.map(section => ({
@@ -423,6 +434,14 @@ test(
         const tableEditor = tableDialog.getByRole('textbox', {
             name: 'Editar tabla de la plantilla',
         });
+        assert.equal(
+            await tableEditor.getByText('$texto', { exact: true }).count(),
+            1,
+        );
+        assert.equal(
+            await tableEditor.getByText('$detalle', { exact: true }).count(),
+            1,
+        );
         const mergeButton = page.getByRole('button', {
             name: 'Combinar celdas',
         });
@@ -540,6 +559,67 @@ test(
             ),
         );
         assert.deepEqual(nativeDialogs, []);
+
+        await page.locator('.document-table-container').hover();
+        await page
+            .getByRole('button', { name: 'Editar tabla: Matriz' })
+            .click();
+        await tableDialog.waitFor();
+        await tableDialog
+            .getByRole('button', { name: 'Configurar estructura' })
+            .click();
+        const structureDialog = page.getByRole('dialog', {
+            name: 'Configurar estructura de la tabla',
+        });
+        await structureDialog.waitFor();
+        await structureDialog.getByLabel('Organizar por unidades').check();
+        await structureDialog
+            .getByLabel('Nombre del grupo repetible')
+            .fill('Unidad temática');
+        await structureDialog
+            .getByRole('button', { name: 'Agregar dato' })
+            .click();
+        await structureDialog
+            .getByLabel('Nombre del dato de unidad 1')
+            .fill('Resultado de aprendizaje');
+        await structureDialog
+            .getByRole('button', { name: 'Agregar columna' })
+            .click();
+        const names = structureDialog.getByLabel('Nombre visible');
+        await names.nth(2).fill('Semana');
+        await structureDialog.locator('#table-column-type-2').click();
+        await page.getByRole('option', { name: 'Número', exact: true }).click();
+        await structureDialog.locator('#table-column-role-2').click();
+        await page
+            .getByRole('option', {
+                name: 'Semana de planificación',
+                exact: true,
+            })
+            .click();
+        await structureDialog.getByLabel('Mostrar fila de totales').check();
+        await structureDialog
+            .getByLabel('Texto de la fila')
+            .fill('Total semanal');
+        await structureDialog
+            .getByRole('button', { name: 'Guardar estructura' })
+            .click();
+        await structureDialog.waitFor({ state: 'hidden' });
+        await tableDialog.waitFor({ state: 'hidden' });
+        const structureRequest = await page.evaluate(() =>
+            window.fixture.requests.find((request) =>
+                request.url.includes('/tabla'),
+            ),
+        );
+        assert.equal(structureRequest.data.repeat.enabled, true);
+        assert.equal(structureRequest.data.repeat.label, 'Unidad temática');
+        assert.equal(
+            structureRequest.data.header_fields[0].label,
+            'Resultado de aprendizaje',
+        );
+        assert.equal(structureRequest.data.columns[2].label, 'Semana');
+        assert.equal(structureRequest.data.columns[2].role, 'week');
+        assert.equal(structureRequest.data.columns[2].sum, false);
+        assert.equal(structureRequest.data.totals.enabled, true);
 
         await renamedSection.hover();
         await renamedSectionMenu.click();

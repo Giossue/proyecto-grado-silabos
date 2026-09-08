@@ -38,6 +38,11 @@
 - ADM-06 aplica el mismo patrón al alta y edición de campos, y el detalle de COR-11 a la
   edición de nombre, descripción y notas internas; el documento permanece como contenido
   principal.
+- En las tablas de ADM-06, `@clave` identifica un valor automático y `$clave` un dato de
+  las filas repetibles. Administración configura unidades, datos de cabecera, columnas,
+  tipos, usos de Semana/ACD/APE/AA y totales desde **Configurar estructura**, sin escribir
+  claves ni roles técnicos. Guardar reconstruye el molde visual de esa tabla previa
+  advertencia, control de conflicto y confirmación de reinicio cuando existan borradores.
 
 ## Criterios críticos
 

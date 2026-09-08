@@ -5,6 +5,7 @@ namespace Tests\Feature\Configuration;
 use App\Models\User;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Faculty;
+use App\Modules\Configuration\Application\Actions\SaveTemplateDocument;
 use App\Modules\Configuration\Domain\TemplateAppearance;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\AcademicSource;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
@@ -375,7 +376,10 @@ class TemplateAndSourceTest extends TestCase
             'repeat' => ['enabled' => true, 'label' => 'Unidad'],
         ];
         $this->actingAsAdministrator()
-            ->patch(route('admin.templates.blocks.table', ['template' => $version, 'block' => $block]), $layout)
+            ->patch(route('admin.templates.blocks.table', ['template' => $version, 'block' => $block]), [
+                ...$layout,
+                'fingerprint' => SaveTemplateDocument::fingerprint($block->fresh()),
+            ])
             ->assertRedirect()
             ->assertSessionHasNoErrors();
 
@@ -390,6 +394,7 @@ class TemplateAndSourceTest extends TestCase
         $broken['columns'][1]['group'] = 'estudiante';
         $broken['columns'][2]['group'] = 'docencia';
         $broken['columns'][3]['group'] = 'estudiante';
+        $broken['fingerprint'] = SaveTemplateDocument::fingerprint($block->fresh());
         $this->actingAsAdministrator()
             ->from(route('admin.templates.show', $version))
             ->patch(route('admin.templates.blocks.table', ['template' => $version, 'block' => $block]), $broken)
@@ -399,7 +404,10 @@ class TemplateAndSourceTest extends TestCase
         $textBlock = $version->sections()->where('clave', 'habilidades')->firstOrFail()->blocks()->firstOrFail();
         $this->actingAsAdministrator()
             ->from(route('admin.templates.show', $version))
-            ->patch(route('admin.templates.blocks.table', ['template' => $version, 'block' => $textBlock]), $layout)
+            ->patch(route('admin.templates.blocks.table', ['template' => $version, 'block' => $textBlock]), [
+                ...$layout,
+                'fingerprint' => SaveTemplateDocument::fingerprint($textBlock),
+            ])
             ->assertSessionHasErrors('table');
     }
 
