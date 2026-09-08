@@ -147,8 +147,9 @@ negrita, cursiva, borde, combinación y operaciones de filas/columnas. El guarda
 PATCH existente de `SaveTemplateDocument`, con su huella, autorización, bloqueo y
 confirmación de reinicio. `TemplateDocument` normaliza el catálogo de atributos por
 celda y `TemplateDocumentView`/`TemplateDocumentWord` lo interpretan sin persistir HTML.
-El tema global se aplica solo a `tableHeader`, filas de unidad y la primera fila antigua
-sin rol; un estilo explícito de celda tiene precedencia.
+El tema global se aplica solo a `tableHeader` y filas de unidad; un estilo explícito de
+celda tiene precedencia. Las tablas antiguas sin roles conservan los colores explícitos
+de sus celdas, evitando convertir por heurística su primera fila en una cabecera.
 
 `TemplateToolbarSelect` y `TemplateToolbarButton` componen los controles icónicos de
 estilo con ayuda de `Tooltip`, sin sustituir sus nombres accesibles y manteniendo la ayuda

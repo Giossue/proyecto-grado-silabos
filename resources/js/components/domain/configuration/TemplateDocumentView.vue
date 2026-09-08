@@ -860,8 +860,6 @@ const Content = defineComponent({ setup: () => () => draw(props.document) });
 }
 .template-document-view[data-themed]
     :deep(.document-table > tbody > tr[data-row-role='unit'] > *),
-.template-document-view[data-themed]
-    :deep(.document-table > tbody > tr:first-child:not([data-row-role]) > *),
 .template-document-view[data-themed] :deep(.document-table th) {
     color: var(--document-table-header-color);
     background-color: var(--document-table-header-background);
@@ -871,11 +869,6 @@ const Content = defineComponent({ setup: () => () => draw(props.document) });
         .document-table
             > tbody
             > tr[data-row-role='unit']
-            > :not([data-cell-text-color])
-            *,
-        .document-table
-            > tbody
-            > tr:first-child:not([data-row-role])
             > :not([data-cell-text-color])
             *,
         .document-table th:not([data-cell-text-color]) *

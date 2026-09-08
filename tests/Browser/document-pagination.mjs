@@ -365,6 +365,19 @@ test(
                 await page.getByText('Total, horas', { exact: true }).count(),
                 1,
             );
+            assert.equal(
+                await page
+                    .getByText(
+                        'Las semanas, horas y créditos se compararán con la malla cuando esta plantilla se utilice en un sílabo.',
+                        { exact: true },
+                    )
+                    .count(),
+                1,
+            );
+            assert.equal(
+                await page.getByText('Créditos de malla: —').count(),
+                0,
+            );
 
             const evaluation = sections(1);
             evaluation[0].blocks[0].content_type = 'table';

@@ -115,8 +115,9 @@ la revisión; no se acepta CSS ni dimensiones arbitrarias.
       de hojas mixtas queda en la revisión manual del constructor.
 - [x] Hacer que Word abra/cierre la sección horizontal y pagine unidades sin confundirlas
       con parciales.
-- [ ] Cubrir claro/oscuro, teclado y 360 px en revisión manual; dominio, petición,
-      borrador, validación, snapshot y DOCX tienen pruebas automatizadas.
+- [ ] Completar la revisión humana de claro/oscuro, teclado y 360 px exigida por la DoD;
+      las tres pruebas Chromium cubren esos recorridos automáticamente y dominio,
+      petición, borrador, validación, snapshot y DOCX tienen pruebas automatizadas.
 - [x] Actualizar `screens.md`, modelo de dominio, arquitectura frontend/documentos,
       normativa, pruebas, trazabilidad y pendientes.
 
@@ -146,11 +147,15 @@ la revisión; no se acepta CSS ni dimensiones arbitrarias.
 - `npm run types:check`: aprobado.
 - ESLint focalizado en los archivos frontend de I-57: aprobado.
 - `npm run build`: aprobado.
+- `document-pagination.mjs`, `template-visual-builder.mjs` y
+  `template-document-editor.mjs`: 3/3 aprobadas en Chromium temporal sin modificar las
+  dependencias del proyecto. Cubren teclado, 360 px, superficies blancas en tema oscuro,
+  paginación y el resumen neutral de la plantilla cuando aún no existe contexto de malla.
 - Suite PHP completa: 389 pruebas aprobadas; la puerta global conserva tres fallos de
   arquitectura de interfaz ajenos a I-57 y no pudo completar la comprobación dependiente
   de Redis porque el servicio local no estaba disponible en `127.0.0.1:56379`.
-- Las pruebas de navegador requieren instalar Playwright en el entorno actual. Queda
-  pendiente la revisión manual de claro/oscuro, teclado, 360 px y fidelidad del DOCX.
+- Queda pendiente la revisión humana de percepción y fidelidad institucional del DOCX
+  vinculada a `PV-07`/`PV-19`; no es una brecha funcional conocida de I-57.
 
 ## Reversión
 
