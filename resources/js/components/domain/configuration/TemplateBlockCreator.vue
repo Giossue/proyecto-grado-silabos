@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3';
-import { Plus, Trash2 } from '@lucide/vue';
+import { Blocks, Trash2 } from '@lucide/vue';
 import { ref } from 'vue';
 import { toast } from 'vue-sonner';
 import TemplateController from '@/actions/App/Modules/Configuration/Presentation/Http/Controllers/TemplateController';
+import TemplateIconPopover from '@/components/domain/configuration/TemplateIconPopover.vue';
 import { Button } from '@/components/ui/button';
 import {
     Field,
@@ -12,11 +13,7 @@ import {
     FieldLabel,
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from '@/components/ui/popover';
+import { PopoverContent } from '@/components/ui/popover';
 import {
     Select,
     SelectContent,
@@ -119,23 +116,19 @@ const updateOpen = (value: boolean): void => {
 </script>
 
 <template>
-    <Popover :open="open" @update:open="updateOpen">
-        <PopoverTrigger as-child>
-            <Button
-                type="button"
-                :variant="empty ? 'default' : 'outline'"
-                :class="empty ? '' : 'border-dashed bg-background'"
-            >
-                <Plus
-                    v-if="empty"
-                    data-icon="inline-start"
-                    aria-hidden="true"
-                />
-                {{ empty ? 'Agregar primer bloque' : 'Agregar bloque' }}
-            </Button>
-        </PopoverTrigger>
+    <TemplateIconPopover
+        :open="open"
+        :label="empty ? 'Agregar primer bloque' : 'Agregar bloque'"
+        :variant="empty ? 'default' : 'outline'"
+        :size="empty ? 'icon' : 'icon-sm'"
+        :button-class="empty ? undefined : 'border-dashed bg-background'"
+        @update:open="updateOpen"
+    >
+        <template #icon>
+            <Blocks aria-hidden="true" />
+        </template>
         <PopoverContent
-            align="center"
+            :align="empty ? 'center' : 'end'"
             class="max-h-[var(--reka-popover-content-available-height)] w-[min(30rem,calc(100vw-2rem))] overflow-hidden p-0"
         >
             <form
@@ -310,5 +303,5 @@ const updateOpen = (value: boolean): void => {
                 </div>
             </form>
         </PopoverContent>
-    </Popover>
+    </TemplateIconPopover>
 </template>

@@ -143,6 +143,13 @@ celda y `TemplateDocumentView`/`TemplateDocumentWord` lo interpretan sin persist
 El tema global se aplica solo a `tableHeader`, filas de unidad y la primera fila antigua
 sin rol; un estilo explícito de celda tiene precedencia.
 
+`TemplateToolbarSelect` y `TemplateToolbarButton` componen los controles icónicos de
+estilo con ayuda de `Tooltip`, sin sustituir sus nombres accesibles y manteniendo la ayuda
+de acciones deshabilitadas. En cada encabezado de bloque, `TemplateVisualBuilder` agrupa
+en una columna las altas contextuales: primero campo y después bloque.
+`TemplateIconPopover` comparte ese patrón sin quitar a cada `Popover` la responsabilidad
+de su propio formulario.
+
 `TemplateBlockCreator` y `TemplateFieldCreator` reutilizan el `Select` de shadcn-vue para
 el tipo de contenido. `SelectContent` admite `portalDisabled` para permanecer dentro del
 `Popover` que posee el formulario; el valor predeterminado conserva el portal en todos

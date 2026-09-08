@@ -127,7 +127,9 @@ completo. El alta está separada de asignar paralelos y no levanta sus bloqueos.
   deja un contenedor vacío. Dentro de un bloque existente, «Agregar campo» usa el mismo
   vocabulario y lo coloca al final. Con un solo campo basta el título del bloque; desde
   dos campos aparecen subtítulos numerados. Con el proceso abierto, estos controles se
-  ocultan y la hoja queda en solo lectura.
+  ocultan y la hoja queda en solo lectura. En cada bloque, los accesos compactos se
+  ordenan verticalmente con **Agregar campo** arriba y **Agregar bloque** abajo; ambos
+  conservan nombre accesible y explican su icono mediante `Tooltip`.
 - **Personalizar** abre un panel lateral con ajustes deliberadamente acotados para todo
   el documento: orientación, márgenes, fuente general, tamaños de título/bloque/campo/
   contenido, paleta institucional para texto, acento y cabecera de tabla, además de
@@ -136,10 +138,11 @@ completo. El alta está separada de asignar paralelos y no levanta sus bloqueos.
   copia en cada revisión y se aplica también al DOCX; el docente nunca la modifica.
 - Cada tabla muestra a Administración una sola acción **Editar tabla**. La edición ocurre
   en el mismo lugar de la hoja: una celda se selecciona con clic y la selección se amplía
-  con Mayús + clic. La barra contextual permite usar colores del catálogo, alineación,
-  negrita, cursiva y borde por celda; combinar/separar celdas y agregar o retirar filas y
-  columnas. Guardar conserva las protecciones de conflicto, bloqueo y reinicio. Docencia
-  ve y completa el resultado, pero nunca recibe esas herramientas.
+  con Mayús + clic. La barra contextual usa controles icónicos compactos con `Tooltip` y
+  nombre accesible para los colores del catálogo, alineación, negrita, cursiva y borde por
+  celda; combinar/separar celdas y agregar o retirar filas y columnas. Guardar conserva
+  las protecciones de conflicto, bloqueo y reinicio. Docencia ve y completa el resultado,
+  pero nunca recibe esas herramientas.
 - ADM-06 muestra hojas carta separadas y numeradas (I-53). El pie derecho muestra
   únicamente el número de página (1, 2, 3…), sin el total. La cantidad se recalcula
   según el contenido de muestra al agregar, retirar, reordenar o renombrar piezas.

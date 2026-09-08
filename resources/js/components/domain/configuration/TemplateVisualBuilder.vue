@@ -122,13 +122,23 @@ const hasTable = (block: TemplateFieldContainer): boolean =>
                         >
                             {{ sectionIndex + 1 }}. {{ section.title }}
                         </h2>
-                        <TemplateFieldCreator
+                        <div
                             v-if="!readonly"
-                            :template-id="template.id"
-                            :section-id="section.id"
-                            :position="section.blocks.length"
-                            :block-types="blockTypes"
-                        />
+                            class="flex shrink-0 flex-col gap-1"
+                            :aria-label="`Acciones del bloque ${section.title}`"
+                        >
+                            <TemplateFieldCreator
+                                :template-id="template.id"
+                                :section-id="section.id"
+                                :position="section.blocks.length"
+                                :block-types="blockTypes"
+                            />
+                            <TemplateBlockCreator
+                                :template-id="template.id"
+                                :position="sectionIndex + 1"
+                                :block-types="blockTypes"
+                            />
+                        </div>
                     </div>
 
                     <p
@@ -187,18 +197,6 @@ const hasTable = (block: TemplateFieldContainer): boolean =>
                         />
                     </article>
                 </section>
-
-                <div
-                    v-if="!readonly"
-                    class="mb-6 flex justify-center"
-                    data-page-unit
-                >
-                    <TemplateBlockCreator
-                        :template-id="template.id"
-                        :position="sectionIndex + 1"
-                        :block-types="blockTypes"
-                    />
-                </div>
             </template>
         </PaginatedDocument>
     </div>

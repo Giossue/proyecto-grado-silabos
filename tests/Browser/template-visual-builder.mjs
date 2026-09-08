@@ -14,6 +14,7 @@ import { createApp, h, ref } from 'vue';
 import { router } from '@inertiajs/vue3';
 import TemplateAppearanceSheet from '/resources/js/components/domain/configuration/TemplateAppearanceSheet.vue';
 import TemplateVisualBuilder from '/resources/js/components/domain/configuration/TemplateVisualBuilder.vue';
+import { TooltipProvider } from '/resources/js/components/ui/tooltip/index.ts';
 import '/resources/css/app.css';
 
 const defaults = {
@@ -116,11 +117,11 @@ createApp({render: () => h('main', {class:'min-h-screen bg-muted p-6'}, [
     h('div', {class:'mb-4 flex justify-end'}, [
         h('button', {type:'button', onClick: () => appearanceOpen.value = true}, 'Personalizar'),
     ]),
-    h(TemplateVisualBuilder, {
+    h(TooltipProvider, null, {default: () => h(TemplateVisualBuilder, {
         template: template.value, appearance: preview.value, blockTypes,
         variables: [], identificationDesign: {type:'doc',content:[{type:'paragraph'}]},
         colorOptions: options.colors, readonly: false,
-    }),
+    })}),
     h(TemplateAppearanceSheet, {
         open: appearanceOpen.value, templateId: template.value.id,
         appearance: appearance.value, options,
@@ -189,9 +190,15 @@ test(
         page.on('pageerror', (error) => errors.push(error.message));
 
         await page.goto(`${server.resolvedUrls.local[0]}fixture`);
+        const firstBlockButton = page.getByRole('button', {
+            name: 'Agregar primer bloque',
+        });
+        await firstBlockButton.hover();
         await page
-            .getByRole('button', { name: 'Agregar primer bloque' })
-            .click();
+            .locator('[data-slot="tooltip-content"]')
+            .filter({ hasText: 'Agregar primer bloque' })
+            .waitFor();
+        await firstBlockButton.click();
         await page
             .getByLabel('Nombre del bloque')
             .fill('Resultados y evidencias');
@@ -220,17 +227,64 @@ test(
             ['text', 'table'],
         );
 
+        const section = page.locator(
+            'section[aria-label="Bloque Resultados y evidencias"]',
+        );
+        const addFieldButton = section.getByRole('button', {
+            name: 'Agregar campo',
+            exact: true,
+        });
+        const addBlockButton = section.getByRole('button', {
+            name: 'Agregar bloque',
+            exact: true,
+        });
+        const [fieldBox, blockBox] = await Promise.all([
+            addFieldButton.boundingBox(),
+            addBlockButton.boundingBox(),
+        ]);
+        assert.ok(fieldBox && blockBox);
+        assert.ok(fieldBox.y < blockBox.y);
+        assert.equal((await addFieldButton.textContent())?.trim(), '');
+        assert.equal((await addBlockButton.textContent())?.trim(), '');
+        await addFieldButton.focus();
+        await page
+            .locator('[data-slot="tooltip-content"]')
+            .filter({ hasText: 'Agregar campo' })
+            .waitFor();
+
         await page
             .getByRole('button', { name: 'Editar tabla: Matriz' })
             .click();
         const tableEditor = page.getByRole('textbox', {
             name: 'Editar tabla de la plantilla',
         });
+        const mergeButton = page.getByRole('button', {
+            name: 'Combinar celdas',
+        });
+        assert.equal(await mergeButton.isDisabled(), true);
+        await page
+            .locator('[data-slot="tooltip-trigger"]')
+            .filter({ has: mergeButton })
+            .hover();
+        await page
+            .locator('[data-slot="tooltip-content"]')
+            .filter({ hasText: 'Combinar celdas' })
+            .waitFor();
         const headers = tableEditor.locator('th');
         await headers.nth(0).click();
         await headers.nth(1).click({ modifiers: ['Shift'] });
-        await page.getByRole('button', { name: 'Combinar' }).click();
-        await page.getByRole('combobox', { name: 'Fondo de celda' }).click();
+        assert.equal(await mergeButton.isEnabled(), true);
+        await mergeButton.click();
+        const backgroundSelect = page.getByRole('combobox', {
+            name: 'Fondo de celda',
+        });
+        await backgroundSelect.focus();
+        await backgroundSelect.hover();
+        await page
+            .locator('[data-slot="tooltip-content"]')
+            .filter({ hasText: 'Fondo de celda:' })
+            .waitFor();
+        await backgroundSelect.click();
         await page.getByRole('option', { name: 'Azul claro' }).click();
         await page.getByRole('combobox', { name: 'Color de texto' }).click();
         await page.getByRole('option', { name: 'Blanco' }).click();

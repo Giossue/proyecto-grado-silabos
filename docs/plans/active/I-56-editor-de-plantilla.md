@@ -316,3 +316,17 @@ fondo, texto, alineación, negrita y borde. Pasan TypeScript, ESLint y Prettier 
 incremento, build de producción, Pint y PHPStan. La regresión OOXML comprueba los estilos
 por celda y que una fila fija no reciba el color global de cabecera. Sin migraciones,
 commit ni push.
+
+## Seguimiento — controles icónicos contextuales (2026-09-07)
+
+- [x] Compactar las herramientas de celda con iconos, nombres accesibles y `Tooltip` de
+      shadcn-vue, conservando los `Select` y menús existentes.
+- [x] Sustituir los accesos textuales de alta por iconos y ordenar **Agregar campo** sobre
+      **Agregar bloque** dentro del encabezado de cada bloque.
+- [x] Cubrir apertura de `Popover`/`Select`, ayudas, orden visual y guardado de estilos en
+      la regresión Chromium del constructor.
+
+Verificación puntual: build de producción, TypeScript, ESLint, Pint, contrato de
+arquitectura (**1 prueba / 98 aserciones**) y `template-visual-builder.mjs`, **1/1**.
+Revisión visual en escritorio de la columna de altas y la barra de tabla. Sin cambios de
+datos, migraciones, commit ni push.

@@ -702,6 +702,8 @@ it('construye la plantilla desde bloques que contienen campos tipados', function
         ->toContain('<TemplateFieldCreator')
         ->toContain('<TemplateTableDesigner')
         ->toContain('<TemplateDocumentView')
+        ->toContain('class="flex shrink-0 flex-col gap-1"')
+        ->toContain('Acciones del bloque')
         ->toContain('section.blocks.length > 1')
         ->toContain('appearance.table_header_background')
         ->toContain('appearance.body_alignment');
@@ -718,6 +720,7 @@ it('construye la plantilla desde bloques que contienen campos tipados', function
         ->toContain('Tipo de contenido')
         ->toContain('<Select')
         ->toContain('<SelectGroup')
+        ->toContain('<TemplateIconPopover')
         ->toContain('portal-disabled')
         ->toContain('Agregar otro campo')
         ->toContain('Crear bloque')
@@ -734,6 +737,7 @@ it('construye la plantilla desde bloques que contienen campos tipados', function
         ->toContain('Tipo de contenido')
         ->toContain('<Select')
         ->toContain('<SelectGroup')
+        ->toContain('<TemplateIconPopover')
         ->toContain('portal-disabled')
         ->toContain('Agregar campo')
         ->not->toContain('<NativeSelect');
@@ -743,6 +747,15 @@ it('construye la plantilla desde bloques que contienen campos tipados', function
     );
     $tableEditor = file_get_contents(
         $root.'/resources/js/components/domain/configuration/TemplateTableEditor.vue',
+    );
+    $toolbarSelect = file_get_contents(
+        $root.'/resources/js/components/domain/configuration/TemplateToolbarSelect.vue',
+    );
+    $toolbarButton = file_get_contents(
+        $root.'/resources/js/components/domain/configuration/TemplateToolbarButton.vue',
+    );
+    $iconPopover = file_get_contents(
+        $root.'/resources/js/components/domain/configuration/TemplateIconPopover.vue',
     );
     expect($tableDesigner)
         ->toBeString()
@@ -759,8 +772,28 @@ it('construye la plantilla desde bloques que contienen campos tipados', function
         ->toContain('Combinar')
         ->toContain('Separar')
         ->toContain('Filas y columnas')
-        ->toContain('<Select')
+        ->toContain('<TemplateToolbarSelect')
+        ->toContain('size="icon-sm"')
+        ->toContain('<TooltipContent')
         ->toContain('<DropdownMenu');
+    expect($toolbarSelect)
+        ->toBeString()
+        ->toContain('<Select')
+        ->toContain('<Tooltip')
+        ->toContain('class="relative w-12 gap-1 px-2"')
+        ->toContain(':aria-label="label"');
+    expect($toolbarButton)
+        ->toBeString()
+        ->toContain('<Tooltip')
+        ->toContain('<Button')
+        ->toContain('size="icon-sm"')
+        ->toContain(':aria-label="label"');
+    expect($iconPopover)
+        ->toBeString()
+        ->toContain('<Popover')
+        ->toContain('<Tooltip')
+        ->toContain("size: 'icon-sm'")
+        ->toContain(':aria-label="label"');
 
     $documentView = file_get_contents(
         $root.'/resources/js/components/domain/configuration/TemplateDocumentView.vue',

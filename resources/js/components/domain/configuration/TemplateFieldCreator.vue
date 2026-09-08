@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3';
+import { ListPlus } from '@lucide/vue';
 import { ref } from 'vue';
 import { toast } from 'vue-sonner';
 import TemplateController from '@/actions/App/Modules/Configuration/Presentation/Http/Controllers/TemplateController';
+import TemplateIconPopover from '@/components/domain/configuration/TemplateIconPopover.vue';
 import { Button } from '@/components/ui/button';
 import {
     Field,
@@ -11,11 +13,7 @@ import {
     FieldLabel,
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from '@/components/ui/popover';
+import { PopoverContent } from '@/components/ui/popover';
 import {
     Select,
     SelectContent,
@@ -93,12 +91,14 @@ const updateOpen = (value: boolean): void => {
 </script>
 
 <template>
-    <Popover :open="open" @update:open="updateOpen">
-        <PopoverTrigger as-child>
-            <Button type="button" variant="ghost" size="sm">
-                Agregar campo
-            </Button>
-        </PopoverTrigger>
+    <TemplateIconPopover
+        :open="open"
+        label="Agregar campo"
+        @update:open="updateOpen"
+    >
+        <template #icon>
+            <ListPlus aria-hidden="true" />
+        </template>
         <PopoverContent align="end" class="w-[min(24rem,calc(100vw-2rem))]">
             <form class="flex flex-col gap-4" @submit.prevent="submit">
                 <div class="flex flex-col gap-1">
@@ -175,5 +175,5 @@ const updateOpen = (value: boolean): void => {
                 </div>
             </form>
         </PopoverContent>
-    </Popover>
+    </TemplateIconPopover>
 </template>
