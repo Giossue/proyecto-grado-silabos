@@ -117,42 +117,12 @@ completo. El alta está separada de asignar paralelos y no levanta sus bloqueos.
   que funcionan como campos compuestos, como el selector de fecha.
 - Editor y revisión usan navegación por secciones, completitud, errores, observaciones y
   estado de guardado sin saturar la pantalla.
-- «Nueva plantilla» crea de inmediato el formato oficial completo (doce secciones,
-  campos, tablas armadas y ficha de identificación) y abre su constructor; no muestra un
-  `Sheet` porque no requiere datos. Administración solo ajusta sobre la hoja.
-- ADM-06 se construye directamente sobre la hoja (I-33). Un **bloque** es únicamente
-  el contenedor que agrupa uno o varios campos. Cada bloque muestra un único botón de
-  tres puntos en el margen. Su menú reúne **Agregar campo**, **Agregar bloque** y las
-  acciones del bloque; al elegir alta se abre un diálogo que pide el nombre y el tipo
-  antes de guardar. Un bloque puede declarar varios campos; cada uno elige Texto, Tabla,
-  Lista con viñetas o Lista numerada. Cancelar o recibir un rechazo no deja un contenedor
-  vacío. El submenú **Campos** reúne editar nombre/tipo —cuando el diseño no lo fija— y
-  eliminar cada campo tras confirmación. Con un solo campo basta el título del bloque;
-  desde dos campos aparecen subtítulos numerados. Con el proceso abierto, estos controles
-  se ocultan y la hoja queda en solo lectura. El botón conserva nombre accesible y su
-  `Tooltip` usa fondo negro y texto blanco sobre la hoja, en ambos temas. Si el cambio
-  implica borrar sílabos en curso, el diálogo institucional de reinicio conserva la
-  última confirmación; los sílabos enviados mantienen su copia.
-- ADM-06 presenta la hoja directamente, sin un índice lateral ni un selector móvil de
-  secciones.
-- **Personalizar** abre un panel lateral con ajustes deliberadamente acotados para todo
-  el documento: orientación, márgenes, fuente general, tamaños de título/bloque/campo/
-  contenido, paleta institucional para texto, acento y cabecera de tabla, además de
-  negrita, cursiva y alineación de los títulos. Los cambios se previsualizan en la hoja
-  antes de guardar. No se admiten CSS, fuentes o colores arbitrarios. La apariencia se
-  copia en cada revisión y se aplica también al DOCX; el docente nunca la modifica.
-- Cada tabla muestra a Administración una sola acción **Editar tabla**. La edición abre
-  un diálogo amplio, dejando la hoja intacta al fondo: una celda se selecciona con clic y
-  la selección se amplía con Mayús + clic. La barra contextual usa controles icónicos compactos con `Tooltip` y
-  nombre accesible para los colores del catálogo, alineación, negrita, cursiva y borde por
-  celda; combinar/separar celdas y agregar o retirar filas y columnas. Guardar conserva
-  las protecciones de conflicto, bloqueo y reinicio. Docencia ve y completa el resultado,
-  pero nunca recibe esas herramientas. Desde ese diálogo, **Configurar estructura**
-  permite definir si la tabla se organiza por unidades, sus datos de cabecera, columnas,
-  tipos, usos de planificación y totales. No expone `unit`, `record` ni `total`. Advierte
-  que guardar la estructura reconstruye el molde y restablece sus combinaciones y estilos
-  particulares. En el constructor, `@clave` representa un dato automático y `$clave` un
-  dato repetible de la tabla.
+- I-59 retira temporalmente el constructor de ADM-06 por decisión explícita del
+  responsable del producto. La ruta muestra únicamente una hoja carta blanca, con su
+  orientación y márgenes, sin título interno, contenido, índice, bloques, campos,
+  tablas, menús, botones de alta ni acción **Personalizar**. No envía esas estructuras
+  al navegador. Los registros existentes permanecen en la base para no destruir
+  sílabos ni revisiones mientras se define el reemplazo.
 - ADM-06 muestra hojas carta separadas y numeradas (I-53). El pie derecho muestra
   únicamente el número de página (1, 2, 3…), sin el total. La cantidad se recalcula
   según el contenido de muestra al agregar, retirar, reordenar o renombrar piezas.
@@ -191,18 +161,15 @@ completo. El alta está separada de asignar paralelos y no levanta sus bloqueos.
 - Si una sección tiene un solo campo, no lleva subtítulo «n.1»: basta el título de la
   sección, en la hoja, el editor docente, la revisión y el Word. Con varios campos sí
   se numeran.
-- La interacción vigente no activa un procesador de texto global ni usa clic derecho,
-  paleta o arrastre. La estructura crece con altas explícitas de bloque y campo, la
-  apariencia global vive en Personalizar y Tiptap se monta solo mientras Administración
-  edita una tabla concreta. Los documentos detallados ya guardados se siguen
-  interpretando sin reescribirlos al abrir la pantalla.
+- ADM-06 no monta ningún editor. Los componentes anteriores de bloques, campos y tablas
+  se conservan solo como compatibilidad interna durante la transición y no son
+  alcanzables desde la hoja vacía.
 - Las tablas repetibles conservan sus unidades, columnas tipadas y sumas. El diseño
   distingue cabecera fija, datos, datos de unidad y total: se combinan celdas dentro
   de cada grupo, sin atravesar grupos que se repiten distintas cantidades de veces.
   Docencia agrega filas/unidades y completa las casillas, sin herramientas de diseño;
-  la revisión muestra el diseño y las variables congelados al enviar. Una tabla nueva
-  nace con el esquema mínimo y Administración puede ajustar su geometría y estilo por
-  celda desde **Editar tabla**. El color global de cabecera solo alcanza cabeceras reales;
+  la revisión muestra el diseño y las variables congelados al enviar. ADM-06 no expone
+  actualmente herramientas para crear o modificar estas tablas. El color global de cabecera solo alcanza cabeceras reales;
   nunca convierte todas las filas fijas de una ficha compleja en cabeceras.
   En la planificación, el período aporta la cantidad de semanas lectivas; unidad y
   parcial son independientes. La interfaz sugiere la siguiente semana libre, calcula

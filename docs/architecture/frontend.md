@@ -78,10 +78,9 @@ No crees una variante visual por módulo si el significado es el mismo.
   común. Materias no mantiene una pantalla paralela.
 - Las superficies usan `background`, `card`, `popover` y `sidebar` como tokens separados;
   un módulo no introduce colores directos para fabricar contraste.
-- En ADM-06, `TemplateSectionActions` y `TemplateFieldActions` encapsulan los menús y
-  diálogos de las mutaciones estructurales. `TemplateVisualBuilder` solo decide su
-  posición contextual sobre la hoja; los componentes envían las rutas Wayfinder ya
-  autorizadas y delegan la confirmación de reinicio en `PurgeConfirmationDialog`.
+- Desde I-59, ADM-06 monta únicamente `PaginatedDocument` vacío. No carga
+  `TemplateVisualBuilder`, acciones estructurales ni panel de apariencia, y el servidor
+  deja de serializar secciones, bloques, campos y catálogos para esa ruta.
 
 ## Formularios y editor
 
@@ -116,7 +115,10 @@ del formulario docente. Una unidad indivisible excepcionalmente más alta que el
 `AppSidebarLayout` y `PageFrame` recortan el exceso horizontal con `overflow-x-clip`;
 la hoja mantiene su propio desplazamiento horizontal en pantallas estrechas.
 
-## Constructor progresivo de plantilla (I-56, vigente)
+## Constructor progresivo de plantilla (I-56/I-58, retirado de ADM-06 por I-59)
+
+La implementación descrita a continuación se conserva como compatibilidad técnica, pero
+no se importa desde la página de plantilla. La superficie vigente es una hoja vacía.
 
 `TemplateVisualBuilder` proyecta las secciones persistidas como bloques de producto y
 los `TemplateBlock` internos como campos. Esa traducción permite conservar el esquema

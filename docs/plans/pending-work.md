@@ -28,6 +28,10 @@ tabla; `@` identifica datos automáticos y `$` datos repetibles. La implementaci
 recorridos Chromium están verificados. Quedan la revisión perceptiva/dispositivos reales
 de PV-19 y la fidelidad institucional del DOCX de PV-07.
 
+I-59 retiró después todo ese constructor de ADM-06. La página conserva únicamente la
+hoja vacía; el código y los datos históricos permanecen temporalmente para no destruir
+revisiones mientras se decide el reemplazo.
+
 ## 1. Código: sin deuda funcional conocida
 
 No hay `TODO` ni `FIXME` nuevos en I-19. Formato, análisis estático, tipos, compilación y
@@ -128,6 +132,7 @@ Done»_, y la Definition of Done incluye la revisión manual de interfaz del pun
 | I-20       | completa               | revisión manual de Malla, estados, foco y dispositivos reales  |
 | I-40       | completa               | revisión manual de COR-14; DT-12 antes de automatizar el cierre de períodos |
 | I-57, I-58 | completas              | revisión manual de interfaz; fidelidad PV-07 y dispositivos PV-19           |
+| I-59       | completa                | revisión visual de la hoja vacía                                            |
 
 ## 5. Orden sugerido
 

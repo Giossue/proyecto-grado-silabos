@@ -676,7 +676,7 @@ it('edita cuentas desde una sola accion del listado de usuarios', function (): v
         ->toContain("display === 'menu'");
 });
 
-it('construye la plantilla desde bloques que contienen campos tipados', function (): void {
+it('deja visible únicamente la hoja vacía de la plantilla', function (): void {
     $root = dirname(__DIR__, 2);
     $source = file_get_contents($root.'/resources/js/pages/Admin/Templates/Show.vue');
 
@@ -684,141 +684,16 @@ it('construye la plantilla desde bloques que contienen campos tipados', function
         ->toBeString()
         ->toContain('<Head title="Plantilla" />')
         ->toContain('<PageFrame')
-        ->toContain('<TemplateVisualBuilder')
-        ->toContain('<TemplateAppearanceSheet')
-        ->toContain('Personalizar')
-        ->toContain('<ProcessLockAlert')
+        ->toContain('<PaginatedDocument')
+        ->toContain('Hoja vacía de la plantilla del sílabo')
+        ->not->toContain('<TemplateVisualBuilder')
+        ->not->toContain('<TemplateAppearanceSheet')
+        ->not->toContain('Personalizar')
+        ->not->toContain('<ProcessLockAlert')
+        ->not->toContain('TemplateBlockCreator')
+        ->not->toContain('TemplateFieldCreator')
         ->not->toContain('<TemplateSheetEditor')
         ->not->toContain('<InstitutionLogoSheet');
-
-    $builder = file_get_contents(
-        $root.'/resources/js/components/domain/configuration/TemplateVisualBuilder.vue',
-    );
-    expect($builder)
-        ->toBeString()
-        ->toContain('<PaginatedDocument')
-        ->toContain('PROGRAMA DE ASIGNATURA (SÍLABO)')
-        ->toContain('<TemplateBlockCreator')
-        ->toContain('<TemplateFieldCreator')
-        ->toContain('<TemplateTableDesigner')
-        ->toContain('<TemplateDocumentView')
-        ->toContain('template-section-menu')
-        ->toContain('Opciones del bloque')
-        ->toContain('section.blocks.length > 1')
-        ->toContain('appearance.table_header_background')
-        ->toContain('appearance.body_alignment');
-
-    $creator = file_get_contents(
-        $root.'/resources/js/components/domain/configuration/TemplateBlockCreator.vue',
-    );
-    expect($creator)
-        ->toBeString()
-        ->toContain(':is="menu ? Dialog : TemplateIconPopover"')
-        ->toContain('El bloque agrupa los campos')
-        ->toContain('Nombre del bloque')
-        ->toContain('form.fields')
-        ->toContain('Tipo de contenido')
-        ->toContain('<Select')
-        ->toContain('<SelectGroup')
-        ->toContain('portal-disabled')
-        ->toContain('Agregar otro campo')
-        ->toContain('Crear bloque')
-        ->not->toContain('<NativeSelect')
-        ->not->toContain('draggable="true"');
-
-    $fieldCreator = file_get_contents(
-        $root.'/resources/js/components/domain/configuration/TemplateFieldCreator.vue',
-    );
-    expect($fieldCreator)
-        ->toBeString()
-        ->toContain(':is="menu ? Dialog : TemplateIconPopover"')
-        ->toContain('Se añadirá dentro de este bloque')
-        ->toContain('Tipo de contenido')
-        ->toContain('<Select')
-        ->toContain('<SelectGroup')
-        ->toContain('portal-disabled')
-        ->toContain('Agregar campo')
-        ->not->toContain('<NativeSelect');
-
-    $tableDesigner = file_get_contents(
-        $root.'/resources/js/components/domain/configuration/TemplateTableDesigner.vue',
-    );
-    $tableEditor = file_get_contents(
-        $root.'/resources/js/components/domain/configuration/TemplateTableEditor.vue',
-    );
-    $toolbarSelect = file_get_contents(
-        $root.'/resources/js/components/domain/configuration/TemplateToolbarSelect.vue',
-    );
-    $toolbarButton = file_get_contents(
-        $root.'/resources/js/components/domain/configuration/TemplateToolbarButton.vue',
-    );
-    $iconPopover = file_get_contents(
-        $root.'/resources/js/components/domain/configuration/TemplateIconPopover.vue',
-    );
-    expect($tableDesigner)
-        ->toBeString()
-        ->toContain('Editar tabla')
-        ->toContain('<Dialog')
-        ->toContain('<DialogTitle>Editar tabla: {{ blockTitle }}</DialogTitle>')
-        ->toContain('<DialogTitle>Descartar cambios de tabla</DialogTitle>')
-        ->toContain('<TemplateTableEditor')
-        ->toContain('TemplateController.updateDocument.url')
-        ->toContain('Guardar tabla')
-        ->not->toContain('window.confirm');
-    expect($tableEditor)
-        ->toBeString()
-        ->toContain('Fondo de celda')
-        ->toContain('Color de texto')
-        ->toContain('Alineación de celda')
-        ->toContain('Borde de celda')
-        ->toContain('Combinar')
-        ->toContain('Separar')
-        ->toContain('Filas y columnas')
-        ->toContain('<TemplateToolbarSelect')
-        ->toContain('size="icon-sm"')
-        ->toContain('<TooltipContent')
-        ->toContain('<DropdownMenu');
-    expect($toolbarSelect)
-        ->toBeString()
-        ->toContain('<Select')
-        ->toContain('<Tooltip')
-        ->toContain('class="relative w-12 gap-1 px-2"')
-        ->toContain(':aria-label="label"');
-    expect($toolbarButton)
-        ->toBeString()
-        ->toContain('<Tooltip')
-        ->toContain('<Button')
-        ->toContain('size="icon-sm"')
-        ->toContain(':aria-label="label"');
-    expect($iconPopover)
-        ->toBeString()
-        ->toContain('<Popover')
-        ->toContain('<Tooltip')
-        ->toContain("size: 'icon-sm'")
-        ->toContain(':aria-label="label"');
-
-    $documentView = file_get_contents(
-        $root.'/resources/js/components/domain/configuration/TemplateDocumentView.vue',
-    );
-    expect($documentView)
-        ->toBeString()
-        ->toContain('.document-table th')
-        ->not->toContain("tr[data-row-role='fixed']");
-
-    $appearance = file_get_contents(
-        $root.'/resources/js/components/domain/configuration/TemplateAppearanceSheet.vue',
-    );
-    expect($appearance)
-        ->toBeString()
-        ->toContain('<Sheet')
-        ->toContain('Personalizar plantilla')
-        ->toContain('Orientación')
-        ->toContain('Márgenes')
-        ->toContain('Fuente general')
-        ->toContain('Título principal')
-        ->toContain('Títulos de bloque')
-        ->toContain('Fondo de cabecera de tabla')
-        ->toContain('Guardar apariencia');
 
     // I-53: el marco compartido conserva el estándar y calcula hojas dinámicas.
     $paper = file_get_contents(
@@ -866,7 +741,7 @@ it('abre los detalles de los listados desde sus acciones', function (): void {
     }
 });
 
-it('presenta la plantilla institucional única y abre su constructor', function (): void {
+it('presenta la plantilla institucional única y abre su hoja vacía', function (): void {
     $root = dirname(__DIR__, 2);
 
     // Una sola plantilla (I-32): la ruta abre directo su constructor y el listado solo
@@ -885,15 +760,16 @@ it('presenta la plantilla institucional única y abre su constructor', function 
         ->not->toContain('<CardTitle')
         ->not->toContain('<TableActionsMenu');
 
-    // La ruta abre el constructor visual de la única plantilla institucional.
+    // La ruta conserva la hoja, pero no monta el constructor retirado.
     $show = file_get_contents($root.'/resources/js/pages/Admin/Templates/Show.vue');
     expect($show)
         ->toBeString()
         ->not->toContain('Versiones')
         ->not->toContain('sibling.id')
         ->toContain('<Head title="Plantilla" />')
-        ->toContain('<TemplateVisualBuilder')
-        ->toContain('<TemplateAppearanceSheet')
+        ->toContain('<PaginatedDocument')
+        ->not->toContain('<TemplateVisualBuilder')
+        ->not->toContain('<TemplateAppearanceSheet')
         ->not->toContain('<TemplateSheetEditor');
 
 });

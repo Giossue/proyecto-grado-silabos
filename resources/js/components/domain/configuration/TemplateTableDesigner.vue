@@ -7,7 +7,6 @@ import { toast } from 'vue-sonner';
 import TemplateController from '@/actions/App/Modules/Configuration/Presentation/Http/Controllers/TemplateController';
 import TemplateDocumentView from '@/components/domain/configuration/TemplateDocumentView.vue';
 import TemplateTableEditor from '@/components/domain/configuration/TemplateTableEditor.vue';
-import TemplateTableStructureDialog from '@/components/domain/configuration/TemplateTableStructureDialog.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
@@ -310,13 +309,6 @@ watch(
                                 o modificar filas y columnas.
                             </DialogDescription>
                         </div>
-                        <TemplateTableStructureDialog
-                            :template-id="templateId"
-                            :block-id="blockId"
-                            :fingerprint="fingerprint"
-                            :layout="layout"
-                            @saved="close(true)"
-                        />
                     </div>
                 </DialogHeader>
 

@@ -49,6 +49,10 @@ Fecha de corte: **30 de agosto de 2026**.
   semánticos y totales sin escribir roles técnicos. Un cambio estructural reconstruye
   el molde visual de esa tabla previa advertencia; las revisiones enviadas permanecen
   intactas.
+- I-59 (8 de septiembre de 2026) retira de ADM-06 el constructor de bloques, campos y
+  tablas, incluida la personalización. La página muestra solo la hoja blanca vacía y no
+  recibe esas estructuras del servidor. Los datos existentes no se eliminan para
+  proteger sílabos y revisiones; I-58 queda retirado de la interfaz.
 - La modalidad de estudio es un dato base de la carrera (la aprueba el CES) y no un
   catálogo: presencial, semipresencial, en línea, a distancia o híbrida, fijas por reglamento.
   Una materia puede usar una modalidad distinta, sin cambiar ni recalificar la modalidad

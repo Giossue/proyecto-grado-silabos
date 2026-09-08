@@ -35,14 +35,10 @@
 - En ADM-05 y COR-11, el listado es la vista inicial y la creación se abre desde
   una acción principal en un panel lateral derecho; los errores permanecen visibles
   hasta corregirse y el panel solo se cierra después de una respuesta exitosa.
-- ADM-06 aplica el mismo patrón al alta y edición de campos, y el detalle de COR-11 a la
-  edición de nombre, descripción y notas internas; el documento permanece como contenido
-  principal.
-- En las tablas de ADM-06, `@clave` identifica un valor automático y `$clave` un dato de
-  las filas repetibles. Administración configura unidades, datos de cabecera, columnas,
-  tipos, usos de Semana/ACD/APE/AA y totales desde **Configurar estructura**, sin escribir
-  claves ni roles técnicos. Guardar reconstruye el molde visual de esa tabla previa
-  advertencia, control de conflicto y confirmación de reinicio cuando existan borradores.
+- I-59 deja ADM-06 como una hoja vacía sin constructor, bloques, campos, tablas ni
+  personalización. La ruta no serializa esas estructuras. La persistencia anterior se
+  conserva para no alterar sílabos o revisiones existentes mientras se define el nuevo
+  modelo de edición. COR-11 mantiene su editor independiente.
 
 ## Criterios críticos
 

@@ -2,8 +2,8 @@
 
 ## Estado
 
-Implementación verificada localmente el 2026-09-08. Permanece activo por la revisión
-manual de foco, contraste y dispositivos reales asociada a PV-19.
+Implementación técnica verificada localmente el 2026-09-08 y retirada de ADM-06 ese
+mismo día por I-59. El diálogo estructural ya no forma parte de la interfaz.
 
 ## Problema
 

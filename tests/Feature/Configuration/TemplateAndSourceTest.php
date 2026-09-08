@@ -77,10 +77,13 @@ class TemplateAndSourceTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Admin/Templates/Show')
-                ->has('template.sections', 12)
                 ->where('template.appearance.font_family', 'Arial')
-                ->has('appearanceOptions.colors', count(TemplateAppearance::COLORS))
-                ->where('processLock', null));
+                ->missing('template.sections')
+                ->missing('appearanceOptions')
+                ->missing('variables')
+                ->missing('identificationDesign')
+                ->missing('logos')
+                ->missing('processLock'));
     }
 
     public function test_administrator_creates_a_block_as_a_container_of_typed_fields(): void
@@ -347,8 +350,6 @@ class TemplateAndSourceTest extends TestCase
         $section = $version->sections()->where('clave', 'descripcion')->firstOrFail();
         $block = $section->blocks()->firstOrFail();
         $field = $block->fields()->firstOrFail();
-        $sectionIndex = $section->posicion - 1;
-
         $this->actingAsAdministrator()
             ->patch(route('admin.templates.fields.update', ['template' => $version, 'field' => $field]), [
                 'block_id' => $block->id,
@@ -357,11 +358,6 @@ class TemplateAndSourceTest extends TestCase
                 'content_type' => 'table',
             ])
             ->assertRedirect();
-        $this->actingAsAdministrator()
-            ->get(route('admin.templates.show', $version))
-            ->assertInertia(fn (Assert $page) => $page
-                ->where("template.sections.$sectionIndex.blocks.0.table.columns.0.key", 'texto'));
-
         $layout = [
             'columns' => [
                 ['key' => 'contenidos', 'label' => 'Contenidos temáticos', 'type' => 'text'],
