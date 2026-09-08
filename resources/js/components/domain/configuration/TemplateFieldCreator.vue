@@ -94,6 +94,7 @@ const updateOpen = (value: boolean): void => {
     <TemplateIconPopover
         :open="open"
         label="Agregar campo"
+        button-class="size-7"
         @update:open="updateOpen"
     >
         <template #icon>

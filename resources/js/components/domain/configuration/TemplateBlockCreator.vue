@@ -121,7 +121,7 @@ const updateOpen = (value: boolean): void => {
         :label="empty ? 'Agregar primer bloque' : 'Agregar bloque'"
         :variant="empty ? 'default' : 'outline'"
         :size="empty ? 'icon' : 'icon-sm'"
-        :button-class="empty ? undefined : 'border-dashed bg-background'"
+        :button-class="empty ? undefined : 'size-7 border-dashed bg-background'"
         @update:open="updateOpen"
     >
         <template #icon>

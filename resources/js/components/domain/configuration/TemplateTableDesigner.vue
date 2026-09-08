@@ -195,7 +195,7 @@ watch(
                         type="button"
                         variant="outline"
                         size="icon-sm"
-                        class="template-table-action absolute top-20 z-10 opacity-0 transition-opacity group-hover/template-table:opacity-100 group-focus-within/template-table:opacity-100"
+                        class="absolute top-1 right-1 z-10 size-7 opacity-0 transition-opacity group-focus-within/template-table:opacity-100 group-hover/template-table:opacity-100"
                         :aria-label="`Editar tabla: ${blockTitle}`"
                         @click="start"
                     >
@@ -219,11 +219,7 @@ watch(
             />
         </template>
 
-        <Dialog
-            v-if="editing"
-            :open="editing"
-            @update:open="updateDialogOpen"
-        >
+        <Dialog v-if="editing" :open="editing" @update:open="updateDialogOpen">
             <DialogContent
                 class="flex h-[min(90vh,60rem)] max-w-[min(96vw,80rem)] flex-col gap-0 p-0"
             >
@@ -255,7 +251,9 @@ watch(
 
                     <Alert v-if="purge" class="mt-4" variant="destructive">
                         <AlertTitle>Confirmación necesaria</AlertTitle>
-                        <AlertDescription class="flex flex-wrap items-center gap-2">
+                        <AlertDescription
+                            class="flex flex-wrap items-center gap-2"
+                        >
                             <span>
                                 {{ purge }} Guardar y reiniciar elimina ese
                                 trabajo en curso.
@@ -305,9 +303,3 @@ watch(
         </Dialog>
     </div>
 </template>
-
-<style scoped>
-.template-table-action {
-    right: calc(-1 * var(--page-margin) + 2rem);
-}
-</style>
