@@ -9,6 +9,11 @@ import TemplateTableEditor from '@/components/domain/configuration/TemplateTable
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { registerLocalPurgeConfirmation } from '@/composables/usePurgeConfirmation';
 import type { TableLayout } from '@/lib/tableLayout';
 import type {
@@ -164,25 +169,23 @@ watch(
 </script>
 
 <template>
-    <div class="group relative min-w-0">
+    <div class="relative min-w-0">
         <template v-if="!editing">
-            <div
-                class="absolute top-2 right-2 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
-            >
-                <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    :aria-label="`Editar tabla: ${blockTitle}`"
-                    @click="start"
-                >
-                    <TableProperties
-                        data-icon="inline-start"
-                        aria-hidden="true"
-                    />
-                    Editar tabla
-                </Button>
-            </div>
+            <Tooltip>
+                <TooltipTrigger as-child>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="icon-sm"
+                        class="template-table-action absolute top-20 z-10"
+                        :aria-label="`Editar tabla: ${blockTitle}`"
+                        @click="start"
+                    >
+                        <TableProperties aria-hidden="true" />
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent>Editar tabla</TooltipContent>
+            </Tooltip>
             <TemplateDocumentView
                 :document="document"
                 :fields="fields"
@@ -262,3 +265,9 @@ watch(
         </template>
     </div>
 </template>
+
+<style scoped>
+.template-table-action {
+    right: calc(-1 * var(--page-margin) + 2rem);
+}
+</style>

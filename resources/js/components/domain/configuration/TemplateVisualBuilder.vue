@@ -117,14 +117,14 @@ const hasTable = (block: TemplateFieldContainer): boolean =>
                         data-page-keep-next
                     >
                         <h2
-                            class="min-w-0 pr-12 leading-snug"
+                            class="min-w-0 leading-snug"
                             :style="sectionStyle"
                         >
                             {{ sectionIndex + 1 }}. {{ section.title }}
                         </h2>
                         <div
                             v-if="!readonly"
-                            class="absolute top-0 right-0 z-10 flex flex-col gap-1"
+                            class="template-section-actions absolute top-0 z-10 flex flex-col gap-1"
                             :aria-label="`Acciones del bloque ${section.title}`"
                         >
                             <TemplateFieldCreator
@@ -201,3 +201,9 @@ const hasTable = (block: TemplateFieldContainer): boolean =>
         </PaginatedDocument>
     </div>
 </template>
+
+<style scoped>
+.template-section-actions {
+    right: calc(-1 * var(--page-margin) + 2rem);
+}
+</style>
