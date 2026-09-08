@@ -211,7 +211,11 @@ existen dos o más. Las etiquetas se renderizan como texto, sin prefijos decorat
 texto fijo, variables de servidor y controles docentes. Docencia conserva autoguardado,
 control de versión, validación e IA por campo; no monta Tiptap ni recibe controles de
 diseño. Las tablas repetibles expanden grupos de filas con claves tipadas, unidades y
-sumas de `TableLayout`. Los diseños sin documento mantienen el lector anterior.
+sumas de `TableLayout`. I-57 añade roles semánticos estables para semana, ACD, APE y AA:
+las etiquetas pueden cambiar sin romper cálculos. `PlanningSummary` deriva el total
+general y compara con la fotografía académica; nunca persiste ese resultado. Agregar una
+unidad crea una fila `_kind=unit`, y quitarla renumera las posteriores. Los diseños sin
+documento mantienen el lector anterior.
 
 El guardado administra su confirmación local de reinicio para conservar callbacks,
 errores y borrador. `registerLocalPurgeConfirmation` evita un segundo diálogo global

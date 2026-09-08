@@ -4,6 +4,7 @@
  * `band`. Las celdas combinadas solo existen en la cabecera y en los totales.
  */
 export type TableColumnType = 'text' | 'number';
+export type TableColumnRole = 'week' | 'hours_acd' | 'hours_ape' | 'hours_aa';
 
 export type TableColumn = {
     key: string;
@@ -15,6 +16,8 @@ export type TableColumn = {
     sum?: boolean;
     /** Peso relativo del ancho, calcado del formato oficial; vacío = automático. */
     width?: number | null;
+    /** Significado estable para validaciones; no depende de la etiqueta visible. */
+    role?: TableColumnRole | null;
 };
 
 export type TableNamed = { key: string; label: string };
@@ -32,6 +35,20 @@ export type TableCellValue = string | number | boolean | null;
 
 /** Una fila guardada: un valor por columna más las marcas `_unit` y `_kind`. */
 export type TableRowData = Record<string, TableCellValue | undefined>;
+
+export type PlanningExpectations = {
+    teaching_weeks: number | null;
+    credits: number | string | null;
+    total_hours: number | string | null;
+    hours_acd: number | string | null;
+    hours_ape: number | string | null;
+    hours_aa: number | string | null;
+};
+
+export type PlanningSummary = {
+    weeks: number[];
+    totals: Record<'hours_acd' | 'hours_ape' | 'hours_aa', number>;
+};
 
 export type HeaderCell = {
     id: string;
@@ -52,6 +69,7 @@ export const defaultTableLayout = (): TableLayout => ({
             type: 'text',
             group: null,
             band: null,
+            role: null,
         },
     ],
     groups: [],
@@ -248,6 +266,73 @@ export const sumColumn = (rows: TableRowData[], key: string): number =>
 /** Suma sin decimales de relleno: 12, 2.5. */
 export const formatSum = (value: number): string =>
     Number.isInteger(value) ? String(value) : String(Number(value.toFixed(2)));
+
+export const planningColumns = (
+    layout: TableLayout,
+): Partial<Record<TableColumnRole, string>> =>
+    Object.fromEntries(
+        layout.columns
+            .filter((column) => column.role)
+            .map((column) => [column.role, column.key]),
+    );
+
+export const isPlanningTable = (layout: TableLayout): boolean => {
+    const columns = planningColumns(layout);
+
+    return ['week', 'hours_acd', 'hours_ape', 'hours_aa'].every(
+        (role) => columns[role as TableColumnRole],
+    );
+};
+
+export const summarizePlanning = (
+    layout: TableLayout,
+    rows: TableRowData[],
+): PlanningSummary | null => {
+    if (!isPlanningTable(layout)) {
+        return null;
+    }
+
+    const columns = planningColumns(layout) as Record<TableColumnRole, string>;
+    const dataRows = rows.filter((row) => row._kind !== 'unit');
+    const numeric = (value: TableRowData[string]): number => {
+        const result = typeof value === 'number' ? value : Number(value);
+
+        return Number.isFinite(result) ? result : 0;
+    };
+
+    return {
+        weeks: dataRows
+            .map((row) => numeric(row[columns.week]))
+            .filter((week) => Number.isInteger(week) && week > 0)
+            .sort((a, b) => a - b),
+        totals: {
+            hours_acd: Number(
+                dataRows
+                    .reduce(
+                        (sum, row) => sum + numeric(row[columns.hours_acd]),
+                        0,
+                    )
+                    .toFixed(2),
+            ),
+            hours_ape: Number(
+                dataRows
+                    .reduce(
+                        (sum, row) => sum + numeric(row[columns.hours_ape]),
+                        0,
+                    )
+                    .toFixed(2),
+            ),
+            hours_aa: Number(
+                dataRows
+                    .reduce(
+                        (sum, row) => sum + numeric(row[columns.hours_aa]),
+                        0,
+                    )
+                    .toFixed(2),
+            ),
+        },
+    };
+};
 
 export type TableUnit<Row> = {
     number: number;

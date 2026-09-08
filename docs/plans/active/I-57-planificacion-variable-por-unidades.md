@@ -2,7 +2,8 @@
 
 ## Estado
 
-Plan creado el 2026-09-08. Implementación pendiente.
+Implementación funcional completada el 2026-09-08. Pendiente únicamente la revisión
+manual de interfaz y fidelidad institucional del DOCX (`PV-07`/`PV-19`).
 
 ## Objetivo
 
@@ -39,9 +40,8 @@ Fuentes:
 - ADM-06, DOC-01..05, DOC-07..10 y COR-06.
 - CP-F plantilla, borrador, validación, revisión y documentos; CP-N interfaz y
   compatibilidad.
-- La fidelidad institucional final del DOCX sigue sujeta a PV-07. PV-08 se resuelve solo
-  para sumas de horas y contraste con la malla; la fórmula/redondeo de créditos queda
-  pendiente hasta confirmación explícita.
+- La fidelidad institucional final del DOCX sigue sujeta a PV-07. PV-08 quedó cerrada
+  por confirmación explícita del responsable del producto el 2026-09-08.
 
 ## Modelo funcional
 
@@ -62,9 +62,8 @@ separadas. Esta primera versión no introduce rangos ni listas anidadas de seman
    renumera sin huecos.
 2. Docencia puede agregar y quitar filas dentro de cada unidad.
 3. La semana es un entero positivo y no se repite dentro de la planificación.
-4. La cantidad de semanas planificables no se escribe en el encabezado. Mientras el
-   período no exponga un calendario lectivo estructurado, se toma de la mayor semana
-   planificada y se presenta sin prometer un máximo institucional.
+4. La cantidad de semanas no se escribe en el encabezado: Administración la declara al
+   crear o editar el período académico y la planificación debe cubrir de 1 hasta ese valor.
 5. ACD, APE y AA admiten valores no negativos con hasta dos decimales.
 6. Los totales por unidad y generales se calculan; nunca se reciben como valores
    editables ni se persisten como fuente de verdad.
@@ -75,17 +74,14 @@ separadas. Esta primera versión no introduce rangos ni listas anidadas de seman
 9. Las revisiones conservan filas y contexto académico; Word y vistas calculan desde
    esa copia inmutable.
 
-## Decisión pendiente acotada — créditos (PV-08)
-
-Propuesta del responsable técnico, aún por confirmar:
+## Decisión confirmada — créditos (PV-08)
 
 - el crédito mostrado sigue viniendo de la malla y no lo edita Docencia;
 - se contrasta `ACD + APE + AA` con `créditos × 48`;
 - un desacuerdo es error de configuración académica, no un dato que el docente corrija;
 - se permiten horas con dos decimales y solo se redondea la presentación final.
 
-No se codificará este contraste ni se cerrará PV-08 hasta que el responsable confirme
-autoridad, severidad y redondeo.
+El responsable confirmó autoridad, severidad y redondeo en conversación el 2026-09-08.
 
 ## Orientación y paginación
 
@@ -105,22 +101,23 @@ la revisión; no se acepta CSS ni dimensiones arbitrarias.
 
 ## Plan de implementación
 
-- [ ] Extender el contrato de tabla para identificar las claves semánticas de semana y
+- [x] Extender el contrato de tabla para identificar las claves semánticas de semana y
       componentes horarios sin depender de etiquetas visibles.
-- [ ] Entregar al editor docente las horas esperadas desde `contexto_academico`.
-- [ ] Mejorar `SyllabusTableEditor`: unidades/filas variables, siguiente semana sugerida,
+- [x] Entregar al editor docente las horas esperadas desde `contexto_academico`.
+- [x] Mejorar `SyllabusTableEditor`: unidades/filas variables, siguiente semana sugerida,
       resumen general y diferencias accesibles.
-- [ ] Validar en servidor forma de filas, unidades, semanas, decimales, duplicados y
+- [x] Validar en servidor forma de filas, unidades, semanas, decimales, duplicados y
       correspondencia ACD/APE/AA al ejecutar la validación determinística.
-- [ ] Conservar autoguardado incompleto y bloquear únicamente validación/envío cuando
+- [x] Conservar autoguardado incompleto y bloquear únicamente validación/envío cuando
       existan diferencias.
-- [ ] Mostrar el mismo resumen en revisión y documento sin guardar resultados derivados.
-- [ ] Añadir orientación por bloque a plantilla, snapshot, previsualización y DOCX.
-- [ ] Hacer que Word abra/cierre la sección horizontal y pagine unidades sin confundirlas
+- [x] Mostrar el mismo resumen en revisión y documento sin guardar resultados derivados.
+- [x] Añadir orientación por bloque a plantilla, snapshot y DOCX. La representación visual
+      de hojas mixtas queda en la revisión manual del constructor.
+- [x] Hacer que Word abra/cierre la sección horizontal y pagine unidades sin confundirlas
       con parciales.
-- [ ] Cubrir dominio, petición, borrador, validación, snapshot, revisión, DOCX, claro/
-      oscuro, teclado y 360 px con datos sintéticos.
-- [ ] Actualizar `screens.md`, modelo de dominio, arquitectura frontend/documentos,
+- [ ] Cubrir claro/oscuro, teclado y 360 px en revisión manual; dominio, petición,
+      borrador, validación, snapshot y DOCX tienen pruebas automatizadas.
+- [x] Actualizar `screens.md`, modelo de dominio, arquitectura frontend/documentos,
       normativa, pruebas, trazabilidad y pendientes.
 
 ## Criterios de aceptación
@@ -138,22 +135,25 @@ la revisión; no se acepta CSS ni dimensiones arbitrarias.
 8. Más filas de las que caben en una página continúan sin recorte ni reducción ilegible.
 9. Una revisión enviada conserva unidades, filas, sumas y orientación aunque cambie la
    plantilla posteriormente.
-10. No se calculan ni redondean créditos mientras la parte pendiente de PV-08 no haya
-    sido confirmada.
+10. Los créditos son de solo lectura desde la malla; `total horas = créditos × 48` se
+    valida sin redondear filas y con máximo dos decimales por entrada.
 
-## Verificación prevista
+## Verificación ejecutada
 
-- `./vendor/bin/pint --test`
-- pruebas focalizadas de Configuración, Sílabos y Documentos;
-- `npm run lint:check`
-- `npm run format:check`
-- `npm run types:check`
-- `npm run build`
-- pruebas de navegador focalizadas de plantilla/paginación;
-- `composer verify` al cerrar el incremento con PostgreSQL y Redis activos.
+- 87 pruebas focalizadas de Configuración, período académico, Sílabos, revisiones y
+  documentos: 87 aprobadas, 1.356 aserciones.
+- `composer types:check`: aprobado sin errores.
+- `npm run types:check`: aprobado.
+- ESLint focalizado en los archivos frontend de I-57: aprobado.
+- `npm run build`: aprobado.
+- Suite PHP completa: 389 pruebas aprobadas; la puerta global conserva tres fallos de
+  arquitectura de interfaz ajenos a I-57 y no pudo completar la comprobación dependiente
+  de Redis porque el servicio local no estaba disponible en `127.0.0.1:56379`.
+- Las pruebas de navegador requieren instalar Playwright en el entorno actual. Queda
+  pendiente la revisión manual de claro/oscuro, teclado, 360 px y fidelidad del DOCX.
 
 ## Reversión
 
-Los cambios de contrato se diseñarán compatibles con tablas existentes. Revertir la
+Los cambios de contrato son compatibles con tablas existentes. Revertir la
 interfaz y los lectores no elimina filas del docente ni revisiones; cualquier migración
 nueva tendrá reversión explícita y no reescribirá datos históricos.

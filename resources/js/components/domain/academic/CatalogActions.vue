@@ -36,6 +36,7 @@ defineProps<{
     campusId?: string | null;
     startsOn?: string | null;
     endsOn?: string | null;
+    teachingWeeks?: number | null;
     faculties: CatalogRecord[];
     campuses?: CatalogRecord[];
     /** Solo carreras: coordinación activa y cuentas que pueden asumirla. */
@@ -109,6 +110,7 @@ const deleteOpen = ref(false);
             :logo-url="logoUrl"
             :starts-on="startsOn"
             :ends-on="endsOn"
+            :teaching-weeks="teachingWeeks"
             :faculties="faculties"
             :show-trigger="false"
         />
@@ -134,7 +136,7 @@ const deleteOpen = ref(false);
                     @success="deleteOpen = false"
                 >
                     <p
-                v-if="errors.record || errors.process"
+                        v-if="errors.record || errors.process"
                         class="mb-4 text-sm text-destructive"
                     >
                         {{ errors.record || errors.process }}

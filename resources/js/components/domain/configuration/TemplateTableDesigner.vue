@@ -1,6 +1,7 @@
 <script setup lang="ts">
+import type { PendingVisit, VisitOptions } from '@inertiajs/core';
 import { router, useForm } from '@inertiajs/vue3';
-import { Save, TableProperties, X } from '@lucide/vue';
+import { Save, TableProperties } from '@lucide/vue';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { toast } from 'vue-sonner';
 import TemplateController from '@/actions/App/Modules/Configuration/Presentation/Http/Controllers/TemplateController';
@@ -48,8 +49,10 @@ const props = defineProps<{
 const editing = ref(false);
 const dirty = ref(false);
 const discardOpen = ref(false);
+const pendingNavigation = ref<PendingVisit | null>(null);
 const draft = ref<DocumentNode>({ type: 'doc', content: [] });
 const editor = ref<InstanceType<typeof TemplateTableEditor> | null>(null);
+let bypassNavigationGuard = false;
 const form = useForm({
     document: null as DocumentNode | null,
     fingerprint: props.fingerprint,
@@ -106,11 +109,68 @@ const close = (force = false): void => {
     form.clearErrors();
 };
 
-const discardChanges = (): void => close(true);
+const resumeNavigation = (visit: PendingVisit): void => {
+    const options: VisitOptions = {
+        method: visit.method,
+        data: visit.data,
+        replace: visit.replace,
+        preserveScroll: visit.preserveScroll,
+        preserveState: visit.preserveState,
+        only: visit.only,
+        except: visit.except,
+        headers: visit.headers,
+        errorBag: visit.errorBag,
+        forceFormData: visit.forceFormData,
+        queryStringArrayFormat: visit.queryStringArrayFormat,
+        async: visit.async,
+        showProgress: visit.showProgress,
+        prefetch: visit.prefetch,
+        fresh: visit.fresh,
+        reset: visit.reset,
+        preserveUrl: visit.preserveUrl,
+        preserveErrors: visit.preserveErrors,
+        invalidateCacheTags: visit.invalidateCacheTags,
+        viewTransition: visit.viewTransition,
+        optimistic: visit.optimistic,
+        component: visit.component,
+        pageProps: visit.pageProps,
+        cached: visit.cached,
+    };
+
+    bypassNavigationGuard = true;
+
+    try {
+        router.visit(visit.url, options);
+    } finally {
+        bypassNavigationGuard = false;
+    }
+};
+
+const discardChanges = (): void => {
+    const navigation = pendingNavigation.value;
+
+    pendingNavigation.value = null;
+    close(true);
+
+    if (navigation) {
+        resumeNavigation(navigation);
+    }
+};
 
 const continueEditing = (): void => {
+    pendingNavigation.value = null;
     discardOpen.value = false;
     editing.value = true;
+};
+
+const updateDiscardOpen = (open: boolean): void => {
+    if (open) {
+        discardOpen.value = true;
+
+        return;
+    }
+
+    continueEditing();
 };
 
 const updateDialogOpen = (open: boolean): void => {
@@ -150,14 +210,15 @@ const confirmAndSave = (): void => {
 
 const stopNavigation = router.on('before', (event) => {
     if (
+        !bypassNavigationGuard &&
         editing.value &&
         dirty.value &&
         !form.processing &&
-        !window.confirm(
-            'Hay cambios de tabla sin guardar. ¿Desea salir y descartarlos?',
-        )
+        event.detail.visit.method === 'get'
     ) {
+        pendingNavigation.value = event.detail.visit;
         event.preventDefault();
+        close();
     }
 });
 
@@ -290,7 +351,6 @@ watch(
                         :disabled="form.processing"
                         @click="close()"
                     >
-                        <X data-icon="inline-start" aria-hidden="true" />
                         Cancelar
                     </Button>
                     <Button
@@ -314,7 +374,7 @@ watch(
             </DialogContent>
         </Dialog>
 
-        <Dialog v-model:open="discardOpen">
+        <Dialog :open="discardOpen" @update:open="updateDiscardOpen">
             <DialogContent class="sm:max-w-md" :show-close-button="false">
                 <DialogHeader>
                     <DialogTitle>Descartar cambios de tabla</DialogTitle>

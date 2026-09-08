@@ -50,7 +50,8 @@ borrar su evidencia.
 
 El Administrador gobierna las entidades institucionales globales y asigna la coordinación
 de una carrera. El Coordinador mantiene la malla, asignaturas, ofertas, paralelos y
-asignaciones docentes solo dentro de esa carrera. Un periodo académico representa fechas;
+asignaciones docentes solo dentro de esa carrera. Un periodo académico representa fechas
+y la cantidad explícita de semanas lectivas;
 el ciclo representa la posición de una materia dentro de la malla.
 
 Cada carrera tiene cero o una sola malla actual. La malla define su cantidad de ciclos y

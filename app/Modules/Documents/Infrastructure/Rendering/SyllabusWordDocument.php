@@ -50,11 +50,17 @@ class SyllabusWordDocument
     /** @var array<string, string> */
     private array $templateVariables = [];
 
+    /** @var array<string, mixed> */
+    private array $academicContext = [];
+
     public function build(DocumentRenderInput $input): PhpWord
     {
         Settings::setOutputEscapingEnabled(true);
         $this->snapshotIdentification = $input->snapshot['identification'] ?? null;
         $this->templateVariables = $input->snapshot['template_variables'] ?? [];
+        $this->academicContext = is_array($input->snapshot['academic_context'] ?? null)
+            ? $input->snapshot['academic_context']
+            : [];
         $mapping = is_array($input->snapshot['document_mapping'] ?? null)
             ? $input->snapshot['document_mapping']
             : null;
@@ -94,14 +100,8 @@ class SyllabusWordDocument
             'levels' => [['format' => 'decimal', 'text' => '%1.', 'left' => 360, 'hanging' => 360]],
         ]);
 
-        $section = $word->addSection([
-            'paperSize' => 'Letter',
-            'orientation' => $this->appearance['orientation'],
-            'marginTop' => $margin,
-            'marginBottom' => $margin,
-            'marginLeft' => $margin,
-            'marginRight' => $margin,
-        ]);
+        $currentOrientation = (string) $this->appearance['orientation'];
+        $section = $this->addSection($word, $currentOrientation, $margin);
 
         $this->logos($section, $input);
         $section->addText(
@@ -120,6 +120,11 @@ class SyllabusWordDocument
         );
 
         foreach ($this->arrayList($input->snapshot['sections'] ?? null) as $sectionIndex => $block) {
+            $desiredOrientation = $this->sectionOrientation($block);
+            if ($desiredOrientation !== $currentOrientation) {
+                $section = $this->addSection($word, $desiredOrientation, $margin);
+                $currentOrientation = $desiredOrientation;
+            }
             $number = $sectionIndex + 1;
             $section->addText(
                 $number.'. '.$this->string($block['title'] ?? null, 'Bloque'),
@@ -149,6 +154,40 @@ class SyllabusWordDocument
     }
 
     public function __construct(private readonly InstitutionalLogos $logos) {}
+
+    private function addSection(PhpWord $word, string $orientation, int $margin): Section
+    {
+        $pageWidth = $orientation === 'landscape' ? 15840 : 12240;
+        $this->contentWidth = $pageWidth - (2 * $margin);
+
+        return $word->addSection([
+            'paperSize' => 'Letter',
+            'orientation' => $orientation,
+            'marginTop' => $margin,
+            'marginBottom' => $margin,
+            'marginLeft' => $margin,
+            'marginRight' => $margin,
+        ]);
+    }
+
+    /** @param array<string, mixed> $snapshotSection */
+    private function sectionOrientation(array $snapshotSection): string
+    {
+        foreach ($this->arrayList($snapshotSection['blocks'] ?? null) as $block) {
+            $orientation = $block['page_orientation'] ?? null;
+            if (in_array($orientation, ['portrait', 'landscape'], true)) {
+                return $orientation;
+            }
+            if (is_array($block['table'] ?? null)) {
+                $layout = TableLayout::normalize($block['table']);
+                if (TableLayout::isPlanning($layout)) {
+                    return 'landscape';
+                }
+            }
+        }
+
+        return (string) $this->appearance['orientation'];
+    }
 
     /** Encabezado: logo de la universidad y logo de la facultad de la carrera. */
     private function logos(Section $section, DocumentRenderInput $input): void
@@ -292,7 +331,13 @@ class SyllabusWordDocument
 
         $contentType = $this->string($container['content_type'] ?? null, 'text');
         if (is_array($container['document'] ?? null)) {
-            $resolved = TemplateDocumentResolver::resolve($container['document'], $fields, $this->templateVariables, $container['table'] ?? null);
+            $resolved = TemplateDocumentResolver::resolve(
+                $container['document'],
+                $fields,
+                $this->templateVariables,
+                $container['table'] ?? null,
+                $this->planningExpectations(),
+            );
             (new TemplateDocumentWord(
                 $this->hasAppearance ? (string) $this->appearance['body_alignment'] : null,
                 $this->hasAppearance ? $this->color('table_header_background') : null,
@@ -368,7 +413,7 @@ class SyllabusWordDocument
         $units = $this->units($layout, $rows);
         foreach ($units as $index => $unit) {
             if ($index > 0) {
-                $section->addTextBreak(1, [], ['spaceAfter' => 0]);
+                $section->addPageBreak();
             }
             $table = $section->addTable([
                 'borderSize' => 4,
@@ -464,6 +509,80 @@ class SyllabusWordDocument
                 }
             }
         }
+
+        if (TableLayout::isPlanning($layout)) {
+            $this->planningSummary($section, $layout, $rows);
+        }
+    }
+
+    /**
+     * Resumen derivado: muestra planificado/esperado y los créditos de la malla sin
+     * convertir ninguno de esos resultados en una segunda fuente de verdad.
+     *
+     * @param  array<string, mixed>  $layout
+     * @param  list<array<string, mixed>>  $rows
+     */
+    private function planningSummary(Section $section, array $layout, array $rows): void
+    {
+        $columns = TableLayout::columnsByRole($layout);
+        $dataRows = array_values(array_filter(
+            array_map($this->rowData(...), $rows),
+            fn (array $row): bool => ($row['_kind'] ?? null) !== 'unit',
+        ));
+        $weeks = array_values(array_unique(array_filter(array_map(
+            fn (array $row): int => (int) ($row[$columns['week']] ?? 0),
+            $dataRows,
+        ))));
+        sort($weeks);
+        $actual = [
+            'hours_acd' => $this->sum($dataRows, $columns['hours_acd']),
+            'hours_ape' => $this->sum($dataRows, $columns['hours_ape']),
+            'hours_aa' => $this->sum($dataRows, $columns['hours_aa']),
+        ];
+        $expected = [
+            'hours_acd' => data_get($this->academicContext, 'subject.hours_ac'),
+            'hours_ape' => data_get($this->academicContext, 'subject.hours_pae'),
+            'hours_aa' => data_get($this->academicContext, 'subject.hours_aa'),
+        ];
+
+        $section->addText('Resumen general de planificación', ['bold' => true], ['spaceBefore' => 160, 'spaceAfter' => 60, 'keepNext' => true]);
+        $table = $section->addTable([
+            'borderSize' => 4,
+            'borderColor' => self::BORDER,
+            'cellMargin' => 50,
+            'width' => 100 * 50,
+            'unit' => TblWidth::PERCENT,
+        ]);
+        $headers = ['Semanas', 'ACD', 'APE', 'AA', 'Créditos (malla)'];
+        $header = $table->addRow(null, ['tblHeader' => true]);
+        foreach ($headers as $label) {
+            $header->addCell((int) floor($this->contentWidth / count($headers)), ['bgColor' => $this->headerBackground()])
+                ->addText($label, ['bold' => true, 'size' => 8, 'color' => $this->headerColor()], ['alignment' => Jc::CENTER, 'spaceAfter' => 0]);
+        }
+        $values = [
+            count($weeks).'/'.(string) (data_get($this->academicContext, 'offering.teaching_weeks') ?? '—'),
+            $actual['hours_acd'].'/'.(string) ($expected['hours_acd'] ?? '—'),
+            $actual['hours_ape'].'/'.(string) ($expected['hours_ape'] ?? '—'),
+            $actual['hours_aa'].'/'.(string) ($expected['hours_aa'] ?? '—'),
+            (string) (data_get($this->academicContext, 'subject.credits') ?? '—'),
+        ];
+        $valueRow = $table->addRow();
+        foreach ($values as $value) {
+            $valueRow->addCell((int) floor($this->contentWidth / count($values)))
+                ->addText($value, ['size' => 9], ['alignment' => Jc::CENTER, 'spaceAfter' => 0]);
+        }
+    }
+
+    /** @return array<string, mixed> */
+    private function planningExpectations(): array
+    {
+        return [
+            'teaching_weeks' => data_get($this->academicContext, 'offering.teaching_weeks'),
+            'credits' => data_get($this->academicContext, 'subject.credits'),
+            'hours_acd' => data_get($this->academicContext, 'subject.hours_ac'),
+            'hours_ape' => data_get($this->academicContext, 'subject.hours_pae'),
+            'hours_aa' => data_get($this->academicContext, 'subject.hours_aa'),
+        ];
     }
 
     /**

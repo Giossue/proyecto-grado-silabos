@@ -5,7 +5,7 @@
 - RF-017 a RF-033; CU-04 y CU-05.
 - RN-009 a RN-016.
 - ADM-05 a ADM-07; COR-11.
-- PV-01, PV-02, PV-07 y PV-08.
+- PV-01, PV-02 y PV-07. PV-08 quedó cerrada en I-57 el 2026-09-08.
 
 ## Comportamiento
 

@@ -3,10 +3,12 @@
 namespace App\Modules\Syllabus\Application\Actions;
 
 use App\Models\User;
+use App\Modules\Configuration\Domain\TableLayout;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\FieldDefinition;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Operations\Application\Actions\RecordAuditEvent;
 use App\Modules\Syllabus\Application\DraftCompleteness;
+use App\Modules\Syllabus\Domain\PlanningTable;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\Syllabus;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\ValidationResult;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\ValidationRun;
@@ -15,7 +17,7 @@ use Illuminate\Support\Facades\DB;
 
 class ValidateDraft
 {
-    public const RULE_VERSION = 'baseline-v1';
+    public const RULE_VERSION = 'planning-v2';
 
     public function __construct(
         private readonly DraftCompleteness $completeness,
@@ -29,17 +31,25 @@ class ValidateDraft
             $locked = Syllabus::query()->lockForUpdate()->findOrFail($syllabus->id);
             $fields = FieldDefinition::query()
                 ->where('plantilla_id', $locked->plantilla_id)
-                ->where('obligatorio', true)
+                ->with('block')
                 ->get();
             $values = $locked->values()->get()->keyBy('definicion_campo_id');
-            $rowCounts = $locked->rows()->selectRaw('definicion_campo_id, count(*) as aggregate')
-                ->groupBy('definicion_campo_id')->pluck('aggregate', 'definicion_campo_id');
+            $rows = $locked->rows()->orderBy('posicion')->get()->groupBy('definicion_campo_id');
+            $academicContext = $locked->contexto_academico ?? [];
+            if (data_get($academicContext, 'offering.teaching_weeks') === null) {
+                data_set(
+                    $academicContext,
+                    'offering.teaching_weeks',
+                    $locked->convocation->process->academicPeriod->semanas_lectivas,
+                );
+            }
             $issues = [];
 
             foreach ($fields as $field) {
-                $missing = $field->tipo === 'repetible'
-                    ? (int) ($rowCounts[$field->id] ?? 0) === 0
-                    : ! $this->filled($values->get($field->id)?->valor);
+                $fieldRows = $rows->get($field->id, collect());
+                $missing = $field->obligatorio && ($field->tipo === 'repetible'
+                    ? $fieldRows->isEmpty()
+                    : ! $this->filled($values->get($field->id)?->valor));
                 if ($missing) {
                     $issues[] = [
                         'field_id' => $field->id,
@@ -49,6 +59,18 @@ class ValidateDraft
                             ? "No se pudo heredar el dato institucional «{$field->etiqueta}». Solicita corrección de la configuración."
                             : "Completa el campo obligatorio «{$field->etiqueta}».",
                     ];
+                }
+
+                $layout = $field->tipo === 'repetible' ? TableLayout::fromBlock($field->block) : null;
+                if ($layout !== null && PlanningTable::applies($layout)) {
+                    foreach (PlanningTable::issues($layout, $fieldRows, $academicContext) as $planningIssue) {
+                        $issues[] = [
+                            'field_id' => $field->id,
+                            'code' => $planningIssue['code'],
+                            'severity' => 'error',
+                            'message' => $planningIssue['message'],
+                        ];
+                    }
                 }
             }
 

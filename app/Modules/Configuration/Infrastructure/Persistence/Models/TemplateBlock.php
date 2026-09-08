@@ -2,6 +2,7 @@
 
 namespace App\Modules\Configuration\Infrastructure\Persistence\Models;
 
+use App\Modules\Configuration\Domain\TableLayout;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -65,5 +66,19 @@ class TemplateBlock extends Model
         $contentType = $configuration['content_type'] ?? null;
 
         return is_string($contentType) ? $contentType : null;
+    }
+
+    public function pageOrientation(): ?string
+    {
+        $orientation = is_array($this->configuracion)
+            ? ($this->configuracion['page_orientation'] ?? null)
+            : null;
+        if (in_array($orientation, ['portrait', 'landscape'], true)) {
+            return $orientation;
+        }
+
+        $layout = TableLayout::fromBlock($this);
+
+        return $layout !== null && TableLayout::isPlanning($layout) ? 'landscape' : null;
     }
 }

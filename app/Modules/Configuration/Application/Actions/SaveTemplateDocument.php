@@ -62,7 +62,8 @@ final class SaveTemplateDocument
                     || ($field !== null && isset($block->configuracion['detached_fields'][$field->clave]))) {
                     throw ValidationException::withMessages(["properties.$index.key" => 'El campo no pertenece al diseño actual.']);
                 }
-                if (($property['ai_enabled'] ?? false) && (($field?->heredado ?? false) || in_array($block->configuredContentType(), ['institutional', 'flow'], true))) {
+                $isInherited = $field !== null && $field->heredado;
+                if (($property['ai_enabled'] ?? false) && ($isInherited || in_array($block->configuredContentType(), ['institutional', 'flow'], true))) {
                     throw ValidationException::withMessages(["properties.$index.ai_enabled" => 'Este campo no admite asistencia de IA.']);
                 }
             }

@@ -13,6 +13,29 @@ use Carbon\CarbonInterface;
  */
 trait CreatesSyllabusProcess
 {
+    /** Planificación válida para la materia sintética del seeder: 64/32/96 en 16 semanas. */
+    protected function validPlanningRowsPayload(): array
+    {
+        $rows = [['data' => [
+            '_unit' => 1,
+            '_kind' => 'unit',
+            'nombre' => 'Unidad integrada',
+            'resultados' => 'Resultado de aprendizaje verificable',
+        ]]];
+        for ($week = 1; $week <= 16; $week++) {
+            $rows[] = ['data' => [
+                '_unit' => 1,
+                'semana' => $week,
+                'acd' => 4,
+                'ape' => 2,
+                'aa' => 6,
+                'contenidos' => "Contenido de la semana {$week}",
+            ]];
+        }
+
+        return $rows;
+    }
+
     protected function openSyllabusProcess(
         string $templateId,
         CarbonInterface|string|null $startsAt = null,

@@ -17,7 +17,7 @@ final class TablePresets
     /** @return array<string, array<string, mixed>> */
     private static function raw(): array
     {
-        $col = fn (string $key, string $label, string $type = 'text', ?string $group = null, ?string $band = null, bool $sum = true, ?int $width = null): array => ['key' => $key, 'label' => $label, 'type' => $type, 'group' => $group, 'band' => $band, 'sum' => $type === 'number' && $sum, 'width' => $width];
+        $col = fn (string $key, string $label, string $type = 'text', ?string $group = null, ?string $band = null, bool $sum = true, ?int $width = null, ?string $role = null): array => ['key' => $key, 'label' => $label, 'type' => $type, 'group' => $group, 'band' => $band, 'sum' => $type === 'number' && $sum, 'width' => $width, 'role' => $role];
 
         return [
             // Calcada del formato oficial (sílabo IA-SW-2026): anchos en twips de la tabla
@@ -25,10 +25,10 @@ final class TablePresets
             'planificacion' => [
                 'columns' => [
                     $col('contenidos', 'Contenidos temáticos de la unidad', 'text', null, null, true, 2121),
-                    $col('semana', 'Semanas (16)', 'number', null, 'horas', false, 427),
-                    $col('acd', 'ACD', 'number', 'docencia', 'horas', true, 849),
-                    $col('ape', 'APE', 'number', 'estudiante', 'horas', true, 566),
-                    $col('aa', 'AA', 'number', 'estudiante', 'horas', true, 566),
+                    $col('semana', 'Semana', 'number', null, 'horas', false, 427, 'week'),
+                    $col('acd', 'ACD', 'number', 'docencia', 'horas', true, 849, 'hours_acd'),
+                    $col('ape', 'APE', 'number', 'estudiante', 'horas', true, 566, 'hours_ape'),
+                    $col('aa', 'AA', 'number', 'estudiante', 'horas', true, 566, 'hours_aa'),
                     $col('act_acd', 'Aprendizaje en Contacto con el Docente (ACD)', 'text', null, 'actividades', true, 2553),
                     $col('act_ape', 'Aprendizaje práctico-experimental (APE)', 'text', null, 'actividades', true, 1843),
                     $col('act_aa', 'Aprendizaje autónomo (AA)', 'text', null, 'actividades', true, 2165),

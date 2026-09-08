@@ -36,6 +36,7 @@ const props = withDefaults(
         campusId?: string | null;
         startsOn?: string | null;
         endsOn?: string | null;
+        teachingWeeks?: number | null;
         faculties: CatalogRecord[];
         campuses?: CatalogRecord[];
         logoUrl?: string | null;
@@ -158,9 +159,7 @@ const facultyOptions = computed(() =>
                                         :value="faculty.id"
                                     >
                                         {{ faculty.nombre }}
-                                        {{
-                                            faculty.activo ? '' : '(inactiva)'
-                                        }}
+                                        {{ faculty.activo ? '' : '(inactiva)' }}
                                     </SelectItem>
                                 </SelectGroup>
                             </SelectContent>
@@ -304,6 +303,30 @@ const facultyOptions = computed(() =>
                             :aria-invalid="Boolean(errors.ends_on)"
                         />
                         <FieldError :errors="[errors.ends_on]" />
+                    </Field>
+
+                    <Field
+                        v-if="entity === 'periodo'"
+                        :data-invalid="Boolean(errors.teaching_weeks)"
+                    >
+                        <FieldLabel
+                            :for="`edit-teaching-weeks-${recordId}`"
+                            required
+                        >
+                            Semanas lectivas
+                        </FieldLabel>
+                        <Input
+                            :id="`edit-teaching-weeks-${recordId}`"
+                            name="teaching_weeks"
+                            type="number"
+                            min="1"
+                            max="52"
+                            step="1"
+                            :default-value="teachingWeeks ?? 16"
+                            required
+                            :aria-invalid="Boolean(errors.teaching_weeks)"
+                        />
+                        <FieldError :errors="[errors.teaching_weeks]" />
                     </Field>
 
                     <FormSheetActions

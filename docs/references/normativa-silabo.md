@@ -5,7 +5,7 @@ estado de vigencia. Se separan de `entrevista-2026-08-26-hallazgos.md` a propós
 respuesta de entrevista es la opinión de una persona, una norma es un texto publicado. La
 regla de procedencia de `baseline.md` exige no mezclarlas.
 
-Consultado el 26 de agosto de 2026.
+Consultado el 8 de septiembre de 2026.
 
 **Antes de citar cualquiera de estas fuentes en la memoria, ábrela y verifica que sigue
 vigente.** Los reglamentos de la UEB se reforman por resolución de Consejo Universitario y
@@ -45,20 +45,25 @@ sobre prórrogas.
 
 ---
 
-## Referencia marco, sin verificar textualmente
+### Manual de procedimiento para elaborar, seguir y evaluar el sílabo UEB (2025)
 
-### Reglamento de Régimen Académico del CES
+Documento aprobado el 8 de abril de 2025 y publicado en el repositorio institucional.
 
-Norma nacional que exige el sílabo y lo define como el programa microcurricular de la
-asignatura. Lo emplea además como unidad de comparación: la homologación por análisis
-comparativo de contenidos exige correspondencia mínima entre microcurrículos.
+<https://rdigital.ueb.edu.ec/items/e6e173c3-37d8-41d2-8e9f-fbfa54979bb1>
 
-<https://www.ces.gob.ec/lotaip/2018/Enero/Anexos%20Procu/An-lit-a2-Reglamento%20de%20R%C3%A9gimen%20Acad%C3%A9mico.pdf>
+**Qué sustenta.** La planificación declara cuántas unidades tiene el sílabo, las numera
+1, 2, 3, … y distribuye contenidos, horas, actividades y evaluación por semana. No fija
+cuatro unidades ni afirma que cada unidad equivalga a un parcial. Por ello, la cantidad
+de unidades y sus filas semanales son datos del sílabo, no geometría de la plantilla.
 
-**Advertencia.** El contenido anterior proviene de resúmenes de búsqueda, **no de leer el
-articulado**. El enlace apunta además a una copia de 2018 y el reglamento se ha reformado
-después. Antes de citarlo hay que abrir la versión vigente en el sitio del CES y localizar
-el artículo exacto. Mientras tanto se trata como **referencia orientativa, no como cita**.
+### Reglamento de Régimen Académico del CES (codificación vigente publicada en 2025)
+
+<https://www.ces.gob.ec/wp-content/uploads/2025/05/Reglamento-de-Regimen-Academico.pdf>
+
+**Qué sustenta.** El artículo 9 establece 48 horas de actividad de aprendizaje por cada
+crédito y el artículo 10 permite que cada IES distribuya las horas del período académico.
+La planificación conserva los componentes ACD, APE y AA de la malla y comprueba su
+distribución; no deriva de esta norma una cantidad universal de unidades o semanas.
 
 ---
 

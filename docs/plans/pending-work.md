@@ -61,7 +61,7 @@ El guion paso a paso está en `docs/quality/manual-review-script.md`.
 La ejecución de CI en remoto dejó de estar pendiente el 2026-08-26: el flujo
 `Verificación` corre en GitHub Actions sobre cada push a `main` y pasa en verde.
 
-## 3. Depende de la UEB: 17 puertas abiertas
+## 3. Depende de la UEB: 16 puertas abiertas
 
 No son tareas de programación: son decisiones que solo la institución puede tomar. El
 sistema está construido para no suplantarlas, y por eso muestra avisos donde una de ellas
@@ -75,7 +75,6 @@ sigue abierta.
 | PV-04  | Responsable de aceptación funcional                          | Dirección/coordinación         |
 | PV-05  | Cantidad real de docentes, paralelos, asignaciones y sílabos | Coordinación                   |
 | PV-07  | DOCX oficial y reglas de exportación                         | Autoridad de plantilla         |
-| PV-08  | Fórmula y redondeo oficial de horas, créditos y totales      | Coordinación/fuente            |
 | PV-11  | Conservación, backup, RPO y RTO                              | Técnico/autoridad              |
 | PV-12  | Base legal, finalidad y aviso de privacidad                  | UEB/datos                      |
 | PV-13  | Hardware disponible para IA local                            | Personal técnico/autores       |
@@ -101,8 +100,8 @@ Done»_, y la Definition of Done incluye la revisión manual de interfaz del pun
 | ---------- | ---------------------- | -------------------------------------------------------------- |
 | I-00       | completa               | CI ejecutada en remoto                                         |
 | I-01       | completa               | revisión manual de interfaz                                    |
-| I-02       | completa               | revisión manual y `PV-01`, `PV-02`, `PV-07`, `PV-08`           |
-| I-03       | completa               | revisión manual y `PV-05`, `PV-08`                             |
+| I-02       | completa               | revisión manual y `PV-01`, `PV-02`, `PV-07`                    |
+| I-03       | completa               | revisión manual y `PV-05`                                      |
 | I-04       | completa               | revisión manual, `DT-07` y `PV-16`                             |
 | I-05       | completa               | fidelidad del DOCX y `PV-07`, `PV-11`, `PV-12`, `PV-15`        |
 | I-06       | completa               | evaluación experta y `PV-02`, `PV-13`, `PV-14`, `PV-18`        |
@@ -115,15 +114,15 @@ Done»_, y la Definition of Done incluye la revisión manual de interfaz del pun
 | I-14       | completa               | ninguna; solo renombrado                                       |
 | I-15       | completa               | revisión manual de interfaz; cerró `PV-06` y `DT-08` a `DT-11` |
 | I-16       | completa               | revisión manual de interfaz                                    |
-| I-18       | completa               | revisión manual del lienzo y `PV-08`                           |
+| I-18       | completa               | revisión manual del lienzo                                     |
 | I-19       | completa               | revisión manual de cards, `Sheet`, foco y dispositivos reales  |
 | I-20       | completa               | revisión manual de Malla, estados, foco y dispositivos reales  |
 | I-40       | completa               | revisión manual de COR-14; DT-12 antes de automatizar el cierre de períodos |
 
 ## 5. Orden sugerido
 
-1. Llevar a Coordinación las puertas que bloquean el sílabo en sí: `PV-07` y `PV-08`.
-   Sin ellas, el documento generado no puede declararse oficial. `PV-06` se cerró el
+1. Llevar a Coordinación `PV-07`, que aún bloquea declarar oficial el documento generado.
+   `PV-08` quedó cerrada el 2026-09-08 y `PV-06` se cerró el
    2026-08-26 con la consulta registrada en
    `references/entrevista-2026-08-26-hallazgos.md`.
 2. Resolver `PV-12` antes de acercar cualquier dato personal real al sistema.

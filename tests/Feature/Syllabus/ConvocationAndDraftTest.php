@@ -248,7 +248,7 @@ class ConvocationAndDraftTest extends TestCase
 
         $this->actingAsTeacher()->post(route('syllabi.validate', $syllabus))->assertRedirect();
         $firstRun = ValidationRun::query()->latest('completado_en')->firstOrFail();
-        $this->assertSame('baseline-v1', $firstRun->version_reglas);
+        $this->assertSame('planning-v2', $firstRun->version_reglas);
         $this->assertGreaterThan(0, $firstRun->errores_bloqueantes);
 
         $requiredEditable = FieldDefinition::query()
@@ -257,9 +257,13 @@ class ConvocationAndDraftTest extends TestCase
             ->where('heredado', false)
             ->get();
         foreach ($requiredEditable as $field) {
-            $payload = match ($field->tipo) {
-                'repetible' => ['version_bloqueo' => $syllabus->fresh()->version_bloqueo, 'rows' => [['data' => ['texto' => "Contenido {$field->clave}"]]]],
-                'seleccion_unica' => ['version_bloqueo' => $syllabus->fresh()->version_bloqueo, 'value' => (string) ($field->opciones[0] ?? '')],
+            $payload = match (true) {
+                $field->clave === 'unidades' => [
+                    'version_bloqueo' => $syllabus->fresh()->version_bloqueo,
+                    'rows' => $this->validPlanningRows(),
+                ],
+                $field->tipo === 'repetible' => ['version_bloqueo' => $syllabus->fresh()->version_bloqueo, 'rows' => [['data' => ['texto' => "Contenido {$field->clave}"]]]],
+                $field->tipo === 'seleccion_unica' => ['version_bloqueo' => $syllabus->fresh()->version_bloqueo, 'value' => (string) ($field->opciones[0] ?? '')],
                 default => ['version_bloqueo' => $syllabus->fresh()->version_bloqueo, 'value' => "Contenido {$field->clave}"],
             };
             $this->actingAsTeacher()->patchJson(route('syllabi.fields.update', [$syllabus, $field]), $payload)->assertOk();
@@ -269,6 +273,34 @@ class ConvocationAndDraftTest extends TestCase
         $lastRun = ValidationRun::query()->whereKeyNot($firstRun->id)->firstOrFail();
         $this->assertSame(0, $lastRun->errores_bloqueantes);
         $this->assertSame('100.00', $lastRun->porcentaje_completitud);
+    }
+
+    public function test_planning_with_wrong_hours_can_be_saved_but_fails_deterministic_validation(): void
+    {
+        $syllabus = $this->openConvocationAndGetSyllabus();
+        $this->actingAsTeacher()->post(route('syllabi.start', $syllabus));
+        $field = FieldDefinition::query()
+            ->where('plantilla_id', $syllabus->plantilla_id)
+            ->where('clave', 'unidades')
+            ->firstOrFail();
+        $rows = $this->validPlanningRows();
+        $rows[1]['data']['acd'] = 2;
+
+        $this->actingAsTeacher()->patchJson(route('syllabi.fields.update', [$syllabus, $field]), [
+            'version_bloqueo' => $syllabus->fresh()->version_bloqueo,
+            'rows' => $rows,
+        ])->assertOk();
+
+        $this->actingAsTeacher()->post(route('syllabi.validate', $syllabus))->assertRedirect();
+        $run = ValidationRun::query()->latest('completado_en')->firstOrFail();
+
+        $this->assertGreaterThan(0, $run->errores_bloqueantes);
+        $this->assertDatabaseHas('resultados_validacion', [
+            'ejecucion_validacion_id' => $run->id,
+            'definicion_campo_id' => $field->id,
+            'codigo' => 'horas_planificacion_no_coinciden',
+            'severidad' => 'error',
+        ]);
     }
 
     public function test_repeatable_rows_keep_identity_when_an_earlier_row_is_removed(): void
@@ -397,6 +429,29 @@ class ConvocationAndDraftTest extends TestCase
         $this->actingAsCoordinator()->post(route('convocations.open', $convocation))->assertRedirect();
 
         return Syllabus::query()->firstOrFail();
+    }
+
+    /** @return list<array{data: array<string, int|string>}> */
+    private function validPlanningRows(): array
+    {
+        $rows = [['data' => [
+            '_unit' => 1,
+            '_kind' => 'unit',
+            'nombre' => 'Unidad integrada',
+            'resultados' => 'Resultado de aprendizaje verificable',
+        ]]];
+        for ($week = 1; $week <= 16; $week++) {
+            $rows[] = ['data' => [
+                '_unit' => 1,
+                'semana' => $week,
+                'acd' => 4,
+                'ape' => 2,
+                'aa' => 6,
+                'contenidos' => "Contenido de la semana {$week}",
+            ]];
+        }
+
+        return $rows;
     }
 
     private function actingAsAdministrator(): static

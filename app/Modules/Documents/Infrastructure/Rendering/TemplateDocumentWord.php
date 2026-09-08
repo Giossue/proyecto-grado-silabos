@@ -22,6 +22,11 @@ final class TemplateDocumentWord
         ?string $list = null,
         ?string $alignmentOverride = null,
     ): void {
+        if ($node['type'] === 'pageBreak') {
+            $target->addPageBreak();
+
+            return;
+        }
         if ($node['type'] === 'table') {
             $this->table($target, $node, $width);
 
@@ -109,7 +114,13 @@ final class TemplateDocumentWord
         $merged = [];
         foreach ($rows as $rowIndex => $source) {
             $role = $source['attrs']['rowRole'] ?? null;
-            $row = $table->addRow();
+            $isRepeatingHeader = $role === 'unit'
+                || array_reduce(
+                    $source['content'],
+                    fn (bool $carry, array $cell): bool => $carry && $cell['type'] === 'tableHeader',
+                    true,
+                );
+            $row = $table->addRow(null, $isRepeatingHeader ? ['tblHeader' => true] : []);
             $cells = $source['content'];
             $column = 0;
             while ($column < $count) {

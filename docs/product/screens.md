@@ -199,6 +199,11 @@ completo. El alta está separada de asignar paralelos y no levanta sus bloqueos.
   nace con el esquema mínimo y Administración puede ajustar su geometría y estilo por
   celda desde **Editar tabla**. El color global de cabecera solo alcanza cabeceras reales;
   nunca convierte todas las filas fijas de una ficha compleja en cabeceras.
+  En la planificación, el período aporta la cantidad de semanas lectivas; unidad y
+  parcial son independientes. La interfaz sugiere la siguiente semana libre, calcula
+  totales por unidad y generales, y compara ACD/APE/AA con la malla. Un desajuste se
+  guarda como borrador, pero bloquea validar y enviar. Créditos y total de horas son de
+  solo lectura; una incoherencia con 48 horas por crédito se reporta como configuración.
   Las fuentes son documentos editables: COR-11 abre el contenido como una hoja visual
   con cinta de opciones; el formato se aplica en tiempo real y el sistema conserva el
   resultado como Markdown seguro sin mostrar su sintaxis.

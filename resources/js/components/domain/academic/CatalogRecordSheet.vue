@@ -278,6 +278,27 @@ const examples = computed(
                             <FieldError :errors="[errors.ends_on]" />
                         </Field>
 
+                        <Field
+                            v-if="entity === 'periodo'"
+                            :data-invalid="Boolean(errors.teaching_weeks)"
+                        >
+                            <FieldLabel for="catalog-teaching-weeks" required>
+                                Semanas lectivas
+                            </FieldLabel>
+                            <Input
+                                id="catalog-teaching-weeks"
+                                name="teaching_weeks"
+                                type="number"
+                                min="1"
+                                max="52"
+                                step="1"
+                                value="16"
+                                required
+                                :aria-invalid="Boolean(errors.teaching_weeks)"
+                            />
+                            <FieldError :errors="[errors.teaching_weeks]" />
+                        </Field>
+
                         <FormSheetActions
                             :close="close"
                             :processing="processing"

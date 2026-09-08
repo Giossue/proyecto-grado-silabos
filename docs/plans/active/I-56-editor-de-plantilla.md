@@ -372,6 +372,22 @@ aserciones**) pasan. Chromium `template-visual-builder.mjs` (**1/1**) modifica u
 tabla, solicita cancelar, conserva su borrador al continuar y guarda. Sin migraciones,
 modificaciones de datos, commit ni push.
 
+### Corrección de la salida por navegación (2026-09-08)
+
+La navegación interna con una tabla modificada usa el mismo diálogo de descarte de la
+aplicación y reanuda la visita pendiente solo después de elegir **Descartar cambios**.
+La confirmación nativa queda reservada a cerrar o recargar el navegador. El botón
+secundario **Cancelar** se muestra sin icono, conforme al patrón general de acciones.
+
+- [x] Sustituir `window.confirm` en la navegación Inertia por el diálogo existente.
+- [x] Conservar la visita pendiente al descartar y restaurar la edición al cancelar.
+- [x] Quitar el icono de la acción secundaria y cubrir ambos comportamientos en Chromium.
+
+Verificación puntual: TypeScript, ESLint, Prettier y Pint pasan;
+`ManagementCreationUiTest`, **24 pruebas / 1159 aserciones**, y Chromium
+`template-visual-builder.mjs`, **1/1**, confirman el diálogo en navegación, la
+reanudación al descartar, la ausencia de confirmaciones nativas y el botón sin icono.
+
 ## Seguimiento — acciones de bloques y campos (2026-09-08)
 
 ADM-06 conserva la edición de tabla para su geometría, pero no la usa como única vía de

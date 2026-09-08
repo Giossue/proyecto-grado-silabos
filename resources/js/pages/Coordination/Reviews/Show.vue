@@ -31,7 +31,11 @@ import {
 } from '@/components/ui/field';
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
-import type { TableLayout, TableRowData } from '@/lib/tableLayout';
+import type {
+    PlanningExpectations,
+    TableLayout,
+    TableRowData,
+} from '@/lib/tableLayout';
 import type { DocumentNode, DocumentField } from '@/lib/templateDocument';
 import { show as documentsShow } from '@/routes/documents';
 import { index as reviewsIndex } from '@/routes/reviews';
@@ -112,6 +116,16 @@ const props = defineProps<{
             schema_version: number;
             sections: SnapshotSection[];
             template_variables?: Record<string, string>;
+            academic_context?: {
+                offering?: { teaching_weeks?: number | null };
+                subject?: {
+                    credits?: number | string | null;
+                    total_hours?: number | string | null;
+                    hours_ac?: number | string | null;
+                    hours_pae?: number | string | null;
+                    hours_aa?: number | string | null;
+                };
+            };
         };
         /** Ficha de identificación en cuadrícula; nula en copias antiguas. */
         identification: IdentificationCell[][] | null;
@@ -160,6 +174,20 @@ const unresolvedCount = computed(
 const canReviewCurrent = computed(
     () => props.revision.is_current && props.syllabus.state === 'en_revision',
 );
+const planningExpectations = computed<PlanningExpectations>(() => ({
+    teaching_weeks:
+        props.revision.snapshot.academic_context?.offering?.teaching_weeks ??
+        null,
+    credits: props.revision.snapshot.academic_context?.subject?.credits ?? null,
+    total_hours:
+        props.revision.snapshot.academic_context?.subject?.total_hours ?? null,
+    hours_acd:
+        props.revision.snapshot.academic_context?.subject?.hours_ac ?? null,
+    hours_ape:
+        props.revision.snapshot.academic_context?.subject?.hours_pae ?? null,
+    hours_aa:
+        props.revision.snapshot.academic_context?.subject?.hours_aa ?? null,
+}));
 
 const toggleObservation = (
     id: string,
@@ -324,6 +352,7 @@ const observationState = (value: string): string =>
                                     revision.snapshot.template_variables ?? {}
                                 "
                                 :layout="block.table"
+                                :planning-expectations="planningExpectations"
                             />
                             <dl v-else class="grid gap-4">
                                 <div
@@ -365,6 +394,9 @@ const observationState = (value: string): string =>
                                         <SyllabusTableView
                                             :layout="block.table"
                                             :rows="tableRows(field)"
+                                            :planning-expectations="
+                                                planningExpectations
+                                            "
                                         />
                                     </dd>
                                     <dd v-else class="mt-3 space-y-2">

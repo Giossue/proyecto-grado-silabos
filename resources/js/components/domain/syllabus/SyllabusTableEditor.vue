@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Trash2 } from '@lucide/vue';
 import { computed } from 'vue';
+import PlanningSummary from '@/components/domain/syllabus/PlanningSummary.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -11,8 +12,13 @@ import {
     sumColumn,
     columnWidths,
     totalizes,
+    planningColumns,
 } from '@/lib/tableLayout';
-import type { TableLayout, TableRowData } from '@/lib/tableLayout';
+import type {
+    PlanningExpectations,
+    TableLayout,
+    TableRowData,
+} from '@/lib/tableLayout';
 
 type EditableRow = { id: string | null; data: TableRowData };
 
@@ -28,6 +34,7 @@ const props = defineProps<{
     rows: EditableRow[];
     required: boolean;
     invalid: boolean;
+    planningExpectations?: PlanningExpectations | null;
 }>();
 
 const emit = defineEmits<{
@@ -108,6 +115,22 @@ const addRow = (unit: number): void => {
         data[column.key] = '';
     }
 
+    const weekKey = planningColumns(props.layout).week;
+
+    if (weekKey) {
+        const used = new Set(
+            props.rows
+                .map((row) => Number(row.data[weekKey]))
+                .filter((week) => Number.isInteger(week) && week > 0),
+        );
+        const maximum = props.planningExpectations?.teaching_weeks ?? 52;
+        const next = Array.from(
+            { length: maximum },
+            (_, index) => index + 1,
+        ).find((week) => !used.has(week));
+        data[weekKey] = next ?? '';
+    }
+
     emit('update:rows', [...cloneRows(), { id: null, data }]);
 };
 
@@ -151,6 +174,11 @@ const widths = computed(() => columnWidths(props.layout));
 
 <template>
     <div class="flex flex-col gap-4">
+        <PlanningSummary
+            :layout="layout"
+            :rows="rows.map((row) => row.data)"
+            :expectations="planningExpectations"
+        />
         <div
             v-for="unit in units"
             :key="unit.number"
@@ -258,7 +286,14 @@ const widths = computed(() => columnWidths(props.layout));
                                         )
                                     "
                                     type="number"
-                                    step="any"
+                                    :step="column.role === 'week' ? 1 : 0.01"
+                                    min="0"
+                                    :max="
+                                        column.role === 'week'
+                                            ? (planningExpectations?.teaching_weeks ??
+                                              52)
+                                            : undefined
+                                    "
                                     class="h-8 text-center"
                                     :model-value="display(row.data[column.key])"
                                     :aria-label="`${column.label}, fila ${rowIndex + 1}`"

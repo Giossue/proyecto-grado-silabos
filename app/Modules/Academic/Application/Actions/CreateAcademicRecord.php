@@ -119,6 +119,7 @@ class CreateAcademicRecord
                 'nombre' => $data['nombre'],
                 'fecha_inicio' => $data['starts_on'],
                 'fecha_fin' => $data['ends_on'],
+                'semanas_lectivas' => $data['teaching_weeks'],
                 'activo' => true,
             ]),
             'malla' => $this->createCurriculum($data, $this->careerId($activeRole)),

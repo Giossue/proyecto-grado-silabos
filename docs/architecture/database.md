@@ -62,8 +62,9 @@ exclusivamente Administración.
 
 Estos catálogos no comparten una tabla polimórfica. `carreras.facultad_id` implementa la
 relación uno-a-muchos Facultad → Carreras con clave foránea y borrado restringido.
-`campus` y `periodos_academicos` conservan identidad propia; el período es institucional
-y de código único, no depende de una carrera. `ofertas_academicas` los
+`campus` y `periodos_academicos` conservan identidad propia; el período es institucional,
+de código único y declara `semanas_lectivas` entre 1 y 52, no depende de una carrera.
+`ofertas_academicas` los
 relaciona con una asignatura mediante claves foráneas. La modalidad no es tabla sino
 columna de texto con valores fijos (`carreras.modalidad` base, `asignaturas.modalidad`
 opcional, `ofertas_academicas.modalidad` copia heredada; migración `000034`, I-37). El

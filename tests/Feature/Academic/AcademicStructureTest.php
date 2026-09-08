@@ -74,6 +74,7 @@ class AcademicStructureTest extends TestCase
                 ->where('catalogs.careers.0.name', 'Software')
                 ->where('catalogs.careers.0.faculty_id', $faculty->id)
                 ->where('catalogs.campuses.0.nombre', 'Campus Matriz')
+                ->where('catalogs.periods.0.teaching_weeks', 16)
                 ->has('options.faculties', 1)
                 ->missing('subjects'));
 
@@ -203,6 +204,34 @@ class AcademicStructureTest extends TestCase
 
         $this->assertDatabaseMissing('facultades', ['nombre' => 'No autorizada']);
         $this->assertDatabaseMissing('mallas', ['codigo' => 'NO-ADMIN']);
+    }
+
+    public function test_administrator_declares_teaching_weeks_when_creating_a_period(): void
+    {
+        $this->actingAsAdministrator()
+            ->post(route('admin.academic.store', 'periodo'), [
+                'code' => '2027-A',
+                'nombre' => 'Primer periodo 2027',
+                'starts_on' => '2027-01-01',
+                'ends_on' => '2027-05-31',
+                'teaching_weeks' => 18,
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('periodos_academicos', [
+            'codigo' => '2027-A',
+            'semanas_lectivas' => 18,
+        ]);
+
+        $this->actingAsAdministrator()
+            ->post(route('admin.academic.store', 'periodo'), [
+                'code' => '2027-B',
+                'nombre' => 'Periodo inválido',
+                'starts_on' => '2027-06-01',
+                'ends_on' => '2027-10-31',
+                'teaching_weeks' => 0,
+            ])
+            ->assertSessionHasErrors('teaching_weeks');
     }
 
     public function test_administrator_creates_faculty_career_and_assigns_a_matching_coordinator(): void
@@ -1446,6 +1475,7 @@ class AcademicStructureTest extends TestCase
                 'nombre' => 'Periodo actualizado',
                 'starts_on' => '2026-10-01',
                 'ends_on' => '2027-02-28',
+                'teaching_weeks' => 18,
             ])
             ->assertRedirect();
 
@@ -1471,6 +1501,7 @@ class AcademicStructureTest extends TestCase
             'nombre' => 'Periodo actualizado',
             'fecha_inicio' => '2026-10-01',
             'fecha_fin' => '2027-02-28',
+            'semanas_lectivas' => 18,
         ]);
 
         $this->assertSame(4, AuditEvent::query()
@@ -1552,6 +1583,7 @@ class AcademicStructureTest extends TestCase
                 'nombre' => $period->nombre,
                 'starts_on' => '2027-02-01',
                 'ends_on' => '2027-01-01',
+                'teaching_weeks' => 16,
             ])
             ->assertSessionHasErrors('ends_on');
 

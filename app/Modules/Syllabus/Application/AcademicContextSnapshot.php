@@ -71,6 +71,7 @@ class AcademicContextSnapshot
             'offering' => [
                 'id' => $offering->id,
                 'period' => $offering->academicPeriod->nombre,
+                'teaching_weeks' => $offering->academicPeriod->semanas_lectivas,
                 'campus' => $offering->campus->nombre,
                 'modality' => $offering->modalidad->label(),
             ],

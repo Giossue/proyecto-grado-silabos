@@ -136,6 +136,10 @@ class WordRendererTest extends TestCase
         $this->assertStringContainsString('w:fill="DBE5F1"', $document);
         $this->assertStringContainsString('w:fill="B8CCE4"', $document);
         $this->assertStringContainsString('w:color w:val="365F91"', $document);
+        // La planificación abre una sección horizontal aunque el documento general sea
+        // vertical, y cada unidad posterior comienza en una página nueva.
+        $this->assertStringContainsString('w:orient="landscape"', $document);
+        $this->assertStringContainsString('<w:br w:type="page"/>', $document);
 
         // Lista con viñetas del segundo bloque.
         $this->assertStringContainsString('Primer objetivo', $document);

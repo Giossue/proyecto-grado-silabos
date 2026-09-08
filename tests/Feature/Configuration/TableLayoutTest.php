@@ -45,6 +45,8 @@ class TableLayoutTest extends TestCase
         $this->assertSame('text', $layout['columns'][5]['type']);
         $this->assertSame(['docencia', 'estudiante'], array_column($layout['groups'], 'key'));
         $this->assertSame(['semana', 'acd', 'ape', 'aa'], TableLayout::numericColumns($layout));
+        $this->assertTrue(TableLayout::isPlanning($layout));
+        $this->assertSame('semana', TableLayout::columnsByRole($layout)['week']);
         $this->assertSame(['enabled' => true, 'label' => 'Total'], $layout['totals']);
         $this->assertSame(['enabled' => true, 'label' => 'Unidad'], $layout['repeat']);
     }
@@ -63,6 +65,7 @@ class TableLayoutTest extends TestCase
         $this->assertFalse($layout['columns'][0]['sum']);
         $this->assertSame(2121, $layout['columns'][0]['width']);
         $this->assertFalse($layout['columns'][1]['sum']);
+        $this->assertSame('Semana', $layout['columns'][1]['label']);
         $this->assertSame(427, $layout['columns'][1]['width']);
         $this->assertTrue($layout['columns'][2]['sum']);
         $this->assertNull($layout['columns'][2]['width']);

@@ -28,7 +28,8 @@ class UpdateDraftFieldRequest extends FormRequest
         $rules = [
             'version_bloqueo' => ['required', 'integer', 'min:0'],
             'value' => $valueRules,
-            'rows' => ['nullable', 'array', 'max:100'],
+            // Hasta 52 semanas más cabeceras de unidad, con margen para otras listas.
+            'rows' => ['nullable', 'array', 'max:250'],
             'rows.*.id' => ['nullable', 'uuid'],
             // Una celda por columna (I-34); `_unit` agrupa filas por unidad y `_kind`
             // marca la fila de cabecera de la unidad.

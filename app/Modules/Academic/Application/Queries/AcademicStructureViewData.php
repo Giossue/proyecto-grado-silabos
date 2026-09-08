@@ -83,6 +83,7 @@ class AcademicStructureViewData
                         'name' => $period->nombre,
                         'starts_on' => $period->fecha_inicio->toDateString(),
                         'ends_on' => $period->fecha_fin->toDateString(),
+                        'teaching_weeks' => $period->semanas_lectivas,
                         'active' => $period->activo,
                     ]),
             ],

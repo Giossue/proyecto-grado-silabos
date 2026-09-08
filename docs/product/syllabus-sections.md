@@ -24,7 +24,8 @@ La referencia visual aportada el 2026-09-06 (`temp/silabo.pdf`) conserva estas d
 áreas. La plantilla inicial incluye en Evaluación una tabla de indicadores con
 puntos y ponderación para cada uno de los dos parciales, seguida de la escala de
 valoración y la recuperación. Son campos que llena el docente: no se precargan
-notas ni se incorporan fórmulas o porcentajes del PDF. PV-07/PV-08 siguen abiertas.
+notas ni se incorporan fórmulas o porcentajes del PDF. PV-07 sigue abierta; PV-08 se
+cerró en I-57 para horas y créditos, sin afectar los porcentajes de evaluación.
 Este ajuste se aplica al crear la plantilla, no sobrescribe diseños guardados ni
 altera revisiones enviadas.
 
@@ -41,6 +42,9 @@ son una cantidad fija del formato.
 - Campos narrativos usan Markdown seguro; no HTML arbitrario.
 - Resultados, habilidades, horas, créditos, TIC/TAC/IA y bibliografía se estructuran si
   deben buscarse, calcularse o verificarse.
+- La sección 6 admite cualquier cantidad de unidades y distribuye las semanas lectivas
+  del período. Sus totales ACD/APE/AA deben coincidir con la malla; `créditos × 48`
+  verifica el total académico y no es un campo editable del sílabo.
 - La sección 12 refleja revisiones/aprobaciones del dominio; una plantilla no puede
   falsificar una aprobación mediante texto editable.
 

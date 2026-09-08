@@ -274,13 +274,14 @@ class TeacherTransferTest extends TestCase
             return (string) $option;
         })->filter()->values();
 
-        return match ($field->tipo) {
-            'repetible' => ['version_bloqueo' => $lockVersion, 'rows' => [['data' => ['texto' => "Contenido {$field->clave}"]]]],
-            'booleano' => ['version_bloqueo' => $lockVersion, 'value' => true],
-            'numero' => ['version_bloqueo' => $lockVersion, 'value' => 1],
-            'fecha' => ['version_bloqueo' => $lockVersion, 'value' => now()->toDateString()],
-            'seleccion_unica' => ['version_bloqueo' => $lockVersion, 'value' => $optionValues->first()],
-            'seleccion_multiple' => ['version_bloqueo' => $lockVersion, 'value' => [$optionValues->first()]],
+        return match (true) {
+            $field->clave === 'unidades' => ['version_bloqueo' => $lockVersion, 'rows' => $this->validPlanningRowsPayload()],
+            $field->tipo === 'repetible' => ['version_bloqueo' => $lockVersion, 'rows' => [['data' => ['texto' => "Contenido {$field->clave}"]]]],
+            $field->tipo === 'booleano' => ['version_bloqueo' => $lockVersion, 'value' => true],
+            $field->tipo === 'numero' => ['version_bloqueo' => $lockVersion, 'value' => 1],
+            $field->tipo === 'fecha' => ['version_bloqueo' => $lockVersion, 'value' => now()->toDateString()],
+            $field->tipo === 'seleccion_unica' => ['version_bloqueo' => $lockVersion, 'value' => $optionValues->first()],
+            $field->tipo === 'seleccion_multiple' => ['version_bloqueo' => $lockVersion, 'value' => [$optionValues->first()]],
             default => ['version_bloqueo' => $lockVersion, 'value' => "Contenido académico {$field->clave}"],
         };
     }

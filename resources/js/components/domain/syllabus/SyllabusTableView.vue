@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import PlanningSummary from '@/components/domain/syllabus/PlanningSummary.vue';
 import {
     formatSum,
     groupByUnit,
@@ -8,12 +9,17 @@ import {
     columnWidths,
     totalizes,
 } from '@/lib/tableLayout';
-import type { TableLayout, TableRowData } from '@/lib/tableLayout';
+import type {
+    PlanningExpectations,
+    TableLayout,
+    TableRowData,
+} from '@/lib/tableLayout';
 
 /** Tabla del sílabo en solo lectura, con el mismo dibujo que el documento impreso. */
 const props = defineProps<{
     layout: TableLayout;
     rows: { id: string | null; data: TableRowData }[];
+    planningExpectations?: PlanningExpectations | null;
 }>();
 
 const header = computed(() => headerRows(props.layout));
@@ -28,6 +34,11 @@ const widths = computed(() => columnWidths(props.layout));
 
 <template>
     <div class="flex flex-col gap-4">
+        <PlanningSummary
+            :layout="layout"
+            :rows="rows.map((row) => row.data)"
+            :expectations="planningExpectations"
+        />
         <table
             v-for="unit in units"
             :key="unit.number"

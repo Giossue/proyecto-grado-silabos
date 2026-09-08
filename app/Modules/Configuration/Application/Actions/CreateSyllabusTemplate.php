@@ -124,6 +124,9 @@ class CreateSyllabusTemplate
                     if ($preset !== null) {
                         $configuration['table'] = TablePresets::layout($preset);
                     }
+                    if ($preset === 'planificacion') {
+                        $configuration['page_orientation'] = 'landscape';
+                    }
                     $block = TemplateBlock::query()->create([
                         'plantilla_id' => $template->id,
                         'seccion_plantilla_id' => $section->id,

@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property string $nombre
  * @property CarbonImmutable $fecha_inicio
  * @property CarbonImmutable $fecha_fin
+ * @property int $semanas_lectivas
  * @property bool $activo
  */
 class AcademicPeriod extends Model
@@ -28,6 +29,7 @@ class AcademicPeriod extends Model
         'nombre',
         'fecha_inicio',
         'fecha_fin',
+        'semanas_lectivas',
         'activo',
     ];
 
@@ -37,6 +39,7 @@ class AcademicPeriod extends Model
         return [
             'fecha_inicio' => 'immutable_date',
             'fecha_fin' => 'immutable_date',
+            'semanas_lectivas' => 'integer',
             'activo' => 'boolean',
         ];
     }

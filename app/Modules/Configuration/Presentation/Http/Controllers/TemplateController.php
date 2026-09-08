@@ -108,6 +108,7 @@ class TemplateController extends Controller
                         'title' => $block->titulo,
                         'type' => $block->tipo,
                         'content_type' => $this->contentType($block, $block->fields->first()),
+                        'page_orientation' => $block->pageOrientation(),
                         'table' => TableLayout::fromBlock($block),
                         'document' => $block->configuracion['document'] ?? null,
                         'fingerprint' => SaveTemplateDocument::fingerprint($block),

@@ -62,6 +62,7 @@ export type AcademicStructureProps = {
             name: string;
             starts_on: string;
             ends_on: string;
+            teaching_weeks: number;
             active: boolean;
         }[];
     };

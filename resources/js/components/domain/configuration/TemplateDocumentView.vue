@@ -2,6 +2,7 @@
 import { defineComponent, h, useId, useSlots } from 'vue';
 import { computed } from 'vue';
 import type { VNodeChild, CSSProperties } from 'vue';
+import PlanningSummary from '@/components/domain/syllabus/PlanningSummary.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -13,8 +14,17 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { groupByUnit, sumColumn, formatSum } from '@/lib/tableLayout';
-import type { TableLayout, TableRowData } from '@/lib/tableLayout';
+import {
+    groupByUnit,
+    sumColumn,
+    formatSum,
+    planningColumns,
+} from '@/lib/tableLayout';
+import type {
+    PlanningExpectations,
+    TableLayout,
+    TableRowData,
+} from '@/lib/tableLayout';
 import { displayDocumentValue } from '@/lib/templateDocument';
 import type { DocumentNode, DocumentField } from '@/lib/templateDocument';
 
@@ -42,6 +52,7 @@ const props = withDefaults(
         textAlign?: 'left' | 'center' | 'right' | 'justify';
         tableHeaderBackground?: string;
         tableHeaderColor?: string;
+        planningExpectations?: PlanningExpectations | null;
     }>(),
     {
         layout: null,
@@ -209,11 +220,48 @@ const setColumn = (context: Context, key: string, value: string | number) => {
     rows[index].data[key] = value;
     emit('rows', field.key, rows);
 };
-const addRecord = (field: DocumentField, unit: number) =>
-    emit('rows', field.key, [
-        ...(field.rows ?? []),
-        { id: null, data: { _unit: unit } },
-    ]);
+const addRecord = (field: DocumentField, unit: number) => {
+    const data: TableRowData = { _unit: unit };
+    const weekKey = props.layout ? planningColumns(props.layout).week : null;
+
+    if (weekKey) {
+        const used = new Set(
+            (field.rows ?? [])
+                .map((row) => Number(row.data[weekKey]))
+                .filter((week) => Number.isInteger(week) && week > 0),
+        );
+        const maximum = props.planningExpectations?.teaching_weeks ?? 52;
+        data[weekKey] =
+            Array.from({ length: maximum }, (_, index) => index + 1).find(
+                (week) => !used.has(week),
+            ) ?? '';
+    }
+
+    emit('rows', field.key, [...(field.rows ?? []), { id: null, data }]);
+};
+const addUnit = (field: DocumentField, number: number) => {
+    const data: TableRowData = { _unit: number, _kind: 'unit' };
+
+    for (const header of props.layout?.header_fields ?? []) {
+        data[header.key] = '';
+    }
+
+    emit('rows', field.key, [...(field.rows ?? []), { id: null, data }]);
+};
+const removeUnit = (field: DocumentField, number: number) =>
+    emit(
+        'rows',
+        field.key,
+        (field.rows ?? [])
+            .filter((row) => Number(row.data._unit ?? 1) !== number)
+            .map((row) => {
+                const current = Number(row.data._unit ?? 1);
+
+                return current > number
+                    ? { ...row, data: { ...row.data, _unit: current - 1 } }
+                    : row;
+            }),
+    );
 const removeRecord = (field: DocumentField, row: Row) =>
     emit(
         'rows',
@@ -420,11 +468,25 @@ const input = (
         !attrs.listStyle && ['numero', 'fecha', 'texto_corto'].includes(kind)
             ? Input
             : Textarea;
+    const columnRole = isColumn
+        ? props.layout?.columns.find((column) => column.key === key)?.role
+        : null;
 
     return h(control, {
         ...attributes,
         modelValue: text,
         type: kind === 'numero' ? 'number' : kind === 'fecha' ? 'date' : 'text',
+        step:
+            columnRole === 'week'
+                ? 1
+                : columnRole?.startsWith('hours_')
+                  ? 0.01
+                  : undefined,
+        min: columnRole ? 0 : undefined,
+        max:
+            columnRole === 'week'
+                ? (props.planningExpectations?.teaching_weeks ?? 52)
+                : undefined,
         placeholder: attrs.listStyle
             ? `Ej. ${label}: un elemento por línea`
             : `Ej. ${label}`,
@@ -588,6 +650,24 @@ const draw = (
                                   },
                                   () => 'Agregar fila de datos',
                               ),
+                              ...(layout.repeat.enabled && units.length > 1
+                                  ? [
+                                        h(
+                                            Button,
+                                            {
+                                                type: 'button',
+                                                variant: 'ghost',
+                                                onClick: () =>
+                                                    removeUnit(
+                                                        field,
+                                                        unit.number,
+                                                    ),
+                                            },
+                                            () =>
+                                                `Quitar ${layout.repeat.label.toLowerCase()}`,
+                                        ),
+                                    ]
+                                  : []),
                               ...unit.rows.map((row, i) =>
                                   h(
                                       Button,
@@ -606,6 +686,14 @@ const draw = (
             );
         });
 
+        tables.push(
+            h(PlanningSummary, {
+                layout,
+                rows: (field.rows ?? []).map((row) => row.data),
+                expectations: props.planningExpectations,
+            }),
+        );
+
         if (props.editable && layout.repeat.enabled) {
             tables.push(
                 h(
@@ -614,7 +702,7 @@ const draw = (
                         type: 'button',
                         variant: 'outline',
                         onClick: () =>
-                            addRecord(
+                            addUnit(
                                 field,
                                 Math.max(...units.map((unit) => unit.number)) +
                                     1,

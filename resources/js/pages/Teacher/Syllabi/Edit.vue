@@ -47,7 +47,11 @@ import {
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 import { defaultTableLayout } from '@/lib/tableLayout';
-import type { TableLayout, TableRowData } from '@/lib/tableLayout';
+import type {
+    PlanningExpectations,
+    TableLayout,
+    TableRowData,
+} from '@/lib/tableLayout';
 import type { DocumentNode } from '@/lib/templateDocument';
 import { index as syllabiIndex } from '@/routes/syllabi';
 
@@ -89,6 +93,7 @@ type DraftSection = {
         title: string;
         content_type: string;
         table: TableLayout | null;
+        page_orientation?: 'portrait' | 'landscape' | null;
         document?: DocumentNode | null;
         fields: DraftField[];
     }[];
@@ -134,6 +139,7 @@ const props = defineProps<{
         teachers: string[];
         identification: IdentificationCell[][];
         template_variables: Record<string, string>;
+        planning_expectations: PlanningExpectations;
         sections: DraftSection[];
         validation: ValidationSummary | null;
         observations: ReviewObservation[];
@@ -757,6 +763,9 @@ onBeforeUnmount(() => {
                                 :variables="syllabus.template_variables"
                                 :layout="block.table"
                                 :editable="!conflict"
+                                :planning-expectations="
+                                    syllabus.planning_expectations
+                                "
                                 @value="
                                     (key, value) =>
                                         updateDesignValue(
@@ -898,6 +907,9 @@ onBeforeUnmount(() => {
                                     :required="field.required"
                                     :invalid="
                                         validationFor(field.id).length > 0
+                                    "
+                                    :planning-expectations="
+                                        syllabus.planning_expectations
                                     "
                                     @update:rows="replaceRows(field, $event)"
                                 />

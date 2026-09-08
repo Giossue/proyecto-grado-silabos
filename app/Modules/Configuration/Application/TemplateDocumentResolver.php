@@ -2,6 +2,8 @@
 
 namespace App\Modules\Configuration\Application;
 
+use App\Modules\Configuration\Domain\TableLayout;
+
 /** Sustituye referencias solo con valores de una fotografía, nunca consultando datos vivos. */
 final class TemplateDocumentResolver
 {
@@ -9,12 +11,13 @@ final class TemplateDocumentResolver
      * @param  list<array<string, mixed>>  $fields
      * @param  array<string, string>  $variables
      * @param  array<string, mixed>|null  $layout
+     * @param  array<string, mixed>|null  $planningExpectations
      * @return array<string, mixed>
      */
-    public static function resolve(array $document, array $fields, array $variables, ?array $layout): array
+    public static function resolve(array $document, array $fields, array $variables, ?array $layout, ?array $planningExpectations = null): array
     {
         $byKey = array_column($fields, null, 'key');
-        $visit = function (array $node, array $data = []) use (&$visit, $byKey, $variables, $layout): array {
+        $visit = function (array $node, array $data = []) use (&$visit, $byKey, $variables, $layout, $planningExpectations): array {
             $type = $node['type'];
             $attrs = $node['attrs'] ?? [];
             if (in_array($type, ['variable', 'field', 'column'], true)) {
@@ -62,6 +65,9 @@ final class TemplateDocumentResolver
                 ksort($units);
                 $result = [];
                 foreach ($units ?: [1 => ['header' => [], 'rows' => []]] as $number => $unit) {
+                    if ($result !== []) {
+                        $result[] = ['type' => 'pageBreak'];
+                    }
                     if ($layout['repeat']['enabled']) {
                         $result[] = ['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => $layout['repeat']['label'].' '.$number, 'marks' => [['type' => 'bold']]]]];
                     }
@@ -91,6 +97,9 @@ final class TemplateDocumentResolver
                         }
                     }
                     $result[] = ['type' => 'table', 'attrs' => ['repeatKey' => null], 'content' => $expanded];
+                }
+                if (TableLayout::isPlanning($layout)) {
+                    $result = [...$result, ...self::planningSummaryNodes($layout, $field['rows'] ?? [], $planningExpectations ?? [])];
                 }
 
                 return $result;
@@ -129,6 +138,58 @@ final class TemplateDocumentResolver
         };
 
         return $visit($document)[0];
+    }
+
+    /**
+     * @param  array<string, mixed>  $layout
+     * @param  list<array<string, mixed>>  $rows
+     * @param  array<string, mixed>  $expected
+     * @return list<array<string, mixed>>
+     */
+    private static function planningSummaryNodes(array $layout, array $rows, array $expected): array
+    {
+        $columns = TableLayout::columnsByRole($layout);
+        $totals = ['hours_acd' => 0.0, 'hours_ape' => 0.0, 'hours_aa' => 0.0];
+        $weeks = [];
+        foreach ($rows as $row) {
+            $data = is_array($row['data'] ?? null) ? $row['data'] : [];
+            if (($data['_kind'] ?? null) === 'unit') {
+                continue;
+            }
+            if (is_numeric($data[$columns['week']] ?? null)) {
+                $weeks[] = (int) $data[$columns['week']];
+            }
+            foreach (array_keys($totals) as $role) {
+                if (is_numeric($data[$columns[$role]] ?? null)) {
+                    $totals[$role] += (float) $data[$columns[$role]];
+                }
+            }
+        }
+        $display = fn (float $value): string => rtrim(rtrim(number_format($value, 2, '.', ''), '0'), '.');
+        $headers = ['Semanas', 'ACD', 'APE', 'AA', 'Créditos (malla)'];
+        $values = [
+            count(array_unique($weeks)).'/'.($expected['teaching_weeks'] ?? '—'),
+            $display($totals['hours_acd']).'/'.($expected['hours_acd'] ?? '—'),
+            $display($totals['hours_ape']).'/'.($expected['hours_ape'] ?? '—'),
+            $display($totals['hours_aa']).'/'.($expected['hours_aa'] ?? '—'),
+            (string) ($expected['credits'] ?? '—'),
+        ];
+        $row = fn (string $type, array $items): array => [
+            'type' => 'tableRow',
+            'content' => array_map(fn (string $text): array => [
+                'type' => $type,
+                'attrs' => ['colspan' => 1, 'rowspan' => 1, 'colwidth' => [100]],
+                'content' => [['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => $text]]]],
+            ], $items),
+        ];
+
+        return [
+            ['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => 'Resumen general de planificación', 'marks' => [['type' => 'bold']]]]],
+            ['type' => 'table', 'attrs' => ['repeatKey' => null], 'content' => [
+                $row('tableHeader', $headers),
+                $row('tableCell', $values),
+            ]],
+        ];
     }
 
     /** @param array<string, mixed> $node

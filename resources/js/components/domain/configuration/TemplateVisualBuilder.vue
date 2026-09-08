@@ -87,6 +87,7 @@ type Editable = { openEdit: () => void; openDelete: () => void };
 const sectionActions = ref<Record<string, Editable>>({});
 const fieldActions = ref<Record<string, Editable>>({});
 const openSectionMenu = ref<string | null>(null);
+const openSectionMenuHelp = ref<string | null>(null);
 
 const bindHandle = <T,>(
     collection: Record<string, T>,
@@ -200,7 +201,15 @@ const bindHandle = <T,>(
                                     :block-types="blockTypes"
                                 />
                             </div>
-                            <Tooltip :disable-hoverable-content="true">
+                            <Tooltip
+                                :open="openSectionMenuHelp === section.id"
+                                :disable-hoverable-content="true"
+                                @update:open="
+                                    openSectionMenuHelp = $event
+                                        ? section.id
+                                        : null
+                                "
+                            >
                                 <TooltipTrigger as-child>
                                     <span class="inline-flex">
                                         <DropdownMenu
@@ -220,6 +229,18 @@ const bindHandle = <T,>(
                                                     size="icon-sm"
                                                     class="size-7 text-foreground"
                                                     aria-label="Opciones del bloque"
+                                                    @focus="
+                                                        openSectionMenuHelp =
+                                                            section.id
+                                                    "
+                                                    @blur="
+                                                        openSectionMenuHelp =
+                                                            null
+                                                    "
+                                                    @click="
+                                                        openSectionMenuHelp =
+                                                            null
+                                                    "
                                                 >
                                                     <MoreHorizontal
                                                         aria-hidden="true"

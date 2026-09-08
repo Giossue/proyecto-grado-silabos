@@ -18,6 +18,7 @@ export type TemplateField = DocumentField & {
     block_id: string;
     help: string | null;
     content_type: TemplateContentType;
+    page_orientation?: 'portrait' | 'landscape' | null;
     master_source: string | null;
     ai_enabled: boolean;
     document_marker: string | null;

@@ -38,6 +38,11 @@ Fecha de corte: **30 de agosto de 2026**.
   tipadas, unidades, sumas y repetición se conservan. Docencia solo completa campos;
   las variables se resuelven en servidor. El DOCX se genera con PHPWord desde la copia
   de cada revisión; el PDF sigue siendo el respaldo de texto plano.
+- I-57 (8 de septiembre de 2026) cierra `PV-08`: el período declara sus semanas
+  lectivas; Docencia distribuye semanas y horas entre cualquier cantidad de unidades;
+  ACD, APE y AA se suman y comparan exactamente con la malla al validar o enviar. El
+  borrador incompleto se conserva. Los créditos son de solo lectura y el total de la
+  malla debe equivaler a `créditos × 48`; una incoherencia es un error de configuración.
 - La modalidad de estudio es un dato base de la carrera (la aprueba el CES) y no un
   catálogo: presencial, semipresencial, en línea, a distancia o híbrida, fijas por reglamento.
   Una materia puede usar una modalidad distinta, sin cambiar ni recalificar la modalidad
@@ -144,8 +149,8 @@ incorpora el desglose de horas y traduce el texto libre de campus y modalidad me
 `alias_institucionales`, sin copiar los defectos de la fuente. `PV-09` y `PV-10` quedan
 `CONFIRMADO` por decisión explícita del responsable del producto; con la identidad
 institucional confirmada, la importación ya propone alta, cambio o sin cambio en lugar de
-declarar todo conflicto. La importación permanece en modo simulación y `PV-08` y `PV-12`
-conservan su autoridad y estado `POR VALIDAR`.
+declarar todo conflicto. La importación permanece en modo simulación y `PV-12`
+conserva su autoridad y estado `POR VALIDAR`; `PV-08` se cerró después en I-57.
 I-41 reemplaza específicamente esa pertenencia por carrera: en el producto el período es
 institucional, de código único, y un proceso de sílabos lo fija para todas las convocatorias
 que cuelgan de él.
@@ -193,8 +198,8 @@ I-18 incorpora Vue Flow como motor de presentación del constructor de mallas. L
 configuración pertenece a la malla actual y admite ciclos, campos tipados, totales,
 reubicación y relaciones explícitas; PostgreSQL y los casos de uso Laravel permanecen
 como fuente de verdad. La alternativa de formulario mantiene las mismas operaciones y
-I-20 permite editarlas sobre el mismo agregado. `PV-08` sigue abierta para las fórmulas
-y siglas oficiales: el sistema no las deduce del color o del aspecto del PDF.
+I-20 permite editarlas sobre el mismo agregado. I-57 cerró después `PV-08` sin deducir
+fórmulas ni siglas del color o del aspecto del PDF.
 
 I-19 confirma que una persona puede coordinar varias carreras y vuelve explícita la
 selección de carrera al iniciar como Coordinador, incluso si solo existe una opción. El

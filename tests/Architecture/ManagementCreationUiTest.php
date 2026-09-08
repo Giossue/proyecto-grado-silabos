@@ -702,8 +702,8 @@ it('construye la plantilla desde bloques que contienen campos tipados', function
         ->toContain('<TemplateFieldCreator')
         ->toContain('<TemplateTableDesigner')
         ->toContain('<TemplateDocumentView')
-        ->toContain('template-section-actions')
-        ->toContain('Acciones del bloque')
+        ->toContain('template-section-menu')
+        ->toContain('Opciones del bloque')
         ->toContain('section.blocks.length > 1')
         ->toContain('appearance.table_header_background')
         ->toContain('appearance.body_alignment');
@@ -713,14 +713,13 @@ it('construye la plantilla desde bloques que contienen campos tipados', function
     );
     expect($creator)
         ->toBeString()
-        ->toContain('<Popover')
+        ->toContain(':is="menu ? Dialog : TemplateIconPopover"')
         ->toContain('El bloque agrupa los campos')
         ->toContain('Nombre del bloque')
         ->toContain('form.fields')
         ->toContain('Tipo de contenido')
         ->toContain('<Select')
         ->toContain('<SelectGroup')
-        ->toContain('<TemplateIconPopover')
         ->toContain('portal-disabled')
         ->toContain('Agregar otro campo')
         ->toContain('Crear bloque')
@@ -732,12 +731,11 @@ it('construye la plantilla desde bloques que contienen campos tipados', function
     );
     expect($fieldCreator)
         ->toBeString()
-        ->toContain('<Popover')
+        ->toContain(':is="menu ? Dialog : TemplateIconPopover"')
         ->toContain('Se añadirá dentro de este bloque')
         ->toContain('Tipo de contenido')
         ->toContain('<Select')
         ->toContain('<SelectGroup')
-        ->toContain('<TemplateIconPopover')
         ->toContain('portal-disabled')
         ->toContain('Agregar campo')
         ->not->toContain('<NativeSelect');
@@ -762,9 +760,11 @@ it('construye la plantilla desde bloques que contienen campos tipados', function
         ->toContain('Editar tabla')
         ->toContain('<Dialog')
         ->toContain('<DialogTitle>Editar tabla: {{ blockTitle }}</DialogTitle>')
+        ->toContain('<DialogTitle>Descartar cambios de tabla</DialogTitle>')
         ->toContain('<TemplateTableEditor')
         ->toContain('TemplateController.updateDocument.url')
-        ->toContain('Guardar tabla');
+        ->toContain('Guardar tabla')
+        ->not->toContain('window.confirm');
     expect($tableEditor)
         ->toBeString()
         ->toContain('Fondo de celda')

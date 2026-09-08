@@ -11,7 +11,7 @@
 | PV-05 | Cantidad real de docentes, paralelos, asignaciones y sílabos | Coordinación | P1 capacidad/I-03 |
 | PV-06 | Excepciones de sílabo separado por paralelo | Coordinación | Cerrada el 2026-08-26 |
 | PV-07 | DOCX oficial y reglas de exportación | Autoridad de plantilla | P0 motor final I-02/I-05 |
-| PV-08 | Fórmula/redondeo oficial de horas, créditos y totales | Coordinación/fuente | P0 cálculos I-02/I-03 |
+| PV-08 | Fórmula/redondeo oficial de horas, créditos y totales | Responsable del producto | Cerrada el 2026-09-08: malla autoritativa, 48 h/crédito, dos decimales y bloqueo al enviar |
 | PV-09 | Acceso, esquema y calidad de base institucional | Personal técnico | Cerrada en I-11 el 2026-08-18; sin objeto desde el 2026-08-27 |
 | PV-10 | Identificadores institucionales únicos | Personal técnico | Cerrada en I-11 el 2026-08-18; sin objeto desde el 2026-08-27 |
 | PV-11 | Conservación, backup, RPO y RTO | Técnico/autoridad | P2 producción |
@@ -64,6 +64,15 @@ Si una tarea toca una fila cuya puerta es P0, el agente debe usar el valor tempo
 documentado o detener esa parte. Nunca decide en nombre de la autoridad esperada.
 
 ## Puertas cerradas
+
+### PV-08 — Horas, créditos y totales
+
+Cerrada el 2026-09-08 por confirmación explícita del responsable del producto. La malla
+es autoritativa para ACD, APE, AA, total de horas y créditos. La planificación distribuye
+esas horas entre semanas y unidades variables: sus sumas se derivan, admiten máximo dos
+decimales y deben coincidir exactamente al validar o enviar. El borrador incompleto sí se
+guarda. Además, el total de la malla debe equivaler a `créditos × 48`; si no coincide, se
+trata como error de configuración académica que Docencia no puede corregir.
 
 ### PV-09 — Acceso, esquema y calidad de base institucional
 

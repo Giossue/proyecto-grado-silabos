@@ -30,7 +30,7 @@ class SyllabusSnapshot
         $identification = IdentificationCard::fromSyllabus($syllabus);
 
         return [
-            'schema_version' => 3,
+            'schema_version' => 4,
             'template_id' => $syllabus->plantilla_id,
             'template_name' => $syllabus->template->nombre,
             // La copia lleva también el mapa del documento: la revisión se exporta desde
@@ -49,6 +49,7 @@ class SyllabusSnapshot
                         'title' => $block->titulo,
                         'content_type' => $block->configuredContentType()
                             ?? ($block->tipo === 'repetible' ? 'table' : 'text'),
+                        'page_orientation' => $block->pageOrientation(),
                         // El esquema de la tabla viaja con la copia: el documento se
                         // exporta con las columnas que el docente llenó.
                         'table' => TableLayout::fromBlock($block),

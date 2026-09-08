@@ -39,6 +39,7 @@ class UpdateAcademicRecord
         'nombre' => 'Nombre',
         'fecha_inicio' => 'Fecha de inicio',
         'fecha_fin' => 'Fecha de fin',
+        'semanas_lectivas' => 'Semanas lectivas',
     ];
 
     /** @var array<string, string> */
@@ -48,6 +49,7 @@ class UpdateAcademicRecord
         'nombre' => 'name',
         'fecha_inicio' => 'starts_on',
         'fecha_fin' => 'ends_on',
+        'semanas_lectivas' => 'teaching_weeks',
     ];
 
     public function __construct(
@@ -134,6 +136,7 @@ class UpdateAcademicRecord
                 'nombre' => $data['nombre'],
                 'fecha_inicio' => $data['starts_on'],
                 'fecha_fin' => $data['ends_on'],
+                'semanas_lectivas' => $data['teaching_weeks'],
             ],
             default => throw ValidationException::withMessages([
                 'entity' => 'El tipo de registro no admite edición.',

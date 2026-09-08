@@ -151,7 +151,27 @@ router.delete = async (url, visit) => {
     await visit?.onSuccess?.({});
     visit?.onFinish?.({});
 };
-window.fixture = { requests, appearance: () => appearance.value };
+router.visit = (url, visit) => {
+    requests.push({method:'visit',url:url.toString(),data:visit?.data ?? {}});
+};
+const triggerNavigation = (target, method = 'get') => document.dispatchEvent(new CustomEvent('inertia:before', {
+    cancelable: true,
+    detail: {visit: {
+        id: 'synthetic-visit', url: new URL(target, window.location.href),
+        completed: false, cancelled: false, interrupted: false,
+        method, data: {}, replace: false, preserveScroll: false,
+        preserveState: false, only: [], except: [], headers: {}, errorBag: '',
+        forceFormData: false, queryStringArrayFormat: 'brackets', async: false,
+        showProgress: true, prefetch: false, fresh: false, reset: [],
+        preserveUrl: false, preserveErrors: false, invalidateCacheTags: [],
+        viewTransition: false, component: null, pageProps: null, cached: false,
+    }},
+}));
+window.fixture = {
+    requests,
+    appearance: () => appearance.value,
+    triggerNavigation,
+};
 
 createApp({render: () => h('main', {class:'min-h-screen bg-muted p-6'}, [
     h('div', {class:'mb-4 flex justify-end'}, [
@@ -227,7 +247,12 @@ test(
             viewport: { width: 1440, height: 1000 },
         });
         const errors = [];
+        const nativeDialogs = [];
         page.on('pageerror', (error) => errors.push(error.message));
+        page.on('dialog', async (dialog) => {
+            nativeDialogs.push(dialog.message());
+            await dialog.dismiss();
+        });
 
         await page.goto(`${server.resolvedUrls.local[0]}fixture`);
         const firstBlockButton = page.getByRole('button', {
@@ -283,12 +308,12 @@ test(
             'section[aria-label="Bloque Resultados y evidencias"]',
         );
         const sectionMenu = section.getByRole('button', {
-            name: 'Opciones de Resultados y evidencias',
+            name: 'Opciones del bloque',
         });
         await section.hover();
         assert.equal(
             await section
-                .getByRole('button', { name: /^Opciones de / })
+                .getByRole('button', { name: 'Opciones del bloque' })
                 .count(),
             1,
         );
@@ -336,8 +361,8 @@ test(
         const renamedSection = page.locator(
             'section[aria-label="Bloque Resultados actualizados"]',
         );
-        const renamedSectionMenu = page.getByRole('button', {
-            name: 'Opciones de Resultados actualizados',
+        const renamedSectionMenu = renamedSection.getByRole('button', {
+            name: 'Opciones del bloque',
         });
         await renamedSection.hover();
         await renamedSectionMenu.click();
@@ -439,7 +464,11 @@ test(
                 name: 'Negrita en las celdas seleccionadas',
             })
             .click();
-        await tableDialog.getByRole('button', { name: 'Cancelar' }).click();
+        const cancelTableButton = tableDialog.getByRole('button', {
+            name: 'Cancelar',
+        });
+        assert.equal(await cancelTableButton.locator('svg').count(), 0);
+        await cancelTableButton.click();
         const discardDialog = page.getByRole('dialog', {
             name: 'Descartar cambios de tabla',
         });
@@ -468,6 +497,49 @@ test(
         assert.equal(header.attrs.textAlign, 'center');
         assert.equal(header.attrs.bold, true);
         assert.equal(header.attrs.borderStyle, 'thick');
+
+        await page.locator('.document-table-container').hover();
+        await page
+            .getByRole('button', { name: 'Editar tabla: Matriz' })
+            .click();
+        await tableDialog.waitFor();
+        await tableDialog
+            .getByRole('textbox', { name: 'Editar tabla de la plantilla' })
+            .locator('th')
+            .first()
+            .click();
+        await page
+            .getByRole('button', {
+                name: 'Cursiva en las celdas seleccionadas',
+            })
+            .click();
+        assert.equal(
+            await page.evaluate(() =>
+                window.fixture.triggerNavigation('/guardar-tabla', 'patch'),
+            ),
+            true,
+        );
+        assert.equal(
+            await page.evaluate(() =>
+                window.fixture.triggerNavigation('/otra-pantalla'),
+            ),
+            false,
+        );
+        await discardDialog.waitFor();
+        await discardDialog
+            .getByRole('button', { name: 'Descartar cambios' })
+            .click();
+        await discardDialog.waitFor({ state: 'hidden' });
+        assert.ok(
+            await page.evaluate(() =>
+                window.fixture.requests.find(
+                    (request) =>
+                        request.method === 'visit' &&
+                        request.url.endsWith('/otra-pantalla'),
+                ),
+            ),
+        );
+        assert.deepEqual(nativeDialogs, []);
 
         await renamedSection.hover();
         await renamedSectionMenu.click();

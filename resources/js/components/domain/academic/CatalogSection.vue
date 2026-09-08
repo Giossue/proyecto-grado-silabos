@@ -453,6 +453,7 @@ const {
                         <TableHead>Periodo</TableHead>
                         <TableHead>Código estable</TableHead>
                         <TableHead>Fechas</TableHead>
+                        <TableHead>Semanas lectivas</TableHead>
                         <TableHead>Estado</TableHead>
                         <TableHead class="text-right">Acciones</TableHead>
                     </TableRow>
@@ -460,7 +461,7 @@ const {
                 <TableBody>
                     <TableEmpty
                         v-if="catalogs.periods.length === 0"
-                        :colspan="5"
+                        :colspan="6"
                     >
                         No existen periodos académicos registrados.
                     </TableEmpty>
@@ -482,6 +483,7 @@ const {
                                 {{ period.ends_on }}
                             </time>
                         </TableCell>
+                        <TableCell>{{ period.teaching_weeks }}</TableCell>
                         <TableCell>
                             {{ period.active ? 'Activo' : 'Inactivo' }}
                         </TableCell>
@@ -494,6 +496,7 @@ const {
                                 :active="period.active"
                                 :starts-on="period.starts_on"
                                 :ends-on="period.ends_on"
+                                :teaching-weeks="period.teaching_weeks"
                                 :faculties="catalogs.faculties"
                                 :lock-reason="lock_reason"
                             />

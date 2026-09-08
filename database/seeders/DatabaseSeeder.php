@@ -63,6 +63,7 @@ class DatabaseSeeder extends Seeder
                     'nombre' => 'Periodo académico 2026-2027',
                     'fecha_inicio' => '2026-05-01',
                     'fecha_fin' => '2027-03-31',
+                    'semanas_lectivas' => 16,
                     'activo' => true,
                 ],
             );
@@ -95,8 +96,9 @@ class DatabaseSeeder extends Seeder
                     'nombre' => 'Arquitectura de Software',
                     'ciclo' => 6,
                     'creditos' => 4,
-                    'horas_totales' => 160,
+                    'horas_totales' => 192,
                     'horas_ac' => 64,
+                    'horas_pae' => 32,
                     'horas_aa' => 96,
                     'activo' => true,
                 ],

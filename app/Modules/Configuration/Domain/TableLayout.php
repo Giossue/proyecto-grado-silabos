@@ -15,7 +15,7 @@ use Illuminate\Validation\ValidationException;
  * TemplateDocument controla las combinaciones del diseño (incluidas filas de datos);
  * este esquema sigue definiendo las claves, tipos y sumas, no la geometría visual.
  *
- * @phpstan-type Column array{key: string, label: string, type: 'text'|'number', group: string|null, band: string|null, sum: bool, width: int|null}
+ * @phpstan-type Column array{key: string, label: string, type: 'text'|'number', group: string|null, band: string|null, sum: bool, width: int|null, role: 'week'|'hours_acd'|'hours_ape'|'hours_aa'|null}
  * @phpstan-type Named array{key: string, label: string}
  * @phpstan-type Layout array{
  *     columns: list<Column>,
@@ -29,6 +29,8 @@ use Illuminate\Validation\ValidationException;
 final class TableLayout
 {
     public const TYPES = ['text', 'number'];
+
+    public const COLUMN_ROLES = ['week', 'hours_acd', 'hours_ape', 'hours_aa'];
 
     public const KEY_PATTERN = '/^[a-z][a-z0-9_]*$/';
 
@@ -44,7 +46,7 @@ final class TableLayout
     {
         return [
             'columns' => [
-                ['key' => 'texto', 'label' => 'Contenido', 'type' => 'text', 'group' => null, 'band' => null, 'sum' => false, 'width' => null],
+                ['key' => 'texto', 'label' => 'Contenido', 'type' => 'text', 'group' => null, 'band' => null, 'sum' => false, 'width' => null, 'role' => null],
             ],
             'groups' => [],
             'bands' => [],
@@ -99,6 +101,9 @@ final class TableLayout
             }
             $key = self::key($column['key'] ?? null);
             $label = self::label($column['label'] ?? null);
+            if ($key === 'semana' && is_string($label) && preg_match('/^semanas?\s*\(\s*16\s*\)$/iu', $label) === 1) {
+                $label = 'Semana';
+            }
             $type = is_string($column['type'] ?? null) && in_array($column['type'], self::TYPES, true)
                 ? $column['type']
                 : 'text';
@@ -119,6 +124,10 @@ final class TableLayout
             // `sum`: si la columna numérica entra en la fila de totales (las semanas no
             // suman). `width`: peso relativo del ancho, calcado del formato oficial.
             $width = $column['width'] ?? null;
+            $role = self::columnRole($column['role'] ?? null, $key);
+            if ($role !== null && $type !== 'number') {
+                $errors["columns.$index.role"] = 'Las semanas y horas necesitan una columna numérica.';
+            }
             $columns[] = [
                 'key' => $key ?? "columna_$index",
                 'label' => $label ?? '',
@@ -127,10 +136,12 @@ final class TableLayout
                 'band' => $band === false ? null : $band,
                 'sum' => $type === 'number' && (bool) ($column['sum'] ?? true),
                 'width' => is_numeric($width) && (int) $width > 0 ? (int) $width : null,
+                'role' => $role,
             ];
         }
 
         self::assertUniqueKeys(array_column($columns, 'key'), 'columns', $errors);
+        self::assertUniqueKeys(array_values(array_filter(array_column($columns, 'role'))), 'columns.role', $errors);
         self::assertContiguous($columns, 'group', 'groups', $errors);
         self::assertContiguous($columns, 'band', 'bands', $errors);
         self::assertGroupsInsideBands($columns, $errors);
@@ -169,6 +180,37 @@ final class TableLayout
             fn (array $column): string => $column['key'],
             array_filter($layout['columns'], fn (array $column): bool => $column['type'] === 'number' && $column['sum']),
         ));
+    }
+
+    /**
+     * Admite también esquemas persistidos antes de I-57: en ellos no existe `role`
+     * y la función lo deriva de las claves históricas.
+     *
+     * @param  array<string, mixed>  $layout
+     * @return array<string, string> rol semántico => clave de columna
+     */
+    public static function columnsByRole(array $layout): array
+    {
+        $roles = [];
+        $columns = is_array($layout['columns'] ?? null) ? $layout['columns'] : [];
+        foreach ($columns as $column) {
+            if (! is_array($column)) {
+                continue;
+            }
+            $key = self::key($column['key'] ?? null);
+            $role = self::columnRole($column['role'] ?? null, $key);
+            if ($role !== null && $key !== null) {
+                $roles[$role] = $key;
+            }
+        }
+
+        return $roles;
+    }
+
+    /** @param array<string, mixed> $layout */
+    public static function isPlanning(array $layout): bool
+    {
+        return count(array_intersect(self::COLUMN_ROLES, array_keys(self::columnsByRole($layout)))) === count(self::COLUMN_ROLES);
     }
 
     /**
@@ -211,6 +253,24 @@ final class TableLayout
         $trimmed = trim(preg_replace('/\s+/u', ' ', $value) ?? '');
 
         return $trimmed !== '' && mb_strlen($trimmed) <= 180 ? $trimmed : null;
+    }
+
+    /** @return 'week'|'hours_acd'|'hours_ape'|'hours_aa'|null */
+    private static function columnRole(mixed $value, ?string $key): ?string
+    {
+        if (is_string($value) && in_array($value, self::COLUMN_ROLES, true)) {
+            return $value;
+        }
+
+        // Compatibilidad con la tabla institucional creada antes de I-57. Las claves
+        // son estables aunque Administración cambie las etiquetas visibles.
+        return match ($key) {
+            'semana' => 'week',
+            'acd' => 'hours_acd',
+            'ape' => 'hours_ape',
+            'aa' => 'hours_aa',
+            default => null,
+        };
     }
 
     /**

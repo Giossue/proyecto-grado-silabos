@@ -214,6 +214,18 @@ class SyllabusController extends Controller
             'teachers' => $syllabus->teachers->pluck('nombre')->unique()->values(),
             'identification' => IdentificationCard::grid(IdentificationCard::fromSyllabus($syllabus)),
             'template_variables' => TemplateVariables::resolve(['identification' => IdentificationCard::fromSyllabus($syllabus), 'academic_context' => $syllabus->contexto_academico]),
+            'planning_expectations' => [
+                'teaching_weeks' => data_get(
+                    $syllabus->contexto_academico,
+                    'offering.teaching_weeks',
+                    $syllabus->convocation->process->academicPeriod->semanas_lectivas,
+                ),
+                'credits' => data_get($syllabus->contexto_academico, 'subject.credits'),
+                'total_hours' => data_get($syllabus->contexto_academico, 'subject.total_hours'),
+                'hours_acd' => data_get($syllabus->contexto_academico, 'subject.hours_ac'),
+                'hours_ape' => data_get($syllabus->contexto_academico, 'subject.hours_pae'),
+                'hours_aa' => data_get($syllabus->contexto_academico, 'subject.hours_aa'),
+            ],
             'sections' => $syllabus->template->sections
                 ->map(fn (TemplateSection $section): array => $this->sectionPayload($section, $values, $rows))
                 ->values(),
@@ -332,6 +344,7 @@ class SyllabusController extends Controller
             'content_type' => $block->configuredContentType()
                 ?? ($block->tipo === 'repetible' ? 'table' : 'text'),
             'table' => TableLayout::fromBlock($block),
+            'page_orientation' => $block->pageOrientation(),
             'document' => $block->configuracion['document'] ?? null,
             'fields' => $fields,
         ];

@@ -52,11 +52,14 @@ I-05 incorpora `baseline-ooxml-pdf-v1` como implementación técnica reversible 
 puerto. Valida estructura OOXML, XML principal y marcadores PDF antes de publicar; su
 salida se rotula como provisional y no demuestra fidelidad visual institucional.
 
-I-34 incorporó PHPWord. I-56 usa `phpword-docx-v3+text-pdf-v2`: el snapshot de esquema 3
-conserva `blocks[].document` y `template_variables`. `TemplateDocumentResolver` sustituye
-tokens y expande filas/unidades/totales exclusivamente con esa fotografía.
+I-34 incorporó PHPWord. I-56 usa `phpword-docx-v3+text-pdf-v2`; I-57 eleva el snapshot a
+esquema 4 para conservar `blocks[].page_orientation`, además de `blocks[].document` y
+`template_variables`. `TemplateDocumentResolver` sustituye tokens y expande
+filas/unidades/totales exclusivamente con esa fotografía.
 `TemplateDocumentWord` traduce nodos permitidos a PHPWord: fuentes, marcas, alineación,
-listas, fondos, anchos, `gridSpan` y `vMerge`. No importa HTML ni recursos externos.
+listas, fondos, anchos, `gridSpan` y `vMerge`. La planificación abre una sección carta
+horizontal, cada unidad posterior inicia página y las cabeceras se repiten al desbordar;
+el resto vuelve a la orientación general. No importa HTML ni recursos externos.
 Las revisiones anteriores sin documento mantienen su lector. Los artefactos existentes
 no se modifican; la versión del motor participa en la idempotencia.
 
