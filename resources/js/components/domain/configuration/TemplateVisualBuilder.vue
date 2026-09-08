@@ -14,7 +14,6 @@ import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
-    DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuSub,
     DropdownMenuSubContent,
@@ -231,9 +230,6 @@ const bindHandle = <T,>(
                                                 align="end"
                                                 side="left"
                                             >
-                                                <DropdownMenuLabel>
-                                                    Opciones del bloque
-                                                </DropdownMenuLabel>
                                                 <TemplateFieldCreator
                                                     menu
                                                     :template-id="template.id"
