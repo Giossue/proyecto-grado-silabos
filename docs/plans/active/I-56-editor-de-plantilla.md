@@ -395,7 +395,8 @@ modificación de datos, commit ni push.
 ## Seguimiento — contraste de ayudas sobre la hoja (2026-09-08)
 
 Los tooltips de las acciones que se sitúan sobre el papel de ADM-06 conservan fondo negro
-y texto blanco, incluida su flecha, aun cuando la interfaz general esté en oscuro. La
-barra del diálogo de tabla mantiene su tema semántico propio. Chromium comprueba el color del tooltip de
+y texto blanco, incluida su flecha, aun cuando la interfaz general esté en oscuro. Se
+abren hacia la izquierda y no retienen el puntero, para no superponerse al control
+vecino. La barra del diálogo de tabla mantiene su tema semántico propio. Chromium comprueba el color del tooltip de
 «Editar tabla»; pasan Prettier, ESLint puntual y TypeScript. Sin migraciones, datos,
 commit ni push.

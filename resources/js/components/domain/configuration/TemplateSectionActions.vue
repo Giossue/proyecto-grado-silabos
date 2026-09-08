@@ -99,7 +99,7 @@ const destroy = (): void => {
 </script>
 
 <template>
-    <Tooltip>
+    <Tooltip :disable-hoverable-content="true">
         <TooltipTrigger as-child>
             <span class="inline-flex">
                 <DropdownMenu>
@@ -131,7 +131,9 @@ const destroy = (): void => {
                 </DropdownMenu>
             </span>
         </TooltipTrigger>
-        <TooltipContent paper> Acciones del bloque </TooltipContent>
+        <TooltipContent paper side="left" :side-offset="8">
+            Acciones del bloque
+        </TooltipContent>
     </Tooltip>
 
     <Dialog v-model:open="editOpen">

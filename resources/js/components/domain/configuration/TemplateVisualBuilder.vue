@@ -121,13 +121,26 @@ const hasTable = (block: TemplateFieldContainer): boolean =>
                         data-page-unit
                         data-page-keep-next
                     >
-                        <h2 class="min-w-0 leading-snug" :style="sectionStyle">
+                        <h2
+                            class="min-w-0 pe-10 leading-snug"
+                            :style="sectionStyle"
+                        >
                             {{ sectionIndex + 1 }}. {{ section.title }}
                         </h2>
                         <div
                             v-if="!readonly"
-                            class="template-section-actions absolute top-0 z-10 flex flex-col gap-1 opacity-0 transition-opacity group-focus-within/template-section:opacity-100 group-hover/template-section:opacity-100"
+                            class="template-section-actions absolute top-0 z-10 opacity-0 transition-opacity group-focus-within/template-section:opacity-100 group-hover/template-section:opacity-100"
                             :aria-label="`Acciones del bloque ${section.title}`"
+                        >
+                            <TemplateSectionActions
+                                :template-id="template.id"
+                                :section="section"
+                            />
+                        </div>
+                        <div
+                            v-if="!readonly"
+                            class="template-section-creators absolute top-0 z-10 flex flex-col gap-1 opacity-0 transition-opacity group-focus-within/template-section:opacity-100 group-hover/template-section:opacity-100"
+                            :aria-label="`Agregar contenido a ${section.title}`"
                         >
                             <TemplateFieldCreator
                                 :template-id="template.id"
@@ -139,10 +152,6 @@ const hasTable = (block: TemplateFieldContainer): boolean =>
                                 :template-id="template.id"
                                 :position="sectionIndex + 1"
                                 :block-types="blockTypes"
-                            />
-                            <TemplateSectionActions
-                                :template-id="template.id"
-                                :section="section"
                             />
                         </div>
                     </div>
@@ -163,7 +172,10 @@ const hasTable = (block: TemplateFieldContainer): boolean =>
                     >
                         <div
                             v-if="!readonly"
-                            class="template-field-actions absolute top-0 z-10 opacity-0 transition-opacity group-focus-within/template-field:opacity-100 group-hover/template-field:opacity-100"
+                            :class="[
+                                'template-field-actions absolute top-0 z-10 opacity-0 transition-opacity group-focus-within/template-field:opacity-100 group-hover/template-field:opacity-100',
+                                hasTable(block) ? 'right-9' : 'right-0',
+                            ]"
                         >
                             <TemplateFieldActions
                                 :template-id="template.id"
@@ -220,11 +232,12 @@ const hasTable = (block: TemplateFieldContainer): boolean =>
 </template>
 
 <style scoped>
-.template-section-actions {
+.template-section-creators {
     right: calc(-1 * var(--page-margin) + 2rem);
 }
 
+.template-section-actions,
 .template-field-actions {
-    right: calc(-1 * var(--page-margin) + 2rem);
+    right: 0;
 }
 </style>

@@ -166,7 +166,7 @@ const destroy = (): void => {
 </script>
 
 <template>
-    <Tooltip v-if="primary">
+    <Tooltip v-if="primary" :disable-hoverable-content="true">
         <TooltipTrigger as-child>
             <span class="inline-flex">
                 <DropdownMenu>
@@ -198,7 +198,9 @@ const destroy = (): void => {
                 </DropdownMenu>
             </span>
         </TooltipTrigger>
-        <TooltipContent paper> Acciones del campo </TooltipContent>
+        <TooltipContent paper side="left" :side-offset="8">
+            Acciones del campo
+        </TooltipContent>
     </Tooltip>
 
     <Dialog v-model:open="editOpen">

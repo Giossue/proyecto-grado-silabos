@@ -210,7 +210,7 @@ watch(
                 preview
             >
                 <template #table-action>
-                    <Tooltip>
+                    <Tooltip :disable-hoverable-content="true">
                         <TooltipTrigger as-child>
                             <Button
                                 type="button"
@@ -223,7 +223,9 @@ watch(
                                 <TableProperties aria-hidden="true" />
                             </Button>
                         </TooltipTrigger>
-                        <TooltipContent paper> Editar tabla </TooltipContent>
+                        <TooltipContent paper side="left" :side-offset="8">
+                            Editar tabla
+                        </TooltipContent>
                     </Tooltip>
                 </template>
             </TemplateDocumentView>

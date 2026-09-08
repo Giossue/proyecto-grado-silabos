@@ -296,6 +296,9 @@ test(
             name: 'Acciones del bloque Resultados y evidencias',
         });
         await section.hover();
+        const blockActionsBox = await blockActions.boundingBox();
+        assert.ok(blockActionsBox);
+        assert.ok(blockActionsBox.x < fieldBox.x);
         await blockActions.click();
         await page.getByRole('menuitem', { name: 'Editar bloque' }).click();
         const blockDialog = page.getByRole('dialog', {
@@ -354,6 +357,7 @@ test(
             .locator('[data-slot="tooltip-content"]')
             .filter({ hasText: 'Editar tabla' });
         await tableTooltip.waitFor();
+        assert.equal(await tableTooltip.getAttribute('data-side'), 'left');
         assert.equal(
             await tableTooltip.evaluate(
                 (element) => getComputedStyle(element).backgroundColor,
