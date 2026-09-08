@@ -8,6 +8,14 @@ import TemplateDocumentView from '@/components/domain/configuration/TemplateDocu
 import TemplateTableEditor from '@/components/domain/configuration/TemplateTableEditor.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { Spinner } from '@/components/ui/spinner';
 import {
     Tooltip,
@@ -79,6 +87,10 @@ const start = (): void => {
 };
 
 const close = (force = false): void => {
+    if (form.processing && !force) {
+        return;
+    }
+
     if (
         !force &&
         dirty.value &&
@@ -92,6 +104,12 @@ const close = (force = false): void => {
     editing.value = false;
     dirty.value = false;
     form.clearErrors();
+};
+
+const updateDialogOpen = (open: boolean): void => {
+    if (!open) {
+        close();
+    }
 };
 
 const save = (): void => {
@@ -201,68 +219,90 @@ watch(
             />
         </template>
 
-        <template v-else>
-            <TemplateTableEditor
-                ref="editor"
-                :document="draft"
-                :pending="form.processing"
-                :font-family="appearance.font_family"
-                :font-size="appearance.body_font_size"
-                :text-color="appearance.text_color"
-                :body-alignment="appearance.body_alignment"
-                :colors="colors"
-                @dirty="dirty = $event"
-            />
+        <Dialog
+            v-if="editing"
+            :open="editing"
+            @update:open="updateDialogOpen"
+        >
+            <DialogContent
+                class="flex h-[min(90vh,60rem)] max-w-[min(96vw,80rem)] flex-col gap-0 p-0"
+            >
+                <DialogHeader class="shrink-0 border-b px-6 py-4 pr-12">
+                    <DialogTitle>Editar tabla: {{ blockTitle }}</DialogTitle>
+                    <DialogDescription>
+                        Seleccione celdas para aplicar formato, combinar o
+                        modificar filas y columnas.
+                    </DialogDescription>
+                </DialogHeader>
 
-            <Alert v-if="error" variant="destructive" data-page-unit>
-                <AlertTitle>No se pudo guardar la tabla</AlertTitle>
-                <AlertDescription>{{ error }}</AlertDescription>
-            </Alert>
+                <div class="min-h-0 flex-1 overflow-auto p-6">
+                    <TemplateTableEditor
+                        ref="editor"
+                        :document="draft"
+                        :pending="form.processing"
+                        :font-family="appearance.font_family"
+                        :font-size="appearance.body_font_size"
+                        :text-color="appearance.text_color"
+                        :body-alignment="appearance.body_alignment"
+                        :colors="colors"
+                        @dirty="dirty = $event"
+                    />
 
-            <Alert v-if="purge" variant="destructive" data-page-unit>
-                <AlertTitle>Confirmación necesaria</AlertTitle>
-                <AlertDescription class="flex flex-wrap items-center gap-2">
-                    <span>
-                        {{ purge }} Guardar y reiniciar elimina ese trabajo en
-                        curso.
-                    </span>
+                    <Alert v-if="error" class="mt-4" variant="destructive">
+                        <AlertTitle>No se pudo guardar la tabla</AlertTitle>
+                        <AlertDescription>{{ error }}</AlertDescription>
+                    </Alert>
+
+                    <Alert v-if="purge" class="mt-4" variant="destructive">
+                        <AlertTitle>Confirmación necesaria</AlertTitle>
+                        <AlertDescription class="flex flex-wrap items-center gap-2">
+                            <span>
+                                {{ purge }} Guardar y reiniciar elimina ese
+                                trabajo en curso.
+                            </span>
+                            <Button
+                                type="button"
+                                variant="destructive"
+                                size="sm"
+                                :disabled="form.processing"
+                                @click="confirmAndSave"
+                            >
+                                Guardar y reiniciar
+                            </Button>
+                        </AlertDescription>
+                    </Alert>
+                </div>
+
+                <DialogFooter class="shrink-0 border-t bg-card px-6 py-4">
                     <Button
                         type="button"
-                        variant="destructive"
-                        size="sm"
+                        variant="outline"
                         :disabled="form.processing"
-                        @click="confirmAndSave"
+                        @click="close()"
                     >
-                        Guardar y reiniciar
+                        <X data-icon="inline-start" aria-hidden="true" />
+                        Cancelar
                     </Button>
-                </AlertDescription>
-            </Alert>
-
-            <div class="flex justify-end gap-2" data-page-unit>
-                <Button
-                    type="button"
-                    variant="outline"
-                    :disabled="form.processing"
-                    @click="close()"
-                >
-                    <X data-icon="inline-start" aria-hidden="true" />
-                    Cancelar
-                </Button>
-                <Button
-                    type="button"
-                    :disabled="form.processing || !dirty"
-                    @click="save"
-                >
-                    <Spinner
-                        v-if="form.processing"
-                        data-icon="inline-start"
-                        aria-hidden="true"
-                    />
-                    <Save v-else data-icon="inline-start" aria-hidden="true" />
-                    Guardar tabla
-                </Button>
-            </div>
-        </template>
+                    <Button
+                        type="button"
+                        :disabled="form.processing || !dirty"
+                        @click="save"
+                    >
+                        <Spinner
+                            v-if="form.processing"
+                            data-icon="inline-start"
+                            aria-hidden="true"
+                        />
+                        <Save
+                            v-else
+                            data-icon="inline-start"
+                            aria-hidden="true"
+                        />
+                        Guardar tabla
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </div>
 </template>
 

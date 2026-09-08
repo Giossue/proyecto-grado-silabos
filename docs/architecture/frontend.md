@@ -134,7 +134,7 @@ siguen protegiendo tanto estructura como apariencia.
 Los componentes documentales anteriores permanecen como lectores compatibles para
 diseños ya guardados. ADM-06 no monta un editor documental global, menú contextual,
 paleta ni arrastre. Cuando Administración pulsa **Editar tabla**,
-`TemplateTableDesigner` sustituye solo esa tabla por `TemplateTableEditor`, una instancia
+`TemplateTableDesigner` abre un `Dialog` amplio con `TemplateTableEditor`, una instancia
 Tiptap acotada que selecciona celdas y expone fondo, color de texto, alineación,
 negrita, cursiva, borde, combinación y operaciones de filas/columnas. El guardado usa el
 PATCH existente de `SaveTemplateDocument`, con su huella, autorización, bloqueo y

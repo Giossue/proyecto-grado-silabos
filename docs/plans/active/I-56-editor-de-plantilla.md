@@ -330,3 +330,23 @@ Verificación puntual: build de producción, TypeScript, ESLint, Pint, contrato 
 arquitectura (**1 prueba / 98 aserciones**) y `template-visual-builder.mjs`, **1/1**.
 Revisión visual en escritorio de la columna de altas y la barra de tabla. Sin cambios de
 datos, migraciones, commit ni push.
+
+## Seguimiento — configuración de tabla en diálogo (2026-09-07)
+
+Por indicación del responsable, la configuración detallada de una tabla no altera la
+hoja. **Editar tabla** abre un `Dialog` amplio con encabezado, área desplazable para
+Tiptap y acciones de cancelar/guardar persistentes. Se conserva el mismo borrador,
+autorización, control de concurrencia, aviso de descarte y confirmación de reinicio;
+no cambian el contrato JSON, las revisiones, los permisos ni la exportación DOCX.
+
+- [x] Mantener la hoja como vista previa mientras la edición de celda ocurre en un
+      diálogo accesible y con título.
+- [x] Conservar los errores y la confirmación de reinicio dentro del área desplazable,
+      y las acciones principales visibles al pie.
+- [x] Cubrir la apertura y cierre del diálogo tras guardar en Chromium; actualizar el
+      contrato arquitectónico y la documentación de ADM-06.
+
+Verificación puntual: TypeScript, ESLint, Pint y el contrato de arquitectura
+(`ManagementCreationUiTest`, **1 prueba / 100 aserciones**) pasan; Chromium
+`template-visual-builder.mjs`, **1/1**, abre el diálogo, combina y estiliza celdas,
+guarda y comprueba su cierre. Sin migraciones, modificaciones de datos, commit ni push.

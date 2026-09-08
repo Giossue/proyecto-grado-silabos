@@ -255,7 +255,11 @@ test(
         await page
             .getByRole('button', { name: 'Editar tabla: Matriz' })
             .click();
-        const tableEditor = page.getByRole('textbox', {
+        const tableDialog = page.getByRole('dialog', {
+            name: 'Editar tabla: Matriz',
+        });
+        await tableDialog.waitFor();
+        const tableEditor = tableDialog.getByRole('textbox', {
             name: 'Editar tabla de la plantilla',
         });
         const mergeButton = page.getByRole('button', {
@@ -300,6 +304,7 @@ test(
             })
             .click();
         await page.getByRole('button', { name: 'Guardar tabla' }).click();
+        await tableDialog.waitFor({ state: 'hidden' });
         await page
             .getByRole('button', { name: 'Editar tabla: Matriz' })
             .waitFor();

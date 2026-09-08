@@ -702,7 +702,7 @@ it('construye la plantilla desde bloques que contienen campos tipados', function
         ->toContain('<TemplateFieldCreator')
         ->toContain('<TemplateTableDesigner')
         ->toContain('<TemplateDocumentView')
-        ->toContain('class="flex shrink-0 flex-col gap-1"')
+        ->toContain('template-section-actions')
         ->toContain('Acciones del bloque')
         ->toContain('section.blocks.length > 1')
         ->toContain('appearance.table_header_background')
@@ -760,6 +760,8 @@ it('construye la plantilla desde bloques que contienen campos tipados', function
     expect($tableDesigner)
         ->toBeString()
         ->toContain('Editar tabla')
+        ->toContain('<Dialog')
+        ->toContain('<DialogTitle>Editar tabla: {{ blockTitle }}</DialogTitle>')
         ->toContain('<TemplateTableEditor')
         ->toContain('TemplateController.updateDocument.url')
         ->toContain('Guardar tabla');

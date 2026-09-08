@@ -136,9 +136,9 @@ completo. El alta está separada de asignar paralelos y no levanta sus bloqueos.
   negrita, cursiva y alineación de los títulos. Los cambios se previsualizan en la hoja
   antes de guardar. No se admiten CSS, fuentes o colores arbitrarios. La apariencia se
   copia en cada revisión y se aplica también al DOCX; el docente nunca la modifica.
-- Cada tabla muestra a Administración una sola acción **Editar tabla**. La edición ocurre
-  en el mismo lugar de la hoja: una celda se selecciona con clic y la selección se amplía
-  con Mayús + clic. La barra contextual usa controles icónicos compactos con `Tooltip` y
+- Cada tabla muestra a Administración una sola acción **Editar tabla**. La edición abre
+  un diálogo amplio, dejando la hoja intacta al fondo: una celda se selecciona con clic y
+  la selección se amplía con Mayús + clic. La barra contextual usa controles icónicos compactos con `Tooltip` y
   nombre accesible para los colores del catálogo, alineación, negrita, cursiva y borde por
   celda; combinar/separar celdas y agregar o retirar filas y columnas. Guardar conserva
   las protecciones de conflicto, bloqueo y reinicio. Docencia ve y completa el resultado,

@@ -97,7 +97,7 @@ siguientes describen la implementación documental anterior y se conservan únic
 como historial de regresión y compatibilidad de diseños ya persistidos.
 
 El seguimiento de tablas mantiene ese constructor progresivo y habilita edición
-contextual solo sobre una tabla. `TemplateTableDesigner` coordina borrador, cancelación,
+contextual solo sobre una tabla en un diálogo. `TemplateTableDesigner` coordina borrador, cancelación,
 confirmación y PATCH; `TemplateTableEditor` selecciona celdas, combina/separa, modifica
 filas/columnas y limita estilos al catálogo validado. `TemplateDocumentTest` cubre
 atributos hostiles y su OOXML; `template-visual-builder.mjs` guarda una selección
