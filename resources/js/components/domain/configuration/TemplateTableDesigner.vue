@@ -164,9 +164,11 @@ watch(
 </script>
 
 <template>
-    <div class="flex min-w-0 flex-col gap-2">
+    <div class="group relative min-w-0">
         <template v-if="!editing">
-            <div class="flex justify-end" data-page-unit>
+            <div
+                class="absolute top-2 right-2 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+            >
                 <Button
                     type="button"
                     variant="outline"
