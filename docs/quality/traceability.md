@@ -112,6 +112,11 @@ mantiene como papel blanco bajo tema oscuro y los marcadores de campos/variables
 un texto contrastado. Las barras y acciones contextuales usan el color semántico del
 tema, sin alterar los colores configurables de las celdas.
 
+Los bloques y campos del constructor progresivo exponen edición y eliminación
+contextuales. Las rutas existentes de sección/campo aplican alcance, bloqueo y auditoría;
+la regresión `template-visual-builder.mjs` cubre renombrar bloque, cambiar nombre/tipo de
+campo y confirmar ambas eliminaciones.
+
 El seguimiento de propiedades reúne nombre, ayuda e IA en el mismo borrador de diseño
 (ADM-06; RNF-018..023). `TemplateDocumentTest` verifica guardado conjunto,
 rechazo de propiedades ajenas y conflictos, IA restringida, campos retirados y

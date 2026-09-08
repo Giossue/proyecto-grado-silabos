@@ -100,6 +100,26 @@ router.patch = async (url, data, visit) => {
                 ...section,
                 blocks: section.blocks.map(block => url.includes(block.id)
                     ? {...block, document: data.document, fingerprint: 'b'.repeat(64)}
+                : block),
+            })),
+        };
+    } else if (url.includes('/secciones/')) {
+        template.value = {
+            ...template.value,
+            sections: template.value.sections.map(section => url.includes(section.id)
+                ? {...section, title: data.title}
+                : section),
+        };
+    } else if (url.includes('/campos/')) {
+        template.value = {
+            ...template.value,
+            sections: template.value.sections.map(section => ({
+                ...section,
+                blocks: section.blocks.map(block => url.includes(block.fields[0]?.id)
+                    ? {...block, title: data.label, content_type: data.content_type,
+                        fields: block.fields.map((field, index) => index === 0
+                            ? {...field, label: data.label, content_type: data.content_type}
+                            : field)}
                     : block),
             })),
         };
@@ -107,6 +127,26 @@ router.patch = async (url, data, visit) => {
         appearance.value = {...data};
         preview.value = {...data};
         template.value = {...template.value, appearance: appearance.value};
+    }
+    await visit?.onSuccess?.({});
+    visit?.onFinish?.({});
+};
+router.delete = async (url, visit) => {
+    requests.push({method:'delete',url,data:{}});
+    visit?.onStart?.({});
+    if (url.includes('/secciones/')) {
+        template.value = {
+            ...template.value,
+            sections: template.value.sections.filter(section => !url.includes(section.id)),
+        };
+    } else if (url.includes('/bloques/')) {
+        template.value = {
+            ...template.value,
+            sections: template.value.sections.map(section => ({
+                ...section,
+                blocks: section.blocks.filter(block => !url.includes(block.id)),
+            })),
+        };
     }
     await visit?.onSuccess?.({});
     visit?.onFinish?.({});
@@ -252,6 +292,53 @@ test(
             .filter({ hasText: 'Agregar campo' })
             .waitFor();
 
+        const blockActions = page.getByRole('button', {
+            name: 'Acciones del bloque Resultados y evidencias',
+        });
+        await section.hover();
+        await blockActions.click();
+        await page.getByRole('menuitem', { name: 'Editar bloque' }).click();
+        const blockDialog = page.getByRole('dialog', {
+            name: 'Editar bloque',
+        });
+        await blockDialog
+            .getByLabel('Nombre del bloque')
+            .fill('Resultados actualizados');
+        await blockDialog
+            .getByRole('button', { name: 'Guardar bloque' })
+            .click();
+        await blockDialog.waitFor({ state: 'hidden' });
+        const blockUpdate = await page.evaluate(() =>
+            window.fixture.requests.find((request) =>
+                request.url.includes('/secciones/section-1'),
+            ),
+        );
+        assert.equal(blockUpdate.data.title, 'Resultados actualizados');
+
+        const summary = page.locator('article[aria-label="Campo Resumen"]');
+        await summary.hover();
+        await page
+            .getByRole('button', { name: 'Acciones del campo Resumen' })
+            .click();
+        await page.getByRole('menuitem', { name: 'Editar campo' }).click();
+        const fieldDialog = page.getByRole('dialog', { name: 'Editar campo' });
+        await fieldDialog
+            .getByLabel('Nombre del campo')
+            .fill('Resumen actualizado');
+        await fieldDialog.getByLabel('Tipo de contenido').click();
+        await page.getByRole('option', { name: 'Lista con viñetas' }).click();
+        await fieldDialog
+            .getByRole('button', { name: 'Guardar campo' })
+            .click();
+        await fieldDialog.waitFor({ state: 'hidden' });
+        const fieldUpdate = await page.evaluate(() =>
+            window.fixture.requests.find((request) =>
+                request.url.includes('/campos/field-1'),
+            ),
+        );
+        assert.equal(fieldUpdate.data.label, 'Resumen actualizado');
+        assert.equal(fieldUpdate.data.content_type, 'bulleted_list');
+
         const editTableButton = page.getByRole('button', {
             name: 'Editar tabla: Matriz',
         });
@@ -262,6 +349,17 @@ test(
             true,
         );
         await page.locator('.document-table-container').hover();
+        await editTableButton.hover();
+        const tableTooltip = page
+            .locator('[data-slot="tooltip-content"]')
+            .filter({ hasText: 'Editar tabla' });
+        await tableTooltip.waitFor();
+        assert.equal(
+            await tableTooltip.evaluate(
+                (element) => getComputedStyle(element).backgroundColor,
+            ),
+            'rgb(0, 0, 0)',
+        );
         await editTableButton.click();
         const tableDialog = page.getByRole('dialog', {
             name: 'Editar tabla: Matriz',
@@ -340,6 +438,58 @@ test(
         assert.equal(header.attrs.textAlign, 'center');
         assert.equal(header.attrs.bold, true);
         assert.equal(header.attrs.borderStyle, 'thick');
+
+        const renamedSummary = page.locator(
+            'article[aria-label="Campo Resumen actualizado"]',
+        );
+        await renamedSummary.hover();
+        await page
+            .getByRole('button', {
+                name: 'Acciones del campo Resumen actualizado',
+            })
+            .click();
+        await page.getByRole('menuitem', { name: 'Eliminar campo' }).click();
+        const deleteFieldDialog = page.getByRole('dialog', {
+            name: 'Eliminar campo',
+        });
+        await deleteFieldDialog
+            .getByRole('button', { name: 'Eliminar campo' })
+            .click();
+        await deleteFieldDialog.waitFor({ state: 'hidden' });
+        const fieldDeletion = await page.evaluate(() =>
+            window.fixture.requests.find(
+                (request) =>
+                    request.method === 'delete' &&
+                    request.url.includes('/bloques/field-block-1'),
+            ),
+        );
+        assert.ok(fieldDeletion);
+
+        const renamedSection = page.locator(
+            'section[aria-label="Bloque Resultados actualizados"]',
+        );
+        await renamedSection.hover();
+        await page
+            .getByRole('button', {
+                name: 'Acciones del bloque Resultados actualizados',
+            })
+            .click();
+        await page.getByRole('menuitem', { name: 'Eliminar bloque' }).click();
+        const deleteBlockDialog = page.getByRole('dialog', {
+            name: 'Eliminar bloque',
+        });
+        await deleteBlockDialog
+            .getByRole('button', { name: 'Eliminar bloque' })
+            .click();
+        await deleteBlockDialog.waitFor({ state: 'hidden' });
+        const blockDeletion = await page.evaluate(() =>
+            window.fixture.requests.find(
+                (request) =>
+                    request.method === 'delete' &&
+                    request.url.includes('/secciones/section-1'),
+            ),
+        );
+        assert.ok(blockDeletion);
 
         await page.getByRole('button', { name: 'Personalizar' }).click();
         const sheet = page.getByRole('dialog');

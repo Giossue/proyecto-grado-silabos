@@ -78,6 +78,10 @@ No crees una variante visual por módulo si el significado es el mismo.
   común. Materias no mantiene una pantalla paralela.
 - Las superficies usan `background`, `card`, `popover` y `sidebar` como tokens separados;
   un módulo no introduce colores directos para fabricar contraste.
+- En ADM-06, `TemplateSectionActions` y `TemplateFieldActions` encapsulan los menús y
+  diálogos de las mutaciones estructurales. `TemplateVisualBuilder` solo decide su
+  posición contextual sobre la hoja; los componentes envían las rutas Wayfinder ya
+  autorizadas y delegan la confirmación de reinicio en `PurgeConfirmationDialog`.
 
 ## Formularios y editor
 

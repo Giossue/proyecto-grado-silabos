@@ -130,6 +130,13 @@ completo. El alta está separada de asignar paralelos y no levanta sus bloqueos.
   ocultan y la hoja queda en solo lectura. En cada bloque, los accesos compactos se
   ordenan verticalmente con **Agregar campo** arriba y **Agregar bloque** abajo; ambos
   conservan nombre accesible y explican su icono mediante `Tooltip`.
+  Sobre la hoja blanca, esos tooltips usan fondo negro y texto blanco en ambos temas.
+- Cada bloque y campo muestra, al pasar sobre él o enfocarlo, un menú compacto de
+  acciones. Desde ahí Administración puede editar el nombre del bloque, o el nombre y
+  tipo de presentación del campo cuando su diseño todavía no lo fija; ambos se eliminan
+  tras confirmación. Eliminar un bloque indica cuántos campos contiene. Si el cambio
+  implica borrar sílabos en curso, el diálogo institucional de reinicio conserva la
+  última confirmación; los sílabos enviados mantienen su copia.
 - **Personalizar** abre un panel lateral con ajustes deliberadamente acotados para todo
   el documento: orientación, márgenes, fuente general, tamaños de título/bloque/campo/
   contenido, paleta institucional para texto, acento y cabecera de tabla, además de

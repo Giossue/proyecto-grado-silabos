@@ -3,7 +3,9 @@ import { computed } from 'vue';
 import type { CSSProperties } from 'vue';
 import TemplateBlockCreator from '@/components/domain/configuration/TemplateBlockCreator.vue';
 import TemplateDocumentView from '@/components/domain/configuration/TemplateDocumentView.vue';
+import TemplateFieldActions from '@/components/domain/configuration/TemplateFieldActions.vue';
 import TemplateFieldCreator from '@/components/domain/configuration/TemplateFieldCreator.vue';
+import TemplateSectionActions from '@/components/domain/configuration/TemplateSectionActions.vue';
 import TemplateTableDesigner from '@/components/domain/configuration/TemplateTableDesigner.vue';
 import PaginatedDocument from '@/components/domain/PaginatedDocument.vue';
 import { defaultDocument, nodesOfType } from '@/lib/templateDocument';
@@ -119,15 +121,12 @@ const hasTable = (block: TemplateFieldContainer): boolean =>
                         data-page-unit
                         data-page-keep-next
                     >
-                        <h2
-                            class="min-w-0 leading-snug"
-                            :style="sectionStyle"
-                        >
+                        <h2 class="min-w-0 leading-snug" :style="sectionStyle">
                             {{ sectionIndex + 1 }}. {{ section.title }}
                         </h2>
                         <div
                             v-if="!readonly"
-                            class="template-section-actions absolute top-0 z-10 flex flex-col gap-1 opacity-0 transition-opacity group-hover/template-section:opacity-100 group-focus-within/template-section:opacity-100"
+                            class="template-section-actions absolute top-0 z-10 flex flex-col gap-1 opacity-0 transition-opacity group-focus-within/template-section:opacity-100 group-hover/template-section:opacity-100"
                             :aria-label="`Acciones del bloque ${section.title}`"
                         >
                             <TemplateFieldCreator
@@ -140,6 +139,10 @@ const hasTable = (block: TemplateFieldContainer): boolean =>
                                 :template-id="template.id"
                                 :position="sectionIndex + 1"
                                 :block-types="blockTypes"
+                            />
+                            <TemplateSectionActions
+                                :template-id="template.id"
+                                :section="section"
                             />
                         </div>
                     </div>
@@ -155,9 +158,20 @@ const hasTable = (block: TemplateFieldContainer): boolean =>
                     <article
                         v-for="(block, fieldIndex) in section.blocks"
                         :key="block.id"
-                        class="mb-4"
+                        class="group/template-field relative mb-4"
                         :aria-label="`Campo ${block.title}`"
                     >
+                        <div
+                            v-if="!readonly"
+                            class="template-field-actions absolute top-0 z-10 opacity-0 transition-opacity group-focus-within/template-field:opacity-100 group-hover/template-field:opacity-100"
+                        >
+                            <TemplateFieldActions
+                                :template-id="template.id"
+                                :section-title="section.title"
+                                :field="block"
+                                :block-types="blockTypes"
+                            />
+                        </div>
                         <h3
                             v-if="section.blocks.length > 1"
                             class="mb-2 leading-snug font-semibold"
@@ -207,6 +221,10 @@ const hasTable = (block: TemplateFieldContainer): boolean =>
 
 <style scoped>
 .template-section-actions {
+    right: calc(-1 * var(--page-margin) + 2rem);
+}
+
+.template-field-actions {
     right: calc(-1 * var(--page-margin) + 2rem);
 }
 </style>

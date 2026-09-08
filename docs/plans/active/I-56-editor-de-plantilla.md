@@ -371,3 +371,31 @@ afectados, compilación Vite y `ManagementCreationUiTest` (**24 pruebas / 1156
 aserciones**) pasan. Chromium `template-visual-builder.mjs` (**1/1**) modifica una
 tabla, solicita cancelar, conserva su borrador al continuar y guarda. Sin migraciones,
 modificaciones de datos, commit ni push.
+
+## Seguimiento — acciones de bloques y campos (2026-09-08)
+
+ADM-06 conserva la edición de tabla para su geometría, pero no la usa como única vía de
+gestión. Cada bloque y campo recibe un menú contextual que no mueve la hoja: editar
+nombre de bloque; editar nombre y tipo del campo mientras no tenga diseño propio; y
+eliminar con confirmación. El servidor existente conserva autorización, bloqueo del
+proceso, purga confirmada, transacción y auditoría; no se crean rutas ni cambios de
+esquema.
+
+- [x] Añadir acciones de editar/eliminar a bloques y campos, con diálogos accesibles,
+      etiquetas y ayudas de iconos.
+- [x] Mantener el tipo fijo cuando el campo ya tiene diseño propio o es heredado, para
+      no desarmar tablas configuradas.
+- [x] Cubrir creación, edición, cambio de tipo y eliminación de ambos niveles en
+      Chromium; actualizar la trazabilidad y la interfaz documentada.
+
+Verificación puntual: `npm run types:check`, Prettier y ESLint de los archivos
+afectados; Chromium `template-visual-builder.mjs` (**1/1**) pasan. Sin migraciones,
+modificación de datos, commit ni push.
+
+## Seguimiento — contraste de ayudas sobre la hoja (2026-09-08)
+
+Los tooltips de las acciones que se sitúan sobre el papel de ADM-06 conservan fondo negro
+y texto blanco, aun cuando la interfaz general esté en oscuro. La barra del diálogo de
+tabla mantiene su tema semántico propio. Chromium comprueba el color del tooltip de
+«Editar tabla»; pasan Prettier, ESLint puntual y TypeScript. Sin migraciones, datos,
+commit ni push.
