@@ -12,14 +12,18 @@ import {
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import {
-    NativeSelect,
-    NativeSelectOption,
-} from '@/components/ui/native-select';
-import {
     Popover,
     PopoverContent,
     PopoverTrigger,
 } from '@/components/ui/popover';
+import {
+    Select,
+    SelectContent,
+    SelectGroup,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import type { TemplateContentType } from '@/types/configuration';
 
 type EditableContentType = Exclude<
@@ -125,21 +129,31 @@ const updateOpen = (value: boolean): void => {
                         <FieldLabel for="new-field-content-type" required>
                             Tipo de contenido
                         </FieldLabel>
-                        <NativeSelect
+                        <Select
                             v-model="form.content_type"
-                            class="w-full"
                             :disabled="form.processing"
-                            id="new-field-content-type"
-                            :aria-invalid="Boolean(errorFor('content_type'))"
                         >
-                            <NativeSelectOption
-                                v-for="type in blockTypes"
-                                :key="type.value"
-                                :value="type.value"
+                            <SelectTrigger
+                                id="new-field-content-type"
+                                class="w-full"
+                                :aria-invalid="
+                                    Boolean(errorFor('content_type'))
+                                "
                             >
-                                {{ type.label }}
-                            </NativeSelectOption>
-                        </NativeSelect>
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent portal-disabled>
+                                <SelectGroup>
+                                    <SelectItem
+                                        v-for="type in blockTypes"
+                                        :key="type.value"
+                                        :value="type.value"
+                                    >
+                                        {{ type.label }}
+                                    </SelectItem>
+                                </SelectGroup>
+                            </SelectContent>
+                        </Select>
                         <FieldError
                             v-if="errorFor('content_type')"
                             :errors="[errorFor('content_type')]"

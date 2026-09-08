@@ -134,6 +134,12 @@ completo. El alta está separada de asignar paralelos y no levanta sus bloqueos.
   negrita, cursiva y alineación de los títulos. Los cambios se previsualizan en la hoja
   antes de guardar. No se admiten CSS, fuentes o colores arbitrarios. La apariencia se
   copia en cada revisión y se aplica también al DOCX; el docente nunca la modifica.
+- Cada tabla muestra a Administración una sola acción **Editar tabla**. La edición ocurre
+  en el mismo lugar de la hoja: una celda se selecciona con clic y la selección se amplía
+  con Mayús + clic. La barra contextual permite usar colores del catálogo, alineación,
+  negrita, cursiva y borde por celda; combinar/separar celdas y agregar o retirar filas y
+  columnas. Guardar conserva las protecciones de conflicto, bloqueo y reinicio. Docencia
+  ve y completa el resultado, pero nunca recibe esas herramientas.
 - ADM-06 muestra hojas carta separadas y numeradas (I-53). El pie derecho muestra
   únicamente el número de página (1, 2, 3…), sin el total. La cantidad se recalcula
   según el contenido de muestra al agregar, retirar, reordenar o renombrar piezas.
@@ -173,16 +179,18 @@ completo. El alta está separada de asignar paralelos y no levanta sus bloqueos.
   sección, en la hoja, el editor docente, la revisión y el Word. Con varios campos sí
   se numeran.
 - La interacción vigente no activa un procesador de texto global ni usa clic derecho,
-  paleta o arrastre. La estructura crece con altas explícitas de bloque y campo, y la
-  apariencia global vive en Personalizar. Los documentos detallados ya guardados se
-  siguen interpretando sin reescribirlos al abrir la pantalla.
+  paleta o arrastre. La estructura crece con altas explícitas de bloque y campo, la
+  apariencia global vive en Personalizar y Tiptap se monta solo mientras Administración
+  edita una tabla concreta. Los documentos detallados ya guardados se siguen
+  interpretando sin reescribirlos al abrir la pantalla.
 - Las tablas repetibles conservan sus unidades, columnas tipadas y sumas. El diseño
   distingue cabecera fija, datos, datos de unidad y total: se combinan celdas dentro
   de cada grupo, sin atravesar grupos que se repiten distintas cantidades de veces.
   Docencia agrega filas/unidades y completa las casillas, sin herramientas de diseño;
   la revisión muestra el diseño y las variables congelados al enviar. Una tabla nueva
-  nace con el esquema mínimo; la configuración detallada de columnas y combinaciones
-  no forma parte de este primer incremento del constructor progresivo.
+  nace con el esquema mínimo y Administración puede ajustar su geometría y estilo por
+  celda desde **Editar tabla**. El color global de cabecera solo alcanza cabeceras reales;
+  nunca convierte todas las filas fijas de una ficha compleja en cabeceras.
   Las fuentes son documentos editables: COR-11 abre el contenido como una hoja visual
   con cinta de opciones; el formato se aplica en tiempo real y el sistema conserva el
   resultado como Markdown seguro sin mostrar su sintaxis.

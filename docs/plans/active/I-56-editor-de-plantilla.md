@@ -291,3 +291,28 @@ revisa el ancho móvil. Pasan TypeScript, ESLint y Prettier del incremento, buil
 producción, Pint y PHPStan de las clases modificadas. Sin migraciones ni modificaciones
 de los diseños persistidos, commit o push. La configuración estructural detallada de
 tablas queda fuera de este primer incremento, tal como se documenta en ADM-06.
+
+## Seguimiento — estilo contextual de tablas (2026-09-07)
+
+El responsable confirma que Administración debe poder editar sobre la hoja el estilo
+de las tablas, incluida la ficha institucional, sin recuperar el editor documental
+global. El alcance añade formato visual y geometría de celdas; no permite a Docencia
+cambiar la plantilla ni elimina los diseños persistidos. Los selectores de tipo de
+campo usan los componentes `Select` de shadcn-vue dentro de sus `Popover`.
+
+- [x] Corregir la aplicación del color global para distinguir cabeceras reales de
+      filas fijas y conservar el estilo propio de la ficha institucional.
+- [x] Permitir seleccionar una o varias celdas y ajustar fondo, texto, negrita,
+      cursiva, alineación y borde; combinar o separar cuando la selección lo admita.
+- [x] Guardar el documento normalizado con autorización, bloqueo, confirmación y
+      concurrencia existentes; reflejar el estilo en vista, snapshot y DOCX.
+- [x] Sustituir los selectores nativos de tipo de campo por `Select` de shadcn-vue sin
+      cerrar el `Popover`; cubrir el flujo real, el ancho móvil y las regresiones.
+
+Verificación: Configuración, Sílabos, Documentos y contrato de arquitectura,
+**130 pruebas / 2848 aserciones**; Chromium `template-visual-builder.mjs`, **1/1**, crea
+un campo de tabla mediante el `Select` de shadcn-vue y guarda dos celdas combinadas con
+fondo, texto, alineación, negrita y borde. Pasan TypeScript, ESLint y Prettier del
+incremento, build de producción, Pint y PHPStan. La regresión OOXML comprueba los estilos
+por celda y que una fila fija no reciba el color global de cabecera. Sin migraciones,
+commit ni push.

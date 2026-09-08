@@ -700,6 +700,7 @@ it('construye la plantilla desde bloques que contienen campos tipados', function
         ->toContain('PROGRAMA DE ASIGNATURA (SÍLABO)')
         ->toContain('<TemplateBlockCreator')
         ->toContain('<TemplateFieldCreator')
+        ->toContain('<TemplateTableDesigner')
         ->toContain('<TemplateDocumentView')
         ->toContain('section.blocks.length > 1')
         ->toContain('appearance.table_header_background')
@@ -715,8 +716,12 @@ it('construye la plantilla desde bloques que contienen campos tipados', function
         ->toContain('Nombre del bloque')
         ->toContain('form.fields')
         ->toContain('Tipo de contenido')
+        ->toContain('<Select')
+        ->toContain('<SelectGroup')
+        ->toContain('portal-disabled')
         ->toContain('Agregar otro campo')
         ->toContain('Crear bloque')
+        ->not->toContain('<NativeSelect')
         ->not->toContain('draggable="true"');
 
     $fieldCreator = file_get_contents(
@@ -727,7 +732,43 @@ it('construye la plantilla desde bloques que contienen campos tipados', function
         ->toContain('<Popover')
         ->toContain('Se añadirá dentro de este bloque')
         ->toContain('Tipo de contenido')
-        ->toContain('Agregar campo');
+        ->toContain('<Select')
+        ->toContain('<SelectGroup')
+        ->toContain('portal-disabled')
+        ->toContain('Agregar campo')
+        ->not->toContain('<NativeSelect');
+
+    $tableDesigner = file_get_contents(
+        $root.'/resources/js/components/domain/configuration/TemplateTableDesigner.vue',
+    );
+    $tableEditor = file_get_contents(
+        $root.'/resources/js/components/domain/configuration/TemplateTableEditor.vue',
+    );
+    expect($tableDesigner)
+        ->toBeString()
+        ->toContain('Editar tabla')
+        ->toContain('<TemplateTableEditor')
+        ->toContain('TemplateController.updateDocument.url')
+        ->toContain('Guardar tabla');
+    expect($tableEditor)
+        ->toBeString()
+        ->toContain('Fondo de celda')
+        ->toContain('Color de texto')
+        ->toContain('Alineación de celda')
+        ->toContain('Borde de celda')
+        ->toContain('Combinar')
+        ->toContain('Separar')
+        ->toContain('Filas y columnas')
+        ->toContain('<Select')
+        ->toContain('<DropdownMenu');
+
+    $documentView = file_get_contents(
+        $root.'/resources/js/components/domain/configuration/TemplateDocumentView.vue',
+    );
+    expect($documentView)
+        ->toBeString()
+        ->toContain('.document-table th')
+        ->not->toContain("tr[data-row-role='fixed']");
 
     $appearance = file_get_contents(
         $root.'/resources/js/components/domain/configuration/TemplateAppearanceSheet.vue',

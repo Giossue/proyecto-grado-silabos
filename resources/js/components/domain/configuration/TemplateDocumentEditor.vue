@@ -146,6 +146,78 @@ const cellAttributes = () => ({
                   }
                 : {},
     },
+    textColor: {
+        default: null,
+        parseHTML: (element: HTMLElement) =>
+            element.getAttribute('data-cell-text-color'),
+        renderHTML: (attributes: Record<string, unknown>) =>
+            attributes.textColor
+                ? {
+                      'data-cell-text-color': attributes.textColor,
+                      style: `color: ${attributes.textColor}`,
+                  }
+                : {},
+    },
+    textAlign: {
+        default: null,
+        parseHTML: (element: HTMLElement) =>
+            element.getAttribute('data-cell-text-align'),
+        renderHTML: (attributes: Record<string, unknown>) =>
+            attributes.textAlign
+                ? {
+                      'data-cell-text-align': attributes.textAlign,
+                      style: `text-align: ${attributes.textAlign}`,
+                  }
+                : {},
+    },
+    bold: {
+        default: null,
+        parseHTML: (element: HTMLElement) => {
+            const value = element.getAttribute('data-cell-bold');
+
+            return value === null ? null : value === 'true';
+        },
+        renderHTML: (attributes: Record<string, unknown>) =>
+            typeof attributes.bold === 'boolean'
+                ? {
+                      'data-cell-bold': String(attributes.bold),
+                      style: `font-weight: ${attributes.bold ? '700' : '400'}`,
+                  }
+                : {},
+    },
+    italic: {
+        default: null,
+        parseHTML: (element: HTMLElement) => {
+            const value = element.getAttribute('data-cell-italic');
+
+            return value === null ? null : value === 'true';
+        },
+        renderHTML: (attributes: Record<string, unknown>) =>
+            typeof attributes.italic === 'boolean'
+                ? {
+                      'data-cell-italic': String(attributes.italic),
+                      style: `font-style: ${attributes.italic ? 'italic' : 'normal'}`,
+                  }
+                : {},
+    },
+    borderStyle: {
+        default: null,
+        parseHTML: (element: HTMLElement) =>
+            element.getAttribute('data-cell-border-style'),
+        renderHTML: (attributes: Record<string, unknown>) => {
+            const value = attributes.borderStyle;
+
+            return typeof value === 'string'
+                ? {
+                      'data-cell-border-style': value,
+                      style:
+                          value === 'none'
+                              ? 'border: 0'
+                              : `${value === 'thick' ? 'border: 2px' : 'border: 1px'} solid #7F7F7F`,
+                  }
+                : {};
+        },
+    },
 });
 const editor = useEditor({
     content: props.document,
@@ -1359,6 +1431,24 @@ defineExpose({ save, editor, markClean, prepareDocument });
 .template-document-editor td p,
 .template-document-editor th p {
     margin: 0;
+}
+.template-document-editor [data-cell-text-color] * {
+    color: inherit !important;
+}
+.template-document-editor [data-cell-text-align] p {
+    text-align: inherit !important;
+}
+.template-document-editor [data-cell-bold='true'] * {
+    font-weight: 700 !important;
+}
+.template-document-editor [data-cell-bold='false'] * {
+    font-weight: 400 !important;
+}
+.template-document-editor [data-cell-italic='true'] * {
+    font-style: italic !important;
+}
+.template-document-editor [data-cell-italic='false'] * {
+    font-style: normal !important;
 }
 .template-document-editor .selectedCell::after {
     background: rgb(0 112 192 / 20%);

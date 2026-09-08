@@ -11,6 +11,10 @@ final class TemplateDocument
 
     public const FIELD_TYPES = ['texto_corto', 'texto_largo', 'numero', 'fecha'];
 
+    public const CELL_ALIGNMENTS = ['left', 'center', 'right', 'justify'];
+
+    public const CELL_BORDER_STYLES = ['thin', 'thick', 'none'];
+
     /** @param array<string, mixed> $document
      * @param  list<string>  $variables
      * @return array<string, mixed>
@@ -123,7 +127,34 @@ final class TemplateDocument
                 if ($background !== null && ! self::color($background)) {
                     self::fail('Color de celda no válido.');
                 }
-                $node['attrs'] = ['colspan' => $span, 'rowspan' => $rows, 'colwidth' => $widths, 'backgroundColor' => $background];
+                $textColor = $attrs['textColor'] ?? null;
+                if ($textColor !== null && ! self::color($textColor)) {
+                    self::fail('Color de texto de celda no válido.');
+                }
+                $textAlign = $attrs['textAlign'] ?? null;
+                if ($textAlign !== null && ! in_array($textAlign, self::CELL_ALIGNMENTS, true)) {
+                    self::fail('Alineación de celda no permitida.');
+                }
+                $borderStyle = $attrs['borderStyle'] ?? null;
+                if ($borderStyle !== null && ! in_array($borderStyle, self::CELL_BORDER_STYLES, true)) {
+                    self::fail('Borde de celda no permitido.');
+                }
+                $bold = $attrs['bold'] ?? null;
+                $italic = $attrs['italic'] ?? null;
+                if (($bold !== null && ! is_bool($bold)) || ($italic !== null && ! is_bool($italic))) {
+                    self::fail('Formato de celda no válido.');
+                }
+                $node['attrs'] = [
+                    'colspan' => $span,
+                    'rowspan' => $rows,
+                    'colwidth' => $widths,
+                    'backgroundColor' => $background,
+                    'textColor' => $textColor,
+                    'textAlign' => $textAlign,
+                    'bold' => $bold,
+                    'italic' => $italic,
+                    'borderStyle' => $borderStyle,
+                ];
             }
             if (isset($raw['marks'])) {
                 if (! in_array($type, ['text', 'variable', 'field', 'column'], true) || ! is_array($raw['marks']) || count($raw['marks']) > 4) {

@@ -51,7 +51,10 @@ const options = {
     orientations: [{value:'portrait',label:'Vertical'},{value:'landscape',label:'Horizontal'}],
 };
 const minimalTable = {
-    columns: [{key:'texto',label:'Contenido',type:'text',group:null,band:null,sum:false,width:null}],
+    columns: [
+        {key:'texto',label:'Contenido',type:'text',group:null,band:null,sum:false,width:null},
+        {key:'detalle',label:'Detalle',type:'text',group:null,band:null,sum:false,width:null},
+    ],
     groups: [], bands: [], header_fields: [], totals: {enabled:false,label:'Total'},
     repeat: {enabled:false,label:'Unidad'},
 };
@@ -89,9 +92,21 @@ router.post = async (url, data, visit) => {
 router.patch = async (url, data, visit) => {
     requests.push({method:'patch',url,data:JSON.parse(JSON.stringify(data))});
     visit?.onStart?.({});
-    appearance.value = {...data};
-    preview.value = {...data};
-    template.value = {...template.value, appearance: appearance.value};
+    if (url.includes('/diseno')) {
+        template.value = {
+            ...template.value,
+            sections: template.value.sections.map(section => ({
+                ...section,
+                blocks: section.blocks.map(block => url.includes(block.id)
+                    ? {...block, document: data.document, fingerprint: 'b'.repeat(64)}
+                    : block),
+            })),
+        };
+    } else {
+        appearance.value = {...data};
+        preview.value = {...data};
+        template.value = {...template.value, appearance: appearance.value};
+    }
     await visit?.onSuccess?.({});
     visit?.onFinish?.({});
 };
@@ -104,7 +119,7 @@ createApp({render: () => h('main', {class:'min-h-screen bg-muted p-6'}, [
     h(TemplateVisualBuilder, {
         template: template.value, appearance: preview.value, blockTypes,
         variables: [], identificationDesign: {type:'doc',content:[{type:'paragraph'}]},
-        readonly: false,
+        colorOptions: options.colors, readonly: false,
     }),
     h(TemplateAppearanceSheet, {
         open: appearanceOpen.value, templateId: template.value.id,
@@ -183,7 +198,8 @@ test(
         await page.locator('#new-template-field-0').fill('Resumen');
         await page.getByRole('button', { name: 'Agregar otro campo' }).click();
         await page.locator('#new-template-field-1').fill('Matriz');
-        await page.locator('#new-template-field-type-1').selectOption('table');
+        await page.locator('#new-template-field-type-1').click();
+        await page.getByRole('option', { name: 'Tabla', exact: true }).click();
         await page.getByRole('button', { name: 'Crear bloque' }).click();
 
         await page
@@ -203,6 +219,50 @@ test(
             creation.data.fields.map((field) => field.content_type),
             ['text', 'table'],
         );
+
+        await page
+            .getByRole('button', { name: 'Editar tabla: Matriz' })
+            .click();
+        const tableEditor = page.getByRole('textbox', {
+            name: 'Editar tabla de la plantilla',
+        });
+        const headers = tableEditor.locator('th');
+        await headers.nth(0).click();
+        await headers.nth(1).click({ modifiers: ['Shift'] });
+        await page.getByRole('button', { name: 'Combinar' }).click();
+        await page.getByRole('combobox', { name: 'Fondo de celda' }).click();
+        await page.getByRole('option', { name: 'Azul claro' }).click();
+        await page.getByRole('combobox', { name: 'Color de texto' }).click();
+        await page.getByRole('option', { name: 'Blanco' }).click();
+        await page
+            .getByRole('combobox', { name: 'Alineación de celda' })
+            .click();
+        await page.getByRole('option', { name: 'Centro' }).click();
+        await page.getByRole('combobox', { name: 'Borde de celda' }).click();
+        await page.getByRole('option', { name: 'Grueso' }).click();
+        await page
+            .getByRole('button', {
+                name: 'Negrita en las celdas seleccionadas',
+            })
+            .click();
+        await page.getByRole('button', { name: 'Guardar tabla' }).click();
+        await page
+            .getByRole('button', { name: 'Editar tabla: Matriz' })
+            .waitFor();
+
+        const tableRequest = await page.evaluate(() =>
+            window.fixture.requests.find((request) =>
+                request.url.includes('/diseno'),
+            ),
+        );
+        const header =
+            tableRequest.data.document.content[0].content[0].content[0];
+        assert.equal(header.attrs.colspan, 2);
+        assert.equal(header.attrs.backgroundColor, '#DBE5F1');
+        assert.equal(header.attrs.textColor, '#FFFFFF');
+        assert.equal(header.attrs.textAlign, 'center');
+        assert.equal(header.attrs.bold, true);
+        assert.equal(header.attrs.borderStyle, 'thick');
 
         await page.getByRole('button', { name: 'Personalizar' }).click();
         const sheet = page.getByRole('dialog');

@@ -25,6 +25,8 @@ type Context = {
     unit?: number;
     role?: string;
     totals?: TableRowData;
+    insideCell?: boolean;
+    cellTextAlign?: string;
 };
 const props = withDefaults(
     defineProps<{
@@ -148,6 +150,17 @@ const markStyle = (node: DocumentNode): CSSProperties => {
     }
 
     return style;
+};
+const cellBorder = (value: unknown): string | undefined => {
+    if (value === 'none') {
+        return '0';
+    }
+
+    if (value === 'thick') {
+        return '2px solid #7F7F7F';
+    }
+
+    return value === 'thin' ? '1px solid #7F7F7F' : undefined;
 };
 const setColumn = (context: Context, key: string, value: string | number) => {
     const field = context.field;
@@ -440,7 +453,13 @@ const draw = (
             'div',
             {
                 class: 'document-paragraph',
-                style: { textAlign: String(attrs.textAlign ?? 'left') },
+                style: {
+                    textAlign: String(
+                        context.cellTextAlign ??
+                            attrs.textAlign ??
+                            (context.insideCell ? 'left' : props.textAlign),
+                    ),
+                },
                 'data-page-unit': '',
             },
             children(),
@@ -608,16 +627,54 @@ const draw = (
     }
 
     if (node.type === 'tableCell' || node.type === 'tableHeader') {
+        const textColor =
+            typeof attrs.textColor === 'string' ? attrs.textColor : undefined;
+        const textAlign =
+            typeof attrs.textAlign === 'string' ? attrs.textAlign : undefined;
+
+        const cellContext = {
+            ...context,
+            insideCell: true,
+            cellTextAlign: textAlign,
+        };
+
         return h(
             node.type === 'tableCell' ? 'td' : 'th',
             {
                 colspan: Number(attrs.colspan ?? 1),
                 rowspan: Number(attrs.rowspan ?? 1),
+                'data-cell-text-color': textColor ? '' : undefined,
+                'data-cell-text-align': textAlign ? '' : undefined,
+                'data-cell-bold':
+                    typeof attrs.bold === 'boolean'
+                        ? String(attrs.bold)
+                        : undefined,
+                'data-cell-italic':
+                    typeof attrs.italic === 'boolean'
+                        ? String(attrs.italic)
+                        : undefined,
                 style: {
                     backgroundColor: attrs.backgroundColor || undefined,
+                    color: textColor,
+                    textAlign,
+                    fontWeight:
+                        typeof attrs.bold === 'boolean'
+                            ? attrs.bold
+                                ? '700'
+                                : '400'
+                            : undefined,
+                    fontStyle:
+                        typeof attrs.italic === 'boolean'
+                            ? attrs.italic
+                                ? 'italic'
+                                : 'normal'
+                            : undefined,
+                    border: cellBorder(attrs.borderStyle),
                 },
             },
-            children(),
+            (node.content ?? []).map((child, index) =>
+                draw(child, cellContext, `${path}-${index}`),
+            ),
         );
     }
 
@@ -659,6 +716,10 @@ const Content = defineComponent({ setup: () => () => draw(props.document) });
 .template-document-view[data-themed] :deep(.document-paragraph) {
     text-align: var(--document-text-align) !important;
 }
+.template-document-view[data-themed]
+    :deep([data-cell-text-align] .document-paragraph) {
+    text-align: inherit !important;
+}
 .template-document-view :deep(.document-table) {
     border-collapse: collapse;
     width: 100%;
@@ -677,13 +738,43 @@ const Content = defineComponent({ setup: () => () => draw(props.document) });
     margin: 0;
 }
 .template-document-view[data-themed]
-    :deep(.document-table > tbody > tr[data-row-role='fixed'] > *),
-.template-document-view[data-themed]
     :deep(.document-table > tbody > tr[data-row-role='unit'] > *),
 .template-document-view[data-themed]
-    :deep(.document-table > tbody > tr:first-child:not([data-row-role]) > *) {
+    :deep(.document-table > tbody > tr:first-child:not([data-row-role]) > *),
+.template-document-view[data-themed] :deep(.document-table th) {
+    color: var(--document-table-header-color);
+    background-color: var(--document-table-header-background);
+}
+.template-document-view[data-themed]
+    :deep(
+        .document-table
+            > tbody
+            > tr[data-row-role='unit']
+            > :not([data-cell-text-color])
+            *,
+        .document-table
+            > tbody
+            > tr:first-child:not([data-row-role])
+            > :not([data-cell-text-color])
+            *,
+        .document-table th:not([data-cell-text-color]) *
+    ) {
     color: var(--document-table-header-color) !important;
-    background-color: var(--document-table-header-background) !important;
+}
+.template-document-view :deep([data-cell-text-color] *) {
+    color: inherit !important;
+}
+.template-document-view :deep([data-cell-bold='true'] *) {
+    font-weight: 700 !important;
+}
+.template-document-view :deep([data-cell-bold='false'] *) {
+    font-weight: 400 !important;
+}
+.template-document-view :deep([data-cell-italic='true'] *) {
+    font-style: italic !important;
+}
+.template-document-view :deep([data-cell-italic='false'] *) {
+    font-style: normal !important;
 }
 .template-document-view :deep(.document-input) {
     font: inherit;

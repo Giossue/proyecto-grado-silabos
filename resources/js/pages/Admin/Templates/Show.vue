@@ -62,6 +62,7 @@ watch(
             :block-types="blockTypes"
             :variables="variables"
             :identification-design="identificationDesign"
+            :color-options="appearanceOptions.colors"
             :readonly="Boolean(processLock)"
         />
     </PageFrame>

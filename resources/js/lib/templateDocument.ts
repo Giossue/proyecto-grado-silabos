@@ -125,8 +125,8 @@ export function defaultDocument(
     );
     const headers = headerRows(layout).map((cells) =>
         row(
-            cells.map((cell) =>
-                cellNode(
+            cells.map((cell) => ({
+                ...cellNode(
                     [
                         {
                             ...textNode(cell.label),
@@ -147,7 +147,8 @@ export function defaultDocument(
                     '#DBE5F1',
                     cell.columns.map((index) => widths[index]),
                 ),
-            ),
+                type: 'tableHeader',
+            })),
         ),
     );
     const record = row(

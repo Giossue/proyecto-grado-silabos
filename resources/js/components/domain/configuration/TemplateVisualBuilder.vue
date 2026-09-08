@@ -4,8 +4,9 @@ import type { CSSProperties } from 'vue';
 import TemplateBlockCreator from '@/components/domain/configuration/TemplateBlockCreator.vue';
 import TemplateDocumentView from '@/components/domain/configuration/TemplateDocumentView.vue';
 import TemplateFieldCreator from '@/components/domain/configuration/TemplateFieldCreator.vue';
+import TemplateTableDesigner from '@/components/domain/configuration/TemplateTableDesigner.vue';
 import PaginatedDocument from '@/components/domain/PaginatedDocument.vue';
-import { defaultDocument } from '@/lib/templateDocument';
+import { defaultDocument, nodesOfType } from '@/lib/templateDocument';
 import { templatePreviewFields } from '@/lib/templatePreview';
 import type {
     TemplateAppearance,
@@ -19,6 +20,7 @@ const props = defineProps<{
     blockTypes: TemplateBuilderProps['blockTypes'];
     variables: TemplateBuilderProps['variables'];
     identificationDesign: TemplateBuilderProps['identificationDesign'];
+    colorOptions: TemplateBuilderProps['appearanceOptions']['colors'];
     readonly: boolean;
 }>();
 
@@ -57,6 +59,9 @@ const documentFor = (block: TemplateFieldContainer) =>
 
 const fieldsFor = (block: TemplateFieldContainer) =>
     templatePreviewFields(block.fields, block.table);
+
+const hasTable = (block: TemplateFieldContainer): boolean =>
+    nodesOfType(documentFor(block), 'table').length > 0;
 </script>
 
 <template>
@@ -150,7 +155,22 @@ const fieldsFor = (block: TemplateFieldContainer) =>
                             {{ sectionIndex + 1 }}.{{ fieldIndex + 1 }}
                             {{ block.title }}
                         </h3>
+                        <TemplateTableDesigner
+                            v-if="!readonly && hasTable(block)"
+                            :template-id="template.id"
+                            :block-id="block.id"
+                            :block-title="block.title"
+                            :fingerprint="block.fingerprint ?? ''"
+                            :document="documentFor(block)"
+                            :fields="fieldsFor(block)"
+                            :variables="variables"
+                            :variable-samples="variableSamples"
+                            :layout="block.table"
+                            :appearance="appearance"
+                            :colors="colorOptions"
+                        />
                         <TemplateDocumentView
+                            v-else
                             :document="documentFor(block)"
                             :fields="fieldsFor(block)"
                             :variables="variableSamples"

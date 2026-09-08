@@ -15,15 +15,20 @@ final class TemplateDocumentWord
     ) {}
 
     /** @param array<string, mixed> $node */
-    public function append(AbstractContainer $target, array $node, int $width = 9406, ?string $list = null): void
-    {
+    public function append(
+        AbstractContainer $target,
+        array $node,
+        int $width = 9406,
+        ?string $list = null,
+        ?string $alignmentOverride = null,
+    ): void {
         if ($node['type'] === 'table') {
             $this->table($target, $node, $width);
 
             return;
         }
         if ($node['type'] === 'paragraph') {
-            $alignment = $this->paragraphAlignment ?? ($node['attrs']['textAlign'] ?? 'left');
+            $alignment = $alignmentOverride ?? $this->paragraphAlignment ?? ($node['attrs']['textAlign'] ?? 'left');
             $style = ['spaceAfter' => 80, 'alignment' => $alignment === 'justify' ? 'both' : $alignment];
             if ($list !== null) {
                 $style['numStyle'] = $list;
@@ -70,7 +75,7 @@ final class TemplateDocumentWord
             'bulletList' => 'silabo-bullets', 'orderedList' => 'silabo-numbers', default => $list
         };
         foreach ($node['content'] ?? [] as $child) {
-            $this->append($target, $child, $width, $list);
+            $this->append($target, $child, $width, $list, $alignmentOverride);
         }
     }
 
@@ -104,15 +109,16 @@ final class TemplateDocumentWord
         $merged = [];
         foreach ($rows as $rowIndex => $source) {
             $role = $source['attrs']['rowRole'] ?? null;
-            $isHeader = in_array($role, ['fixed', 'unit'], true)
-                || ($role === null && $rowIndex === 0);
             $row = $table->addRow();
             $cells = $source['content'];
             $column = 0;
             while ($column < $count) {
                 if (isset($merged[$column])) {
                     $merge = $merged[$column];
-                    $row->addCell((int) array_sum(array_slice($widths, $column, $merge['span'])), ['vMerge' => 'continue', 'gridSpan' => $merge['span']]);
+                    $row->addCell(
+                        (int) array_sum(array_slice($widths, $column, $merge['span'])),
+                        $merge['options'],
+                    );
                     if (--$merged[$column]['rows'] === 0) {
                         unset($merged[$column]);
                     }
@@ -128,30 +134,104 @@ final class TemplateDocumentWord
                 $span = $attrs['colspan'] ?? 1;
                 $height = $attrs['rowspan'] ?? 1;
                 $cellWidth = (int) array_sum(array_slice($widths, $column, $span));
-                $options = ['gridSpan' => $span, 'valign' => 'center'];
-                if ($height > 1) {
-                    $options['vMerge'] = 'restart';
-                    $merged[$column] = ['span' => $span, 'rows' => $height - 1];
+                $isHeader = $role === 'unit'
+                    || $cell['type'] === 'tableHeader'
+                    || ($role === null && $rowIndex === 0);
+                $options = [
+                    'gridSpan' => $span,
+                    'valign' => 'center',
+                    ...$this->cellBorderOptions($attrs),
+                ];
+                if ($isHeader && $this->tableHeaderBackground !== null) {
+                    $options['bgColor'] = $this->tableHeaderBackground;
                 }
                 if (($attrs['backgroundColor'] ?? null) !== null) {
                     $options['bgColor'] = ltrim($attrs['backgroundColor'], '#');
                 }
-                if ($isHeader && $this->tableHeaderBackground !== null) {
-                    $options['bgColor'] = $this->tableHeaderBackground;
+                if ($height > 1) {
+                    $options['vMerge'] = 'restart';
+                    $merged[$column] = [
+                        'span' => $span,
+                        'rows' => $height - 1,
+                        'options' => [...$options, 'vMerge' => 'continue'],
+                    ];
                 }
                 $destination = $row->addCell($cellWidth, $options);
                 foreach ($cell['content'] as $child) {
+                    $styled = $isHeader && $this->tableHeaderColor !== null
+                        ? $this->withTextColor($child, $this->tableHeaderColor)
+                        : $child;
                     $this->append(
                         $destination,
-                        $isHeader && $this->tableHeaderColor !== null
-                            ? $this->withTextColor($child, $this->tableHeaderColor)
-                            : $child,
+                        $this->withCellTextStyle($styled, $attrs),
                         $cellWidth,
+                        null,
+                        is_string($attrs['textAlign'] ?? null) ? $attrs['textAlign'] : null,
                     );
                 }
                 $column += $span;
             }
         }
+    }
+
+    /**
+     * @param  array<string, mixed>  $attrs
+     * @return array<string, int|string>
+     */
+    private function cellBorderOptions(array $attrs): array
+    {
+        return match ($attrs['borderStyle'] ?? null) {
+            'none' => ['borderSize' => 0, 'borderStyle' => 'none'],
+            'thick' => ['borderSize' => 12, 'borderStyle' => 'single', 'borderColor' => '7F7F7F'],
+            'thin' => ['borderSize' => 4, 'borderStyle' => 'single', 'borderColor' => '7F7F7F'],
+            default => [],
+        };
+    }
+
+    /**
+     * @param  array<string, mixed>  $node
+     * @param  array<string, mixed>  $attrs
+     * @return array<string, mixed>
+     */
+    private function withCellTextStyle(array $node, array $attrs): array
+    {
+        if ($node['type'] === 'paragraph' && is_string($attrs['textAlign'] ?? null)) {
+            $node['attrs'] = [
+                ...($node['attrs'] ?? []),
+                'textAlign' => $attrs['textAlign'],
+            ];
+        }
+
+        if (in_array($node['type'], ['text', 'variable', 'field', 'column'], true)) {
+            $marks = $node['marks'] ?? [];
+            foreach (['bold', 'italic'] as $markType) {
+                if (! is_bool($attrs[$markType] ?? null)) {
+                    continue;
+                }
+
+                $marks = array_values(array_filter(
+                    $marks,
+                    fn (array $mark): bool => $mark['type'] !== $markType,
+                ));
+                if ($attrs[$markType]) {
+                    $marks[] = ['type' => $markType];
+                }
+            }
+            $node['marks'] = $marks;
+
+            if (is_string($attrs['textColor'] ?? null)) {
+                $node = $this->withTextColor($node, ltrim($attrs['textColor'], '#'));
+            }
+        }
+
+        if (is_array($node['content'] ?? null)) {
+            $node['content'] = array_map(
+                fn (array $child): array => $this->withCellTextStyle($child, $attrs),
+                $node['content'],
+            );
+        }
+
+        return $node;
     }
 
     /**

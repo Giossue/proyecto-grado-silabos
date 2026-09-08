@@ -7,6 +7,7 @@ use App\Modules\Configuration\Application\Actions\SaveTemplateDocument;
 use App\Modules\Configuration\Application\TemplateDocumentDefaults;
 use App\Modules\Configuration\Application\TemplateDocumentResolver;
 use App\Modules\Configuration\Application\TemplateVariables;
+use App\Modules\Configuration\Domain\TemplateAppearance;
 use App\Modules\Configuration\Domain\TemplateDocument;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
 use App\Modules\Documents\Domain\Contracts\DocumentRenderer;
@@ -129,6 +130,44 @@ class TemplateDocumentTest extends TestCase
         $this->assertCount(2, TemplateDocument::nodes($resolved, 'listItem'));
     }
 
+    public function test_cell_style_accepts_only_the_editor_catalog(): void
+    {
+        $document = $this->document();
+        $cell = TemplateDocument::normalize(
+            $document,
+            array_keys(TemplateVariables::definitions()),
+        )['content'][0]['content'][0]['content'][1];
+
+        $this->assertSame('#E7E6E6', $cell['attrs']['backgroundColor']);
+        $this->assertSame('#FFFFFF', $cell['attrs']['textColor']);
+        $this->assertSame('center', $cell['attrs']['textAlign']);
+        $this->assertTrue($cell['attrs']['bold']);
+        $this->assertFalse($cell['attrs']['italic']);
+        $this->assertSame('thick', $cell['attrs']['borderStyle']);
+
+        foreach ([
+            'backgroundColor' => 'url(https://example.com)',
+            'textColor' => 'red',
+            'textAlign' => 'diagonal',
+            'bold' => 'yes',
+            'italic' => 1,
+            'borderStyle' => 'javascript',
+        ] as $attribute => $invalid) {
+            $hostile = $document;
+            $hostile['content'][0]['content'][0]['content'][1]['attrs'][$attribute] = $invalid;
+
+            try {
+                TemplateDocument::normalize(
+                    $hostile,
+                    array_keys(TemplateVariables::definitions()),
+                );
+                $this->fail("El atributo $attribute debía rechazarse.");
+            } catch (ValidationException) {
+                $this->addToAssertionCount(1);
+            }
+        }
+    }
+
     public function test_text_field_list_format_preserves_values_and_exports_lines_as_items(): void
     {
         $template = $this->template();
@@ -181,7 +220,15 @@ class TemplateDocumentTest extends TestCase
             subject: 'Materia', subjectCode: 'SW-001', academicPeriod: '2026', revisionNumber: 1,
             revisionFingerprint: str_repeat('a', 64), templateId: '01900000-0000-7000-8000-000000000001',
             generatedAt: '2026-09-06T00:00:00Z', locale: 'es-EC',
-            snapshot: ['template_variables' => $variables, 'sections' => [['title' => 'Sección', 'blocks' => [['title' => 'Contenido', 'document' => $doc, 'fields' => $fields]]]]],
+            snapshot: [
+                'document_mapping' => ['appearance' => [
+                    ...TemplateAppearance::defaults(),
+                    'table_header_background' => '#548235',
+                    'body_alignment' => 'justify',
+                ]],
+                'template_variables' => $variables,
+                'sections' => [['title' => 'Sección', 'blocks' => [['title' => 'Contenido', 'document' => $doc, 'fields' => $fields]]]],
+            ],
         );
         $renderer = app(DocumentRenderer::class);
         $bundle = $renderer->render($input);
@@ -193,9 +240,10 @@ class TemplateDocumentTest extends TestCase
             $this->assertTrue($zip->open($path));
             $xml = $zip->getFromName('word/document.xml');
             $zip->close();
-            foreach (['Carrera congelada', 'Contenido &lt;docente&gt; &amp; aprobado', 'w:gridSpan w:val="2"', 'w:vMerge w:val="restart"', 'w:vMerge w:val="continue"', 'w:color w:val="CC0000"', 'w:sz w:val="28"', 'w:jc w:val="right"', 'Times New Roman'] as $expected) {
+            foreach (['Carrera congelada', 'Contenido &lt;docente&gt; &amp; aprobado', 'w:gridSpan w:val="2"', 'w:vMerge w:val="restart"', 'w:vMerge w:val="continue"', 'w:fill="E7E6E6"', 'w:color w:val="FFFFFF"', 'w:color w:val="CC0000"', 'w:sz w:val="28"', 'w:jc w:val="center"', 'w:jc w:val="both"', 'Times New Roman', '<w:tcBorders>', 'w:sz="12"'] as $expected) {
                 $this->assertStringContainsString($expected, $xml);
             }
+            $this->assertStringNotContainsString('w:fill="548235"', $xml);
         } finally {
             unlink($path);
         }
@@ -319,8 +367,8 @@ class TemplateDocumentTest extends TestCase
         $cell = fn ($content, $span = 1, $height = 1) => ['type' => 'tableCell', 'attrs' => ['colspan' => $span, 'rowspan' => $height, 'backgroundColor' => '#DBE5F1'], 'content' => [$p($content)]];
         $field = fn ($key, $label, $kind) => ['type' => 'field', 'attrs' => ['key' => $key, 'label' => $label, 'kind' => $kind]];
 
-        return ['type' => 'doc', 'content' => [['type' => 'table', 'content' => [
-            ['type' => 'tableRow', 'content' => [
+        $document = ['type' => 'doc', 'content' => [['type' => 'table', 'content' => [
+            ['type' => 'tableRow', 'attrs' => ['rowRole' => 'fixed'], 'content' => [
                 $cell([['type' => 'variable', 'attrs' => ['id' => 'nombre_carrera'], 'marks' => [['type' => 'bold'], ['type' => 'italic'], ['type' => 'underline'], ['type' => 'textStyle', 'attrs' => ['fontFamily' => 'Times New Roman', 'fontSize' => '14pt', 'color' => '#CC0000']]]]], 2),
                 $cell([$field('objetivo_general', 'Objetivo general', 'markdown')], 1, 2),
             ]],
@@ -329,5 +377,17 @@ class TemplateDocumentTest extends TestCase
                 $cell([$field('respuesta_extra', 'Cantidad', 'numero')]),
             ]],
         ]]]];
+        $styled = &$document['content'][0]['content'][0]['content'][1]['attrs'];
+        $styled = [
+            ...$styled,
+            'backgroundColor' => '#E7E6E6',
+            'textColor' => '#FFFFFF',
+            'textAlign' => 'center',
+            'bold' => true,
+            'italic' => false,
+            'borderStyle' => 'thick',
+        ];
+
+        return $document;
     }
 }

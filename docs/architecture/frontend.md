@@ -132,9 +132,22 @@ DOCX. No se persisten CSS, clases ni colores libres. `ProcessLocks` y `InProgres
 siguen protegiendo tanto estructura como apariencia.
 
 Los componentes documentales anteriores permanecen como lectores compatibles para
-diseños ya guardados, pero ADM-06 no monta Tiptap, menú contextual, paleta ni arrastre.
-Las tablas nuevas nacen con `TableLayout::default()`; su configuración estructural
-detallada se decidirá en una iteración posterior del constructor.
+diseños ya guardados. ADM-06 no monta un editor documental global, menú contextual,
+paleta ni arrastre. Cuando Administración pulsa **Editar tabla**,
+`TemplateTableDesigner` sustituye solo esa tabla por `TemplateTableEditor`, una instancia
+Tiptap acotada que selecciona celdas y expone fondo, color de texto, alineación,
+negrita, cursiva, borde, combinación y operaciones de filas/columnas. El guardado usa el
+PATCH existente de `SaveTemplateDocument`, con su huella, autorización, bloqueo y
+confirmación de reinicio. `TemplateDocument` normaliza el catálogo de atributos por
+celda y `TemplateDocumentView`/`TemplateDocumentWord` lo interpretan sin persistir HTML.
+El tema global se aplica solo a `tableHeader`, filas de unidad y la primera fila antigua
+sin rol; un estilo explícito de celda tiene precedencia.
+
+`TemplateBlockCreator` y `TemplateFieldCreator` reutilizan el `Select` de shadcn-vue para
+el tipo de contenido. `SelectContent` admite `portalDisabled` para permanecer dentro del
+`Popover` que posee el formulario; el valor predeterminado conserva el portal en todos
+los demás usos. Las tablas nuevas siguen naciendo con `TableLayout::default()` y después
+pueden ajustarse en la hoja.
 
 ## Editor documental anterior (I-56, reemplazado)
 

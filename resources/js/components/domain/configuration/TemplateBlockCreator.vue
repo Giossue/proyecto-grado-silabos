@@ -13,14 +13,18 @@ import {
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import {
-    NativeSelect,
-    NativeSelectOption,
-} from '@/components/ui/native-select';
-import {
     Popover,
     PopoverContent,
     PopoverTrigger,
 } from '@/components/ui/popover';
+import {
+    Select,
+    SelectContent,
+    SelectGroup,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import type { TemplateContentType } from '@/types/configuration';
 
 type EditableContentType = Exclude<
@@ -235,27 +239,35 @@ const updateOpen = (value: boolean): void => {
                                 >
                                     Tipo de contenido
                                 </FieldLabel>
-                                <NativeSelect
+                                <Select
                                     v-model="field.content_type"
-                                    class="w-full"
                                     :disabled="form.processing"
-                                    :id="`new-template-field-type-${index}`"
-                                    :aria-invalid="
-                                        Boolean(
-                                            errorFor(
-                                                `fields.${index}.content_type`,
-                                            ),
-                                        )
-                                    "
                                 >
-                                    <NativeSelectOption
-                                        v-for="type in blockTypes"
-                                        :key="type.value"
-                                        :value="type.value"
+                                    <SelectTrigger
+                                        :id="`new-template-field-type-${index}`"
+                                        class="w-full"
+                                        :aria-invalid="
+                                            Boolean(
+                                                errorFor(
+                                                    `fields.${index}.content_type`,
+                                                ),
+                                            )
+                                        "
                                     >
-                                        {{ type.label }}
-                                    </NativeSelectOption>
-                                </NativeSelect>
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent portal-disabled>
+                                        <SelectGroup>
+                                            <SelectItem
+                                                v-for="type in blockTypes"
+                                                :key="type.value"
+                                                :value="type.value"
+                                            >
+                                                {{ type.label }}
+                                            </SelectItem>
+                                        </SelectGroup>
+                                    </SelectContent>
+                                </Select>
                                 <FieldError
                                     v-if="
                                         errorFor(`fields.${index}.content_type`)

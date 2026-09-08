@@ -31,11 +31,13 @@ Fecha de corte: **30 de agosto de 2026**.
   la estructura: un bloque agrupa campos y cada campo define si el docente completa
   texto, tabla, lista con viñetas o lista numerada. La apariencia global es acotada a
   catálogos institucionales de fuente, tamaños, colores, alineación, márgenes y
-  orientación (I-56, ajuste del 7 de septiembre de 2026). Los diseños complejos ya
-  guardados, variables descriptivas como `@nombre_carrera`, columnas tipadas, unidades,
-  sumas y repetición se conservan. Docencia solo completa campos; las variables se
-  resuelven en servidor. El DOCX se genera con PHPWord desde la copia de cada revisión;
-  el PDF sigue siendo el respaldo de texto plano.
+  orientación (I-56, ajuste del 7 de septiembre de 2026). Administración puede editar
+  en la hoja el estilo y geometría de una tabla por celda: colores catalogados,
+  alineación, negrita, cursiva, borde, combinación y filas/columnas. Los diseños
+  complejos ya guardados, variables descriptivas como `@nombre_carrera`, columnas
+  tipadas, unidades, sumas y repetición se conservan. Docencia solo completa campos;
+  las variables se resuelven en servidor. El DOCX se genera con PHPWord desde la copia
+  de cada revisión; el PDF sigue siendo el respaldo de texto plano.
 - La modalidad de estudio es un dato base de la carrera (la aprueba el CES) y no un
   catálogo: presencial, semipresencial, en línea, a distancia o híbrida, fijas por reglamento.
   Una materia puede usar una modalidad distinta, sin cambiar ni recalificar la modalidad
