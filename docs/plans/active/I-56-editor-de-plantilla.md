@@ -413,3 +413,16 @@ modifica el documento, sus permisos o su exportación.
 - [x] Mostrar índice lateral anidado en escritorio y selector equivalente en móvil.
 - [x] Actualizar el enlace activo mediante `IntersectionObserver` y conservar nombres
       accesibles.
+
+## Corrección — retiro del índice de navegación (2026-09-08)
+
+Por indicación posterior del responsable, ADM-06 vuelve a presentar únicamente la hoja.
+Se retiran el índice lateral de escritorio y su selector equivalente en móvil, junto con
+la observación de secciones que solo sostenía esos controles. No cambian el documento,
+sus bloques, permisos, paginación ni exportación.
+
+- [x] Retirar ambos controles de navegación y su lógica exclusiva.
+- [x] Actualizar la especificación de pantalla y la trazabilidad de ADM-06.
+
+Verificación puntual: TypeScript, ESLint del componente, Prettier de los archivos
+afectados y `git diff --check` pasan. Sin migraciones, datos, commit ni push.
