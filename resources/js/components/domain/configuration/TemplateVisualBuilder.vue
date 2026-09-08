@@ -112,19 +112,19 @@ const hasTable = (block: TemplateFieldContainer): boolean =>
             >
                 <section class="mb-6" :aria-label="`Bloque ${section.title}`">
                     <div
-                        class="mb-3 flex items-start gap-3"
+                        class="relative mb-3"
                         data-page-unit
                         data-page-keep-next
                     >
                         <h2
-                            class="min-w-0 flex-1 leading-snug"
+                            class="min-w-0 pr-12 leading-snug"
                             :style="sectionStyle"
                         >
                             {{ sectionIndex + 1 }}. {{ section.title }}
                         </h2>
                         <div
                             v-if="!readonly"
-                            class="flex shrink-0 flex-col gap-1"
+                            class="absolute top-0 right-0 z-10 flex flex-col gap-1"
                             :aria-label="`Acciones del bloque ${section.title}`"
                         >
                             <TemplateFieldCreator
