@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
 import { MoreHorizontal, Pencil, Trash2 } from '@lucide/vue';
+import { computed, ref } from 'vue';
 import type { CSSProperties } from 'vue';
 import TemplateBlockCreator from '@/components/domain/configuration/TemplateBlockCreator.vue';
 import TemplateDocumentView from '@/components/domain/configuration/TemplateDocumentView.vue';
@@ -202,122 +202,147 @@ const bindHandle = <T,>(
                                 />
                             </div>
                             <Tooltip :disable-hoverable-content="true">
-                                <DropdownMenu
-                                    :open="openSectionMenu === section.id"
-                                    @update:open="
-                                        openSectionMenu = $event
-                                            ? section.id
-                                            : null
-                                    "
-                                >
-                                    <TooltipTrigger as-child>
-                                        <DropdownMenuTrigger as-child>
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                size="icon-sm"
-                                                class="size-7 text-foreground"
-                                                :aria-label="`Opciones de ${section.title}`"
+                                <TooltipTrigger as-child>
+                                    <span class="inline-flex">
+                                        <DropdownMenu
+                                            :open="
+                                                openSectionMenu === section.id
+                                            "
+                                            @update:open="
+                                                openSectionMenu = $event
+                                                    ? section.id
+                                                    : null
+                                            "
+                                        >
+                                            <DropdownMenuTrigger as-child>
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="icon-sm"
+                                                    class="size-7 text-foreground"
+                                                    aria-label="Opciones del bloque"
+                                                >
+                                                    <MoreHorizontal
+                                                        aria-hidden="true"
+                                                    />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent
+                                                align="end"
+                                                side="left"
                                             >
-                                                <MoreHorizontal
-                                                    aria-hidden="true"
+                                                <DropdownMenuLabel>
+                                                    Opciones del bloque
+                                                </DropdownMenuLabel>
+                                                <TemplateFieldCreator
+                                                    menu
+                                                    :template-id="template.id"
+                                                    :section-id="section.id"
+                                                    :position="
+                                                        section.blocks.length
+                                                    "
+                                                    :block-types="blockTypes"
+                                                    @closed="
+                                                        openSectionMenu = null
+                                                    "
                                                 />
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                    </TooltipTrigger>
-                                    <DropdownMenuContent
-                                        align="end"
-                                        side="left"
-                                    >
-                                        <DropdownMenuLabel>
-                                            Opciones del bloque
-                                        </DropdownMenuLabel>
-                                        <TemplateFieldCreator
-                                            menu
-                                            :template-id="template.id"
-                                            :section-id="section.id"
-                                            :position="section.blocks.length"
-                                            :block-types="blockTypes"
-                                            @closed="openSectionMenu = null"
-                                        />
-                                        <TemplateBlockCreator
-                                            menu
-                                            :template-id="template.id"
-                                            :position="sectionIndex + 1"
-                                            :block-types="blockTypes"
-                                            @closed="openSectionMenu = null"
-                                        />
-                                        <DropdownMenuSeparator />
-                                        <DropdownMenuItem
-                                            @select="
-                                                sectionActions[
-                                                    section.id
-                                                ]?.openEdit()
-                                            "
-                                        >
-                                            <Pencil aria-hidden="true" />
-                                            Editar bloque
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem
-                                            variant="destructive"
-                                            @select="
-                                                sectionActions[
-                                                    section.id
-                                                ]?.openDelete()
-                                            "
-                                        >
-                                            <Trash2 aria-hidden="true" />
-                                            Eliminar bloque
-                                        </DropdownMenuItem>
-                                        <DropdownMenuSeparator
-                                            v-if="section.blocks.length > 0"
-                                        />
-                                        <DropdownMenuSub
-                                            v-if="section.blocks.length > 0"
-                                        >
-                                            <DropdownMenuSubTrigger>
-                                                Campos
-                                            </DropdownMenuSubTrigger>
-                                            <DropdownMenuSubContent>
+                                                <TemplateBlockCreator
+                                                    menu
+                                                    :template-id="template.id"
+                                                    :position="sectionIndex + 1"
+                                                    :block-types="blockTypes"
+                                                    @closed="
+                                                        openSectionMenu = null
+                                                    "
+                                                />
+                                                <DropdownMenuSeparator />
+                                                <DropdownMenuItem
+                                                    @select="
+                                                        sectionActions[
+                                                            section.id
+                                                        ]?.openEdit()
+                                                    "
+                                                >
+                                                    <Pencil
+                                                        aria-hidden="true"
+                                                    />
+                                                    Editar bloque
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem
+                                                    variant="destructive"
+                                                    @select="
+                                                        sectionActions[
+                                                            section.id
+                                                        ]?.openDelete()
+                                                    "
+                                                >
+                                                    <Trash2
+                                                        aria-hidden="true"
+                                                    />
+                                                    Eliminar bloque
+                                                </DropdownMenuItem>
+                                                <DropdownMenuSeparator
+                                                    v-if="
+                                                        section.blocks.length >
+                                                        0
+                                                    "
+                                                />
                                                 <DropdownMenuSub
-                                                    v-for="block in section.blocks"
-                                                    :key="block.id"
+                                                    v-if="
+                                                        section.blocks.length >
+                                                        0
+                                                    "
                                                 >
                                                     <DropdownMenuSubTrigger>
-                                                        {{ block.title }}
+                                                        Campos
                                                     </DropdownMenuSubTrigger>
                                                     <DropdownMenuSubContent>
-                                                        <DropdownMenuItem
-                                                            @select="
-                                                                fieldActions[
-                                                                    block.id
-                                                                ]?.openEdit()
-                                                            "
+                                                        <DropdownMenuSub
+                                                            v-for="block in section.blocks"
+                                                            :key="block.id"
                                                         >
-                                                            <Pencil
-                                                                aria-hidden="true"
-                                                            />
-                                                            Editar campo
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem
-                                                            variant="destructive"
-                                                            @select="
-                                                                fieldActions[
-                                                                    block.id
-                                                                ]?.openDelete()
-                                                            "
-                                                        >
-                                                            <Trash2
-                                                                aria-hidden="true"
-                                                            />
-                                                            Eliminar campo
-                                                        </DropdownMenuItem>
+                                                            <DropdownMenuSubTrigger>
+                                                                {{
+                                                                    block.title
+                                                                }}
+                                                            </DropdownMenuSubTrigger>
+                                                            <DropdownMenuSubContent>
+                                                                <DropdownMenuItem
+                                                                    @select="
+                                                                        fieldActions[
+                                                                            block
+                                                                                .id
+                                                                        ]?.openEdit()
+                                                                    "
+                                                                >
+                                                                    <Pencil
+                                                                        aria-hidden="true"
+                                                                    />
+                                                                    Editar campo
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuItem
+                                                                    variant="destructive"
+                                                                    @select="
+                                                                        fieldActions[
+                                                                            block
+                                                                                .id
+                                                                        ]?.openDelete()
+                                                                    "
+                                                                >
+                                                                    <Trash2
+                                                                        aria-hidden="true"
+                                                                    />
+                                                                    Eliminar
+                                                                    campo
+                                                                </DropdownMenuItem>
+                                                            </DropdownMenuSubContent>
+                                                        </DropdownMenuSub>
                                                     </DropdownMenuSubContent>
                                                 </DropdownMenuSub>
-                                            </DropdownMenuSubContent>
-                                        </DropdownMenuSub>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </span>
+                                </TooltipTrigger>
                                 <TooltipContent
                                     paper
                                     side="left"
