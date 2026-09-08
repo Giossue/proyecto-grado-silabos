@@ -169,7 +169,7 @@ watch(
 </script>
 
 <template>
-    <div class="relative min-w-0">
+    <div class="group/template-table relative min-w-0">
         <template v-if="!editing">
             <Tooltip>
                 <TooltipTrigger as-child>
@@ -177,7 +177,7 @@ watch(
                         type="button"
                         variant="outline"
                         size="icon-sm"
-                        class="template-table-action absolute top-20 z-10"
+                        class="template-table-action absolute top-20 z-10 opacity-0 transition-opacity group-hover/template-table:opacity-100 group-focus-within/template-table:opacity-100"
                         :aria-label="`Editar tabla: ${blockTitle}`"
                         @click="start"
                     >

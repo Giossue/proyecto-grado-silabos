@@ -110,7 +110,10 @@ const hasTable = (block: TemplateFieldContainer): boolean =>
                 v-for="(section, sectionIndex) in template.sections"
                 :key="section.id"
             >
-                <section class="mb-6" :aria-label="`Bloque ${section.title}`">
+                <section
+                    class="group/template-section mb-6"
+                    :aria-label="`Bloque ${section.title}`"
+                >
                     <div
                         class="relative mb-3"
                         data-page-unit
@@ -124,7 +127,7 @@ const hasTable = (block: TemplateFieldContainer): boolean =>
                         </h2>
                         <div
                             v-if="!readonly"
-                            class="template-section-actions absolute top-0 z-10 flex flex-col gap-1"
+                            class="template-section-actions absolute top-0 z-10 flex flex-col gap-1 opacity-0 transition-opacity group-hover/template-section:opacity-100 group-focus-within/template-section:opacity-100"
                             :aria-label="`Acciones del bloque ${section.title}`"
                         >
                             <TemplateFieldCreator
