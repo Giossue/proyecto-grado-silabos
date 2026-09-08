@@ -187,23 +187,8 @@ watch(
 </script>
 
 <template>
-    <div class="group/template-table relative min-w-0">
+    <div class="min-w-0">
         <template v-if="!editing">
-            <Tooltip>
-                <TooltipTrigger as-child>
-                    <Button
-                        type="button"
-                        variant="outline"
-                        size="icon-sm"
-                        class="absolute top-1 right-1 z-10 size-7 opacity-0 transition-opacity group-focus-within/template-table:opacity-100 group-hover/template-table:opacity-100"
-                        :aria-label="`Editar tabla: ${blockTitle}`"
-                        @click="start"
-                    >
-                        <TableProperties aria-hidden="true" />
-                    </Button>
-                </TooltipTrigger>
-                <TooltipContent>Editar tabla</TooltipContent>
-            </Tooltip>
             <TemplateDocumentView
                 :document="document"
                 :fields="fields"
@@ -216,7 +201,25 @@ watch(
                 :table-header-background="appearance.table_header_background"
                 :table-header-color="appearance.table_header_color"
                 preview
-            />
+            >
+                <template #table-action>
+                    <Tooltip>
+                        <TooltipTrigger as-child>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="icon-sm"
+                                class="size-7"
+                                :aria-label="`Editar tabla: ${blockTitle}`"
+                                @click="start"
+                            >
+                                <TableProperties aria-hidden="true" />
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Editar tabla</TooltipContent>
+                    </Tooltip>
+                </template>
+            </TemplateDocumentView>
         </template>
 
         <Dialog v-if="editing" :open="editing" @update:open="updateDialogOpen">

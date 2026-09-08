@@ -252,9 +252,16 @@ test(
             .filter({ hasText: 'Agregar campo' })
             .waitFor();
 
-        await page
-            .getByRole('button', { name: 'Editar tabla: Matriz' })
-            .click();
+        const editTableButton = page.getByRole('button', {
+            name: 'Editar tabla: Matriz',
+        });
+        assert.equal(
+            await editTableButton.evaluate((button) =>
+                Boolean(button.closest('.document-table-container')),
+            ),
+            true,
+        );
+        await editTableButton.click();
         const tableDialog = page.getByRole('dialog', {
             name: 'Editar tabla: Matriz',
         });

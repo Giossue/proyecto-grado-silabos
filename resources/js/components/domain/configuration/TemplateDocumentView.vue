@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { defineComponent, h, useId } from 'vue';
+import { defineComponent, h, useId, useSlots } from 'vue';
 import { computed } from 'vue';
 import type { VNodeChild, CSSProperties } from 'vue';
 import { Button } from '@/components/ui/button';
@@ -59,6 +59,7 @@ const emit = defineEmits<{
     value: [key: string, value: string | number | boolean];
     rows: [key: string, rows: Row[]];
 }>();
+const slots = useSlots();
 const prefix = useId();
 const documentStyle = computed((): CSSProperties & Record<string, string> => ({
     fontFamily: props.fontFamily,
@@ -115,6 +116,25 @@ const columnGroup = (table: DocumentNode): VNodeChild => {
             h('col', { style: { width: `${(width / total) * 100}%` } }),
         ),
     );
+};
+const tableWithAction = (
+    table: DocumentNode,
+    content: VNodeChild[],
+): VNodeChild => {
+    const tableAction = slots['table-action'];
+    const rendered = h('table', { class: 'document-table' }, [
+        columnGroup(table),
+        h('tbody', {}, content),
+    ]);
+
+    if (!tableAction) {
+        return rendered;
+    }
+
+    return h('div', { class: 'document-table-container' }, [
+        rendered,
+        h('div', { class: 'document-table-action' }, tableAction()),
+    ]);
 };
 const markStyle = (node: DocumentNode): CSSProperties => {
     const style: CSSProperties = {};
@@ -555,10 +575,7 @@ const draw = (
                               `${layout.repeat.label} ${unit.number}`,
                           )
                         : null,
-                    h('table', { class: 'document-table' }, [
-                        columnGroup(node),
-                        h('tbody', {}, content),
-                    ]),
+                    tableWithAction(node, content),
                     props.editable
                         ? h('div', { class: 'flex flex-wrap gap-2 py-2' }, [
                               h(
@@ -612,10 +629,7 @@ const draw = (
     }
 
     if (node.type === 'table') {
-        return h('table', { class: 'document-table' }, [
-            columnGroup(node),
-            h('tbody', {}, children()),
-        ]);
+        return tableWithAction(node, children());
     }
 
     if (node.type === 'tableRow') {
@@ -725,6 +739,15 @@ const Content = defineComponent({ setup: () => () => draw(props.document) });
     width: 100%;
     table-layout: fixed;
     margin: 8px 0;
+}
+.template-document-view :deep(.document-table-container) {
+    position: relative;
+}
+.template-document-view :deep(.document-table-action) {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    z-index: 1;
 }
 .template-document-view :deep(td),
 .template-document-view :deep(th) {
