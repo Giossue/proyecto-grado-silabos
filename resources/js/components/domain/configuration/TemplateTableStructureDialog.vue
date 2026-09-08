@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3';
 import { ArrowDown, ArrowUp, Plus, Save, Settings2, Trash2 } from '@lucide/vue';
-import { computed, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { toast } from 'vue-sonner';
 import TemplateController from '@/actions/App/Modules/Configuration/Presentation/Http/Controllers/TemplateController';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -33,6 +33,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { registerLocalPurgeConfirmation } from '@/composables/usePurgeConfirmation';
 import {
     cloneTableLayout,
     defaultTableLayout,
@@ -54,6 +55,17 @@ const props = defineProps<{
 
 const emit = defineEmits<{ saved: [] }>();
 const open = ref(false);
+const generatedColumnKeys = new Set<string>();
+const generatedHeaderKeys = new Set<string>();
+
+const url = computed(() =>
+    TemplateController.updateTableLayout.url({
+        template: props.templateId,
+        block: props.blockId,
+    }),
+);
+const unregisterPurgeConfirmation = registerLocalPurgeConfirmation(url.value);
+onBeforeUnmount(unregisterPurgeConfirmation);
 
 const initialLayout = (): TableLayout =>
     cloneTableLayout(props.layout ?? defaultTableLayout());
@@ -100,6 +112,8 @@ const canSubmit = computed(
 const reset = (): void => {
     const layout = initialLayout();
 
+    generatedColumnKeys.clear();
+    generatedHeaderKeys.clear();
     form.fingerprint = props.fingerprint;
     form.columns = layout.columns;
     form.groups = layout.groups;
@@ -148,11 +162,13 @@ const addColumn = (): void => {
     }
 
     const label = `Columna ${form.columns.length + 1}`;
+    const key = tableKeyFor(
+        label,
+        form.columns.map((column) => column.key),
+    );
+    generatedColumnKeys.add(key);
     form.columns.push({
-        key: tableKeyFor(
-            label,
-            form.columns.map((column) => column.key),
-        ),
+        key,
         label,
         type: 'text',
         group: null,
@@ -165,6 +181,7 @@ const addColumn = (): void => {
 
 const removeColumn = (index: number): void => {
     if (form.columns.length > 1) {
+        generatedColumnKeys.delete(form.columns[index].key);
         form.columns.splice(index, 1);
     }
 };
@@ -175,13 +192,35 @@ const addHeaderField = (): void => {
     }
 
     const label = `Dato de la unidad ${form.header_fields.length + 1}`;
-    form.header_fields.push({
-        key: tableKeyFor(
-            label,
-            form.header_fields.map((field) => field.key),
-        ),
+    const key = tableKeyFor(
         label,
-    });
+        form.header_fields.map((field) => field.key),
+    );
+    generatedHeaderKeys.add(key);
+    form.header_fields.push({ key, label });
+};
+
+const removeHeaderField = (index: number): void => {
+    generatedHeaderKeys.delete(form.header_fields[index].key);
+    form.header_fields.splice(index, 1);
+};
+
+const refreshGeneratedKey = (
+    item: { key: string; label: string },
+    items: { key: string; label: string }[],
+    generated: Set<string>,
+): void => {
+    if (!generated.has(item.key) || item.label.trim() === '') {
+        return;
+    }
+
+    const previous = item.key;
+    item.key = tableKeyFor(
+        item.label,
+        items.filter((candidate) => candidate !== item).map(({ key }) => key),
+    );
+    generated.delete(previous);
+    generated.add(item.key);
 };
 
 const setColumnType = (column: TableColumn, value: unknown): void => {
@@ -203,6 +242,11 @@ const setColumnRole = (column: TableColumn, value: unknown): void => {
     column.role = role ?? null;
 
     if (role) {
+        form.columns.forEach((candidate) => {
+            if (candidate !== column && candidate.role === role) {
+                candidate.role = null;
+            }
+        });
         column.type = 'number';
 
         if (role === 'week') {
@@ -212,6 +256,12 @@ const setColumnRole = (column: TableColumn, value: unknown): void => {
 };
 
 const submit = (confirmPurge = false): void => {
+    form.columns.forEach((column) =>
+        refreshGeneratedKey(column, form.columns, generatedColumnKeys),
+    );
+    form.header_fields.forEach((field) =>
+        refreshGeneratedKey(field, form.header_fields, generatedHeaderKeys),
+    );
     form.confirm_purge = confirmPurge;
     form.transform((data) => ({
         ...data,
@@ -224,28 +274,22 @@ const submit = (confirmPurge = false): void => {
                     : false,
         })),
     }));
-    form.patch(
-        TemplateController.updateTableLayout.url({
-            template: props.templateId,
-            block: props.blockId,
-        }),
-        {
-            preserveScroll: true,
-            onSuccess: () => {
-                toast.success('Estructura de la tabla guardada.');
-                open.value = false;
-                emit('saved');
-            },
-            onError: (errors) => {
-                if (!('purge_required' in errors)) {
-                    toast.error(
-                        Object.values(errors)[0] ??
-                            'No se pudo guardar la estructura.',
-                    );
-                }
-            },
+    form.patch(url.value, {
+        preserveScroll: true,
+        onSuccess: () => {
+            toast.success('Estructura de la tabla guardada.');
+            open.value = false;
+            emit('saved');
         },
-    );
+        onError: (errors) => {
+            if (!('purge_required' in errors)) {
+                toast.error(
+                    Object.values(errors)[0] ??
+                        'No se pudo guardar la estructura.',
+                );
+            }
+        },
+    });
 };
 </script>
 
@@ -370,7 +414,7 @@ const submit = (confirmPurge = false): void => {
 
                             <Field
                                 v-for="(field, index) in form.header_fields"
-                                :key="field.key"
+                                :key="index"
                                 :data-invalid="
                                     Boolean(
                                         errorFor(
@@ -390,6 +434,13 @@ const submit = (confirmPurge = false): void => {
                                                 errorFor(
                                                     `header_fields.${index}.label`,
                                                 ),
+                                            )
+                                        "
+                                        @blur="
+                                            refreshGeneratedKey(
+                                                field,
+                                                form.header_fields,
+                                                generatedHeaderKeys,
                                             )
                                         "
                                     />
@@ -429,9 +480,7 @@ const submit = (confirmPurge = false): void => {
                                         size="icon-sm"
                                         :disabled="form.processing"
                                         :aria-label="`Quitar ${field.label}`"
-                                        @click="
-                                            form.header_fields.splice(index, 1)
-                                        "
+                                        @click="removeHeaderField(index)"
                                     >
                                         <Trash2 aria-hidden="true" />
                                     </Button>
@@ -482,7 +531,7 @@ const submit = (confirmPurge = false): void => {
 
                             <FieldGroup
                                 v-for="(column, index) in form.columns"
-                                :key="column.key"
+                                :key="index"
                                 class="gap-4 rounded-lg border p-4"
                             >
                                 <div
@@ -569,6 +618,13 @@ const submit = (confirmPurge = false): void => {
                                                     errorFor(
                                                         `columns.${index}.label`,
                                                     ),
+                                                )
+                                            "
+                                            @blur="
+                                                refreshGeneratedKey(
+                                                    column,
+                                                    form.columns,
+                                                    generatedColumnKeys,
                                                 )
                                             "
                                         />

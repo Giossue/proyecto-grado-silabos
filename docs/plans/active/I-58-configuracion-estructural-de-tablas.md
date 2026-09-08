@@ -2,8 +2,8 @@
 
 ## Estado
 
-En implementación desde el 2026-09-08 por solicitud explícita del responsable del
-producto.
+Implementación verificada localmente el 2026-09-08. Permanece activo por la revisión
+manual de foco, contraste y dispositivos reales asociada a PV-19.
 
 ## Problema
 
@@ -36,15 +36,15 @@ la tabla.
 
 ## Unidad vertical
 
-- [ ] Mostrar los nodos `column` como `$clave` y conservar `@clave` para variables.
-- [ ] Añadir un diálogo de estructura desde el modal de tabla.
-- [ ] Permitir configurar repetición por unidades, datos de cabecera, columnas, tipos,
+- [x] Mostrar los nodos `column` como `$clave` y conservar `@clave` para variables.
+- [x] Añadir un diálogo de estructura desde el modal de tabla.
+- [x] Permitir configurar repetición por unidades, datos de cabecera, columnas, tipos,
       uso semántico y totalización.
-- [ ] Guardar esquema y reiniciar el documento visual de la tabla de forma atómica,
+- [x] Guardar esquema y reiniciar el documento visual de la tabla de forma atómica,
       protegida por huella, bloqueo, confirmación y auditoría.
-- [ ] Mantener compatibilidad con tablas existentes, grupos y bandas conservados.
-- [ ] Cubrir servidor, TypeScript y recorrido Chromium.
-- [ ] Actualizar producto, arquitectura y trazabilidad.
+- [x] Mantener compatibilidad con tablas existentes, grupos y bandas conservados.
+- [x] Cubrir servidor, TypeScript y recorrido Chromium.
+- [x] Actualizar producto, arquitectura y trazabilidad.
 
 ## Criterios de aceptación
 
@@ -67,3 +67,11 @@ la tabla.
 - `npm run types:check`, ESLint focalizado y `npm run build`;
 - prueba Chromium del constructor en 1440 px y 360 px.
 
+## Evidencia local
+
+- `TemplateDocumentTest` y `TemplateAndSourceTest`: 31 pruebas y 301 aserciones.
+- Pint focalizado y PHPStan: aprobados sin errores.
+- `vue-tsc`, ESLint focalizado, Prettier y compilación Vite: aprobados.
+- `template-visual-builder.mjs`, `document-pagination.mjs` y
+  `template-document-editor.mjs`: 3 recorridos aprobados en Chromium; el primero cubre
+  el diálogo estructural, generación automática de claves y vista de 360 px.

@@ -19,6 +19,15 @@ modificaron. Corresponde resolverlos en el mantenimiento de calidad general; no 
 sus pruebas ni borrar la carpeta externa. Los estados y conteos que siguen son el corte
 histórico, no una afirmación sobre la puerta actual.
 
+## Actualización de tablas, 2026-09-08 (I-57 e I-58)
+
+La planificación admite cualquier cantidad de unidades y filas, valida semanas y horas
+contra la malla y exporta cada unidad en orientación horizontal. Administración ya puede
+definir desde la interfaz la repetición, cabecera, columnas, tipos, roles y totales de una
+tabla; `@` identifica datos automáticos y `$` datos repetibles. La implementación y sus
+recorridos Chromium están verificados. Quedan la revisión perceptiva/dispositivos reales
+de PV-19 y la fidelidad institucional del DOCX de PV-07.
+
 ## 1. Código: sin deuda funcional conocida
 
 No hay `TODO` ni `FIXME` nuevos en I-19. Formato, análisis estático, tipos, compilación y
@@ -118,6 +127,7 @@ Done»_, y la Definition of Done incluye la revisión manual de interfaz del pun
 | I-19       | completa               | revisión manual de cards, `Sheet`, foco y dispositivos reales  |
 | I-20       | completa               | revisión manual de Malla, estados, foco y dispositivos reales  |
 | I-40       | completa               | revisión manual de COR-14; DT-12 antes de automatizar el cierre de períodos |
+| I-57, I-58 | completas              | revisión manual de interfaz; fidelidad PV-07 y dispositivos PV-19           |
 
 ## 5. Orden sugerido
 

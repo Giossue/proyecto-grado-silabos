@@ -616,7 +616,12 @@ test(
             structureRequest.data.header_fields[0].label,
             'Resultado de aprendizaje',
         );
+        assert.equal(
+            structureRequest.data.header_fields[0].key,
+            'resultado_de_aprendizaje',
+        );
         assert.equal(structureRequest.data.columns[2].label, 'Semana');
+        assert.equal(structureRequest.data.columns[2].key, 'semana');
         assert.equal(structureRequest.data.columns[2].role, 'week');
         assert.equal(structureRequest.data.columns[2].sum, false);
         assert.equal(structureRequest.data.totals.enabled, true);
