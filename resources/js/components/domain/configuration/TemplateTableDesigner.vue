@@ -223,11 +223,7 @@ watch(
                                 <TableProperties aria-hidden="true" />
                             </Button>
                         </TooltipTrigger>
-                        <TooltipContent
-                            class="bg-black text-white [&>svg]:bg-black [&>svg]:fill-black"
-                        >
-                            Editar tabla
-                        </TooltipContent>
+                        <TooltipContent paper> Editar tabla </TooltipContent>
                     </Tooltip>
                 </template>
             </TemplateDocumentView>

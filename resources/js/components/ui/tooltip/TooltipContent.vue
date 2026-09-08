@@ -9,13 +9,18 @@ defineOptions({
   inheritAttrs: false,
 })
 
-const props = withDefaults(defineProps<TooltipContentProps & { class?: HTMLAttributes["class"] }>(), {
+const props = withDefaults(defineProps<TooltipContentProps & {
+  class?: HTMLAttributes["class"]
+  /** El tooltip se muestra sobre papel blanco, no sobre la interfaz tematizada. */
+  paper?: boolean
+}>(), {
   sideOffset: 4,
+  paper: false,
 })
 
 const emits = defineEmits<TooltipContentEmits>()
 
-const delegatedProps = reactiveOmit(props, "class")
+const delegatedProps = reactiveOmit(props, "class", "paper")
 const forwarded = useForwardPropsEmits(delegatedProps, emits)
 </script>
 
@@ -24,11 +29,11 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
     <TooltipContent
       data-slot="tooltip-content"
       v-bind="{ ...forwarded, ...$attrs }"
-      :class="cn('bg-foreground text-background animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 w-fit rounded-md px-3 py-1.5 text-xs text-balance', props.class)"
+      :class="cn(props.paper ? 'bg-black text-white' : 'bg-foreground text-background', 'animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 w-fit rounded-md px-3 py-1.5 text-xs text-balance', props.class)"
     >
       <slot />
 
-      <TooltipArrow class="bg-foreground fill-foreground z-50 size-2.5 translate-y-[calc(-50%_-_2px)] rotate-45 rounded-[2px]" />
+      <TooltipArrow :class="cn(props.paper ? 'bg-black fill-black' : 'bg-foreground fill-foreground', 'z-50 size-2.5 translate-y-[calc(-50%_-_2px)] rotate-45 rounded-[2px]')" />
     </TooltipContent>
   </TooltipPortal>
 </template>

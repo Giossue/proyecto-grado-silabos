@@ -57,11 +57,7 @@ const helpOpen = ref(false);
                 </Popover>
             </span>
         </TooltipTrigger>
-        <TooltipContent
-            side="left"
-            :side-offset="8"
-            class="bg-black text-white [&>svg]:bg-black [&>svg]:fill-black"
-        >
+        <TooltipContent paper side="left" :side-offset="8">
             {{ label }}
         </TooltipContent>
     </Tooltip>

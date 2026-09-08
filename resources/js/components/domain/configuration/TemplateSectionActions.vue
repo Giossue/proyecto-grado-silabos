@@ -131,11 +131,7 @@ const destroy = (): void => {
                 </DropdownMenu>
             </span>
         </TooltipTrigger>
-        <TooltipContent
-            class="bg-black text-white [&>svg]:bg-black [&>svg]:fill-black"
-        >
-            Acciones del bloque
-        </TooltipContent>
+        <TooltipContent paper> Acciones del bloque </TooltipContent>
     </Tooltip>
 
     <Dialog v-model:open="editOpen">

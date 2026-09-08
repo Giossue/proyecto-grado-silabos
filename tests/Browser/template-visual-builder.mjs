@@ -360,6 +360,12 @@ test(
             ),
             'rgb(0, 0, 0)',
         );
+        assert.equal(
+            await tableTooltip
+                .locator('svg')
+                .evaluate((element) => getComputedStyle(element).fill),
+            'rgb(0, 0, 0)',
+        );
         await editTableButton.click();
         const tableDialog = page.getByRole('dialog', {
             name: 'Editar tabla: Matriz',
