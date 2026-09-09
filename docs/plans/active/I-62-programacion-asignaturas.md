@@ -2,7 +2,8 @@
 
 ## Estado
 
-En implementación desde el 2026-09-09.
+Implementación y migración local verificadas el 2026-09-09. El despliegue compatible y
+la migración remota permanecen pendientes.
 
 ## Problema
 
@@ -71,9 +72,14 @@ La base remota se migra mediante el procedimiento con `.pgpass`, bloqueo aislado
 estado antes/después descrito en `docs/security/hardening.md`, una vez que el artefacto
 compatible esté desplegado.
 
-## Verificación prevista
+## Evidencia de verificación
 
-- Pruebas focalizadas de estructura académica, convocatorias, relevo e identificación.
-- Pruebas de arquitectura de interfaz y esquema en español.
-- `composer verify` con PostgreSQL y Redis.
-- `php artisan migrate:status` y comprobaciones de conteo/relaciones en local y remoto.
+- `composer verify`: 399 pruebas y 5.929 aserciones; escaneo de secretos, ESLint,
+  Prettier, TypeScript, Pint, PHPStan y build de producción aprobados.
+- Pruebas focalizadas iniciales: 79 pruebas y 986 aserciones sobre estructura
+  académica, convocatorias, relevo, identificación, esquema y planificación.
+- Base local: migraciones `000051` y `000052` aplicadas; 1 programación, 1 paralelo,
+  0 alcances y 0 relaciones huérfanas después del cambio.
+- Prevalidación remota de solo lectura: 42 programaciones, 43 paralelos, 0 alcances y
+  0 duplicados por período/materia. Las migraciones `000051` y `000052` siguen
+  pendientes hasta desplegar el artefacto compatible.

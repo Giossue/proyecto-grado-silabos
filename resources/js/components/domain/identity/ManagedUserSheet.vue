@@ -108,6 +108,7 @@ watch(open, (isOpen) => {
                         <Input
                             id="teacher-scope"
                             :model-value="`Docente · ${teacherCareer.name}`"
+                            placeholder="Ej. Docente · Software"
                             readonly
                         />
                     </Field>

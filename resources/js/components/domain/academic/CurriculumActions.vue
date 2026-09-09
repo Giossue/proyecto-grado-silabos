@@ -55,8 +55,8 @@ const deleteOpen = ref(false);
                     <DialogTitle>Eliminar malla</DialogTitle>
                     <DialogDescription>
                         Esta acción solo se completará si la malla no tiene
-                        materias programadas ni sílabos relacionados. Si ya tiene historial,
-                        debe deshabilitarla.
+                        materias programadas ni sílabos relacionados. Si ya
+                        tiene historial, debe deshabilitarla.
                     </DialogDescription>
                 </DialogHeader>
 

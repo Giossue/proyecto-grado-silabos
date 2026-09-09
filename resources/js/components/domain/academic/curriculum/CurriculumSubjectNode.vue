@@ -219,7 +219,8 @@ const totalFields = computed(
                     <DialogDescription>
                         Se eliminará «{{ data.subject.name }}» junto con sus
                         relaciones académicas. Esta acción solo se completará si
-                        la materia no tiene programaciones ni sílabos relacionados.
+                        la materia no tiene programaciones ni sílabos
+                        relacionados.
                     </DialogDescription>
                 </DialogHeader>
 

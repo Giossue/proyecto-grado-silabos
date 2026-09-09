@@ -76,7 +76,10 @@ const deletionDescription = computed(() =>
             <slot />
 
             <DropdownMenuItem
-                v-if="entity === 'programacion_asignatura' && parallelCreationSupported"
+                v-if="
+                    entity === 'programacion_asignatura' &&
+                    parallelCreationSupported
+                "
                 @select="parallelCreationOpen = true"
             >
                 <Plus aria-hidden="true" />
@@ -132,11 +135,17 @@ const deletionDescription = computed(() =>
                 >
                     <p
                         v-if="
-                            errors.scheduledSubject || errors.record || errors.process
+                            errors.scheduledSubject ||
+                            errors.record ||
+                            errors.process
                         "
                         class="mb-4 text-sm text-destructive"
                     >
-                        {{ errors.scheduledSubject || errors.record || errors.process }}
+                        {{
+                            errors.scheduledSubject ||
+                            errors.record ||
+                            errors.process
+                        }}
                     </p>
                     <DialogFooter>
                         <DialogClose as-child>

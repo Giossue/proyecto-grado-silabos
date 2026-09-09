@@ -177,7 +177,8 @@ const canReviewCurrent = computed(
 );
 const planningExpectations = computed<PlanningExpectations>(() => ({
     teaching_weeks:
-        props.revision.snapshot.academic_context?.scheduled_subject?.teaching_weeks ??
+        props.revision.snapshot.academic_context?.scheduled_subject
+            ?.teaching_weeks ??
         props.revision.snapshot.academic_context?.offering?.teaching_weeks ??
         null,
     credits: props.revision.snapshot.academic_context?.subject?.credits ?? null,

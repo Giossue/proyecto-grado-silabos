@@ -91,7 +91,7 @@ const selectOption = (option: Option): void => {
             />
         </PopoverAnchor>
         <PopoverContent
-            class="w-(--reka-popover-trigger-width) max-h-72 overflow-y-auto p-1"
+            class="max-h-72 w-(--reka-popover-trigger-width) overflow-y-auto p-1"
             align="start"
             @open-auto-focus.prevent
             @mousedown.stop
@@ -104,7 +104,7 @@ const selectOption = (option: Option): void => {
                     type="button"
                     role="option"
                     :aria-selected="option.id === selectedId"
-                    class="focus:bg-accent focus:text-accent-foreground relative flex w-full cursor-default items-center gap-2 rounded-sm py-1.5 pr-2 pl-2 text-left text-sm outline-hidden select-none"
+                    class="relative flex w-full cursor-default items-center gap-2 rounded-sm py-1.5 pr-2 pl-2 text-left text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground"
                     @mousedown.prevent
                     @click="selectOption(option)"
                 >

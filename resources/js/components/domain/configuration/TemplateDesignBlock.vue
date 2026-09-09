@@ -366,6 +366,7 @@ watch(
                             <Input
                                 id="design-title"
                                 :model-value="form.title"
+                                placeholder="Ej. Identificación de la asignatura"
                                 @update:model-value="updatePrimaryName"
                                 maxlength="180"
                                 :disabled="form.processing"

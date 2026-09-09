@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3';
-import { CalendarCheck, CheckCheck, ListChecks, Plus, Trash2 } from '@lucide/vue';
+import { CalendarCheck, ListChecks, Trash2 } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import CareerAcademicStructureController from '@/actions/App/Modules/Academic/Presentation/Http/Controllers/CareerAcademicStructureController';
 import FormSheet from '@/components/domain/FormSheet.vue';
@@ -22,6 +22,7 @@ import {
     Table,
     TableBody,
     TableCell,
+    TableEmpty,
     TableHead,
     TableHeader,
     TableRow,
@@ -42,7 +43,10 @@ type PreparationRow = {
     parallels: ParallelDraft[];
 };
 
-const props = defineProps<Pick<AcademicStructureProps, 'scheduledSubjects' | 'options'>>();
+const props =
+    defineProps<
+        Pick<AcademicStructureProps, 'scheduledSubjects' | 'options'>
+    >();
 const open = ref(false);
 const rows = ref<PreparationRow[]>([]);
 const bulkCode = ref('A');
@@ -70,12 +74,15 @@ const dateRange = (period: Option): string =>
               dateFormatter.format(new Date(period.starts_on + 'T00:00:00Z')),
               dateFormatter.format(new Date(period.ends_on + 'T00:00:00Z')),
           ].join(' – ')
-        : period.nombre ?? '';
+        : (period.nombre ?? '');
 const preparedSubjectIds = computed(
     () =>
         new Set(
             props.scheduledSubjects
-                .filter((scheduledSubject) => scheduledSubject.period_id === prepare.period_id)
+                .filter(
+                    (scheduledSubject) =>
+                        scheduledSubject.period_id === prepare.period_id,
+                )
                 .map((scheduledSubject) => scheduledSubject.subject_id),
         ),
 );
@@ -177,7 +184,7 @@ watch(open, (isOpen) => {
         wide
         trigger-label="Preparar período"
         title="Preparar período académico"
-        description="Seleccione materias aún no preparadas y configure sus paralelos. Campus y modalidad se heredan de la carrera."
+        description="Seleccione materias aún no programadas y configure sus paralelos. Campus y modalidad se heredan de la carrera."
     >
         <template #trigger>
             <Button>
@@ -196,7 +203,9 @@ watch(open, (isOpen) => {
                         <Select v-model="prepare.period_id" required>
                             <SelectTrigger
                                 id="period-preparation-period"
-                                :aria-invalid="Boolean(prepare.errors.period_id)"
+                                :aria-invalid="
+                                    Boolean(prepare.errors.period_id)
+                                "
                             >
                                 <SelectValue
                                     placeholder="Seleccione un período"
@@ -222,194 +231,220 @@ watch(open, (isOpen) => {
 
                     <Alert v-if="prepare.period_id === ''">
                         <AlertDescription>
-                            Seleccione un período para ver las materias que aún no
-                            están programadas.
-                        </AlertDescription>
-                    </Alert>
-
-                    <Alert v-else-if="availableRows.length === 0">
-                        <AlertDescription>
-                            Todas las materias activas ya están programadas en este
-                            período. Agregue paralelos desde las acciones de cada
-                            materia.
+                            Seleccione un período para ver las materias que aún
+                            no están programadas.
                         </AlertDescription>
                     </Alert>
 
                     <template v-else>
-                    <div
-                        class="flex w-full max-w-5xl flex-col gap-3 rounded-lg border bg-muted/30 p-4 lg:flex-row lg:items-end"
-                    >
-                        <Field class="min-w-0 flex-1">
-                            <FieldLabel for="period-preparation-code">
-                                Paralelo inicial para las seleccionadas
-                            </FieldLabel>
-                            <Input
-                                id="period-preparation-code"
-                                v-model="bulkCode"
-                                placeholder="Ej. A"
-                            />
-                        </Field>
-                        <Field class="min-w-0 flex-1">
-                            <FieldLabel for="period-preparation-shift">
-                                Jornada inicial para las seleccionadas
-                            </FieldLabel>
-                            <Select v-model="bulkShift">
-                                <SelectTrigger id="period-preparation-shift">
-                                    <SelectValue
-                                        placeholder="Sin jornada definida"
-                                    />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectGroup>
-                                        <SelectItem
-                                            v-for="shift in SHIFTS"
-                                            :key="shift.value"
-                                            :value="shift.value"
-                                        >
-                                            {{ shift.label }}
-                                        </SelectItem>
-                                    </SelectGroup>
-                                </SelectContent>
-                            </Select>
-                        </Field>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            :disabled="selectedRows.length === 0"
-                            @click="applyToSelected"
+                        <div
+                            v-if="availableRows.length > 0"
+                            class="flex w-full max-w-5xl flex-col gap-3 rounded-lg border bg-muted/30 p-4 lg:flex-row lg:items-end"
                         >
-                            <CheckCheck
-                                data-icon="inline-start"
-                                aria-hidden="true"
-                            />
-                            Aplicar a seleccionadas
-                        </Button>
-                    </div>
-
-                    <div class="flex flex-wrap items-center gap-2">
-                        <Button
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            @click="selectAll(true)"
-                        >
-                            Seleccionar todas
-                        </Button>
-                        <Button
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            @click="selectAll(false)"
-                        >
-                            Ninguna
-                        </Button>
-                        <p class="text-sm text-muted-foreground">
-                            {{ selectedRows.length }} de {{ availableRows.length }}
-                            materias seleccionadas.
-                        </p>
-                    </div>
-
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead class="w-12">
-                                    <span class="sr-only">Incluir</span>
-                                </TableHead>
-                                <TableHead>Código</TableHead>
-                                <TableHead>Materia</TableHead>
-                                <TableHead>Paralelos y jornada</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            <TableRow v-for="row in availableRows" :key="row.id">
-                                <TableCell>
-                                    <Checkbox
-                                        :model-value="row.selected"
-                                        :aria-label="'Incluir ' + row.name"
-                                        @update:model-value="row.selected = $event === true"
-                                    />
-                                </TableCell>
-                                <TableCell>{{ row.code }}</TableCell>
-                                <TableCell>{{ row.name }}</TableCell>
-                                <TableCell>
-                                    <div class="flex flex-col gap-2">
-                                        <div
-                                            v-for="(parallel, index) in row.parallels"
-                                            :key="index"
-                                            class="flex flex-wrap items-center gap-2"
-                                        >
-                                            <Input
-                                                v-model="parallel.code"
-                                                class="w-28"
-                                                :disabled="!row.selected"
-                                                :aria-label="`Código del paralelo ${index + 1} de ${row.name}`"
-                                                :placeholder="index === 0 ? 'Ej. A' : 'Ej. B'"
-                                            />
-                                            <Select
-                                                v-model="parallel.shift"
-                                                :disabled="!row.selected"
+                            <Field class="min-w-0 flex-1">
+                                <FieldLabel for="period-preparation-code">
+                                    Paralelo inicial para las seleccionadas
+                                </FieldLabel>
+                                <Input
+                                    id="period-preparation-code"
+                                    v-model="bulkCode"
+                                    placeholder="Ej. A"
+                                />
+                            </Field>
+                            <Field class="min-w-0 flex-1">
+                                <FieldLabel for="period-preparation-shift">
+                                    Jornada inicial para las seleccionadas
+                                </FieldLabel>
+                                <Select v-model="bulkShift">
+                                    <SelectTrigger
+                                        id="period-preparation-shift"
+                                    >
+                                        <SelectValue
+                                            placeholder="Sin jornada definida"
+                                        />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectGroup>
+                                            <SelectItem
+                                                v-for="shift in SHIFTS"
+                                                :key="shift.value"
+                                                :value="shift.value"
                                             >
-                                                <SelectTrigger
-                                                    class="w-44"
-                                                    :aria-label="`Jornada del paralelo ${index + 1} de ${row.name}`"
+                                                {{ shift.label }}
+                                            </SelectItem>
+                                        </SelectGroup>
+                                    </SelectContent>
+                                </Select>
+                            </Field>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                :disabled="selectedRows.length === 0"
+                                @click="applyToSelected"
+                            >
+                                Aplicar a seleccionadas
+                            </Button>
+                        </div>
+
+                        <div
+                            v-if="availableRows.length > 0"
+                            class="flex flex-wrap items-center gap-2"
+                        >
+                            <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                @click="selectAll(true)"
+                            >
+                                Seleccionar todas
+                            </Button>
+                            <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                @click="selectAll(false)"
+                            >
+                                Ninguna
+                            </Button>
+                            <p class="text-sm text-muted-foreground">
+                                {{ selectedRows.length }} de
+                                {{ availableRows.length }}
+                                materias seleccionadas.
+                            </p>
+                        </div>
+
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead class="w-12">
+                                        <span class="sr-only">Incluir</span>
+                                    </TableHead>
+                                    <TableHead>Código</TableHead>
+                                    <TableHead>Materia</TableHead>
+                                    <TableHead>Paralelos y jornada</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                <TableEmpty
+                                    v-if="availableRows.length === 0"
+                                    :colspan="4"
+                                >
+                                    Todas las materias activas ya están
+                                    programadas en este período. Agregue
+                                    paralelos desde las acciones de cada materia
+                                    programada.
+                                </TableEmpty>
+                                <TableRow
+                                    v-for="row in availableRows"
+                                    :key="row.id"
+                                >
+                                    <TableCell>
+                                        <Checkbox
+                                            :model-value="row.selected"
+                                            :aria-label="'Incluir ' + row.name"
+                                            @update:model-value="
+                                                row.selected = $event === true
+                                            "
+                                        />
+                                    </TableCell>
+                                    <TableCell>{{ row.code }}</TableCell>
+                                    <TableCell>{{ row.name }}</TableCell>
+                                    <TableCell>
+                                        <div class="flex flex-col gap-2">
+                                            <div
+                                                v-for="(
+                                                    parallel, index
+                                                ) in row.parallels"
+                                                :key="index"
+                                                class="flex flex-wrap items-center gap-2"
+                                            >
+                                                <Input
+                                                    v-model="parallel.code"
+                                                    class="w-28"
+                                                    :disabled="!row.selected"
+                                                    :aria-label="`Código del paralelo ${index + 1} de ${row.name}`"
+                                                    :placeholder="
+                                                        index === 0
+                                                            ? 'Ej. A'
+                                                            : 'Ej. B'
+                                                    "
+                                                />
+                                                <Select
+                                                    v-model="parallel.shift"
+                                                    :disabled="!row.selected"
                                                 >
-                                                    <SelectValue
-                                                        placeholder="Sin jornada"
+                                                    <SelectTrigger
+                                                        class="w-44"
+                                                        :aria-label="`Jornada del paralelo ${index + 1} de ${row.name}`"
+                                                    >
+                                                        <SelectValue
+                                                            placeholder="Sin jornada"
+                                                        />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectGroup>
+                                                            <SelectItem
+                                                                v-for="shift in SHIFTS"
+                                                                :key="
+                                                                    shift.value
+                                                                "
+                                                                :value="
+                                                                    shift.value
+                                                                "
+                                                            >
+                                                                {{
+                                                                    shift.label
+                                                                }}
+                                                            </SelectItem>
+                                                        </SelectGroup>
+                                                    </SelectContent>
+                                                </Select>
+                                                <Button
+                                                    v-if="
+                                                        row.parallels.length > 1
+                                                    "
+                                                    type="button"
+                                                    size="icon-sm"
+                                                    variant="ghost"
+                                                    :disabled="!row.selected"
+                                                    :aria-label="`Quitar paralelo ${parallel.code || index + 1} de ${row.name}`"
+                                                    @click="
+                                                        removeParallel(
+                                                            row,
+                                                            index,
+                                                        )
+                                                    "
+                                                >
+                                                    <Trash2
+                                                        aria-hidden="true"
                                                     />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectGroup>
-                                                        <SelectItem
-                                                            v-for="shift in SHIFTS"
-                                                            :key="shift.value"
-                                                            :value="shift.value"
-                                                        >
-                                                            {{ shift.label }}
-                                                        </SelectItem>
-                                                    </SelectGroup>
-                                                </SelectContent>
-                                            </Select>
+                                                </Button>
+                                            </div>
                                             <Button
-                                                v-if="row.parallels.length > 1"
                                                 type="button"
-                                                size="icon-sm"
-                                                variant="ghost"
+                                                size="sm"
+                                                variant="outline"
+                                                class="w-fit"
                                                 :disabled="!row.selected"
-                                                :aria-label="`Quitar paralelo ${parallel.code || index + 1} de ${row.name}`"
-                                                @click="removeParallel(row, index)"
+                                                @click="addParallel(row)"
                                             >
-                                                <Trash2 aria-hidden="true" />
+                                                Agregar paralelo
                                             </Button>
                                         </div>
-                                        <Button
-                                            type="button"
-                                            size="sm"
-                                            variant="outline"
-                                            class="w-fit"
-                                            :disabled="!row.selected"
-                                            @click="addParallel(row)"
-                                        >
-                                            <Plus
-                                                data-icon="inline-start"
-                                                aria-hidden="true"
-                                            />
-                                            Agregar paralelo
-                                        </Button>
-                                    </div>
-                                </TableCell>
-                            </TableRow>
-                        </TableBody>
-                    </Table>
+                                    </TableCell>
+                                </TableRow>
+                            </TableBody>
+                        </Table>
 
-                    <Alert
-                        v-if="invalidRows.length > 0"
-                        variant="destructive"
-                    >
-                        <AlertDescription>
-                            Cada materia seleccionada debe tener al menos un paralelo
-                            con código.
-                        </AlertDescription>
-                    </Alert>
+                        <Alert
+                            v-if="invalidRows.length > 0"
+                            variant="destructive"
+                        >
+                            <AlertDescription>
+                                Cada materia seleccionada debe tener al menos un
+                                paralelo con código.
+                            </AlertDescription>
+                        </Alert>
                     </template>
 
                     <FormSheetActions

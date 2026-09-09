@@ -5,7 +5,12 @@ import { watch } from 'vue';
 import CareerAcademicStructureController from '@/actions/App/Modules/Academic/Presentation/Http/Controllers/CareerAcademicStructureController';
 import FormSheet from '@/components/domain/FormSheet.vue';
 import FormSheetActions from '@/components/domain/FormSheetActions.vue';
-import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field';
+import {
+    Field,
+    FieldError,
+    FieldGroup,
+    FieldLabel,
+} from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import {
     Select,
@@ -34,19 +39,17 @@ const reset = (): void => {
 };
 
 const submit = (close: () => void): void => {
-    form
-        .transform((data) => ({
-            scheduled_subject_id: props.scheduledSubjectId,
-            codes: [data.codes.trim()],
-            shift: data.shift || null,
-        }))
-        .post(CareerAcademicStructureController.storeParallels.url(), {
-            preserveScroll: true,
-            onSuccess: () => {
-                reset();
-                close();
-            },
-        });
+    form.transform((data) => ({
+        scheduled_subject_id: props.scheduledSubjectId,
+        codes: [data.codes.trim()],
+        shift: data.shift || null,
+    })).post(CareerAcademicStructureController.storeParallels.url(), {
+        preserveScroll: true,
+        onSuccess: () => {
+            reset();
+            close();
+        },
+    });
 };
 
 watch(open, (isOpen) => {
@@ -96,7 +99,9 @@ watch(open, (isOpen) => {
                                 :id="`parallel-creation-shift-${scheduledSubjectId}`"
                                 :aria-invalid="Boolean(form.errors.shift)"
                             >
-                                <SelectValue placeholder="Sin jornada definida" />
+                                <SelectValue
+                                    placeholder="Sin jornada definida"
+                                />
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectGroup>

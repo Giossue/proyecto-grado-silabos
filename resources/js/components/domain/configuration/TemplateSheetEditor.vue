@@ -6,14 +6,11 @@ import {
     Heading,
     List,
     ListOrdered,
-    LoaderCircle,
     MoreHorizontal,
     PencilLine,
-    Save,
     Table,
     Trash2,
     Type,
-    X,
 } from '@lucide/vue';
 import { computed, nextTick, ref, watch } from 'vue';
 import type { ComponentPublicInstance } from 'vue';
@@ -926,7 +923,6 @@ const dropOnFieldZone = (section: TemplateSection, index: number): void => {
                     :disabled="savingDocument"
                     @click="cancelDocumentEditing"
                 >
-                    <X data-icon="inline-start" />
                     Cancelar
                 </Button>
                 <Button
@@ -935,13 +931,7 @@ const dropOnFieldZone = (section: TemplateSection, index: number): void => {
                     :disabled="savingDocument || !hasDesignChanges"
                     @click="saveDocument"
                 >
-                    <LoaderCircle
-                        v-if="savingDocument"
-                        data-icon="inline-start"
-                        class="animate-spin"
-                    />
-                    <Save v-else data-icon="inline-start" />
-                    Guardar
+                    {{ savingDocument ? 'Guardando…' : 'Guardar' }}
                 </Button>
                 <Button
                     type="button"

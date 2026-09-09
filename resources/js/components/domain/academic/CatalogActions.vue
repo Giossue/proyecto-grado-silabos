@@ -121,8 +121,8 @@ const deleteOpen = ref(false);
                     <DialogTitle>Eliminar registro institucional</DialogTitle>
                     <DialogDescription>
                         Se eliminará «{{ recordName }}». La operación se
-                        rechazará si tiene carreras, materias programadas, procesos u otro
-                        historial relacionado.
+                        rechazará si tiene carreras, materias programadas,
+                        procesos u otro historial relacionado.
                     </DialogDescription>
                 </DialogHeader>
                 <Form

@@ -24,7 +24,11 @@ import { PARALLEL_SHIFTS as SHIFTS } from '@/lib/parallelShifts';
 import type { AcademicStructureProps } from '@/types/academic';
 
 export type CareerAcademicEntity =
-    'malla' | 'asignatura' | 'programacion_asignatura' | 'paralelo' | 'asignacion_docente';
+    | 'malla'
+    | 'asignatura'
+    | 'programacion_asignatura'
+    | 'paralelo'
+    | 'asignacion_docente';
 
 export type CareerAcademicEditableRecord = {
     id: string;
@@ -254,7 +258,9 @@ const entityLabel = computed(
                     </template>
 
                     <template v-else-if="entity === 'paralelo'">
-                        <Field :data-invalid="Boolean(errors.scheduled_subject_id)">
+                        <Field
+                            :data-invalid="Boolean(errors.scheduled_subject_id)"
+                        >
                             <FieldLabel
                                 :for="`edit-parallel-scheduled-subject-${record.id}`"
                                 required
@@ -267,7 +273,9 @@ const entityLabel = computed(
                             >
                                 <SelectTrigger
                                     :id="`edit-parallel-scheduled-subject-${record.id}`"
-                                    :aria-invalid="Boolean(errors.scheduled_subject_id)"
+                                    :aria-invalid="
+                                        Boolean(errors.scheduled_subject_id)
+                                    "
                                     ><SelectValue
                                         placeholder="Seleccione una materia programada"
                                 /></SelectTrigger>
@@ -283,7 +291,9 @@ const entityLabel = computed(
                                     </SelectGroup></SelectContent
                                 >
                             </Select>
-                            <FieldError :errors="[errors.scheduled_subject_id]" />
+                            <FieldError
+                                :errors="[errors.scheduled_subject_id]"
+                            />
                         </Field>
                         <Field :data-invalid="Boolean(errors.code)">
                             <FieldLabel

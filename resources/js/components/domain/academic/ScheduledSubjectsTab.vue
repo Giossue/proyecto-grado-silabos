@@ -62,8 +62,7 @@ const {
                 :filter="scheduledSubjectFilter"
                 input-id="scheduled-subjects-search"
                 label="Buscar materia programada"
-                placeholder="Buscar por materia, código, período, campus o modalidad"
-            />
+                placeholder="Buscar por materia, código, período, campus o modalidad" />
             <Table
                 ><TableHeader
                     ><TableRow
@@ -77,10 +76,15 @@ const {
                         ></TableRow
                     ></TableHeader
                 ><TableBody>
-                    <TableEmpty v-if="scheduledSubjects.length === 0" :colspan="6"
+                    <TableEmpty
+                        v-if="scheduledSubjects.length === 0"
+                        :colspan="6"
                         >No hay materias programadas.</TableEmpty
                     >
-                    <TableRow v-for="item in scheduledSubjectPage" v-else :key="item.id"
+                    <TableRow
+                        v-for="item in scheduledSubjectPage"
+                        v-else
+                        :key="item.id"
                         ><TableCell>{{ item.subject_name }}</TableCell
                         ><TableCell>{{ item.subject_code }}</TableCell
                         ><TableCell>{{

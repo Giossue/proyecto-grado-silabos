@@ -82,7 +82,9 @@ const formRoute = computed(() =>
                                 id="process-period"
                                 :aria-invalid="Boolean(errors.period_id)"
                             >
-                                <SelectValue placeholder="Seleccione un periodo" />
+                                <SelectValue
+                                    placeholder="Seleccione un periodo"
+                                />
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectGroup>
