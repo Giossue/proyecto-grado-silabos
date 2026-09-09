@@ -442,3 +442,10 @@ sus bloques, permisos, paginación ni exportación.
 
 Verificación puntual: TypeScript, ESLint del componente, Prettier de los archivos
 afectados y `git diff --check` pasan. Sin migraciones, datos, commit ni push.
+
+## Seguimiento — lectura separada del modo de edición (2026-09-09)
+
+I-60 reemplaza el retiro temporal anterior. La ruta normal de ADM-06 es una vista limpia
+y siempre de solo lectura; una ruta `/editar` dedicada recupera el constructor con una
+cinta contextual. La edición de celdas ocurre dentro de la hoja y sus herramientas se
+proyectan en la cinta, sin abrir el diálogo documental de pantalla completa.

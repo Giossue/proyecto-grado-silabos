@@ -2,23 +2,23 @@
 
 namespace App\Modules\Syllabus\Application;
 
-use App\Modules\Academic\Infrastructure\Persistence\Models\CourseOffering;
+use App\Modules\Academic\Infrastructure\Persistence\Models\ScheduledSubject;
 use App\Modules\Academic\Infrastructure\Persistence\Models\SubjectFieldValue;
 use App\Modules\Academic\Infrastructure\Persistence\Models\SubjectRequirement;
 
 class AcademicContextSnapshot
 {
     /** @return array<string, mixed> */
-    public function build(CourseOffering $offering): array
+    public function build(ScheduledSubject $scheduledSubject): array
     {
-        $offering->loadMissing([
+        $scheduledSubject->loadMissing([
             'subject.curriculum.career.faculty',
             'subject.requirements.requirement',
             'subject.fieldValues.definition',
             'academicPeriod',
             'campus',
         ]);
-        $subject = $offering->subject;
+        $subject = $scheduledSubject->subject;
         $curriculum = $subject->curriculum;
         $career = $curriculum->career;
         $requirementCodes = fn (string $type): array => $subject->requirements
@@ -29,7 +29,7 @@ class AcademicContextSnapshot
             ->all();
 
         return [
-            'schema_version' => 1,
+            'schema_version' => 2,
             // La ficha de identificación (I-34) sale de aquí: carrera, facultad y requisitos.
             'career' => [
                 'id' => $career->id,
@@ -68,12 +68,12 @@ class AcademicContextSnapshot
                         'value' => $value->valor,
                     ])->values()->all(),
             ],
-            'offering' => [
-                'id' => $offering->id,
-                'period' => $offering->academicPeriod->nombre,
-                'teaching_weeks' => $offering->academicPeriod->semanas_lectivas,
-                'campus' => $offering->campus->nombre,
-                'modality' => $offering->modalidad->label(),
+            'scheduled_subject' => [
+                'id' => $scheduledSubject->id,
+                'period' => $scheduledSubject->academicPeriod->nombre,
+                'teaching_weeks' => $scheduledSubject->academicPeriod->semanas_lectivas,
+                'campus' => $scheduledSubject->campus->nombre,
+                'modality' => $scheduledSubject->modalidad->label(),
             ],
         ];
     }

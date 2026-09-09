@@ -77,7 +77,12 @@ const resend = (): void => {
                         variant="destructive"
                         :disabled="processing"
                     >
-                        <Spinner v-if="processing" />
+                        <Spinner v-if="processing" data-icon="inline-start" />
+                        <Trash2
+                            v-else
+                            data-icon="inline-start"
+                            aria-hidden="true"
+                        />
                         Eliminar cuenta
                     </Button>
                 </DialogFooter>

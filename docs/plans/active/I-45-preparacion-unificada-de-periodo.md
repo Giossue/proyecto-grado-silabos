@@ -10,16 +10,17 @@ RF-008..016, RN-005..008, CU-03, COR-14, UI-04.
 
 ## Decisión del responsable del producto
 
-La oferta académica y sus paralelos permanecen como entidades distintas. Preparar
-período solo muestra materias sin oferta para el período seleccionado y crea uno o más
-paralelos con jornada individual. La acción de la oferta permite agregar otros más tarde.
-Ninguna omisión elimina oferta, paralelo ni historia.
+La programación de una asignatura y sus paralelos permanecen como entidades distintas.
+Preparar período solo muestra materias sin programación para el período seleccionado y
+crea uno o más paralelos con jornada individual. La acción de la materia programada
+permite agregar otros más tarde. Ninguna omisión elimina programación, paralelo ni
+historia. I-62 actualiza aquí el vocabulario sin alterar esta decisión funcional.
 
 ## Pasos
 
-- [x] Aceptar y validar la preparación solo para materias aún no ofertadas del período.
+- [x] Aceptar y validar la preparación solo para materias aún no programadas del período.
 - [x] Sustituir el panel mínimo por la hoja lateral amplia con paralelos y jornadas por materia.
-- [x] Mantener Ofertas como la única pantalla y crear un paralelo desde las acciones de cada oferta.
+- [x] Mantener Materias y paralelos como la única pantalla y crear un paralelo desde las acciones de cada materia programada.
 - [x] Cubrir la operación y la interfaz con pruebas y actualizar pantallas/trazabilidad.
 
 ## Verificación

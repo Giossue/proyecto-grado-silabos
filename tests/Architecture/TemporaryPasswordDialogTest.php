@@ -6,18 +6,27 @@
  * descartable la pantalla diría que se puede seguir usando la aplicación cuando no.
  */
 it('presenta el cambio de contrasena temporal como un dialogo que no se descarta', function (): void {
+    $root = dirname(__DIR__, 2);
     $dialog = (string) file_get_contents(
-        dirname(__DIR__, 2).'/resources/js/components/TemporaryPasswordDialog.vue',
+        $root.'/resources/js/components/TemporaryPasswordDialog.vue',
+    );
+    $dialogContent = (string) file_get_contents(
+        $root.'/resources/js/components/ui/dialog/DialogContent.vue',
     );
 
-    expect($dialog)
-        ->toContain(':show-close-button="false"')
-        ->toContain('@escape-key-down="block"')
-        ->toContain('@interact-outside="block"')
-        ->toContain('@pointer-down-outside="block"')
+    expect($dialogContent)
+        ->toContain('@escape-key-down="preventImplicitDismiss"')
+        ->toContain('@interact-outside="preventImplicitDismiss"')
+        ->toContain('@pointer-down-outside="preventImplicitDismiss"')
         ->toContain('event.preventDefault()')
+        ->not->toContain('<DialogClose')
+        ->not->toContain('showCloseButton');
+
+    expect($dialog)
+        ->toContain('<DialogContent class="sm:max-w-md">')
         ->toContain('debe_cambiar_contrasena')
         ->toContain('SecurityController.update.form()')
+        ->toContain('<Save')
         // Cerrar sesión es la única alternativa a cambiarla.
         ->toContain('logout()');
 });

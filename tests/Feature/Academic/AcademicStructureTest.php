@@ -8,11 +8,11 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Campus;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CoordinatorAssignment;
-use App\Modules\Academic\Infrastructure\Persistence\Models\CourseOffering;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CurriculumFieldDefinition;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Faculty;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
+use App\Modules\Academic\Infrastructure\Persistence\Models\ScheduledSubject;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Subject;
 use App\Modules\Academic\Infrastructure\Persistence\Models\SubjectFieldValue;
 use App\Modules\Academic\Infrastructure\Persistence\Models\SubjectRequirement;
@@ -129,10 +129,10 @@ class AcademicStructureTest extends TestCase
     public function test_coordinator_sees_only_their_career_and_subjects_live_inside_each_curriculum(): void
     {
         $curriculum = Curriculum::query()->firstOrFail();
-        $offering = CourseOffering::query()
+        $scheduledSubject = ScheduledSubject::query()
             ->with(['academicPeriod', 'subject', 'parallels'])
             ->firstOrFail();
-        $parallel = $offering->parallels->firstOrFail();
+        $parallel = $scheduledSubject->parallels->firstOrFail();
 
         $this->actingAsCoordinator()
             ->get(route('coordination.academic.curricula.index'))
@@ -152,15 +152,15 @@ class AcademicStructureTest extends TestCase
             ->assertRedirect('/coordinacion/malla');
 
         $this->actingAsCoordinator()
-            ->get(route('coordination.academic.offerings.index'))
+            ->get(route('coordination.academic.scheduled-subjects.index'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->component('Coordination/Academic/Offerings')
-                ->has('offerings', 1)
-                ->where('offerings.0.subject_code', $offering->subject->codigo_institucional)
-                ->where('offerings.0.subject_name', $offering->subject->nombre)
-                ->where('offerings.0.period_starts_on', $offering->academicPeriod->fecha_inicio->toDateString())
-                ->where('offerings.0.period_ends_on', $offering->academicPeriod->fecha_fin->toDateString()));
+                ->component('Coordination/Academic/ScheduledSubjects')
+                ->has('scheduledSubjects', 1)
+                ->where('scheduledSubjects.0.subject_code', $scheduledSubject->subject->codigo_institucional)
+                ->where('scheduledSubjects.0.subject_name', $scheduledSubject->subject->nombre)
+                ->where('scheduledSubjects.0.period_starts_on', $scheduledSubject->academicPeriod->fecha_inicio->toDateString())
+                ->where('scheduledSubjects.0.period_ends_on', $scheduledSubject->academicPeriod->fecha_fin->toDateString()));
 
         $this->assertFalse(Route::has('coordination.academic.parallels.index'));
 
@@ -174,7 +174,7 @@ class AcademicStructureTest extends TestCase
                 ->has('options.parallels', 1)
                 ->where(
                     'options.parallels.0.label',
-                    "{$offering->subject->nombre} · {$offering->academicPeriod->nombre} · Paralelo {$parallel->codigo}",
+                    "{$scheduledSubject->subject->nombre} · {$scheduledSubject->academicPeriod->nombre} · Paralelo {$parallel->codigo}",
                 )
                 ->where('options.teacherUsers.0.name', 'DOCENTE DEMO')
                 ->where('options.teacherUsers.0.email', 'docente@silabos.test'));
@@ -607,9 +607,9 @@ class AcademicStructureTest extends TestCase
         ]);
     }
 
-    public function test_coordinator_edits_unused_offering_parallel_and_teacher_assignment(): void
+    public function test_coordinator_edits_unused_scheduled_subject_parallel_and_teacher_assignment(): void
     {
-        $offering = CourseOffering::query()->firstOrFail();
+        $scheduledSubject = ScheduledSubject::query()->firstOrFail();
         $parallel = Parallel::query()->firstOrFail();
         $assignment = TeacherAssignment::query()->firstOrFail();
         $teacher = User::query()->where('correo_electronico', 'docente@silabos.test')->firstOrFail();
@@ -621,14 +621,14 @@ class AcademicStructureTest extends TestCase
             'activo' => true,
         ]);
 
-        // El campus no se edita en la oferta: lo fija la carrera (I-36).
+        // El campus no se edita en la programación de asignatura: lo fija la carrera (I-36).
         $this->actingAsCoordinator()
             ->patch(route('coordination.academic.update', [
-                'entity' => 'oferta',
-                'record' => $offering->id,
+                'entity' => 'programacion_asignatura',
+                'record' => $scheduledSubject->id,
             ]), [
                 'period_id' => $period->id,
-                'subject_id' => $offering->asignatura_id,
+                'subject_id' => $scheduledSubject->asignatura_id,
             ])
             ->assertRedirect();
 
@@ -637,7 +637,7 @@ class AcademicStructureTest extends TestCase
                 'entity' => 'paralelo',
                 'record' => $parallel->id,
             ]), [
-                'offering_id' => $offering->id,
+                'scheduled_subject_id' => $scheduledSubject->id,
                 'code' => 'B',
                 'shift' => 'vespertina',
             ])
@@ -653,14 +653,14 @@ class AcademicStructureTest extends TestCase
             ])
             ->assertRedirect();
 
-        $this->assertSame($period->id, $offering->fresh()->periodo_academico_id);
-        $this->assertSame(Career::query()->findOrFail($this->coordinatorContext->carrera_id)->campus_id, $offering->fresh()->campus_id);
+        $this->assertSame($period->id, $scheduledSubject->fresh()->periodo_academico_id);
+        $this->assertSame(Career::query()->findOrFail($this->coordinatorContext->carrera_id)->campus_id, $scheduledSubject->fresh()->campus_id);
         $this->assertSame('B', $parallel->fresh()->codigo);
         $this->assertSame('vespertina', $parallel->fresh()->jornada);
         $this->assertSame($teacher->id, $assignment->fresh()->usuario_id);
         $this->assertSame(2, AuditEvent::query()
             ->whereIn('accion', [
-                'academico.oferta.actualizacion',
+                'academico.programacion_asignatura.actualizacion',
                 'academico.paralelo.actualizacion',
                 'academico.asignacion_docente.actualizacion',
             ])
@@ -702,7 +702,7 @@ class AcademicStructureTest extends TestCase
         $this->assertSame('Nombre reescrito', $subject->fresh()->nombre);
     }
 
-    public function test_coordinator_disables_and_reactivates_the_curriculum_and_inactive_state_blocks_new_offerings(): void
+    public function test_coordinator_disables_and_reactivates_the_curriculum_and_inactive_state_blocks_new_scheduled_subjects(): void
     {
         $curriculum = Curriculum::query()->firstOrFail();
 
@@ -728,10 +728,10 @@ class AcademicStructureTest extends TestCase
             ])
             ->assertRedirect();
         $subject = Subject::query()->where('codigo_institucional', 'SW-INACTIVA')->firstOrFail();
-        $reference = CourseOffering::query()->firstOrFail();
+        $reference = ScheduledSubject::query()->firstOrFail();
 
         $this->actingAsCoordinator()
-            ->post(route('coordination.academic.store', 'oferta'), [
+            ->post(route('coordination.academic.store', 'programacion_asignatura'), [
                 'period_id' => $reference->periodo_academico_id,
                 'subject_id' => $subject->id,
                 'campus_id' => $reference->campus_id,
@@ -747,24 +747,24 @@ class AcademicStructureTest extends TestCase
         $this->assertSame('activa', $curriculum->fresh()->estado);
     }
 
-    public function test_coordinator_deletes_an_offering_with_its_parallels_and_teacher_assignments_without_syllabi(): void
+    public function test_coordinator_deletes_a_scheduled_subject_with_its_parallels_and_teacher_assignments_without_syllabi(): void
     {
-        $offering = CourseOffering::query()->firstOrFail();
+        $scheduledSubject = ScheduledSubject::query()->firstOrFail();
         $parallelIds = Parallel::query()
-            ->where('oferta_academica_id', $offering->id)
+            ->where('programacion_asignatura_id', $scheduledSubject->id)
             ->pluck('id');
 
         $this->actingAsCoordinator()
-            ->delete(route('coordination.academic.offerings.destroy', $offering))
+            ->delete(route('coordination.academic.scheduled-subjects.destroy', $scheduledSubject))
             ->assertRedirect()
             ->assertSessionHas('success');
 
-        $this->assertDatabaseMissing('ofertas_academicas', ['id' => $offering->id]);
+        $this->assertDatabaseMissing('programaciones_asignatura', ['id' => $scheduledSubject->id]);
         $this->assertSame(0, Parallel::query()->whereIn('id', $parallelIds)->count());
         $this->assertSame(0, TeacherAssignment::query()->whereIn('paralelo_id', $parallelIds)->count());
         $this->assertDatabaseHas('eventos_auditoria', [
-            'accion' => 'academico.oferta.eliminacion',
-            'recurso_id' => $offering->id,
+            'accion' => 'academico.programacion_asignatura.eliminacion',
+            'recurso_id' => $scheduledSubject->id,
         ]);
     }
 
@@ -841,7 +841,7 @@ class AcademicStructureTest extends TestCase
             'recurso_id' => $subject->id,
         ]);
 
-        $usedSubject = CourseOffering::query()->firstOrFail()->subject()->firstOrFail();
+        $usedSubject = ScheduledSubject::query()->firstOrFail()->subject()->firstOrFail();
         $this->actingAsCoordinator()
             ->delete(route('coordination.academic.curricula.subjects.destroy', [
                 'curriculum' => $usedSubject->malla_id,
@@ -903,8 +903,8 @@ class AcademicStructureTest extends TestCase
         $this->assertTrue($otherSubject->fresh()->activo);
     }
 
-    /** I-35/I-37: la modalidad la aprueba el CES por carrera; la oferta no la elige. */
-    public function test_a_career_requires_its_approved_modality_and_offerings_inherit_it(): void
+    /** I-35/I-37: la modalidad la aprueba el CES por carrera; la programacion_asignatura no la elige. */
+    public function test_a_career_requires_its_approved_modality_and_scheduled_subjects_inherit_it(): void
     {
         $faculty = Faculty::query()->firstOrFail();
 
@@ -953,17 +953,17 @@ class AcademicStructureTest extends TestCase
             'ciclo' => 2,
             'activo' => true,
         ]);
-        $reference = CourseOffering::query()->firstOrFail();
+        $reference = ScheduledSubject::query()->firstOrFail();
 
         $this->actingAsCoordinator()
-            ->post(route('coordination.academic.store', 'oferta'), [
+            ->post(route('coordination.academic.store', 'programacion_asignatura'), [
                 'period_id' => $reference->periodo_academico_id,
                 'subject_id' => $subject->id,
             ])
             ->assertRedirect()
             ->assertSessionHasNoErrors();
-        $offering = CourseOffering::query()->where('asignatura_id', $subject->id)->firstOrFail();
-        $this->assertSame(StudyModality::Presencial, $offering->modalidad);
+        $scheduledSubject = ScheduledSubject::query()->where('asignatura_id', $subject->id)->firstOrFail();
+        $this->assertSame(StudyModality::Presencial, $scheduledSubject->modalidad);
 
         // Sin modalidad en la carrera no hay de dónde heredar: se explica, no se adivina.
         $career->forceFill(['modalidad' => null])->save();
@@ -975,8 +975,8 @@ class AcademicStructureTest extends TestCase
             'activo' => true,
         ]);
         $this->actingAsCoordinator()
-            ->from(route('coordination.academic.offerings.index'))
-            ->post(route('coordination.academic.store', 'oferta'), [
+            ->from(route('coordination.academic.scheduled-subjects.index'))
+            ->post(route('coordination.academic.store', 'programacion_asignatura'), [
                 'period_id' => $reference->periodo_academico_id,
                 'subject_id' => $another->id,
             ])
@@ -1023,15 +1023,15 @@ class AcademicStructureTest extends TestCase
                 ->where('catalogs.careers.0.modality', 'presencial')
                 ->where('catalogs.careers.0.modality_label', 'Presencial'));
 
-        $reference = CourseOffering::query()->firstOrFail();
+        $reference = ScheduledSubject::query()->firstOrFail();
         $this->actingAsCoordinator()
-            ->post(route('coordination.academic.store', 'oferta'), [
+            ->post(route('coordination.academic.store', 'programacion_asignatura'), [
                 'period_id' => $reference->periodo_academico_id,
                 'subject_id' => $subject->id,
             ])
             ->assertRedirect()
             ->assertSessionHasNoErrors();
-        $this->assertSame(StudyModality::EnLinea, CourseOffering::query()->where('asignatura_id', $subject->id)->firstOrFail()->modalidad);
+        $this->assertSame(StudyModality::EnLinea, ScheduledSubject::query()->where('asignatura_id', $subject->id)->firstOrFail()->modalidad);
 
         // La excepción de la materia no convierte ni bloquea la modalidad de la carrera.
         $this->actingAsAdministrator()
@@ -1048,12 +1048,12 @@ class AcademicStructureTest extends TestCase
         $this->assertSame(StudyModality::EnLinea, $career->fresh()->modalidad);
     }
 
-    /** I-36: preparar solo acepta materias que aún no tienen oferta en el período. */
-    public function test_coordinator_prepares_only_subjects_without_an_offering_in_the_period(): void
+    /** I-36: preparar solo acepta materias que aún no tienen programacion_asignatura en el período. */
+    public function test_coordinator_prepares_only_subjects_without_programming_in_the_period(): void
     {
         $career = Career::query()->findOrFail($this->coordinatorContext->carrera_id);
         $curriculum = Curriculum::query()->active()->where('carrera_id', $career->id)->firstOrFail();
-        $reference = CourseOffering::query()->firstOrFail();
+        $reference = ScheduledSubject::query()->firstOrFail();
         $subjects = [];
         foreach (['SW-P1', 'SW-P2'] as $index => $code) {
             $subjects[] = Subject::query()->create([
@@ -1077,16 +1077,16 @@ class AcademicStructureTest extends TestCase
             ])
             ->assertRedirect()
             ->assertSessionHasNoErrors()
-            ->assertSessionHas('success', 'Período preparado: 2 ofertas y 2 paralelos nuevos para 2 materias.');
+            ->assertSessionHas('success', 'Período preparado: 2 materias programadas y 2 paralelos nuevos para 2 materias.');
 
-        $offerings = CourseOffering::query()->where('periodo_academico_id', $reference->periodo_academico_id)->get();
-        $this->assertCount($subjectCount, $offerings);
-        $this->assertTrue($offerings->every(fn (CourseOffering $offering): bool => $offering->campus_id === $career->campus_id
-            && $offering->modalidad === $career->modalidad));
-        $this->assertSame($subjectCount, Parallel::query()->whereIn('oferta_academica_id', $offerings->pluck('id'))->count());
+        $scheduledSubjects = ScheduledSubject::query()->where('periodo_academico_id', $reference->periodo_academico_id)->get();
+        $this->assertCount($subjectCount, $scheduledSubjects);
+        $this->assertTrue($scheduledSubjects->every(fn (ScheduledSubject $scheduledSubject): bool => $scheduledSubject->campus_id === $career->campus_id
+            && $scheduledSubject->modalidad === $career->modalidad));
+        $this->assertSame($subjectCount, Parallel::query()->whereIn('programacion_asignatura_id', $scheduledSubjects->pluck('id'))->count());
         $this->assertSame(2, AuditEvent::query()->where('accion', 'academico.paralelo.creacion')->count());
 
-        // No se vuelve a preparar una materia ya ofertada.
+        // No se vuelve a preparar una materia ya programada.
         $this->actingAsCoordinator()
             ->post(route('coordination.academic.period.prepare'), [
                 'period_id' => $reference->periodo_academico_id,
@@ -1097,7 +1097,7 @@ class AcademicStructureTest extends TestCase
             ])
             ->assertRedirect()
             ->assertSessionHasErrors('subjects');
-        $this->assertSame($subjectCount, CourseOffering::query()->where('periodo_academico_id', $reference->periodo_academico_id)->count());
+        $this->assertSame($subjectCount, ScheduledSubject::query()->where('periodo_academico_id', $reference->periodo_academico_id)->count());
 
         // Sin campus en la carrera no hay de dónde heredar.
         $career->forceFill(['campus_id' => null])->save();
@@ -1110,7 +1110,7 @@ class AcademicStructureTest extends TestCase
             'activo' => true,
         ]);
         $this->actingAsCoordinator()
-            ->from(route('coordination.academic.offerings.index'))
+            ->from(route('coordination.academic.scheduled-subjects.index'))
             ->post(route('coordination.academic.period.prepare'), [
                 'period_id' => $reference->periodo_academico_id,
                 'subjects' => [[
@@ -1125,7 +1125,7 @@ class AcademicStructureTest extends TestCase
     {
         $career = Career::query()->findOrFail($this->coordinatorContext->carrera_id);
         $curriculum = Curriculum::query()->active()->where('carrera_id', $career->id)->firstOrFail();
-        $reference = CourseOffering::query()->firstOrFail();
+        $reference = ScheduledSubject::query()->firstOrFail();
         $subject = Subject::query()->create([
             'malla_id' => $curriculum->id,
             'codigo_institucional' => 'SW-PREPARACION-SELECTIVA',
@@ -1148,44 +1148,44 @@ class AcademicStructureTest extends TestCase
             ])
             ->assertRedirect()
             ->assertSessionHasNoErrors()
-            ->assertSessionHas('success', 'Período preparado: 1 oferta y 2 paralelos nuevos para 1 materia.');
+            ->assertSessionHas('success', 'Período preparado: 1 materia programada y 2 paralelos nuevos para 1 materia.');
 
-        $offering = CourseOffering::query()
+        $scheduledSubject = ScheduledSubject::query()
             ->where('periodo_academico_id', $reference->periodo_academico_id)
             ->where('asignatura_id', $subject->id)
             ->firstOrFail();
         $this->assertDatabaseHas('paralelos', [
-            'oferta_academica_id' => $offering->id,
+            'programacion_asignatura_id' => $scheduledSubject->id,
             'codigo' => 'B',
             'jornada' => 'matutina',
         ]);
         $this->assertDatabaseHas('paralelos', [
-            'oferta_academica_id' => $offering->id,
+            'programacion_asignatura_id' => $scheduledSubject->id,
             'codigo' => 'C',
             'jornada' => 'vespertina',
         ]);
         $this->assertDatabaseMissing('paralelos', [
-            'oferta_academica_id' => $offering->id,
+            'programacion_asignatura_id' => $scheduledSubject->id,
             'codigo' => 'A',
         ]);
     }
 
-    public function test_duplicate_offering_is_reported_to_the_coordinator_as_a_validation_error(): void
+    public function test_duplicate_scheduled_subject_is_reported_to_the_coordinator_as_a_validation_error(): void
     {
-        $offering = CourseOffering::query()->firstOrFail();
+        $scheduledSubject = ScheduledSubject::query()->firstOrFail();
 
         $this->actingAsCoordinator()
-            ->post(route('coordination.academic.store', 'oferta'), [
-                'period_id' => $offering->periodo_academico_id,
-                'subject_id' => $offering->asignatura_id,
-                'campus_id' => $offering->campus_id,
+            ->post(route('coordination.academic.store', 'programacion_asignatura'), [
+                'period_id' => $scheduledSubject->periodo_academico_id,
+                'subject_id' => $scheduledSubject->asignatura_id,
+                'campus_id' => $scheduledSubject->campus_id,
             ])
             ->assertSessionHasErrors('subject_id');
 
-        $this->assertSame(1, CourseOffering::query()->count());
+        $this->assertSame(1, ScheduledSubject::query()->count());
     }
 
-    public function test_coordinator_creates_an_offering_and_parallel_for_a_subject_in_the_active_curriculum(): void
+    public function test_coordinator_creates_a_scheduled_subject_and_parallel_for_a_subject_in_the_active_curriculum(): void
     {
         $curriculum = Curriculum::query()->active()->firstOrFail();
         $subject = Subject::query()->create([
@@ -1195,27 +1195,27 @@ class AcademicStructureTest extends TestCase
             'ciclo' => 7,
             'activo' => true,
         ]);
-        $reference = CourseOffering::query()->firstOrFail();
+        $reference = ScheduledSubject::query()->firstOrFail();
 
         $this->actingAsCoordinator()
-            ->post(route('coordination.academic.store', 'oferta'), [
+            ->post(route('coordination.academic.store', 'programacion_asignatura'), [
                 'period_id' => $reference->periodo_academico_id,
                 'subject_id' => $subject->id,
                 'campus_id' => $reference->campus_id,
             ])
             ->assertRedirect();
-        $offering = CourseOffering::query()->where('asignatura_id', $subject->id)->firstOrFail();
+        $scheduledSubject = ScheduledSubject::query()->where('asignatura_id', $subject->id)->firstOrFail();
 
         $this->actingAsCoordinator()
             ->post(route('coordination.academic.store', 'paralelo'), [
-                'offering_id' => $offering->id,
+                'scheduled_subject_id' => $scheduledSubject->id,
                 'code' => 'A',
                 'shift' => 'matutina',
             ])
             ->assertRedirect();
 
         $this->assertDatabaseHas('paralelos', [
-            'oferta_academica_id' => $offering->id,
+            'programacion_asignatura_id' => $scheduledSubject->id,
             'codigo' => 'A',
             'jornada' => 'matutina',
             'activo' => true,
@@ -1226,13 +1226,13 @@ class AcademicStructureTest extends TestCase
         ]);
     }
 
-    public function test_coordinator_creates_multiple_parallels_atomically_for_one_offering(): void
+    public function test_coordinator_creates_multiple_parallels_atomically_for_one_scheduled_subject(): void
     {
-        $offering = CourseOffering::query()->firstOrFail();
+        $scheduledSubject = ScheduledSubject::query()->firstOrFail();
 
         $this->actingAsCoordinator()
             ->post(route('coordination.academic.parallels.store'), [
-                'offering_id' => $offering->id,
+                'scheduled_subject_id' => $scheduledSubject->id,
                 'codes' => ['B', 'C'],
                 'shift' => 'vespertina',
             ])
@@ -1241,7 +1241,7 @@ class AcademicStructureTest extends TestCase
 
         foreach (['B', 'C'] as $code) {
             $this->assertDatabaseHas('paralelos', [
-                'oferta_academica_id' => $offering->id,
+                'programacion_asignatura_id' => $scheduledSubject->id,
                 'codigo' => $code,
                 'jornada' => 'vespertina',
                 'activo' => true,
@@ -1254,19 +1254,19 @@ class AcademicStructureTest extends TestCase
 
         $this->actingAsCoordinator()
             ->post(route('coordination.academic.parallels.store'), [
-                'offering_id' => $offering->id,
+                'scheduled_subject_id' => $scheduledSubject->id,
                 'codes' => ['C', 'D'],
                 'shift' => 'nocturna',
             ])
             ->assertSessionHasErrors('codes');
 
         $this->assertDatabaseMissing('paralelos', [
-            'oferta_academica_id' => $offering->id,
+            'programacion_asignatura_id' => $scheduledSubject->id,
             'codigo' => 'D',
         ]);
     }
 
-    public function test_coordinator_cannot_create_parallel_lot_for_an_offering_from_another_career(): void
+    public function test_coordinator_cannot_create_parallel_lot_for_a_scheduled_subject_from_another_career(): void
     {
         $otherCareer = $this->createCareer('OTRA-PAR');
         $curriculum = Curriculum::query()->create([
@@ -1281,7 +1281,7 @@ class AcademicStructureTest extends TestCase
             'ciclo' => 1,
             'activo' => true,
         ]);
-        $offering = CourseOffering::query()->create([
+        $scheduledSubject = ScheduledSubject::query()->create([
             'periodo_academico_id' => AcademicPeriod::query()->firstOrFail()->id,
             'asignatura_id' => $subject->id,
             'campus_id' => Campus::query()->firstOrFail()->id,
@@ -1291,13 +1291,13 @@ class AcademicStructureTest extends TestCase
 
         $this->actingAsCoordinator()
             ->post(route('coordination.academic.parallels.store'), [
-                'offering_id' => $offering->id,
+                'scheduled_subject_id' => $scheduledSubject->id,
                 'codes' => ['B'],
             ])
-            ->assertSessionHasErrors('offering_id');
+            ->assertSessionHasErrors('scheduled_subject_id');
 
         $this->assertDatabaseMissing('paralelos', [
-            'oferta_academica_id' => $offering->id,
+            'programacion_asignatura_id' => $scheduledSubject->id,
             'codigo' => 'B',
         ]);
     }
@@ -1305,9 +1305,9 @@ class AcademicStructureTest extends TestCase
     public function test_coordinator_assigns_a_teacher_to_a_parallel_in_their_career(): void
     {
         $teacher = User::query()->where('correo_electronico', 'docente@silabos.test')->firstOrFail();
-        $offering = CourseOffering::query()->firstOrFail();
+        $scheduledSubject = ScheduledSubject::query()->firstOrFail();
         $parallel = Parallel::query()->create([
-            'oferta_academica_id' => $offering->id,
+            'programacion_asignatura_id' => $scheduledSubject->id,
             'codigo' => 'B',
             'activo' => true,
         ]);

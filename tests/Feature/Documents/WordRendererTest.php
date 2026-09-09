@@ -183,7 +183,7 @@ class WordRendererTest extends TestCase
                 [
                     'career' => ['name' => 'Software', 'faculty' => 'Ciencias Administrativas, Gestión Empresarial e Informática'],
                     'subject' => ['name' => 'Inteligencia Artificial', 'code' => 'SW-P7-037', 'cycle' => 7, 'prerequisites' => ['SW-P6-032'], 'corequisites' => []],
-                    'offering' => ['period' => 'Marzo – Julio 2026', 'campus' => 'Matriz', 'modality' => 'Presencial'],
+                    'scheduled_subject' => ['period' => 'Marzo – Julio 2026', 'campus' => 'Matriz', 'modality' => 'Presencial'],
                 ],
                 ['A'],
                 ['PAUL GUARANGA'],

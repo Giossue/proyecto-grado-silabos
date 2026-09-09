@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * I-28: el esquema físico completo queda en español. Este test recorre el esquema real
@@ -90,4 +91,24 @@ it('I-52 no conserva marcas genéricas de auditoría en tablas de dominio', func
         ->all();
 
     expect($columnas)->toBe([]);
+});
+
+it('I-62 persiste la programación de asignaturas con nombres e invariante propios', function () {
+    expect(Schema::hasTable('programaciones_asignatura'))->toBeTrue()
+        ->and(Schema::hasTable('ofertas_academicas'))->toBeFalse()
+        ->and(Schema::hasColumn('paralelos', 'programacion_asignatura_id'))->toBeTrue()
+        ->and(Schema::hasColumn('paralelos', 'oferta_academica_id'))->toBeFalse()
+        ->and(Schema::hasColumn('alcances_silabo', 'programacion_asignatura_id'))->toBeTrue()
+        ->and(Schema::hasColumn('alcances_silabo', 'oferta_academica_id'))->toBeFalse();
+
+    $restricciones = collect(DB::select(
+        "SELECT conname
+         FROM pg_constraint
+         WHERE conrelid = 'programaciones_asignatura'::regclass",
+    ))->pluck('conname');
+
+    expect($restricciones)
+        ->toContain('programacion_asignatura_periodo_materia_unica')
+        ->toContain('programaciones_asignatura_periodo_academico_id_foreign')
+        ->toContain('programaciones_asignatura_asignatura_id_foreign');
 });

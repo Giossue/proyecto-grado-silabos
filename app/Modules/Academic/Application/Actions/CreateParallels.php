@@ -4,8 +4,8 @@ namespace App\Modules\Academic\Application\Actions;
 
 use App\Models\User;
 use App\Modules\Academic\Domain\AcademicStructurePermissions;
-use App\Modules\Academic\Infrastructure\Persistence\Models\CourseOffering;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
+use App\Modules\Academic\Infrastructure\Persistence\Models\ScheduledSubject;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
 use App\Modules\Operations\Application\Actions\RecordAuditEvent;
@@ -15,7 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
-/** Alta atómica de paralelos de una sola oferta, con alcance y auditoría por fila. */
+/** Alta atómica de paralelos de una sola programación de asignatura. */
 class CreateParallels
 {
     public function __construct(
@@ -25,7 +25,7 @@ class CreateParallels
     ) {}
 
     /**
-     * @param  array{offering_id: string, codes: list<string>, shift?: string|null}  $data
+     * @param  array{scheduled_subject_id: string, codes: list<string>, shift?: string|null}  $data
      */
     public function execute(array $data, User $actor, Request $request): int
     {
@@ -38,8 +38,8 @@ class CreateParallels
         $this->locks->assertCareerEditable($activeRole->carrera_id);
 
         return DB::transaction(function () use ($data, $actor, $request, $activeRole): int {
-            $offering = CourseOffering::query()
-                ->whereKey($data['offering_id'])
+            $scheduledSubject = ScheduledSubject::query()
+                ->whereKey($data['scheduled_subject_id'])
                 ->where('activo', true)
                 ->whereHas('subject.curriculum', fn ($query) => $query
                     ->where('carrera_id', $activeRole->carrera_id)
@@ -50,20 +50,20 @@ class CreateParallels
                 ->map(fn (string $code) => trim($code))
                 ->values();
             $existing = Parallel::query()
-                ->where('oferta_academica_id', $offering->id)
+                ->where('programacion_asignatura_id', $scheduledSubject->id)
                 ->whereIn('codigo', $codes)
                 ->pluck('codigo');
 
             if ($existing->isNotEmpty()) {
                 throw ValidationException::withMessages([
-                    'codes' => 'Ya existe el paralelo '.$existing->join(', ').' en esta oferta.',
+                    'codes' => 'Ya existe el paralelo '.$existing->join(', ').' para esta materia programada.',
                 ]);
             }
 
             $correlationId = $request->attributes->getString('correlation_id') ?: null;
             foreach ($codes as $code) {
                 $parallel = Parallel::query()->create([
-                    'oferta_academica_id' => $offering->id,
+                    'programacion_asignatura_id' => $scheduledSubject->id,
                     'codigo' => $code,
                     'jornada' => $data['shift'] ?? null,
                     'activo' => true,

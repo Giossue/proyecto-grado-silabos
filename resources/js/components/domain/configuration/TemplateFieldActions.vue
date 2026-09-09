@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3';
-import { MoreHorizontal, Pencil, Trash2 } from '@lucide/vue';
+import { MoreHorizontal, Pencil, Save, Trash2 } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import { toast } from 'vue-sonner';
 import TemplateController from '@/actions/App/Modules/Configuration/Presentation/Http/Controllers/TemplateController';
@@ -36,6 +36,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { Spinner } from '@/components/ui/spinner';
 import {
     Tooltip,
     TooltipContent,
@@ -290,6 +291,15 @@ defineExpose({
                         Cancelar
                     </Button>
                     <Button type="submit" :disabled="form.processing">
+                        <Spinner
+                            v-if="form.processing"
+                            data-icon="inline-start"
+                        />
+                        <Save
+                            v-else
+                            data-icon="inline-start"
+                            aria-hidden="true"
+                        />
                         Guardar campo
                     </Button>
                 </DialogFooter>
@@ -321,6 +331,12 @@ defineExpose({
                     :disabled="form.processing"
                     @click="destroy"
                 >
+                    <Spinner v-if="form.processing" data-icon="inline-start" />
+                    <Trash2
+                        v-else
+                        data-icon="inline-start"
+                        aria-hidden="true"
+                    />
                     Eliminar campo
                 </Button>
             </DialogFooter>

@@ -23,7 +23,7 @@ use Illuminate\Validation\ValidationException;
  * Reiniciar un sílabo: el docente empieza de cero.
  *
  * Es la respuesta a «ya lo presentó y justo cambió la base»: la coordinación descarta lo
- * hecho, el expediente vuelve a «Sin iniciar» y toma de nuevo la malla, la oferta y la
+ * hecho, el expediente vuelve a «Sin iniciar» y toma de nuevo la malla, la programación y la
  * plantilla tal como están ahora. Las revisiones enviadas, las observaciones y las
  * transiciones no se tocan —son evidencia y la base no las deja borrar—; lo que se pierde
  * es el borrador actual, y por eso pide motivo y queda en auditoría con el avance
@@ -56,7 +56,7 @@ class ResetSyllabus
         return DB::transaction(function () use ($activeRole, $actor, $reason, $request, $syllabus): Syllabus {
             $locked = Syllabus::query()
                 ->lockForUpdate()
-                ->with(['convocation', 'scopes.offering', 'template.sections.blocks.fields'])
+                ->with(['convocation', 'scopes.scheduledSubject', 'template.sections.blocks.fields'])
                 ->findOrFail($syllabus->id);
 
             if (! in_array($locked->estado, self::RESETTABLE_STATES, true)) {
@@ -72,9 +72,9 @@ class ResetSyllabus
                 ]);
             }
 
-            $offering = $locked->scopes->first()?->offering;
-            if ($offering === null) {
-                throw ValidationException::withMessages(['syllabus' => 'El sílabo no tiene una oferta asociada.']);
+            $scheduledSubject = $locked->scopes->first()?->scheduledSubject;
+            if ($scheduledSubject === null) {
+                throw ValidationException::withMessages(['syllabus' => 'El sílabo no tiene una materia programada asociada.']);
             }
 
             $discarded = [
@@ -96,12 +96,12 @@ class ResetSyllabus
                 'porcentaje_completitud' => 0,
                 'iniciado_en' => null,
                 'guardado_en' => null,
-                'contexto_academico' => $this->academicContext->build($offering),
+                'contexto_academico' => $this->academicContext->build($scheduledSubject),
             ]);
             $this->inherit->execute(
                 $locked,
                 $locked->template->sections->flatMap(fn ($section) => $section->blocks->flatMap(fn ($block) => $block->fields)),
-                $offering,
+                $scheduledSubject,
             );
 
             $correlationId = $request->attributes->getString('correlation_id') ?: null;

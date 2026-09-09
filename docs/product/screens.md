@@ -41,7 +41,7 @@
 | COR-11 | Fuentes académicas                                            |
 | COR-12 | Informes                                                      |
 | COR-13 | Malla, constructor visual/formulario y materias de la carrera |
-| COR-14 | Ofertas académicas de la carrera y sus paralelos              |
+| COR-14 | Materias programadas en el período y sus paralelos             |
 | COR-15 | Asignaciones docentes de la carrera                           |
 
 En COR-15, **Crear docente** abre el formulario compartido de cuentas en modo docente
@@ -117,12 +117,13 @@ completo. El alta está separada de asignar paralelos y no levanta sus bloqueos.
   que funcionan como campos compuestos, como el selector de fecha.
 - Editor y revisión usan navegación por secciones, completitud, errores, observaciones y
   estado de guardado sin saturar la pantalla.
-- I-59 retira temporalmente el constructor de ADM-06 por decisión explícita del
-  responsable del producto. La ruta muestra únicamente una hoja carta blanca, con su
-  orientación y márgenes, sin título interno, contenido, índice, bloques, campos,
-  tablas, menús, botones de alta ni acción **Personalizar**. No envía esas estructuras
-  al navegador. Los registros existentes permanecen en la base para no destruir
-  sílabos ni revisiones mientras se define el reemplazo.
+- I-60 separa los dos estados de ADM-06. `/admin/plantilla/{id}` presenta la plantilla
+  completa en solo lectura y ofrece **Editar**. `/admin/plantilla/{id}/editar` conserva
+  la hoja y añade una cinta contextual: al seleccionar un bloque, campo o tabla muestra
+  únicamente sus acciones. El editor de celdas trabaja dentro de la hoja y no encierra
+  el documento en un diálogo de pantalla completa. Durante esta edición no se muestran
+  el sidebar ni el encabezado administrativo: una cabecera fija de ancho completo reúne
+  la salida a la vista normal y la cinta, mientras la hoja se desplaza por debajo.
 - ADM-06 muestra hojas carta separadas y numeradas (I-53). El pie derecho muestra
   únicamente el número de página (1, 2, 3…), sin el total. La cantidad se recalcula
   según el contenido de muestra al agregar, retirar, reordenar o renombrar piezas.
@@ -134,12 +135,12 @@ completo. El alta está separada de asignar paralelos y no levanta sus bloqueos.
   Las hojas se muestran directamente sobre el fondo de la pantalla, sin panel gris;
   los controles de alta aparecen en el punto del documento donde actuarán.
 - La ficha institucional parte del formato oficial y conserva su diseño al mostrarse en
-  el constructor. Sus variables muestran datos de malla, oferta, paralelos y docentes;
+  el constructor. Sus variables muestran datos de malla, programación, paralelos y docentes;
   no son campos de escritura. Discapacidad y formación son campos que completa el
   docente en su lugar dentro de la tabla. Mapa: `docs/product/identificacion-institucional.md`.
-  COR-14 concentra sus paralelos dentro de Ofertas. Desde acciones de cada oferta se
+  COR-14 concentra sus paralelos dentro de **Materias y paralelos**. Desde las acciones de cada materia se
   crea un paralelo con su código y jornada; el servidor rechaza códigos repetidos. La
-  tabla de ofertas muestra materia y código en columnas separadas, más el rango de
+  tabla de materias programadas muestra materia y código en columnas separadas, más el rango de
   inicio y fin del período institucional, no su nombre.
 - Indicadores del Panel (UI-01), cuatro por rol y todos accionables: Administración ve
   avance del proceso (% aprobados), días para la entrega, carreras sin convocar y sílabos
@@ -147,7 +148,7 @@ completo. El alta está separada de asignar paralelos y no levanta sus bloqueos.
   por entregar, días, avance de sus borradores y por corregir. Sin conteos de catálogo.
 - El Panel de cada rol abre con «Puesta en marcha»: barra de progreso y los pasos en
   orden (Administración: facultades, carreras, campus, modalidades, periodo, cuentas,
-  coordinadores, plantilla, proceso; Coordinación: malla, ofertas (y sus paralelos), docentes,
+  coordinadores, plantilla, proceso; Coordinación: malla, materias y paralelos, docentes,
   fuentes, convocatoria; Docencia: recibir, iniciar, enviar). Cada paso se calcula con
   datos reales; el siguiente lleva su botón y la tarjeta desaparece al completarse. El
   encabezado repite el avance en miniatura (barra con color y «n/m», tooltip
@@ -161,15 +162,15 @@ completo. El alta está separada de asignar paralelos y no levanta sus bloqueos.
 - Si una sección tiene un solo campo, no lleva subtítulo «n.1»: basta el título de la
   sección, en la hoja, el editor docente, la revisión y el Word. Con varios campos sí
   se numeran.
-- ADM-06 no monta ningún editor. Los componentes anteriores de bloques, campos y tablas
-  se conservan solo como compatibilidad interna durante la transición y no son
-  alcanzables desde la hoja vacía.
+- ADM-06 no mezcla lectura y edición: la ruta normal nunca monta controles mutables. La
+  ruta `/editar` reutiliza los mismos bloques, campos y documentos persistidos.
 - Las tablas repetibles conservan sus unidades, columnas tipadas y sumas. El diseño
   distingue cabecera fija, datos, datos de unidad y total: se combinan celdas dentro
   de cada grupo, sin atravesar grupos que se repiten distintas cantidades de veces.
   Docencia agrega filas/unidades y completa las casillas, sin herramientas de diseño;
-  la revisión muestra el diseño y las variables congelados al enviar. ADM-06 no expone
-  actualmente herramientas para crear o modificar estas tablas. El color global de cabecera solo alcanza cabeceras reales;
+  la revisión muestra el diseño y las variables congelados al enviar. En ADM-06 la
+  tabla se selecciona sobre la hoja y se modifica con la cinta del modo de edición. El
+  color global de cabecera solo alcanza cabeceras reales;
   nunca convierte todas las filas fijas de una ficha compleja en cabeceras.
   En la planificación, el período aporta la cantidad de semanas lectivas; unidad y
   parcial son independientes. La interfaz sugiere la siguiente semana libre, calcula
@@ -202,28 +203,28 @@ completo. El alta está separada de asignar paralelos y no levanta sus bloqueos.
   su Campus, Facultades muestra la cantidad relacionada; los catálogos no se mezclan ni
   se ocultan en pestañas.
 - La modalidad base se fija por carrera (obligatoria al crearla; la aprueba el CES) y
-  no por oferta. No hay catálogo: son las del reglamento (presencial, semipresencial, en
+  no por programación. No hay catálogo: son las del reglamento (presencial, semipresencial, en
   línea, a distancia). Cualquier materia puede apartarse en COR-13 («Igual que la
-  carrera» o una distinta), sin cambiar la modalidad visible de la carrera. COR-14 abre
-  ofertas sin selector de modalidad: hereda la de la materia o, si no hay excepción, la
+  carrera» o una distinta), sin cambiar la modalidad visible de la carrera. COR-14 programa
+  materias sin selector de modalidad: hereda la de la materia o, si no hay excepción, la
   de la carrera y la muestra en el listado (I-35).
-- COR-14 no crea ofertas una a una: **Preparar período** abre una hoja lateral amplia
-  con las materias activas que aún no tienen oferta en el período elegido. Coordinación
+- COR-14 no programa materias una a una: **Preparar período** abre una hoja lateral amplia
+  con las materias activas que aún no están programadas en el período elegido. Coordinación
   selecciona las que se dictarán y define uno o más paralelos, cada uno con su jornada;
   campus y modalidad vienen de la carrera (ADM-04 pide ambos al crearla). Una materia
   ya preparada no reaparece aquí: para cambios posteriores se usa la acción de su
-  oferta.
+  materia programada.
 - COR-13 usa una única entrada **Malla**. Si existe, la ruta abre directamente la página
   completa con **Interactivo** (pestaña principal, decisión de los coordinadores) y
   **Desglose académico** (`?modo=desglose`); si no existe, muestra el
   estado vacío universal y la acción para crearla. No presenta buscador, filtros, cards,
   paginación, publicación ni número de versión. Materias, campos y relaciones se
   consultan y mantienen dentro de esa malla. COR-14 conserva una única entrada
-  **Ofertas**; sus paralelos se agregan desde las acciones de cada oferta.
+  **Materias y paralelos**; los paralelos se agregan desde las acciones de cada materia.
 - COR-13 agrupa **Editar**, **Deshabilitar/Reactivar**, **Eliminar** y **Configurar** en un
   menú de tres puntos, con el mismo patrón de la columna de acciones de las tablas. La
   malla activa o inactiva sigue siendo editable; eliminar se rechaza cuando existen
-  ofertas o sílabos y explica que debe deshabilitarse. Editar una asignación cambia
+  materias programadas o sílabos y explica que debe deshabilitarse. Editar una asignación cambia
   docente o paralelo; la vigencia laboral se gestiona en la cuenta, nunca nombre o correo
   desde esta pantalla.
 - COR-13 abre la malla en una página completa con ciclos, tarjetas, totales y relaciones.
@@ -261,7 +262,7 @@ completo. El alta está separada de asignar paralelos y no levanta sus bloqueos.
   el proceso institucional están en pausa o cerrados. ADM-05,
   ADM-06, COR-11 y COR-13 muestran un aviso con la razón del bloqueo y ocultan las
   acciones de edición mientras dure; el servidor rechaza igual aunque se fuerce la
-  petición. I-44 extiende ese candado a catálogos institucionales, ofertas, paralelos y
+  petición. I-44 extiende ese candado a catálogos institucionales, programaciones, paralelos y
   asignaciones genéricas: solo el relevo docente sigue disponible durante la convocatoria.
 - El menú de acciones de ADM-04 distingue edición y eliminación: **Editar** abre un
   `Sheet` precargado; **Eliminar** pide confirmación y explica si una dependencia o
@@ -274,7 +275,7 @@ completo. El alta está separada de asignar paralelos y no levanta sus bloqueos.
 | Rol           | Interfaces cubiertas                            | Comportamiento                                                                                                                                                                                                                              |
 | ------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Administrador | ADM-02, ADM-03, ADM-04, ADM-05, ADM-06 y ADM-12 | Cuentas, roles, catálogos, coordinaciones, campos y procesos de sílabos se crean desde una acción que abre el `Sheet` derecho. La única plantilla institucional se crea de inmediato porque no pide datos.                                  |
-| Coordinador   | COR-02, COR-06, COR-11, COR-13, COR-14 y COR-15 | Convocatorias, observaciones, fuentes, mallas, materias, ofertas, paralelos y asignaciones docentes usan el mismo patrón. En COR-15, los selectores permiten buscar docentes por nombre o correo y paralelos por materia, período o código. |
+| Coordinador   | COR-02, COR-06, COR-11, COR-13, COR-14 y COR-15 | Convocatorias, observaciones, fuentes, mallas, materias programadas, paralelos y asignaciones docentes usan el mismo patrón. En COR-15, los selectores permiten buscar docentes por nombre o correo y paralelos por materia, período o código. |
 | Docente       | DOC-02 a DOC-10                                 | No administra colecciones maestras. Edición, IA, envío y respuestas son flujos académicos de página completa, no formularios de alta.                                                                                                       |
 
 Selección de rol, filtros, configuración personal, resolución de contradicciones y

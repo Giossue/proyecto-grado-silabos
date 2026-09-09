@@ -1,15 +1,17 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
+import { Pencil } from '@lucide/vue';
+import TemplateVisualBuilder from '@/components/domain/configuration/TemplateVisualBuilder.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
-import PaginatedDocument from '@/components/domain/PaginatedDocument.vue';
-import { index as templatesIndex } from '@/routes/admin/templates';
-import type { TemplateAppearance } from '@/types/configuration';
+import ProcessLockAlert from '@/components/domain/ProcessLockAlert.vue';
+import { Button } from '@/components/ui/button';
+import {
+    edit as templateEdit,
+    index as templatesIndex,
+} from '@/routes/admin/templates';
+import type { TemplateBuilderProps } from '@/types/configuration';
 
-defineProps<{
-    template: {
-        appearance: TemplateAppearance;
-    };
-}>();
+defineProps<TemplateBuilderProps>();
 
 defineOptions({
     layout: { breadcrumbs: [{ title: 'Plantilla', href: templatesIndex() }] },
@@ -23,17 +25,29 @@ defineOptions({
         description="Hoja base de la plantilla institucional."
         size="wide"
     >
-        <div
-            class="min-w-0 overflow-x-auto p-1 pb-4"
-            aria-label="Hoja vacía de la plantilla del sílabo"
-        >
-            <PaginatedDocument
-                :orientation="template.appearance.orientation"
-                :margin-cm="template.appearance.margin_cm"
-                :font-family="template.appearance.font_family"
-                :font-size="template.appearance.body_font_size"
-                :text-color="template.appearance.text_color"
-            />
-        </div>
+        <template #actions>
+            <Button v-if="!processLock" as-child>
+                <Link :href="templateEdit(template.id)">
+                    <Pencil data-icon="inline-start" aria-hidden="true" />
+                    Editar
+                </Link>
+            </Button>
+        </template>
+
+        <ProcessLockAlert
+            v-if="processLock"
+            title="Plantilla protegida durante el proceso"
+            :reason="processLock"
+        />
+
+        <TemplateVisualBuilder
+            :template="template"
+            :appearance="template.appearance"
+            :block-types="blockTypes"
+            :variables="variables"
+            :identification-design="identificationDesign"
+            :color-options="appearanceOptions.colors"
+            :readonly="true"
+        />
     </PageFrame>
 </template>

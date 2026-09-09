@@ -185,8 +185,24 @@ watch(
                             </div>
                         </div>
 
-                        <div class="flex w-full items-center space-x-5">
-                            <Button class="w-full" @click="handleModalNextStep">
+                        <div class="flex w-full items-center gap-2">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                class="flex-1"
+                                @click="isOpen = false"
+                            >
+                                Cancelar
+                            </Button>
+                            <Button
+                                type="button"
+                                class="flex-1"
+                                @click="handleModalNextStep"
+                            >
+                                <Check
+                                    data-icon="inline-start"
+                                    aria-hidden="true"
+                                />
                                 {{ modalConfig.buttonText }}
                             </Button>
                         </div>
@@ -280,7 +296,18 @@ watch(
                                 <InputError :message="errors?.code" />
                             </div>
 
-                            <div class="flex w-full items-center space-x-5">
+                            <div
+                                class="flex w-full flex-wrap items-center gap-2"
+                            >
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    class="flex-1"
+                                    @click="isOpen = false"
+                                    :disabled="processing"
+                                >
+                                    Cancelar
+                                </Button>
                                 <Button
                                     type="button"
                                     variant="outline"
@@ -295,6 +322,10 @@ watch(
                                     class="w-auto flex-1"
                                     :disabled="processing || code.length < 6"
                                 >
+                                    <Check
+                                        data-icon="inline-start"
+                                        aria-hidden="true"
+                                    />
                                     Confirmar
                                 </Button>
                             </div>

@@ -3,9 +3,9 @@
 namespace App\Modules\Syllabus\Application\Actions;
 
 use App\Models\User;
-use App\Modules\Academic\Infrastructure\Persistence\Models\CourseOffering;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
+use App\Modules\Academic\Infrastructure\Persistence\Models\ScheduledSubject;
 use App\Modules\Academic\Infrastructure\Persistence\Models\TeacherAssignment;
 use App\Modules\Configuration\Application\TemplateStructureValidator;
 use App\Modules\Identity\Application\ActiveRole;
@@ -74,7 +74,7 @@ class OpenConvocation
                 ]);
             }
 
-            $offerings = CourseOffering::query()
+            $scheduledSubjects = ScheduledSubject::query()
                 ->where('periodo_academico_id', $convocation->process->periodo_academico_id)
                 ->where('activo', true)
                 ->whereHas('subject.curriculum', fn ($query) => $query
@@ -93,23 +93,23 @@ class OpenConvocation
                 ->lockForUpdate()
                 ->get();
 
-            if ($offerings->isEmpty()) {
-                throw ValidationException::withMessages(['convocation' => 'No existen ofertas activas de la carrera para el periodo.']);
+            if ($scheduledSubjects->isEmpty()) {
+                throw ValidationException::withMessages(['convocation' => 'No existen materias programadas activas de la carrera para el período.']);
             }
-            foreach ($offerings as $offering) {
-                if ($offering->parallels->isEmpty() || $offering->parallels->contains(
+            foreach ($scheduledSubjects as $scheduledSubject) {
+                if ($scheduledSubject->parallels->isEmpty() || $scheduledSubject->parallels->contains(
                     fn (Parallel $parallel): bool => $parallel->teacherAssignments->isEmpty(),
                 )) {
                     throw ValidationException::withMessages([
-                        'convocation' => "La oferta {$offering->subject->nombre} tiene un paralelo sin docente vigente.",
+                        'convocation' => "La materia {$scheduledSubject->subject->nombre} tiene un paralelo sin docente vigente.",
                     ]);
                 }
             }
 
             $generated = 0;
-            foreach ($offerings as $offering) {
-                foreach ($offering->parallels as $parallel) {
-                    $this->generateSyllabus($convocation, $offering, new Collection([$parallel]));
+            foreach ($scheduledSubjects as $scheduledSubject) {
+                foreach ($scheduledSubject->parallels as $parallel) {
+                    $this->generateSyllabus($convocation, $scheduledSubject, new Collection([$parallel]));
                     $generated++;
                 }
             }
@@ -139,14 +139,14 @@ class OpenConvocation
     }
 
     /** @param Collection<int, Parallel> $parallels */
-    private function generateSyllabus(Convocation $convocation, CourseOffering $offering, Collection $parallels): void
+    private function generateSyllabus(Convocation $convocation, ScheduledSubject $scheduledSubject, Collection $parallels): void
     {
         $syllabus = Syllabus::query()->create([
             'convocatoria_id' => $convocation->id,
-            'asignatura_id' => $offering->subject->id,
-            'malla_id' => $offering->subject->malla_id,
+            'asignatura_id' => $scheduledSubject->subject->id,
+            'malla_id' => $scheduledSubject->subject->malla_id,
             'plantilla_id' => $convocation->process->plantilla_id,
-            'contexto_academico' => $this->academicContext->build($offering),
+            'contexto_academico' => $this->academicContext->build($scheduledSubject),
             'estado' => 'sin_iniciar',
         ]);
 
@@ -154,13 +154,13 @@ class OpenConvocation
             SyllabusScope::query()->create([
                 'silabo_id' => $syllabus->id,
                 'convocatoria_id' => $convocation->id,
-                'oferta_academica_id' => $offering->id,
+                'programacion_asignatura_id' => $scheduledSubject->id,
                 'paralelo_id' => $parallel->id,
             ]);
             foreach ($parallel->teacherAssignments as $assignment) {
                 $this->addCollaborator($syllabus, $assignment);
             }
         }
-        $this->inherit->execute($syllabus, $convocation->process->template->sections->flatMap(fn ($section) => $section->blocks->flatMap(fn ($block) => $block->fields)), $offering);
+        $this->inherit->execute($syllabus, $convocation->process->template->sections->flatMap(fn ($section) => $section->blocks->flatMap(fn ($block) => $block->fields)), $scheduledSubject);
     }
 }

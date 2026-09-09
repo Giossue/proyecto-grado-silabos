@@ -46,7 +46,7 @@ const dialogs: Record<
     iniciar: {
         title: 'Iniciar convocatoria de la carrera',
         description:
-            'Se comprobarán la malla, las ofertas, la asignación docente y las fuentes académicas de su carrera. Se generará un sílabo por paralelo usando la plantilla y las fechas institucionales. Si falta algún requisito, no se iniciará la convocatoria.',
+            'Se comprobarán la malla, las materias programadas, la asignación docente y las fuentes académicas de su carrera. Se generará un sílabo por paralelo usando la plantilla y las fechas institucionales. Si falta algún requisito, no se iniciará la convocatoria.',
         label: 'Iniciar convocatoria',
     },
     abrir: {
@@ -215,7 +215,17 @@ const transitionForm = (transition: Transition) => {
                         "
                         :disabled="processing"
                     >
-                        <Spinner v-if="processing" />
+                        <Spinner v-if="processing" data-icon="inline-start" />
+                        <Pause
+                            v-else-if="pending === 'pausar'"
+                            data-icon="inline-start"
+                            aria-hidden="true"
+                        />
+                        <Play
+                            v-else
+                            data-icon="inline-start"
+                            aria-hidden="true"
+                        />
                         {{ dialogs[pending].label }}
                     </Button>
                 </DialogFooter>

@@ -5,10 +5,10 @@ namespace App\Modules\Academic\Presentation\Http\Requests;
 use App\Modules\Academic\Domain\AcademicStructurePermissions;
 use App\Modules\Academic\Domain\CurriculumSystemFields;
 use App\Modules\Academic\Domain\StudyModality;
-use App\Modules\Academic\Infrastructure\Persistence\Models\CourseOffering;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CurriculumFieldDefinition;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
+use App\Modules\Academic\Infrastructure\Persistence\Models\ScheduledSubject;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Subject;
 use App\Modules\Configuration\Application\InstitutionalLogos;
 use App\Modules\Identity\Application\ActiveRole;
@@ -61,7 +61,7 @@ class StoreAcademicRecordRequest extends FormRequest
             'campus' => $this->namedCatalogRules('campus', 120),
             'carrera' => [
                 'faculty_id' => ['required', 'uuid', Rule::exists('facultades', 'id')->where('activo', true)],
-                // La modalidad la aprueba el CES por carrera; las ofertas la heredan (I-35).
+                // La modalidad la aprueba el CES por carrera; las programaciones la heredan (I-35).
                 'modality' => ['required', 'string', Rule::in(StudyModality::values())],
                 'campus_id' => ['required', 'uuid', Rule::exists('campus', 'id')->where('activo', true)],
                 ...$this->namedCatalogRules('carreras', 180),
@@ -90,7 +90,7 @@ class StoreAcademicRecordRequest extends FormRequest
                 ],
             ],
             'asignatura' => $this->subjectRules(),
-            'oferta' => [
+            'programacion_asignatura' => [
                 'period_id' => [
                     'required',
                     'uuid',
@@ -105,15 +105,15 @@ class StoreAcademicRecordRequest extends FormRequest
                             ->select('id')
                             ->where('carrera_id', $this->careerId())
                             ->where('estado', 'activa'))),
-                    Rule::unique('ofertas_academicas', 'asignatura_id')
+                    Rule::unique('programaciones_asignatura', 'asignatura_id')
                         ->where('periodo_academico_id', $this->input('period_id')),
                 ],
             ],
             'paralelo' => [
-                'offering_id' => [
+                'scheduled_subject_id' => [
                     'required',
                     'uuid',
-                    Rule::exists('ofertas_academicas', 'id')->where(fn ($query) => $query
+                    Rule::exists('programaciones_asignatura', 'id')->where(fn ($query) => $query
                         ->where('activo', true)
                         ->whereIn('asignatura_id', Subject::query()
                             ->select('id')
@@ -125,7 +125,7 @@ class StoreAcademicRecordRequest extends FormRequest
                     'required',
                     'string',
                     'max:30',
-                    $this->uniqueWithin('paralelos', 'codigo', 'oferta_academica_id', 'offering_id'),
+                    $this->uniqueWithin('paralelos', 'codigo', 'programacion_asignatura_id', 'scheduled_subject_id'),
                 ],
                 'shift' => ['nullable', 'string', Rule::in(Parallel::SHIFTS)],
             ],
@@ -139,7 +139,7 @@ class StoreAcademicRecordRequest extends FormRequest
                     'uuid',
                     Rule::exists('paralelos', 'id')->where(fn ($query) => $query
                         ->where('activo', true)
-                        ->whereIn('oferta_academica_id', CourseOffering::query()
+                        ->whereIn('programacion_asignatura_id', ScheduledSubject::query()
                             ->select('id')
                             ->whereHas('subject.curriculum', fn ($curricula) => $curricula
                                 ->where('carrera_id', $this->careerId())

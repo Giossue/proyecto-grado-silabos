@@ -13,6 +13,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
+import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import {
     Field,
     FieldError,
@@ -21,7 +22,6 @@ import {
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { PopoverContent } from '@/components/ui/popover';
-import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import {
     Select,
     SelectContent,
@@ -30,6 +30,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { Spinner } from '@/components/ui/spinner';
 import type { TemplateContentType } from '@/types/configuration';
 
 type EditableContentType = Exclude<
@@ -44,8 +45,9 @@ const props = withDefaults(
         position: number;
         blockTypes: { value: EditableContentType; label: string }[];
         menu?: boolean;
+        ribbon?: boolean;
     }>(),
-    { menu: false },
+    { menu: false, ribbon: false },
 );
 
 const open = ref(false);
@@ -109,7 +111,16 @@ const updateOpen = (value: boolean): void => {
     <component
         :is="menu ? Dialog : TemplateIconPopover"
         :open="open"
-        v-bind="menu ? {} : { label: 'Agregar campo', buttonClass: 'size-7' }"
+        v-bind="
+            menu
+                ? {}
+                : {
+                      label: 'Agregar campo',
+                      buttonClass: ribbon ? undefined : 'size-7',
+                      size: ribbon ? 'sm' : 'icon-sm',
+                      showLabel: ribbon,
+                  }
+        "
         @update:open="updateOpen"
     >
         <template v-if="menu">
@@ -202,6 +213,15 @@ const updateOpen = (value: boolean): void => {
                         Cancelar
                     </Button>
                     <Button type="submit" :disabled="form.processing">
+                        <Spinner
+                            v-if="form.processing"
+                            data-icon="inline-start"
+                        />
+                        <ListPlus
+                            v-else
+                            data-icon="inline-start"
+                            aria-hidden="true"
+                        />
                         Agregar campo
                     </Button>
                 </div>

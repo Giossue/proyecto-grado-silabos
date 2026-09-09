@@ -7,9 +7,9 @@ use App\Modules\Academic\Domain\AcademicStructurePermissions;
 use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Campus;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
-use App\Modules\Academic\Infrastructure\Persistence\Models\CourseOffering;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Faculty;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
+use App\Modules\Academic\Infrastructure\Persistence\Models\ScheduledSubject;
 use App\Modules\Academic\Infrastructure\Persistence\Models\TeacherAssignment;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
@@ -68,10 +68,10 @@ class DeleteAcademicRecord
                 }
             : match ($entity) {
                 'paralelo' => Parallel::query()
-                    ->whereHas('offering.subject.curriculum', fn ($query) => $query->where('carrera_id', $role->carrera_id))
+                    ->whereHas('scheduledSubject.subject.curriculum', fn ($query) => $query->where('carrera_id', $role->carrera_id))
                     ->lockForUpdate()->findOrFail($recordId),
                 'asignacion_docente' => TeacherAssignment::query()
-                    ->whereHas('parallel.offering.subject.curriculum', fn ($query) => $query->where('carrera_id', $role->carrera_id))
+                    ->whereHas('parallel.scheduledSubject.subject.curriculum', fn ($query) => $query->where('carrera_id', $role->carrera_id))
                     ->lockForUpdate()->findOrFail($recordId),
                 default => throw new \LogicException('Entidad de carrera no admitida.'),
             };
@@ -102,8 +102,8 @@ class DeleteAcademicRecord
                 || DB::table('asignaciones_coordinador')->where('carrera_id', $record->getKey())->exists()
                 || DB::table('asignaciones_rol')->where('carrera_id', $record->getKey())->exists(),
             'campus' => Career::query()->where('campus_id', $record->getKey())->exists()
-                || CourseOffering::query()->where('campus_id', $record->getKey())->exists(),
-            'periodo' => CourseOffering::query()->where('periodo_academico_id', $record->getKey())->exists()
+                || ScheduledSubject::query()->where('campus_id', $record->getKey())->exists(),
+            'periodo' => ScheduledSubject::query()->where('periodo_academico_id', $record->getKey())->exists()
                 || DB::table('convocatorias_universidad')->where('periodo_academico_id', $record->getKey())->exists(),
             'paralelo' => SyllabusScope::query()->where('paralelo_id', $record->getKey())->exists()
                 || SyllabusCollaborator::query()->whereHas('teacherAssignment', fn ($query) => $query->where('paralelo_id', $record->getKey()))->exists(),

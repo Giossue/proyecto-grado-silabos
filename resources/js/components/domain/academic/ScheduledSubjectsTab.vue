@@ -17,7 +17,7 @@ import { useClientPagination } from '@/composables/useClientPagination';
 import type { AcademicStructureProps } from '@/types/academic';
 
 const props = defineProps<
-    Pick<AcademicStructureProps, 'offerings' | 'options'> & {
+    Pick<AcademicStructureProps, 'scheduledSubjects' | 'options'> & {
         lockReason?: string | null;
     }
 >();
@@ -32,8 +32,8 @@ const formatPeriod = (startsOn: string, endsOn: string): string =>
         dateFormatter.format(new Date(startsOn + 'T00:00:00Z')),
         dateFormatter.format(new Date(endsOn + 'T00:00:00Z')),
     ].join(' – ');
-const offeringFilter = useClientFilter(
-    () => props.offerings,
+const scheduledSubjectFilter = useClientFilter(
+    () => props.scheduledSubjects,
     (item) => [
         item.subject_name,
         item.subject_code,
@@ -49,20 +49,20 @@ const offeringFilter = useClientFilter(
 );
 
 const {
-    items: offeringPage,
-    meta: offeringMeta,
-    setPage: setOfferingPage,
-} = useClientPagination(() => offeringFilter.items.value);
+    items: scheduledSubjectPage,
+    meta: scheduledSubjectMeta,
+    setPage: setScheduledSubjectPage,
+} = useClientPagination(() => scheduledSubjectFilter.items.value);
 </script>
 
 <template>
     <Card>
         <CardContent class="flex flex-col gap-4">
             <ClientFilterBar
-                :filter="offeringFilter"
-                input-id="offerings-search"
-                label="Buscar oferta"
-                placeholder="Buscar por materia, código, periodo, campus o modalidad"
+                :filter="scheduledSubjectFilter"
+                input-id="scheduled-subjects-search"
+                label="Buscar materia programada"
+                placeholder="Buscar por materia, código, período, campus o modalidad"
             />
             <Table
                 ><TableHeader
@@ -77,10 +77,10 @@ const {
                         ></TableRow
                     ></TableHeader
                 ><TableBody>
-                    <TableEmpty v-if="offerings.length === 0" :colspan="6"
-                        >No existen ofertas.</TableEmpty
+                    <TableEmpty v-if="scheduledSubjects.length === 0" :colspan="6"
+                        >No hay materias programadas.</TableEmpty
                     >
-                    <TableRow v-for="item in offeringPage" v-else :key="item.id"
+                    <TableRow v-for="item in scheduledSubjectPage" v-else :key="item.id"
                         ><TableCell>{{ item.subject_name }}</TableCell
                         ><TableCell>{{ item.subject_code }}</TableCell
                         ><TableCell>{{
@@ -95,7 +95,7 @@ const {
                         ><TableCell>{{ item.parallel_count }}</TableCell
                         ><TableCell class="text-right"
                             ><CareerAcademicActions
-                                entity="oferta"
+                                entity="programacion_asignatura"
                                 :record="item"
                                 :record-label="item.label"
                                 :editable="item.editable"
@@ -108,10 +108,10 @@ const {
                                 :options="options" /></TableCell
                     ></TableRow> </TableBody></Table
             ><TablePagination
-                :meta="offeringMeta"
+                :meta="scheduledSubjectMeta"
                 mode="client"
-                label="Paginación de ofertas académicas"
-                @update:page="setOfferingPage"
+                label="Paginación de materias programadas"
+                @update:page="setScheduledSubjectPage"
         /></CardContent>
     </Card>
 </template>

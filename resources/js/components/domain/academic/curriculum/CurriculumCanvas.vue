@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { router } from '@inertiajs/vue3';
-import { Info } from '@lucide/vue';
+import { Info, Link2, Trash2 } from '@lucide/vue';
 import { Controls } from '@vue-flow/controls';
 import {
     ConnectionMode,
@@ -825,6 +825,10 @@ const onNodeDragStop = ({ node }: NodeDragEvent): void => {
                             :disabled="savingRequirement"
                             @click="createRequirement('prerrequisito')"
                         >
+                            <Link2
+                                data-icon="inline-start"
+                                aria-hidden="true"
+                            />
                             Prerrequisito
                         </Button>
                     </DialogFooter>
@@ -878,6 +882,11 @@ const onNodeDragStop = ({ node }: NodeDragEvent): void => {
                             <Spinner
                                 v-if="deletingRequirement"
                                 data-icon="inline-start"
+                            />
+                            <Trash2
+                                v-else
+                                data-icon="inline-start"
+                                aria-hidden="true"
                             />
                             Eliminar relación
                         </Button>

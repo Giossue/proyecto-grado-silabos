@@ -121,7 +121,7 @@ const deleteOpen = ref(false);
                     <DialogTitle>Eliminar registro institucional</DialogTitle>
                     <DialogDescription>
                         Se eliminará «{{ recordName }}». La operación se
-                        rechazará si tiene carreras, ofertas, procesos u otro
+                        rechazará si tiene carreras, materias programadas, procesos u otro
                         historial relacionado.
                     </DialogDescription>
                 </DialogHeader>
@@ -152,7 +152,15 @@ const deleteOpen = ref(false);
                             variant="destructive"
                             :disabled="processing"
                         >
-                            <Spinner v-if="processing" />
+                            <Spinner
+                                v-if="processing"
+                                data-icon="inline-start"
+                            />
+                            <Trash2
+                                v-else
+                                data-icon="inline-start"
+                                aria-hidden="true"
+                            />
                             Eliminar registro
                         </Button>
                     </DialogFooter>

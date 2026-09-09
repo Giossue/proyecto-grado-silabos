@@ -15,6 +15,9 @@ use App\Modules\Configuration\Application\Actions\SaveTemplateDocument;
 use App\Modules\Configuration\Application\Actions\SaveTemplateSection;
 use App\Modules\Configuration\Application\Actions\UpdateTableLayout;
 use App\Modules\Configuration\Application\InstitutionalLogos;
+use App\Modules\Configuration\Application\TemplateDocumentDefaults;
+use App\Modules\Configuration\Application\TemplateVariables;
+use App\Modules\Configuration\Domain\TableLayout;
 use App\Modules\Configuration\Domain\TemplateAppearance;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\FieldDefinition;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
@@ -32,6 +35,7 @@ use App\Modules\Configuration\Presentation\Http\Requests\StoreInstitutionLogoReq
 use App\Modules\Configuration\Presentation\Http\Requests\UpdateTableLayoutRequest;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Operations\Application\Actions\RecordAuditEvent;
+use App\Modules\Syllabus\Application\IdentificationCard;
 use App\Modules\Syllabus\Application\ProcessLocks;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\UploadedFile;
@@ -72,16 +76,87 @@ class TemplateController extends Controller
         abort_unless($actor instanceof User, 401);
         $template = $action->execute($actor, $request);
 
-        return to_route('admin.templates.show', $template)->with('success', 'Plantilla creada.');
+        return to_route('admin.templates.show', $template)->with('success', 'Plantilla creada con las doce áreas base.');
     }
 
-    public function show(SyllabusTemplate $template, ManageTemplatesRequest $request): Response
+    public function show(SyllabusTemplate $template, ManageTemplatesRequest $request, ProcessLocks $locks, InstitutionalLogos $logos): Response
     {
-        return Inertia::render('Admin/Templates/Show', [
-            'template' => [
-                'appearance' => TemplateAppearance::fromMapping($template->mapeo_documento),
+        return Inertia::render('Admin/Templates/Show', $this->builderProps($template, $locks, $logos));
+    }
+
+    public function edit(SyllabusTemplate $template, ManageTemplatesRequest $request, ProcessLocks $locks, InstitutionalLogos $logos): Response|RedirectResponse
+    {
+        $reason = $locks->templateLockReason();
+
+        if ($reason !== null) {
+            return to_route('admin.templates.show', $template)->with('error', $reason);
+        }
+
+        return Inertia::render('Admin/Templates/Edit', $this->builderProps($template, $locks, $logos));
+    }
+
+    /** @return array<string, mixed> */
+    private function builderProps(SyllabusTemplate $template, ProcessLocks $locks, InstitutionalLogos $logos): array
+    {
+        $template->load('sections.blocks.fields');
+
+        return [
+            'processLock' => $locks->templateLockReason(),
+            'identificationSample' => IdentificationCard::grid(IdentificationCard::sample()),
+            'variables' => TemplateVariables::catalog(),
+            'identificationDesign' => TemplateDocumentDefaults::identification(),
+            'logos' => [
+                'institution' => route('logos.institution', ['v' => $logos->version($logos->institutionPath())]),
+                'institution_size' => InstitutionalLogos::INSTITUTION,
             ],
-        ]);
+            'template' => [
+                'id' => $template->id,
+                'name' => $template->nombre,
+                'description' => $template->descripcion,
+                'appearance' => TemplateAppearance::fromMapping($template->mapeo_documento),
+                'sections' => $template->sections->map(fn (TemplateSection $section) => [
+                    'id' => $section->id,
+                    'key' => $section->clave,
+                    'title' => $section->titulo,
+                    'description' => $section->descripcion,
+                    'blocks' => $section->blocks->map(fn (TemplateBlock $block) => [
+                        'id' => $block->id,
+                        'key' => $block->clave,
+                        'title' => $block->titulo,
+                        'type' => $block->tipo,
+                        'content_type' => $this->contentType($block, $block->fields->first()),
+                        'page_orientation' => $block->pageOrientation(),
+                        'table' => TableLayout::fromBlock($block),
+                        'document' => $block->configuracion['document'] ?? null,
+                        'fingerprint' => SaveTemplateDocument::fingerprint($block),
+                        'fields' => $block->fields
+                            ->reject(fn (FieldDefinition $field) => isset($block->configuracion['detached_fields'][$field->clave]))
+                            ->map(fn (FieldDefinition $field) => [
+                                'id' => $field->id,
+                                'block_id' => $block->id,
+                                'key' => $field->clave,
+                                'label' => $field->etiqueta,
+                                'help' => $field->ayuda,
+                                'type' => $field->tipo,
+                                'required' => $field->obligatorio,
+                                'inherited' => $field->heredado,
+                                'master_source' => $field->origen_maestro,
+                                'teacher_editable' => $field->editable_docente,
+                                'ai_enabled' => $field->ia_habilitada,
+                                'document_marker' => $field->marcador_documento,
+                                'content_type' => $this->contentType($block, $field),
+                            ])->values()->all(),
+                    ])->values()->all(),
+                ])->values()->all(),
+            ],
+            'blockTypes' => [
+                ['value' => 'text', 'label' => 'Texto'],
+                ['value' => 'table', 'label' => 'Tabla'],
+                ['value' => 'bulleted_list', 'label' => 'Lista con viñetas'],
+                ['value' => 'numbered_list', 'label' => 'Lista numerada'],
+            ],
+            'appearanceOptions' => TemplateAppearance::catalog(),
+        ];
     }
 
     public function updateAppearance(
@@ -94,6 +169,21 @@ class TemplateController extends Controller
         $action->execute($template, $request->safe()->except('confirm_purge'), $actor, $request);
 
         return back()->with('success', 'Apariencia de la plantilla guardada.');
+    }
+
+    private function contentType(TemplateBlock $block, ?FieldDefinition $field): string
+    {
+        $contentType = $block->configuredContentType();
+
+        if ($contentType !== null) {
+            return $contentType;
+        }
+
+        if ($field?->tipo === 'repetible' || $block->tipo === 'repetible') {
+            return 'table';
+        }
+
+        return 'text';
     }
 
     public function storeField(

@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import type { PendingVisit, VisitOptions } from '@inertiajs/core';
 import { router, useForm } from '@inertiajs/vue3';
-import { Save, TableProperties } from '@lucide/vue';
+import { Save, TableProperties, Trash2 } from '@lucide/vue';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { toast } from 'vue-sonner';
 import TemplateController from '@/actions/App/Modules/Configuration/Presentation/Http/Controllers/TemplateController';
 import TemplateDocumentView from '@/components/domain/configuration/TemplateDocumentView.vue';
 import TemplateTableEditor from '@/components/domain/configuration/TemplateTableEditor.vue';
+import TemplateTableStructureDialog from '@/components/domain/configuration/TemplateTableStructureDialog.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
@@ -44,6 +45,13 @@ const props = defineProps<{
     layout: TableLayout | null;
     appearance: TemplateAppearance;
     colors: { value: string; label: string }[];
+    ribbonTarget?: string;
+    contextPanelTarget?: string;
+}>();
+
+const emit = defineEmits<{
+    activate: [];
+    'editing-change': [value: boolean];
 }>();
 
 const editing = ref(false);
@@ -88,6 +96,7 @@ const start = (): void => {
     form.confirm_purge = false;
     dirty.value = false;
     editing.value = true;
+    emit('activate');
 };
 
 const close = (force = false): void => {
@@ -173,12 +182,6 @@ const updateDiscardOpen = (open: boolean): void => {
     continueEditing();
 };
 
-const updateDialogOpen = (open: boolean): void => {
-    if (!open) {
-        close();
-    }
-};
-
 const save = (): void => {
     const value = editor.value?.getDocument();
 
@@ -237,6 +240,8 @@ onBeforeUnmount(() => {
 watch(
     editing,
     (active, _previous, onCleanup) => {
+        emit('editing-change', active);
+
         if (active) {
             onCleanup(registerLocalPurgeConfirmation(url.value));
         }
@@ -252,6 +257,8 @@ watch(
         }
     },
 );
+
+defineExpose({ start });
 </script>
 
 <template>
@@ -279,7 +286,7 @@ watch(
                                 size="icon-sm"
                                 class="size-7 text-foreground"
                                 :aria-label="`Editar tabla: ${blockTitle}`"
-                                @click="start"
+                                @click.stop="start"
                             >
                                 <TableProperties aria-hidden="true" />
                             </Button>
@@ -292,70 +299,21 @@ watch(
             </TemplateDocumentView>
         </template>
 
-        <Dialog v-if="editing" :open="editing" @update:open="updateDialogOpen">
-            <DialogContent
-                class="flex h-[calc(100vh-2rem)] max-h-[70rem] w-[calc(100vw-2rem)] max-w-[80rem] flex-col gap-0 p-0 sm:max-w-[80rem]"
-            >
-                <DialogHeader class="shrink-0 border-b px-6 py-4 pr-12">
-                    <div
-                        class="flex flex-wrap items-start justify-between gap-3"
-                    >
-                        <div class="flex min-w-0 flex-col gap-1">
-                            <DialogTitle
-                                >Editar tabla: {{ blockTitle }}</DialogTitle
-                            >
-                            <DialogDescription>
-                                Seleccione celdas para aplicar formato, combinar
-                                o modificar filas y columnas.
-                            </DialogDescription>
-                        </div>
-                    </div>
-                </DialogHeader>
-
-                <div class="min-h-0 flex-1 overflow-auto p-6">
-                    <TemplateTableEditor
-                        ref="editor"
-                        :document="draft"
-                        :pending="form.processing"
-                        :font-family="appearance.font_family"
-                        :font-size="appearance.body_font_size"
-                        :text-color="appearance.text_color"
-                        :body-alignment="appearance.body_alignment"
-                        :colors="colors"
-                        @dirty="dirty = $event"
+        <template v-if="editing">
+            <Teleport v-if="ribbonTarget" :to="`${ribbonTarget}-actions`">
+                <div class="flex flex-wrap items-center gap-2">
+                    <TemplateTableStructureDialog
+                        :template-id="templateId"
+                        :block-id="blockId"
+                        :fingerprint="fingerprint"
+                        :layout="layout"
+                        :panel-target="contextPanelTarget"
+                        @saved="close(true)"
                     />
-
-                    <Alert v-if="error" class="mt-4" variant="destructive">
-                        <AlertTitle>No se pudo guardar la tabla</AlertTitle>
-                        <AlertDescription>{{ error }}</AlertDescription>
-                    </Alert>
-
-                    <Alert v-if="purge" class="mt-4" variant="destructive">
-                        <AlertTitle>Confirmación necesaria</AlertTitle>
-                        <AlertDescription
-                            class="flex flex-wrap items-center gap-2"
-                        >
-                            <span>
-                                {{ purge }} Guardar y reiniciar elimina ese
-                                trabajo en curso.
-                            </span>
-                            <Button
-                                type="button"
-                                variant="destructive"
-                                size="sm"
-                                :disabled="form.processing"
-                                @click="confirmAndSave"
-                            >
-                                Guardar y reiniciar
-                            </Button>
-                        </AlertDescription>
-                    </Alert>
-                </div>
-
-                <DialogFooter class="shrink-0 border-t bg-card px-6 py-4">
                     <Button
                         type="button"
                         variant="outline"
+                        size="sm"
                         :disabled="form.processing"
                         @click="close()"
                     >
@@ -363,6 +321,7 @@ watch(
                     </Button>
                     <Button
                         type="button"
+                        size="sm"
                         :disabled="form.processing || !dirty"
                         @click="save"
                     >
@@ -378,12 +337,59 @@ watch(
                         />
                         Guardar tabla
                     </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+                </div>
+            </Teleport>
+
+            <div class="mb-3 rounded-md border border-dashed px-3 py-2">
+                <p class="text-sm font-medium">Editando: {{ blockTitle }}</p>
+                <p class="text-xs text-muted-foreground">
+                    Seleccione celdas y use la cinta superior para dar formato.
+                </p>
+            </div>
+
+            <TemplateTableEditor
+                ref="editor"
+                :document="draft"
+                :pending="form.processing"
+                :font-family="appearance.font_family"
+                :font-size="appearance.body_font_size"
+                :text-color="appearance.text_color"
+                :body-alignment="appearance.body_alignment"
+                :colors="colors"
+                :toolbar-target="
+                    ribbonTarget ? `${ribbonTarget}-tools` : undefined
+                "
+                @dirty="dirty = $event"
+            />
+
+            <Alert v-if="error" class="mt-4" variant="destructive">
+                <AlertTitle>No se pudo guardar la tabla</AlertTitle>
+                <AlertDescription>{{ error }}</AlertDescription>
+            </Alert>
+
+            <Alert v-if="purge" class="mt-4" variant="destructive">
+                <AlertTitle>Confirmación necesaria</AlertTitle>
+                <AlertDescription class="flex flex-wrap items-center gap-2">
+                    <span>
+                        {{ purge }} Guardar y reiniciar elimina ese trabajo en
+                        curso.
+                    </span>
+                    <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        :disabled="form.processing"
+                        @click="confirmAndSave"
+                    >
+                        <Save data-icon="inline-start" aria-hidden="true" />
+                        Guardar y reiniciar
+                    </Button>
+                </AlertDescription>
+            </Alert>
+        </template>
 
         <Dialog :open="discardOpen" @update:open="updateDiscardOpen">
-            <DialogContent class="sm:max-w-md" :show-close-button="false">
+            <DialogContent class="sm:max-w-md">
                 <DialogHeader>
                     <DialogTitle>Descartar cambios de tabla</DialogTitle>
                     <DialogDescription>
@@ -403,6 +409,7 @@ watch(
                         variant="destructive"
                         @click="discardChanges"
                     >
+                        <Trash2 data-icon="inline-start" aria-hidden="true" />
                         Descartar cambios
                     </Button>
                 </DialogFooter>

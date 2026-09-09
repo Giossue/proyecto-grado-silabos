@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { MoreHorizontal, Pencil, Trash2 } from '@lucide/vue';
+import { Pencil, Settings, TableProperties, Trash2 } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import type { CSSProperties } from 'vue';
 import TemplateBlockCreator from '@/components/domain/configuration/TemplateBlockCreator.vue';
@@ -9,39 +9,108 @@ import TemplateFieldCreator from '@/components/domain/configuration/TemplateFiel
 import TemplateSectionActions from '@/components/domain/configuration/TemplateSectionActions.vue';
 import TemplateTableDesigner from '@/components/domain/configuration/TemplateTableDesigner.vue';
 import PaginatedDocument from '@/components/domain/PaginatedDocument.vue';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuSeparator,
-    DropdownMenuSub,
-    DropdownMenuSubContent,
-    DropdownMenuSubTrigger,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipTrigger,
-} from '@/components/ui/tooltip';
 import { defaultDocument, nodesOfType } from '@/lib/templateDocument';
 import { templatePreviewFields } from '@/lib/templatePreview';
+import { cn } from '@/lib/utils';
 import type {
     TemplateAppearance,
     TemplateBuilderProps,
     TemplateFieldContainer,
+    TemplateSection,
 } from '@/types/configuration';
 
-const props = defineProps<{
-    template: TemplateBuilderProps['template'];
-    appearance: TemplateAppearance;
-    blockTypes: TemplateBuilderProps['blockTypes'];
-    variables: TemplateBuilderProps['variables'];
-    identificationDesign: TemplateBuilderProps['identificationDesign'];
-    colorOptions: TemplateBuilderProps['appearanceOptions']['colors'];
-    readonly: boolean;
-}>();
+const props = withDefaults(
+    defineProps<{
+        template: TemplateBuilderProps['template'];
+        appearance: TemplateAppearance;
+        blockTypes: TemplateBuilderProps['blockTypes'];
+        variables: TemplateBuilderProps['variables'];
+        identificationDesign: TemplateBuilderProps['identificationDesign'];
+        colorOptions: TemplateBuilderProps['appearanceOptions']['colors'];
+        readonly: boolean;
+        ribbon?: boolean;
+        fixedRibbon?: boolean;
+    }>(),
+    { ribbon: false },
+);
+
+const emit = defineEmits<{ personalize: [] }>();
+type Editable = { openEdit: () => void; openDelete: () => void };
+type TableDesigner = { start: () => void };
+type Selection =
+    | { kind: 'document' }
+    | { kind: 'section'; sectionId: string }
+    | { kind: 'field'; sectionId: string; blockId: string };
+
+const selection = ref<Selection>({ kind: 'document' });
+const activeTable = ref<string | null>(null);
+const sectionActions = ref<Record<string, Editable>>({});
+const fieldActions = ref<Record<string, Editable>>({});
+const tableDesigners = ref<Record<string, TableDesigner>>({});
+
+const bindHandle = <T,>(
+    collection: Record<string, T>,
+    id: string,
+    instance: unknown,
+): void => {
+    if (instance) {
+        collection[id] = instance as T;
+
+        return;
+    }
+
+    delete collection[id];
+};
+
+const selectedSection = computed<TemplateSection | null>(() => {
+    const current = selection.value;
+
+    if (current.kind === 'document') {
+        return null;
+    }
+
+    return (
+        props.template.sections.find(
+            (section) => section.id === current.sectionId,
+        ) ?? null
+    );
+});
+
+const selectedField = computed<TemplateFieldContainer | null>(() => {
+    const current = selection.value;
+
+    if (current.kind !== 'field') {
+        return null;
+    }
+
+    return (
+        selectedSection.value?.blocks.find(
+            (block) => block.id === current.blockId,
+        ) ?? null
+    );
+});
+
+const selectedSectionIndex = computed(() =>
+    selectedSection.value
+        ? props.template.sections.findIndex(
+              (section) => section.id === selectedSection.value?.id,
+          )
+        : -1,
+);
+
+const selectionLabel = computed(() => {
+    if (selectedField.value) {
+        return `Campo · ${selectedField.value.title}`;
+    }
+
+    if (selectedSection.value) {
+        return `Bloque · ${selectedSection.value.title}`;
+    }
+
+    return 'Ningún elemento seleccionado';
+});
 
 const variableSamples = computed(() =>
     Object.fromEntries(
@@ -75,301 +144,349 @@ const fieldStyle = computed<CSSProperties>(() => ({
 
 const documentFor = (block: TemplateFieldContainer) =>
     block.document ?? defaultDocument(block, props.identificationDesign);
-
 const fieldsFor = (block: TemplateFieldContainer) =>
     templatePreviewFields(block.fields, block.table);
-
 const hasTable = (block: TemplateFieldContainer): boolean =>
     nodesOfType(documentFor(block), 'table').length > 0;
 
-type Editable = { openEdit: () => void; openDelete: () => void };
+const selectSection = (sectionId: string): void => {
+    if (!activeTable.value) {
+        selection.value = { kind: 'section', sectionId };
+    }
+};
 
-const sectionActions = ref<Record<string, Editable>>({});
-const fieldActions = ref<Record<string, Editable>>({});
-const openSectionMenu = ref<string | null>(null);
-const openSectionMenuHelp = ref<string | null>(null);
+const selectField = (sectionId: string, blockId: string): void => {
+    if (activeTable.value && activeTable.value !== blockId) {
+        return;
+    }
 
-const bindHandle = <T,>(
-    collection: Record<string, T>,
-    id: string,
-    instance: unknown,
+    selection.value = { kind: 'field', sectionId, blockId };
+};
+
+const updateTableEditing = (
+    sectionId: string,
+    blockId: string,
+    editing: boolean,
 ): void => {
-    if (instance) {
-        collection[id] = instance as T;
+    if (editing) {
+        activeTable.value = blockId;
+        selection.value = { kind: 'field', sectionId, blockId };
 
         return;
     }
 
-    delete collection[id];
+    if (activeTable.value === blockId) {
+        activeTable.value = null;
+    }
 };
+
+const sectionSelectionListeners = (sectionId: string) =>
+    props.readonly
+        ? {}
+        : {
+              pointerdown: () => selectSection(sectionId),
+              keydown: (event: KeyboardEvent) => {
+                  if (
+                      event.key === 'Enter' &&
+                      event.target === event.currentTarget
+                  ) {
+                      selectSection(sectionId);
+                  }
+              },
+          };
+
+const fieldSelectionListeners = (sectionId: string, blockId: string) =>
+    props.readonly
+        ? {}
+        : {
+              pointerdown: (event: PointerEvent) => {
+                  event.stopPropagation();
+                  selectField(sectionId, blockId);
+              },
+              keydown: (event: KeyboardEvent) => {
+                  if (
+                      event.key === 'Enter' &&
+                      event.target === event.currentTarget
+                  ) {
+                      selectField(sectionId, blockId);
+                  }
+              },
+          };
 </script>
 
 <template>
     <div
-        class="min-w-0 overflow-x-auto p-1 pb-4"
+        class="min-w-0"
         :aria-label="
             readonly
                 ? 'Plantilla del sílabo, solo lectura'
                 : 'Constructor visual de la plantilla del sílabo'
         "
     >
-        <PaginatedDocument
-            :orientation="appearance.orientation"
-            :margin-cm="appearance.margin_cm"
-            :font-family="appearance.font_family"
-            :font-size="appearance.body_font_size"
-            :text-color="appearance.text_color"
-        >
-            <h1
-                class="mb-8 leading-tight"
-                :style="titleStyle"
-                data-page-unit
-                data-page-keep-next
-            >
-                PROGRAMA DE ASIGNATURA (SÍLABO)
-            </h1>
-
+        <Teleport to="body" :disabled="!fixedRibbon">
             <div
-                v-if="template.sections.length === 0"
-                class="flex min-h-80 items-center justify-center"
-                data-page-unit
+                v-if="ribbon && !readonly"
+                id="template-editor-ribbon"
+                :class="
+                    cn(
+                        'min-w-0 bg-background/95 backdrop-blur',
+                        fixedRibbon
+                            ? 'fixed inset-x-0 top-12 z-40 border-b shadow-sm'
+                            : 'sticky top-2 z-20 mb-4 rounded-lg border shadow-sm',
+                    )
+                "
             >
-                <TemplateBlockCreator
-                    v-if="!readonly"
-                    :template-id="template.id"
-                    :position="0"
-                    :block-types="blockTypes"
-                    empty
-                />
-                <p v-else class="text-center text-muted-foreground">
-                    La plantilla todavía no tiene bloques.
-                </p>
-            </div>
-
-            <template
-                v-for="(section, sectionIndex) in template.sections"
-                :key="section.id"
-            >
-                <section
-                    class="group/template-section mb-6"
-                    :aria-label="`Bloque ${section.title}`"
+                <div
+                    class="flex min-h-14 min-w-0 items-center gap-2 overflow-hidden px-3 py-2 sm:px-5"
                 >
                     <div
-                        class="relative mb-3"
+                        id="template-editor-ribbon-tools"
+                        class="flex min-w-0 items-center gap-2 overflow-x-auto"
+                    >
+                        <template v-if="!activeTable">
+                            <TemplateBlockCreator
+                                v-if="!selectedField"
+                                :template-id="template.id"
+                                :position="
+                                    selectedSectionIndex >= 0
+                                        ? selectedSectionIndex + 1
+                                        : template.sections.length
+                                "
+                                :block-types="blockTypes"
+                                ribbon
+                            />
+
+                            <template v-if="selectedSection && !selectedField">
+                                <TemplateFieldCreator
+                                    :template-id="template.id"
+                                    :section-id="selectedSection.id"
+                                    :position="selectedSection.blocks.length"
+                                    :block-types="blockTypes"
+                                    ribbon
+                                />
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    @click="
+                                        sectionActions[
+                                            selectedSection.id
+                                        ]?.openEdit()
+                                    "
+                                >
+                                    <Pencil
+                                        data-icon="inline-start"
+                                        aria-hidden="true"
+                                    />
+                                    Renombrar bloque
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    class="text-destructive hover:text-destructive"
+                                    @click="
+                                        sectionActions[
+                                            selectedSection.id
+                                        ]?.openDelete()
+                                    "
+                                >
+                                    <Trash2
+                                        data-icon="inline-start"
+                                        aria-hidden="true"
+                                    />
+                                    Eliminar bloque
+                                </Button>
+                            </template>
+
+                            <template v-if="selectedField && selectedSection">
+                                <Button
+                                    v-if="hasTable(selectedField)"
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    @click="
+                                        tableDesigners[
+                                            selectedField.id
+                                        ]?.start()
+                                    "
+                                >
+                                    <TableProperties
+                                        data-icon="inline-start"
+                                        aria-hidden="true"
+                                    />
+                                    Editar tabla
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    @click="
+                                        fieldActions[
+                                            selectedField.id
+                                        ]?.openEdit()
+                                    "
+                                >
+                                    <Pencil
+                                        data-icon="inline-start"
+                                        aria-hidden="true"
+                                    />
+                                    Editar campo
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    class="text-destructive hover:text-destructive"
+                                    @click="
+                                        fieldActions[
+                                            selectedField.id
+                                        ]?.openDelete()
+                                    "
+                                >
+                                    <Trash2
+                                        data-icon="inline-start"
+                                        aria-hidden="true"
+                                    />
+                                    Eliminar campo
+                                </Button>
+                            </template>
+                        </template>
+
+                        <Badge
+                            variant="secondary"
+                            class="ms-1 max-w-64 shrink-0 gap-1.5 px-2.5 py-1 font-normal"
+                            :title="selectionLabel"
+                        >
+                            <span class="text-muted-foreground">
+                                Selección:
+                            </span>
+                            <span class="truncate font-medium text-foreground">
+                                {{ selectionLabel }}
+                            </span>
+                        </Badge>
+                    </div>
+
+                    <div
+                        id="template-editor-ribbon-actions"
+                        class="ms-auto flex shrink-0 items-center gap-2"
+                    >
+                        <Button
+                            v-if="!activeTable"
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            @click="emit('personalize')"
+                        >
+                            <Settings
+                                data-icon="inline-start"
+                                aria-hidden="true"
+                            />
+                            Documento
+                        </Button>
+                    </div>
+                </div>
+            </div>
+        </Teleport>
+
+        <div
+            v-if="ribbon && !readonly"
+            id="template-editor-context-panel"
+            class="mb-4 min-w-0 empty:hidden"
+        />
+
+        <div class="min-w-0 overflow-x-auto p-1 pb-4">
+            <PaginatedDocument
+                :orientation="appearance.orientation"
+                :margin-cm="appearance.margin_cm"
+                :font-family="appearance.font_family"
+                :font-size="appearance.body_font_size"
+                :text-color="appearance.text_color"
+            >
+                <h1
+                    class="mb-8 leading-tight"
+                    :style="titleStyle"
+                    data-page-unit
+                    data-page-keep-next
+                >
+                    PROGRAMA DE ASIGNATURA (SÍLABO)
+                </h1>
+
+                <div
+                    v-if="template.sections.length === 0"
+                    class="flex min-h-80 items-center justify-center"
+                    data-page-unit
+                >
+                    <TemplateBlockCreator
+                        v-if="!readonly"
+                        :template-id="template.id"
+                        :position="0"
+                        :block-types="blockTypes"
+                        empty
+                    />
+                    <p v-else class="text-center text-muted-foreground">
+                        La plantilla todavía no tiene bloques.
+                    </p>
+                </div>
+
+                <section
+                    v-for="(section, sectionIndex) in template.sections"
+                    :key="section.id"
+                    class="mb-6 rounded-xs outline-offset-4 transition-shadow"
+                    :class="{
+                        'cursor-pointer outline-2 outline-primary/50':
+                            !readonly &&
+                            selection.kind === 'section' &&
+                            selection.sectionId === section.id,
+                    }"
+                    :aria-label="`Bloque ${section.title}`"
+                    :role="readonly ? undefined : 'button'"
+                    :aria-pressed="
+                        readonly
+                            ? undefined
+                            : selection.kind === 'section' &&
+                              selection.sectionId === section.id
+                    "
+                    :tabindex="readonly ? undefined : 0"
+                    v-on="sectionSelectionListeners(section.id)"
+                >
+                    <div v-if="!readonly" class="hidden" aria-hidden="true">
+                        <TemplateSectionActions
+                            :ref="
+                                (instance) =>
+                                    bindHandle(
+                                        sectionActions,
+                                        section.id,
+                                        instance,
+                                    )
+                            "
+                            :template-id="template.id"
+                            :section="section"
+                        />
+                        <TemplateFieldActions
+                            v-for="block in section.blocks"
+                            :key="block.id"
+                            :ref="
+                                (instance) =>
+                                    bindHandle(fieldActions, block.id, instance)
+                            "
+                            :template-id="template.id"
+                            :section-title="section.title"
+                            :field="block"
+                            :block-types="blockTypes"
+                        />
+                    </div>
+
+                    <h2
+                        :id="`template-section-${section.id}`"
+                        class="mb-3 min-w-0 scroll-mt-40 leading-snug"
+                        :style="sectionStyle"
                         data-page-unit
                         data-page-keep-next
+                        tabindex="-1"
                     >
-                        <h2
-                            :id="`template-section-${section.id}`"
-                            class="min-w-0 scroll-mt-6 leading-snug"
-                            :style="sectionStyle"
-                            tabindex="-1"
-                        >
-                            {{ sectionIndex + 1 }}. {{ section.title }}
-                        </h2>
-                        <div
-                            v-if="!readonly"
-                            class="template-section-menu absolute top-0 z-10 opacity-0 transition-opacity group-focus-within/template-section:opacity-100 group-hover/template-section:opacity-100"
-                        >
-                            <div class="hidden" aria-hidden="true">
-                                <TemplateSectionActions
-                                    :ref="
-                                        (instance) =>
-                                            bindHandle(
-                                                sectionActions,
-                                                section.id,
-                                                instance,
-                                            )
-                                    "
-                                    :template-id="template.id"
-                                    :section="section"
-                                />
-                                <TemplateFieldActions
-                                    v-for="block in section.blocks"
-                                    :key="block.id"
-                                    :ref="
-                                        (instance) =>
-                                            bindHandle(
-                                                fieldActions,
-                                                block.id,
-                                                instance,
-                                            )
-                                    "
-                                    :template-id="template.id"
-                                    :section-title="section.title"
-                                    :field="block"
-                                    :block-types="blockTypes"
-                                />
-                            </div>
-                            <Tooltip
-                                :open="openSectionMenuHelp === section.id"
-                                :disable-hoverable-content="true"
-                                @update:open="
-                                    openSectionMenuHelp = $event
-                                        ? section.id
-                                        : null
-                                "
-                            >
-                                <TooltipTrigger as-child>
-                                    <span class="inline-flex">
-                                        <DropdownMenu
-                                            :open="
-                                                openSectionMenu === section.id
-                                            "
-                                            @update:open="
-                                                openSectionMenu = $event
-                                                    ? section.id
-                                                    : null
-                                            "
-                                        >
-                                            <DropdownMenuTrigger as-child>
-                                                <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    size="icon-sm"
-                                                    class="size-7 text-foreground"
-                                                    aria-label="Opciones del bloque"
-                                                    @focus="
-                                                        openSectionMenuHelp =
-                                                            section.id
-                                                    "
-                                                    @blur="
-                                                        openSectionMenuHelp =
-                                                            null
-                                                    "
-                                                    @click="
-                                                        openSectionMenuHelp =
-                                                            null
-                                                    "
-                                                >
-                                                    <MoreHorizontal
-                                                        aria-hidden="true"
-                                                    />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent
-                                                align="end"
-                                                side="left"
-                                            >
-                                                <TemplateFieldCreator
-                                                    menu
-                                                    :template-id="template.id"
-                                                    :section-id="section.id"
-                                                    :position="
-                                                        section.blocks.length
-                                                    "
-                                                    :block-types="blockTypes"
-                                                    @closed="
-                                                        openSectionMenu = null
-                                                    "
-                                                />
-                                                <TemplateBlockCreator
-                                                    menu
-                                                    :template-id="template.id"
-                                                    :position="sectionIndex + 1"
-                                                    :block-types="blockTypes"
-                                                    @closed="
-                                                        openSectionMenu = null
-                                                    "
-                                                />
-                                                <DropdownMenuSeparator />
-                                                <DropdownMenuItem
-                                                    @select="
-                                                        sectionActions[
-                                                            section.id
-                                                        ]?.openEdit()
-                                                    "
-                                                >
-                                                    <Pencil
-                                                        aria-hidden="true"
-                                                    />
-                                                    Editar bloque
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem
-                                                    variant="destructive"
-                                                    @select="
-                                                        sectionActions[
-                                                            section.id
-                                                        ]?.openDelete()
-                                                    "
-                                                >
-                                                    <Trash2
-                                                        aria-hidden="true"
-                                                    />
-                                                    Eliminar bloque
-                                                </DropdownMenuItem>
-                                                <DropdownMenuSeparator
-                                                    v-if="
-                                                        section.blocks.length >
-                                                        0
-                                                    "
-                                                />
-                                                <DropdownMenuSub
-                                                    v-if="
-                                                        section.blocks.length >
-                                                        0
-                                                    "
-                                                >
-                                                    <DropdownMenuSubTrigger>
-                                                        Campos
-                                                    </DropdownMenuSubTrigger>
-                                                    <DropdownMenuSubContent>
-                                                        <DropdownMenuSub
-                                                            v-for="block in section.blocks"
-                                                            :key="block.id"
-                                                        >
-                                                            <DropdownMenuSubTrigger>
-                                                                {{
-                                                                    block.title
-                                                                }}
-                                                            </DropdownMenuSubTrigger>
-                                                            <DropdownMenuSubContent>
-                                                                <DropdownMenuItem
-                                                                    @select="
-                                                                        fieldActions[
-                                                                            block
-                                                                                .id
-                                                                        ]?.openEdit()
-                                                                    "
-                                                                >
-                                                                    <Pencil
-                                                                        aria-hidden="true"
-                                                                    />
-                                                                    Editar campo
-                                                                </DropdownMenuItem>
-                                                                <DropdownMenuItem
-                                                                    variant="destructive"
-                                                                    @select="
-                                                                        fieldActions[
-                                                                            block
-                                                                                .id
-                                                                        ]?.openDelete()
-                                                                    "
-                                                                >
-                                                                    <Trash2
-                                                                        aria-hidden="true"
-                                                                    />
-                                                                    Eliminar
-                                                                    campo
-                                                                </DropdownMenuItem>
-                                                            </DropdownMenuSubContent>
-                                                        </DropdownMenuSub>
-                                                    </DropdownMenuSubContent>
-                                                </DropdownMenuSub>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </span>
-                                </TooltipTrigger>
-                                <TooltipContent
-                                    paper
-                                    side="left"
-                                    :side-offset="8"
-                                >
-                                    Opciones del bloque
-                                </TooltipContent>
-                            </Tooltip>
-                        </div>
-                    </div>
+                        {{ sectionIndex + 1 }}. {{ section.title }}
+                    </h2>
 
                     <p
                         v-if="section.blocks.length === 0"
@@ -382,18 +499,28 @@ const bindHandle = <T,>(
                     <article
                         v-for="(block, fieldIndex) in section.blocks"
                         :key="block.id"
-                        :id="
-                            section.blocks.length === 1
-                                ? `template-field-${block.id}`
-                                : undefined
-                        "
-                        class="group/template-field relative mb-4 scroll-mt-6"
+                        :id="`template-field-${block.id}`"
+                        class="relative mb-4 scroll-mt-40 rounded-xs outline-offset-4 transition-shadow"
+                        :class="{
+                            'cursor-pointer outline-2 outline-primary':
+                                !readonly &&
+                                selection.kind === 'field' &&
+                                selection.blockId === block.id,
+                        }"
                         :aria-label="`Campo ${block.title}`"
+                        :role="readonly ? undefined : 'button'"
+                        :aria-pressed="
+                            readonly
+                                ? undefined
+                                : selection.kind === 'field' &&
+                                  selection.blockId === block.id
+                        "
+                        :tabindex="readonly ? undefined : 0"
+                        v-on="fieldSelectionListeners(section.id, block.id)"
                     >
                         <h3
                             v-if="section.blocks.length > 1"
-                            :id="`template-field-${block.id}`"
-                            class="mb-2 scroll-mt-6 leading-snug font-semibold"
+                            class="mb-2 leading-snug font-semibold"
                             :style="fieldStyle"
                             data-page-unit
                             data-page-keep-next
@@ -402,8 +529,17 @@ const bindHandle = <T,>(
                             {{ sectionIndex + 1 }}.{{ fieldIndex + 1 }}
                             {{ block.title }}
                         </h3>
+
                         <TemplateTableDesigner
                             v-if="!readonly && hasTable(block)"
+                            :ref="
+                                (instance) =>
+                                    bindHandle(
+                                        tableDesigners,
+                                        block.id,
+                                        instance,
+                                    )
+                            "
                             :template-id="template.id"
                             :block-id="block.id"
                             :block-title="block.title"
@@ -415,6 +551,12 @@ const bindHandle = <T,>(
                             :layout="block.table"
                             :appearance="appearance"
                             :colors="colorOptions"
+                            ribbon-target="#template-editor-ribbon"
+                            context-panel-target="#template-editor-context-panel"
+                            @activate="selectField(section.id, block.id)"
+                            @editing-change="
+                                updateTableEditing(section.id, block.id, $event)
+                            "
                         />
                         <TemplateDocumentView
                             v-else
@@ -434,13 +576,7 @@ const bindHandle = <T,>(
                         />
                     </article>
                 </section>
-            </template>
-        </PaginatedDocument>
+            </PaginatedDocument>
+        </div>
     </div>
 </template>
-
-<style scoped>
-.template-section-menu {
-    right: calc(-1 * var(--page-margin) + 2rem);
-}
-</style>

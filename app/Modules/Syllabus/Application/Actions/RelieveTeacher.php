@@ -59,8 +59,8 @@ class RelieveTeacher
             $assignments = TeacherAssignment::query()
                 ->where('usuario_id', $outgoingUserId)
                 ->where('activo', true)
-                ->whereHas('parallel.offering.subject.curriculum', fn ($query) => $query->where('carrera_id', $careerId))
-                ->with('parallel.offering.subject:id,nombre')
+                ->whereHas('parallel.scheduledSubject.subject.curriculum', fn ($query) => $query->where('carrera_id', $careerId))
+                ->with('parallel.scheduledSubject.subject:id,nombre')
                 ->lockForUpdate()
                 ->get();
             if ($assignments->isEmpty()) {
@@ -74,7 +74,7 @@ class RelieveTeacher
             $underReview = $collaborations
                 ->filter(fn (SyllabusCollaborator $collaboration): bool => $collaboration->syllabus->estado === 'en_revision')
                 ->map(fn (SyllabusCollaborator $collaboration): string => $assignments
-                    ->firstWhere('id', $collaboration->asignacion_docente_id)?->parallel->offering->subject->nombre ?? 'una materia');
+                    ->firstWhere('id', $collaboration->asignacion_docente_id)?->parallel->scheduledSubject->subject->nombre ?? 'una materia');
             if ($underReview->isNotEmpty()) {
                 throw ValidationException::withMessages([
                     'outgoing_user_id' => 'Hay sílabos en revisión ('.$underReview->unique()->implode(', ').'). Resuélvalos antes de relevar.',

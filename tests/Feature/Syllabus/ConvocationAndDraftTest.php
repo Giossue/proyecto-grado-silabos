@@ -4,7 +4,7 @@ namespace Tests\Feature\Syllabus;
 
 use App\Models\User;
 use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
-use App\Modules\Academic\Infrastructure\Persistence\Models\CourseOffering;
+use App\Modules\Academic\Infrastructure\Persistence\Models\ScheduledSubject;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
 use App\Modules\Academic\Infrastructure\Persistence\Models\TeacherAssignment;
@@ -120,9 +120,9 @@ class ConvocationAndDraftTest extends TestCase
 
     public function test_explicit_per_parallel_mode_generates_one_syllabus_for_each_parallel(): void
     {
-        $offering = CourseOffering::query()->firstOrFail();
+        $scheduledSubject = ScheduledSubject::query()->firstOrFail();
         $parallel = Parallel::query()->create([
-            'oferta_academica_id' => $offering->id,
+            'programacion_asignatura_id' => $scheduledSubject->id,
             'codigo' => 'B',
             'activo' => true,
         ]);
@@ -141,8 +141,8 @@ class ConvocationAndDraftTest extends TestCase
 
     public function test_opening_is_atomic_when_a_parallel_has_no_current_teacher(): void
     {
-        $offering = CourseOffering::query()->firstOrFail();
-        Parallel::query()->create(['oferta_academica_id' => $offering->id, 'codigo' => 'B', 'activo' => true]);
+        $scheduledSubject = ScheduledSubject::query()->firstOrFail();
+        Parallel::query()->create(['programacion_asignatura_id' => $scheduledSubject->id, 'codigo' => 'B', 'activo' => true]);
         $convocation = $this->createPreparedConvocation();
 
         $this->actingAsCoordinator()

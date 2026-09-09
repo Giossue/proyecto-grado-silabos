@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Trash2 } from '@lucide/vue';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -36,6 +37,7 @@ const { open, message, confirm, cancel } = usePurgeConfirmation();
                     Cancelar
                 </Button>
                 <Button type="button" variant="destructive" @click="confirm">
+                    <Trash2 data-icon="inline-start" aria-hidden="true" />
                     Borrar y guardar
                 </Button>
             </DialogFooter>

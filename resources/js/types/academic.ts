@@ -10,7 +10,7 @@ export type Option = {
     correo_electronico?: string;
     starts_on?: string;
     ends_on?: string;
-    /** Materias de la malla activa: para agruparlas por ciclo al abrir ofertas. */
+    /** Materias de la malla activa: para agruparlas por ciclo al preparar un período. */
     ciclo?: number | null;
 };
 
@@ -79,7 +79,7 @@ export type AcademicStructureProps = {
         career_name: string;
         editable: boolean;
     }[];
-    offerings: {
+    scheduledSubjects: {
         id: string;
         subject_id: string;
         period_id: string;
@@ -97,7 +97,7 @@ export type AcademicStructureProps = {
     }[];
     parallels: {
         id: string;
-        offering_id: string;
+        scheduled_subject_id: string;
         code: string;
         shift: string | null;
         active: boolean;
@@ -132,7 +132,7 @@ export type AcademicStructureProps = {
         campuses: Option[];
         currentCurricula: Option[];
         activeSubjects: Option[];
-        offerings: Option[];
+        scheduledSubjects: Option[];
         parallels: Option[];
         coordinatorUsers: Option[];
         teacherUsers: Option[];

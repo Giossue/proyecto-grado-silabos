@@ -26,10 +26,10 @@ Word de identificación) se conservan para sílabos y revisiones anteriores sin 
 |---|---|---|
 | Facultad | `faculty` | `carreras.facultad_id` → `facultades.nombre` |
 | Carrera | `career` | `mallas.carrera_id` → `carreras.nombre` |
-| Modalidad de estudio | `modality` | `ofertas_academicas.modalidad` (valor fijo del RRA, heredado de la materia o de la carrera al abrir la oferta; I-35, I-37) |
-| Campus universitario | `campus` | `ofertas_academicas.campus_id` → `campus.nombre` |
+| Modalidad de estudio | `modality` | `programaciones_asignatura.modalidad` (valor fijo del RRA, heredado de la materia o de la carrera al programarla; I-35, I-37, I-62) |
+| Campus universitario | `campus` | `programaciones_asignatura.campus_id` → `campus.nombre` |
 | Asignatura | `subject` | `asignaturas.nombre` |
-| Periodo académico | `period` | `ofertas_academicas.periodo_academico_id` → `periodos_academicos.nombre` |
+| Periodo académico | `period` | `programaciones_asignatura.periodo_academico_id` → `periodos_academicos.nombre` |
 | Ciclo | `cycle` | `asignaturas.ciclo` (número → «Séptimo») |
 | Paralelo | `parallel` | `paralelos.codigo` de los alcances del expediente (`alcances_silabo`) |
 | Jornada | `shift` | `paralelos.jornada` (matutina, vespertina, nocturna) |
@@ -51,7 +51,7 @@ Los campos que llena el docente viven en el mismo bloque «Identificación insti
 de la plantilla (`IdentificationCard::INPUT_KEYS`). Con diseño guardado se completan
 dentro de sus celdas; el lector anterior los sigue mostrando debajo de la ficha.
 
-Los datos de la malla y la oferta llegan por `contexto_academico` (copiado al abrir la
+Los datos de la malla y la programación llegan por `contexto_academico` (copiado al abrir la
 convocatoria por `AcademicContextSnapshot`). Paralelos y docentes se leen del
 expediente en el momento. Al enviar una revisión, la ficha ya armada se guarda dentro
 de la copia (`fotografia.identification`). Además se guardan el diseño de cada bloque

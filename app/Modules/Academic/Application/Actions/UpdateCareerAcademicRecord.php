@@ -3,15 +3,15 @@
 namespace App\Modules\Academic\Application\Actions;
 
 use App\Models\User;
-use App\Modules\Academic\Application\OfferingInheritance;
+use App\Modules\Academic\Application\ScheduledSubjectInheritance;
 use App\Modules\Academic\Domain\AcademicStructurePermissions;
 use App\Modules\Academic\Domain\CurriculumSystemFields;
 use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Campus;
-use App\Modules\Academic\Infrastructure\Persistence\Models\CourseOffering;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CurriculumFieldDefinition;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
+use App\Modules\Academic\Infrastructure\Persistence\Models\ScheduledSubject;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Subject;
 use App\Modules\Academic\Infrastructure\Persistence\Models\TeacherAssignment;
 use App\Modules\Identity\Application\ActiveRole;
@@ -51,7 +51,7 @@ class UpdateCareerAcademicRecord
         'asignatura_id' => 'Materia',
         'campus_id' => 'Campus',
         'modalidad' => 'Modalidad',
-        'oferta_academica_id' => 'Oferta académica',
+        'programacion_asignatura_id' => 'Programación de asignatura',
         'usuario_id' => 'Docente',
         'paralelo_id' => 'Paralelo',
     ];
@@ -75,7 +75,7 @@ class UpdateCareerAcademicRecord
         private readonly ProcessLocks $locks,
         private readonly InProgressWork $work,
         private readonly SyncSubjectFieldValues $syncSubjectFieldValues,
-        private readonly OfferingInheritance $inheritance,
+        private readonly ScheduledSubjectInheritance $inheritance,
     ) {}
 
     /** @param array<string, mixed> $data */
@@ -164,19 +164,19 @@ class UpdateCareerAcademicRecord
                 ->whereHas('curriculum', fn ($query) => $query
                     ->where('carrera_id', $careerId))
                 ->lockForUpdate()->firstOrFail(),
-            'oferta' => CourseOffering::query()
+            'programacion_asignatura' => ScheduledSubject::query()
                 ->whereKey($recordId)
                 ->whereHas('subject.curriculum', fn ($query) => $query
                     ->where('carrera_id', $careerId))
                 ->lockForUpdate()->firstOrFail(),
             'paralelo' => Parallel::query()
                 ->whereKey($recordId)
-                ->whereHas('offering.subject.curriculum', fn ($query) => $query
+                ->whereHas('scheduledSubject.subject.curriculum', fn ($query) => $query
                     ->where('carrera_id', $careerId))
                 ->lockForUpdate()->firstOrFail(),
             'asignacion_docente' => TeacherAssignment::query()
                 ->whereKey($recordId)
-                ->whereHas('parallel.offering.subject.curriculum', fn ($query) => $query
+                ->whereHas('parallel.scheduledSubject.subject.curriculum', fn ($query) => $query
                     ->where('carrera_id', $careerId))
                 ->lockForUpdate()->firstOrFail(),
             default => throw new AuthorizationException('El tipo de registro no admite edición desde Coordinación.'),
@@ -187,7 +187,7 @@ class UpdateCareerAcademicRecord
     {
         $usedBySyllabus = match ($entity) {
             'malla', 'asignatura' => false,
-            'oferta' => SyllabusScope::query()->where('oferta_academica_id', $record->getKey())->exists(),
+            'programacion_asignatura' => SyllabusScope::query()->where('programacion_asignatura_id', $record->getKey())->exists(),
             'paralelo' => SyllabusScope::query()->where('paralelo_id', $record->getKey())->exists(),
             'asignacion_docente' => SyllabusCollaborator::query()->where('asignacion_docente_id', $record->getKey())->exists(),
             default => true,
@@ -212,7 +212,7 @@ class UpdateCareerAcademicRecord
                 'codigo' => $data['code'],
             ],
             'asignatura' => $this->subjectAttributes($data, $record),
-            'oferta' => $this->offeringAttributes($data, $careerId),
+            'programacion_asignatura' => $this->scheduledSubjectAttributes($data, $careerId),
             'paralelo' => $this->parallelAttributes($data, $careerId),
             'asignacion_docente' => $this->teacherAssignmentAttributes($data, $careerId),
             default => throw ValidationException::withMessages(['entity' => 'El tipo de registro no admite edición.']),
@@ -265,7 +265,7 @@ class UpdateCareerAcademicRecord
     /** @param array<string, mixed> $data
      * @return array<string, mixed>
      */
-    private function offeringAttributes(array $data, string $careerId): array
+    private function scheduledSubjectAttributes(array $data, string $careerId): array
     {
         $subject = Subject::query()->whereKey($this->stringValue($data, 'subject_id'))
             ->where('activo', true)
@@ -292,14 +292,14 @@ class UpdateCareerAcademicRecord
      */
     private function parallelAttributes(array $data, string $careerId): array
     {
-        $offering = CourseOffering::query()->whereKey($this->stringValue($data, 'offering_id'))
+        $scheduledSubject = ScheduledSubject::query()->whereKey($this->stringValue($data, 'scheduled_subject_id'))
             ->where('activo', true)
             ->whereHas('subject.curriculum', fn ($query) => $query
                 ->where('carrera_id', $careerId)
                 ->where('estado', 'activa'))
             ->lockForUpdate()->firstOrFail();
 
-        return ['oferta_academica_id' => $offering->id, 'codigo' => $data['code'], 'jornada' => $data['shift'] ?? null];
+        return ['programacion_asignatura_id' => $scheduledSubject->id, 'codigo' => $data['code'], 'jornada' => $data['shift'] ?? null];
     }
 
     /** @param array<string, mixed> $data
@@ -309,7 +309,7 @@ class UpdateCareerAcademicRecord
     {
         $parallel = Parallel::query()->whereKey($this->stringValue($data, 'parallel_id'))
             ->where('activo', true)
-            ->whereHas('offering.subject.curriculum', fn ($query) => $query
+            ->whereHas('scheduledSubject.subject.curriculum', fn ($query) => $query
                 ->where('carrera_id', $careerId)
                 ->where('estado', 'activa'))
             ->lockForUpdate()->firstOrFail();

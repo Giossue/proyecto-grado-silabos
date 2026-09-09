@@ -24,32 +24,32 @@ al entrar y puede sustituirla desde el menú, sin sumar alcances ni privilegios.
 - `Facultad`, `Carrera`, `Campus`, `Modalidad`, `PeriodoAcademico`.
 - `Malla`, `DefinicionCampoMalla`, `Asignatura` con ciclo/orden,
   `ValorCampoAsignatura` y `RequisitoAsignatura`.
-- `OfertaAcademica`, `Paralelo`, `AsignacionDocente`.
+- `ProgramacionAsignatura`, `Paralelo`, `AsignacionDocente`.
 - `AliasInstitucional` traduce el texto libre de la fuente hacia un catálogo normalizado.
 
 Una `Facultad` agrupa muchas `Carrera`. `Campus` representa la ubicación física donde se
-dicta una oferta; no es una subdivisión de la facultad.
+dicta una carrera y sus materias; no es una subdivisión de la facultad.
 
 `Campus` es catálogo; la modalidad no: son los valores fijos del Reglamento de Régimen
-Académico (`StudyModality`). La oferta no elige ninguno de los dos: hereda el campus de
+Académico (`StudyModality`). La programación de asignatura no elige ninguno de los dos: hereda el campus de
 la carrera (`carreras.campus_id`, I-36) y la modalidad de la materia si se apartó
 (`asignaturas.modalidad`) o de la base aprobada de la carrera (`carreras.modalidad`,
 I-35, I-37). La excepción de una materia no cambia ni recalifica la modalidad de la
-carrera. La oferta conserva las copias porque el sílabo toma de ahí campus y modalidad.
+carrera. La programación conserva las copias porque el sílabo toma de ahí campus y modalidad.
 
 `PeriodoAcademico` es un catálogo institucional único: su código no se repite entre
 carreras. Aunque la fuente histórica lo replique por carrera, el producto lo consolida
 como la ventana temporal común de la universidad (I-41).
 
 Una `Asignatura` se identifica dentro de su malla por su código visible, que es el que
-leen las personas y el que usa el producto en ofertas, sílabos y documentos.
+leen las personas y el que usa el producto en programaciones, sílabos y documentos.
 
 Las relaciones que ya respaldan un sílabo se protegen y no se eliminan. Las que aún no
 tienen dependencias se eliminan; roles, nombramientos y asignaciones se desactivan sin
 borrar su evidencia.
 
 El Administrador gobierna las entidades institucionales globales y asigna la coordinación
-de una carrera. El Coordinador mantiene la malla, asignaturas, ofertas, paralelos y
+de una carrera. El Coordinador mantiene la malla, asignaturas programadas, paralelos y
 asignaciones docentes solo dentro de esa carrera. Un periodo académico representa fechas
 y la cantidad explícita de semanas lectivas;
 el ciclo representa la posición de una materia dentro de la malla.
@@ -67,8 +67,8 @@ Una relación académica guarda origen, destino y tipo; el color del diagrama no
 la regla. El desglose académico y el constructor visual son dos proyecciones del mismo
 agregado; las asignaturas se mantienen dentro de la malla y no como una
 colección de navegación independiente. La malla actual se edita sobre sí misma tanto
-activa como inactiva. Deshabilitarla bloquea ofertas y procesos nuevos; eliminarla solo
-es posible cuando no tiene ofertas ni sílabos. `mallas` tiene una sola fila por carrera
+activa como inactiva. Deshabilitarla bloquea nuevas programaciones y procesos; eliminarla solo
+es posible cuando no tiene materias programadas ni sílabos. `mallas` tiene una sola fila por carrera
 (I-32).
 
 ### Configuración
@@ -103,7 +103,7 @@ abierto; al abrirla, la plantilla debe estar completa y las fuentes activas.
 Una convocatoria está **en curso** cuando ella está abierta y su proceso también. Esa
 condición habilita a los docentes y, por lo mismo, congela lo que sostiene su trabajo:
 con el proceso abierto no se edita la plantilla ni la estructura institucional; con una
-convocatoria en curso no se editan malla, fuentes, ofertas, paralelos ni asignaciones
+convocatoria en curso no se editan malla, fuentes, programaciones, paralelos ni asignaciones
 genéricas de esa carrera. El relevo docente es la única excepción, porque traslada de
 forma atómica la responsabilidad y el historial. Para corregir se pausa: Administración
 el proceso —detiene a toda la universidad—, Coordinación su convocatoria —solo su
@@ -113,7 +113,7 @@ la del proceso solo alcanza a las convocatorias que se abran después.
 ### Sílabo
 
 `Silabo` identifica el expediente canónico por asignatura, periodo y malla. Fija en
-`contexto_academico` una fotografía de la malla, materia y oferta al momento de crearse,
+`contexto_academico` una fotografía de la malla, materia y su programación al momento de crearse,
 por lo que cambios posteriores no reescriben el expediente. Puede agrupar
 docentes/paralelos compatibles o registrar una excepción justificada.
 
@@ -168,7 +168,7 @@ establece; una recomendación de IA nunca bloquea por sí sola.
     ambos admiten edición por Coordinación.
 13. Una materia, un campo o una relación de malla siempre pertenece a una única carrera
     por medio de la malla.
-14. Crear ofertas y abrir procesos exige que la malla actual esté activa.
+14. Programar materias y abrir procesos exige que la malla actual esté activa.
 15. Todo sílabo y toda revisión conservan el contexto académico fijado al crearse.
 16. Las horas totales de una materia se derivan de sus componentes horarios activos y no
     de un valor ingresado manualmente.

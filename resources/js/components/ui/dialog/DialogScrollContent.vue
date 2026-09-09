@@ -1,10 +1,8 @@
 <script setup lang="ts">
 import type { DialogContentEmits, DialogContentProps } from "reka-ui"
 import type { HTMLAttributes } from "vue"
-import { X } from "@lucide/vue"
 import { reactiveOmit } from "@vueuse/core"
 import {
-  DialogClose,
   DialogContent,
   DialogOverlay,
   DialogPortal,
@@ -22,6 +20,10 @@ const emits = defineEmits<DialogContentEmits>()
 const delegatedProps = reactiveOmit(props, "class")
 
 const forwarded = useForwardPropsEmits(delegatedProps, emits)
+
+const preventImplicitDismiss = (event: Event): void => {
+  event.preventDefault()
+}
 </script>
 
 <template>
@@ -37,22 +39,11 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
           )
         "
         v-bind="{ ...$attrs, ...forwarded }"
-        @pointer-down-outside="(event) => {
-          const originalEvent = event.detail.originalEvent;
-          const target = originalEvent.target as HTMLElement;
-          if (originalEvent.offsetX > target.clientWidth || originalEvent.offsetY > target.clientHeight) {
-            event.preventDefault();
-          }
-        }"
+        @escape-key-down="preventImplicitDismiss"
+        @interact-outside="preventImplicitDismiss"
+        @pointer-down-outside="preventImplicitDismiss"
       >
         <slot />
-
-        <DialogClose
-          class="absolute top-4 right-4 p-0.5 transition-colors rounded-md hover:bg-secondary"
-        >
-          <X class="w-4 h-4" />
-          <span class="sr-only">Close</span>
-        </DialogClose>
       </DialogContent>
     </DialogOverlay>
   </DialogPortal>

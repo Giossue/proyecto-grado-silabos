@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Form, Link, router, usePage } from '@inertiajs/vue3';
-import { LogOut } from '@lucide/vue';
+import { LogOut, Save } from '@lucide/vue';
 import { computed } from 'vue';
 import SecurityController from '@/actions/App/Http/Controllers/Settings/SecurityController';
 import InputError from '@/components/InputError.vue';
@@ -25,12 +25,6 @@ const required = computed(
     () => page.props.auth.user?.debe_cambiar_contrasena === true,
 );
 
-// El diálogo no se cierra: sin botón, sin «Esc» y sin clic fuera. La única alternativa a
-// cambiar la contraseña es cerrar sesión.
-const block = (event: Event): void => {
-    event.preventDefault();
-};
-
 const onLogout = (): void => {
     router.flushAll();
 };
@@ -38,14 +32,7 @@ const onLogout = (): void => {
 
 <template>
     <Dialog :open="required">
-        <DialogContent
-            class="sm:max-w-md"
-            :show-close-button="false"
-            @escape-key-down="block"
-            @interact-outside="block"
-            @pointer-down-outside="block"
-            @focus-outside="block"
-        >
+        <DialogContent class="sm:max-w-md">
             <DialogHeader>
                 <DialogTitle>Cambie su contraseña temporal</DialogTitle>
                 <DialogDescription>
@@ -111,7 +98,12 @@ const onLogout = (): void => {
                         Cerrar sesión
                     </Link>
                     <Button type="submit" :disabled="processing">
-                        <Spinner v-if="processing" />
+                        <Spinner v-if="processing" data-icon="inline-start" />
+                        <Save
+                            v-else
+                            data-icon="inline-start"
+                            aria-hidden="true"
+                        />
                         Guardar y continuar
                     </Button>
                 </div>

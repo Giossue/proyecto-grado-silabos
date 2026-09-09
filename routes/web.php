@@ -147,9 +147,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('coordination.academic.curricula.show');
         Route::redirect('materias', '/coordinacion/malla')
             ->name('coordination.academic.subjects.index');
-        Route::redirect('oferta-paralelos', '/coordinacion/ofertas');
-        Route::get('ofertas', [CareerAcademicStructureController::class, 'offerings'])
-            ->name('coordination.academic.offerings.index');
+        Route::redirect('oferta-paralelos', '/coordinacion/materias-paralelos');
+        Route::redirect('ofertas', '/coordinacion/materias-paralelos');
+        Route::get('materias-paralelos', [CareerAcademicStructureController::class, 'scheduledSubjects'])
+            ->name('coordination.academic.scheduled-subjects.index');
         Route::get('asignaciones-docentes', [CareerAcademicStructureController::class, 'teacherAssignments'])
             ->name('coordination.academic.teacher-assignments.index');
         Route::post('docentes', [CareerTeacherController::class, 'store'])
@@ -171,9 +172,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('estructura-academica/{entity}/{record}', [CareerAcademicStructureController::class, 'destroy'])
             ->whereUuid('record')
             ->name('coordination.academic.destroy');
-        Route::delete('ofertas/{offering}', [CareerAcademicStructureController::class, 'destroyOffering'])
-            ->whereUuid('offering')
-            ->name('coordination.academic.offerings.destroy');
+        Route::delete('materias-programadas/{scheduledSubject}', [CareerAcademicStructureController::class, 'destroyScheduledSubject'])
+            ->whereUuid('scheduledSubject')
+            ->name('coordination.academic.scheduled-subjects.destroy');
         Route::delete('malla/{curriculum}', [CareerAcademicStructureController::class, 'destroyCurriculum'])
             ->whereUuid('curriculum')
             ->name('coordination.academic.curricula.destroy');
@@ -251,6 +252,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('plantilla/logo', [TemplateController::class, 'storeLogo'])->name('templates.logo.store');
         // Una sola plantilla que se edita en el sitio (I-32): sin versiones, sin publicar.
         Route::redirect('plantillas', '/admin/plantilla');
+        Route::get('plantilla/{template}/editar', [TemplateController::class, 'edit'])->name('templates.edit');
         Route::get('plantilla/{template}', [TemplateController::class, 'show'])->name('templates.show');
         Route::patch('plantilla/{template}/apariencia', [TemplateController::class, 'updateAppearance'])->name('templates.appearance.update');
         Route::post('plantilla/{template}/secciones', [TemplateController::class, 'storeSection'])->name('templates.sections.store');

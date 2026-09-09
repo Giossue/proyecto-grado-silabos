@@ -214,16 +214,16 @@ class MutateCurriculumBuilder
                 ->lockForUpdate()
                 ->findOrFail($subjectId);
 
-            // Decir «tiene ofertas o sílabos» deja a quien lo lee sin saber qué mirar ni
+            // Indicar cada dependencia permite entender por qué se protege la materia.
             // dónde: se nombra lo que hay y cuánto, que es lo que permite ir a revisarlo.
-            $offerings = $subject->offerings()->count();
+            $scheduledSubjects = $subject->scheduledSubjects()->count();
             $syllabi = Syllabus::query()->where('asignatura_id', $subject->id)->count();
-            if ($offerings > 0 || $syllabi > 0) {
+            if ($scheduledSubjects > 0 || $syllabi > 0) {
                 $blockers = [];
-                if ($offerings > 0) {
-                    $blockers[] = $offerings === 1
-                        ? '1 oferta académica'
-                        : "{$offerings} ofertas académicas";
+                if ($scheduledSubjects > 0) {
+                    $blockers[] = $scheduledSubjects === 1
+                        ? '1 programación de asignatura'
+                        : "{$scheduledSubjects} programaciones de asignatura";
                 }
                 if ($syllabi > 0) {
                     $blockers[] = $syllabi === 1 ? '1 sílabo' : "{$syllabi} sílabos";

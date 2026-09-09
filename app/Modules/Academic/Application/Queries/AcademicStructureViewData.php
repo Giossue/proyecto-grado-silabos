@@ -9,11 +9,11 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Campus;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CoordinatorAssignment;
-use App\Modules\Academic\Infrastructure\Persistence\Models\CourseOffering;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CurriculumFieldDefinition;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Faculty;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
+use App\Modules\Academic\Infrastructure\Persistence\Models\ScheduledSubject;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Subject;
 use App\Modules\Academic\Infrastructure\Persistence\Models\SubjectRequirement;
 use App\Modules\Academic\Infrastructure\Persistence\Models\TeacherAssignment;
@@ -283,11 +283,11 @@ class AcademicStructureViewData
     }
 
     /** @return array<string, mixed> */
-    public function offerings(string $careerId): array
+    public function scheduledSubjects(string $careerId): array
     {
         $career = $this->career($careerId);
         $lockReason = $this->locks->careerLockReason($careerId);
-        $offerings = CourseOffering::query()
+        $scheduledSubjects = ScheduledSubject::query()
             ->whereHas('subject.curriculum', fn ($query) => $query
                 ->where('carrera_id', $careerId))
             ->with([
@@ -298,9 +298,9 @@ class AcademicStructureViewData
             ->withCount('parallels')
             ->orderBy('asignatura_id')
             ->get();
-        $usedOfferingIds = SyllabusScope::query()
-            ->whereIn('oferta_academica_id', $offerings->pluck('id'))
-            ->pluck('oferta_academica_id')
+        $usedScheduledSubjectIds = SyllabusScope::query()
+            ->whereIn('programacion_asignatura_id', $scheduledSubjects->pluck('id'))
+            ->pluck('programacion_asignatura_id')
             ->flip();
 
         return [
@@ -309,22 +309,22 @@ class AcademicStructureViewData
                 'name' => $career->nombre,
                 'lock_reason' => $lockReason,
             ],
-            'offerings' => $offerings
-                ->map(fn (CourseOffering $offering) => [
-                    'id' => $offering->id,
-                    'subject_id' => $offering->asignatura_id,
-                    'period_id' => $offering->periodo_academico_id,
-                    'campus_id' => $offering->campus_id,
-                    'label' => "{$offering->subject->codigo_institucional} · {$offering->subject->nombre}",
-                    'subject_code' => $offering->subject->codigo_institucional,
-                    'subject_name' => $offering->subject->nombre,
-                    'period_starts_on' => $offering->academicPeriod->fecha_inicio->toDateString(),
-                    'period_ends_on' => $offering->academicPeriod->fecha_fin->toDateString(),
-                    'campus_name' => $offering->campus->nombre,
-                    'modality_name' => $offering->modalidad->label(),
-                    'parallel_count' => $offering->parallels_count,
-                    'active' => $offering->activo,
-                    'editable' => $lockReason === null && ! $usedOfferingIds->has($offering->id),
+            'scheduledSubjects' => $scheduledSubjects
+                ->map(fn (ScheduledSubject $scheduledSubject) => [
+                    'id' => $scheduledSubject->id,
+                    'subject_id' => $scheduledSubject->asignatura_id,
+                    'period_id' => $scheduledSubject->periodo_academico_id,
+                    'campus_id' => $scheduledSubject->campus_id,
+                    'label' => "{$scheduledSubject->subject->codigo_institucional} · {$scheduledSubject->subject->nombre}",
+                    'subject_code' => $scheduledSubject->subject->codigo_institucional,
+                    'subject_name' => $scheduledSubject->subject->nombre,
+                    'period_starts_on' => $scheduledSubject->academicPeriod->fecha_inicio->toDateString(),
+                    'period_ends_on' => $scheduledSubject->academicPeriod->fecha_fin->toDateString(),
+                    'campus_name' => $scheduledSubject->campus->nombre,
+                    'modality_name' => $scheduledSubject->modalidad->label(),
+                    'parallel_count' => $scheduledSubject->parallels_count,
+                    'active' => $scheduledSubject->activo,
+                    'editable' => $lockReason === null && ! $usedScheduledSubjectIds->has($scheduledSubject->id),
                 ]),
             'options' => [
                 ...$this->emptyOptions(),
@@ -348,16 +348,16 @@ class AcademicStructureViewData
                     ->orderBy('orden_en_ciclo')
                     ->orderBy('nombre')
                     ->get(['id', 'codigo_institucional', 'nombre', 'ciclo']),
-                'offerings' => CourseOffering::query()
+                'scheduledSubjects' => ScheduledSubject::query()
                     ->where('activo', true)
                     ->whereHas('subject.curriculum', fn ($query) => $query
                         ->where('carrera_id', $careerId)
                         ->where('estado', 'activa'))
                     ->with(['subject:id,codigo_institucional,nombre', 'academicPeriod:id,nombre'])
                     ->get()
-                    ->map(fn (CourseOffering $offering) => [
-                        'id' => $offering->id,
-                        'label' => "{$offering->subject->codigo_institucional} · {$offering->academicPeriod->nombre}",
+                    ->map(fn (ScheduledSubject $scheduledSubject) => [
+                        'id' => $scheduledSubject->id,
+                        'label' => "{$scheduledSubject->subject->codigo_institucional} · {$scheduledSubject->academicPeriod->nombre}",
                     ]),
             ],
         ];
@@ -370,13 +370,13 @@ class AcademicStructureViewData
         $lockReason = $this->locks->careerLockReason($careerId);
         $teacherAssignments = TeacherAssignment::query()
             ->whereHas(
-                'parallel.offering.subject.curriculum',
+                'parallel.scheduledSubject.subject.curriculum',
                 fn ($query) => $query->where('carrera_id', $careerId),
             )
             ->with([
                 'user:id,nombre,correo_electronico',
-                'parallel.offering.subject:id,nombre,codigo_institucional',
-                'parallel.offering.academicPeriod:id,nombre',
+                'parallel.scheduledSubject.subject:id,nombre,codigo_institucional',
+                'parallel.scheduledSubject.academicPeriod:id,nombre',
             ])
             ->orderByDesc('asignado_en')
             ->get();
@@ -399,8 +399,8 @@ class AcademicStructureViewData
                     'user_name' => $assignment->user->nombre,
                     'user_email' => $assignment->user->correo_electronico,
                     'parallel_code' => $assignment->parallel->codigo,
-                    'subject_name' => $assignment->parallel->offering->subject->nombre,
-                    'period_name' => $assignment->parallel->offering->academicPeriod->nombre,
+                    'subject_name' => $assignment->parallel->scheduledSubject->subject->nombre,
+                    'period_name' => $assignment->parallel->scheduledSubject->academicPeriod->nombre,
                     'active' => $assignment->activo,
                     'editable' => $lockReason === null && ! $usedAssignmentIds->has($assignment->id),
                 ]),
@@ -409,19 +409,19 @@ class AcademicStructureViewData
                 'parallels' => Parallel::query()
                     ->where('activo', true)
                     ->whereHas(
-                        'offering.subject.curriculum',
+                        'scheduledSubject.subject.curriculum',
                         fn ($query) => $query
                             ->where('carrera_id', $careerId)
                             ->where('estado', 'activa'),
                     )
                     ->with([
-                        'offering.subject:id,codigo_institucional,nombre',
-                        'offering.academicPeriod:id,nombre',
+                        'scheduledSubject.subject:id,codigo_institucional,nombre',
+                        'scheduledSubject.academicPeriod:id,nombre',
                     ])
                     ->get()
                     ->map(fn (Parallel $parallel) => [
                         'id' => $parallel->id,
-                        'label' => "{$parallel->offering->subject->nombre} · {$parallel->offering->academicPeriod->nombre} · Paralelo {$parallel->codigo}",
+                        'label' => "{$parallel->scheduledSubject->subject->nombre} · {$parallel->scheduledSubject->academicPeriod->nombre} · Paralelo {$parallel->codigo}",
                     ]),
                 'teacherUsers' => User::query()
                     ->where('activo', true)
@@ -456,7 +456,7 @@ class AcademicStructureViewData
             'campuses' => [],
             'currentCurricula' => [],
             'activeSubjects' => [],
-            'offerings' => [],
+            'scheduledSubjects' => [],
             'parallels' => [],
             'coordinatorUsers' => [],
             'teacherUsers' => [],

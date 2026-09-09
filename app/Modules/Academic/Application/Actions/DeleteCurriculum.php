@@ -4,8 +4,8 @@ namespace App\Modules\Academic\Application\Actions;
 
 use App\Models\User;
 use App\Modules\Academic\Domain\AcademicStructurePermissions;
-use App\Modules\Academic\Infrastructure\Persistence\Models\CourseOffering;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
+use App\Modules\Academic\Infrastructure\Persistence\Models\ScheduledSubject;
 use App\Modules\Academic\Infrastructure\Persistence\Models\SubjectRequirement;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
@@ -44,10 +44,10 @@ class DeleteCurriculum
             $subjectIds = $curriculum->subjects->pluck('id');
 
             $hasSyllabi = Syllabus::query()->where('malla_id', $curriculum->id)->exists();
-            $hasOfferings = CourseOffering::query()->whereIn('asignatura_id', $subjectIds)->exists();
-            if ($hasSyllabi || $hasOfferings) {
+            $hasScheduledSubjects = ScheduledSubject::query()->whereIn('asignatura_id', $subjectIds)->exists();
+            if ($hasSyllabi || $hasScheduledSubjects) {
                 throw ValidationException::withMessages([
-                    'curriculum' => 'La malla tiene ofertas o sílabos relacionados y no puede eliminarse. Deshabilítela para bloquear procesos nuevos sin perder el historial.',
+                    'curriculum' => 'La malla tiene materias programadas o sílabos relacionados y no puede eliminarse. Deshabilítela para bloquear procesos nuevos sin perder el historial.',
                 ]);
             }
 

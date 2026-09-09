@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3';
+import { RotateCcw } from '@lucide/vue';
 import { ref } from 'vue';
 import ReviewController from '@/actions/App/Modules/Syllabus/Presentation/Http/Controllers/ReviewController';
 import { Button } from '@/components/ui/button';
@@ -76,7 +77,12 @@ const open = ref(false);
                         variant="destructive"
                         :disabled="processing"
                     >
-                        <Spinner v-if="processing" />
+                        <Spinner v-if="processing" data-icon="inline-start" />
+                        <RotateCcw
+                            v-else
+                            data-icon="inline-start"
+                            aria-hidden="true"
+                        />
                         Reiniciar y descartar
                     </Button>
                 </DialogFooter>

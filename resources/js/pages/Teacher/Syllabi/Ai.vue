@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/card';
 import {
     Dialog,
+    DialogClose,
     DialogContent,
     DialogDescription,
     DialogFooter,
@@ -568,12 +569,27 @@ onBeforeUnmount(() => {
                                                 }}
                                             </p>
                                             <DialogFooter>
+                                                <DialogClose as-child>
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        :disabled="processing"
+                                                    >
+                                                        Cancelar
+                                                    </Button>
+                                                </DialogClose>
                                                 <Button
                                                     type="submit"
                                                     :disabled="processing"
                                                 >
                                                     <Spinner
                                                         v-if="processing"
+                                                        data-icon="inline-start"
+                                                    />
+                                                    <Sparkles
+                                                        v-else
+                                                        data-icon="inline-start"
+                                                        aria-hidden="true"
                                                     />
                                                     Aplicar este texto
                                                 </Button>

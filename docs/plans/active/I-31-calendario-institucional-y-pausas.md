@@ -42,7 +42,7 @@ producción.
 - La pausa del administrador congela toda la universidad; la del coordinador, su carrera.
 - Las fechas de la convocatoria siguen viviendo en `fechas_limite_convocatoria` (I-15) y
   se copian del proceso al prepararla; la prórroga por carrera se mantiene.
-- Ofertas, paralelos y asignaciones docentes no se bloquean: no fueron pedidos y el
+- Programaciones, paralelos y asignaciones docentes no se bloquean: no fueron pedidos y el
   relevo docente (I-15) los necesita en plena convocatoria.
 - Los expedientes ya creados conservan su plantilla: cambiar la plantilla del proceso solo
   afecta convocatorias que se abran después.

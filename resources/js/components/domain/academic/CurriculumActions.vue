@@ -55,7 +55,7 @@ const deleteOpen = ref(false);
                     <DialogTitle>Eliminar malla</DialogTitle>
                     <DialogDescription>
                         Esta acción solo se completará si la malla no tiene
-                        ofertas ni sílabos relacionados. Si ya tiene historial,
+                        materias programadas ni sílabos relacionados. Si ya tiene historial,
                         debe deshabilitarla.
                     </DialogDescription>
                 </DialogHeader>
@@ -85,7 +85,15 @@ const deleteOpen = ref(false);
                             variant="destructive"
                             :disabled="processing"
                         >
-                            <Spinner v-if="processing" />
+                            <Spinner
+                                v-if="processing"
+                                data-icon="inline-start"
+                            />
+                            <Trash2
+                                v-else
+                                data-icon="inline-start"
+                                aria-hidden="true"
+                            />
                             Eliminar malla
                         </Button>
                     </DialogFooter>

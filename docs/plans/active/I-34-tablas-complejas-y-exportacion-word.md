@@ -59,7 +59,7 @@ defecto de las tablas sin esquema y de las listas.
       calculados; validación de celdas escalares.
 - [x] Vista de revisión (`SyllabusTableView`) con el esquema copiado en la revisión.
 - [x] Ficha de identificación institucional (`IdentificationCard`): primera tabla del
-      formato, armada desde la malla, la oferta, los paralelos y los docentes
+      formato, armada desde la malla, la programación, los paralelos y los docentes
       (facultad, carrera, modalidad, campus, asignatura, periodo, ciclo, paralelo, código,
       unidad de organización, prerrequisitos, correquisitos, horas ACD/APE/AA, total,
       créditos, docente, correo). El bloque heredado «Asignatura» pasa a

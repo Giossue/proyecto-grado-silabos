@@ -9,7 +9,7 @@ use App\Modules\Identity\Application\ActiveRole;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-/** Crea varios paralelos de una oferta en una única operación atómica (I-40). */
+/** Crea varios paralelos de una programación de asignatura en una operación atómica. */
 class StoreParallelsRequest extends FormRequest
 {
     protected function prepareForValidation(): void
@@ -44,10 +44,10 @@ class StoreParallelsRequest extends FormRequest
         $careerId = app(ActiveRole::class)->resolve($this)?->carrera_id;
 
         return [
-            'offering_id' => [
+            'scheduled_subject_id' => [
                 'required',
                 'uuid',
-                Rule::exists('ofertas_academicas', 'id')->where(fn ($query) => $query
+                Rule::exists('programaciones_asignatura', 'id')->where(fn ($query) => $query
                     ->where('activo', true)
                     ->whereIn('asignatura_id', Subject::query()
                         ->select('id')

@@ -11,7 +11,7 @@ use Illuminate\Validation\Rule;
 /**
  * «Preparar período» permite elegir materias y sus paralelos con jornada propia en un
  * solo envío.
- * Solo admite materias que todavía no tienen una oferta en el período elegido.
+ * Solo admite materias que todavía no están programadas en el período elegido.
  */
 class PreparePeriodRequest extends FormRequest
 {
@@ -57,7 +57,7 @@ class PreparePeriodRequest extends FormRequest
 
         return $this->user()?->activo === true
             && $activeRole !== null
-            && AcademicStructurePermissions::mayCreate($activeRole, 'oferta');
+            && AcademicStructurePermissions::mayCreate($activeRole, 'programacion_asignatura');
     }
 
     /** @return array<string, list<mixed>> */

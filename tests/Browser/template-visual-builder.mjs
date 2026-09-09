@@ -351,15 +351,15 @@ test(
         await page.getByRole('button', { name: 'Cancelar' }).click();
         await section.hover();
         await sectionMenu.click();
-        await page.getByRole('menuitem', { name: 'Editar bloque' }).click();
+        await page.getByRole('menuitem', { name: 'Renombrar bloque' }).click();
         const blockDialog = page.getByRole('dialog', {
-            name: 'Editar bloque',
+            name: 'Renombrar bloque',
         });
         await blockDialog
             .getByLabel('Nombre del bloque')
             .fill('Resultados actualizados');
         await blockDialog
-            .getByRole('button', { name: 'Guardar bloque' })
+            .getByRole('button', { name: 'Guardar nombre' })
             .click();
         await blockDialog.waitFor({ state: 'hidden' });
         const blockUpdate = await page.evaluate(() =>

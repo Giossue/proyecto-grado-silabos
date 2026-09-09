@@ -8,10 +8,10 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Campus;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CoordinatorAssignment;
-use App\Modules\Academic\Infrastructure\Persistence\Models\CourseOffering;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Faculty;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
+use App\Modules\Academic\Infrastructure\Persistence\Models\ScheduledSubject;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Subject;
 use App\Modules\Academic\Infrastructure\Persistence\Models\TeacherAssignment;
 use App\Modules\Identity\Application\ActiveRole;
@@ -35,7 +35,7 @@ class SetAcademicRecordStatus
         'periodo' => AcademicPeriod::class,
         'malla' => Curriculum::class,
         'asignatura' => Subject::class,
-        'oferta' => CourseOffering::class,
+        'programacion_asignatura' => ScheduledSubject::class,
         'paralelo' => Parallel::class,
         'asignacion_coordinador' => CoordinatorAssignment::class,
         'asignacion_docente' => TeacherAssignment::class,
@@ -119,16 +119,16 @@ class SetAcademicRecordStatus
                 'curriculum',
                 fn ($query) => $query->where('carrera_id', $careerId),
             )->lockForUpdate()->findOrFail($recordId),
-            'oferta' => CourseOffering::query()->whereHas(
+            'programacion_asignatura' => ScheduledSubject::query()->whereHas(
                 'subject.curriculum',
                 fn ($query) => $query->where('carrera_id', $careerId),
             )->lockForUpdate()->findOrFail($recordId),
             'paralelo' => Parallel::query()->whereHas(
-                'offering.subject.curriculum',
+                'scheduledSubject.subject.curriculum',
                 fn ($query) => $query->where('carrera_id', $careerId),
             )->lockForUpdate()->findOrFail($recordId),
             'asignacion_docente' => TeacherAssignment::query()->whereHas(
-                'parallel.offering.subject.curriculum',
+                'parallel.scheduledSubject.subject.curriculum',
                 fn ($query) => $query->where('carrera_id', $careerId),
             )->lockForUpdate()->findOrFail($recordId),
             default => throw new AuthorizationException('El registro no pertenece a la gestión de carrera.'),
@@ -141,10 +141,10 @@ class SetAcademicRecordStatus
             'facultad' => Career::query()->where('facultad_id', $recordId)->where('activo', true)->exists(),
             'carrera' => Curriculum::query()->where('carrera_id', $recordId)->active()->exists(),
             'malla' => false,
-            'campus' => CourseOffering::query()->where('campus_id', $recordId)->where('activo', true)->exists(),
-            'periodo' => CourseOffering::query()->where('periodo_academico_id', $recordId)->where('activo', true)->exists(),
-            'asignatura' => CourseOffering::query()->where('asignatura_id', $recordId)->where('activo', true)->exists(),
-            'oferta' => Parallel::query()->where('oferta_academica_id', $recordId)->where('activo', true)->exists(),
+            'campus' => ScheduledSubject::query()->where('campus_id', $recordId)->where('activo', true)->exists(),
+            'periodo' => ScheduledSubject::query()->where('periodo_academico_id', $recordId)->where('activo', true)->exists(),
+            'asignatura' => ScheduledSubject::query()->where('asignatura_id', $recordId)->where('activo', true)->exists(),
+            'programacion_asignatura' => Parallel::query()->where('programacion_asignatura_id', $recordId)->where('activo', true)->exists(),
             'paralelo' => TeacherAssignment::query()->where('paralelo_id', $recordId)->where('activo', true)->exists(),
             default => false,
         };

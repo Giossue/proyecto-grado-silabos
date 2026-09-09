@@ -219,7 +219,7 @@ const totalFields = computed(
                     <DialogDescription>
                         Se eliminará «{{ data.subject.name }}» junto con sus
                         relaciones académicas. Esta acción solo se completará si
-                        la materia no tiene ofertas ni sílabos relacionados.
+                        la materia no tiene programaciones ni sílabos relacionados.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -251,7 +251,15 @@ const totalFields = computed(
                             variant="destructive"
                             :disabled="processing"
                         >
-                            <Spinner v-if="processing" />
+                            <Spinner
+                                v-if="processing"
+                                data-icon="inline-start"
+                            />
+                            <Trash2
+                                v-else
+                                data-icon="inline-start"
+                                aria-hidden="true"
+                            />
                             Eliminar materia
                         </Button>
                     </DialogFooter>

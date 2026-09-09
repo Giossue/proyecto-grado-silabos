@@ -51,14 +51,14 @@ it('mantiene las altas de gestión que requieren datos dentro del sheet derecho 
             'component_file' => 'resources/js/components/domain/academic/curriculum/CurriculumSubjectSheet.vue',
             'action' => 'CareerAcademicStructureController.store.form',
         ],
-        'Coordinador · ofertas' => [
-            'page' => 'resources/js/pages/Coordination/Academic/Offerings.vue',
+        'Coordinador · materias y paralelos' => [
+            'page' => 'resources/js/pages/Coordination/Academic/ScheduledSubjects.vue',
             'component' => 'PeriodPreparationSheet',
             'component_file' => 'resources/js/components/domain/academic/PeriodPreparationSheet.vue',
             'action' => 'CareerAcademicStructureController.preparePeriod.url',
             'success' => 'onSuccess: () => {',
         ],
-        'Coordinador · paralelo desde una oferta' => [
+        'Coordinador · paralelo desde una materia programada' => [
             'page' => 'resources/js/components/domain/academic/CareerAcademicActions.vue',
             'component' => 'ParallelCreationSheet',
             'component_file' => 'resources/js/components/domain/academic/ParallelCreationSheet.vue',
@@ -261,8 +261,8 @@ it('presenta una sola malla por carrera sin buscador filtros cards ni versiones'
     $curriculumForm = file_get_contents(
         $root.'/resources/js/components/domain/academic/curriculum/CurriculumFormView.vue',
     );
-    $offerings = file_get_contents(
-        $root.'/resources/js/pages/Coordination/Academic/Offerings.vue',
+    $scheduledSubjects = file_get_contents(
+        $root.'/resources/js/pages/Coordination/Academic/ScheduledSubjects.vue',
     );
     expect($sidebar)
         ->toBeString()
@@ -270,9 +270,8 @@ it('presenta una sola malla por carrera sin buscador filtros cards ni versiones'
         ->toContain('href: curriculaIndex()')
         ->not->toContain("title: 'Mallas y materias'")
         ->not->toContain('subjectsIndex')
-        ->toContain("title: 'Ofertas'")
-        ->toContain('href: offeringsIndex()')
-        ->not->toContain("title: 'Ofertas y paralelos'")
+        ->toContain("title: 'Materias y paralelos'")
+        ->toContain('href: scheduledSubjectsIndex()')
         ->not->toContain('parallelsIndex');
     expect($curricula)
         ->toBeString()
@@ -304,7 +303,7 @@ it('presenta una sola malla por carrera sin buscador filtros cards ni versiones'
         ->not->toContain('Malla publicada')
         ->not->toContain('número de versión')
         ->not->toContain('version_number');
-    expect($offerings)->toBeString()->toContain('<PeriodPreparationSheet');
+    expect($scheduledSubjects)->toBeString()->toContain('<PeriodPreparationSheet');
 });
 
 it('ofrece desglose y constructor visual sobre el mismo contrato de malla', function (): void {
@@ -428,11 +427,11 @@ it('ofrece desglose y constructor visual sobre el mismo contrato de malla', func
 
 it('evita repetir el encabezado de pagina dentro de las tablas academicas', function (): void {
     $root = dirname(__DIR__, 2);
-    $offerings = file_get_contents(
-        $root.'/resources/js/components/domain/academic/OfferingsTab.vue',
+    $scheduledSubjects = file_get_contents(
+        $root.'/resources/js/components/domain/academic/ScheduledSubjectsTab.vue',
     );
 
-    expect($offerings)
+    expect($scheduledSubjects)
         ->toBeString()
         ->toContain('period_starts_on')
         ->toContain('<TableHead>Materia</TableHead')
@@ -443,7 +442,7 @@ it('evita repetir el encabezado de pagina dentro de las tablas academicas', func
         ->not->toContain('<CardDescription');
 });
 
-it('prepara solo ofertas pendientes en una hoja lateral amplia', function (): void {
+it('prepara solo materias pendientes en una hoja lateral amplia', function (): void {
     $root = dirname(__DIR__, 2);
     $sheet = file_get_contents(
         $root.'/resources/js/components/domain/academic/PeriodPreparationSheet.vue',
@@ -571,7 +570,7 @@ it('agrupa las acciones de tabla en menus accesibles de tres puntos', function (
     $this->assertSame(4, substr_count($catalogs, '<CatalogActions'));
 
     foreach ([
-        'resources/js/components/domain/academic/OfferingsTab.vue' => 1,
+        'resources/js/components/domain/academic/ScheduledSubjectsTab.vue' => 1,
         'resources/js/components/domain/academic/TeacherAssignmentsPanel.vue' => 1,
     ] as $surface => $expected) {
         $source = file_get_contents($root.'/'.$surface);
@@ -676,28 +675,200 @@ it('edita cuentas desde una sola accion del listado de usuarios', function (): v
         ->toContain("display === 'menu'");
 });
 
-it('deja visible únicamente la hoja vacía de la plantilla', function (): void {
+it('construye la plantilla desde bloques que contienen campos tipados', function (): void {
     $root = dirname(__DIR__, 2);
     $source = file_get_contents($root.'/resources/js/pages/Admin/Templates/Show.vue');
+    $editor = file_get_contents($root.'/resources/js/pages/Admin/Templates/Edit.vue');
 
     expect($source)
         ->toBeString()
         ->toContain('<Head title="Plantilla" />')
         ->toContain('<PageFrame')
-        ->toContain('<PaginatedDocument')
-        ->toContain('Hoja vacía de la plantilla del sílabo')
-        ->not->toContain('<TemplateVisualBuilder')
+        ->toContain('<TemplateVisualBuilder')
+        ->toContain(':readonly="true"')
+        ->toContain('templateEdit(template.id)')
+        ->toContain('Editar')
+        ->toContain('<ProcessLockAlert')
         ->not->toContain('<TemplateAppearanceSheet')
-        ->not->toContain('Personalizar')
-        ->not->toContain('<ProcessLockAlert')
-        ->not->toContain('TemplateBlockCreator')
-        ->not->toContain('TemplateFieldCreator')
         ->not->toContain('<TemplateSheetEditor')
         ->not->toContain('<InstitutionLogoSheet');
+
+    expect($editor)
+        ->toBeString()
+        ->toContain('<Head title="Editar plantilla" />')
+        ->toContain('templateShow(template.id)')
+        ->toContain('<TemplateVisualBuilder')
+        ->toContain('ribbon')
+        ->toContain('fixed-ribbon')
+        ->toContain('class="sticky top-0')
+        ->not->toContain('<PageFrame')
+        ->toContain('<TemplateAppearanceSheet');
+
+    $app = file_get_contents($root.'/resources/js/app.ts');
+    $editorLayout = file_get_contents(
+        $root.'/resources/js/layouts/TemplateEditorLayout.vue',
+    );
+    expect($app)
+        ->toBeString()
+        ->toContain("case name === 'Admin/Templates/Edit':")
+        ->toContain('return TemplateEditorLayout;');
+    expect($editorLayout)
+        ->toBeString()
+        ->toContain('<slot />')
+        ->not->toContain('AppSidebar')
+        ->not->toContain('AppSidebarHeader');
+
+    $builder = file_get_contents(
+        $root.'/resources/js/components/domain/configuration/TemplateVisualBuilder.vue',
+    );
+    expect($builder)
+        ->toBeString()
+        ->toContain('<PaginatedDocument')
+        ->toContain('PROGRAMA DE ASIGNATURA (SÍLABO)')
+        ->toContain('<TemplateBlockCreator')
+        ->toContain('<TemplateFieldCreator')
+        ->toContain('<TemplateTableDesigner')
+        ->toContain('<TemplateDocumentView')
+        ->toContain('template-editor-ribbon')
+        ->toContain('<Teleport to="body" :disabled="!fixedRibbon">')
+        ->toContain("'fixed inset-x-0 top-12 z-40 border-b shadow-sm'")
+        ->toContain('Renombrar bloque')
+        ->toContain('Editar campo')
+        ->toContain('section.blocks.length > 1')
+        ->toContain('appearance.table_header_background')
+        ->toContain('appearance.body_alignment');
+
+    $creator = file_get_contents(
+        $root.'/resources/js/components/domain/configuration/TemplateBlockCreator.vue',
+    );
+    expect($creator)
+        ->toBeString()
+        ->toContain(':is="menu ? Dialog : TemplateIconPopover"')
+        ->toContain('El bloque agrupa los campos')
+        ->toContain('Nombre del bloque')
+        ->toContain('form.fields')
+        ->toContain('Tipo de contenido')
+        ->toContain('<Select')
+        ->toContain('<SelectGroup')
+        ->toContain('portal-disabled')
+        ->toContain('Agregar otro campo')
+        ->toContain('Crear bloque')
+        ->not->toContain('<NativeSelect')
+        ->not->toContain('draggable="true"');
+
+    $fieldCreator = file_get_contents(
+        $root.'/resources/js/components/domain/configuration/TemplateFieldCreator.vue',
+    );
+    expect($fieldCreator)
+        ->toBeString()
+        ->toContain(':is="menu ? Dialog : TemplateIconPopover"')
+        ->toContain('Se añadirá dentro de este bloque')
+        ->toContain('Tipo de contenido')
+        ->toContain('<Select')
+        ->toContain('<SelectGroup')
+        ->toContain('portal-disabled')
+        ->toContain('Agregar campo')
+        ->not->toContain('<NativeSelect');
+
+    $tableDesigner = file_get_contents(
+        $root.'/resources/js/components/domain/configuration/TemplateTableDesigner.vue',
+    );
+    $tableEditor = file_get_contents(
+        $root.'/resources/js/components/domain/configuration/TemplateTableEditor.vue',
+    );
+    $tableStructure = file_get_contents(
+        $root.'/resources/js/components/domain/configuration/TemplateTableStructureDialog.vue',
+    );
+    $toolbarSelect = file_get_contents(
+        $root.'/resources/js/components/domain/configuration/TemplateToolbarSelect.vue',
+    );
+    $toolbarButton = file_get_contents(
+        $root.'/resources/js/components/domain/configuration/TemplateToolbarButton.vue',
+    );
+    $iconPopover = file_get_contents(
+        $root.'/resources/js/components/domain/configuration/TemplateIconPopover.vue',
+    );
+    expect($tableDesigner)
+        ->toBeString()
+        ->toContain('Editar tabla')
+        ->toContain('ribbonTarget')
+        ->toContain('<Teleport')
+        ->toContain('Editando: {{ blockTitle }}')
+        ->toContain('<DialogTitle>Descartar cambios de tabla</DialogTitle>')
+        ->toContain('<TemplateTableEditor')
+        ->toContain('TemplateController.updateDocument.url')
+        ->toContain('Guardar tabla')
+        ->not->toContain('window.confirm');
+    expect($tableStructure)
+        ->toBeString()
+        ->toContain('panelTarget')
+        ->toContain('<Teleport')
+        ->toContain("panelTarget ? 'section' : DialogContent")
+        ->toContain('Ocultar estructura');
+    expect($tableEditor)
+        ->toBeString()
+        ->toContain('Fondo de celda')
+        ->toContain('Color de texto')
+        ->toContain('Alineación de celda')
+        ->toContain('Borde de celda')
+        ->toContain('Combinar')
+        ->toContain('Separar')
+        ->toContain('Filas y columnas')
+        ->toContain('<TemplateToolbarSelect')
+        ->toContain('size="icon-sm"')
+        ->toContain('<TooltipContent')
+        ->toContain('<DropdownMenu');
+    expect($toolbarSelect)
+        ->toBeString()
+        ->toContain('<Select')
+        ->toContain('<Tooltip')
+        ->toContain('class="relative w-12 gap-1 px-2"')
+        ->toContain(':aria-label="label"');
+    expect($toolbarButton)
+        ->toBeString()
+        ->toContain('<Tooltip')
+        ->toContain('<Button')
+        ->toContain('size="icon-sm"')
+        ->toContain(':aria-label="label"');
+    expect($iconPopover)
+        ->toBeString()
+        ->toContain('<Popover')
+        ->toContain('<Tooltip')
+        ->toContain("size: 'icon-sm'")
+        ->toContain(':aria-label="label"');
+
+    $documentView = file_get_contents(
+        $root.'/resources/js/components/domain/configuration/TemplateDocumentView.vue',
+    );
+    expect($documentView)
+        ->toBeString()
+        ->toContain('.document-table th')
+        ->not->toContain("tr[data-row-role='fixed']");
+
+    $appearance = file_get_contents(
+        $root.'/resources/js/components/domain/configuration/TemplateAppearanceSheet.vue',
+    );
+    expect($appearance)
+        ->toBeString()
+        ->toContain('<Sheet')
+        ->toContain('Personalizar plantilla')
+        ->toContain('Orientación')
+        ->toContain('Márgenes')
+        ->toContain('Fuente general')
+        ->toContain('Título principal')
+        ->toContain('Títulos de bloque')
+        ->toContain('Fondo de cabecera de tabla')
+        ->toContain('Guardar apariencia');
 
     // I-53: el marco compartido conserva el estándar y calcula hojas dinámicas.
     $paper = file_get_contents(
         $root.'/resources/js/components/domain/PaginatedDocument.vue',
+    );
+    $pagination = file_get_contents(
+        $root.'/resources/js/lib/documentPagination.ts',
+    );
+    $tableEditor = file_get_contents(
+        $root.'/resources/js/components/domain/configuration/TemplateTableEditor.vue',
     );
 
     expect($paper)
@@ -709,6 +880,18 @@ it('deja visible únicamente la hoja vacía de la plantilla', function (): void 
         ->toContain('v-for="page in pages"')
         ->toContain('ResizeObserver')
         ->toContain('MutationObserver');
+
+    expect($pagination)
+        ->toBeString()
+        ->toContain('flowThrough: boolean')
+        ->toContain("element.hasAttribute('data-page-flow-through')")
+        ->toContain('function spacerAnchor(')
+        ->toContain('sibling.getClientRects().length > 0')
+        ->toContain('anchor.before(spacer)')
+        ->toContain('!unit.flowThrough');
+    expect($tableEditor)
+        ->toBeString()
+        ->toContain('data-page-flow-through');
 });
 
 it('abre los detalles de los listados desde sus acciones', function (): void {
@@ -741,7 +924,7 @@ it('abre los detalles de los listados desde sus acciones', function (): void {
     }
 });
 
-it('presenta la plantilla institucional única y abre su hoja vacía', function (): void {
+it('presenta la plantilla institucional única y abre su constructor', function (): void {
     $root = dirname(__DIR__, 2);
 
     // Una sola plantilla (I-32): la ruta abre directo su constructor y el listado solo
@@ -760,17 +943,26 @@ it('presenta la plantilla institucional única y abre su hoja vacía', function 
         ->not->toContain('<CardTitle')
         ->not->toContain('<TableActionsMenu');
 
-    // La ruta conserva la hoja, pero no monta el constructor retirado.
+    // La ruta normal presenta una vista limpia y la edición vive en una URL dedicada.
     $show = file_get_contents($root.'/resources/js/pages/Admin/Templates/Show.vue');
+    $edit = file_get_contents($root.'/resources/js/pages/Admin/Templates/Edit.vue');
     expect($show)
         ->toBeString()
         ->not->toContain('Versiones')
         ->not->toContain('sibling.id')
         ->toContain('<Head title="Plantilla" />')
-        ->toContain('<PaginatedDocument')
-        ->not->toContain('<TemplateVisualBuilder')
+        ->toContain('<TemplateVisualBuilder')
+        ->toContain(':readonly="true"')
+        ->toContain('templateEdit(template.id)')
         ->not->toContain('<TemplateAppearanceSheet')
         ->not->toContain('<TemplateSheetEditor');
+
+    expect($edit)
+        ->toBeString()
+        ->toContain('<Head title="Editar plantilla" />')
+        ->toContain('templateShow(template.id)')
+        ->toContain('<TemplateAppearanceSheet')
+        ->toContain('ribbon');
 
 });
 
@@ -913,7 +1105,7 @@ it('normaliza los encabezados de todos los modulos autenticados', function (): v
         'resources/js/pages/Role/Select.vue',
         'resources/js/pages/Coordination/Academic/Curricula.vue',
         'resources/js/pages/Coordination/Academic/CurriculumBuilder.vue',
-        'resources/js/pages/Coordination/Academic/Offerings.vue',
+        'resources/js/pages/Coordination/Academic/ScheduledSubjects.vue',
         'resources/js/pages/Coordination/Academic/TeacherAssignments.vue',
         'resources/js/pages/Coordination/Convocations/Index.vue',
         'resources/js/pages/Coordination/Convocations/Show.vue',
@@ -999,6 +1191,7 @@ it('normaliza los encabezados de todos los modulos autenticados', function (): v
         $relativePath = str_replace($root.'/', '', $file->getPathname());
         if (
             $relativePath === 'resources/js/pages/Welcome.vue'
+            || $relativePath === 'resources/js/pages/Admin/Templates/Edit.vue'
             || str_starts_with($relativePath, 'resources/js/pages/auth/')
             || str_starts_with($relativePath, 'resources/js/pages/settings/')
         ) {

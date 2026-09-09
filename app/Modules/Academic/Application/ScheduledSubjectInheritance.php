@@ -9,13 +9,13 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\Subject;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Lo que la oferta hereda en vez de preguntar. El CES aprueba cada carrera para una
+ * Lo que la programación de asignatura hereda en vez de volver a preguntar. El CES aprueba cada carrera para una
  * sede y una modalidad (RRA arts. 70-74): campus y modalidad viven en la carrera.
  * Cualquier materia puede apartarse de la modalidad base (tres materias en línea en
  * una carrera presencial) sin cambiar la modalidad aprobada de la carrera. El sílabo
- * copia ambos datos de la oferta (I-35, I-36, I-37).
+ * copia ambos datos de la programación (I-35, I-36, I-37).
  */
-class OfferingInheritance
+class ScheduledSubjectInheritance
 {
     /**
      * Modalidad propia de una materia: vacío significa «la de la carrera».
@@ -29,7 +29,7 @@ class OfferingInheritance
         return is_string($value) && $value !== '' ? StudyModality::from($value) : null;
     }
 
-    /** Modalidad con la que se abre la oferta de una materia. */
+    /** Modalidad con la que se programa una materia. */
     public function modalityFor(Subject $subject): StudyModality
     {
         if ($subject->modalidad instanceof StudyModality) {
@@ -40,21 +40,21 @@ class OfferingInheritance
         $modality = $subject->curriculum->career->modalidad;
         if (! $modality instanceof StudyModality) {
             throw ValidationException::withMessages([
-                'subject_id' => 'La carrera no tiene modalidad. Administración debe asignarla en Carreras antes de abrir ofertas.',
+                'subject_id' => 'La carrera no tiene modalidad. Administración debe asignarla en Carreras antes de programar materias.',
             ]);
         }
 
         return $modality;
     }
 
-    /** Campus en el que se dicta cualquier oferta de la carrera. */
+    /** Campus en el que se dicta cualquier materia programada de la carrera. */
     public function campusFor(Career $career): Campus
     {
         $career->loadMissing('campus');
 
         if ($career->campus === null) {
             throw ValidationException::withMessages([
-                'subject_id' => 'La carrera no tiene campus. Administración debe asignarlo en Carreras antes de abrir ofertas.',
+                'subject_id' => 'La carrera no tiene campus. Administración debe asignarlo en Carreras antes de programar materias.',
             ]);
         }
 

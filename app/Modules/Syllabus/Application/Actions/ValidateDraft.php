@@ -7,6 +7,7 @@ use App\Modules\Configuration\Domain\TableLayout;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\FieldDefinition;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Operations\Application\Actions\RecordAuditEvent;
+use App\Modules\Syllabus\Application\AcademicContextValues;
 use App\Modules\Syllabus\Application\DraftCompleteness;
 use App\Modules\Syllabus\Domain\PlanningTable;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\Syllabus;
@@ -36,10 +37,10 @@ class ValidateDraft
             $values = $locked->values()->get()->keyBy('definicion_campo_id');
             $rows = $locked->rows()->orderBy('posicion')->get()->groupBy('definicion_campo_id');
             $academicContext = $locked->contexto_academico ?? [];
-            if (data_get($academicContext, 'offering.teaching_weeks') === null) {
+            if (AcademicContextValues::scheduledSubject($academicContext, 'teaching_weeks') === null) {
                 data_set(
                     $academicContext,
-                    'offering.teaching_weeks',
+                    'scheduled_subject.teaching_weeks',
                     $locked->convocation->process->academicPeriod->semanas_lectivas,
                 );
             }

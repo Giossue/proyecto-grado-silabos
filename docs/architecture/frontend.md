@@ -68,6 +68,10 @@ No crees una variante visual por módulo si el significado es el mismo.
   pares mediante tokens semánticos comunes para tema claro y oscuro.
 - Los paneles destacan trabajo que requiere acción; no repiten todos los conteos como cards.
 - CRUD corto puede usar diálogo; editor, revisión, convocatoria y publicación usan página completa.
+- `DialogContent` y `DialogScrollContent` aplican el patrón persistente de I-61: no
+  incluyen cierre `X` y previenen cierre por fondo o `Esc`. Cada diálogo ofrece una
+  salida explícita y su acción principal incluye un icono semántico; `Sheet` permanece
+  fuera de esta convención.
 - La navegación visible no supera dos niveles y cambia según el rol efectivo.
 - Coordinación entra mediante cards de carrera y el menú de usuario abre
   `WorkScopeSwitcherSheet` para sustituir el único ámbito activo. Ambos envían el mismo
@@ -78,9 +82,12 @@ No crees una variante visual por módulo si el significado es el mismo.
   común. Materias no mantiene una pantalla paralela.
 - Las superficies usan `background`, `card`, `popover` y `sidebar` como tokens separados;
   un módulo no introduce colores directos para fabricar contraste.
-- Desde I-59, ADM-06 monta únicamente `PaginatedDocument` vacío. No carga
-  `TemplateVisualBuilder`, acciones estructurales ni panel de apariencia, y el servidor
-  deja de serializar secciones, bloques, campos y catálogos para esa ruta.
+- Desde I-60, ADM-06 tiene una ruta de lectura y otra de edición. `Show.vue` monta
+  `TemplateVisualBuilder` siempre en solo lectura; `Edit.vue` activa su cinta contextual.
+  Ambas reciben la misma proyección del servidor, evitando dos representaciones del
+  documento. La ruta de edición usa `TemplateEditorLayout`: no monta `AppSidebar` ni el
+  encabezado administrativo y fija su cabecera con la cinta a todo el viewport. La vista
+  normal conserva `AppSidebarLayout` y `PageFrame`.
 
 ## Formularios y editor
 
@@ -104,6 +111,9 @@ margen, fuente, tamaño y color; intercambia ancho/alto en horizontal y entrega 
 métricas vigentes a `documentPagination` sin persistir saltos.
 `documentPagination` mide el DOM y agrega separadores transitorios entre unidades
 marcadas con `data-page-unit`; `data-page-keep-next` mantiene títulos con contenido.
+Si una unidad es el primer contenido visible de un contenedor de presentación, el
+separador se inserta antes del contenedor para no ampliar artificialmente su contorno de
+selección.
 Las tablas se recorren por grupos completos de `rowspan`. Se conservan los nodos Vue y
 sus controles; los separadores se retiran antes de recalcular. `MutationObserver`,
 `ResizeObserver` y la carga de fuentes/imágenes disparan un cálculo agrupado por frame,
@@ -115,20 +125,17 @@ del formulario docente. Una unidad indivisible excepcionalmente más alta que el
 `AppSidebarLayout` y `PageFrame` recortan el exceso horizontal con `overflow-x-clip`;
 la hoja mantiene su propio desplazamiento horizontal en pantallas estrechas.
 
-## Constructor progresivo de plantilla (I-56/I-58, retirado de ADM-06 por I-59)
+## Constructor progresivo de plantilla (I-56/I-58/I-60)
 
-La implementación descrita a continuación se conserva como compatibilidad técnica, pero
-no se importa desde la página de plantilla. La superficie vigente es una hoja vacía.
+La implementación se vuelve a exponer mediante el modo de edición dedicado de ADM-06.
 
 `TemplateVisualBuilder` proyecta las secciones persistidas como bloques de producto y
 los `TemplateBlock` internos como campos. Esa traducción permite conservar el esquema
 existente sin una migración destructiva: para Administración, un bloque es siempre un
 contenedor y cada campo elige su presentación. El índice de `Show.vue` observa los
-encabezados anclados de `TemplateVisualBuilder`, marca el bloque visible y permite saltar
-tanto a ese bloque como a sus campos; en móvil lo sustituye un `Select`. El único menú de
-tres puntos por bloque abre los
-diálogos de `TemplateBlockCreator` y `TemplateFieldCreator`, además de las acciones
-estructurales. `SaveTemplateSection` crea sección, bloques técnicos y definiciones dentro
+encabezados de `TemplateVisualBuilder`. La selección de un bloque, campo o tabla cambia
+la cinta superior sin duplicar controles junto a cada elemento. `SaveTemplateSection`
+crea sección, bloques técnicos y definiciones dentro
 de una sola transacción. Los identificadores técnicos se generan en cliente, se validan
 como opacos y nunca se muestran.
 
@@ -140,11 +147,10 @@ revisión ya copia ese mapa; `SyllabusWordDocument` interpreta los mismos valore
 DOCX. No se persisten CSS, clases ni colores libres. `ProcessLocks` y `InProgressWork`
 siguen protegiendo tanto estructura como apariencia.
 
-Los componentes documentales anteriores permanecen como lectores compatibles para
-diseños ya guardados. ADM-06 no monta un editor documental global, menú contextual,
-paleta ni arrastre. Cuando Administración pulsa **Editar tabla**,
-`TemplateTableDesigner` abre un `Dialog` amplio con `TemplateTableEditor`, una instancia
-Tiptap acotada que selecciona celdas y expone fondo, color de texto, alineación,
+Los componentes documentales sirven a las dos rutas. Cuando Administración selecciona
+una tabla y pulsa **Editar tabla**, `TemplateTableDesigner` monta `TemplateTableEditor`
+dentro de la hoja y teletransporta sus herramientas a la cinta. La instancia Tiptap
+acotada selecciona celdas y expone fondo, color de texto, alineación,
 negrita, cursiva, borde, combinación y operaciones de filas/columnas. El guardado usa el
 PATCH existente de `SaveTemplateDocument`, con su huella, autorización, bloqueo y
 confirmación de reinicio. `TemplateDocument` normaliza el catálogo de atributos por

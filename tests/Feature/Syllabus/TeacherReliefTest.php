@@ -4,7 +4,7 @@ namespace Tests\Feature\Syllabus;
 
 use App\Models\User;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
-use App\Modules\Academic\Infrastructure\Persistence\Models\CourseOffering;
+use App\Modules\Academic\Infrastructure\Persistence\Models\ScheduledSubject;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
 use App\Modules\Academic\Infrastructure\Persistence\Models\TeacherAssignment;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\AcademicSource;
@@ -151,8 +151,8 @@ class TeacherReliefTest extends TestCase
 
     private function extraParallelFor(User $teacher): Parallel
     {
-        $offering = CourseOffering::query()->firstOrFail();
-        $parallel = Parallel::query()->create(['oferta_academica_id' => $offering->id, 'codigo' => 'Z', 'activo' => true]);
+        $scheduledSubject = ScheduledSubject::query()->firstOrFail();
+        $parallel = Parallel::query()->create(['programacion_asignatura_id' => $scheduledSubject->id, 'codigo' => 'Z', 'activo' => true]);
         TeacherAssignment::query()->create([
             'usuario_id' => $teacher->id,
             'paralelo_id' => $parallel->id,

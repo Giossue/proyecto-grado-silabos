@@ -44,24 +44,24 @@
 - La actualización se autoriza y valida en servidor, se ejecuta dentro de una transacción
   y registra campos modificados y valores anterior/nuevo en auditoría. Un envío sin cambios
   no inventa un evento.
-- El Coordinador mantiene la malla, materias, ofertas, paralelos y asignaciones docentes
+- El Coordinador mantiene la malla, materias programadas, paralelos y asignaciones docentes
   únicamente para la carrera de su rol.
 - Cada fila editable de esas colecciones ofrece Editar o Eliminar cuando no tiene
-  dependencias. Una convocatoria abierta congela ofertas, paralelos y asignaciones de su
+  dependencias. Una convocatoria abierta congela programaciones, paralelos y asignaciones de su
   carrera; Coordinación debe pausarla para corregir y el servidor vuelve a comprobar el
   alcance por registro. Las actualizaciones conservan antes/después en auditoría.
-- COR-14 puede crear varios paralelos de una misma oferta en un lote atómico: los códigos
+- COR-14 puede crear varios paralelos de una misma materia programada en un lote atómico: los códigos
   separados por coma o línea comparten jornada; una duplicación o un código inválido no
   crea una parte del lote. Cada paralelo creado queda auditado por separado.
 - Cada carrera tiene cero o una malla actual, editable activa o inactiva. Coordinación
-  puede deshabilitarla/reactivarla y solo eliminarla cuando no tiene ofertas ni sílabos.
-  Una oferta, paralelo o asignación ya incorporada a un sílabo queda protegida y no se
+  puede deshabilitarla/reactivarla y solo eliminarla cuando no tiene programaciones ni sílabos.
+  Una programación, paralelo o asignación ya incorporada a un sílabo queda protegida y no se
   elimina; para sustituir un responsable existente se usa el relevo con sustento.
 - La navegación del Coordinador concentra Materias dentro de **Malla**. La ruta abre el
   agregado actual directamente o muestra su estado vacío; no usa buscador, filtros,
-  cards, paginación, publicación ni número de versión. Ofertas y Paralelos conservan
-  rutas hijas separadas.
-- Estructura, mallas, materias y ofertas usan identificadores estables. La posición de una
+  cards, paginación, publicación ni número de versión. **Materias y paralelos** conserva
+  una ruta separada.
+- Estructura, mallas, materias y programaciones usan identificadores estables. La posición de una
   materia se presenta como ciclo; el periodo académico conserva sus fechas.
 - ADM-02..04 y COR-14..15 priorizan sus tablas; COR-13 prioriza la página completa de la
   malla. En el desglose de COR-13, la acción principal abre desde la derecha el formulario
@@ -72,12 +72,12 @@
 ## Criterios críticos
 
 - Un usuario fuera de alcance no puede inferir ni descargar el recurso.
-- Un ID de malla, materia, oferta, paralelo o asignación de otra carrera no concede acceso
+- Un ID de malla, materia programada, paralelo o asignación de otra carrera no concede acceso
   ni permite una mutación aunque se envíe fuera de la interfaz.
 - Cada carrera tiene como máximo una coordinación activa.
 - Un Coordinador o Docente no puede actualizar catálogos globales aunque construya la
   solicitud fuera de la interfaz.
 - No hay archivado de catálogos académicos: los registros sin dependencias se eliminan
   con confirmación y auditoría; las referencias históricas bloquean la eliminación.
-- Sin una malla activa no se crean ofertas ni se abren procesos nuevos. Los sílabos
+- Sin una malla activa no se programan materias ni se abren procesos nuevos. Los sílabos
   existentes conservan su fotografía académica aunque la malla se edite o deshabilite.

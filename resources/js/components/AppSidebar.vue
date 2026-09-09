@@ -39,7 +39,7 @@ import { index as usersIndex } from '@/routes/admin/users';
 import { index as convocationsIndex } from '@/routes/convocations';
 import { dashboard as coordinationDashboard } from '@/routes/coordination';
 import { index as curriculaIndex } from '@/routes/coordination/academic/curricula';
-import { index as offeringsIndex } from '@/routes/coordination/academic/offerings';
+import { index as scheduledSubjectsIndex } from '@/routes/coordination/academic/scheduled-subjects';
 import { index as teacherAssignmentsIndex } from '@/routes/coordination/academic/teacher-assignments';
 import { index as coordinationSourcesIndex } from '@/routes/coordination/sources';
 import { index as reportsIndex } from '@/routes/reports';
@@ -147,8 +147,8 @@ const mainNavItems = computed<NavItem[]>(() => [
                   icon: UsersRound,
               },
               {
-                  title: 'Ofertas',
-                  href: offeringsIndex(),
+                  title: 'Materias y paralelos',
+                  href: scheduledSubjectsIndex(),
                   icon: Building2,
               },
               {

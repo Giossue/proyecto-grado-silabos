@@ -48,14 +48,14 @@ const editOpen = ref(false);
 const deleteOpen = ref(false);
 const parallelCreationOpen = ref(false);
 const deletionTitle = computed(() =>
-    props.entity === 'oferta'
-        ? 'Eliminar oferta académica'
+    props.entity === 'programacion_asignatura'
+        ? 'Eliminar materia programada'
         : props.entity === 'paralelo'
           ? 'Eliminar paralelo'
           : 'Eliminar asignación docente',
 );
 const deletionDescription = computed(() =>
-    props.entity === 'oferta'
+    props.entity === 'programacion_asignatura'
         ? 'Se eliminarán también sus paralelos y asignaciones docentes. La operación se rechazará si existe algún sílabo relacionado, para conservar su historial.'
         : 'La operación se rechazará si el registro ya forma parte de un sílabo. Use el relevo docente para cambiar responsables de expedientes existentes.',
 );
@@ -76,7 +76,7 @@ const deletionDescription = computed(() =>
             <slot />
 
             <DropdownMenuItem
-                v-if="entity === 'oferta' && parallelCreationSupported"
+                v-if="entity === 'programacion_asignatura' && parallelCreationSupported"
                 @select="parallelCreationOpen = true"
             >
                 <Plus aria-hidden="true" />
@@ -102,11 +102,11 @@ const deletionDescription = computed(() =>
         />
 
         <ParallelCreationSheet
-            v-if="entity === 'oferta'"
+            v-if="entity === 'programacion_asignatura'"
             :key="`parallel-${record.id}`"
             v-model:open="parallelCreationOpen"
-            :offering-id="record.id"
-            :offering-label="recordLabel"
+            :scheduled-subject-id="record.id"
+            :scheduled-subject-label="recordLabel"
         />
 
         <Dialog v-model:open="deleteOpen">
@@ -119,8 +119,8 @@ const deletionDescription = computed(() =>
                 </DialogHeader>
                 <Form
                     v-bind="
-                        entity === 'oferta'
-                            ? CareerAcademicStructureController.destroyOffering.form(
+                        entity === 'programacion_asignatura'
+                            ? CareerAcademicStructureController.destroyScheduledSubject.form(
                                   record.id,
                               )
                             : CareerAcademicStructureController.destroy.form({
@@ -131,10 +131,12 @@ const deletionDescription = computed(() =>
                     v-slot="{ errors, processing }"
                 >
                     <p
-                        v-if="errors.offering || errors.record || errors.process"
+                        v-if="
+                            errors.scheduledSubject || errors.record || errors.process
+                        "
                         class="mb-4 text-sm text-destructive"
                     >
-                        {{ errors.offering || errors.record || errors.process }}
+                        {{ errors.scheduledSubject || errors.record || errors.process }}
                     </p>
                     <DialogFooter>
                         <DialogClose as-child>
@@ -147,7 +149,15 @@ const deletionDescription = computed(() =>
                             variant="destructive"
                             :disabled="processing"
                         >
-                            <Spinner v-if="processing" />
+                            <Spinner
+                                v-if="processing"
+                                data-icon="inline-start"
+                            />
+                            <Trash2
+                                v-else
+                                data-icon="inline-start"
+                                aria-hidden="true"
+                            />
                             {{ deletionTitle }}
                         </Button>
                     </DialogFooter>

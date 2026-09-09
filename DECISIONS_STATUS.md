@@ -53,10 +53,14 @@ Fecha de corte: **30 de agosto de 2026**.
   tablas, incluida la personalización. La página muestra solo la hoja blanca vacía y no
   recibe esas estructuras del servidor. Los datos existentes no se eliminan para
   proteger sílabos y revisiones; I-58 queda retirado de la interfaz.
+- I-61 (9 de septiembre de 2026) unifica los diálogos del sistema como persistentes:
+  no muestran cierre `X` ni se descartan con el fondo o `Esc`. La persona sale mediante
+  una acción explícita, normalmente «Cancelar», y toda acción principal del diálogo
+  lleva un icono semántico. Los paneles laterales `Sheet` conservan su comportamiento.
 - La modalidad de estudio es un dato base de la carrera (la aprueba el CES) y no un
   catálogo: presencial, semipresencial, en línea, a distancia o híbrida, fijas por reglamento.
   Una materia puede usar una modalidad distinta, sin cambiar ni recalificar la modalidad
-  de la carrera. La oferta hereda la excepción de la materia o, si no existe, la base de
+  de la carrera. La programación de asignatura hereda la excepción de la materia o, si no existe, la base de
   la carrera (I-35, I-36, I-37, 5 de septiembre de 2026). La ley fija componentes ACD/APE/AA,
   unidades de organización curricular y créditos de 48 h; el dibujo de la malla y el
   formato del sílabo son institucionales, no ministeriales.
@@ -71,14 +75,13 @@ Fecha de corte: **30 de agosto de 2026**.
 - Monolito modular y servicio local de IA desacoplado por HTTP.
 - Integración institucional sin escritura directa en la base de la UEB.
 - Gobierno académico distribuido: Administrador mantiene facultades, carreras, cuentas y
-  coordinaciones; Coordinador gestiona mallas, materias, ofertas, paralelos y asignaciones
+  coordinaciones; Coordinador gestiona mallas, materias programadas, paralelos y asignaciones
   docentes exclusivamente dentro de su carrera.
 - La identidad de las cuentas se administra de forma centralizada: solo el Administrador
   puede corregir nombre o correo. Coordinadores y Docentes solicitan esos cambios a
   Administración, incluso cuando se trata de la cuenta propia.
-- La estructura institucional se presenta y persiste como Facultad → Carrera. Campus y
-  modalidades siguen siendo catálogos independientes; un campus participa en una oferta
-  académica y no se mezcla ni se duplica como facultad o carrera. El período académico es
+- La estructura institucional se presenta y persiste como Facultad → Carrera. Campus
+  conserva identidad propia y no se mezcla ni se duplica como facultad o carrera. El período académico es
   un catálogo institucional único (I-41, decisión explícita del responsable del producto
   del 2026-09-03), aunque la fuente histórica lo repita por carrera.
 - Administración puede corregir los metadatos de esos catálogos y reasignar una carrera a
@@ -90,8 +93,8 @@ Fecha de corte: **30 de agosto de 2026**.
 - Cada carrera tiene cero o una sola malla actual, configurable en ciclos y campos. El
   documento de Software es una referencia visual, no una plantilla universal;
   Coordinación edita la misma malla mediante constructor y formulario, puede
-  deshabilitarla/reactivarla y solo la elimina si no tiene ofertas ni sílabos.
-- Sin una malla activa no se crean ofertas ni se abren procesos nuevos para docentes.
+  deshabilitarla/reactivarla y solo la elimina si no tiene materias programadas ni sílabos.
+- Sin una malla activa no se programan materias ni se abren procesos nuevos para docentes.
   Los sílabos conservan una fotografía de su contexto académico y las revisiones siguen
   siendo inmutables aunque la malla actual cambie.
 - El calendario académico oficial obliga a toda la universidad (I-31, 2 de septiembre
@@ -172,10 +175,10 @@ para corregir. El cambio estructural muestra sus consecuencias y, tras confirmac
 elimina únicamente sílabos sin envío ni evidencia de IA. No existe «Archivar» para
 catálogos académicos: se elimina lo que no tiene dependencias y se protege la historia.
 
-I-45 (3 de septiembre de 2026) concentra la preparación inicial de ofertas en una
+I-45 (3 de septiembre de 2026) concentra la preparación inicial de materias en una
 hoja lateral amplia. Para el período elegido, Coordinación solo ve materias activas de
-su malla que aún no tienen oferta y define uno o más paralelos, cada uno con su propia
-jornada. La acción de cada oferta queda para agregar paralelos más tarde. El envío no
+su malla que aún no están programadas y define uno o más paralelos, cada uno con su propia
+jornada. La acción de cada materia queda para agregar paralelos más tarde. El envío no
 elimina por omisión ni altera la historia.
 
 I-12 renombra «contexto» a rol en todo el sistema —clases, props, rutas, vistas, columna
@@ -197,7 +200,7 @@ I-14 renombra «campaña» a «convocatoria» en todo el sistema —base de dato
 rutas, vistas, auditoría y documentación— por decisión explícita del responsable del
 producto. No altera comportamiento.
 
-I-16 completa la edición de mallas, materias, ofertas, paralelos y asignaciones docentes
+I-16 completa la edición de mallas, materias programadas, paralelos y asignaciones docentes
 por decisión explícita del responsable del producto. Coordinación solo modifica registros
 de su carrera y cada cambio queda auditado; I-20 reemplaza la inmutabilidad de la malla,
 mientras que el historial de sílabos se conserva. Nombre y correo permanecen exclusivamente bajo
@@ -268,7 +271,7 @@ ese caso el cambio se rechaza. Los sílabos de procesos cerrados no se tocan.
 I-46 (4 de septiembre de 2026) precisa dos alcances del mismo ciclo: Administración
 prepara y abre un único proceso institucional por período académico; Coordinación no
 prepara ni configura otra convocatoria, sino que inicia o pausa el alcance de su carrera
-desde ese proceso visible. Iniciar exige malla activa, ofertas con paralelos y docentes
+desde ese proceso visible. Iniciar exige malla activa, materias programadas con paralelos y docentes
 vigentes, y fuentes académicas activas; genera atómicamente un sílabo por paralelo. Las
 fuentes activas de toda la carrera se fijan de forma automática y se sincronizan al
 reanudar. PostgreSQL impide más de un proceso por período y más de un alcance por
@@ -282,7 +285,7 @@ respaldo lógico previo.
 
 I-48 (5 de septiembre de 2026) retira el nivel `escuelas` que provenía de SIANET: no
 representa una extensión ni una entidad operativa de sílabos. El producto queda como
-Facultad → Carrera; `campus` conserva la ubicación física de las ofertas. La migración
+Facultad → Carrera; `campus` conserva la ubicación física de las materias programadas. La migración
 es irreversible y exige un respaldo lógico previo.
 
 I-50 (5 de septiembre de 2026) simplifica la cuenta gestionada: `activo` conserva el
@@ -316,6 +319,15 @@ El 6 de septiembre I-52 retira además `sustento_tipo`, `sustento_numero` y
 `sustento_fecha` de esa asignación: la coordinación no conserva información documental y
 solo Administración designa y define la calidad. La migración `000049` fue respaldada y
 aplicada local y remotamente.
+
+I-62 (9 de septiembre de 2026) reserva **oferta académica** para el conjunto de carreras
+y programas aprobados por el CES y registrados en el SNIESE. La operación de una materia
+en un período se denomina **programación de asignatura**; contiene uno o más paralelos y
+cada paralelo conserva su asignación docente y genera su propio sílabo. Coordinación la
+presenta como **Materias y paralelos**. El esquema usa `programaciones_asignatura` y
+`programacion_asignatura_id`; las fotografías nuevas usan `scheduled_subject` y los
+lectores mantienen compatibilidad con la clave histórica `offering`. No cambian permisos,
+estados ni cardinalidades.
 
 ## Propuesto
 

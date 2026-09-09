@@ -26,13 +26,13 @@ el permiso, pero no lo sustituyen.
 | Crear, editar y eliminar sin dependencias facultades, carreras y catálogos globales | Sí, salvo con proceso abierto | Consulta de alcance | Consulta asignada |
 | Asignar coordinación a una carrera | Sí | No | No |
 | Gestionar mallas y materias | No por defecto | Sí, en su carrera, salvo con convocatoria en curso | Consulta asignada |
-| Gestionar ofertas y paralelos | No por defecto | Sí, en su carrera, salvo con convocatoria en curso | Consulta asignada |
+| Gestionar materias programadas y paralelos | No por defecto | Sí, en su carrera, salvo con convocatoria en curso | Consulta asignada |
 | Asignar docentes a paralelos | No por defecto | Sí, en su carrera, salvo con convocatoria en curso | Consulta propia |
 | Diseñar/publicar plantilla | Sí, salvo con proceso abierto | Consulta/aporte según política | No |
 | Gestionar fuentes (documentos) | No participa | Sí, en su carrera, salvo con convocatoria en curso | Consulta autorizada |
 | Abrir, pausar, reanudar y cerrar el proceso de sílabos | Sí | Consulta al convocar | No |
 | Preparar convocatoria institucional | Sí, una por período | No | No |
-| Iniciar alcance de su carrera desde convocatoria institucional abierta | No | Sí, si su malla, ofertas/paralelos, docentes y fuentes están listos | No |
+| Iniciar alcance de su carrera desde convocatoria institucional abierta | No | Sí, si su malla, materias programadas, paralelos, docentes y fuentes están listos | No |
 | Pausar/reanudar convocatoria | No | Sí, en su carrera | No |
 | Cerrar (sobre el proceso; detiene a todas las convocatorias) | Sí | No | No |
 | Prorrogar plazo (sobre el proceso; alcanza a todas las convocatorias) | Sí | No | No |

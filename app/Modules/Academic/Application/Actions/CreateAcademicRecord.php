@@ -3,18 +3,18 @@
 namespace App\Modules\Academic\Application\Actions;
 
 use App\Models\User;
-use App\Modules\Academic\Application\OfferingInheritance;
+use App\Modules\Academic\Application\ScheduledSubjectInheritance;
 use App\Modules\Academic\Domain\AcademicStructurePermissions;
 use App\Modules\Academic\Domain\CurriculumSystemFields;
 use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Campus;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CoordinatorAssignment;
-use App\Modules\Academic\Infrastructure\Persistence\Models\CourseOffering;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CurriculumFieldDefinition;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Faculty;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
+use App\Modules\Academic\Infrastructure\Persistence\Models\ScheduledSubject;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Subject;
 use App\Modules\Academic\Infrastructure\Persistence\Models\TeacherAssignment;
 use App\Modules\Configuration\Application\InstitutionalLogos;
@@ -40,7 +40,7 @@ class CreateAcademicRecord
         private readonly InProgressWork $work,
         private readonly SyncSubjectFieldValues $syncSubjectFieldValues,
         private readonly InstitutionalLogos $logos,
-        private readonly OfferingInheritance $inheritance,
+        private readonly ScheduledSubjectInheritance $inheritance,
     ) {}
 
     /** @param array<string, mixed> $data */
@@ -54,7 +54,7 @@ class CreateAcademicRecord
         if (AcademicStructurePermissions::isGovernanceContext($activeRole)) {
             $this->locks->assertInstitutionalStructureEditable();
         }
-        // Una convocatoria en curso ya fijó su oferta, paralelos y colaboradores. El
+        // Una convocatoria en curso ya fijó sus materias programadas, paralelos y colaboradores. El
         // relevo docente es la única excepción y usa su propio caso de uso atómico.
         if (AcademicStructurePermissions::isCareerContext($activeRole)) {
             $this->locks->assertCareerEditable($activeRole->carrera_id);
@@ -124,7 +124,7 @@ class CreateAcademicRecord
             ]),
             'malla' => $this->createCurriculum($data, $this->careerId($activeRole)),
             'asignatura' => $this->createSubject($data, $this->careerId($activeRole)),
-            'oferta' => $this->createOffering($data, $this->careerId($activeRole)),
+            'programacion_asignatura' => $this->createScheduledSubject($data, $this->careerId($activeRole)),
             'paralelo' => $this->createParallel($data, $this->careerId($activeRole)),
             'asignacion_coordinador' => $this->createCoordinatorAssignment($data),
             'asignacion_docente' => $this->createTeacherAssignment($data, $this->careerId($activeRole)),
@@ -224,7 +224,7 @@ class CreateAcademicRecord
     }
 
     /** @param array<string, mixed> $data */
-    private function createOffering(array $data, string $careerId): CourseOffering
+    private function createScheduledSubject(array $data, string $careerId): ScheduledSubject
     {
         $subject = Subject::query()
             ->with('curriculum:id,estado,carrera_id')
@@ -236,7 +236,7 @@ class CreateAcademicRecord
 
         if ($subject->curriculum->estado !== 'activa') {
             throw ValidationException::withMessages([
-                'subject_id' => 'La oferta requiere una materia de la malla activa.',
+                'subject_id' => 'La programación requiere una materia de la malla activa.',
             ]);
         }
 
@@ -246,7 +246,7 @@ class CreateAcademicRecord
             ->lockForUpdate()
             ->firstOrFail();
 
-        return CourseOffering::query()->create([
+        return ScheduledSubject::query()->create([
             'periodo_academico_id' => $period->id,
             'asignatura_id' => $subject->id,
             // Heredados: el campus lo fija la carrera; la modalidad, la carrera o la materia.
@@ -259,8 +259,8 @@ class CreateAcademicRecord
     /** @param array<string, mixed> $data */
     private function createParallel(array $data, string $careerId): Parallel
     {
-        $offering = CourseOffering::query()
-            ->whereKey($this->stringValue($data, 'offering_id'))
+        $scheduledSubject = ScheduledSubject::query()
+            ->whereKey($this->stringValue($data, 'scheduled_subject_id'))
             ->whereHas(
                 'subject.curriculum',
                 fn ($query) => $query
@@ -271,7 +271,7 @@ class CreateAcademicRecord
             ->firstOrFail();
 
         return Parallel::query()->create([
-            'oferta_academica_id' => $offering->id,
+            'programacion_asignatura_id' => $scheduledSubject->id,
             'codigo' => $data['code'],
             'jornada' => $data['shift'] ?? null,
             'activo' => true,
@@ -296,10 +296,10 @@ class CreateAcademicRecord
     private function createTeacherAssignment(array $data, string $careerId): TeacherAssignment
     {
         $parallel = Parallel::query()
-            ->with('offering.subject.curriculum:id,carrera_id,estado')
+            ->with('scheduledSubject.subject.curriculum:id,carrera_id,estado')
             ->whereKey($this->stringValue($data, 'parallel_id'))
             ->whereHas(
-                'offering.subject.curriculum',
+                'scheduledSubject.subject.curriculum',
                 fn ($query) => $query
                     ->where('carrera_id', $careerId)
                     ->where('estado', 'activa'),

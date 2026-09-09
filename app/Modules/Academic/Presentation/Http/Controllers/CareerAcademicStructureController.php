@@ -7,8 +7,8 @@ use App\Models\User;
 use App\Modules\Academic\Application\Actions\CreateAcademicRecord;
 use App\Modules\Academic\Application\Actions\CreateParallels;
 use App\Modules\Academic\Application\Actions\DeleteAcademicRecord;
-use App\Modules\Academic\Application\Actions\DeleteCourseOffering;
 use App\Modules\Academic\Application\Actions\DeleteCurriculum;
+use App\Modules\Academic\Application\Actions\DeleteScheduledSubject;
 use App\Modules\Academic\Application\Actions\MutateCurriculumBuilder;
 use App\Modules\Academic\Application\Actions\PreparePeriod;
 use App\Modules\Academic\Application\Actions\SetAcademicRecordStatus;
@@ -62,14 +62,14 @@ class CareerAcademicStructureController extends Controller
         );
     }
 
-    public function offerings(
+    public function scheduledSubjects(
         ManageCareerAcademicStructureRequest $request,
         ActiveRole $roles,
         AcademicStructureViewData $viewData,
     ): Response {
         return Inertia::render(
-            'Coordination/Academic/Offerings',
-            $viewData->offerings($this->careerId($request, $roles)),
+            'Coordination/Academic/ScheduledSubjects',
+            $viewData->scheduledSubjects($this->careerId($request, $roles)),
         );
     }
 
@@ -99,14 +99,14 @@ class CareerAcademicStructureController extends Controller
         return back()->with('success', 'Registro académico creado dentro de su carrera.');
     }
 
-    /** Crea varios paralelos de una misma oferta en una operación atómica (I-40). */
+    /** Crea varios paralelos de una misma programación de asignatura en una operación atómica (I-40). */
     public function storeParallels(
         StoreParallelsRequest $request,
         CreateParallels $action,
     ): RedirectResponse {
         $actor = $request->user();
         abort_unless($actor instanceof User, 401);
-        /** @var array{offering_id: string, codes: list<string>, shift?: string|null} $data */
+        /** @var array{scheduled_subject_id: string, codes: list<string>, shift?: string|null} $data */
         $data = $request->validated();
         $created = $action->execute($data, $actor, $request);
 
@@ -143,8 +143,8 @@ class CareerAcademicStructureController extends Controller
 
         $message = sprintf(
             'Período preparado: %d %s y %d %s nuevos para %d %s.',
-            $result['offerings'],
-            $result['offerings'] === 1 ? 'oferta' : 'ofertas',
+            $result['scheduledSubjects'],
+            $result['scheduledSubjects'] === 1 ? 'materia programada' : 'materias programadas',
             $result['parallels'],
             $result['parallels'] === 1 ? 'paralelo' : 'paralelos',
             $result['subjects'],
@@ -202,16 +202,16 @@ class CareerAcademicStructureController extends Controller
             ->with('success', 'Malla eliminada. La carrera queda sin estructura académica activa.');
     }
 
-    public function destroyOffering(
-        string $offering,
+    public function destroyScheduledSubject(
+        string $scheduledSubject,
         ManageCareerAcademicStructureRequest $request,
-        DeleteCourseOffering $action,
+        DeleteScheduledSubject $action,
     ): RedirectResponse {
         $actor = $request->user();
         abort_unless($actor instanceof User, 401);
-        $action->execute($offering, $actor, $request);
+        $action->execute($scheduledSubject, $actor, $request);
 
-        return back()->with('success', 'Oferta eliminada junto con sus paralelos y asignaciones sin historial.');
+        return back()->with('success', 'Materia programada eliminada junto con sus paralelos y asignaciones sin historial.');
     }
 
     public function destroy(

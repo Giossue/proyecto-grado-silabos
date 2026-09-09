@@ -13,6 +13,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
+import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import {
     Field,
     FieldError,
@@ -21,7 +22,6 @@ import {
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { PopoverContent } from '@/components/ui/popover';
-import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import {
     Select,
     SelectContent,
@@ -30,6 +30,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { Spinner } from '@/components/ui/spinner';
 import type { TemplateContentType } from '@/types/configuration';
 
 type EditableContentType = Exclude<
@@ -44,8 +45,9 @@ const props = withDefaults(
         blockTypes: { value: EditableContentType; label: string }[];
         empty?: boolean;
         menu?: boolean;
+        ribbon?: boolean;
     }>(),
-    { empty: false, menu: false },
+    { empty: false, menu: false, ribbon: false },
 );
 
 let sequence = 0;
@@ -137,10 +139,13 @@ const updateOpen = (value: boolean): void => {
                 : {
                       label: empty ? 'Agregar primer bloque' : 'Agregar bloque',
                       variant: empty ? 'default' : 'outline',
-                      size: empty ? 'icon' : 'icon-sm',
+                      size: empty ? 'icon' : ribbon ? 'sm' : 'icon-sm',
+                      showLabel: ribbon,
                       buttonClass: empty
                           ? undefined
-                          : 'size-7 border-dashed bg-background',
+                          : ribbon
+                            ? undefined
+                            : 'size-7 border-dashed bg-background',
                   }
         "
         @update:open="updateOpen"
@@ -342,6 +347,15 @@ const updateOpen = (value: boolean): void => {
                         Cancelar
                     </Button>
                     <Button type="submit" :disabled="form.processing">
+                        <Spinner
+                            v-if="form.processing"
+                            data-icon="inline-start"
+                        />
+                        <Blocks
+                            v-else
+                            data-icon="inline-start"
+                            aria-hidden="true"
+                        />
                         Crear bloque
                     </Button>
                 </div>

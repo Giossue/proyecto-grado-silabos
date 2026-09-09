@@ -18,8 +18,8 @@ import {
 import { PARALLEL_SHIFTS as SHIFTS } from '@/lib/parallelShifts';
 
 const props = defineProps<{
-    offeringId: string;
-    offeringLabel: string;
+    scheduledSubjectId: string;
+    scheduledSubjectLabel: string;
 }>();
 
 const open = defineModel<boolean>('open', { default: false });
@@ -36,7 +36,7 @@ const reset = (): void => {
 const submit = (close: () => void): void => {
     form
         .transform((data) => ({
-            offering_id: props.offeringId,
+            scheduled_subject_id: props.scheduledSubjectId,
             codes: [data.codes.trim()],
             shift: data.shift || null,
         }))
@@ -61,7 +61,7 @@ watch(open, (isOpen) => {
         v-model:open="open"
         trigger-label="Agregar paralelo"
         title="Agregar paralelo"
-        :description="`Añada un paralelo a ${offeringLabel} y defina su jornada.`"
+        :description="`Añada un paralelo a la materia ${scheduledSubjectLabel} y defina su jornada.`"
         :show-trigger="false"
     >
         <template #default="{ close }">
@@ -69,13 +69,13 @@ watch(open, (isOpen) => {
                 <FieldGroup>
                     <Field :data-invalid="Boolean(form.errors.codes)">
                         <FieldLabel
-                            :for="`parallel-creation-code-${offeringId}`"
+                            :for="`parallel-creation-code-${scheduledSubjectId}`"
                             required
                         >
                             Código de paralelo
                         </FieldLabel>
                         <Input
-                            :id="`parallel-creation-code-${offeringId}`"
+                            :id="`parallel-creation-code-${scheduledSubjectId}`"
                             v-model="form.codes"
                             maxlength="30"
                             placeholder="Ej. B"
@@ -87,13 +87,13 @@ watch(open, (isOpen) => {
 
                     <Field :data-invalid="Boolean(form.errors.shift)">
                         <FieldLabel
-                            :for="`parallel-creation-shift-${offeringId}`"
+                            :for="`parallel-creation-shift-${scheduledSubjectId}`"
                         >
                             Jornada
                         </FieldLabel>
                         <Select v-model="form.shift">
                             <SelectTrigger
-                                :id="`parallel-creation-shift-${offeringId}`"
+                                :id="`parallel-creation-shift-${scheduledSubjectId}`"
                                 :aria-invalid="Boolean(form.errors.shift)"
                             >
                                 <SelectValue placeholder="Sin jornada definida" />

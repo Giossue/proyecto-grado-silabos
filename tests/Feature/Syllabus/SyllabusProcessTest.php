@@ -4,7 +4,7 @@ namespace Tests\Feature\Syllabus;
 
 use App\Models\User;
 use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
-use App\Modules\Academic\Infrastructure\Persistence\Models\CourseOffering;
+use App\Modules\Academic\Infrastructure\Persistence\Models\ScheduledSubject;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\AcademicSource;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
@@ -280,6 +280,9 @@ class SyllabusProcessTest extends TestCase
         $this->actingAsAdministrator()->get(route('admin.templates.show', $template))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page->whereNot('processLock', null));
+        $this->actingAsAdministrator()->get(route('admin.templates.edit', $template))
+            ->assertRedirect(route('admin.templates.show', $template))
+            ->assertSessionHas('error');
 
         $this->transition($process, 'pausar', 'Hay que corregir el bloque de bibliografía.')->assertRedirect();
 
@@ -292,6 +295,9 @@ class SyllabusProcessTest extends TestCase
         $this->actingAsAdministrator()->get(route('admin.templates.show', $template))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page->where('processLock', null));
+        $this->actingAsAdministrator()->get(route('admin.templates.edit', $template))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->component('Admin/Templates/Edit'));
     }
 
     public function test_changing_the_template_during_a_pause_asks_before_deleting_unsent_syllabi(): void
@@ -413,13 +419,13 @@ class SyllabusProcessTest extends TestCase
     public function test_an_open_cycle_freezes_every_structure_change_until_its_scope_is_paused(): void
     {
         $convocation = $this->openedConvocation();
-        $offering = CourseOffering::query()->firstOrFail();
+        $scheduledSubject = ScheduledSubject::query()->firstOrFail();
 
-        // Una convocatoria abierta no admite alterar su oferta ni añadir paralelos:
+        // Una convocatoria abierta no admite alterar su programación ni añadir paralelos:
         // los docentes ya recibieron los alcances generados al abrirla.
         $this->actingAsCoordinator()
             ->post(route('coordination.academic.parallels.store'), [
-                'offering_id' => $offering->id,
+                'scheduled_subject_id' => $scheduledSubject->id,
                 'codes' => ['B'],
                 'shift' => 'matutina',
             ])
@@ -440,7 +446,7 @@ class SyllabusProcessTest extends TestCase
             ->assertRedirect();
         $this->actingAsCoordinator()
             ->post(route('coordination.academic.parallels.store'), [
-                'offering_id' => $offering->id,
+                'scheduled_subject_id' => $scheduledSubject->id,
                 'codes' => ['B'],
                 'shift' => 'matutina',
             ])

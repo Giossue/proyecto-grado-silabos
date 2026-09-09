@@ -10,6 +10,7 @@ use App\Modules\Configuration\Infrastructure\Persistence\Models\FieldDefinition;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateBlock;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateSection;
 use App\Modules\Identity\Application\ActiveRole;
+use App\Modules\Syllabus\Application\AcademicContextValues;
 use App\Modules\Syllabus\Application\Actions\RespondToObservation;
 use App\Modules\Syllabus\Application\Actions\StartDraft;
 use App\Modules\Syllabus\Application\Actions\SubmitSyllabus;
@@ -215,11 +216,10 @@ class SyllabusController extends Controller
             'identification' => IdentificationCard::grid(IdentificationCard::fromSyllabus($syllabus)),
             'template_variables' => TemplateVariables::resolve(['identification' => IdentificationCard::fromSyllabus($syllabus), 'academic_context' => $syllabus->contexto_academico]),
             'planning_expectations' => [
-                'teaching_weeks' => data_get(
-                    $syllabus->contexto_academico,
-                    'offering.teaching_weeks',
-                    $syllabus->convocation->process->academicPeriod->semanas_lectivas,
-                ),
+                'teaching_weeks' => AcademicContextValues::scheduledSubject(
+                    $syllabus->contexto_academico ?? [],
+                    'teaching_weeks',
+                ) ?? $syllabus->convocation->process->academicPeriod->semanas_lectivas,
                 'credits' => data_get($syllabus->contexto_academico, 'subject.credits'),
                 'total_hours' => data_get($syllabus->contexto_academico, 'subject.total_hours'),
                 'hours_acd' => data_get($syllabus->contexto_academico, 'subject.hours_ac'),

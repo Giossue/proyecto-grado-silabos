@@ -81,10 +81,10 @@ class Subject extends Model
         return $this->belongsTo(Curriculum::class, 'malla_id');
     }
 
-    /** @return HasMany<CourseOffering, $this> */
-    public function offerings(): HasMany
+    /** @return HasMany<ScheduledSubject, $this> */
+    public function scheduledSubjects(): HasMany
     {
-        return $this->hasMany(CourseOffering::class, 'asignatura_id');
+        return $this->hasMany(ScheduledSubject::class, 'asignatura_id');
     }
 
     /** @return HasMany<SubjectFieldValue, $this> */

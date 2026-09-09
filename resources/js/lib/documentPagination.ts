@@ -12,6 +12,7 @@ type Unit = {
     first: HTMLElement;
     last: HTMLElement;
     keepNext: boolean;
+    flowThrough: boolean;
     table?: HTMLTableElement;
 };
 
@@ -42,6 +43,7 @@ function tableUnits(table: HTMLTableElement): Unit[] {
             first: rows[start],
             last: rows[end],
             keepNext: rows[start].parentElement === table.tHead,
+            flowThrough: false,
             table,
         });
         start = end + 1;
@@ -67,9 +69,52 @@ function collectUnits(root: HTMLElement): Unit[] {
                 first: element,
                 last: element,
                 keepNext: element.hasAttribute('data-page-keep-next'),
+                flowThrough: element.hasAttribute('data-page-flow-through'),
             },
         ];
     });
+}
+
+/**
+ * Keep a page spacer outside presentation wrappers when the unit is their first visible
+ * child. Otherwise an outline on a selected section or field would also surround the
+ * artificial empty space used to reach the following sheet.
+ */
+function spacerAnchor(first: HTMLElement, root: HTMLElement): HTMLElement {
+    if (first instanceof HTMLTableRowElement || first.tagName === 'LI') {
+        return first;
+    }
+
+    let anchor = first;
+
+    while (anchor.parentElement && anchor.parentElement !== root) {
+        const parent = anchor.parentElement;
+
+        if (
+            parent instanceof HTMLTableElement ||
+            ['THEAD', 'TBODY', 'TFOOT', 'TR', 'UL', 'OL'].includes(
+                parent.tagName,
+            )
+        ) {
+            break;
+        }
+
+        const children = Array.from(parent.children);
+        const siblingsBefore = children.slice(0, children.indexOf(anchor));
+        const hasVisibleContentBefore = siblingsBefore.some(
+            (sibling) =>
+                !sibling.hasAttribute('data-page-spacer') &&
+                sibling.getClientRects().length > 0,
+        );
+
+        if (hasVisibleContentBefore) {
+            break;
+        }
+
+        anchor = parent;
+    }
+
+    return anchor;
 }
 
 /**
@@ -94,6 +139,7 @@ export function createDocumentPaginator(
     const spacerBefore = (unit: Unit, height: number) => {
         const isRow = unit.first instanceof HTMLTableRowElement;
         const isListItem = unit.first.tagName === 'LI';
+        const anchor = spacerAnchor(unit.first, root);
         const spacer = document.createElement(
             isRow ? 'tr' : isListItem ? 'li' : 'div',
         );
@@ -115,7 +161,7 @@ export function createDocumentPaginator(
             spacer.append(cell);
         }
 
-        unit.first.before(spacer);
+        anchor.before(spacer);
         inserted.push(spacer);
     };
 
@@ -146,7 +192,11 @@ export function createDocumentPaginator(
                 bottom = unit.last.getBoundingClientRect().bottom - origin;
             }
 
-            if (bottom > end + 0.5 && top > page * pitch + 0.5) {
+            if (
+                !unit.flowThrough &&
+                bottom > end + 0.5 &&
+                top > page * pitch + 0.5
+            ) {
                 page++;
                 spacerBefore(unit, Math.max(0, page * pitch - top));
             }

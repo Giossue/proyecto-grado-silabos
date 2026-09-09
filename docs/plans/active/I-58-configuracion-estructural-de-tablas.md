@@ -2,8 +2,8 @@
 
 ## Estado
 
-Implementación técnica verificada localmente el 2026-09-08 y retirada de ADM-06 ese
-mismo día por I-59. El diálogo estructural ya no forma parte de la interfaz.
+Implementación técnica verificada localmente el 2026-09-08. I-59 la retiró de ADM-06
+temporalmente; I-60 vuelve a hacerla accesible desde la cinta del modo de edición.
 
 ## Problema
 

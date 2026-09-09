@@ -47,7 +47,7 @@ class Career extends Model
         return $this->hasMany(CoordinatorAssignment::class, 'carrera_id');
     }
 
-    /** Sede aprobada para la carrera; la heredan sus ofertas (I-36). */
+    /** Sede aprobada para la carrera; la heredan sus materias programadas (I-36). */
     /** @return BelongsTo<Campus, $this> */
     public function campus(): BelongsTo
     {

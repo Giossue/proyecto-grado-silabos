@@ -7,6 +7,7 @@ use App\Modules\Configuration\Application\TemplateDocumentResolver;
 use App\Modules\Configuration\Domain\TableLayout;
 use App\Modules\Configuration\Domain\TemplateAppearance;
 use App\Modules\Documents\Domain\Data\DocumentRenderInput;
+use App\Modules\Syllabus\Application\AcademicContextValues;
 use App\Modules\Syllabus\Application\IdentificationCard;
 use PhpOffice\PhpWord\Element\Section;
 use PhpOffice\PhpWord\Element\Table;
@@ -560,7 +561,7 @@ class SyllabusWordDocument
                 ->addText($label, ['bold' => true, 'size' => 8, 'color' => $this->headerColor()], ['alignment' => Jc::CENTER, 'spaceAfter' => 0]);
         }
         $values = [
-            count($weeks).'/'.(string) (data_get($this->academicContext, 'offering.teaching_weeks') ?? '—'),
+            count($weeks).'/'.(string) (AcademicContextValues::scheduledSubject($this->academicContext, 'teaching_weeks') ?? '—'),
             $actual['hours_acd'].'/'.(string) ($expected['hours_acd'] ?? '—'),
             $actual['hours_ape'].'/'.(string) ($expected['hours_ape'] ?? '—'),
             $actual['hours_aa'].'/'.(string) ($expected['hours_aa'] ?? '—'),
@@ -577,7 +578,7 @@ class SyllabusWordDocument
     private function planningExpectations(): array
     {
         return [
-            'teaching_weeks' => data_get($this->academicContext, 'offering.teaching_weeks'),
+            'teaching_weeks' => AcademicContextValues::scheduledSubject($this->academicContext, 'teaching_weeks'),
             'credits' => data_get($this->academicContext, 'subject.credits'),
             'hours_acd' => data_get($this->academicContext, 'subject.hours_ac'),
             'hours_ape' => data_get($this->academicContext, 'subject.hours_pae'),

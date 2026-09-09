@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3';
-import { MoreHorizontal, Pencil, Trash2 } from '@lucide/vue';
+import { MoreHorizontal, Pencil, Save, Trash2 } from '@lucide/vue';
 import { ref } from 'vue';
 import { toast } from 'vue-sonner';
 import TemplateController from '@/actions/App/Modules/Configuration/Presentation/Http/Controllers/TemplateController';
@@ -27,6 +27,7 @@ import {
     FieldLabel,
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { Spinner } from '@/components/ui/spinner';
 import {
     Tooltip,
     TooltipContent,
@@ -124,7 +125,7 @@ defineExpose({
                     <DropdownMenuContent align="end">
                         <DropdownMenuItem @select="openEdit">
                             <Pencil aria-hidden="true" />
-                            Editar bloque
+                            Renombrar bloque
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
@@ -146,9 +147,9 @@ defineExpose({
     <Dialog v-model:open="editOpen">
         <DialogContent>
             <DialogHeader>
-                <DialogTitle>Editar bloque</DialogTitle>
+                <DialogTitle>Renombrar bloque</DialogTitle>
                 <DialogDescription>
-                    El bloque agrupa los campos que completará el docente.
+                    Cambie el nombre que identifica este grupo de campos.
                 </DialogDescription>
             </DialogHeader>
             <form class="flex flex-col gap-4" @submit.prevent="save">
@@ -181,7 +182,16 @@ defineExpose({
                         Cancelar
                     </Button>
                     <Button type="submit" :disabled="form.processing">
-                        Guardar bloque
+                        <Spinner
+                            v-if="form.processing"
+                            data-icon="inline-start"
+                        />
+                        <Save
+                            v-else
+                            data-icon="inline-start"
+                            aria-hidden="true"
+                        />
+                        Guardar nombre
                     </Button>
                 </DialogFooter>
             </form>
@@ -213,6 +223,12 @@ defineExpose({
                     :disabled="form.processing"
                     @click="destroy"
                 >
+                    <Spinner v-if="form.processing" data-icon="inline-start" />
+                    <Trash2
+                        v-else
+                        data-icon="inline-start"
+                        aria-hidden="true"
+                    />
                     Eliminar bloque
                 </Button>
             </DialogFooter>

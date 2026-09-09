@@ -17,13 +17,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property-read Campus $campus
  * @property StudyModality $modalidad
  */
-class CourseOffering extends Model
+class ScheduledSubject extends Model
 {
     use HasUuids;
 
     public $timestamps = false;
 
-    protected $table = 'ofertas_academicas';
+    protected $table = 'programaciones_asignatura';
 
     /** @var list<string> */
     protected $fillable = ['periodo_academico_id', 'asignatura_id', 'campus_id', 'modalidad', 'activo'];
@@ -55,6 +55,6 @@ class CourseOffering extends Model
     /** @return HasMany<Parallel, $this> */
     public function parallels(): HasMany
     {
-        return $this->hasMany(Parallel::class, 'oferta_academica_id');
+        return $this->hasMany(Parallel::class, 'programacion_asignatura_id');
     }
 }

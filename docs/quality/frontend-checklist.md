@@ -28,6 +28,9 @@
 - [ ] Pendiente bloquea duplicados sin congelar toda la pantalla.
 - [ ] Guardado/guardado fallido/conflicto/cambios sin guardar son visibles.
 - [ ] Una versión inmutable explica la consecuencia antes de confirmar.
+- [ ] Todo `Dialog` se cierra mediante una acción explícita: no muestra `X` ni responde
+      al fondo o a `Esc`; su acción principal tiene un icono semántico y conserva un
+      indicador de carga cuando corresponda.
 
 ## IA
 

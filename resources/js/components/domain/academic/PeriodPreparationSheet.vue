@@ -42,7 +42,7 @@ type PreparationRow = {
     parallels: ParallelDraft[];
 };
 
-const props = defineProps<Pick<AcademicStructureProps, 'offerings' | 'options'>>();
+const props = defineProps<Pick<AcademicStructureProps, 'scheduledSubjects' | 'options'>>();
 const open = ref(false);
 const rows = ref<PreparationRow[]>([]);
 const bulkCode = ref('A');
@@ -74,9 +74,9 @@ const dateRange = (period: Option): string =>
 const preparedSubjectIds = computed(
     () =>
         new Set(
-            props.offerings
-                .filter((offering) => offering.period_id === prepare.period_id)
-                .map((offering) => offering.subject_id),
+            props.scheduledSubjects
+                .filter((scheduledSubject) => scheduledSubject.period_id === prepare.period_id)
+                .map((scheduledSubject) => scheduledSubject.subject_id),
         ),
 );
 const availableRows = computed(() =>
@@ -223,15 +223,15 @@ watch(open, (isOpen) => {
                     <Alert v-if="prepare.period_id === ''">
                         <AlertDescription>
                             Seleccione un período para ver las materias que aún no
-                            tienen oferta.
+                            están programadas.
                         </AlertDescription>
                     </Alert>
 
                     <Alert v-else-if="availableRows.length === 0">
                         <AlertDescription>
-                            Todas las materias activas ya tienen una oferta en este
+                            Todas las materias activas ya están programadas en este
                             período. Agregue paralelos desde las acciones de cada
-                            oferta.
+                            materia.
                         </AlertDescription>
                     </Alert>
 

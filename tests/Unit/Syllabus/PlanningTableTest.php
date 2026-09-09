@@ -63,7 +63,7 @@ class PlanningTableTest extends TestCase
     private function context(): array
     {
         return [
-            'offering' => ['teaching_weeks' => 4],
+            'scheduled_subject' => ['teaching_weeks' => 4],
             'subject' => [
                 'hours_ac' => 8,
                 'hours_pae' => 4,

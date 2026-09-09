@@ -20,7 +20,7 @@ final class AcademicStructurePermissions
     public const CAREER_ENTITIES = [
         'malla',
         'asignatura',
-        'oferta',
+        'programacion_asignatura',
         'paralelo',
         'asignacion_docente',
     ];
@@ -46,7 +46,7 @@ final class AcademicStructurePermissions
     public const CAREER_UPDATE_ENTITIES = [
         'malla',
         'asignatura',
-        'oferta',
+        'programacion_asignatura',
         'paralelo',
         'asignacion_docente',
     ];
@@ -55,7 +55,7 @@ final class AcademicStructurePermissions
     public const CAREER_STATUS_ENTITIES = [
         'malla',
         'asignatura',
-        'oferta',
+        'programacion_asignatura',
         'paralelo',
         'asignacion_docente',
     ];

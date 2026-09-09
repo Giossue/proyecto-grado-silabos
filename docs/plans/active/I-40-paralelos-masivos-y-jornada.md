@@ -14,7 +14,7 @@ una decisión `POR VALIDAR`.
 ## Resultado demostrable
 
 El contrato permite altas atómicas de varios paralelos para usos internos. La interfaz
-actual crea un solo paralelo con jornada desde cada oferta; la edición vuelve a mostrar
+actual crea un solo paralelo con jornada desde cada materia programada; la edición vuelve a mostrar
 la jornada. Cada alta conserva alcance por carrera y un evento de auditoría por
 paralelo.
 
@@ -44,7 +44,7 @@ paralelo.
 
 - Crea un lote, registra jornada y auditorías.
 - Rechaza duplicados, incluidos los ya existentes, sin inserciones parciales.
-- Rechaza una oferta de otra carrera.
+- Rechaza una programación de otra carrera.
 - Comprueba la presencia del selector de jornada en la edición de paralelo.
 
 ## Pasos

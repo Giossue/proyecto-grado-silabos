@@ -31,7 +31,7 @@ genera Word/PDF desde la revisión aprobada.
 | Rol | Resultado que busca |
 |---|---|
 | Docente | Elaborar, corregir, justificar y enviar el sílabo asignado sin perder trabajo. |
-| Coordinador | Gestionar mallas, materias, oferta y docentes de su carrera; preparar convocatorias, revisar, aprobar y vigilar el avance. |
+| Coordinador | Gestionar mallas, materias programadas, paralelos y docentes de su carrera; preparar convocatorias, revisar, aprobar y vigilar el avance. |
 | Administrador | Mantener usuarios, facultades, carreras, coordinaciones, plantillas y operación. |
 
 Una persona puede acumular roles. El permiso efectivo depende además de alcance,

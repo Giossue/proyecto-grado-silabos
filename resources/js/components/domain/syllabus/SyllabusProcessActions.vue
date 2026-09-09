@@ -206,7 +206,22 @@ const dialogs: Record<
                         "
                         :disabled="processing"
                     >
-                        <Spinner v-if="processing" />
+                        <Spinner v-if="processing" data-icon="inline-start" />
+                        <Pause
+                            v-else-if="pending === 'pausar'"
+                            data-icon="inline-start"
+                            aria-hidden="true"
+                        />
+                        <Square
+                            v-else-if="pending === 'cerrar'"
+                            data-icon="inline-start"
+                            aria-hidden="true"
+                        />
+                        <Play
+                            v-else
+                            data-icon="inline-start"
+                            aria-hidden="true"
+                        />
                         {{ dialogs[pending].label }}
                     </Button>
                 </DialogFooter>

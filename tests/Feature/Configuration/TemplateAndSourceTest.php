@@ -77,13 +77,19 @@ class TemplateAndSourceTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Admin/Templates/Show')
+                ->has('template.sections', 12)
                 ->where('template.appearance.font_family', 'Arial')
-                ->missing('template.sections')
-                ->missing('appearanceOptions')
-                ->missing('variables')
-                ->missing('identificationDesign')
-                ->missing('logos')
-                ->missing('processLock'));
+                ->has('appearanceOptions.colors', count(TemplateAppearance::COLORS))
+                ->where('processLock', null));
+
+        $this->actingAsAdministrator()
+            ->get(route('admin.templates.edit', $template))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Admin/Templates/Edit')
+                ->has('template.sections', 12)
+                ->where('template.id', $template->id)
+                ->where('processLock', null));
     }
 
     public function test_administrator_creates_a_block_as_a_container_of_typed_fields(): void
@@ -208,8 +214,14 @@ class TemplateAndSourceTest extends TestCase
 
     public function test_non_administrator_cannot_manage_templates(): void
     {
+        $template = $this->createTemplate();
+
         $this->actingAsCoordinator()
             ->get(route('admin.templates.index'))
+            ->assertForbidden();
+
+        $this->actingAsCoordinator()
+            ->get(route('admin.templates.edit', $template))
             ->assertForbidden();
     }
 
@@ -272,13 +284,13 @@ class TemplateAndSourceTest extends TestCase
                 'key' => $identification->clave,
                 'label' => $identification->etiqueta,
                 'content_type' => 'institutional',
-                'help' => 'Se llena sola desde la malla y la oferta.',
+                'help' => 'Se llena sola desde la malla y la programación de asignatura.',
                 'ai_enabled' => 1,
             ])
             ->assertRedirect()
             ->assertSessionHasNoErrors();
         $identification->refresh();
-        $this->assertSame('Se llena sola desde la malla y la oferta.', $identification->ayuda);
+        $this->assertSame('Se llena sola desde la malla y la programación de asignatura.', $identification->ayuda);
         $this->assertTrue($identification->heredado);
         $this->assertSame('asignaturas', $identification->origen_maestro);
         $this->assertFalse($identification->ia_habilitada);
@@ -350,6 +362,8 @@ class TemplateAndSourceTest extends TestCase
         $section = $version->sections()->where('clave', 'descripcion')->firstOrFail();
         $block = $section->blocks()->firstOrFail();
         $field = $block->fields()->firstOrFail();
+        $sectionIndex = $section->posicion - 1;
+
         $this->actingAsAdministrator()
             ->patch(route('admin.templates.fields.update', ['template' => $version, 'field' => $field]), [
                 'block_id' => $block->id,
@@ -358,6 +372,11 @@ class TemplateAndSourceTest extends TestCase
                 'content_type' => 'table',
             ])
             ->assertRedirect();
+        $this->actingAsAdministrator()
+            ->get(route('admin.templates.show', $version))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where("template.sections.$sectionIndex.blocks.0.table.columns.0.key", 'texto'));
+
         $layout = [
             'columns' => [
                 ['key' => 'contenidos', 'label' => 'Contenidos temáticos', 'type' => 'text'],

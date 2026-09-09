@@ -9,7 +9,7 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Campus;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CoordinatorAssignment;
-use App\Modules\Academic\Infrastructure\Persistence\Models\CourseOffering;
+use App\Modules\Academic\Infrastructure\Persistence\Models\ScheduledSubject;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CurriculumFieldDefinition;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Faculty;
@@ -103,7 +103,7 @@ class DatabaseSeeder extends Seeder
                     'activo' => true,
                 ],
             );
-            $offering = CourseOffering::query()->firstOrCreate(
+            $scheduledSubject = ScheduledSubject::query()->firstOrCreate(
                 [
                     'periodo_academico_id' => $period->id,
                     'asignatura_id' => $subject->id,
@@ -112,7 +112,7 @@ class DatabaseSeeder extends Seeder
                 ['modalidad' => StudyModality::Presencial, 'activo' => true],
             );
             $parallel = Parallel::query()->firstOrCreate(
-                ['oferta_academica_id' => $offering->id, 'codigo' => 'A'],
+                ['programacion_asignatura_id' => $scheduledSubject->id, 'codigo' => 'A'],
                 ['activo' => true],
             );
 

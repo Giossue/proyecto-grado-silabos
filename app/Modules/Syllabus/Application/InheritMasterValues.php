@@ -2,33 +2,33 @@
 
 namespace App\Modules\Syllabus\Application;
 
-use App\Modules\Academic\Infrastructure\Persistence\Models\CourseOffering;
+use App\Modules\Academic\Infrastructure\Persistence\Models\ScheduledSubject;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\FieldDefinition;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\FieldValue;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\Syllabus;
 use Illuminate\Support\Collection;
 
 /**
- * Los campos heredados se copian de la malla y la oferta al crear el expediente —y al
+ * Los campos heredados se copian de la malla y la programación de asignatura al crear el expediente —y al
  * reiniciarlo—: es la fotografía de la que parte el docente.
  */
 class InheritMasterValues
 {
     /** @param Collection<int, FieldDefinition> $fields */
-    public function execute(Syllabus $syllabus, Collection $fields, CourseOffering $offering): void
+    public function execute(Syllabus $syllabus, Collection $fields, ScheduledSubject $scheduledSubject): void
     {
-        $offering->loadMissing(['subject', 'campus']);
+        $scheduledSubject->loadMissing(['subject', 'campus']);
 
         foreach ($fields->where('heredado', true) as $field) {
             $value = match ($field->origen_maestro) {
                 'asignaturas' => [
-                    'codigo' => $offering->subject->codigo_institucional,
-                    'nombre' => $offering->subject->nombre,
-                    'ciclo' => $offering->subject->ciclo,
-                    'creditos' => $offering->subject->creditos,
-                    'horas_totales' => $offering->subject->horas_totales,
-                    'campus' => $offering->campus->nombre,
-                    'modalidad' => $offering->modalidad->label(),
+                    'codigo' => $scheduledSubject->subject->codigo_institucional,
+                    'nombre' => $scheduledSubject->subject->nombre,
+                    'ciclo' => $scheduledSubject->subject->ciclo,
+                    'creditos' => $scheduledSubject->subject->creditos,
+                    'horas_totales' => $scheduledSubject->subject->horas_totales,
+                    'campus' => $scheduledSubject->campus->nombre,
+                    'modalidad' => $scheduledSubject->modalidad->label(),
                 ],
                 'flujo' => ['estado' => 'Sin iniciar'],
                 default => null,

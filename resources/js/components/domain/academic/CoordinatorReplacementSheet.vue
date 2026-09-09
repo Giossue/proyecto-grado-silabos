@@ -54,7 +54,7 @@ const candidates = computed(() =>
         "
         :description="
             coordinator
-                ? `${coordinator.name} deja de coordinar en este momento; la persona entrante recibe el rol y el nombramiento. Malla, ofertas y convocatorias siguen siendo de la carrera.`
+                ? `${coordinator.name} deja de coordinar en este momento; la persona entrante recibe el rol y el nombramiento. Malla, materias programadas y convocatorias siguen siendo de la carrera.`
                 : 'La persona entrante recibe el rol de coordinación y el nombramiento de la carrera.'
         "
         :show-trigger="false"

@@ -117,6 +117,7 @@ const props = defineProps<{
             sections: SnapshotSection[];
             template_variables?: Record<string, string>;
             academic_context?: {
+                scheduled_subject?: { teaching_weeks?: number | null };
                 offering?: { teaching_weeks?: number | null };
                 subject?: {
                     credits?: number | string | null;
@@ -176,6 +177,7 @@ const canReviewCurrent = computed(
 );
 const planningExpectations = computed<PlanningExpectations>(() => ({
     teaching_weeks:
+        props.revision.snapshot.academic_context?.scheduled_subject?.teaching_weeks ??
         props.revision.snapshot.academic_context?.offering?.teaching_weeks ??
         null,
     credits: props.revision.snapshot.academic_context?.subject?.credits ?? null,

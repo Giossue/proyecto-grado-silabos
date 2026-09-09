@@ -17,11 +17,13 @@ withDefaults(
         variant?: ButtonVariants['variant'];
         size?: ButtonVariants['size'];
         buttonClass?: HTMLAttributes['class'];
+        showLabel?: boolean;
     }>(),
     {
         variant: 'outline',
         size: 'icon-sm',
         buttonClass: undefined,
+        showLabel: false,
     },
 );
 
@@ -59,6 +61,7 @@ const helpOpen = ref(false);
                             @blur="helpOpen = false"
                         >
                             <slot name="icon" />
+                            <span v-if="showLabel">{{ label }}</span>
                         </Button>
                     </PopoverTrigger>
                     <slot />

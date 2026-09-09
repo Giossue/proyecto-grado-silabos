@@ -66,15 +66,16 @@ final class IdentificationCard
     public static function build(array $context, array $parallels, array $teachers, array $emails, array $inputs = []): array
     {
         $get = fn (string $path): string => self::text(data_get($context, $path));
+        $scheduled = fn (string $key): string => self::text(AcademicContextValues::scheduledSubject($context, $key));
         $input = fn (string $key): string => self::text($inputs[$key] ?? null);
 
         return [
             'faculty' => $get('career.faculty'),
             'career' => $get('career.name'),
-            'modality' => $get('offering.modality'),
-            'campus' => $get('offering.campus'),
+            'modality' => $scheduled('modality'),
+            'campus' => $scheduled('campus'),
             'subject' => $get('subject.name'),
-            'period' => $get('offering.period'),
+            'period' => $scheduled('period'),
             'cycle' => self::cycle(data_get($context, 'subject.cycle')),
             'parallel' => self::join($parallels),
             'shift' => '',
@@ -107,7 +108,7 @@ final class IdentificationCard
                     'prerequisites' => ['SW-P6-032'], 'corequisites' => [],
                     'hours_ac' => 32, 'hours_pae' => 16, 'hours_aa' => 48, 'total_hours' => 96, 'credits' => 2,
                 ],
-                'offering' => ['period' => 'Marzo – Julio 2026', 'campus' => 'Matriz', 'modality' => 'Presencial'],
+                'scheduled_subject' => ['period' => 'Marzo – Julio 2026', 'campus' => 'Matriz', 'modality' => 'Presencial'],
             ],
             ['A'],
             ['NOMBRE DEL DOCENTE'],

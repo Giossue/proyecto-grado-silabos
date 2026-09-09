@@ -22,7 +22,7 @@ class IdentificationCardTest extends TestCase
                     'organization_unit' => 'Unidad Profesional', 'prerequisites' => ['SW-P6-032'], 'corequisites' => [],
                     'hours_ac' => '32', 'hours_pae' => '16', 'hours_aa' => '48', 'total_hours' => 96, 'credits' => '2',
                 ],
-                'offering' => ['period' => 'Marzo – Julio 2026', 'campus' => 'Matriz', 'modality' => 'Presencial'],
+                'scheduled_subject' => ['period' => 'Marzo – Julio 2026', 'campus' => 'Matriz', 'modality' => 'Presencial'],
             ],
             ['A', 'B'],
             ['PAUL GUARANGA'],
@@ -81,5 +81,27 @@ class IdentificationCardTest extends TestCase
         $this->assertSame('X', $texts[11][1], 'La muestra marca No.');
         $this->assertStringStartsWith('FORMACIÓN Y EXPERIENCIA ACADÉMICA – INVESTIGATIVA:', $texts[17][0]);
         $this->assertSame('blue', $grid[0][0]['style']);
+    }
+
+    public function test_build_reads_historical_contexts_that_used_the_offering_key(): void
+    {
+        $data = IdentificationCard::build(
+            [
+                'career' => ['name' => 'Software', 'faculty' => 'FCAGEI'],
+                'subject' => ['name' => 'Programación', 'code' => 'SW-101', 'cycle' => 1],
+                'offering' => [
+                    'period' => 'Noviembre 2025 – Marzo 2026',
+                    'campus' => 'Matriz',
+                    'modality' => 'Presencial',
+                ],
+            ],
+            ['A'],
+            ['DOCENTE'],
+            ['docente@ueb.edu.ec'],
+        );
+
+        $this->assertSame('Noviembre 2025 – Marzo 2026', $data['period']);
+        $this->assertSame('Matriz', $data['campus']);
+        $this->assertSame('Presencial', $data['modality']);
     }
 }

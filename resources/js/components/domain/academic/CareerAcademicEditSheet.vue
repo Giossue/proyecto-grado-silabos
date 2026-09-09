@@ -24,7 +24,7 @@ import { PARALLEL_SHIFTS as SHIFTS } from '@/lib/parallelShifts';
 import type { AcademicStructureProps } from '@/types/academic';
 
 export type CareerAcademicEntity =
-    'malla' | 'asignatura' | 'oferta' | 'paralelo' | 'asignacion_docente';
+    'malla' | 'asignatura' | 'programacion_asignatura' | 'paralelo' | 'asignacion_docente';
 
 export type CareerAcademicEditableRecord = {
     id: string;
@@ -37,7 +37,7 @@ export type CareerAcademicEditableRecord = {
     subject_id?: string;
     period_id?: string;
     campus_id?: string;
-    offering_id?: string;
+    scheduled_subject_id?: string;
     user_id?: string;
     parallel_id?: string;
 };
@@ -55,7 +55,7 @@ const entityLabel = computed(
         ({
             malla: 'malla',
             asignatura: 'materia',
-            oferta: 'oferta académica',
+            programacion_asignatura: 'programación de asignatura',
             paralelo: 'paralelo',
             asignacion_docente: 'asignación docente',
         })[props.entity],
@@ -186,10 +186,10 @@ const entityLabel = computed(
                         </Field>
                     </template>
 
-                    <template v-else-if="entity === 'oferta'">
+                    <template v-else-if="entity === 'programacion_asignatura'">
                         <Field :data-invalid="Boolean(errors.subject_id)">
                             <FieldLabel
-                                :for="`edit-offering-subject-${record.id}`"
+                                :for="`edit-scheduled-subject-subject-${record.id}`"
                                 required
                                 >Materia de la malla activa</FieldLabel
                             >
@@ -199,7 +199,7 @@ const entityLabel = computed(
                                 required
                             >
                                 <SelectTrigger
-                                    :id="`edit-offering-subject-${record.id}`"
+                                    :id="`edit-scheduled-subject-subject-${record.id}`"
                                     :aria-invalid="Boolean(errors.subject_id)"
                                 >
                                     <SelectValue
@@ -222,7 +222,7 @@ const entityLabel = computed(
                         </Field>
                         <Field :data-invalid="Boolean(errors.period_id)">
                             <FieldLabel
-                                :for="`edit-offering-period-${record.id}`"
+                                :for="`edit-scheduled-subject-period-${record.id}`"
                                 required
                                 >Periodo académico</FieldLabel
                             >
@@ -232,7 +232,7 @@ const entityLabel = computed(
                                 required
                             >
                                 <SelectTrigger
-                                    :id="`edit-offering-period-${record.id}`"
+                                    :id="`edit-scheduled-subject-period-${record.id}`"
                                     :aria-invalid="Boolean(errors.period_id)"
                                     ><SelectValue
                                         placeholder="Seleccione un periodo"
@@ -254,27 +254,27 @@ const entityLabel = computed(
                     </template>
 
                     <template v-else-if="entity === 'paralelo'">
-                        <Field :data-invalid="Boolean(errors.offering_id)">
+                        <Field :data-invalid="Boolean(errors.scheduled_subject_id)">
                             <FieldLabel
-                                :for="`edit-parallel-offering-${record.id}`"
+                                :for="`edit-parallel-scheduled-subject-${record.id}`"
                                 required
-                                >Oferta académica</FieldLabel
+                                >Materia programada</FieldLabel
                             >
                             <Select
-                                name="offering_id"
-                                :default-value="record.offering_id"
+                                name="scheduled_subject_id"
+                                :default-value="record.scheduled_subject_id"
                                 required
                             >
                                 <SelectTrigger
-                                    :id="`edit-parallel-offering-${record.id}`"
-                                    :aria-invalid="Boolean(errors.offering_id)"
+                                    :id="`edit-parallel-scheduled-subject-${record.id}`"
+                                    :aria-invalid="Boolean(errors.scheduled_subject_id)"
                                     ><SelectValue
-                                        placeholder="Seleccione una oferta"
+                                        placeholder="Seleccione una materia programada"
                                 /></SelectTrigger>
                                 <SelectContent
                                     ><SelectGroup>
                                         <SelectItem
-                                            v-for="item in options.offerings"
+                                            v-for="item in options.scheduledSubjects"
                                             :key="item.id"
                                             :value="item.id"
                                         >
@@ -283,7 +283,7 @@ const entityLabel = computed(
                                     </SelectGroup></SelectContent
                                 >
                             </Select>
-                            <FieldError :errors="[errors.offering_id]" />
+                            <FieldError :errors="[errors.scheduled_subject_id]" />
                         </Field>
                         <Field :data-invalid="Boolean(errors.code)">
                             <FieldLabel

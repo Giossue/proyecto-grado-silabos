@@ -66,7 +66,7 @@ ya estaba dentro. La fecha anterior se conserva en el evento de auditoría.
 Administración prepara una sola convocatoria institucional por período académico y la
 abre para la universidad. Cada coordinador la ve en su área y solo puede iniciar el
 alcance de su carrera: no define nombre, plantilla, período, modo de agrupación ni un
-subconjunto de fuentes. El inicio comprueba malla activa, ofertas activas con paralelos,
+subconjunto de fuentes. El inicio comprueba malla activa, materias programadas con paralelos,
 docente vigente en cada paralelo y al menos una fuente académica activa; si todo pasa,
 crea la convocatoria de carrera y exactamente un sílabo por paralelo en una transacción.
 Las fuentes activas de la carrera se fijan completas al inicio y se incorporan al
@@ -92,9 +92,9 @@ periodo académico.
 
 - usuario activo, rol, alcance y asignación vigentes;
 - convocatoria y periodo compatibles;
-- al iniciar el alcance: malla activa, ofertas/paralelos y docentes vigentes, y fuentes
+- al iniciar el alcance: malla activa, materias programadas, paralelos y docentes vigentes, y fuentes
   académicas activas de la carrera;
-- malla actual activa al crear ofertas y abrir un proceso nuevo;
+- malla actual activa al programar materias y abrir un proceso nuevo;
 - control de concurrencia superado;
 - plantilla institucional completa al abrir el proceso; la revisión enviada se renderiza desde su propia copia;
 - validaciones determinísticas obligatorias ejecutadas antes del envío;

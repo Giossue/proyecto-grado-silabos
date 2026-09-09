@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $codigo
  * @property string|null $jornada
  * @property bool $activo
- * @property-read CourseOffering $offering
+ * @property-read ScheduledSubject $scheduledSubject
  */
 class Parallel extends Model
 {
@@ -27,12 +27,12 @@ class Parallel extends Model
     public const SHIFTS = ['matutina', 'vespertina', 'nocturna'];
 
     /** @var list<string> */
-    protected $fillable = ['oferta_academica_id', 'codigo', 'jornada', 'activo'];
+    protected $fillable = ['programacion_asignatura_id', 'codigo', 'jornada', 'activo'];
 
-    /** @return BelongsTo<CourseOffering, $this> */
-    public function offering(): BelongsTo
+    /** @return BelongsTo<ScheduledSubject, $this> */
+    public function scheduledSubject(): BelongsTo
     {
-        return $this->belongsTo(CourseOffering::class, 'oferta_academica_id');
+        return $this->belongsTo(ScheduledSubject::class, 'programacion_asignatura_id');
     }
 
     /** @return HasMany<TeacherAssignment, $this> */

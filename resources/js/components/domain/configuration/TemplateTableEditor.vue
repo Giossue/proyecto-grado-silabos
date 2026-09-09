@@ -75,6 +75,7 @@ const props = defineProps<{
     textColor: string;
     bodyAlignment: CellAlignment;
     colors: { value: string; label: string }[];
+    toolbarTarget?: string;
 }>();
 
 const emit = defineEmits<{
@@ -251,6 +252,7 @@ const inlineNode = (name: 'field' | 'column' | 'variable') =>
                             ? 'template-table-variable'
                             : 'template-table-field',
                     contenteditable: 'false',
+                    title: label,
                 }),
                 label,
             ];
@@ -447,269 +449,285 @@ defineExpose({ getDocument });
         class="template-table-editor flex min-w-0 flex-col gap-3 rounded-lg ring-1 ring-ring"
         :style="editorStyle"
         data-page-unit
+        data-page-flow-through
     >
-        <div
-            class="flex flex-wrap items-center gap-2 bg-muted/40 p-2 text-foreground"
-            role="toolbar"
-            aria-label="Formato de celdas"
-        >
-            <TemplateToolbarSelect
-                v-model="background"
-                label="Fondo de celda"
-                :tooltip="backgroundTooltip"
-                :disabled="!inCell || pending"
+        <Teleport :to="toolbarTarget ?? 'body'" :disabled="!toolbarTarget">
+            <div
+                class="flex min-w-max items-center gap-2 text-foreground"
+                role="toolbar"
+                aria-label="Formato de celdas"
             >
-                <template #icon>
-                    <PaintBucket aria-hidden="true" />
-                </template>
-                <SelectItem value="inherit">Sin fondo</SelectItem>
-                <SelectItem
-                    v-for="option in colors"
-                    :key="`background-${option.value}`"
-                    :value="option.value"
+                <TemplateToolbarSelect
+                    v-model="background"
+                    label="Fondo de celda"
+                    :tooltip="backgroundTooltip"
+                    :disabled="!inCell || pending"
                 >
-                    <span
-                        class="size-3 rounded-sm border"
-                        :style="{ backgroundColor: option.value }"
-                        aria-hidden="true"
-                    />
-                    {{ option.label }}
-                </SelectItem>
-            </TemplateToolbarSelect>
+                    <template #icon>
+                        <PaintBucket aria-hidden="true" />
+                    </template>
+                    <SelectItem value="inherit">Sin fondo</SelectItem>
+                    <SelectItem
+                        v-for="option in colors"
+                        :key="`background-${option.value}`"
+                        :value="option.value"
+                    >
+                        <span
+                            class="size-3 rounded-sm border"
+                            :style="{ backgroundColor: option.value }"
+                            aria-hidden="true"
+                        />
+                        {{ option.label }}
+                    </SelectItem>
+                </TemplateToolbarSelect>
 
-            <TemplateToolbarSelect
-                v-model="color"
-                label="Color de texto"
-                :tooltip="textColorTooltip"
-                :disabled="!inCell || pending"
-            >
-                <template #icon>
-                    <Baseline aria-hidden="true" />
-                </template>
-                <SelectItem value="inherit">Color heredado</SelectItem>
-                <SelectItem
-                    v-for="option in colors"
-                    :key="`text-${option.value}`"
-                    :value="option.value"
+                <TemplateToolbarSelect
+                    v-model="color"
+                    label="Color de texto"
+                    :tooltip="textColorTooltip"
+                    :disabled="!inCell || pending"
                 >
-                    <span
-                        class="size-3 rounded-sm border"
-                        :style="{ backgroundColor: option.value }"
-                        aria-hidden="true"
-                    />
-                    {{ option.label }}
-                </SelectItem>
-            </TemplateToolbarSelect>
+                    <template #icon>
+                        <Baseline aria-hidden="true" />
+                    </template>
+                    <SelectItem value="inherit">Color heredado</SelectItem>
+                    <SelectItem
+                        v-for="option in colors"
+                        :key="`text-${option.value}`"
+                        :value="option.value"
+                    >
+                        <span
+                            class="size-3 rounded-sm border"
+                            :style="{ backgroundColor: option.value }"
+                            aria-hidden="true"
+                        />
+                        {{ option.label }}
+                    </SelectItem>
+                </TemplateToolbarSelect>
 
-            <TemplateToolbarSelect
-                v-model="alignment"
-                label="Alineación de celda"
-                :tooltip="alignmentTooltip"
-                :disabled="!inCell || pending"
-            >
-                <template #icon>
-                    <AlignLeft aria-hidden="true" />
-                </template>
-                <SelectItem value="inherit">Alineación heredada</SelectItem>
-                <SelectItem value="left"> <AlignLeft /> Izquierda </SelectItem>
-                <SelectItem value="center"> <AlignCenter /> Centro </SelectItem>
-                <SelectItem value="right"> <AlignRight /> Derecha </SelectItem>
-                <SelectItem value="justify">
-                    <AlignJustify /> Justificado
-                </SelectItem>
-            </TemplateToolbarSelect>
+                <TemplateToolbarSelect
+                    v-model="alignment"
+                    label="Alineación de celda"
+                    :tooltip="alignmentTooltip"
+                    :disabled="!inCell || pending"
+                >
+                    <template #icon>
+                        <AlignLeft aria-hidden="true" />
+                    </template>
+                    <SelectItem value="inherit">Alineación heredada</SelectItem>
+                    <SelectItem value="left">
+                        <AlignLeft /> Izquierda
+                    </SelectItem>
+                    <SelectItem value="center">
+                        <AlignCenter /> Centro
+                    </SelectItem>
+                    <SelectItem value="right">
+                        <AlignRight /> Derecha
+                    </SelectItem>
+                    <SelectItem value="justify">
+                        <AlignJustify /> Justificado
+                    </SelectItem>
+                </TemplateToolbarSelect>
 
-            <TemplateToolbarSelect
-                v-model="border"
-                label="Borde de celda"
-                :tooltip="borderTooltip"
-                :disabled="!inCell || pending"
-            >
-                <template #icon>
-                    <SquareDashed aria-hidden="true" />
-                </template>
-                <SelectItem value="inherit">Borde original</SelectItem>
-                <SelectItem value="thin">Fino</SelectItem>
-                <SelectItem value="thick">Grueso</SelectItem>
-                <SelectItem value="none">Sin borde</SelectItem>
-            </TemplateToolbarSelect>
+                <TemplateToolbarSelect
+                    v-model="border"
+                    label="Borde de celda"
+                    :tooltip="borderTooltip"
+                    :disabled="!inCell || pending"
+                >
+                    <template #icon>
+                        <SquareDashed aria-hidden="true" />
+                    </template>
+                    <SelectItem value="inherit">Borde original</SelectItem>
+                    <SelectItem value="thin">Fino</SelectItem>
+                    <SelectItem value="thick">Grueso</SelectItem>
+                    <SelectItem value="none">Sin borde</SelectItem>
+                </TemplateToolbarSelect>
 
-            <Separator orientation="vertical" class="h-7" />
+                <Separator orientation="vertical" class="h-7" />
 
-            <TemplateToolbarButton
-                label="Negrita en las celdas seleccionadas"
-                tooltip="Negrita"
-                :variant="selectedCell.bold === true ? 'secondary' : 'ghost'"
-                :disabled="!inCell || pending"
-                :pressed="selectedCell.bold === true"
-                @click="
-                    setCell('bold', selectedCell.bold === true ? false : true)
-                "
-            >
-                <Bold aria-hidden="true" />
-            </TemplateToolbarButton>
-            <TemplateToolbarButton
-                label="Cursiva en las celdas seleccionadas"
-                tooltip="Cursiva"
-                :variant="selectedCell.italic === true ? 'secondary' : 'ghost'"
-                :disabled="!inCell || pending"
-                :pressed="selectedCell.italic === true"
-                @click="
-                    setCell(
-                        'italic',
-                        selectedCell.italic === true ? false : true,
-                    )
-                "
-            >
-                <Italic aria-hidden="true" />
-            </TemplateToolbarButton>
-
-            <Separator orientation="vertical" class="h-7" />
-
-            <TemplateToolbarButton
-                label="Combinar celdas"
-                :disabled="!can('mergeCells') || pending"
-                @click="state?.chain().focus().mergeCells().run()"
-            >
-                <UnfoldHorizontal aria-hidden="true" />
-            </TemplateToolbarButton>
-            <TemplateToolbarButton
-                label="Separar celda"
-                :disabled="!can('splitCell') || pending"
-                @click="state?.chain().focus().splitCell().run()"
-            >
-                <SplitSquareHorizontal aria-hidden="true" />
-            </TemplateToolbarButton>
-
-            <Tooltip v-model:open="tableMenuHelpOpen">
-                <TooltipTrigger as-child>
-                    <span class="inline-flex">
-                        <DropdownMenu>
-                            <DropdownMenuTrigger as-child>
-                                <Button
-                                    type="button"
-                                    size="icon-sm"
-                                    variant="ghost"
-                                    :disabled="!inCell || pending"
-                                    aria-label="Filas y columnas"
-                                    @focus="tableMenuHelpOpen = true"
-                                    @blur="tableMenuHelpOpen = false"
-                                >
-                                    <Rows3 aria-hidden="true" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuGroup>
-                                    <DropdownMenuItem
-                                        :disabled="!can('addRowBefore')"
-                                        @select="
-                                            state
-                                                ?.chain()
-                                                .focus()
-                                                .addRowBefore()
-                                                .run()
-                                        "
-                                    >
-                                        <Rows3 /> Fila arriba
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem
-                                        :disabled="!can('addRowAfter')"
-                                        @select="
-                                            state
-                                                ?.chain()
-                                                .focus()
-                                                .addRowAfter()
-                                                .run()
-                                        "
-                                    >
-                                        <Rows3 /> Fila abajo
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem
-                                        :disabled="!can('addColumnBefore')"
-                                        @select="
-                                            state
-                                                ?.chain()
-                                                .focus()
-                                                .addColumnBefore()
-                                                .run()
-                                        "
-                                    >
-                                        <Columns3 /> Columna izquierda
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem
-                                        :disabled="!can('addColumnAfter')"
-                                        @select="
-                                            state
-                                                ?.chain()
-                                                .focus()
-                                                .addColumnAfter()
-                                                .run()
-                                        "
-                                    >
-                                        <Columns3 /> Columna derecha
-                                    </DropdownMenuItem>
-                                </DropdownMenuGroup>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuGroup>
-                                    <DropdownMenuItem
-                                        variant="destructive"
-                                        :disabled="!can('deleteRow')"
-                                        @select="
-                                            state
-                                                ?.chain()
-                                                .focus()
-                                                .deleteRow()
-                                                .run()
-                                        "
-                                    >
-                                        Eliminar fila
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem
-                                        variant="destructive"
-                                        :disabled="!can('deleteColumn')"
-                                        @select="
-                                            state
-                                                ?.chain()
-                                                .focus()
-                                                .deleteColumn()
-                                                .run()
-                                        "
-                                    >
-                                        Eliminar columna
-                                    </DropdownMenuItem>
-                                </DropdownMenuGroup>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    </span>
-                </TooltipTrigger>
-                <TooltipContent>Filas y columnas</TooltipContent>
-            </Tooltip>
-
-            <TemplateToolbarButton
-                label="Quitar estilo de celda"
-                :disabled="!inCell || pending"
-                @click="resetCell"
-            >
-                <Eraser aria-hidden="true" />
-            </TemplateToolbarButton>
-
-            <div class="ms-auto flex gap-1">
                 <TemplateToolbarButton
-                    label="Deshacer"
-                    :disabled="!state?.can().undo() || pending"
-                    @click="state?.chain().focus().undo().run()"
+                    label="Negrita en las celdas seleccionadas"
+                    tooltip="Negrita"
+                    :variant="
+                        selectedCell.bold === true ? 'secondary' : 'ghost'
+                    "
+                    :disabled="!inCell || pending"
+                    :pressed="selectedCell.bold === true"
+                    @click="
+                        setCell(
+                            'bold',
+                            selectedCell.bold === true ? false : true,
+                        )
+                    "
                 >
-                    <Undo2 aria-hidden="true" />
+                    <Bold aria-hidden="true" />
                 </TemplateToolbarButton>
                 <TemplateToolbarButton
-                    label="Rehacer"
-                    :disabled="!state?.can().redo() || pending"
-                    @click="state?.chain().focus().redo().run()"
+                    label="Cursiva en las celdas seleccionadas"
+                    tooltip="Cursiva"
+                    :variant="
+                        selectedCell.italic === true ? 'secondary' : 'ghost'
+                    "
+                    :disabled="!inCell || pending"
+                    :pressed="selectedCell.italic === true"
+                    @click="
+                        setCell(
+                            'italic',
+                            selectedCell.italic === true ? false : true,
+                        )
+                    "
                 >
-                    <Redo2 aria-hidden="true" />
+                    <Italic aria-hidden="true" />
                 </TemplateToolbarButton>
+
+                <Separator orientation="vertical" class="h-7" />
+
+                <TemplateToolbarButton
+                    label="Combinar celdas"
+                    :disabled="!can('mergeCells') || pending"
+                    @click="state?.chain().focus().mergeCells().run()"
+                >
+                    <UnfoldHorizontal aria-hidden="true" />
+                </TemplateToolbarButton>
+                <TemplateToolbarButton
+                    label="Separar celda"
+                    :disabled="!can('splitCell') || pending"
+                    @click="state?.chain().focus().splitCell().run()"
+                >
+                    <SplitSquareHorizontal aria-hidden="true" />
+                </TemplateToolbarButton>
+
+                <Tooltip v-model:open="tableMenuHelpOpen">
+                    <TooltipTrigger as-child>
+                        <span class="inline-flex">
+                            <DropdownMenu>
+                                <DropdownMenuTrigger as-child>
+                                    <Button
+                                        type="button"
+                                        size="icon-sm"
+                                        variant="ghost"
+                                        :disabled="!inCell || pending"
+                                        aria-label="Filas y columnas"
+                                        @focus="tableMenuHelpOpen = true"
+                                        @blur="tableMenuHelpOpen = false"
+                                    >
+                                        <Rows3 aria-hidden="true" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuGroup>
+                                        <DropdownMenuItem
+                                            :disabled="!can('addRowBefore')"
+                                            @select="
+                                                state
+                                                    ?.chain()
+                                                    .focus()
+                                                    .addRowBefore()
+                                                    .run()
+                                            "
+                                        >
+                                            <Rows3 /> Fila arriba
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                            :disabled="!can('addRowAfter')"
+                                            @select="
+                                                state
+                                                    ?.chain()
+                                                    .focus()
+                                                    .addRowAfter()
+                                                    .run()
+                                            "
+                                        >
+                                            <Rows3 /> Fila abajo
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                            :disabled="!can('addColumnBefore')"
+                                            @select="
+                                                state
+                                                    ?.chain()
+                                                    .focus()
+                                                    .addColumnBefore()
+                                                    .run()
+                                            "
+                                        >
+                                            <Columns3 /> Columna izquierda
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                            :disabled="!can('addColumnAfter')"
+                                            @select="
+                                                state
+                                                    ?.chain()
+                                                    .focus()
+                                                    .addColumnAfter()
+                                                    .run()
+                                            "
+                                        >
+                                            <Columns3 /> Columna derecha
+                                        </DropdownMenuItem>
+                                    </DropdownMenuGroup>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuGroup>
+                                        <DropdownMenuItem
+                                            variant="destructive"
+                                            :disabled="!can('deleteRow')"
+                                            @select="
+                                                state
+                                                    ?.chain()
+                                                    .focus()
+                                                    .deleteRow()
+                                                    .run()
+                                            "
+                                        >
+                                            Eliminar fila
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                            variant="destructive"
+                                            :disabled="!can('deleteColumn')"
+                                            @select="
+                                                state
+                                                    ?.chain()
+                                                    .focus()
+                                                    .deleteColumn()
+                                                    .run()
+                                            "
+                                        >
+                                            Eliminar columna
+                                        </DropdownMenuItem>
+                                    </DropdownMenuGroup>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </span>
+                    </TooltipTrigger>
+                    <TooltipContent>Filas y columnas</TooltipContent>
+                </Tooltip>
+
+                <TemplateToolbarButton
+                    label="Quitar estilo de celda"
+                    :disabled="!inCell || pending"
+                    @click="resetCell"
+                >
+                    <Eraser aria-hidden="true" />
+                </TemplateToolbarButton>
+
+                <div class="ms-auto flex gap-1">
+                    <TemplateToolbarButton
+                        label="Deshacer"
+                        :disabled="!state?.can().undo() || pending"
+                        @click="state?.chain().focus().undo().run()"
+                    >
+                        <Undo2 aria-hidden="true" />
+                    </TemplateToolbarButton>
+                    <TemplateToolbarButton
+                        label="Rehacer"
+                        :disabled="!state?.can().redo() || pending"
+                        @click="state?.chain().focus().redo().run()"
+                    >
+                        <Redo2 aria-hidden="true" />
+                    </TemplateToolbarButton>
+                </div>
             </div>
-        </div>
+        </Teleport>
 
         <p v-if="!inCell" class="px-3 text-sm text-muted-foreground">
             Seleccione una celda. Use Mayús + clic para ampliar la selección.
@@ -800,5 +818,14 @@ defineExpose({ getDocument });
     border-radius: 2px;
     color: #111827 !important;
     padding: 1px 3px;
+}
+.template-table-editor .tiptap .template-table-field,
+.template-table-editor .tiptap .template-table-variable {
+    display: inline-block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: bottom;
+    white-space: nowrap;
 }
 </style>

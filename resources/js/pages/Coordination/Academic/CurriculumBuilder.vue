@@ -122,7 +122,7 @@ const openSubject = (subject: CurriculumBuilderSubject): void => {
             <PowerOff aria-hidden="true" />
             <AlertTitle>Malla deshabilitada</AlertTitle>
             <AlertDescription>
-                Puede seguir editándola, pero no se crearán ofertas ni procesos
+                Puede seguir editándola, pero no se programarán materias ni se crearán procesos
                 nuevos para sus materias hasta reactivarla.
             </AlertDescription>
         </Alert>

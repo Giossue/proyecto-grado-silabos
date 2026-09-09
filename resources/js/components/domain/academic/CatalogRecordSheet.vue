@@ -52,7 +52,7 @@ const labels = computed(
                 trigger: 'Nuevo campus',
                 title: 'Nuevo campus',
                 description:
-                    'Registre una sede institucional disponible para la oferta académica.',
+                    'Registre una sede institucional disponible para las carreras y programas.',
             },
             periodo: {
                 trigger: 'Nuevo periodo académico',

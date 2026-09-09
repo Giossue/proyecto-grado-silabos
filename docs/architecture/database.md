@@ -47,7 +47,7 @@ programadas de inicio o fin.
 
 `facultades`, `carreras`, `campus`, `asignaciones_coordinador`,
 `periodos_academicos`, `mallas`, `asignaturas`, `requisitos_asignatura`,
-`definiciones_campo_malla`, `valores_campo_asignatura`, `ofertas_academicas`,
+`definiciones_campo_malla`, `valores_campo_asignatura`, `programaciones_asignatura`,
 `paralelos`, `asignaciones_docente`.
 
 `asignaciones_docente` vincula una persona con un paralelo, conserva en `asignado_en` el
@@ -64,12 +64,12 @@ Estos catálogos no comparten una tabla polimórfica. `carreras.facultad_id` imp
 relación uno-a-muchos Facultad → Carreras con clave foránea y borrado restringido.
 `campus` y `periodos_academicos` conservan identidad propia; el período es institucional,
 de código único y declara `semanas_lectivas` entre 1 y 52, no depende de una carrera.
-`ofertas_academicas` los
-relaciona con una asignatura mediante claves foráneas. La modalidad no es tabla sino
+`programaciones_asignatura` relaciona cada período con una asignatura mediante claves
+foráneas. La modalidad no es tabla sino
 columna de texto con valores fijos (`carreras.modalidad` base, `asignaturas.modalidad`
-opcional, `ofertas_academicas.modalidad` copia heredada; migración `000034`, I-37). El
-campus cuelga de la carrera (`carreras.campus_id`, migración `000033`, I-36) y la oferta
-guarda la copia. La
+opcional, `programaciones_asignatura.modalidad` copia heredada; migraciones `000034` y
+`000052`, I-37/I-62). El campus cuelga de la carrera (`carreras.campus_id`, migración
+`000033`, I-36) y la programación guarda la copia. La
 jerarquía que presenta ADM-04 es una proyección de lectura y no una desnormalización de
 la persistencia.
 
@@ -81,8 +81,8 @@ una columna académica estructurada o almacenar un valor tipado por asignatura e
 pantalla no se persisten. `requisitos_asignatura.tipo` conserva la semántica explícita de
 cada flecha.
 
-`silabos.contexto_academico` conserva una fotografía JSON de la malla, la asignatura y la
-oferta al crear el expediente. Es evidencia histórica de lectura y exportación; no
+`silabos.contexto_academico` conserva una fotografía JSON de la malla, la asignatura y su
+programación al crear el expediente. Es evidencia histórica de lectura y exportación; no
 sustituye las relaciones transaccionales ni permite reconstruir autorizaciones.
 
 ### Plantillas y fuentes
@@ -165,7 +165,7 @@ protege mediante el contexto académico fijado en cada sílabo.
 - `RESTRICT` para referencias históricas.
 - `CASCADE` únicamente entre padre e hijos que no tienen sentido independiente y aún no
   constituyen evidencia publicada.
-- la malla actual solo se elimina cuando no tiene ofertas ni sílabos; con dependencias se
+- la malla actual solo se elimina cuando no tiene materias programadas ni sílabos; con dependencias se
   deshabilita.
 - un catálogo sin dependencias se elimina; si tiene historia, las claves foráneas lo
   protegen y la aplicación muestra el motivo. Las cuentas con historia se desactivan,

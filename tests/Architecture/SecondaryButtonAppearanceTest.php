@@ -1,6 +1,6 @@
 <?php
 
-it('mantiene los botones secundarios textuales sin iconos de accion, salvo el agregador del constructor visual', function (): void {
+it('mantiene los botones secundarios textuales fuera de dialogos sin iconos de accion', function (): void {
     $root = dirname(__DIR__, 2);
     $files = new RecursiveIteratorIterator(
         new RecursiveDirectoryIterator($root.'/resources/js'),
@@ -18,6 +18,14 @@ it('mantiene los botones secundarios textuales sin iconos de accion, salvo el ag
         }
 
         $source = (string) file_get_contents($path);
+        // I-61 exige un icono semántico en las acciones principales de Dialog. Esa
+        // convención tiene su propia regresión y no pertenece a los botones secundarios
+        // de páginas, barras o paneles laterales que verifica esta prueba.
+        $source = preg_replace(
+            '/<DialogContent\b[^>]*>.*?<\/DialogContent\s*>/s',
+            '',
+            $source,
+        ) ?? $source;
         preg_match_all(
             '/import\s*\{(?<names>[^}]+)\}\s*from\s*[\'\"]@lucide\/vue[\'\"];?/s',
             $source,

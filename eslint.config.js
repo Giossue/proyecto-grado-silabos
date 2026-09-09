@@ -95,6 +95,7 @@ export default defineConfigWithVueTs(
             '.claude/**',
             'vendor',
             'node_modules',
+            'temp/.venv/**',
             'public',
             'bootstrap/ssr',
             'tailwind.config.js',

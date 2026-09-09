@@ -99,7 +99,7 @@ const props = defineProps<{
     blockTypes: { value: string; label: string }[];
     /** Con el proceso abierto la hoja solo se mira. */
     readonly: boolean;
-    /** Ficha de identificación de muestra: se llena sola desde la malla y la oferta. */
+    /** Ficha de muestra: se llena sola desde la malla y la programación de asignatura. */
     identification: IdentificationCell[][];
     /** Logo de la universidad vigente; el de la facultad depende de cada carrera. */
     institutionLogo: string;
@@ -1473,6 +1473,11 @@ const dropOnFieldZone = (section: TemplateSection, index: number): void => {
                         :disabled="creatingSection"
                         @click="createSection(piece.type)"
                     >
+                        <component
+                            :is="piece.icon"
+                            data-icon="inline-start"
+                            aria-hidden="true"
+                        />
                         {{ piece.label }}
                     </Button>
                 </div>
@@ -1512,6 +1517,7 @@ const dropOnFieldZone = (section: TemplateSection, index: number): void => {
                         variant="destructive"
                         @click="confirmDiscardDocument"
                     >
+                        <Trash2 data-icon="inline-start" aria-hidden="true" />
                         Descartar cambios
                     </Button>
                 </DialogFooter>
@@ -1554,6 +1560,7 @@ const dropOnFieldZone = (section: TemplateSection, index: number): void => {
                         variant="destructive"
                         @click="confirmDeletion"
                     >
+                        <Trash2 data-icon="inline-start" aria-hidden="true" />
                         Eliminar
                     </Button>
                 </DialogFooter>

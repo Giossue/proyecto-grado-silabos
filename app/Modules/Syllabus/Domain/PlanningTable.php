@@ -3,6 +3,7 @@
 namespace App\Modules\Syllabus\Domain;
 
 use App\Modules\Configuration\Domain\TableLayout;
+use App\Modules\Syllabus\Application\AcademicContextValues;
 
 /** Reglas determinísticas de la planificación microcurricular por unidades. */
 final class PlanningTable
@@ -136,7 +137,7 @@ final class PlanningTable
             $issues[] = ['code' => 'semana_duplicada', 'message' => 'No repita semanas: '.implode(', ', $duplicates).'.'];
         }
 
-        $teachingWeeks = self::integer(data_get($academicContext, 'offering.teaching_weeks'));
+        $teachingWeeks = self::integer(AcademicContextValues::scheduledSubject($academicContext, 'teaching_weeks'));
         if ($teachingWeeks !== null && $teachingWeeks > 0) {
             $outOfRange = array_values(array_filter(array_keys($weeks), fn (int $week): bool => $week > $teachingWeeks));
             if ($outOfRange !== []) {
