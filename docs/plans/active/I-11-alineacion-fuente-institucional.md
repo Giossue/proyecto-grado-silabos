@@ -1,5 +1,8 @@
 # I-11: Alineación del esquema con la fuente institucional
 
+> Nota de terminología (I-62, 2026-09-09): «oferta» en este registro histórico equivale
+> a la entidad actual **programación de asignatura**.
+
 
 > **Nota del 2026-09-03 (I-41).** La decisión de período por carrera queda reemplazada:
 > el producto usa un período institucional único, por indicación explícita del responsable

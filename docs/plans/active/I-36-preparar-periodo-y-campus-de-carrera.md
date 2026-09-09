@@ -1,5 +1,9 @@
 # I-36: Preparar periodo y campus de la carrera
 
+> Nota de terminología (I-62, 2026-09-09): las referencias históricas a «oferta» y
+> `OfferingInheritance` corresponden hoy a **programación de asignatura** y
+> `ScheduledSubjectInheritance`.
+
 ## Estado
 
 Implementado el 2026-09-03. Verificación al pie.

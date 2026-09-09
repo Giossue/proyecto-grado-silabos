@@ -1,5 +1,9 @@
 # I-09: Gobierno institucional y gestión académica por carrera
 
+> Nota de terminología (I-62, 2026-09-09): las menciones históricas a «oferta» de una
+> materia corresponden ahora a **programación de asignatura** y a la pantalla
+> **Materias y paralelos**.
+
 ## Estado
 
 Implementación y verificación automatizada concluidas el 2026-08-14 por decisión

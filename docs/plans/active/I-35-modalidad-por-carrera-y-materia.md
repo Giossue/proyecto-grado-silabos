@@ -1,5 +1,9 @@
 # I-35: Modalidad por carrera y por materia
 
+> Nota de terminología (I-62, 2026-09-09): las referencias históricas a «oferta» y
+> `ofertas_academicas` corresponden hoy a **programación de asignatura** y
+> `programaciones_asignatura`.
+
 ## Estado
 
 Implementado el 2026-09-03. Verificación al pie. El mismo día I-37 retiró el catálogo de

@@ -1,5 +1,9 @@
 # I-37: Modalidades fijas por norma y excepciones por materia
 
+> Nota de terminología (I-62, 2026-09-09): las referencias históricas a «oferta»,
+> `ofertas_academicas` y `OfferingInheritance` corresponden hoy a **programación de
+> asignatura**, `programaciones_asignatura` y `ScheduledSubjectInheritance`.
+
 ## Estado
 
 Implementado el 2026-09-03 y ajustado el 2026-09-05. Verificación al pie.
