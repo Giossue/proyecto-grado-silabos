@@ -110,5 +110,7 @@ it('I-62 persiste la programación de asignaturas con nombres e invariante propi
     expect($restricciones)
         ->toContain('programacion_asignatura_periodo_materia_unica')
         ->toContain('programaciones_asignatura_periodo_academico_id_foreign')
-        ->toContain('programaciones_asignatura_asignatura_id_foreign');
+        ->toContain('programaciones_asignatura_asignatura_id_foreign')
+        ->toContain('programaciones_asignatura_id_not_null')
+        ->not->toContain('ofertas_academicas_id_not_null');
 });

@@ -393,6 +393,24 @@ class DocumentOperationsTest extends TestCase
         $this->actingAsTeacher()->get(route('admin.audit.index'))->assertForbidden();
         $this->actingAsCoordinator()->get(route('admin.audit.index'))->assertForbidden();
 
+        AuditEvent::query()->create([
+            'actor_usuario_id' => $this->coordinator->id,
+            'asignacion_rol_id' => $this->coordinatorContext->id,
+            'accion' => 'academico.oferta.creacion',
+            'tipo_recurso' => 'oferta',
+            'recurso_id' => (string) Str::uuid(),
+            'resultado' => 'exito',
+            'metadatos' => [],
+            'ocurrido_en' => now(),
+        ]);
+        $this->actingAsAdministrator()
+            ->get(route('admin.audit.index', ['action' => 'academico.oferta.creacion']))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('events.total', 1)
+                ->where('events.data.0.action', 'Materia programada')
+                ->where('events.data.0.resource', 'Programación de asignatura'));
+
         try {
             $event->update(['resultado' => 'fallida']);
             $this->fail('El modelo permitió modificar auditoría histórica.');

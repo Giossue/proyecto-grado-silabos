@@ -64,35 +64,12 @@ return new class extends Migration
             UNIQUE (periodo_academico_id, asignatura_id)
         SQL);
 
-        DB::table('eventos_auditoria')
-            ->where('accion', 'academico.oferta.creacion')
-            ->update(['accion' => 'academico.programacion_asignatura.creacion']);
-        DB::table('eventos_auditoria')
-            ->where('accion', 'academico.oferta.actualizacion')
-            ->update(['accion' => 'academico.programacion_asignatura.actualizacion']);
-        DB::table('eventos_auditoria')
-            ->where('accion', 'academico.oferta.eliminacion')
-            ->update(['accion' => 'academico.programacion_asignatura.eliminacion']);
-        DB::table('eventos_auditoria')
-            ->where('tipo_recurso', 'oferta')
-            ->update(['tipo_recurso' => 'programacion_asignatura']);
+        // Los eventos ya escritos son evidencia histórica append-only. Conservan el
+        // vocabulario vigente cuando ocurrieron; los eventos nuevos usan la terminología I-62.
     }
 
     public function down(): void
     {
-        DB::table('eventos_auditoria')
-            ->where('tipo_recurso', 'programacion_asignatura')
-            ->update(['tipo_recurso' => 'oferta']);
-        DB::table('eventos_auditoria')
-            ->where('accion', 'academico.programacion_asignatura.creacion')
-            ->update(['accion' => 'academico.oferta.creacion']);
-        DB::table('eventos_auditoria')
-            ->where('accion', 'academico.programacion_asignatura.actualizacion')
-            ->update(['accion' => 'academico.oferta.actualizacion']);
-        DB::table('eventos_auditoria')
-            ->where('accion', 'academico.programacion_asignatura.eliminacion')
-            ->update(['accion' => 'academico.oferta.eliminacion']);
-
         DB::statement(<<<'SQL'
             ALTER TABLE programaciones_asignatura
             DROP CONSTRAINT programacion_asignatura_periodo_materia_unica

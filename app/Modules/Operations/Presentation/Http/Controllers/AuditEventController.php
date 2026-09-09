@@ -114,6 +114,10 @@ class AuditEventController extends Controller
             'academico.programacion_asignatura.creacion' => 'Materia programada',
             'academico.programacion_asignatura.actualizacion' => 'Programación de asignatura actualizada',
             'academico.programacion_asignatura.eliminacion' => 'Materia programada eliminada',
+            // I-62 conserva el valor original de los eventos append-only.
+            'academico.oferta.creacion' => 'Materia programada',
+            'academico.oferta.actualizacion' => 'Programación de asignatura actualizada',
+            'academico.oferta.eliminacion' => 'Materia programada eliminada',
             'academico.paralelo.creacion' => 'Paralelo creado',
             'academico.paralelo.actualizacion' => 'Paralelo actualizado',
             'academico.asignacion_docente.creacion' => 'Asignación docente creada',
@@ -176,6 +180,7 @@ class AuditEventController extends Controller
             'asignatura' => 'Materia',
             'requisito' => 'Relación académica',
             'programacion_asignatura' => 'Programación de asignatura',
+            'oferta' => 'Programación de asignatura',
             'paralelo' => 'Paralelo',
             'asignacion_docente' => 'Asignación docente',
             'asignacion_coordinador' => 'Asignación de coordinación',

@@ -2,8 +2,7 @@
 
 ## Estado
 
-Implementación y migración local verificadas el 2026-09-09. El despliegue compatible y
-la migración remota permanecen pendientes.
+Implementación, despliegue y migraciones local/remota verificados el 2026-09-09.
 
 ## Problema
 
@@ -81,5 +80,16 @@ compatible esté desplegado.
 - Base local: migraciones `000051` y `000052` aplicadas; 1 programación, 1 paralelo,
   0 alcances y 0 relaciones huérfanas después del cambio.
 - Prevalidación remota de solo lectura: 42 programaciones, 43 paralelos, 0 alcances y
-  0 duplicados por período/materia. Las migraciones `000051` y `000052` siguen
-  pendientes hasta desplegar el artefacto compatible.
+  0 duplicados por período/materia.
+- Producción: `000051`, `000052` y el remate técnico `000053` aplicados; se conservaron
+  42 programaciones y 43 paralelos, con 0 relaciones huérfanas. Los 46 eventos de
+  auditoría históricos permanecen inmutables y la interfaz traduce sus claves anteriores.
+
+## Incidente de despliegue
+
+El primer intento de `000052` fue rechazado por el trigger append-only al intentar
+actualizar eventos históricos. PostgreSQL revirtió la migración completa. Se retiró esa
+transformación: el historial conserva el vocabulario con el que ocurrió y solo los
+eventos futuros usan las claves I-62. La ejecución corregida y `000053` terminaron sin
+pérdida de filas; esta última renombra seis restricciones `NOT NULL` que PostgreSQL
+había conservado con el identificador anterior.
