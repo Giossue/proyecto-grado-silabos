@@ -18,7 +18,6 @@ import type {
 } from '@vue-flow/core';
 import { MiniMap } from '@vue-flow/minimap';
 import { computed, ref, watch } from 'vue';
-import { toast } from 'vue-sonner';
 import CareerAcademicStructureController from '@/actions/App/Modules/Academic/Presentation/Http/Controllers/CareerAcademicStructureController';
 import CurriculumAddSubjectNode from '@/components/domain/academic/curriculum/CurriculumAddSubjectNode.vue';
 import CurriculumCycleNode from '@/components/domain/academic/curriculum/CurriculumCycleNode.vue';
@@ -42,6 +41,7 @@ import {
 } from '@/components/ui/popover';
 import { Spinner } from '@/components/ui/spinner';
 import { formatNumericDisplay } from '@/lib/numberDisplay';
+import { toast } from '@/lib/toast';
 import type {
     CurriculumBuilderProps,
     CurriculumBuilderSubject,

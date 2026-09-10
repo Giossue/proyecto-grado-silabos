@@ -2,7 +2,6 @@
 import { useForm } from '@inertiajs/vue3';
 import { Save } from '@lucide/vue';
 import { ref } from 'vue';
-import { toast } from 'vue-sonner';
 import TemplateController from '@/actions/App/Modules/Configuration/Presentation/Http/Controllers/TemplateController';
 import { Button } from '@/components/ui/button';
 import {
@@ -21,6 +20,7 @@ import {
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
+import { toast } from '@/lib/toast';
 
 const props = defineProps<{
     templateId: string;

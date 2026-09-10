@@ -14,7 +14,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $carrera_id
  * @property string $nombre
  * @property string|null $descripcion
- * @property string|null $notas_internas
  * @property string|null $contenido
  * @property bool $activo
  */
@@ -27,7 +26,7 @@ class AcademicSource extends Model
     protected $table = 'fuentes_academicas';
 
     /** @var list<string> */
-    protected $fillable = ['carrera_id', 'nombre', 'descripcion', 'notas_internas', 'contenido', 'activo'];
+    protected $fillable = ['carrera_id', 'nombre', 'descripcion', 'contenido', 'activo'];
 
     /** @return BelongsTo<Career, $this> */
     public function career(): BelongsTo

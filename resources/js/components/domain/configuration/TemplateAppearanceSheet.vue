@@ -2,7 +2,6 @@
 import { Form, useForm } from '@inertiajs/vue3';
 import { Upload } from '@lucide/vue';
 import { computed, watch } from 'vue';
-import { toast } from 'vue-sonner';
 import TemplateController from '@/actions/App/Modules/Configuration/Presentation/Http/Controllers/TemplateController';
 import FormSheet from '@/components/domain/FormSheet.vue';
 import FormSheetActions from '@/components/domain/FormSheetActions.vue';
@@ -28,6 +27,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
+import { toast } from '@/lib/toast';
 import type {
     TemplateAppearance,
     TemplateAppearanceOptions,

@@ -96,7 +96,8 @@ sustituye las relaciones transaccionales ni permite reconstruir autorizaciones.
 y cada revisión enviada conserva su propia fotografía inmutable (I-32, I-52).
 
 `fuentes_academicas` es un documento por fila (I-26): nombre único por carrera,
-descripción, notas internas y `contenido` Markdown editable. Las tablas
+descripción y `contenido` Markdown editable. La migración `000054` retira
+`notas_internas`; las tablas
 `versiones_fuente`, `fragmentos_fuente` y `conflictos_fuente` se retiraron en la
 migración `000020`; la evidencia de IA conserva su propia copia del contenido citado.
 

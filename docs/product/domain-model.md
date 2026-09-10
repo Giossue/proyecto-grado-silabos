@@ -90,7 +90,7 @@ relevos aplican la misma protección en el servidor (I-64).
   secciones, bloques, definiciones de campo y el mapa de exportación. Se edita en el
   sitio.
 - `FuenteAcademica` es un documento de la Coordinación de la carrera: nombre,
-  descripción, notas internas y contenido Markdown editable. No tiene versiones ni
+  descripción y contenido Markdown editable. No tiene versiones ni
   fragmentos; la evidencia de IA conserva su propia fotografía del contenido.
 
 No hay publicación: la estructura se comprueba al abrir o reanudar el proceso. Un sílabo

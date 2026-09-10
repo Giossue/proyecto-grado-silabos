@@ -35,7 +35,6 @@ class AcademicSourceController extends Controller
                     'id' => $source->id,
                     'name' => $source->nombre,
                     'description' => $source->descripcion,
-                    'internal_notes' => $source->notas_internas,
                     'has_content' => is_string($source->contenido) && trim($source->contenido) !== '',
                 ]),
         ]);
@@ -58,7 +57,6 @@ class AcademicSourceController extends Controller
                 'id' => $source->id,
                 'name' => $source->nombre,
                 'description' => $source->descripcion,
-                'internal_notes' => $source->notas_internas,
                 'content' => $source->contenido,
             ],
         ]);

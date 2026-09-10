@@ -526,20 +526,18 @@ class TemplateAndSourceTest extends TestCase
     {
         $source = $this->createSourceAsCoordinator('Perfil de egreso');
         $this->assertSame('Documento de referencia.', $source->descripcion);
-        $this->assertSame('Entregar al inicio del periodo.', $source->notas_internas);
+        $this->assertFalse(Schema::hasColumn('fuentes_academicas', 'notas_internas'));
 
         $this->actingAsCoordinator()
             ->patch(route('sources.update', $source), [
                 'nombre' => 'Perfil de egreso 2026',
                 'description' => 'Versión socializada con docentes.',
-                'internal_notes' => null,
             ])
             ->assertRedirect()
             ->assertSessionHas('success');
 
         $updated = $source->fresh();
         $this->assertSame('Perfil de egreso 2026', $updated->nombre);
-        $this->assertNull($updated->notas_internas);
 
         $this->actingAsCoordinator()
             ->put(route('sources.content.update', $source), [
@@ -632,7 +630,6 @@ class TemplateAndSourceTest extends TestCase
             ->post(route('sources.store'), [
                 'nombre' => $name,
                 'description' => 'Documento de referencia.',
-                'internal_notes' => 'Entregar al inicio del periodo.',
             ])
             ->assertRedirect();
 

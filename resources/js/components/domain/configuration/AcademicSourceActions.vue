@@ -16,7 +16,6 @@ defineProps<{
         id: string;
         name: string;
         description: string | null;
-        internal_notes: string | null;
     };
     locked: boolean;
 }>();

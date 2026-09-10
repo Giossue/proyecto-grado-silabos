@@ -200,6 +200,9 @@ de acciones deshabilitadas. El menú único conserva los nombres accesibles y co
 submenús para que la hoja no reciba controles duplicados.
 Toda ayuda emergente de la interfaz usa `Tooltip` de shadcn-vue; el atributo HTML `title`
 no se usa como tooltip nativo.
+Los avisos transitorios usan el `Toaster` compartido en la parte superior central y
+pasan por `lib/toast`, que elimina el punto final también en mensajes dinámicos o del
+servidor.
 
 `TemplateBlockCreator` y `TemplateFieldCreator` reutilizan el `Select` de shadcn-vue para
 el tipo de contenido dentro de sus diálogos. `SelectContent` admite `portalDisabled` para

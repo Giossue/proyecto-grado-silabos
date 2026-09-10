@@ -2,7 +2,6 @@
 import { useForm } from '@inertiajs/vue3';
 import { Blocks, Trash2 } from '@lucide/vue';
 import { ref } from 'vue';
-import { toast } from 'vue-sonner';
 import TemplateController from '@/actions/App/Modules/Configuration/Presentation/Http/Controllers/TemplateController';
 import FormSheet from '@/components/domain/FormSheet.vue';
 import FormSheetActions from '@/components/domain/FormSheetActions.vue';
@@ -22,6 +21,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { toast } from '@/lib/toast';
 import type { TemplateContentType } from '@/types/configuration';
 
 type EditableContentType = Exclude<

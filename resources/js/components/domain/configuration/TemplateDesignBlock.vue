@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { router, useForm } from '@inertiajs/vue3';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { toast } from 'vue-sonner';
 import TemplateController from '@/actions/App/Modules/Configuration/Presentation/Http/Controllers/TemplateController';
 import TemplateDocumentEditor from '@/components/domain/configuration/TemplateDocumentEditor.vue';
 import TemplateDocumentView from '@/components/domain/configuration/TemplateDocumentView.vue';
@@ -35,6 +34,7 @@ import type {
     TemplateVariable,
 } from '@/lib/templateDocument';
 import { templatePreviewFields } from '@/lib/templatePreview';
+import { toast } from '@/lib/toast';
 
 const props = defineProps<{
     templateId: string;

@@ -372,7 +372,6 @@ class SyllabusProcessTest extends TestCase
             ->patch(route('sources.update', $source), [
                 'nombre' => 'Fuente renombrada',
                 'description' => null,
-                'internal_notes' => null,
             ])
             ->assertSessionHasErrors('process');
         $this->assertNotSame('Fuente renombrada', $source->fresh()->nombre);
@@ -408,7 +407,6 @@ class SyllabusProcessTest extends TestCase
             ->patch(route('sources.update', $source), [
                 'nombre' => 'Fuente renombrada',
                 'description' => null,
-                'internal_notes' => null,
             ])
             ->assertRedirect()
             ->assertSessionHasNoErrors();

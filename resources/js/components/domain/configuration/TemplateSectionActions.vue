@@ -2,7 +2,6 @@
 import { useForm } from '@inertiajs/vue3';
 import { MoreHorizontal, Pencil, Save, Trash2 } from '@lucide/vue';
 import { ref } from 'vue';
-import { toast } from 'vue-sonner';
 import TemplateController from '@/actions/App/Modules/Configuration/Presentation/Http/Controllers/TemplateController';
 import { Button } from '@/components/ui/button';
 import {
@@ -33,6 +32,7 @@ import {
     TooltipContent,
     TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { toast } from '@/lib/toast';
 import type { TemplateSection } from '@/types/configuration';
 
 const props = defineProps<{

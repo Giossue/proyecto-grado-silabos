@@ -19,7 +19,6 @@ const props = defineProps<{
         id: string;
         name: string;
         description: string | null;
-        internal_notes: string | null;
     };
     /** `menu` lo dibuja sin disparador propio: lo abre la opción del menú de la fila. */
     display?: 'button' | 'menu';
@@ -34,7 +33,7 @@ const open = defineModel<boolean>('open', { default: false });
         trigger-label="Editar fuente"
         :show-trigger="props.display !== 'menu'"
         title="Editar fuente académica"
-        description="Cambie el nombre, la descripción o las notas internas. El contenido se edita en la propia página."
+        description="Cambie el nombre o la descripción. El contenido se edita en la propia página."
     >
         <template #trigger>
             <Button variant="outline">Editar fuente</Button>
@@ -72,19 +71,6 @@ const open = defineModel<boolean>('open', { default: false });
                             :aria-invalid="Boolean(errors.description)"
                         />
                         <FieldError :errors="[errors.description]" />
-                    </Field>
-
-                    <Field :data-invalid="Boolean(errors.internal_notes)">
-                        <FieldLabel for="source-edit-internal-notes">
-                            Notas internas
-                        </FieldLabel>
-                        <Textarea
-                            id="source-edit-internal-notes"
-                            name="internal_notes"
-                            :default-value="source.internal_notes ?? ''"
-                            :aria-invalid="Boolean(errors.internal_notes)"
-                        />
-                        <FieldError :errors="[errors.internal_notes]" />
                     </Field>
 
                     <FormSheetActions

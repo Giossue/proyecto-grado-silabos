@@ -41,14 +41,9 @@ import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { CellSelection } from '@tiptap/pm/tables';
 import type { EditorView } from '@tiptap/pm/view';
 import StarterKit from '@tiptap/starter-kit';
-import {
-    EditorContent,
-    useEditor,
-    VueNodeViewRenderer,
-} from '@tiptap/vue-3';
+import { EditorContent, useEditor, VueNodeViewRenderer } from '@tiptap/vue-3';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import type { CSSProperties } from 'vue';
-import { toast } from 'vue-sonner';
 import TemplateTableInlineNode from '@/components/domain/configuration/TemplateTableInlineNode.vue';
 import TemplateToolbarButton from '@/components/domain/configuration/TemplateToolbarButton.vue';
 import TemplateToolbarSelect from '@/components/domain/configuration/TemplateToolbarSelect.vue';
@@ -112,6 +107,7 @@ import type {
     TemplateVariable,
 } from '@/lib/templateDocument';
 import { nodesOfType } from '@/lib/templateDocument';
+import { toast } from '@/lib/toast';
 import {
     cellBoundaryPosition,
     resizeCellBoundary,

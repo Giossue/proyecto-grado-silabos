@@ -24,7 +24,6 @@ class UpdateSourceRequest extends ManageAcademicSourceRequest
                     ->ignore($sourceId),
             ],
             'description' => ['nullable', 'string', 'max:2000'],
-            'internal_notes' => ['nullable', 'string', 'max:5000'],
         ];
     }
 

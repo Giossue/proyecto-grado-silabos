@@ -1499,3 +1499,43 @@ it('reserva todos los tooltips del frontend para el componente shadcn', function
 
     expect($nativeTitles)->toBe([]);
 });
+
+it('presenta y normaliza los toast desde una configuracion global', function (): void {
+    $root = dirname(__DIR__, 2);
+    $toaster = file_get_contents(
+        $root.'/resources/js/components/ui/sonner/Sonner.vue',
+    );
+    $adapter = file_get_contents($root.'/resources/js/lib/toast.ts');
+
+    expect($toaster)
+        ->toBeString()
+        ->toContain('position: "top-center"');
+    expect($adapter)
+        ->toBeString()
+        ->toContain("message.replace(/\\.\\s*$/, '')")
+        ->toContain("show('success', message, options)")
+        ->toContain("show('error', message, options)");
+
+    $directImports = [];
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($root.'/resources/js'),
+    );
+
+    foreach ($iterator as $file) {
+        if (! $file->isFile() || ! in_array($file->getExtension(), ['vue', 'ts'], true)) {
+            continue;
+        }
+
+        $path = $file->getPathname();
+        $source = file_get_contents($path);
+        if (
+            is_string($source)
+            && $path !== $root.'/resources/js/lib/toast.ts'
+            && str_contains($source, "import { toast } from 'vue-sonner'")
+        ) {
+            $directImports[] = str_replace($root.'/', '', $path);
+        }
+    }
+
+    expect($directImports)->toBe([]);
+});

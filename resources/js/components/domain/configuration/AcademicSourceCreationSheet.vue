@@ -54,18 +54,6 @@ import { Textarea } from '@/components/ui/textarea';
                         <FieldError :errors="[errors.description]" />
                     </Field>
 
-                    <Field :data-invalid="Boolean(errors.internal_notes)">
-                        <FieldLabel for="source-internal-notes">
-                            Notas internas
-                        </FieldLabel>
-                        <Textarea
-                            id="source-internal-notes"
-                            name="internal_notes"
-                            :aria-invalid="Boolean(errors.internal_notes)"
-                        />
-                        <FieldError :errors="[errors.internal_notes]" />
-                    </Field>
-
                     <FormSheetActions
                         :close="close"
                         :processing="processing"

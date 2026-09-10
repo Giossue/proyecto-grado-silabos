@@ -23,7 +23,6 @@ const props = defineProps<{
         id: string;
         name: string;
         description: string | null;
-        internal_notes: string | null;
         content: string | null;
     };
     /** Motivo por el que no se edita la fuente; nulo cuando sí se puede. */
@@ -71,21 +70,6 @@ defineOptions({
                 title="Fuente protegida durante la convocatoria"
                 :reason="processLock"
             />
-            <Card v-if="source.internal_notes">
-                <CardHeader>
-                    <CardTitle>Notas internas</CardTitle>
-                    <CardDescription>
-                        Solo las ve la coordinación; no forman parte del
-                        documento.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <p class="text-sm whitespace-pre-wrap">
-                        {{ source.internal_notes }}
-                    </p>
-                </CardContent>
-            </Card>
-
             <Card>
                 <CardHeader>
                     <CardTitle>Contenido del documento</CardTitle>

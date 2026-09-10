@@ -30,7 +30,6 @@ class UpdateAcademicSource
             $locked->update([
                 'nombre' => $data['nombre'],
                 'descripcion' => $data['description'] ?? null,
-                'notas_internas' => $data['internal_notes'] ?? null,
             ]);
 
             $this->audit->execute(

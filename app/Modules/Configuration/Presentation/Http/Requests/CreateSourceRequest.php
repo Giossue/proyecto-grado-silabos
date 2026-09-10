@@ -26,7 +26,6 @@ class CreateSourceRequest extends FormRequest
                 Rule::unique('fuentes_academicas', 'nombre')->where('carrera_id', $careerId),
             ],
             'description' => ['nullable', 'string', 'max:2000'],
-            'internal_notes' => ['nullable', 'string', 'max:5000'],
         ];
     }
 

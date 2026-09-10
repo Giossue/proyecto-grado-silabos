@@ -14,7 +14,6 @@ import {
 } from '@lucide/vue';
 import { computed, nextTick, ref, watch } from 'vue';
 import type { ComponentPublicInstance } from 'vue';
-import { toast } from 'vue-sonner';
 import TemplateController from '@/actions/App/Modules/Configuration/Presentation/Http/Controllers/TemplateController';
 import TemplateDesignBlock from '@/components/domain/configuration/TemplateDesignBlock.vue';
 import PaginatedDocument from '@/components/domain/PaginatedDocument.vue';
@@ -38,6 +37,7 @@ import {
 import { Input } from '@/components/ui/input';
 import type { TableLayout } from '@/lib/tableLayout';
 import type { DocumentNode, TemplateVariable } from '@/lib/templateDocument';
+import { toast } from '@/lib/toast';
 
 type TemplateField = {
     id: string;

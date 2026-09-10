@@ -34,7 +34,6 @@ class CreateAcademicSource
                 'carrera_id' => $activeRole->carrera_id,
                 'nombre' => $data['nombre'],
                 'descripcion' => $data['description'] ?? null,
-                'notas_internas' => $data['internal_notes'] ?? null,
                 'activo' => true,
             ]);
 

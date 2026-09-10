@@ -8,7 +8,7 @@ materiales a los docentes. Decisión confirmada por los autores el 1 de septiemb
 de 2026:
 
 - Una fuente no tiene versiones, fragmentos ni conflictos: es un solo documento vivo.
-- Sus datos son nombre, descripción, notas internas y un contenido en Markdown.
+- Sus datos son nombre, descripción y un contenido en Markdown.
 - La edita únicamente la Coordinación de la carrera; Administración no participa.
 - El contenido se redacta en un editor Markdown con cinta de opciones y vista previa,
   al estilo de un procesador de textos.
@@ -48,6 +48,18 @@ huella aunque la fuente se edite después.
   externos al plan: `temp/chartdb.sql` dispara el escaneo de seguridad (decisión del
   usuario: retirarlo o autorizarlo) y 3 archivos del flujo de mallas sin formato
   Prettier (`CurriculumCanvas`, `CurriculumConfigurationSheet`, `CurriculumSubjectNode`).
+
+## Ajuste del 10 de septiembre de 2026
+
+Por decisión explícita del responsable del producto, las notas internas se retiran del
+formulario, la consulta y la persistencia de las fuentes académicas. La migración
+`000054` elimina definitivamente la columna `notas_internas`; nombre, descripción y
+contenido Markdown conforman el documento.
+
+La migración se aplicó y verificó en las bases local y remota después de generar copias
+privadas válidas. Su reversión se ensayó localmente y se dejó aplicado nuevamente el
+estado final. Pasaron Pint, ESLint, Prettier, TypeScript, 63 pruebas con 1.806 aserciones
+y el build de producción.
 
 ## Migración segura
 

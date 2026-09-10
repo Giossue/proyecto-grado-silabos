@@ -21,8 +21,8 @@ Fecha de corte: **30 de agosto de 2026**.
 - La plantilla institucional es única y se edita en el sitio; no hay versiones ni
   publicación (I-32, 2 de septiembre de 2026). Cada revisión enviada conserva su copia
   completa de la estructura y del mapa de exportación, que es lo que la protege.
-- Las fuentes académicas son documentos de la Coordinación (I-26, 1 de septiembre
-  de 2026): nombre, descripción, notas internas y contenido Markdown editable, sin
+- Las fuentes académicas son documentos de la Coordinación (I-26, ajustada el 10 de septiembre
+  de 2026): nombre, descripción y contenido Markdown editable, sin
   versiones, fragmentos ni conflictos. Administración no participa. La evidencia de IA
   conserva nombre, extracto y huella del contenido en el momento del análisis.
 - La plantilla de sílabo es única e institucional: no pertenece a una carrera y la usan

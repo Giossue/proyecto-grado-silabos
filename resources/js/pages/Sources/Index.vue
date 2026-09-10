@@ -25,7 +25,6 @@ const props = defineProps<{
         id: string;
         name: string;
         description: string | null;
-        internal_notes: string | null;
         has_content: boolean;
     }[];
     /** Motivo por el que no se editan las fuentes; nulo cuando sí se puede. */

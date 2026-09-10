@@ -23,7 +23,7 @@
 - Publicar crea una versión inmutable con identidad y vigencia.
 - Clonar crea otra identidad; desactivar solo impide usos futuros.
 - Una fuente académica es un documento de la Coordinación de la carrera (I-26): nombre,
-  descripción, notas internas y un contenido en Markdown. No tiene versiones, fragmentos
+  descripción y un contenido en Markdown. No tiene versiones, fragmentos
   ni conflictos, y Administración no participa.
 - El contenido se redacta en COR-11 como una hoja de documento visual con cinta de
   opciones (encabezados, énfasis, listas, cita, tabla con selector de tamaño, código,
