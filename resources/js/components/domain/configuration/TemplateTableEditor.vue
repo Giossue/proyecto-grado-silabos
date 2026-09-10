@@ -19,7 +19,6 @@ import {
     Redo2,
     Rows3,
     SplitSquareHorizontal,
-    Type,
     Undo2,
     UnfoldHorizontal,
     UserRoundPlus,
@@ -1076,36 +1075,6 @@ const alignment = nullableModel<CellAlignment>('textAlign');
 const cellFontSize = nullableModel<string>('fontSize');
 const cellFontSizes = [7, 8, 9, 10, 11, 12, 14, 16, 18, 20, 24];
 
-const canFormatText = computed(() => {
-    const selection = state.value?.state.selection;
-
-    return (
-        inCell.value &&
-        selection !== undefined &&
-        !(selection instanceof CellSelection)
-    );
-});
-
-const fontColor = computed({
-    get: () => {
-        void version.value;
-        const value = state.value?.getAttributes('textStyle').color;
-
-        return typeof value === 'string' && value !== '' ? value : 'inherit';
-    },
-    set: (value: string) => {
-        const chain = state.value?.chain().focus();
-
-        if (value === 'inherit') {
-            chain?.unsetColor().run();
-
-            return;
-        }
-
-        chain?.setColor(value).run();
-    },
-});
-
 const colorName = (value: string, inherited: string): string =>
     value === 'inherit'
         ? inherited
@@ -1116,11 +1085,7 @@ const backgroundTooltip = computed(
     () => `Fondo de celda: ${colorName(background.value, 'Sin fondo')}`,
 );
 const cellTextColorTooltip = computed(
-    () =>
-        `Color de toda la celda: ${colorName(cellTextColor.value, 'Heredado')}`,
-);
-const fontColorTooltip = computed(
-    () => `Color de fuente: ${colorName(fontColor.value, 'Heredado')}`,
+    () => `Color de fuente: ${colorName(cellTextColor.value, 'Heredado')}`,
 );
 const alignmentTooltip = computed(() => {
     const labels: Record<string, string> = {
@@ -1675,7 +1640,7 @@ defineExpose({ getDocument });
 
                 <TemplateToolbarSelect
                     v-model="cellTextColor"
-                    label="Color de toda la celda"
+                    label="Color de fuente"
                     :tooltip="cellTextColorTooltip"
                     :disabled="!inCell || pending"
                 >
@@ -1746,42 +1711,6 @@ defineExpose({ getDocument });
                 </TemplateToolbarSelect>
 
                 <Separator orientation="vertical" class="h-7" />
-
-                <TemplateToolbarSelect
-                    v-model="fontColor"
-                    label="Color de fuente"
-                    :tooltip="fontColorTooltip"
-                    :disabled="!canFormatText || pending"
-                >
-                    <template #icon>
-                        <span class="relative inline-flex">
-                            <Type class="text-foreground" aria-hidden="true" />
-                            <span
-                                class="absolute inset-x-0 -bottom-0.5 h-0.5 rounded-full"
-                                :style="{
-                                    backgroundColor:
-                                        fontColor === 'inherit'
-                                            ? textColor
-                                            : fontColor,
-                                }"
-                                aria-hidden="true"
-                            />
-                        </span>
-                    </template>
-                    <SelectItem value="inherit">Color heredado</SelectItem>
-                    <SelectItem
-                        v-for="option in colors"
-                        :key="`font-${option.value}`"
-                        :value="option.value"
-                    >
-                        <span
-                            class="size-3 rounded-sm border"
-                            :style="{ backgroundColor: option.value }"
-                            aria-hidden="true"
-                        />
-                        {{ option.label }}
-                    </SelectItem>
-                </TemplateToolbarSelect>
 
                 <TemplateToolbarButton
                     label="Negrita en las celdas seleccionadas"
@@ -2221,7 +2150,7 @@ defineExpose({ getDocument });
 .template-table-editor th:not([data-cell-text-align]) p {
     text-align: var(--table-body-alignment) !important;
 }
-.template-table-editor [data-cell-text-color] :not([style*='color' i]) {
+.template-table-editor [data-cell-text-color] * {
     color: inherit !important;
 }
 .template-table-editor [data-cell-text-align] p {

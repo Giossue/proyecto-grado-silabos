@@ -112,40 +112,25 @@ test(
         await page.goto(`${server.resolvedUrls.local[0]}fixture`);
         const cell = page.locator('.template-table-editor td');
         await cell.click();
-        await page
-            .getByRole('combobox', { name: 'Color de toda la celda' })
-            .click();
+        await page.getByRole('combobox', { name: 'Fondo de celda' }).click();
         await page.getByRole('option', { name: 'Azul claro' }).click();
-        const paragraph = cell.locator('p');
-        await paragraph.click();
-        await page.keyboard.press('Home');
-
-        for (let index = 0; index < 5; index++) {
-            await page.keyboard.press('Shift+ArrowRight');
-        }
-
-        assert.equal(
-            await page.evaluate(() => window.getSelection()?.toString()),
-            'Texto',
-        );
         await page.getByRole('combobox', { name: 'Color de fuente' }).click();
         await page.getByRole('option', { name: 'Rojo' }).click();
-        const formatted = await page.evaluate(() => window.fixture.document());
+        assert.deepEqual(
+            await cell.evaluate((element) => {
+                const style = getComputedStyle(element);
 
-        assert.equal(
-            formatted.content[0].content[0].content[0].content[0].content.some(
-                (node) =>
-                    node.marks?.some((mark) => mark.attrs?.color === '#C00000'),
-            ),
-            true,
-            JSON.stringify(formatted),
+                return {
+                    backgroundColor: style.backgroundColor,
+                    color: style.color,
+                };
+            }),
+            {
+                backgroundColor: 'rgb(219, 229, 241)',
+                color: 'rgb(192, 0, 0)',
+            },
         );
-        assert.equal(
-            await cell
-                .locator('span[style*="color"]')
-                .evaluate((element) => getComputedStyle(element).color),
-            'rgb(192, 0, 0)',
-        );
+        const paragraph = cell.locator('p');
         await paragraph.click();
         await page.keyboard.press('End');
 
@@ -211,21 +196,15 @@ test(
         );
         assert.equal(saved.content[0].attrs.repeatLabel, 'Datos repetibles');
         assert.equal(saved.content[0].content[0].attrs.rowRole, 'record');
+        assert.equal(
+            saved.content[0].content[0].content[0].attrs.textColor,
+            '#C00000',
+        );
         const inline =
             saved.content[0].content[0].content[0].content[0].content;
-        const coloredText = inline.find(
-            (node) =>
-                node.type === 'text' &&
-                node.marks?.some(
-                    (mark) =>
-                        mark.type === 'textStyle' &&
-                        mark.attrs?.color === '#C00000',
-                ),
-        );
         const variable = inline.find((node) => node.type === 'variable');
         const insertedFields = inline.filter((node) => node.type === 'field');
         const column = inline.find((node) => node.type === 'column');
-        assert.equal(coloredText.text, 'Texto');
         assert.equal(variable.attrs.id, 'nombre_docente');
         assert.equal(insertedFields[0].attrs.kind, 'markdown');
         assert.equal(insertedFields[0].attrs.options, null);

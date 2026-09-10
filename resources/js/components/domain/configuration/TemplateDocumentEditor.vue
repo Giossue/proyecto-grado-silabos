@@ -1436,7 +1436,7 @@ defineExpose({ save, editor, markClean, prepareDocument });
 .template-document-editor th p {
     margin: 0;
 }
-.template-document-editor [data-cell-text-color] :not([style*='color' i]) {
+.template-document-editor [data-cell-text-color] * {
     color: inherit !important;
 }
 .template-document-editor [data-cell-text-align] p {

@@ -171,7 +171,7 @@ final class TemplateDocumentWord
                 $destination = $row->addCell($cellWidth, $options);
                 foreach ($cell['content'] as $child) {
                     $styled = $isHeader && $this->tableHeaderColor !== null
-                        ? $this->withDefaultTextColor($child, $this->tableHeaderColor)
+                        ? $this->withTextColor($child, $this->tableHeaderColor)
                         : $child;
                     $this->append(
                         $destination,
@@ -233,7 +233,7 @@ final class TemplateDocumentWord
             $node['marks'] = $marks;
 
             if (is_string($attrs['textColor'] ?? null)) {
-                $node = $this->withDefaultTextColor($node, ltrim($attrs['textColor'], '#'));
+                $node = $this->withTextColor($node, ltrim($attrs['textColor'], '#'));
             }
             if (is_string($attrs['fontSize'] ?? null)) {
                 $node = $this->withFontSize($node, $attrs['fontSize']);
@@ -254,7 +254,7 @@ final class TemplateDocumentWord
      * @param  array<string, mixed>  $node
      * @return array<string, mixed>
      */
-    private function withDefaultTextColor(array $node, string $color): array
+    private function withTextColor(array $node, string $color): array
     {
         if ($node['type'] === 'text') {
             $marks = $node['marks'] ?? [];
@@ -264,15 +264,11 @@ final class TemplateDocumentWord
                     continue;
                 }
 
-                if (! is_string($mark['attrs']['color'] ?? null)) {
-                    $marks[$index]['attrs'] = [
-                        ...($mark['attrs'] ?? []),
-                        'color' => '#'.$color,
-                    ];
-                }
+                $marks[$index]['attrs'] = [
+                    ...($mark['attrs'] ?? []),
+                    'color' => '#'.$color,
+                ];
                 $hasTextStyle = true;
-
-                break;
             }
             if (! $hasTextStyle) {
                 $marks[] = ['type' => 'textStyle', 'attrs' => ['color' => '#'.$color]];
@@ -282,7 +278,7 @@ final class TemplateDocumentWord
 
         if (is_array($node['content'] ?? null)) {
             $node['content'] = array_map(
-                fn (array $child): array => $this->withDefaultTextColor($child, $color),
+                fn (array $child): array => $this->withTextColor($child, $color),
                 $node['content'],
             );
         }

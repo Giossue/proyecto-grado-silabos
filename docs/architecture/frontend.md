@@ -195,9 +195,8 @@ que el navegador no redistribuya el resto de la tabla.
 El tema global se aplica solo a `tableHeader` y filas de unidad; un estilo explícito de
 celda tiene precedencia. Las tablas antiguas sin roles conservan los colores explícitos
 de sus celdas, evitando convertir por heurística su primera fila en una cabecera.
-La cinta diferencia **Color de toda la celda** de **Color de fuente**. El segundo actúa
-sobre la selección de texto y tiene precedencia visual y documental sobre el color de
-la celda o de la cabecera.
+La cinta diferencia **Fondo de celda** de **Color de fuente**; ambos actúan sobre la
+celda o las celdas seleccionadas y se conservan en la vista y la exportación.
 
 Desde I-63, la misma cinta contiene **Insertar**. Sus tres fuentes son distintas: una
 variable `@` del catálogo del servidor, un campo que completa Docencia o una marca `X`

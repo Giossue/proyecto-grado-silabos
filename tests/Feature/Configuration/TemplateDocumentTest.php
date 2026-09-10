@@ -371,14 +371,6 @@ class TemplateDocumentTest extends TestCase
     public function test_word_and_text_pdf_render_saved_design_and_frozen_values(): void
     {
         $doc = TemplateDocument::normalize($this->document(), array_keys(TemplateVariables::definitions()));
-        array_unshift(
-            $doc['content'][0]['content'][0]['content'][1]['content'][0]['content'],
-            ['type' => 'text', 'text' => 'Predeterminado '],
-        );
-        $doc['content'][0]['content'][0]['content'][1]['content'][0]['content'][0]['marks'] = [[
-            'type' => 'textStyle',
-            'attrs' => ['color' => '#548235'],
-        ]];
         $fields = [
             ['key' => 'objetivo_general', 'value' => 'Contenido <docente> & aprobado', 'rows' => []],
             ['key' => 'respuesta_extra', 'value' => 23, 'rows' => []],
@@ -410,7 +402,7 @@ class TemplateDocumentTest extends TestCase
             $this->assertTrue($zip->open($path));
             $xml = $zip->getFromName('word/document.xml');
             $zip->close();
-            foreach (['Carrera congelada', 'Contenido &lt;docente&gt; &amp; aprobado', 'w:gridSpan w:val="2"', 'w:vMerge w:val="restart"', 'w:vMerge w:val="continue"', 'w:fill="E7E6E6"', 'w:color w:val="FFFFFF"', 'w:color w:val="CC0000"', 'w:color w:val="548235"', 'w:jc w:val="center"', '<w:tcBorders>', 'w:sz="12"'] as $expected) {
+            foreach (['Carrera congelada', 'Contenido &lt;docente&gt; &amp; aprobado', 'w:gridSpan w:val="2"', 'w:vMerge w:val="restart"', 'w:vMerge w:val="continue"', 'w:fill="E7E6E6"', 'w:color w:val="FFFFFF"', 'w:color w:val="CC0000"', 'w:jc w:val="center"', '<w:tcBorders>', 'w:sz="12"'] as $expected) {
                 $this->assertStringContainsString($expected, $xml);
             }
             $this->assertStringContainsString('w:sz w:val="18"', $xml);

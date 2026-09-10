@@ -30,8 +30,8 @@ claves técnicas sin pedirlas. El formulario extenso «Configurar estructura» d
 - [x] Redimensionar el borde de una celda como Word sin alterar las demás filas.
 - [x] Conservar hojas y bloques al retirar un dato repetible que no cambia la altura de
       la tabla.
-- [x] Permitir cambiar el color del texto seleccionado sin reemplazar el color general
-      de la celda.
+- [x] Permitir cambiar el color de fuente de las celdas seleccionadas de forma
+      independiente a su fondo.
 
 ## Riesgos
 
@@ -52,9 +52,8 @@ exista trabajo en curso. No se crean migraciones ni se modifican revisiones envi
 - El mismo recorrido distribuye doce secciones en varias hojas, retira `$anio` de una
   tabla de bibliografía y comprueba que tabla, separadores, páginas y secciones ajenas
   mantengan exactamente su geometría.
-- La cinta separa **Color de toda la celda** de **Color de fuente**; el recorrido de
-  contenido verifica la selección, la vista y el documento serializado, y la prueba
-  DOCX comprueba que el color puntual prevalezca sobre el color general de la celda.
+- La cinta separa **Fondo de celda** de **Color de fuente**; el recorrido de contenido
+  verifica ambos estilos en la vista y el documento serializado.
 
 Desde el 10 de septiembre, **Dato repetible** y **Estructura de filas** ya no dependen de
 que el bloque haya nacido como tabla repetible. En una tabla estática, **Nuevo dato de
