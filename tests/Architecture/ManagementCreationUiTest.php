@@ -445,22 +445,23 @@ it('evita repetir el encabezado de pagina dentro de las tablas academicas', func
         ->toContain('<TableHead>Ciclo</TableHead')
         ->toContain('<TableHead>Paralelos y jornadas</TableHead')
         ->toContain('shiftLabel(parallel.shift)')
+        ->toContain(':edit-supported="false"')
         ->not->toContain('<TableHead>Ubicación</TableHead')
         ->not->toContain('item.offering_label')
         ->not->toContain('<CardHeader')
         ->not->toContain('<CardTitle')
         ->not->toContain('<CardDescription');
 
-    $editSheet = file_get_contents(
-        $root.'/resources/js/components/domain/academic/CareerAcademicEditSheet.vue',
+    $parallelSheet = file_get_contents(
+        $root.'/resources/js/components/domain/academic/ParallelCreationSheet.vue',
     );
 
-    expect($editSheet)
+    expect($parallelSheet)
         ->toBeString()
-        ->toContain('<FieldLegend>Paralelos y jornadas</FieldLegend>')
-        ->toContain('Jornada del paralelo')
-        ->toContain('`parallels[${index}][shift]`')
-        ->toContain("parallel.shift ?? 'sin_jornada'");
+        ->toContain('Paralelos registrados')
+        ->toContain('<TableHead>Paralelo</TableHead>')
+        ->toContain('<TableHead>Jornada</TableHead>')
+        ->toContain('shiftLabel(parallel.shift)');
 });
 
 it('prepara solo materias pendientes en una hoja lateral amplia', function (): void {
@@ -1032,7 +1033,7 @@ it('usa el mismo paginador en todas las superficies tabulares', function (): voi
         $checked += $tableCount;
     }
 
-    $this->assertSame(22, $checked);
+    $this->assertSame(23, $checked);
 });
 
 it('ordena busqueda filtros y accion mediante una barra compartida', function (): void {

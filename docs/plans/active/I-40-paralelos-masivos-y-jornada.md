@@ -1,4 +1,4 @@
-# I-40: Paralelos masivos y jornada editable
+# I-40: Paralelos masivos y jornada
 
 ## Estado
 
@@ -14,10 +14,10 @@ una decisión `POR VALIDAR`.
 ## Resultado demostrable
 
 El contrato permite altas atómicas de varios paralelos para usos internos. La interfaz
-actual crea un solo paralelo con jornada desde cada materia programada. Su tabla muestra
-código y jornada por paralelo, y la edición de la materia programada permite actualizar
-las jornadas existentes de forma atómica. Cada alta o cambio conserva alcance por carrera
-y un evento de auditoría por paralelo.
+actual crea un solo paralelo con jornada desde cada materia programada. Su tabla principal
+muestra código y jornada por paralelo; la hoja **Agregar paralelo** repite ese resumen antes
+de crear uno nuevo. Cada alta conserva alcance por carrera y un evento de auditoría por
+paralelo.
 
 ## Decisiones y supuestos
 
@@ -34,8 +34,8 @@ y un evento de auditoría por paralelo.
 ## Cambios previstos
 
 - Backend: request, caso de uso, ruta y respuesta de creación masiva.
-- Frontend: alta individual con jornada, detalle de código y jornada en la tabla, y
-  selectores de jornada por paralelo en la edición de la materia programada.
+- Frontend: alta individual con jornada y resumen de códigos y jornadas tanto en el
+  listado como en la hoja de creación; sin acción de edición para la materia programada.
 - Seguridad/auditoría: autorización y alcance por materia programada en servidor,
   transacción y una auditoría por registro.
 - Datos: sin migración.
@@ -46,8 +46,7 @@ y un evento de auditoría por paralelo.
 - Crea un lote, registra jornada y auditorías.
 - Rechaza duplicados, incluidos los ya existentes, sin inserciones parciales.
 - Rechaza una programación de otra carrera.
-- Comprueba la presencia del selector de jornada en la edición de paralelo.
-- Comprueba la consulta y edición auditada de jornadas desde la materia programada.
+- Comprueba el resumen de jornadas y la ausencia de edición de la materia programada.
 
 ## Pasos
 
@@ -65,6 +64,6 @@ historia ni datos ya usados por un sílabo.
 ## Evidencia de cierre
 
 - `php artisan test tests/Feature/Academic/AcademicStructureTest.php
-  tests/Architecture/ManagementCreationUiTest.php`: 63 pruebas, 1740 aserciones.
-- `composer verify`: 404 pruebas, 6054 aserciones; escaneo de secretos, ESLint,
+  tests/Architecture/ManagementCreationUiTest.php`: 62 pruebas, 1733 aserciones.
+- `composer verify`: 403 pruebas, 6047 aserciones; escaneo de secretos, ESLint,
   Prettier, tipos Vue, Pint, PHPStan y build de producción correctos.

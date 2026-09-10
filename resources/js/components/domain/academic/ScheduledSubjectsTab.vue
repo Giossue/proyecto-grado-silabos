@@ -227,6 +227,7 @@ watch(
                                 :record="item"
                                 :record-label="item.label"
                                 :editable="item.editable"
+                                :edit-supported="false"
                                 :active="item.active"
                                 :delete-supported="
                                     !lockReason && item.period_planning_enabled

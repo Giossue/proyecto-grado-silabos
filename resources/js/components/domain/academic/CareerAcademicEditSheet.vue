@@ -10,8 +10,6 @@ import {
     FieldError,
     FieldGroup,
     FieldLabel,
-    FieldLegend,
-    FieldSet,
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import {
@@ -266,74 +264,6 @@ const planningPeriods = computed(() =>
                             </Select>
                             <FieldError :errors="[errors.period_id]" />
                         </Field>
-                        <FieldSet v-if="record.parallels?.length">
-                            <FieldLegend>Paralelos y jornadas</FieldLegend>
-                            <FieldGroup>
-                                <Field
-                                    v-for="(
-                                        parallel, index
-                                    ) in record.parallels"
-                                    :key="parallel.id"
-                                    :data-invalid="
-                                        Boolean(
-                                            errors[`parallels.${index}.shift`],
-                                        )
-                                    "
-                                >
-                                    <input
-                                        type="hidden"
-                                        :name="`parallels[${index}][id]`"
-                                        :value="parallel.id"
-                                    />
-                                    <FieldLabel
-                                        :for="`edit-scheduled-subject-parallel-${parallel.id}-shift`"
-                                    >
-                                        Jornada del paralelo
-                                        {{ parallel.code }}
-                                    </FieldLabel>
-                                    <Select
-                                        :name="`parallels[${index}][shift]`"
-                                        :default-value="
-                                            parallel.shift ?? 'sin_jornada'
-                                        "
-                                    >
-                                        <SelectTrigger
-                                            :id="`edit-scheduled-subject-parallel-${parallel.id}-shift`"
-                                            :aria-invalid="
-                                                Boolean(
-                                                    errors[
-                                                        `parallels.${index}.shift`
-                                                    ],
-                                                )
-                                            "
-                                        >
-                                            <SelectValue
-                                                placeholder="Seleccione la jornada"
-                                            />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectGroup>
-                                                <SelectItem value="sin_jornada">
-                                                    Sin jornada
-                                                </SelectItem>
-                                                <SelectItem
-                                                    v-for="shift in SHIFTS"
-                                                    :key="shift.value"
-                                                    :value="shift.value"
-                                                >
-                                                    {{ shift.label }}
-                                                </SelectItem>
-                                            </SelectGroup>
-                                        </SelectContent>
-                                    </Select>
-                                    <FieldError
-                                        :errors="[
-                                            errors[`parallels.${index}.shift`],
-                                        ]"
-                                    />
-                                </Field>
-                            </FieldGroup>
-                        </FieldSet>
                     </template>
 
                     <template v-else-if="entity === 'paralelo'">

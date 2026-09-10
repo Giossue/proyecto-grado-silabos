@@ -52,7 +52,6 @@ class UpdateCareerAcademicRecord
         'asignatura_id' => 'Materia',
         'campus_id' => 'Campus',
         'modalidad' => 'Modalidad',
-        'jornada' => 'Jornada',
         'programacion_asignatura_id' => 'Programación de asignatura',
         'usuario_id' => 'Docente',
         'paralelo_id' => 'Paralelo',
@@ -130,38 +129,28 @@ class UpdateCareerAcademicRecord
                     is_array($customValues) ? $customValues : [],
                 );
             }
-            $parallelShiftsChanged = $record instanceof ScheduledSubject
-                ? $this->updateParallelShifts($record, $data, $actor, $activeRole, $request)
-                : false;
-
-            if ($dirty === [] && ! $customValuesChanged && ! $parallelShiftsChanged) {
+            if ($dirty === [] && ! $customValuesChanged) {
                 return $record;
             }
 
-            $metadata = null;
-            if ($dirty !== [] || $customValuesChanged) {
-                $metadata = $this->auditContext($record, $dirty);
-                if ($customValuesChanged) {
-                    $metadata['custom_fields_changed'] = true;
-                }
+            $metadata = $this->auditContext($record, $dirty);
+            if ($customValuesChanged) {
+                $metadata['custom_fields_changed'] = true;
             }
-
             if ($dirty !== []) {
                 $record->save();
             }
 
-            if ($metadata !== null) {
-                $this->audit->execute(
-                    actorId: $actor->id,
-                    roleAssignmentId: $activeRole->id,
-                    action: "academico.{$entity}.actualizacion",
-                    resourceType: $entity,
-                    resourceId: (string) $record->getKey(),
-                    result: 'exito',
-                    metadata: $metadata,
-                    correlationId: $request->attributes->getString('correlation_id') ?: null,
-                );
-            }
+            $this->audit->execute(
+                actorId: $actor->id,
+                roleAssignmentId: $activeRole->id,
+                action: "academico.{$entity}.actualizacion",
+                resourceType: $entity,
+                resourceId: (string) $record->getKey(),
+                result: 'exito',
+                metadata: $metadata,
+                correlationId: $request->attributes->getString('correlation_id') ?: null,
+            );
 
             return $record;
         });
@@ -362,73 +351,6 @@ class UpdateCareerAcademicRecord
         if ($record instanceof TeacherAssignment) {
             $this->periodPlanning->assertTeacherAssignmentMayChange($record);
         }
-    }
-
-    /** @param array<string, mixed> $data */
-    private function updateParallelShifts(
-        ScheduledSubject $scheduledSubject,
-        array $data,
-        User $actor,
-        RoleAssignment $activeRole,
-        Request $request,
-    ): bool {
-        $requested = $data['parallels'] ?? [];
-        if (! is_array($requested) || $requested === []) {
-            return false;
-        }
-
-        $ids = collect($requested)
-            ->map(fn (mixed $parallel): mixed => is_array($parallel) ? ($parallel['id'] ?? null) : null)
-            ->filter(fn (mixed $id): bool => is_string($id))
-            ->values();
-        $parallels = Parallel::query()
-            ->where('programacion_asignatura_id', $scheduledSubject->id)
-            ->whereIn('id', $ids)
-            ->orderBy('id')
-            ->lockForUpdate()
-            ->get()
-            ->keyBy('id');
-
-        if ($ids->count() !== count($requested) || $parallels->count() !== $ids->count()) {
-            throw ValidationException::withMessages([
-                'parallels' => 'Uno de los paralelos no pertenece a esta programación.',
-            ]);
-        }
-
-        $changed = false;
-        foreach ($requested as $parallelData) {
-            if (! is_array($parallelData)) {
-                continue;
-            }
-
-            $parallel = $parallels->get($parallelData['id'] ?? '');
-            if (! $parallel instanceof Parallel) {
-                continue;
-            }
-
-            $shift = $parallelData['shift'] ?? null;
-            $parallel->fill(['jornada' => is_string($shift) ? $shift : null]);
-            $dirty = $parallel->getDirty();
-            if ($dirty === []) {
-                continue;
-            }
-
-            $metadata = $this->auditContext($parallel, $dirty);
-            $parallel->save();
-            $this->audit->execute(
-                actorId: $actor->id,
-                roleAssignmentId: $activeRole->id,
-                action: 'academico.paralelo.actualizacion',
-                resourceType: 'paralelo',
-                resourceId: $parallel->id,
-                result: 'exito',
-                metadata: $metadata,
-                correlationId: $request->attributes->getString('correlation_id') ?: null,
-            );
-            $changed = true;
-        }
-
-        return $changed;
     }
 
     /** @param array<string, mixed> $dirty

@@ -31,6 +31,7 @@ const props = withDefaults(
         recordLabel: string;
         editable: boolean;
         active?: boolean;
+        editSupported?: boolean;
         deleteSupported?: boolean;
         parallelCreationSupported?: boolean;
         lockedLabel?: string;
@@ -38,6 +39,7 @@ const props = withDefaults(
     }>(),
     {
         active: true,
+        editSupported: true,
         deleteSupported: false,
         parallelCreationSupported: false,
         lockedLabel: 'Con historial: este registro queda protegido',
@@ -64,11 +66,14 @@ const deletionDescription = computed(() =>
 <template>
     <div class="flex justify-end">
         <TableActionsMenu :label="`Acciones para ${recordLabel}`">
-            <DropdownMenuItem v-if="editable" @select="editOpen = true">
+            <DropdownMenuItem
+                v-if="editSupported && editable"
+                @select="editOpen = true"
+            >
                 <Pencil aria-hidden="true" />
                 Editar
             </DropdownMenuItem>
-            <DropdownMenuItem v-else disabled>
+            <DropdownMenuItem v-else-if="!editable" disabled>
                 <LockKeyhole aria-hidden="true" />
                 {{ lockedLabel }}
             </DropdownMenuItem>
@@ -97,6 +102,7 @@ const deletionDescription = computed(() =>
         </TableActionsMenu>
 
         <CareerAcademicEditSheet
+            v-if="editSupported"
             :key="record.id"
             v-model:open="editOpen"
             :entity="entity"
@@ -110,6 +116,7 @@ const deletionDescription = computed(() =>
             v-model:open="parallelCreationOpen"
             :scheduled-subject-id="record.id"
             :scheduled-subject-label="recordLabel"
+            :parallels="record.parallels ?? []"
         />
 
         <Dialog v-model:open="deleteOpen">

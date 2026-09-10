@@ -5,6 +5,7 @@ import { watch } from 'vue';
 import CareerAcademicStructureController from '@/actions/App/Modules/Academic/Presentation/Http/Controllers/CareerAcademicStructureController';
 import FormSheet from '@/components/domain/FormSheet.vue';
 import FormSheetActions from '@/components/domain/FormSheetActions.vue';
+import TablePagination from '@/components/domain/TablePagination.vue';
 import {
     Field,
     FieldError,
@@ -20,11 +21,27 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { PARALLEL_SHIFTS as SHIFTS } from '@/lib/parallelShifts';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableEmpty,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
+import { useClientPagination } from '@/composables/useClientPagination';
+import { PARALLEL_SHIFTS as SHIFTS, shiftLabel } from '@/lib/parallelShifts';
 
 const props = defineProps<{
     scheduledSubjectId: string;
     scheduledSubjectLabel: string;
+    parallels: {
+        id: string;
+        code: string;
+        shift: string | null;
+        active: boolean;
+    }[];
 }>();
 
 const open = defineModel<boolean>('open', { default: false });
@@ -32,6 +49,11 @@ const form = useForm<{ codes: string; shift: string }>({
     codes: '',
     shift: '',
 });
+const {
+    items: parallelPage,
+    meta: parallelMeta,
+    setPage: setParallelPage,
+} = useClientPagination(() => props.parallels);
 
 const reset = (): void => {
     form.reset();
@@ -55,6 +77,7 @@ const submit = (close: () => void): void => {
 watch(open, (isOpen) => {
     if (isOpen) {
         reset();
+        setParallelPage(1);
     }
 });
 </script>
@@ -117,6 +140,54 @@ watch(open, (isOpen) => {
                         </Select>
                         <FieldError :errors="[form.errors.shift]" />
                     </Field>
+
+                    <section
+                        class="space-y-2"
+                        aria-labelledby="parallel-summary-title"
+                    >
+                        <h3
+                            id="parallel-summary-title"
+                            class="text-sm font-medium"
+                        >
+                            Paralelos registrados
+                        </h3>
+                        <div class="overflow-hidden rounded-md border">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Paralelo</TableHead>
+                                        <TableHead>Jornada</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    <TableEmpty
+                                        v-if="parallels.length === 0"
+                                        :colspan="2"
+                                    >
+                                        Sin paralelos registrados
+                                    </TableEmpty>
+                                    <TableRow
+                                        v-for="parallel in parallelPage"
+                                        v-else
+                                        :key="parallel.id"
+                                    >
+                                        <TableCell>{{
+                                            parallel.code
+                                        }}</TableCell>
+                                        <TableCell>
+                                            {{ shiftLabel(parallel.shift) }}
+                                        </TableCell>
+                                    </TableRow>
+                                </TableBody>
+                            </Table>
+                        </div>
+                        <TablePagination
+                            :meta="parallelMeta"
+                            mode="client"
+                            label="Paginación de paralelos registrados"
+                            @update:page="setParallelPage"
+                        />
+                    </section>
 
                     <FormSheetActions
                         :close="close"

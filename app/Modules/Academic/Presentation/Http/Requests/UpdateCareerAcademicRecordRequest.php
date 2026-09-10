@@ -21,27 +21,6 @@ class UpdateCareerAcademicRecordRequest extends FormRequest
 {
     protected function prepareForValidation(): void
     {
-        if ($this->route('entity') === 'programacion_asignatura') {
-            $parallels = $this->input('parallels');
-            if (is_array($parallels)) {
-                $this->merge([
-                    'parallels' => array_map(
-                        fn (mixed $parallel): mixed => is_array($parallel)
-                            ? [
-                                ...$parallel,
-                                'shift' => ($parallel['shift'] ?? null) === 'sin_jornada'
-                                    ? null
-                                    : ($parallel['shift'] ?? null),
-                            ]
-                            : $parallel,
-                        $parallels,
-                    ),
-                ]);
-            }
-
-            return;
-        }
-
         if ($this->route('entity') !== 'asignatura') {
             return;
         }
@@ -100,15 +79,6 @@ class UpdateCareerAcademicRecordRequest extends FormRequest
                         ->where('periodo_academico_id', $this->input('period_id'))
                         ->ignore($this->recordId()),
                 ],
-                'parallels' => ['sometimes', 'array'],
-                'parallels.*.id' => [
-                    'required',
-                    'uuid',
-                    'distinct',
-                    Rule::exists('paralelos', 'id')
-                        ->where('programacion_asignatura_id', $this->recordId()),
-                ],
-                'parallels.*.shift' => ['present', 'nullable', 'string', Rule::in(Parallel::SHIFTS)],
             ],
             'paralelo' => [
                 'scheduled_subject_id' => [
