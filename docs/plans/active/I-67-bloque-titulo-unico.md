@@ -17,7 +17,14 @@ RF-017..026; RN-009..012; CU-04; ADM-06, DOC-01 y COR-06. No depende de una deci
 
 ## Plan y aceptación
 
-- [ ] Dominio, guardado autorizado, auditoría y compatibilidad anterior.
-- [ ] Selección y edición desde la cinta, sin acciones de alta, borrado o movimiento.
-- [ ] Vista, snapshot y DOCX usan el bloque persistido.
-- [ ] Pruebas PHP, TypeScript, ESLint, build y navegador afectado.
+- [x] Dominio, guardado autorizado, auditoría y compatibilidad anterior.
+- [x] Selección y edición desde la cinta, sin acciones de alta, borrado o movimiento.
+- [x] Vista, snapshot, DOCX y PDF usan el bloque persistido.
+- [x] Pruebas PHP, TypeScript, ESLint, build y navegador afectado.
+
+## Verificación
+
+47 pruebas PHP afectadas pasan con 1.545 aserciones; TypeScript y ESLint pasan. La
+suite Chromium confirma un solo bloque, edición desde la cinta, ausencia de eliminar y
+su posición anterior a la primera sección. Sin migración: el mapa JSON conserva
+compatibilidad por valor predeterminado.

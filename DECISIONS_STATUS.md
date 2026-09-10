@@ -39,6 +39,10 @@ Fecha de corte: **30 de agosto de 2026**.
   tipadas, unidades, sumas y repetición se conservan. Docencia solo completa campos;
   las variables se resuelven en servidor. El DOCX se genera con PHPWord desde la copia
   de cada revisión; el PDF sigue siendo el respaldo de texto plano.
+- I-67 (10 de septiembre de 2026) convierte el título principal en un bloque raíz
+  único: se guarda en `mapeo_documento`, siempre se proyecta antes de las secciones y
+  no puede eliminarse, duplicarse ni reordenarse. Las plantillas y revisiones anteriores
+  reciben el título institucional predeterminado.
 - I-57 (8 de septiembre de 2026) cierra `PV-08`: el período declara sus semanas
   lectivas; Docencia distribuye semanas y horas entre cualquier cantidad de unidades;
   ACD, APE y AA se suman y comparan exactamente con la malla al validar o enviar. El

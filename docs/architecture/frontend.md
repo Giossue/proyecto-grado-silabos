@@ -140,6 +140,12 @@ crea sección, bloques técnicos y definiciones dentro
 de una sola transacción. Los identificadores técnicos se generan en cliente, se validan
 como opacos y nunca se muestran.
 
+`TemplateTitleBlock` adapta el título raíz desde `mapeo_documento.title_block` y aporta
+el valor institucional a documentos anteriores. `TemplateVisualBuilder` lo dibuja una
+sola vez antes de las secciones; `TemplateTitleActions` permite editarlo, sin rutas de
+alta, borrado u ordenamiento. El snapshot copia ese mapa y los renderizadores HTML,
+DOCX y PDF leen el mismo texto.
+
 I-65 añade inserción contextual dentro de la hoja. Solo el elemento seleccionado muestra
 un `+`; al activarlo, un popover permite elegir entre agregar un campo dentro del bloque
 actual o agregar un bloque después del actual. El mismo control cubre el primer campo de

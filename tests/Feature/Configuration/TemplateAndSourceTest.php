@@ -197,6 +197,10 @@ class TemplateAndSourceTest extends TestCase
 
     public function test_title_is_a_single_persisted_block_always_projected_before_sections(): void
     {
+        $this->assertSame(
+            TemplateTitleBlock::defaults(),
+            TemplateTitleBlock::fromMapping(['title_block' => 'formato anterior']),
+        );
         $template = $this->createTemplate();
 
         $this->actingAsAdministrator()

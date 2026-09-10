@@ -125,6 +125,9 @@ paralelo. Son operaciones separadas y ninguna levanta los bloqueos académicos.
   el documento en un diálogo de pantalla completa. Durante esta edición no se muestran
   el sidebar ni el encabezado administrativo: una cabecera fija de ancho completo reúne
   la salida a la vista normal y la cinta, mientras la hoja se desplaza por debajo.
+- ADM-06 presenta el título principal como un bloque raíz único y siempre primero.
+  Administración puede seleccionarlo y editar su texto desde la cinta, pero no eliminarlo,
+  duplicarlo, moverlo ni agregarle campos.
 - ADM-06 muestra hojas carta separadas y numeradas (I-53). El pie derecho muestra
   únicamente el número de página (1, 2, 3…), sin el total. La cantidad se recalcula
   según el contenido de muestra al agregar, retirar, reordenar o renombrar piezas.

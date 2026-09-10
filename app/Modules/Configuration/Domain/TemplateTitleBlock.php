@@ -19,7 +19,8 @@ final class TemplateTitleBlock
      */
     public static function fromMapping(?array $mapping): array
     {
-        $text = $mapping['title_block']['text'] ?? null;
+        $block = $mapping['title_block'] ?? null;
+        $text = is_array($block) ? ($block['text'] ?? null) : null;
 
         if (! is_string($text)) {
             return self::defaults();
