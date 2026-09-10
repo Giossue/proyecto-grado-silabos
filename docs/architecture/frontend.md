@@ -166,9 +166,10 @@ confirmación de reinicio. `TemplateDocument` normaliza el catálogo de atributo
 celda y `TemplateDocumentView`/`TemplateDocumentWord` lo interpretan sin persistir HTML.
 `wordTableResize` reemplaza el redimensionamiento global de Tiptap: al mover un borde
 refina la cuadrícula con `colspan` y `colwidth`, mantiene fijo el ancho de la tabla y no
-altera las filas que no comparten una celda combinada verticalmente. El imantado
-normaliza la coordenada visual contra la división lógica para que los bordes colapsados
-del navegador no creen columnas técnicas de ancho mínimo.
+altera las filas que no comparten una celda combinada verticalmente. El arrastre calcula
+el desplazamiento desde la división lógica inicial, sin imantado. Las celdas visibles
+conservan un mínimo de 20 px, mientras las divisiones técnicas pueden ser menores para
+que el navegador no redistribuya el resto de la tabla.
 El tema global se aplica solo a `tableHeader` y filas de unidad; un estilo explícito de
 celda tiene precedencia. Las tablas antiguas sin roles conservan los colores explícitos
 de sus celdas, evitando convertir por heurística su primera fila en una cabecera.

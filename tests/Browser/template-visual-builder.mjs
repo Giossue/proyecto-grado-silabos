@@ -266,7 +266,7 @@ test(
         });
 
         await page.goto(`${server.resolvedUrls.local[0]}fixture`);
-        const snappedGrid = await page.evaluate(async () => {
+        const independentGrid = await page.evaluate(async () => {
             const { resizeCellBoundary } =
                 await import('/resources/js/lib/wordTableResize.ts');
             const cell = (colspan) => ({
@@ -302,10 +302,10 @@ test(
                       ),
                   };
         });
-        assert.deepEqual(snappedGrid, {
+        assert.deepEqual(independentGrid, {
             spans: [
-                [1, 1],
-                [1, 1],
+                [2, 1],
+                [1, 2],
             ],
         });
         const firstBlockButton = page.getByRole('button', {
@@ -497,7 +497,20 @@ test(
             recordBeforeResize.x + recordBeforeResize.width + 5,
             recordBeforeResize.y + recordBeforeResize.height / 2,
         );
-        await tableField.locator('[data-snapped="true"]').waitFor();
+        await page.waitForTimeout(50);
+        const headerDuringSmallResize = await headerLeftCell.boundingBox();
+        const recordDuringSmallResize = await recordLeftCell.boundingBox();
+        assert.ok(headerDuringSmallResize && recordDuringSmallResize);
+        assert.ok(
+            Math.abs(
+                headerDuringSmallResize.width - headerBeforeResize.width,
+            ) < 1,
+            'Una división interna pequeña no debe mover una fila ajena.',
+        );
+        assert.ok(
+            recordDuringSmallResize.width > recordBeforeResize.width + 3,
+            'El borde debe seguir al puntero sin imantarse.',
+        );
         await page.mouse.move(
             recordBeforeResize.x + recordBeforeResize.width + 40,
             recordBeforeResize.y + recordBeforeResize.height / 2,

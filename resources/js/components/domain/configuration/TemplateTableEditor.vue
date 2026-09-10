@@ -105,8 +105,10 @@ import type {
     TemplateVariable,
 } from '@/lib/templateDocument';
 import { nodesOfType } from '@/lib/templateDocument';
-import { cn } from '@/lib/utils';
-import { resizeCellBoundary } from '@/lib/wordTableResize';
+import {
+    cellBoundaryPosition,
+    resizeCellBoundary,
+} from '@/lib/wordTableResize';
 
 type CellAlignment = 'left' | 'center' | 'right' | 'justify';
 type CellBorder = 'thin' | 'thick' | 'none';
@@ -123,7 +125,6 @@ type ResizeGuide = {
     left: number;
     top: number;
     height: number;
-    snapped: boolean;
 };
 type CellResizeSession = {
     table: DocumentNode;
@@ -136,7 +137,9 @@ type CellResizeSession = {
     minimumX: number;
     maximumX: number;
     currentX: number;
-    snapBoundaries: number[];
+    pointerStartX: number;
+    boundaryStartX: number;
+    guideStartX: number;
     rowTop: number;
     rowHeight: number;
     previewed: boolean;
@@ -401,7 +404,9 @@ const editor = useEditor({
         }).configure({
             resizable: false,
             renderWrapper: true,
-            cellMinWidth: 20,
+            // Las celdas visibles conservan 20 px por CSS. Una división lógica
+            // puede ser menor cuando otra fila mantiene un borde cercano.
+            cellMinWidth: 1,
             lastColumnResizable: false,
         }),
         TableRow.extend({
@@ -511,29 +516,20 @@ const moveCellResize = (event: MouseEvent): void => {
         return;
     }
 
-    const limited = Math.min(
+    const requested =
+        session.boundaryStartX + event.clientX - session.pointerStartX;
+    session.currentX = Math.min(
         session.maximumX,
-        Math.max(session.minimumX, event.clientX),
+        Math.max(session.minimumX, requested),
     );
-    const closest = session.snapBoundaries.reduce<number | null>(
-        (nearest, boundary) => {
-            const candidate = session.tableLeft + boundary;
-
-            return nearest === null ||
-                Math.abs(candidate - limited) < Math.abs(nearest - limited)
-                ? candidate
-                : nearest;
-        },
-        null,
-    );
-    const snapped = closest !== null && Math.abs(closest - limited) <= 8;
-
-    session.currentX = snapped ? closest : limited;
     resizeGuide.value = {
-        left: session.currentX - shell.getBoundingClientRect().left,
+        left:
+            session.guideStartX +
+            session.currentX -
+            session.boundaryStartX -
+            shell.getBoundingClientRect().left,
         top: session.rowTop,
         height: session.rowHeight,
-        snapped,
     };
     cancelAnimationFrame(resizeFrame);
     resizeFrame = requestAnimationFrame(() => {
@@ -657,33 +653,36 @@ const startCellResize = (event: MouseEvent): void => {
     const rowRect = row.getBoundingClientRect();
     const shellRect = shell.getBoundingClientRect();
     const rowIndex = Array.from(table.rows).indexOf(row);
-    const snapBoundaries = Array.from(table.rows)
-        .filter((_, index) => index !== rowIndex)
-        .flatMap((tableRow) => Array.from(tableRow.cells))
-        .map(
-            (tableCell) =>
-                tableCell.getBoundingClientRect().right - tableRect.left,
-        )
-        .filter((boundary) => boundary > 1 && boundary < tableRect.width - 1);
+    const tableDocument = tableNode.toJSON() as DocumentNode;
+    const logicalBoundary = cellBoundaryPosition(
+        tableDocument,
+        widths,
+        rowIndex,
+        cell.cellIndex,
+    );
 
-    if (widths.length < 2) {
+    if (widths.length < 2 || logicalBoundary === null) {
         return;
     }
+
+    const boundaryStartX = tableRect.left + logicalBoundary;
 
     event.preventDefault();
     event.stopPropagation();
     resizeSession = {
-        table: tableNode.toJSON() as DocumentNode,
+        table: tableDocument,
         tablePosition,
         tableSize: tableNode.nodeSize,
         row: rowIndex,
         cell: cell.cellIndex,
         widths,
         tableLeft: tableRect.left,
-        minimumX: cellRect.left + 20,
-        maximumX: adjacentRect.right - 20,
-        currentX: cellRect.right,
-        snapBoundaries: Array.from(new Set(snapBoundaries)),
+        minimumX: boundaryStartX - cellRect.width + 20,
+        maximumX: boundaryStartX + adjacentRect.width - 20,
+        currentX: boundaryStartX,
+        pointerStartX: event.clientX,
+        boundaryStartX,
+        guideStartX: cellRect.right,
         rowTop: rowRect.top - shellRect.top,
         rowHeight: rowRect.height,
         previewed: false,
@@ -692,7 +691,6 @@ const startCellResize = (event: MouseEvent): void => {
         left: cellRect.right - shellRect.left,
         top: rowRect.top - shellRect.top,
         height: rowRect.height,
-        snapped: false,
     };
     window.addEventListener('mousemove', moveCellResize, true);
     window.addEventListener('mouseup', finishCellResize, true);
@@ -1318,18 +1316,12 @@ defineExpose({ getDocument });
     >
         <div
             v-if="resizeGuide"
-            :class="
-                cn(
-                    'pointer-events-none absolute z-30 w-px',
-                    resizeGuide.snapped ? 'bg-primary' : 'bg-primary/80',
-                )
-            "
+            class="pointer-events-none absolute z-30 w-px bg-primary/80"
             :style="{
                 left: `${resizeGuide.left}px`,
                 top: `${resizeGuide.top}px`,
                 height: `${resizeGuide.height}px`,
             }"
-            :data-snapped="resizeGuide.snapped || undefined"
             aria-hidden="true"
         />
         <Teleport :to="toolbarTarget ?? 'body'" :disabled="!toolbarTarget">

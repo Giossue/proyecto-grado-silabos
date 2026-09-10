@@ -54,6 +54,33 @@ const cellsInGrid = (table: DocumentNode, columns: number): Placement[] => {
 const closeEnough = (left: number, right: number): boolean =>
     Math.abs(left - right) < 1;
 
+export function cellBoundaryPosition(
+    source: DocumentNode,
+    gridWidths: number[],
+    rowIndex: number,
+    cellIndex: number,
+): number | null {
+    if (
+        source.type !== 'table' ||
+        gridWidths.length < 2 ||
+        gridWidths.some((width) => !Number.isFinite(width) || width <= 0)
+    ) {
+        return null;
+    }
+
+    const placement = cellsInGrid(source, gridWidths.length).find(
+        (cell) => cell.row === rowIndex && cell.cell === cellIndex,
+    );
+
+    if (!placement) {
+        return null;
+    }
+
+    return gridWidths
+        .slice(0, placement.end)
+        .reduce((total, width) => total + width, 0);
+}
+
 /**
  * Moves one visible cell boundary while retaining every other row boundary.
  * The resulting union grid mirrors Word: unaffected cells span any new logical column.
@@ -169,26 +196,7 @@ export function resizeCellBoundary(
         maximum,
         Math.max(minimum, requestedBoundary),
     );
-    const closestGridBoundary = positions
-        .slice(1, -1)
-        .filter((position) => position >= minimum && position <= maximum)
-        .reduce<number | null>(
-            (closest, position) =>
-                closest === null ||
-                Math.abs(position - limitedBoundary) <
-                    Math.abs(closest - limitedBoundary)
-                    ? position
-                    : closest,
-            null,
-        );
-    // Los bordes colapsados del DOM desplazan la coordenada visual cerca de 1 px.
-    // Reutilizar aquí la división lógica evita crear una columna espuria de 1 px
-    // que el navegador ampliaría al mínimo de 20 px, moviendo las demás filas.
-    const boundary =
-        closestGridBoundary !== null &&
-        Math.abs(closestGridBoundary - limitedBoundary) <= 2
-            ? closestGridBoundary
-            : limitedBoundary;
+    const boundary = limitedBoundary;
 
     if (closeEnough(boundary, originalBoundary)) {
         return { table, changed: false };
