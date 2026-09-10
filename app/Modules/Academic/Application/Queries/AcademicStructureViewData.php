@@ -296,8 +296,10 @@ class AcademicStructureViewData
                 'academicPeriod:id,fecha_inicio,fecha_fin,activo',
                 'subject:id,nombre,codigo_institucional,ciclo',
                 'campus:id,nombre',
+                'parallels' => fn ($query) => $query
+                    ->orderBy('codigo')
+                    ->select(['id', 'programacion_asignatura_id', 'codigo', 'jornada', 'activo']),
             ])
-            ->withCount('parallels')
             ->orderBy('asignatura_id')
             ->get();
         $usedScheduledSubjectIds = SyllabusScope::query()
@@ -361,7 +363,15 @@ class AcademicStructureViewData
                         'period_planning_enabled' => $periodPlanningEnabled,
                         'campus_name' => $scheduledSubject->campus->nombre,
                         'modality_name' => $scheduledSubject->modalidad->label(),
-                        'parallel_count' => $scheduledSubject->parallels_count,
+                        'parallels' => $scheduledSubject->parallels
+                            ->map(fn (Parallel $parallel): array => [
+                                'id' => $parallel->id,
+                                'code' => $parallel->codigo,
+                                'shift' => $this->parallelShift($parallel),
+                                'active' => $parallel->activo,
+                            ])
+                            ->values()
+                            ->all(),
                         'active' => $scheduledSubject->activo,
                         'editable' => $periodPlanningEnabled && $lockReason === null && ! $usedScheduledSubjectIds->has($scheduledSubject->id),
                     ];
@@ -493,6 +503,13 @@ class AcademicStructureViewData
     private function career(string $careerId): Career
     {
         return Career::query()->where('activo', true)->findOrFail($careerId);
+    }
+
+    private function parallelShift(Parallel $parallel): ?string
+    {
+        $shift = $parallel->getAttribute('jornada');
+
+        return is_string($shift) ? $shift : null;
     }
 
     /** @return array<string, array<never, never>> */

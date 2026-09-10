@@ -4,7 +4,7 @@
 
 Sustituido en interfaz por I-45: ya no hay alta masiva visible. El contrato conserva
 la operación atómica para usos internos ya cubiertos, pero Coordinación agrega un
-paralelo por vez desde la acción de su oferta.
+paralelo por vez desde la acción de la materia programada.
 
 ## Trazabilidad
 
@@ -14,15 +14,16 @@ una decisión `POR VALIDAR`.
 ## Resultado demostrable
 
 El contrato permite altas atómicas de varios paralelos para usos internos. La interfaz
-actual crea un solo paralelo con jornada desde cada materia programada; la edición vuelve a mostrar
-la jornada. Cada alta conserva alcance por carrera y un evento de auditoría por
-paralelo.
+actual crea un solo paralelo con jornada desde cada materia programada. Su tabla muestra
+código y jornada por paralelo, y la edición de la materia programada permite actualizar
+las jornadas existentes de forma atómica. Cada alta o cambio conserva alcance por carrera
+y un evento de auditoría por paralelo.
 
 ## Decisiones y supuestos
 
 - La operación atómica, si se usa internamente, corresponde a paralelos de **una
-  oferta**: una carga para varias ofertas requeriría decidir cómo se emparejan códigos,
-  jornadas y docentes.
+  materia programada**: una carga para varias materias programadas requeriría decidir
+  cómo se emparejan códigos, jornadas y docentes.
 - Los códigos se escriben separados por coma, punto y coma o salto de línea. Un lote es
   atómico: si un código es inválido o ya existe, no se crea ninguno.
 - «Preparar período» conserva su paralelo inicial `A`, decisión vigente de I-36; no es
@@ -33,10 +34,10 @@ paralelo.
 ## Cambios previstos
 
 - Backend: request, caso de uso, ruta y respuesta de creación masiva.
-- Frontend: formulario de paralelos con lista de códigos y jornada compartida; corrección
-  del selector de jornada en edición.
-- Seguridad/auditoría: autorización y alcance por oferta en servidor, transacción y una
-  auditoría por registro.
+- Frontend: alta individual con jornada, detalle de código y jornada en la tabla, y
+  selectores de jornada por paralelo en la edición de la materia programada.
+- Seguridad/auditoría: autorización y alcance por materia programada en servidor,
+  transacción y una auditoría por registro.
 - Datos: sin migración.
 - Documentación y trazabilidad: especificación, pantalla COR-14 y matriz.
 
@@ -46,6 +47,7 @@ paralelo.
 - Rechaza duplicados, incluidos los ya existentes, sin inserciones parciales.
 - Rechaza una programación de otra carrera.
 - Comprueba la presencia del selector de jornada en la edición de paralelo.
+- Comprueba la consulta y edición auditada de jornadas desde la materia programada.
 
 ## Pasos
 
@@ -63,9 +65,6 @@ historia ni datos ya usados por un sílabo.
 ## Evidencia de cierre
 
 - `php artisan test tests/Feature/Academic/AcademicStructureTest.php
-  tests/Architecture/ManagementCreationUiTest.php`: 55 pruebas, 1476 aserciones.
-- Pint, análisis estático focalizado de los archivos PHP, tipos Vue, ESLint focalizado y
-  build de producción: correctos.
-- La puerta completa no queda en verde por dos fallos ajenos a este incremento: ESLint
-  incluye un archivo de terceros bajo `temp/.venv/`, y el análisis estático completo falla
-  en `ManagedUserController.php:101`.
+  tests/Architecture/ManagementCreationUiTest.php`: 63 pruebas, 1740 aserciones.
+- `composer verify`: 404 pruebas, 6054 aserciones; escaneo de secretos, ESLint,
+  Prettier, tipos Vue, Pint, PHPStan y build de producción correctos.

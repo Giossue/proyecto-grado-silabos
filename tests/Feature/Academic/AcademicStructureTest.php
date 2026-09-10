@@ -172,6 +172,10 @@ class AcademicStructureTest extends TestCase
                 ->where('scheduledSubjects.0.period_ends_on', $scheduledSubject->academicPeriod->fecha_fin->toDateString())
                 ->where('scheduledSubjects.0.period_status', 'en_curso')
                 ->where('scheduledSubjects.0.period_planning_enabled', true)
+                ->has('scheduledSubjects.0.parallels', 1)
+                ->where('scheduledSubjects.0.parallels.0.id', $parallel->id)
+                ->where('scheduledSubjects.0.parallels.0.code', $parallel->codigo)
+                ->where('scheduledSubjects.0.parallels.0.shift', $parallel->jornada)
                 ->where('options.periods.0.status', 'en_curso'));
 
         $this->assertFalse(Route::has('coordination.academic.parallels.index'));
@@ -832,6 +836,55 @@ class AcademicStructureTest extends TestCase
                 'academico.asignacion_docente.actualizacion',
             ])
             ->count());
+    }
+
+    public function test_coordinator_edits_parallel_shifts_from_the_scheduled_subject(): void
+    {
+        Carbon::setTestNow('2026-09-09 12:00:00');
+        $scheduledSubject = ScheduledSubject::query()->firstOrFail();
+        $parallel = $scheduledSubject->parallels()->firstOrFail();
+        $parallel->update(['jornada' => 'matutina']);
+
+        $this->actingAsCoordinator()
+            ->patch(route('coordination.academic.update', [
+                'entity' => 'programacion_asignatura',
+                'record' => $scheduledSubject->id,
+            ]), [
+                'period_id' => $scheduledSubject->periodo_academico_id,
+                'subject_id' => $scheduledSubject->asignatura_id,
+                'parallels' => [[
+                    'id' => $parallel->id,
+                    'shift' => 'nocturna',
+                ]],
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('nocturna', $parallel->fresh()->jornada);
+        $event = AuditEvent::query()
+            ->where('accion', 'academico.paralelo.actualizacion')
+            ->where('recurso_id', $parallel->id)
+            ->latest('ocurrido_en')
+            ->firstOrFail();
+        $this->assertSame('Jornada', $event->metadatos['changed_fields'] ?? null);
+        $this->assertSame('matutina', $event->metadatos['before_jornada'] ?? null);
+        $this->assertSame('nocturna', $event->metadatos['after_jornada'] ?? null);
+
+        $this->actingAsCoordinator()
+            ->patch(route('coordination.academic.update', [
+                'entity' => 'programacion_asignatura',
+                'record' => $scheduledSubject->id,
+            ]), [
+                'period_id' => $scheduledSubject->periodo_academico_id,
+                'subject_id' => $scheduledSubject->asignatura_id,
+                'parallels' => [[
+                    'id' => $parallel->id,
+                    'shift' => 'madrugada',
+                ]],
+            ])
+            ->assertSessionHasErrors('parallels.0.shift');
+
+        $this->assertSame('nocturna', $parallel->fresh()->jornada);
     }
 
     public function test_current_curriculum_and_subject_remain_editable(): void

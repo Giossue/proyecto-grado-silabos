@@ -6,4 +6,5 @@ export const PARALLEL_SHIFTS = [
 ] as const;
 
 export const shiftLabel = (value: string | null | undefined): string =>
-    PARALLEL_SHIFTS.find((shift) => shift.value === value)?.label ?? '—';
+    PARALLEL_SHIFTS.find((shift) => shift.value === value)?.label ??
+    'Sin jornada';

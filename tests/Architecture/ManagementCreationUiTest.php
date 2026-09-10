@@ -443,11 +443,24 @@ it('evita repetir el encabezado de pagina dentro de las tablas academicas', func
         ->toContain('<TableHead>Materia</TableHead')
         ->toContain('<TableHead>Código</TableHead')
         ->toContain('<TableHead>Ciclo</TableHead')
+        ->toContain('<TableHead>Paralelos y jornadas</TableHead')
+        ->toContain('shiftLabel(parallel.shift)')
         ->not->toContain('<TableHead>Ubicación</TableHead')
         ->not->toContain('item.offering_label')
         ->not->toContain('<CardHeader')
         ->not->toContain('<CardTitle')
         ->not->toContain('<CardDescription');
+
+    $editSheet = file_get_contents(
+        $root.'/resources/js/components/domain/academic/CareerAcademicEditSheet.vue',
+    );
+
+    expect($editSheet)
+        ->toBeString()
+        ->toContain('<FieldLegend>Paralelos y jornadas</FieldLegend>')
+        ->toContain('Jornada del paralelo')
+        ->toContain('`parallels[${index}][shift]`')
+        ->toContain("parallel.shift ?? 'sin_jornada'");
 });
 
 it('prepara solo materias pendientes en una hoja lateral amplia', function (): void {

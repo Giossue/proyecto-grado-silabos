@@ -102,7 +102,12 @@ export type AcademicStructureProps = {
         period_planning_enabled: boolean;
         campus_name: string;
         modality_name: string;
-        parallel_count: number;
+        parallels: {
+            id: string;
+            code: string;
+            shift: string | null;
+            active: boolean;
+        }[];
         active: boolean;
         editable: boolean;
     }[];

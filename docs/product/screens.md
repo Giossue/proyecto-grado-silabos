@@ -140,8 +140,9 @@ completo. El alta está separada de asignar paralelos y no levanta sus bloqueos.
   docente en su lugar dentro de la tabla. Mapa: `docs/product/identificacion-institucional.md`.
   COR-14 concentra sus paralelos dentro de **Materias y paralelos**. Desde las acciones de cada materia se
   crea un paralelo con su código y jornada; el servidor rechaza códigos repetidos. La
-  pantalla selecciona un período académico a la vez y la tabla muestra materia, código
-  y ciclo en columnas separadas.
+  pantalla selecciona un período académico a la vez y la tabla muestra materia, código,
+  ciclo y cada paralelo con su jornada. La edición de una materia programada permite
+  actualizar la jornada de sus paralelos existentes.
 - Indicadores del Panel (UI-01), cuatro por rol y todos accionables: Administración ve
   avance del proceso (% aprobados), días para la entrega, carreras sin convocar y sílabos
   sin iniciar; Coordinación, avance, días, por revisar y sin iniciar; Docencia, sílabos

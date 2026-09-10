@@ -5,6 +5,7 @@ import CareerAcademicActions from '@/components/domain/academic/CareerAcademicAc
 import ClientFilterBar from '@/components/domain/ClientFilterBar.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Field, FieldLabel } from '@/components/ui/field';
 import {
@@ -26,6 +27,7 @@ import {
 } from '@/components/ui/table';
 import { useClientFilter } from '@/composables/useClientFilter';
 import { useClientPagination } from '@/composables/useClientPagination';
+import { shiftLabel } from '@/lib/parallelShifts';
 import { index as scheduledSubjectsIndex } from '@/routes/coordination/academic/scheduled-subjects';
 import type { AcademicStructureProps, Option } from '@/types/academic';
 
@@ -71,6 +73,10 @@ const scheduledSubjectFilter = useClientFilter(
         item.subject_name,
         item.subject_code,
         item.subject_cycle?.toString(),
+        ...item.parallels.flatMap((parallel) => [
+            parallel.code,
+            shiftLabel(parallel.shift),
+        ]),
     ],
     {
         estado: {
@@ -127,7 +133,7 @@ watch(
                 :filter="scheduledSubjectFilter"
                 input-id="scheduled-subjects-search"
                 label="Buscar materia programada"
-                placeholder="Buscar por materia, código o ciclo"
+                placeholder="Buscar por materia, código, ciclo, paralelo o jornada"
             >
                 <template #filters>
                     <Field data-wide>
@@ -172,7 +178,7 @@ watch(
                         <TableHead>Materia</TableHead>
                         <TableHead>Código</TableHead>
                         <TableHead>Ciclo</TableHead>
-                        <TableHead>Paralelos</TableHead>
+                        <TableHead>Paralelos y jornadas</TableHead>
                         <TableHead class="text-right">Acciones</TableHead>
                     </TableRow>
                 </TableHeader>
@@ -197,7 +203,24 @@ watch(
                                     : `${item.subject_cycle}.º`
                             }}
                         </TableCell>
-                        <TableCell>{{ item.parallel_count }}</TableCell>
+                        <TableCell>
+                            <div class="flex flex-wrap gap-1.5">
+                                <Badge
+                                    v-for="parallel in item.parallels"
+                                    :key="parallel.id"
+                                    variant="outline"
+                                >
+                                    {{ parallel.code }} ·
+                                    {{ shiftLabel(parallel.shift) }}
+                                </Badge>
+                                <span
+                                    v-if="item.parallels.length === 0"
+                                    class="text-muted-foreground"
+                                >
+                                    Sin paralelos
+                                </span>
+                            </div>
+                        </TableCell>
                         <TableCell class="text-right">
                             <CareerAcademicActions
                                 entity="programacion_asignatura"
