@@ -37,7 +37,8 @@ confirmada por el responsable del producto el 2026-09-09. No depende de una puer
 2. [x] Exponer estado, etiqueta, capacidad de planificación y período seleccionado desde la
    consulta de estructura académica.
 3. [x] Añadir selector y estado visible en **Materias y paralelos**, mostrando únicamente
-   las filas del período elegido.
+   las filas del período elegido. El selector forma parte de la barra compartida de
+   búsqueda y filtros para conservar el patrón visual de las tablas del sistema.
 4. [x] Abrir **Preparar período** en el período operativo seleccionado y excluir períodos
    finalizados.
 5. [x] Proteger preparación, programaciones, paralelos, asignaciones docentes y relevos en

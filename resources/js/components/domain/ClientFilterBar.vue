@@ -54,7 +54,7 @@ const search = props.filter.search;
         </div>
         <MobileFilterSheet
             v-if="$slots.filters"
-            class="grid min-w-0 gap-3 sm:grid-cols-2 lg:flex lg:flex-none lg:items-end [&_[data-slot=select-trigger]]:w-full [&>[data-slot=field]]:min-w-0 lg:[&>[data-slot=field]]:w-44"
+            class="grid min-w-0 gap-3 sm:grid-cols-2 lg:flex lg:flex-none lg:items-end [&_[data-slot=select-trigger]]:w-full [&>[data-slot=field]]:min-w-0 lg:[&>[data-slot=field]]:w-44 lg:[&>[data-slot=field][data-wide]]:w-96"
         >
             <slot name="filters" />
 

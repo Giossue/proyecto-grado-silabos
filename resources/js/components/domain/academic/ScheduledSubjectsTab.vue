@@ -4,7 +4,7 @@ import { computed, ref, watch } from 'vue';
 import CareerAcademicActions from '@/components/domain/academic/CareerAcademicActions.vue';
 import ClientFilterBar from '@/components/domain/ClientFilterBar.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
-import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent } from '@/components/ui/card';
 import { Field, FieldLabel } from '@/components/ui/field';
 import {
@@ -124,56 +124,49 @@ watch(
 <template>
     <Card>
         <CardContent class="flex flex-col gap-4">
-            <div
-                class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"
-            >
-                <Field class="w-full sm:max-w-md">
-                    <FieldLabel for="scheduled-subject-period">
-                        Período académico
-                    </FieldLabel>
-                    <Select
-                        :model-value="selectedPeriod"
-                        @update:model-value="changePeriod"
-                    >
-                        <SelectTrigger id="scheduled-subject-period">
-                            <SelectValue placeholder="Seleccione un período" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectGroup>
-                                <SelectItem
-                                    v-for="period in options.periods"
-                                    :key="period.id"
-                                    :value="period.id"
-                                >
-                                    {{ periodLabel(period) }} ·
-                                    {{ period.status_label }}
-                                </SelectItem>
-                            </SelectGroup>
-                        </SelectContent>
-                    </Select>
-                </Field>
-                <Badge
-                    v-if="selectedPeriodOption?.status_label"
-                    :variant="
-                        selectedPeriodOption.status === 'en_curso'
-                            ? 'secondary'
-                            : 'outline'
-                    "
-                >
-                    {{ selectedPeriodOption.status_label }}
-                </Badge>
-            </div>
-
-            <p v-if="periodLockedLabel" class="text-sm text-muted-foreground">
-                {{ periodLockedLabel }}
-            </p>
-
             <ClientFilterBar
                 :filter="scheduledSubjectFilter"
                 input-id="scheduled-subjects-search"
                 label="Buscar materia programada"
                 placeholder="Buscar por materia, código, campus o modalidad"
-            />
+            >
+                <template #filters>
+                    <Field data-wide>
+                        <FieldLabel
+                            for="scheduled-subject-period"
+                            class="sr-only"
+                        >
+                            Período académico
+                        </FieldLabel>
+                        <Select
+                            :model-value="selectedPeriod"
+                            @update:model-value="changePeriod"
+                        >
+                            <SelectTrigger id="scheduled-subject-period">
+                                <SelectValue
+                                    placeholder="Seleccione un período"
+                                />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectGroup>
+                                    <SelectItem
+                                        v-for="period in options.periods"
+                                        :key="period.id"
+                                        :value="period.id"
+                                    >
+                                        {{ periodLabel(period) }} ·
+                                        {{ period.status_label }}
+                                    </SelectItem>
+                                </SelectGroup>
+                            </SelectContent>
+                        </Select>
+                    </Field>
+                </template>
+            </ClientFilterBar>
+
+            <Alert v-if="periodLockedLabel">
+                <AlertDescription>{{ periodLockedLabel }}</AlertDescription>
+            </Alert>
             <Table>
                 <TableHeader>
                     <TableRow>

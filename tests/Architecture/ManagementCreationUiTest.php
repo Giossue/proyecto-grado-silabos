@@ -436,6 +436,8 @@ it('evita repetir el encabezado de pagina dentro de las tablas academicas', func
         ->toContain('selectedPeriodId')
         ->toContain('period_status')
         ->toContain('Período académico')
+        ->toContain('<template #filters>')
+        ->toContain('<Field data-wide>')
         ->toContain('router.get(')
         ->toContain('disponible solo para consulta')
         ->toContain('<TableHead>Materia</TableHead')
