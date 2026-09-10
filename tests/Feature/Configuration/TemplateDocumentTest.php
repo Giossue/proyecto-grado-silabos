@@ -74,6 +74,55 @@ class TemplateDocumentTest extends TestCase
         $this->assertDatabaseHas('eventos_auditoria', ['accion' => 'plantilla.diseno_actualizado', 'recurso_id' => $block->id]);
     }
 
+    public function test_admin_creates_a_selection_field_and_uses_it_as_a_conditional_mark(): void
+    {
+        $template = $this->template();
+        $block = $template->fields()->where('clave', 'objetivo_general')->firstOrFail()->block;
+        $field = fn (?string $choice) => ['type' => 'field', 'attrs' => [
+            'key' => 'campo_requiere_adaptacion',
+            'label' => '¿Requiere adaptación?',
+            'kind' => 'seleccion_unica',
+            'options' => ['Sí', 'No'],
+            'choice' => $choice,
+        ]];
+        $cell = fn (array $content) => ['type' => 'tableCell', 'content' => [[
+            'type' => 'paragraph', 'content' => $content,
+        ]]];
+        $document = ['type' => 'doc', 'content' => [[
+            'type' => 'table', 'content' => [[
+                'type' => 'tableRow', 'content' => [
+                    $cell([$field(null)]),
+                    $cell([$field('Sí')]),
+                ],
+            ]],
+        ]]];
+
+        $url = route('admin.templates.blocks.document', [$template, $block]);
+        $this->patch($url, [
+            'document' => $document,
+            'fingerprint' => SaveTemplateDocument::fingerprint($block),
+        ])->assertSessionHasNoErrors();
+
+        $created = $block->fields()->where('clave', 'campo_requiere_adaptacion')->firstOrFail();
+        $this->assertSame('seleccion_unica', $created->tipo);
+        $this->assertSame(['Sí', 'No'], $created->opciones);
+        $this->assertTrue($created->editable_docente);
+
+        $resolved = TemplateDocumentResolver::resolve(
+            $block->fresh()->configuracion['document'],
+            [['key' => $created->clave, 'value' => 'Sí', 'rows' => []]],
+            [],
+            null,
+        );
+        $this->assertSame(['Sí', 'X'], array_column(TemplateDocument::nodes($resolved, 'text'), 'text'));
+
+        $document['content'][0]['content'][0]['content'][1]['content'][0]['content'][0]['attrs']['choice'] = 'Quizá';
+        $this->patch($url, [
+            'document' => $document,
+            'fingerprint' => SaveTemplateDocument::fingerprint($block->fresh()),
+        ])->assertSessionHasErrors('document');
+    }
+
     public function test_teacher_and_coordinator_cannot_change_the_design(): void
     {
         $template = $this->template();

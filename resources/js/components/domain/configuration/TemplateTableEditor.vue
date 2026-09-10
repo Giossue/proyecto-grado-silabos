@@ -5,17 +5,22 @@ import {
     AlignLeft,
     AlignRight,
     Baseline,
+    BadgeCheck,
     Bold,
+    Braces,
+    ChevronDown,
     Columns3,
     Eraser,
     Italic,
     PaintBucket,
+    Plus,
     Redo2,
     Rows3,
     SplitSquareHorizontal,
     SquareDashed,
     Undo2,
     UnfoldHorizontal,
+    UserRoundPlus,
 } from '@lucide/vue';
 import { mergeAttributes, Node } from '@tiptap/core';
 import {
@@ -40,21 +45,50 @@ import TemplateToolbarButton from '@/components/domain/configuration/TemplateToo
 import TemplateToolbarSelect from '@/components/domain/configuration/TemplateToolbarSelect.vue';
 import { Button } from '@/components/ui/button';
 import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuGroup,
     DropdownMenuItem,
     DropdownMenuSeparator,
+    DropdownMenuSub,
+    DropdownMenuSubContent,
+    DropdownMenuSubTrigger,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { SelectItem } from '@/components/ui/select';
+import {
+    Field,
+    FieldDescription,
+    FieldGroup,
+    FieldLabel,
+} from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import {
     Tooltip,
     TooltipContent,
     TooltipTrigger,
 } from '@/components/ui/tooltip';
-import type { DocumentNode } from '@/lib/templateDocument';
+import type {
+    DocumentField,
+    DocumentNode,
+    TemplateVariable,
+} from '@/lib/templateDocument';
+import { nodesOfType } from '@/lib/templateDocument';
 
 type CellAlignment = 'left' | 'center' | 'right' | 'justify';
 type CellBorder = 'thin' | 'thick' | 'none';
@@ -75,6 +109,8 @@ const props = defineProps<{
     textColor: string;
     bodyAlignment: CellAlignment;
     colors: { value: string; label: string }[];
+    fields: DocumentField[];
+    variables: TemplateVariable[];
     toolbarTarget?: string;
 }>();
 
@@ -220,6 +256,7 @@ const inlineNode = (name: 'field' | 'column' | 'variable') =>
                       label: { default: '' },
                       kind: { default: 'texto_largo' },
                       choice: { default: null },
+                      options: { default: null },
                       listStyle: { default: null },
                   },
         parseHTML: () => [
@@ -237,7 +274,7 @@ const inlineNode = (name: 'field' | 'column' | 'variable') =>
                     : name === 'column'
                       ? `$${node.attrs.key}`
                       : node.attrs.choice
-                        ? `${node.attrs.label} (${node.attrs.choice})`
+                        ? `X si ${node.attrs.label} = ${node.attrs.choice}`
                         : node.attrs.label;
 
             return [
@@ -262,6 +299,11 @@ const inlineNode = (name: 'field' | 'column' | 'variable') =>
 const initial = JSON.stringify(props.document);
 const version = ref(0);
 const tableMenuHelpOpen = ref(false);
+const newFieldOpen = ref(false);
+const newFieldLabel = ref('');
+const newFieldType = ref('texto_largo');
+const newFieldOptions = ref('Sí, No');
+const newFieldError = ref('');
 const editor = useEditor({
     content: props.document,
     editorProps: {
@@ -358,6 +400,55 @@ const selectedCell = computed<CellAttributes>(() => {
 });
 
 const inCell = computed(() => Object.keys(selectedCell.value).length > 0);
+const teacherFields = computed(() => {
+    void version.value;
+    const byKey = new Map(
+        props.fields
+            .filter(
+                (field) =>
+                    field.teacher_editable !== false &&
+                    !field.inherited &&
+                    !['repetible', 'flujo', 'referencia_maestra'].includes(
+                        field.type ?? '',
+                    ),
+            )
+            .map((field) => [field.key, field]),
+    );
+
+    for (const node of nodesOfType(
+        (editor.value?.getJSON() as DocumentNode | undefined) ?? props.document,
+        'field',
+    )) {
+        const key = String(node.attrs?.key ?? '');
+
+        if (!key || byKey.has(key)) {
+            continue;
+        }
+
+        const rawOptions = node.attrs?.options;
+        byKey.set(key, {
+            key,
+            label: String(node.attrs?.label ?? key),
+            type: String(node.attrs?.kind ?? 'texto_largo'),
+            options: Array.isArray(rawOptions)
+                ? rawOptions.map((option) => ({
+                      value: String(option),
+                      label: String(option),
+                  }))
+                : [],
+            inherited: false,
+            teacher_editable: true,
+            required: true,
+        });
+    }
+
+    return [...byKey.values()];
+});
+const conditionalChoices = computed(() =>
+    teacherFields.value.flatMap((field) =>
+        (field.options ?? []).map((option) => ({ field, option })),
+    ),
+);
 type TableCommand =
     | 'mergeCells'
     | 'splitCell'
@@ -438,6 +529,120 @@ const resetCell = (): void => {
         .run();
 };
 
+const insertNode = (node: DocumentNode): void => {
+    if (!inCell.value || props.pending) {
+        return;
+    }
+
+    state.value?.chain().focus().insertContent(node).run();
+};
+
+const insertVariable = (variable: TemplateVariable): void =>
+    insertNode({
+        type: 'variable',
+        attrs: { id: variable.key, label: variable.label },
+    });
+
+const insertField = (
+    field: DocumentField,
+    choice: string | null = null,
+): void =>
+    insertNode({
+        type: 'field',
+        attrs: {
+            key: field.key,
+            label: field.label,
+            kind: field.type ?? 'texto_largo',
+            choice,
+            options: field.options?.map((option) => option.value) ?? null,
+            listStyle: null,
+        },
+    });
+
+const openNewField = (): void => {
+    newFieldLabel.value = '';
+    newFieldType.value = 'texto_largo';
+    newFieldOptions.value = 'Sí, No';
+    newFieldError.value = '';
+    newFieldOpen.value = true;
+};
+
+const parsedOptions = (): string[] => [
+    ...new Set(
+        newFieldOptions.value
+            .split(',')
+            .map((option) => option.trim())
+            .filter(Boolean),
+    ),
+];
+
+const keyFor = (label: string): string => {
+    const base = label
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '_')
+        .replace(/^_+|_+$/g, '')
+        .slice(0, 80);
+    const used = new Set([
+        ...props.fields.map((field) => field.key),
+        ...nodesOfType(
+            (editor.value?.getJSON() as DocumentNode | undefined) ??
+                props.document,
+            'field',
+        ).map((node) => String(node.attrs?.key ?? '')),
+    ]);
+    const unique = globalThis.crypto
+        .randomUUID()
+        .replaceAll('-', '')
+        .slice(0, 8);
+    const root = `campo_${base || 'respuesta'}_${unique}`;
+    let candidate = root;
+    let suffix = 2;
+
+    while (used.has(candidate)) {
+        candidate = `${root}_${suffix++}`;
+    }
+
+    return candidate;
+};
+
+const createField = (): void => {
+    const label = newFieldLabel.value.trim();
+    const options =
+        newFieldType.value === 'seleccion_unica' ? parsedOptions() : [];
+
+    if (!label) {
+        newFieldError.value = 'Escriba el nombre que verá el docente.';
+
+        return;
+    }
+
+    if (label.length > 180) {
+        newFieldError.value = 'Use un nombre de hasta 180 caracteres.';
+
+        return;
+    }
+
+    if (newFieldType.value === 'seleccion_unica' && options.length < 2) {
+        newFieldError.value =
+            'Escriba al menos dos opciones separadas por comas.';
+
+        return;
+    }
+
+    insertField({
+        key: keyFor(label),
+        label,
+        type: newFieldType.value,
+        options: options.map((option) => ({ value: option, label: option })),
+        inherited: false,
+        teacher_editable: true,
+        required: true,
+    });
+    newFieldOpen.value = false;
+};
+
 const getDocument = (): DocumentNode | null =>
     (editor.value?.getJSON() as DocumentNode | undefined) ?? null;
 
@@ -457,6 +662,126 @@ defineExpose({ getDocument });
                 role="toolbar"
                 aria-label="Formato de celdas"
             >
+                <DropdownMenu>
+                    <DropdownMenuTrigger as-child>
+                        <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            :disabled="!inCell || pending"
+                            aria-label="Insertar contenido en la celda"
+                        >
+                            <Plus data-icon="inline-start" aria-hidden="true" />
+                            Insertar
+                            <ChevronDown
+                                data-icon="inline-end"
+                                aria-hidden="true"
+                            />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" class="w-64">
+                        <DropdownMenuGroup>
+                            <DropdownMenuSub>
+                                <DropdownMenuSubTrigger>
+                                    <Braces />
+                                    Dato automático
+                                </DropdownMenuSubTrigger>
+                                <DropdownMenuSubContent
+                                    class="max-h-80 w-72 overflow-y-auto"
+                                >
+                                    <DropdownMenuGroup>
+                                        <DropdownMenuItem
+                                            v-for="variable in variables"
+                                            :key="variable.key"
+                                            @select="insertVariable(variable)"
+                                        >
+                                            <span class="min-w-0">
+                                                <span
+                                                    class="block truncate font-medium"
+                                                >
+                                                    {{ variable.label }}
+                                                </span>
+                                                <span
+                                                    class="block truncate text-xs text-muted-foreground"
+                                                >
+                                                    @{{ variable.key }}
+                                                </span>
+                                            </span>
+                                        </DropdownMenuItem>
+                                    </DropdownMenuGroup>
+                                </DropdownMenuSubContent>
+                            </DropdownMenuSub>
+
+                            <DropdownMenuSub>
+                                <DropdownMenuSubTrigger>
+                                    <UserRoundPlus />
+                                    Campo del docente
+                                </DropdownMenuSubTrigger>
+                                <DropdownMenuSubContent
+                                    class="max-h-80 w-72 overflow-y-auto"
+                                >
+                                    <DropdownMenuGroup>
+                                        <DropdownMenuItem
+                                            v-for="field in teacherFields"
+                                            :key="field.key"
+                                            @select="insertField(field)"
+                                        >
+                                            {{ field.label }}
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                            v-if="teacherFields.length === 0"
+                                            disabled
+                                        >
+                                            Aún no hay campos
+                                        </DropdownMenuItem>
+                                    </DropdownMenuGroup>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem @select="openNewField">
+                                        <Plus />
+                                        Nuevo campo…
+                                    </DropdownMenuItem>
+                                </DropdownMenuSubContent>
+                            </DropdownMenuSub>
+
+                            <DropdownMenuSub>
+                                <DropdownMenuSubTrigger>
+                                    <BadgeCheck />
+                                    Marca condicional
+                                </DropdownMenuSubTrigger>
+                                <DropdownMenuSubContent
+                                    class="max-h-80 w-80 overflow-y-auto"
+                                >
+                                    <DropdownMenuGroup>
+                                        <DropdownMenuItem
+                                            v-for="item in conditionalChoices"
+                                            :key="`${item.field.key}-${item.option.value}`"
+                                            @select="
+                                                insertField(
+                                                    item.field,
+                                                    item.option.value,
+                                                )
+                                            "
+                                        >
+                                            X si {{ item.field.label }} =
+                                            {{ item.option.label }}
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                            v-if="
+                                                conditionalChoices.length === 0
+                                            "
+                                            disabled
+                                        >
+                                            Cree primero un campo de selección
+                                        </DropdownMenuItem>
+                                    </DropdownMenuGroup>
+                                </DropdownMenuSubContent>
+                            </DropdownMenuSub>
+                        </DropdownMenuGroup>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+
+                <Separator orientation="vertical" class="h-7" />
+
                 <TemplateToolbarSelect
                     v-model="background"
                     label="Fondo de celda"
@@ -738,6 +1063,86 @@ defineExpose({ getDocument });
             class="template-table-canvas min-w-0 overflow-x-auto p-2"
         />
     </div>
+
+    <Dialog v-model:open="newFieldOpen">
+        <DialogContent class="sm:max-w-md">
+            <DialogHeader>
+                <DialogTitle>Nuevo campo del docente</DialogTitle>
+                <DialogDescription>
+                    Se insertará en la celda seleccionada y aparecerá en el
+                    formulario del sílabo.
+                </DialogDescription>
+            </DialogHeader>
+
+            <FieldGroup>
+                <Field>
+                    <FieldLabel for="table-field-label"
+                        >Nombre visible</FieldLabel
+                    >
+                    <Input
+                        id="table-field-label"
+                        v-model="newFieldLabel"
+                        maxlength="180"
+                        placeholder="Ej. Tipo de discapacidad"
+                    />
+                </Field>
+                <Field>
+                    <FieldLabel for="table-field-type">
+                        Tipo de respuesta
+                    </FieldLabel>
+                    <Select v-model="newFieldType">
+                        <SelectTrigger id="table-field-type" class="w-full">
+                            <SelectValue placeholder="Seleccione un tipo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="texto_corto"
+                                >Texto corto</SelectItem
+                            >
+                            <SelectItem value="texto_largo"
+                                >Texto largo</SelectItem
+                            >
+                            <SelectItem value="numero">Número</SelectItem>
+                            <SelectItem value="fecha">Fecha</SelectItem>
+                            <SelectItem value="seleccion_unica"
+                                >Selección única</SelectItem
+                            >
+                        </SelectContent>
+                    </Select>
+                </Field>
+                <Field v-if="newFieldType === 'seleccion_unica'">
+                    <FieldLabel for="table-field-options">Opciones</FieldLabel>
+                    <Input
+                        id="table-field-options"
+                        v-model="newFieldOptions"
+                        placeholder="Sí, No"
+                    />
+                    <FieldDescription>
+                        Separe cada opción con una coma.
+                    </FieldDescription>
+                </Field>
+                <p v-if="newFieldError" class="text-sm text-destructive">
+                    {{ newFieldError }}
+                </p>
+            </FieldGroup>
+
+            <DialogFooter>
+                <Button
+                    type="button"
+                    variant="outline"
+                    @click="newFieldOpen = false"
+                >
+                    Cancelar
+                </Button>
+                <Button type="button" @click="createField">
+                    <UserRoundPlus
+                        data-icon="inline-start"
+                        aria-hidden="true"
+                    />
+                    Insertar campo
+                </Button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
 </template>
 
 <style>

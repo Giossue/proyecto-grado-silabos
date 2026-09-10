@@ -4,7 +4,10 @@ import type { TableLayout, TableRowData } from '@/lib/tableLayout';
 export type DocumentNode = {
     type: string;
     text?: string;
-    attrs?: Record<string, string | number | boolean | null | number[]>;
+    attrs?: Record<
+        string,
+        string | number | boolean | null | number[] | string[]
+    >;
     marks?: { type: string; attrs?: Record<string, string | null> }[];
     content?: DocumentNode[];
 };
@@ -46,6 +49,7 @@ export const fieldNode = (
         label: field.label,
         kind: field.type ?? 'texto_largo',
         choice: null,
+        options: field.options?.map((option) => option.value) ?? null,
     },
 });
 export const cellNode = (

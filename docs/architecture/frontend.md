@@ -159,6 +159,15 @@ El tema global se aplica solo a `tableHeader` y filas de unidad; un estilo expl�
 celda tiene precedencia. Las tablas antiguas sin roles conservan los colores explícitos
 de sus celdas, evitando convertir por heurística su primera fila en una cabecera.
 
+Desde I-63, la misma cinta contiene **Insertar**. Sus tres fuentes son distintas: una
+variable `@` del catálogo del servidor, un campo que completa Docencia o una marca `X`
+condicionada por una opción de un campo de selección. Los campos nuevos reciben una clave
+técnica generada, se insertan en la celda y `SaveTemplateDocument` crea su definición y
+guarda el documento en una sola transacción. Las opciones son datos declarativos; no se
+admiten expresiones ni código. Un campo nuevo queda disponible inmediatamente en la cinta
+para reutilizarlo antes de guardar. `TemplateTableStructureDialog` solo se muestra si el
+bloque posee un `TableLayout` repetible.
+
 `TemplateToolbarSelect` y `TemplateToolbarButton` componen los controles icónicos de
 estilo con ayuda de `Tooltip`, sin sustituir sus nombres accesibles y manteniendo la ayuda
 de acciones deshabilitadas. El menú único conserva los nombres accesibles y concentra sus

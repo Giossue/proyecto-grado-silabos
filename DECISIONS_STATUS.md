@@ -57,6 +57,13 @@ Fecha de corte: **30 de agosto de 2026**.
   no muestran cierre `X` ni se descartan con el fondo o `Esc`. La persona sale mediante
   una acción explícita, normalmente «Cancelar», y toda acción principal del diálogo
   lleva un icono semántico. Los paneles laterales `Sheet` conservan su comportamiento.
+- I-63 (9 de septiembre de 2026) permite insertar contenido dinámico en una celda desde
+  la cinta de edición: **Dato automático** usa el catálogo seguro `@clave`, **Campo del
+  docente** reutiliza o crea una respuesta tipada y **Marca condicional** presenta `X`
+  cuando una selección coincide con una opción. La clave técnica del campo se genera y
+  no se solicita a Administración. `$clave` continúa reservado para filas repetibles.
+  «Configurar estructura» solo corresponde a tablas que tienen `TableLayout`; una tabla
+  fija como Identificación se modifica directamente en la hoja.
 - La modalidad de estudio es un dato base de la carrera (la aprueba el CES) y no un
   catálogo: presencial, semipresencial, en línea, a distancia o híbrida, fijas por reglamento.
   Una materia puede usar una modalidad distinta, sin cambiar ni recalificar la modalidad

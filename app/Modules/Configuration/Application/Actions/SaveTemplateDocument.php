@@ -87,16 +87,30 @@ final class SaveTemplateDocument
                 $labels[$key] = $attrs['label'];
                 $used[] = $key;
                 if (isset($fields[$key])) {
+                    $choice = $attrs['choice'] ?? null;
+                    if ($choice !== null && ! in_array($choice, $this->optionValues($fields[$key]), true)) {
+                        TemplateDocument::fail('La condición usa una opción que no pertenece al campo.');
+                    }
+
                     continue;
                 }
                 if (! in_array($attrs['kind'], TemplateDocument::FIELD_TYPES, true)
                     || FieldDefinition::query()->where('plantilla_id', $block->plantilla_id)->where('clave', $key)->exists()) {
                     TemplateDocument::fail('El campo pertenece a otro bloque o su tipo no está permitido.');
                 }
-                if (isset($toCreate[$key]) && $toCreate[$key] !== $attrs) {
+                $definition = [
+                    'key' => $attrs['key'],
+                    'label' => $attrs['label'],
+                    'kind' => $attrs['kind'],
+                    'options' => $attrs['options'] ?? null,
+                ];
+                if ($attrs['kind'] === 'seleccion_unica' && $definition['options'] === null) {
+                    TemplateDocument::fail('Un campo de selección necesita sus opciones.');
+                }
+                if (isset($toCreate[$key]) && $toCreate[$key] !== $definition) {
                     TemplateDocument::fail('Dos campos comparten nombre interno pero tienen distinta definición.');
                 }
-                $toCreate[$key] = $attrs;
+                $toCreate[$key] = $definition;
             }
             $configuration = $block->configuracion ?? [];
             $layout = TableLayout::fromBlock($block);
@@ -181,6 +195,7 @@ final class SaveTemplateDocument
                 $block->fields()->create([
                     'plantilla_id' => $block->plantilla_id, 'clave' => $key,
                     'etiqueta' => $attrs['label'], 'tipo' => $attrs['kind'],
+                    'opciones' => $attrs['options'],
                     'obligatorio' => true, 'heredado' => false, 'editable_docente' => true,
                     'ia_habilitada' => false, 'posicion' => ++$position,
                 ]);
@@ -269,5 +284,23 @@ final class SaveTemplateDocument
             correlationId: $request->attributes->getString('correlation_id') ?: null,
             metadata: ['fields' => $fields],
         );
+    }
+
+    /** @return list<string> */
+    private function optionValues(FieldDefinition $field): array
+    {
+        return collect($field->opciones ?? [])
+            ->map(static function (mixed $option): ?string {
+                if (is_string($option) || is_int($option)) {
+                    return (string) $option;
+                }
+
+                return is_array($option) && (is_string($option['value'] ?? null) || is_int($option['value'] ?? null))
+                    ? (string) $option['value']
+                    : null;
+            })
+            ->filter(static fn (?string $value): bool => $value !== null)
+            ->values()
+            ->all();
     }
 }

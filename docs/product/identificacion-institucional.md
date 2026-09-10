@@ -62,9 +62,14 @@ para reemplazar las variables de una revisión histórica.
 
 - **Etiqueta, color o celdas**: Administración abre «Editar diseño», cambia el contenido
   o combina/separa celdas y pulsa «Guardar diseño».
-- **Dato automático**: escribir `@` y elegir, por ejemplo, `nombre_carrera`,
-  `nombre_facultad`, `nombre_docente` o `correo_docente`. El docente no los escribe.
-- **Respuesta manual**: insertar un campo con nombre descriptivo y tipo de respuesta.
+- **Dato automático**: seleccionar una celda y usar **Insertar → Dato automático**;
+  por ejemplo, `nombre_carrera`, `nombre_facultad`, `nombre_docente` o
+  `correo_docente`. Se representa con `@` y el docente no lo escribe.
+- **Respuesta manual**: usar **Insertar → Campo del docente** para reutilizar uno o
+  crear un campo con nombre descriptivo y tipo de respuesta. La clave técnica se genera.
+- **Condición Sí/No u otra selección**: crear o reutilizar un campo de selección y usar
+  **Insertar → Marca condicional** en la celda que debe mostrar `X`. La condición solo
+  compara una opción; no acepta fórmulas ni código.
 - **Nueva variable disponible**: editar únicamente `config/syllabus_variables.php` si
   la fuente ya está en la identificación o en el contexto académico. Cada entrada
   define clave descriptiva, etiqueta y `source`, por ejemplo `identification.career`.

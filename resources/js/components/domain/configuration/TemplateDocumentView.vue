@@ -100,7 +100,7 @@ const columnGroup = (table: DocumentNode): VNodeChild => {
 
             for (let column = 0; column < span; column++) {
                 if (values[column]) {
-                    widths[x + column] = values[column];
+                    widths[x + column] = Number(values[column]);
                 } else {
                     widths[x + column] ??= 0;
                 }

@@ -303,6 +303,7 @@ defineExpose({ start });
             <Teleport v-if="ribbonTarget" :to="`${ribbonTarget}-actions`">
                 <div class="flex flex-wrap items-center gap-2">
                     <TemplateTableStructureDialog
+                        v-if="layout"
                         :template-id="templateId"
                         :block-id="blockId"
                         :fingerprint="fingerprint"
@@ -356,6 +357,8 @@ defineExpose({ start });
                 :text-color="appearance.text_color"
                 :body-alignment="appearance.body_alignment"
                 :colors="colors"
+                :fields="fields"
+                :variables="variables"
                 :toolbar-target="
                     ribbonTarget ? `${ribbonTarget}-tools` : undefined
                 "

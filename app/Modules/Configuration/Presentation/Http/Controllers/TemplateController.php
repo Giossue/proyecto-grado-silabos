@@ -138,6 +138,7 @@ class TemplateController extends Controller
                                 'label' => $field->etiqueta,
                                 'help' => $field->ayuda,
                                 'type' => $field->tipo,
+                                'options' => $this->fieldOptions($field),
                                 'required' => $field->obligatorio,
                                 'inherited' => $field->heredado,
                                 'master_source' => $field->origen_maestro,
@@ -184,6 +185,30 @@ class TemplateController extends Controller
         }
 
         return 'text';
+    }
+
+    /** @return list<array{value: string, label: string}> */
+    private function fieldOptions(FieldDefinition $field): array
+    {
+        $normalized = [];
+        foreach ($field->opciones ?? [] as $option) {
+            if (is_string($option) || is_int($option)) {
+                $value = (string) $option;
+                $normalized[] = ['value' => $value, 'label' => $value];
+
+                continue;
+            }
+            if (! is_array($option) || (! is_string($option['value'] ?? null) && ! is_int($option['value'] ?? null))) {
+                continue;
+            }
+            $value = (string) $option['value'];
+            $normalized[] = [
+                'value' => $value,
+                'label' => is_string($option['label'] ?? null) ? $option['label'] : $value,
+            ];
+        }
+
+        return $normalized;
     }
 
     public function storeField(

@@ -9,7 +9,7 @@ final class TemplateDocument
 {
     public const FONTS = ['Arial', 'Calibri', 'Times New Roman', 'Verdana', 'Georgia'];
 
-    public const FIELD_TYPES = ['texto_corto', 'texto_largo', 'numero', 'fecha'];
+    public const FIELD_TYPES = ['texto_corto', 'texto_largo', 'numero', 'fecha', 'seleccion_unica'];
 
     public const CELL_ALIGNMENTS = ['left', 'center', 'right', 'justify'];
 
@@ -71,9 +71,17 @@ final class TemplateDocument
                     self::fail('Cada campo necesita un nombre y un tipo válido.');
                 }
                 $node['attrs'] = ['key' => $key, 'label' => trim($label), 'kind' => $kind];
+                $options = self::options($attrs['options'] ?? null);
+                if ($options !== null && $kind !== 'seleccion_unica') {
+                    self::fail('Solo un campo de selección admite opciones.');
+                }
+                $node['attrs']['options'] = $options;
                 $choice = $attrs['choice'] ?? null;
-                if ($choice !== null && ! in_array($choice, ['Sí', 'No'], true)) {
+                if ($choice !== null && (! is_string($choice) || trim($choice) === '' || mb_strlen($choice) > 100)) {
                     self::fail('Opción de campo no válida.');
+                }
+                if ($choice !== null && $options !== null && ! in_array($choice, $options, true)) {
+                    self::fail('La condición usa una opción que no pertenece al campo.');
                 }
                 $node['attrs']['choice'] = $choice;
                 $listStyle = $attrs['listStyle'] ?? null;
@@ -269,6 +277,29 @@ final class TemplateDocument
     private static function color(mixed $value): bool
     {
         return is_string($value) && preg_match('/^#[0-9a-fA-F]{6}$/D', $value) === 1;
+    }
+
+    /** @return list<string>|null */
+    private static function options(mixed $raw): ?array
+    {
+        if ($raw === null) {
+            return null;
+        }
+        if (! is_array($raw) || ! array_is_list($raw) || count($raw) < 2 || count($raw) > 20) {
+            self::fail('Un campo de selección necesita entre 2 y 20 opciones.');
+        }
+        $options = [];
+        foreach ($raw as $option) {
+            if (! is_string($option) || trim($option) === '' || mb_strlen(trim($option)) > 100) {
+                self::fail('Las opciones del campo no son válidas.');
+            }
+            $options[] = trim($option);
+        }
+        if (count(array_unique($options)) !== count($options)) {
+            self::fail('Las opciones del campo no pueden repetirse.');
+        }
+
+        return $options;
     }
 
     public static function fail(string $message): never
