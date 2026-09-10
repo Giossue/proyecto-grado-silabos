@@ -28,6 +28,7 @@ import {
     TableCell,
     TableHeader,
     TableRow,
+    TableView,
 } from '@tiptap/extension-table';
 import TextAlign from '@tiptap/extension-text-align';
 import {
@@ -36,7 +37,9 @@ import {
     FontSize,
     TextStyle,
 } from '@tiptap/extension-text-style';
+import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { CellSelection } from '@tiptap/pm/tables';
+import type { EditorView } from '@tiptap/pm/view';
 import StarterKit from '@tiptap/starter-kit';
 import {
     EditorContent,
@@ -125,6 +128,48 @@ type CellAttributes = {
     italic?: boolean | null;
     borderStyle?: CellBorder | null;
 };
+
+class ResponsiveTableView extends TableView {
+    constructor(
+        node: ProseMirrorNode,
+        cellMinWidth: number,
+        view?: EditorView,
+        HTMLAttributes: Record<string, unknown> = {},
+    ) {
+        super(node, cellMinWidth, view, HTMLAttributes);
+        this.fitColumns();
+    }
+
+    update(node: ProseMirrorNode): boolean {
+        const updated = super.update(node);
+
+        if (updated) {
+            this.fitColumns();
+        }
+
+        return updated;
+    }
+
+    private fitColumns(): void {
+        const columns = Array.from(
+            this.colgroup.children,
+        ) as HTMLTableColElement[];
+        const widths = columns.map(
+            (column) =>
+                Number.parseFloat(column.style.width) ||
+                Number.parseFloat(column.style.minWidth) ||
+                1,
+        );
+        const total = widths.reduce((sum, width) => sum + width, 0);
+
+        columns.forEach((column, index) => {
+            column.style.width = `${(widths[index] / total) * 100}%`;
+            column.style.minWidth = '0';
+        });
+        this.table.style.width = '100%';
+        this.table.style.minWidth = '0';
+    }
+}
 type ResizeGuide = {
     left: number;
     top: number;
@@ -410,6 +455,7 @@ const editor = useEditor({
         }).configure({
             resizable: false,
             renderWrapper: true,
+            View: ResponsiveTableView,
             // Las celdas visibles conservan 20 px por CSS. Una división lógica
             // puede ser menor cuando otra fila mantiene un borde cercano.
             cellMinWidth: 1,
@@ -1301,7 +1347,7 @@ defineExpose({ getDocument });
 <template>
     <div
         ref="editorShell"
-        class="template-table-editor relative flex min-w-0 flex-col gap-3 rounded-lg ring-1 ring-ring"
+        class="template-table-editor relative flex min-w-0 flex-col gap-3"
         :style="editorStyle"
         data-page-unit
         data-page-flow-through
@@ -1827,7 +1873,7 @@ defineExpose({ getDocument });
 
         <EditorContent
             :editor="editor"
-            class="template-table-canvas min-w-0 overflow-x-auto"
+            class="template-table-canvas min-w-0 overflow-x-clip"
             @mousedown.capture="startCellResize"
         />
     </div>
@@ -2041,11 +2087,12 @@ defineExpose({ getDocument });
 
 <style>
 .template-table-editor .tiptap {
-    min-width: 580px;
+    min-width: 0;
     width: 100%;
     outline: none;
 }
 .template-table-editor .tableWrapper {
+    min-width: 0;
     width: 100%;
 }
 .template-table-editor .template-table-canvas {

@@ -3,6 +3,8 @@
 namespace Tests\Feature\Documents;
 
 use App\Modules\Configuration\Domain\TemplateAppearance;
+use App\Modules\Configuration\Domain\TemplateTitleBlock;
+use App\Modules\Documents\Application\SyllabusDocumentContent;
 use App\Modules\Documents\Domain\Contracts\DocumentRenderer;
 use App\Modules\Documents\Domain\Data\DocumentRenderInput;
 use App\Modules\Documents\Infrastructure\Rendering\PhpWordDocumentRenderer;
@@ -16,23 +18,26 @@ class WordRendererTest extends TestCase
     public function test_applies_the_frozen_template_appearance_to_docx(): void
     {
         $snapshot = $this->snapshot();
-        $snapshot['document_mapping'] = ['appearance' => [
-            ...TemplateAppearance::defaults(),
-            'font_family' => 'Georgia',
-            'body_font_size' => 12,
-            'title_font_size' => 18,
-            'section_font_size' => 14,
-            'field_font_size' => 12,
-            'text_color' => '#1F4E78',
-            'accent_color' => '#C00000',
-            'table_header_background' => '#548235',
-            'table_header_color' => '#FFFFFF',
-            'margin_cm' => 2.0,
-            'orientation' => 'landscape',
-            'title_italic' => true,
-            'section_alignment' => 'center',
-            'body_alignment' => 'justify',
-        ]];
+        $snapshot['document_mapping'] = [
+            'appearance' => [
+                ...TemplateAppearance::defaults(),
+                'font_family' => 'Georgia',
+                'body_font_size' => 12,
+                'title_font_size' => 18,
+                'section_font_size' => 14,
+                'field_font_size' => 12,
+                'text_color' => '#1F4E78',
+                'accent_color' => '#C00000',
+                'table_header_background' => '#548235',
+                'table_header_color' => '#FFFFFF',
+                'margin_cm' => 2.0,
+                'orientation' => 'landscape',
+                'title_italic' => true,
+                'section_alignment' => 'center',
+                'body_alignment' => 'justify',
+            ],
+            'title_block' => ['text' => 'PLAN ACADÉMICO INSTITUCIONAL'],
+        ];
         $input = new DocumentRenderInput(
             subject: 'Inteligencia Artificial',
             subjectCode: 'SW-P7-037',
@@ -43,6 +48,10 @@ class WordRendererTest extends TestCase
             generatedAt: '2026-09-07T20:00:00-05:00',
             locale: 'es-EC',
             snapshot: $snapshot,
+        );
+        $this->assertSame(
+            'PLAN ACADÉMICO INSTITUCIONAL',
+            app(SyllabusDocumentContent::class)->lines($input)[0],
         );
 
         $document = app(DocumentRenderer::class)->render($input)->docx;
@@ -64,6 +73,8 @@ class WordRendererTest extends TestCase
         $this->assertStringContainsString('w:color w:val="FFFFFF"', $documentXml);
         $this->assertStringContainsString('w:color w:val="C00000"', $documentXml);
         $this->assertStringContainsString('w:sz w:val="36"', $documentXml);
+        $this->assertStringContainsString('PLAN ACADÉMICO INSTITUCIONAL', $documentXml);
+        $this->assertStringNotContainsString(TemplateTitleBlock::DEFAULT_TEXT, $documentXml);
         $this->assertStringContainsString('<w:i w:val="1"/>', $documentXml);
         $this->assertStringContainsString('Georgia', $stylesXml);
         $this->assertStringContainsString('w:color w:val="1F4E78"', $stylesXml);
@@ -86,6 +97,10 @@ class WordRendererTest extends TestCase
             locale: 'es-EC',
             snapshot: $this->snapshot(),
         );
+        $this->assertSame(
+            TemplateTitleBlock::DEFAULT_TEXT,
+            app(SyllabusDocumentContent::class)->lines($input)[0],
+        );
 
         $first = $renderer->render($input);
         $second = $renderer->render($input);
@@ -101,6 +116,7 @@ class WordRendererTest extends TestCase
         $zip->close();
         @unlink($temporary);
         $this->assertIsString($document);
+        $this->assertStringContainsString(TemplateTitleBlock::DEFAULT_TEXT, $document);
 
         // Ficha de identificación institucional desde la copia de la revisión.
         $this->assertStringContainsString('FACULTAD', $document);

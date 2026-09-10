@@ -134,7 +134,8 @@ los `TemplateBlock` internos como campos. Esa traducción permite conservar el e
 existente sin una migración destructiva: para Administración, un bloque es siempre un
 contenedor y cada campo elige su presentación. El índice de `Show.vue` observa los
 encabezados de `TemplateVisualBuilder`. La selección de un bloque, campo o tabla cambia
-la cinta superior sin duplicar controles junto a cada elemento. `SaveTemplateSection`
+la cinta superior sin duplicar controles junto a cada elemento; pulsar fuera de bloques
+y campos limpia esa selección. `SaveTemplateSection`
 crea sección, bloques técnicos y definiciones dentro
 de una sola transacción. Los identificadores técnicos se generan en cliente, se validan
 como opacos y nunca se muestran.

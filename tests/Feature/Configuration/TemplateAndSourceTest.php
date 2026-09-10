@@ -7,6 +7,7 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Faculty;
 use App\Modules\Configuration\Application\Actions\SaveTemplateDocument;
 use App\Modules\Configuration\Domain\TemplateAppearance;
+use App\Modules\Configuration\Domain\TemplateTitleBlock;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\AcademicSource;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
@@ -71,6 +72,10 @@ class TemplateAndSourceTest extends TestCase
             TemplateAppearance::defaults(),
             $template->mapeo_documento['appearance'],
         );
+        $this->assertEquals(
+            TemplateTitleBlock::defaults(),
+            $template->mapeo_documento['title_block'],
+        );
 
         $this->actingAsAdministrator()
             ->get(route('admin.templates.show', $template))
@@ -79,6 +84,7 @@ class TemplateAndSourceTest extends TestCase
                 ->component('Admin/Templates/Show')
                 ->has('template.sections', 12)
                 ->where('template.appearance.font_family', 'Arial')
+                ->where('template.titleBlock.text', TemplateTitleBlock::DEFAULT_TEXT)
                 ->has('appearanceOptions.colors', count(TemplateAppearance::COLORS))
                 ->where('processLock', null));
 
@@ -187,6 +193,50 @@ class TemplateAndSourceTest extends TestCase
         $this->actingAsCoordinator()
             ->patch(route('admin.templates.appearance.update', $template), TemplateAppearance::defaults())
             ->assertForbidden();
+    }
+
+    public function test_title_is_a_single_persisted_block_always_projected_before_sections(): void
+    {
+        $template = $this->createTemplate();
+
+        $this->actingAsAdministrator()
+            ->patch(route('admin.templates.title.update', $template), [
+                'title' => 'PROGRAMA INSTITUCIONAL DE ASIGNATURA',
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $template->refresh();
+        $this->assertSame(
+            ['text' => 'PROGRAMA INSTITUCIONAL DE ASIGNATURA'],
+            $template->mapeo_documento['title_block'],
+        );
+        $this->assertDatabaseHas('eventos_auditoria', [
+            'accion' => 'plantilla.titulo_actualizado',
+            'recurso_id' => $template->id,
+        ]);
+
+        $this->actingAsAdministrator()
+            ->get(route('admin.templates.edit', $template))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('template.titleBlock.text', 'PROGRAMA INSTITUCIONAL DE ASIGNATURA')
+                ->has('template.sections', 12));
+
+        $this->actingAsAdministrator()
+            ->patch(route('admin.templates.title.update', $template), ['title' => ''])
+            ->assertSessionHasErrors('title');
+
+        $this->actingAsCoordinator()
+            ->patch(route('admin.templates.title.update', $template), [
+                'title' => 'Cambio no autorizado',
+            ])
+            ->assertForbidden();
+
+        $this->assertSame(
+            'PROGRAMA INSTITUCIONAL DE ASIGNATURA',
+            $template->fresh()->mapeo_documento['title_block']['text'],
+        );
     }
 
     public function test_administrator_can_only_create_one_institutional_template(): void

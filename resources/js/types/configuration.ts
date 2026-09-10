@@ -96,6 +96,7 @@ export type TemplateBuilderProps = {
         name: string;
         description: string | null;
         appearance: TemplateAppearance;
+        titleBlock: { text: string };
         sections: TemplateSection[];
     };
     blockTypes: {

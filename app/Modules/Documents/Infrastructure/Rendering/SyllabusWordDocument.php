@@ -6,6 +6,7 @@ use App\Modules\Configuration\Application\InstitutionalLogos;
 use App\Modules\Configuration\Application\TemplateDocumentResolver;
 use App\Modules\Configuration\Domain\TableLayout;
 use App\Modules\Configuration\Domain\TemplateAppearance;
+use App\Modules\Configuration\Domain\TemplateTitleBlock;
 use App\Modules\Documents\Domain\Data\DocumentRenderInput;
 use App\Modules\Syllabus\Application\AcademicContextValues;
 use App\Modules\Syllabus\Application\IdentificationCard;
@@ -40,6 +41,8 @@ class SyllabusWordDocument
     /** @var array<string, mixed> */
     private array $appearance = [];
 
+    private string $title = TemplateTitleBlock::DEFAULT_TEXT;
+
     /** Ancho útil de la hoja en twips, según orientación y márgenes. */
     private int $contentWidth = 9406;
 
@@ -67,6 +70,7 @@ class SyllabusWordDocument
             : null;
         $this->hasAppearance = is_array($mapping['appearance'] ?? null);
         $this->appearance = TemplateAppearance::fromMapping($mapping);
+        $this->title = TemplateTitleBlock::fromMapping($mapping)['text'];
         $margin = (int) round(Converter::cmToTwip((float) $this->appearance['margin_cm']));
         $pageWidth = $this->appearance['orientation'] === 'landscape' ? 15840 : 12240;
         $this->contentWidth = $pageWidth - (2 * $margin);
@@ -106,7 +110,7 @@ class SyllabusWordDocument
 
         $this->logos($section, $input);
         $section->addText(
-            'PROGRAMA DE ASIGNATURA (SÍLABO)',
+            $this->title,
             [
                 'bold' => $this->appearance['title_bold'],
                 'italic' => $this->appearance['title_italic'],

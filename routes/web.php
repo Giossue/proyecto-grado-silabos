@@ -255,6 +255,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('plantilla/{template}/editar', [TemplateController::class, 'edit'])->name('templates.edit');
         Route::get('plantilla/{template}', [TemplateController::class, 'show'])->name('templates.show');
         Route::patch('plantilla/{template}/apariencia', [TemplateController::class, 'updateAppearance'])->name('templates.appearance.update');
+        Route::patch('plantilla/{template}/titulo', [TemplateController::class, 'updateTitle'])->name('templates.title.update');
         Route::post('plantilla/{template}/secciones', [TemplateController::class, 'storeSection'])->name('templates.sections.store');
         Route::patch('plantilla/{template}/secciones/orden', [TemplateController::class, 'reorderSections'])->name('templates.sections.reorder');
         Route::patch('plantilla/{template}/secciones/{section}', [TemplateController::class, 'updateSection'])->name('templates.sections.update');

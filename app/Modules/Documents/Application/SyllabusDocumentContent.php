@@ -4,6 +4,7 @@ namespace App\Modules\Documents\Application;
 
 use App\Modules\Configuration\Application\TemplateDocumentResolver;
 use App\Modules\Configuration\Domain\TemplateDocument;
+use App\Modules\Configuration\Domain\TemplateTitleBlock;
 use App\Modules\Documents\Domain\Data\DocumentRenderInput;
 
 class SyllabusDocumentContent
@@ -11,8 +12,11 @@ class SyllabusDocumentContent
     /** @return list<string> */
     public function lines(DocumentRenderInput $input): array
     {
+        $mapping = is_array($input->snapshot['document_mapping'] ?? null)
+            ? $input->snapshot['document_mapping']
+            : null;
         $lines = [
-            'SÍLABO ACADÉMICO — FORMATO TÉCNICO PROVISIONAL',
+            TemplateTitleBlock::fromMapping($mapping)['text'],
             $input->subject.' ('.$input->subjectCode.')',
             'Periodo: '.$input->academicPeriod,
             'Revisión: '.$input->revisionNumber,

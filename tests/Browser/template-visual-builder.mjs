@@ -29,7 +29,7 @@ const defaults = {
 const appearance = ref({...defaults});
 const preview = ref({...defaults});
 const appearanceOpen = ref(false);
-const template = ref({id: 'synthetic-template', name: 'Plantilla', description: null, appearance: appearance.value, sections: []});
+const template = ref({id: 'synthetic-template', name: 'Plantilla', description: null, appearance: appearance.value, titleBlock: {text: 'PROGRAMA DE ASIGNATURA (SÍLABO)'}, sections: []});
 const requests = [];
 const blockTypes = [
     {value:'text',label:'Texto'}, {value:'table',label:'Tabla'},
@@ -93,7 +93,9 @@ router.post = async (url, data, visit) => {
 router.patch = async (url, data, visit) => {
     requests.push({method:'patch',url,data:JSON.parse(JSON.stringify(data))});
     visit?.onStart?.({});
-    if (url.includes('/tabla')) {
+    if (url.includes('/titulo')) {
+        template.value = {...template.value, titleBlock: {text: data.title}};
+    } else if (url.includes('/tabla')) {
         const {fingerprint, confirm_purge, ...table} = data;
         template.value = {
             ...template.value,
@@ -308,6 +310,46 @@ test(
                 [1, 2],
             ],
         });
+        const ribbonTools = page.locator('#template-editor-ribbon-tools');
+        const titleBlock = page.locator('[data-template-selectable="title"]');
+        await page
+            .getByRole('heading', {
+                name: 'PROGRAMA DE ASIGNATURA (SÍLABO)',
+            })
+            .click();
+        assert.equal(await titleBlock.count(), 1);
+        assert.equal(
+            await ribbonTools.getByRole('button', { name: /Eliminar/ }).count(),
+            0,
+        );
+        await ribbonTools
+            .getByRole('button', { name: 'Editar título', exact: true })
+            .click();
+        const titleDialog = page.getByRole('dialog', {
+            name: 'Editar título principal',
+        });
+        await titleDialog
+            .getByLabel('Título')
+            .fill('PROGRAMA INSTITUCIONAL DE ASIGNATURA');
+        await titleDialog
+            .getByRole('button', { name: 'Guardar título' })
+            .click();
+        await titleDialog.waitFor({ state: 'hidden' });
+        await page
+            .getByRole('heading', {
+                name: 'PROGRAMA INSTITUCIONAL DE ASIGNATURA',
+            })
+            .waitFor();
+        const titleRequest = await page.evaluate(() =>
+            window.fixture.requests.find((request) =>
+                request.url.includes('/titulo'),
+            ),
+        );
+        assert.equal(
+            titleRequest.data.title,
+            'PROGRAMA INSTITUCIONAL DE ASIGNATURA',
+        );
+
         const firstBlockButton = page.getByRole('button', {
             name: 'Agregar primer bloque',
         });
@@ -347,7 +389,11 @@ test(
             1,
         );
         assert.equal(await page.locator('.document-table').count(), 1);
-        const creation = await page.evaluate(() => window.fixture.requests[0]);
+        const creation = await page.evaluate(() =>
+            window.fixture.requests.find((request) =>
+                request.url.includes('/secciones'),
+            ),
+        );
         assert.deepEqual(
             creation.data.fields.map((field) => field.content_type),
             ['text', 'table'],
@@ -356,7 +402,9 @@ test(
         const section = page.locator(
             'section[aria-label="Bloque Resultados y evidencias"]',
         );
-        const ribbonTools = page.locator('#template-editor-ribbon-tools');
+        const titleBox = await titleBlock.boundingBox();
+        const sectionBox = await section.boundingBox();
+        assert.ok(titleBox && sectionBox && titleBox.y < sectionBox.y);
         await section.locator('h2').click();
         assert.equal(
             await section
@@ -431,6 +479,17 @@ test(
         assert.equal(fieldUpdate.data.label, 'Resumen actualizado');
         assert.equal(fieldUpdate.data.content_type, 'bulleted_list');
 
+        await page.locator('.paged-document-content').dispatchEvent('pointerdown');
+        assert.match(
+            await page.locator('#template-editor-ribbon').innerText(),
+            /Ningún elemento seleccionado/,
+        );
+        assert.equal(await summaryField.getAttribute('aria-pressed'), 'false');
+        assert.equal(
+            await renamedSection.getAttribute('aria-pressed'),
+            'false',
+        );
+
         const tableField = page.locator('#template-field-field-block-2');
         await tableField.click();
         const previewTableBox = await tableField.locator('table').boundingBox();
@@ -461,6 +520,17 @@ test(
         assert.ok(
             Math.abs(editorTableBox.width - previewTableBox.width) < 1,
             `El ancho cambió de ${previewTableBox.width}px a ${editorTableBox.width}px`,
+        );
+        const tableCanvas = tableEditor.locator('..');
+        const tableOverflow = await tableCanvas.evaluate((element) => ({
+            clientWidth: element.clientWidth,
+            scrollWidth: element.scrollWidth,
+            overflowX: getComputedStyle(element).overflowX,
+        }));
+        assert.equal(tableOverflow.overflowX, 'clip');
+        assert.ok(
+            tableOverflow.scrollWidth <= tableOverflow.clientWidth + 1,
+            `La tabla desborda ${tableOverflow.scrollWidth - tableOverflow.clientWidth}px`,
         );
         assert.equal(
             await tableEditor.getByText('$texto', { exact: true }).count(),

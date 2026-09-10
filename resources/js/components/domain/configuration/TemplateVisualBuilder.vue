@@ -8,6 +8,7 @@ import TemplateFieldActions from '@/components/domain/configuration/TemplateFiel
 import TemplateInsertPopover from '@/components/domain/configuration/TemplateInsertPopover.vue';
 import TemplateSectionActions from '@/components/domain/configuration/TemplateSectionActions.vue';
 import TemplateTableDesigner from '@/components/domain/configuration/TemplateTableDesigner.vue';
+import TemplateTitleActions from '@/components/domain/configuration/TemplateTitleActions.vue';
 import PaginatedDocument from '@/components/domain/PaginatedDocument.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -43,9 +44,11 @@ const props = withDefaults(
 
 const emit = defineEmits<{ personalize: [] }>();
 type Editable = { openEdit: () => void; openDelete: () => void };
+type TitleActions = { openEdit: () => void };
 type TableDesigner = { start: () => void };
 type Selection =
     | { kind: 'document' }
+    | { kind: 'title' }
     | { kind: 'section'; sectionId: string }
     | { kind: 'field'; sectionId: string; blockId: string };
 
@@ -54,6 +57,7 @@ const activeTable = ref<string | null>(null);
 const sectionActions = ref<Record<string, Editable>>({});
 const fieldActions = ref<Record<string, Editable>>({});
 const tableDesigners = ref<Record<string, TableDesigner>>({});
+const titleActions = ref<TitleActions | null>(null);
 
 const bindHandle = <T,>(
     collection: Record<string, T>,
@@ -72,7 +76,7 @@ const bindHandle = <T,>(
 const selectedSection = computed<TemplateSection | null>(() => {
     const current = selection.value;
 
-    if (current.kind === 'document') {
+    if (current.kind !== 'section' && current.kind !== 'field') {
         return null;
     }
 
@@ -98,6 +102,10 @@ const selectedField = computed<TemplateFieldContainer | null>(() => {
 });
 
 const selectionLabel = computed(() => {
+    if (selection.value.kind === 'title') {
+        return `Título · ${props.template.titleBlock.text}`;
+    }
+
     if (selectedField.value) {
         return `Campo · ${selectedField.value.title}`;
     }
@@ -149,6 +157,12 @@ const hasTable = (block: TemplateFieldContainer): boolean =>
 const selectSection = (sectionId: string): void => {
     if (!activeTable.value) {
         selection.value = { kind: 'section', sectionId };
+    }
+};
+
+const selectTitle = (): void => {
+    if (!activeTable.value) {
+        selection.value = { kind: 'title' };
     }
 };
 
@@ -209,6 +223,24 @@ const fieldSelectionListeners = (sectionId: string, blockId: string) =>
                   }
               },
           };
+
+const clearSelectionFromBackground = (event: PointerEvent): void => {
+    if (props.readonly || activeTable.value) {
+        return;
+    }
+
+    const target = event.target;
+
+    if (
+        !(target instanceof Element) ||
+        target.closest('[data-template-selectable]') ||
+        target.closest('#template-editor-ribbon')
+    ) {
+        return;
+    }
+
+    selection.value = { kind: 'document' };
+};
 </script>
 
 <template>
@@ -219,6 +251,7 @@ const fieldSelectionListeners = (sectionId: string, blockId: string) =>
                 ? 'Plantilla del sílabo, solo lectura'
                 : 'Constructor visual de la plantilla del sílabo'
         "
+        @pointerdown.capture="clearSelectionFromBackground"
     >
         <Teleport to="body" :disabled="!fixedRibbon">
             <div
@@ -269,6 +302,19 @@ const fieldSelectionListeners = (sectionId: string, blockId: string) =>
                             class="flex min-w-0 items-center gap-2"
                         >
                             <template v-if="!activeTable">
+                                <Button
+                                    v-if="selection.kind === 'title'"
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    @click="titleActions?.openEdit()"
+                                >
+                                    <Pencil
+                                        data-icon="inline-start"
+                                        aria-hidden="true"
+                                    />
+                                    Editar título
+                                </Button>
                                 <template
                                     v-if="selectedSection && !selectedField"
                                 >
@@ -397,13 +443,41 @@ const fieldSelectionListeners = (sectionId: string, blockId: string) =>
                 :font-size="appearance.body_font_size"
                 :text-color="appearance.text_color"
             >
+                <TemplateTitleActions
+                    v-if="!readonly"
+                    ref="titleActions"
+                    :template-id="template.id"
+                    :title="template.titleBlock.text"
+                />
+                <div
+                    v-if="!readonly"
+                    class="mb-8 rounded-xs leading-tight outline-offset-4 transition-shadow"
+                    :class="{
+                        'cursor-pointer outline-2 outline-primary':
+                            selection.kind === 'title',
+                    }"
+                    :aria-label="`Título ${template.titleBlock.text}`"
+                    role="button"
+                    :aria-pressed="selection.kind === 'title'"
+                    tabindex="0"
+                    data-template-selectable="title"
+                    data-page-unit
+                    data-page-keep-next
+                    @pointerdown.stop="selectTitle"
+                    @keydown.enter.self="selectTitle"
+                >
+                    <h1 :style="titleStyle">
+                        {{ template.titleBlock.text }}
+                    </h1>
+                </div>
                 <h1
+                    v-else
                     class="mb-8 leading-tight"
                     :style="titleStyle"
                     data-page-unit
                     data-page-keep-next
                 >
-                    PROGRAMA DE ASIGNATURA (SÍLABO)
+                    {{ template.titleBlock.text }}
                 </h1>
 
                 <div
@@ -426,6 +500,7 @@ const fieldSelectionListeners = (sectionId: string, blockId: string) =>
                 <section
                     v-for="(section, sectionIndex) in template.sections"
                     :key="section.id"
+                    data-template-selectable="section"
                     class="relative mb-6 rounded-xs outline-offset-4 transition-shadow"
                     :class="{
                         'cursor-pointer outline-2 outline-primary/50':
@@ -494,6 +569,7 @@ const fieldSelectionListeners = (sectionId: string, blockId: string) =>
                         v-for="(block, fieldIndex) in section.blocks"
                         :key="block.id"
                         :id="`template-field-${block.id}`"
+                        data-template-selectable="field"
                         class="relative mb-4 scroll-mt-40 rounded-xs outline-offset-4 transition-shadow"
                         :class="{
                             'cursor-pointer outline-2 outline-primary':
