@@ -1,19 +1,24 @@
 <script setup lang="ts">
-import { useForm } from '@inertiajs/vue3';
+import { Form, useForm } from '@inertiajs/vue3';
+import { Upload } from '@lucide/vue';
 import { computed, watch } from 'vue';
 import { toast } from 'vue-sonner';
 import TemplateController from '@/actions/App/Modules/Configuration/Presentation/Http/Controllers/TemplateController';
+import FormSheet from '@/components/domain/FormSheet.vue';
+import FormSheetActions from '@/components/domain/FormSheetActions.vue';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
     Field,
     FieldContent,
+    FieldDescription,
     FieldError,
     FieldGroup,
     FieldLabel,
     FieldLegend,
     FieldSet,
 } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
 import {
     Select,
     SelectContent,
@@ -22,14 +27,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import {
-    Sheet,
-    SheetContent,
-    SheetDescription,
-    SheetFooter,
-    SheetHeader,
-    SheetTitle,
-} from '@/components/ui/sheet';
+import { Spinner } from '@/components/ui/spinner';
 import type {
     TemplateAppearance,
     TemplateAppearanceOptions,
@@ -40,6 +38,7 @@ const props = defineProps<{
     templateId: string;
     appearance: TemplateAppearance;
     options: TemplateAppearanceOptions;
+    institutionLogoUrl: string;
 }>();
 
 const emit = defineEmits<{
@@ -105,6 +104,15 @@ const updateOpen = (value: boolean): void => {
     close();
 };
 
+const sheetOpen = computed({
+    get: () => props.open,
+    set: updateOpen,
+});
+
+const logoUpdated = (): void => {
+    toast.success('Logo de la universidad actualizado.');
+};
+
 const submit = (): void => {
     form.patch(TemplateController.updateAppearance.url(props.templateId), {
         preserveScroll: true,
@@ -125,21 +133,77 @@ const submit = (): void => {
 </script>
 
 <template>
-    <Sheet :open="open" @update:open="updateOpen">
-        <SheetContent class="w-full overflow-hidden sm:max-w-lg">
-            <SheetHeader>
-                <SheetTitle>Personalizar plantilla</SheetTitle>
-                <SheetDescription>
-                    Ajustes institucionales aplicados a toda la hoja y a la
-                    exportación.
-                </SheetDescription>
-            </SheetHeader>
+    <FormSheet
+        v-model:open="sheetOpen"
+        trigger-label="Personalizar plantilla"
+        title="Personalizar plantilla"
+        description="Ajustes institucionales aplicados a toda la hoja y a la exportación."
+        :show-trigger="false"
+        wide
+    >
+        <template #default="{ close: closeSheet }">
+            <Form
+                v-bind="TemplateController.storeLogo.form()"
+                v-slot="{ errors, processing }"
+                class="mb-6"
+                reset-on-success
+                @success="logoUpdated"
+            >
+                <FieldSet class="gap-4 rounded-lg border p-4">
+                    <FieldLegend>Logo de la universidad</FieldLegend>
+                    <div
+                        class="flex min-h-20 items-center justify-center rounded-md border bg-background p-4"
+                    >
+                        <img
+                            :src="institutionLogoUrl"
+                            alt="Logo actual de la Universidad Estatal de Bolívar"
+                            class="h-auto max-h-10 max-w-full object-contain"
+                        />
+                    </div>
+                    <Field :data-invalid="Boolean(errors.logo)">
+                        <FieldLabel for="template-institution-logo" required>
+                            Nuevo logo
+                        </FieldLabel>
+                        <Input
+                            id="template-institution-logo"
+                            name="logo"
+                            type="file"
+                            accept="image/png"
+                            required
+                            :disabled="processing"
+                            :aria-invalid="Boolean(errors.logo)"
+                        />
+                        <FieldDescription>
+                            PNG transparente. Recomendado: 1012 × 190 px.
+                        </FieldDescription>
+                        <FieldError :errors="[errors.logo]" />
+                    </Field>
+                    <div class="flex justify-end">
+                        <Button
+                            type="submit"
+                            variant="outline"
+                            :disabled="processing"
+                        >
+                            <Spinner
+                                v-if="processing"
+                                data-icon="inline-start"
+                            />
+                            <Upload
+                                v-else
+                                data-icon="inline-start"
+                                aria-hidden="true"
+                            />
+                            Actualizar logo
+                        </Button>
+                    </div>
+                </FieldSet>
+            </Form>
 
-            <form class="flex min-h-0 flex-1 flex-col" @submit.prevent="submit">
-                <FieldGroup class="min-h-0 flex-1 overflow-y-auto px-4 pb-6">
-                    <FieldSet>
+            <form @submit.prevent="submit">
+                <FieldGroup class="grid gap-6 lg:grid-cols-2">
+                    <FieldSet class="gap-4 rounded-lg border p-4">
                         <FieldLegend>Documento</FieldLegend>
-                        <FieldGroup>
+                        <FieldGroup class="gap-4">
                             <Field>
                                 <FieldLabel for="template-orientation">
                                     Orientación
@@ -191,9 +255,9 @@ const submit = (): void => {
                         </FieldGroup>
                     </FieldSet>
 
-                    <FieldSet>
+                    <FieldSet class="gap-4 rounded-lg border p-4">
                         <FieldLegend>Tipografía</FieldLegend>
-                        <FieldGroup>
+                        <FieldGroup class="gap-4">
                             <Field>
                                 <FieldLabel for="template-font">
                                     Fuente general
@@ -320,9 +384,9 @@ const submit = (): void => {
                         </FieldGroup>
                     </FieldSet>
 
-                    <FieldSet>
+                    <FieldSet class="gap-4 rounded-lg border p-4">
                         <FieldLegend>Colores</FieldLegend>
-                        <FieldGroup>
+                        <FieldGroup class="grid gap-4 sm:grid-cols-2">
                             <Field
                                 v-for="setting in [
                                     {
@@ -392,9 +456,9 @@ const submit = (): void => {
                         </FieldGroup>
                     </FieldSet>
 
-                    <FieldSet>
+                    <FieldSet class="gap-4 rounded-lg border p-4">
                         <FieldLegend>Texto y alineación</FieldLegend>
-                        <FieldGroup>
+                        <FieldGroup class="gap-4">
                             <Field>
                                 <FieldLabel for="template-title-alignment">
                                     Título principal
@@ -528,23 +592,19 @@ const submit = (): void => {
                         </FieldGroup>
                     </FieldSet>
 
-                    <FieldError v-if="error" :errors="[error]" />
+                    <FieldError
+                        v-if="error"
+                        class="lg:col-span-2"
+                        :errors="[error]"
+                    />
                 </FieldGroup>
 
-                <SheetFooter class="shrink-0 border-t bg-card">
-                    <Button
-                        type="button"
-                        variant="outline"
-                        :disabled="form.processing"
-                        @click="close"
-                    >
-                        Cancelar
-                    </Button>
-                    <Button type="submit" :disabled="form.processing">
-                        Guardar apariencia
-                    </Button>
-                </SheetFooter>
+                <FormSheetActions
+                    :close="closeSheet"
+                    :processing="form.processing"
+                    label="Guardar apariencia"
+                />
             </form>
-        </SheetContent>
-    </Sheet>
+        </template>
+    </FormSheet>
 </template>

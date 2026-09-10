@@ -80,6 +80,7 @@ watch(
         :template-id="template.id"
         :appearance="template.appearance"
         :options="appearanceOptions"
+        :institution-logo-url="logos.institution"
         @preview="previewAppearance = $event"
     />
 </template>

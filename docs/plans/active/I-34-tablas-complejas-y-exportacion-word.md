@@ -26,14 +26,14 @@ documento Word salga igual a la hoja.
 
 ## Cómo se descompone una tabla compleja
 
-| Pieza | Qué es | Dónde vive |
-|---|---|---|
-| Columnas | Lista plana; cada una con clave, nombre y tipo (texto o número) | `configuracion.table.columns` del bloque |
-| Grupo | Cabecera que abraza columnas vecinas (Docencia → ACD) | `columns[].group` + `table.groups` |
-| Agrupamiento | Cabecera superior que abraza columnas y grupos vecinos (Horas por semana) | `columns[].band` + `table.bands` |
-| Cabecera de unidad | Datos sueltos encima de la tabla (Nombre de la unidad, Resultados) | `table.header_fields`; valores en una fila `_kind = unit` |
-| Totales | Fila final que suma las columnas numéricas | `table.totals` |
-| Por unidad | La tabla entera se repite (Unidad 1, 2, 3) | `table.repeat`; cada fila lleva `_unit` |
+| Pieza              | Qué es                                                                    | Dónde vive                                                |
+| ------------------ | ------------------------------------------------------------------------- | --------------------------------------------------------- |
+| Columnas           | Lista plana; cada una con clave, nombre y tipo (texto o número)           | `configuracion.table.columns` del bloque                  |
+| Grupo              | Cabecera que abraza columnas vecinas (Docencia → ACD)                     | `columns[].group` + `table.groups`                        |
+| Agrupamiento       | Cabecera superior que abraza columnas y grupos vecinos (Horas por semana) | `columns[].band` + `table.bands`                          |
+| Cabecera de unidad | Datos sueltos encima de la tabla (Nombre de la unidad, Resultados)        | `table.header_fields`; valores en una fila `_kind = unit` |
+| Totales            | Fila final que suma las columnas numéricas                                | `table.totals`                                            |
+| Por unidad         | La tabla entera se repite (Unidad 1, 2, 3)                                | `table.repeat`; cada fila lleva `_unit`                   |
 
 Reglas (`TableLayout::normalize`): claves únicas, columnas de un grupo o agrupamiento
 siempre vecinas, un grupo entero dentro de un solo agrupamiento, máximo dos niveles,
@@ -81,7 +81,7 @@ defecto de las tablas sin esquema y de las listas.
       antes de abrir su convocatoria. Se carga en el paso del Panel, sin entrada de
       sidebar. PNG sin fondo (regla `TransparentPng`, canal alfa); la medida no se
       exige: `InstitutionalLogos::fit` escala conservando la proporción y centra sobre
-      lienzo transparente de 850 × 315 o 600 × 180 (decisión del responsable del
+      lienzo transparente de 1012 × 190 o 600 × 180 (decisión del responsable del
       producto, 2026-09-03: mejor ajustar que rechazar). Se sirven en `logos/institucion` y
       `logos/facultad/{id}`; el Word lee el archivo del disco privado. Sin subida, el
       logo de fábrica es solo una muestra y no habilita la apertura.

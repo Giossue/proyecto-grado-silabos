@@ -31,7 +31,7 @@ provide(pageTitleKey, pageTitle);
 <template>
     <AppShell variant="sidebar">
         <AppSidebar />
-        <AppContent variant="sidebar" class="overflow-x-clip">
+        <AppContent variant="sidebar" class="overflow-clip">
             <AppSidebarHeader
                 :breadcrumbs="breadcrumbs"
                 :page-title="pageTitle"

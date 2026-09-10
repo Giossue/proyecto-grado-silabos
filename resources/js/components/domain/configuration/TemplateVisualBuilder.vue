@@ -445,20 +445,27 @@ const clearSelectionFromBackground = (event: PointerEvent): void => {
                 :text-color="appearance.text_color"
             >
                 <div
-                    class="mb-6 flex flex-col items-start gap-4"
+                    class="mb-5 flex w-full items-center justify-between gap-6"
+                    :style="{
+                        marginTop: `-${appearance.margin_cm * 0.4}cm`,
+                    }"
                     data-page-unit
                     data-page-keep-next
                 >
-                    <img
-                        :src="logos.institution"
-                        alt="Universidad Estatal de Bolívar"
-                        class="h-auto w-full object-contain object-left"
-                    />
-                    <img
-                        :src="logos.faculty"
-                        alt="Ejemplo de logo de facultad"
-                        class="h-auto w-4/5 max-w-full object-contain object-left"
-                    />
+                    <div class="flex min-w-0 flex-1 justify-start">
+                        <img
+                            :src="logos.institution"
+                            alt="Universidad Estatal de Bolívar"
+                            class="h-auto max-h-10 max-w-full object-contain object-left"
+                        />
+                    </div>
+                    <div class="flex min-w-0 flex-1 justify-end">
+                        <img
+                            :src="logos.faculty"
+                            alt="Ejemplo de logo de facultad"
+                            class="h-auto max-h-14 max-w-full object-contain object-right"
+                        />
+                    </div>
                 </div>
 
                 <TemplateTitleActions

@@ -20,7 +20,7 @@ class InstitutionalLogos
     public const DISK = 'private';
 
     /** @var array{width: positive-int, height: positive-int} */
-    public const INSTITUTION = ['width' => 850, 'height' => 315];
+    public const INSTITUTION = ['width' => 1012, 'height' => 190];
 
     /** @var array{width: positive-int, height: positive-int} */
     public const FACULTY = ['width' => 600, 'height' => 180];
@@ -119,7 +119,7 @@ class InstitutionalLogos
 
         return $disk->exists(self::INSTITUTION_PATH)
             ? $disk->path(self::INSTITUTION_PATH)
-            : public_path('images/silabo/ueb.jpeg');
+            : public_path('images/silabo/logo-universidad.png');
     }
 
     /** Ruta absoluta del logo de la facultad; el de fábrica si no tiene o no existe. */

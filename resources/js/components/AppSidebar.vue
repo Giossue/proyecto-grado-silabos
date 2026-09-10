@@ -82,6 +82,11 @@ const mainNavItems = computed<NavItem[]>(() => [
     ...(activeRole.value?.role === 'administrador'
         ? [
               {
+                  title: 'Convocatorias',
+                  href: processesIndex(),
+                  icon: CalendarRange,
+              },
+              {
                   title: 'Usuarios y roles',
                   href: usersIndex(),
                   icon: UsersRound,
@@ -98,12 +103,12 @@ const mainNavItems = computed<NavItem[]>(() => [
                           href: academicIndex('facultades'),
                       },
                       {
-                          title: 'Carreras',
-                          href: academicIndex('carreras'),
-                      },
-                      {
                           title: 'Campus',
                           href: academicIndex('campus'),
+                      },
+                      {
+                          title: 'Carreras',
+                          href: academicIndex('carreras'),
                       },
                       {
                           title: 'Periodos académicos',
@@ -115,11 +120,6 @@ const mainNavItems = computed<NavItem[]>(() => [
                   title: 'Plantilla',
                   href: templatesIndex(),
                   icon: FileStack,
-              },
-              {
-                  title: 'Convocatorias',
-                  href: processesIndex(),
-                  icon: CalendarRange,
               },
               {
                   title: 'Auditoría',

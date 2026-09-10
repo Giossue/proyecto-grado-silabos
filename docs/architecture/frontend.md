@@ -122,8 +122,9 @@ Es presentación de la muestra administrativa, no un motor de impresión ni un c
 del formulario docente. Una unidad indivisible excepcionalmente más alta que el área
 útil se conserva visible; no se recorta ni se descarta contenido.
 
-`AppSidebarLayout` y `PageFrame` recortan el exceso horizontal con `overflow-x-clip`;
-la hoja mantiene su propio desplazamiento horizontal en pantallas estrechas.
+`AppSidebarLayout` recorta su contenido al contorno redondeado del `SidebarInset` con
+`overflow-clip`; `PageFrame` recorta el exceso horizontal y la hoja mantiene su propio
+desplazamiento horizontal en pantallas estrechas.
 
 ## Constructor progresivo de plantilla (I-56/I-58/I-60)
 
@@ -161,6 +162,9 @@ valores normalizados en `plantillas_silabo.mapeo_documento.appearance`. Un snaps
 revisión ya copia ese mapa; `SyllabusWordDocument` interpreta los mismos valores para
 DOCX. No se persisten CSS, clases ni colores libres. `ProcessLocks` y `InProgressWork`
 siguen protegiendo tanto estructura como apariencia.
+La hoja reutiliza `FormSheet` y `FormSheetActions`; su primera sección permite a
+Administración previsualizar y reemplazar el logo institucional mediante el endpoint
+auditado existente, sin abrir un segundo panel.
 
 Los componentes documentales sirven a las dos rutas. Cuando Administración selecciona
 una tabla y pulsa **Editar tabla**, `TemplateTableDesigner` monta `TemplateTableEditor`

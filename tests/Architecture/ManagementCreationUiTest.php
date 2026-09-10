@@ -982,7 +982,11 @@ it('construye la plantilla desde bloques que contienen campos tipados', function
     );
     expect($appearance)
         ->toBeString()
-        ->toContain('<Sheet')
+        ->toContain('<FormSheet')
+        ->toContain('<FormSheetActions')
+        ->toContain('TemplateController.storeLogo.form()')
+        ->toContain('Logo de la universidad')
+        ->toContain('institutionLogoUrl')
         ->toContain('Personalizar plantilla')
         ->toContain('Orientación')
         ->toContain('Márgenes')

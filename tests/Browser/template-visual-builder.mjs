@@ -193,9 +193,9 @@ createApp({render: () => h('main', {class:'min-h-screen bg-muted p-6'}, [
     h(TooltipProvider, null, {default: () => h(TemplateVisualBuilder, {
         template: template.value, appearance: preview.value, blockTypes,
         logos: {
-            institution: '/images/silabo/ueb.jpeg',
+            institution: '/images/silabo/logo-universidad.png',
             faculty: '/images/silabo/facultad.jpeg',
-            institution_size: {width: 850, height: 315},
+            institution_size: {width: 1012, height: 190},
             faculty_size: {width: 600, height: 180},
         },
         variables: [], identificationDesign: {type:'doc',content:[{type:'paragraph'}]},
@@ -204,6 +204,7 @@ createApp({render: () => h('main', {class:'min-h-screen bg-muted p-6'}, [
     h(TemplateAppearanceSheet, {
         open: appearanceOpen.value, templateId: template.value.id,
         appearance: appearance.value, options,
+        institutionLogoUrl: '/images/silabo/logo-universidad.png',
         'onUpdate:open': value => appearanceOpen.value = value,
         onPreview: value => preview.value = value,
     }),

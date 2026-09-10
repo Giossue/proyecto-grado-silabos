@@ -54,7 +54,7 @@ createApp({render: () => h('main', {class: 'min-h-screen bg-muted p-6'}, [
         logos: {
             institution: '/images/silabo/ueb.jpeg',
             faculty: '/images/silabo/facultad.jpeg',
-            institution_size: {width: 850, height: 315},
+            institution_size: {width: 1012, height: 190},
             faculty_size: {width: 600, height: 180},
         },
         identificationDesign: {type: 'doc', content: [{type: 'paragraph'}]},

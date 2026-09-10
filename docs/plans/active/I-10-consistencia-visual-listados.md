@@ -24,7 +24,7 @@ Dashboard; las demás pantallas no presentan resúmenes métricos independientes
 - El color de fondo de la aplicación se conserva y las superficies interactivas usan
   tokens semánticos diferenciados en claro y oscuro.
 - ADM-04 deja de ocultar catálogos tras pestañas. `Estructura académica` es un menú del
-  sidebar con rutas hijas para Facultades, Carreras, Campus, Modalidades y Periodos
+  sidebar con rutas hijas para Facultades, Campus, Carreras, Modalidades y Periodos
   académicos.
 - La relación Facultad → Carrera continúa normalizada y visible; campus, modalidades y
   periodos siguen siendo catálogos independientes.

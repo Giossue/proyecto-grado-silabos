@@ -39,7 +39,7 @@ class InstitutionalLogosTest extends TestCase
     public function test_administrator_replaces_the_university_logo_and_it_is_served_publicly(): void
     {
         $this->actingAsAdministrator()
-            ->post(route('admin.templates.logo.store'), ['logo' => $this->transparentPng(850, 315)])
+            ->post(route('admin.templates.logo.store'), ['logo' => $this->transparentPng(1012, 190)])
             ->assertRedirect()
             ->assertSessionHasNoErrors();
 
@@ -54,7 +54,7 @@ class InstitutionalLogosTest extends TestCase
     {
         $this->actingAsAdministrator()
             ->from(route('admin.templates.index'))
-            ->post(route('admin.templates.logo.store'), ['logo' => $this->opaquePng(850, 315)])
+            ->post(route('admin.templates.logo.store'), ['logo' => $this->opaquePng(1012, 190)])
             ->assertSessionHasErrors('logo');
         Storage::disk('private')->assertMissing('logos/institucion.png');
 
@@ -64,7 +64,7 @@ class InstitutionalLogosTest extends TestCase
             ->assertRedirect()
             ->assertSessionHasNoErrors();
 
-        $this->assertStoredPngHasSize('logos/institucion.png', 850, 315);
+        $this->assertStoredPngHasSize('logos/institucion.png', 1012, 190);
     }
 
     public function test_administrator_can_create_a_faculty_with_or_without_its_logo(): void

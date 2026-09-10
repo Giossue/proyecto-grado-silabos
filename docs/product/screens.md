@@ -41,7 +41,7 @@
 | COR-11 | Fuentes académicas                                            |
 | COR-12 | Informes                                                      |
 | COR-13 | Malla, constructor visual/formulario y materias de la carrera |
-| COR-14 | Materias programadas en el período y sus paralelos             |
+| COR-14 | Materias programadas en el período y sus paralelos            |
 | COR-15 | Asignaciones docentes de la carrera                           |
 
 En COR-15, una sola acción **Gestionar docente** reúne **Crear docente** y **Asignar
@@ -153,7 +153,7 @@ paralelo. Son operaciones separadas y ninguna levanta los bloqueos académicos.
   sin iniciar; Coordinación, avance, días, por revisar y sin iniciar; Docencia, sílabos
   por entregar, días, avance de sus borradores y por corregir. Sin conteos de catálogo.
 - El Panel de cada rol abre con «Puesta en marcha»: barra de progreso y los pasos en
-  orden (Administración: facultades, carreras, campus, modalidades, periodo, cuentas,
+  orden (Administración: facultades, campus, carreras, modalidades, periodo, cuentas,
   coordinadores, plantilla, proceso; Coordinación: logo de la facultad, malla, materias
   y paralelos, docentes, fuentes, convocatoria; Docencia: recibir, iniciar, enviar). El
   logo se carga en un `Dialog` desde el propio paso, sin opción en el sidebar. Cada paso
@@ -161,11 +161,13 @@ paralelo. Son operaciones separadas y ninguna levanta los bloqueos académicos.
   completarse. El encabezado repite el avance en miniatura (barra con color y «n/m», tooltip
   «Configuración del sistema») y lleva al Panel; se recalcula en cada petición, así
   que reaparece si algo se borra.
-- Encabezado del sílabo: logo de la universidad y, debajo, logo de la facultad de la
-  carrera, antes del bloque de título. Administración puede cargar el logo de facultad al
+- Encabezado del sílabo: logo de la universidad a la izquierda y logo de la facultad de la
+  carrera a la derecha, dentro del ancho útil de los márgenes y antes del bloque de título.
+  Administración reemplaza el logo institucional desde la hoja «Personalizar plantilla»
+  de ADM-06 y puede cargar el logo de facultad al
   crearla o editarla, pero es opcional en ADM-04. Si falta, Coordinación debe cargarlo
   desde «Puesta en marcha» del Panel antes de abrir su convocatoria. Ambos son PNG sin
-  fondo; el sistema los ajusta a la medida fija (universidad 850 × 315 px, facultad
+  fondo; el sistema los ajusta a la medida fija (universidad 1012 × 190 px, facultad
   600 × 180 px) conservando la proporción y centrando sobre transparente. La plantilla
   institucional usa el logo de facultad de muestra; el sílabo real usa el de su carrera.
 - Si una sección tiene un solo campo, no lleva subtítulo «n.1»: basta el título de la
@@ -292,11 +294,11 @@ paralelo. Son operaciones separadas y ninguna levanta los bloqueos académicos.
 
 ### Cobertura del patrón de altas
 
-| Rol           | Interfaces cubiertas                            | Comportamiento                                                                                                                                                                                                                              |
-| ------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Administrador | ADM-02, ADM-03, ADM-04, ADM-05, ADM-06 y ADM-12 | Cuentas, roles, catálogos, coordinaciones, campos y procesos de sílabos se crean desde una acción que abre el `Sheet` derecho. La única plantilla institucional se crea de inmediato porque no pide datos.                                  |
+| Rol           | Interfaces cubiertas                            | Comportamiento                                                                                                                                                                                                                                 |
+| ------------- | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Administrador | ADM-02, ADM-03, ADM-04, ADM-05, ADM-06 y ADM-12 | Cuentas, roles, catálogos, coordinaciones, campos y procesos de sílabos se crean desde una acción que abre el `Sheet` derecho. La única plantilla institucional se crea de inmediato porque no pide datos.                                     |
 | Coordinador   | COR-02, COR-06, COR-11, COR-13, COR-14 y COR-15 | Convocatorias, observaciones, fuentes, mallas, materias programadas, paralelos y asignaciones docentes usan el mismo patrón. En COR-15, los selectores permiten buscar docentes por nombre o correo y paralelos por materia, período o código. |
-| Docente       | DOC-02 a DOC-10                                 | No administra colecciones maestras. Edición, IA, envío y respuestas son flujos académicos de página completa, no formularios de alta.                                                                                                       |
+| Docente       | DOC-02 a DOC-10                                 | No administra colecciones maestras. Edición, IA, envío y respuestas son flujos académicos de página completa, no formularios de alta.                                                                                                          |
 
 Selección de rol, filtros, configuración personal, resolución de contradicciones y
 acciones de ciclo de vida como publicar, activar, aprobar o reabrir permanecen en su
