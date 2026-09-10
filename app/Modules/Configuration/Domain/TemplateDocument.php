@@ -89,6 +89,18 @@ final class TemplateDocument
                     self::fail('Formato de lista no válido.');
                 }
                 $node['attrs']['listStyle'] = $listStyle;
+                if ($type === 'column') {
+                    $role = $attrs['role'] ?? null;
+                    $sum = $attrs['sum'] ?? null;
+                    if ($role !== null && (! is_string($role) || ! in_array($role, TableLayout::COLUMN_ROLES, true))) {
+                        self::fail('Función de columna no permitida.');
+                    }
+                    if ($sum !== null && ! is_bool($sum)) {
+                        self::fail('Totalización de columna no válida.');
+                    }
+                    $node['attrs']['role'] = $role;
+                    $node['attrs']['sum'] = $sum;
+                }
             }
             if ($type === 'paragraph') {
                 $align = $attrs['textAlign'] ?? 'left';
@@ -102,7 +114,19 @@ final class TemplateDocument
                 if ($key !== null && (! is_string($key) || ! preg_match('/^[a-z][a-z0-9_]{0,119}$/D', $key))) {
                     self::fail('La tabla repetible no tiene un campo válido.');
                 }
-                $node['attrs'] = ['repeatKey' => $key];
+                $groupByUnit = $attrs['groupByUnit'] ?? null;
+                if ($groupByUnit !== null && ! is_bool($groupByUnit)) {
+                    self::fail('La agrupación por unidades no es válida.');
+                }
+                $visualStructure = $attrs['visualStructure'] ?? null;
+                if ($visualStructure !== null && ! is_bool($visualStructure)) {
+                    self::fail('El origen visual de la estructura no es válido.');
+                }
+                $node['attrs'] = [
+                    'repeatKey' => $key,
+                    'groupByUnit' => $groupByUnit,
+                    'visualStructure' => $visualStructure,
+                ];
                 if ($insideTable && $key !== null) {
                     self::fail('Una tabla repetible no puede estar dentro de otra tabla.');
                 }

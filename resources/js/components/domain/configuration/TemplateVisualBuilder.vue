@@ -362,12 +362,6 @@ const fieldSelectionListeners = (sectionId: string, blockId: string) =>
             </div>
         </Teleport>
 
-        <div
-            v-if="ribbon && !readonly"
-            id="template-editor-context-panel"
-            class="mb-4 min-w-0 empty:hidden"
-        />
-
         <div class="min-w-0 overflow-x-auto p-1 pb-4">
             <PaginatedDocument
                 :orientation="appearance.orientation"
@@ -525,7 +519,6 @@ const fieldSelectionListeners = (sectionId: string, blockId: string) =>
                             :appearance="appearance"
                             :colors="colorOptions"
                             ribbon-target="#template-editor-ribbon"
-                            context-panel-target="#template-editor-context-panel"
                             @activate="selectField(section.id, block.id)"
                             @editing-change="
                                 updateTableEditing(section.id, block.id, $event)

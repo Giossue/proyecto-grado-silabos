@@ -116,6 +116,10 @@ final class SaveTemplateDocument
             $layout = TableLayout::fromBlock($block);
             $columnKeys = [];
             $headerKeys = [];
+            $summedKeys = [];
+            $hasTotalRow = false;
+            $groupByUnit = (bool) ($layout['repeat']['enabled'] ?? false);
+            $visualStructure = false;
             foreach (TemplateDocument::nodes($normalized, 'table') as $table) {
                 $key = $table['attrs']['repeatKey'];
                 if ($key === null) {
@@ -128,6 +132,10 @@ final class SaveTemplateDocument
                 if (! isset($fields[$key]) || $fields[$key]->tipo !== 'repetible' || $layout === null) {
                     TemplateDocument::fail('No se reconoce el origen de las filas de la tabla.');
                 }
+                if (is_bool($table['attrs']['groupByUnit'] ?? null)) {
+                    $groupByUnit = $table['attrs']['groupByUnit'];
+                }
+                $visualStructure = $visualStructure || ($table['attrs']['visualStructure'] ?? false) === true;
                 $used[] = $key;
                 $hasRecords = false;
                 $recordKeys = [];
@@ -135,6 +143,7 @@ final class SaveTemplateDocument
                 foreach ($table['content'] as $row) {
                     $role = $row['attrs']['rowRole'];
                     $hasRecords = $hasRecords || $role === 'record';
+                    $hasTotalRow = $hasTotalRow || $role === 'total';
                     foreach (TemplateDocument::nodes($row, 'column') as $node) {
                         $attrs = $node['attrs'];
                         if ($role === 'unit') {
@@ -143,14 +152,29 @@ final class SaveTemplateDocument
                             if (! in_array($attrs['kind'], ['texto_largo', 'numero'], true)) {
                                 TemplateDocument::fail('Las columnas admiten texto o número.');
                             }
-                            if (isset($columnKeys[$attrs['key']]) && $columnKeys[$attrs['key']] !== $attrs) {
+                            $knownColumn = $columnKeys[$attrs['key']] ?? null;
+                            if ($knownColumn !== null
+                                && ($knownColumn['label'] !== $attrs['label'] || $knownColumn['kind'] !== $attrs['kind'])) {
                                 TemplateDocument::fail('Un campo de columna debe mantener el mismo nombre y tipo en todas sus apariciones.');
                             }
-                            $columnKeys[$attrs['key']] = $attrs;
+                            if ($knownColumn !== null
+                                && ($knownColumn['role'] ?? null) !== null
+                                && ($attrs['role'] ?? null) !== null
+                                && $knownColumn['role'] !== $attrs['role']) {
+                                TemplateDocument::fail('Un campo de columna debe conservar la misma función especial.');
+                            }
+                            $columnKeys[$attrs['key']] = [
+                                ...($knownColumn ?? $attrs),
+                                'role' => $attrs['role'] ?? $knownColumn['role'] ?? null,
+                                'sum' => $role === 'total'
+                                    ? true
+                                    : ($attrs['sum'] ?? $knownColumn['sum'] ?? null),
+                            ];
                             if ($role === 'record') {
                                 $recordKeys[] = $attrs['key'];
                             } else {
                                 $totalKeys[] = $attrs['key'];
+                                $summedKeys[] = $attrs['key'];
                             }
                         } else {
                             TemplateDocument::fail('Un campo de columna debe estar en una fila de datos, unidad o total.');
@@ -176,14 +200,24 @@ final class SaveTemplateDocument
                         'key' => $key, 'label' => $attrs['label'], 'type' => $type,
                         'group' => $known[$key]['group'] ?? null,
                         'band' => $known[$key]['band'] ?? null,
-                        'sum' => $known[$key]['sum'] ?? false,
+                        'sum' => $visualStructure
+                            ? in_array($key, $summedKeys, true)
+                            : ($attrs['sum'] ?? $known[$key]['sum'] ?? false),
                         'width' => $known[$key]['width'] ?? null,
-                        'role' => $known[$key]['role'] ?? null,
+                        'role' => $attrs['role'] ?? $known[$key]['role'] ?? null,
                     ];
                 }
                 $configuration['table'] = TableLayout::normalize([
                     ...$layout, 'columns' => $columns,
                     'header_fields' => array_values($headerKeys),
+                    'totals' => [
+                        ...$layout['totals'],
+                        'enabled' => $visualStructure ? $hasTotalRow : $layout['totals']['enabled'],
+                    ],
+                    'repeat' => [
+                        ...$layout['repeat'],
+                        'enabled' => $visualStructure ? $groupByUnit : $layout['repeat']['enabled'],
+                    ],
                 ]);
             }
             $this->work->requireConfirmation($request);

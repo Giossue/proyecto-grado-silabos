@@ -10,6 +10,7 @@ import {
     Braces,
     ChevronDown,
     Columns3,
+    Database,
     Eraser,
     Italic,
     PaintBucket,
@@ -43,6 +44,8 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import type { CSSProperties } from 'vue';
 import TemplateToolbarButton from '@/components/domain/configuration/TemplateToolbarButton.vue';
 import TemplateToolbarSelect from '@/components/domain/configuration/TemplateToolbarSelect.vue';
+import FormSheet from '@/components/domain/FormSheet.vue';
+import FormSheetActions from '@/components/domain/FormSheetActions.vue';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -54,9 +57,13 @@ import {
 } from '@/components/ui/dialog';
 import {
     DropdownMenu,
+    DropdownMenuCheckboxItem,
     DropdownMenuContent,
     DropdownMenuGroup,
     DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuRadioGroup,
+    DropdownMenuRadioItem,
     DropdownMenuSeparator,
     DropdownMenuSub,
     DropdownMenuSubContent,
@@ -66,6 +73,7 @@ import {
 import {
     Field,
     FieldDescription,
+    FieldError,
     FieldGroup,
     FieldLabel,
 } from '@/components/ui/field';
@@ -73,6 +81,7 @@ import { Input } from '@/components/ui/input';
 import {
     Select,
     SelectContent,
+    SelectGroup,
     SelectItem,
     SelectTrigger,
     SelectValue,
@@ -84,6 +93,12 @@ import {
     TooltipTrigger,
 } from '@/components/ui/tooltip';
 import type {
+    TableColumn,
+    TableColumnRole,
+    TableLayout,
+} from '@/lib/tableLayout';
+import { tableKeyFor } from '@/lib/tableLayout';
+import type {
     DocumentField,
     DocumentNode,
     TemplateVariable,
@@ -92,6 +107,7 @@ import { nodesOfType } from '@/lib/templateDocument';
 
 type CellAlignment = 'left' | 'center' | 'right' | 'justify';
 type CellBorder = 'thin' | 'thick' | 'none';
+type TableRowRole = 'fixed' | 'record' | 'unit' | 'total';
 type CellAttributes = {
     backgroundColor?: string | null;
     textColor?: string | null;
@@ -111,6 +127,7 @@ const props = defineProps<{
     colors: { value: string; label: string }[];
     fields: DocumentField[];
     variables: TemplateVariable[];
+    layout?: TableLayout | null;
     toolbarTarget?: string;
 }>();
 
@@ -258,6 +275,12 @@ const inlineNode = (name: 'field' | 'column' | 'variable') =>
                       choice: { default: null },
                       options: { default: null },
                       listStyle: { default: null },
+                      ...(name === 'column'
+                          ? {
+                                role: { default: null },
+                                sum: { default: null },
+                            }
+                          : {}),
                   },
         parseHTML: () => [
             {
@@ -304,6 +327,12 @@ const newFieldLabel = ref('');
 const newFieldType = ref('texto_largo');
 const newFieldOptions = ref('Sí, No');
 const newFieldError = ref('');
+const newDataOpen = ref(false);
+const newDataLabel = ref('');
+const newDataType = ref<'text' | 'number'>('text');
+const newDataRole = ref<TableColumnRole | 'none'>('none');
+const newDataScope = ref<'record' | 'unit'>('record');
+const newDataError = ref('');
 const editor = useEditor({
     content: props.document,
     editorProps: {
@@ -332,7 +361,12 @@ const editor = useEditor({
         TextAlign.configure({ types: ['paragraph'] }),
         Table.extend({
             addAttributes() {
-                return { ...this.parent?.(), repeatKey: { default: null } };
+                return {
+                    ...this.parent?.(),
+                    repeatKey: { default: null },
+                    groupByUnit: { default: null },
+                    visualStructure: { default: null },
+                };
             },
         }).configure({
             resizable: true,
@@ -400,6 +434,122 @@ const selectedCell = computed<CellAttributes>(() => {
 });
 
 const inCell = computed(() => Object.keys(selectedCell.value).length > 0);
+const ancestorAttributes = (type: 'table' | 'tableRow') => {
+    const current = state.value;
+
+    if (!current) {
+        return null;
+    }
+
+    const { $from } = current.state.selection;
+
+    for (let depth = $from.depth; depth > 0; depth--) {
+        const node = $from.node(depth);
+
+        if (node.type.name === type) {
+            return node.attrs as Record<string, unknown>;
+        }
+    }
+
+    return null;
+};
+const selectedRowRole = computed<TableRowRole>(() => {
+    void version.value;
+
+    const role = ancestorAttributes('tableRow')?.rowRole;
+
+    return ['record', 'unit', 'total'].includes(String(role))
+        ? (role as TableRowRole)
+        : 'fixed';
+});
+const groupedByUnit = computed(() => {
+    void version.value;
+
+    const value = ancestorAttributes('table')?.groupByUnit;
+
+    return typeof value === 'boolean'
+        ? value
+        : Boolean(props.layout?.repeat.enabled);
+});
+const repeatField = computed(() =>
+    props.fields.find((field) => field.type === 'repetible'),
+);
+const repeatedColumns = computed<TableColumn[]>(() => {
+    void version.value;
+
+    const columns = new Map(
+        (props.layout?.columns ?? []).map((column) => [column.key, column]),
+    );
+    const document =
+        (editor.value?.getJSON() as DocumentNode | undefined) ?? props.document;
+
+    for (const row of nodesOfType(document, 'tableRow')) {
+        if (!['record', 'total'].includes(String(row.attrs?.rowRole))) {
+            continue;
+        }
+
+        for (const node of nodesOfType(row, 'column')) {
+            const key = String(node.attrs?.key ?? '');
+
+            if (!key || columns.has(key)) {
+                continue;
+            }
+
+            columns.set(key, {
+                key,
+                label: String(node.attrs?.label ?? key),
+                type: node.attrs?.kind === 'numero' ? 'number' : 'text',
+                group: null,
+                band: null,
+                sum: Boolean(node.attrs?.sum),
+                width: null,
+                role: (node.attrs?.role as TableColumnRole | null) ?? null,
+            });
+        }
+    }
+
+    return [...columns.values()];
+});
+const selectedRowHasColumns = computed(() => {
+    void version.value;
+
+    const current = state.value;
+
+    if (!current) {
+        return false;
+    }
+
+    const { $from } = current.state.selection;
+
+    for (let depth = $from.depth; depth > 0; depth--) {
+        const node = $from.node(depth);
+
+        if (node.type.name === 'tableRow') {
+            return (
+                nodesOfType(node.toJSON() as DocumentNode, 'column').length > 0
+            );
+        }
+    }
+
+    return false;
+});
+const usedColumnRoles = computed(
+    () =>
+        new Set(
+            repeatedColumns.value
+                .map((column) => column.role)
+                .filter((role): role is TableColumnRole => role !== null),
+        ),
+);
+const rowRoleLabel = computed(
+    () =>
+        ({
+            fixed: 'Fila normal',
+            record: 'Fila que completa el docente',
+            unit: 'Datos de la unidad',
+            total: 'Fila de totales',
+        })[selectedRowRole.value],
+);
 const teacherFields = computed(() => {
     void version.value;
     const byKey = new Map(
@@ -464,6 +614,92 @@ const can = (command: TableCommand) => {
     const candidate = commands?.[command];
 
     return typeof candidate === 'function' ? candidate() : false;
+};
+
+const setAncestorAttribute = (
+    type: 'table' | 'tableRow',
+    attribute: string,
+    value: unknown,
+): void => {
+    const current = state.value;
+
+    if (!current) {
+        return;
+    }
+
+    const { $from } = current.state.selection;
+
+    for (let depth = $from.depth; depth > 0; depth--) {
+        if ($from.node(depth).type.name !== type) {
+            continue;
+        }
+
+        current.view.dispatch(
+            current.state.tr.setNodeAttribute(
+                $from.before(depth),
+                attribute,
+                value,
+            ),
+        );
+        current.commands.focus();
+
+        return;
+    }
+};
+
+const enableRepeatedTable = (): boolean => {
+    const field = repeatField.value;
+
+    if (!field) {
+        return false;
+    }
+
+    setAncestorAttribute('table', 'repeatKey', field.key);
+    setAncestorAttribute('table', 'visualStructure', true);
+
+    return true;
+};
+
+const setRowRole = (value: unknown): void => {
+    if (
+        !['fixed', 'record', 'unit', 'total'].includes(String(value)) ||
+        !repeatField.value
+    ) {
+        return;
+    }
+
+    const role = value as TableRowRole;
+
+    if (
+        role === 'fixed' &&
+        selectedRowRole.value !== 'fixed' &&
+        selectedRowHasColumns.value
+    ) {
+        return;
+    }
+
+    if (role !== 'fixed' && !enableRepeatedTable()) {
+        return;
+    }
+
+    if (role === 'fixed') {
+        setAncestorAttribute('table', 'visualStructure', true);
+    }
+
+    setAncestorAttribute('tableRow', 'rowRole', role);
+};
+
+const deleteSelectedRow = (): void => {
+    setAncestorAttribute('table', 'visualStructure', true);
+    state.value?.chain().focus().deleteRow().run();
+};
+
+const setGroupedByUnit = (value: boolean): void => {
+    if (!enableRepeatedTable()) {
+        return;
+    }
+
+    setAncestorAttribute('table', 'groupByUnit', value);
 };
 
 const setCell = (attribute: keyof CellAttributes, value: unknown): void => {
@@ -558,6 +794,129 @@ const insertField = (
             listStyle: null,
         },
     });
+
+const insertRepeatedColumn = (column: TableColumn): void => {
+    if (
+        !repeatField.value ||
+        !['record', 'total'].includes(selectedRowRole.value)
+    ) {
+        return;
+    }
+
+    enableRepeatedTable();
+    insertNode({
+        type: 'column',
+        attrs: {
+            key: column.key,
+            label: column.label,
+            kind: column.type === 'number' ? 'numero' : 'texto_largo',
+            role: column.role ?? null,
+            sum: selectedRowRole.value === 'total' || Boolean(column.sum),
+        },
+    });
+};
+
+const openNewData = (): void => {
+    if (!repeatField.value || selectedRowRole.value === 'total') {
+        return;
+    }
+
+    newDataScope.value = selectedRowRole.value === 'unit' ? 'unit' : 'record';
+    newDataLabel.value = '';
+    newDataType.value = 'text';
+    newDataRole.value = 'none';
+    newDataError.value = '';
+    newDataOpen.value = true;
+};
+
+const updateNewDataOpen = (value: boolean): void => {
+    newDataOpen.value = value;
+
+    if (!value) {
+        newDataError.value = '';
+    }
+};
+
+const setNewDataType = (value: unknown): void => {
+    if (value !== 'text' && value !== 'number') {
+        return;
+    }
+
+    newDataType.value = value;
+
+    if (value === 'text') {
+        newDataRole.value = 'none';
+    }
+};
+
+const setNewDataRole = (value: unknown): void => {
+    if (
+        value === 'none' ||
+        ['week', 'hours_acd', 'hours_ape', 'hours_aa'].includes(String(value))
+    ) {
+        newDataRole.value = value as TableColumnRole | 'none';
+
+        if (value !== 'none') {
+            newDataType.value = 'number';
+        }
+    }
+};
+
+const createRepeatedData = (): void => {
+    const label = newDataLabel.value.trim();
+
+    if (!label) {
+        newDataError.value = 'Escriba el nombre del dato.';
+
+        return;
+    }
+
+    if (label.length > 180) {
+        newDataError.value = 'Use un nombre de hasta 180 caracteres.';
+
+        return;
+    }
+
+    if (
+        newDataRole.value !== 'none' &&
+        usedColumnRoles.value.has(newDataRole.value)
+    ) {
+        newDataError.value =
+            'Esa función especial ya pertenece a otra columna.';
+
+        return;
+    }
+
+    const document =
+        (editor.value?.getJSON() as DocumentNode | undefined) ?? props.document;
+    const key = tableKeyFor(label, [
+        ...repeatedColumns.value.map((column) => column.key),
+        ...(props.layout?.header_fields ?? []).map((field) => field.key),
+        ...nodesOfType(document, 'column').map((node) =>
+            String(node.attrs?.key ?? ''),
+        ),
+    ]);
+    const scope = newDataScope.value;
+
+    setRowRole(scope);
+    insertNode({
+        type: 'column',
+        attrs: {
+            key,
+            label,
+            kind:
+                scope === 'unit' || newDataType.value === 'text'
+                    ? 'texto_largo'
+                    : 'numero',
+            role:
+                scope === 'record' && newDataRole.value !== 'none'
+                    ? newDataRole.value
+                    : null,
+            sum: false,
+        },
+    });
+    newDataOpen.value = false;
+};
 
 const openNewField = (): void => {
     newFieldLabel.value = '';
@@ -776,7 +1135,131 @@ defineExpose({ getDocument });
                                     </DropdownMenuGroup>
                                 </DropdownMenuSubContent>
                             </DropdownMenuSub>
+
+                            <DropdownMenuSeparator v-if="repeatField" />
+                            <DropdownMenuSub v-if="repeatField">
+                                <DropdownMenuSubTrigger>
+                                    <Database />
+                                    Dato repetible
+                                </DropdownMenuSubTrigger>
+                                <DropdownMenuSubContent
+                                    class="max-h-80 w-72 overflow-y-auto"
+                                >
+                                    <DropdownMenuGroup>
+                                        <DropdownMenuItem
+                                            v-for="column in repeatedColumns"
+                                            :key="column.key"
+                                            :disabled="
+                                                !['record', 'total'].includes(
+                                                    selectedRowRole,
+                                                )
+                                            "
+                                            @select="
+                                                insertRepeatedColumn(column)
+                                            "
+                                        >
+                                            <span class="min-w-0">
+                                                <span
+                                                    class="block truncate font-medium"
+                                                >
+                                                    {{ column.label }}
+                                                </span>
+                                                <span
+                                                    class="block truncate text-xs text-muted-foreground"
+                                                >
+                                                    ${{ column.key }}
+                                                </span>
+                                            </span>
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                            v-if="repeatedColumns.length === 0"
+                                            disabled
+                                        >
+                                            Aún no hay datos de fila
+                                        </DropdownMenuItem>
+                                    </DropdownMenuGroup>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuGroup>
+                                        <DropdownMenuItem
+                                            :disabled="
+                                                !['record', 'unit'].includes(
+                                                    selectedRowRole,
+                                                )
+                                            "
+                                            @select="openNewData"
+                                        >
+                                            <Plus />
+                                            {{
+                                                selectedRowRole === 'unit'
+                                                    ? 'Nuevo dato de unidad…'
+                                                    : 'Nuevo dato de fila…'
+                                            }}
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                            v-if="selectedRowRole === 'fixed'"
+                                            disabled
+                                        >
+                                            Primero defina el tipo de fila
+                                        </DropdownMenuItem>
+                                    </DropdownMenuGroup>
+                                </DropdownMenuSubContent>
+                            </DropdownMenuSub>
                         </DropdownMenuGroup>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+
+                <DropdownMenu v-if="repeatField">
+                    <DropdownMenuTrigger as-child>
+                        <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            :disabled="!inCell || pending"
+                            :aria-label="`Datos: ${rowRoleLabel}`"
+                        >
+                            <Database
+                                data-icon="inline-start"
+                                aria-hidden="true"
+                            />
+                            Datos
+                            <ChevronDown
+                                data-icon="inline-end"
+                                aria-hidden="true"
+                            />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" class="w-72">
+                        <DropdownMenuCheckboxItem
+                            :checked="groupedByUnit"
+                            @select.prevent="setGroupedByUnit(!groupedByUnit)"
+                        >
+                            Organizar por unidades
+                        </DropdownMenuCheckboxItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuLabel>Tipo de fila</DropdownMenuLabel>
+                        <DropdownMenuRadioGroup
+                            :model-value="selectedRowRole"
+                            @update:model-value="setRowRole"
+                        >
+                            <DropdownMenuRadioItem
+                                value="fixed"
+                                :disabled="
+                                    selectedRowRole !== 'fixed' &&
+                                    selectedRowHasColumns
+                                "
+                            >
+                                Fila normal
+                            </DropdownMenuRadioItem>
+                            <DropdownMenuRadioItem value="record">
+                                Fila que completa el docente
+                            </DropdownMenuRadioItem>
+                            <DropdownMenuRadioItem value="unit">
+                                Datos de la unidad
+                            </DropdownMenuRadioItem>
+                            <DropdownMenuRadioItem value="total">
+                                Fila de totales
+                            </DropdownMenuRadioItem>
+                        </DropdownMenuRadioGroup>
                     </DropdownMenuContent>
                 </DropdownMenu>
 
@@ -996,13 +1479,7 @@ defineExpose({ getDocument });
                                         <DropdownMenuItem
                                             variant="destructive"
                                             :disabled="!can('deleteRow')"
-                                            @select="
-                                                state
-                                                    ?.chain()
-                                                    .focus()
-                                                    .deleteRow()
-                                                    .run()
-                                            "
+                                            @select="deleteSelectedRow"
                                         >
                                             Eliminar fila
                                         </DropdownMenuItem>
@@ -1063,6 +1540,132 @@ defineExpose({ getDocument });
             class="template-table-canvas min-w-0 overflow-x-auto p-2"
         />
     </div>
+
+    <FormSheet
+        :open="newDataOpen"
+        trigger-label="Nuevo dato repetible"
+        :title="
+            newDataScope === 'unit'
+                ? 'Nuevo dato de unidad'
+                : 'Nuevo dato de fila'
+        "
+        description="Se insertará en la celda seleccionada y lo completará el docente."
+        :show-trigger="false"
+        @update:open="updateNewDataOpen"
+    >
+        <template #default="{ close }">
+            <form
+                class="flex flex-col gap-4"
+                @submit.prevent="createRepeatedData"
+            >
+                <FieldGroup>
+                    <Field :data-invalid="Boolean(newDataError)">
+                        <FieldLabel for="table-data-label" required>
+                            Nombre visible
+                        </FieldLabel>
+                        <Input
+                            id="table-data-label"
+                            v-model="newDataLabel"
+                            maxlength="180"
+                            placeholder="Ej. Contenidos temáticos"
+                            :aria-invalid="Boolean(newDataError)"
+                        />
+                        <FieldError
+                            v-if="newDataError"
+                            :errors="[newDataError]"
+                        />
+                    </Field>
+
+                    <Field v-if="newDataScope === 'record'">
+                        <FieldLabel for="table-data-type" required>
+                            Tipo de dato
+                        </FieldLabel>
+                        <Select
+                            :model-value="newDataType"
+                            @update:model-value="setNewDataType"
+                        >
+                            <SelectTrigger id="table-data-type" class="w-full">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectGroup>
+                                    <SelectItem value="text">Texto</SelectItem>
+                                    <SelectItem value="number">
+                                        Número
+                                    </SelectItem>
+                                </SelectGroup>
+                            </SelectContent>
+                        </Select>
+                    </Field>
+
+                    <Field
+                        v-if="
+                            newDataScope === 'record' &&
+                            newDataType === 'number'
+                        "
+                    >
+                        <FieldLabel for="table-data-role">
+                            Función especial
+                        </FieldLabel>
+                        <Select
+                            :model-value="newDataRole"
+                            @update:model-value="setNewDataRole"
+                        >
+                            <SelectTrigger id="table-data-role" class="w-full">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectGroup>
+                                    <SelectItem value="none">
+                                        Ninguna
+                                    </SelectItem>
+                                    <SelectItem
+                                        value="week"
+                                        :disabled="usedColumnRoles.has('week')"
+                                    >
+                                        Semana de planificación
+                                    </SelectItem>
+                                    <SelectItem
+                                        value="hours_acd"
+                                        :disabled="
+                                            usedColumnRoles.has('hours_acd')
+                                        "
+                                    >
+                                        Horas ACD
+                                    </SelectItem>
+                                    <SelectItem
+                                        value="hours_ape"
+                                        :disabled="
+                                            usedColumnRoles.has('hours_ape')
+                                        "
+                                    >
+                                        Horas APE
+                                    </SelectItem>
+                                    <SelectItem
+                                        value="hours_aa"
+                                        :disabled="
+                                            usedColumnRoles.has('hours_aa')
+                                        "
+                                    >
+                                        Horas AA
+                                    </SelectItem>
+                                </SelectGroup>
+                            </SelectContent>
+                        </Select>
+                        <FieldDescription>
+                            Úsela solo en la tabla de planificación.
+                        </FieldDescription>
+                    </Field>
+                </FieldGroup>
+
+                <FormSheetActions
+                    label="Insertar dato"
+                    :close="close"
+                    :icon="Database"
+                />
+            </form>
+        </template>
+    </FormSheet>
 
     <Dialog v-model:open="newFieldOpen">
         <DialogContent class="sm:max-w-md">

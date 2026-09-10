@@ -2,8 +2,8 @@
 
 ## Estado
 
-Implementación técnica verificada localmente el 2026-09-08. I-59 la retiró de ADM-06
-temporalmente; I-60 vuelve a hacerla accesible desde la cinta del modo de edición.
+Implementación técnica verificada localmente el 2026-09-08. I-66 reemplaza su formulario
+por edición directa desde la tabla; el contrato interno y la compatibilidad permanecen.
 
 ## Problema
 

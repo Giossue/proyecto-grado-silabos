@@ -174,8 +174,7 @@ condicionada por una opción de un campo de selección. Los campos nuevos recibe
 técnica generada, se insertan en la celda y `SaveTemplateDocument` crea su definición y
 guarda el documento en una sola transacción. Las opciones son datos declarativos; no se
 admiten expresiones ni código. Un campo nuevo queda disponible inmediatamente en la cinta
-para reutilizarlo antes de guardar. `TemplateTableStructureDialog` solo se muestra si el
-bloque posee un `TableLayout` repetible.
+para reutilizarlo antes de guardar.
 
 `TemplateToolbarSelect` y `TemplateToolbarButton` componen los controles icónicos de
 estilo con ayuda de `Tooltip`, sin sustituir sus nombres accesibles y manteniendo la ayuda
@@ -185,16 +184,14 @@ submenús para que la hoja no reciba controles duplicados.
 `TemplateBlockCreator` y `TemplateFieldCreator` reutilizan el `Select` de shadcn-vue para
 el tipo de contenido dentro de sus diálogos. `SelectContent` admite `portalDisabled` para
 mantener el foco dentro de ese flujo; el valor predeterminado conserva el portal en todos
-los demás usos. Las tablas nuevas siguen naciendo con `TableLayout::default()` y después
-pueden ajustarse en la hoja. `TemplateTableStructureDialog` separa ese contrato del
-formato visual: edita repetición, cabecera de unidad, columnas tipadas, roles semánticos y
-totales mediante primitivas shadcn-vue. Envía la huella actual al caso de uso existente;
-el servidor normaliza el esquema, exige la confirmación de reinicio cuando corresponda y
-retira el documento visual para que se regenere desde el nuevo contrato. Las agrupaciones
-y bandas válidas se conservan, al igual que los roles al guardar después desde el editor
-visual. Los nodos `variable` se muestran con `@clave`; los nodos `column`, que pertenecen
-a una fila repetible, se muestran con `$clave`. El prefijo es de presentación y no altera
-las claves persistidas.
+los demás usos. Las tablas nuevas siguen naciendo con `TableLayout::default()`. Desde
+I-66, la cinta **Datos** clasifica la fila seleccionada y activa la organización por
+unidades. **Insertar → Dato repetible** reutiliza una columna o abre una hoja breve para
+crearla; la clave se genera desde su nombre y solo una columna numérica solicita, de forma
+opcional, Semana, ACD, APE o AA. Al guardar, `SaveTemplateDocument` deriva columnas,
+datos de unidad y totales del documento visual sin reconstruirlo. Las agrupaciones,
+bandas y roles anteriores se conservan. Los nodos `variable` se muestran con `@clave` y
+los nodos `column` con `$clave`.
 
 ## Editor documental anterior (I-56, reemplazado)
 

@@ -62,13 +62,18 @@ Fecha de corte: **30 de agosto de 2026**.
   docente** reutiliza o crea una respuesta tipada y **Marca condicional** presenta `X`
   cuando una selección coincide con una opción. La clave técnica del campo se genera y
   no se solicita a Administración. `$clave` continúa reservado para filas repetibles.
-  «Configurar estructura» solo corresponde a tablas que tienen `TableLayout`; una tabla
+  Las acciones repetibles solo corresponden a tablas que tienen `TableLayout`; una tabla
   fija como Identificación se modifica directamente en la hoja.
 - I-65 (9 de septiembre de 2026, ajustada el 10 de septiembre) sitúa el alta junto al
   documento: el elemento seleccionado muestra un único `+` que abre un popover para
   elegir entre insertar un campo dentro del bloque actual o un bloque después del actual.
   También cubre el primer campo de un bloque vacío. El control es discreto, crece al
   apuntarlo y reutiliza los formularios y posiciones existentes.
+- I-66 (10 de septiembre de 2026) reemplaza el formulario estructural de I-58 por edición
+  directa sobre la tabla. La cinta clasifica filas, activa unidades e inserta datos `$`
+  desde la celda; las claves se generan y el servidor deriva columnas, datos de unidad y
+  totales al guardar. I-58 conserva el contrato interno y la compatibilidad, pero ya no
+  reconstruye el diseño desde una pantalla separada.
 - La modalidad de estudio es un dato base de la carrera (la aprueba el CES) y no un
   catálogo: presencial, semipresencial, en línea, a distancia o híbrida, fijas por reglamento.
   Una materia puede usar una modalidad distinta, sin cambiar ni recalificar la modalidad

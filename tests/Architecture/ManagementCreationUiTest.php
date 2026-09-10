@@ -881,9 +881,6 @@ it('construye la plantilla desde bloques que contienen campos tipados', function
     $tableEditor = file_get_contents(
         $root.'/resources/js/components/domain/configuration/TemplateTableEditor.vue',
     );
-    $tableStructure = file_get_contents(
-        $root.'/resources/js/components/domain/configuration/TemplateTableStructureDialog.vue',
-    );
     $toolbarSelect = file_get_contents(
         $root.'/resources/js/components/domain/configuration/TemplateToolbarSelect.vue',
     );
@@ -902,16 +899,12 @@ it('construye la plantilla desde bloques que contienen campos tipados', function
         ->toContain('<TemplateTableEditor')
         ->toContain('TemplateController.updateDocument.url')
         ->toContain('Guardar tabla')
+        ->not->toContain('TemplateTableStructureDialog')
+        ->not->toContain('Configurar estructura')
         ->not->toContain('<template #table-action>')
         ->not->toContain('`Editar tabla: ${blockTitle}`')
         ->not->toContain('TableProperties')
         ->not->toContain('window.confirm');
-    expect($tableStructure)
-        ->toBeString()
-        ->toContain('panelTarget')
-        ->toContain('<Teleport')
-        ->toContain("panelTarget ? 'section' : DialogContent")
-        ->toContain('Ocultar estructura');
     expect($tableEditor)
         ->toBeString()
         ->toContain('Fondo de celda')
@@ -921,6 +914,11 @@ it('construye la plantilla desde bloques que contienen campos tipados', function
         ->toContain('Combinar')
         ->toContain('Separar')
         ->toContain('Filas y columnas')
+        ->toContain('Dato repetible')
+        ->toContain('Organizar por unidades')
+        ->toContain('Fila que completa el docente')
+        ->toContain('Nuevo dato de fila')
+        ->toContain('<FormSheet')
         ->toContain('<TemplateToolbarSelect')
         ->toContain('size="icon-sm"')
         ->toContain('<TooltipContent')

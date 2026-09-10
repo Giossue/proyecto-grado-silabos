@@ -389,6 +389,54 @@ class TemplateDocumentTest extends TestCase
         $this->assertTrue($savedColumn['sum']);
     }
 
+    public function test_visual_table_save_derives_units_columns_and_totals_without_the_structure_form(): void
+    {
+        $template = $this->template();
+        $block = $template->fields()->where('clave', 'unidades')->firstOrFail()->block;
+        $column = fn (bool $sum = false): array => ['type' => 'column', 'attrs' => [
+            'key' => 'horas_clase', 'label' => 'Horas de clase', 'kind' => 'numero',
+            'role' => 'hours_acd', 'sum' => $sum,
+        ]];
+        $cell = fn (array $content): array => ['type' => 'tableCell', 'content' => [[
+            'type' => 'paragraph', 'content' => $content,
+        ]]];
+        $document = ['type' => 'doc', 'content' => [[
+            'type' => 'table',
+            'attrs' => [
+                'repeatKey' => 'unidades',
+                'groupByUnit' => true,
+                'visualStructure' => true,
+            ],
+            'content' => [
+                ['type' => 'tableRow', 'attrs' => ['rowRole' => 'unit'], 'content' => [
+                    $cell([['type' => 'column', 'attrs' => [
+                        'key' => 'resultado_unidad', 'label' => 'Resultado de la unidad',
+                        'kind' => 'texto_largo', 'role' => null, 'sum' => false,
+                    ]]]),
+                ]],
+                ['type' => 'tableRow', 'attrs' => ['rowRole' => 'record'], 'content' => [
+                    $cell([$column()]),
+                ]],
+                ['type' => 'tableRow', 'attrs' => ['rowRole' => 'total'], 'content' => [
+                    $cell([$column(true)]),
+                ]],
+            ],
+        ]]];
+
+        $this->patch(route('admin.templates.blocks.document', [$template, $block]), [
+            'document' => $document,
+            'fingerprint' => SaveTemplateDocument::fingerprint($block),
+        ])->assertSessionHasNoErrors();
+
+        $layout = $block->fresh()->configuracion['table'];
+        $this->assertTrue($layout['repeat']['enabled']);
+        $this->assertTrue($layout['totals']['enabled']);
+        $this->assertSame('resultado_unidad', $layout['header_fields'][0]['key']);
+        $this->assertSame('horas_clase', $layout['columns'][0]['key']);
+        $this->assertSame('hours_acd', $layout['columns'][0]['role']);
+        $this->assertTrue($layout['columns'][0]['sum']);
+    }
+
     public function test_design_properties_save_atomically_and_reject_foreign_fields_and_stale_edits(): void
     {
         $template = $this->template();

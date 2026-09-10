@@ -33,7 +33,8 @@ una cinta contextual sin encerrar el documento en un modal.
       la tabla.
 - [x] El modo de edición aprovecha todo el viewport y no monta el sidebar administrativo.
 - [x] Una tabla se edita directamente sobre la hoja, con formato y guardado en la cinta.
-- [x] La configuración estructural se despliega bajo la cinta, sin modal.
+- [x] La configuración estructural se despliega bajo la cinta, sin modal (reemplazada
+      después por la edición directa de I-66).
 - [x] Los bloqueos de proceso impiden entrar al modo de edición.
 - [x] Pasan pruebas de servidor, tipos, lint, build y comprobación en Chromium.
 

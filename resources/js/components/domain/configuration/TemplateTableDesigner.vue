@@ -7,7 +7,6 @@ import { toast } from 'vue-sonner';
 import TemplateController from '@/actions/App/Modules/Configuration/Presentation/Http/Controllers/TemplateController';
 import TemplateDocumentView from '@/components/domain/configuration/TemplateDocumentView.vue';
 import TemplateTableEditor from '@/components/domain/configuration/TemplateTableEditor.vue';
-import TemplateTableStructureDialog from '@/components/domain/configuration/TemplateTableStructureDialog.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
@@ -41,7 +40,6 @@ const props = defineProps<{
     appearance: TemplateAppearance;
     colors: { value: string; label: string }[];
     ribbonTarget?: string;
-    contextPanelTarget?: string;
 }>();
 
 const emit = defineEmits<{
@@ -277,15 +275,6 @@ defineExpose({ start });
         <template v-if="editing">
             <Teleport v-if="ribbonTarget" :to="`${ribbonTarget}-actions`">
                 <div class="flex flex-wrap items-center gap-2">
-                    <TemplateTableStructureDialog
-                        v-if="layout"
-                        :template-id="templateId"
-                        :block-id="blockId"
-                        :fingerprint="fingerprint"
-                        :layout="layout"
-                        :panel-target="contextPanelTarget"
-                        @saved="close(true)"
-                    />
                     <Button
                         type="button"
                         variant="outline"
@@ -334,6 +323,7 @@ defineExpose({ start });
                 :colors="colors"
                 :fields="fields"
                 :variables="variables"
+                :layout="layout"
                 :toolbar-target="
                     ribbonTarget ? `${ribbonTarget}-tools` : undefined
                 "

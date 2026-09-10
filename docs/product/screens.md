@@ -170,6 +170,8 @@ paralelo. Son operaciones separadas y ninguna levanta los bloqueos académicos.
 - Las tablas repetibles conservan sus unidades, columnas tipadas y sumas. El diseño
   distingue cabecera fija, datos, datos de unidad y total: se combinan celdas dentro
   de cada grupo, sin atravesar grupos que se repiten distintas cantidades de veces.
+  En ADM-06 se configura sobre la tabla: la cinta clasifica la fila seleccionada, activa
+  unidades e inserta datos repetibles en la celda sin un formulario estructural separado.
   Docencia agrega filas/unidades y completa las casillas, sin herramientas de diseño;
   la revisión muestra el diseño y las variables congelados al enviar. En ADM-06 la
   tabla se selecciona sobre la hoja y se modifica con la cinta del modo de edición. El

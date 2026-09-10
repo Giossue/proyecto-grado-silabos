@@ -23,7 +23,7 @@ las nuevas definiciones de campo en la transacción existente.
 - `$clave` sigue reservado para columnas de filas repetibles.
 - Una marca condicional compara una respuesta contra una opción y presenta `X` cuando
   coincide; no ejecuta código ni expresiones libres.
-- La configuración estructural solo aparece cuando el bloque tiene un `TableLayout`;
+- Las acciones de datos repetibles solo aparecen cuando el bloque tiene un `TableLayout`;
   una tabla fija como Identificación se diseña directamente.
 
 ## Cambios previstos

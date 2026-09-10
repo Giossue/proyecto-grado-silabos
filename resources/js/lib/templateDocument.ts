@@ -1,5 +1,9 @@
 import { columnWidths, headerRows } from '@/lib/tableLayout';
-import type { TableLayout, TableRowData } from '@/lib/tableLayout';
+import type {
+    TableColumnRole,
+    TableLayout,
+    TableRowData,
+} from '@/lib/tableLayout';
 
 export type DocumentNode = {
     type: string;
@@ -23,6 +27,8 @@ export type DocumentField = {
     inherited?: boolean;
     teacher_editable?: boolean;
     required?: boolean;
+    role?: TableColumnRole | null;
+    sum?: boolean | null;
 };
 export const DOCUMENT_FONTS = [
     'Arial',
@@ -50,6 +56,9 @@ export const fieldNode = (
         kind: field.type ?? 'texto_largo',
         choice: null,
         options: field.options?.map((option) => option.value) ?? null,
+        ...(type === 'column'
+            ? { role: field.role ?? null, sum: field.sum ?? null }
+            : {}),
     },
 });
 export const cellNode = (
@@ -209,7 +218,11 @@ export function defaultDocument(
         content: [
             {
                 type: 'table',
-                attrs: { repeatKey: first.key },
+                attrs: {
+                    repeatKey: first.key,
+                    groupByUnit: layout.repeat.enabled,
+                    visualStructure: true,
+                },
                 content: [...unitRows, ...headers, record, ...totals],
             },
         ],

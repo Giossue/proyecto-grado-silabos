@@ -420,6 +420,50 @@ test(
             await tableEditor.getByText('$detalle', { exact: true }).count(),
             1,
         );
+        await tableEditor.locator('td').first().click();
+        const dataButton = page.getByRole('button', {
+            name: 'Datos: Fila que completa el docente',
+        });
+        await dataButton.click();
+        await page
+            .getByRole('menuitemcheckbox', { name: 'Organizar por unidades' })
+            .click();
+        await page.keyboard.press('Escape');
+        await page
+            .getByRole('button', { name: 'Insertar contenido en la celda' })
+            .click();
+        await page.getByRole('menuitem', { name: 'Dato repetible' }).hover();
+        await page
+            .getByRole('menuitem', { name: 'Nuevo dato de fila…' })
+            .click();
+        const dataSheet = page.locator('[data-slot="sheet-content"]');
+        await dataSheet.getByLabel('Nombre visible').fill('Horas de clase');
+        await dataSheet.getByLabel('Tipo de dato').click();
+        await page.getByRole('option', { name: 'Número' }).click();
+        await dataSheet.getByLabel('Función especial').click();
+        await page.getByRole('option', { name: 'Horas ACD' }).click();
+        await dataSheet.getByRole('button', { name: 'Insertar dato' }).click();
+        await dataSheet.waitFor({ state: 'hidden' });
+        assert.equal(
+            await tableEditor
+                .getByText('$horas_de_clase', {
+                    exact: true,
+                })
+                .count(),
+            1,
+        );
+        await page.getByRole('button', { name: 'Filas y columnas' }).click();
+        await page.getByRole('menuitem', { name: 'Fila abajo' }).click();
+        await tableEditor.locator('tr').last().locator('td').first().click();
+        await page.getByRole('button', { name: /^Datos:/ }).click();
+        await page
+            .getByRole('menuitemradio', { name: 'Fila de totales' })
+            .click();
+        await page
+            .getByRole('button', { name: 'Insertar contenido en la celda' })
+            .click();
+        await page.getByRole('menuitem', { name: 'Dato repetible' }).hover();
+        await page.getByRole('menuitem', { name: /Horas de clase/ }).click();
         const mergeButton = page.getByRole('button', {
             name: 'Combinar celdas',
         });
@@ -495,6 +539,30 @@ test(
         assert.equal(header.attrs.textAlign, 'center');
         assert.equal(header.attrs.bold, true);
         assert.equal(header.attrs.borderStyle, 'thick');
+        assert.equal(
+            tableRequest.data.document.content[0].attrs.groupByUnit,
+            true,
+        );
+        assert.equal(
+            tableRequest.data.document.content[0].content.at(-1).attrs.rowRole,
+            'total',
+        );
+        assert.equal(
+            tableRequest.data.document.content[0].content
+                .at(-1)
+                .content.flatMap((cell) => cell.content)
+                .flatMap((paragraph) => paragraph.content ?? [])
+                .some((node) => node.attrs?.key === 'horas_de_clase'),
+            true,
+        );
+        const insertedColumn = tableRequest.data.document.content[0].content
+            .flatMap((row) => row.content)
+            .flatMap((cell) => cell.content)
+            .flatMap((paragraph) => paragraph.content ?? [])
+            .find((node) => node.attrs?.key === 'horas_de_clase');
+        assert.equal(insertedColumn.type, 'column');
+        assert.equal(insertedColumn.attrs.kind, 'numero');
+        assert.equal(insertedColumn.attrs.role, 'hours_acd');
 
         await tableField.click();
         await editTableButton.click();
