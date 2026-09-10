@@ -150,8 +150,11 @@ DOCX y PDF leen el mismo texto.
 I-65 añade inserción contextual dentro de la hoja. Solo el elemento seleccionado muestra
 un `+`; al activarlo, un popover permite elegir entre agregar un campo dentro del bloque
 actual o agregar un bloque después del actual. El mismo control cubre el primer campo de
-un bloque vacío. `TemplateInsertPopover` permanece visible con borde aun sin interacción,
-aumenta de escala al apuntarlo o enfocarlo y conserva un tooltip accesible.
+un bloque vacío. `TemplateInsertPopover` permanece visible con fondo primario, contraste,
+sombra y un área de 28 px aun sin interacción; aumenta de escala al apuntarlo o enfocarlo
+y conserva un tooltip accesible. Dos botones adyacentes permiten mover el campo dentro
+de su bloque o mover el bloque completo; las direcciones imposibles permanecen
+deshabilitadas y cada acción usa el tooltip compartido.
 `TemplateBlockCreator` y `TemplateFieldCreator` reciben la posición visual elegida y
 llaman a los mismos casos de uso; no existe una segunda ruta de persistencia.
 
@@ -172,12 +175,14 @@ Los componentes documentales sirven a las dos rutas. Cuando Administración sele
 una tabla y pulsa **Editar tabla**, `TemplateTableDesigner` monta `TemplateTableEditor`
 dentro de la hoja y teletransporta sus herramientas a la cinta. La acción aparece solo
 en la cinta contextual; la tabla no muestra un botón propio duplicado. La instancia Tiptap
-acotada selecciona celdas y expone fondo, color de texto, alineación,
+acotada selecciona celdas y expone fondo, color de texto, alineación, tamaño de fuente,
 negrita, cursiva, combinación y operaciones de filas/columnas. El borde conserva el
 valor institucional del documento y no tiene control en la cinta. El guardado usa el
 PATCH existente de `SaveTemplateDocument`, con su huella, autorización, bloqueo y
 confirmación de reinicio. `TemplateDocument` normaliza el catálogo de atributos por
 celda y `TemplateDocumentView`/`TemplateDocumentWord` lo interpretan sin persistir HTML.
+El tamaño por celda se limita al catálogo de 7–24 pt ofrecido en la cinta; si se elimina,
+la celda vuelve a heredar el tamaño general de contenido.
 `wordTableResize` reemplaza el redimensionamiento global de Tiptap: al mover un borde
 refina la cuadrícula con `colspan` y `colwidth`, mantiene fijo el ancho de la tabla y no
 altera las filas que no comparten una celda combinada verticalmente. El arrastre calcula
@@ -211,9 +216,11 @@ el tipo de contenido dentro de sus diálogos. `SelectContent` admite `portalDisa
 mantener el foco dentro de ese flujo; el valor predeterminado conserva el portal en todos
 los demás usos. Las tablas nuevas siguen naciendo con `TableLayout::default()`. Desde
 I-66, **Insertar → Estructura de filas** clasifica la fila seleccionada y activa la
-organización por unidades. **Insertar → Dato repetible** reutiliza una columna o abre una hoja breve para
-crearla; la clave se genera desde su nombre y solo una columna numérica solicita, de forma
-opcional, Semana, ACD, APE o AA. Al guardar, `SaveTemplateDocument` deriva columnas,
+organización por unidades. Ambos submenús aparecen en cualquier tabla. **Insertar → Dato
+repetible** reutiliza una columna o abre una hoja breve para crearla; si la tabla era
+estática, el primer dato crea también su origen repetible interno. La clave se genera
+desde su nombre y solo una columna numérica solicita, de forma opcional, Semana, ACD,
+APE o AA. Al guardar, `SaveTemplateDocument` deriva columnas,
 datos de unidad y totales del documento visual sin reconstruirlo. Las agrupaciones,
 bandas y roles anteriores se conservan. Los nodos `variable` se muestran con `@clave` y
 los nodos `column` con `$clave`.

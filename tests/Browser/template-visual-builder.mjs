@@ -93,7 +93,22 @@ router.post = async (url, data, visit) => {
 router.patch = async (url, data, visit) => {
     requests.push({method:'patch',url,data:JSON.parse(JSON.stringify(data))});
     visit?.onStart?.({});
-    if (url.includes('/titulo')) {
+    if (url.includes('/secciones/orden')) {
+        const byId = new Map(template.value.sections.map(section => [section.id, section]));
+        template.value = {
+            ...template.value,
+            sections: data.section_ids.map(id => byId.get(id)),
+        };
+    } else if (url.includes('/bloques/orden')) {
+        template.value = {
+            ...template.value,
+            sections: template.value.sections.map(section => {
+                if (section.id !== data.section_id) return section;
+                const byId = new Map(section.blocks.map(block => [block.id, block]));
+                return {...section, blocks: data.block_ids.map(id => byId.get(id))};
+            }),
+        };
+    } else if (url.includes('/titulo')) {
         template.value = {...template.value, titleBlock: {text: data.title}};
     } else if (url.includes('/tabla')) {
         const {fingerprint, confirm_purge, ...table} = data;
@@ -465,6 +480,29 @@ test(
         );
         const summaryField = page.locator('#template-field-field-block-1');
         await summaryField.click();
+        const moveFieldUp = summaryField.getByRole('button', {
+            name: 'Mover campo arriba',
+        });
+        const moveFieldDown = summaryField.getByRole('button', {
+            name: 'Mover campo abajo',
+        });
+        assert.equal(await moveFieldUp.isDisabled(), true);
+        assert.equal(await moveFieldDown.isDisabled(), false);
+        await moveFieldDown.click();
+        await page
+            .getByRole('heading', { name: '1.2 Resumen', exact: true })
+            .waitFor();
+        const fieldOrderRequest = await page.evaluate(() =>
+            window.fixture.requests.find((request) =>
+                request.url.includes('/bloques/orden'),
+            ),
+        );
+        assert.deepEqual(fieldOrderRequest.data, {
+            section_id: 'section-1',
+            block_ids: ['field-block-2', 'field-block-1'],
+        });
+        assert.equal(await moveFieldUp.isDisabled(), false);
+        assert.equal(await moveFieldDown.isDisabled(), true);
         await ribbonTools
             .getByRole('button', { name: 'Editar campo', exact: true })
             .click();
@@ -732,6 +770,10 @@ test(
             .click();
         await page.getByRole('option', { name: 'Centro' }).click();
         await page
+            .getByRole('combobox', { name: 'Tamaño de fuente de celda' })
+            .click();
+        await page.getByRole('option', { name: '9 pt', exact: true }).click();
+        await page
             .getByRole('button', {
                 name: 'Negrita en las celdas seleccionadas',
             })
@@ -768,6 +810,7 @@ test(
         assert.equal(header.attrs.backgroundColor, '#DBE5F1');
         assert.equal(header.attrs.textColor, '#FFFFFF');
         assert.equal(header.attrs.textAlign, 'center');
+        assert.equal(header.attrs.fontSize, '9pt');
         assert.equal(header.attrs.bold, true);
         assert.equal(header.attrs.borderStyle, null);
         assert.equal(

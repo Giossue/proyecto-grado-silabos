@@ -147,7 +147,28 @@ test(
             })
             .click();
 
+        await insert.click();
+        await page.getByRole('menuitem', { name: 'Dato repetible' }).hover();
+        await page
+            .getByRole('menuitem', { name: 'Nuevo dato de fila…' })
+            .click();
+        const repeatedDataSheet = page.getByRole('dialog', {
+            name: 'Nuevo dato de fila',
+        });
+        await repeatedDataSheet
+            .getByLabel('Nombre visible')
+            .fill('Resultado de aprendizaje');
+        await repeatedDataSheet
+            .getByRole('button', { name: 'Insertar dato' })
+            .click();
+
         const saved = await page.evaluate(() => window.fixture.document());
+        assert.match(
+            saved.content[0].attrs.repeatKey,
+            /^campo_datos_repetibles_/,
+        );
+        assert.equal(saved.content[0].attrs.repeatLabel, 'Datos repetibles');
+        assert.equal(saved.content[0].content[0].attrs.rowRole, 'record');
         const inline =
             saved.content[0].content[0].content[0].content[0].content;
         assert.equal(inline[0].type, 'variable');
@@ -157,5 +178,7 @@ test(
         assert.equal(inline[1].attrs.options, null);
         assert.deepEqual(inline[2].attrs.options, ['Sí', 'No', 'No aplica']);
         assert.equal(inline[3].attrs.choice, 'Sí');
+        assert.equal(inline[4].type, 'column');
+        assert.equal(inline[4].attrs.label, 'Resultado de aprendizaje');
     },
 );

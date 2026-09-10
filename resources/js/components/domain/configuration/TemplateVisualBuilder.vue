@@ -1,7 +1,16 @@
 <script setup lang="ts">
-import { Pencil, Settings, TableProperties, Trash2 } from '@lucide/vue';
+import { router } from '@inertiajs/vue3';
+import {
+    ArrowDown,
+    ArrowUp,
+    Pencil,
+    Settings,
+    TableProperties,
+    Trash2,
+} from '@lucide/vue';
 import { computed, ref } from 'vue';
 import type { CSSProperties } from 'vue';
+import TemplateController from '@/actions/App/Modules/Configuration/Presentation/Http/Controllers/TemplateController';
 import TemplateBlockCreator from '@/components/domain/configuration/TemplateBlockCreator.vue';
 import TemplateDocumentView from '@/components/domain/configuration/TemplateDocumentView.vue';
 import TemplateFieldActions from '@/components/domain/configuration/TemplateFieldActions.vue';
@@ -9,6 +18,7 @@ import TemplateInsertPopover from '@/components/domain/configuration/TemplateIns
 import TemplateSectionActions from '@/components/domain/configuration/TemplateSectionActions.vue';
 import TemplateTableDesigner from '@/components/domain/configuration/TemplateTableDesigner.vue';
 import TemplateTitleActions from '@/components/domain/configuration/TemplateTitleActions.vue';
+import TemplateToolbarButton from '@/components/domain/configuration/TemplateToolbarButton.vue';
 import PaginatedDocument from '@/components/domain/PaginatedDocument.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -19,6 +29,7 @@ import {
 } from '@/components/ui/tooltip';
 import { defaultDocument, nodesOfType } from '@/lib/templateDocument';
 import { templatePreviewFields } from '@/lib/templatePreview';
+import { toast } from '@/lib/toast';
 import { cn } from '@/lib/utils';
 import type {
     TemplateAppearance,
@@ -48,6 +59,7 @@ const emit = defineEmits<{ personalize: [] }>();
 type Editable = { openEdit: () => void; openDelete: () => void };
 type TitleActions = { openEdit: () => void };
 type TableDesigner = { start: () => void };
+type MoveDirection = -1 | 1;
 type Selection =
     | { kind: 'document' }
     | { kind: 'title' }
@@ -56,6 +68,7 @@ type Selection =
 
 const selection = ref<Selection>({ kind: 'document' });
 const activeTable = ref<string | null>(null);
+const reorderPending = ref(false);
 const sectionActions = ref<Record<string, Editable>>({});
 const fieldActions = ref<Record<string, Editable>>({});
 const tableDesigners = ref<Record<string, TableDesigner>>({});
@@ -155,6 +168,101 @@ const fieldsFor = (block: TemplateFieldContainer) =>
     templatePreviewFields(block.fields, block.table);
 const hasTable = (block: TemplateFieldContainer): boolean =>
     nodesOfType(documentFor(block), 'table').length > 0;
+
+const shiftedIds = (
+    ids: string[],
+    id: string,
+    direction: MoveDirection,
+): string[] | null => {
+    const current = ids.indexOf(id);
+    const target = current + direction;
+
+    if (current < 0 || target < 0 || target >= ids.length) {
+        return null;
+    }
+
+    const reordered = [...ids];
+    [reordered[current], reordered[target]] = [
+        reordered[target],
+        reordered[current],
+    ];
+
+    return reordered;
+};
+
+const moveSection = (sectionId: string, direction: MoveDirection): void => {
+    if (reorderPending.value) {
+        return;
+    }
+
+    const sectionIds = shiftedIds(
+        props.template.sections.map((section) => section.id),
+        sectionId,
+        direction,
+    );
+
+    if (!sectionIds) {
+        return;
+    }
+
+    reorderPending.value = true;
+    router.patch(
+        TemplateController.reorderSections.url(props.template.id),
+        { section_ids: sectionIds },
+        {
+            preserveScroll: true,
+            preserveState: true,
+            onSuccess: () => toast.success('Bloque movido'),
+            onError: (errors) =>
+                toast.error(
+                    Object.values(errors)[0] ??
+                        'No se pudo cambiar el orden del bloque',
+                ),
+            onFinish: () => {
+                reorderPending.value = false;
+            },
+        },
+    );
+};
+
+const moveField = (
+    section: TemplateSection,
+    blockId: string,
+    direction: MoveDirection,
+): void => {
+    if (reorderPending.value) {
+        return;
+    }
+
+    const blockIds = shiftedIds(
+        section.blocks.map((block) => block.id),
+        blockId,
+        direction,
+    );
+
+    if (!blockIds) {
+        return;
+    }
+
+    reorderPending.value = true;
+    router.patch(
+        TemplateController.reorderBlocks.url(props.template.id),
+        { section_id: section.id, block_ids: blockIds },
+        {
+            preserveScroll: true,
+            preserveState: true,
+            onSuccess: () => toast.success('Campo movido'),
+            onError: (errors) =>
+                toast.error(
+                    Object.values(errors)[0] ??
+                        'No se pudo cambiar el orden del campo',
+                ),
+            onFinish: () => {
+                reorderPending.value = false;
+            },
+        },
+    );
+};
 
 const selectSection = (sectionId: string): void => {
     if (!activeTable.value) {
@@ -675,7 +783,7 @@ const clearSelectionFromBackground = (event: PointerEvent): void => {
                                 selection.kind === 'field' &&
                                 selection.blockId === block.id
                             "
-                            class="absolute top-1/2 -right-1 z-10 flex h-5 translate-x-1/2 -translate-y-1/2 items-center justify-center"
+                            class="absolute top-1/2 -right-1 z-10 flex h-7 translate-x-1/2 -translate-y-1/2 items-center justify-center"
                             data-template-insert="content"
                             @pointerdown.stop
                             @click.stop
@@ -687,6 +795,31 @@ const clearSelectionFromBackground = (event: PointerEvent): void => {
                                 :block-position="sectionIndex + 1"
                                 :block-types="blockTypes"
                             />
+                            <div
+                                class="absolute top-1/2 left-full ms-1 flex -translate-y-1/2 items-center gap-1"
+                            >
+                                <TemplateToolbarButton
+                                    label="Mover campo arriba"
+                                    variant="outline"
+                                    :disabled="
+                                        reorderPending || fieldIndex === 0
+                                    "
+                                    @click="moveField(section, block.id, -1)"
+                                >
+                                    <ArrowUp aria-hidden="true" />
+                                </TemplateToolbarButton>
+                                <TemplateToolbarButton
+                                    label="Mover campo abajo"
+                                    variant="outline"
+                                    :disabled="
+                                        reorderPending ||
+                                        fieldIndex === section.blocks.length - 1
+                                    "
+                                    @click="moveField(section, block.id, 1)"
+                                >
+                                    <ArrowDown aria-hidden="true" />
+                                </TemplateToolbarButton>
+                            </div>
                         </div>
                     </article>
 
@@ -697,7 +830,7 @@ const clearSelectionFromBackground = (event: PointerEvent): void => {
                             selection.kind === 'section' &&
                             selection.sectionId === section.id
                         "
-                        class="absolute top-1/2 -right-1 z-10 flex h-5 translate-x-1/2 -translate-y-1/2 items-center justify-center"
+                        class="absolute top-1/2 -right-1 z-10 flex h-7 translate-x-1/2 -translate-y-1/2 items-center justify-center"
                         data-template-insert="content"
                         @pointerdown.stop
                         @click.stop
@@ -709,6 +842,30 @@ const clearSelectionFromBackground = (event: PointerEvent): void => {
                             :block-position="sectionIndex + 1"
                             :block-types="blockTypes"
                         />
+                        <div
+                            class="absolute top-1/2 left-full ms-1 flex -translate-y-1/2 items-center gap-1"
+                        >
+                            <TemplateToolbarButton
+                                label="Mover bloque arriba"
+                                variant="outline"
+                                :disabled="reorderPending || sectionIndex === 0"
+                                @click="moveSection(section.id, -1)"
+                            >
+                                <ArrowUp aria-hidden="true" />
+                            </TemplateToolbarButton>
+                            <TemplateToolbarButton
+                                label="Mover bloque abajo"
+                                variant="outline"
+                                :disabled="
+                                    reorderPending ||
+                                    sectionIndex ===
+                                        template.sections.length - 1
+                                "
+                                @click="moveSection(section.id, 1)"
+                            >
+                                <ArrowDown aria-hidden="true" />
+                            </TemplateToolbarButton>
+                        </div>
                     </div>
                 </section>
             </PaginatedDocument>

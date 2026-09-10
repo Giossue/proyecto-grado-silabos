@@ -56,17 +56,17 @@ final class TableLayout
         ];
     }
 
-    /** @return Layout|null Solo los bloques de tipo tabla llevan esquema. */
+    /** @return Layout|null Un bloque no tabular puede adquirir esquema al volver repetible una tabla incrustada. */
     public static function fromBlock(TemplateBlock $block): ?array
     {
-        if ($block->configuredContentType() !== 'table') {
-            return null;
-        }
-
         $configuration = $block->getAttribute('configuracion');
         $raw = is_array($configuration) ? ($configuration['table'] ?? null) : null;
 
-        return is_array($raw) ? self::normalize($raw) : self::default();
+        if (is_array($raw)) {
+            return self::normalize($raw);
+        }
+
+        return $block->configuredContentType() === 'table' ? self::default() : null;
     }
 
     /**

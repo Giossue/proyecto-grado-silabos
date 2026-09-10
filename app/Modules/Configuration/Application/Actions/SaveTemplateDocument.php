@@ -112,8 +112,35 @@ final class SaveTemplateDocument
                 }
                 $toCreate[$key] = $definition;
             }
+            foreach (TemplateDocument::nodes($normalized, 'table') as $table) {
+                $key = $table['attrs']['repeatKey'] ?? null;
+                if ($key === null || isset($fields[$key])) {
+                    continue;
+                }
+                $label = $table['attrs']['repeatLabel'] ?? null;
+                if (! is_string($label) || $label === ''
+                    || FieldDefinition::query()->where('plantilla_id', $block->plantilla_id)->where('clave', $key)->exists()) {
+                    TemplateDocument::fail('No se reconoce el origen de las filas de la tabla.');
+                }
+                $definition = [
+                    'key' => $key,
+                    'label' => $label,
+                    'kind' => 'repetible',
+                    'options' => null,
+                ];
+                if (isset($toCreate[$key]) && $toCreate[$key] !== $definition) {
+                    TemplateDocument::fail('Dos campos comparten nombre interno pero tienen distinta definición.');
+                }
+                $toCreate[$key] = $definition;
+                $labels[$key] = $label;
+            }
             $configuration = $block->configuracion ?? [];
             $layout = TableLayout::fromBlock($block);
+            if ($layout === null && collect(TemplateDocument::nodes($normalized, 'table'))->contains(
+                fn (array $table): bool => ($table['attrs']['repeatKey'] ?? null) !== null,
+            )) {
+                $layout = TableLayout::default();
+            }
             $columnKeys = [];
             $headerKeys = [];
             $summedKeys = [];
@@ -129,7 +156,9 @@ final class SaveTemplateDocument
 
                     continue;
                 }
-                if (! isset($fields[$key]) || $fields[$key]->tipo !== 'repetible' || $layout === null) {
+                $existingRepeatField = isset($fields[$key]) && $fields[$key]->tipo === 'repetible';
+                $newRepeatField = ($toCreate[$key]['kind'] ?? null) === 'repetible';
+                if ((! $existingRepeatField && ! $newRepeatField) || $layout === null) {
                     TemplateDocument::fail('No se reconoce el origen de las filas de la tabla.');
                 }
                 if (is_bool($table['attrs']['groupByUnit'] ?? null)) {

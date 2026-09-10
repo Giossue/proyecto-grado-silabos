@@ -3,7 +3,7 @@
 ## Estado
 
 Completado por solicitud explícita del responsable del producto el 2026-09-09 y
-ajustado a un selector único el 2026-09-10.
+ajustado a un selector único y controles de orden el 2026-09-10.
 
 ## Trazabilidad
 
@@ -12,9 +12,10 @@ ni modifica permisos o persistencia.
 
 ## Resultado demostrable
 
-Al seleccionar un campo o bloque en el modo de edición, aparece debajo un único control
-`+` pequeño pero siempre visible. Aumenta ligeramente al pasar el cursor o enfocarlo y
-abre un popover para elegir si se agrega un campo o un bloque en la posición indicada.
+Al seleccionar un campo o bloque en el modo de edición, aparece en su borde derecho un
+control `+` primario y, a su lado, flechas para mover el elemento arriba o abajo. El `+`
+abre un popover para elegir si se agrega un campo o un bloque en la posición indicada;
+las flechas reutilizan las rutas de reordenamiento y se desactivan en los extremos.
 
 ## Pasos
 
@@ -22,6 +23,8 @@ abre un popover para elegir si se agrega un campo o un bloque en la posición in
 - [x] Ubicar inserción de campo tras el campo seleccionado y de bloque tras el bloque.
 - [x] Cubrir el primer campo de un bloque vacío.
 - [x] Unificar las dos alternativas en un solo control y popover contextual.
+- [x] Reutilizar las rutas existentes para mover el campo o bloque seleccionado.
+- [x] Desactivar el movimiento imposible al inicio y al final de cada nivel.
 - [x] Verificar teclado, tooltip, posición y regresiones visuales.
 - [x] Actualizar trazabilidad y decisión durable.
 

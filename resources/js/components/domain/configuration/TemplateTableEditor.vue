@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import {
+    ALargeSmall,
     AlignCenter,
     AlignJustify,
     AlignLeft,
@@ -120,6 +121,7 @@ type CellAttributes = {
     backgroundColor?: string | null;
     textColor?: string | null;
     textAlign?: CellAlignment | null;
+    fontSize?: string | null;
     bold?: boolean | null;
     italic?: boolean | null;
     borderStyle?: CellBorder | null;
@@ -235,6 +237,13 @@ const cellStyle = (attributes: Record<string, unknown>) => {
         styles.push(`text-align: ${attributes.textAlign}`);
     }
 
+    if (
+        typeof attributes.fontSize === 'string' &&
+        /^(?:[7-9]|[12][0-9]|3[0-6])pt$/.test(attributes.fontSize)
+    ) {
+        styles.push(`font-size: ${attributes.fontSize}`);
+    }
+
     if (typeof attributes.bold === 'boolean') {
         styles.push(`font-weight: ${attributes.bold ? '700' : '400'}`);
     }
@@ -270,6 +279,11 @@ const cellAttributes = () => ({
         parseHTML: (element: HTMLElement) =>
             element.getAttribute('data-cell-text-align'),
     },
+    fontSize: {
+        default: null,
+        parseHTML: (element: HTMLElement) =>
+            element.getAttribute('data-cell-font-size'),
+    },
     bold: {
         default: null,
         parseHTML: (element: HTMLElement) => {
@@ -298,6 +312,7 @@ const cellDomAttributes = (attributes: Record<string, unknown>) => {
         backgroundColor,
         textColor,
         textAlign,
+        fontSize,
         bold,
         italic,
         borderStyle,
@@ -308,6 +323,7 @@ const cellDomAttributes = (attributes: Record<string, unknown>) => {
         'data-background-color': backgroundColor ?? undefined,
         'data-cell-text-color': textColor ?? undefined,
         'data-cell-text-align': textAlign ?? undefined,
+        'data-cell-font-size': fontSize ?? undefined,
         'data-cell-bold': typeof bold === 'boolean' ? String(bold) : undefined,
         'data-cell-italic':
             typeof italic === 'boolean' ? String(italic) : undefined,
@@ -444,6 +460,7 @@ const editor = useEditor({
                 return {
                     ...this.parent?.(),
                     repeatKey: { default: null },
+                    repeatLabel: { default: null },
                     groupByUnit: { default: null },
                     visualStructure: { default: null },
                 };
@@ -984,23 +1001,26 @@ const setAncestorAttribute = (
 };
 
 const enableRepeatedTable = (): boolean => {
-    const field = repeatField.value;
+    const table = ancestorAttributes('table');
+    const configuredKey = table?.repeatKey;
+    const key =
+        typeof configuredKey === 'string' && configuredKey !== ''
+            ? configuredKey
+            : (repeatField.value?.key ?? keyFor('Datos repetibles'));
 
-    if (!field) {
-        return false;
+    setAncestorAttribute('table', 'repeatKey', key);
+
+    if (!repeatField.value && !table?.repeatLabel) {
+        setAncestorAttribute('table', 'repeatLabel', 'Datos repetibles');
     }
 
-    setAncestorAttribute('table', 'repeatKey', field.key);
     setAncestorAttribute('table', 'visualStructure', true);
 
     return true;
 };
 
 const setRowRole = (value: unknown): void => {
-    if (
-        !['fixed', 'record', 'unit', 'total'].includes(String(value)) ||
-        !repeatField.value
-    ) {
+    if (!['fixed', 'record', 'unit', 'total'].includes(String(value))) {
         return;
     }
 
@@ -1052,6 +1072,8 @@ const nullableModel = <T extends string>(attribute: keyof CellAttributes) =>
 const background = nullableModel<string>('backgroundColor');
 const color = nullableModel<string>('textColor');
 const alignment = nullableModel<CellAlignment>('textAlign');
+const cellFontSize = nullableModel<string>('fontSize');
+const cellFontSizes = [7, 8, 9, 10, 11, 12, 14, 16, 18, 20, 24];
 
 const colorName = (value: string, inherited: string): string =>
     value === 'inherit'
@@ -1076,6 +1098,11 @@ const alignmentTooltip = computed(() => {
 
     return `Alineación de celda: ${labels[alignment.value] ?? alignment.value}`;
 });
+const fontSizeTooltip = computed(() =>
+    cellFontSize.value === 'inherit'
+        ? `Tamaño de fuente: heredado (${props.fontSize} pt)`
+        : `Tamaño de fuente: ${cellFontSize.value}`,
+);
 const resetCell = (): void => {
     const chain = state.value?.chain().focus();
 
@@ -1083,6 +1110,7 @@ const resetCell = (): void => {
         ?.setCellAttribute('backgroundColor', null)
         .setCellAttribute('textColor', null)
         .setCellAttribute('textAlign', null)
+        .setCellAttribute('fontSize', null)
         .setCellAttribute('bold', null)
         .setCellAttribute('italic', null)
         .run();
@@ -1119,10 +1147,7 @@ const insertField = (
     });
 
 const insertRepeatedColumn = (column: TableColumn): void => {
-    if (
-        !repeatField.value ||
-        !['record', 'total'].includes(selectedRowRole.value)
-    ) {
+    if (!['record', 'total'].includes(selectedRowRole.value)) {
         return;
     }
 
@@ -1140,7 +1165,7 @@ const insertRepeatedColumn = (column: TableColumn): void => {
 };
 
 const openNewData = (): void => {
-    if (!repeatField.value || selectedRowRole.value === 'total') {
+    if (selectedRowRole.value === 'total') {
         return;
     }
 
@@ -1268,6 +1293,11 @@ const keyFor = (label: string): string => {
         .slice(0, 80);
     const used = new Set([
         ...props.fields.map((field) => field.key),
+        ...nodesOfType(
+            (editor.value?.getJSON() as DocumentNode | undefined) ??
+                props.document,
+            'table',
+        ).map((node) => String(node.attrs?.repeatKey ?? '')),
         ...nodesOfType(
             (editor.value?.getJSON() as DocumentNode | undefined) ??
                 props.document,
@@ -1471,8 +1501,8 @@ defineExpose({ getDocument });
                                 </DropdownMenuSubContent>
                             </DropdownMenuSub>
 
-                            <DropdownMenuSeparator v-if="repeatField" />
-                            <DropdownMenuSub v-if="repeatField">
+                            <DropdownMenuSeparator />
+                            <DropdownMenuSub>
                                 <DropdownMenuSubTrigger>
                                     <Database />
                                     Dato repetible
@@ -1517,9 +1547,7 @@ defineExpose({ getDocument });
                                     <DropdownMenuGroup>
                                         <DropdownMenuItem
                                             :disabled="
-                                                !['record', 'unit'].includes(
-                                                    selectedRowRole,
-                                                )
+                                                selectedRowRole === 'total'
                                             "
                                             @select="openNewData"
                                         >
@@ -1530,17 +1558,11 @@ defineExpose({ getDocument });
                                                     : 'Nuevo dato de fila…'
                                             }}
                                         </DropdownMenuItem>
-                                        <DropdownMenuItem
-                                            v-if="selectedRowRole === 'fixed'"
-                                            disabled
-                                        >
-                                            Primero defina el tipo de fila
-                                        </DropdownMenuItem>
                                     </DropdownMenuGroup>
                                 </DropdownMenuSubContent>
                             </DropdownMenuSub>
 
-                            <DropdownMenuSub v-if="repeatField">
+                            <DropdownMenuSub>
                                 <DropdownMenuSubTrigger>
                                     <Rows3 />
                                     Estructura de filas
@@ -1661,6 +1683,30 @@ defineExpose({ getDocument });
                     </SelectItem>
                     <SelectItem value="justify">
                         <AlignJustify /> Justificado
+                    </SelectItem>
+                </TemplateToolbarSelect>
+
+                <TemplateToolbarSelect
+                    v-model="cellFontSize"
+                    label="Tamaño de fuente de celda"
+                    :tooltip="fontSizeTooltip"
+                    :disabled="!inCell || pending"
+                >
+                    <template #icon>
+                        <ALargeSmall
+                            class="text-foreground"
+                            aria-hidden="true"
+                        />
+                    </template>
+                    <SelectItem value="inherit">
+                        Heredado ({{ props.fontSize }} pt)
+                    </SelectItem>
+                    <SelectItem
+                        v-for="size in cellFontSizes"
+                        :key="size"
+                        :value="`${size}pt`"
+                    >
+                        {{ size }} pt
                     </SelectItem>
                 </TemplateToolbarSelect>
 

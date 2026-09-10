@@ -131,6 +131,7 @@ test(
         const before = await fieldButton.boundingBox();
         const selectedFieldBox = await selectedField.boundingBox();
         assert.ok(before && selectedFieldBox);
+        assert.ok(before.width >= 28 && before.height >= 28);
         assert.ok(
             Math.abs(
                 before.x +
@@ -145,13 +146,13 @@ test(
                 opacity: style.opacity,
                 visibility: style.visibility,
                 borderStyle: style.borderTopStyle,
+                backgroundColor: style.backgroundColor,
             };
         });
-        assert.deepEqual(restingStyle, {
-            opacity: '1',
-            visibility: 'visible',
-            borderStyle: 'solid',
-        });
+        assert.equal(restingStyle.opacity, '1');
+        assert.equal(restingStyle.visibility, 'visible');
+        assert.equal(restingStyle.borderStyle, 'none');
+        assert.notEqual(restingStyle.backgroundColor, 'rgba(0, 0, 0, 0)');
         await fieldButton.hover();
         await page.waitForTimeout(200);
         const after = await fieldButton.boundingBox();

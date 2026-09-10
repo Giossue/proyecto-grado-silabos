@@ -22,6 +22,8 @@ claves técnicas sin pedirlas. El formulario extenso «Configurar estructura» d
 - [x] Retirar el panel estructural que reconstruye el molde.
 - [x] Permitir clasificar la fila seleccionada y activar unidades desde la cinta.
 - [x] Insertar o reutilizar datos repetibles desde la celda seleccionada.
+- [x] Mostrar estas opciones en toda tabla y crear automáticamente su origen repetible
+      al insertar el primer dato de fila.
 - [x] Derivar columnas, datos de unidad y totales al guardar el documento visual.
 - [x] Conservar funciones semánticas y compatibilidad con diseños anteriores.
 - [x] Cubrir servidor, TypeScript y recorrido Chromium.
@@ -43,3 +45,8 @@ exista trabajo en curso. No se crean migraciones ni se modifican revisiones envi
   el borde de una celda, incluso en movimientos consecutivos; el arrastre sigue al
   puntero sin imantado y admite divisiones lógicas menores que el ancho mínimo visible
   de una celda, evitando que se desplace el contenido ajeno.
+
+Desde el 10 de septiembre, **Dato repetible** y **Estructura de filas** ya no dependen de
+que el bloque haya nacido como tabla repetible. En una tabla estática, **Nuevo dato de
+fila** crea una definición repetible interna, convierte la fila seleccionada y deriva el
+esquema al guardar; las tablas que ya tenían un origen conservan el mismo contrato.

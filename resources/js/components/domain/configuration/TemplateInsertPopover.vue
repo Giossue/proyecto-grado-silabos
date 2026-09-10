@@ -27,9 +27,9 @@ const open = ref(false);
     <TemplateIconPopover
         :open="open"
         label="Agregar contenido"
-        variant="outline"
+        variant="default"
         size="icon-sm"
-        button-class="size-5 rounded-full p-0 opacity-100 transition-transform hover:scale-125 focus-visible:scale-125"
+        button-class="size-7 rounded-full p-0 text-primary-foreground opacity-100 shadow-md ring-2 ring-background transition-transform hover:scale-110 focus-visible:scale-110"
         tooltip-side="bottom"
         @update:open="open = $event"
     >

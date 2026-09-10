@@ -740,6 +740,11 @@ const draw = (
             typeof attrs.textColor === 'string' ? attrs.textColor : undefined;
         const textAlign =
             typeof attrs.textAlign === 'string' ? attrs.textAlign : undefined;
+        const fontSize =
+            typeof attrs.fontSize === 'string' &&
+            /^(?:[7-9]|[12][0-9]|3[0-6])pt$/.test(attrs.fontSize)
+                ? attrs.fontSize
+                : undefined;
 
         const cellContext = {
             ...context,
@@ -754,6 +759,7 @@ const draw = (
                 rowspan: Number(attrs.rowspan ?? 1),
                 'data-cell-text-color': textColor ? '' : undefined,
                 'data-cell-text-align': textAlign ? '' : undefined,
+                'data-cell-font-size': fontSize ? '' : undefined,
                 'data-cell-bold':
                     typeof attrs.bold === 'boolean'
                         ? String(attrs.bold)
@@ -766,6 +772,7 @@ const draw = (
                     backgroundColor: attrs.backgroundColor || undefined,
                     color: textColor,
                     textAlign,
+                    fontSize,
                     fontWeight:
                         typeof attrs.bold === 'boolean'
                             ? attrs.bold

@@ -120,6 +120,10 @@ final class TemplateDocument
                 if ($key !== null && (! is_string($key) || ! preg_match('/^[a-z][a-z0-9_]{0,119}$/D', $key))) {
                     self::fail('La tabla repetible no tiene un campo válido.');
                 }
+                $repeatLabel = $attrs['repeatLabel'] ?? null;
+                if ($repeatLabel !== null && ($key === null || ! is_string($repeatLabel) || trim($repeatLabel) === '' || mb_strlen($repeatLabel) > 180)) {
+                    self::fail('La tabla repetible no tiene un nombre válido.');
+                }
                 $groupByUnit = $attrs['groupByUnit'] ?? null;
                 if ($groupByUnit !== null && ! is_bool($groupByUnit)) {
                     self::fail('La agrupación por unidades no es válida.');
@@ -133,6 +137,9 @@ final class TemplateDocument
                     'groupByUnit' => $groupByUnit,
                     'visualStructure' => $visualStructure,
                 ];
+                if ($repeatLabel !== null) {
+                    $node['attrs']['repeatLabel'] = trim($repeatLabel);
+                }
                 if ($insideTable && $key !== null) {
                     self::fail('Una tabla repetible no puede estar dentro de otra tabla.');
                 }
@@ -173,6 +180,10 @@ final class TemplateDocument
                 if ($textAlign !== null && ! in_array($textAlign, self::CELL_ALIGNMENTS, true)) {
                     self::fail('Alineación de celda no permitida.');
                 }
+                $fontSize = $attrs['fontSize'] ?? null;
+                if ($fontSize !== null && (! is_string($fontSize) || ! preg_match('/^(?:[7-9]|[12][0-9]|3[0-6])pt$/D', $fontSize))) {
+                    self::fail('Tamaño de fuente de celda no permitido.');
+                }
                 $borderStyle = $attrs['borderStyle'] ?? null;
                 if ($borderStyle !== null && ! in_array($borderStyle, self::CELL_BORDER_STYLES, true)) {
                     self::fail('Borde de celda no permitido.');
@@ -193,6 +204,9 @@ final class TemplateDocument
                     'italic' => $italic,
                     'borderStyle' => $borderStyle,
                 ];
+                if ($fontSize !== null) {
+                    $node['attrs']['fontSize'] = $fontSize;
+                }
             }
             if (isset($raw['marks'])) {
                 if (! in_array($type, ['text', 'variable', 'field', 'column'], true) || ! is_array($raw['marks']) || count($raw['marks']) > 4) {

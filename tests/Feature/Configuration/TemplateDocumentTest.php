@@ -7,6 +7,7 @@ use App\Modules\Configuration\Application\Actions\SaveTemplateDocument;
 use App\Modules\Configuration\Application\TemplateDocumentDefaults;
 use App\Modules\Configuration\Application\TemplateDocumentResolver;
 use App\Modules\Configuration\Application\TemplateVariables;
+use App\Modules\Configuration\Domain\TableLayout;
 use App\Modules\Configuration\Domain\TemplateAppearance;
 use App\Modules\Configuration\Domain\TemplateDocument;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
@@ -249,6 +250,7 @@ class TemplateDocumentTest extends TestCase
         $this->assertSame('#E7E6E6', $cell['attrs']['backgroundColor']);
         $this->assertSame('#FFFFFF', $cell['attrs']['textColor']);
         $this->assertSame('center', $cell['attrs']['textAlign']);
+        $this->assertSame('9pt', $cell['attrs']['fontSize']);
         $this->assertTrue($cell['attrs']['bold']);
         $this->assertFalse($cell['attrs']['italic']);
         $this->assertSame('thick', $cell['attrs']['borderStyle']);
@@ -257,6 +259,7 @@ class TemplateDocumentTest extends TestCase
             'backgroundColor' => 'url(https://example.com)',
             'textColor' => 'red',
             'textAlign' => 'diagonal',
+            'fontSize' => '100vw',
             'bold' => 'yes',
             'italic' => 1,
             'borderStyle' => 'javascript',
@@ -274,6 +277,57 @@ class TemplateDocumentTest extends TestCase
                 $this->addToAssertionCount(1);
             }
         }
+    }
+
+    public function test_a_static_table_can_create_its_repeat_source_when_the_first_data_is_added(): void
+    {
+        $template = $this->template();
+        $block = $template->fields()->where('clave', 'objetivo_general')->firstOrFail()->block;
+        $repeatKey = 'campo_datos_repetibles_prueba';
+        $document = ['type' => 'doc', 'content' => [[
+            'type' => 'table',
+            'attrs' => [
+                'repeatKey' => $repeatKey,
+                'repeatLabel' => 'Datos repetibles',
+                'groupByUnit' => false,
+                'visualStructure' => true,
+            ],
+            'content' => [[
+                'type' => 'tableRow',
+                'attrs' => ['rowRole' => 'record'],
+                'content' => [[
+                    'type' => 'tableCell',
+                    'attrs' => ['colspan' => 1, 'rowspan' => 1],
+                    'content' => [['type' => 'paragraph', 'content' => [[
+                        'type' => 'column',
+                        'attrs' => [
+                            'key' => 'resultado_aprendizaje',
+                            'label' => 'Resultado de aprendizaje',
+                            'kind' => 'texto_largo',
+                            'role' => null,
+                            'sum' => false,
+                        ],
+                    ]]]],
+                ]],
+            ]],
+        ]]];
+
+        $this->patch(route('admin.templates.blocks.document', [$template, $block]), [
+            'document' => $document,
+            'fingerprint' => SaveTemplateDocument::fingerprint($block),
+        ])->assertSessionHasNoErrors();
+
+        $repeatField = $block->fresh()->fields()->where('clave', $repeatKey)->firstOrFail();
+        $this->assertSame('repetible', $repeatField->tipo);
+        $this->assertSame('Datos repetibles', $repeatField->etiqueta);
+        $this->assertSame(
+            'resultado_aprendizaje',
+            TableLayout::fromBlock($block->fresh())['columns'][0]['key'],
+        );
+        $this->assertSame(
+            $repeatKey,
+            $block->fresh()->configuracion['document']['content'][0]['attrs']['repeatKey'],
+        );
     }
 
     public function test_text_field_list_format_preserves_values_and_exports_lines_as_items(): void
@@ -351,6 +405,7 @@ class TemplateDocumentTest extends TestCase
             foreach (['Carrera congelada', 'Contenido &lt;docente&gt; &amp; aprobado', 'w:gridSpan w:val="2"', 'w:vMerge w:val="restart"', 'w:vMerge w:val="continue"', 'w:fill="E7E6E6"', 'w:color w:val="FFFFFF"', 'w:color w:val="CC0000"', 'w:jc w:val="center"', '<w:tcBorders>', 'w:sz="12"'] as $expected) {
                 $this->assertStringContainsString($expected, $xml);
             }
+            $this->assertStringContainsString('w:sz w:val="18"', $xml);
             $this->assertStringNotContainsString('w:sz w:val="28"', $xml);
             $this->assertStringNotContainsString('w:jc w:val="both"', $xml);
             $this->assertStringNotContainsString('Times New Roman', $xml);
@@ -593,6 +648,7 @@ class TemplateDocumentTest extends TestCase
             'backgroundColor' => '#E7E6E6',
             'textColor' => '#FFFFFF',
             'textAlign' => 'center',
+            'fontSize' => '9pt',
             'bold' => true,
             'italic' => false,
             'borderStyle' => 'thick',

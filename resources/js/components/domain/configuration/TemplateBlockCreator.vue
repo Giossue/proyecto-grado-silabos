@@ -128,7 +128,6 @@ const updateOpen = (value: boolean): void => {
         :trigger-label="empty ? 'Agregar primer bloque' : 'Agregar bloque'"
         title="Nuevo bloque"
         description="El bloque agrupa los campos que completará el docente."
-        wide
         @update:open="updateOpen"
     >
         <template #trigger>
