@@ -18,7 +18,6 @@ import {
     Redo2,
     Rows3,
     SplitSquareHorizontal,
-    SquareDashed,
     Undo2,
     UnfoldHorizontal,
     UserRoundPlus,
@@ -345,7 +344,6 @@ const inlineNode = (name: 'field' | 'column' | 'variable') =>
                             ? 'template-table-variable'
                             : 'template-table-field',
                     contenteditable: 'false',
-                    title: label,
                 }),
                 label,
             ];
@@ -1013,7 +1011,6 @@ const nullableModel = <T extends string>(attribute: keyof CellAttributes) =>
 const background = nullableModel<string>('backgroundColor');
 const color = nullableModel<string>('textColor');
 const alignment = nullableModel<CellAlignment>('textAlign');
-const border = nullableModel<CellBorder>('borderStyle');
 
 const colorName = (value: string, inherited: string): string =>
     value === 'inherit'
@@ -1038,17 +1035,6 @@ const alignmentTooltip = computed(() => {
 
     return `Alineación de celda: ${labels[alignment.value] ?? alignment.value}`;
 });
-const borderTooltip = computed(() => {
-    const labels: Record<string, string> = {
-        inherit: 'Original',
-        thin: 'Fino',
-        thick: 'Grueso',
-        none: 'Sin borde',
-    };
-
-    return `Borde de celda: ${labels[border.value] ?? border.value}`;
-});
-
 const resetCell = (): void => {
     const chain = state.value?.chain().focus();
 
@@ -1058,7 +1044,6 @@ const resetCell = (): void => {
         .setCellAttribute('textAlign', null)
         .setCellAttribute('bold', null)
         .setCellAttribute('italic', null)
-        .setCellAttribute('borderStyle', null)
         .run();
 };
 
@@ -1581,7 +1566,10 @@ defineExpose({ getDocument });
                     :disabled="!inCell || pending"
                 >
                     <template #icon>
-                        <PaintBucket aria-hidden="true" />
+                        <PaintBucket
+                            class="text-foreground"
+                            aria-hidden="true"
+                        />
                     </template>
                     <SelectItem value="inherit">Sin fondo</SelectItem>
                     <SelectItem
@@ -1605,7 +1593,7 @@ defineExpose({ getDocument });
                     :disabled="!inCell || pending"
                 >
                     <template #icon>
-                        <Baseline aria-hidden="true" />
+                        <Baseline class="text-foreground" aria-hidden="true" />
                     </template>
                     <SelectItem value="inherit">Color heredado</SelectItem>
                     <SelectItem
@@ -1629,7 +1617,7 @@ defineExpose({ getDocument });
                     :disabled="!inCell || pending"
                 >
                     <template #icon>
-                        <AlignLeft aria-hidden="true" />
+                        <AlignLeft class="text-foreground" aria-hidden="true" />
                     </template>
                     <SelectItem value="inherit">Alineación heredada</SelectItem>
                     <SelectItem value="left">
@@ -1644,21 +1632,6 @@ defineExpose({ getDocument });
                     <SelectItem value="justify">
                         <AlignJustify /> Justificado
                     </SelectItem>
-                </TemplateToolbarSelect>
-
-                <TemplateToolbarSelect
-                    v-model="border"
-                    label="Borde de celda"
-                    :tooltip="borderTooltip"
-                    :disabled="!inCell || pending"
-                >
-                    <template #icon>
-                        <SquareDashed aria-hidden="true" />
-                    </template>
-                    <SelectItem value="inherit">Borde original</SelectItem>
-                    <SelectItem value="thin">Fino</SelectItem>
-                    <SelectItem value="thick">Grueso</SelectItem>
-                    <SelectItem value="none">Sin borde</SelectItem>
                 </TemplateToolbarSelect>
 
                 <Separator orientation="vertical" class="h-7" />

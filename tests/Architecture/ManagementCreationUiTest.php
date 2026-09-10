@@ -809,6 +809,8 @@ it('construye la plantilla desde bloques que contienen campos tipados', function
         ->toContain('<TemplateDocumentView')
         ->toContain('template-editor-ribbon')
         ->toContain('<Teleport to="body" :disabled="!fixedRibbon">')
+        ->toContain('<TooltipContent>')
+        ->not->toContain(':title="selectionLabel"')
         ->toContain("'fixed inset-x-0 top-12 z-40 border-b shadow-sm'")
         ->toContain('Renombrar bloque')
         ->toContain('Editar campo')
@@ -910,7 +912,7 @@ it('construye la plantilla desde bloques que contienen campos tipados', function
         ->toContain('Fondo de celda')
         ->toContain('Color de texto')
         ->toContain('Alineación de celda')
-        ->toContain('Borde de celda')
+        ->not->toContain('Borde de celda')
         ->toContain('Combinar')
         ->toContain('Separar')
         ->toContain('Filas y columnas')
@@ -922,12 +924,16 @@ it('construye la plantilla desde bloques que contienen campos tipados', function
         ->toContain('<TemplateToolbarSelect')
         ->toContain('size="icon-sm"')
         ->toContain('<TooltipContent')
+        ->not->toContain('title: label')
         ->toContain('<DropdownMenu');
     expect($toolbarSelect)
         ->toBeString()
         ->toContain('<Select')
         ->toContain('<Tooltip')
-        ->toContain('class="relative w-12 gap-1 px-2"')
+        ->toContain('<TooltipTrigger as-child>')
+        ->toContain('<TooltipContent>{{ tooltip }}</TooltipContent>')
+        ->toContain('!border-0')
+        ->toContain('!bg-transparent')
         ->toContain(':aria-label="label"');
     expect($toolbarButton)
         ->toBeString()
@@ -1402,4 +1408,69 @@ it('ofrece quitar los filtros en las dos barras y solo cuando hay alguno puesto'
     $this->assertStringContainsString('syncActive(event.target)', $toolbar);
     $this->assertStringContainsString('draftActive.value ?? urlActive.value', $toolbar);
     $this->assertStringContainsString('draftActive.value = false', $toolbar);
+});
+
+it('evita tooltips nativos en todo el frontend', function (): void {
+    $root = dirname(__DIR__, 2);
+    $frontend = $root.'/resources/js';
+    $violations = [];
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($frontend),
+    );
+
+    foreach ($iterator as $file) {
+        if (! $file->isFile() || ! in_array($file->getExtension(), ['vue', 'ts', 'tsx'], true)) {
+            continue;
+        }
+
+        $source = file_get_contents($file->getPathname());
+        if (! is_string($source)) {
+            continue;
+        }
+
+        $hasNativeTemplateTitle = preg_match(
+            '/<[a-z][a-z0-9-]*\b(?:(?!>).)*\s(?::|v-bind:)?title\s*=/s',
+            $source,
+        ) === 1;
+        $setsNativeTitle = preg_match(
+            '/setAttribute\(\s*[\'\"]title[\'\"]/',
+            $source,
+        ) === 1;
+        $rendersNativeTitle = preg_match(
+            '/(?:mergeAttributes|\bh)\s*\([\s\S]{0,1200}?\btitle\s*:/',
+            $source,
+        ) === 1;
+
+        if ($hasNativeTemplateTitle || $setsNativeTitle || $rendersNativeTitle) {
+            $violations[] = str_replace($root.'/', '', $file->getPathname());
+        }
+    }
+
+    expect($violations)->toBe([]);
+});
+
+it('reserva todos los tooltips del frontend para el componente shadcn', function (): void {
+    $root = dirname(__DIR__, 2);
+    $frontend = $root.'/resources/js';
+    $nativeTitles = [];
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($frontend),
+    );
+
+    foreach ($iterator as $file) {
+        if (! $file->isFile() || $file->getExtension() !== 'vue') {
+            continue;
+        }
+
+        $source = file_get_contents($file->getPathname());
+        if (! is_string($source)) {
+            continue;
+        }
+
+        if (preg_match('/<[a-z][\w-]*\b(?:(?!>).)*\s(?::|v-bind:)?title\s*=/s', $source) === 1) {
+            $nativeTitles[] = str_replace($root.'/', '', $file->getPathname());
+        }
+    }
+
+    expect($nativeTitles)->toBe([]);
 });

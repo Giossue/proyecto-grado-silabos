@@ -160,7 +160,8 @@ una tabla y pulsa **Editar tabla**, `TemplateTableDesigner` monta `TemplateTable
 dentro de la hoja y teletransporta sus herramientas a la cinta. La acción aparece solo
 en la cinta contextual; la tabla no muestra un botón propio duplicado. La instancia Tiptap
 acotada selecciona celdas y expone fondo, color de texto, alineación,
-negrita, cursiva, borde, combinación y operaciones de filas/columnas. El guardado usa el
+negrita, cursiva, combinación y operaciones de filas/columnas. El borde conserva el
+valor institucional del documento y no tiene control en la cinta. El guardado usa el
 PATCH existente de `SaveTemplateDocument`, con su huella, autorización, bloqueo y
 confirmación de reinicio. `TemplateDocument` normaliza el catálogo de atributos por
 celda y `TemplateDocumentView`/`TemplateDocumentWord` lo interpretan sin persistir HTML.
@@ -186,6 +187,8 @@ para reutilizarlo antes de guardar.
 estilo con ayuda de `Tooltip`, sin sustituir sus nombres accesibles y manteniendo la ayuda
 de acciones deshabilitadas. El menú único conserva los nombres accesibles y concentra sus
 submenús para que la hoja no reciba controles duplicados.
+Toda ayuda emergente de la interfaz usa `Tooltip` de shadcn-vue; el atributo HTML `title`
+no se usa como tooltip nativo.
 
 `TemplateBlockCreator` y `TemplateFieldCreator` reutilizan el `Select` de shadcn-vue para
 el tipo de contenido dentro de sus diálogos. `SelectContent` admite `portalDisabled` para

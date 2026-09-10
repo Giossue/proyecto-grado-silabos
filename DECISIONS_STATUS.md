@@ -33,7 +33,8 @@ Fecha de corte: **30 de agosto de 2026**.
   catálogos institucionales de fuente, tamaños, colores, alineación, márgenes y
   orientación (I-56, ajuste del 7 de septiembre de 2026). Administración puede editar
   en la hoja el estilo y geometría de una tabla por celda: colores catalogados,
-  alineación, negrita, cursiva, borde, combinación y filas/columnas. Los diseños
+  alineación, negrita, cursiva, combinación y filas/columnas. El borde conserva el
+  estilo institucional predeterminado y no se ofrece como ajuste. Los diseños
   complejos ya guardados, variables descriptivas como `@nombre_carrera`, columnas
   tipadas, unidades, sumas y repetición se conservan. Docencia solo completa campos;
   las variables se resuelven en servidor. El DOCX se genera con PHPWord desde la copia

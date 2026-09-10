@@ -303,7 +303,8 @@ campo usan los componentes `Select` de shadcn-vue dentro de sus `Popover`.
 - [x] Corregir la aplicación del color global para distinguir cabeceras reales de
       filas fijas y conservar el estilo propio de la ficha institucional.
 - [x] Permitir seleccionar una o varias celdas y ajustar fondo, texto, negrita,
-      cursiva, alineación y borde; combinar o separar cuando la selección lo admita.
+      cursiva y alineación; combinar o separar cuando la selección lo admita. El borde
+      conserva su valor institucional y no se modifica desde la cinta.
 - [x] Guardar el documento normalizado con autorización, bloqueo, confirmación y
       concurrencia existentes; reflejar el estilo en vista, snapshot y DOCX.
 - [x] Sustituir los selectores nativos de tipo de campo por `Select` de shadcn-vue sin
@@ -312,7 +313,7 @@ campo usan los componentes `Select` de shadcn-vue dentro de sus `Popover`.
 Verificación: Configuración, Sílabos, Documentos y contrato de arquitectura,
 **130 pruebas / 2848 aserciones**; Chromium `template-visual-builder.mjs`, **1/1**, crea
 un campo de tabla mediante el `Select` de shadcn-vue y guarda dos celdas combinadas con
-fondo, texto, alineación, negrita y borde. Pasan TypeScript, ESLint y Prettier del
+fondo, texto, alineación y negrita, conservando el borde. Pasan TypeScript, ESLint y Prettier del
 incremento, build de producción, Pint y PHPStan. La regresión OOXML comprueba los estilos
 por celda y que una fila fija no reciba el color global de cabecera. Sin migraciones,
 commit ni push.

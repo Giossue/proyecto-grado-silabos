@@ -502,9 +502,8 @@ test(
         const recordDuringSmallResize = await recordLeftCell.boundingBox();
         assert.ok(headerDuringSmallResize && recordDuringSmallResize);
         assert.ok(
-            Math.abs(
-                headerDuringSmallResize.width - headerBeforeResize.width,
-            ) < 1,
+            Math.abs(headerDuringSmallResize.width - headerBeforeResize.width) <
+                1,
             'Una división interna pequeña no debe mover una fila ajena.',
         );
         assert.ok(
@@ -608,6 +607,22 @@ test(
         const backgroundSelect = page.getByRole('combobox', {
             name: 'Fondo de celda',
         });
+        const backgroundSelectStyle = await backgroundSelect.evaluate(
+            (element) => {
+                const style = getComputedStyle(element);
+
+                return {
+                    borderWidth: style.borderWidth,
+                    backgroundColor: style.backgroundColor,
+                    width: style.width,
+                };
+            },
+        );
+        assert.deepEqual(backgroundSelectStyle, {
+            borderWidth: '0px',
+            backgroundColor: 'rgba(0, 0, 0, 0)',
+            width: '32px',
+        });
         await backgroundSelect.focus();
         await backgroundSelect.hover();
         await page
@@ -622,8 +637,6 @@ test(
             .getByRole('combobox', { name: 'Alineación de celda' })
             .click();
         await page.getByRole('option', { name: 'Centro' }).click();
-        await page.getByRole('combobox', { name: 'Borde de celda' }).click();
-        await page.getByRole('option', { name: 'Grueso' }).click();
         await page
             .getByRole('button', {
                 name: 'Negrita en las celdas seleccionadas',
@@ -662,7 +675,7 @@ test(
         assert.equal(header.attrs.textColor, '#FFFFFF');
         assert.equal(header.attrs.textAlign, 'center');
         assert.equal(header.attrs.bold, true);
-        assert.equal(header.attrs.borderStyle, 'thick');
+        assert.equal(header.attrs.borderStyle, null);
         assert.equal(
             tableRequest.data.document.content[0].attrs.groupByUnit,
             true,
