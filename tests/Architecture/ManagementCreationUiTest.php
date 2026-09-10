@@ -993,11 +993,12 @@ it('presenta la plantilla institucional única y abre su constructor', function 
 
 it('usa el mismo paginador en todas las superficies tabulares', function (): void {
     $root = dirname(__DIR__, 2);
-    // La tabla dentro de Preparar período es una matriz de configuración previa al
-    // guardado, no un listado navegable. Debe mostrar la malla completa para que la
-    // selección masiva no oculte materias en otras páginas.
+    // Estas tablas forman parte de formularios, no de listados navegables. Preparar
+    // período muestra la malla completa para la selección masiva y Agregar paralelo
+    // resume los paralelos de una sola materia sin controles de navegación.
     $configurationTables = [
         'resources/js/components/domain/academic/PeriodPreparationSheet.vue',
+        'resources/js/components/domain/academic/ParallelCreationSheet.vue',
     ];
     $iterator = new RecursiveIteratorIterator(
         new RecursiveDirectoryIterator($root.'/resources/js'),
@@ -1033,7 +1034,7 @@ it('usa el mismo paginador en todas las superficies tabulares', function (): voi
         $checked += $tableCount;
     }
 
-    $this->assertSame(23, $checked);
+    $this->assertSame(22, $checked);
 });
 
 it('ordena busqueda filtros y accion mediante una barra compartida', function (): void {

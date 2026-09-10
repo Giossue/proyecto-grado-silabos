@@ -5,7 +5,6 @@ import { watch } from 'vue';
 import CareerAcademicStructureController from '@/actions/App/Modules/Academic/Presentation/Http/Controllers/CareerAcademicStructureController';
 import FormSheet from '@/components/domain/FormSheet.vue';
 import FormSheetActions from '@/components/domain/FormSheetActions.vue';
-import TablePagination from '@/components/domain/TablePagination.vue';
 import {
     Field,
     FieldError,
@@ -30,7 +29,6 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { useClientPagination } from '@/composables/useClientPagination';
 import { PARALLEL_SHIFTS as SHIFTS, shiftLabel } from '@/lib/parallelShifts';
 
 const props = defineProps<{
@@ -49,11 +47,6 @@ const form = useForm<{ codes: string; shift: string }>({
     codes: '',
     shift: '',
 });
-const {
-    items: parallelPage,
-    meta: parallelMeta,
-    setPage: setParallelPage,
-} = useClientPagination(() => props.parallels);
 
 const reset = (): void => {
     form.reset();
@@ -77,7 +70,6 @@ const submit = (close: () => void): void => {
 watch(open, (isOpen) => {
     if (isOpen) {
         reset();
-        setParallelPage(1);
     }
 });
 </script>
@@ -167,7 +159,7 @@ watch(open, (isOpen) => {
                                         Sin paralelos registrados
                                     </TableEmpty>
                                     <TableRow
-                                        v-for="parallel in parallelPage"
+                                        v-for="parallel in parallels"
                                         v-else
                                         :key="parallel.id"
                                     >
@@ -181,12 +173,6 @@ watch(open, (isOpen) => {
                                 </TableBody>
                             </Table>
                         </div>
-                        <TablePagination
-                            :meta="parallelMeta"
-                            mode="client"
-                            label="Paginación de paralelos registrados"
-                            @update:page="setParallelPage"
-                        />
                     </section>
 
                     <FormSheetActions
