@@ -18,6 +18,7 @@ withDefaults(
         size?: ButtonVariants['size'];
         buttonClass?: HTMLAttributes['class'];
         showLabel?: boolean;
+        tooltip?: boolean;
         tooltipSide?: 'top' | 'right' | 'bottom' | 'left';
     }>(),
     {
@@ -25,6 +26,7 @@ withDefaults(
         size: 'icon-sm',
         buttonClass: undefined,
         showLabel: false,
+        tooltip: true,
         tooltipSide: 'left',
     },
 );
@@ -45,7 +47,12 @@ const helpOpen = ref(false);
         <slot name="trigger" />
         <slot />
     </Popover>
-    <Tooltip v-else v-model:open="helpOpen" :disable-hoverable-content="true">
+    <Tooltip
+        v-else
+        v-model:open="helpOpen"
+        :disabled="!tooltip"
+        :disable-hoverable-content="true"
+    >
         <TooltipTrigger as-child>
             <span class="inline-flex">
                 <Popover
@@ -59,7 +66,7 @@ const helpOpen = ref(false);
                             :size="size"
                             :class="['text-foreground', buttonClass]"
                             :aria-label="label"
-                            @focus="helpOpen = true"
+                            @focus="helpOpen = tooltip"
                             @blur="helpOpen = false"
                         >
                             <slot name="icon" />
@@ -70,7 +77,12 @@ const helpOpen = ref(false);
                 </Popover>
             </span>
         </TooltipTrigger>
-        <TooltipContent paper :side="tooltipSide" :side-offset="8">
+        <TooltipContent
+            v-if="tooltip"
+            paper
+            :side="tooltipSide"
+            :side-offset="8"
+        >
             {{ label }}
         </TooltipContent>
     </Tooltip>

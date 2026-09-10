@@ -153,6 +153,15 @@ test(
             await page.getByRole('button', { name: 'Agregar bloque' }).count(),
             1,
         );
+        await page.getByRole('button', { name: 'Agregar campo' }).hover();
+        await page.waitForTimeout(200);
+        assert.equal(
+            await page
+                .locator('[data-slot="tooltip-content"]')
+                .filter({ hasText: 'Agregar campo' })
+                .count(),
+            0,
+        );
         await page.getByRole('button', { name: 'Agregar campo' }).click();
         await page.getByText('Nuevo campo', { exact: true }).waitFor();
         await page.getByRole('button', { name: 'Cancelar' }).click();

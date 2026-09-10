@@ -125,6 +125,7 @@ const updateOpen = (value: boolean): void => {
                             : 'size-7',
                       size: ribbon || choice ? 'sm' : 'icon-sm',
                       showLabel: ribbon || choice,
+                      tooltip: !choice,
                       tooltipSide: 'left',
                   }
         "
