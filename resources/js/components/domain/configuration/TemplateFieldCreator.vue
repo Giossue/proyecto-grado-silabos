@@ -47,8 +47,9 @@ const props = withDefaults(
         menu?: boolean;
         ribbon?: boolean;
         inline?: boolean;
+        choice?: boolean;
     }>(),
-    { menu: false, ribbon: false, inline: false },
+    { menu: false, ribbon: false, inline: false, choice: false },
 );
 
 const open = ref(false);
@@ -117,14 +118,20 @@ const updateOpen = (value: boolean): void => {
                 ? {}
                 : {
                       label: 'Agregar campo',
-                      variant: 'outline',
-                      buttonClass: inline
-                          ? 'size-5 rounded-full p-0 opacity-100 transition-transform hover:scale-125 focus-visible:scale-125'
-                          : ribbon
-                            ? undefined
-                            : 'size-7',
-                      size: inline ? 'icon-sm' : ribbon ? 'sm' : 'icon-sm',
-                      showLabel: ribbon,
+                      variant: choice ? 'ghost' : 'outline',
+                      buttonClass: choice
+                          ? 'w-full justify-start'
+                          : inline
+                            ? 'size-5 rounded-full p-0 opacity-100 transition-transform hover:scale-125 focus-visible:scale-125'
+                            : ribbon
+                              ? undefined
+                              : 'size-7',
+                      size: inline
+                          ? 'icon-sm'
+                          : ribbon || choice
+                            ? 'sm'
+                            : 'icon-sm',
+                      showLabel: ribbon || choice,
                       tooltipSide: inline ? 'bottom' : 'left',
                   }
         "
@@ -144,7 +151,7 @@ const updateOpen = (value: boolean): void => {
         </template>
         <component
             :is="menu ? DialogContent : PopoverContent"
-            v-bind="menu ? {} : { align: 'end' }"
+            v-bind="menu ? {} : { align: choice ? 'start' : 'end' }"
             class="w-[min(24rem,calc(100vw-2rem))]"
         >
             <DialogTitle v-if="menu" class="sr-only"> Nuevo campo </DialogTitle>

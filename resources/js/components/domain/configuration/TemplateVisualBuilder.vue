@@ -6,6 +6,7 @@ import TemplateBlockCreator from '@/components/domain/configuration/TemplateBloc
 import TemplateDocumentView from '@/components/domain/configuration/TemplateDocumentView.vue';
 import TemplateFieldActions from '@/components/domain/configuration/TemplateFieldActions.vue';
 import TemplateFieldCreator from '@/components/domain/configuration/TemplateFieldCreator.vue';
+import TemplateInsertPopover from '@/components/domain/configuration/TemplateInsertPopover.vue';
 import TemplateSectionActions from '@/components/domain/configuration/TemplateSectionActions.vue';
 import TemplateTableDesigner from '@/components/domain/configuration/TemplateTableDesigner.vue';
 import PaginatedDocument from '@/components/domain/PaginatedDocument.vue';
@@ -496,28 +497,6 @@ const fieldSelectionListeners = (sectionId: string, blockId: string) =>
                         Este bloque todavía no tiene campos.
                     </p>
 
-                    <div
-                        v-if="
-                            !readonly &&
-                            !activeTable &&
-                            section.blocks.length === 0 &&
-                            selection.kind === 'section' &&
-                            selection.sectionId === section.id
-                        "
-                        class="relative z-10 mb-2 flex h-5 items-center justify-center"
-                        data-template-insert="first-field"
-                        @pointerdown.stop
-                        @click.stop
-                    >
-                        <TemplateFieldCreator
-                            :template-id="template.id"
-                            :section-id="section.id"
-                            :position="0"
-                            :block-types="blockTypes"
-                            inline
-                        />
-                    </div>
-
                     <article
                         v-for="(block, fieldIndex) in section.blocks"
                         :key="block.id"
@@ -604,16 +583,16 @@ const fieldSelectionListeners = (sectionId: string, blockId: string) =>
                                 selection.blockId === block.id
                             "
                             class="absolute -bottom-3 left-1/2 z-10 flex h-5 -translate-x-1/2 items-center justify-center"
-                            data-template-insert="field"
+                            data-template-insert="content"
                             @pointerdown.stop
                             @click.stop
                         >
-                            <TemplateFieldCreator
+                            <TemplateInsertPopover
                                 :template-id="template.id"
                                 :section-id="section.id"
-                                :position="fieldIndex + 1"
+                                :field-position="fieldIndex + 1"
+                                :block-position="sectionIndex + 1"
                                 :block-types="blockTypes"
-                                inline
                             />
                         </div>
                     </article>
@@ -626,15 +605,16 @@ const fieldSelectionListeners = (sectionId: string, blockId: string) =>
                             selection.sectionId === section.id
                         "
                         class="absolute -bottom-3 left-1/2 z-10 flex h-5 -translate-x-1/2 items-center justify-center"
-                        data-template-insert="block"
+                        data-template-insert="content"
                         @pointerdown.stop
                         @click.stop
                     >
-                        <TemplateBlockCreator
+                        <TemplateInsertPopover
                             :template-id="template.id"
-                            :position="sectionIndex + 1"
+                            :section-id="section.id"
+                            :field-position="section.blocks.length"
+                            :block-position="sectionIndex + 1"
                             :block-types="blockTypes"
-                            inline
                         />
                     </div>
                 </section>

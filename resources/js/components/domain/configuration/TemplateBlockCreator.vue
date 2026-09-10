@@ -47,8 +47,15 @@ const props = withDefaults(
         menu?: boolean;
         ribbon?: boolean;
         inline?: boolean;
+        choice?: boolean;
     }>(),
-    { empty: false, menu: false, ribbon: false, inline: false },
+    {
+        empty: false,
+        menu: false,
+        ribbon: false,
+        inline: false,
+        choice: false,
+    },
 );
 
 let sequence = 0;
@@ -139,23 +146,25 @@ const updateOpen = (value: boolean): void => {
                 ? {}
                 : {
                       label: empty ? 'Agregar primer bloque' : 'Agregar bloque',
-                      variant: empty ? 'default' : 'outline',
+                      variant: empty ? 'default' : choice ? 'ghost' : 'outline',
                       size: empty
                           ? 'icon'
                           : inline
                             ? 'icon-sm'
-                            : ribbon
+                            : ribbon || choice
                               ? 'sm'
                               : 'icon-sm',
-                      showLabel: ribbon,
+                      showLabel: ribbon || choice,
                       tooltipSide: inline ? 'bottom' : 'left',
                       buttonClass: inline
                           ? 'size-5 rounded-full p-0 opacity-100 transition-transform hover:scale-125 focus-visible:scale-125'
-                          : empty
-                            ? undefined
-                            : ribbon
+                          : choice
+                            ? 'w-full justify-start'
+                            : empty
                               ? undefined
-                              : 'size-7 border-dashed bg-background',
+                              : ribbon
+                                ? undefined
+                                : 'size-7 border-dashed bg-background',
                   }
         "
         @update:open="updateOpen"
@@ -174,7 +183,11 @@ const updateOpen = (value: boolean): void => {
         </template>
         <component
             :is="menu ? DialogContent : PopoverContent"
-            v-bind="menu ? {} : { align: empty ? 'center' : 'end' }"
+            v-bind="
+                menu
+                    ? {}
+                    : { align: empty ? 'center' : choice ? 'start' : 'end' }
+            "
             :class="
                 menu
                     ? 'max-h-[calc(100vh-2rem)] w-[min(30rem,calc(100vw-2rem))] overflow-hidden p-0'

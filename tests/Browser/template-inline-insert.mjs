@@ -116,9 +116,9 @@ test(
         await page
             .locator('article[aria-label="Campo Descripción de la asignatura"]')
             .click();
-        const fieldInsert = page.locator('[data-template-insert="field"]');
+        const fieldInsert = page.locator('[data-template-insert="content"]');
         const fieldButton = fieldInsert.getByRole('button', {
-            name: 'Agregar campo',
+            name: 'Agregar contenido',
         });
         const before = await fieldButton.boundingBox();
         const restingStyle = await fieldButton.evaluate((element) => {
@@ -141,36 +141,37 @@ test(
         assert.ok(before && after && after.width > before.width);
         const fieldTooltip = page
             .locator('[data-slot="tooltip-content"]')
-            .filter({ hasText: 'Agregar campo' });
+            .filter({ hasText: 'Agregar contenido' });
         await fieldTooltip.waitFor();
         assert.equal(await fieldTooltip.getAttribute('data-side'), 'bottom');
         await fieldButton.click();
+        assert.equal(
+            await page.getByRole('button', { name: 'Agregar campo' }).count(),
+            1,
+        );
+        assert.equal(
+            await page.getByRole('button', { name: 'Agregar bloque' }).count(),
+            1,
+        );
+        await page.getByRole('button', { name: 'Agregar campo' }).click();
         await page.getByText('Nuevo campo', { exact: true }).waitFor();
         await page.getByRole('button', { name: 'Cancelar' }).click();
 
         await page.locator('section[aria-label="Bloque Bloque vacío"]').click();
         assert.equal(
-            await page.locator('[data-template-insert="first-field"]').count(),
+            await page.locator('[data-template-insert="content"]').count(),
             1,
         );
-        const firstFieldButton = page
-            .locator('[data-template-insert="first-field"]')
-            .getByRole('button', { name: 'Agregar campo' });
-        assert.equal(
-            await firstFieldButton.evaluate(
-                (element) => getComputedStyle(element).opacity,
-            ),
-            '1',
-        );
-        const blockButton = page
-            .locator('[data-template-insert="block"]')
-            .getByRole('button', { name: 'Agregar bloque' });
-        await blockButton.hover();
+        const emptyBlockButton = page
+            .locator('[data-template-insert="content"]')
+            .getByRole('button', { name: 'Agregar contenido' });
+        await emptyBlockButton.hover();
         await page
             .locator('[data-slot="tooltip-content"]')
-            .filter({ hasText: 'Agregar bloque' })
+            .filter({ hasText: 'Agregar contenido' })
             .waitFor();
-        await blockButton.click();
+        await emptyBlockButton.click();
+        await page.getByRole('button', { name: 'Agregar bloque' }).click();
         await page.getByText('Nuevo bloque', { exact: true }).waitFor();
     },
 );
