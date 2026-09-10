@@ -764,7 +764,9 @@ test(
             .waitFor();
         await backgroundSelect.click();
         await page.getByRole('option', { name: 'Azul claro' }).click();
-        await page.getByRole('combobox', { name: 'Color de texto' }).click();
+        await page
+            .getByRole('combobox', { name: 'Color de toda la celda' })
+            .click();
         await page.getByRole('option', { name: 'Blanco' }).click();
         await page
             .getByRole('combobox', { name: 'Alineación de celda' })

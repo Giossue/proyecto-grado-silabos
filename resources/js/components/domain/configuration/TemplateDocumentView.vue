@@ -889,12 +889,12 @@ const Content = defineComponent({ setup: () => () => draw(props.document) });
             > tbody
             > tr[data-row-role='unit']
             > :not([data-cell-text-color])
-            *,
-        .document-table th:not([data-cell-text-color]) *
+            :not([style*='color' i]),
+        .document-table th:not([data-cell-text-color]) :not([style*='color' i])
     ) {
     color: var(--document-table-header-color) !important;
 }
-.template-document-view :deep([data-cell-text-color] *) {
+.template-document-view :deep([data-cell-text-color] :not([style*='color' i])) {
     color: inherit !important;
 }
 .template-document-view :deep([data-cell-bold='true'] *) {

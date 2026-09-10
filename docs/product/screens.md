@@ -125,6 +125,8 @@ paralelo. Son operaciones separadas y ninguna levanta los bloqueos académicos.
   el documento en un diálogo de pantalla completa. Durante esta edición no se muestran
   el sidebar ni el encabezado administrativo: una cabecera fija de ancho completo reúne
   la salida a la vista normal y la cinta, mientras la hoja se desplaza por debajo.
+- En una tabla, **Color de toda la celda** aplica un valor general y **Color de fuente**
+  aplica el color al texto seleccionado; este último prevalece en la hoja y la exportación.
 - ADM-06 presenta el título principal como un bloque raíz único y siempre primero.
   Administración puede seleccionarlo y editar su texto desde la cinta, pero no eliminarlo,
   duplicarlo, moverlo ni agregarle campos.

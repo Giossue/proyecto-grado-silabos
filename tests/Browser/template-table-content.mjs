@@ -20,7 +20,10 @@ const document = {
     type: 'doc', content: [{
         type: 'table', content: [{
             type: 'tableRow', content: [{
-                type: 'tableCell', content: [{type: 'paragraph'}],
+                type: 'tableCell', content: [{
+                    type: 'paragraph',
+                    content: [{type: 'text', text: 'Texto de ejemplo'}],
+                }],
             }],
         }],
     }],
@@ -44,7 +47,10 @@ createApp({render: () => h('main', {class: 'p-8'}, [
     h(TooltipProvider, null, {default: () => h(TemplateTableEditor, {
         ref: editor, document, fields, variables, pending: false,
         fontFamily: 'Arial', fontSize: 11, textColor: '#000000',
-        bodyAlignment: 'left', colors: [{value: '#DBE5F1', label: 'Azul claro'}],
+        bodyAlignment: 'left', colors: [
+            {value: '#DBE5F1', label: 'Azul claro'},
+            {value: '#C00000', label: 'Rojo'},
+        ],
     })}),
 ])}).mount('#app');
 `;
@@ -106,6 +112,42 @@ test(
         await page.goto(`${server.resolvedUrls.local[0]}fixture`);
         const cell = page.locator('.template-table-editor td');
         await cell.click();
+        await page
+            .getByRole('combobox', { name: 'Color de toda la celda' })
+            .click();
+        await page.getByRole('option', { name: 'Azul claro' }).click();
+        const paragraph = cell.locator('p');
+        await paragraph.click();
+        await page.keyboard.press('Home');
+
+        for (let index = 0; index < 5; index++) {
+            await page.keyboard.press('Shift+ArrowRight');
+        }
+
+        assert.equal(
+            await page.evaluate(() => window.getSelection()?.toString()),
+            'Texto',
+        );
+        await page.getByRole('combobox', { name: 'Color de fuente' }).click();
+        await page.getByRole('option', { name: 'Rojo' }).click();
+        const formatted = await page.evaluate(() => window.fixture.document());
+
+        assert.equal(
+            formatted.content[0].content[0].content[0].content[0].content.some(
+                (node) =>
+                    node.marks?.some((mark) => mark.attrs?.color === '#C00000'),
+            ),
+            true,
+            JSON.stringify(formatted),
+        );
+        assert.equal(
+            await cell
+                .locator('span[style*="color"]')
+                .evaluate((element) => getComputedStyle(element).color),
+            'rgb(192, 0, 0)',
+        );
+        await paragraph.click();
+        await page.keyboard.press('End');
 
         const insert = page.getByRole('button', {
             name: 'Insertar contenido en la celda',
@@ -171,14 +213,29 @@ test(
         assert.equal(saved.content[0].content[0].attrs.rowRole, 'record');
         const inline =
             saved.content[0].content[0].content[0].content[0].content;
-        assert.equal(inline[0].type, 'variable');
-        assert.equal(inline[0].attrs.id, 'nombre_docente');
-        assert.equal(inline[1].type, 'field');
-        assert.equal(inline[1].attrs.kind, 'markdown');
-        assert.equal(inline[1].attrs.options, null);
-        assert.deepEqual(inline[2].attrs.options, ['Sí', 'No', 'No aplica']);
-        assert.equal(inline[3].attrs.choice, 'Sí');
-        assert.equal(inline[4].type, 'column');
-        assert.equal(inline[4].attrs.label, 'Resultado de aprendizaje');
+        const coloredText = inline.find(
+            (node) =>
+                node.type === 'text' &&
+                node.marks?.some(
+                    (mark) =>
+                        mark.type === 'textStyle' &&
+                        mark.attrs?.color === '#C00000',
+                ),
+        );
+        const variable = inline.find((node) => node.type === 'variable');
+        const insertedFields = inline.filter((node) => node.type === 'field');
+        const column = inline.find((node) => node.type === 'column');
+        assert.equal(coloredText.text, 'Texto');
+        assert.equal(variable.attrs.id, 'nombre_docente');
+        assert.equal(insertedFields[0].attrs.kind, 'markdown');
+        assert.equal(insertedFields[0].attrs.options, null);
+        assert.deepEqual(insertedFields[1].attrs.options, [
+            'Sí',
+            'No',
+            'No aplica',
+        ]);
+        assert.equal(insertedFields[2].attrs.choice, 'Sí');
+        assert.equal(column.type, 'column');
+        assert.equal(column.attrs.label, 'Resultado de aprendizaje');
     },
 );
