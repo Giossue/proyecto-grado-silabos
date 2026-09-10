@@ -148,9 +148,7 @@ test(
         await page.getByText('Nuevo campo', { exact: true }).waitFor();
         await page.getByRole('button', { name: 'Cancelar' }).click();
 
-        await page
-            .locator('section[aria-label="Bloque Bloque vacío"]')
-            .click();
+        await page.locator('section[aria-label="Bloque Bloque vacío"]').click();
         assert.equal(
             await page.locator('[data-template-insert="first-field"]').count(),
             1,
