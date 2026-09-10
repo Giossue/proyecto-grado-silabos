@@ -866,7 +866,7 @@ it('construye la plantilla desde bloques que contienen campos tipados', function
         ->toContain('hover:scale-125')
         ->toContain('<TemplateFieldCreator')
         ->toContain('<TemplateBlockCreator')
-        ->toContain(':field-position="fieldPosition"')
+        ->toContain(':position="fieldPosition"')
         ->toContain(':position="blockPosition"');
 
     $tableDesigner = file_get_contents(
