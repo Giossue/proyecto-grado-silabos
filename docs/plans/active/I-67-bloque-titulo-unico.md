@@ -24,7 +24,7 @@ RF-017..026; RN-009..012; CU-04; ADM-06, DOC-01 y COR-06. No depende de una deci
 
 ## Verificación
 
-47 pruebas PHP afectadas pasan con 1.545 aserciones; TypeScript y ESLint pasan. La
+47 pruebas PHP afectadas pasan con 1.546 aserciones; TypeScript y ESLint pasan. La
 suite Chromium confirma un solo bloque, edición desde la cinta, ausencia de eliminar y
 su posición anterior a la primera sección. Sin migración: el mapa JSON conserva
 compatibilidad por valor predeterminado.
