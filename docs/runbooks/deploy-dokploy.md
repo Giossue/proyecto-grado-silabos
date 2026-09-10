@@ -18,6 +18,11 @@ Tipo de construcción: **Dockerfile**, ruta `./Dockerfile`. El puerto del conten
 **8080**, no 80: la imagen sirve en un puerto no privilegiado para poder arrancar también
 sin root.
 
+La imagen final fija la rama de Alpine y compila `pdo_pgsql` contra `libpq-dev`. No debe
+usarse el paquete virtual `postgresql-dev`: incluye herramientas de desarrollo del
+servidor PostgreSQL y puede incorporar toolchains grandes como LLVM sin que la aplicación
+los necesite.
+
 ## 2. Variables de entorno
 
 `APP_KEY` es obligatoria y el contenedor se niega a arrancar sin ella. Genera una con:

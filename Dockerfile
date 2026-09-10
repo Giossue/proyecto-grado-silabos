@@ -56,7 +56,9 @@ RUN mkdir -p storage/framework/cache/data storage/framework/sessions storage/fra
     && npm run build
 
 # --- Etapa 3: imagen final ----------------------------------------------------------
-FROM docker.io/library/php:8.4-fpm-alpine AS runtime
+# Se fija la rama de Alpine para que la etiqueta móvil de PHP no cambie de distribución
+# silenciosamente entre despliegues. Los parches de PHP 8.4 siguen llegando dentro de ella.
+FROM docker.io/library/php:8.4-fpm-alpine3.23 AS runtime
 
 # `pdo_pgsql` habla con PostgreSQL; `intl` sostiene el formato de fechas en español;
 # `zip` y `gd` los necesita la exportación de documentos. `opcache` no es opcional en
@@ -64,7 +66,7 @@ FROM docker.io/library/php:8.4-fpm-alpine AS runtime
 RUN apk add --no-cache \
         nginx \
         supervisor \
-        postgresql-dev \
+        libpq-dev \
         icu-dev \
         libzip-dev \
         freetype-dev \
@@ -78,8 +80,8 @@ RUN apk add --no-cache \
         gd \
         opcache \
         pcntl \
-    && apk del postgresql-dev icu-dev libzip-dev freetype-dev libjpeg-turbo-dev libpng-dev \
-    && apk add --no-cache postgresql-libs icu-libs libzip freetype libjpeg-turbo libpng
+    && apk del libpq-dev icu-dev libzip-dev freetype-dev libjpeg-turbo-dev libpng-dev \
+    && apk add --no-cache libpq icu-libs libzip freetype libjpeg-turbo libpng
 
 WORKDIR /var/www/html
 
