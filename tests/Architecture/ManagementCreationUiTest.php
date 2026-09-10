@@ -886,6 +886,9 @@ it('construye la plantilla desde bloques que contienen campos tipados', function
     $toolbarSelect = file_get_contents(
         $root.'/resources/js/components/domain/configuration/TemplateToolbarSelect.vue',
     );
+    $inlineNode = file_get_contents(
+        $root.'/resources/js/components/domain/configuration/TemplateTableInlineNode.vue',
+    );
     $toolbarButton = file_get_contents(
         $root.'/resources/js/components/domain/configuration/TemplateToolbarButton.vue',
     );
@@ -925,7 +928,15 @@ it('construye la plantilla desde bloques que contienen campos tipados', function
         ->toContain('size="icon-sm"')
         ->toContain('<TooltipContent')
         ->not->toContain('title: label')
+        ->toContain('VueNodeViewRenderer(TemplateTableInlineNode)')
         ->toContain('<DropdownMenu');
+    expect($inlineNode)
+        ->toBeString()
+        ->toContain('<NodeViewWrapper')
+        ->toContain('<Tooltip>')
+        ->toContain('<TooltipTrigger as-child>')
+        ->toContain('<TooltipContent>{{ label }}</TooltipContent>')
+        ->not->toContain('title=');
     expect($toolbarSelect)
         ->toBeString()
         ->toContain('<Select')

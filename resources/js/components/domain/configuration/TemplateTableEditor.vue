@@ -38,10 +38,15 @@ import {
 } from '@tiptap/extension-text-style';
 import { CellSelection } from '@tiptap/pm/tables';
 import StarterKit from '@tiptap/starter-kit';
-import { EditorContent, useEditor } from '@tiptap/vue-3';
+import {
+    EditorContent,
+    useEditor,
+    VueNodeViewRenderer,
+} from '@tiptap/vue-3';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import type { CSSProperties } from 'vue';
 import { toast } from 'vue-sonner';
+import TemplateTableInlineNode from '@/components/domain/configuration/TemplateTableInlineNode.vue';
 import TemplateToolbarButton from '@/components/domain/configuration/TemplateToolbarButton.vue';
 import TemplateToolbarSelect from '@/components/domain/configuration/TemplateToolbarSelect.vue';
 import FormSheet from '@/components/domain/FormSheet.vue';
@@ -347,6 +352,9 @@ const inlineNode = (name: 'field' | 'column' | 'variable') =>
                 }),
                 label,
             ];
+        },
+        addNodeView() {
+            return VueNodeViewRenderer(TemplateTableInlineNode);
         },
     });
 

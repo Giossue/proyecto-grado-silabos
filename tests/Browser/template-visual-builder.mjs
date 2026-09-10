@@ -567,14 +567,15 @@ test(
         await page.getByRole('option', { name: 'Horas ACD' }).click();
         await dataSheet.getByRole('button', { name: 'Insertar dato' }).click();
         await dataSheet.waitFor({ state: 'hidden' });
-        assert.equal(
-            await tableEditor
-                .getByText('$horas_de_clase', {
-                    exact: true,
-                })
-                .count(),
-            1,
-        );
+        const repeatedDataToken = tableEditor.getByText('$horas_de_clase', {
+            exact: true,
+        });
+        assert.equal(await repeatedDataToken.count(), 1);
+        await repeatedDataToken.hover();
+        await page
+            .locator('[data-slot="tooltip-content"]')
+            .filter({ hasText: '$horas_de_clase' })
+            .waitFor();
         await page.getByRole('button', { name: 'Filas y columnas' }).click();
         await page.getByRole('menuitem', { name: 'Fila abajo' }).click();
         await tableEditor.locator('tr').last().locator('td').first().click();
