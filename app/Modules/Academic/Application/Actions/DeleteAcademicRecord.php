@@ -3,6 +3,7 @@
 namespace App\Modules\Academic\Application\Actions;
 
 use App\Models\User;
+use App\Modules\Academic\Application\AcademicPeriodPlanning;
 use App\Modules\Academic\Domain\AcademicStructurePermissions;
 use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Campus;
@@ -34,6 +35,7 @@ class DeleteAcademicRecord
         private readonly ActiveRole $roles,
         private readonly RecordAuditEvent $audit,
         private readonly ProcessLocks $locks,
+        private readonly AcademicPeriodPlanning $periodPlanning,
     ) {}
 
     public function execute(string $entity, string $recordId, User $actor, Request $request): void
@@ -75,6 +77,12 @@ class DeleteAcademicRecord
                     ->lockForUpdate()->findOrFail($recordId),
                 default => throw new \LogicException('Entidad de carrera no admitida.'),
             };
+
+            if ($record instanceof Parallel) {
+                $this->periodPlanning->assertParallelMayChange($record);
+            } elseif ($record instanceof TeacherAssignment) {
+                $this->periodPlanning->assertTeacherAssignmentMayChange($record);
+            }
 
             $this->assertDeletable($entity, $record);
             $metadata = $this->delete($entity, $record);

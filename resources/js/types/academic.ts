@@ -10,6 +10,12 @@ export type Option = {
     correo_electronico?: string;
     starts_on?: string;
     ends_on?: string;
+    active?: boolean;
+    status?: 'proximo' | 'en_curso' | 'finalizado';
+    status_label?: string;
+    planning_enabled?: boolean;
+    subject_id?: string;
+    period_id?: string;
     /** Materias de la malla activa: para agruparlas por ciclo al preparar un período. */
     ciclo?: number | null;
 };
@@ -31,6 +37,7 @@ export type GovernanceSection =
     'faculties' | 'careers' | 'campuses' | 'academic-periods';
 
 export type AcademicStructureProps = {
+    selectedPeriodId?: string | null;
     career: {
         id: string;
         name: string;
@@ -89,6 +96,9 @@ export type AcademicStructureProps = {
         subject_name: string;
         period_starts_on: string;
         period_ends_on: string;
+        period_status: 'proximo' | 'en_curso' | 'finalizado';
+        period_status_label: string;
+        period_planning_enabled: boolean;
         campus_name: string;
         modality_name: string;
         parallel_count: number;
@@ -122,6 +132,8 @@ export type AcademicStructureProps = {
         parallel_code: string;
         subject_name: string;
         period_name: string;
+        period_status: 'proximo' | 'en_curso' | 'finalizado';
+        period_planning_enabled: boolean;
         active: boolean;
         editable: boolean;
     }[];

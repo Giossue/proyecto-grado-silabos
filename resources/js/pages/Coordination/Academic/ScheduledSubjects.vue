@@ -16,7 +16,10 @@ defineOptions({
 });
 
 defineProps<
-    Pick<AcademicStructureProps, 'career' | 'scheduledSubjects' | 'options'>
+    Pick<
+        AcademicStructureProps,
+        'career' | 'scheduledSubjects' | 'options' | 'selectedPeriodId'
+    >
 >();
 </script>
 
@@ -29,9 +32,13 @@ defineProps<
     >
         <template #actions>
             <PeriodPreparationSheet
-                v-if="!career.lock_reason"
+                v-if="
+                    !career.lock_reason &&
+                    options.periods.some((period) => period.planning_enabled)
+                "
                 :scheduledSubjects="scheduledSubjects"
                 :options="options"
+                :initial-period-id="selectedPeriodId"
             />
         </template>
 
@@ -44,6 +51,7 @@ defineProps<
         <ScheduledSubjectsTab
             :scheduledSubjects="scheduledSubjects"
             :options="options"
+            :selected-period-id="selectedPeriodId"
             :lock-reason="career.lock_reason"
         />
     </PageFrame>

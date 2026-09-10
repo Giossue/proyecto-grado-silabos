@@ -3,6 +3,7 @@
 namespace App\Modules\Academic\Application\Actions;
 
 use App\Models\User;
+use App\Modules\Academic\Application\AcademicPeriodPlanning;
 use App\Modules\Academic\Application\ScheduledSubjectInheritance;
 use App\Modules\Academic\Domain\AcademicStructurePermissions;
 use App\Modules\Academic\Domain\CurriculumSystemFields;
@@ -41,6 +42,7 @@ class CreateAcademicRecord
         private readonly SyncSubjectFieldValues $syncSubjectFieldValues,
         private readonly InstitutionalLogos $logos,
         private readonly ScheduledSubjectInheritance $inheritance,
+        private readonly AcademicPeriodPlanning $periodPlanning,
     ) {}
 
     /** @param array<string, mixed> $data */
@@ -245,6 +247,7 @@ class CreateAcademicRecord
             ->where('activo', true)
             ->lockForUpdate()
             ->firstOrFail();
+        $this->periodPlanning->assertMayPlan($period);
 
         return ScheduledSubject::query()->create([
             'periodo_academico_id' => $period->id,
@@ -269,6 +272,7 @@ class CreateAcademicRecord
             )
             ->lockForUpdate()
             ->firstOrFail();
+        $this->periodPlanning->assertScheduledSubjectMayChange($scheduledSubject, 'scheduled_subject_id');
 
         return Parallel::query()->create([
             'programacion_asignatura_id' => $scheduledSubject->id,
@@ -306,6 +310,7 @@ class CreateAcademicRecord
             )
             ->lockForUpdate()
             ->firstOrFail();
+        $this->periodPlanning->assertParallelMayChange($parallel, 'parallel_id');
         $userId = $this->stringValue($data, 'user_id');
         $this->ensureScopedRole($userId, $careerId, RoleCode::Teacher);
 

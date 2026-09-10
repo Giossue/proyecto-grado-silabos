@@ -138,8 +138,18 @@ const {
                                     :record-label="`la asignación de ${item.user_name}`"
                                     :editable="item.editable"
                                     :active="item.active"
-                                    :delete-supported="!lockReason"
-                                    :locked-label="lockReason ?? undefined"
+                                    :delete-supported="
+                                        !lockReason &&
+                                        item.period_planning_enabled
+                                    "
+                                    :locked-label="
+                                        !item.period_planning_enabled
+                                            ? item.period_status ===
+                                              'finalizado'
+                                                ? 'Período finalizado: disponible solo para consulta'
+                                                : 'Período inactivo: disponible solo para consulta'
+                                            : (lockReason ?? undefined)
+                                    "
                                     :options="options"
                                 />
                             </TableCell>

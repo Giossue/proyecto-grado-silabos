@@ -3,6 +3,7 @@
 namespace App\Modules\Academic\Application\Actions;
 
 use App\Models\User;
+use App\Modules\Academic\Application\AcademicPeriodPlanning;
 use App\Modules\Academic\Domain\AcademicStructurePermissions;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
 use App\Modules\Academic\Infrastructure\Persistence\Models\ScheduledSubject;
@@ -22,6 +23,7 @@ class CreateParallels
         private readonly ActiveRole $roles,
         private readonly RecordAuditEvent $audit,
         private readonly ProcessLocks $locks,
+        private readonly AcademicPeriodPlanning $periodPlanning,
     ) {}
 
     /**
@@ -46,6 +48,7 @@ class CreateParallels
                     ->where('estado', 'activa'))
                 ->lockForUpdate()
                 ->firstOrFail();
+            $this->periodPlanning->assertScheduledSubjectMayChange($scheduledSubject, 'scheduled_subject_id');
             $codes = collect($data['codes'])
                 ->map(fn (string $code) => trim($code))
                 ->values();

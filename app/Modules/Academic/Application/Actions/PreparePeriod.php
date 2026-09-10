@@ -3,6 +3,7 @@
 namespace App\Modules\Academic\Application\Actions;
 
 use App\Models\User;
+use App\Modules\Academic\Application\AcademicPeriodPlanning;
 use App\Modules\Academic\Application\ScheduledSubjectInheritance;
 use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
@@ -30,6 +31,7 @@ class PreparePeriod
         private readonly RecordAuditEvent $audit,
         private readonly ScheduledSubjectInheritance $inheritance,
         private readonly ProcessLocks $locks,
+        private readonly AcademicPeriodPlanning $periodPlanning,
     ) {}
 
     /**
@@ -48,6 +50,7 @@ class PreparePeriod
         return DB::transaction(function () use ($actor, $activeRole, $careerId, $data, $request): array {
             $career = Career::query()->whereKey($careerId)->with('campus')->lockForUpdate()->firstOrFail();
             $period = AcademicPeriod::query()->whereKey($data['period_id'])->lockForUpdate()->firstOrFail();
+            $this->periodPlanning->assertMayPlan($period);
             $campus = $this->inheritance->campusFor($career);
             $settingsBySubject = collect($data['subjects'])->keyBy('id');
             $subjectsQuery = Subject::query()

@@ -3,6 +3,7 @@
 namespace App\Modules\Syllabus\Application\Actions;
 
 use App\Models\User;
+use App\Modules\Academic\Application\AcademicPeriodPlanning;
 use App\Modules\Academic\Infrastructure\Persistence\Models\TeacherAssignment;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Identity\Domain\Enums\RoleCode;
@@ -37,6 +38,7 @@ class TransferSyllabusTeacher
         private readonly ActiveRole $roles,
         private readonly ReopenSyllabus $reopen,
         private readonly RecordAuditEvent $audit,
+        private readonly AcademicPeriodPlanning $periodPlanning,
     ) {}
 
     /**
@@ -99,6 +101,7 @@ class TransferSyllabusTeacher
 
             foreach ($collaborations as $collaboration) {
                 $previous = $collaboration->teacherAssignment;
+                $this->periodPlanning->assertTeacherAssignmentMayChange($previous, 'syllabus');
                 $previous->update(['activo' => false]);
 
                 $replacement = TeacherAssignment::query()->create([

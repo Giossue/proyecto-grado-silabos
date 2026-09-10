@@ -3,6 +3,7 @@
 namespace App\Modules\Syllabus\Application\Actions;
 
 use App\Models\User;
+use App\Modules\Academic\Application\AcademicPeriodPlanning;
 use App\Modules\Academic\Infrastructure\Persistence\Models\TeacherAssignment;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Identity\Domain\Enums\RoleCode;
@@ -29,6 +30,7 @@ class RelieveTeacher
         private readonly ActiveRole $roles,
         private readonly TransferSyllabusTeacher $transfer,
         private readonly RecordAuditEvent $audit,
+        private readonly AcademicPeriodPlanning $periodPlanning,
     ) {}
 
     /**
@@ -60,9 +62,15 @@ class RelieveTeacher
                 ->where('usuario_id', $outgoingUserId)
                 ->where('activo', true)
                 ->whereHas('parallel.scheduledSubject.subject.curriculum', fn ($query) => $query->where('carrera_id', $careerId))
-                ->with('parallel.scheduledSubject.subject:id,nombre')
+                ->with([
+                    'parallel.scheduledSubject.subject:id,nombre',
+                    'parallel.scheduledSubject.academicPeriod:id,fecha_inicio,fecha_fin,activo',
+                ])
                 ->lockForUpdate()
-                ->get();
+                ->get()
+                ->filter(fn (TeacherAssignment $assignment): bool => $this->periodPlanning
+                    ->mayPlan($assignment->parallel->scheduledSubject->academicPeriod))
+                ->values();
             if ($assignments->isEmpty()) {
                 throw ValidationException::withMessages(['outgoing_user_id' => 'Ese docente no tiene paralelos vigentes en la carrera.']);
             }

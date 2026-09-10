@@ -3,6 +3,7 @@
 namespace App\Modules\Academic\Application\Actions;
 
 use App\Models\User;
+use App\Modules\Academic\Application\AcademicPeriodPlanning;
 use App\Modules\Academic\Application\ScheduledSubjectInheritance;
 use App\Modules\Academic\Domain\AcademicStructurePermissions;
 use App\Modules\Academic\Domain\CurriculumSystemFields;
@@ -76,6 +77,7 @@ class UpdateCareerAcademicRecord
         private readonly InProgressWork $work,
         private readonly SyncSubjectFieldValues $syncSubjectFieldValues,
         private readonly ScheduledSubjectInheritance $inheritance,
+        private readonly AcademicPeriodPlanning $periodPlanning,
     ) {}
 
     /** @param array<string, mixed> $data */
@@ -103,6 +105,7 @@ class UpdateCareerAcademicRecord
 
         return DB::transaction(function () use ($actor, $activeRole, $data, $entity, $recordId, $request): Model {
             $record = $this->scopedRecord($entity, $recordId, $activeRole->carrera_id);
+            $this->assertPeriodMayChange($record);
             $this->ensureMutable($entity, $record);
             if ($record instanceof Subject && isset($data['cycle'])) {
                 $cycleCount = Curriculum::query()
@@ -276,6 +279,7 @@ class UpdateCareerAcademicRecord
         $period = AcademicPeriod::query()->whereKey($this->stringValue($data, 'period_id'))
             ->where('activo', true)
             ->lockForUpdate()->firstOrFail();
+        $this->periodPlanning->assertMayPlan($period);
         $subject->loadMissing('curriculum.career');
 
         return [
@@ -298,6 +302,7 @@ class UpdateCareerAcademicRecord
                 ->where('carrera_id', $careerId)
                 ->where('estado', 'activa'))
             ->lockForUpdate()->firstOrFail();
+        $this->periodPlanning->assertScheduledSubjectMayChange($scheduledSubject, 'scheduled_subject_id');
 
         return ['programacion_asignatura_id' => $scheduledSubject->id, 'codigo' => $data['code'], 'jornada' => $data['shift'] ?? null];
     }
@@ -313,6 +318,7 @@ class UpdateCareerAcademicRecord
                 ->where('carrera_id', $careerId)
                 ->where('estado', 'activa'))
             ->lockForUpdate()->firstOrFail();
+        $this->periodPlanning->assertParallelMayChange($parallel, 'parallel_id');
         $userId = $this->stringValue($data, 'user_id');
         $hasRole = RoleAssignment::query()->effective()
             ->where('usuario_id', $userId)
@@ -331,6 +337,21 @@ class UpdateCareerAcademicRecord
             'usuario_id' => $userId,
             'paralelo_id' => $parallel->id,
         ];
+    }
+
+    private function assertPeriodMayChange(Model $record): void
+    {
+        if ($record instanceof ScheduledSubject) {
+            $this->periodPlanning->assertScheduledSubjectMayChange($record);
+        }
+
+        if ($record instanceof Parallel) {
+            $this->periodPlanning->assertParallelMayChange($record);
+        }
+
+        if ($record instanceof TeacherAssignment) {
+            $this->periodPlanning->assertTeacherAssignmentMayChange($record);
+        }
     }
 
     /** @param array<string, mixed> $dirty

@@ -71,6 +71,19 @@ activa como inactiva. Deshabilitarla bloquea nuevas programaciones y procesos; e
 es posible cuando no tiene materias programadas ni sílabos. `mallas` tiene una sola fila por carrera
 (I-32).
 
+### Programación por período
+
+`ProgramacionAsignatura` vincula una materia de la malla con el período en que se dicta.
+Sus paralelos y asignaciones docentes forman la organización operativa de esa
+programación; no son una nueva carrera o programa aprobado por el CES.
+
+El estado temporal del período no se persiste: se deriva de `fecha_inicio` y
+`fecha_fin` con la fecha local de `America/Guayaquil`. Antes del inicio está
+**Próximo**, dentro del rango inclusivo está **En curso** y después de `fecha_fin` está
+**Finalizado**. Al finalizar, la programación, sus paralelos, asignaciones docentes y
+sílabos se conservan como historia de solo lectura. Las operaciones directas y los
+relevos aplican la misma protección en el servidor (I-64).
+
 ### Configuración
 
 - `PlantillaSilabo` institucional única, sin versiones (I-32): contiene directamente
@@ -104,8 +117,9 @@ Una convocatoria está **en curso** cuando ella está abierta y su proceso tambi
 condición habilita a los docentes y, por lo mismo, congela lo que sostiene su trabajo:
 con el proceso abierto no se edita la plantilla ni la estructura institucional; con una
 convocatoria en curso no se editan malla, fuentes, programaciones, paralelos ni asignaciones
-genéricas de esa carrera. El relevo docente es la única excepción, porque traslada de
-forma atómica la responsabilidad y el historial. Para corregir se pausa: Administración
+genéricas de esa carrera. En un período que aún no finaliza, el relevo docente es la
+única excepción, porque traslada de forma atómica la responsabilidad y el historial.
+Para corregir se pausa: Administración
 el proceso —detiene a toda la universidad—, Coordinación su convocatoria —solo su
 carrera—. Los expedientes ya creados conservan la plantilla con la que nacieron; cambiar
 la del proceso solo alcanza a las convocatorias que se abran después.

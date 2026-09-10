@@ -43,10 +43,11 @@ type PreparationRow = {
     parallels: ParallelDraft[];
 };
 
-const props =
-    defineProps<
-        Pick<AcademicStructureProps, 'scheduledSubjects' | 'options'>
-    >();
+const props = defineProps<
+    Pick<AcademicStructureProps, 'scheduledSubjects' | 'options'> & {
+        initialPeriodId?: string | null;
+    }
+>();
 const open = ref(false);
 const rows = ref<PreparationRow[]>([]);
 const bulkCode = ref('A');
@@ -75,6 +76,9 @@ const dateRange = (period: Option): string =>
               dateFormatter.format(new Date(period.ends_on + 'T00:00:00Z')),
           ].join(' – ')
         : (period.nombre ?? '');
+const planningPeriods = computed(() =>
+    props.options.periods.filter((period) => period.planning_enabled),
+);
 const preparedSubjectIds = computed(
     () =>
         new Set(
@@ -119,6 +123,11 @@ const reset = (): void => {
     bulkCode.value = 'A';
     bulkShift.value = '';
     prepare.reset();
+    prepare.period_id = planningPeriods.value.some(
+        (period) => period.id === props.initialPeriodId,
+    )
+        ? (props.initialPeriodId ?? '')
+        : (planningPeriods.value[0]?.id ?? '');
     prepare.clearErrors();
 };
 
@@ -214,7 +223,7 @@ watch(open, (isOpen) => {
                             <SelectContent>
                                 <SelectGroup>
                                     <SelectItem
-                                        v-for="period in options.periods"
+                                        v-for="period in planningPeriods"
                                         :key="period.id"
                                         :value="period.id"
                                     >

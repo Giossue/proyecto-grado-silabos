@@ -39,7 +39,7 @@ const outgoingTeachers = computed(() => {
     const seen = new Map<string, { id: string; name: string; count: number }>();
 
     for (const assignment of props.teacherAssignments) {
-        if (!assignment.active) {
+        if (!assignment.active || !assignment.period_planning_enabled) {
             continue;
         }
 

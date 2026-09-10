@@ -3,6 +3,7 @@
 namespace App\Modules\Academic\Application\Actions;
 
 use App\Models\User;
+use App\Modules\Academic\Application\AcademicPeriodPlanning;
 use App\Modules\Academic\Domain\AcademicStructurePermissions;
 use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Campus;
@@ -46,6 +47,7 @@ class SetAcademicRecordStatus
         private readonly RecordAuditEvent $audit,
         private readonly ProcessLocks $locks,
         private readonly InProgressWork $work,
+        private readonly AcademicPeriodPlanning $periodPlanning,
     ) {}
 
     public function execute(
@@ -80,6 +82,14 @@ class SetAcademicRecordStatus
             $record = AcademicStructurePermissions::isCareerContext($activeRole)
                 ? $this->findCareerRecord($entity, $recordId, $activeRole->carrera_id)
                 : $modelClass::query()->lockForUpdate()->findOrFail($recordId);
+
+            if ($record instanceof ScheduledSubject) {
+                $this->periodPlanning->assertScheduledSubjectMayChange($record);
+            } elseif ($record instanceof Parallel) {
+                $this->periodPlanning->assertParallelMayChange($record);
+            } elseif ($record instanceof TeacherAssignment) {
+                $this->periodPlanning->assertTeacherAssignmentMayChange($record);
+            }
 
             if (! $active) {
                 $this->ensureMayDeactivate($entity, $recordId);

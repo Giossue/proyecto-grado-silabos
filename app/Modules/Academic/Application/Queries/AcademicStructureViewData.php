@@ -3,6 +3,7 @@
 namespace App\Modules\Academic\Application\Queries;
 
 use App\Models\User;
+use App\Modules\Academic\Application\AcademicPeriodPlanning;
 use App\Modules\Academic\Domain\CurriculumSystemFields;
 use App\Modules\Academic\Domain\StudyModality;
 use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
@@ -29,6 +30,7 @@ class AcademicStructureViewData
     public function __construct(
         private readonly ProcessLocks $locks,
         private readonly InstitutionalLogos $logos,
+        private readonly AcademicPeriodPlanning $periodPlanning,
     ) {}
 
     /** @return array<string, mixed> */
@@ -283,7 +285,7 @@ class AcademicStructureViewData
     }
 
     /** @return array<string, mixed> */
-    public function scheduledSubjects(string $careerId): array
+    public function scheduledSubjects(string $careerId, ?string $requestedPeriodId = null): array
     {
         $career = $this->career($careerId);
         $lockReason = $this->locks->careerLockReason($careerId);
@@ -291,7 +293,7 @@ class AcademicStructureViewData
             ->whereHas('subject.curriculum', fn ($query) => $query
                 ->where('carrera_id', $careerId))
             ->with([
-                'academicPeriod:id,fecha_inicio,fecha_fin',
+                'academicPeriod:id,fecha_inicio,fecha_fin,activo',
                 'subject:id,nombre,codigo_institucional',
                 'campus:id,nombre',
             ])
@@ -302,6 +304,35 @@ class AcademicStructureViewData
             ->whereIn('programacion_asignatura_id', $scheduledSubjects->pluck('id'))
             ->pluck('programacion_asignatura_id')
             ->flip();
+        $periodIdsWithHistory = $scheduledSubjects->pluck('periodo_academico_id');
+        $periods = AcademicPeriod::query()
+            ->where('activo', true)
+            ->orWhereIn('id', $periodIdsWithHistory)
+            ->get(['id', 'nombre', 'fecha_inicio', 'fecha_fin', 'activo'])
+            ->sort(function (AcademicPeriod $left, AcademicPeriod $right): int {
+                $rank = [
+                    AcademicPeriodPlanning::CURRENT => 0,
+                    AcademicPeriodPlanning::UPCOMING => 1,
+                    AcademicPeriodPlanning::FINISHED => 2,
+                ];
+                $leftStatus = $this->periodPlanning->status($left);
+                $rightStatus = $this->periodPlanning->status($right);
+                $byStatus = $rank[$leftStatus] <=> $rank[$rightStatus];
+
+                if ($byStatus !== 0) {
+                    return $byStatus;
+                }
+
+                return $leftStatus === AcademicPeriodPlanning::UPCOMING
+                    ? $left->fecha_inicio <=> $right->fecha_inicio
+                    : $right->fecha_inicio <=> $left->fecha_inicio;
+            })
+            ->values();
+        $selectedPeriodId = $periods->contains('id', $requestedPeriodId)
+            ? $requestedPeriodId
+            : $periods->first(fn (AcademicPeriod $period): bool => $this->periodPlanning->status($period) === AcademicPeriodPlanning::CURRENT)?->id;
+        $selectedPeriodId ??= $periods->first(fn (AcademicPeriod $period): bool => $this->periodPlanning->status($period) === AcademicPeriodPlanning::UPCOMING)?->id;
+        $selectedPeriodId ??= $periods->first()?->id;
 
         return [
             'career' => [
@@ -309,34 +340,43 @@ class AcademicStructureViewData
                 'name' => $career->nombre,
                 'lock_reason' => $lockReason,
             ],
+            'selectedPeriodId' => $selectedPeriodId,
             'scheduledSubjects' => $scheduledSubjects
-                ->map(fn (ScheduledSubject $scheduledSubject) => [
-                    'id' => $scheduledSubject->id,
-                    'subject_id' => $scheduledSubject->asignatura_id,
-                    'period_id' => $scheduledSubject->periodo_academico_id,
-                    'campus_id' => $scheduledSubject->campus_id,
-                    'label' => "{$scheduledSubject->subject->codigo_institucional} · {$scheduledSubject->subject->nombre}",
-                    'subject_code' => $scheduledSubject->subject->codigo_institucional,
-                    'subject_name' => $scheduledSubject->subject->nombre,
-                    'period_starts_on' => $scheduledSubject->academicPeriod->fecha_inicio->toDateString(),
-                    'period_ends_on' => $scheduledSubject->academicPeriod->fecha_fin->toDateString(),
-                    'campus_name' => $scheduledSubject->campus->nombre,
-                    'modality_name' => $scheduledSubject->modalidad->label(),
-                    'parallel_count' => $scheduledSubject->parallels_count,
-                    'active' => $scheduledSubject->activo,
-                    'editable' => $lockReason === null && ! $usedScheduledSubjectIds->has($scheduledSubject->id),
-                ]),
+                ->map(function (ScheduledSubject $scheduledSubject) use ($lockReason, $usedScheduledSubjectIds): array {
+                    $periodPlanningEnabled = $this->periodPlanning->mayPlan($scheduledSubject->academicPeriod);
+
+                    return [
+                        'id' => $scheduledSubject->id,
+                        'subject_id' => $scheduledSubject->asignatura_id,
+                        'period_id' => $scheduledSubject->periodo_academico_id,
+                        'campus_id' => $scheduledSubject->campus_id,
+                        'label' => "{$scheduledSubject->subject->codigo_institucional} · {$scheduledSubject->subject->nombre}",
+                        'subject_code' => $scheduledSubject->subject->codigo_institucional,
+                        'subject_name' => $scheduledSubject->subject->nombre,
+                        'period_starts_on' => $scheduledSubject->academicPeriod->fecha_inicio->toDateString(),
+                        'period_ends_on' => $scheduledSubject->academicPeriod->fecha_fin->toDateString(),
+                        'period_status' => $this->periodPlanning->status($scheduledSubject->academicPeriod),
+                        'period_status_label' => $this->periodPlanning->label($scheduledSubject->academicPeriod),
+                        'period_planning_enabled' => $periodPlanningEnabled,
+                        'campus_name' => $scheduledSubject->campus->nombre,
+                        'modality_name' => $scheduledSubject->modalidad->label(),
+                        'parallel_count' => $scheduledSubject->parallels_count,
+                        'active' => $scheduledSubject->activo,
+                        'editable' => $periodPlanningEnabled && $lockReason === null && ! $usedScheduledSubjectIds->has($scheduledSubject->id),
+                    ];
+                }),
             'options' => [
                 ...$this->emptyOptions(),
-                'periods' => AcademicPeriod::query()
-                    ->where('activo', true)
-                    ->orderByDesc('fecha_inicio')
-                    ->get(['id', 'nombre', 'fecha_inicio', 'fecha_fin'])
+                'periods' => $periods
                     ->map(fn (AcademicPeriod $period): array => [
                         'id' => $period->id,
                         'nombre' => $period->nombre,
                         'starts_on' => $period->fecha_inicio->toDateString(),
                         'ends_on' => $period->fecha_fin->toDateString(),
+                        'active' => $period->activo,
+                        'status' => $this->periodPlanning->status($period),
+                        'status_label' => $this->periodPlanning->label($period),
+                        'planning_enabled' => $this->periodPlanning->mayPlan($period),
                     ]),
                 'campuses' => Campus::query()->where('activo', true)->orderBy('nombre')->get(['id', 'nombre']),
                 'activeSubjects' => Subject::query()
@@ -353,11 +393,14 @@ class AcademicStructureViewData
                     ->whereHas('subject.curriculum', fn ($query) => $query
                         ->where('carrera_id', $careerId)
                         ->where('estado', 'activa'))
-                    ->with(['subject:id,codigo_institucional,nombre', 'academicPeriod:id,nombre'])
+                    ->with(['subject:id,codigo_institucional,nombre', 'academicPeriod:id,nombre,fecha_inicio,fecha_fin,activo'])
                     ->get()
+                    ->filter(fn (ScheduledSubject $scheduledSubject): bool => $this->periodPlanning->mayPlan($scheduledSubject->academicPeriod))
                     ->map(fn (ScheduledSubject $scheduledSubject) => [
                         'id' => $scheduledSubject->id,
                         'label' => "{$scheduledSubject->subject->codigo_institucional} · {$scheduledSubject->academicPeriod->nombre}",
+                        'subject_id' => $scheduledSubject->asignatura_id,
+                        'period_id' => $scheduledSubject->periodo_academico_id,
                     ]),
             ],
         ];
@@ -376,7 +419,7 @@ class AcademicStructureViewData
             ->with([
                 'user:id,nombre,correo_electronico',
                 'parallel.scheduledSubject.subject:id,nombre,codigo_institucional',
-                'parallel.scheduledSubject.academicPeriod:id,nombre',
+                'parallel.scheduledSubject.academicPeriod:id,nombre,fecha_inicio,fecha_fin,activo',
             ])
             ->orderByDesc('asignado_en')
             ->get();
@@ -401,8 +444,12 @@ class AcademicStructureViewData
                     'parallel_code' => $assignment->parallel->codigo,
                     'subject_name' => $assignment->parallel->scheduledSubject->subject->nombre,
                     'period_name' => $assignment->parallel->scheduledSubject->academicPeriod->nombre,
+                    'period_status' => $this->periodPlanning->status($assignment->parallel->scheduledSubject->academicPeriod),
+                    'period_planning_enabled' => $this->periodPlanning->mayPlan($assignment->parallel->scheduledSubject->academicPeriod),
                     'active' => $assignment->activo,
-                    'editable' => $lockReason === null && ! $usedAssignmentIds->has($assignment->id),
+                    'editable' => $this->periodPlanning->mayPlan($assignment->parallel->scheduledSubject->academicPeriod)
+                        && $lockReason === null
+                        && ! $usedAssignmentIds->has($assignment->id),
                 ]),
             'options' => [
                 ...$this->emptyOptions(),
@@ -416,9 +463,10 @@ class AcademicStructureViewData
                     )
                     ->with([
                         'scheduledSubject.subject:id,codigo_institucional,nombre',
-                        'scheduledSubject.academicPeriod:id,nombre',
+                        'scheduledSubject.academicPeriod:id,nombre,fecha_inicio,fecha_fin,activo',
                     ])
                     ->get()
+                    ->filter(fn (Parallel $parallel): bool => $this->periodPlanning->mayPlan($parallel->scheduledSubject->academicPeriod))
                     ->map(fn (Parallel $parallel) => [
                         'id' => $parallel->id,
                         'label' => "{$parallel->scheduledSubject->subject->nombre} · {$parallel->scheduledSubject->academicPeriod->nombre} · Paralelo {$parallel->codigo}",

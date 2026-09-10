@@ -140,8 +140,8 @@ completo. El alta está separada de asignar paralelos y no levanta sus bloqueos.
   docente en su lugar dentro de la tabla. Mapa: `docs/product/identificacion-institucional.md`.
   COR-14 concentra sus paralelos dentro de **Materias y paralelos**. Desde las acciones de cada materia se
   crea un paralelo con su código y jornada; el servidor rechaza códigos repetidos. La
-  tabla de materias programadas muestra materia y código en columnas separadas, más el rango de
-  inicio y fin del período institucional, no su nombre.
+  pantalla selecciona un período académico a la vez y la tabla muestra materia y código
+  en columnas separadas.
 - Indicadores del Panel (UI-01), cuatro por rol y todos accionables: Administración ve
   avance del proceso (% aprobados), días para la entrega, carreras sin convocar y sílabos
   sin iniciar; Coordinación, avance, días, por revisar y sin iniciar; Docencia, sílabos
@@ -214,6 +214,12 @@ completo. El alta está separada de asignar paralelos y no levanta sus bloqueos.
   campus y modalidad vienen de la carrera (ADM-04 pide ambos al crearla). Una materia
   ya preparada no reaparece aquí: para cambios posteriores se usa la acción de su
   materia programada.
+- COR-14 conserva el período seleccionado en la URL. Al entrar elige el período en curso;
+  si no existe, el próximo más cercano y, finalmente, el último disponible. El selector
+  identifica cada período como **Próximo**, **En curso** o **Finalizado**, estado derivado
+  de sus fechas en `America/Guayaquil`. Los períodos finalizados permanecen como historial:
+  sus materias, paralelos, responsables y sílabos se consultan, pero no se preparan, crean,
+  editan, deshabilitan, eliminan ni relevan.
 - COR-13 usa una única entrada **Malla**. Si existe, la ruta abre directamente la página
   completa con **Interactivo** (pestaña principal, decisión de los coordinadores) y
   **Desglose académico** (`?modo=desglose`); si no existe, muestra el

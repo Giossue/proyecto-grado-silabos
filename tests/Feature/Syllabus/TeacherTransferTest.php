@@ -3,6 +3,7 @@
 namespace Tests\Feature\Syllabus;
 
 use App\Models\User;
+use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\AcademicSource;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\FieldDefinition;
@@ -137,6 +138,26 @@ class TeacherTransferTest extends TestCase
         $this->assertDatabaseHas('colaboradores_silabo', [
             'silabo_id' => $syllabus->id,
             'usuario_id' => $this->teacher->id,
+        ]);
+    }
+
+    public function test_a_syllabus_from_a_finished_period_is_not_transferred(): void
+    {
+        $syllabus = $this->openedSyllabus();
+        AcademicPeriod::query()->update([
+            'fecha_inicio' => '2025-05-01',
+            'fecha_fin' => '2026-03-31',
+        ]);
+
+        $this->transfer($syllabus)->assertSessionHasErrors('syllabus');
+
+        $this->assertDatabaseHas('colaboradores_silabo', [
+            'silabo_id' => $syllabus->id,
+            'usuario_id' => $this->teacher->id,
+        ]);
+        $this->assertDatabaseMissing('colaboradores_silabo', [
+            'silabo_id' => $syllabus->id,
+            'usuario_id' => $this->replacement->id,
         ]);
     }
 

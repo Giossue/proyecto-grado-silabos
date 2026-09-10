@@ -329,6 +329,11 @@ presenta como **Materias y paralelos**. El esquema usa `programaciones_asignatur
 lectores mantienen compatibilidad con la clave histórica `offering`. No cambian permisos,
 estados ni cardinalidades.
 
+I-64 (9 de septiembre de 2026) confirma que **Materias y paralelos** muestra un período
+a la vez y conserva los anteriores como historial. El estado Próximo/En curso/Finalizado
+se deriva de las fechas en `America/Guayaquil`; un período finalizado es de solo consulta
+y el servidor bloquea cambios en sus programaciones, paralelos y asignaciones docentes.
+
 ## Propuesto
 
 I-52, actualización del 6 de septiembre: se retira `calidad` de las asignaciones de

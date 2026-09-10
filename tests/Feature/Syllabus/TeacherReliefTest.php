@@ -3,6 +3,7 @@
 namespace Tests\Feature\Syllabus;
 
 use App\Models\User;
+use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
 use App\Modules\Academic\Infrastructure\Persistence\Models\ScheduledSubject;
@@ -89,6 +90,29 @@ class TeacherReliefTest extends TestCase
         $this->assertDatabaseHas('colaboradores_silabo', ['silabo_id' => $syllabus->id, 'usuario_id' => $this->teacher->id]);
         $this->assertDatabaseHas('asignaciones_docente', ['usuario_id' => $this->teacher->id, 'paralelo_id' => $extra->id, 'activo' => true]);
         $this->assertSame(0, TeacherAssignment::query()->where('usuario_id', $this->replacement->id)->count());
+    }
+
+    public function test_global_relief_leaves_finished_period_assignments_in_history(): void
+    {
+        $syllabus = $this->openedSyllabus();
+        AcademicPeriod::query()->update([
+            'fecha_inicio' => '2025-05-01',
+            'fecha_fin' => '2026-03-31',
+        ]);
+
+        $this->relieve()->assertSessionHasErrors('outgoing_user_id');
+
+        $this->assertDatabaseHas('colaboradores_silabo', [
+            'silabo_id' => $syllabus->id,
+            'usuario_id' => $this->teacher->id,
+        ]);
+        $this->assertDatabaseHas('asignaciones_docente', [
+            'usuario_id' => $this->teacher->id,
+            'activo' => true,
+        ]);
+        $this->assertSame(0, TeacherAssignment::query()
+            ->where('usuario_id', $this->replacement->id)
+            ->count());
     }
 
     public function test_the_replacement_must_teach_in_the_career_and_only_coordination_relieves(): void

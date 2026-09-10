@@ -24,6 +24,7 @@ use App\Modules\Operations\Infrastructure\Persistence\Models\AuditEvent;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
@@ -56,6 +57,12 @@ class AcademicStructureTest extends TestCase
         $this->administratorContext = $this->administrator->roleAssignments()->firstOrFail();
         $this->coordinator = User::query()->where('correo_electronico', 'coordinador@silabos.test')->firstOrFail();
         $this->coordinatorContext = $this->coordinator->roleAssignments()->firstOrFail();
+    }
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+        parent::tearDown();
     }
 
     public function test_administrator_sees_global_governance_split_by_catalog(): void
@@ -157,10 +164,14 @@ class AcademicStructureTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Coordination/Academic/ScheduledSubjects')
                 ->has('scheduledSubjects', 1)
+                ->where('selectedPeriodId', $scheduledSubject->periodo_academico_id)
                 ->where('scheduledSubjects.0.subject_code', $scheduledSubject->subject->codigo_institucional)
                 ->where('scheduledSubjects.0.subject_name', $scheduledSubject->subject->nombre)
                 ->where('scheduledSubjects.0.period_starts_on', $scheduledSubject->academicPeriod->fecha_inicio->toDateString())
-                ->where('scheduledSubjects.0.period_ends_on', $scheduledSubject->academicPeriod->fecha_fin->toDateString()));
+                ->where('scheduledSubjects.0.period_ends_on', $scheduledSubject->academicPeriod->fecha_fin->toDateString())
+                ->where('scheduledSubjects.0.period_status', 'en_curso')
+                ->where('scheduledSubjects.0.period_planning_enabled', true)
+                ->where('options.periods.0.status', 'en_curso'));
 
         $this->assertFalse(Route::has('coordination.academic.parallels.index'));
 
@@ -204,6 +215,161 @@ class AcademicStructureTest extends TestCase
 
         $this->assertDatabaseMissing('facultades', ['nombre' => 'No autorizada']);
         $this->assertDatabaseMissing('mallas', ['codigo' => 'NO-ADMIN']);
+    }
+
+    public function test_materias_y_paralelos_selects_the_current_period_and_keeps_finished_periods_as_history(): void
+    {
+        Carbon::setTestNow('2026-09-09 12:00:00');
+        $current = AcademicPeriod::query()->firstOrFail();
+        $reference = ScheduledSubject::query()->firstOrFail();
+        $finished = AcademicPeriod::query()->create([
+            'codigo' => '2025-B',
+            'nombre' => 'Segundo período 2025',
+            'fecha_inicio' => '2025-09-01',
+            'fecha_fin' => '2026-02-28',
+            'semanas_lectivas' => 16,
+            'activo' => true,
+        ]);
+        $upcoming = AcademicPeriod::query()->create([
+            'codigo' => '2027-A',
+            'nombre' => 'Primer período 2027',
+            'fecha_inicio' => '2027-04-01',
+            'fecha_fin' => '2027-08-31',
+            'semanas_lectivas' => 16,
+            'activo' => true,
+        ]);
+        $historical = ScheduledSubject::query()->create([
+            'periodo_academico_id' => $finished->id,
+            'asignatura_id' => $reference->asignatura_id,
+            'campus_id' => $reference->campus_id,
+            'modalidad' => $reference->modalidad,
+            'activo' => true,
+        ]);
+
+        $this->actingAsCoordinator()
+            ->get(route('coordination.academic.scheduled-subjects.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('selectedPeriodId', $current->id)
+                ->where('options.periods.0.id', $current->id)
+                ->where('options.periods.0.status_label', 'En curso')
+                ->where('options.periods.1.id', $upcoming->id)
+                ->where('options.periods.1.status_label', 'Próximo')
+                ->where('options.periods.2.id', $finished->id)
+                ->where('options.periods.2.status_label', 'Finalizado'));
+
+        $this->actingAsCoordinator()
+            ->get(route('coordination.academic.scheduled-subjects.index', ['period' => $finished->id]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('selectedPeriodId', $finished->id)
+                ->where('scheduledSubjects', fn ($rows): bool => collect($rows)
+                    ->contains(fn (array $row): bool => $row['id'] === $historical->id
+                        && $row['period_status'] === 'finalizado'
+                        && $row['period_planning_enabled'] === false
+                        && $row['editable'] === false)));
+    }
+
+    public function test_finished_period_programming_is_read_only_on_every_direct_mutation_path(): void
+    {
+        Carbon::setTestNow('2026-09-09 12:00:00');
+        $scheduledSubject = ScheduledSubject::query()->firstOrFail();
+        $scheduledSubject->academicPeriod()->update([
+            'fecha_inicio' => '2025-05-01',
+            'fecha_fin' => '2026-03-31',
+            'activo' => true,
+        ]);
+        $parallel = $scheduledSubject->parallels()->firstOrFail();
+        $assignment = TeacherAssignment::query()->where('paralelo_id', $parallel->id)->firstOrFail();
+        $curriculum = $scheduledSubject->subject->curriculum;
+        $newSubject = Subject::query()->create([
+            'malla_id' => $curriculum->id,
+            'codigo_institucional' => 'SW-HIST-001',
+            'nombre' => 'Materia para verificar historial',
+            'ciclo' => 2,
+            'activo' => true,
+        ]);
+
+        $this->actingAsCoordinator()
+            ->post(route('coordination.academic.period.prepare'), [
+                'period_id' => $scheduledSubject->periodo_academico_id,
+                'subjects' => [[
+                    'id' => $newSubject->id,
+                    'parallels' => [['code' => 'A']],
+                ]],
+            ])
+            ->assertSessionHasErrors('period_id');
+
+        $this->actingAsCoordinator()
+            ->post(route('coordination.academic.store', 'programacion_asignatura'), [
+                'period_id' => $scheduledSubject->periodo_academico_id,
+                'subject_id' => $newSubject->id,
+            ])
+            ->assertSessionHasErrors('period_id');
+
+        $this->actingAsCoordinator()
+            ->post(route('coordination.academic.parallels.store'), [
+                'scheduled_subject_id' => $scheduledSubject->id,
+                'codes' => ['B'],
+            ])
+            ->assertSessionHasErrors('scheduled_subject_id');
+
+        $this->actingAsCoordinator()
+            ->patch(route('coordination.academic.update', [
+                'entity' => 'programacion_asignatura',
+                'record' => $scheduledSubject->id,
+            ]), [
+                'period_id' => $scheduledSubject->periodo_academico_id,
+                'subject_id' => $scheduledSubject->asignatura_id,
+            ])
+            ->assertSessionHasErrors('record');
+
+        $this->actingAsCoordinator()
+            ->patch(route('coordination.academic.update', [
+                'entity' => 'paralelo',
+                'record' => $parallel->id,
+            ]), [
+                'scheduled_subject_id' => $scheduledSubject->id,
+                'code' => $parallel->codigo,
+                'shift' => $parallel->jornada,
+            ])
+            ->assertSessionHasErrors('record');
+
+        $this->actingAsCoordinator()
+            ->post(route('coordination.academic.store', 'asignacion_docente'), [
+                'user_id' => $assignment->usuario_id,
+                'parallel_id' => $parallel->id,
+            ])
+            ->assertSessionHasErrors('parallel_id');
+
+        $this->actingAsCoordinator()
+            ->patch(route('coordination.academic.status.update', [
+                'entity' => 'asignacion_docente',
+                'record' => $assignment->id,
+            ]), ['active' => false])
+            ->assertSessionHasErrors('record');
+
+        $this->actingAsCoordinator()
+            ->delete(route('coordination.academic.scheduled-subjects.destroy', $scheduledSubject))
+            ->assertSessionHasErrors('scheduledSubject');
+
+        $this->actingAsCoordinator()
+            ->delete(route('coordination.academic.destroy', [
+                'entity' => 'paralelo',
+                'record' => $parallel->id,
+            ]))
+            ->assertSessionHasErrors('record');
+
+        $this->assertDatabaseHas('programaciones_asignatura', ['id' => $scheduledSubject->id]);
+        $this->assertDatabaseHas('paralelos', ['id' => $parallel->id]);
+        $this->assertDatabaseHas('asignaciones_docente', [
+            'id' => $assignment->id,
+            'activo' => true,
+        ]);
+        $this->assertDatabaseMissing('programaciones_asignatura', [
+            'periodo_academico_id' => $scheduledSubject->periodo_academico_id,
+            'asignatura_id' => $newSubject->id,
+        ]);
     }
 
     public function test_administrator_declares_teaching_weeks_when_creating_a_period(): void

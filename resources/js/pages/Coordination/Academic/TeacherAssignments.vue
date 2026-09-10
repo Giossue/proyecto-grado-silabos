@@ -42,7 +42,14 @@ defineProps<
                 :teacher-career="career"
             />
             <TeacherReliefSheet
-                v-if="!career.lock_reason"
+                v-if="
+                    !career.lock_reason &&
+                    teacherAssignments.some(
+                        (assignment) =>
+                            assignment.active &&
+                            assignment.period_planning_enabled,
+                    )
+                "
                 :teacher-assignments="teacherAssignments"
                 :options="options"
             />

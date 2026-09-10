@@ -69,7 +69,10 @@ class CareerAcademicStructureController extends Controller
     ): Response {
         return Inertia::render(
             'Coordination/Academic/ScheduledSubjects',
-            $viewData->scheduledSubjects($this->careerId($request, $roles)),
+            $viewData->scheduledSubjects(
+                $this->careerId($request, $roles),
+                $request->string('period')->toString() ?: null,
+            ),
         );
     }
 

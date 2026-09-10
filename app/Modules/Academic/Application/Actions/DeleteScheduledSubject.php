@@ -3,6 +3,7 @@
 namespace App\Modules\Academic\Application\Actions;
 
 use App\Models\User;
+use App\Modules\Academic\Application\AcademicPeriodPlanning;
 use App\Modules\Academic\Domain\AcademicStructurePermissions;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
 use App\Modules\Academic\Infrastructure\Persistence\Models\ScheduledSubject;
@@ -24,6 +25,7 @@ class DeleteScheduledSubject
         private readonly ActiveRole $roles,
         private readonly RecordAuditEvent $audit,
         private readonly ProcessLocks $locks,
+        private readonly AcademicPeriodPlanning $periodPlanning,
     ) {}
 
     public function execute(string $scheduledSubjectId, User $actor, Request $request): void
@@ -41,6 +43,7 @@ class DeleteScheduledSubject
                 ->whereHas('subject.curriculum', fn ($query) => $query->where('carrera_id', $role->carrera_id))
                 ->lockForUpdate()
                 ->findOrFail($scheduledSubjectId);
+            $this->periodPlanning->assertScheduledSubjectMayChange($scheduledSubject, 'scheduledSubject');
 
             $parallelIds = Parallel::query()
                 ->where('programacion_asignatura_id', $scheduledSubject->id)

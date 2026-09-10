@@ -64,6 +64,9 @@ const entityLabel = computed(
             asignacion_docente: 'asignación docente',
         })[props.entity],
 );
+const planningPeriods = computed(() =>
+    props.options.periods.filter((period) => period.planning_enabled),
+);
 </script>
 
 <template>
@@ -244,7 +247,7 @@ const entityLabel = computed(
                                 <SelectContent
                                     ><SelectGroup>
                                         <SelectItem
-                                            v-for="item in options.periods"
+                                            v-for="item in planningPeriods"
                                             :key="item.id"
                                             :value="item.id"
                                         >
