@@ -153,12 +153,12 @@ const updateOpen = (value: boolean): void => {
                       showLabel: ribbon || choice,
                       tooltipSide: inline ? 'bottom' : 'left',
                       buttonClass: choice
-                            ? 'w-full justify-start'
+                          ? 'w-full justify-start'
                           : empty
+                            ? undefined
+                            : ribbon
                               ? undefined
-                              : ribbon
-                                ? undefined
-                                : 'size-7 border-dashed bg-background',
+                              : 'size-7 border-dashed bg-background',
                   }
         "
         @update:open="updateOpen"
