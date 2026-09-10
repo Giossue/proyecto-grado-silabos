@@ -18,6 +18,7 @@ use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
+use Tests\Support\ConfiguresFacultyLogos;
 use Tests\Support\CreatesSyllabusProcess;
 use Tests\TestCase;
 
@@ -28,6 +29,7 @@ use Tests\TestCase;
  */
 class TeacherTransferTest extends TestCase
 {
+    use ConfiguresFacultyLogos;
     use CreatesSyllabusProcess;
     use RefreshDatabase;
 
@@ -49,6 +51,7 @@ class TeacherTransferTest extends TestCase
     {
         parent::setUp();
         $this->seed(DatabaseSeeder::class);
+        $this->configureFacultyLogos();
 
         $this->administrator = User::query()->where('correo_electronico', 'admin@silabos.test')->firstOrFail();
         $this->administratorContext = $this->administrator->roleAssignments()->firstOrFail();

@@ -8,6 +8,7 @@ import FormSheet from '@/components/domain/FormSheet.vue';
 import FormSheetActions from '@/components/domain/FormSheetActions.vue';
 import {
     Field,
+    FieldDescription,
     FieldError,
     FieldGroup,
     FieldLabel,
@@ -111,7 +112,7 @@ const examples = computed(
                             v-if="entity === 'facultad'"
                             :data-invalid="Boolean(errors.logo)"
                         >
-                            <FieldLabel for="faculty-logo" required>
+                            <FieldLabel for="faculty-logo">
                                 Logo de la facultad (PNG sin fondo)
                             </FieldLabel>
                             <Input
@@ -119,9 +120,13 @@ const examples = computed(
                                 name="logo"
                                 type="file"
                                 accept="image/png"
-                                required
                                 :aria-invalid="Boolean(errors.logo)"
                             />
+                            <FieldDescription>
+                                Opcional para Administración. Si lo deja
+                                pendiente, Coordinación deberá cargarlo desde su
+                                Panel antes de abrir la convocatoria.
+                            </FieldDescription>
                             <FieldError :errors="[errors.logo]" />
                         </Field>
                         <Field

@@ -27,11 +27,13 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 use LogicException;
+use Tests\Support\ConfiguresFacultyLogos;
 use Tests\Support\CreatesSyllabusProcess;
 use Tests\TestCase;
 
 class ReviewWorkflowTest extends TestCase
 {
+    use ConfiguresFacultyLogos;
     use CreatesSyllabusProcess;
     use RefreshDatabase;
 
@@ -53,6 +55,7 @@ class ReviewWorkflowTest extends TestCase
     {
         parent::setUp();
         $this->seed(DatabaseSeeder::class);
+        $this->configureFacultyLogos();
 
         $this->administrator = User::query()->where('correo_electronico', 'admin@silabos.test')->firstOrFail();
         $this->administratorContext = $this->administrator->roleAssignments()->firstOrFail();

@@ -85,6 +85,8 @@ class TemplateAndSourceTest extends TestCase
                 ->has('template.sections', 12)
                 ->where('template.appearance.font_family', 'Arial')
                 ->where('template.titleBlock.text', TemplateTitleBlock::DEFAULT_TEXT)
+                ->where('logos.institution', fn (string $url): bool => str_contains($url, '/logos/institucion'))
+                ->where('logos.faculty', fn (string $url): bool => str_contains($url, '/images/silabo/facultad.jpeg'))
                 ->has('appearanceOptions.colors', count(TemplateAppearance::COLORS))
                 ->where('processLock', null));
 

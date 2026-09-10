@@ -7,6 +7,7 @@ use App\Modules\Academic\Presentation\Http\Controllers\AcademicGovernanceControl
 use App\Modules\Academic\Presentation\Http\Controllers\CareerAcademicStructureController;
 use App\Modules\AiAssistance\Presentation\Http\Controllers\AiAssistanceController;
 use App\Modules\Configuration\Presentation\Http\Controllers\AcademicSourceController;
+use App\Modules\Configuration\Presentation\Http\Controllers\FacultyLogoController;
 use App\Modules\Configuration\Presentation\Http\Controllers\LogoController;
 use App\Modules\Configuration\Presentation\Http\Controllers\TemplateController;
 use App\Modules\Documents\Presentation\Http\Controllers\DocumentController;
@@ -120,6 +121,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('fuentes/{source}', [AcademicSourceController::class, 'show'])->name('sources.show');
             Route::get('revisiones/{revision}/documentos', [DocumentController::class, 'show'])->name('documents.show');
         });
+        Route::post('panel/logo-facultad', [FacultyLogoController::class, 'store'])
+            ->name('coordination.faculty-logo.store');
         Route::get('informes', [OperationalReportController::class, 'index'])->name('reports.index');
         Route::get('convocatorias', [ConvocationController::class, 'index'])->name('convocations.index');
         Route::post('convocatorias', [ConvocationController::class, 'store'])->name('convocations.store');

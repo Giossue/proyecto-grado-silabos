@@ -76,14 +76,15 @@ defecto de las tablas sin esquema y de las listas.
       constructor. Las bases local y de producción se dejaron solo con el administrador
       y el catálogo de roles (`temp/limpiar_bd.php`, con respaldo previo) el 2026-09-02.
 - [x] Logos del encabezado (`InstitutionalLogos`): el de la universidad se reemplaza
-      desde la plantilla (`POST admin/plantilla/logo`); el de cada facultad es
-      obligatorio al crearla (`facultades.logo_ruta`, migración `000031`) y opcional al
-      editarla. PNG sin fondo (regla `TransparentPng`, canal alfa); la medida no se
+      desde la plantilla (`POST admin/plantilla/logo`); desde I-68 el de cada facultad es
+      opcional para Administración al crearla o editarla y obligatorio para Coordinación
+      antes de abrir su convocatoria. Se carga en el paso del Panel, sin entrada de
+      sidebar. PNG sin fondo (regla `TransparentPng`, canal alfa); la medida no se
       exige: `InstitutionalLogos::fit` escala conservando la proporción y centra sobre
       lienzo transparente de 850 × 315 o 600 × 180 (decisión del responsable del
       producto, 2026-09-03: mejor ajustar que rechazar). Se sirven en `logos/institucion` y
-      `logos/facultad/{id}`; el Word lee el archivo del disco privado. Sin subida,
-      salen los de fábrica.
+      `logos/facultad/{id}`; el Word lee el archivo del disco privado. Sin subida, el
+      logo de fábrica es solo una muestra y no habilita la apertura.
 - [x] Jornada del paralelo (`paralelos.jornada`, migración `000030`: matutina,
       vespertina, nocturna; opcional) para completar la ficha. Se elige al crear o
       editar el paralelo. Los campos propios de la malla no llegan al sílabo.

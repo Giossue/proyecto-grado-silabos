@@ -17,6 +17,7 @@ export type SetupStep = {
     hint: string;
     done: boolean;
     href: string;
+    action: string | null;
 };
 
 export type Setup = {
@@ -32,6 +33,7 @@ export type Setup = {
  * hechos quedan tachados; los demás esperan. Desaparece cuando todo está hecho.
  */
 const props = defineProps<{ setup: Setup }>();
+const emit = defineEmits<{ action: [action: string] }>();
 
 const nextKey = computed(
     () => props.setup.steps.find((step) => !step.done)?.key ?? null,
@@ -113,7 +115,16 @@ const percent = computed(() =>
                         </p>
                     </div>
                     <Button
-                        v-if="step.key === nextKey"
+                        v-if="step.key === nextKey && step.action"
+                        type="button"
+                        size="sm"
+                        class="shrink-0"
+                        @click="emit('action', step.action)"
+                    >
+                        Configurar
+                    </Button>
+                    <Button
+                        v-else-if="step.key === nextKey"
                         as-child
                         size="sm"
                         class="shrink-0"

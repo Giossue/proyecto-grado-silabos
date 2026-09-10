@@ -12,6 +12,7 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\Faculty;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
 use App\Modules\Academic\Infrastructure\Persistence\Models\ScheduledSubject;
 use App\Modules\Academic\Infrastructure\Persistence\Models\TeacherAssignment;
+use App\Modules\Configuration\Application\InstitutionalLogos;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\AcademicSource;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
 use App\Modules\Identity\Domain\Enums\RoleCode;
@@ -26,11 +27,13 @@ use Illuminate\Database\Eloquent\Builder;
  * Cada paso se calcula con datos reales; no se marca a mano ni se guarda. Cuando
  * todo está hecho, el panel deja de mostrarlo.
  *
- * @phpstan-type Step array{key: string, label: string, hint: string, done: bool, href: string}
+ * @phpstan-type Step array{key: string, label: string, hint: string, done: bool, href: string, action: string|null}
  * @phpstan-type Checklist array{title: string, intro: string, done: int, total: int, steps: list<Step>}
  */
 class SetupChecklist
 {
+    public function __construct(private readonly InstitutionalLogos $logos) {}
+
     /**
      * Resumen para el encabezado: cuánto falta según el rol activo.
      *
@@ -65,7 +68,7 @@ class SetupChecklist
             'Puesta en marcha de la institución',
             'En este orden. Cada paso habilita el siguiente; las coordinaciones no pueden empezar hasta que termine.',
             [
-                $this->step('faculties', 'Registrar las facultades', 'Con su logo: encabeza el sílabo de sus carreras.', Faculty::query()->where('activo', true)->exists(), route('admin.academic.index', 'facultades')),
+                $this->step('faculties', 'Registrar las facultades', 'Cada facultad agrupa sus carreras; el logo puede completarlo su Coordinación.', Faculty::query()->where('activo', true)->exists(), route('admin.academic.index', 'facultades')),
                 $this->step('campus', 'Registrar los campus', 'Matriz, Laguacoto, CENI, San Miguel… donde se dictan clases.', Campus::query()->where('activo', true)->exists(), route('admin.academic.index', 'campus')),
                 $this->step('careers', 'Registrar las carreras', 'Cada carrera cuelga de una facultad, con su campus y su modalidad aprobados.', $careerCount > 0, route('admin.academic.index', 'carreras')),
                 $this->step('periods', 'Registrar el periodo académico', 'El periodo que abrirá el primer proceso de sílabos.', AcademicPeriod::query()->where('activo', true)->exists(), route('admin.academic.index', 'periodos-academicos')),
@@ -85,6 +88,7 @@ class SetupChecklist
         }
 
         $curriculum = Curriculum::query()->where('carrera_id', $careerId)->withCount('subjects')->first();
+        $faculty = Career::query()->with('faculty')->find($careerId)?->faculty;
         $scheduledSubjects = ScheduledSubject::query()->whereHas('subject.curriculum', fn (Builder $query) => $query->where('carrera_id', $careerId));
         $parallels = Parallel::query()->whereHas('scheduledSubject.subject.curriculum', fn (Builder $query) => $query->where('carrera_id', $careerId));
         $assignments = TeacherAssignment::query()->where('activo', true)->whereHas('parallel.scheduledSubject.subject.curriculum', fn (Builder $query) => $query->where('carrera_id', $careerId));
@@ -94,6 +98,14 @@ class SetupChecklist
             'Puesta en marcha de la carrera',
             'En este orden. Al abrir la convocatoria se crea un sílabo por paralelo con su docente.',
             [
+                $this->step(
+                    'faculty_logo',
+                    'Cargar el logo de la facultad',
+                    'Aparecerá junto al logo de la universidad en todos los sílabos de la carrera.',
+                    $this->logos->facultyIsConfigured($faculty),
+                    route('coordination.dashboard'),
+                    'faculty_logo',
+                ),
                 $this->step('curriculum', 'Armar la malla con sus materias', 'Ciclos, materias, horas, créditos y prerrequisitos.', $curriculum !== null && $curriculum->subjects_count > 0, route('coordination.academic.curricula.index')),
                 $this->step('scheduled_subjects', 'Programar las materias del período', 'Materia, período, campus y modalidad.', (clone $scheduledSubjects)->exists(), route('coordination.academic.scheduled-subjects.index')),
                 $this->step('parallels', 'Crear los paralelos', 'Desde Materias y paralelos, con su jornada: matutina, vespertina o nocturna.', (clone $parallels)->exists(), route('coordination.academic.scheduled-subjects.index')),
@@ -138,8 +150,14 @@ class SetupChecklist
     }
 
     /** @return Step */
-    private function step(string $key, string $label, string $hint, bool $done, string $href): array
-    {
-        return ['key' => $key, 'label' => $label, 'hint' => $hint, 'done' => $done, 'href' => $href];
+    private function step(
+        string $key,
+        string $label,
+        string $hint,
+        bool $done,
+        string $href,
+        ?string $action = null,
+    ): array {
+        return ['key' => $key, 'label' => $label, 'hint' => $hint, 'done' => $done, 'href' => $href, 'action' => $action];
     }
 }

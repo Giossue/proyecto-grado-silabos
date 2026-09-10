@@ -26,6 +26,13 @@ iniciarlo desde Acciones. `SyllabusProcessTest` comprueba la fila antes/después
 y los filtros por estado de carrera; `ConvocationActions` conserva las validaciones del
 inicio atómico y las acciones de seguimiento, pausa y reanudación.
 
+I-68 — RF-017..045, RN-009..024, CU-04/06/07, ADM-04/06 y COR-01/02:
+`InstitutionalLogosTest` verifica el alta administrativa opcional, la carga de
+Coordinación limitada a la facultad de su carrera y el archivo normalizado;
+`DashboardMetricsTest` fija el paso modal sin navegación lateral;
+`ConvocationAndDraftTest` comprueba que no se abra ni se creen sílabos sin logo; y
+`TemplateAndSourceTest` conserva ambos logos antes del título en la proyección.
+
 - SRS v0.1: RF-001..075, RNF-001..036, RN-001..034, PV-01..20.
 - Modelado funcional: CU-01..18 y modelo de dominio.
 - Prototipos: UI/DOC/COR/ADM.

@@ -192,6 +192,12 @@ createApp({render: () => h('main', {class:'min-h-screen bg-muted p-6'}, [
     ]),
     h(TooltipProvider, null, {default: () => h(TemplateVisualBuilder, {
         template: template.value, appearance: preview.value, blockTypes,
+        logos: {
+            institution: '/images/silabo/ueb.jpeg',
+            faculty: '/images/silabo/facultad.jpeg',
+            institution_size: {width: 850, height: 315},
+            faculty_size: {width: 600, height: 180},
+        },
         variables: [], identificationDesign: {type:'doc',content:[{type:'paragraph'}]},
         colorOptions: options.colors, readonly: false, ribbon: true,
     })}),
@@ -479,7 +485,9 @@ test(
         assert.equal(fieldUpdate.data.label, 'Resumen actualizado');
         assert.equal(fieldUpdate.data.content_type, 'bulleted_list');
 
-        await page.locator('.paged-document-content').dispatchEvent('pointerdown');
+        await page
+            .locator('.paged-document-content')
+            .dispatchEvent('pointerdown');
         assert.match(
             await page.locator('#template-editor-ribbon').innerText(),
             /Ningún elemento seleccionado/,

@@ -33,6 +33,7 @@ const props = withDefaults(
         appearance: TemplateAppearance;
         blockTypes: TemplateBuilderProps['blockTypes'];
         variables: TemplateBuilderProps['variables'];
+        logos: TemplateBuilderProps['logos'];
         identificationDesign: TemplateBuilderProps['identificationDesign'];
         colorOptions: TemplateBuilderProps['appearanceOptions']['colors'];
         readonly: boolean;
@@ -443,6 +444,23 @@ const clearSelectionFromBackground = (event: PointerEvent): void => {
                 :font-size="appearance.body_font_size"
                 :text-color="appearance.text_color"
             >
+                <div
+                    class="mb-6 flex flex-col items-start gap-4"
+                    data-page-unit
+                    data-page-keep-next
+                >
+                    <img
+                        :src="logos.institution"
+                        alt="Universidad Estatal de Bolívar"
+                        class="h-auto w-full object-contain object-left"
+                    />
+                    <img
+                        :src="logos.faculty"
+                        alt="Ejemplo de logo de facultad"
+                        class="h-auto w-4/5 max-w-full object-contain object-left"
+                    />
+                </div>
+
                 <TemplateTitleActions
                     v-if="!readonly"
                     ref="titleActions"

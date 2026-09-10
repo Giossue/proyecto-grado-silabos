@@ -64,6 +64,7 @@ watch(
                 :appearance="previewAppearance"
                 :block-types="blockTypes"
                 :variables="variables"
+                :logos="logos"
                 :identification-design="identificationDesign"
                 :color-options="appearanceOptions.colors"
                 :readonly="false"

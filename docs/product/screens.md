@@ -154,17 +154,20 @@ paralelo. Son operaciones separadas y ninguna levanta los bloqueos académicos.
   por entregar, días, avance de sus borradores y por corregir. Sin conteos de catálogo.
 - El Panel de cada rol abre con «Puesta en marcha»: barra de progreso y los pasos en
   orden (Administración: facultades, carreras, campus, modalidades, periodo, cuentas,
-  coordinadores, plantilla, proceso; Coordinación: malla, materias y paralelos, docentes,
-  fuentes, convocatoria; Docencia: recibir, iniciar, enviar). Cada paso se calcula con
-  datos reales; el siguiente lleva su botón y la tarjeta desaparece al completarse. El
-  encabezado repite el avance en miniatura (barra con color y «n/m», tooltip
+  coordinadores, plantilla, proceso; Coordinación: logo de la facultad, malla, materias
+  y paralelos, docentes, fuentes, convocatoria; Docencia: recibir, iniciar, enviar). El
+  logo se carga en un `Dialog` desde el propio paso, sin opción en el sidebar. Cada paso
+  se calcula con datos reales; el siguiente lleva su botón y la tarjeta desaparece al
+  completarse. El encabezado repite el avance en miniatura (barra con color y «n/m», tooltip
   «Configuración del sistema») y lleva al Panel; se recalcula en cada petición, así
   que reaparece si algo se borra.
-- Encabezado del sílabo: logo de la universidad (uno, lo reemplaza Administración desde
-  «Logo de la universidad» en la plantilla) y logo de la facultad de la carrera
-  (obligatorio al crear la facultad en ADM-04; se reemplaza al editarla). Ambos PNG sin
+- Encabezado del sílabo: logo de la universidad y, debajo, logo de la facultad de la
+  carrera, antes del bloque de título. Administración puede cargar el logo de facultad al
+  crearla o editarla, pero es opcional en ADM-04. Si falta, Coordinación debe cargarlo
+  desde «Puesta en marcha» del Panel antes de abrir su convocatoria. Ambos son PNG sin
   fondo; el sistema los ajusta a la medida fija (universidad 850 × 315 px, facultad
-  600 × 180 px) conservando la proporción y centrando sobre transparente.
+  600 × 180 px) conservando la proporción y centrando sobre transparente. La plantilla
+  institucional usa el logo de facultad de muestra; el sílabo real usa el de su carrera.
 - Si una sección tiene un solo campo, no lleva subtítulo «n.1»: basta el título de la
   sección, en la hoja, el editor docente, la revisión y el Word. Con varios campos sí
   se numeran.

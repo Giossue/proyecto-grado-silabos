@@ -8,6 +8,7 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
 use App\Modules\Academic\Infrastructure\Persistence\Models\ScheduledSubject;
 use App\Modules\Academic\Infrastructure\Persistence\Models\TeacherAssignment;
+use App\Modules\Configuration\Application\InstitutionalLogos;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\AcademicSource;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\FieldDefinition;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
@@ -19,14 +20,17 @@ use App\Modules\Syllabus\Infrastructure\Persistence\Models\ValidationRun;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\Support\CreatesSyllabusProcess;
+use Tests\Support\MakesTransparentPng;
 use Tests\TestCase;
 
 class ConvocationAndDraftTest extends TestCase
 {
     use CreatesSyllabusProcess;
+    use MakesTransparentPng;
     use RefreshDatabase;
 
     private User $administrator;
@@ -44,6 +48,7 @@ class ConvocationAndDraftTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        Storage::fake('private');
         $this->seed(DatabaseSeeder::class);
 
         $this->administrator = User::query()->where('correo_electronico', 'admin@silabos.test')->firstOrFail();
@@ -90,6 +95,20 @@ class ConvocationAndDraftTest extends TestCase
             ->post(route('convocations.open', $convocation))
             ->assertForbidden();
         $this->assertDatabaseCount('silabos', 1);
+    }
+
+    public function test_faculty_logo_is_required_before_opening_the_convocation(): void
+    {
+        $convocation = $this->createPreparedConvocation(withFacultyLogo: false);
+
+        $this->actingAsCoordinator()
+            ->post(route('convocations.open', $convocation))
+            ->assertSessionHasErrors([
+                'convocation' => 'Cargue el logo de la facultad desde Puesta en marcha del Panel antes de abrir la convocatoria.',
+            ]);
+
+        $this->assertSame('preparacion', $convocation->fresh()->estado);
+        $this->assertDatabaseCount('silabos', 0);
     }
 
     public function test_inactive_curriculum_blocks_opening_without_changing_existing_history(): void
@@ -376,8 +395,13 @@ class ConvocationAndDraftTest extends TestCase
         $this->actingAsCoordinator()->get(route('syllabi.index'))->assertForbidden();
     }
 
-    private function createPreparedConvocation(?string $periodId = null): Convocation
+    private function createPreparedConvocation(?string $periodId = null, bool $withFacultyLogo = true): Convocation
     {
+        if ($withFacultyLogo) {
+            $faculty = $this->coordinatorContext->career()->firstOrFail()->faculty()->firstOrFail();
+            app(InstitutionalLogos::class)->storeFaculty($faculty, $this->transparentPng(600, 180));
+        }
+
         [$template, $source] = $this->publishedConfiguration();
         $process = $periodId === null
             ? $this->openSyllabusProcess($template->id, now()->subDay()->toIso8601String(), now()->addMonth()->toIso8601String())

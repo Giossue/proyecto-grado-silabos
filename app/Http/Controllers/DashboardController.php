@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
+use App\Modules\Academic\Infrastructure\Persistence\Models\Faculty;
+use App\Modules\Configuration\Application\InstitutionalLogos;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Identity\Domain\Enums\RoleCode;
 use App\Modules\Operations\Application\SetupChecklist;
@@ -26,8 +28,13 @@ use Inertia\Response;
  */
 class DashboardController extends Controller
 {
-    public function index(Request $request, ActiveRole $roles, SetupChecklist $setup, ConvocationSchedule $schedule): Response|RedirectResponse
-    {
+    public function index(
+        Request $request,
+        ActiveRole $roles,
+        SetupChecklist $setup,
+        ConvocationSchedule $schedule,
+        InstitutionalLogos $logos,
+    ): Response|RedirectResponse {
         $activeRole = $roles->resolve($request);
         $user = $request->user();
 
@@ -59,7 +66,39 @@ class DashboardController extends Controller
             default => null,
         };
 
-        return Inertia::render('Dashboard', ['metrics' => $metrics, 'setup' => $checklist]);
+        $facultyLogo = $activeRole?->role->codigo === RoleCode::Coordinator->value
+            ? $this->facultyLogo($activeRole->carrera_id, $logos)
+            : null;
+
+        return Inertia::render('Dashboard', [
+            'metrics' => $metrics,
+            'setup' => $checklist,
+            'facultyLogo' => $facultyLogo,
+        ]);
+    }
+
+    /** @return array{name: string, current_url: string, configured: bool, size: array{width: int, height: int}}|null */
+    private function facultyLogo(?string $careerId, InstitutionalLogos $logos): ?array
+    {
+        $faculty = is_string($careerId)
+            ? Career::query()->with('faculty')->find($careerId)?->faculty
+            : null;
+
+        if (! $faculty instanceof Faculty) {
+            return null;
+        }
+
+        $path = $logos->facultyPath($faculty);
+
+        return [
+            'name' => $faculty->nombre,
+            'current_url' => route('logos.faculty', [
+                'faculty' => $faculty->id,
+                'v' => $logos->version($path),
+            ]),
+            'configured' => $logos->facultyIsConfigured($faculty),
+            'size' => InstitutionalLogos::FACULTY,
+        ];
     }
 
     /**

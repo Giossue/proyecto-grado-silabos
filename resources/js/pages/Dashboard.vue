@@ -12,6 +12,8 @@ import {
     UsersRound,
 } from '@lucide/vue';
 import type { Component } from 'vue';
+import { ref } from 'vue';
+import FacultyLogoDialog from '@/components/domain/configuration/FacultyLogoDialog.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
 import SetupChecklist from '@/components/domain/SetupChecklist.vue';
 import type { Setup } from '@/components/domain/SetupChecklist.vue';
@@ -26,7 +28,18 @@ type Metric = {
     hint: string;
 };
 
-defineProps<{ metrics: Metric[]; setup: Setup | null }>();
+type FacultyLogo = {
+    name: string;
+    current_url: string;
+    configured: boolean;
+    size: { width: number; height: number };
+};
+
+defineProps<{
+    metrics: Metric[];
+    setup: Setup | null;
+    facultyLogo: FacultyLogo | null;
+}>();
 
 defineOptions({
     layout: {
@@ -35,6 +48,7 @@ defineOptions({
 });
 
 const page = usePage();
+const facultyLogoOpen = ref(false);
 const activeRole = page.props.auth.roles.find(
     (role) => role.id === page.props.auth.active_role_id,
 );
@@ -51,6 +65,12 @@ const icons: Record<string, Component> = {
     correction_requested: CircleAlert,
     teachers_pending: UsersRound,
 };
+
+const handleSetupAction = (action: string): void => {
+    if (action === 'faculty_logo') {
+        facultyLogoOpen.value = true;
+    }
+};
 </script>
 
 <template>
@@ -63,7 +83,11 @@ const icons: Record<string, Component> = {
             activeRole?.career_name ?? 'Gestión institucional de Sílabos UEB'
         "
     >
-        <SetupChecklist v-if="setup" :setup="setup" />
+        <SetupChecklist
+            v-if="setup"
+            :setup="setup"
+            @action="handleSetupAction"
+        />
 
         <!--
             Dos por fila desde el móvil: son cifras cortas y una sola por fila obligaba a
@@ -89,4 +113,13 @@ const icons: Record<string, Component> = {
             No hay indicadores disponibles para este rol.
         </p>
     </PageFrame>
+
+    <FacultyLogoDialog
+        v-if="facultyLogo"
+        v-model:open="facultyLogoOpen"
+        :faculty-name="facultyLogo.name"
+        :current-url="facultyLogo.current_url"
+        :configured="facultyLogo.configured"
+        :size="facultyLogo.size"
+    />
 </template>

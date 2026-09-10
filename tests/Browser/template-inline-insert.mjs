@@ -32,6 +32,7 @@ const field = {
 };
 const template = {
     id: 'template-1', name: 'Plantilla', description: null, appearance,
+    titleBlock: {text: 'PROGRAMA DE ASIGNATURA (SÍLABO)'},
     sections: [
         {id: 'section-1', key: 'descripcion', title: 'Descripción de la asignatura', description: null, blocks: [{
             id: 'block-1', key: 'descripcion', title: 'Descripción de la asignatura',
@@ -50,6 +51,12 @@ const blockTypes = [
 createApp({render: () => h('main', {class: 'min-h-screen bg-muted p-6'}, [
     h(TooltipProvider, null, {default: () => h(TemplateVisualBuilder, {
         template, appearance, blockTypes, variables: [], readonly: false,
+        logos: {
+            institution: '/images/silabo/ueb.jpeg',
+            faculty: '/images/silabo/facultad.jpeg',
+            institution_size: {width: 850, height: 315},
+            faculty_size: {width: 600, height: 180},
+        },
         identificationDesign: {type: 'doc', content: [{type: 'paragraph'}]},
         colorOptions: [],
     })}),

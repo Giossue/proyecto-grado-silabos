@@ -58,7 +58,7 @@ class DashboardMetricsTest extends TestCase
         $esperado = [
             // El docente no tiene sílabos hasta que Coordinación abra la convocatoria.
             'admin@silabos.test' => ['faculties', 'process', 8, true],
-            'coordinador@silabos.test' => ['curriculum', 'convocation', 6, true],
+            'coordinador@silabos.test' => ['faculty_logo', 'convocation', 7, false],
             'docente@silabos.test' => ['assigned', 'submitted', 3, false],
         ];
         foreach ($esperado as $correo => [$primero, $ultimo, $total, $primeroHecho]) {
@@ -88,6 +88,14 @@ class DashboardMetricsTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->where('setup.steps.6.done', false)
                 ->where('setup.steps.7.done', false));
+
+        $coordinator = User::query()->where('correo_electronico', 'coordinador@silabos.test')->firstOrFail();
+        $this->actingAs($coordinator)
+            ->withSession(['active_role_assignment_id' => $coordinator->roleAssignments()->firstOrFail()->id])
+            ->get(route('coordination.dashboard'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('facultyLogo.configured', false)
+                ->where('setup.steps.0.action', 'faculty_logo'));
     }
 
     public function test_el_coordinador_no_cuenta_convocatorias_de_otra_carrera(): void

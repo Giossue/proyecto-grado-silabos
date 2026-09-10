@@ -45,6 +45,7 @@ defineOptions({
             :appearance="template.appearance"
             :block-types="blockTypes"
             :variables="variables"
+            :logos="logos"
             :identification-design="identificationDesign"
             :color-options="appearanceOptions.colors"
             :readonly="true"

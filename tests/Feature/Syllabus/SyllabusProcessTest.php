@@ -18,6 +18,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia as Assert;
+use Tests\Support\ConfiguresFacultyLogos;
 use Tests\TestCase;
 
 /**
@@ -28,6 +29,7 @@ use Tests\TestCase;
  */
 class SyllabusProcessTest extends TestCase
 {
+    use ConfiguresFacultyLogos;
     use RefreshDatabase;
 
     private User $administrator;
@@ -61,6 +63,7 @@ class SyllabusProcessTest extends TestCase
     {
         parent::setUp();
         $this->seed(DatabaseSeeder::class);
+        $this->configureFacultyLogos();
 
         $this->administrator = User::query()->where('correo_electronico', 'admin@silabos.test')->firstOrFail();
         $this->administratorContext = $this->administrator->roleAssignments()->firstOrFail();

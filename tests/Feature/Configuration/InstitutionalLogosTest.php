@@ -21,6 +21,10 @@ class InstitutionalLogosTest extends TestCase
 
     private RoleAssignment $administratorContext;
 
+    private User $coordinator;
+
+    private RoleAssignment $coordinatorContext;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -28,6 +32,8 @@ class InstitutionalLogosTest extends TestCase
         $this->seed(DatabaseSeeder::class);
         $this->administrator = User::query()->where('correo_electronico', 'admin@silabos.test')->firstOrFail();
         $this->administratorContext = $this->administrator->roleAssignments()->firstOrFail();
+        $this->coordinator = User::query()->where('correo_electronico', 'coordinador@silabos.test')->firstOrFail();
+        $this->coordinatorContext = $this->coordinator->roleAssignments()->firstOrFail();
     }
 
     public function test_administrator_replaces_the_university_logo_and_it_is_served_publicly(): void
@@ -61,13 +67,17 @@ class InstitutionalLogosTest extends TestCase
         $this->assertStoredPngHasSize('logos/institucion.png', 850, 315);
     }
 
-    public function test_a_faculty_requires_its_logo_and_serves_it(): void
+    public function test_administrator_can_create_a_faculty_with_or_without_its_logo(): void
     {
         $this->actingAsAdministrator()
             ->from(route('admin.academic.index', 'facultades'))
             ->post(route('admin.academic.store', 'facultad'), ['code' => 'FAC-SL', 'nombre' => 'Sin logo'])
-            ->assertSessionHasErrors('logo');
-        $this->assertDatabaseMissing('facultades', ['codigo_institucional' => 'FAC-SL']);
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('facultades', [
+            'codigo_institucional' => 'FAC-SL',
+            'logo_ruta' => null,
+        ]);
 
         $this->actingAsAdministrator()
             ->post(route('admin.academic.store', 'facultad'), [
@@ -88,6 +98,34 @@ class InstitutionalLogosTest extends TestCase
         $this->get(route('logos.faculty', $legacy))->assertOk();
     }
 
+    public function test_coordinator_configures_only_the_faculty_of_the_active_career_from_the_dashboard(): void
+    {
+        $faculty = $this->coordinatorContext->career()->firstOrFail()->faculty()->firstOrFail();
+        $this->assertNull($faculty->logo_ruta);
+
+        $this->actingAsCoordinator()
+            ->post(route('coordination.faculty-logo.store'), [
+                'logo' => $this->transparentPng(320, 120),
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $faculty->refresh();
+        $this->assertSame("logos/facultades/{$faculty->id}.png", $faculty->logo_ruta);
+        $this->assertStoredPngHasSize($faculty->logo_ruta, 600, 180);
+        $this->assertDatabaseHas('eventos_auditoria', [
+            'accion' => 'facultad.logo_actualizado',
+            'recurso_id' => $faculty->id,
+            'asignacion_rol_id' => $this->coordinatorContext->id,
+        ]);
+
+        $this->actingAsAdministrator()
+            ->post(route('coordination.faculty-logo.store'), [
+                'logo' => $this->transparentPng(320, 120),
+            ])
+            ->assertForbidden();
+    }
+
     /** El archivo guardado tiene la medida fija y conserva el canal alfa (tipo de color 6). */
     private function assertStoredPngHasSize(string $path, int $width, int $height): void
     {
@@ -103,6 +141,13 @@ class InstitutionalLogosTest extends TestCase
     private function actingAsAdministrator(): static
     {
         $this->actingAs($this->administrator)->withSession(['active_role_assignment_id' => $this->administratorContext->id]);
+
+        return $this;
+    }
+
+    private function actingAsCoordinator(): static
+    {
+        $this->actingAs($this->coordinator)->withSession(['active_role_assignment_id' => $this->coordinatorContext->id]);
 
         return $this;
     }

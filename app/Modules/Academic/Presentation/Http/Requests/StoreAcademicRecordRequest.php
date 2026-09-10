@@ -55,8 +55,8 @@ class StoreAcademicRecordRequest extends FormRequest
         return match ($this->route('entity')) {
             'facultad' => [
                 ...$this->namedCatalogRules('facultades', 180),
-                // El logo encabeza el sílabo de sus carreras: obligatorio desde el alta.
-                'logo' => ['required', ...InstitutionalLogos::rules(InstitutionalLogos::FACULTY)],
+                // Administración puede adelantarlo; Coordinación lo completa desde su Panel.
+                'logo' => ['nullable', ...InstitutionalLogos::rules(InstitutionalLogos::FACULTY)],
             ],
             'campus' => $this->namedCatalogRules('campus', 120),
             'carrera' => [

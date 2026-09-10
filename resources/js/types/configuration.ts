@@ -89,7 +89,9 @@ export type TemplateBuilderProps = {
     identificationDesign: DocumentNode;
     logos: {
         institution: string;
+        faculty: string;
         institution_size: { width: number; height: number };
+        faculty_size: { width: number; height: number };
     };
     template: {
         id: string;

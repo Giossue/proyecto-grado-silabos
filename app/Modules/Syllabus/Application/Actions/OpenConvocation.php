@@ -7,6 +7,7 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
 use App\Modules\Academic\Infrastructure\Persistence\Models\ScheduledSubject;
 use App\Modules\Academic\Infrastructure\Persistence\Models\TeacherAssignment;
+use App\Modules\Configuration\Application\InstitutionalLogos;
 use App\Modules\Configuration\Application\TemplateStructureValidator;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Operations\Application\Actions\RecordAuditEvent;
@@ -30,6 +31,7 @@ class OpenConvocation
         private readonly AcademicContextSnapshot $academicContext,
         private readonly TemplateStructureValidator $templateStructure,
         private readonly InheritMasterValues $inherit,
+        private readonly InstitutionalLogos $logos,
     ) {}
 
     public function execute(string $convocationId, User $actor, Request $request): Convocation
@@ -39,13 +41,18 @@ class OpenConvocation
         return DB::transaction(function () use ($actor, $convocationId, $activeRole, $request): Convocation {
             $convocation = Convocation::query()
                 ->lockForUpdate()
-                ->with(['sources', 'process.template.sections.blocks.fields'])
+                ->with(['career.faculty', 'sources', 'process.template.sections.blocks.fields'])
                 ->findOrFail($convocationId);
             if ($activeRole?->carrera_id !== $convocation->carrera_id || $activeRole->role->codigo !== 'coordinador') {
                 abort(403);
             }
             if ($convocation->estado !== 'preparacion') {
                 throw ValidationException::withMessages(['convocation' => 'Solo una convocatoria en preparación puede abrirse.']);
+            }
+            if (! $this->logos->facultyIsConfigured($convocation->career->faculty)) {
+                throw ValidationException::withMessages([
+                    'convocation' => 'Cargue el logo de la facultad desde Puesta en marcha del Panel antes de abrir la convocatoria.',
+                ]);
             }
             // El calendario lo marca Administración: sin proceso abierto no hay a qué convocar.
             if ($convocation->process->estado !== SyllabusProcess::STATE_OPEN) {

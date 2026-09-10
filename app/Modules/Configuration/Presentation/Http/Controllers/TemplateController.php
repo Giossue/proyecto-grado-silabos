@@ -110,7 +110,9 @@ class TemplateController extends Controller
             'identificationDesign' => TemplateDocumentDefaults::identification(),
             'logos' => [
                 'institution' => route('logos.institution', ['v' => $logos->version($logos->institutionPath())]),
+                'faculty' => asset('images/silabo/facultad.jpeg').'?v='.$logos->version(public_path('images/silabo/facultad.jpeg')),
                 'institution_size' => InstitutionalLogos::INSTITUTION,
+                'faculty_size' => InstitutionalLogos::FACULTY,
             ],
             'template' => [
                 'id' => $template->id,

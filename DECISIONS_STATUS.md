@@ -43,6 +43,11 @@ Fecha de corte: **30 de agosto de 2026**.
   único: se guarda en `mapeo_documento`, siempre se proyecta antes de las secciones y
   no puede eliminarse, duplicarse ni reordenarse. Las plantillas y revisiones anteriores
   reciben el título institucional predeterminado.
+- I-68 (10 de septiembre de 2026) fija los dos logos antes del título: la plantilla
+  muestra el logo UEB y una muestra de facultad, mientras cada sílabo resuelve el logo de
+  la facultad de su carrera. Administración puede omitirlo al registrar la facultad;
+  Coordinación lo carga desde «Puesta en marcha» de su Panel y no puede abrir la
+  convocatoria hasta que exista. No se añade una opción al menú lateral.
 - I-57 (8 de septiembre de 2026) cierra `PV-08`: el período declara sus semanas
   lectivas; Docencia distribuye semanas y horas entre cualquier cantidad de unidades;
   ACD, APE y AA se suman y comparan exactamente con la malla al validar o enviar. El

@@ -9,10 +9,11 @@ use Illuminate\Validation\ValidationException;
 
 /**
  * Logos que encabezan el sílabo: el de la universidad (uno, reemplazable por
- * Administración) y el de cada facultad (obligatorio al crearla). Ambos son PNG sin
- * fondo; el sistema los ajusta a una medida fija (conservando la proporción, centrados
- * sobre lienzo transparente) para que el encabezado salga siempre igual. Viven en el
- * disco privado y se sirven por ruta propia; el Word los lee del disco.
+ * Administración) y el de cada facultad. El alta administrativa puede dejar pendiente
+ * este último, pero Coordinación debe configurarlo antes de abrir su convocatoria.
+ * Ambos son PNG sin fondo; el sistema los ajusta a una medida fija (conservando la
+ * proporción, centrados sobre lienzo transparente) para que el encabezado salga siempre
+ * igual. Viven en el disco privado y se sirven por ruta propia; el Word los lee del disco.
  */
 class InstitutionalLogos
 {
@@ -135,6 +136,16 @@ class InstitutionalLogos
     public function facultyPathById(?string $facultyId): string
     {
         return $this->facultyPath($facultyId === null ? null : Faculty::query()->find($facultyId));
+    }
+
+    /** El logo propio existe; el archivo de muestra no completa la puesta en marcha. */
+    public function facultyIsConfigured(?Faculty $faculty): bool
+    {
+        $path = $faculty?->logo_ruta;
+
+        return is_string($path)
+            && $path !== ''
+            && Storage::disk(self::DISK)->exists($path);
     }
 
     /** Marca de versión para que el navegador no cachee un logo reemplazado. */
