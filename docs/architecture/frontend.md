@@ -164,6 +164,9 @@ negrita, cursiva, borde, combinación y operaciones de filas/columnas. El guarda
 PATCH existente de `SaveTemplateDocument`, con su huella, autorización, bloqueo y
 confirmación de reinicio. `TemplateDocument` normaliza el catálogo de atributos por
 celda y `TemplateDocumentView`/`TemplateDocumentWord` lo interpretan sin persistir HTML.
+`wordTableResize` reemplaza el redimensionamiento global de Tiptap: al mover un borde
+refina la cuadrícula con `colspan` y `colwidth`, mantiene fijo el ancho de la tabla y no
+altera las filas que no comparten una celda combinada verticalmente.
 El tema global se aplica solo a `tableHeader` y filas de unidad; un estilo explícito de
 celda tiene precedencia. Las tablas antiguas sin roles conservan los colores explícitos
 de sus celdas, evitando convertir por heurística su primera fila en una cabecera.

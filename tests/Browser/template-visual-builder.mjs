@@ -428,6 +428,67 @@ test(
             await tableEditor.getByText('$detalle', { exact: true }).count(),
             1,
         );
+
+        const editorTable = tableEditor.locator('table');
+        const headerLeftCell = editorTable
+            .locator('tr')
+            .first()
+            .locator('th')
+            .first();
+        const recordLeftCell = editorTable
+            .locator('tr')
+            .last()
+            .locator('td')
+            .first();
+        const tableBeforeResize = await editorTable.boundingBox();
+        const headerBeforeResize = await headerLeftCell.boundingBox();
+        const recordBeforeResize = await recordLeftCell.boundingBox();
+        assert.ok(
+            tableBeforeResize && headerBeforeResize && recordBeforeResize,
+        );
+        await page.mouse.move(
+            recordBeforeResize.x + recordBeforeResize.width - 1,
+            recordBeforeResize.y + recordBeforeResize.height / 2,
+        );
+        await page.mouse.down();
+        await page.mouse.move(
+            recordBeforeResize.x + recordBeforeResize.width + 5,
+            recordBeforeResize.y + recordBeforeResize.height / 2,
+        );
+        await tableField.locator('[data-snapped="true"]').waitFor();
+        await page.mouse.move(
+            recordBeforeResize.x + recordBeforeResize.width + 40,
+            recordBeforeResize.y + recordBeforeResize.height / 2,
+        );
+        await page.waitForTimeout(50);
+        const headerDuringResize = await headerLeftCell.boundingBox();
+        const recordDuringResize = await recordLeftCell.boundingBox();
+        assert.ok(headerDuringResize && recordDuringResize);
+        assert.ok(
+            Math.abs(headerDuringResize.width - headerBeforeResize.width) < 1,
+            'La previsualización no debe mover una fila ajena.',
+        );
+        assert.ok(
+            recordDuringResize.width > recordBeforeResize.width + 30,
+            'La celda debe mostrar su nuevo ancho antes de soltar el mouse.',
+        );
+        await page.mouse.up();
+        const tableAfterResize = await editorTable.boundingBox();
+        const headerAfterResize = await headerLeftCell.boundingBox();
+        const recordAfterResize = await recordLeftCell.boundingBox();
+        assert.ok(tableAfterResize && headerAfterResize && recordAfterResize);
+        assert.ok(
+            Math.abs(tableAfterResize.width - tableBeforeResize.width) < 1,
+            `El ancho total cambió de ${tableBeforeResize.width}px a ${tableAfterResize.width}px.`,
+        );
+        assert.ok(
+            Math.abs(headerAfterResize.width - headerBeforeResize.width) < 1,
+            'Una fila ajena no debe cambiar al mover el borde de una celda.',
+        );
+        assert.ok(
+            recordAfterResize.width > recordBeforeResize.width + 30,
+            'Solo la celda de la fila arrastrada debe cambiar de ancho.',
+        );
         await tableEditor.locator('td').first().click();
         const dataButton = page.getByRole('button', {
             name: 'Datos: Fila que completa el docente',
@@ -541,7 +602,7 @@ test(
         );
         const header =
             tableRequest.data.document.content[0].content[0].content[0];
-        assert.equal(header.attrs.colspan, 2);
+        assert.equal(header.attrs.colspan, 3);
         assert.equal(header.attrs.backgroundColor, '#DBE5F1');
         assert.equal(header.attrs.textColor, '#FFFFFF');
         assert.equal(header.attrs.textAlign, 'center');

@@ -25,6 +25,7 @@ claves técnicas sin pedirlas. El formulario extenso «Configurar estructura» d
 - [x] Derivar columnas, datos de unidad y totales al guardar el documento visual.
 - [x] Conservar funciones semánticas y compatibilidad con diseños anteriores.
 - [x] Cubrir servidor, TypeScript y recorrido Chromium.
+- [x] Redimensionar el borde de una celda como Word sin alterar las demás filas.
 
 ## Riesgos
 
@@ -38,3 +39,5 @@ exista trabajo en curso. No se crean migraciones ni se modifican revisiones envi
 - 26 pruebas del contrato de interfaz: 1.276 aserciones.
 - `template-visual-builder.mjs` y `template-table-content.mjs` aprobadas en Chromium.
 - TypeScript, ESLint focalizado, Pint, DOCX y build Vite aprobados.
+- `template-visual-builder.mjs` conserva el ancho total y las filas ajenas al mover
+  el borde de una celda; la cuadrícula lógica resultante permanece editable.

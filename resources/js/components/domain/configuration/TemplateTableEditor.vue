@@ -42,6 +42,7 @@ import StarterKit from '@tiptap/starter-kit';
 import { EditorContent, useEditor } from '@tiptap/vue-3';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import type { CSSProperties } from 'vue';
+import { toast } from 'vue-sonner';
 import TemplateToolbarButton from '@/components/domain/configuration/TemplateToolbarButton.vue';
 import TemplateToolbarSelect from '@/components/domain/configuration/TemplateToolbarSelect.vue';
 import FormSheet from '@/components/domain/FormSheet.vue';
@@ -104,6 +105,8 @@ import type {
     TemplateVariable,
 } from '@/lib/templateDocument';
 import { nodesOfType } from '@/lib/templateDocument';
+import { cn } from '@/lib/utils';
+import { resizeCellBoundary } from '@/lib/wordTableResize';
 
 type CellAlignment = 'left' | 'center' | 'right' | 'justify';
 type CellBorder = 'thin' | 'thick' | 'none';
@@ -115,6 +118,28 @@ type CellAttributes = {
     bold?: boolean | null;
     italic?: boolean | null;
     borderStyle?: CellBorder | null;
+};
+type ResizeGuide = {
+    left: number;
+    top: number;
+    height: number;
+    snapped: boolean;
+};
+type CellResizeSession = {
+    table: DocumentNode;
+    tablePosition: number;
+    tableSize: number;
+    row: number;
+    cell: number;
+    widths: number[];
+    tableLeft: number;
+    minimumX: number;
+    maximumX: number;
+    currentX: number;
+    snapBoundaries: number[];
+    rowTop: number;
+    rowHeight: number;
+    previewed: boolean;
 };
 
 const props = defineProps<{
@@ -134,6 +159,11 @@ const props = defineProps<{
 const emit = defineEmits<{
     dirty: [value: boolean];
 }>();
+
+const editorShell = ref<HTMLElement | null>(null);
+const resizeGuide = ref<ResizeGuide | null>(null);
+let resizeSession: CellResizeSession | null = null;
+let resizeFrame = 0;
 
 const editorStyle = computed<CSSProperties & Record<string, string>>(() => ({
     fontFamily: props.fontFamily,
@@ -369,7 +399,8 @@ const editor = useEditor({
                 };
             },
         }).configure({
-            resizable: true,
+            resizable: false,
+            renderWrapper: true,
             cellMinWidth: 20,
             lastColumnResizable: false,
         }),
@@ -401,8 +432,276 @@ watch(
     (pending) => editor.value?.setEditable(!pending),
 );
 
-onBeforeUnmount(() => editor.value?.destroy());
+const clearCellResize = (): void => {
+    cancelAnimationFrame(resizeFrame);
+    resizeFrame = 0;
+    window.removeEventListener('mousemove', moveCellResize, true);
+    window.removeEventListener('mouseup', finishCellResize, true);
+    resizeSession = null;
+    resizeGuide.value = null;
+};
 
+const replaceResizeTable = (
+    session: CellResizeSession,
+    document: DocumentNode,
+    addToHistory: boolean,
+): boolean => {
+    const current = editor.value;
+
+    if (!current) {
+        return false;
+    }
+
+    const state = current.view.state;
+    const table = state.doc.nodeAt(session.tablePosition);
+
+    if (!table || table.nodeSize !== session.tableSize) {
+        return false;
+    }
+
+    if (JSON.stringify(table.toJSON()) === JSON.stringify(document)) {
+        return true;
+    }
+
+    const replacement = state.schema.nodeFromJSON(document);
+    const transaction = state.tr.replaceWith(
+        session.tablePosition,
+        session.tablePosition + session.tableSize,
+        replacement,
+    );
+
+    if (!addToHistory) {
+        transaction.setMeta('addToHistory', false);
+    }
+
+    current.view.dispatch(transaction);
+
+    return true;
+};
+
+const previewCellResize = (): void => {
+    const session = resizeSession;
+
+    if (!session) {
+        return;
+    }
+
+    const result = resizeCellBoundary(
+        session.table,
+        session.widths,
+        session.row,
+        session.cell,
+        session.currentX - session.tableLeft,
+    );
+
+    if ('error' in result) {
+        return;
+    }
+
+    if (replaceResizeTable(session, result.table, false)) {
+        session.previewed = true;
+    }
+};
+
+const moveCellResize = (event: MouseEvent): void => {
+    const session = resizeSession;
+    const shell = editorShell.value;
+
+    if (!session || !shell) {
+        return;
+    }
+
+    const limited = Math.min(
+        session.maximumX,
+        Math.max(session.minimumX, event.clientX),
+    );
+    const closest = session.snapBoundaries.reduce<number | null>(
+        (nearest, boundary) => {
+            const candidate = session.tableLeft + boundary;
+
+            return nearest === null ||
+                Math.abs(candidate - limited) < Math.abs(nearest - limited)
+                ? candidate
+                : nearest;
+        },
+        null,
+    );
+    const snapped = closest !== null && Math.abs(closest - limited) <= 8;
+
+    session.currentX = snapped ? closest : limited;
+    resizeGuide.value = {
+        left: session.currentX - shell.getBoundingClientRect().left,
+        top: session.rowTop,
+        height: session.rowHeight,
+        snapped,
+    };
+    cancelAnimationFrame(resizeFrame);
+    resizeFrame = requestAnimationFrame(() => {
+        resizeFrame = 0;
+        previewCellResize();
+    });
+};
+
+const finishCellResize = (event: MouseEvent): void => {
+    const session = resizeSession;
+    const current = editor.value;
+
+    if (!session || !current) {
+        clearCellResize();
+
+        return;
+    }
+
+    moveCellResize(event);
+    cancelAnimationFrame(resizeFrame);
+    resizeFrame = 0;
+    const result = resizeCellBoundary(
+        session.table,
+        session.widths,
+        session.row,
+        session.cell,
+        session.currentX - session.tableLeft,
+    );
+
+    if (
+        session.previewed &&
+        !replaceResizeTable(session, session.table, false)
+    ) {
+        clearCellResize();
+        toast.error('La tabla cambió mientras se ajustaba la celda.');
+
+        return;
+    }
+
+    if ('error' in result) {
+        clearCellResize();
+        toast.error(result.error);
+
+        return;
+    }
+
+    if (!result.changed) {
+        clearCellResize();
+
+        return;
+    }
+
+    if (!replaceResizeTable(session, result.table, true)) {
+        clearCellResize();
+        toast.error('La tabla cambió mientras se ajustaba la celda.');
+
+        return;
+    }
+
+    clearCellResize();
+    current.view.focus();
+};
+
+const startCellResize = (event: MouseEvent): void => {
+    const target = event.target;
+
+    if (props.pending || !(target instanceof Element) || event.button !== 0) {
+        return;
+    }
+
+    const cell = target.closest('td, th');
+    const row = cell?.parentElement;
+    const table = cell?.closest('table');
+    const adjacent = cell?.nextElementSibling;
+    const shell = editorShell.value;
+    const current = editor.value;
+
+    if (
+        !(cell instanceof HTMLTableCellElement) ||
+        !(row instanceof HTMLTableRowElement) ||
+        !(table instanceof HTMLTableElement) ||
+        !(adjacent instanceof HTMLTableCellElement) ||
+        !shell ||
+        !current
+    ) {
+        return;
+    }
+
+    const cellRect = cell.getBoundingClientRect();
+
+    if (Math.abs(cellRect.right - event.clientX) > 6) {
+        return;
+    }
+
+    const view = current.view;
+    const position = view.posAtDOM(cell, 0);
+    const resolved = view.state.doc.resolve(position);
+    let tableDepth = -1;
+
+    for (let depth = resolved.depth; depth > 0; depth--) {
+        if (resolved.node(depth).type.name === 'table') {
+            tableDepth = depth;
+            break;
+        }
+    }
+
+    if (tableDepth < 1) {
+        return;
+    }
+
+    const tableNode = resolved.node(tableDepth);
+    const tablePosition = resolved.before(tableDepth);
+    const columns = Array.from(
+        table.querySelectorAll(':scope > colgroup > col'),
+    );
+    const widths = columns.map(
+        (column) => column.getBoundingClientRect().width,
+    );
+    const adjacentRect = adjacent.getBoundingClientRect();
+    const tableRect = table.getBoundingClientRect();
+    const rowRect = row.getBoundingClientRect();
+    const shellRect = shell.getBoundingClientRect();
+    const rowIndex = Array.from(table.rows).indexOf(row);
+    const snapBoundaries = Array.from(table.rows)
+        .filter((_, index) => index !== rowIndex)
+        .flatMap((tableRow) => Array.from(tableRow.cells))
+        .map(
+            (tableCell) =>
+                tableCell.getBoundingClientRect().right - tableRect.left,
+        )
+        .filter((boundary) => boundary > 1 && boundary < tableRect.width - 1);
+
+    if (widths.length < 2) {
+        return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    resizeSession = {
+        table: tableNode.toJSON() as DocumentNode,
+        tablePosition,
+        tableSize: tableNode.nodeSize,
+        row: rowIndex,
+        cell: cell.cellIndex,
+        widths,
+        tableLeft: tableRect.left,
+        minimumX: cellRect.left + 20,
+        maximumX: adjacentRect.right - 20,
+        currentX: cellRect.right,
+        snapBoundaries: Array.from(new Set(snapBoundaries)),
+        rowTop: rowRect.top - shellRect.top,
+        rowHeight: rowRect.height,
+        previewed: false,
+    };
+    resizeGuide.value = {
+        left: cellRect.right - shellRect.left,
+        top: rowRect.top - shellRect.top,
+        height: rowRect.height,
+        snapped: false,
+    };
+    window.addEventListener('mousemove', moveCellResize, true);
+    window.addEventListener('mouseup', finishCellResize, true);
+};
+
+onBeforeUnmount(() => {
+    clearCellResize();
+    editor.value?.destroy();
+});
 const state = computed(() => {
     void version.value;
 
@@ -1010,11 +1309,29 @@ defineExpose({ getDocument });
 
 <template>
     <div
-        class="template-table-editor flex min-w-0 flex-col gap-3 rounded-lg ring-1 ring-ring"
+        ref="editorShell"
+        class="template-table-editor relative flex min-w-0 flex-col gap-3 rounded-lg ring-1 ring-ring"
         :style="editorStyle"
         data-page-unit
         data-page-flow-through
+        :data-resizing="Boolean(resizeGuide) || undefined"
     >
+        <div
+            v-if="resizeGuide"
+            :class="
+                cn(
+                    'pointer-events-none absolute z-30 w-px',
+                    resizeGuide.snapped ? 'bg-primary' : 'bg-primary/80',
+                )
+            "
+            :style="{
+                left: `${resizeGuide.left}px`,
+                top: `${resizeGuide.top}px`,
+                height: `${resizeGuide.height}px`,
+            }"
+            :data-snapped="resizeGuide.snapped || undefined"
+            aria-hidden="true"
+        />
         <Teleport :to="toolbarTarget ?? 'body'" :disabled="!toolbarTarget">
             <div
                 class="flex min-w-max items-center gap-2 text-foreground"
@@ -1538,6 +1855,7 @@ defineExpose({ getDocument });
         <EditorContent
             :editor="editor"
             class="template-table-canvas min-w-0 overflow-x-auto"
+            @mousedown.capture="startCellResize"
         />
     </div>
 
@@ -1809,14 +2127,27 @@ defineExpose({ getDocument });
     pointer-events: none;
     position: absolute;
 }
-.template-table-editor .column-resize-handle {
+.template-table-editor td:not(:last-child)::before,
+.template-table-editor th:not(:last-child)::before {
     background: #0070c0;
     bottom: 0;
-    pointer-events: none;
+    content: '';
+    cursor: col-resize;
+    opacity: 0;
     position: absolute;
-    right: -2px;
+    right: -0.5px;
     top: 0;
-    width: 4px;
+    transition: opacity 120ms ease;
+    width: 1px;
+    z-index: 20;
+}
+.template-table-editor td:not(:last-child):hover::before,
+.template-table-editor th:not(:last-child):hover::before {
+    opacity: 1;
+}
+.template-table-editor[data-resizing] td:not(:last-child)::before,
+.template-table-editor[data-resizing] th:not(:last-child)::before {
+    display: none;
 }
 .template-table-editor .template-table-field {
     background: #edf6ff;
