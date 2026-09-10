@@ -889,7 +889,6 @@ it('construye la plantilla desde bloques que contienen campos tipados', function
     );
     expect($tableDesigner)
         ->toBeString()
-        ->toContain('Editar tabla')
         ->toContain('ribbonTarget')
         ->toContain('<Teleport')
         ->toContain('Editando: {{ blockTitle }}')
@@ -897,6 +896,9 @@ it('construye la plantilla desde bloques que contienen campos tipados', function
         ->toContain('<TemplateTableEditor')
         ->toContain('TemplateController.updateDocument.url')
         ->toContain('Guardar tabla')
+        ->not->toContain('<template #table-action>')
+        ->not->toContain('`Editar tabla: ${blockTitle}`')
+        ->not->toContain('TableProperties')
         ->not->toContain('window.confirm');
     expect($tableStructure)
         ->toBeString()

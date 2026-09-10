@@ -29,6 +29,8 @@ una cinta contextual sin encerrar el documento en un modal.
 - [x] El botón Editar abre una URL dedicada y el enlace de salida vuelve a la vista.
 - [x] La hoja identifica visualmente el elemento seleccionado y la cinta presenta sus
       acciones.
+- [x] Editar tabla aparece solo en la cinta contextual, sin un botón duplicado dentro de
+      la tabla.
 - [x] El modo de edición aprovecha todo el viewport y no monta el sidebar administrativo.
 - [x] Una tabla se edita directamente sobre la hoja, con formato y guardado en la cinta.
 - [x] La configuración estructural se despliega bajo la cinta, sin modal.

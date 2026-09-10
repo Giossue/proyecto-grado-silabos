@@ -157,7 +157,8 @@ siguen protegiendo tanto estructura como apariencia.
 
 Los componentes documentales sirven a las dos rutas. Cuando Administración selecciona
 una tabla y pulsa **Editar tabla**, `TemplateTableDesigner` monta `TemplateTableEditor`
-dentro de la hoja y teletransporta sus herramientas a la cinta. La instancia Tiptap
+dentro de la hoja y teletransporta sus herramientas a la cinta. La acción aparece solo
+en la cinta contextual; la tabla no muestra un botón propio duplicado. La instancia Tiptap
 acotada selecciona celdas y expone fondo, color de texto, alineación,
 negrita, cursiva, borde, combinación y operaciones de filas/columnas. El guardado usa el
 PATCH existente de `SaveTemplateDocument`, con su huella, autorización, bloqueo y

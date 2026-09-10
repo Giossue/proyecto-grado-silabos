@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { PendingVisit, VisitOptions } from '@inertiajs/core';
 import { router, useForm } from '@inertiajs/vue3';
-import { Save, TableProperties, Trash2 } from '@lucide/vue';
+import { Save, Trash2 } from '@lucide/vue';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { toast } from 'vue-sonner';
 import TemplateController from '@/actions/App/Modules/Configuration/Presentation/Http/Controllers/TemplateController';
@@ -19,11 +19,6 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { Spinner } from '@/components/ui/spinner';
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipTrigger,
-} from '@/components/ui/tooltip';
 import { registerLocalPurgeConfirmation } from '@/composables/usePurgeConfirmation';
 import type { TableLayout } from '@/lib/tableLayout';
 import type {
@@ -276,27 +271,7 @@ defineExpose({ start });
                 :table-header-background="appearance.table_header_background"
                 :table-header-color="appearance.table_header_color"
                 preview
-            >
-                <template #table-action>
-                    <Tooltip :disable-hoverable-content="true">
-                        <TooltipTrigger as-child>
-                            <Button
-                                type="button"
-                                variant="outline"
-                                size="icon-sm"
-                                class="size-7 text-foreground"
-                                :aria-label="`Editar tabla: ${blockTitle}`"
-                                @click.stop="start"
-                            >
-                                <TableProperties aria-hidden="true" />
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent paper side="left" :side-offset="8">
-                            Editar tabla
-                        </TooltipContent>
-                    </Tooltip>
-                </template>
-            </TemplateDocumentView>
+            />
         </template>
 
         <template v-if="editing">
