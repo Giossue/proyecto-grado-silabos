@@ -70,8 +70,7 @@ const scheduledSubjectFilter = useClientFilter(
     (item) => [
         item.subject_name,
         item.subject_code,
-        item.campus_name,
-        item.modality_name,
+        item.subject_cycle?.toString(),
     ],
     {
         estado: {
@@ -128,7 +127,7 @@ watch(
                 :filter="scheduledSubjectFilter"
                 input-id="scheduled-subjects-search"
                 label="Buscar materia programada"
-                placeholder="Buscar por materia, código, campus o modalidad"
+                placeholder="Buscar por materia, código o ciclo"
             >
                 <template #filters>
                     <Field data-wide>
@@ -172,7 +171,7 @@ watch(
                     <TableRow>
                         <TableHead>Materia</TableHead>
                         <TableHead>Código</TableHead>
-                        <TableHead>Ubicación</TableHead>
+                        <TableHead>Ciclo</TableHead>
                         <TableHead>Paralelos</TableHead>
                         <TableHead class="text-right">Acciones</TableHead>
                     </TableRow>
@@ -192,7 +191,11 @@ watch(
                         <TableCell>{{ item.subject_name }}</TableCell>
                         <TableCell>{{ item.subject_code }}</TableCell>
                         <TableCell>
-                            {{ item.campus_name }} · {{ item.modality_name }}
+                            {{
+                                item.subject_cycle === null
+                                    ? 'Sin ciclo'
+                                    : `${item.subject_cycle}.º`
+                            }}
                         </TableCell>
                         <TableCell>{{ item.parallel_count }}</TableCell>
                         <TableCell class="text-right">

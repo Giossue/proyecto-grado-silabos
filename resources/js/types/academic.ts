@@ -94,6 +94,7 @@ export type AcademicStructureProps = {
         label: string;
         subject_code: string;
         subject_name: string;
+        subject_cycle: number | null;
         period_starts_on: string;
         period_ends_on: string;
         period_status: 'proximo' | 'en_curso' | 'finalizado';

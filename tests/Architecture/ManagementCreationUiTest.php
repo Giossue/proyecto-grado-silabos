@@ -442,6 +442,8 @@ it('evita repetir el encabezado de pagina dentro de las tablas academicas', func
         ->toContain('disponible solo para consulta')
         ->toContain('<TableHead>Materia</TableHead')
         ->toContain('<TableHead>Código</TableHead')
+        ->toContain('<TableHead>Ciclo</TableHead')
+        ->not->toContain('<TableHead>Ubicación</TableHead')
         ->not->toContain('item.offering_label')
         ->not->toContain('<CardHeader')
         ->not->toContain('<CardTitle')

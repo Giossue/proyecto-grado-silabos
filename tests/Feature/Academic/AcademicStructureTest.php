@@ -167,6 +167,7 @@ class AcademicStructureTest extends TestCase
                 ->where('selectedPeriodId', $scheduledSubject->periodo_academico_id)
                 ->where('scheduledSubjects.0.subject_code', $scheduledSubject->subject->codigo_institucional)
                 ->where('scheduledSubjects.0.subject_name', $scheduledSubject->subject->nombre)
+                ->where('scheduledSubjects.0.subject_cycle', $scheduledSubject->subject->ciclo)
                 ->where('scheduledSubjects.0.period_starts_on', $scheduledSubject->academicPeriod->fecha_inicio->toDateString())
                 ->where('scheduledSubjects.0.period_ends_on', $scheduledSubject->academicPeriod->fecha_fin->toDateString())
                 ->where('scheduledSubjects.0.period_status', 'en_curso')

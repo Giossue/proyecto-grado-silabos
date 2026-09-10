@@ -294,7 +294,7 @@ class AcademicStructureViewData
                 ->where('carrera_id', $careerId))
             ->with([
                 'academicPeriod:id,fecha_inicio,fecha_fin,activo',
-                'subject:id,nombre,codigo_institucional',
+                'subject:id,nombre,codigo_institucional,ciclo',
                 'campus:id,nombre',
             ])
             ->withCount('parallels')
@@ -353,6 +353,7 @@ class AcademicStructureViewData
                         'label' => "{$scheduledSubject->subject->codigo_institucional} · {$scheduledSubject->subject->nombre}",
                         'subject_code' => $scheduledSubject->subject->codigo_institucional,
                         'subject_name' => $scheduledSubject->subject->nombre,
+                        'subject_cycle' => $scheduledSubject->subject->ciclo,
                         'period_starts_on' => $scheduledSubject->academicPeriod->fecha_inicio->toDateString(),
                         'period_ends_on' => $scheduledSubject->academicPeriod->fecha_fin->toDateString(),
                         'period_status' => $this->periodPlanning->status($scheduledSubject->academicPeriod),
