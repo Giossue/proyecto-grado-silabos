@@ -266,6 +266,48 @@ test(
         });
 
         await page.goto(`${server.resolvedUrls.local[0]}fixture`);
+        const snappedGrid = await page.evaluate(async () => {
+            const { resizeCellBoundary } =
+                await import('/resources/js/lib/wordTableResize.ts');
+            const cell = (colspan) => ({
+                type: 'tableCell',
+                attrs: { colspan, rowspan: 1, colwidth: null },
+                content: [{ type: 'paragraph' }],
+            });
+            const result = resizeCellBoundary(
+                {
+                    type: 'table',
+                    content: [
+                        {
+                            type: 'tableRow',
+                            content: [cell(2), cell(1)],
+                        },
+                        {
+                            type: 'tableRow',
+                            content: [cell(1), cell(2)],
+                        },
+                    ],
+                },
+                [100, 100, 100],
+                0,
+                0,
+                101,
+            );
+
+            return 'error' in result
+                ? { error: result.error }
+                : {
+                      spans: result.table.content.map((row) =>
+                          row.content.map((item) => item.attrs.colspan),
+                      ),
+                  };
+        });
+        assert.deepEqual(snappedGrid, {
+            spans: [
+                [1, 1],
+                [1, 1],
+            ],
+        });
         const firstBlockButton = page.getByRole('button', {
             name: 'Agregar primer bloque',
         });

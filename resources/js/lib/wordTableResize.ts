@@ -165,7 +165,30 @@ export function resizeCellBoundary(
         return { error: 'No hay espacio suficiente para mover ese borde.' };
     }
 
-    const boundary = Math.min(maximum, Math.max(minimum, requestedBoundary));
+    const limitedBoundary = Math.min(
+        maximum,
+        Math.max(minimum, requestedBoundary),
+    );
+    const closestGridBoundary = positions
+        .slice(1, -1)
+        .filter((position) => position >= minimum && position <= maximum)
+        .reduce<number | null>(
+            (closest, position) =>
+                closest === null ||
+                Math.abs(position - limitedBoundary) <
+                    Math.abs(closest - limitedBoundary)
+                    ? position
+                    : closest,
+            null,
+        );
+    // Los bordes colapsados del DOM desplazan la coordenada visual cerca de 1 px.
+    // Reutilizar aquí la división lógica evita crear una columna espuria de 1 px
+    // que el navegador ampliaría al mínimo de 20 px, moviendo las demás filas.
+    const boundary =
+        closestGridBoundary !== null &&
+        Math.abs(closestGridBoundary - limitedBoundary) <= 2
+            ? closestGridBoundary
+            : limitedBoundary;
 
     if (closeEnough(boundary, originalBoundary)) {
         return { table, changed: false };

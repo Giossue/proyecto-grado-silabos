@@ -40,4 +40,5 @@ exista trabajo en curso. No se crean migraciones ni se modifican revisiones envi
 - `template-visual-builder.mjs` y `template-table-content.mjs` aprobadas en Chromium.
 - TypeScript, ESLint focalizado, Pint, DOCX y build Vite aprobados.
 - `template-visual-builder.mjs` conserva el ancho total y las filas ajenas al mover
-  el borde de una celda; la cuadrícula lógica resultante permanece editable.
+  el borde de una celda, incluso en movimientos consecutivos; el ajuste imantado
+  reutiliza la división lógica y no crea columnas mínimas que desplacen el contenido.
