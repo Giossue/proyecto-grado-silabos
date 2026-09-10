@@ -1,8 +1,12 @@
 <script setup lang="ts">
+import { UserRoundCog } from '@lucide/vue';
+import { ref } from 'vue';
 import CareerAcademicActions from '@/components/domain/academic/CareerAcademicActions.vue';
+import TeacherReliefSheet from '@/components/domain/academic/TeacherReliefSheet.vue';
 import ClientFilterBar from '@/components/domain/ClientFilterBar.vue';
 import TablePagination from '@/components/domain/TablePagination.vue';
 import { Card, CardContent } from '@/components/ui/card';
+import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Field, FieldLabel } from '@/components/ui/field';
 import {
     Select,
@@ -30,6 +34,29 @@ const props = defineProps<
         lockReason?: string | null;
     }
 >();
+
+type TeacherAssignment = AcademicStructureProps['teacherAssignments'][number];
+type OutgoingTeacher = {
+    id: string;
+    name: string;
+    parallelCount: number;
+};
+
+const reliefOpen = ref(false);
+const outgoingTeacher = ref<OutgoingTeacher | null>(null);
+const openTeacherRelief = (assignment: TeacherAssignment): void => {
+    outgoingTeacher.value = {
+        id: assignment.user_id,
+        name: assignment.user_name,
+        parallelCount: props.teacherAssignments.filter(
+            (item) =>
+                item.user_id === assignment.user_id &&
+                item.active &&
+                item.period_planning_enabled,
+        ).length,
+    };
+    reliefOpen.value = true;
+};
 
 const filter = useClientFilter(
     () => props.teacherAssignments,
@@ -151,7 +178,19 @@ const {
                                             : (lockReason ?? undefined)
                                     "
                                     :options="options"
-                                />
+                                >
+                                    <DropdownMenuItem
+                                        v-if="
+                                            !lockReason &&
+                                            item.active &&
+                                            item.period_planning_enabled
+                                        "
+                                        @select="openTeacherRelief(item)"
+                                    >
+                                        <UserRoundCog aria-hidden="true" />
+                                        Relevar docente
+                                    </DropdownMenuItem>
+                                </CareerAcademicActions>
                             </TableCell>
                         </TableRow>
                     </TableBody>
@@ -164,5 +203,12 @@ const {
                 />
             </CardContent>
         </Card>
+
+        <TeacherReliefSheet
+            v-if="outgoingTeacher"
+            v-model:open="reliefOpen"
+            :outgoing-teacher="outgoingTeacher"
+            :options="options"
+        />
     </div>
 </template>

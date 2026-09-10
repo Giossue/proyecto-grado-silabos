@@ -156,6 +156,38 @@ it('permite buscar docente y paralelo al crear una asignación docente', functio
     $this->assertStringContainsString('@open-auto-focus.prevent', $selector);
 });
 
+it('inicia el relevo desde el docente saliente y solo pide el reemplazo', function (): void {
+    $root = dirname(__DIR__, 2);
+    $page = file_get_contents(
+        $root.'/resources/js/pages/Coordination/Academic/TeacherAssignments.vue',
+    );
+    $panel = file_get_contents(
+        $root.'/resources/js/components/domain/academic/TeacherAssignmentsPanel.vue',
+    );
+    $sheet = file_get_contents(
+        $root.'/resources/js/components/domain/academic/TeacherReliefSheet.vue',
+    );
+
+    expect($page)
+        ->toBeString()
+        ->not->toContain('TeacherReliefSheet');
+    expect($panel)
+        ->toBeString()
+        ->toContain('@select="openTeacherRelief(item)"')
+        ->toContain('Relevar docente')
+        ->toContain('<TeacherReliefSheet');
+    expect($sheet)
+        ->toBeString()
+        ->toContain(':value="outgoingTeacher.id"')
+        ->toContain('Docente entrante')
+        ->toContain('impactLabel')
+        ->not->toContain('Docente saliente')
+        ->not->toContain('backing_type')
+        ->not->toContain('backing_number')
+        ->not->toContain('backing_date')
+        ->not->toContain('DatePicker');
+});
+
 it('crea la plantilla institucional de inmediato y abre su constructor', function (): void {
     $source = file_get_contents(
         dirname(__DIR__, 2).'/resources/js/pages/Admin/Templates/Index.vue',

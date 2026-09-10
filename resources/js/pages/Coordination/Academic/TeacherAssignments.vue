@@ -2,7 +2,6 @@
 import { Head } from '@inertiajs/vue3';
 import TeacherAssignmentSheet from '@/components/domain/academic/TeacherAssignmentSheet.vue';
 import TeacherAssignmentsPanel from '@/components/domain/academic/TeacherAssignmentsPanel.vue';
-import TeacherReliefSheet from '@/components/domain/academic/TeacherReliefSheet.vue';
 import ManagedUserSheet from '@/components/domain/identity/ManagedUserSheet.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
 import ProcessLockAlert from '@/components/domain/ProcessLockAlert.vue';
@@ -40,18 +39,6 @@ defineProps<
                 v-if="canCreateTeacher"
                 :key="career.id"
                 :teacher-career="career"
-            />
-            <TeacherReliefSheet
-                v-if="
-                    !career.lock_reason &&
-                    teacherAssignments.some(
-                        (assignment) =>
-                            assignment.active &&
-                            assignment.period_planning_enabled,
-                    )
-                "
-                :teacher-assignments="teacherAssignments"
-                :options="options"
             />
             <TeacherAssignmentSheet
                 v-if="!career.lock_reason"

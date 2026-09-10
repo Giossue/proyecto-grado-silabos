@@ -42,13 +42,13 @@ class TransferSyllabusTeacher
     ) {}
 
     /**
-     * @param  array{type: string, number: string, date: string}  $backing
+     * @param  array{type: string, number: string, date: string}|null  $backing
      */
     public function execute(
         Syllabus $syllabus,
         string $outgoingUserId,
         string $incomingUserId,
-        array $backing,
+        ?array $backing,
         string $idempotencyKey,
         User $actor,
         Request $request,
@@ -108,9 +108,9 @@ class TransferSyllabusTeacher
                     'usuario_id' => $incomingUserId,
                     'paralelo_id' => $previous->paralelo_id,
                     'activo' => true,
-                    'sustento_tipo' => $backing['type'],
-                    'sustento_numero' => $backing['number'],
-                    'sustento_fecha' => $backing['date'],
+                    'sustento_tipo' => $backing['type'] ?? null,
+                    'sustento_numero' => $backing['number'] ?? null,
+                    'sustento_fecha' => $backing['date'] ?? null,
                 ]);
 
                 $collaboration->update([
@@ -128,7 +128,9 @@ class TransferSyllabusTeacher
                 // aprobada queda intacta: ADR-0005.
                 $this->reopen->execute(
                     $locked,
-                    "Relevo de docente: {$backing['type']} {$backing['number']} de {$backing['date']}.",
+                    $backing === null
+                        ? 'Relevo de docente registrado por Coordinación.'
+                        : "Relevo de docente: {$backing['type']} {$backing['number']} de {$backing['date']}.",
                     $idempotencyKey,
                     $actor,
                     $request,
@@ -164,9 +166,11 @@ class TransferSyllabusTeacher
                     'previous_state' => $previousState,
                     'parallels_moved' => $collaborations->count(),
                     'discarded_completion' => $discardedCompletion,
-                    'backing_type' => $backing['type'],
-                    'backing_number' => $backing['number'],
-                    'backing_date' => $backing['date'],
+                    ...($backing === null ? [] : [
+                        'backing_type' => $backing['type'],
+                        'backing_number' => $backing['number'],
+                        'backing_date' => $backing['date'],
+                    ]),
                 ],
                 correlationId: $request->attributes->getString('correlation_id') ?: null,
             );

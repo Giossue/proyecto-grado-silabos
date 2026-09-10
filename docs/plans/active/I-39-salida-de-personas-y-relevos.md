@@ -9,6 +9,10 @@ Implementado el 2026-09-03 de madrugada por encargo del responsable del producto
 > de roles y asignaciones. Donde este plan histórico dice «vigencia» o
 > `vigente_hasta`, la implementación actual conserva la fila y cambia `activo` a falso.
 
+> Actualización del 9 de septiembre de 2026: el relevo docente global se inicia desde la
+> asignación del saliente y solo solicita al docente entrante. La auditoría sustituye el
+> sustento documental en este flujo; la transferencia individual conserva su contrato.
+
 ## Punto de partida
 
 Nada del sistema pertenece a una persona: malla, ofertas, paralelos y convocatorias son
@@ -56,9 +60,10 @@ cuenta. La historia (revisiones, aprobaciones, auditoría) no se toca ni se reas
   la carrera. Las que sostienen un sílabo pasan por `TransferSyllabusTeacher` (mismas
   reglas por estado: aprobado se reabre, corrección se conserva, borrador se descarta con
   aviso, en revisión se rechaza); las que no tienen sílabo se cierran y se abren para el
-  entrante con el mismo sustento documental. Todo o nada: si un sílabo está en revisión,
-  no se releva ninguno y el mensaje nombra la materia. Audita
-  `docente.relevo_global` con conteos.
+  entrante sin exigir sustento documental. La fila elegida identifica al saliente y la
+  hoja solicita únicamente al entrante. Todo o nada: si un sílabo está en revisión, no se
+  releva ninguno y el mensaje nombra la materia. Audita `docente.relevo_global` con las
+  personas involucradas y los conteos.
 - **Archivo seguro** (`SetUserStatus`): al desactivar, rechaza si (a) es el único
   administrador activo, o (b) colabora en sílabos en curso (`borrador`, `en_revision`,
   `correccion_solicitada`) de convocatorias abiertas, diciendo cuántos y en qué carreras.
@@ -70,3 +75,7 @@ cuenta. La historia (revisiones, aprobaciones, auditoría) no se toca ni se reas
 `CoordinatorReplacementTest`, `TeacherReliefTest`, `ManagedUserTest` (archivo bloqueado,
 cierre de asignaciones, último administrador); suite completa, phpstan, eslint, vue-tsc y
 build.
+
+La simplificación del relevo global quedó verificada con 38 pruebas focalizadas y 1434
+aserciones. `composer verify` completó 404 pruebas y 6061 aserciones, además de escaneo de
+secretos, ESLint, Prettier, tipos Vue, Pint, PHPStan y build de producción.

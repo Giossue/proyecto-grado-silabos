@@ -124,7 +124,6 @@ class CareerAcademicStructureController extends Controller
         $summary = $action->execute(
             $request->string('outgoing_user_id')->toString(),
             $request->string('incoming_user_id')->toString(),
-            $request->backing(),
             $request->string('idempotency_key')->toString(),
             $actor,
             $request,

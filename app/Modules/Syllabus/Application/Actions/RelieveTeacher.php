@@ -34,13 +34,11 @@ class RelieveTeacher
     ) {}
 
     /**
-     * @param  array{type: string, number: string, date: string}  $backing
      * @return Summary
      */
     public function execute(
         string $outgoingUserId,
         string $incomingUserId,
-        array $backing,
         string $idempotencyKey,
         User $actor,
         Request $request,
@@ -57,7 +55,7 @@ class RelieveTeacher
             throw ValidationException::withMessages(['incoming_user_id' => 'El docente entrante no tiene un rol docente vigente en la carrera.']);
         }
 
-        return DB::transaction(function () use ($activeRole, $actor, $backing, $careerId, $idempotencyKey, $incomingUserId, $outgoingUserId, $request): array {
+        return DB::transaction(function () use ($activeRole, $actor, $careerId, $idempotencyKey, $incomingUserId, $outgoingUserId, $request): array {
             $assignments = TeacherAssignment::query()
                 ->where('usuario_id', $outgoingUserId)
                 ->where('activo', true)
@@ -91,7 +89,7 @@ class RelieveTeacher
 
             $syllabusIds = $collaborations->pluck('silabo_id')->unique();
             foreach (Syllabus::query()->whereIn('id', $syllabusIds)->get() as $syllabus) {
-                $this->transfer->execute($syllabus, $outgoingUserId, $incomingUserId, $backing, "{$idempotencyKey}-{$syllabus->id}", $actor, $request);
+                $this->transfer->execute($syllabus, $outgoingUserId, $incomingUserId, null, "{$idempotencyKey}-{$syllabus->id}", $actor, $request);
             }
 
             $movedWithoutSyllabus = 0;
@@ -104,9 +102,6 @@ class RelieveTeacher
                     'usuario_id' => $incomingUserId,
                     'paralelo_id' => $assignment->paralelo_id,
                     'activo' => true,
-                    'sustento_tipo' => $backing['type'],
-                    'sustento_numero' => $backing['number'],
-                    'sustento_fecha' => $backing['date'],
                 ]);
                 $movedWithoutSyllabus++;
             }

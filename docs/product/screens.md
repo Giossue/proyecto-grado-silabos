@@ -192,10 +192,11 @@ completo. El alta está separada de asignar paralelos y no levanta sus bloqueos.
   tiene **Reemplazar coordinador** (o **Asignar coordinador** si no hay): cierra
   nombramiento y rol de quien sale, abre los de quien entra y, si se marca y no le
   queda otro rol, desactiva la cuenta saliente. Administración elige a la persona
-  coordinadora sin tipo de designación ni sustento documental. En COR-15
-  **Relevar docente** mueve todos
-  los paralelos y sílabos de un docente al entrante con el mismo sustento documental
-  (borrador se descarta, aprobado se reabre, en revisión bloquea). Desactivar una cuenta
+  coordinadora sin tipo de designación ni sustento documental. En COR-15, cada asignación
+  vigente ofrece **Relevar docente**: la fila identifica a quien sale y la hoja solo pide
+  al docente entrante, muestra cuántos paralelos se transferirán y confirma el efecto sobre
+  sus sílabos (borrador se descarta, aprobado se reabre, en revisión bloquea). La auditoría
+  registra el cambio sin exigir una referencia documental. Desactivar una cuenta
   (ADM-02) se rechaza si tiene sílabos en curso o es la única administración; al
   desactivar se cierran sus asignaciones docentes activas.
 - Los estados usan las mismas etiquetas y colores en todo el producto.
