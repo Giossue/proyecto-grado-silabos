@@ -251,7 +251,9 @@ paralelo. Son operaciones separadas y ninguna levanta los bloqueos académicos.
   desde esta pantalla.
 - COR-13 abre la malla en una página completa con ciclos, tarjetas, totales y relaciones.
   El lienzo permite zoom, desplazamiento, conexión y reubicación, además de crear una
-  materia en su ciclo y editarla directamente desde su tarjeta. El desglose académico
+  materia en su ciclo y editarla directamente desde su tarjeta. El desplazamiento se
+  limita al ancho del ciclo con más asignaturas y a la altura de los ciclos configurados,
+  conservando solo un margen breve alrededor del contenido. El desglose académico
   ofrece las mismas operaciones mediante formularios y tablas accesibles; su alta y
   edición manual sí usan Sheet. «Configurar malla» solo edita código y cantidad de
   ciclos; los campos de la tarjeta (ACD, APE, AA, CRED, TOTAL) los fija el reglamento y

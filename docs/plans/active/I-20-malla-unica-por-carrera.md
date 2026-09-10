@@ -42,6 +42,8 @@ actual se deshabilite o cambie.
 - En materias, los campos activos son obligatorios, TOTAL deriva de los componentes de
   horas y el orden se asigna automáticamente cuando el desglose no lo envía. Las unidades
   ya usadas se ofrecen como sugerencias sin cerrar la entrada a valores nuevos.
+- El lienzo interactivo limita su navegación al ancho real del ciclo con más materias y
+  a la altura definida por la cantidad de ciclos, con un margen visual breve.
 
 ## Cambios previstos
 
@@ -75,6 +77,7 @@ actual se deshabilite o cambie.
 - [x] Bloquear procesos nuevos sin malla activa y preservar la historia.
 - [x] Simplificar el alta de materias y derivar orden y total en servidor.
 - [x] Actualizar trazabilidad, pruebas y evidencia focalizada.
+- [x] Limitar el desplazamiento del lienzo al contenido real de la malla.
 
 ## Riesgos y reversión
 
@@ -93,3 +96,5 @@ actual se deshabilite o cambie.
 - TypeScript, ESLint focalizado, Prettier y formato PHP: correctos.
 - No se ejecutaron build ni `composer verify`: la validación fue proporcional al cambio
   y queda pendiente la revisión manual de Malla en claro, oscuro, teclado y móvil.
+- El límite dinámico del lienzo se verificó el 10 de septiembre de 2026 con 67 pruebas y
+  1.825 aserciones, ESLint, Prettier, TypeScript y build de producción correctos.

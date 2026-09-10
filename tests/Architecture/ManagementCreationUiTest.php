@@ -409,6 +409,8 @@ it('ofrece desglose y constructor visual sobre el mismo contrato de malla', func
         ->toContain("from '@vue-flow/core'")
         ->toContain('useVueFlow({ id: flowId })')
         ->toContain('setNodes(nextNodes)')
+        ->toContain('const navigationExtent = computed<CoordinateExtent>')
+        ->toContain(':translate-extent="navigationExtent"')
         ->toContain('updateSubjectLayout.url')
         ->toContain('storeSubjectRequirement.url')
         ->toContain('CurriculumAddSubjectNode')

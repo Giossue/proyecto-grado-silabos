@@ -10,6 +10,7 @@ import {
 } from '@vue-flow/core';
 import type {
     Connection,
+    CoordinateExtent,
     Edge,
     EdgeMouseEvent,
     Node,
@@ -222,6 +223,24 @@ const laneWidth = computed(() => {
 
     // Los 200px extra reservan espacio para las columnas de totales del nivel.
     return Math.max(1120, widestCycle + 200);
+});
+
+// El viewport termina donde termina la malla. El margen permite respirar alrededor
+// del primer y último ciclo sin dejar que el lienzo navegue hacia espacio infinito.
+const navigationPadding = 48;
+const navigationExtent = computed<CoordinateExtent>(() => {
+    const contentHeight = Math.max(
+        laneHeight - laneInset,
+        props.curriculum.cycle_count * laneHeight - laneInset,
+    );
+
+    return [
+        [-navigationPadding, -navigationPadding],
+        [
+            laneWidth.value + navigationPadding,
+            contentHeight + navigationPadding,
+        ],
+    ];
 });
 
 const subjectById = computed(
@@ -752,6 +771,7 @@ const onNodeDragStop = ({ node }: NodeDragEvent): void => {
             fit-view-on-init
             :min-zoom="0.2"
             :max-zoom="1.5"
+            :translate-extent="navigationExtent"
             :connection-mode="ConnectionMode.Loose"
             :nodes-draggable="curriculum.editable && !hasOpenEditor"
             :nodes-connectable="curriculum.editable && !hasOpenEditor"
