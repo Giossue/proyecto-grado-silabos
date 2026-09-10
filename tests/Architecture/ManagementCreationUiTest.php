@@ -804,7 +804,7 @@ it('construye la plantilla desde bloques que contienen campos tipados', function
         ->toContain('<PaginatedDocument')
         ->toContain('PROGRAMA DE ASIGNATURA (SÍLABO)')
         ->toContain('<TemplateBlockCreator')
-        ->toContain('<TemplateFieldCreator')
+        ->not->toContain('<TemplateFieldCreator')
         ->toContain('<TemplateTableDesigner')
         ->toContain('<TemplateDocumentView')
         ->toContain('template-editor-ribbon')

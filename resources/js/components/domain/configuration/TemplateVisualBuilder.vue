@@ -5,7 +5,6 @@ import type { CSSProperties } from 'vue';
 import TemplateBlockCreator from '@/components/domain/configuration/TemplateBlockCreator.vue';
 import TemplateDocumentView from '@/components/domain/configuration/TemplateDocumentView.vue';
 import TemplateFieldActions from '@/components/domain/configuration/TemplateFieldActions.vue';
-import TemplateFieldCreator from '@/components/domain/configuration/TemplateFieldCreator.vue';
 import TemplateInsertPopover from '@/components/domain/configuration/TemplateInsertPopover.vue';
 import TemplateSectionActions from '@/components/domain/configuration/TemplateSectionActions.vue';
 import TemplateTableDesigner from '@/components/domain/configuration/TemplateTableDesigner.vue';
@@ -92,14 +91,6 @@ const selectedField = computed<TemplateFieldContainer | null>(() => {
         ) ?? null
     );
 });
-
-const selectedSectionIndex = computed(() =>
-    selectedSection.value
-        ? props.template.sections.findIndex(
-              (section) => section.id === selectedSection.value?.id,
-          )
-        : -1,
-);
 
 const selectionLabel = computed(() => {
     if (selectedField.value) {
@@ -245,26 +236,7 @@ const fieldSelectionListeners = (sectionId: string, blockId: string) =>
                         class="flex min-w-0 items-center gap-2 overflow-x-auto"
                     >
                         <template v-if="!activeTable">
-                            <TemplateBlockCreator
-                                v-if="!selectedField"
-                                :template-id="template.id"
-                                :position="
-                                    selectedSectionIndex >= 0
-                                        ? selectedSectionIndex + 1
-                                        : template.sections.length
-                                "
-                                :block-types="blockTypes"
-                                ribbon
-                            />
-
                             <template v-if="selectedSection && !selectedField">
-                                <TemplateFieldCreator
-                                    :template-id="template.id"
-                                    :section-id="selectedSection.id"
-                                    :position="selectedSection.blocks.length"
-                                    :block-types="blockTypes"
-                                    ribbon
-                                />
                                 <Button
                                     type="button"
                                     variant="ghost"

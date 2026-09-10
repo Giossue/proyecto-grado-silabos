@@ -338,7 +338,11 @@ test(
                 .count(),
             0,
         );
-        await ribbonTools
+        await section
+            .getByRole('button', { name: 'Agregar contenido' })
+            .click();
+        await page
+            .locator('[data-slot="popover-content"]:visible')
             .getByRole('button', { name: 'Agregar campo', exact: true })
             .click();
         await page.getByText('Nuevo campo', { exact: true }).waitFor();
