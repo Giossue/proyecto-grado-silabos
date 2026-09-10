@@ -35,24 +35,25 @@ watch(
             aria-label="Herramientas del editor de plantilla"
         >
             <div
-                class="flex h-12 min-w-0 items-center justify-between gap-4 px-3 sm:px-5"
+                class="grid h-12 min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 px-3 sm:px-5"
             >
-                <div class="flex min-w-0 items-baseline gap-2">
-                    <span class="truncate text-sm font-semibold">
-                        {{ template.name }}
-                    </span>
-                    <span
-                        class="hidden shrink-0 text-xs text-muted-foreground sm:inline"
-                    >
-                        Modo edición
-                    </span>
-                </div>
-
-                <Button as-child variant="outline" size="sm">
+                <Button
+                    as-child
+                    variant="outline"
+                    size="sm"
+                    class="justify-self-start"
+                >
                     <Link :href="templateShow(template.id)">
                         Volver a la vista
                     </Link>
                 </Button>
+
+                <div
+                    id="template-editor-header-selection"
+                    class="min-w-0 justify-self-center"
+                />
+
+                <div aria-hidden="true" />
             </div>
 
             <div class="min-h-14 min-w-0 border-t" aria-hidden="true" />
@@ -70,6 +71,7 @@ watch(
                 :readonly="false"
                 ribbon
                 fixed-ribbon
+                selection-target="#template-editor-header-selection"
                 @personalize="appearanceOpen = true"
             />
         </main>

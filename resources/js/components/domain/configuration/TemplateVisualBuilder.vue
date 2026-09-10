@@ -39,6 +39,7 @@ const props = withDefaults(
         readonly: boolean;
         ribbon?: boolean;
         fixedRibbon?: boolean;
+        selectionTarget?: string;
     }>(),
     { ribbon: false },
 );
@@ -273,165 +274,164 @@ const clearSelectionFromBackground = (event: PointerEvent): void => {
                     <div
                         class="flex min-w-0 flex-1 items-center overflow-hidden"
                     >
-                        <Tooltip>
-                            <TooltipTrigger as-child>
-                                <Badge
-                                    variant="secondary"
-                                    class="max-w-64 shrink-0 gap-1.5 px-2.5 py-1 font-normal"
-                                >
-                                    <span class="text-muted-foreground">
-                                        Selección:
-                                    </span>
-                                    <span
-                                        class="truncate font-medium text-foreground"
-                                    >
+                        <Teleport
+                            :to="selectionTarget ?? 'body'"
+                            :disabled="!selectionTarget"
+                        >
+                            <div
+                                class="flex min-w-0 items-center justify-center"
+                            >
+                                <Tooltip>
+                                    <TooltipTrigger as-child>
+                                        <Badge
+                                            variant="secondary"
+                                            class="max-w-64 shrink-0 gap-1.5 px-2.5 py-1 font-normal"
+                                        >
+                                            <span class="text-muted-foreground">
+                                                Selección:
+                                            </span>
+                                            <span
+                                                class="truncate font-medium text-foreground"
+                                            >
+                                                {{ selectionLabel }}
+                                            </span>
+                                        </Badge>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
                                         {{ selectionLabel }}
-                                    </span>
-                                </Badge>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                {{ selectionLabel }}
-                            </TooltipContent>
-                        </Tooltip>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </div>
+                        </Teleport>
                     </div>
 
                     <div
+                        id="template-editor-ribbon-tools"
                         class="flex min-w-0 shrink-0 items-center justify-center gap-2 overflow-x-auto"
                     >
-                        <div
-                            id="template-editor-ribbon-tools"
-                            class="flex min-w-0 items-center gap-2"
-                        >
-                            <template v-if="!activeTable">
+                        <template v-if="!activeTable">
+                            <Button
+                                v-if="selection.kind === 'title'"
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                @click="titleActions?.openEdit()"
+                            >
+                                <Pencil
+                                    data-icon="inline-start"
+                                    aria-hidden="true"
+                                />
+                                Editar título
+                            </Button>
+                            <template v-if="selectedSection && !selectedField">
                                 <Button
-                                    v-if="selection.kind === 'title'"
                                     type="button"
                                     variant="ghost"
                                     size="sm"
-                                    @click="titleActions?.openEdit()"
+                                    @click="
+                                        sectionActions[
+                                            selectedSection.id
+                                        ]?.openEdit()
+                                    "
                                 >
                                     <Pencil
                                         data-icon="inline-start"
                                         aria-hidden="true"
                                     />
-                                    Editar título
+                                    Renombrar bloque
                                 </Button>
-                                <template
-                                    v-if="selectedSection && !selectedField"
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    class="text-destructive hover:text-destructive"
+                                    @click="
+                                        sectionActions[
+                                            selectedSection.id
+                                        ]?.openDelete()
+                                    "
                                 >
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="sm"
-                                        @click="
-                                            sectionActions[
-                                                selectedSection.id
-                                            ]?.openEdit()
-                                        "
-                                    >
-                                        <Pencil
-                                            data-icon="inline-start"
-                                            aria-hidden="true"
-                                        />
-                                        Renombrar bloque
-                                    </Button>
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="sm"
-                                        class="text-destructive hover:text-destructive"
-                                        @click="
-                                            sectionActions[
-                                                selectedSection.id
-                                            ]?.openDelete()
-                                        "
-                                    >
-                                        <Trash2
-                                            data-icon="inline-start"
-                                            aria-hidden="true"
-                                        />
-                                        Eliminar bloque
-                                    </Button>
-                                </template>
-
-                                <template
-                                    v-if="selectedField && selectedSection"
-                                >
-                                    <Button
-                                        v-if="hasTable(selectedField)"
-                                        type="button"
-                                        variant="ghost"
-                                        size="sm"
-                                        @click="
-                                            tableDesigners[
-                                                selectedField.id
-                                            ]?.start()
-                                        "
-                                    >
-                                        <TableProperties
-                                            data-icon="inline-start"
-                                            aria-hidden="true"
-                                        />
-                                        Editar tabla
-                                    </Button>
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="sm"
-                                        @click="
-                                            fieldActions[
-                                                selectedField.id
-                                            ]?.openEdit()
-                                        "
-                                    >
-                                        <Pencil
-                                            data-icon="inline-start"
-                                            aria-hidden="true"
-                                        />
-                                        Editar campo
-                                    </Button>
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="sm"
-                                        class="text-destructive hover:text-destructive"
-                                        @click="
-                                            fieldActions[
-                                                selectedField.id
-                                            ]?.openDelete()
-                                        "
-                                    >
-                                        <Trash2
-                                            data-icon="inline-start"
-                                            aria-hidden="true"
-                                        />
-                                        Eliminar campo
-                                    </Button>
-                                </template>
+                                    <Trash2
+                                        data-icon="inline-start"
+                                        aria-hidden="true"
+                                    />
+                                    Eliminar bloque
+                                </Button>
                             </template>
-                        </div>
 
-                        <div
-                            id="template-editor-ribbon-actions"
-                            class="flex shrink-0 items-center gap-2"
-                        >
-                            <Button
-                                v-if="!activeTable"
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                @click="emit('personalize')"
-                            >
-                                <Settings
-                                    data-icon="inline-start"
-                                    aria-hidden="true"
-                                />
-                                Documento
-                            </Button>
-                        </div>
+                            <template v-if="selectedField && selectedSection">
+                                <Button
+                                    v-if="hasTable(selectedField)"
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    @click="
+                                        tableDesigners[
+                                            selectedField.id
+                                        ]?.start()
+                                    "
+                                >
+                                    <TableProperties
+                                        data-icon="inline-start"
+                                        aria-hidden="true"
+                                    />
+                                    Editar tabla
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    @click="
+                                        fieldActions[
+                                            selectedField.id
+                                        ]?.openEdit()
+                                    "
+                                >
+                                    <Pencil
+                                        data-icon="inline-start"
+                                        aria-hidden="true"
+                                    />
+                                    Editar campo
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    class="text-destructive hover:text-destructive"
+                                    @click="
+                                        fieldActions[
+                                            selectedField.id
+                                        ]?.openDelete()
+                                    "
+                                >
+                                    <Trash2
+                                        data-icon="inline-start"
+                                        aria-hidden="true"
+                                    />
+                                    Eliminar campo
+                                </Button>
+                            </template>
+                        </template>
                     </div>
 
-                    <div class="min-w-0 flex-1" aria-hidden="true" />
+                    <div
+                        id="template-editor-ribbon-actions"
+                        class="flex min-w-0 flex-1 items-center justify-end gap-2 overflow-x-auto"
+                    >
+                        <Button
+                            v-if="!activeTable"
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            @click="emit('personalize')"
+                        >
+                            <Settings
+                                data-icon="inline-start"
+                                aria-hidden="true"
+                            />
+                            Documento
+                        </Button>
+                    </div>
                 </div>
             </div>
         </Teleport>

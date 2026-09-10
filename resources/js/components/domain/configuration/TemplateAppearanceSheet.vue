@@ -8,7 +8,6 @@ import FormSheetActions from '@/components/domain/FormSheetActions.vue';
 import { Button } from '@/components/ui/button';
 import {
     Field,
-    FieldDescription,
     FieldError,
     FieldGroup,
     FieldLabel,
@@ -121,6 +120,14 @@ const logoUpdated = (): void => {
     toast.success('Logo de la universidad actualizado');
 };
 
+const uploadLogo = (event: Event): void => {
+    const input = event.currentTarget as HTMLInputElement;
+
+    if (input.files?.length) {
+        input.form?.requestSubmit();
+    }
+};
+
 const submit = (): void => {
     form.patch(TemplateController.updateAppearance.url(props.templateId), {
         preserveScroll: true,
@@ -167,42 +174,45 @@ const submit = (): void => {
                             class="h-auto max-h-10 max-w-full object-contain"
                         />
                     </div>
-                    <Field :data-invalid="Boolean(errors.logo)">
-                        <FieldLabel for="template-institution-logo" required>
-                            Nuevo logo
-                        </FieldLabel>
+                    <Field
+                        class="items-end"
+                        :data-invalid="Boolean(errors.logo)"
+                    >
                         <Input
                             id="template-institution-logo"
+                            class="sr-only"
                             name="logo"
                             type="file"
                             accept="image/png"
                             required
                             :disabled="processing"
                             :aria-invalid="Boolean(errors.logo)"
+                            aria-label="Seleccionar logo de la universidad"
+                            @change="uploadLogo"
                         />
-                        <FieldDescription>
-                            PNG transparente. Recomendado: 1012 × 190 px.
-                        </FieldDescription>
-                        <FieldError :errors="[errors.logo]" />
-                    </Field>
-                    <div class="flex justify-end">
                         <Button
-                            type="submit"
+                            v-if="processing"
+                            type="button"
                             variant="outline"
-                            :disabled="processing"
+                            disabled
                         >
-                            <Spinner
-                                v-if="processing"
-                                data-icon="inline-start"
-                            />
-                            <Upload
-                                v-else
-                                data-icon="inline-start"
-                                aria-hidden="true"
-                            />
-                            Actualizar logo
+                            <Spinner data-icon="inline-start" />
+                            Actualizando logo
                         </Button>
-                    </div>
+                        <Button v-else as-child variant="outline">
+                            <label for="template-institution-logo">
+                                <Upload
+                                    data-icon="inline-start"
+                                    aria-hidden="true"
+                                />
+                                Actualizar logo
+                            </label>
+                        </Button>
+                        <FieldError
+                            v-if="errors.logo"
+                            :errors="[errors.logo]"
+                        />
+                    </Field>
                 </FieldSet>
             </Form>
 
