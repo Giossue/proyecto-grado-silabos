@@ -790,6 +790,8 @@ it('construye la plantilla desde bloques que contienen campos tipados', function
         ->toContain('return TemplateEditorLayout;');
     expect($editorLayout)
         ->toBeString()
+        ->toContain("import { TooltipProvider } from '@/components/ui/tooltip';")
+        ->toContain('<TooltipProvider :delay-duration="150">')
         ->toContain('<slot />')
         ->not->toContain('AppSidebar')
         ->not->toContain('AppSidebarHeader');
