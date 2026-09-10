@@ -524,6 +524,7 @@ test(
             name: 'Editar tabla de la plantilla',
         });
         await tableEditor.waitFor();
+        assert.equal(await tableField.getAttribute('role'), null);
         const editorTableBox = await tableEditor.locator('table').boundingBox();
         assert.ok(editorTableBox);
         assert.ok(
@@ -561,6 +562,12 @@ test(
             .last()
             .locator('td')
             .first();
+        assert.equal(
+            await recordLeftCell.evaluate(
+                (cell) => getComputedStyle(cell).cursor,
+            ),
+            'text',
+        );
         const tableBeforeResize = await editorTable.boundingBox();
         const headerBeforeResize = await headerLeftCell.boundingBox();
         const recordBeforeResize = await recordLeftCell.boundingBox();
@@ -623,10 +630,12 @@ test(
             'Solo la celda de la fila arrastrada debe cambiar de ancho.',
         );
         await tableEditor.locator('td').first().click();
-        const dataButton = page.getByRole('button', {
-            name: 'Datos: Fila que completa el docente',
-        });
-        await dataButton.click();
+        await page
+            .getByRole('button', { name: 'Insertar contenido en la celda' })
+            .click();
+        await page
+            .getByRole('menuitem', { name: 'Estructura de filas' })
+            .hover();
         await page
             .getByRole('menuitemcheckbox', { name: 'Organizar por unidades' })
             .click();
@@ -658,7 +667,12 @@ test(
         await page.getByRole('button', { name: 'Filas y columnas' }).click();
         await page.getByRole('menuitem', { name: 'Fila abajo' }).click();
         await tableEditor.locator('tr').last().locator('td').first().click();
-        await page.getByRole('button', { name: /^Datos:/ }).click();
+        await page
+            .getByRole('button', { name: 'Insertar contenido en la celda' })
+            .click();
+        await page
+            .getByRole('menuitem', { name: 'Estructura de filas' })
+            .hover();
         await page
             .getByRole('menuitemradio', { name: 'Fila de totales' })
             .click();

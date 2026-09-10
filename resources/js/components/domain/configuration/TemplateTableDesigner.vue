@@ -30,7 +30,6 @@ import type { TemplateAppearance } from '@/types/configuration';
 const props = defineProps<{
     templateId: string;
     blockId: string;
-    blockTitle: string;
     fingerprint: string;
     document: DocumentNode;
     fields: DocumentField[];
@@ -304,13 +303,6 @@ defineExpose({ start });
                     </Button>
                 </div>
             </Teleport>
-
-            <div class="mb-3 rounded-md border border-dashed px-3 py-2">
-                <p class="text-sm font-medium">Editando: {{ blockTitle }}</p>
-                <p class="text-xs text-muted-foreground">
-                    Seleccione celdas y use la cinta superior para dar formato.
-                </p>
-            </div>
 
             <TemplateTableEditor
                 ref="editor"

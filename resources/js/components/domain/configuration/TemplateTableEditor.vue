@@ -886,15 +886,6 @@ const usedColumnRoles = computed(
                 .filter((role): role is TableColumnRole => role !== null),
         ),
 );
-const rowRoleLabel = computed(
-    () =>
-        ({
-            fixed: 'Fila normal',
-            record: 'Fila que completa el docente',
-            unit: 'Datos de la unidad',
-            total: 'Fila de totales',
-        })[selectedRowRole.value],
-);
 const teacherFields = computed(() => {
     void version.value;
     const byKey = new Map(
@@ -1548,62 +1539,51 @@ defineExpose({ getDocument });
                                     </DropdownMenuGroup>
                                 </DropdownMenuSubContent>
                             </DropdownMenuSub>
-                        </DropdownMenuGroup>
-                    </DropdownMenuContent>
-                </DropdownMenu>
 
-                <DropdownMenu v-if="repeatField">
-                    <DropdownMenuTrigger as-child>
-                        <Button
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            :disabled="!inCell || pending"
-                            :aria-label="`Datos: ${rowRoleLabel}`"
-                        >
-                            <Database
-                                data-icon="inline-start"
-                                aria-hidden="true"
-                            />
-                            Datos
-                            <ChevronDown
-                                data-icon="inline-end"
-                                aria-hidden="true"
-                            />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" class="w-72">
-                        <DropdownMenuCheckboxItem
-                            :checked="groupedByUnit"
-                            @select.prevent="setGroupedByUnit(!groupedByUnit)"
-                        >
-                            Organizar por unidades
-                        </DropdownMenuCheckboxItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuLabel>Tipo de fila</DropdownMenuLabel>
-                        <DropdownMenuRadioGroup
-                            :model-value="selectedRowRole"
-                            @update:model-value="setRowRole"
-                        >
-                            <DropdownMenuRadioItem
-                                value="fixed"
-                                :disabled="
-                                    selectedRowRole !== 'fixed' &&
-                                    selectedRowHasColumns
-                                "
-                            >
-                                Fila normal
-                            </DropdownMenuRadioItem>
-                            <DropdownMenuRadioItem value="record">
-                                Fila que completa el docente
-                            </DropdownMenuRadioItem>
-                            <DropdownMenuRadioItem value="unit">
-                                Datos de la unidad
-                            </DropdownMenuRadioItem>
-                            <DropdownMenuRadioItem value="total">
-                                Fila de totales
-                            </DropdownMenuRadioItem>
-                        </DropdownMenuRadioGroup>
+                            <DropdownMenuSub v-if="repeatField">
+                                <DropdownMenuSubTrigger>
+                                    <Rows3 />
+                                    Estructura de filas
+                                </DropdownMenuSubTrigger>
+                                <DropdownMenuSubContent class="w-72">
+                                    <DropdownMenuCheckboxItem
+                                        :checked="groupedByUnit"
+                                        @select.prevent="
+                                            setGroupedByUnit(!groupedByUnit)
+                                        "
+                                    >
+                                        Organizar por unidades
+                                    </DropdownMenuCheckboxItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuLabel>
+                                        Tipo de fila
+                                    </DropdownMenuLabel>
+                                    <DropdownMenuRadioGroup
+                                        :model-value="selectedRowRole"
+                                        @update:model-value="setRowRole"
+                                    >
+                                        <DropdownMenuRadioItem
+                                            value="fixed"
+                                            :disabled="
+                                                selectedRowRole !== 'fixed' &&
+                                                selectedRowHasColumns
+                                            "
+                                        >
+                                            Fila normal
+                                        </DropdownMenuRadioItem>
+                                        <DropdownMenuRadioItem value="record">
+                                            Fila que completa el docente
+                                        </DropdownMenuRadioItem>
+                                        <DropdownMenuRadioItem value="unit">
+                                            Datos de la unidad
+                                        </DropdownMenuRadioItem>
+                                        <DropdownMenuRadioItem value="total">
+                                            Fila de totales
+                                        </DropdownMenuRadioItem>
+                                    </DropdownMenuRadioGroup>
+                                </DropdownMenuSubContent>
+                            </DropdownMenuSub>
+                        </DropdownMenuGroup>
                     </DropdownMenuContent>
                 </DropdownMenu>
 
@@ -2103,6 +2083,7 @@ defineExpose({ getDocument });
 .template-table-editor td,
 .template-table-editor th {
     border: 1px solid #7f7f7f;
+    cursor: text;
     min-width: 20px;
     padding: 2px 4px;
     position: relative;

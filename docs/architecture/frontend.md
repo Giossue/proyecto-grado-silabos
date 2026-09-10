@@ -210,8 +210,8 @@ servidor.
 el tipo de contenido dentro de sus diálogos. `SelectContent` admite `portalDisabled` para
 mantener el foco dentro de ese flujo; el valor predeterminado conserva el portal en todos
 los demás usos. Las tablas nuevas siguen naciendo con `TableLayout::default()`. Desde
-I-66, la cinta **Datos** clasifica la fila seleccionada y activa la organización por
-unidades. **Insertar → Dato repetible** reutiliza una columna o abre una hoja breve para
+I-66, **Insertar → Estructura de filas** clasifica la fila seleccionada y activa la
+organización por unidades. **Insertar → Dato repetible** reutiliza una columna o abre una hoja breve para
 crearla; la clave se genera desde su nombre y solo una columna numérica solicita, de forma
 opcional, Semana, ACD, APE o AA. Al guardar, `SaveTemplateDocument` deriva columnas,
 datos de unidad y totales del documento visual sin reconstruirlo. Las agrupaciones,

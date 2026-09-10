@@ -209,7 +209,7 @@ const sectionSelectionListeners = (sectionId: string) =>
           };
 
 const fieldSelectionListeners = (sectionId: string, blockId: string) =>
-    props.readonly
+    props.readonly || activeTable.value
         ? {}
         : {
               pointerdown: (event: PointerEvent) => {
@@ -526,9 +526,9 @@ const clearSelectionFromBackground = (event: PointerEvent): void => {
                     v-for="(section, sectionIndex) in template.sections"
                     :key="section.id"
                     data-template-selectable="section"
-                    class="relative mb-6 rounded-xs outline-offset-4 transition-shadow"
+                    class="relative mb-6 rounded-none outline-offset-4 transition-shadow"
                     :class="{
-                        'cursor-pointer outline-2 outline-primary/50':
+                        'cursor-pointer outline-2 outline-primary':
                             !readonly &&
                             selection.kind === 'section' &&
                             selection.sectionId === section.id,
@@ -595,22 +595,23 @@ const clearSelectionFromBackground = (event: PointerEvent): void => {
                         :key="block.id"
                         :id="`template-field-${block.id}`"
                         data-template-selectable="field"
-                        class="relative mb-4 scroll-mt-40 rounded-xs outline-offset-4 transition-shadow"
+                        class="relative mb-4 scroll-mt-40 rounded-none outline-offset-4 transition-shadow"
                         :class="{
                             'cursor-pointer outline-2 outline-primary':
                                 !readonly &&
+                                !activeTable &&
                                 selection.kind === 'field' &&
                                 selection.blockId === block.id,
                         }"
                         :aria-label="`Campo ${block.title}`"
-                        :role="readonly ? undefined : 'button'"
+                        :role="readonly || activeTable ? undefined : 'button'"
                         :aria-pressed="
-                            readonly
+                            readonly || activeTable
                                 ? undefined
                                 : selection.kind === 'field' &&
                                   selection.blockId === block.id
                         "
-                        :tabindex="readonly ? undefined : 0"
+                        :tabindex="readonly || activeTable ? undefined : 0"
                         v-on="fieldSelectionListeners(section.id, block.id)"
                     >
                         <h3
@@ -637,7 +638,6 @@ const clearSelectionFromBackground = (event: PointerEvent): void => {
                             "
                             :template-id="template.id"
                             :block-id="block.id"
-                            :block-title="block.title"
                             :fingerprint="block.fingerprint ?? ''"
                             :document="documentFor(block)"
                             :fields="fieldsFor(block)"
