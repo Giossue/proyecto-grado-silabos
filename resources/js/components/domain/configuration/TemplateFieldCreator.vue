@@ -4,16 +4,9 @@ import { ListPlus } from '@lucide/vue';
 import { ref } from 'vue';
 import { toast } from 'vue-sonner';
 import TemplateController from '@/actions/App/Modules/Configuration/Presentation/Http/Controllers/TemplateController';
-import TemplateIconPopover from '@/components/domain/configuration/TemplateIconPopover.vue';
+import FormSheet from '@/components/domain/FormSheet.vue';
+import FormSheetActions from '@/components/domain/FormSheetActions.vue';
 import { Button } from '@/components/ui/button';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogTitle,
-    DialogTrigger,
-} from '@/components/ui/dialog';
-import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import {
     Field,
     FieldError,
@@ -21,7 +14,6 @@ import {
     FieldLabel,
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { PopoverContent } from '@/components/ui/popover';
 import {
     Select,
     SelectContent,
@@ -30,7 +22,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Spinner } from '@/components/ui/spinner';
 import type { TemplateContentType } from '@/types/configuration';
 
 type EditableContentType = Exclude<
@@ -44,11 +35,9 @@ const props = withDefaults(
         sectionId: string;
         position: number;
         blockTypes: { value: EditableContentType; label: string }[];
-        menu?: boolean;
-        ribbon?: boolean;
         choice?: boolean;
     }>(),
-    { menu: false, ribbon: false, choice: false },
+    { choice: false },
 );
 
 const open = ref(false);
@@ -109,55 +98,26 @@ const updateOpen = (value: boolean): void => {
 </script>
 
 <template>
-    <component
-        :is="menu ? Dialog : TemplateIconPopover"
+    <FormSheet
         :open="open"
-        v-bind="
-            menu
-                ? {}
-                : {
-                      label: 'Agregar campo',
-                      variant: choice ? 'ghost' : 'outline',
-                      buttonClass: choice
-                          ? 'w-full justify-start'
-                          : ribbon
-                            ? undefined
-                            : 'size-7',
-                      size: ribbon || choice ? 'sm' : 'icon-sm',
-                      showLabel: ribbon || choice,
-                      tooltip: !choice,
-                      tooltipSide: 'left',
-                  }
-        "
+        trigger-label="Agregar campo"
+        title="Nuevo campo"
+        description="Se añadirá dentro de este bloque."
         @update:open="updateOpen"
     >
-        <template v-if="menu">
-            <DialogTrigger as-child>
-                <DropdownMenuItem @select.prevent>
-                    <ListPlus aria-hidden="true" />
-                    Agregar campo
-                </DropdownMenuItem>
-            </DialogTrigger>
+        <template #trigger>
+            <Button
+                type="button"
+                :variant="choice ? 'ghost' : 'outline'"
+                size="sm"
+                :class="choice ? 'w-full justify-start' : undefined"
+            >
+                <ListPlus data-icon="inline-start" aria-hidden="true" />
+                Agregar campo
+            </Button>
         </template>
-        <template #icon>
-            <ListPlus v-if="!menu" aria-hidden="true" />
-        </template>
-        <component
-            :is="menu ? DialogContent : PopoverContent"
-            v-bind="menu ? {} : { align: choice ? 'start' : 'end' }"
-            class="w-[min(24rem,calc(100vw-2rem))]"
-        >
-            <DialogTitle v-if="menu" class="sr-only"> Nuevo campo </DialogTitle>
-            <DialogDescription v-if="menu" class="sr-only">
-                Se añadirá dentro de este bloque.
-            </DialogDescription>
+        <template #default="{ close }">
             <form class="flex flex-col gap-4" @submit.prevent="submit">
-                <div class="flex flex-col gap-1">
-                    <p class="font-medium">Nuevo campo</p>
-                    <p class="text-sm text-muted-foreground">
-                        Se añadirá dentro de este bloque.
-                    </p>
-                </div>
                 <FieldGroup>
                     <Field :data-invalid="Boolean(errorFor('label'))">
                         <FieldLabel for="new-field-label" required>
@@ -193,7 +153,7 @@ const updateOpen = (value: boolean): void => {
                             >
                                 <SelectValue />
                             </SelectTrigger>
-                            <SelectContent portal-disabled>
+                            <SelectContent>
                                 <SelectGroup>
                                     <SelectItem
                                         v-for="type in blockTypes"
@@ -211,29 +171,13 @@ const updateOpen = (value: boolean): void => {
                         />
                     </Field>
                 </FieldGroup>
-                <div class="flex justify-end gap-2">
-                    <Button
-                        type="button"
-                        variant="outline"
-                        :disabled="form.processing"
-                        @click="updateOpen(false)"
-                    >
-                        Cancelar
-                    </Button>
-                    <Button type="submit" :disabled="form.processing">
-                        <Spinner
-                            v-if="form.processing"
-                            data-icon="inline-start"
-                        />
-                        <ListPlus
-                            v-else
-                            data-icon="inline-start"
-                            aria-hidden="true"
-                        />
-                        Agregar campo
-                    </Button>
-                </div>
+                <FormSheetActions
+                    label="Agregar campo"
+                    :close="close"
+                    :processing="form.processing"
+                    :icon="ListPlus"
+                />
             </form>
-        </component>
-    </component>
+        </template>
+    </FormSheet>
 </template>

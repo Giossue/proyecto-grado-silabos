@@ -826,18 +826,21 @@ it('construye la plantilla desde bloques que contienen campos tipados', function
     );
     expect($creator)
         ->toBeString()
-        ->toContain(':is="menu ? Dialog : TemplateIconPopover"')
+        ->toContain('<FormSheet')
+        ->toContain('title="Nuevo bloque"')
+        ->toContain('<FormSheetActions')
         ->toContain('El bloque agrupa los campos')
         ->toContain('Nombre del bloque')
         ->toContain('form.fields')
         ->toContain('Tipo de contenido')
         ->toContain('<Select')
         ->toContain('<SelectGroup')
-        ->toContain('portal-disabled')
         ->toContain('Agregar otro campo')
         ->toContain('Crear bloque')
         ->toContain("choice ? 'ghost' : 'outline'")
         ->toContain("'w-full justify-start'")
+        ->not->toContain('<PopoverContent')
+        ->not->toContain('portal-disabled')
         ->not->toContain('<NativeSelect')
         ->not->toContain('draggable="true"');
 
@@ -846,15 +849,18 @@ it('construye la plantilla desde bloques que contienen campos tipados', function
     );
     expect($fieldCreator)
         ->toBeString()
-        ->toContain(':is="menu ? Dialog : TemplateIconPopover"')
+        ->toContain('<FormSheet')
+        ->toContain('title="Nuevo campo"')
+        ->toContain('<FormSheetActions')
         ->toContain('Se añadirá dentro de este bloque')
         ->toContain('Tipo de contenido')
         ->toContain('<Select')
         ->toContain('<SelectGroup')
-        ->toContain('portal-disabled')
         ->toContain('Agregar campo')
         ->toContain("choice ? 'ghost' : 'outline'")
         ->toContain("'w-full justify-start'")
+        ->not->toContain('<PopoverContent')
+        ->not->toContain('portal-disabled')
         ->not->toContain('<NativeSelect');
 
     $insertPopover = file_get_contents(

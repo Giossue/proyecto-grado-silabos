@@ -269,13 +269,9 @@ test(
         const firstBlockButton = page.getByRole('button', {
             name: 'Agregar primer bloque',
         });
-        await firstBlockButton.hover();
-        await page
-            .locator('[data-slot="tooltip-content"]')
-            .filter({ hasText: 'Agregar primer bloque' })
-            .waitFor();
         await firstBlockButton.click();
-        await page
+        const blockSheet = page.locator('[data-slot="sheet-content"]');
+        await blockSheet
             .getByLabel('Nombre del bloque')
             .fill('Resultados y evidencias');
         await page.locator('#new-template-field-0').fill('Resumen');

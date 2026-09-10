@@ -113,14 +113,24 @@ test(
         await page.goto(`${server.resolvedUrls.local[0]}fixture`);
         assert.equal(await page.locator('[data-template-insert]').count(), 0);
 
-        await page
-            .locator('article[aria-label="Campo Descripción de la asignatura"]')
-            .click();
+        const selectedField = page.locator(
+            'article[aria-label="Campo Descripción de la asignatura"]',
+        );
+        await selectedField.click();
         const fieldInsert = page.locator('[data-template-insert="content"]');
         const fieldButton = fieldInsert.getByRole('button', {
             name: 'Agregar contenido',
         });
         const before = await fieldButton.boundingBox();
+        const selectedFieldBox = await selectedField.boundingBox();
+        assert.ok(before && selectedFieldBox);
+        assert.ok(
+            Math.abs(
+                before.x +
+                    before.width / 2 -
+                    (selectedFieldBox.x + selectedFieldBox.width + 4),
+            ) < 1,
+        );
         const restingStyle = await fieldButton.evaluate((element) => {
             const style = getComputedStyle(element);
 
@@ -163,7 +173,9 @@ test(
             0,
         );
         await page.getByRole('button', { name: 'Agregar campo' }).click();
-        await page.getByText('Nuevo campo', { exact: true }).waitFor();
+        const fieldSheet = page.locator('[data-slot="sheet-content"]');
+        await fieldSheet.getByText('Nuevo campo', { exact: true }).waitFor();
+        assert.equal(await fieldSheet.getByLabel('Nombre').count(), 1);
         await page.getByRole('button', { name: 'Cancelar' }).click();
 
         await page.locator('section[aria-label="Bloque Bloque vacío"]').click();
@@ -181,6 +193,11 @@ test(
             .waitFor();
         await emptyBlockButton.click();
         await page.getByRole('button', { name: 'Agregar bloque' }).click();
-        await page.getByText('Nuevo bloque', { exact: true }).waitFor();
+        const blockSheet = page.locator('[data-slot="sheet-content"]');
+        await blockSheet.getByText('Nuevo bloque', { exact: true }).waitFor();
+        assert.equal(
+            await blockSheet.getByLabel('Nombre del bloque').count(),
+            1,
+        );
     },
 );

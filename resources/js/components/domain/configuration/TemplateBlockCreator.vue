@@ -4,16 +4,9 @@ import { Blocks, Trash2 } from '@lucide/vue';
 import { ref } from 'vue';
 import { toast } from 'vue-sonner';
 import TemplateController from '@/actions/App/Modules/Configuration/Presentation/Http/Controllers/TemplateController';
-import TemplateIconPopover from '@/components/domain/configuration/TemplateIconPopover.vue';
+import FormSheet from '@/components/domain/FormSheet.vue';
+import FormSheetActions from '@/components/domain/FormSheetActions.vue';
 import { Button } from '@/components/ui/button';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogTitle,
-    DialogTrigger,
-} from '@/components/ui/dialog';
-import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import {
     Field,
     FieldError,
@@ -21,7 +14,6 @@ import {
     FieldLabel,
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { PopoverContent } from '@/components/ui/popover';
 import {
     Select,
     SelectContent,
@@ -30,7 +22,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Spinner } from '@/components/ui/spinner';
 import type { TemplateContentType } from '@/types/configuration';
 
 type EditableContentType = Exclude<
@@ -44,14 +35,10 @@ const props = withDefaults(
         position: number;
         blockTypes: { value: EditableContentType; label: string }[];
         empty?: boolean;
-        menu?: boolean;
-        ribbon?: boolean;
         choice?: boolean;
     }>(),
     {
         empty: false,
-        menu: false,
-        ribbon: false,
         choice: false,
     },
 );
@@ -136,80 +123,28 @@ const updateOpen = (value: boolean): void => {
 </script>
 
 <template>
-    <component
-        :is="menu ? Dialog : TemplateIconPopover"
+    <FormSheet
         :open="open"
-        v-bind="
-            menu
-                ? {}
-                : {
-                      label: empty ? 'Agregar primer bloque' : 'Agregar bloque',
-                      variant: empty ? 'default' : choice ? 'ghost' : 'outline',
-                      size: empty
-                          ? 'icon'
-                          : ribbon || choice
-                            ? 'sm'
-                            : 'icon-sm',
-                      showLabel: ribbon || choice,
-                      tooltip: !choice,
-                      tooltipSide: 'left',
-                      buttonClass: choice
-                          ? 'w-full justify-start'
-                          : empty
-                            ? undefined
-                            : ribbon
-                              ? undefined
-                              : 'size-7 border-dashed bg-background',
-                  }
-        "
+        :trigger-label="empty ? 'Agregar primer bloque' : 'Agregar bloque'"
+        title="Nuevo bloque"
+        description="El bloque agrupa los campos que completará el docente."
+        wide
         @update:open="updateOpen"
     >
-        <template v-if="menu">
-            <DialogTrigger as-child>
-                <DropdownMenuItem @select.prevent>
-                    <Blocks aria-hidden="true" />
-                    Agregar bloque
-                </DropdownMenuItem>
-            </DialogTrigger>
-        </template>
-        <template #icon>
-            <Blocks v-if="!menu" aria-hidden="true" />
-        </template>
-        <component
-            :is="menu ? DialogContent : PopoverContent"
-            v-bind="
-                menu
-                    ? {}
-                    : { align: empty ? 'center' : choice ? 'start' : 'end' }
-            "
-            :class="
-                menu
-                    ? 'max-h-[calc(100vh-2rem)] w-[min(30rem,calc(100vw-2rem))] overflow-hidden p-0'
-                    : 'max-h-[var(--reka-popover-content-available-height)] w-[min(30rem,calc(100vw-2rem))] overflow-hidden p-0'
-            "
-        >
-            <DialogTitle v-if="menu" class="sr-only">
-                Nuevo bloque
-            </DialogTitle>
-            <DialogDescription v-if="menu" class="sr-only">
-                El bloque agrupa los campos que completará el docente.
-            </DialogDescription>
-            <form
-                :class="
-                    menu
-                        ? 'flex max-h-[calc(100vh-2rem)] flex-col'
-                        : 'flex max-h-[var(--reka-popover-content-available-height)] flex-col'
-                "
-                @submit.prevent="submit"
+        <template #trigger>
+            <Button
+                type="button"
+                :variant="empty ? 'default' : choice ? 'ghost' : 'outline'"
+                size="sm"
+                :class="choice ? 'w-full justify-start' : undefined"
             >
-                <div class="flex flex-col gap-1 border-b px-4 py-3">
-                    <p class="font-medium">Nuevo bloque</p>
-                    <p class="text-sm text-muted-foreground">
-                        El bloque agrupa los campos que completará el docente.
-                    </p>
-                </div>
-
-                <div class="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+                <Blocks data-icon="inline-start" aria-hidden="true" />
+                {{ empty ? 'Agregar primer bloque' : 'Agregar bloque' }}
+            </Button>
+        </template>
+        <template #default="{ close }">
+            <form class="flex flex-col gap-4" @submit.prevent="submit">
+                <div>
                     <FieldGroup>
                         <Field :data-invalid="Boolean(errorFor('title'))">
                             <FieldLabel for="new-template-block-title" required>
@@ -316,7 +251,7 @@ const updateOpen = (value: boolean): void => {
                                     >
                                         <SelectValue />
                                     </SelectTrigger>
-                                    <SelectContent portal-disabled>
+                                    <SelectContent>
                                         <SelectGroup>
                                             <SelectItem
                                                 v-for="type in blockTypes"
@@ -352,32 +287,13 @@ const updateOpen = (value: boolean): void => {
                         Agregar otro campo
                     </Button>
                 </div>
-
-                <div
-                    class="flex justify-end gap-2 border-t bg-muted/30 px-4 py-3"
-                >
-                    <Button
-                        type="button"
-                        variant="outline"
-                        :disabled="form.processing"
-                        @click="updateOpen(false)"
-                    >
-                        Cancelar
-                    </Button>
-                    <Button type="submit" :disabled="form.processing">
-                        <Spinner
-                            v-if="form.processing"
-                            data-icon="inline-start"
-                        />
-                        <Blocks
-                            v-else
-                            data-icon="inline-start"
-                            aria-hidden="true"
-                        />
-                        Crear bloque
-                    </Button>
-                </div>
+                <FormSheetActions
+                    label="Crear bloque"
+                    :close="close"
+                    :processing="form.processing"
+                    :icon="Blocks"
+                />
             </form>
-        </component>
-    </component>
+        </template>
+    </FormSheet>
 </template>

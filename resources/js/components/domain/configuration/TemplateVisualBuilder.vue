@@ -554,7 +554,7 @@ const fieldSelectionListeners = (sectionId: string, blockId: string) =>
                                 selection.kind === 'field' &&
                                 selection.blockId === block.id
                             "
-                            class="absolute top-1/2 right-0 z-10 flex h-5 translate-x-1/2 -translate-y-1/2 items-center justify-center"
+                            class="absolute top-1/2 -right-1 z-10 flex h-5 translate-x-1/2 -translate-y-1/2 items-center justify-center"
                             data-template-insert="content"
                             @pointerdown.stop
                             @click.stop
@@ -576,7 +576,7 @@ const fieldSelectionListeners = (sectionId: string, blockId: string) =>
                             selection.kind === 'section' &&
                             selection.sectionId === section.id
                         "
-                        class="absolute top-1/2 right-0 z-10 flex h-5 translate-x-1/2 -translate-y-1/2 items-center justify-center"
+                        class="absolute top-1/2 -right-1 z-10 flex h-5 translate-x-1/2 -translate-y-1/2 items-center justify-center"
                         data-template-insert="content"
                         @pointerdown.stop
                         @click.stop
