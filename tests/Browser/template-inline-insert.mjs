@@ -121,6 +121,20 @@ test(
             name: 'Agregar campo',
         });
         const before = await fieldButton.boundingBox();
+        const restingStyle = await fieldButton.evaluate((element) => {
+            const style = getComputedStyle(element);
+
+            return {
+                opacity: style.opacity,
+                visibility: style.visibility,
+                borderStyle: style.borderTopStyle,
+            };
+        });
+        assert.deepEqual(restingStyle, {
+            opacity: '1',
+            visibility: 'visible',
+            borderStyle: 'solid',
+        });
         await fieldButton.hover();
         await page.waitForTimeout(200);
         const after = await fieldButton.boundingBox();
@@ -140,6 +154,15 @@ test(
         assert.equal(
             await page.locator('[data-template-insert="first-field"]').count(),
             1,
+        );
+        const firstFieldButton = page
+            .locator('[data-template-insert="first-field"]')
+            .getByRole('button', { name: 'Agregar campo' });
+        assert.equal(
+            await firstFieldButton.evaluate(
+                (element) => getComputedStyle(element).opacity,
+            ),
+            '1',
         );
         const blockButton = page
             .locator('[data-template-insert="block"]')

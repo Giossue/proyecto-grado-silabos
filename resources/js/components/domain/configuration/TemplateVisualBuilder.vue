@@ -504,7 +504,7 @@ const fieldSelectionListeners = (sectionId: string, blockId: string) =>
                             selection.kind === 'section' &&
                             selection.sectionId === section.id
                         "
-                        class="-mt-2 mb-1 flex h-4 items-center justify-center"
+                        class="relative z-10 mb-2 flex h-5 items-center justify-center"
                         data-template-insert="first-field"
                         @pointerdown.stop
                         @click.stop
@@ -603,7 +603,7 @@ const fieldSelectionListeners = (sectionId: string, blockId: string) =>
                                 selection.kind === 'field' &&
                                 selection.blockId === block.id
                             "
-                            class="absolute -bottom-3 left-1/2 flex h-4 -translate-x-1/2 items-center justify-center"
+                            class="absolute -bottom-3 left-1/2 z-10 flex h-5 -translate-x-1/2 items-center justify-center"
                             data-template-insert="field"
                             @pointerdown.stop
                             @click.stop
@@ -625,7 +625,7 @@ const fieldSelectionListeners = (sectionId: string, blockId: string) =>
                             selection.kind === 'section' &&
                             selection.sectionId === section.id
                         "
-                        class="absolute -bottom-3 left-1/2 flex h-4 -translate-x-1/2 items-center justify-center"
+                        class="absolute -bottom-3 left-1/2 z-10 flex h-5 -translate-x-1/2 items-center justify-center"
                         data-template-insert="block"
                         @pointerdown.stop
                         @click.stop

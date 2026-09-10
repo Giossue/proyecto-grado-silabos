@@ -139,7 +139,7 @@ const updateOpen = (value: boolean): void => {
                 ? {}
                 : {
                       label: empty ? 'Agregar primer bloque' : 'Agregar bloque',
-                      variant: empty ? 'default' : inline ? 'ghost' : 'outline',
+                      variant: empty ? 'default' : 'outline',
                       size: empty
                           ? 'icon'
                           : inline
@@ -150,7 +150,7 @@ const updateOpen = (value: boolean): void => {
                       showLabel: ribbon,
                       tooltipSide: inline ? 'bottom' : 'left',
                       buttonClass: inline
-                          ? 'size-5 rounded-full p-0 text-primary opacity-40 shadow-none transition-[transform,opacity] hover:scale-125 hover:opacity-100 focus-visible:scale-125 focus-visible:opacity-100'
+                          ? 'size-5 rounded-full p-0 opacity-100 transition-transform hover:scale-125 focus-visible:scale-125'
                           : empty
                             ? undefined
                             : ribbon

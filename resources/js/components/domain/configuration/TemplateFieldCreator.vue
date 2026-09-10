@@ -117,9 +117,9 @@ const updateOpen = (value: boolean): void => {
                 ? {}
                 : {
                       label: 'Agregar campo',
-                      variant: inline ? 'ghost' : 'outline',
+                      variant: 'outline',
                       buttonClass: inline
-                          ? 'size-5 rounded-full p-0 text-primary opacity-40 shadow-none transition-[transform,opacity] hover:scale-125 hover:opacity-100 focus-visible:scale-125 focus-visible:opacity-100'
+                          ? 'size-5 rounded-full p-0 opacity-100 transition-transform hover:scale-125 focus-visible:scale-125'
                           : ribbon
                             ? undefined
                             : 'size-7',

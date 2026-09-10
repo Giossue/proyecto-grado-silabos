@@ -12,8 +12,9 @@ ni modifica permisos o persistencia.
 ## Resultado demostrable
 
 Al seleccionar un campo o bloque en el modo de edición, aparece debajo un control `+`
-discreto. Aumenta ligeramente al pasar el cursor o enfocarlo, su tooltip explica si
-agrega un campo o un bloque y abre el formulario existente en la posición indicada.
+pequeño pero siempre visible. Aumenta ligeramente al pasar el cursor o enfocarlo, su
+tooltip explica si agrega un campo o un bloque y abre el formulario existente en la
+posición indicada.
 
 ## Pasos
 

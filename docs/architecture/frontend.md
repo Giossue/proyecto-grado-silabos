@@ -142,8 +142,9 @@ como opacos y nunca se muestran.
 I-65 añade controles de inserción contextuales dentro de la hoja. Solo el elemento
 seleccionado muestra un `+`: bajo un campo inserta el siguiente campo y bajo un bloque
 inserta el siguiente bloque; un bloque vacío también ofrece su primer campo. El control
-usa `TemplateIconPopover`, aumenta de escala al apuntarlo o enfocarlo y conserva un
-tooltip accesible. `TemplateBlockCreator` y `TemplateFieldCreator` reciben la posición
+usa `TemplateIconPopover`, permanece visible con borde aun sin interacción, aumenta de
+escala al apuntarlo o enfocarlo y conserva un tooltip accesible. `TemplateBlockCreator`
+y `TemplateFieldCreator` reciben la posición
 visual y llaman a los mismos casos de uso; no existe una segunda ruta de persistencia.
 
 `TemplateAppearanceSheet` trabaja con un catálogo entregado por
