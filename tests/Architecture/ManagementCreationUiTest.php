@@ -156,6 +156,25 @@ it('permite buscar docente y paralelo al crear una asignación docente', functio
     $this->assertStringContainsString('@open-auto-focus.prevent', $selector);
 });
 
+it('agrupa crear y asignar docente bajo una sola accion visible', function (): void {
+    $root = dirname(__DIR__, 2);
+    $page = file_get_contents(
+        $root.'/resources/js/pages/Coordination/Academic/TeacherAssignments.vue',
+    );
+
+    expect($page)
+        ->toBeString()
+        ->toContain('<DropdownMenu')
+        ->toContain('Gestionar docente')
+        ->toContain('Crear docente')
+        ->toContain('Asignar docente')
+        ->toContain('v-model:open="createTeacherOpen"')
+        ->toContain('v-model:open="assignTeacherOpen"')
+        ->toContain(':show-trigger="false"')
+        ->and(substr_count($page, '<Button>'))
+        ->toBe(1);
+});
+
 it('inicia el relevo desde el docente saliente y solo pide el reemplazo', function (): void {
     $root = dirname(__DIR__, 2);
     $page = file_get_contents(

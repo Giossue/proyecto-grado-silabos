@@ -18,7 +18,8 @@ I-54 — RF-003..016, RN-001..008, CU-02/03, COR-15 y ADM-02:
 identidad ni credenciales, repetición, rechazo de roles/carreras manipulados y accesos
 retirados. `ManagedUserTest`, `ManagedUserProfileTest` y `ManagedUserUpdateTest`
 conservan la regresión administrativa. `ManagementCreationUiTest` cubre el formulario
-compartido de alta. Sin cambios de esquema ni permisos sobre asignaciones académicas.
+compartido de alta y la acción única **Gestionar docente**, que abre alta o asignación.
+Sin cambios de esquema ni permisos sobre asignaciones académicas.
 
 COR-02 (I-46): el listado institucional incluye el alcance de la carrera activa y permite
 iniciarlo desde Acciones. `SyllabusProcessTest` comprueba la fila antes/después de iniciar

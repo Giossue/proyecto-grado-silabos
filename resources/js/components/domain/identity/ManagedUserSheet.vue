@@ -35,8 +35,9 @@ withDefaults(
         roles?: { codigo: string; nombre: string }[];
         careers?: { id: string; nombre: string }[];
         teacherCareer?: { id: string; name: string };
+        showTrigger?: boolean;
     }>(),
-    { roles: () => [], careers: () => [] },
+    { roles: () => [], careers: () => [], showTrigger: true },
 );
 
 const initialRole = ref('docente');
@@ -65,7 +66,7 @@ const copy = async (): Promise<void> => {
 
 // Cada apertura del panel estrena contraseña: así dos cuentas creadas seguidas nunca
 // comparten la misma y no queda a la vista la de la cuenta anterior.
-const open = ref(false);
+const open = defineModel<boolean>('open', { default: false });
 
 watch(open, (isOpen) => {
     if (isOpen) {
@@ -88,6 +89,7 @@ watch(open, (isOpen) => {
                 ? `Registre un docente para ${teacherCareer.name}. Si el correo ya tiene una cuenta, se incorporará conservando su nombre y acceso actuales.`
                 : 'Registre una cuenta con su rol inicial, carrera y contraseña temporal. La contraseña no se guarda en auditoría ni logs.'
         "
+        :show-trigger="showTrigger"
     >
         <template #default="{ close }">
             <Form

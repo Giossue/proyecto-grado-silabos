@@ -30,6 +30,8 @@
   La operación es transaccional y auditada, no asigna paralelos ni altera los permisos
   administrativos. Puede realizarse con convocatoria en curso sin levantar el bloqueo
   de las asignaciones académicas.
+- COR-15 reúne el alta y la asignación bajo una sola acción visible **Gestionar docente**;
+  sus opciones conservan formularios y permisos independientes.
 - Solo el Administrador puede corregir el nombre o el correo de una cuenta. Coordinadores
   y Docentes consultan esos datos en su perfil y solicitan la corrección a Administración.
 - ADM-04 presenta Facultades, Carreras, Campus, Modalidades y Periodos académicos como

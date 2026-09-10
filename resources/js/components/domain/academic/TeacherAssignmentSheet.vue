@@ -14,7 +14,13 @@ import {
 } from '@/components/ui/field';
 import type { AcademicStructureProps } from '@/types/academic';
 
-const props = defineProps<Pick<AcademicStructureProps, 'options'>>();
+const props = withDefaults(
+    defineProps<
+        Pick<AcademicStructureProps, 'options'> & { showTrigger?: boolean }
+    >(),
+    { showTrigger: true },
+);
+const open = defineModel<boolean>('open', { default: false });
 const selectionKey = ref(0);
 const teacherOptions = computed(() =>
     props.options.teacherUsers.map((teacher) => ({
@@ -36,9 +42,11 @@ const closeAfterSuccess = (close: () => void): void => {
 
 <template>
     <FormSheet
+        v-model:open="open"
         trigger-label="Asignar docente"
         title="Asignar docente"
         description="Seleccione una cuenta activa con rol Docente y un paralelo perteneciente a esta carrera."
+        :show-trigger="showTrigger"
     >
         <template #default="{ close }">
             <Form

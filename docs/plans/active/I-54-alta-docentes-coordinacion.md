@@ -26,6 +26,8 @@ usan datos sintéticos y correo falso. No afecta PV-16 ni autoriza envío manual
 - Crear/incorporar no asigna paralelos ni modifica sílabos: está disponible durante el
   proceso, igual que las altas administrativas. Las asignaciones académicas mantienen
   sus bloqueos de convocatoria. Se conservan los endpoints administrativos.
+- COR-15 presenta una sola acción **Gestionar docente**. Su menú abre el alta o la
+  asignación en hojas independientes, sin mezclar sus permisos ni transacciones.
 - Sin migraciones: se reutilizan identidad y rol por carrera con sus constraints.
 
 ## Plan y aceptación
@@ -45,3 +47,6 @@ ejecutada con PostgreSQL de pruebas y correo falso; incluye rollback tras fallo 
 `temp/.venv/.../emscripten_fetch_worker.js`, ajeno a este cambio. No se declara aprobada
 la puerta global. No se realizó validación visual en navegador ni prueba de concurrencia
 multiproceso; la incorporación usa bloqueo de cuenta e índice único existentes.
+
+La unificación visual de alta y asignación se verificó con 73 pruebas y 1831 aserciones,
+además de Pint, Prettier, TypeScript y ESLint focalizado.
