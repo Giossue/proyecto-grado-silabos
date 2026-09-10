@@ -191,7 +191,7 @@ createApp({render: () => h('main', {class:'min-h-screen bg-muted p-6'}, [
     h(TooltipProvider, null, {default: () => h(TemplateVisualBuilder, {
         template: template.value, appearance: preview.value, blockTypes,
         variables: [], identificationDesign: {type:'doc',content:[{type:'paragraph'}]},
-        colorOptions: options.colors, readonly: false,
+        colorOptions: options.colors, readonly: false, ribbon: true,
     })}),
     h(TemplateAppearanceSheet, {
         open: appearanceOpen.value, templateId: template.value.id,
@@ -318,15 +318,13 @@ test(
         const section = page.locator(
             'section[aria-label="Bloque Resultados y evidencias"]',
         );
-        const sectionMenu = section.getByRole('button', {
-            name: 'Opciones del bloque',
-        });
-        await section.hover();
+        const ribbonTools = page.locator('#template-editor-ribbon-tools');
+        await section.locator('h2').click();
         assert.equal(
             await section
                 .getByRole('button', { name: 'Opciones del bloque' })
                 .count(),
-            1,
+            0,
         );
         assert.equal(
             await section
@@ -340,18 +338,14 @@ test(
                 .count(),
             0,
         );
-        await sectionMenu.focus();
-        await page
-            .locator('[data-slot="tooltip-content"]')
-            .filter({ hasText: 'Opciones del bloque' })
-            .waitFor();
-        await sectionMenu.click();
-        await page.getByRole('menuitem', { name: 'Agregar campo' }).click();
-        await page.getByRole('heading', { name: 'Nuevo campo' }).waitFor();
+        await ribbonTools
+            .getByRole('button', { name: 'Agregar campo', exact: true })
+            .click();
+        await page.getByText('Nuevo campo', { exact: true }).waitFor();
         await page.getByRole('button', { name: 'Cancelar' }).click();
-        await section.hover();
-        await sectionMenu.click();
-        await page.getByRole('menuitem', { name: 'Renombrar bloque' }).click();
+        await ribbonTools
+            .getByRole('button', { name: 'Renombrar bloque', exact: true })
+            .click();
         const blockDialog = page.getByRole('dialog', {
             name: 'Renombrar bloque',
         });
@@ -372,14 +366,11 @@ test(
         const renamedSection = page.locator(
             'section[aria-label="Bloque Resultados actualizados"]',
         );
-        const renamedSectionMenu = renamedSection.getByRole('button', {
-            name: 'Opciones del bloque',
-        });
-        await renamedSection.hover();
-        await renamedSectionMenu.click();
-        await page.getByRole('menuitem', { name: 'Campos' }).hover();
-        await page.getByRole('menuitem', { name: 'Resumen' }).hover();
-        await page.getByRole('menuitem', { name: 'Editar campo' }).click();
+        const summaryField = page.locator('#template-field-field-block-1');
+        await summaryField.click();
+        await ribbonTools
+            .getByRole('button', { name: 'Editar campo', exact: true })
+            .click();
         const fieldDialog = page.getByRole('dialog', { name: 'Editar campo' });
         await fieldDialog
             .getByLabel('Nombre del campo')
@@ -398,42 +389,29 @@ test(
         assert.equal(fieldUpdate.data.label, 'Resumen actualizado');
         assert.equal(fieldUpdate.data.content_type, 'bulleted_list');
 
-        const editTableButton = page.getByRole('button', {
-            name: 'Editar tabla: Matriz',
+        const tableField = page.locator('#template-field-field-block-2');
+        await tableField.click();
+        assert.equal(
+            await tableField
+                .getByRole('button', { name: /Editar tabla/ })
+                .count(),
+            0,
+        );
+        const editTableButton = ribbonTools.getByRole('button', {
+            name: 'Editar tabla',
+            exact: true,
         });
         assert.equal(
             await editTableButton.evaluate((button) =>
-                Boolean(button.closest('.document-table-container')),
+                Boolean(button.closest('#template-editor-ribbon-tools')),
             ),
             true,
         );
-        await page.locator('.document-table-container').hover();
-        await editTableButton.hover();
-        const tableTooltip = page
-            .locator('[data-slot="tooltip-content"]')
-            .filter({ hasText: 'Editar tabla' });
-        await tableTooltip.waitFor();
-        assert.equal(await tableTooltip.getAttribute('data-side'), 'left');
-        assert.equal(
-            await tableTooltip.evaluate(
-                (element) => getComputedStyle(element).backgroundColor,
-            ),
-            'rgb(0, 0, 0)',
-        );
-        assert.equal(
-            await tableTooltip
-                .locator('svg')
-                .evaluate((element) => getComputedStyle(element).fill),
-            'rgb(0, 0, 0)',
-        );
         await editTableButton.click();
-        const tableDialog = page.getByRole('dialog', {
-            name: 'Editar tabla: Matriz',
-        });
-        await tableDialog.waitFor();
-        const tableEditor = tableDialog.getByRole('textbox', {
+        const tableEditor = tableField.getByRole('textbox', {
             name: 'Editar tabla de la plantilla',
         });
+        await tableEditor.waitFor();
         assert.equal(
             await tableEditor.getByText('$texto', { exact: true }).count(),
             1,
@@ -483,7 +461,8 @@ test(
                 name: 'Negrita en las celdas seleccionadas',
             })
             .click();
-        const cancelTableButton = tableDialog.getByRole('button', {
+        const ribbonActions = page.locator('#template-editor-ribbon-actions');
+        const cancelTableButton = ribbonActions.getByRole('button', {
             name: 'Cancelar',
         });
         assert.equal(await cancelTableButton.locator('svg').count(), 0);
@@ -496,12 +475,12 @@ test(
             .getByRole('button', { name: 'Seguir editando' })
             .click();
         await discardDialog.waitFor({ state: 'hidden' });
-        await tableDialog.waitFor();
-        await page.getByRole('button', { name: 'Guardar tabla' }).click();
-        await tableDialog.waitFor({ state: 'hidden' });
-        await page
-            .getByRole('button', { name: 'Editar tabla: Matriz' })
-            .waitFor();
+        await tableEditor.waitFor();
+        await ribbonActions
+            .getByRole('button', { name: 'Guardar tabla' })
+            .click();
+        await tableEditor.waitFor({ state: 'hidden' });
+        await editTableButton.waitFor();
 
         const tableRequest = await page.evaluate(() =>
             window.fixture.requests.find((request) =>
@@ -517,12 +496,10 @@ test(
         assert.equal(header.attrs.bold, true);
         assert.equal(header.attrs.borderStyle, 'thick');
 
-        await page.locator('.document-table-container').hover();
-        await page
-            .getByRole('button', { name: 'Editar tabla: Matriz' })
-            .click();
-        await tableDialog.waitFor();
-        await tableDialog
+        await tableField.click();
+        await editTableButton.click();
+        await tableEditor.waitFor();
+        await tableField
             .getByRole('textbox', { name: 'Editar tabla de la plantilla' })
             .locator('th')
             .first()
@@ -560,13 +537,10 @@ test(
         );
         assert.deepEqual(nativeDialogs, []);
 
-        await renamedSection.hover();
-        await renamedSectionMenu.click();
-        await page.getByRole('menuitem', { name: 'Campos' }).hover();
-        await page
-            .getByRole('menuitem', { name: 'Resumen actualizado' })
-            .hover();
-        await page.getByRole('menuitem', { name: 'Eliminar campo' }).click();
+        await summaryField.click();
+        await ribbonTools
+            .getByRole('button', { name: 'Eliminar campo', exact: true })
+            .click();
         const deleteFieldDialog = page.getByRole('dialog', {
             name: 'Eliminar campo',
         });
@@ -583,9 +557,10 @@ test(
         );
         assert.ok(fieldDeletion);
 
-        await renamedSection.hover();
-        await renamedSectionMenu.click();
-        await page.getByRole('menuitem', { name: 'Eliminar bloque' }).click();
+        await renamedSection.locator('h2').click();
+        await ribbonTools
+            .getByRole('button', { name: 'Eliminar bloque', exact: true })
+            .click();
         const deleteBlockDialog = page.getByRole('dialog', {
             name: 'Eliminar bloque',
         });
