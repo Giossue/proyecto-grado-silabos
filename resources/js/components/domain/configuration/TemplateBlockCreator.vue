@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3';
-import { Blocks, Trash2 } from '@lucide/vue';
+import { Blocks, Plus, Trash2 } from '@lucide/vue';
 import { ref } from 'vue';
 import { toast } from 'vue-sonner';
 import TemplateController from '@/actions/App/Modules/Configuration/Presentation/Http/Controllers/TemplateController';
@@ -46,8 +46,9 @@ const props = withDefaults(
         empty?: boolean;
         menu?: boolean;
         ribbon?: boolean;
+        inline?: boolean;
     }>(),
-    { empty: false, menu: false, ribbon: false },
+    { empty: false, menu: false, ribbon: false, inline: false },
 );
 
 let sequence = 0;
@@ -138,14 +139,23 @@ const updateOpen = (value: boolean): void => {
                 ? {}
                 : {
                       label: empty ? 'Agregar primer bloque' : 'Agregar bloque',
-                      variant: empty ? 'default' : 'outline',
-                      size: empty ? 'icon' : ribbon ? 'sm' : 'icon-sm',
+                      variant: empty ? 'default' : inline ? 'ghost' : 'outline',
+                      size: empty
+                          ? 'icon'
+                          : inline
+                            ? 'icon-sm'
+                            : ribbon
+                              ? 'sm'
+                              : 'icon-sm',
                       showLabel: ribbon,
-                      buttonClass: empty
-                          ? undefined
-                          : ribbon
+                      tooltipSide: inline ? 'bottom' : 'left',
+                      buttonClass: inline
+                          ? 'size-5 rounded-full p-0 text-primary opacity-40 shadow-none transition-[transform,opacity] hover:scale-125 hover:opacity-100 focus-visible:scale-125 focus-visible:opacity-100'
+                          : empty
                             ? undefined
-                            : 'size-7 border-dashed bg-background',
+                            : ribbon
+                              ? undefined
+                              : 'size-7 border-dashed bg-background',
                   }
         "
         @update:open="updateOpen"
@@ -159,7 +169,8 @@ const updateOpen = (value: boolean): void => {
             </DialogTrigger>
         </template>
         <template #icon>
-            <Blocks v-if="!menu" aria-hidden="true" />
+            <Plus v-if="!menu && inline" aria-hidden="true" />
+            <Blocks v-else-if="!menu" aria-hidden="true" />
         </template>
         <component
             :is="menu ? DialogContent : PopoverContent"

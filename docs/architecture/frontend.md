@@ -139,6 +139,13 @@ crea sección, bloques técnicos y definiciones dentro
 de una sola transacción. Los identificadores técnicos se generan en cliente, se validan
 como opacos y nunca se muestran.
 
+I-65 añade controles de inserción contextuales dentro de la hoja. Solo el elemento
+seleccionado muestra un `+`: bajo un campo inserta el siguiente campo y bajo un bloque
+inserta el siguiente bloque; un bloque vacío también ofrece su primer campo. El control
+usa `TemplateIconPopover`, aumenta de escala al apuntarlo o enfocarlo y conserva un
+tooltip accesible. `TemplateBlockCreator` y `TemplateFieldCreator` reciben la posición
+visual y llaman a los mismos casos de uso; no existe una segunda ruta de persistencia.
+
 `TemplateAppearanceSheet` trabaja con un catálogo entregado por
 `TemplateAppearance`: fuentes, tamaños, colores, márgenes, orientación, alineaciones,
 negrita y cursiva admitidos. La previsualización es local y el PATCH guarda únicamente

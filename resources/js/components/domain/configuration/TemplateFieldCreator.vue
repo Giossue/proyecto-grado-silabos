@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3';
-import { ListPlus } from '@lucide/vue';
+import { ListPlus, Plus } from '@lucide/vue';
 import { ref } from 'vue';
 import { toast } from 'vue-sonner';
 import TemplateController from '@/actions/App/Modules/Configuration/Presentation/Http/Controllers/TemplateController';
@@ -46,8 +46,9 @@ const props = withDefaults(
         blockTypes: { value: EditableContentType; label: string }[];
         menu?: boolean;
         ribbon?: boolean;
+        inline?: boolean;
     }>(),
-    { menu: false, ribbon: false },
+    { menu: false, ribbon: false, inline: false },
 );
 
 const open = ref(false);
@@ -116,9 +117,15 @@ const updateOpen = (value: boolean): void => {
                 ? {}
                 : {
                       label: 'Agregar campo',
-                      buttonClass: ribbon ? undefined : 'size-7',
-                      size: ribbon ? 'sm' : 'icon-sm',
+                      variant: inline ? 'ghost' : 'outline',
+                      buttonClass: inline
+                          ? 'size-5 rounded-full p-0 text-primary opacity-40 shadow-none transition-[transform,opacity] hover:scale-125 hover:opacity-100 focus-visible:scale-125 focus-visible:opacity-100'
+                          : ribbon
+                            ? undefined
+                            : 'size-7',
+                      size: inline ? 'icon-sm' : ribbon ? 'sm' : 'icon-sm',
                       showLabel: ribbon,
+                      tooltipSide: inline ? 'bottom' : 'left',
                   }
         "
         @update:open="updateOpen"
@@ -132,7 +139,8 @@ const updateOpen = (value: boolean): void => {
             </DialogTrigger>
         </template>
         <template #icon>
-            <ListPlus v-if="!menu" aria-hidden="true" />
+            <Plus v-if="!menu && inline" aria-hidden="true" />
+            <ListPlus v-else-if="!menu" aria-hidden="true" />
         </template>
         <component
             :is="menu ? DialogContent : PopoverContent"

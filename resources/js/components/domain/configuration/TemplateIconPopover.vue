@@ -18,12 +18,14 @@ withDefaults(
         size?: ButtonVariants['size'];
         buttonClass?: HTMLAttributes['class'];
         showLabel?: boolean;
+        tooltipSide?: 'top' | 'right' | 'bottom' | 'left';
     }>(),
     {
         variant: 'outline',
         size: 'icon-sm',
         buttonClass: undefined,
         showLabel: false,
+        tooltipSide: 'left',
     },
 );
 
@@ -68,7 +70,7 @@ const helpOpen = ref(false);
                 </Popover>
             </span>
         </TooltipTrigger>
-        <TooltipContent paper side="left" :side-offset="8">
+        <TooltipContent paper :side="tooltipSide" :side-offset="8">
             {{ label }}
         </TooltipContent>
     </Tooltip>

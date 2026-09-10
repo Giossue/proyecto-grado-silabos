@@ -432,7 +432,7 @@ const fieldSelectionListeners = (sectionId: string, blockId: string) =>
                 <section
                     v-for="(section, sectionIndex) in template.sections"
                     :key="section.id"
-                    class="mb-6 rounded-xs outline-offset-4 transition-shadow"
+                    class="relative mb-6 rounded-xs outline-offset-4 transition-shadow"
                     :class="{
                         'cursor-pointer outline-2 outline-primary/50':
                             !readonly &&
@@ -495,6 +495,28 @@ const fieldSelectionListeners = (sectionId: string, blockId: string) =>
                     >
                         Este bloque todavía no tiene campos.
                     </p>
+
+                    <div
+                        v-if="
+                            !readonly &&
+                            !activeTable &&
+                            section.blocks.length === 0 &&
+                            selection.kind === 'section' &&
+                            selection.sectionId === section.id
+                        "
+                        class="-mt-2 mb-1 flex h-4 items-center justify-center"
+                        data-template-insert="first-field"
+                        @pointerdown.stop
+                        @click.stop
+                    >
+                        <TemplateFieldCreator
+                            :template-id="template.id"
+                            :section-id="section.id"
+                            :position="0"
+                            :block-types="blockTypes"
+                            inline
+                        />
+                    </div>
 
                     <article
                         v-for="(block, fieldIndex) in section.blocks"
@@ -574,7 +596,47 @@ const fieldSelectionListeners = (sectionId: string, blockId: string) =>
                             :table-header-color="appearance.table_header_color"
                             preview
                         />
+                        <div
+                            v-if="
+                                !readonly &&
+                                !activeTable &&
+                                selection.kind === 'field' &&
+                                selection.blockId === block.id
+                            "
+                            class="absolute -bottom-3 left-1/2 flex h-4 -translate-x-1/2 items-center justify-center"
+                            data-template-insert="field"
+                            @pointerdown.stop
+                            @click.stop
+                        >
+                            <TemplateFieldCreator
+                                :template-id="template.id"
+                                :section-id="section.id"
+                                :position="fieldIndex + 1"
+                                :block-types="blockTypes"
+                                inline
+                            />
+                        </div>
                     </article>
+
+                    <div
+                        v-if="
+                            !readonly &&
+                            !activeTable &&
+                            selection.kind === 'section' &&
+                            selection.sectionId === section.id
+                        "
+                        class="absolute -bottom-3 left-1/2 flex h-4 -translate-x-1/2 items-center justify-center"
+                        data-template-insert="block"
+                        @pointerdown.stop
+                        @click.stop
+                    >
+                        <TemplateBlockCreator
+                            :template-id="template.id"
+                            :position="sectionIndex + 1"
+                            :block-types="blockTypes"
+                            inline
+                        />
+                    </div>
                 </section>
             </PaginatedDocument>
         </div>

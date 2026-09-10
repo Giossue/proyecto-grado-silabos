@@ -64,6 +64,11 @@ Fecha de corte: **30 de agosto de 2026**.
   no se solicita a Administración. `$clave` continúa reservado para filas repetibles.
   «Configurar estructura» solo corresponde a tablas que tienen `TableLayout`; una tabla
   fija como Identificación se modifica directamente en la hoja.
+- I-65 (9 de septiembre de 2026) sitúa el alta junto al documento: al seleccionar un
+  campo aparece debajo un `+` para insertar el siguiente campo y al seleccionar un
+  bloque aparece debajo otro `+` para insertar el siguiente bloque. Un bloque vacío
+  ofrece además su primer campo. Los controles son discretos, crecen al apuntarlos y
+  explican la acción con tooltip; reutilizan los formularios y posiciones existentes.
 - La modalidad de estudio es un dato base de la carrera (la aprueba el CES) y no un
   catálogo: presencial, semipresencial, en línea, a distancia o híbrida, fijas por reglamento.
   Una materia puede usar una modalidad distinta, sin cambiar ni recalificar la modalidad
