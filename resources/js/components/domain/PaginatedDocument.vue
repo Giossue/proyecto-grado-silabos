@@ -35,13 +35,33 @@ const page = computed(() => ({
 const content = ref<HTMLElement | null>(null);
 const pages = ref(1);
 let frame = 0;
+let rerun = false;
 let disposed = false;
 let resize: ResizeObserver | undefined;
 let mutations: MutationObserver | undefined;
 let paginator: ReturnType<typeof createDocumentPaginator> | undefined;
+let measuredWidth = 0;
+let measuredHeight = 0;
+
+const rememberContentSize = () => {
+    const rect = content.value?.getBoundingClientRect();
+
+    if (!rect) {
+        return;
+    }
+
+    measuredWidth = rect.width;
+    measuredHeight = rect.height;
+};
 
 const schedule = () => {
-    if (disposed || frame) {
+    if (disposed) {
+        return;
+    }
+
+    if (frame) {
+        rerun = true;
+
         return;
     }
 
@@ -50,7 +70,13 @@ const schedule = () => {
         // Our own spacers must not schedule another pagination pass.
         mutations?.disconnect();
         pages.value = paginator?.paginate() ?? 1;
+        rememberContentSize();
         observeContent();
+
+        if (rerun) {
+            rerun = false;
+            schedule();
+        }
     });
 };
 
@@ -76,9 +102,27 @@ onMounted(() => {
     }
 
     paginator = createDocumentPaginator(content.value, () => page.value);
-    mutations = new MutationObserver(schedule);
+    mutations = new MutationObserver(() => {
+        if (paginator?.hasGeometryChanged() ?? true) {
+            schedule();
+        }
+    });
     observeContent();
-    resize = new ResizeObserver(schedule);
+    rememberContentSize();
+    resize = new ResizeObserver(([entry]) => {
+        const { width, height } = entry.contentRect;
+
+        if (
+            Math.abs(width - measuredWidth) <= 0.5 &&
+            Math.abs(height - measuredHeight) <= 0.5
+        ) {
+            return;
+        }
+
+        measuredWidth = width;
+        measuredHeight = height;
+        schedule();
+    });
     resize.observe(content.value);
     content.value.addEventListener('load', schedule, true);
     document.fonts.ready.then(schedule);

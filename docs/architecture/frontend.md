@@ -117,7 +117,10 @@ selección.
 Las tablas se recorren por grupos completos de `rowspan`. Se conservan los nodos Vue y
 sus controles; los separadores se retiran antes de recalcular. `MutationObserver`,
 `ResizeObserver` y la carga de fuentes/imágenes disparan un cálculo agrupado por frame,
-sin observar sus propias inserciones. Ninguna página o posición se persiste.
+sin observar sus propias inserciones. Antes de repetirlo se compara la geometría de las
+unidades y del contenedor: quitar contenido en línea que no cambia ninguna altura no
+reconstruye los separadores ni desplaza bloques ajenos. Ninguna página o posición se
+persiste.
 Es presentación de la muestra administrativa, no un motor de impresión ni un cambio
 del formulario docente. Una unidad indivisible excepcionalmente más alta que el área
 útil se conserva visible; no se recorta ni se descarta contenido.

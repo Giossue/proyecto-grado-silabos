@@ -18,7 +18,9 @@ type Unit = {
 
 /** A rowspan, including rowspan=0, must stay with all the rows it covers. */
 function tableUnits(table: HTMLTableElement): Unit[] {
-    const rows = Array.from(table.rows);
+    const rows = Array.from(table.rows).filter(
+        (row) => !row.hasAttribute('data-page-spacer'),
+    );
     const units: Unit[] = [];
 
     for (let start = 0; start < rows.length;) {
@@ -127,6 +129,57 @@ export function createDocumentPaginator(
     metrics: () => DocumentPageMetrics = () => LETTER_PAGE,
 ) {
     const inserted: HTMLElement[] = [];
+    let snapshot: {
+        first: HTMLElement;
+        last: HTMLElement;
+        top: number;
+        right: number;
+        bottom: number;
+        left: number;
+    }[] = [];
+
+    const geometry = () => {
+        const origin = root.getBoundingClientRect();
+
+        return collectUnits(root).map((unit) => {
+            const first = unit.first.getBoundingClientRect();
+            const last = unit.last.getBoundingClientRect();
+
+            return {
+                first: unit.first,
+                last: unit.last,
+                top: first.top - origin.top,
+                right: last.right - origin.left,
+                bottom: last.bottom - origin.top,
+                left: first.left - origin.left,
+            };
+        });
+    };
+
+    const rememberGeometry = () => {
+        snapshot = geometry();
+    };
+
+    const hasGeometryChanged = () => {
+        const current = geometry();
+
+        if (current.length !== snapshot.length) {
+            return true;
+        }
+
+        return current.some((unit, index) => {
+            const previous = snapshot[index];
+
+            return (
+                unit.first !== previous.first ||
+                unit.last !== previous.last ||
+                Math.abs(unit.top - previous.top) > 0.5 ||
+                Math.abs(unit.right - previous.right) > 0.5 ||
+                Math.abs(unit.bottom - previous.bottom) > 0.5 ||
+                Math.abs(unit.left - previous.left) > 0.5
+            );
+        });
+    };
 
     const reset = () => {
         for (const node of inserted) {
@@ -134,6 +187,7 @@ export function createDocumentPaginator(
         }
 
         inserted.length = 0;
+        snapshot = [];
     };
 
     const spacerBefore = (unit: Unit, height: number) => {
@@ -207,8 +261,10 @@ export function createDocumentPaginator(
             page = Math.max(page, Math.floor((actualBottom - 0.5) / pitch));
         }
 
+        rememberGeometry();
+
         return Math.max(1, page + 1);
     };
 
-    return { paginate, reset };
+    return { paginate, reset, hasGeometryChanged };
 }

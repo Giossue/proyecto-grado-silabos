@@ -28,6 +28,8 @@ claves técnicas sin pedirlas. El formulario extenso «Configurar estructura» d
 - [x] Conservar funciones semánticas y compatibilidad con diseños anteriores.
 - [x] Cubrir servidor, TypeScript y recorrido Chromium.
 - [x] Redimensionar el borde de una celda como Word sin alterar las demás filas.
+- [x] Conservar hojas y bloques al retirar un dato repetible que no cambia la altura de
+      la tabla.
 
 ## Riesgos
 
@@ -45,6 +47,9 @@ exista trabajo en curso. No se crean migraciones ni se modifican revisiones envi
   el borde de una celda, incluso en movimientos consecutivos; el arrastre sigue al
   puntero sin imantado y admite divisiones lógicas menores que el ancho mínimo visible
   de una celda, evitando que se desplace el contenido ajeno.
+- El mismo recorrido distribuye doce secciones en varias hojas, retira `$anio` de una
+  tabla de bibliografía y comprueba que tabla, separadores, páginas y secciones ajenas
+  mantengan exactamente su geometría.
 
 Desde el 10 de septiembre, **Dato repetible** y **Estructura de filas** ya no dependen de
 que el bloque haya nacido como tabla repetible. En una tabla estática, **Nuevo dato de

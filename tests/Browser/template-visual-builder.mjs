@@ -199,6 +199,7 @@ window.fixture = {
     requests,
     appearance: () => appearance.value,
     triggerNavigation,
+    setTemplate(value) { template.value = value; },
 };
 
 createApp({render: () => h('main', {class:'min-h-screen bg-muted p-6'}, [
@@ -979,6 +980,277 @@ test(
                     document.documentElement.clientWidth,
             ),
             true,
+        );
+
+        await page.setViewportSize({ width: 1440, height: 1000 });
+        await page.evaluate(() => {
+            const paragraph = (text) => ({
+                type: 'paragraph',
+                content: [{ type: 'text', text }],
+            });
+            const textBlock = (section, block, title) => ({
+                id: `pagination-block-${section}-${block}`,
+                key: `pagination_block_${section}_${block}`,
+                title,
+                type: 'narrativa',
+                content_type: 'text',
+                table: null,
+                fingerprint: 'a'.repeat(64),
+                fields: [],
+                document: {
+                    type: 'doc',
+                    content: [
+                        paragraph(
+                            'Contenido de prueba que mantiene una altura estable antes y después de editar la tabla.',
+                        ),
+                        paragraph(
+                            'Segundo párrafo para distribuir el documento.',
+                        ),
+                    ],
+                },
+            });
+            const bibliographyTable = {
+                type: 'doc',
+                content: [
+                    {
+                        type: 'table',
+                        attrs: {
+                            repeatKey: 'bibliografia',
+                            groupByUnit: false,
+                            visualStructure: true,
+                        },
+                        content: [
+                            {
+                                type: 'tableRow',
+                                attrs: { rowRole: 'fixed' },
+                                content: [
+                                    'Autor',
+                                    'Título',
+                                    'Año',
+                                    'Ciudad',
+                                    'Editorial',
+                                    'ISBN',
+                                    'Código',
+                                ].map((text) => ({
+                                    type: 'tableHeader',
+                                    attrs: { colspan: 1, rowspan: 1 },
+                                    content: [paragraph(text)],
+                                })),
+                            },
+                            {
+                                type: 'tableRow',
+                                attrs: { rowRole: 'record' },
+                                content: [
+                                    ['autor', 'Autor'],
+                                    ['titulo', 'Título'],
+                                    ['anio', 'Año'],
+                                    ['ciudad', 'Ciudad'],
+                                    ['editorial', 'Editorial'],
+                                    ['isbn', 'ISBN'],
+                                    ['codigo', 'Código'],
+                                ].map(([key, label]) => ({
+                                    type: 'tableCell',
+                                    attrs: { colspan: 1, rowspan: 1 },
+                                    content: [
+                                        {
+                                            type: 'paragraph',
+                                            content: [
+                                                {
+                                                    type: 'column',
+                                                    attrs: {
+                                                        key,
+                                                        label,
+                                                        kind: 'texto_largo',
+                                                        role: null,
+                                                        sum: false,
+                                                    },
+                                                },
+                                            ],
+                                        },
+                                    ],
+                                })),
+                            },
+                        ],
+                    },
+                ],
+            };
+            const columns = [
+                'autor',
+                'titulo',
+                'anio',
+                'ciudad',
+                'editorial',
+                'isbn',
+                'codigo',
+            ].map((key) => ({
+                key,
+                label: key,
+                type: 'text',
+                group: null,
+                band: null,
+                sum: false,
+                width: null,
+                role: null,
+            }));
+            const sections = Array.from({ length: 12 }, (_, index) => ({
+                id: `pagination-section-${index + 1}`,
+                key: `pagination_section_${index + 1}`,
+                title: `Sección de paginación ${index + 1}`,
+                description: null,
+                blocks: Array.from(
+                    { length: index === 6 ? 5 : 2 },
+                    (_, block) =>
+                        textBlock(
+                            index + 1,
+                            block + 1,
+                            `Contenido ${block + 1}`,
+                        ),
+                ),
+            }));
+            sections[10].title = 'Bibliografía';
+            sections[10].blocks = [
+                {
+                    id: 'pagination-bibliography',
+                    key: 'bibliografia_basica',
+                    title: 'Bibliografía básica',
+                    type: 'repetible',
+                    content_type: 'table',
+                    table: {
+                        columns,
+                        groups: [],
+                        bands: [],
+                        header_fields: [],
+                        totals: { enabled: false, label: 'Total' },
+                        repeat: { enabled: false, label: 'Bibliografía' },
+                    },
+                    document: bibliographyTable,
+                    fingerprint: 'a'.repeat(64),
+                    fields: [
+                        {
+                            id: 'pagination-bibliography-field',
+                            key: 'bibliografia',
+                            label: 'Bibliografía',
+                            type: 'repetible',
+                            required: true,
+                            inherited: false,
+                            teacher_editable: true,
+                        },
+                    ],
+                },
+            ];
+            window.fixture.setTemplate({
+                id: 'pagination-template',
+                name: 'Plantilla de paginación',
+                description: null,
+                appearance: window.fixture.appearance(),
+                titleBlock: { text: 'PROGRAMA DE ASIGNATURA (SÍLABO)' },
+                sections,
+            });
+        });
+        await page.waitForFunction(
+            () => document.querySelectorAll('.paged-document-paper').length > 2,
+        );
+        const bibliography = page.locator(
+            '#template-field-pagination-bibliography',
+        );
+        await bibliography.click();
+        await ribbonTools
+            .getByRole('button', { name: 'Editar tabla', exact: true })
+            .click();
+        const bibliographyEditor = bibliography.getByRole('textbox', {
+            name: 'Editar tabla de la plantilla',
+        });
+        await bibliographyEditor.waitFor();
+        await page.evaluate(
+            () =>
+                new Promise((resolve) => {
+                    let frames = 20;
+                    const next = () => {
+                        frames--;
+
+                        if (frames === 0) {
+                            resolve();
+
+                            return;
+                        }
+
+                        requestAnimationFrame(next);
+                    };
+
+                    requestAnimationFrame(next);
+                }),
+        );
+        const paginationBeforeDelete = await page.evaluate(() => {
+            const root = document.querySelector('.paged-document-content');
+            const editor = document.querySelector(
+                '#template-field-pagination-bibliography .template-table-editor',
+            );
+            const table = editor.querySelector('table');
+
+            return {
+                headings: [
+                    ...document.querySelectorAll(
+                        '[id^="template-section-pagination-section-"]',
+                    ),
+                ].map(
+                    (element) =>
+                        element.getBoundingClientRect().top -
+                        root.getBoundingClientRect().top,
+                ),
+                spacers: [
+                    ...document.querySelectorAll('[data-page-spacer]'),
+                ].map((element) => element.getBoundingClientRect().height),
+                pages: document.querySelectorAll('.paged-document-paper')
+                    .length,
+                editorHeight: editor.getBoundingClientRect().height,
+                tableHeight: table.getBoundingClientRect().height,
+            };
+        });
+        const year = bibliographyEditor.getByText('$anio', { exact: true });
+        await year.click();
+        await page.keyboard.press('Backspace');
+        await page.waitForFunction(
+            () =>
+                ![...document.querySelectorAll('[data-template-column]')].some(
+                    (element) => element.textContent === '$anio',
+                ),
+        );
+        await page.evaluate(
+            () =>
+                new Promise((resolve) =>
+                    requestAnimationFrame(() => requestAnimationFrame(resolve)),
+                ),
+        );
+        const paginationAfterDelete = await page.evaluate(() => {
+            const root = document.querySelector('.paged-document-content');
+            const editor = document.querySelector(
+                '#template-field-pagination-bibliography .template-table-editor',
+            );
+            const table = editor.querySelector('table');
+
+            return {
+                headings: [
+                    ...document.querySelectorAll(
+                        '[id^="template-section-pagination-section-"]',
+                    ),
+                ].map(
+                    (element) =>
+                        element.getBoundingClientRect().top -
+                        root.getBoundingClientRect().top,
+                ),
+                spacers: [
+                    ...document.querySelectorAll('[data-page-spacer]'),
+                ].map((element) => element.getBoundingClientRect().height),
+                pages: document.querySelectorAll('.paged-document-paper')
+                    .length,
+                editorHeight: editor.getBoundingClientRect().height,
+                tableHeight: table.getBoundingClientRect().height,
+            };
+        });
+        assert.deepEqual(
+            paginationAfterDelete,
+            paginationBeforeDelete,
+            'Removing an inline repeated field must not move unrelated document sections',
         );
         assert.deepEqual(errors, []);
     },
