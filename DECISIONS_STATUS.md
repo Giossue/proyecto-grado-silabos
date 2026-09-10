@@ -29,9 +29,11 @@ Fecha de corte: **30 de agosto de 2026**.
   las convocatorias de cualquier carrera tal como esté al abrir el proceso.
 - La plantilla se arma sobre hojas y bloques (I-33/I-53). Solo Administración cambia
   la estructura: un bloque agrupa campos y cada campo define si el docente completa
-  texto, tabla, lista con viñetas o lista numerada. La apariencia global es acotada a
-  catálogos institucionales de fuente, tamaños, colores, alineación, márgenes y
-  orientación (I-56, ajuste del 7 de septiembre de 2026). Administración puede editar
+  texto, tabla, lista con viñetas o lista numerada. La apariencia global permite ajustar
+  orientación, márgenes y tamaños de título, bloque y contenido. Arial, colores globales,
+  alineaciones y énfasis institucionales quedan fijos; campos, variables y todo el texto
+  de las tablas usan el tamaño de contenido (I-56, ajuste del 10 de septiembre de 2026).
+  Administración puede editar
   en la hoja el estilo y geometría de una tabla por celda: colores catalogados,
   alineación, negrita, cursiva, combinación y filas/columnas. El borde conserva el
   estilo institucional predeterminado y no se ofrece como ajuste. Los diseños

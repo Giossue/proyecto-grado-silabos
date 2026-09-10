@@ -21,6 +21,7 @@ final class TemplateDocumentWord
         int $width = 9406,
         ?string $list = null,
         ?string $alignmentOverride = null,
+        bool $insideTable = false,
     ): void {
         if ($node['type'] === 'pageBreak') {
             $target->addPageBreak();
@@ -57,10 +58,10 @@ final class TemplateDocumentWord
                         if (isset($attrs['color'])) {
                             $font['color'] = ltrim($attrs['color'], '#');
                         }
-                        if (isset($attrs['fontFamily'])) {
+                        if (isset($attrs['fontFamily']) && ! $insideTable) {
                             $font['name'] = $attrs['fontFamily'];
                         }
-                        if (isset($attrs['fontSize'])) {
+                        if (isset($attrs['fontSize']) && ! $insideTable) {
                             $font['size'] = (int) $attrs['fontSize'];
                         }
                     }
@@ -80,7 +81,7 @@ final class TemplateDocumentWord
             'bulletList' => 'silabo-bullets', 'orderedList' => 'silabo-numbers', default => $list
         };
         foreach ($node['content'] ?? [] as $child) {
-            $this->append($target, $child, $width, $list, $alignmentOverride);
+            $this->append($target, $child, $width, $list, $alignmentOverride, $insideTable);
         }
     }
 
@@ -178,6 +179,7 @@ final class TemplateDocumentWord
                         $cellWidth,
                         null,
                         is_string($attrs['textAlign'] ?? null) ? $attrs['textAlign'] : null,
+                        true,
                     );
                 }
                 $column += $span;

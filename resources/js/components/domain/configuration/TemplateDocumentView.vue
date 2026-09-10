@@ -147,7 +147,10 @@ const tableWithAction = (
         h('div', { class: 'document-table-action' }, tableAction()),
     ]);
 };
-const markStyle = (node: DocumentNode): CSSProperties => {
+const markStyle = (
+    node: DocumentNode,
+    inheritTableTypography = false,
+): CSSProperties => {
     const style: CSSProperties = {};
 
     for (const mark of node.marks ?? []) {
@@ -166,11 +169,11 @@ const markStyle = (node: DocumentNode): CSSProperties => {
         if (mark.type === 'textStyle') {
             const attrs = mark.attrs ?? {};
 
-            if (attrs.fontFamily) {
+            if (attrs.fontFamily && !inheritTableTypography) {
                 style.fontFamily = attrs.fontFamily;
             }
 
-            if (attrs.fontSize) {
+            if (attrs.fontSize && !inheritTableTypography) {
                 style.fontSize = attrs.fontSize;
             }
 
@@ -316,7 +319,7 @@ const input = (
             emit('value', key, value);
         }
     };
-    const style = markStyle(node);
+    const style = markStyle(node, context.insideCell === true);
     const text = displayDocumentValue(value);
 
     if (!canEdit) {
@@ -506,7 +509,11 @@ const draw = (
         );
 
     if (node.type === 'text') {
-        return h('span', { style: markStyle(node) }, node.text);
+        return h(
+            'span',
+            { style: markStyle(node, context.insideCell === true) },
+            node.text,
+        );
     }
 
     if (node.type === 'hardBreak') {
@@ -517,7 +524,7 @@ const draw = (
         return h(
             'span',
             {
-                style: markStyle(node),
+                style: markStyle(node, context.insideCell === true),
                 'data-variable': String(attrs.id),
                 class: 'document-variable',
             },
@@ -853,6 +860,11 @@ const Content = defineComponent({ setup: () => () => draw(props.document) });
     padding: 2px 4px;
     vertical-align: middle;
     font-weight: normal;
+}
+.template-document-view :deep(.document-table td *),
+.template-document-view :deep(.document-table th *) {
+    font-family: inherit !important;
+    font-size: inherit !important;
 }
 .template-document-view :deep(td .document-paragraph),
 .template-document-view :deep(th .document-paragraph) {

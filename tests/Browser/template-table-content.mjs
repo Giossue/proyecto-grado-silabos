@@ -30,6 +30,10 @@ const fields = [{
     type: 'seleccion_unica', inherited: false, teacher_editable: true,
     required: true,
     options: [{value: 'Sí', label: 'Sí'}, {value: 'No', label: 'No'}],
+}, {
+    key: 'formacion_experiencia', label: 'Formación y experiencia',
+    type: 'markdown', inherited: false, teacher_editable: true,
+    required: true, options: [],
 }];
 const variables = [{
     key: 'nombre_docente', label: 'Nombre del docente', sample: 'Docente Demo',
@@ -114,11 +118,22 @@ test(
 
         await insert.click();
         await page.getByRole('menuitem', { name: 'Campo del docente' }).hover();
+        await page
+            .getByRole('menuitem', {
+                name: 'Formación y experiencia',
+                exact: true,
+            })
+            .click();
+
+        await insert.click();
+        await page.getByRole('menuitem', { name: 'Campo del docente' }).hover();
         await page.getByRole('menuitem', { name: 'Nuevo campo…' }).click();
         const dialog = page.getByRole('dialog', {
             name: 'Nuevo campo del docente',
         });
-        await dialog.getByLabel('Nombre visible').fill('Requiere acompañamiento');
+        await dialog
+            .getByLabel('Nombre visible')
+            .fill('Requiere acompañamiento');
         await dialog.getByRole('combobox').click();
         await page.getByRole('option', { name: 'Selección única' }).click();
         await dialog.getByLabel('Opciones').fill('Sí, No, No aplica');
@@ -133,11 +148,14 @@ test(
             .click();
 
         const saved = await page.evaluate(() => window.fixture.document());
-        const inline = saved.content[0].content[0].content[0].content[0].content;
+        const inline =
+            saved.content[0].content[0].content[0].content[0].content;
         assert.equal(inline[0].type, 'variable');
         assert.equal(inline[0].attrs.id, 'nombre_docente');
         assert.equal(inline[1].type, 'field');
-        assert.deepEqual(inline[1].attrs.options, ['Sí', 'No', 'No aplica']);
-        assert.equal(inline[2].attrs.choice, 'Sí');
+        assert.equal(inline[1].attrs.kind, 'markdown');
+        assert.equal(inline[1].attrs.options, null);
+        assert.deepEqual(inline[2].attrs.options, ['Sí', 'No', 'No aplica']);
+        assert.equal(inline[3].attrs.choice, 'Sí');
     },
 );

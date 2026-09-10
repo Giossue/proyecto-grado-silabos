@@ -38,7 +38,7 @@ final class TemplateDocumentDefaults
                     $r === 11 && $c === 1 => '[[field:discapacidad_tiene:No]]',
                     default => $cell['text'],
                 };
-                $marks = [['type' => 'textStyle', 'attrs' => ['fontSize' => $cell['small'] ? '7pt' : '9pt', 'color' => $cell['style'] === 'blue' ? '#FFFFFF' : '#000000']]];
+                $marks = [['type' => 'textStyle', 'attrs' => ['color' => $cell['style'] === 'blue' ? '#FFFFFF' : '#000000']]];
                 if ($cell['bold']) {
                     $marks[] = ['type' => 'bold'];
                 }

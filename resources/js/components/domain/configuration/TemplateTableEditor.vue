@@ -106,7 +106,7 @@ import type {
     DocumentNode,
     TemplateVariable,
 } from '@/lib/templateDocument';
-import { nodesOfType } from '@/lib/templateDocument';
+import { documentFieldOptions, nodesOfType } from '@/lib/templateDocument';
 import { toast } from '@/lib/toast';
 import {
     cellBoundaryPosition,
@@ -1122,7 +1122,7 @@ const insertField = (
             label: field.label,
             kind: field.type ?? 'texto_largo',
             choice,
-            options: field.options?.map((option) => option.value) ?? null,
+            options: documentFieldOptions(field),
             listStyle: null,
         },
     });
@@ -2108,6 +2108,11 @@ defineExpose({ getDocument });
     position: relative;
     vertical-align: top;
     overflow-wrap: anywhere;
+}
+.template-table-editor td *,
+.template-table-editor th * {
+    font-family: inherit !important;
+    font-size: inherit !important;
 }
 .template-table-editor td p,
 .template-table-editor th p {

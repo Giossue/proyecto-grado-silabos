@@ -24,6 +24,22 @@ final class TemplateAppearance
 
     public const ORIENTATIONS = ['portrait', 'landscape'];
 
+    /** @var array<string, mixed> */
+    private const INSTITUTIONAL_STYLE = [
+        'font_family' => 'Arial',
+        'text_color' => '#000000',
+        'accent_color' => '#0070C0',
+        'table_header_background' => '#4F81BD',
+        'table_header_color' => '#FFFFFF',
+        'title_bold' => true,
+        'title_italic' => false,
+        'title_alignment' => 'center',
+        'section_bold' => true,
+        'section_italic' => false,
+        'section_alignment' => 'left',
+        'body_alignment' => 'left',
+    ];
+
     /** @var array<string, string> */
     public const COLORS = [
         '#000000' => 'Negro',
@@ -83,13 +99,18 @@ final class TemplateAppearance
     public static function normalize(array $raw): array
     {
         $defaults = self::defaults();
-        $value = [...$defaults, ...array_intersect_key($raw, $defaults)];
+        $value = [
+            ...$defaults,
+            ...array_intersect_key($raw, $defaults),
+            ...self::INSTITUTIONAL_STYLE,
+        ];
 
         $value['font_family'] = self::allowed($value['font_family'], self::FONTS, $defaults['font_family']);
         $value['body_font_size'] = self::allowedInteger($value['body_font_size'], self::BODY_SIZES, $defaults['body_font_size']);
         $value['title_font_size'] = self::allowedInteger($value['title_font_size'], self::TITLE_SIZES, $defaults['title_font_size']);
         $value['section_font_size'] = self::allowedInteger($value['section_font_size'], self::SECTION_SIZES, $defaults['section_font_size']);
-        $value['field_font_size'] = self::allowedInteger($value['field_font_size'], self::FIELD_SIZES, $defaults['field_font_size']);
+        // Campos, variables y texto comparten una sola escala dentro del documento.
+        $value['field_font_size'] = $value['body_font_size'];
 
         foreach (['text_color', 'accent_color', 'table_header_background', 'table_header_color'] as $key) {
             $value[$key] = array_key_exists((string) $value[$key], self::COLORS)

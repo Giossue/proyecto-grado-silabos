@@ -992,10 +992,13 @@ it('construye la plantilla desde bloques que contienen campos tipados', function
         ->toContain('Personalizar plantilla')
         ->toContain('Orientación')
         ->toContain('Márgenes')
-        ->toContain('Fuente general')
-        ->toContain('Título principal')
-        ->toContain('Títulos de bloque')
-        ->toContain('Fondo de cabecera de tabla')
+        ->toContain('Título')
+        ->toContain('Bloques')
+        ->toContain('Contenido')
+        ->not->toContain('template-font')
+        ->not->toContain('template-field-size')
+        ->not->toContain('<FieldLegend>Colores</FieldLegend>')
+        ->not->toContain('<FieldLegend>Texto y alineación</FieldLegend>')
         ->toContain('Guardar apariencia');
 
     // I-53: el marco compartido conserva el estándar y calcula hojas dinámicas.

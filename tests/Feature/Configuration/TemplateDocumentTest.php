@@ -31,8 +31,67 @@ class TemplateDocumentTest extends TestCase
         $this->assertContains('nombre_facultad', $keys);
         $this->assertNotContains('carrera', $keys);
         $this->assertCount(5, TemplateDocument::nodes($doc, 'field'));
+        $this->assertStringNotContainsString('fontSize', json_encode($doc, JSON_THROW_ON_ERROR));
         $values = TemplateVariables::resolve(['identification' => ['career' => 'Carrera real del expediente']]);
         $this->assertSame('Carrera real del expediente', $values['nombre_carrera']);
+    }
+
+    public function test_non_selection_field_normalizes_legacy_empty_options_as_absent(): void
+    {
+        $document = ['type' => 'doc', 'content' => [[
+            'type' => 'paragraph',
+            'content' => [[
+                'type' => 'field',
+                'attrs' => [
+                    'key' => 'formacion_experiencia',
+                    'label' => 'Formación y experiencia',
+                    'kind' => 'markdown',
+                    'options' => [],
+                ],
+            ]],
+        ]]];
+
+        $normalized = TemplateDocument::normalize($document, []);
+
+        $this->assertNull(TemplateDocument::nodes($normalized, 'field')[0]['attrs']['options']);
+    }
+
+    public function test_table_text_uses_the_global_content_size(): void
+    {
+        $text = fn (string $value): array => [
+            'type' => 'text',
+            'text' => $value,
+            'marks' => [[
+                'type' => 'textStyle',
+                'attrs' => [
+                    'fontFamily' => 'Times New Roman',
+                    'fontSize' => '7pt',
+                    'color' => '#000000',
+                ],
+            ]],
+        ];
+        $document = ['type' => 'doc', 'content' => [
+            ['type' => 'paragraph', 'content' => [$text('Fuera')]],
+            ['type' => 'table', 'content' => [[
+                'type' => 'tableRow',
+                'content' => [[
+                    'type' => 'tableCell',
+                    'content' => [[
+                        'type' => 'paragraph',
+                        'content' => [$text('Dentro')],
+                    ]],
+                ]],
+            ]]],
+        ]];
+
+        $normalized = TemplateDocument::normalize($document, []);
+        $texts = TemplateDocument::nodes($normalized, 'text');
+
+        $this->assertSame('Times New Roman', $texts[0]['marks'][0]['attrs']['fontFamily']);
+        $this->assertSame('7pt', $texts[0]['marks'][0]['attrs']['fontSize']);
+        $this->assertArrayNotHasKey('fontSize', $texts[1]['marks'][0]['attrs']);
+        $this->assertArrayNotHasKey('fontFamily', $texts[1]['marks'][0]['attrs']);
+        $this->assertSame('#000000', $texts[1]['marks'][0]['attrs']['color']);
     }
 
     public function test_admin_saves_layout_and_creates_only_teacher_editable_fields_with_conflict_control(): void
@@ -289,9 +348,12 @@ class TemplateDocumentTest extends TestCase
             $this->assertTrue($zip->open($path));
             $xml = $zip->getFromName('word/document.xml');
             $zip->close();
-            foreach (['Carrera congelada', 'Contenido &lt;docente&gt; &amp; aprobado', 'w:gridSpan w:val="2"', 'w:vMerge w:val="restart"', 'w:vMerge w:val="continue"', 'w:fill="E7E6E6"', 'w:color w:val="FFFFFF"', 'w:color w:val="CC0000"', 'w:sz w:val="28"', 'w:jc w:val="center"', 'w:jc w:val="both"', 'Times New Roman', '<w:tcBorders>', 'w:sz="12"'] as $expected) {
+            foreach (['Carrera congelada', 'Contenido &lt;docente&gt; &amp; aprobado', 'w:gridSpan w:val="2"', 'w:vMerge w:val="restart"', 'w:vMerge w:val="continue"', 'w:fill="E7E6E6"', 'w:color w:val="FFFFFF"', 'w:color w:val="CC0000"', 'w:jc w:val="center"', '<w:tcBorders>', 'w:sz="12"'] as $expected) {
                 $this->assertStringContainsString($expected, $xml);
             }
+            $this->assertStringNotContainsString('w:sz w:val="28"', $xml);
+            $this->assertStringNotContainsString('w:jc w:val="both"', $xml);
+            $this->assertStringNotContainsString('Times New Roman', $xml);
             $this->assertStringNotContainsString('w:fill="548235"', $xml);
         } finally {
             unlink($path);

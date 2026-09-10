@@ -138,6 +138,10 @@ paralelo. Son operaciones separadas y ninguna levanta los bloqueos académicos.
   que redacte el docente. La muestra no garantiza los mismos cortes que Word o PDF.
   Las hojas se muestran directamente sobre el fondo de la pantalla, sin panel gris;
   los controles de alta aparecen en el punto del documento donde actuarán.
+- «Personalizar plantilla» permite ajustar orientación, márgenes y tres tamaños:
+  título, bloques y contenido. El tamaño de contenido se aplica uniformemente a texto,
+  variables y campos dentro de cualquier tabla. La fuente Arial, los colores globales,
+  las alineaciones y los énfasis institucionales son fijos y no aparecen como controles.
 - La ficha institucional parte del formato oficial y conserva su diseño al mostrarse en
   el constructor. Sus variables muestran datos de malla, programación, paralelos y docentes;
   no son campos de escritura. Discapacidad y formación son campos que completa el

@@ -866,14 +866,20 @@ test(
         const sheet = page.getByRole('dialog');
         await sheet.getByLabel('Orientación').click();
         await page.getByRole('option', { name: 'Horizontal' }).click();
-        await sheet.getByLabel('Fuente general').click();
-        await page.getByRole('option', { name: 'Georgia' }).click();
         await sheet
             .getByRole('combobox', { name: 'Título', exact: true })
             .click();
         await page.getByRole('option', { name: '18 pt' }).click();
-        await sheet.locator('#template-accent_color').click();
-        await page.getByRole('option', { name: 'Rojo' }).click();
+        await sheet
+            .getByRole('combobox', { name: 'Contenido', exact: true })
+            .click();
+        await page.getByRole('option', { name: '12 pt' }).click();
+        assert.equal(await sheet.getByLabel('Fuente general').count(), 0);
+        assert.equal(await sheet.getByLabel('Campos').count(), 0);
+        assert.equal(
+            await sheet.getByText('Colores', { exact: true }).count(),
+            0,
+        );
 
         await page.waitForFunction(() => {
             const paper = document.querySelector('.paged-document-paper');
@@ -894,17 +900,19 @@ test(
                     fontSize: style.fontSize,
                 };
             });
-        assert.equal(titleStyle.color, 'rgb(192, 0, 0)');
-        assert.match(titleStyle.fontFamily, /Georgia/);
+        assert.equal(titleStyle.color, 'rgb(0, 112, 192)');
+        assert.match(titleStyle.fontFamily, /Arial/);
         assert.equal(titleStyle.fontSize, '24px');
 
         await sheet.getByRole('button', { name: 'Guardar apariencia' }).click();
         await sheet.waitFor({ state: 'detached' });
         const saved = await page.evaluate(() => window.fixture.appearance());
         assert.equal(saved.orientation, 'landscape');
-        assert.equal(saved.font_family, 'Georgia');
+        assert.equal(saved.font_family, 'Arial');
         assert.equal(saved.title_font_size, 18);
-        assert.equal(saved.accent_color, '#C00000');
+        assert.equal(saved.accent_color, '#0070C0');
+        assert.equal(saved.body_font_size, 12);
+        assert.equal(saved.field_font_size, 12);
 
         await page.setViewportSize({ width: 360, height: 800 });
         assert.equal(

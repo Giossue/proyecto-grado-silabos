@@ -45,6 +45,10 @@ export const textNode = (text: string): DocumentNode => ({
     type: 'text',
     text,
 });
+export const documentFieldOptions = (field: DocumentField): string[] | null =>
+    field.type === 'seleccion_unica'
+        ? (field.options?.map((option) => option.value) ?? [])
+        : null;
 export const fieldNode = (
     field: DocumentField,
     type = 'field',
@@ -55,7 +59,7 @@ export const fieldNode = (
         label: field.label,
         kind: field.type ?? 'texto_largo',
         choice: null,
-        options: field.options?.map((option) => option.value) ?? null,
+        options: documentFieldOptions(field),
         ...(type === 'column'
             ? { role: field.role ?? null, sum: field.sum ?? null }
             : {}),
@@ -148,7 +152,6 @@ export function defaultDocument(
                                 {
                                     type: 'textStyle',
                                     attrs: {
-                                        fontSize: '8pt',
                                         color: '#365F91',
                                     },
                                 },

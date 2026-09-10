@@ -155,10 +155,12 @@ aumenta de escala al apuntarlo o enfocarlo y conserva un tooltip accesible.
 `TemplateBlockCreator` y `TemplateFieldCreator` reciben la posición visual elegida y
 llaman a los mismos casos de uso; no existe una segunda ruta de persistencia.
 
-`TemplateAppearanceSheet` trabaja con un catálogo entregado por
-`TemplateAppearance`: fuentes, tamaños, colores, márgenes, orientación, alineaciones,
-negrita y cursiva admitidos. La previsualización es local y el PATCH guarda únicamente
-valores normalizados en `plantillas_silabo.mapeo_documento.appearance`. Un snapshot de
+`TemplateAppearanceSheet` expone únicamente orientación, márgenes y los tamaños de
+título, bloque y contenido del catálogo entregado por `TemplateAppearance`. Fuente,
+colores globales, alineaciones y énfasis forman el estilo institucional fijo. El tamaño de
+contenido gobierna también campos, variables y texto de tablas; el normalizador elimina
+tamaños inline heredados dentro de ellas. La previsualización es local y el PATCH guarda
+únicamente valores normalizados en `plantillas_silabo.mapeo_documento.appearance`. Un snapshot de
 revisión ya copia ese mapa; `SyllabusWordDocument` interpreta los mismos valores para
 DOCX. No se persisten CSS, clases ni colores libres. `ProcessLocks` y `InProgressWork`
 siguen protegiendo tanto estructura como apariencia.

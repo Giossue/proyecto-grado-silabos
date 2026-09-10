@@ -69,15 +69,15 @@ class WordRendererTest extends TestCase
         $this->assertIsString($stylesXml);
         $this->assertStringContainsString('w:orient="landscape"', $documentXml);
         $this->assertStringContainsString('w:top="1134"', $documentXml);
-        $this->assertStringContainsString('w:fill="548235"', $documentXml);
+        $this->assertStringContainsString('w:fill="4F81BD"', $documentXml);
         $this->assertStringContainsString('w:color w:val="FFFFFF"', $documentXml);
-        $this->assertStringContainsString('w:color w:val="C00000"', $documentXml);
+        $this->assertStringContainsString('w:color w:val="0070C0"', $documentXml);
         $this->assertStringContainsString('w:sz w:val="36"', $documentXml);
         $this->assertStringContainsString('PLAN ACADÉMICO INSTITUCIONAL', $documentXml);
         $this->assertStringNotContainsString(TemplateTitleBlock::DEFAULT_TEXT, $documentXml);
-        $this->assertStringContainsString('<w:i w:val="1"/>', $documentXml);
-        $this->assertStringContainsString('Georgia', $stylesXml);
-        $this->assertStringContainsString('w:color w:val="1F4E78"', $stylesXml);
+        $this->assertStringNotContainsString('<w:i w:val="1"/>', $documentXml);
+        $this->assertStringContainsString('Arial', $stylesXml);
+        $this->assertStringContainsString('w:color w:val="000000"', $stylesXml);
         $this->assertStringContainsString('w:sz w:val="24"', $stylesXml);
     }
 

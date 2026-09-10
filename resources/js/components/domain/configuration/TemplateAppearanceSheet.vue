@@ -6,10 +6,8 @@ import TemplateController from '@/actions/App/Modules/Configuration/Presentation
 import FormSheet from '@/components/domain/FormSheet.vue';
 import FormSheetActions from '@/components/domain/FormSheetActions.vue';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
     Field,
-    FieldContent,
     FieldDescription,
     FieldError,
     FieldGroup,
@@ -46,7 +44,10 @@ const emit = defineEmits<{
     preview: [value: TemplateAppearance];
 }>();
 
-const copy = (value: TemplateAppearance): TemplateAppearance => ({ ...value });
+const copy = (value: TemplateAppearance): TemplateAppearance => ({
+    ...value,
+    field_font_size: value.body_font_size,
+});
 const form = useForm<TemplateAppearance>(copy(props.appearance));
 
 const error = computed(() =>
@@ -65,6 +66,13 @@ const reset = (): void => {
     Object.assign(form, copy(props.appearance));
     emit('preview', copy(props.appearance));
 };
+
+watch(
+    () => form.body_font_size,
+    (value) => {
+        form.field_font_size = value;
+    },
+);
 
 watch(
     () => props.open,
@@ -110,21 +118,21 @@ const sheetOpen = computed({
 });
 
 const logoUpdated = (): void => {
-    toast.success('Logo de la universidad actualizado.');
+    toast.success('Logo de la universidad actualizado');
 };
 
 const submit = (): void => {
     form.patch(TemplateController.updateAppearance.url(props.templateId), {
         preserveScroll: true,
         onSuccess: () => {
-            toast.success('Apariencia guardada.');
+            toast.success('Apariencia guardada');
             emit('update:open', false);
         },
         onError: (errors) => {
             if (!('purge_required' in errors)) {
                 toast.error(
                     Object.values(errors)[0] ??
-                        'No se pudo guardar la apariencia.',
+                        'No se pudo guardar la apariencia',
                 );
             }
         },
@@ -139,7 +147,6 @@ const submit = (): void => {
         title="Personalizar plantilla"
         description="Ajustes institucionales aplicados a toda la hoja y a la exportación."
         :show-trigger="false"
-        wide
     >
         <template #default="{ close: closeSheet }">
             <Form
@@ -200,7 +207,7 @@ const submit = (): void => {
             </Form>
 
             <form @submit.prevent="submit">
-                <FieldGroup class="grid gap-6 lg:grid-cols-2">
+                <FieldGroup class="grid gap-6">
                     <FieldSet class="gap-4 rounded-lg border p-4">
                         <FieldLegend>Documento</FieldLegend>
                         <FieldGroup class="gap-4">
@@ -257,22 +264,22 @@ const submit = (): void => {
 
                     <FieldSet class="gap-4 rounded-lg border p-4">
                         <FieldLegend>Tipografía</FieldLegend>
-                        <FieldGroup class="gap-4">
+                        <FieldGroup class="grid gap-3 sm:grid-cols-3">
                             <Field>
-                                <FieldLabel for="template-font">
-                                    Fuente general
+                                <FieldLabel for="template-title-size">
+                                    Título
                                 </FieldLabel>
                                 <Select
-                                    v-model="form.font_family"
+                                    v-model="form.title_font_size"
                                     :disabled="form.processing"
                                 >
-                                    <SelectTrigger id="template-font">
+                                    <SelectTrigger id="template-title-size">
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectGroup>
                                             <SelectItem
-                                                v-for="option in options.fonts"
+                                                v-for="option in options.title_sizes"
                                                 :key="option.value"
                                                 :value="option.value"
                                             >
@@ -282,200 +289,21 @@ const submit = (): void => {
                                     </SelectContent>
                                 </Select>
                             </Field>
-
-                            <div class="grid grid-cols-2 gap-3">
-                                <Field>
-                                    <FieldLabel for="template-title-size">
-                                        Título
-                                    </FieldLabel>
-                                    <Select
-                                        v-model="form.title_font_size"
-                                        :disabled="form.processing"
-                                    >
-                                        <SelectTrigger id="template-title-size">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectGroup>
-                                                <SelectItem
-                                                    v-for="option in options.title_sizes"
-                                                    :key="option.value"
-                                                    :value="option.value"
-                                                >
-                                                    {{ option.label }}
-                                                </SelectItem>
-                                            </SelectGroup>
-                                        </SelectContent>
-                                    </Select>
-                                </Field>
-                                <Field>
-                                    <FieldLabel for="template-block-size">
-                                        Bloques
-                                    </FieldLabel>
-                                    <Select
-                                        v-model="form.section_font_size"
-                                        :disabled="form.processing"
-                                    >
-                                        <SelectTrigger id="template-block-size">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectGroup>
-                                                <SelectItem
-                                                    v-for="option in options.section_sizes"
-                                                    :key="option.value"
-                                                    :value="option.value"
-                                                >
-                                                    {{ option.label }}
-                                                </SelectItem>
-                                            </SelectGroup>
-                                        </SelectContent>
-                                    </Select>
-                                </Field>
-                                <Field>
-                                    <FieldLabel for="template-field-size">
-                                        Campos
-                                    </FieldLabel>
-                                    <Select
-                                        v-model="form.field_font_size"
-                                        :disabled="form.processing"
-                                    >
-                                        <SelectTrigger id="template-field-size">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectGroup>
-                                                <SelectItem
-                                                    v-for="option in options.field_sizes"
-                                                    :key="option.value"
-                                                    :value="option.value"
-                                                >
-                                                    {{ option.label }}
-                                                </SelectItem>
-                                            </SelectGroup>
-                                        </SelectContent>
-                                    </Select>
-                                </Field>
-                                <Field>
-                                    <FieldLabel for="template-body-size">
-                                        Contenido
-                                    </FieldLabel>
-                                    <Select
-                                        v-model="form.body_font_size"
-                                        :disabled="form.processing"
-                                    >
-                                        <SelectTrigger id="template-body-size">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectGroup>
-                                                <SelectItem
-                                                    v-for="option in options.body_sizes"
-                                                    :key="option.value"
-                                                    :value="option.value"
-                                                >
-                                                    {{ option.label }}
-                                                </SelectItem>
-                                            </SelectGroup>
-                                        </SelectContent>
-                                    </Select>
-                                </Field>
-                            </div>
-                        </FieldGroup>
-                    </FieldSet>
-
-                    <FieldSet class="gap-4 rounded-lg border p-4">
-                        <FieldLegend>Colores</FieldLegend>
-                        <FieldGroup class="grid gap-4 sm:grid-cols-2">
-                            <Field
-                                v-for="setting in [
-                                    {
-                                        key: 'text_color',
-                                        label: 'Texto',
-                                    },
-                                    {
-                                        key: 'accent_color',
-                                        label: 'Título principal',
-                                    },
-                                    {
-                                        key: 'table_header_background',
-                                        label: 'Fondo de cabecera de tabla',
-                                    },
-                                    {
-                                        key: 'table_header_color',
-                                        label: 'Texto de cabecera de tabla',
-                                    },
-                                ] as const"
-                                :key="setting.key"
-                            >
-                                <FieldLabel :for="`template-${setting.key}`">
-                                    {{ setting.label }}
-                                </FieldLabel>
-                                <Select
-                                    v-model="form[setting.key]"
-                                    :disabled="form.processing"
-                                >
-                                    <SelectTrigger
-                                        :id="`template-${setting.key}`"
-                                    >
-                                        <span
-                                            class="size-3 rounded-sm border"
-                                            :style="{
-                                                backgroundColor:
-                                                    form[setting.key],
-                                            }"
-                                            aria-hidden="true"
-                                        />
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectGroup>
-                                            <SelectItem
-                                                v-for="option in options.colors"
-                                                :key="option.value"
-                                                :value="option.value"
-                                            >
-                                                <span
-                                                    class="flex items-center gap-2"
-                                                >
-                                                    <span
-                                                        class="size-3 rounded-sm border"
-                                                        :style="{
-                                                            backgroundColor:
-                                                                option.value,
-                                                        }"
-                                                        aria-hidden="true"
-                                                    />
-                                                    {{ option.label }}
-                                                </span>
-                                            </SelectItem>
-                                        </SelectGroup>
-                                    </SelectContent>
-                                </Select>
-                            </Field>
-                        </FieldGroup>
-                    </FieldSet>
-
-                    <FieldSet class="gap-4 rounded-lg border p-4">
-                        <FieldLegend>Texto y alineación</FieldLegend>
-                        <FieldGroup class="gap-4">
                             <Field>
-                                <FieldLabel for="template-title-alignment">
-                                    Título principal
+                                <FieldLabel for="template-block-size">
+                                    Bloques
                                 </FieldLabel>
                                 <Select
-                                    v-model="form.title_alignment"
+                                    v-model="form.section_font_size"
                                     :disabled="form.processing"
                                 >
-                                    <SelectTrigger
-                                        id="template-title-alignment"
-                                    >
+                                    <SelectTrigger id="template-block-size">
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectGroup>
                                             <SelectItem
-                                                v-for="option in options.alignments"
+                                                v-for="option in options.section_sizes"
                                                 :key="option.value"
                                                 :value="option.value"
                                             >
@@ -485,101 +313,21 @@ const submit = (): void => {
                                     </SelectContent>
                                 </Select>
                             </Field>
-                            <div class="grid grid-cols-2 gap-3">
-                                <Field orientation="horizontal">
-                                    <Checkbox
-                                        id="template-title-bold"
-                                        v-model="form.title_bold"
-                                        :disabled="form.processing"
-                                    />
-                                    <FieldContent>
-                                        <FieldLabel for="template-title-bold">
-                                            Título en negrita
-                                        </FieldLabel>
-                                    </FieldContent>
-                                </Field>
-                                <Field orientation="horizontal">
-                                    <Checkbox
-                                        id="template-title-italic"
-                                        v-model="form.title_italic"
-                                        :disabled="form.processing"
-                                    />
-                                    <FieldContent>
-                                        <FieldLabel for="template-title-italic">
-                                            Título en cursiva
-                                        </FieldLabel>
-                                    </FieldContent>
-                                </Field>
-                            </div>
                             <Field>
-                                <FieldLabel for="template-section-alignment">
-                                    Títulos de bloque
-                                </FieldLabel>
-                                <Select
-                                    v-model="form.section_alignment"
-                                    :disabled="form.processing"
-                                >
-                                    <SelectTrigger
-                                        id="template-section-alignment"
-                                    >
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectGroup>
-                                            <SelectItem
-                                                v-for="option in options.alignments"
-                                                :key="option.value"
-                                                :value="option.value"
-                                            >
-                                                {{ option.label }}
-                                            </SelectItem>
-                                        </SelectGroup>
-                                    </SelectContent>
-                                </Select>
-                            </Field>
-                            <div class="grid grid-cols-2 gap-3">
-                                <Field orientation="horizontal">
-                                    <Checkbox
-                                        id="template-section-bold"
-                                        v-model="form.section_bold"
-                                        :disabled="form.processing"
-                                    />
-                                    <FieldContent>
-                                        <FieldLabel for="template-section-bold">
-                                            Bloques en negrita
-                                        </FieldLabel>
-                                    </FieldContent>
-                                </Field>
-                                <Field orientation="horizontal">
-                                    <Checkbox
-                                        id="template-section-italic"
-                                        v-model="form.section_italic"
-                                        :disabled="form.processing"
-                                    />
-                                    <FieldContent>
-                                        <FieldLabel
-                                            for="template-section-italic"
-                                        >
-                                            Bloques en cursiva
-                                        </FieldLabel>
-                                    </FieldContent>
-                                </Field>
-                            </div>
-                            <Field>
-                                <FieldLabel for="template-body-alignment">
+                                <FieldLabel for="template-body-size">
                                     Contenido
                                 </FieldLabel>
                                 <Select
-                                    v-model="form.body_alignment"
+                                    v-model="form.body_font_size"
                                     :disabled="form.processing"
                                 >
-                                    <SelectTrigger id="template-body-alignment">
+                                    <SelectTrigger id="template-body-size">
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectGroup>
                                             <SelectItem
-                                                v-for="option in options.alignments"
+                                                v-for="option in options.body_sizes"
                                                 :key="option.value"
                                                 :value="option.value"
                                             >
@@ -592,11 +340,7 @@ const submit = (): void => {
                         </FieldGroup>
                     </FieldSet>
 
-                    <FieldError
-                        v-if="error"
-                        class="lg:col-span-2"
-                        :errors="[error]"
-                    />
+                    <FieldError v-if="error" :errors="[error]" />
                 </FieldGroup>
 
                 <FormSheetActions

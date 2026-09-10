@@ -176,7 +176,16 @@ class TemplateAndSourceTest extends TestCase
             ->assertRedirect()
             ->assertSessionHasNoErrors();
 
-        $this->assertEquals($appearance, $template->fresh()->mapeo_documento['appearance']);
+        $expected = [
+            ...TemplateAppearance::defaults(),
+            'body_font_size' => 12,
+            'title_font_size' => 18,
+            'section_font_size' => 14,
+            'field_font_size' => 12,
+            'margin_cm' => 2.0,
+            'orientation' => 'landscape',
+        ];
+        $this->assertEquals($expected, $template->fresh()->mapeo_documento['appearance']);
         $this->assertDatabaseHas('eventos_auditoria', [
             'accion' => 'plantilla.apariencia_actualizada',
             'recurso_id' => $template->id,
@@ -190,7 +199,7 @@ class TemplateAndSourceTest extends TestCase
                 'accent_color' => 'url(https://example.com)',
             ])
             ->assertSessionHasErrors(['font_family', 'accent_color']);
-        $this->assertEquals($appearance, $template->fresh()->mapeo_documento['appearance']);
+        $this->assertEquals($expected, $template->fresh()->mapeo_documento['appearance']);
 
         $this->actingAsCoordinator()
             ->patch(route('admin.templates.appearance.update', $template), TemplateAppearance::defaults())

@@ -273,8 +273,9 @@ creación es atómica y no deja bloques vacíos si se cancela o falla. Se conser
 ya persistidos; este cambio no autoriza a borrar la plantilla existente.
 
 La personalización es deliberadamente acotada y se guarda en
-`plantillas_silabo.mapeo_documento`: familia y jerarquía tipográfica, colores de texto,
-acento y cabecera de tabla, negrita/cursiva/alineación de títulos, márgenes y orientación.
+`plantillas_silabo.mapeo_documento`: tamaños de título, bloque y contenido, márgenes y
+orientación. Fuente, colores globales, negrita/cursiva y alineaciones conservan los valores
+institucionales fijos.
 La estructura y la apariencia siguen separadas; las revisiones conservan el mapa en su
 fotografía y PHPWord lo usa al exportar.
 
@@ -286,7 +287,7 @@ fotografía y PHPWord lo usa al exportar.
 Verificación: Configuración, Sílabos, Documentos y contrato de arquitectura,
 **129 pruebas / 2801 aserciones** en PostgreSQL local aislado; la suite Chromium
 `template-visual-builder.mjs`, **1/1**, crea un bloque con campos de texto y tabla,
-comprueba la previsualización horizontal, tipografía y color, guarda la apariencia y
+comprueba la previsualización horizontal y las escalas tipográficas, guarda la apariencia y
 revisa el ancho móvil. Pasan TypeScript, ESLint y Prettier del incremento, build de
 producción, Pint y PHPStan de las clases modificadas. Sin migraciones ni modificaciones
 de los diseños persistidos, commit o push. La configuración estructural detallada de
@@ -450,3 +451,16 @@ I-60 reemplaza el retiro temporal anterior. La ruta normal de ADM-06 es una vist
 y siempre de solo lectura; una ruta `/editar` dedicada recupera el constructor con una
 cinta contextual. La edición de celdas ocurre dentro de la hoja y sus herramientas se
 proyectan en la cinta, sin abrir el diálogo documental de pantalla completa.
+
+## Seguimiento — escala uniforme e identidad fija (2026-09-10)
+
+Por indicación del responsable, todo el contenido de una tabla comparte la escala
+«Contenido», incluidos texto, variables y campos. Los tamaños inline históricos se
+ignoran en la vista, se retiran al normalizar y tampoco se aplican al exportar a Word.
+La hoja de apariencia conserva como ajustes únicamente orientación, márgenes y tamaños
+de título, bloque y contenido; Arial, colores, alineaciones y énfasis institucionales
+quedan fijos en servidor.
+
+- [x] Unificar la escala de tablas en editor, vista y DOCX.
+- [x] Simplificar la hoja reutilizable y derivar «Campos» desde «Contenido».
+- [x] Cubrir normalización, persistencia, contrato de interfaz y exportación.

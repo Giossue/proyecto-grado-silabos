@@ -71,7 +71,13 @@ final class TemplateDocument
                     self::fail('Cada campo necesita un nombre y un tipo válido.');
                 }
                 $node['attrs'] = ['key' => $key, 'label' => trim($label), 'kind' => $kind];
-                $options = self::options($attrs['options'] ?? null);
+                $rawOptions = $attrs['options'] ?? null;
+                // Versiones anteriores del editor serializaban `[]` también para
+                // texto, número y Markdown. En esos tipos equivale a no tener opciones.
+                if ($kind !== 'seleccion_unica' && $rawOptions === []) {
+                    $rawOptions = null;
+                }
+                $options = self::options($rawOptions);
                 if ($options !== null && $kind !== 'seleccion_unica') {
                     self::fail('Solo un campo de selección admite opciones.');
                 }
@@ -203,6 +209,9 @@ final class TemplateDocument
                         $style = is_array($mark['attrs'] ?? null) ? $mark['attrs'] : [];
                         $clean['attrs'] = [];
                         foreach (['fontFamily', 'fontSize', 'color'] as $property) {
+                            if ($insideTable && in_array($property, ['fontFamily', 'fontSize'], true)) {
+                                continue;
+                            }
                             $value = $style[$property] ?? null;
                             if ($value === null) {
                                 continue;
