@@ -812,9 +812,11 @@ it('construye la plantilla desde bloques que contienen campos tipados', function
         ->toContain("'fixed inset-x-0 top-12 z-40 border-b shadow-sm'")
         ->toContain('Renombrar bloque')
         ->toContain('Editar campo')
-        ->toContain('data-template-insert="field"')
-        ->toContain('data-template-insert="block"')
-        ->toContain('data-template-insert="first-field"')
+        ->toContain('<TemplateInsertPopover')
+        ->toContain('data-template-insert="content"')
+        ->not->toContain('data-template-insert="field"')
+        ->not->toContain('data-template-insert="block"')
+        ->not->toContain('data-template-insert="first-field"')
         ->toContain('section.blocks.length > 1')
         ->toContain('appearance.table_header_background')
         ->toContain('appearance.body_alignment');
@@ -834,8 +836,8 @@ it('construye la plantilla desde bloques que contienen campos tipados', function
         ->toContain('portal-disabled')
         ->toContain('Agregar otro campo')
         ->toContain('Crear bloque')
-        ->toContain('hover:scale-125')
-        ->toContain("tooltipSide: inline ? 'bottom' : 'left'")
+        ->toContain("choice ? 'ghost' : 'outline'")
+        ->toContain("choice\n                            ? 'w-full justify-start'")
         ->not->toContain('<NativeSelect')
         ->not->toContain('draggable="true"');
 
@@ -851,9 +853,21 @@ it('construye la plantilla desde bloques que contienen campos tipados', function
         ->toContain('<SelectGroup')
         ->toContain('portal-disabled')
         ->toContain('Agregar campo')
-        ->toContain('hover:scale-125')
-        ->toContain("tooltipSide: inline ? 'bottom' : 'left'")
+        ->toContain("choice ? 'ghost' : 'outline'")
+        ->toContain("choice\n                          ? 'w-full justify-start'")
         ->not->toContain('<NativeSelect');
+
+    $insertPopover = file_get_contents(
+        $root.'/resources/js/components/domain/configuration/TemplateInsertPopover.vue',
+    );
+    expect($insertPopover)
+        ->toBeString()
+        ->toContain('label="Agregar contenido"')
+        ->toContain('hover:scale-125')
+        ->toContain('<TemplateFieldCreator')
+        ->toContain('<TemplateBlockCreator')
+        ->toContain(':field-position="fieldPosition"')
+        ->toContain(':position="blockPosition"');
 
     $tableDesigner = file_get_contents(
         $root.'/resources/js/components/domain/configuration/TemplateTableDesigner.vue',

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3';
-import { ListPlus, Plus } from '@lucide/vue';
+import { ListPlus } from '@lucide/vue';
 import { ref } from 'vue';
 import { toast } from 'vue-sonner';
 import TemplateController from '@/actions/App/Modules/Configuration/Presentation/Http/Controllers/TemplateController';
@@ -46,10 +46,9 @@ const props = withDefaults(
         blockTypes: { value: EditableContentType; label: string }[];
         menu?: boolean;
         ribbon?: boolean;
-        inline?: boolean;
         choice?: boolean;
     }>(),
-    { menu: false, ribbon: false, inline: false, choice: false },
+    { menu: false, ribbon: false, choice: false },
 );
 
 const open = ref(false);
@@ -121,18 +120,12 @@ const updateOpen = (value: boolean): void => {
                       variant: choice ? 'ghost' : 'outline',
                       buttonClass: choice
                           ? 'w-full justify-start'
-                          : inline
-                            ? 'size-5 rounded-full p-0 opacity-100 transition-transform hover:scale-125 focus-visible:scale-125'
-                            : ribbon
-                              ? undefined
-                              : 'size-7',
-                      size: inline
-                          ? 'icon-sm'
-                          : ribbon || choice
-                            ? 'sm'
-                            : 'icon-sm',
+                          : ribbon
+                            ? undefined
+                            : 'size-7',
+                      size: ribbon || choice ? 'sm' : 'icon-sm',
                       showLabel: ribbon || choice,
-                      tooltipSide: inline ? 'bottom' : 'left',
+                      tooltipSide: 'left',
                   }
         "
         @update:open="updateOpen"
@@ -146,8 +139,7 @@ const updateOpen = (value: boolean): void => {
             </DialogTrigger>
         </template>
         <template #icon>
-            <Plus v-if="!menu && inline" aria-hidden="true" />
-            <ListPlus v-else-if="!menu" aria-hidden="true" />
+            <ListPlus v-if="!menu" aria-hidden="true" />
         </template>
         <component
             :is="menu ? DialogContent : PopoverContent"

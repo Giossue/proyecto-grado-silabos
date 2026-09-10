@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3';
-import { Blocks, Plus, Trash2 } from '@lucide/vue';
+import { Blocks, Trash2 } from '@lucide/vue';
 import { ref } from 'vue';
 import { toast } from 'vue-sonner';
 import TemplateController from '@/actions/App/Modules/Configuration/Presentation/Http/Controllers/TemplateController';
@@ -46,14 +46,12 @@ const props = withDefaults(
         empty?: boolean;
         menu?: boolean;
         ribbon?: boolean;
-        inline?: boolean;
         choice?: boolean;
     }>(),
     {
         empty: false,
         menu: false,
         ribbon: false,
-        inline: false,
         choice: false,
     },
 );
@@ -149,18 +147,14 @@ const updateOpen = (value: boolean): void => {
                       variant: empty ? 'default' : choice ? 'ghost' : 'outline',
                       size: empty
                           ? 'icon'
-                          : inline
-                            ? 'icon-sm'
-                            : ribbon || choice
-                              ? 'sm'
-                              : 'icon-sm',
+                          : ribbon || choice
+                            ? 'sm'
+                            : 'icon-sm',
                       showLabel: ribbon || choice,
                       tooltipSide: inline ? 'bottom' : 'left',
-                      buttonClass: inline
-                          ? 'size-5 rounded-full p-0 opacity-100 transition-transform hover:scale-125 focus-visible:scale-125'
-                          : choice
+                      buttonClass: choice
                             ? 'w-full justify-start'
-                            : empty
+                          : empty
                               ? undefined
                               : ribbon
                                 ? undefined
@@ -178,8 +172,7 @@ const updateOpen = (value: boolean): void => {
             </DialogTrigger>
         </template>
         <template #icon>
-            <Plus v-if="!menu && inline" aria-hidden="true" />
-            <Blocks v-else-if="!menu" aria-hidden="true" />
+            <Blocks v-if="!menu" aria-hidden="true" />
         </template>
         <component
             :is="menu ? DialogContent : PopoverContent"
