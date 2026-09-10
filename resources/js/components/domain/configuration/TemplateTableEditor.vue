@@ -1537,7 +1537,7 @@ defineExpose({ getDocument });
 
         <EditorContent
             :editor="editor"
-            class="template-table-canvas min-w-0 overflow-x-auto p-2"
+            class="template-table-canvas min-w-0 overflow-x-auto"
         />
     </div>
 
@@ -1751,7 +1751,11 @@ defineExpose({ getDocument });
 <style>
 .template-table-editor .tiptap {
     min-width: 580px;
+    width: 100%;
     outline: none;
+}
+.template-table-editor .tableWrapper {
+    width: 100%;
 }
 .template-table-editor .template-table-canvas {
     /* El documento se edita sobre papel, independientemente del tema de la interfaz. */
@@ -1760,7 +1764,7 @@ defineExpose({ getDocument });
 .template-table-editor table {
     border-collapse: collapse;
     table-layout: fixed;
-    width: 100%;
+    width: 100% !important;
 }
 .template-table-editor td,
 .template-table-editor th {

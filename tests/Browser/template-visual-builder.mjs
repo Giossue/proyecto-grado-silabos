@@ -391,6 +391,8 @@ test(
 
         const tableField = page.locator('#template-field-field-block-2');
         await tableField.click();
+        const previewTableBox = await tableField.locator('table').boundingBox();
+        assert.ok(previewTableBox);
         assert.equal(
             await tableField
                 .getByRole('button', { name: /Editar tabla/ })
@@ -412,6 +414,12 @@ test(
             name: 'Editar tabla de la plantilla',
         });
         await tableEditor.waitFor();
+        const editorTableBox = await tableEditor.locator('table').boundingBox();
+        assert.ok(editorTableBox);
+        assert.ok(
+            Math.abs(editorTableBox.width - previewTableBox.width) < 1,
+            `El ancho cambió de ${previewTableBox.width}px a ${editorTableBox.width}px`,
+        );
         assert.equal(
             await tableEditor.getByText('$texto', { exact: true }).count(),
             1,
