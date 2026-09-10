@@ -151,7 +151,7 @@ const updateOpen = (value: boolean): void => {
                             ? 'sm'
                             : 'icon-sm',
                       showLabel: ribbon || choice,
-                      tooltipSide: inline ? 'bottom' : 'left',
+                      tooltipSide: 'left',
                       buttonClass: choice
                           ? 'w-full justify-start'
                           : empty

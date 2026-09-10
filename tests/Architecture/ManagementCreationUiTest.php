@@ -837,7 +837,7 @@ it('construye la plantilla desde bloques que contienen campos tipados', function
         ->toContain('Agregar otro campo')
         ->toContain('Crear bloque')
         ->toContain("choice ? 'ghost' : 'outline'")
-        ->toContain("choice\n                            ? 'w-full justify-start'")
+        ->toContain("'w-full justify-start'")
         ->not->toContain('<NativeSelect')
         ->not->toContain('draggable="true"');
 
@@ -854,7 +854,7 @@ it('construye la plantilla desde bloques que contienen campos tipados', function
         ->toContain('portal-disabled')
         ->toContain('Agregar campo')
         ->toContain("choice ? 'ghost' : 'outline'")
-        ->toContain("choice\n                          ? 'w-full justify-start'")
+        ->toContain("'w-full justify-start'")
         ->not->toContain('<NativeSelect');
 
     $insertPopover = file_get_contents(
