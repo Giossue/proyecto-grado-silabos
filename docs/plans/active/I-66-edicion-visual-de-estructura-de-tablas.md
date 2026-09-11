@@ -32,6 +32,8 @@ claves técnicas sin pedirlas. El formulario extenso «Configurar estructura» d
       la tabla.
 - [x] Permitir cambiar el color de fuente de las celdas seleccionadas de forma
       independiente a su fondo.
+- [x] Convertir una tabla repetible en estática al retirar su último dato de fila, sin
+      exigir un `$dato` inexistente ni desplazarla al espacio entre hojas.
 
 ## Riesgos
 
@@ -54,6 +56,9 @@ exista trabajo en curso. No se crean migraciones ni se modifican revisiones envi
   mantengan exactamente su geometría.
 - La cinta separa **Fondo de celda** de **Color de fuente**; el recorrido de contenido
   verifica ambos estilos en la vista y el documento serializado.
+- El recorrido con una sola columna retira `$texto`, conserva el contenido literal,
+  guarda la tabla con filas normales y comprueba que ninguna fila cruce el espacio no
+  imprimible entre hojas.
 
 Desde el 10 de septiembre, **Dato repetible** y **Estructura de filas** ya no dependen de
 que el bloque haya nacido como tabla repetible. En una tabla estática, **Nuevo dato de

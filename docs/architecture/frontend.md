@@ -229,6 +229,10 @@ APE o AA. Al guardar, `SaveTemplateDocument` deriva columnas,
 datos de unidad y totales del documento visual sin reconstruirlo. Las agrupaciones,
 bandas y roles anteriores se conservan. Los nodos `variable` se muestran con `@clave` y
 los nodos `column` con `$clave`.
+En sentido inverso, retirar el último nodo `column` elimina el origen repetible y
+normaliza sus filas como contenido estático. Durante la edición, un contenedor marcado
+`data-page-flow-through` entrega sus filas reales al paginador para que ninguna tabla se
+dibuje sobre el espacio entre hojas.
 
 ## Editor documental anterior (I-56, reemplazado)
 

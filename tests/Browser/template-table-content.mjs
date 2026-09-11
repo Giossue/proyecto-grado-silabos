@@ -216,5 +216,18 @@ test(
         assert.equal(insertedFields[2].attrs.choice, 'Sí');
         assert.equal(column.type, 'column');
         assert.equal(column.attrs.label, 'Resultado de aprendizaje');
+
+        const repeatedToken = cell.locator('[data-template-column]').last();
+        await repeatedToken.click();
+        await page.keyboard.press('Backspace');
+        const staticDocument = await page.evaluate(() =>
+            window.fixture.document(),
+        );
+        const staticTable = staticDocument.content[0];
+
+        assert.equal(staticTable.attrs.repeatKey, null);
+        assert.equal(staticTable.attrs.groupByUnit, null);
+        assert.equal(staticTable.attrs.visualStructure, null);
+        assert.equal(staticTable.content[0].attrs.rowRole, 'fixed');
     },
 );

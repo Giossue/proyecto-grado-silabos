@@ -330,6 +330,62 @@ class TemplateDocumentTest extends TestCase
         );
     }
 
+    public function test_removing_the_last_data_column_turns_a_repeated_table_into_a_static_table(): void
+    {
+        $template = $this->template();
+        $field = $template->fields()->where('clave', 'unidades')->firstOrFail();
+        $block = $field->block;
+        $document = ['type' => 'doc', 'content' => [[
+            'type' => 'table',
+            'attrs' => [
+                'repeatKey' => $field->clave,
+                'groupByUnit' => false,
+                'visualStructure' => true,
+            ],
+            'content' => [
+                [
+                    'type' => 'tableRow',
+                    'attrs' => ['rowRole' => 'fixed'],
+                    'content' => [[
+                        'type' => 'tableHeader',
+                        'attrs' => ['colspan' => 1, 'rowspan' => 1],
+                        'content' => [['type' => 'paragraph', 'content' => [[
+                            'type' => 'text',
+                            'text' => 'Contenido',
+                        ]]]],
+                    ]],
+                ],
+                [
+                    'type' => 'tableRow',
+                    'attrs' => ['rowRole' => 'record'],
+                    'content' => [[
+                        'type' => 'tableCell',
+                        'attrs' => ['colspan' => 1, 'rowspan' => 1],
+                        'content' => [['type' => 'paragraph', 'content' => [[
+                            'type' => 'text',
+                            'text' => 'Ejemplo',
+                        ]]]],
+                    ]],
+                ],
+            ],
+        ]]];
+
+        $this->patch(route('admin.templates.blocks.document', [$template, $block]), [
+            'document' => $document,
+            'fingerprint' => SaveTemplateDocument::fingerprint($block),
+        ])->assertSessionHasNoErrors();
+
+        $saved = $block->fresh()->configuracion['document'];
+        $this->assertNull($saved['content'][0]['attrs']['repeatKey']);
+        $this->assertSame('fixed', $saved['content'][0]['content'][1]['attrs']['rowRole']);
+        $this->assertFalse($field->fresh()->obligatorio);
+        $this->assertFalse($field->fresh()->editable_docente);
+        $this->assertArrayHasKey(
+            $field->clave,
+            $block->fresh()->configuracion['detached_fields'],
+        );
+    }
+
     public function test_text_field_list_format_preserves_values_and_exports_lines_as_items(): void
     {
         $template = $this->template();

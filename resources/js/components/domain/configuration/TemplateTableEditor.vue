@@ -107,7 +107,11 @@ import type {
     DocumentNode,
     TemplateVariable,
 } from '@/lib/templateDocument';
-import { documentFieldOptions, nodesOfType } from '@/lib/templateDocument';
+import {
+    demoteEmptyRepeatedTables,
+    documentFieldOptions,
+    nodesOfType,
+} from '@/lib/templateDocument';
 import { toast } from '@/lib/toast';
 import {
     cellBoundaryPosition,
@@ -1355,8 +1359,11 @@ const createField = (): void => {
     newFieldOpen.value = false;
 };
 
-const getDocument = (): DocumentNode | null =>
-    (editor.value?.getJSON() as DocumentNode | undefined) ?? null;
+const getDocument = (): DocumentNode | null => {
+    const document = editor.value?.getJSON() as DocumentNode | undefined;
+
+    return document ? demoteEmptyRepeatedTables(document) : null;
+};
 
 defineExpose({ getDocument });
 </script>

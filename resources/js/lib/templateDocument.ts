@@ -84,6 +84,41 @@ export const nodesOfType = (
     ...(doc.content ?? []).flatMap((child) => nodesOfType(child, type)),
 ];
 
+/** Retirar el último dato de fila convierte la tabla en contenido estático. */
+export const demoteEmptyRepeatedTables = (
+    document: DocumentNode,
+): DocumentNode => {
+    const content = document.content?.map(demoteEmptyRepeatedTables);
+    const node = content ? { ...document, content } : { ...document };
+
+    if (
+        node.type !== 'table' ||
+        node.attrs?.repeatKey == null ||
+        nodesOfType(node, 'column').length > 0
+    ) {
+        return node;
+    }
+
+    return {
+        ...node,
+        attrs: {
+            ...node.attrs,
+            repeatKey: null,
+            repeatLabel: null,
+            groupByUnit: null,
+            visualStructure: null,
+        },
+        content: (node.content ?? []).map((row) =>
+            row.type === 'tableRow'
+                ? {
+                      ...row,
+                      attrs: { ...row.attrs, rowRole: 'fixed' },
+                  }
+                : row,
+        ),
+    };
+};
+
 export function defaultDocument(
     block: {
         content_type: string;

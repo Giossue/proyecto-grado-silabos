@@ -37,7 +37,11 @@ final class SaveTemplateDocument
     public function execute(TemplateBlock $block, ?array $document, string $fingerprint, User $actor, Request $request): void
     {
         abort_unless($actor->can('manage-templates'), 403);
-        $normalized = $document === null ? null : TemplateDocument::normalize($document, array_keys(TemplateVariables::definitions()));
+        $normalized = $document === null
+            ? null
+            : $this->demoteEmptyRepeatedTables(
+                TemplateDocument::normalize($document, array_keys(TemplateVariables::definitions())),
+            );
         DB::transaction(function () use ($block, $normalized, $fingerprint, $actor, $request): void {
             SyllabusTemplate::query()->whereKey($block->plantilla_id)->lockForUpdate()->firstOrFail();
             $this->locks->assertTemplateEditable();
@@ -335,6 +339,39 @@ final class SaveTemplateDocument
         };
 
         return $visit($document);
+    }
+
+    /** @param array<string, mixed> $document
+     * @return array<string, mixed>
+     */
+    private function demoteEmptyRepeatedTables(array $document): array
+    {
+        if (isset($document['content'])) {
+            $document['content'] = array_map(
+                $this->demoteEmptyRepeatedTables(...),
+                $document['content'],
+            );
+        }
+
+        if (($document['type'] ?? null) !== 'table'
+            || ($document['attrs']['repeatKey'] ?? null) === null
+            || TemplateDocument::nodes($document, 'column') !== []) {
+            return $document;
+        }
+
+        $document['attrs']['repeatKey'] = null;
+        $document['attrs']['groupByUnit'] = null;
+        $document['attrs']['visualStructure'] = null;
+        unset($document['attrs']['repeatLabel']);
+        $document['content'] = array_map(static function (array $row): array {
+            if (($row['type'] ?? null) === 'tableRow') {
+                $row['attrs']['rowRole'] = 'fixed';
+            }
+
+            return $row;
+        }, $document['content']);
+
+        return $document;
     }
 
     private function auditDesign(TemplateBlock $block, User $actor, Request $request, int $fields): void

@@ -66,6 +66,12 @@ function collectUnits(root: HTMLElement): Unit[] {
             return tableUnits(element);
         }
 
+        if (element.hasAttribute('data-page-flow-through')) {
+            return Array.from(element.querySelectorAll('table'))
+                .filter((table) => !table.parentElement?.closest('table'))
+                .flatMap(tableUnits);
+        }
+
         return [
             {
                 first: element,

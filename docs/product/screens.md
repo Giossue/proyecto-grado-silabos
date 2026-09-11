@@ -186,6 +186,8 @@ paralelo. Son operaciones separadas y ninguna levanta los bloqueos académicos.
   de cada grupo, sin atravesar grupos que se repiten distintas cantidades de veces.
   En ADM-06 se configura sobre la tabla: la cinta clasifica la fila seleccionada, activa
   unidades e inserta datos repetibles en la celda sin un formulario estructural separado.
+  Al retirar el último dato repetible, la tabla pasa a ser estática y permite conservar
+  texto normal sin exigir otra fila de datos.
   Al arrastrar un borde vertical se ajusta esa celda como en Word: el ancho total y las
   demás filas se conservan mediante divisiones lógicas internas.
   Docencia agrega filas/unidades y completa las casillas, sin herramientas de diseño;

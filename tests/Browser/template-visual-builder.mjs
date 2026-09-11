@@ -1023,15 +1023,7 @@ test(
                             {
                                 type: 'tableRow',
                                 attrs: { rowRole: 'fixed' },
-                                content: [
-                                    'Autor',
-                                    'Título',
-                                    'Año',
-                                    'Ciudad',
-                                    'Editorial',
-                                    'ISBN',
-                                    'Código',
-                                ].map((text) => ({
+                                content: ['Contenido'].map((text) => ({
                                     type: 'tableHeader',
                                     attrs: { colspan: 1, rowspan: 1 },
                                     content: [paragraph(text)],
@@ -1040,49 +1032,35 @@ test(
                             {
                                 type: 'tableRow',
                                 attrs: { rowRole: 'record' },
-                                content: [
-                                    ['autor', 'Autor'],
-                                    ['titulo', 'Título'],
-                                    ['anio', 'Año'],
-                                    ['ciudad', 'Ciudad'],
-                                    ['editorial', 'Editorial'],
-                                    ['isbn', 'ISBN'],
-                                    ['codigo', 'Código'],
-                                ].map(([key, label]) => ({
-                                    type: 'tableCell',
-                                    attrs: { colspan: 1, rowspan: 1 },
-                                    content: [
-                                        {
-                                            type: 'paragraph',
-                                            content: [
-                                                {
-                                                    type: 'column',
-                                                    attrs: {
-                                                        key,
-                                                        label,
-                                                        kind: 'texto_largo',
-                                                        role: null,
-                                                        sum: false,
+                                content: [['texto', 'Contenido']].map(
+                                    ([key, label]) => ({
+                                        type: 'tableCell',
+                                        attrs: { colspan: 1, rowspan: 1 },
+                                        content: [
+                                            {
+                                                type: 'paragraph',
+                                                content: [
+                                                    {
+                                                        type: 'column',
+                                                        attrs: {
+                                                            key,
+                                                            label,
+                                                            kind: 'texto_largo',
+                                                            role: null,
+                                                            sum: false,
+                                                        },
                                                     },
-                                                },
-                                            ],
-                                        },
-                                    ],
-                                })),
+                                                ],
+                                            },
+                                        ],
+                                    }),
+                                ),
                             },
                         ],
                     },
                 ],
             };
-            const columns = [
-                'autor',
-                'titulo',
-                'anio',
-                'ciudad',
-                'editorial',
-                'isbn',
-                'codigo',
-            ].map((key) => ({
+            const columns = ['texto'].map((key) => ({
                 key,
                 label: key,
                 type: 'text',
@@ -1206,20 +1184,35 @@ test(
                 tableHeight: table.getBoundingClientRect().height,
             };
         });
-        const year = bibliographyEditor.getByText('$anio', { exact: true });
-        await year.click();
+        const repeatedText = bibliographyEditor.getByText('$texto', {
+            exact: true,
+        });
+        await repeatedText.click();
         await page.keyboard.press('Backspace');
         await page.waitForFunction(
             () =>
                 ![...document.querySelectorAll('[data-template-column]')].some(
-                    (element) => element.textContent === '$anio',
+                    (element) => element.textContent === '$texto',
                 ),
         );
         await page.evaluate(
             () =>
-                new Promise((resolve) =>
-                    requestAnimationFrame(() => requestAnimationFrame(resolve)),
-                ),
+                new Promise((resolve) => {
+                    let frames = 20;
+                    const next = () => {
+                        frames--;
+
+                        if (frames === 0) {
+                            resolve();
+
+                            return;
+                        }
+
+                        requestAnimationFrame(next);
+                    };
+
+                    requestAnimationFrame(next);
+                }),
         );
         const paginationAfterDelete = await page.evaluate(() => {
             const root = document.querySelector('.paged-document-content');
@@ -1247,10 +1240,100 @@ test(
                 tableHeight: table.getBoundingClientRect().height,
             };
         });
-        assert.deepEqual(
-            paginationAfterDelete,
-            paginationBeforeDelete,
-            'Removing an inline repeated field must not move unrelated document sections',
+        assert.equal(
+            paginationAfterDelete.headings.length,
+            paginationBeforeDelete.headings.length,
+        );
+        assert.equal(
+            paginationAfterDelete.headings.every(
+                (top, index, headings) =>
+                    index === 0 || top > headings[index - 1],
+            ),
+            true,
+            'Document sections must keep their order after repagination',
+        );
+        assert.ok(
+            paginationAfterDelete.editorHeight <=
+                paginationBeforeDelete.editorHeight + 0.5,
+        );
+        assert.ok(
+            paginationAfterDelete.tableHeight <=
+                paginationBeforeDelete.tableHeight + 0.5,
+        );
+        assert.ok(
+            paginationAfterDelete.pages <= paginationBeforeDelete.pages,
+            'Removing content must not create extra sheets',
+        );
+        assert.equal(
+            await page.evaluate(() => {
+                const root = document.querySelector('.paged-document-content');
+                const paper = document.querySelector('.paged-document');
+                const table = document.querySelector(
+                    '#template-field-pagination-bibliography .template-table-editor table',
+                );
+                const style = getComputedStyle(paper);
+                const height = Number.parseFloat(
+                    style.getPropertyValue('--page-height'),
+                );
+                const margin = Number.parseFloat(
+                    style.getPropertyValue('--page-margin'),
+                );
+                const gap = Number.parseFloat(
+                    style.getPropertyValue('--page-gap'),
+                );
+                const pitch = height + gap;
+                const usable = height - 2 * margin;
+                const origin = root.getBoundingClientRect().top;
+
+                return [...table.rows]
+                    .filter((row) => !row.hasAttribute('data-page-spacer'))
+                    .every((row) => {
+                        const rect = row.getBoundingClientRect();
+                        const top = rect.top - origin;
+                        const bottom = rect.bottom - origin;
+                        const page = Math.floor((top + 0.5) / pitch);
+
+                        return bottom <= page * pitch + usable + 0.5;
+                    });
+            }),
+            true,
+            'Table rows must not cross the non-printable gap between sheets',
+        );
+        assert.equal(
+            await page.evaluate(() => {
+                const root = document
+                    .querySelector('.paged-document-content')
+                    .getBoundingClientRect();
+                const table = document
+                    .querySelector(
+                        '#template-field-pagination-bibliography .template-table-editor table',
+                    )
+                    .getBoundingClientRect();
+
+                return (
+                    table.left >= root.left - 0.5 &&
+                    table.right <= root.right + 0.5
+                );
+            }),
+            true,
+            'The edited table must remain inside the horizontal document bounds',
+        );
+        await ribbonActions
+            .getByRole('button', { name: 'Guardar tabla' })
+            .click();
+        const demotedRequest = await page.evaluate(() =>
+            window.fixture.requests
+                .filter((request) => request.url.includes('/diseno'))
+                .at(-1),
+        );
+        const demotedTable = demotedRequest.data.document.content[0];
+
+        assert.equal(demotedTable.attrs.repeatKey, null);
+        assert.equal(demotedTable.attrs.groupByUnit, null);
+        assert.equal(demotedTable.attrs.visualStructure, null);
+        assert.equal(
+            demotedTable.content.every((row) => row.attrs.rowRole === 'fixed'),
+            true,
         );
         assert.deepEqual(errors, []);
     },
