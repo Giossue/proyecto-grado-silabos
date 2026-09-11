@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Form, useForm } from '@inertiajs/vue3';
-import { Upload } from '@lucide/vue';
 import { computed, watch } from 'vue';
 import TemplateController from '@/actions/App/Modules/Configuration/Presentation/Http/Controllers/TemplateController';
 import FormSheet from '@/components/domain/FormSheet.vue';
@@ -201,10 +200,6 @@ const submit = (): void => {
                         </Button>
                         <Button v-else as-child variant="outline">
                             <label for="template-institution-logo">
-                                <Upload
-                                    data-icon="inline-start"
-                                    aria-hidden="true"
-                                />
                                 Actualizar logo
                             </label>
                         </Button>

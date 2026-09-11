@@ -14,13 +14,22 @@ type Unit = {
     keepNext: boolean;
     flowThrough: boolean;
     table?: HTMLTableElement;
+    repeatHeader?: HTMLTableRowElement[];
 };
 
 /** A rowspan, including rowspan=0, must stay with all the rows it covers. */
 function tableUnits(table: HTMLTableElement): Unit[] {
     const rows = Array.from(table.rows).filter(
-        (row) => !row.hasAttribute('data-page-spacer'),
+        (row) =>
+            !row.hasAttribute('data-page-spacer') &&
+            !row.hasAttribute('data-page-repeat-header-row'),
     );
+    const firstBodyRow = rows.findIndex((row) =>
+        Array.from(row.cells).some((cell) => cell.tagName !== 'TH'),
+    );
+    const repeatHeader = table.hasAttribute('data-page-repeat-header')
+        ? rows.slice(0, firstBodyRow === -1 ? rows.length : firstBodyRow)
+        : [];
     const units: Unit[] = [];
 
     for (let start = 0; start < rows.length;) {
@@ -44,14 +53,46 @@ function tableUnits(table: HTMLTableElement): Unit[] {
         units.push({
             first: rows[start],
             last: rows[end],
-            keepNext: rows[start].parentElement === table.tHead,
+            keepNext:
+                rows[start].parentElement === table.tHead ||
+                repeatHeader.includes(rows[start]),
             flowThrough: false,
             table,
+            repeatHeader:
+                start >= repeatHeader.length && repeatHeader.length > 0
+                    ? repeatHeader
+                    : undefined,
         });
         start = end + 1;
     }
 
     return units;
+}
+
+function fragmentUnits(element: HTMLElement): Unit[] {
+    const fragments = Array.from(
+        element.querySelectorAll<HTMLElement>('[data-page-fragment]'),
+    ).filter((fragment) => fragment.getClientRects().length > 0);
+    const lines: (Unit & { top: number })[] = [];
+
+    for (const fragment of fragments) {
+        const top = fragment.getBoundingClientRect().top;
+        const line = lines.at(-1);
+
+        if (!line || Math.abs(line.top - top) > 0.5) {
+            lines.push({
+                first: fragment,
+                last: fragment,
+                keepNext: false,
+                flowThrough: false,
+                top,
+            });
+        } else {
+            line.last = fragment;
+        }
+    }
+
+    return lines;
 }
 
 function collectUnits(root: HTMLElement): Unit[] {
@@ -67,9 +108,19 @@ function collectUnits(root: HTMLElement): Unit[] {
         }
 
         if (element.hasAttribute('data-page-flow-through')) {
-            return Array.from(element.querySelectorAll('table'))
+            const tables = Array.from(element.querySelectorAll('table'))
                 .filter((table) => !table.parentElement?.closest('table'))
                 .flatMap(tableUnits);
+
+            if (tables.length > 0) {
+                return tables;
+            }
+
+            const fragments = fragmentUnits(element);
+
+            if (fragments.length > 0) {
+                return fragments;
+            }
         }
 
         return [
@@ -223,6 +274,24 @@ export function createDocumentPaginator(
 
         anchor.before(spacer);
         inserted.push(spacer);
+
+        if (isRow && unit.repeatHeader?.length) {
+            let previous = spacer;
+
+            for (const source of unit.repeatHeader) {
+                const repeated = source.cloneNode(true) as HTMLTableRowElement;
+
+                repeated.setAttribute('data-page-repeat-header-row', '');
+                repeated.setAttribute('aria-hidden', 'true');
+                repeated.setAttribute('inert', '');
+                repeated
+                    .querySelectorAll('[id]')
+                    .forEach((node) => node.removeAttribute('id'));
+                previous.after(repeated);
+                previous = repeated;
+                inserted.push(repeated);
+            }
+        }
     };
 
     const paginate = () => {

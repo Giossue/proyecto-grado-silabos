@@ -83,7 +83,7 @@ window.fixture = {
     previewFields: templatePreviewFields,
     setIdentification(value) {
         identification.value = value;
-        identificationDesign.value = { type: 'doc', content: value.length ? [{ type: 'table', attrs: { repeatKey: null }, content: value.map(cells => ({ type: 'tableRow', content: cells.map(cell => ({ type: 'tableCell', attrs: { colspan: cell.span, rowspan: cell.rows }, content: [{ type: 'paragraph', content: [{ type: 'text', text: cell.text }] }] })) })) }] : [{ type: 'paragraph' }] };
+        identificationDesign.value = { type: 'doc', content: value.length ? [{ type: 'table', attrs: { repeatKey: null }, content: value.map(cells => ({ type: 'tableRow', content: cells.map(cell => ({ type: cell.header ? 'tableHeader' : 'tableCell', attrs: { colspan: cell.span, rowspan: cell.rows }, content: [{ type: 'paragraph', content: [{ type: 'text', text: cell.text }] }] })) })) }] : [{ type: 'paragraph' }] };
     },
     requests,
     failOrder() { failOrder = true; },
@@ -253,20 +253,56 @@ test(
                 )
                 .waitFor();
 
-            await page.waitForFunction(() => {
-                const table = document.querySelector('.document-table');
-                const paper = document.querySelector('.paged-document-paper');
+            await page.waitForFunction(
+                () =>
+                    document.querySelectorAll('.document-table tr').length >=
+                    18,
+            );
+            await page.evaluate(
+                () =>
+                    new Promise((resolve) => {
+                        let remaining = 20;
+                        const frame = () => {
+                            remaining -= 1;
 
-                return (
-                    table &&
-                    table.getBoundingClientRect().bottom <=
-                        paper.getBoundingClientRect().bottom -
-                            (2.5 * 96) / 2.54 +
-                            1 &&
-                    document.querySelectorAll('.paged-document-paper')
-                        .length === 1
-                );
-            });
+                            if (remaining === 0) {
+                                resolve();
+
+                                return;
+                            }
+
+                            requestAnimationFrame(frame);
+                        };
+
+                        requestAnimationFrame(frame);
+                    }),
+            );
+            assert.deepEqual(
+                await page.evaluate(() => {
+                    const margin = (2.5 * 96) / 2.54;
+                    const papers = [
+                        ...document.querySelectorAll('.paged-document-paper'),
+                    ].map((paper) => paper.getBoundingClientRect());
+
+                    return [
+                        ...document.querySelectorAll(
+                            '.document-table tr:not([data-page-spacer]):not([data-page-repeat-header-row])',
+                        ),
+                    ]
+                        .filter((row) => {
+                            const rect = row.getBoundingClientRect();
+
+                            return !papers.some(
+                                (paper) =>
+                                    rect.top >= paper.top + margin - 1 &&
+                                    rect.bottom <= paper.bottom - margin + 1,
+                            );
+                        })
+                        .map((row) => row.textContent);
+                }),
+                [],
+                'The institutional table may use multiple sheets but every row stays inside their margins',
+            );
             assert.equal(
                 await page
                     .locator('.document-table tr:not([data-page-spacer])')
@@ -342,6 +378,117 @@ test(
             assert.deepEqual(
                 samples.typed.map((field) => field.value),
                 [2, '2026-03-01', false, 'a'],
+            );
+
+            const longField = sections(1, true);
+            longField[0].blocks[0].document.content[0].content[0].text =
+                'Un campo docente muy extenso debe continuar por líneas sin ocupar el espacio entre hojas. '.repeat(
+                    250,
+                );
+            await page.evaluate(
+                (value) => window.fixture.setSections(value),
+                longField,
+            );
+            await page.waitForFunction(
+                () =>
+                    document.querySelectorAll('.paged-document-paper').length >
+                    2,
+            );
+            const longFieldLayout = await page.evaluate(() => {
+                const margin = (2.5 * 96) / 2.54;
+                const papers = [
+                    ...document.querySelectorAll('.paged-document-paper'),
+                ].map((paper) => paper.getBoundingClientRect());
+                const pageOf = (node) => {
+                    const rect = node.getBoundingClientRect();
+
+                    return papers.findIndex(
+                        (paper) =>
+                            rect.top >= paper.top + margin - 1 &&
+                            rect.bottom <= paper.bottom - margin + 1,
+                    );
+                };
+                const heading = document.querySelector('.doc-heading-row');
+                const fragments = [
+                    ...document.querySelectorAll('[data-page-fragment]'),
+                ];
+
+                return {
+                    misplaced: fragments
+                        .filter((fragment) => pageOf(fragment) === -1)
+                        .map((fragment) => fragment.textContent),
+                    headingPage: pageOf(heading),
+                    firstFragmentPage: pageOf(fragments[0]),
+                };
+            });
+            assert.deepEqual(
+                longFieldLayout.misplaced,
+                [],
+                'A long teacher field must split between visual lines',
+            );
+            assert.equal(
+                longFieldLayout.headingPage,
+                longFieldLayout.firstFragmentPage,
+                'The block title must accompany the beginning of its first field',
+            );
+
+            const multiField = sections(1, true);
+            multiField[0].blocks = Array.from({ length: 6 }, (_, index) => {
+                const block = structuredClone(multiField[0].blocks[0]);
+
+                block.id = `multi-page-block-${index}`;
+                block.key = `multi_page_block_${index}`;
+                block.title = `Campo ${index + 1}`;
+                block.fields[0].id = `multi-page-field-${index}`;
+                block.fields[0].key = `multi_page_field_${index}`;
+                block.document.content[0].content[0].text =
+                    `Contenido del campo ${index + 1}. `.repeat(80);
+
+                return block;
+            });
+            await page.evaluate(
+                (value) => window.fixture.setSections(value),
+                multiField,
+            );
+            await page.waitForFunction(
+                () =>
+                    document.querySelectorAll('.paged-document-paper').length >
+                    1,
+            );
+            const multiFieldLayout = await page.evaluate(() => {
+                const margin = (2.5 * 96) / 2.54;
+                const papers = [
+                    ...document.querySelectorAll('.paged-document-paper'),
+                ].map((paper) => paper.getBoundingClientRect());
+                const pageOf = (node) => {
+                    const rect = node.getBoundingClientRect();
+
+                    return papers.findIndex(
+                        (paper) =>
+                            rect.top >= paper.top + margin - 1 &&
+                            rect.bottom <= paper.bottom - margin + 1,
+                    );
+                };
+                const fields = [...document.querySelectorAll('.doc-field')];
+
+                return fields.map((field) => ({
+                    heading: pageOf(field.querySelector('.doc-heading-row')),
+                    content: pageOf(
+                        field.querySelector('[data-page-fragment]'),
+                    ),
+                }));
+            });
+            assert.equal(
+                multiFieldLayout.every(
+                    (field) => field.heading === field.content,
+                ),
+                true,
+                'Every field subtitle must accompany its first line',
+            );
+            assert.ok(
+                new Set(multiFieldLayout.map((field) => field.heading)).size >
+                    1,
+                'Fields in one block may continue on following sheets',
             );
 
             const planning = sections(1);
@@ -426,7 +573,11 @@ test(
                 ].map((node) => node.getBoundingClientRect());
                 const margin = (2.5 * 96) / 2.54;
 
-                return [...document.querySelectorAll('[data-page-unit]')]
+                return [
+                    ...document.querySelectorAll(
+                        '[data-page-unit]:not([data-page-flow-through]), [data-page-fragment]',
+                    ),
+                ]
                     .filter((node) => {
                         const rect = node.getBoundingClientRect();
 
@@ -1009,8 +1160,14 @@ test(
                     small: false,
                     center: false,
                 });
-                window.fixture.setIdentification(
-                    Array.from({ length: 120 }, (_, index) =>
+                window.fixture.setIdentification([
+                    [
+                        {
+                            ...cell('Cabecera', 9),
+                            header: true,
+                        },
+                    ],
+                    ...Array.from({ length: 120 }, (_, index) =>
                         index % 3 === 0
                             ? [
                                   cell(`Grupo ${index / 3}`, 4, 3),
@@ -1018,7 +1175,7 @@ test(
                               ]
                             : [cell(`Fila ${index}`, 5)],
                     ),
-                );
+                ]);
                 window.fixture.setSections(value);
             }, tableSection);
             await page.waitForFunction(
@@ -1055,9 +1212,17 @@ test(
             );
             assert.equal(
                 await page
-                    .locator('.document-table tr:not([data-page-spacer])')
+                    .locator(
+                        '.document-table tr:not([data-page-spacer]):not([data-page-repeat-header-row])',
+                    )
                     .count(),
-                120,
+                121,
+            );
+            assert.ok(
+                (await page
+                    .locator('.document-table [data-page-repeat-header-row]')
+                    .count()) > 0,
+                'A continued table repeats its header row',
             );
 
             // A transparent spacer is insufficient if any ancestor paints over it.

@@ -80,6 +80,28 @@ const documentStyle = computed((): CSSProperties & Record<string, string> => ({
     '--document-table-header-background': props.tableHeaderBackground,
     '--document-table-header-color': props.tableHeaderColor,
 }));
+const textFragments = (
+    text: string,
+    attributes: Record<string, unknown> = {},
+): VNodeChild[] =>
+    (text.match(/\S+[ \t]*|[ \t]+|(?:\r\n|\r|\n)/g) ?? [text]).map(
+        (fragment, index) =>
+            /^(?:\r\n|\r|\n)$/.test(fragment)
+                ? h('br', {
+                      ...attributes,
+                      key: index,
+                      'data-page-fragment': '',
+                  })
+                : h(
+                      'span',
+                      {
+                          ...attributes,
+                          key: index,
+                          'data-page-fragment': '',
+                      },
+                      fragment,
+                  ),
+    );
 const columnGroup = (table: DocumentNode): VNodeChild => {
     const occupied: boolean[][] = [];
     const widths: number[] = [];
@@ -133,10 +155,18 @@ const tableWithAction = (
     content: VNodeChild[],
 ): VNodeChild => {
     const tableAction = slots['table-action'];
-    const rendered = h('table', { class: 'document-table' }, [
-        columnGroup(table),
-        h('tbody', {}, content),
-    ]);
+    const repeatsHeader =
+        table.content?.[0]?.content?.every(
+            (cell) => cell.type === 'tableHeader',
+        ) === true;
+    const rendered = h(
+        'table',
+        {
+            class: 'document-table',
+            'data-page-repeat-header': repeatsHeader ? '' : undefined,
+        },
+        [columnGroup(table), h('tbody', {}, content)],
+    );
 
     if (!tableAction) {
         return rendered;
@@ -352,8 +382,11 @@ const input = (
 
         return h(
             'span',
-            { style, class: 'document-value' },
-            content || (props.preview && !choice ? label : ''),
+            { class: 'contents' },
+            textFragments(content || (props.preview && !choice ? label : ''), {
+                style,
+                class: 'document-value',
+            }),
         );
     }
 
@@ -509,11 +542,9 @@ const draw = (
         );
 
     if (node.type === 'text') {
-        return h(
-            'span',
-            { style: markStyle(node, context.insideCell === true) },
-            node.text,
-        );
+        return textFragments(node.text ?? '', {
+            style: markStyle(node, context.insideCell === true),
+        });
     }
 
     if (node.type === 'hardBreak') {
@@ -526,6 +557,7 @@ const draw = (
             {
                 style: markStyle(node, context.insideCell === true),
                 'data-variable': String(attrs.id),
+                'data-page-fragment': '',
                 class: 'document-variable',
             },
             props.variables[String(attrs.id)] ??
@@ -550,6 +582,8 @@ const draw = (
                     ),
                 },
                 'data-page-unit': '',
+                'data-page-flow-through':
+                    !props.editable && !context.insideCell ? '' : undefined,
             },
             children(),
         );

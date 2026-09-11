@@ -389,7 +389,7 @@ final class SaveTemplateDocument
     /** @return list<string> */
     private function optionValues(FieldDefinition $field): array
     {
-        return collect($field->opciones ?? [])
+        return array_values(collect($field->opciones ?? [])
             ->map(static function (mixed $option): ?string {
                 if (is_string($option) || is_int($option)) {
                     return (string) $option;
@@ -400,7 +400,6 @@ final class SaveTemplateDocument
                     : null;
             })
             ->filter(static fn (?string $value): bool => $value !== null)
-            ->values()
-            ->all();
+            ->all());
     }
 }

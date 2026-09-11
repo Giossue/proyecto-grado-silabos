@@ -114,16 +114,22 @@ marcadas con `data-page-unit`; `data-page-keep-next` mantiene títulos con conte
 Si una unidad es el primer contenido visible de un contenedor de presentación, el
 separador se inserta antes del contenedor para no ampliar artificialmente su contorno de
 selección.
-Las tablas se recorren por grupos completos de `rowspan`. Se conservan los nodos Vue y
-sus controles; los separadores se retiran antes de recalcular. `MutationObserver`,
+Las tablas se recorren por grupos completos de `rowspan`; si continúan en otra hoja, el
+paginador inserta una copia visual, inaccesible y transitoria de sus filas iniciales de
+cabecera. Los párrafos de solo lectura exponen fragmentos de texto que se agrupan por
+línea visual, de modo que un contenido mayor que una hoja puede continuar sin atravesar
+el espacio no imprimible. Se conservan los nodos Vue y sus controles; los separadores y
+cabeceras repetidas se retiran antes de recalcular. `MutationObserver`,
 `ResizeObserver` y la carga de fuentes/imágenes disparan un cálculo agrupado por frame,
 sin observar sus propias inserciones. Antes de repetirlo se compara la geometría de las
 unidades y del contenedor: quitar contenido en línea que no cambia ninguna altura no
 reconstruye los separadores ni desplaza bloques ajenos. Ninguna página o posición se
 persiste.
-Es presentación de la muestra administrativa, no un motor de impresión ni un cambio
-del formulario docente. Una unidad indivisible excepcionalmente más alta que el área
-útil se conserva visible; no se recorta ni se descarta contenido.
+Es presentación de la muestra administrativa, no un cambio del formulario continuo de
+Docencia. Los títulos de sección y campo conservan `data-page-keep-next` para acompañar
+la primera línea o fila, sin volver indivisible todo el bloque. Una celda o elemento no
+textual excepcionalmente más alto que el área útil se conserva visible; no se recorta ni
+se descarta contenido.
 
 `AppSidebarLayout` recorta su contenido al contorno redondeado del `SidebarInset` con
 `overflow-clip`; `PageFrame` recorta el exceso horizontal y la hoja mantiene su propio

@@ -63,8 +63,9 @@ Chromium disponibles en la estación; una instalación externa puede indicarse m
 Levanta Vite en loopback con un puerto efímero y monta el componente real con datos
 sintéticos, sin Laravel ni base de datos. Comprueba aumento/reducción de páginas,
 márgenes, renombrado con Escape/foco, zonas de arrastre, menú y reordenamiento reactivo,
-solo lectura, scroll local a 360 px y una tabla
-de 120 filas con celdas combinadas. `PAGINATION_SCREENSHOT` permite guardar una captura
+solo lectura, scroll local a 360 px, un campo textual mayor que una hoja, un bloque con
+varios campos y una tabla de 120 filas con celdas combinadas y cabecera repetida.
+`PAGINATION_SCREENSHOT` permite guardar una captura
 de esa muestra. El mismo caso cubre arrastre nativo con orden previo al drop,
 cancelación sin petición, recuperación ante rechazo y elección del primer campo antes
 del alta; sustituye el transporte Inertia con un registro de peticiones sintéticas.
@@ -74,7 +75,8 @@ parte de esa puerta; la aceptación con documentos/dispositivos reales sigue pen
 
 La suite también lee los diseños iniciales de PHP con el autoloader y un contenedor
 de configuración aislado (sin arrancar Laravel, leer `.env` ni consultar bases).
-Comprueba la ficha institucional compacta, muestras breves y tipadas, una fila de
+Comprueba que la ficha institucional use las hojas necesarias sin forzar una cantidad,
+muestras breves y tipadas, una fila de
 planificación con encabezado/totales y las cabeceras de ambos parciales. Revisa que
 ningún ancestro del separador pinte un rectángulo entre hojas, en claro y oscuro.
 `PAGINATION_REFERENCE_SCREENSHOT` guarda la ficha y `PAGINATION_GAP_SCREENSHOT`

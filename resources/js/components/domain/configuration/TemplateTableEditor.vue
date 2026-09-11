@@ -1485,7 +1485,12 @@ defineExpose({ getDocument });
                                     <DropdownMenuGroup>
                                         <DropdownMenuItem
                                             v-for="item in conditionalChoices"
-                                            :key="`${item.field.key}-${item.option.value}`"
+                                            :key="
+                                                [
+                                                    item.field.key,
+                                                    item.option.value,
+                                                ].join('-')
+                                            "
                                             @select="
                                                 insertField(
                                                     item.field,
@@ -2083,7 +2088,7 @@ defineExpose({ getDocument });
                     <Input
                         id="table-field-options"
                         v-model="newFieldOptions"
-                        placeholder="Sí, No"
+                        placeholder="Ej. Sí, No"
                     />
                     <FieldDescription>
                         Separe cada opción con una coma.

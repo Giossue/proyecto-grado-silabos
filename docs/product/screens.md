@@ -133,8 +133,11 @@ paralelo. Son operaciones separadas y ninguna levanta los bloqueos académicos.
 - ADM-06 muestra hojas carta separadas y numeradas (I-53). El pie derecho muestra
   únicamente el número de página (1, 2, 3…), sin el total. La cantidad se recalcula
   según el contenido de muestra al agregar, retirar, reordenar o renombrar piezas.
-  Los títulos acompañan al primer contenido y las tablas se dividen entre grupos de
-  filas que no atraviesen celdas combinadas. Cada hoja conserva los márgenes de 2.5 cm.
+  Los títulos acompañan al primer contenido; un bloque con varios campos puede continuar
+  entre hojas y cada subtítulo acompaña la primera línea de su campo. Los textos extensos
+  se dividen entre líneas visuales. Las tablas pueden ocupar varias hojas, se dividen
+  entre grupos de filas que no atraviesen celdas combinadas y repiten su cabecera al
+  continuar. Cada hoja conserva los márgenes de 2.5 cm.
   En pantallas pequeñas, la hoja mantiene su ancho y se desplaza dentro de su área.
   Estos saltos no se guardan: cada sílabo puede ocupar más o menos páginas según lo
   que redacte el docente. La muestra no garantiza los mismos cortes que Word o PDF.

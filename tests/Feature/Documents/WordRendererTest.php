@@ -138,6 +138,8 @@ class WordRendererTest extends TestCase
         $this->assertStringContainsString('<w:gridSpan w:val="2"/>', $document);
         $this->assertStringContainsString('<w:vMerge w:val="restart"/>', $document);
         $this->assertStringContainsString('<w:vMerge w:val="continue"/>', $document);
+        $this->assertStringContainsString('<w:tblHeader w:val="1"/>', $document);
+        $this->assertStringContainsString('<w:keepNext w:val="1"/>', $document);
 
         // Dos unidades con su cabecera y totales sumados por unidad.
         $this->assertSame(2, substr_count($document, 'Unidad No.'));

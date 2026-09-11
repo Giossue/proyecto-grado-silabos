@@ -32,9 +32,7 @@ const dataAttributes = computed(() => ({
     [kind.value === 'variable'
         ? 'data-template-variable'
         : `data-template-${kind.value}`]:
-        kind.value === 'variable'
-            ? props.node.attrs.id
-            : props.node.attrs.key,
+        kind.value === 'variable' ? props.node.attrs.id : props.node.attrs.key,
 }));
 </script>
 
