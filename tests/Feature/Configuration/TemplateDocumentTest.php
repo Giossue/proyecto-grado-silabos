@@ -378,6 +378,10 @@ class TemplateDocumentTest extends TestCase
         $saved = $block->fresh()->configuracion['document'];
         $this->assertNull($saved['content'][0]['attrs']['repeatKey']);
         $this->assertSame('fixed', $saved['content'][0]['content'][1]['attrs']['rowRole']);
+        $this->assertSame(
+            'Ejemplo',
+            $saved['content'][0]['content'][1]['content'][0]['content'][0]['content'][0]['text'],
+        );
         $this->assertFalse($field->fresh()->obligatorio);
         $this->assertFalse($field->fresh()->editable_docente);
         $this->assertArrayHasKey(
