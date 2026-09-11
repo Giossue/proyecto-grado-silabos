@@ -182,6 +182,12 @@ paralelo. Son operaciones separadas y ninguna levanta los bloqueos académicos.
 - Si una sección tiene un solo campo, no lleva subtítulo «n.1»: basta el título de la
   sección, en la hoja, el editor docente, la revisión y el Word. Con varios campos sí
   se numeran.
+- DOC-04 separa la captura del formato de impresión. La ficha institucional aparece
+  como un resumen académico de solo lectura y sus respuestas docentes usan controles
+  normales debajo. Los bloques de texto y listas se completan como formulario; solo
+  planificación, evaluación, bibliografía y otras estructuras realmente tabulares
+  conservan una cuadrícula, porque filas y columnas forman parte de sus datos. El diseño
+  oficial permanece en la plantilla, las revisiones y las exportaciones.
 - ADM-06 no mezcla lectura y edición: la ruta normal nunca monta controles mutables. La
   ruta `/editar` reutiliza los mismos bloques, campos y documentos persistidos.
 - Las tablas repetibles conservan sus unidades, columnas tipadas y sumas. El diseño

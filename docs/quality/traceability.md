@@ -39,6 +39,12 @@ por líneas visuales, tablas por grupos de filas y repiten cabeceras de continua
 `document-pagination.mjs` cubre texto mayor que una hoja, varios campos y 120 filas con
 `rowspan`; `WordRendererTest` conserva `keepNext` y `tblHeader` en DOCX.
 
+I-71 — RF-037..044, RN-020..024, CU-07 y DOC-04:
+`SyllabusAcademicContext` separa los datos maestros de la ficha imprimible; el editor
+usa controles de formulario para prosa y listas, y reserva `TemplateDocumentView` para
+estructuras tabulares. `TeacherSyllabusEditorUiTest` impide que la ficha institucional
+o el panel redundante de colaboradores regresen a la captura docente.
+
 - SRS v0.1: RF-001..075, RNF-001..036, RN-001..034, PV-01..20.
 - Modelado funcional: CU-01..18 y modelo de dominio.
 - Prototipos: UI/DOC/COR/ADM.

@@ -23,7 +23,8 @@ infraestructura o umbrales finales.
 
 ## Hallazgos antes de demostrar IA
 
-- El entorno local usa `AI_DRIVER=disabled`; la base no configura el adaptador de IA.
+- PostgreSQL no configura el adaptador de IA. El valor efectivo de `AI_DRIVER` en
+  producción debe comprobarse en las variables de la aplicación y del worker.
 - La única fuente fijada por la convocatoria está activa, pero no tiene contenido, por
   lo que cualquier análisis terminaría como no concluyente sin invocar el modelo.
 - El controlador entrega `executions.*.estado`, mientras la página Vue lee
@@ -35,5 +36,5 @@ infraestructura o umbrales finales.
 ## Próxima unidad vertical
 
 Unificar el contrato de estado entre PHP y Vue con una prueba Inertia, preparar una
-fuente académica real mediante Coordinación y decidir si la demostración usa el
-simulador `baseline` o un servicio HTTP local evaluado.
+fuente académica real mediante Coordinación y comprobar el servicio HTTP de producción
+junto con su worker antes de ejecutar la demostración.

@@ -131,6 +131,14 @@ la primera línea o fila, sin volver indivisible todo el bloque. Una celda o ele
 textual excepcionalmente más alto que el área útil se conserva visible; no se recorta ni
 se descarta contenido.
 
+DOC-04 no monta la ficha institucional ni los bloques de prosa mediante el renderizador
+de impresión. `SyllabusAcademicContext` presenta los datos maestros como contexto de
+solo lectura y los campos editables usan los controles compartidos de formulario. Un
+`TemplateDocumentView` editable se conserva únicamente para bloques de tipo tabla, donde
+la posición en filas y columnas sí tiene significado para la respuesta docente. Así, el
+formato oficial sigue gobernando revisión y exportación sin convertir la captura diaria
+en una simulación de papel.
+
 `AppSidebarLayout` recorta su contenido al contorno redondeado del `SidebarInset` con
 `overflow-clip`; `PageFrame` recorta el exceso horizontal y la hoja mantiene su propio
 desplazamiento horizontal en pantallas estrechas.

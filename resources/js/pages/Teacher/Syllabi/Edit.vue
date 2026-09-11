@@ -13,8 +13,7 @@ import AiAssistanceController from '@/actions/App/Modules/AiAssistance/Presentat
 import SyllabusController from '@/actions/App/Modules/Syllabus/Presentation/Http/Controllers/SyllabusController';
 import TemplateDocumentView from '@/components/domain/configuration/TemplateDocumentView.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
-import IdentificationCard from '@/components/domain/syllabus/IdentificationCard.vue';
-import type { IdentificationCell } from '@/components/domain/syllabus/IdentificationCard.vue';
+import SyllabusAcademicContext from '@/components/domain/syllabus/SyllabusAcademicContext.vue';
 import SyllabusTableEditor from '@/components/domain/syllabus/SyllabusTableEditor.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -83,20 +82,22 @@ type DraftField = {
     rows: DraftRow[];
 };
 
+type DraftBlock = {
+    id: string;
+    title: string;
+    content_type: string;
+    table: TableLayout | null;
+    page_orientation?: 'portrait' | 'landscape' | null;
+    document?: DocumentNode | null;
+    fields: DraftField[];
+};
+
 type DraftSection = {
     id: string;
     key: string;
     title: string;
     description: string | null;
-    blocks: {
-        id: string;
-        title: string;
-        content_type: string;
-        table: TableLayout | null;
-        page_orientation?: 'portrait' | 'landscape' | null;
-        document?: DocumentNode | null;
-        fields: DraftField[];
-    }[];
+    blocks: DraftBlock[];
 };
 
 type ValidationSummary = {
@@ -136,8 +137,6 @@ const props = defineProps<{
         completion: number;
         guardado_en: string | null;
         parallels: string[];
-        teachers: string[];
-        identification: IdentificationCell[][];
         template_variables: Record<string, string>;
         planning_expectations: PlanningExpectations;
         sections: DraftSection[];
@@ -250,6 +249,23 @@ const validationFor = (fieldId: string) =>
     props.syllabus.validation?.results.filter(
         (result) => result.field_id === fieldId,
     ) ?? [];
+
+const usesTabularDocument = (
+    block: DraftBlock,
+): block is DraftBlock & { document: DocumentNode } =>
+    block.content_type === 'table' && block.document != null;
+
+const formFields = (block: DraftBlock): DraftField[] => {
+    if (usesTabularDocument(block)) {
+        return [];
+    }
+
+    return block.content_type === 'institutional'
+        ? block.fields.filter(
+              (field) => !field.inherited && field.teacher_editable,
+          )
+        : block.fields;
+};
 
 const scheduleSave = (field: DraftField): void => {
     if (conflict.value || field.inherited || !field.teacher_editable) {
@@ -700,11 +716,13 @@ onBeforeUnmount(() => {
             </AlertDescription>
         </Alert>
 
-        <div class="grid gap-6 xl:grid-cols-[15rem_minmax(0,1fr)_18rem]">
+        <div class="grid gap-6 xl:grid-cols-[14rem_minmax(0,1fr)]">
             <Card class="h-fit xl:sticky xl:top-4">
                 <CardHeader>
                     <CardTitle>Secciones</CardTitle>
-                    <CardDescription>Navegue por el documento.</CardDescription>
+                    <CardDescription>
+                        Vaya directamente a los campos de cada sección.
+                    </CardDescription>
                 </CardHeader>
                 <CardContent>
                     <nav aria-label="Secciones del sílabo">
@@ -729,6 +747,70 @@ onBeforeUnmount(() => {
             </Card>
 
             <main class="flex min-w-0 flex-col gap-6">
+                <Card v-if="requestedObservations.length > 0">
+                    <CardHeader>
+                        <CardTitle>Observaciones por responder</CardTitle>
+                        <CardDescription>
+                            Guarde una respuesta para cada observación. Se
+                            fijará al reenviar.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent class="flex flex-col gap-4">
+                        <article
+                            v-for="observation in requestedObservations"
+                            :key="observation.id"
+                            class="flex flex-col gap-3 rounded-md border p-3"
+                        >
+                            <Badge variant="outline" class="self-start">
+                                Revisión {{ observation.revision_number }}
+                            </Badge>
+                            <p class="text-sm whitespace-pre-wrap">
+                                {{ observation.content }}
+                            </p>
+                            <Form
+                                v-bind="
+                                    SyllabusController.respondObservation.form({
+                                        syllabus: syllabus.id,
+                                        observation: observation.id,
+                                    })
+                                "
+                                :options="{ preserveScroll: true }"
+                                class="flex flex-col gap-2"
+                                v-slot="{ errors, processing }"
+                            >
+                                <Field>
+                                    <FieldLabel
+                                        :for="`response-${observation.id}`"
+                                        required
+                                    >
+                                        Respuesta
+                                    </FieldLabel>
+                                    <Textarea
+                                        :id="`response-${observation.id}`"
+                                        name="content"
+                                        :model-value="
+                                            observation.response?.content ?? ''
+                                        "
+                                        rows="4"
+                                        required
+                                    />
+                                    <FieldError :errors="[errors.content]" />
+                                </Field>
+                                <Button
+                                    type="submit"
+                                    size="sm"
+                                    variant="outline"
+                                    class="self-start"
+                                    :disabled="processing || globalSaving"
+                                >
+                                    <Spinner v-if="processing" />
+                                    Guardar respuesta
+                                </Button>
+                            </Form>
+                        </article>
+                    </CardContent>
+                </Card>
+
                 <Card
                     v-for="section in syllabus.sections"
                     :id="`section-${section.id}`"
@@ -756,8 +838,12 @@ onBeforeUnmount(() => {
                             >
                                 {{ block.title }}
                             </h3>
+                            <SyllabusAcademicContext
+                                v-if="block.content_type === 'institutional'"
+                                :variables="syllabus.template_variables"
+                            />
                             <TemplateDocumentView
-                                v-if="block.document"
+                                v-if="usesTabularDocument(block)"
                                 :document="block.document"
                                 :fields="designFields(block.fields)"
                                 :variables="syllabus.template_variables"
@@ -784,7 +870,7 @@ onBeforeUnmount(() => {
                                 "
                             />
                             <div
-                                v-if="block.document"
+                                v-if="usesTabularDocument(block)"
                                 class="flex flex-col gap-2"
                                 aria-live="polite"
                             >
@@ -842,9 +928,7 @@ onBeforeUnmount(() => {
                                 </div>
                             </div>
                             <Field
-                                v-for="field in block.document
-                                    ? []
-                                    : block.fields"
+                                v-for="field in formFields(block)"
                                 :key="field.id"
                                 :data-invalid="
                                     fieldStates[field.id].status === 'error' ||
@@ -872,17 +956,8 @@ onBeforeUnmount(() => {
                                     {{ field.help }}
                                 </FieldDescription>
 
-                                <IdentificationCard
-                                    v-if="
-                                        block.content_type ===
-                                            'institutional' && field.inherited
-                                    "
-                                    :id="`field-${field.id}`"
-                                    :grid="syllabus.identification"
-                                />
-
                                 <div
-                                    v-else-if="
+                                    v-if="
                                         field.inherited ||
                                         !field.teacher_editable
                                     "
@@ -1173,89 +1248,6 @@ onBeforeUnmount(() => {
                     </CardContent>
                 </Card>
             </main>
-
-            <aside class="flex flex-col gap-6 xl:sticky xl:top-4 xl:h-fit">
-                <Card v-if="requestedObservations.length > 0">
-                    <CardHeader>
-                        <CardTitle>Observaciones por responder</CardTitle>
-                        <CardDescription>
-                            Guarde una respuesta para cada observación. Se
-                            fijará al reenviar.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent class="space-y-4">
-                        <article
-                            v-for="observation in requestedObservations"
-                            :key="observation.id"
-                            class="space-y-3 rounded-md border p-3"
-                        >
-                            <Badge variant="outline">
-                                Revisión {{ observation.revision_number }}
-                            </Badge>
-                            <p class="text-sm whitespace-pre-wrap">
-                                {{ observation.content }}
-                            </p>
-                            <Form
-                                v-bind="
-                                    SyllabusController.respondObservation.form({
-                                        syllabus: syllabus.id,
-                                        observation: observation.id,
-                                    })
-                                "
-                                :options="{ preserveScroll: true }"
-                                class="space-y-2"
-                                v-slot="{ errors, processing }"
-                            >
-                                <Field>
-                                    <FieldLabel
-                                        :for="`response-${observation.id}`"
-                                        required
-                                    >
-                                        Respuesta
-                                    </FieldLabel>
-                                    <Textarea
-                                        :id="`response-${observation.id}`"
-                                        name="content"
-                                        :model-value="
-                                            observation.response?.content ?? ''
-                                        "
-                                        rows="4"
-                                        required
-                                    />
-                                    <FieldError :errors="[errors.content]" />
-                                </Field>
-                                <Button
-                                    type="submit"
-                                    size="sm"
-                                    variant="outline"
-                                    :disabled="processing || globalSaving"
-                                >
-                                    <Spinner v-if="processing" />
-                                    Guardar respuesta
-                                </Button>
-                            </Form>
-                        </article>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Colaboradores</CardTitle>
-                        <CardDescription>
-                            El bloqueo optimista evita sobrescribir otra sesión.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <ul class="flex flex-col gap-2 text-sm">
-                            <li
-                                v-for="teacher in syllabus.teachers"
-                                :key="teacher"
-                            >
-                                {{ teacher }}
-                            </li>
-                        </ul>
-                    </CardContent>
-                </Card>
-            </aside>
         </div>
     </PageFrame>
 </template>
