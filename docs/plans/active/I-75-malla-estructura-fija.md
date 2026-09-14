@@ -25,6 +25,7 @@ El 2026-09-14, local y producción tenían cero definiciones libres y cero valor
 
 ## Despliegue
 
-La migración elimina tablas que el artefacto anterior consulta. Debe desplegarse el
-artefacto de esta decisión junto con `000060`, con una breve ventana de mantenimiento o
-compatibilidad controlada; no se aplica aislada sobre la aplicación antigua.
+El 14 de septiembre de 2026 se aplicó `000060` en producción, lote 39, después de
+verificar cero definiciones libres y cero valores EAV. Se creó antes el respaldo remoto
+`/tmp/silabos-production-000060-lJiieX/pre-000060.dump`. La verificación posterior
+confirmó que ambas tablas ya no existen.

@@ -168,27 +168,6 @@ UNIQUE (carrera_id)
 UNIQUE (carrera_id, codigo)
 ~~~
 
-## definiciones_campo_malla
-
-**Contexto:** campos académicos configurables de una malla. Esta tabla permanece en
-producción hasta desplegar la migración `000060` junto con el código de I-75.
-
-~~~text
-id UUID (PK)
-malla_id UUID (FK → mallas.id) NOT NULL
-clave VARCHAR NOT NULL
-etiqueta VARCHAR NOT NULL
-tipo VARCHAR NOT NULL
-clave_sistema VARCHAR NULL
-posicion SMALLINT NOT NULL
-visible_en_tarjeta BOOLEAN NOT NULL
-totalizable BOOLEAN NOT NULL
-activo BOOLEAN NOT NULL
-
-UNIQUE (malla_id, clave)
-UNIQUE (malla_id, clave_sistema)
-~~~
-
 ## asignaturas
 
 **Contexto:** materias de una malla.
@@ -213,20 +192,6 @@ unidad_organizacion_curricular VARCHAR NULL
 modalidad VARCHAR NULL
 
 UNIQUE (malla_id, codigo_institucional)
-~~~
-
-## valores_campo_asignatura
-
-**Contexto:** valor de un campo de malla para una asignatura. Esta tabla permanece en
-producción hasta desplegar la migración `000060` junto con el código de I-75.
-
-~~~text
-id UUID (PK)
-asignatura_id UUID (FK → asignaturas.id) NOT NULL
-definicion_campo_id UUID (FK → definiciones_campo_malla.id) NOT NULL
-valor JSONB NULL
-
-UNIQUE (asignatura_id, definicion_campo_id)
 ~~~
 
 ## requisitos_asignatura
@@ -278,8 +243,6 @@ facultades 1:N carreras
 campus 1:N carreras
 carreras 1:0..1 mallas
 mallas 1:N asignaturas
-mallas 1:N definiciones_campo_malla (hasta migración 000060)
-asignaturas N:M definiciones_campo_malla mediante valores_campo_asignatura (hasta migración 000060)
 asignaturas 1:N requisitos_asignatura, como asignatura y como requisito
 periodos_academicos 1:N programaciones_asignatura
 asignaturas 1:N programaciones_asignatura
@@ -1012,7 +975,6 @@ usuarios N:M roles mediante asignaciones_rol
 usuarios N:M carreras por roles con alcance en asignaciones_rol
 asignaciones_rol (docente) 1:N docentes_paralelo
 paralelos 1:N docentes_paralelo
-asignaturas N:M definiciones_campo_malla mediante valores_campo_asignatura (hasta migración 000060)
 convocatorias_carreras N:M fuentes_academicas mediante fuentes_convocatoria
 silabos N:M paralelos mediante alcances_silabo
 silabos N:M usuarios colaboradores mediante colaboradores_silabo
