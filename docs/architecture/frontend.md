@@ -145,6 +145,11 @@ serial y espera también una petición ya iniciada. El índice lateral de escrit
 `Select` móvil comparten `selectSection`; el fragmento `#section-{id}` permite recuperar
 el punto de trabajo sin persistirlo en PostgreSQL.
 
+Los controles editables llaman a `scheduleSave` con cada modificación y consolidan los
+cambios durante 700 ms antes de enviarlos a la cola serial. No existe una acción manual
+por campo: el encabezado comunica el estado global y las transiciones hacia IA,
+validación, envío o una nueva sección fuerzan el vaciado de la cola antes de continuar.
+
 `AppSidebarLayout` recorta su contenido al contorno redondeado del `SidebarInset` con
 `overflow-clip`; `PageFrame` recorta el exceso horizontal y la hoja mantiene su propio
 desplazamiento horizontal en pantallas estrechas.

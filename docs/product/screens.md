@@ -192,6 +192,8 @@ paralelo. Son operaciones separadas y ninguna levanta los bloqueos académicos.
   con la sección actual; en pantallas pequeñas lo reemplaza por un selector. Las acciones
   anterior y siguiente esperan el autoguardado antes de cambiar y reflejan la sección en
   el fragmento de la URL, sin guardar navegación como dato académico.
+- DOC-04 no presenta acciones «Guardar ahora» por campo. Cada cambio activa el
+  autoguardado y el único estado de guardado visible se mantiene en el encabezado.
 - ADM-06 no mezcla lectura y edición: la ruta normal nunca monta controles mutables. La
   ruta `/editar` reutiliza los mismos bloques, campos y documentos persistidos.
 - Las tablas repetibles conservan sus unidades, columnas tipadas y sumas. El diseño

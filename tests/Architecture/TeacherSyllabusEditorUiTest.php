@@ -19,7 +19,10 @@ test('el editor docente separa el formulario del formato de impresión', functio
         ->toContain('Siguiente sección')
         ->toContain('@update:model-value="selectSectionById"')
         ->toContain('await flushPendingChanges()')
+        ->toContain('scheduleSave(field)')
         ->not->toContain('<IdentificationCard')
+        ->not->toContain('Guardar ahora')
+        ->not->toContain('queueNow')
         ->not->toContain('<CardTitle>Colaboradores</CardTitle>');
 
     expect($context)

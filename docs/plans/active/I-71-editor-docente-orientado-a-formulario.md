@@ -25,6 +25,7 @@ RF-037..044; RN-020..024; CU-07; DOC-03..05; CP-F. No depende de una decisión
 - [x] Mostrar una sola sección activa con navegación anterior/siguiente.
 - [x] Reemplazar el listado extenso por un selector de sección en pantallas pequeñas.
 - [x] Vaciar y esperar la cola de autoguardado antes de cambiar de sección.
+- [x] Retirar el guardado manual repetido de cada campo y tabla.
 - [x] Verificar tipos, lint, formato y la prueba focalizada de interfaz.
 
 ## Criterios de aceptación
@@ -37,9 +38,11 @@ RF-037..044; RN-020..024; CU-07; DOC-03..05; CP-F. No depende de una decisión
 - La pantalla no introduce desplazamiento horizontal global a 360 px.
 - Cambiar de sección espera cualquier guardado pendiente y conserva la sección activa en
   el fragmento de la URL.
+- Cada modificación activa el autoguardado; el encabezado comunica su estado y no se
+  repite una acción «Guardar ahora» dentro de cada campo.
 
 ## Evidencia
 
-- `TeacherSyllabusEditorUiTest`: 1 prueba y 17 aserciones.
-- Suite arquitectónica relacionada: 35 pruebas y 1.638 aserciones.
+- `TeacherSyllabusEditorUiTest`: 1 prueba y 20 aserciones.
+- Suite arquitectónica relacionada: 35 pruebas y 1.641 aserciones.
 - Prettier, ESLint, TypeScript, build de producción y `git diff --check` aprobados.

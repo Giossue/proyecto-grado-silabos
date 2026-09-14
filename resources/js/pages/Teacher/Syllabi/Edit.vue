@@ -4,7 +4,6 @@ import {
     AlertTriangle,
     CheckCircle2,
     RotateCcw,
-    Save,
     Send,
     Trash2,
 } from '@lucide/vue';
@@ -410,18 +409,6 @@ const addRow = (field: DraftField): void => {
 const removeRow = (field: DraftField, index: number): void => {
     fieldStates[field.id].rows.splice(index, 1);
     scheduleSave(field);
-};
-
-const queueNow = (field: DraftField): void => {
-    const timer = timers.get(field.id);
-
-    if (timer) {
-        clearTimeout(timer);
-        timers.delete(field.id);
-    }
-
-    pendingFieldIds.add(field.id);
-    void processQueue();
 };
 
 const openAi = async (field: DraftField): Promise<void> => {
@@ -1016,15 +1003,6 @@ onBeforeUnmount(() => {
                                     >
                                         Asistencia IA
                                     </Button>
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="sm"
-                                        :disabled="globalSaving || conflict"
-                                        @click="queueNow(field)"
-                                    >
-                                        Guardar ahora
-                                    </Button>
                                 </div>
                             </div>
                             <Field
@@ -1314,10 +1292,10 @@ onBeforeUnmount(() => {
                                         }}
                                     </span>
                                     <span
+                                        v-if="field.ai_enabled"
                                         class="flex flex-wrap items-center gap-1"
                                     >
                                         <Button
-                                            v-if="field.ai_enabled"
                                             type="button"
                                             size="sm"
                                             variant="outline"
@@ -1325,21 +1303,6 @@ onBeforeUnmount(() => {
                                             @click="openAi(field)"
                                         >
                                             Asistencia IA
-                                        </Button>
-                                        <Button
-                                            type="button"
-                                            size="sm"
-                                            variant="ghost"
-                                            :disabled="
-                                                globalSaving ||
-                                                fieldStates[field.id].status ===
-                                                    'saving' ||
-                                                conflict
-                                            "
-                                            @click="queueNow(field)"
-                                        >
-                                            <Save aria-hidden="true" />
-                                            Guardar ahora
                                         </Button>
                                     </span>
                                 </div>
