@@ -116,8 +116,10 @@ paralelo. Son operaciones separadas y ninguna levanta los bloqueos académicos.
   su etiqueta basta para comunicar el resultado. El indicador de carga sí permanece. Se
   exceptúan los controles exclusivamente icónicos con nombre accesible y los disparadores
   que funcionan como campos compuestos, como el selector de fecha.
-- Editor y revisión usan navegación por secciones, completitud, errores, observaciones y
-  estado de guardado sin saturar la pantalla.
+- El editor docente presenta el formulario completo en flujo continuo. Mientras falten
+  obligatorios no muestra acciones de validación o envío; al completarlos ofrece
+  **Validar sílabo** y, solo para la versión validada sin errores bloqueantes, cambia a
+  **Enviar sílabo**. Las recomendaciones de IA permanecen opcionales y no bloquean.
 - I-60 separa los dos estados de ADM-06. `/admin/plantilla/{id}` presenta la plantilla
   completa en solo lectura y ofrece **Editar**. `/admin/plantilla/{id}/editar` conserva
   la hoja y añade una cinta contextual: al seleccionar un bloque, campo o tabla muestra

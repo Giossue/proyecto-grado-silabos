@@ -231,6 +231,7 @@ class SyllabusController extends Controller
                 ->values(),
             'validation' => $lastValidation instanceof ValidationRun ? [
                 'completed_at' => $lastValidation->completado_en->toIso8601String(),
+                'version_bloqueo' => $lastValidation->version_bloqueo,
                 'blocking_errors' => $lastValidation->errores_bloqueantes,
                 'warnings' => $lastValidation->advertencias,
                 'results' => $lastValidation->results->map(fn ($result) => [

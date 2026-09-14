@@ -145,8 +145,16 @@ la página conserva el contexto y evita duplicar los títulos en otro panel.
 
 Los controles editables llaman a `scheduleSave` con cada modificación y consolidan los
 cambios durante 700 ms antes de enviarlos a la cola serial. No existe una acción manual
-por campo: el encabezado comunica el estado global y las transiciones hacia IA,
+por campo ni un distintivo permanente de guardado en el encabezado; los fallos y
+conflictos continúan visibles junto al contenido afectado. Las transiciones hacia IA,
 validación o envío fuerzan el vaciado de la cola antes de continuar.
+
+DOC-04 usa `porcentaje_completitud`, recalculado por `UpdateDraftField`, para revelar la
+siguiente acción. Con menos de 100 % no muestra botones de validación o envío. Al llegar
+a 100 % ofrece **Validar sílabo**. Una ejecución solo se considera vigente cuando su
+`version_bloqueo` coincide con la versión actual; cualquier nueva edición la invalida en
+la interfaz. Sin errores determinísticos se ofrece **Enviar sílabo**. Las recomendaciones
+de IA siguen un flujo separado, opcional y no bloqueante.
 
 `AppSidebarLayout` recorta su contenido al contorno redondeado del `SidebarInset` con
 `overflow-clip`; `PageFrame` recorta el exceso horizontal y la hoja mantiene su propio

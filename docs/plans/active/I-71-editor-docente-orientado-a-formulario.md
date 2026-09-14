@@ -24,6 +24,10 @@ RF-037..044; RN-020..024; CU-07; DOC-03..05; CP-F. No depende de una decisión
 - [x] Eliminar el panel lateral redundante de colaboradores y ampliar el formulario.
 - [x] Presentar todas las secciones consecutivamente, sin navegación paralela.
 - [x] Retirar el guardado manual repetido de cada campo y tabla.
+- [x] Simplificar la cabecera y mostrar una sola acción progresiva según completitud y
+      validación vigente.
+- [x] Evitar que `PageFrame` reserve espacio cuando el slot de acciones existe pero su
+      condición no muestra ningún botón.
 - [x] Verificar tipos, lint, formato y la prueba focalizada de interfaz.
 
 ## Criterios de aceptación
@@ -35,11 +39,16 @@ RF-037..044; RN-020..024; CU-07; DOC-03..05; CP-F. No depende de una decisión
 - Autoguardado, validación, IA, concurrencia y envío conservan su comportamiento.
 - La pantalla no introduce desplazamiento horizontal global a 360 px.
 - Todas las secciones aparecen una debajo de otra dentro del mismo flujo de captura.
-- Cada modificación activa el autoguardado; el encabezado comunica su estado y no se
-  repite una acción «Guardar ahora» dentro de cada campo.
+- Cada modificación activa el autoguardado y no se repite una acción «Guardar ahora»
+  dentro de cada campo.
+- La cabecera no repite regreso, estado del borrador ni hora de guardado.
+- Con obligatorios incompletos no aparece una acción de validación o envío; al completar
+  se ofrece validar y solo una validación vigente sin errores habilita el envío.
+- Una edición posterior invalida visualmente la validación anterior. Las sugerencias de
+  IA se pueden atender o ignorar y no cambian la elegibilidad para enviar.
 
 ## Evidencia
 
-- `TeacherSyllabusEditorUiTest`: 1 prueba y 20 aserciones.
-- Suite arquitectónica relacionada: 35 pruebas y 1.641 aserciones.
+- `TeacherSyllabusEditorUiTest`: 1 prueba y 29 aserciones.
+- Suites focalizadas de sílabos y cabecera: 69 pruebas y 2.008 aserciones.
 - Prettier, ESLint, TypeScript, build de producción y `git diff --check` aprobados.

@@ -1,12 +1,6 @@
 <script setup lang="ts">
-import { Form, Head, Link, router } from '@inertiajs/vue3';
-import {
-    AlertTriangle,
-    CheckCircle2,
-    RotateCcw,
-    Send,
-    Trash2,
-} from '@lucide/vue';
+import { Form, Head, router } from '@inertiajs/vue3';
+import { AlertTriangle, RotateCcw, Send, Trash2 } from '@lucide/vue';
 import { computed, onBeforeUnmount, reactive, ref } from 'vue';
 import AiAssistanceController from '@/actions/App/Modules/AiAssistance/Presentation/Http/Controllers/AiAssistanceController';
 import SyllabusController from '@/actions/App/Modules/Syllabus/Presentation/Http/Controllers/SyllabusController';
@@ -101,6 +95,7 @@ type DraftSection = {
 
 type ValidationSummary = {
     completed_at: string;
+    version_bloqueo: number;
     blocking_errors: number;
     warnings: number;
     results: {
@@ -190,34 +185,35 @@ const fieldStates = reactive<Record<string, FieldState>>(
 );
 
 const lockVersion = ref(props.syllabus.version_bloqueo);
-const savedAt = ref(props.syllabus.guardado_en);
+const completion = ref(props.syllabus.completion);
 const globalSaving = ref(false);
 const validating = ref(false);
 const preparingSubmission = ref(false);
 const conflict = ref(false);
+const validationInvalidated = ref(false);
 const pendingFieldIds = new Set<string>();
 const timers = new Map<string, ReturnType<typeof setTimeout>>();
 let queuePromise: Promise<void> | null = null;
 
-const saveLabel = computed(() => {
-    if (conflict.value) {
-        return 'Conflicto detectado';
-    }
+const requiredFieldsComplete = computed(() => completion.value >= 100);
+const currentValidation = computed(() => {
+    const validation = props.syllabus.validation;
 
-    if (globalSaving.value || timers.size > 0) {
-        return 'Guardando cambios…';
-    }
-
-    if (!savedAt.value) {
-        return 'Sin guardados';
-    }
-
-    return `Guardado ${new Intl.DateTimeFormat('es-EC', {
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-    }).format(new Date(savedAt.value))}`;
+    return requiredFieldsComplete.value &&
+        !validationInvalidated.value &&
+        validation?.version_bloqueo === lockVersion.value
+        ? validation
+        : null;
 });
+const canValidate = computed(
+    () => requiredFieldsComplete.value && currentValidation.value === null,
+);
+const canSubmit = computed(
+    () =>
+        requiredFieldsComplete.value &&
+        currentValidation.value !== null &&
+        currentValidation.value.blocking_errors === 0,
+);
 
 const csrfToken =
     document
@@ -246,7 +242,7 @@ const masterValue = (value: JsonValue): string => {
 };
 
 const validationFor = (fieldId: string) =>
-    props.syllabus.validation?.results.filter(
+    currentValidation.value?.results.filter(
         (result) => result.field_id === fieldId,
     ) ?? [];
 
@@ -271,6 +267,8 @@ const scheduleSave = (field: DraftField): void => {
     if (conflict.value || field.inherited || !field.teacher_editable) {
         return;
     }
+
+    validationInvalidated.value = true;
 
     const previous = timers.get(field.id);
 
@@ -477,6 +475,7 @@ const saveField = async (field: DraftField): Promise<void> => {
         const payload = (await response.json()) as {
             message?: string;
             version_bloqueo?: number;
+            completion?: number;
             guardado_en?: string;
             version_bloqueo_actual?: number;
             errors?: Record<string, string[]>;
@@ -504,7 +503,7 @@ const saveField = async (field: DraftField): Promise<void> => {
         }
 
         lockVersion.value = payload.version_bloqueo ?? lockVersion.value;
-        savedAt.value = payload.guardado_en ?? savedAt.value;
+        completion.value = payload.completion ?? completion.value;
 
         if (field.type === 'repetible' && payload.rows) {
             state.rows = payload.rows.map((row) => ({
@@ -536,7 +535,7 @@ const flushPendingChanges = async (): Promise<boolean> => {
 };
 
 const runValidation = async (): Promise<void> => {
-    if (!(await flushPendingChanges())) {
+    if (!(await flushPendingChanges()) || !canValidate.value) {
         return;
     }
 
@@ -546,6 +545,11 @@ const runValidation = async (): Promise<void> => {
         {},
         {
             preserveScroll: true,
+            onSuccess: () => {
+                lockVersion.value = props.syllabus.version_bloqueo;
+                completion.value = props.syllabus.completion;
+                validationInvalidated.value = false;
+            },
             onFinish: () => {
                 validating.value = false;
             },
@@ -562,18 +566,12 @@ const goToSubmission = async (): Promise<void> => {
     const canContinue = await flushPendingChanges();
     preparingSubmission.value = false;
 
-    if (canContinue) {
+    if (canContinue && canSubmit.value) {
         router.visit(
             SyllabusController.submitConfirmation.url(props.syllabus.id),
         );
     }
 };
-
-const stateLabel = computed(() =>
-    props.syllabus.state === 'correccion_solicitada'
-        ? 'Corrección solicitada'
-        : 'Borrador',
-);
 
 const requestedObservations = computed(() =>
     props.syllabus.observations.filter(
@@ -604,40 +602,18 @@ onBeforeUnmount(() => {
         :title="syllabus.subject"
         :description="`${syllabus.code} · ${syllabus.convocation} · Paralelo(s) ${syllabus.parallels.join(', ')}`"
     >
-        <template #eyebrow>
-            <Button as-child variant="link" class="h-auto px-0">
-                <Link :href="SyllabusController.show(syllabus.id)">
-                    ← Volver al resumen
-                </Link>
-            </Button>
-        </template>
-        <template #meta>
-            <Badge variant="secondary">{{ stateLabel }}</Badge>
-            <!-- El estado de guardado informa, no acciona. Vive aquí para que no flote
-                 junto a los botones en móvil; conserva `aria-live` para que el lector
-                 anuncie los cambios. -->
-            <span aria-live="polite">
-                <Badge :variant="conflict ? 'destructive' : 'outline'">
-                    <Spinner v-if="globalSaving" />
-                    <CheckCircle2
-                        v-else-if="!conflict && savedAt"
-                        aria-hidden="true"
-                    />
-                    {{ saveLabel }}
-                </Badge>
-            </span>
-        </template>
         <template #actions>
             <Button
+                v-if="canValidate"
                 type="button"
-                variant="outline"
                 :disabled="globalSaving || validating || conflict"
                 @click="runValidation"
             >
                 <Spinner v-if="validating" />
-                Validar borrador
+                Validar sílabo
             </Button>
             <Button
+                v-else-if="canSubmit"
                 type="button"
                 :disabled="
                     globalSaving ||
@@ -649,7 +625,7 @@ onBeforeUnmount(() => {
             >
                 <Spinner v-if="preparingSubmission" />
                 <Send v-else aria-hidden="true" />
-                Revisar y enviar
+                Enviar sílabo
             </Button>
         </template>
 
@@ -689,19 +665,24 @@ onBeforeUnmount(() => {
         </Alert>
 
         <Alert
-            v-if="syllabus.validation"
+            v-if="currentValidation"
             :variant="
-                syllabus.validation.blocking_errors > 0
+                currentValidation.blocking_errors > 0
                     ? 'destructive'
                     : 'default'
             "
         >
-            <AlertTitle>Validación del borrador</AlertTitle>
+            <AlertTitle>Validación del sílabo</AlertTitle>
             <AlertDescription>
-                {{ syllabus.validation.blocking_errors }} error(es)
-                bloqueante(s) y
-                {{ syllabus.validation.warnings }} advertencia(s). Este
-                resultado no proviene de IA.
+                <template v-if="currentValidation.blocking_errors > 0">
+                    Se encontraron
+                    {{ currentValidation.blocking_errors }} error(es)
+                    bloqueante(s). Corríjalos y vuelva a validar.
+                </template>
+                <template v-else>
+                    No hay errores bloqueantes. Las recomendaciones de IA son
+                    opcionales; ya puede enviar el sílabo.
+                </template>
             </AlertDescription>
         </Alert>
 

@@ -98,7 +98,7 @@ const floatingHidden = computed(() => hidden.value && !expanded.value);
             cn(
                 'flex min-w-0 flex-col gap-6 overflow-x-clip p-4 sm:p-6',
                 // Sitio para que el botón flotante no tape la última fila de una tabla.
-                $slots.actions &&
+                actionCount > 0 &&
                     'max-sm:pb-[calc(6rem+env(safe-area-inset-bottom))]',
                 widthClass,
             )
@@ -129,7 +129,7 @@ const floatingHidden = computed(() => hidden.value && !expanded.value);
                 fila en el encabezado; en móvil, una pila flotante abajo a la derecha.
             -->
             <div
-                v-if="$slots.actions"
+                v-if="actionCount > 0"
                 :class="
                     cn(
                         'flex w-full shrink-0 flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap sm:justify-end',
