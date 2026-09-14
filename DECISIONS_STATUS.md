@@ -157,6 +157,19 @@ técnico determinista y un cliente HTTP exclusivamente local. Esto demuestra int
 y degradación segura, pero no confirma motor, modelo, hardware, corpus, precedencia ni
 umbrales: `PV-02`, `PV-13`, `PV-14` y `PV-18` permanecen `POR VALIDAR`.
 
+I-72 (14 de septiembre de 2026) fija por decisión explícita del responsable del producto
+la configuración de alcance de IA: Administración define en cada campo el valor
+predeterminado; la Coordinación de cada carrera puede sobrescribirlo y conserva esa
+preferencia hasta que cualquier configuración de la plantilla cambie, momento en que
+vuelve a heredarse el valor administrativo. Coordinación también elige antes de iniciar
+su alcance qué fuentes activas de su carrera alimentarán la IA. Esta última decisión
+reemplaza únicamente la selección automática de todas las fuentes establecida en I-46;
+no modifica su congelación durante un alcance abierto ni la evidencia histórica. Chat y
+revisión integral usarán el mismo contexto autorizado, con citas a fuentes y secciones,
+y continuarán siendo asistencia opcional que no bloquea el envío. La implementación está
+planificada en `docs/plans/active/I-72-asistente-ia-contextual.md`; no cierra `PV-02`,
+`PV-13`, `PV-14` ni `PV-18`.
+
 I-07 implementa un puerto de lectura, fixture sintético versionado, staging inmutable,
 simulación y exclusión humana. Demuestra idempotencia, conflicto y cero mutación del
 catálogo, pero no incorpora esquema, credenciales, red, reglas de identidad ni aplicador:
