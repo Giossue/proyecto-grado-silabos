@@ -139,16 +139,14 @@ la posición en filas y columnas sí tiene significado para la respuesta docente
 formato oficial sigue gobernando revisión y exportación sin convertir la captura diaria
 en una simulación de papel.
 
-El editor mantiene en memoria todos los `FieldState`, pero monta una sola sección a la
-vez. Antes de cambiar, `flushPendingChanges` mueve los debounce pendientes a una cola
-serial y espera también una petición ya iniciada. El índice lateral de escritorio y el
-`Select` móvil comparten `selectSection`; el fragmento `#section-{id}` permite recuperar
-el punto de trabajo sin persistirlo en PostgreSQL.
+El editor monta las secciones consecutivamente dentro de un solo formulario visual. No
+mantiene navegación paralela ni estado de sección activa: el desplazamiento natural de
+la página conserva el contexto y evita duplicar los títulos en otro panel.
 
 Los controles editables llaman a `scheduleSave` con cada modificación y consolidan los
 cambios durante 700 ms antes de enviarlos a la cola serial. No existe una acción manual
 por campo: el encabezado comunica el estado global y las transiciones hacia IA,
-validación, envío o una nueva sección fuerzan el vaciado de la cola antes de continuar.
+validación o envío fuerzan el vaciado de la cola antes de continuar.
 
 `AppSidebarLayout` recorta su contenido al contorno redondeado del `SidebarInset` con
 `overflow-clip`; `PageFrame` recorta el exceso horizontal y la hoja mantiene su propio

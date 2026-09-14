@@ -19,10 +19,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Card,
-    CardAction,
     CardContent,
     CardDescription,
-    CardFooter,
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
@@ -197,22 +195,9 @@ const globalSaving = ref(false);
 const validating = ref(false);
 const preparingSubmission = ref(false);
 const conflict = ref(false);
-const sectionChanging = ref(false);
 const pendingFieldIds = new Set<string>();
 const timers = new Map<string, ReturnType<typeof setTimeout>>();
 let queuePromise: Promise<void> | null = null;
-
-const sectionFromHash = window.location.hash.replace('#section-', '');
-const initialSectionIndex = Math.max(
-    0,
-    props.syllabus.sections.findIndex(
-        (section) => section.id === sectionFromHash,
-    ),
-);
-const activeSectionIndex = ref(initialSectionIndex);
-const activeSection = computed(
-    () => props.syllabus.sections[activeSectionIndex.value],
-);
 
 const saveLabel = computed(() => {
     if (conflict.value) {
@@ -550,50 +535,6 @@ const flushPendingChanges = async (): Promise<boolean> => {
     return !conflict.value;
 };
 
-const selectSection = async (index: number): Promise<void> => {
-    if (
-        index < 0 ||
-        index >= props.syllabus.sections.length ||
-        index === activeSectionIndex.value ||
-        sectionChanging.value
-    ) {
-        return;
-    }
-
-    sectionChanging.value = true;
-
-    try {
-        if (!(await flushPendingChanges())) {
-            return;
-        }
-
-        activeSectionIndex.value = index;
-        const section = props.syllabus.sections[index];
-        window.history.replaceState(
-            window.history.state,
-            '',
-            `#section-${section.id}`,
-        );
-        requestAnimationFrame(() => {
-            document
-                .getElementById(`section-${section.id}`)
-                ?.scrollIntoView({ block: 'start' });
-        });
-    } finally {
-        sectionChanging.value = false;
-    }
-};
-
-const selectSectionById = (sectionId: unknown): void => {
-    const index = props.syllabus.sections.findIndex(
-        (section) => section.id === String(sectionId),
-    );
-
-    if (index >= 0) {
-        void selectSection(index);
-    }
-};
-
 const runValidation = async (): Promise<void> => {
     if (!(await flushPendingChanges())) {
         return;
@@ -764,580 +705,450 @@ onBeforeUnmount(() => {
             </AlertDescription>
         </Alert>
 
-        <Field v-if="activeSection" class="xl:hidden">
-            <FieldLabel for="syllabus-section">Sección del sílabo</FieldLabel>
-            <Select
-                :model-value="activeSection.id"
-                :disabled="sectionChanging || conflict"
-                @update:model-value="selectSectionById"
-            >
-                <SelectTrigger id="syllabus-section">
-                    <SelectValue placeholder="Seleccione una sección" />
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectGroup>
-                        <SelectItem
-                            v-for="(section, index) in syllabus.sections"
-                            :key="section.id"
-                            :value="section.id"
-                        >
-                            {{ index + 1 }}. {{ section.title }}
-                        </SelectItem>
-                    </SelectGroup>
-                </SelectContent>
-            </Select>
-        </Field>
-
-        <div class="grid gap-6 xl:grid-cols-[14rem_minmax(0,1fr)]">
-            <Card class="hidden h-fit xl:sticky xl:top-4 xl:block">
+        <main class="flex min-w-0 flex-col gap-6">
+            <Card v-if="requestedObservations.length > 0">
                 <CardHeader>
-                    <CardTitle>Secciones</CardTitle>
+                    <CardTitle>Observaciones por responder</CardTitle>
                     <CardDescription>
-                        Vaya directamente a los campos de cada sección.
+                        Guarde una respuesta para cada observación. Se fijará al
+                        reenviar.
                     </CardDescription>
                 </CardHeader>
-                <CardContent>
-                    <nav aria-label="Secciones del sílabo">
-                        <ol class="flex flex-col gap-1">
-                            <li
-                                v-for="(section, index) in syllabus.sections"
-                                :key="section.id"
-                            >
-                                <Button
-                                    type="button"
-                                    :variant="
-                                        index === activeSectionIndex
-                                            ? 'secondary'
-                                            : 'ghost'
-                                    "
-                                    class="h-auto w-full justify-start text-left whitespace-normal"
-                                    :aria-current="
-                                        index === activeSectionIndex
-                                            ? 'step'
-                                            : undefined
-                                    "
-                                    :disabled="sectionChanging || conflict"
-                                    @click="selectSection(index)"
+                <CardContent class="flex flex-col gap-4">
+                    <article
+                        v-for="observation in requestedObservations"
+                        :key="observation.id"
+                        class="flex flex-col gap-3 rounded-md border p-3"
+                    >
+                        <Badge variant="outline" class="self-start">
+                            Revisión {{ observation.revision_number }}
+                        </Badge>
+                        <p class="text-sm whitespace-pre-wrap">
+                            {{ observation.content }}
+                        </p>
+                        <Form
+                            v-bind="
+                                SyllabusController.respondObservation.form({
+                                    syllabus: syllabus.id,
+                                    observation: observation.id,
+                                })
+                            "
+                            :options="{ preserveScroll: true }"
+                            class="flex flex-col gap-2"
+                            v-slot="{ errors, processing }"
+                        >
+                            <Field>
+                                <FieldLabel
+                                    :for="`response-${observation.id}`"
+                                    required
                                 >
-                                    {{ index + 1 }}. {{ section.title }}
-                                </Button>
-                            </li>
-                        </ol>
-                    </nav>
+                                    Respuesta
+                                </FieldLabel>
+                                <Textarea
+                                    :id="`response-${observation.id}`"
+                                    name="content"
+                                    :model-value="
+                                        observation.response?.content ?? ''
+                                    "
+                                    rows="4"
+                                    required
+                                />
+                                <FieldError :errors="[errors.content]" />
+                            </Field>
+                            <Button
+                                type="submit"
+                                size="sm"
+                                variant="outline"
+                                class="self-start"
+                                :disabled="processing || globalSaving"
+                            >
+                                <Spinner v-if="processing" />
+                                Guardar respuesta
+                            </Button>
+                        </Form>
+                    </article>
                 </CardContent>
             </Card>
 
-            <main class="flex min-w-0 flex-col gap-6">
-                <Card v-if="requestedObservations.length > 0">
-                    <CardHeader>
-                        <CardTitle>Observaciones por responder</CardTitle>
-                        <CardDescription>
-                            Guarde una respuesta para cada observación. Se
-                            fijará al reenviar.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent class="flex flex-col gap-4">
-                        <article
-                            v-for="observation in requestedObservations"
-                            :key="observation.id"
-                            class="flex flex-col gap-3 rounded-md border p-3"
+            <Card
+                v-for="section in syllabus.sections"
+                :id="`section-${section.id}`"
+                :key="section.id"
+            >
+                <CardHeader>
+                    <CardTitle>{{ section.title }}</CardTitle>
+                    <CardDescription>
+                        {{
+                            section.description ??
+                            'Complete los campos aplicables.'
+                        }}
+                    </CardDescription>
+                </CardHeader>
+                <CardContent class="flex flex-col gap-6">
+                    <div
+                        v-for="block in section.blocks"
+                        :key="block.id"
+                        class="flex flex-col gap-5"
+                    >
+                        <h3
+                            v-if="section.blocks.length > 1"
+                            class="font-medium"
                         >
-                            <Badge variant="outline" class="self-start">
-                                Revisión {{ observation.revision_number }}
-                            </Badge>
-                            <p class="text-sm whitespace-pre-wrap">
-                                {{ observation.content }}
-                            </p>
-                            <Form
-                                v-bind="
-                                    SyllabusController.respondObservation.form({
-                                        syllabus: syllabus.id,
-                                        observation: observation.id,
-                                    })
-                                "
-                                :options="{ preserveScroll: true }"
-                                class="flex flex-col gap-2"
-                                v-slot="{ errors, processing }"
-                            >
-                                <Field>
-                                    <FieldLabel
-                                        :for="`response-${observation.id}`"
-                                        required
-                                    >
-                                        Respuesta
-                                    </FieldLabel>
-                                    <Textarea
-                                        :id="`response-${observation.id}`"
-                                        name="content"
-                                        :model-value="
-                                            observation.response?.content ?? ''
-                                        "
-                                        rows="4"
-                                        required
-                                    />
-                                    <FieldError :errors="[errors.content]" />
-                                </Field>
-                                <Button
-                                    type="submit"
-                                    size="sm"
-                                    variant="outline"
-                                    class="self-start"
-                                    :disabled="processing || globalSaving"
-                                >
-                                    <Spinner v-if="processing" />
-                                    Guardar respuesta
-                                </Button>
-                            </Form>
-                        </article>
-                    </CardContent>
-                </Card>
-
-                <Card
-                    v-if="activeSection"
-                    :id="`section-${activeSection.id}`"
-                    :key="activeSection.id"
-                    class="scroll-mt-4"
-                >
-                    <CardHeader>
-                        <CardTitle>{{ activeSection.title }}</CardTitle>
-                        <CardDescription>
-                            {{
-                                activeSection.description ??
-                                'Complete los campos aplicables.'
-                            }}
-                        </CardDescription>
-                        <CardAction>
-                            <Badge variant="outline">
-                                Sección {{ activeSectionIndex + 1 }} de
-                                {{ syllabus.sections.length }}
-                            </Badge>
-                        </CardAction>
-                    </CardHeader>
-                    <CardContent class="flex flex-col gap-6">
+                            {{ block.title }}
+                        </h3>
+                        <SyllabusAcademicContext
+                            v-if="block.content_type === 'institutional'"
+                            :variables="syllabus.template_variables"
+                        />
+                        <TemplateDocumentView
+                            v-if="usesTabularDocument(block)"
+                            :document="block.document"
+                            :fields="designFields(block.fields)"
+                            :variables="syllabus.template_variables"
+                            :layout="block.table"
+                            :editable="!conflict"
+                            :planning-expectations="
+                                syllabus.planning_expectations
+                            "
+                            @value="
+                                (key, value) =>
+                                    updateDesignValue(block.fields, key, value)
+                            "
+                            @rows="
+                                (key, rows) =>
+                                    updateDesignRows(block.fields, key, rows)
+                            "
+                        />
                         <div
-                            v-for="block in activeSection.blocks"
-                            :key="block.id"
-                            class="flex flex-col gap-5"
+                            v-if="usesTabularDocument(block)"
+                            class="flex flex-col gap-2"
+                            aria-live="polite"
                         >
-                            <h3
-                                v-if="activeSection.blocks.length > 1"
-                                class="font-medium"
-                            >
-                                {{ block.title }}
-                            </h3>
-                            <SyllabusAcademicContext
-                                v-if="block.content_type === 'institutional'"
-                                :variables="syllabus.template_variables"
-                            />
-                            <TemplateDocumentView
-                                v-if="usesTabularDocument(block)"
-                                :document="block.document"
-                                :fields="designFields(block.fields)"
-                                :variables="syllabus.template_variables"
-                                :layout="block.table"
-                                :editable="!conflict"
-                                :planning-expectations="
-                                    syllabus.planning_expectations
-                                "
-                                @value="
-                                    (key, value) =>
-                                        updateDesignValue(
-                                            block.fields,
-                                            key,
-                                            value,
-                                        )
-                                "
-                                @rows="
-                                    (key, rows) =>
-                                        updateDesignRows(
-                                            block.fields,
-                                            key,
-                                            rows,
-                                        )
-                                "
-                            />
                             <div
-                                v-if="usesTabularDocument(block)"
-                                class="flex flex-col gap-2"
-                                aria-live="polite"
-                            >
-                                <div
-                                    v-for="field in block.fields.filter(
-                                        (item) =>
-                                            !item.inherited &&
-                                            item.teacher_editable,
-                                    )"
-                                    :key="field.id"
-                                    class="flex flex-wrap items-center gap-2 text-sm text-muted-foreground"
-                                >
-                                    <span
-                                        >{{ field.label }}:
-                                        {{
-                                            {
-                                                idle: 'Sin cambios',
-                                                pending: 'Cambio pendiente',
-                                                saving: 'Guardando…',
-                                                saved: 'Guardado',
-                                                error: 'Error al guardar',
-                                                conflict:
-                                                    'Conflicto de edición',
-                                            }[fieldStates[field.id].status]
-                                        }}</span
-                                    >
-                                    <FieldError
-                                        :errors="[
-                                            fieldStates[field.id].error ??
-                                                undefined,
-                                            ...validationFor(field.id).map(
-                                                (item) => item.message,
-                                            ),
-                                        ]"
-                                    />
-                                    <Button
-                                        v-if="field.ai_enabled"
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        :disabled="globalSaving || conflict"
-                                        @click="openAi(field)"
-                                    >
-                                        Asistencia IA
-                                    </Button>
-                                </div>
-                            </div>
-                            <Field
-                                v-for="field in formFields(block)"
+                                v-for="field in block.fields.filter(
+                                    (item) =>
+                                        !item.inherited &&
+                                        item.teacher_editable,
+                                )"
                                 :key="field.id"
-                                :data-invalid="
-                                    fieldStates[field.id].status === 'error' ||
-                                    validationFor(field.id).length > 0
-                                "
-                                :data-disabled="
-                                    field.inherited || !field.teacher_editable
-                                "
+                                class="flex flex-wrap items-center gap-2 text-sm text-muted-foreground"
                             >
-                                <div class="flex flex-wrap items-center gap-2">
-                                    <FieldLabel
-                                        :for="`field-${field.id}`"
-                                        :required="field.required"
-                                    >
-                                        {{ field.label }}
-                                    </FieldLabel>
-                                    <Badge
-                                        v-if="field.inherited"
-                                        variant="outline"
-                                    >
-                                        Institucional · solo lectura
-                                    </Badge>
-                                </div>
-                                <FieldDescription v-if="field.help">
-                                    {{ field.help }}
-                                </FieldDescription>
-
-                                <div
-                                    v-if="
-                                        field.inherited ||
-                                        !field.teacher_editable
-                                    "
-                                    :id="`field-${field.id}`"
-                                    class="rounded-md border bg-muted/30 p-3 text-sm"
-                                    tabindex="0"
+                                <span
+                                    >{{ field.label }}:
+                                    {{
+                                        {
+                                            idle: 'Sin cambios',
+                                            pending: 'Cambio pendiente',
+                                            saving: 'Guardando…',
+                                            saved: 'Guardado',
+                                            error: 'Error al guardar',
+                                            conflict: 'Conflicto de edición',
+                                        }[fieldStates[field.id].status]
+                                    }}</span
                                 >
-                                    {{ masterValue(field.value) }}
-                                </div>
-
-                                <SyllabusTableEditor
-                                    v-else-if="
-                                        field.type === 'repetible' &&
-                                        block.content_type === 'table'
-                                    "
-                                    :field-id="field.id"
-                                    :label="field.label"
-                                    :layout="
-                                        block.table ?? defaultTableLayout()
-                                    "
-                                    :rows="fieldStates[field.id].rows"
-                                    :required="field.required"
-                                    :invalid="
-                                        validationFor(field.id).length > 0
-                                    "
-                                    :planning-expectations="
-                                        syllabus.planning_expectations
-                                    "
-                                    @update:rows="replaceRows(field, $event)"
-                                />
-
-                                <div
-                                    v-else-if="field.type === 'repetible'"
-                                    class="flex flex-col gap-3"
-                                >
-                                    <div
-                                        v-for="(row, rowIndex) in fieldStates[
-                                            field.id
-                                        ].rows"
-                                        :key="row.id ?? `new-${rowIndex}`"
-                                        class="flex items-start gap-2"
-                                    >
-                                        <Textarea
-                                            :id="`field-${field.id}-row-${rowIndex}`"
-                                            :model-value="
-                                                String(row.data.texto ?? '')
-                                            "
-                                            :aria-label="`${field.label}, fila ${rowIndex + 1}`"
-                                            :aria-invalid="
-                                                validationFor(field.id).length >
-                                                0
-                                            "
-                                            :aria-required="field.required"
-                                            placeholder="Escriba un elemento estructurado"
-                                            @update:model-value="
-                                                updateRow(
-                                                    field,
-                                                    rowIndex,
-                                                    $event,
-                                                )
-                                            "
-                                        />
-                                        <Button
-                                            type="button"
-                                            size="icon"
-                                            variant="ghost"
-                                            :aria-label="`Eliminar fila ${rowIndex + 1}`"
-                                            @click="removeRow(field, rowIndex)"
-                                        >
-                                            <Trash2 aria-hidden="true" />
-                                        </Button>
-                                    </div>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        class="self-start"
-                                        @click="addRow(field)"
-                                    >
-                                        {{
-                                            [
-                                                'bulleted_list',
-                                                'numbered_list',
-                                            ].includes(block.content_type)
-                                                ? 'Agregar elemento'
-                                                : 'Agregar fila'
-                                        }}
-                                    </Button>
-                                </div>
-
-                                <Input
-                                    v-else-if="
-                                        [
-                                            'texto_corto',
-                                            'numero',
-                                            'fecha',
-                                        ].includes(field.type)
-                                    "
-                                    :id="`field-${field.id}`"
-                                    :model-value="textValue(field.id)"
-                                    :type="
-                                        field.type === 'numero'
-                                            ? 'number'
-                                            : field.type === 'fecha'
-                                              ? 'date'
-                                              : 'text'
-                                    "
-                                    :placeholder="
-                                        field.type === 'texto_corto'
-                                            ? `Ej. ${field.label}`
-                                            : undefined
-                                    "
-                                    :aria-invalid="
-                                        validationFor(field.id).length > 0
-                                    "
-                                    :required="field.required"
-                                    @update:model-value="
-                                        updateValue(field, $event)
-                                    "
-                                />
-
-                                <div
-                                    v-else-if="field.type === 'booleano'"
-                                    class="flex items-center gap-3"
-                                >
-                                    <Checkbox
-                                        :id="`field-${field.id}`"
-                                        :model-value="booleanValue(field.id)"
-                                        :aria-invalid="
-                                            validationFor(field.id).length > 0
-                                        "
-                                        :aria-required="field.required"
-                                        @update:model-value="
-                                            updateBoolean(field, $event)
-                                        "
-                                    />
-                                    <span class="text-sm text-muted-foreground">
-                                        Marque cuando corresponda.
-                                    </span>
-                                </div>
-
-                                <Select
-                                    v-else-if="field.type === 'seleccion_unica'"
-                                    :model-value="String(textValue(field.id))"
-                                    :required="field.required"
-                                    @update:model-value="
-                                        updateValue(field, String($event))
-                                    "
-                                >
-                                    <SelectTrigger
-                                        :id="`field-${field.id}`"
-                                        :aria-invalid="
-                                            validationFor(field.id).length > 0
-                                        "
-                                    >
-                                        <SelectValue placeholder="Seleccione" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectGroup>
-                                            <SelectItem
-                                                v-for="option in field.options"
-                                                :key="option.value"
-                                                :value="option.value"
-                                            >
-                                                {{ option.label }}
-                                            </SelectItem>
-                                        </SelectGroup>
-                                    </SelectContent>
-                                </Select>
-
-                                <FieldSet
-                                    v-else-if="
-                                        field.type === 'seleccion_multiple'
-                                    "
-                                    :aria-required="field.required"
-                                >
-                                    <FieldLegend
-                                        class="sr-only"
-                                        variant="label"
-                                        :required="field.required"
-                                    >
-                                        {{ field.label }}
-                                    </FieldLegend>
-                                    <Field
-                                        v-for="option in field.options"
-                                        :key="option.value"
-                                        orientation="horizontal"
-                                    >
-                                        <Checkbox
-                                            :id="`field-${field.id}-${option.value}`"
-                                            :model-value="
-                                                selectedOptions(
-                                                    field.id,
-                                                ).includes(option.value)
-                                            "
-                                            @update:model-value="
-                                                toggleOption(
-                                                    field,
-                                                    option.value,
-                                                    $event,
-                                                )
-                                            "
-                                        />
-                                        <FieldLabel
-                                            :for="`field-${field.id}-${option.value}`"
-                                        >
-                                            {{ option.label }}
-                                        </FieldLabel>
-                                    </Field>
-                                </FieldSet>
-
-                                <Textarea
-                                    v-else
-                                    :id="`field-${field.id}`"
-                                    :model-value="textValue(field.id)"
-                                    :aria-invalid="
-                                        validationFor(field.id).length > 0
-                                    "
-                                    :required="field.required"
-                                    class="min-h-32"
-                                    @update:model-value="
-                                        updateValue(field, $event)
-                                    "
-                                />
-
                                 <FieldError
                                     :errors="[
                                         fieldStates[field.id].error ??
                                             undefined,
                                         ...validationFor(field.id).map(
-                                            (result) => result.message,
+                                            (item) => item.message,
                                         ),
                                     ]"
                                 />
-                                <div
-                                    v-if="
-                                        !field.inherited &&
-                                        field.teacher_editable
-                                    "
-                                    class="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground"
-                                    aria-live="polite"
+                                <Button
+                                    v-if="field.ai_enabled"
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    :disabled="globalSaving || conflict"
+                                    @click="openAi(field)"
                                 >
-                                    <span>
-                                        {{
-                                            fieldStates[field.id].status ===
-                                            'saving'
-                                                ? 'Guardando…'
-                                                : fieldStates[field.id]
-                                                        .status === 'pending'
-                                                  ? 'Cambio pendiente'
-                                                  : fieldStates[field.id]
-                                                          .status === 'saved'
-                                                    ? 'Campo guardado'
-                                                    : ''
-                                        }}
-                                    </span>
-                                    <span
-                                        v-if="field.ai_enabled"
-                                        class="flex flex-wrap items-center gap-1"
-                                    >
-                                        <Button
-                                            type="button"
-                                            size="sm"
-                                            variant="outline"
-                                            :disabled="globalSaving || conflict"
-                                            @click="openAi(field)"
-                                        >
-                                            Asistencia IA
-                                        </Button>
-                                    </span>
-                                </div>
-                            </Field>
+                                    Asistencia IA
+                                </Button>
+                            </div>
                         </div>
-                    </CardContent>
-                    <CardFooter class="justify-between gap-3">
-                        <Button
-                            type="button"
-                            variant="outline"
-                            :disabled="
-                                activeSectionIndex === 0 ||
-                                sectionChanging ||
-                                conflict
+                        <Field
+                            v-for="field in formFields(block)"
+                            :key="field.id"
+                            :data-invalid="
+                                fieldStates[field.id].status === 'error' ||
+                                validationFor(field.id).length > 0
                             "
-                            @click="selectSection(activeSectionIndex - 1)"
-                        >
-                            Sección anterior
-                        </Button>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            :disabled="
-                                activeSectionIndex ===
-                                    syllabus.sections.length - 1 ||
-                                sectionChanging ||
-                                conflict
+                            :data-disabled="
+                                field.inherited || !field.teacher_editable
                             "
-                            @click="selectSection(activeSectionIndex + 1)"
                         >
-                            Siguiente sección
-                        </Button>
-                    </CardFooter>
-                </Card>
-            </main>
-        </div>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <FieldLabel
+                                    :for="`field-${field.id}`"
+                                    :required="field.required"
+                                >
+                                    {{ field.label }}
+                                </FieldLabel>
+                                <Badge v-if="field.inherited" variant="outline">
+                                    Institucional · solo lectura
+                                </Badge>
+                            </div>
+                            <FieldDescription v-if="field.help">
+                                {{ field.help }}
+                            </FieldDescription>
+
+                            <div
+                                v-if="
+                                    field.inherited || !field.teacher_editable
+                                "
+                                :id="`field-${field.id}`"
+                                class="rounded-md border bg-muted/30 p-3 text-sm"
+                                tabindex="0"
+                            >
+                                {{ masterValue(field.value) }}
+                            </div>
+
+                            <SyllabusTableEditor
+                                v-else-if="
+                                    field.type === 'repetible' &&
+                                    block.content_type === 'table'
+                                "
+                                :field-id="field.id"
+                                :label="field.label"
+                                :layout="block.table ?? defaultTableLayout()"
+                                :rows="fieldStates[field.id].rows"
+                                :required="field.required"
+                                :invalid="validationFor(field.id).length > 0"
+                                :planning-expectations="
+                                    syllabus.planning_expectations
+                                "
+                                @update:rows="replaceRows(field, $event)"
+                            />
+
+                            <div
+                                v-else-if="field.type === 'repetible'"
+                                class="flex flex-col gap-3"
+                            >
+                                <div
+                                    v-for="(row, rowIndex) in fieldStates[
+                                        field.id
+                                    ].rows"
+                                    :key="row.id ?? `new-${rowIndex}`"
+                                    class="flex items-start gap-2"
+                                >
+                                    <Textarea
+                                        :id="`field-${field.id}-row-${rowIndex}`"
+                                        :model-value="
+                                            String(row.data.texto ?? '')
+                                        "
+                                        :aria-label="`${field.label}, fila ${rowIndex + 1}`"
+                                        :aria-invalid="
+                                            validationFor(field.id).length > 0
+                                        "
+                                        :aria-required="field.required"
+                                        placeholder="Escriba un elemento estructurado"
+                                        @update:model-value="
+                                            updateRow(field, rowIndex, $event)
+                                        "
+                                    />
+                                    <Button
+                                        type="button"
+                                        size="icon"
+                                        variant="ghost"
+                                        :aria-label="`Eliminar fila ${rowIndex + 1}`"
+                                        @click="removeRow(field, rowIndex)"
+                                    >
+                                        <Trash2 aria-hidden="true" />
+                                    </Button>
+                                </div>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    class="self-start"
+                                    @click="addRow(field)"
+                                >
+                                    {{
+                                        [
+                                            'bulleted_list',
+                                            'numbered_list',
+                                        ].includes(block.content_type)
+                                            ? 'Agregar elemento'
+                                            : 'Agregar fila'
+                                    }}
+                                </Button>
+                            </div>
+
+                            <Input
+                                v-else-if="
+                                    ['texto_corto', 'numero', 'fecha'].includes(
+                                        field.type,
+                                    )
+                                "
+                                :id="`field-${field.id}`"
+                                :model-value="textValue(field.id)"
+                                :type="
+                                    field.type === 'numero'
+                                        ? 'number'
+                                        : field.type === 'fecha'
+                                          ? 'date'
+                                          : 'text'
+                                "
+                                :placeholder="
+                                    field.type === 'texto_corto'
+                                        ? `Ej. ${field.label}`
+                                        : undefined
+                                "
+                                :aria-invalid="
+                                    validationFor(field.id).length > 0
+                                "
+                                :required="field.required"
+                                @update:model-value="updateValue(field, $event)"
+                            />
+
+                            <div
+                                v-else-if="field.type === 'booleano'"
+                                class="flex items-center gap-3"
+                            >
+                                <Checkbox
+                                    :id="`field-${field.id}`"
+                                    :model-value="booleanValue(field.id)"
+                                    :aria-invalid="
+                                        validationFor(field.id).length > 0
+                                    "
+                                    :aria-required="field.required"
+                                    @update:model-value="
+                                        updateBoolean(field, $event)
+                                    "
+                                />
+                                <span class="text-sm text-muted-foreground">
+                                    Marque cuando corresponda.
+                                </span>
+                            </div>
+
+                            <Select
+                                v-else-if="field.type === 'seleccion_unica'"
+                                :model-value="String(textValue(field.id))"
+                                :required="field.required"
+                                @update:model-value="
+                                    updateValue(field, String($event))
+                                "
+                            >
+                                <SelectTrigger
+                                    :id="`field-${field.id}`"
+                                    :aria-invalid="
+                                        validationFor(field.id).length > 0
+                                    "
+                                >
+                                    <SelectValue placeholder="Seleccione" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectGroup>
+                                        <SelectItem
+                                            v-for="option in field.options"
+                                            :key="option.value"
+                                            :value="option.value"
+                                        >
+                                            {{ option.label }}
+                                        </SelectItem>
+                                    </SelectGroup>
+                                </SelectContent>
+                            </Select>
+
+                            <FieldSet
+                                v-else-if="field.type === 'seleccion_multiple'"
+                                :aria-required="field.required"
+                            >
+                                <FieldLegend
+                                    class="sr-only"
+                                    variant="label"
+                                    :required="field.required"
+                                >
+                                    {{ field.label }}
+                                </FieldLegend>
+                                <Field
+                                    v-for="option in field.options"
+                                    :key="option.value"
+                                    orientation="horizontal"
+                                >
+                                    <Checkbox
+                                        :id="`field-${field.id}-${option.value}`"
+                                        :model-value="
+                                            selectedOptions(field.id).includes(
+                                                option.value,
+                                            )
+                                        "
+                                        @update:model-value="
+                                            toggleOption(
+                                                field,
+                                                option.value,
+                                                $event,
+                                            )
+                                        "
+                                    />
+                                    <FieldLabel
+                                        :for="`field-${field.id}-${option.value}`"
+                                    >
+                                        {{ option.label }}
+                                    </FieldLabel>
+                                </Field>
+                            </FieldSet>
+
+                            <Textarea
+                                v-else
+                                :id="`field-${field.id}`"
+                                :model-value="textValue(field.id)"
+                                :aria-invalid="
+                                    validationFor(field.id).length > 0
+                                "
+                                :required="field.required"
+                                class="min-h-32"
+                                @update:model-value="updateValue(field, $event)"
+                            />
+
+                            <FieldError
+                                :errors="[
+                                    fieldStates[field.id].error ?? undefined,
+                                    ...validationFor(field.id).map(
+                                        (result) => result.message,
+                                    ),
+                                ]"
+                            />
+                            <div
+                                v-if="
+                                    !field.inherited && field.teacher_editable
+                                "
+                                class="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground"
+                                aria-live="polite"
+                            >
+                                <span>
+                                    {{
+                                        fieldStates[field.id].status ===
+                                        'saving'
+                                            ? 'Guardando…'
+                                            : fieldStates[field.id].status ===
+                                                'pending'
+                                              ? 'Cambio pendiente'
+                                              : fieldStates[field.id].status ===
+                                                  'saved'
+                                                ? 'Campo guardado'
+                                                : ''
+                                    }}
+                                </span>
+                                <span
+                                    v-if="field.ai_enabled"
+                                    class="flex flex-wrap items-center gap-1"
+                                >
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="outline"
+                                        :disabled="globalSaving || conflict"
+                                        @click="openAi(field)"
+                                    >
+                                        Asistencia IA
+                                    </Button>
+                                </span>
+                            </div>
+                        </Field>
+                    </div>
+                </CardContent>
+            </Card>
+        </main>
     </PageFrame>
 </template>

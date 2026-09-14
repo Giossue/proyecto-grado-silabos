@@ -188,10 +188,8 @@ paralelo. Son operaciones separadas y ninguna levanta los bloqueos académicos.
   planificación, evaluación, bibliografía y otras estructuras realmente tabulares
   conservan una cuadrícula, porque filas y columnas forman parte de sus datos. El diseño
   oficial permanece en la plantilla, las revisiones y las exportaciones.
-- El editor mantiene una sola sección activa. En escritorio muestra el índice lateral
-  con la sección actual; en pantallas pequeñas lo reemplaza por un selector. Las acciones
-  anterior y siguiente esperan el autoguardado antes de cambiar y reflejan la sección en
-  el fragmento de la URL, sin guardar navegación como dato académico.
+- El editor presenta todas las secciones consecutivamente como un formulario continuo.
+  No añade un índice lateral, un selector de sección ni pasos anterior/siguiente.
 - DOC-04 no presenta acciones «Guardar ahora» por campo. Cada cambio activa el
   autoguardado y el único estado de guardado visible se mantiene en el encabezado.
 - ADM-06 no mezcla lectura y edición: la ruta normal nunca monta controles mutables. La
