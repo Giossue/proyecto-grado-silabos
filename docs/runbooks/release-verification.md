@@ -45,7 +45,7 @@ Antes de almacenar cachés, verifique al menos:
   `DB_TIMEZONE=UTC`;
 - `QUEUE_CONNECTION=redis` y `REDIS_QUEUE_RETRY_AFTER` mayor que 120 s;
 - almacenamiento privado persistente; ningún volumen funcional bajo `public/`;
-- `AI_DRIVER=disabled` si no existe servicio local aprobado;
+- `AI_DRIVER=disabled` si no existe un servicio local o proveedor alojado aprobado;
 - correo, backup, retención y observabilidad resueltos antes de producción.
 
 Después:

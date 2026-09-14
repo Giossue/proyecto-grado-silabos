@@ -107,7 +107,7 @@ class JobExecutionController extends Controller
     private function queueLabel(string $queue): string
     {
         return match ($queue) {
-            'ia' => 'IA local',
+            'ia' => 'IA',
             'documentos' => 'Documentos',
             'notificaciones' => 'Notificaciones',
             'critica' => 'Crítica',

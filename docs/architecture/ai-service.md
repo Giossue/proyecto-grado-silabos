@@ -3,12 +3,12 @@
 ## Frontera
 
 Laravel conserva usuarios, permisos, convocatorias, contenido, fuentes, ejecuciones y
-decisiones. Un servicio local realiza recuperación/inferencia detrás de un cliente HTTP.
-El dominio depende de `AiAnalysisGateway`, no de un modelo o SDK.
+decisiones. La inferencia ocurre detrás de adaptadores HTTP intercambiables. El dominio
+depende de `AiAnalysisGateway`, no de un modelo, proveedor o SDK.
 
 ```text
 Docente → Laravel → registro EjecucionIA → cola Redis → Job
-Job → AiAnalysisGateway → servicio local IA
+Job → AiAnalysisGateway → servicio local u hospedado de IA
                             │
                             └─ resultado + referencias
 Job → valida contrato → persiste recomendaciones/evidencias → notifica
@@ -49,7 +49,7 @@ La respuesta incluye:
 - No habilites herramientas, red o archivos del host innecesarios al modelo.
 - Limita tamaño, tiempo, concurrencia y salida.
 - Valida el esquema de respuesta; rechaza referencias no solicitadas.
-- Minimiza datos personales y no llama servicios externos no autorizados.
+- Minimiza datos personales y solo llama al proveedor autorizado por el despliegue.
 - Los logs usan huellas/IDs, no prompts completos por defecto.
 
 ## Reproducibilidad y caché
@@ -96,3 +96,19 @@ contrato y sus fakes sí pueden implementarse antes.
 El simulador `contract-simulator-v1` no usa el contenido de las fuentes como
 instrucciones. Solo prueba integración, trazabilidad y control humano; debe reemplazarse
 tras la evaluación de I-08 y las decisiones pendientes.
+
+## Proveedores alojados I-73
+
+- `AI_DRIVER=openai`, `claude` o `deepseek` selecciona el protocolo; `anthropic` se
+  acepta como alias de `claude`.
+- Los tres usan `AI_BASE_URL`, `AI_MODEL` y `AI_API_KEY`. La URL exige HTTPS, no admite
+  credenciales incrustadas ni redirecciones. Puede señalar la base o el endpoint completo.
+- OpenAI usa Responses con JSON Schema y `store=false`; Claude usa Messages con salida
+  JSON estructurada; DeepSeek usa Chat Completions con JSON y pensamiento deshabilitado.
+- La respuesta del proveedor se reduce al contrato interno. Laravel fija el request ID y
+  la versión del gateway, verifica tipos, tamaños y citas y nunca acepta acciones
+  académicas.
+- La clave solo entra en la cabecera HTTP. Los errores remotos se reemplazan por mensajes
+  seguros; cuerpos, claves, prompts y razonamiento no se registran ni persisten.
+- El modelo sigue siendo una decisión del operador y forma parte de la versión funcional
+  del gateway, por lo que cambiarlo evita atribuir un resultado al modelo anterior.

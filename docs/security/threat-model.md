@@ -17,7 +17,7 @@
 2. Laravel ↔ PostgreSQL;
 3. Laravel/worker ↔ Redis;
 4. aplicación ↔ almacenamiento privado;
-5. worker ↔ servicio local de IA;
+5. worker ↔ servicio local o proveedor alojado de IA;
 6. operadores ↔ despliegue/backups.
 
 ## Amenazas prioritarias
@@ -37,9 +37,10 @@
 | Job replay | trabajo duplica efectos | clave única, estado persistido, outbox |
 | Prompt injection | fuente ordena exfiltrar/ignorar reglas | datos delimitados, sin tools/red, simulador independiente del contenido y salida validada |
 | Referencia inventada | IA cita fuente inexistente | snapshot de IDs autorizados, contrato y vínculo PostgreSQL |
-| SSRF/proveedor externo | URL de IA sale del host autorizado | cliente solo HTTP loopback, sin credenciales ni redirecciones |
+| SSRF/proveedor externo | una URL manipulada desvía contenido o la clave de IA | URL definida solo por operación, HTTPS obligatorio, sin credenciales embebidas ni redirecciones; clave en secreto de despliegue |
 | Decisión encubierta de IA | respuesta intenta aprobar, calificar o cambiar estado | claves prohibidas, tipos allowlist y aplicación humana separada |
 | Exfiltración por logs | prompts/documentos aparecen en logs | minimización, redacción, acceso/retención |
+| Tratamiento por tercero | borrador y extractos salen hacia un proveedor alojado | activación explícita, minimización previa, contrato/retención/región acordados y `disabled` por defecto |
 | Ransomware/pérdida | base/archivos destruidos | backups aislados, restore probado, mínimo privilegio |
 | DoS | IA y exportación agotan los workers | colas separadas, rate limit por actor/recurso, límites de entrada y timeout |
 

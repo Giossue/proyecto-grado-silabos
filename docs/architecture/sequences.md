@@ -102,7 +102,7 @@ sequenceDiagram
     participant A as RequestAiAnalysis
     participant DB as PostgreSQL
     participant Q as Redis/Worker
-    participant AI as Servicio IA local
+    participant AI as Servicio IA configurado
 
     D->>UI: Solicita análisis de campo habilitado
     UI->>A: request(field, content_hash)
@@ -172,4 +172,3 @@ sequenceDiagram
     I-->>UI: altas, cambios, rechazos y conflictos finales
     Note over I,X: Nunca escribe en la fuente institucional
 ```
-

@@ -8,6 +8,7 @@ use App\Modules\Academic\Infrastructure\Access\AcademicRoleEligibility;
 use App\Modules\AiAssistance\Domain\Contracts\AiAnalysisGateway;
 use App\Modules\AiAssistance\Infrastructure\Gateways\BaselineAiAnalysisGateway;
 use App\Modules\AiAssistance\Infrastructure\Gateways\DisabledAiAnalysisGateway;
+use App\Modules\AiAssistance\Infrastructure\Gateways\HostedAiAnalysisGateway;
 use App\Modules\AiAssistance\Infrastructure\Gateways\HttpAiAnalysisGateway;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\AcademicSource;
 use App\Modules\Documents\Domain\Contracts\DocumentRenderer;
@@ -49,6 +50,7 @@ class AppServiceProvider extends ServiceProvider
             return match ((string) config('ai.driver')) {
                 'baseline' => app(BaselineAiAnalysisGateway::class),
                 'http' => app(HttpAiAnalysisGateway::class),
+                'openai', 'claude', 'anthropic', 'deepseek' => app(HostedAiAnalysisGateway::class),
                 default => app(DisabledAiAnalysisGateway::class),
             };
         });

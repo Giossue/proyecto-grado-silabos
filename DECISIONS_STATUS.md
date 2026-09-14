@@ -107,7 +107,8 @@ Fecha de corte: **30 de agosto de 2026**.
   sílabos en curso (I-38, I-39, I-44, 3 de septiembre de 2026).
 - La IA es asistencia explicable; no toma decisiones académicas ni bloquea el flujo.
 - Stack base: Laravel 13, Vue/Inertia, TypeScript, PostgreSQL y Redis.
-- Monolito modular y servicio local de IA desacoplado por HTTP.
+- Monolito modular y servicio de IA desacoplado por HTTP, local o alojado según el
+  adaptador autorizado por el despliegue.
 - Integración institucional sin escritura directa en la base de la UEB.
 - Gobierno académico distribuido: Administrador mantiene facultades, carreras, cuentas y
   coordinaciones; Coordinador gestiona mallas, materias programadas, paralelos y asignaciones
@@ -169,6 +170,15 @@ revisión integral usarán el mismo contexto autorizado, con citas a fuentes y s
 y continuarán siendo asistencia opcional que no bloquea el envío. La implementación está
 planificada en `docs/plans/active/I-72-asistente-ia-contextual.md`; no cierra `PV-02`,
 `PV-13`, `PV-14` ni `PV-18`.
+
+I-73 (14 de septiembre de 2026) incorpora, por decisión explícita del responsable del
+producto, adaptadores de inferencia para OpenAI, Claude y DeepSeek. El operador elige el
+protocolo con `AI_DRIVER` y configura únicamente URL base, modelo y API key; no existen
+controles de razonamiento y DeepSeek se fuerza al modo sin pensamiento. El soporte
+técnico no selecciona ni valida un modelo definitivo, no habilita un proveedor por
+defecto y no cambia el control humano, por lo que `PV-13`, `PV-14` y `PV-18` conservan su
+estado `POR VALIDAR`. La activación con datos institucionales requiere además resolver
+el tratamiento externo aplicable bajo `PV-12`.
 
 I-07 implementa un puerto de lectura, fixture sintético versionado, staging inmutable,
 simulación y exclusión humana. Demuestra idempotencia, conflicto y cero mutación del

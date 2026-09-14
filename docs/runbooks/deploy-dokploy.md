@@ -66,7 +66,55 @@ LOG_CHANNEL=stderr
 LOG_LEVEL=warning
 
 AI_DRIVER=disabled
+AI_BASE_URL=
+AI_MODEL=
+AI_API_KEY=
 ```
+
+### Proveedor de IA
+
+La asistencia parte desactivada. Para habilitarla se conservan cuatro variables: el
+driver y la URL base, modelo y clave elegidos. No se configuran niveles de razonamiento.
+La URL debe usar HTTPS y puede ser la base o el endpoint completo; Laravel añade la ruta
+propia del protocolo cuando haga falta.
+
+OpenAI:
+
+```text
+AI_DRIVER=openai
+AI_BASE_URL=https://api.openai.com/v1
+AI_MODEL=<modelo elegido>
+AI_API_KEY=<secreto de OpenAI>
+```
+
+Claude:
+
+```text
+AI_DRIVER=claude
+AI_BASE_URL=https://api.anthropic.com/v1
+AI_MODEL=<modelo elegido>
+AI_API_KEY=<secreto de Anthropic>
+```
+
+DeepSeek:
+
+```text
+AI_DRIVER=deepseek
+AI_BASE_URL=https://api.deepseek.com
+AI_MODEL=<modelo elegido>
+AI_API_KEY=<secreto de DeepSeek>
+```
+
+`AI_API_KEY` se configura como secreto en Dokploy: no se escribe en el repositorio, la
+base, logs ni comandos de diagnóstico. Tras cambiar estas variables hay que redesplegar
+o reiniciar el contenedor completo para reconstruir la caché de configuración y para que
+el worker de la cola `ia` use el proveedor nuevo. La URL y el modelo deben corresponder
+al mismo proveedor seleccionado por `AI_DRIVER`.
+
+Activar un proveedor alojado envía el campo del sílabo y los extractos de las fuentes
+seleccionadas a ese tercero. Antes de hacerlo con información institucional deben estar
+acordados el proveedor, región, retención y tratamiento de datos. Un error del proveedor
+solo deshabilita temporalmente las recomendaciones; no bloquea el flujo del sílabo.
 
 ### Correo
 
@@ -146,5 +194,6 @@ redespliegue los pierde. En Dokploy, añade un **volume mount** hacia
 
 ## Fuera de alcance
 
-El servicio local de IA queda desactivado (`AI_DRIVER=disabled`). Depende de `PV-13` y
-`PV-14`, que siguen abiertas.
+El despliegue no elige automáticamente un modelo ni valida su calidad académica. `PV-13`,
+`PV-14` y `PV-18` siguen abiertas; hasta que se resuelvan, `AI_DRIVER=disabled` continúa
+siendo el valor seguro por defecto.

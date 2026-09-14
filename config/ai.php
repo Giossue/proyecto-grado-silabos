@@ -10,6 +10,14 @@ return [
         'connect_timeout_seconds' => (int) env('AI_CONNECT_TIMEOUT', 2),
         'timeout_seconds' => (int) env('AI_TIMEOUT', 20),
     ],
+    'hosted' => [
+        'base_url' => env('AI_BASE_URL'),
+        'model' => env('AI_MODEL'),
+        'api_key' => env('AI_API_KEY'),
+        'connect_timeout_seconds' => (int) env('AI_CONNECT_TIMEOUT', 2),
+        'timeout_seconds' => (int) env('AI_TIMEOUT', 20),
+        'max_output_tokens' => 4096,
+    ],
     'limits' => [
         'input_characters' => 50000,
         'evidence_items' => 50,

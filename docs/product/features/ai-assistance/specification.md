@@ -27,7 +27,8 @@
 - No aprobar, rechazar, calificar, bloquear ni cambiar estado.
 - No inventar una precedencia entre fuentes en conflicto.
 - No modificar texto sin vista previa y confirmación humana.
-- No enviar contenido a un proveedor externo no autorizado.
+- No enviar contenido a un proveedor externo distinto del autorizado expresamente en el
+  despliegue ni habilitar uno por defecto.
 - No presentar confianza como probabilidad científica si no está calibrada.
 
 ## Criterios críticos
@@ -56,6 +57,10 @@
   el estado del sílabo.
 - `contract-simulator-v1` normaliza únicamente espacios y puntuación para demostrar el
   contrato. No es un modelo académico validado y no cierra `PV-13`, `PV-14` ni `PV-18`.
+- I-73 agrega adaptadores configurables para OpenAI, Claude y DeepSeek sin cambiar el
+  control humano. Comparten URL, modelo y clave; no exponen razonamiento y DeepSeek se
+  invoca explícitamente en modo sin pensamiento. El proveedor alojado solo recibe el
+  contenido y la evidencia que Laravel ya autorizó y fotografió.
 
 ## Ampliación I-72 en curso
 
