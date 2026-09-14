@@ -814,19 +814,6 @@ onBeforeUnmount(() => {
                                 :key="field.id"
                                 class="flex flex-wrap items-center gap-2 text-sm text-muted-foreground"
                             >
-                                <span
-                                    >{{ field.label }}:
-                                    {{
-                                        {
-                                            idle: 'Sin cambios',
-                                            pending: 'Cambio pendiente',
-                                            saving: 'Guardando…',
-                                            saved: 'Guardado',
-                                            error: 'Error al guardar',
-                                            conflict: 'Conflicto de edición',
-                                        }[fieldStates[field.id].status]
-                                    }}</span
-                                >
                                 <FieldError
                                     :errors="[
                                         fieldStates[field.id].error ??
@@ -1092,39 +1079,21 @@ onBeforeUnmount(() => {
                             />
                             <div
                                 v-if="
-                                    !field.inherited && field.teacher_editable
+                                    !field.inherited &&
+                                    field.teacher_editable &&
+                                    field.ai_enabled
                                 "
-                                class="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground"
-                                aria-live="polite"
+                                class="flex justify-end"
                             >
-                                <span>
-                                    {{
-                                        fieldStates[field.id].status ===
-                                        'saving'
-                                            ? 'Guardando…'
-                                            : fieldStates[field.id].status ===
-                                                'pending'
-                                              ? 'Cambio pendiente'
-                                              : fieldStates[field.id].status ===
-                                                  'saved'
-                                                ? 'Campo guardado'
-                                                : ''
-                                    }}
-                                </span>
-                                <span
-                                    v-if="field.ai_enabled"
-                                    class="flex flex-wrap items-center gap-1"
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    :disabled="globalSaving || conflict"
+                                    @click="openAi(field)"
                                 >
-                                    <Button
-                                        type="button"
-                                        size="sm"
-                                        variant="outline"
-                                        :disabled="globalSaving || conflict"
-                                        @click="openAi(field)"
-                                    >
-                                        Asistencia IA
-                                    </Button>
-                                </span>
+                                    Asistencia IA
+                                </Button>
                             </div>
                         </Field>
                     </div>
