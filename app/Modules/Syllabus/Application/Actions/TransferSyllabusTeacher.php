@@ -41,14 +41,10 @@ class TransferSyllabusTeacher
         private readonly AcademicPeriodPlanning $periodPlanning,
     ) {}
 
-    /**
-     * @param  array{type: string, number: string, date: string}|null  $backing
-     */
     public function execute(
         Syllabus $syllabus,
         string $outgoingUserId,
         string $incomingUserId,
-        ?array $backing,
         string $idempotencyKey,
         User $actor,
         Request $request,
@@ -79,7 +75,7 @@ class TransferSyllabusTeacher
         }
 
         return DB::transaction(function () use (
-            $activeRole, $actor, $backing, $idempotencyKey, $incomingRole, $incomingUserId, $outgoingUserId, $request, $syllabus,
+            $activeRole, $actor, $idempotencyKey, $incomingRole, $incomingUserId, $outgoingUserId, $request, $syllabus,
         ): Syllabus {
             $locked = Syllabus::query()->lockForUpdate()->findOrFail($syllabus->id);
 
@@ -109,9 +105,6 @@ class TransferSyllabusTeacher
                     'asignacion_rol_id' => $incomingRole->id,
                     'paralelo_id' => $previous->paralelo_id,
                     'activo' => true,
-                    'sustento_tipo' => $backing['type'] ?? null,
-                    'sustento_numero' => $backing['number'] ?? null,
-                    'sustento_fecha' => $backing['date'] ?? null,
                 ]);
 
                 $collaboration->update([
@@ -129,9 +122,7 @@ class TransferSyllabusTeacher
                 // aprobada queda intacta: ADR-0005.
                 $this->reopen->execute(
                     $locked,
-                    $backing === null
-                        ? 'Relevo de docente registrado por Coordinación.'
-                        : "Relevo de docente: {$backing['type']} {$backing['number']} de {$backing['date']}.",
+                    'Relevo de docente registrado por Coordinación.',
                     $idempotencyKey,
                     $actor,
                     $request,
@@ -167,11 +158,6 @@ class TransferSyllabusTeacher
                     'previous_state' => $previousState,
                     'parallels_moved' => $collaborations->count(),
                     'discarded_completion' => $discardedCompletion,
-                    ...($backing === null ? [] : [
-                        'backing_type' => $backing['type'],
-                        'backing_number' => $backing['number'],
-                        'backing_date' => $backing['date'],
-                    ]),
                 ],
                 correlationId: $request->attributes->getString('correlation_id') ?: null,
             );

@@ -56,9 +56,8 @@ coordinación ejercible por carrera (rol activo y cuenta activa); la aplicación
 el error de negocio antes de llegar a la restricción.
 
 `docentes_paralelo` vincula una asignación de rol `docente` con un paralelo, conserva
-`asignado_en` y el acto que la respalda; no tiene intervalo de vigencia laboral. Su
-identidad única es `asignacion_rol_id + paralelo_id`; un relevo finaliza relación
-anterior y crea nueva.
+`asignado_en`; no tiene intervalo de vigencia laboral. Su identidad única es
+`asignacion_rol_id + paralelo_id`; un relevo finaliza relación anterior y crea nueva.
 
 Estos catálogos no comparten una tabla polimórfica. `carreras.facultad_id` implementa la
 relación uno-a-muchos Facultad → Carreras con clave foránea y borrado restringido.

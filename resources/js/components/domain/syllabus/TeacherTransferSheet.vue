@@ -3,7 +3,6 @@ import { Form } from '@inertiajs/vue3';
 import { UserRoundCog } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import ReviewController from '@/actions/App/Modules/Syllabus/Presentation/Http/Controllers/ReviewController';
-import DatePicker from '@/components/DatePicker.vue';
 import FormSheet from '@/components/domain/FormSheet.vue';
 import FormSheetActions from '@/components/domain/FormSheetActions.vue';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -14,7 +13,6 @@ import {
     FieldGroup,
     FieldLabel,
 } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
 import {
     Select,
     SelectContent,
@@ -134,67 +132,6 @@ const idempotencyKey = `transfer-${props.syllabusId}-${Math.trunc(performance.no
                             </SelectContent>
                         </Select>
                         <FieldError :errors="[errors.incoming_user_id]" />
-                    </Field>
-
-                    <Field :data-invalid="Boolean(errors.backing_type)">
-                        <FieldLabel for="transfer-backing-type" required>
-                            Documento que respalda el relevo
-                        </FieldLabel>
-                        <Select
-                            name="backing_type"
-                            default-value="accion_personal"
-                            required
-                        >
-                            <SelectTrigger
-                                id="transfer-backing-type"
-                                :aria-invalid="Boolean(errors.backing_type)"
-                            >
-                                <SelectValue placeholder="Seleccione" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectGroup>
-                                    <SelectItem value="accion_personal">
-                                        Acción de personal
-                                    </SelectItem>
-                                    <SelectItem value="resolucion">
-                                        Resolución
-                                    </SelectItem>
-                                    <SelectItem value="oficio">
-                                        Oficio
-                                    </SelectItem>
-                                </SelectGroup>
-                            </SelectContent>
-                        </Select>
-                        <FieldError :errors="[errors.backing_type]" />
-                    </Field>
-
-                    <Field :data-invalid="Boolean(errors.backing_number)">
-                        <FieldLabel for="transfer-backing-number" required>
-                            Número
-                        </FieldLabel>
-                        <Input
-                            id="transfer-backing-number"
-                            name="backing_number"
-                            :aria-invalid="Boolean(errors.backing_number)"
-                            placeholder="Ej. UEB-RECT-2026-0142-R"
-                            required
-                        />
-                        <FieldError :errors="[errors.backing_number]" />
-                    </Field>
-
-                    <Field :data-invalid="Boolean(errors.backing_date)">
-                        <FieldLabel for="transfer-backing-date" required>
-                            Fecha del documento
-                        </FieldLabel>
-                        <DatePicker
-                            id="transfer-backing-date"
-                            name="backing_date"
-                            :aria-invalid="Boolean(errors.backing_date)"
-                            required
-                        />
-                        <FieldError
-                            :errors="[errors.backing_date, errors.syllabus]"
-                        />
                     </Field>
 
                     <FormSheetActions

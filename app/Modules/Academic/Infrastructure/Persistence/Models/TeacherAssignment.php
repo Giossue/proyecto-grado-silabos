@@ -13,8 +13,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /**
  * @property string $id
  * @property string|null $asignacion_rol_id
- * @property string|null $sustento_tipo
- * @property string|null $sustento_numero
  * @property bool $activo
  * @property-read RoleAssignment $roleAssignment
  * @property-read Parallel $parallel
@@ -36,18 +34,12 @@ class TeacherAssignment extends Model
         'usuario_id',
         'paralelo_id',
         'activo',
-        'sustento_tipo',
-        'sustento_numero',
-        'sustento_fecha',
     ];
 
     /** @return array<string, string> */
     protected function casts(): array
     {
-        return [
-            'activo' => 'boolean',
-            'sustento_fecha' => 'immutable_date',
-        ];
+        return ['activo' => 'boolean'];
     }
 
     protected static function booted(): void

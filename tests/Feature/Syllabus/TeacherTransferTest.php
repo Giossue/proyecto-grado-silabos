@@ -63,7 +63,7 @@ class TeacherTransferTest extends TestCase
         $this->replacement = $this->createReplacementTeacher();
     }
 
-    public function test_transferring_an_untouched_syllabus_moves_the_assignment_and_records_the_backing(): void
+    public function test_transferring_an_untouched_syllabus_moves_the_assignment(): void
     {
         $syllabus = $this->openedSyllabus();
 
@@ -85,8 +85,6 @@ class TeacherTransferTest extends TestCase
         $this->assertTrue(TeacherAssignment::query()
             ->forUser($this->replacement->id)
             ->where('activo', true)
-            ->where('sustento_tipo', 'accion_personal')
-            ->where('sustento_numero', 'UEB-RECT-2026-0142-R')
             ->exists());
         $this->assertDatabaseHas('eventos_auditoria', [
             'accion' => 'silabo.docente_transferido',
@@ -175,17 +173,6 @@ class TeacherTransferTest extends TestCase
         $this->transfer($syllabus, $outsider->id)->assertSessionHasErrors('incoming_user_id');
     }
 
-    public function test_the_transfer_requires_a_backing_document(): void
-    {
-        $syllabus = $this->openedSyllabus();
-
-        $this->actingAsCoordinator()->post(route('reviews.teacher.transfer', $syllabus), [
-            'outgoing_user_id' => $this->teacher->id,
-            'incoming_user_id' => $this->replacement->id,
-            'idempotency_key' => (string) Str::uuid(),
-        ])->assertSessionHasErrors(['backing_type', 'backing_number', 'backing_date']);
-    }
-
     public function test_only_the_coordinator_of_the_career_transfers(): void
     {
         $syllabus = $this->openedSyllabus();
@@ -193,9 +180,6 @@ class TeacherTransferTest extends TestCase
         $this->actingAsTeacher()->post(route('reviews.teacher.transfer', $syllabus), [
             'outgoing_user_id' => $this->teacher->id,
             'incoming_user_id' => $this->replacement->id,
-            'backing_type' => 'resolucion',
-            'backing_number' => 'R-001',
-            'backing_date' => now()->subDay()->toDateString(),
             'idempotency_key' => (string) Str::uuid(),
         ])->assertForbidden();
     }
@@ -205,9 +189,6 @@ class TeacherTransferTest extends TestCase
         return $this->actingAsCoordinator()->post(route('reviews.teacher.transfer', $syllabus), [
             'outgoing_user_id' => $this->teacher->id,
             'incoming_user_id' => $incomingId ?? $this->replacement->id,
-            'backing_type' => 'accion_personal',
-            'backing_number' => 'UEB-RECT-2026-0142-R',
-            'backing_date' => now()->subDay()->toDateString(),
             'idempotency_key' => (string) Str::uuid(),
         ]);
     }

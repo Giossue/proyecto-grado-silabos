@@ -27,11 +27,6 @@ class TransferSyllabusTeacherRequest extends FormRequest
                 'different:outgoing_user_id',
                 Rule::exists('usuarios', 'id')->where('activo', true),
             ],
-            // El relevo lo autoriza coordinación sustentada en un acto, no por su sola
-            // voluntad: decisión B3 de la consulta del 2026-08-26.
-            'backing_type' => ['required', Rule::in(['accion_personal', 'resolucion', 'oficio'])],
-            'backing_number' => ['required', 'string', 'max:80'],
-            'backing_date' => ['required', 'date', 'before_or_equal:today'],
             'idempotency_key' => ['required', 'string', 'max:120'],
         ];
     }
@@ -41,18 +36,6 @@ class TransferSyllabusTeacherRequest extends FormRequest
     {
         return [
             'incoming_user_id.different' => 'El docente entrante debe ser distinto del saliente.',
-            'backing_number.required' => 'Indique el número del documento que respalda el relevo.',
-            'backing_date.before_or_equal' => 'El documento no puede tener fecha futura.',
-        ];
-    }
-
-    /** @return array{type: string, number: string, date: string} */
-    public function backing(): array
-    {
-        return [
-            'type' => $this->string('backing_type')->toString(),
-            'number' => $this->string('backing_number')->toString(),
-            'date' => $this->string('backing_date')->toString(),
         ];
     }
 }

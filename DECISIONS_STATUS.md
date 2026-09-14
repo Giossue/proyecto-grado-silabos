@@ -409,6 +409,11 @@ a la vez y conserva los anteriores como historial. El estado Próximo/En curso/F
 se deriva de las fechas en `America/Guayaquil`; un período finalizado es de solo consulta
 y el servidor bloquea cambios en sus programaciones, paralelos y asignaciones docentes.
 
+I-76 (14 de septiembre de 2026) simplifica el relevo docente: `docentes_paralelo` no
+conserva el tipo, número ni fecha de un documento de sustento. La responsabilidad se
+expresa mediante la asignación RBAC docente, el paralelo, su estado activo y
+`asignado_en`; el relevo conserva su trazabilidad operativa en auditoría.
+
 ## Propuesto
 
 I-52, actualización del 6 de septiembre: se retira `calidad` de las asignaciones de

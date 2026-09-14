@@ -79,7 +79,6 @@ class TeacherReliefTest extends TestCase
             ->forUser($this->replacement->id)
             ->where('paralelo_id', $extra->id)
             ->where('activo', true)
-            ->whereNull('sustento_numero')
             ->exists());
         $this->assertDatabaseHas('eventos_auditoria', ['accion' => 'docente.relevo_global', 'recurso_id' => $this->teacher->id]);
         $this->assertDatabaseHas('eventos_auditoria', ['accion' => 'silabo.docente_transferido', 'recurso_id' => $syllabus->id]);

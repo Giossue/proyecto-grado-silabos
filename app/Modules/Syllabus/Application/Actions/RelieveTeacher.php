@@ -90,7 +90,7 @@ class RelieveTeacher
 
             $syllabusIds = $collaborations->pluck('silabo_id')->unique();
             foreach (Syllabus::query()->whereIn('id', $syllabusIds)->get() as $syllabus) {
-                $this->transfer->execute($syllabus, $outgoingUserId, $incomingUserId, null, "{$idempotencyKey}-{$syllabus->id}", $actor, $request);
+                $this->transfer->execute($syllabus, $outgoingUserId, $incomingUserId, "{$idempotencyKey}-{$syllabus->id}", $actor, $request);
             }
 
             $movedWithoutSyllabus = 0;

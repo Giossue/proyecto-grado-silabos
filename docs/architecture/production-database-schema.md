@@ -58,9 +58,6 @@ asignacion_rol_id UUID (FK → asignaciones_rol.id) NOT NULL
 paralelo_id UUID (FK → paralelos.id) NOT NULL
 activo BOOLEAN NOT NULL
 asignado_en TIMESTAMPTZ NULL
-sustento_tipo VARCHAR NULL
-sustento_numero VARCHAR NULL
-sustento_fecha DATE NULL
 
 UNIQUE (asignacion_rol_id, paralelo_id)
 ~~~
