@@ -2,7 +2,6 @@
 import { Form, Head, router } from '@inertiajs/vue3';
 import { AlertTriangle, RotateCcw, Send, Trash2 } from '@lucide/vue';
 import { computed, onBeforeUnmount, reactive, ref } from 'vue';
-import AiAssistanceController from '@/actions/App/Modules/AiAssistance/Presentation/Http/Controllers/AiAssistanceController';
 import SyllabusController from '@/actions/App/Modules/Syllabus/Presentation/Http/Controllers/SyllabusController';
 import TemplateDocumentView from '@/components/domain/configuration/TemplateDocumentView.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
@@ -70,7 +69,6 @@ type DraftField = {
     required: boolean;
     inherited: boolean;
     teacher_editable: boolean;
-    ai_enabled: boolean;
     value: JsonValue;
     rows: DraftRow[];
 };
@@ -392,19 +390,6 @@ const addRow = (field: DraftField): void => {
 const removeRow = (field: DraftField, index: number): void => {
     fieldStates[field.id].rows.splice(index, 1);
     scheduleSave(field);
-};
-
-const openAi = async (field: DraftField): Promise<void> => {
-    await flushPendingChanges();
-
-    if (!conflict.value) {
-        router.visit(
-            AiAssistanceController.show.url({
-                syllabus: props.syllabus.id,
-                field: field.id,
-            }),
-        );
-    }
 };
 
 const processQueue = (): Promise<void> => {
@@ -823,16 +808,6 @@ onBeforeUnmount(() => {
                                         ),
                                     ]"
                                 />
-                                <Button
-                                    v-if="field.ai_enabled"
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    :disabled="globalSaving || conflict"
-                                    @click="openAi(field)"
-                                >
-                                    Asistencia IA
-                                </Button>
                             </div>
                         </div>
                         <Field
@@ -1077,24 +1052,6 @@ onBeforeUnmount(() => {
                                     ),
                                 ]"
                             />
-                            <div
-                                v-if="
-                                    !field.inherited &&
-                                    field.teacher_editable &&
-                                    field.ai_enabled
-                                "
-                                class="flex justify-end"
-                            >
-                                <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="outline"
-                                    :disabled="globalSaving || conflict"
-                                    @click="openAi(field)"
-                                >
-                                    Asistencia IA
-                                </Button>
-                            </div>
                         </Field>
                     </div>
                 </CardContent>

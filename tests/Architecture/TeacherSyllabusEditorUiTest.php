@@ -32,6 +32,8 @@ test('el editor docente separa el formulario del formato de impresión', functio
         ->not->toContain('Cambio pendiente')
         ->not->toContain('Guardando…')
         ->not->toContain('Sin cambios')
+        ->not->toContain('Asistencia IA')
+        ->not->toContain('AiAssistanceController')
         ->not->toContain('queueNow')
         ->not->toContain('activeSection')
         ->not->toContain('selectSection')

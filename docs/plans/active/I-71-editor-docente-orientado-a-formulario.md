@@ -30,6 +30,7 @@ RF-037..044; RN-020..024; CU-07; DOC-03..05; CP-F. No depende de una decisión
       condición no muestra ningún botón.
 - [x] Mantener el autoguardado silencioso cuando funciona y mostrar al docente solo
       fallos recuperables o conflictos.
+- [x] Retirar los botones repetidos de asistencia de IA de los campos y tablas.
 - [x] Verificar tipos, lint, formato y la prueba focalizada de interfaz.
 
 ## Criterios de aceptación
@@ -51,6 +52,6 @@ RF-037..044; RN-020..024; CU-07; DOC-03..05; CP-F. No depende de una decisión
 
 ## Evidencia
 
-- `TeacherSyllabusEditorUiTest`: 1 prueba y 33 aserciones.
+- `TeacherSyllabusEditorUiTest`: 1 prueba y 35 aserciones.
 - Suites focalizadas de sílabos y cabecera: 69 pruebas y 2.008 aserciones.
 - Prettier, ESLint, TypeScript, build de producción y `git diff --check` aprobados.
