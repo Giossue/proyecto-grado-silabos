@@ -10,7 +10,6 @@ use App\Modules\Academic\Domain\CurriculumSystemFields;
 use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Campus;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
-use App\Modules\Academic\Infrastructure\Persistence\Models\CurriculumFieldDefinition;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
 use App\Modules\Academic\Infrastructure\Persistence\Models\ScheduledSubject;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Subject;
@@ -75,7 +74,6 @@ class UpdateCareerAcademicRecord
         private readonly RecordAuditEvent $audit,
         private readonly ProcessLocks $locks,
         private readonly InProgressWork $work,
-        private readonly SyncSubjectFieldValues $syncSubjectFieldValues,
         private readonly ScheduledSubjectInheritance $inheritance,
         private readonly AcademicPeriodPlanning $periodPlanning,
     ) {}
@@ -121,25 +119,12 @@ class UpdateCareerAcademicRecord
             $attributes = $this->attributes($entity, $data, $activeRole->carrera_id, $record);
             $record->fill($attributes);
             $dirty = $record->getDirty();
-            $customValuesChanged = false;
-            if ($record instanceof Subject) {
-                $customValues = $data['custom_values'] ?? [];
-                $customValuesChanged = $this->syncSubjectFieldValues->execute(
-                    $record,
-                    is_array($customValues) ? $customValues : [],
-                );
-            }
-            if ($dirty === [] && ! $customValuesChanged) {
+            if ($dirty === []) {
                 return $record;
             }
 
             $metadata = $this->auditContext($record, $dirty);
-            if ($customValuesChanged) {
-                $metadata['custom_fields_changed'] = true;
-            }
-            if ($dirty !== []) {
-                $record->save();
-            }
+            $record->save();
 
             $this->audit->execute(
                 actorId: $actor->id,
@@ -230,19 +215,13 @@ class UpdateCareerAcademicRecord
             throw new \LogicException('El registro esperado debe ser una materia.');
         }
 
-        $activeSystemKeys = CurriculumFieldDefinition::query()
-            ->where('malla_id', $record->malla_id)
-            ->where('activo', true)
-            ->whereNotNull('clave_sistema')
-            ->pluck('clave_sistema');
-
         $attributes = [
             'codigo_institucional' => $data['code'],
             'nombre' => $data['nombre'],
             'ciclo' => $data['cycle'] ?? null,
             'modalidad' => $this->inheritance->subjectModality($data),
             'creditos' => $data['creditos'] ?? null,
-            'horas_totales' => CurriculumSystemFields::totalHours($data, $activeSystemKeys),
+            'horas_totales' => CurriculumSystemFields::totalHours($data),
         ];
         $optional = [
             'position' => 'orden_en_ciclo',

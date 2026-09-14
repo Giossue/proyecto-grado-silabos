@@ -59,10 +59,4 @@ class Curriculum extends Model
     {
         return $this->hasMany(Subject::class, 'malla_id');
     }
-
-    /** @return HasMany<CurriculumFieldDefinition, $this> */
-    public function fieldDefinitions(): HasMany
-    {
-        return $this->hasMany(CurriculumFieldDefinition::class, 'malla_id');
-    }
 }

@@ -11,7 +11,6 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\Campus;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CoordinatorAssignment;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
-use App\Modules\Academic\Infrastructure\Persistence\Models\CurriculumFieldDefinition;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Faculty;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
 use App\Modules\Academic\Infrastructure\Persistence\Models\ScheduledSubject;
@@ -161,19 +160,12 @@ class AcademicStructureViewData
         $career = $this->career($careerId);
         $curriculum = Curriculum::query()
             ->where('carrera_id', $careerId)
-            ->with([
-                'fieldDefinitions' => fn ($query) => $query
-                    ->where('activo', true)
-                    ->orderBy('posicion')
-                    ->orderBy('etiqueta'),
-                'subjects' => fn ($query) => $query
-                    ->with('fieldValues')
-                    ->orderBy('ciclo')
-                    ->orderBy('orden_en_ciclo')
-                    ->orderBy('nombre'),
-            ])
+            ->with(['subjects' => fn ($query) => $query
+                ->orderBy('ciclo')
+                ->orderBy('orden_en_ciclo')
+                ->orderBy('nombre')])
             ->findOrFail($curriculumId);
-        $definitions = $curriculum->fieldDefinitions;
+        $definitions = collect(CurriculumSystemFields::fixedDefinitions());
         $subjectIds = $curriculum->subjects->pluck('id');
         // La malla se congela mientras una convocatoria de la carrera está en curso; la
         // razón viaja a la pantalla para que explique el bloqueo con las mismas palabras.
@@ -198,39 +190,31 @@ class AcademicStructureViewData
                 'editable' => $lockReason === null,
                 'lock_reason' => $lockReason,
             ],
-            'fieldDefinitions' => $definitions->map(fn (CurriculumFieldDefinition $field) => [
-                'id' => $field->id,
-                'key' => $field->clave,
-                'label' => $field->etiqueta,
-                'type' => $field->tipo,
-                'system_key' => $field->clave_sistema,
-                'system_label' => $field->clave_sistema === null
-                    ? null
-                    : CurriculumSystemFields::LABELS[$field->clave_sistema] ?? null,
-                'position' => $field->posicion,
-                'visible_on_card' => $field->visible_en_tarjeta,
-                'totalizable' => $field->totalizable,
+            'fixedFields' => $definitions->map(fn (array $field) => [
+                'id' => $field['system_key'],
+                'key' => $field['key'],
+                'label' => $field['label'],
+                'type' => $field['type'],
+                'system_key' => $field['system_key'],
+                'system_label' => CurriculumSystemFields::LABELS[$field['system_key']] ?? $field['label'],
+                'position' => $field['position'],
+                'visible_on_card' => true,
+                'totalizable' => $field['totalizable'],
             ])->values(),
-            'fieldTotals' => $definitions
+            'fixedFieldTotals' => $definitions
                 ->where('totalizable', true)
-                ->map(function (CurriculumFieldDefinition $field) use ($curriculum): array {
-                    $value = $curriculum->subjects->sum(function (Subject $subject) use ($field): float|int {
-                        $rawValue = $field->clave_sistema === null
-                            ? $subject->fieldValues->firstWhere('definicion_campo_id', $field->id)?->valor
-                            : CurriculumSystemFields::value($subject, $field->clave_sistema);
-
-                        return is_numeric($rawValue) ? $rawValue + 0 : 0;
-                    });
+                ->map(function (array $field) use ($curriculum): array {
+                    $value = $curriculum->subjects->sum(fn (Subject $subject): float|int => is_numeric(CurriculumSystemFields::value($subject, $field['system_key']))
+                            ? CurriculumSystemFields::value($subject, $field['system_key']) + 0
+                            : 0);
 
                     return [
-                        'id' => $field->id,
-                        'label' => $field->etiqueta,
+                        'id' => $field['system_key'],
+                        'label' => $field['label'],
                         'value' => $value,
                     ];
                 })->values(),
             'subjects' => $curriculum->subjects->map(function (Subject $subject) use ($definitions): array {
-                $customValues = $subject->fieldValues->keyBy('definicion_campo_id');
-
                 return [
                     'id' => $subject->id,
                     'code' => $subject->codigo_institucional,
@@ -243,20 +227,14 @@ class AcademicStructureViewData
                     'credits' => $subject->creditos,
                     'total_hours' => $subject->horas_totales,
                     'active' => $subject->activo,
-                    'custom_values' => $customValues->mapWithKeys(
-                        fn ($value, string $definitionId) => [$definitionId => $value->valor],
-                    ),
                     'system_values' => collect(CurriculumSystemFields::ATTRIBUTES)->mapWithKeys(
                         fn (string $attribute, string $key) => [$key => $subject->getAttribute($attribute)],
                     ),
                     'display_fields' => $definitions
-                        ->where('visible_en_tarjeta', true)
-                        ->map(fn (CurriculumFieldDefinition $field) => [
-                            'id' => $field->id,
-                            'label' => $field->etiqueta,
-                            'value' => $field->clave_sistema === null
-                                ? $customValues->get($field->id)?->valor
-                                : CurriculumSystemFields::value($subject, $field->clave_sistema),
+                        ->map(fn (array $field) => [
+                            'id' => $field['system_key'],
+                            'label' => $field['label'],
+                            'value' => CurriculumSystemFields::value($subject, $field['system_key']),
                         ])->values(),
                 ];
             })->values(),
@@ -272,13 +250,6 @@ class AcademicStructureViewData
                     'requirement_id' => $requirement->requisito_id,
                     'type' => $requirement->tipo,
                 ]),
-            'systemFieldOptions' => collect(CurriculumSystemFields::ATTRIBUTES)
-                ->keys()
-                ->map(fn (string $key) => [
-                    'value' => $key,
-                    'label' => CurriculumSystemFields::LABELS[$key],
-                ])
-                ->values(),
             'modalityOptions' => StudyModality::options(),
             'options' => $this->emptyOptions(),
         ];

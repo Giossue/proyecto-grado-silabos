@@ -10,10 +10,10 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import type { CurriculumFieldDefinition } from '@/types/academic';
+import type { FixedSubjectField } from '@/types/academic';
 
 const props = defineProps<{
-    field: CurriculumFieldDefinition;
+    field: FixedSubjectField;
     inputId: string;
     value: number | string;
     error?: string;
@@ -25,9 +25,7 @@ const emit = defineEmits<{
 }>();
 
 const inputName = computed(() =>
-    props.field.system_key
-        ? props.field.system_key
-        : `custom_values[${props.field.id}]`,
+    props.field.system_key,
 );
 const inputType = computed(() =>
     props.field.type === 'numero' || props.field.type === 'entero'

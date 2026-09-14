@@ -3,7 +3,6 @@
 namespace App\Modules\Syllabus\Application;
 
 use App\Modules\Academic\Infrastructure\Persistence\Models\ScheduledSubject;
-use App\Modules\Academic\Infrastructure\Persistence\Models\SubjectFieldValue;
 use App\Modules\Academic\Infrastructure\Persistence\Models\SubjectRequirement;
 
 class AcademicContextSnapshot
@@ -14,7 +13,6 @@ class AcademicContextSnapshot
         $scheduledSubject->loadMissing([
             'subject.curriculum.career.faculty',
             'subject.requirements.requirement',
-            'subject.fieldValues.definition',
             'academicPeriod',
             'campus',
         ]);
@@ -60,13 +58,6 @@ class AcademicContextSnapshot
                 'hours_paec' => $subject->horas_paec,
                 'prerequisites' => $requirementCodes('prerrequisito'),
                 'corequisites' => $requirementCodes('correquisito'),
-                'custom_fields' => $subject->fieldValues
-                    ->map(fn (SubjectFieldValue $value): array => [
-                        'key' => $value->definition->clave,
-                        'label' => $value->definition->etiqueta,
-                        'type' => $value->definition->tipo,
-                        'value' => $value->valor,
-                    ])->values()->all(),
             ],
             'scheduled_subject' => [
                 'id' => $scheduledSubject->id,

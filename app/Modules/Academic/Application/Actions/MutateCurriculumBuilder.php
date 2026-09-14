@@ -4,9 +4,7 @@ namespace App\Modules\Academic\Application\Actions;
 
 use App\Models\User;
 use App\Modules\Academic\Domain\AcademicStructurePermissions;
-use App\Modules\Academic\Domain\CurriculumSystemFields;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
-use App\Modules\Academic\Infrastructure\Persistence\Models\CurriculumFieldDefinition;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Subject;
 use App\Modules\Academic\Infrastructure\Persistence\Models\SubjectRequirement;
 use App\Modules\Identity\Application\ActiveRole;
@@ -62,80 +60,6 @@ class MutateCurriculumBuilder
             ]);
 
             return $curriculum;
-        });
-    }
-
-    /** @param array<string, mixed> $data */
-    public function createField(string $curriculumId, array $data, User $actor, Request $request): CurriculumFieldDefinition
-    {
-        return DB::transaction(function () use ($actor, $curriculumId, $data, $request): CurriculumFieldDefinition {
-            [$role, $curriculum] = $this->currentCurriculum($curriculumId, $request);
-            $this->work->requireConfirmation($request, $role->carrera_id);
-            if (($data['system_key'] ?? null) !== null
-                && ! in_array($data['type'], ['numero', 'entero'], true)) {
-                throw ValidationException::withMessages([
-                    'type' => 'Los datos académicos estructurados de esta malla son numéricos.',
-                ]);
-            }
-            if ($data['totalizable'] && ! in_array($data['type'], ['numero', 'entero'], true)) {
-                throw ValidationException::withMessages([
-                    'totalizable' => 'Solo los campos numéricos pueden incluirse en los totales.',
-                ]);
-            }
-            if (($data['system_key'] ?? null) !== null
-                && ! array_key_exists((string) $data['system_key'], CurriculumSystemFields::ATTRIBUTES)) {
-                throw ValidationException::withMessages(['system_key' => 'El dato estructurado no es válido.']);
-            }
-            $field = CurriculumFieldDefinition::query()->firstOrNew([
-                'malla_id' => $curriculum->id,
-                'clave' => $data['key'],
-            ]);
-            $sameSystemField = CurriculumFieldDefinition::query()
-                ->where('malla_id', $curriculum->id)
-                ->where('clave_sistema', $data['system_key'] ?? null);
-            if ($field->exists) {
-                $sameSystemField->whereKeyNot($field->id);
-            }
-            if (($data['system_key'] ?? null) !== null && $sameSystemField->exists()) {
-                throw ValidationException::withMessages([
-                    'system_key' => 'Ese dato estructurado ya pertenece a otro campo de esta malla.',
-                ]);
-            }
-            $field->fill([
-                'etiqueta' => $data['label'],
-                'tipo' => $data['type'],
-                'clave_sistema' => $data['system_key'] ?? null,
-                'posicion' => $data['position'],
-                'visible_en_tarjeta' => $data['visible_on_card'],
-                'totalizable' => $data['totalizable'],
-                'activo' => true,
-            ]);
-            $field->save();
-            $this->record($actor, $role, $request, 'academico.campo_malla.creacion', 'campo_malla', $field->id, [
-                'curriculum_id' => $curriculum->id,
-                'key' => $field->clave,
-            ]);
-
-            return $field;
-        });
-    }
-
-    public function deleteField(
-        string $curriculumId,
-        string $fieldId,
-        User $actor,
-        Request $request,
-    ): void {
-        DB::transaction(function () use ($actor, $curriculumId, $fieldId, $request): void {
-            [$role, $curriculum] = $this->currentCurriculum($curriculumId, $request);
-            $this->work->requireConfirmation($request, $role->carrera_id);
-            $field = CurriculumFieldDefinition::query()
-                ->where('malla_id', $curriculum->id)
-                ->lockForUpdate()
-                ->findOrFail($fieldId);
-            $metadata = ['curriculum_id' => $curriculum->id, 'key' => $field->clave];
-            $field->update(['activo' => false]);
-            $this->record($actor, $role, $request, 'academico.campo_malla.eliminacion', 'campo_malla', $fieldId, $metadata);
         });
     }
 

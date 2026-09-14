@@ -27,14 +27,14 @@ import { INHERITED_MODALITY } from '@/lib/studyModalities';
 import type {
     CurriculumBuilderProps,
     CurriculumBuilderSubject,
-    CurriculumFieldDefinition,
+    FixedSubjectField,
 } from '@/types/academic';
 
 const props = defineProps<{
     career: CurriculumBuilderProps['career'];
     modalityOptions: CurriculumBuilderProps['modalityOptions'];
     curriculum: CurriculumBuilderProps['curriculum'];
-    fieldDefinitions: CurriculumFieldDefinition[];
+    fixedFields: FixedSubjectField[];
     subject: CurriculumBuilderSubject | null;
     cycle: number;
     position: number;
@@ -66,11 +66,10 @@ const formRoute = computed(() =>
 
 const { updateValue, valueFor } = useCurriculumSubjectFieldValues(
     () => props.subject,
-    () => props.fieldDefinitions,
+    () => props.fixedFields,
 );
 
-const errorKey = (field: CurriculumFieldDefinition): string =>
-    field.system_key ?? `custom_values.${field.id}`;
+const errorKey = (field: FixedSubjectField): string => field.system_key;
 const organizationUnit = ref(props.subject?.organization_unit ?? '');
 
 watch(
@@ -198,11 +197,11 @@ watch(
             </Field>
 
             <div
-                v-if="fieldDefinitions.length > 0"
+                v-if="fixedFields.length > 0"
                 class="-m-1 flex gap-2 overflow-x-auto p-1"
             >
                 <CurriculumSubjectFieldInput
-                    v-for="field in fieldDefinitions"
+                    v-for="field in fixedFields"
                     :key="field.id"
                     class="min-w-24 flex-1 gap-1"
                     :field="field"

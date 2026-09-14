@@ -57,7 +57,7 @@ const {
                 <CardTitle>Materias de la malla</CardTitle>
                 <CardDescription>
                     Desglose completo de materias, ciclos, unidades de
-                    organización y campos configurados para esta versión.
+                    organización y componentes académicos fijos.
                 </CardDescription>
             </CardHeader>
             <CardContent class="flex flex-col gap-4">
@@ -70,7 +70,7 @@ const {
                                 <TableHead>Unidad</TableHead>
                                 <TableHead>Modalidad</TableHead>
                                 <TableHead
-                                    v-for="field in fieldDefinitions"
+                                    v-for="field in fixedFields"
                                     :key="field.id"
                                     data-card-hidden="true"
                                 >
@@ -84,7 +84,7 @@ const {
                         <TableBody>
                             <TableEmpty
                                 v-if="subjects.length === 0"
-                                :colspan="4 + fieldDefinitions.length"
+                                :colspan="4 + fixedFields.length"
                             >
                                 No hay materias en esta malla.
                             </TableEmpty>

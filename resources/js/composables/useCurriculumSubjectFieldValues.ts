@@ -2,20 +2,16 @@ import type { MaybeRefOrGetter } from 'vue';
 import { computed, ref, toValue, watch } from 'vue';
 import type {
     CurriculumBuilderSubject,
-    CurriculumFieldDefinition,
+    FixedSubjectField,
 } from '@/types/academic';
 
 const HOUR_COMPONENT_KEYS = new Set([
-    'hours_project',
-    'hours_ap',
     'horas_ac',
     'horas_pae',
     'horas_aa',
-    'hours_paec',
 ]);
 
-const fieldKey = (field: CurriculumFieldDefinition): string =>
-    field.system_key ?? field.id;
+const fieldKey = (field: FixedSubjectField): string => field.system_key;
 
 const normalizedValue = (value: unknown): number | string => {
     if (typeof value === 'boolean') {
@@ -33,7 +29,7 @@ const normalizedValue = (value: unknown): number | string => {
 // número descarta los ceros de relleno sin perder decimales reales («4.50» → 4.5).
 // Solo aplica al cargar: normalizar mientras se teclea borraría el punto de «4.».
 const storedValue = (
-    field: CurriculumFieldDefinition,
+    field: FixedSubjectField,
     value: unknown,
 ): number | string => {
     const normalized = normalizedValue(value);
@@ -63,7 +59,7 @@ const numericValue = (value: number | string): number => {
 
 export function useCurriculumSubjectFieldValues(
     subject: MaybeRefOrGetter<CurriculumBuilderSubject | null>,
-    definitions: MaybeRefOrGetter<CurriculumFieldDefinition[]>,
+    definitions: MaybeRefOrGetter<FixedSubjectField[]>,
 ) {
     const values = ref<Record<string, number | string>>({});
 
@@ -72,9 +68,7 @@ export function useCurriculumSubjectFieldValues(
 
         values.value = Object.fromEntries(
             toValue(definitions).map((field) => {
-                const value = field.system_key
-                    ? currentSubject?.system_values[field.system_key]
-                    : currentSubject?.custom_values[field.id];
+                const value = currentSubject?.system_values[field.system_key];
 
                 return [fieldKey(field), storedValue(field, value)];
             }),
@@ -89,9 +83,7 @@ export function useCurriculumSubjectFieldValues(
     const totalHours = computed(() =>
         toValue(definitions)
             .filter(
-                (field) =>
-                    field.system_key !== null &&
-                    HOUR_COMPONENT_KEYS.has(field.system_key),
+                (field) => HOUR_COMPONENT_KEYS.has(field.system_key),
             )
             .reduce(
                 (total, field) =>
@@ -100,13 +92,13 @@ export function useCurriculumSubjectFieldValues(
             ),
     );
 
-    const valueFor = (field: CurriculumFieldDefinition): number | string =>
+    const valueFor = (field: FixedSubjectField): number | string =>
         field.system_key === 'horas_totales'
             ? totalHours.value
             : (values.value[fieldKey(field)] ?? '');
 
     const updateValue = (
-        field: CurriculumFieldDefinition,
+        field: FixedSubjectField,
         value: unknown,
     ): void => {
         if (field.system_key === 'horas_totales') {

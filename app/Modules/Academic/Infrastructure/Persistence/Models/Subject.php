@@ -87,12 +87,6 @@ class Subject extends Model
         return $this->hasMany(ScheduledSubject::class, 'asignatura_id');
     }
 
-    /** @return HasMany<SubjectFieldValue, $this> */
-    public function fieldValues(): HasMany
-    {
-        return $this->hasMany(SubjectFieldValue::class, 'asignatura_id');
-    }
-
     /** @return HasMany<SubjectRequirement, $this> */
     public function requirements(): HasMany
     {

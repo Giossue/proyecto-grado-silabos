@@ -47,8 +47,7 @@ programadas de inicio o fin.
 
 `facultades`, `carreras`, `campus`,
 `periodos_academicos`, `mallas`, `asignaturas`, `requisitos_asignatura`,
-`definiciones_campo_malla`, `valores_campo_asignatura`, `programaciones_asignatura`,
-`paralelos`, `docentes_paralelo`.
+`programaciones_asignatura`, `paralelos`, `docentes_paralelo`.
 
 `asignaciones_rol` es única relación RBAC: une usuario, rol y alcance de carrera. Una
 fila activa con rol `coordinador` expresa directamente quién coordina esa carrera; no
@@ -74,13 +73,13 @@ opcional, `programaciones_asignatura.modalidad` copia heredada; migraciones `000
 jerarquía que presenta ADM-04 es una proyección de lectura y no una desnormalización de
 la persistencia.
 
-`mallas` contiene una sola fila por carrera y define su cantidad de ciclos y sus campos
-de tarjeta. Su estado puede ser `activa` o `inactiva`. Una definición puede enlazarse con
-una columna académica estructurada o almacenar un valor tipado por asignatura en
-`valores_campo_asignatura`; nunca altera el DDL por carrera. `asignaturas.ciclo` y
-`orden_en_ciclo` determinan la posición reproducible del lienzo. Las coordenadas de
-pantalla no se persisten. `requisitos_asignatura.tipo` conserva la semántica explícita de
-cada flecha.
+`mallas` contiene una sola fila por carrera y define su cantidad de ciclos. Su estado
+puede ser `activa` o `inactiva`. Los atributos académicos de `asignaturas` son fijos y
+tipados: ninguna carrera agrega columnas, valores EAV o campos arbitrarios. ACD, APE,
+AA, créditos y total son un conjunto fijo; el total se deriva de ACD + APE + AA.
+`asignaturas.ciclo` y `orden_en_ciclo` determinan la posición reproducible del lienzo.
+Las coordenadas de pantalla no se persisten. `requisitos_asignatura.tipo` conserva la
+semántica explícita de cada flecha.
 
 `silabos.contexto_academico` conserva una fotografía JSON de la malla, la asignatura y su
 programación al crear el expediente. Es evidencia histórica de lectura y exportación; no
@@ -187,8 +186,7 @@ Como mínimo, prueba/define:
 - filtros frecuentes por convocatoria, estado, asignación, plazo y fecha;
 - búsquedas de auditoría por recurso/actor/tiempo;
 - una sola malla actual por carrera mediante índice parcial único;
-- clave y dato estructurado únicos por malla, y un valor por
-  asignatura/definición;
+- código institucional único por malla y datos académicos tipados por asignatura;
 - colas/outbox por estado y próximo intento.
 
 Usa índices parciales o constraints de exclusión PostgreSQL cuando expresen mejor la

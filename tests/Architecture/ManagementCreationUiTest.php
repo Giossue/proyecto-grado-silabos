@@ -417,7 +417,7 @@ it('ofrece desglose y constructor visual sobre el mismo contrato de malla', func
         ->toContain("activeMode === 'breakdown'")
         ->toContain('<TabsTrigger value="breakdown"')
         ->toContain('<TabsTrigger value="builder"')
-        ->toContain(':field-definitions="fieldDefinitions"');
+        ->toContain(':fixed-fields="fixedFields"');
     expect($canvas)
         ->toBeString()
         ->toContain("from '@vue-flow/core'")

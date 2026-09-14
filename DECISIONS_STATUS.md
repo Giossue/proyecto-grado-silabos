@@ -190,6 +190,13 @@ roles, pero no bloquea un reemplazo. La entrega requiere las migraciones `000056
 `000059` junto con el despliegue de aplicación; hasta entonces la fotografía remota
 continúa en el esquema anterior.
 
+I-75 (14 de septiembre de 2026) fija la estructura académica de la malla: ninguna
+carrera puede inventar campos para sus materias. Código, nombre, ciclo, unidad de
+organización curricular, modalidad, créditos y componentes horarios son atributos
+tipados de `asignaturas`; ACD, APE, AA, créditos y total se muestran como conjunto
+fijo. Se retiran `definiciones_campo_malla` y `valores_campo_asignatura`; requisitos,
+programaciones, paralelos y responsabilidades docentes se mantienen como relaciones.
+
 I-07 implementa un puerto de lectura, fixture sintético versionado, staging inmutable,
 simulación y exclusión humana. Demuestra idempotencia, conflicto y cero mutación del
 catálogo, pero no incorpora esquema, credenciales, red, reglas de identidad ni aplicador:

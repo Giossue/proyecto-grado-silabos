@@ -23,7 +23,7 @@ import { formatNumericDisplay } from '@/lib/numberDisplay';
 import type {
     CurriculumBuilderProps,
     CurriculumBuilderSubject,
-    CurriculumFieldDefinition,
+    FixedSubjectField,
 } from '@/types/academic';
 
 const props = defineProps<{
@@ -31,7 +31,7 @@ const props = defineProps<{
         career: CurriculumBuilderProps['career'];
         modalityOptions: CurriculumBuilderProps['modalityOptions'];
         curriculum: CurriculumBuilderProps['curriculum'];
-        fieldDefinitions: CurriculumFieldDefinition[];
+        fixedFields: FixedSubjectField[];
         organizationUnits: string[];
         subject: CurriculumBuilderSubject | null;
         unitStyle: { backgroundColor: string; color: string };
@@ -54,7 +54,7 @@ const formatFieldValue = formatNumericDisplay;
 const totalFieldIds = computed(
     () =>
         new Set(
-            props.data.fieldDefinitions
+            props.data.fixedFields
                 .filter((field) => field.system_key === 'total_hours')
                 .map((field) => field.id),
         ),
@@ -81,7 +81,7 @@ const totalFields = computed(
         :career="data.career"
         :modality-options="data.modalityOptions"
         :curriculum="data.curriculum"
-        :field-definitions="data.fieldDefinitions"
+        :fixed-fields="data.fixedFields"
         :organization-units="data.organizationUnits"
         :subject="data.subject"
         :cycle="data.cycle"

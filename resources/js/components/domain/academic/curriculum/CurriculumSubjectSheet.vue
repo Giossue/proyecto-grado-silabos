@@ -28,13 +28,13 @@ import { cn } from '@/lib/utils';
 import type {
     CurriculumBuilderProps,
     CurriculumBuilderSubject,
-    CurriculumFieldDefinition,
+    FixedSubjectField,
 } from '@/types/academic';
 
 const props = defineProps<{
     career: CurriculumBuilderProps['career'];
     curriculum: CurriculumBuilderProps['curriculum'];
-    fieldDefinitions: CurriculumBuilderProps['fieldDefinitions'];
+    fixedFields: CurriculumBuilderProps['fixedFields'];
     subject: CurriculumBuilderSubject | null;
     organizationUnits: string[];
     modalityOptions: CurriculumBuilderProps['modalityOptions'];
@@ -66,7 +66,7 @@ const title = computed(() =>
 );
 const { reset, updateValue, valueFor } = useCurriculumSubjectFieldValues(
     () => props.subject,
-    () => props.fieldDefinitions,
+    () => props.fixedFields,
 );
 
 watch(open, (isOpen) => {
@@ -75,9 +75,8 @@ watch(open, (isOpen) => {
     }
 });
 
-const errorKey = (field: CurriculumFieldDefinition): string =>
-    field.system_key ?? `custom_values.${field.id}`;
-const fieldGridClass = (field: CurriculumFieldDefinition): string =>
+const errorKey = (field: FixedSubjectField): string => field.system_key;
+const fieldGridClass = (field: FixedSubjectField): string =>
     cn(field.type === 'texto' && 'col-span-2 sm:col-span-5');
 const organizationUnit = ref(props.subject?.organization_unit ?? '');
 
@@ -213,7 +212,7 @@ watch(
 
                     <div class="grid grid-cols-2 gap-3 sm:grid-cols-5">
                         <CurriculumSubjectFieldInput
-                            v-for="field in fieldDefinitions"
+                            v-for="field in fixedFields"
                             :key="field.id"
                             :class="fieldGridClass(field)"
                             :field="field"

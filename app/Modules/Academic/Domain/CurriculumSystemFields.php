@@ -7,19 +7,12 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\Subject;
 final class CurriculumSystemFields
 {
     /**
-     * `hours_project`, `hours_ap` y `hours_paec` conservan la clave inglesa: la
-     * migración I-28 (`definiciones_campo_malla.clave_sistema`) solo tradujo las
-     * cinco claves restantes, por lo que la BD puede contener esos valores.
-     *
      * @var list<string>
      */
-    public const HOUR_COMPONENT_KEYS = [
-        'hours_project',
-        'hours_ap',
+    public const TOTAL_HOUR_COMPONENT_KEYS = [
         'horas_ac',
         'horas_pae',
         'horas_aa',
-        'hours_paec',
     ];
 
     /** @var array<string, string> */
@@ -46,8 +39,12 @@ final class CurriculumSystemFields
         'horas_totales' => 'Horas totales',
     ];
 
-    /** @return list<array{key: string, label: string, type: string, system_key: string, position: int, totalizable: bool}> */
-    public static function defaults(): array
+    /**
+     * Campos fijos de una asignatura. No son configurables por carrera ni malla.
+     *
+     * @return list<array{key: string, label: string, type: string, system_key: string, position: int, totalizable: bool}>
+     */
+    public static function fixedDefinitions(): array
     {
         return [
             ['key' => 'acd', 'label' => 'ACD', 'type' => 'entero', 'system_key' => 'horas_ac', 'position' => 1, 'totalizable' => true],
@@ -65,18 +62,11 @@ final class CurriculumSystemFields
         return $attribute === null ? null : $subject->getAttribute($attribute);
     }
 
-    /**
-     * @param  array<string, mixed>  $values
-     * @param  iterable<string>|null  $activeSystemKeys
-     */
-    public static function totalHours(array $values, ?iterable $activeSystemKeys = null): int|float
+    /** @param array<string, mixed> $values */
+    public static function totalHours(array $values): int|float
     {
-        $keys = $activeSystemKeys === null
-            ? self::HOUR_COMPONENT_KEYS
-            : array_values(array_intersect(self::HOUR_COMPONENT_KEYS, [...$activeSystemKeys]));
-
         return array_reduce(
-            $keys,
+            self::TOTAL_HOUR_COMPONENT_KEYS,
             fn (int|float $total, string $key): int|float => $total
                 + (is_numeric($values[$key] ?? null) ? $values[$key] + 0 : 0),
             0,

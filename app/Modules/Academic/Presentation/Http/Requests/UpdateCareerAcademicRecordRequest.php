@@ -6,14 +6,12 @@ use App\Modules\Academic\Domain\AcademicStructurePermissions;
 use App\Modules\Academic\Domain\CurriculumSystemFields;
 use App\Modules\Academic\Domain\StudyModality;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
-use App\Modules\Academic\Infrastructure\Persistence\Models\CurriculumFieldDefinition;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
 use App\Modules\Academic\Infrastructure\Persistence\Models\ScheduledSubject;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Subject;
 use App\Modules\Academic\Infrastructure\Persistence\Models\TeacherAssignment;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -26,10 +24,7 @@ class UpdateCareerAcademicRecordRequest extends FormRequest
         }
 
         $this->merge([
-            'horas_totales' => CurriculumSystemFields::totalHours(
-                $this->all(),
-                $this->activeSubjectSystemKeys($this->subjectCurriculumId()),
-            ),
+            'horas_totales' => CurriculumSystemFields::totalHours($this->all()),
         ]);
     }
 
@@ -167,52 +162,17 @@ class UpdateCareerAcademicRecordRequest extends FormRequest
             'position' => ['nullable', 'integer', 'min:0', 'max:999'],
             'organization_unit' => ['required', 'string', 'max:80'],
             'modality' => ['nullable', 'string', Rule::in(StudyModality::values())],
-            'creditos' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
-            'horas_totales' => ['nullable', 'integer', 'min:0', 'max:65535'],
+            'creditos' => ['required', 'numeric', 'min:0', 'max:9999.99'],
+            'horas_totales' => ['required', 'integer', 'min:0', 'max:65535'],
             'hours_project' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
             'hours_ap' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
-            'horas_ac' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
-            'horas_pae' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
-            'horas_aa' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
+            'horas_ac' => ['required', 'numeric', 'min:0', 'max:9999.99'],
+            'horas_pae' => ['required', 'numeric', 'min:0', 'max:9999.99'],
+            'horas_aa' => ['required', 'numeric', 'min:0', 'max:9999.99'],
             'hours_paec' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
-            'custom_values' => ['nullable', 'array'],
-            'custom_values.*' => ['nullable'],
         ];
 
-        foreach ($this->activeSubjectFields($curriculumId) as $field) {
-            if ($field->clave_sistema !== null && isset($rules[$field->clave_sistema])) {
-                $rules[$field->clave_sistema][0] = 'required';
-
-                continue;
-            }
-
-            if ($field->clave_sistema === null) {
-                $rules['custom_values'][0] = 'required';
-                $rules["custom_values.{$field->id}"] = ['required'];
-            }
-        }
-
         return $rules;
-    }
-
-    /** @return Collection<int, CurriculumFieldDefinition> */
-    private function activeSubjectFields(string $curriculumId)
-    {
-        return CurriculumFieldDefinition::query()
-            ->where('malla_id', $curriculumId)
-            ->where('activo', true)
-            ->whereHas('curriculum', fn ($query) => $query
-                ->where('carrera_id', $this->careerId()))
-            ->get(['id', 'clave_sistema']);
-    }
-
-    /** @return list<string> */
-    private function activeSubjectSystemKeys(string $curriculumId): array
-    {
-        return array_values($this->activeSubjectFields($curriculumId)
-            ->pluck('clave_sistema')
-            ->filter(fn (mixed $key): bool => is_string($key))
-            ->all());
     }
 
     private function subjectCurriculumId(): string

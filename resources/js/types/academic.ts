@@ -157,13 +157,13 @@ export type AcademicStructureProps = {
     };
 };
 
-export type CurriculumFieldDefinition = {
+export type FixedSubjectField = {
     id: string;
     key: string;
     label: string;
     type: 'texto' | 'numero' | 'entero' | 'booleano';
-    system_key: string | null;
-    system_label: string | null;
+    system_key: string;
+    system_label: string;
     position: number;
     visible_on_card: boolean;
     totalizable: boolean;
@@ -182,7 +182,6 @@ export type CurriculumBuilderSubject = {
     credits: string | null;
     total_hours: number | null;
     active: boolean;
-    custom_values: Record<string, boolean | number | string | null>;
     system_values: Record<string, number | string | null>;
     display_fields: {
         id: string;
@@ -207,8 +206,8 @@ export type CurriculumBuilderProps = {
         editable: boolean;
         lock_reason: string | null;
     };
-    fieldDefinitions: CurriculumFieldDefinition[];
-    fieldTotals: {
+    fixedFields: FixedSubjectField[];
+    fixedFieldTotals: {
         id: string;
         label: string;
         value: number;
@@ -219,10 +218,6 @@ export type CurriculumBuilderProps = {
         subject_id: string;
         requirement_id: string;
         type: 'prerrequisito' | 'correquisito';
-    }[];
-    systemFieldOptions: {
-        value: string;
-        label: string;
     }[];
     modalityOptions: { value: string; label: string }[];
     options: AcademicStructureProps['options'];

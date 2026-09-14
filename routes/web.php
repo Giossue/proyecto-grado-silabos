@@ -187,12 +187,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::patch('malla/{curriculum}/configuracion', [CareerAcademicStructureController::class, 'updateCurriculumConfiguration'])
             ->whereUuid('curriculum')
             ->name('coordination.academic.curricula.configuration.update');
-        Route::post('malla/{curriculum}/campos', [CareerAcademicStructureController::class, 'storeCurriculumField'])
-            ->whereUuid('curriculum')
-            ->name('coordination.academic.curricula.fields.store');
-        Route::delete('malla/{curriculum}/campos/{field}', [CareerAcademicStructureController::class, 'destroyCurriculumField'])
-            ->whereUuid(['curriculum', 'field'])
-            ->name('coordination.academic.curricula.fields.destroy');
         Route::post('malla/{curriculum}/relaciones', [CareerAcademicStructureController::class, 'storeSubjectRequirement'])
             ->whereUuid('curriculum')
             ->name('coordination.academic.curricula.requirements.store');

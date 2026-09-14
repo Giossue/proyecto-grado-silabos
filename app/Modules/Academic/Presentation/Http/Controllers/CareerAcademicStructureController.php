@@ -18,7 +18,6 @@ use App\Modules\Academic\Presentation\Http\Requests\ManageCareerAcademicStructur
 use App\Modules\Academic\Presentation\Http\Requests\PreparePeriodRequest;
 use App\Modules\Academic\Presentation\Http\Requests\SetAcademicRecordStatusRequest;
 use App\Modules\Academic\Presentation\Http\Requests\StoreAcademicRecordRequest;
-use App\Modules\Academic\Presentation\Http\Requests\StoreCurriculumFieldRequest;
 use App\Modules\Academic\Presentation\Http\Requests\StoreParallelsRequest;
 use App\Modules\Academic\Presentation\Http\Requests\StoreSubjectRequirementRequest;
 use App\Modules\Academic\Presentation\Http\Requests\UpdateCareerAcademicRecordRequest;
@@ -246,27 +245,6 @@ class CareerAcademicStructureController extends Controller
         return back()->with('success', 'Configuración de la malla actualizada.');
     }
 
-    public function storeCurriculumField(
-        string $curriculum,
-        StoreCurriculumFieldRequest $request,
-        MutateCurriculumBuilder $action,
-    ): RedirectResponse {
-        $action->createField($curriculum, $request->validated(), $this->actor($request), $request);
-
-        return back()->with('success', 'Campo agregado a la malla.');
-    }
-
-    public function destroyCurriculumField(
-        string $curriculum,
-        string $field,
-        ManageCareerAcademicStructureRequest $request,
-        MutateCurriculumBuilder $action,
-    ): RedirectResponse {
-        $action->deleteField($curriculum, $field, $this->actor($request), $request);
-
-        return back()->with('success', 'Campo retirado de la malla.');
-    }
-
     public function storeSubjectRequirement(
         string $curriculum,
         StoreSubjectRequirementRequest $request,
@@ -319,7 +297,7 @@ class CareerAcademicStructureController extends Controller
         return $careerId;
     }
 
-    private function actor(ManageCareerAcademicStructureRequest|StoreCurriculumFieldRequest|StoreSubjectRequirementRequest|UpdateCurriculumConfigurationRequest|UpdateSubjectLayoutRequest $request): User
+    private function actor(ManageCareerAcademicStructureRequest|StoreSubjectRequirementRequest|UpdateCurriculumConfigurationRequest|UpdateSubjectLayoutRequest $request): User
     {
         $actor = $request->user();
         abort_unless($actor instanceof User, 401);

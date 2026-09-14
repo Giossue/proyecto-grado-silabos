@@ -3,13 +3,11 @@
 namespace Database\Seeders;
 
 use App\Models\User;
-use App\Modules\Academic\Domain\CurriculumSystemFields;
 use App\Modules\Academic\Domain\StudyModality;
 use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Campus;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
-use App\Modules\Academic\Infrastructure\Persistence\Models\CurriculumFieldDefinition;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Faculty;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
 use App\Modules\Academic\Infrastructure\Persistence\Models\ScheduledSubject;
@@ -72,23 +70,6 @@ class DatabaseSeeder extends Seeder
                     'estado' => 'activa',
                 ],
             );
-            foreach (CurriculumSystemFields::defaults() as $field) {
-                CurriculumFieldDefinition::query()->firstOrCreate(
-                    [
-                        'malla_id' => $curriculum->id,
-                        'clave' => $field['key'],
-                    ],
-                    [
-                        'etiqueta' => $field['label'],
-                        'tipo' => $field['type'],
-                        'clave_sistema' => $field['system_key'],
-                        'posicion' => $field['position'],
-                        'visible_en_tarjeta' => true,
-                        'totalizable' => $field['totalizable'],
-                        'activo' => true,
-                    ],
-                );
-            }
             $subject = Subject::query()->firstOrCreate(
                 ['malla_id' => $curriculum->id, 'codigo_institucional' => 'SW-601'],
                 [

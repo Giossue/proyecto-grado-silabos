@@ -11,7 +11,6 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Campus;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
-use App\Modules\Academic\Infrastructure\Persistence\Models\CurriculumFieldDefinition;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Faculty;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
 use App\Modules\Academic\Infrastructure\Persistence\Models\ScheduledSubject;
@@ -38,7 +37,6 @@ class CreateAcademicRecord
         private readonly RecordAuditEvent $audit,
         private readonly ProcessLocks $locks,
         private readonly InProgressWork $work,
-        private readonly SyncSubjectFieldValues $syncSubjectFieldValues,
         private readonly InstitutionalLogos $logos,
         private readonly ScheduledSubjectInheritance $inheritance,
         private readonly AcademicPeriodPlanning $periodPlanning,
@@ -151,20 +149,6 @@ class CreateAcademicRecord
             'estado' => 'activa',
         ]);
 
-        foreach (CurriculumSystemFields::defaults() as $field) {
-            CurriculumFieldDefinition::query()->create([
-                'malla_id' => $curriculum->id,
-                'clave' => $field['key'],
-                'etiqueta' => $field['label'],
-                'tipo' => $field['type'],
-                'clave_sistema' => $field['system_key'],
-                'posicion' => $field['position'],
-                'visible_en_tarjeta' => true,
-                'totalizable' => $field['totalizable'],
-                'activo' => true,
-            ]);
-        }
-
         return $curriculum;
     }
 
@@ -192,12 +176,6 @@ class CreateAcademicRecord
             ? (int) $data['position']
             : ($lastPosition === null ? 0 : (int) $lastPosition + 1);
 
-        $activeSystemKeys = CurriculumFieldDefinition::query()
-            ->where('malla_id', $curriculum->id)
-            ->where('activo', true)
-            ->whereNotNull('clave_sistema')
-            ->pluck('clave_sistema');
-
         $subject = Subject::query()->create([
             'malla_id' => $curriculum->id,
             'codigo_institucional' => $data['code'],
@@ -207,7 +185,7 @@ class CreateAcademicRecord
             'unidad_organizacion_curricular' => $data['organization_unit'] ?? null,
             'modalidad' => $this->inheritance->subjectModality($data),
             'creditos' => $data['creditos'] ?? null,
-            'horas_totales' => CurriculumSystemFields::totalHours($data, $activeSystemKeys),
+            'horas_totales' => CurriculumSystemFields::totalHours($data),
             'horas_proyecto' => $data['hours_project'] ?? null,
             'horas_ap' => $data['hours_ap'] ?? null,
             'horas_ac' => $data['horas_ac'] ?? null,
@@ -216,9 +194,6 @@ class CreateAcademicRecord
             'horas_paec' => $data['hours_paec'] ?? null,
             'activo' => true,
         ]);
-
-        $customValues = $data['custom_values'] ?? [];
-        $this->syncSubjectFieldValues->execute($subject, is_array($customValues) ? $customValues : []);
 
         return $subject;
     }

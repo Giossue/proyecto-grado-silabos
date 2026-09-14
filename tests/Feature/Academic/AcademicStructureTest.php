@@ -9,12 +9,10 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\Campus;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CoordinatorAssignment;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
-use App\Modules\Academic\Infrastructure\Persistence\Models\CurriculumFieldDefinition;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Faculty;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
 use App\Modules\Academic\Infrastructure\Persistence\Models\ScheduledSubject;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Subject;
-use App\Modules\Academic\Infrastructure\Persistence\Models\SubjectFieldValue;
 use App\Modules\Academic\Infrastructure\Persistence\Models\SubjectRequirement;
 use App\Modules\Academic\Infrastructure\Persistence\Models\TeacherAssignment;
 use App\Modules\Identity\Domain\Enums\RoleCode;
@@ -549,7 +547,7 @@ class AcademicStructureTest extends TestCase
             ->assertSessionHasErrors('curriculum');
     }
 
-    public function test_coordinator_opens_the_curriculum_builder_with_configurable_fields(): void
+    public function test_coordinator_opens_the_curriculum_builder_with_fixed_fields(): void
     {
         $curriculum = Curriculum::query()->firstOrFail();
 
@@ -563,13 +561,13 @@ class AcademicStructureTest extends TestCase
                 ->where('curriculum.cycle_count', 8)
                 ->where('curriculum.active', true)
                 ->where('curriculum.editable', true)
-                ->has('fieldDefinitions', 5)
-                ->where('fieldDefinitions.0.label', 'ACD')
+                ->has('fixedFields', 5)
+                ->where('fixedFields.0.label', 'ACD')
                 ->where('subjects.0.display_fields.0.label', 'ACD')
                 ->where('subjects.0.display_fields.0.value', '64.00'));
     }
 
-    public function test_coordinator_configures_the_current_curriculum_with_fields_layout_and_requirements(): void
+    public function test_coordinator_configures_the_current_curriculum_with_layout_and_requirements(): void
     {
         $curriculum = Curriculum::query()->firstOrFail();
 
@@ -580,8 +578,8 @@ class AcademicStructureTest extends TestCase
             ])
             ->assertRedirect();
 
-        // Payload completo: los campos activos de la malla son obligatorios, así
-        // que solo el ciclo fuera de rango debe rechazar la materia.
+        // Los campos académicos son fijos y obligatorios; solo el ciclo fuera de
+        // rango debe rechazar la materia.
         $this->actingAsCoordinator()
             ->post(route('coordination.academic.store', 'asignatura'), [
                 'curriculum_id' => $curriculum->id,
@@ -597,25 +595,9 @@ class AcademicStructureTest extends TestCase
             ])
             ->assertSessionHasErrors('cycle');
 
-        $this->actingAsCoordinator()
-            ->post(route('coordination.academic.curricula.fields.store', $curriculum->id), [
-                'key' => 'horas_laboratorio',
-                'label' => 'LAB',
-                'type' => 'entero',
-                'system_key' => null,
-                'position' => 6,
-                'visible_on_card' => true,
-                'totalizable' => true,
-            ])
-            ->assertRedirect();
-        $field = CurriculumFieldDefinition::query()
-            ->where('malla_id', $curriculum->id)
-            ->where('clave', 'horas_laboratorio')
-            ->firstOrFail();
-
         foreach ([
-            ['code' => 'FLEX-101', 'nombre' => 'Fundamentos flexibles', 'cycle' => 1, 'position' => 0],
-            ['code' => 'FLEX-201', 'nombre' => 'Proyecto flexible', 'cycle' => 2, 'position' => 1],
+            ['code' => 'MALLA-101', 'nombre' => 'Fundamentos', 'cycle' => 1, 'position' => 0],
+            ['code' => 'MALLA-201', 'nombre' => 'Proyecto', 'cycle' => 2, 'position' => 1],
         ] as $subjectData) {
             $this->actingAsCoordinator()
                 ->post(route('coordination.academic.store', 'asignatura'), [
@@ -627,12 +609,11 @@ class AcademicStructureTest extends TestCase
                     'horas_aa' => 64,
                     'creditos' => 3,
                     'horas_totales' => 144,
-                    'custom_values' => [$field->id => 24],
                 ])
                 ->assertRedirect();
         }
-        $first = Subject::query()->where('codigo_institucional', 'FLEX-101')->firstOrFail();
-        $second = Subject::query()->where('codigo_institucional', 'FLEX-201')->firstOrFail();
+        $first = Subject::query()->where('codigo_institucional', 'MALLA-101')->firstOrFail();
+        $second = Subject::query()->where('codigo_institucional', 'MALLA-201')->firstOrFail();
 
         $this->actingAsCoordinator()
             ->post(route('coordination.academic.curricula.requirements.store', $curriculum->id), [
@@ -661,26 +642,21 @@ class AcademicStructureTest extends TestCase
         $this->assertSame(9, $second->fresh()->ciclo);
         $this->assertSame(3, $second->fresh()->orden_en_ciclo);
         $this->assertSame('Unidad profesional', $second->fresh()->unidad_organizacion_curricular);
-        $this->assertSame(2, SubjectFieldValue::query()->where('definicion_campo_id', $field->id)->count());
         $this->assertSame(1, SubjectRequirement::query()->where('asignatura_id', $second->id)->count());
         $this->actingAsCoordinator()
             ->get(route('coordination.academic.curricula.show', $curriculum->id))
             ->assertInertia(fn (Assert $page) => $page
-                ->where('fieldTotals.5.label', 'LAB')
-                ->where('fieldTotals.5.value', 48));
+                ->where('fixedFieldTotals.0.label', 'ACD')
+                ->where('fixedFieldTotals.0.value', 160));
         $this->assertDatabaseHas('eventos_auditoria', [
             'accion' => 'academico.requisito_asignatura.creacion',
             'tipo_recurso' => 'requisito_asignatura',
         ]);
 
-        $this->actingAsCoordinator()
-            ->delete(route('coordination.academic.curricula.fields.destroy', [
-                'curriculum' => $curriculum->id,
-                'field' => $field->id,
-            ]))
-            ->assertRedirect();
-        $this->assertFalse($field->fresh()->activo);
-        $this->assertSame(2, SubjectFieldValue::query()->where('definicion_campo_id', $field->id)->count());
+        $this->assertFalse(Route::has('coordination.academic.curricula.fields.store'));
+        $this->assertFalse(Route::has('coordination.academic.curricula.fields.destroy'));
+        $this->assertFalse(Schema::hasTable('definiciones_campo_malla'));
+        $this->assertFalse(Schema::hasTable('valores_campo_asignatura'));
     }
 
     public function test_builder_edits_the_current_curriculum_but_rejects_out_of_scope_mutations(): void

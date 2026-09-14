@@ -57,8 +57,8 @@ const props = defineProps<
     Pick<
         CurriculumBuilderProps,
         | 'curriculum'
-        | 'fieldDefinitions'
-        | 'fieldTotals'
+        | 'fixedFields'
+        | 'fixedFieldTotals'
         | 'subjects'
         | 'requirements'
         | 'career'
@@ -134,7 +134,7 @@ const dominantUnit = (
 };
 
 const summaryLabel = (fieldId: string, label: string): string =>
-    props.fieldDefinitions.find((field) => field.id === fieldId)
+    props.fixedFields.find((field) => field.id === fieldId)
         ?.system_label ?? label;
 
 // La leyenda y el resumen se arman una sola vez y se reparten entre el panel de
@@ -156,7 +156,7 @@ const summaryRows = computed(() => [
         label: 'N° asignaturas',
         value: String(props.subjects.length),
     },
-    ...props.fieldTotals.map((total) => ({
+    ...props.fixedFieldTotals.map((total) => ({
         id: total.id,
         label: summaryLabel(total.id, total.label),
         value: formatNumericDisplay(total.value),
@@ -307,7 +307,7 @@ const buildNodes = (): Node[] => {
                     career: props.career,
                     modalityOptions: props.modalityOptions,
                     curriculum: props.curriculum,
-                    fieldDefinitions: props.fieldDefinitions,
+                    fixedFields: props.fixedFields,
                     organizationUnits: props.organizationUnits,
                     subject,
                     unitStyle: unitStyleFor(subject.organization_unit),
@@ -352,7 +352,7 @@ const buildNodes = (): Node[] => {
                     career: props.career,
                     modalityOptions: props.modalityOptions,
                     curriculum: props.curriculum,
-                    fieldDefinitions: props.fieldDefinitions,
+                    fixedFields: props.fixedFields,
                     organizationUnits: props.organizationUnits,
                     subject: null,
                     unitStyle: FALLBACK_UNIT_STYLE,
