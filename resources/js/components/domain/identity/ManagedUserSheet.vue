@@ -103,17 +103,6 @@ watch(open, (isOpen) => {
                 @success="close"
             >
                 <FieldGroup>
-                    <Field v-if="teacherCareer">
-                        <FieldLabel for="teacher-scope"
-                            >Rol y carrera</FieldLabel
-                        >
-                        <Input
-                            id="teacher-scope"
-                            :model-value="`Docente · ${teacherCareer.name}`"
-                            placeholder="Ej. Docente · Software"
-                            readonly
-                        />
-                    </Field>
                     <Field :data-invalid="Boolean(errors.nombre)">
                         <FieldLabel for="managed-name" required>
                             Nombre completo

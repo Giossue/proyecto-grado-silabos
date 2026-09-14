@@ -175,6 +175,20 @@ it('agrupa crear y asignar docente bajo una sola accion visible', function (): v
         ->toBe(1);
 });
 
+it('pide solo identidad y contrasena al crear un docente desde coordinacion', function (): void {
+    $sheet = file_get_contents(
+        dirname(__DIR__, 2).'/resources/js/components/domain/identity/ManagedUserSheet.vue',
+    );
+
+    expect($sheet)
+        ->toBeString()
+        ->toContain('name="nombre"')
+        ->toContain('name="correo_electronico"')
+        ->toContain('name="password"')
+        ->not->toContain('Rol y carrera')
+        ->not->toContain('id="teacher-scope"');
+});
+
 it('inicia el relevo desde el docente saliente y solo pide el reemplazo', function (): void {
     $root = dirname(__DIR__, 2);
     $page = file_get_contents(

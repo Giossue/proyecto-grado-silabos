@@ -33,7 +33,9 @@ usan datos sintéticos y correo falso. No afecta PV-16 ni autoriza envío manual
 ## Plan y aceptación
 
 - [x] Permiso dedicado, Form Request, acción transaccional y endpoint de Coordinación.
-- [x] Formulario compartido con rol/carrera fijos; errores y confirmación visibles.
+- [x] Formulario compartido que solo solicita nombre, correo y contraseña temporal;
+      rol/carrera se derivan del contexto sin mostrarse como campos; errores y
+      confirmación visibles.
 - [x] Pruebas de creación/reutilización, repetición, correo, rollback, alcance, roles
       acumulados, revocaciones, entradas manipuladas y compatibilidad administrativa.
 - [x] Verificación específica, documentación, decisiones y trazabilidad actualizadas.

@@ -46,7 +46,8 @@
 
 En COR-15, una sola acción **Gestionar docente** reúne **Crear docente** y **Asignar
 docente**. Crear abre el formulario compartido de cuentas en modo docente de la carrera
-activa (I-54): rol y carrera se muestran fijos; un correo existente se incorpora sin
+activa (I-54): solo solicita nombre, correo y contraseña temporal; el rol y la carrera se
+derivan del contexto y no se muestran como campos. Un correo existente se incorpora sin
 cambiar su identidad ni contraseña. Asignar vincula una cuenta docente existente con un
 paralelo. Son operaciones separadas y ninguna levanta los bloqueos académicos.
 
