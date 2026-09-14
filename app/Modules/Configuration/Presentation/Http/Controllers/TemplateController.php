@@ -150,6 +150,7 @@ class TemplateController extends Controller
                                 'master_source' => $field->origen_maestro,
                                 'teacher_editable' => $field->editable_docente,
                                 'ai_enabled' => $field->ia_habilitada,
+                                'ai_coordinator_configurable' => $field->ia_coordinacion_configurable,
                                 'document_marker' => $field->marcador_documento,
                                 'content_type' => $this->contentType($block, $field),
                             ])->values()->all(),

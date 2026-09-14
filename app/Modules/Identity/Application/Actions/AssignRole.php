@@ -4,19 +4,18 @@ namespace App\Modules\Identity\Application\Actions;
 
 use App\Models\User;
 use App\Modules\Identity\Application\ActiveRole;
-use App\Modules\Identity\Application\CoordinationMandate;
 use App\Modules\Identity\Domain\Enums\RoleCode;
 use App\Modules\Identity\Infrastructure\Persistence\Models\Role;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
 use App\Modules\Operations\Application\Actions\RecordAuditEvent;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class AssignRole
 {
     public function __construct(
         private readonly ActiveRole $roles,
-        private readonly CoordinationMandate $mandate,
         private readonly RecordAuditEvent $audit,
     ) {}
 
@@ -30,6 +29,20 @@ class AssignRole
             $careerId = $data['role_code'] === RoleCode::Administrator->value
                 ? null
                 : ($data['career_id'] ?? null);
+            if ($data['role_code'] === RoleCode::Coordinator->value) {
+                $alreadyCoordinated = RoleAssignment::query()
+                    ->effective()
+                    ->where('carrera_id', $careerId)
+                    ->where('usuario_id', '!=', $target->id)
+                    ->whereHas('user', fn ($query) => $query->where('activo', true))
+                    ->whereHas('role', fn ($query) => $query->where('codigo', RoleCode::Coordinator->value))
+                    ->exists();
+                if ($alreadyCoordinated) {
+                    throw ValidationException::withMessages([
+                        'role_code' => 'La carrera ya tiene una coordinación activa. Use el reemplazo de coordinación.',
+                    ]);
+                }
+            }
             $assignment = RoleAssignment::query()->firstOrCreate(
                 [
                     'usuario_id' => $target->id,
@@ -45,14 +58,6 @@ class AssignRole
                 $assignment->update(['activo' => true]);
             }
 
-            // Conceder la coordinación es concederla de verdad: sin nombramiento el rol
-            // queda decorativo y la persona no puede activarlo.
-            $mandate = $this->mandate->open(
-                $target->id,
-                $data['role_code'],
-                $careerId,
-            );
-
             $this->audit->execute(
                 actorId: $actor->id,
                 roleAssignmentId: $activeRole?->id,
@@ -62,7 +67,7 @@ class AssignRole
                 result: 'exito',
                 metadata: [
                     'role' => $data['role_code'],
-                    'coordination_id' => $mandate?->id,
+                    'career_id' => $careerId,
                 ],
                 correlationId: $request->attributes->getString('correlation_id') ?: null,
             );

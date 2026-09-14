@@ -11,6 +11,9 @@
 ## Comportamiento
 
 - Solo campos/secciones habilitados solicitan análisis.
+- Administración define por campo el valor predeterminado de IA y puede impedir que
+  Coordinación lo sustituya para su carrera. Un valor fijado por Administración no se
+  puede alterar desde Coordinación ni mediante una petición forzada.
 - La solicitud se procesa en cola y muestra estado.
 - La recuperación se restringe a fuentes vigentes/activas del rol.
 - Cada recomendación muestra explicación, procedencia y extracto verificable.
@@ -69,3 +72,5 @@
   por campo. El chat libre, el contexto cruzado entre secciones y la configuración
   efectiva por carrera todavía no están implementados.
 - El contrato de presentación usa `status` de forma consistente entre Laravel y Vue.
+- La plantilla ya conserva `ia_coordinacion_configurable`; la preferencia efectiva por
+  carrera y su resolvedor se completarán en I-72.2.

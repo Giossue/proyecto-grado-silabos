@@ -21,6 +21,7 @@ export type TemplateField = DocumentField & {
     page_orientation?: 'portrait' | 'landscape' | null;
     master_source: string | null;
     ai_enabled: boolean;
+    ai_coordinator_configurable: boolean;
     document_marker: string | null;
 };
 

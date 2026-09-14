@@ -264,7 +264,8 @@ final class SaveTemplateDocument
                     'etiqueta' => $attrs['label'], 'tipo' => $attrs['kind'],
                     'opciones' => $attrs['options'],
                     'obligatorio' => true, 'heredado' => false, 'editable_docente' => true,
-                    'ia_habilitada' => false, 'posicion' => ++$position,
+                    'ia_habilitada' => false, 'ia_coordinacion_configurable' => true,
+                    'posicion' => ++$position,
                 ]);
             }
             // Las definiciones pueden estar referenciadas por datos y evidencia históricos.
@@ -277,7 +278,12 @@ final class SaveTemplateDocument
                         unset($detached[$field->clave]);
                     }
                 } else {
-                    $detached[$field->clave] ??= $field->only(['obligatorio', 'editable_docente', 'ia_habilitada']);
+                    $detached[$field->clave] ??= $field->only([
+                        'obligatorio',
+                        'editable_docente',
+                        'ia_habilitada',
+                        'ia_coordinacion_configurable',
+                    ]);
                     $field->update(['obligatorio' => false, 'editable_docente' => false, 'ia_habilitada' => false]);
                 }
             }
@@ -303,6 +309,14 @@ final class SaveTemplateDocument
                     $detached[$property['key']]['ia_habilitada'] = $property['ai_enabled'];
                 } else {
                     $attributes['ia_habilitada'] = $property['ai_enabled'];
+                }
+            }
+            if (array_key_exists('ai_coordinator_configurable', $property)
+                && ! in_array($block->configuredContentType(), ['institutional', 'flow'], true)) {
+                if (isset($detached[$property['key']])) {
+                    $detached[$property['key']]['ia_coordinacion_configurable'] = $property['ai_coordinator_configurable'];
+                } else {
+                    $attributes['ia_coordinacion_configurable'] = $property['ai_coordinator_configurable'];
                 }
             }
             $block->fields()->where('clave', $property['key'])->update($attributes);

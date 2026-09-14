@@ -4,7 +4,6 @@ namespace App\Modules\Identity\Application\Actions;
 
 use App\Models\User;
 use App\Modules\Identity\Application\ActiveRole;
-use App\Modules\Identity\Application\CoordinationMandate;
 use App\Modules\Identity\Domain\Enums\RoleCode;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
 use App\Modules\Operations\Application\Actions\RecordAuditEvent;
@@ -16,7 +15,6 @@ class SetUserStatus
 {
     public function __construct(
         private readonly ActiveRole $roles,
-        private readonly CoordinationMandate $mandate,
         private readonly RecordAuditEvent $audit,
     ) {}
 
@@ -31,18 +29,14 @@ class SetUserStatus
 
             $target->update(['activo' => $active]);
 
-            $closedMandates = 0;
             $closedTeacherAssignments = 0;
 
             if (! $active) {
                 DB::table('sesiones')->where('user_id', $target->id)->delete();
-                // Un nombramiento abierto de una cuenta desactivada bloquea la carrera:
-                // la base no admite dos coordinaciones activas a la vez.
-                $closedMandates = $this->mandate->closeFor($target->id);
                 // Ningún paralelo queda a nombre de alguien que ya no está (I-39); los
                 // sílabos en curso se relevaron antes, porque `ensureMayDeactivate` lo exige.
-                $closedTeacherAssignments = DB::table('asignaciones_docente')
-                    ->where('usuario_id', $target->id)
+                $closedTeacherAssignments = DB::table('docentes_paralelo')
+                    ->whereIn('asignacion_rol_id', RoleAssignment::query()->where('usuario_id', $target->id)->select('id'))
                     ->where('activo', true)
                     ->update(['activo' => false]);
             }
@@ -54,7 +48,7 @@ class SetUserStatus
                 resourceType: 'usuario',
                 resourceId: $target->id,
                 result: 'exito',
-                metadata: ['closed_coordinations' => $closedMandates, 'closed_teacher_assignments' => $closedTeacherAssignments],
+                metadata: ['closed_teacher_assignments' => $closedTeacherAssignments],
                 correlationId: $request->attributes->getString('correlation_id') ?: null,
             );
 

@@ -180,6 +180,16 @@ defecto y no cambia el control humano, por lo que `PV-13`, `PV-14` y `PV-18` con
 estado `POR VALIDAR`. La activación con datos institucionales requiere además resolver
 el tratamiento externo aplicable bajo `PV-12`.
 
+I-74 (14 de septiembre de 2026) normaliza roles y responsabilidades académicas: la
+única relación RBAC es `asignaciones_rol(usuario_id, rol_id, carrera_id)`. Se elimina
+`asignaciones_coordinador`, porque duplicaba el rol `coordinador` con alcance de carrera.
+La responsabilidad operativa de un paralelo no es un rol: `docentes_paralelo` referencia
+la asignación RBAC `docente` que la respalda. PostgreSQL impide más de una coordinación
+ejercible por carrera mediante trigger; una cuenta inactiva conserva el historial de sus
+roles, pero no bloquea un reemplazo. La entrega requiere las migraciones `000056` a
+`000059` junto con el despliegue de aplicación; hasta entonces la fotografía remota
+continúa en el esquema anterior.
+
 I-07 implementa un puerto de lectura, fixture sintético versionado, staging inmutable,
 simulación y exclusión humana. Demuestra idempotencia, conflicto y cero mutación del
 catálogo, pero no incorpora esquema, credenciales, red, reglas de identidad ni aplicador:

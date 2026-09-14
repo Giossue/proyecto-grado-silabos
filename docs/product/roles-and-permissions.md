@@ -69,6 +69,10 @@ de rol conserva su propia carrera y se retira manualmente al finalizarla. Al ini
 Coordinador debe elegir una carrera incluso si solo tiene una coordinación activa; durante la sesión puede cambiar
 de carrera o rol desde el menú de usuario. Solo existe un ámbito activo a la vez.
 
+Una carrera solo puede tener una coordinación ejercible: una asignación de rol
+`coordinador` activa cuya cuenta también está activa. Para cambiarla, Administración usa
+el relevo atómico; no se crea una tabla de "coordinadores" adicional.
+
 No se combinan privilegios de forma implícita para evadir la separación de
 responsabilidades. Cada selección sustituye el ámbito de sesión y el evento de auditoría
 registra la asignación usada.

@@ -34,6 +34,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // del suyo: el puerto 8080 del contenedor no está expuesto fuera de esa red.
         $middleware->trustProxies(at: '*');
 
+        // Fuera de desarrollo solo se acepta el host declarado en APP_URL (y sus
+        // subdominios). Esto evita que un Host manipulado determine enlaces de reset.
+        $middleware->trustHosts();
+
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
         $middleware->web(append: [

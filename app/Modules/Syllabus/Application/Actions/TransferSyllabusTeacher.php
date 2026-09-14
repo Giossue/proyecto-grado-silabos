@@ -71,14 +71,15 @@ class TransferSyllabusTeacher
                 'incoming_user_id' => 'La cuenta del docente entrante no existe o está inactiva.',
             ]);
         }
-        if (! $this->teachesInCareer($incomingUserId, (string) $careerId)) {
+        $incomingRole = $this->teacherRoleInCareer($incomingUserId, (string) $careerId);
+        if (! $incomingRole instanceof RoleAssignment) {
             throw ValidationException::withMessages([
                 'incoming_user_id' => 'El docente entrante no tiene un rol docente vigente en la carrera.',
             ]);
         }
 
         return DB::transaction(function () use (
-            $activeRole, $actor, $backing, $idempotencyKey, $incomingUserId, $outgoingUserId, $request, $syllabus,
+            $activeRole, $actor, $backing, $idempotencyKey, $incomingRole, $incomingUserId, $outgoingUserId, $request, $syllabus,
         ): Syllabus {
             $locked = Syllabus::query()->lockForUpdate()->findOrFail($syllabus->id);
 
@@ -105,7 +106,7 @@ class TransferSyllabusTeacher
                 $previous->update(['activo' => false]);
 
                 $replacement = TeacherAssignment::query()->create([
-                    'usuario_id' => $incomingUserId,
+                    'asignacion_rol_id' => $incomingRole->id,
                     'paralelo_id' => $previous->paralelo_id,
                     'activo' => true,
                     'sustento_tipo' => $backing['type'] ?? null,
@@ -115,7 +116,7 @@ class TransferSyllabusTeacher
 
                 $collaboration->update([
                     'usuario_id' => $incomingUserId,
-                    'asignacion_docente_id' => $replacement->id,
+                    'docente_paralelo_id' => $replacement->id,
                 ]);
             }
 
@@ -179,7 +180,7 @@ class TransferSyllabusTeacher
         });
     }
 
-    private function teachesInCareer(string $userId, string $careerId): bool
+    private function teacherRoleInCareer(string $userId, string $careerId): ?RoleAssignment
     {
         return RoleAssignment::query()
             ->where('usuario_id', $userId)
@@ -187,6 +188,6 @@ class TransferSyllabusTeacher
             ->whereHas('role', fn ($query) => $query->where('codigo', RoleCode::Teacher->value))
             ->whereHas('user', fn (Builder $query) => $query->where('activo', true))
             ->effective()
-            ->exists();
+            ->first();
     }
 }

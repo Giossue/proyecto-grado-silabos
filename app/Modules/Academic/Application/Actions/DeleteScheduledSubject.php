@@ -64,7 +64,7 @@ class DeleteScheduledSubject
                 ->lockForUpdate()
                 ->pluck('id');
 
-            if (SyllabusCollaborator::query()->whereIn('asignacion_docente_id', $assignmentIds)->exists()) {
+            if (SyllabusCollaborator::query()->whereIn('docente_paralelo_id', $assignmentIds)->exists()) {
                 throw ValidationException::withMessages([
                     'scheduledSubject' => 'La materia programada tiene asignaciones docentes con historia de sílabo y no puede eliminarse.',
                 ]);

@@ -428,15 +428,15 @@ class AcademicStructureViewData
                 fn ($query) => $query->where('carrera_id', $careerId),
             )
             ->with([
-                'user:id,nombre,correo_electronico',
+                'roleAssignment.user:id,nombre,correo_electronico',
                 'parallel.scheduledSubject.subject:id,nombre,codigo_institucional',
                 'parallel.scheduledSubject.academicPeriod:id,nombre,fecha_inicio,fecha_fin,activo',
             ])
             ->orderByDesc('asignado_en')
             ->get();
         $usedAssignmentIds = SyllabusCollaborator::query()
-            ->whereIn('asignacion_docente_id', $teacherAssignments->pluck('id'))
-            ->pluck('asignacion_docente_id')
+            ->whereIn('docente_paralelo_id', $teacherAssignments->pluck('id'))
+            ->pluck('docente_paralelo_id')
             ->flip();
 
         return [
@@ -448,10 +448,10 @@ class AcademicStructureViewData
             'teacherAssignments' => $teacherAssignments
                 ->map(fn (TeacherAssignment $assignment) => [
                     'id' => $assignment->id,
-                    'user_id' => $assignment->user->id,
+                    'user_id' => $assignment->roleAssignment->user->id,
                     'parallel_id' => $assignment->paralelo_id,
-                    'user_name' => $assignment->user->nombre,
-                    'user_email' => $assignment->user->correo_electronico,
+                    'user_name' => $assignment->roleAssignment->user->nombre,
+                    'user_email' => $assignment->roleAssignment->user->correo_electronico,
                     'parallel_code' => $assignment->parallel->codigo,
                     'subject_name' => $assignment->parallel->scheduledSubject->subject->nombre,
                     'period_name' => $assignment->parallel->scheduledSubject->academicPeriod->nombre,

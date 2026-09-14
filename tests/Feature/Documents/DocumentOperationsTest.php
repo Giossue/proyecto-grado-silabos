@@ -452,11 +452,11 @@ class DocumentOperationsTest extends TestCase
             'iniciado_en' => now()->subDay(),
             'guardado_en' => now(),
         ]);
-        $teacherAssignment = TeacherAssignment::query()->where('usuario_id', $this->teacher->id)->firstOrFail();
+        $teacherAssignment = TeacherAssignment::query()->forUser($this->teacher->id)->firstOrFail();
         SyllabusCollaborator::query()->create([
             'silabo_id' => $syllabus->id,
             'usuario_id' => $this->teacher->id,
-            'asignacion_docente_id' => $teacherAssignment->id,
+            'docente_paralelo_id' => $teacherAssignment->id,
         ]);
         $snapshot = [
             'schema_version' => 1,

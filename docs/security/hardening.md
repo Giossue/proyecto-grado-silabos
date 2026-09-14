@@ -7,6 +7,10 @@
 - Cookies `Secure`, `HttpOnly`, `SameSite`; CSRF y rotación al autenticar.
 - Rate limit en login, recuperación y acciones sensibles.
 - Revocación de sesiones y desactivación efectiva en la siguiente petición.
+- En ambientes expuestos, `SESSION_ENCRYPT=true`; el host permitido se deriva de
+  `APP_URL` para que los enlaces de recuperación no acepten un `Host` manipulado.
+- El scheduler ejecuta `auth:clear-resets` cada quince minutos; el proceso de
+  scheduler debe estar activo en el despliegue.
 - Cuentas gestionadas no se autoeliminan; la baja administrativa conserva referencias
   históricas protegidas por claves foráneas restrictivas.
 - Mensajes de recuperación no confirman existencia de cuenta.

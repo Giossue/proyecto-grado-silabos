@@ -5,6 +5,7 @@ namespace Tests\Feature\Syllabus;
 use App\Models\User;
 use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
+use App\Modules\Academic\Infrastructure\Persistence\Models\TeacherAssignment;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\AcademicSource;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\FieldDefinition;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
@@ -80,16 +81,13 @@ class TeacherTransferTest extends TestCase
         ]);
 
         // La vigencia anterior se cierra, no se borra: el historial se conserva.
-        $this->assertDatabaseHas('asignaciones_docente', [
-            'usuario_id' => $this->teacher->id,
-            'activo' => false,
-        ]);
-        $this->assertDatabaseHas('asignaciones_docente', [
-            'usuario_id' => $this->replacement->id,
-            'activo' => true,
-            'sustento_tipo' => 'accion_personal',
-            'sustento_numero' => 'UEB-RECT-2026-0142-R',
-        ]);
+        $this->assertTrue(TeacherAssignment::query()->forUser($this->teacher->id)->where('activo', false)->exists());
+        $this->assertTrue(TeacherAssignment::query()
+            ->forUser($this->replacement->id)
+            ->where('activo', true)
+            ->where('sustento_tipo', 'accion_personal')
+            ->where('sustento_numero', 'UEB-RECT-2026-0142-R')
+            ->exists());
         $this->assertDatabaseHas('eventos_auditoria', [
             'accion' => 'silabo.docente_transferido',
             'recurso_id' => $syllabus->id,

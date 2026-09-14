@@ -4,12 +4,8 @@ namespace App\Modules\Identity\Application\Actions;
 
 use App\Models\User;
 use App\Modules\Identity\Application\ActiveRole;
-use App\Modules\Identity\Application\CoordinationMandate;
-use App\Modules\Identity\Domain\Enums\RoleCode;
 use App\Modules\Identity\Domain\PersonName;
 use App\Modules\Identity\Infrastructure\Mail\ManagedUserCredentialsMail;
-use App\Modules\Identity\Infrastructure\Persistence\Models\Role;
-use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
 use App\Modules\Operations\Application\Actions\RecordAuditEvent;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -19,7 +15,7 @@ class CreateManagedUser
 {
     public function __construct(
         private readonly ActiveRole $roles,
-        private readonly CoordinationMandate $mandate,
+        private readonly AssignRole $assignRole,
         private readonly RecordAuditEvent $audit,
     ) {}
 
@@ -38,23 +34,7 @@ class CreateManagedUser
                 // en cuanto se entrega: su titular la cambia antes de operar.
                 'debe_cambiar_contrasena' => true,
             ]);
-            $role = Role::query()->where('codigo', $data['role_code'])->firstOrFail();
-            $careerId = $data['role_code'] === RoleCode::Administrator->value
-                ? null
-                : ($data['career_id'] ?? null);
-
-            RoleAssignment::query()->create([
-                'usuario_id' => $user->id,
-                'rol_id' => $role->id,
-                'carrera_id' => $careerId,
-                'activo' => true,
-            ]);
-
-            $this->mandate->open(
-                $user->id,
-                $data['role_code'],
-                $careerId,
-            );
+            $assignment = $this->assignRole->execute($user, $data, $actor, $request);
 
             $this->audit->execute(
                 actorId: $actor->id,
@@ -71,12 +51,12 @@ class CreateManagedUser
 
             // Después del commit: si la transacción se deshace, nadie recibe las
             // credenciales de una cuenta que no llegó a existir.
-            DB::afterCommit(function () use ($data, $role, $user): void {
+            DB::afterCommit(function () use ($assignment, $data, $user): void {
                 Mail::to($user->correo_electronico)->send(new ManagedUserCredentialsMail(
                     name: $user->nombre,
                     email: $user->correo_electronico,
                     temporaryPassword: $data['password'],
-                    roleName: $role->nombre,
+                    roleName: $assignment->role->nombre,
                     loginUrl: route('login'),
                 ));
             });

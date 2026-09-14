@@ -4,6 +4,7 @@ namespace Tests\Feature\Identity;
 
 use App\Models\User;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
+use App\Modules\Academic\Infrastructure\Persistence\Models\CoordinatorAssignment;
 use App\Modules\Identity\Domain\Enums\RoleCode;
 use App\Modules\Identity\Infrastructure\Persistence\Models\Role;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
@@ -198,14 +199,14 @@ class ManagedUserUpdateTest extends TestCase
             ->assertRedirect()
             ->assertSessionHas('success');
 
-        // El estado se aplica al final: el nombramiento recién concedido queda cerrado y
-        // la cuenta desactivada no deja la carrera bloqueada con una coordinación abierta.
+        // El estado de cuenta es la puerta exterior: el rol queda como historial, pero
+        // una cuenta inactiva no puede ejercerlo ni bloquear la futura coordinación.
         $this->assertDatabaseHas('usuarios', ['id' => $this->teacher->id, 'activo' => false]);
-        $this->assertDatabaseHas('asignaciones_coordinador', [
-            'usuario_id' => $this->teacher->id,
-            'carrera_id' => $career->id,
-            'activo' => false,
-        ]);
+        $this->assertTrue(CoordinatorAssignment::query()
+            ->where('usuario_id', $this->teacher->id)
+            ->where('carrera_id', $career->id)
+            ->where('activo', true)
+            ->exists());
     }
 
     private function actingAsAdministrator(): static

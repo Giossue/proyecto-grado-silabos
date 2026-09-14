@@ -106,7 +106,7 @@ class SyllabusPolicy
             ->where('usuario_id', $user->id)
             ->whereHas('teacherAssignment', fn (Builder $query) => $query
                 ->where('activo', true)
-                ->whereHas('user', fn (Builder $userQuery) => $userQuery->where('activo', true))
+                ->whereHas('roleAssignment.user', fn (Builder $userQuery) => $userQuery->where('activo', true))
             )
             ->exists();
     }

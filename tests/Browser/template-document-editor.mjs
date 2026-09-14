@@ -610,6 +610,7 @@ test(
                 label: 'Objetivo renovado',
                 help: 'Indique el objetivo con claridad.',
                 ai_enabled: true,
+                ai_coordinator_configurable: true,
             },
         ]);
 
@@ -664,6 +665,15 @@ test(
             await properties
                 .getByRole('checkbox', {
                     name: 'Permite asistencia de IA',
+                    exact: true,
+                })
+                .isChecked(),
+            true,
+        );
+        assert.equal(
+            await properties
+                .getByRole('checkbox', {
+                    name: 'Permitir que Coordinación cambie este valor',
                     exact: true,
                 })
                 .isChecked(),

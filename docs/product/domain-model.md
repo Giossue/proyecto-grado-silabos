@@ -8,12 +8,12 @@
   (I-32): mayúsculas con tildes, primero nombres y luego apellidos, sin espacios
   sobrantes; `PersonName::normalize` lo aplica en toda escritura.
 - `Rol`: Administrador, Coordinador o Docente.
-- `AsignacionRol`: rol y alcance; una persona puede tener varias.
-- `AsignacionCoordinador` y `AsignacionDocente`: vinculan responsabilidad académica.
-  La asignación docente guarda la referencia del acto que la respalda —tipo, número y
-  fecha— y conecta al docente con el paralelo. La coordinación no almacena documentos y
-  no distingue tipos de designación. Ninguna de las dos relaciones programa inicio o fin:
-  `activo` expresa su estado actual.
+- `AsignacionRol`: relación RBAC de rol y alcance; una persona puede tener varias. Una
+  asignación `coordinador` activa de carrera es coordinación efectiva.
+- `DocenteParalelo`: vincula una `AsignacionRol` de docente con un paralelo y guarda
+  referencia del acto que la respalda —tipo, número y fecha—. No hay tabla de
+  coordinación separada ni tabla por rol. Ninguna relación programa inicio o fin:
+  `activo` expresa estado actual.
 
 Una persona puede coordinar más de una carrera mediante asignaciones independientes. La
 sesión conserva una sola `AsignacionRol` activa: Coordinación siempre confirma la carrera
@@ -24,7 +24,7 @@ al entrar y puede sustituirla desde el menú, sin sumar alcances ni privilegios.
 - `Facultad`, `Carrera`, `Campus`, `Modalidad`, `PeriodoAcademico`.
 - `Malla`, `DefinicionCampoMalla`, `Asignatura` con ciclo/orden,
   `ValorCampoAsignatura` y `RequisitoAsignatura`.
-- `ProgramacionAsignatura`, `Paralelo`, `AsignacionDocente`.
+- `ProgramacionAsignatura`, `Paralelo`, `DocenteParalelo`.
 - `AliasInstitucional` traduce el texto libre de la fuente hacia un catálogo normalizado.
 
 Una `Facultad` agrupa muchas `Carrera`. `Campus` representa la ubicación física donde se

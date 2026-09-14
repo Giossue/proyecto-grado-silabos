@@ -55,7 +55,6 @@ class CoordinatorReplacementTest extends TestCase
             ->assertSessionHasNoErrors()
             ->assertSessionHas('success');
 
-        $this->assertDatabaseHas('asignaciones_coordinador', ['usuario_id' => $this->coordinator->id, 'carrera_id' => $this->career->id, 'activo' => false]);
         $this->assertTrue(CoordinatorAssignment::query()->effective()->where('carrera_id', $this->career->id)->where('usuario_id', $incoming->id)->exists());
         // Rol de coordinación: cerrado para quien sale, concedido a quien entra; el de docente del entrante sigue.
         $coordinatorRole = Role::query()->where('codigo', RoleCode::Coordinator->value)->firstOrFail();

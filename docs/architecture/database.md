@@ -45,20 +45,21 @@ programadas de inicio o fin.
 
 ### Académico
 
-`facultades`, `carreras`, `campus`, `asignaciones_coordinador`,
+`facultades`, `carreras`, `campus`,
 `periodos_academicos`, `mallas`, `asignaturas`, `requisitos_asignatura`,
 `definiciones_campo_malla`, `valores_campo_asignatura`, `programaciones_asignatura`,
-`paralelos`, `asignaciones_docente`.
+`paralelos`, `docentes_paralelo`.
 
-`asignaciones_docente` vincula una persona con un paralelo, conserva en `asignado_en` el
-momento efectivo y el acto que la respalda; no tiene intervalo de vigencia laboral. Su identidad única es
-`usuario_id + paralelo_id`; un relevo finaliza la relación anterior y crea la nueva.
+`asignaciones_rol` es única relación RBAC: une usuario, rol y alcance de carrera. Una
+fila activa con rol `coordinador` expresa directamente quién coordina esa carrera; no
+existe segunda tabla de coordinación. Un trigger PostgreSQL garantiza como máximo una
+coordinación ejercible por carrera (rol activo y cuenta activa); la aplicación muestra
+el error de negocio antes de llegar a la restricción.
 
-`asignaciones_coordinador` conserva quién ejerce la coordinación de una carrera y la
-relación con la persona asignada. No almacena tipos de designación, documentos ni programa
-un intervalo: `activo` expresa el estado actual y un índice parcial garantiza como máximo
-una coordinación activa por carrera. La designación la administra
-exclusivamente Administración.
+`docentes_paralelo` vincula una asignación de rol `docente` con un paralelo, conserva
+`asignado_en` y el acto que la respalda; no tiene intervalo de vigencia laboral. Su
+identidad única es `asignacion_rol_id + paralelo_id`; un relevo finaliza relación
+anterior y crea nueva.
 
 Estos catálogos no comparten una tabla polimórfica. `carreras.facultad_id` implementa la
 relación uno-a-muchos Facultad → Carreras con clave foránea y borrado restringido.

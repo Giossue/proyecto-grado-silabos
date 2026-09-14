@@ -19,11 +19,12 @@ de configuración continúan pendientes.
 
 ## Resultado demostrable
 
-Administración define en cada campo de la plantilla el valor predeterminado **Usar IA**.
-La Coordinación de cada carrera hereda esos valores, puede cambiarlos y el sistema
-conserva su elección mientras no cambie la configuración de la plantilla. Cualquier
-mutación posterior de la plantilla invalida esas excepciones y vuelve a mostrar los
-nuevos valores administrativos.
+Administración define en cada campo de la plantilla el valor predeterminado **Usar IA**
+y si Coordinación puede modificarlo. La Coordinación de cada carrera hereda esos
+valores y solo puede cambiarlos cuando el campo lo permite; el sistema conserva su
+elección mientras no cambie la configuración de la plantilla. Cualquier mutación
+posterior de la plantilla invalida esas excepciones y vuelve a mostrar los nuevos valores
+administrativos.
 
 Antes de iniciar el alcance de su carrera, Coordinación elige expresamente qué fuentes
 académicas alimentarán la IA. Durante la edición, Docencia usa un único asistente lateral
@@ -34,7 +35,9 @@ las sustentan. Ninguna sugerencia bloquea el envío ni se aplica sola.
 ## Decisiones confirmadas
 
 1. `definiciones_campo.ia_habilitada` es el valor predeterminado fijado por
-   Administración; no se añadirá un segundo interruptor administrativo.
+   Administración. `definiciones_campo.ia_coordinacion_configurable` decide, por
+   campo, si Coordinación puede guardar una excepción. Cuando es falso, el resolvedor
+   ignora toda excepción de carrera y aplica el valor administrativo.
 2. La excepción de Coordinación pertenece a la carrera, no a la cuenta de la persona.
    Así sobrevive a un reemplazo de coordinador y se aplica a los siguientes alcances de
    esa carrera.
@@ -78,7 +81,8 @@ Antes de ampliar el flujo se corregirá el contrato conocido donde Laravel entre
 
 - Una revisión monotónica de configuración en la plantilla.
 - Preferencias de IA por carrera y campo con la revisión de plantilla de origen.
-- Un resolvedor de servidor que calcule `excepción vigente ?? valor administrativo`.
+- Un resolvedor de servidor que calcule
+  `campo configurable && excepción vigente ? excepción : valor administrativo`.
 - Invalidación segura: la revisión es la fuente de verdad; una limpieza posterior puede
   borrar excepciones obsoletas, pero un fallo de limpieza nunca debe revivirlas.
 - Auditoría del cambio administrativo, cambio de Coordinación e invalidación.
@@ -167,11 +171,13 @@ PV-13 y PV-14 definan hardware y modelo; no se añade una base vectorial por ant
 
 ### Frontend
 
-- Administración conserva el toggle por campo existente, con texto claro de que es el
-  valor predeterminado para las carreras.
+- Administración conserva el toggle por campo existente y añade **Permitir que
+  Coordinación cambie este valor**, con texto claro de que el primero es el valor
+  predeterminado para las carreras.
 - Coordinación recibe una configuración compacta por campos: valor heredado, excepción
-  vigente y acción **Restablecer valores de Administración**. En la preparación del
-  alcance elige las fuentes para IA.
+  vigente y acción **Restablecer valores de Administración** solo en los campos
+  configurables; los bloqueados muestran el valor institucional en solo lectura. En la
+  preparación del alcance elige las fuentes para IA.
 - Docencia recibe un solo **Asistente IA** en una columna fija a la derecha del editor en
   escritorio y dentro del flujo en pantallas estrechas; no vuelven botones por sección o
   campo.
@@ -232,6 +238,9 @@ documentación antes de empezar la siguiente. I-72.2 e I-72.3 no dependen del mo
 - [x] Conservadas dentro del panel las decisiones ignorar/no útil y la comparación
       explícita antes de aplicar una recomendación.
 - [x] Añadido sondeo del trabajo asíncrono sin bloquear edición, envío ni navegación.
+- [x] Administración puede fijar, por campo, si Coordinación podrá sustituir el valor
+      predeterminado de IA; se conserva en la plantilla y en los diseños documentales.
+      La preferencia de carrera y su resolvedor siguen pendientes en I-72.2.
 - [x] Puerta `composer verify` aprobada: seguridad, ESLint, Prettier, TypeScript,
       PHPStan, build y 420 pruebas con 6.388 aserciones.
 
@@ -242,7 +251,11 @@ conversación libre se añadirá en I-72.6 cuando exista su contrato y persisten
 ## Pruebas
 
 - Administración cambia un toggle y las carreras sin excepción heredan el valor.
-- Coordinación cambia un valor solo para su carrera; otro coordinador o carrera no lo ve.
+- Coordinación cambia un valor solo para su carrera y solo si Administración lo permite;
+  otro coordinador o carrera no lo ve.
+- Una excepción persistida para un campo que Administración bloquea deja de ser efectiva
+  de inmediato; al volver a permitirla sigue rigiendo únicamente si coincide con la
+  revisión vigente de plantilla.
 - Reemplazar al coordinador conserva la preferencia de la carrera.
 - Cualquier mutación de plantilla incrementa la revisión e invalida todas las
   excepciones anteriores sin borrar auditoría; una escritura concurrente no las revive.
@@ -269,7 +282,8 @@ conversación libre se añadirá en I-72.6 cuando exista su contrato y persisten
 
 - No existe un sílabo, sección o relación académica codificada de forma especial para la
   IA; el comportamiento nace de plantilla, preferencias efectivas y fuentes elegidas.
-- Coordinación distingue qué heredó, qué sobrescribió y por qué una excepción caducó.
+- Coordinación distingue qué heredó, qué sobrescribió, qué fue fijado por Administración
+  y por qué una excepción caducó.
 - Cambiar cualquier configuración de la plantilla hace que todas las carreras vuelvan a
   los valores administrativos actuales en su siguiente lectura.
 - Docencia conversa y revisa desde un único panel; cada consejo identifica dónde aplica

@@ -10,7 +10,6 @@ use App\Modules\Academic\Domain\CurriculumSystemFields;
 use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Campus;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
-use App\Modules\Academic\Infrastructure\Persistence\Models\CoordinatorAssignment;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CurriculumFieldDefinition;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Faculty;
@@ -128,7 +127,6 @@ class CreateAcademicRecord
             'asignatura' => $this->createSubject($data, $this->careerId($activeRole)),
             'programacion_asignatura' => $this->createScheduledSubject($data, $this->careerId($activeRole)),
             'paralelo' => $this->createParallel($data, $this->careerId($activeRole)),
-            'asignacion_coordinador' => $this->createCoordinatorAssignment($data),
             'asignacion_docente' => $this->createTeacherAssignment($data, $this->careerId($activeRole)),
             default => throw ValidationException::withMessages([
                 'entity' => 'El tipo de registro académico no es válido.',
@@ -283,20 +281,6 @@ class CreateAcademicRecord
     }
 
     /** @param array<string, mixed> $data */
-    private function createCoordinatorAssignment(array $data): CoordinatorAssignment
-    {
-        $userId = $this->stringValue($data, 'user_id');
-        $careerId = $this->stringValue($data, 'career_id');
-        $this->ensureScopedRole($userId, $careerId, RoleCode::Coordinator);
-
-        return CoordinatorAssignment::query()->create([
-            'usuario_id' => $userId,
-            'carrera_id' => $careerId,
-            'activo' => true,
-        ]);
-    }
-
-    /** @param array<string, mixed> $data */
     private function createTeacherAssignment(array $data, string $careerId): TeacherAssignment
     {
         $parallel = Parallel::query()
@@ -312,10 +296,10 @@ class CreateAcademicRecord
             ->firstOrFail();
         $this->periodPlanning->assertParallelMayChange($parallel, 'parallel_id');
         $userId = $this->stringValue($data, 'user_id');
-        $this->ensureScopedRole($userId, $careerId, RoleCode::Teacher);
+        $roleAssignment = $this->scopedRole($userId, $careerId, RoleCode::Teacher);
 
         return TeacherAssignment::query()->create([
-            'usuario_id' => $userId,
+            'asignacion_rol_id' => $roleAssignment->id,
             'paralelo_id' => $parallel->id,
             'activo' => true,
         ]);
@@ -330,21 +314,23 @@ class CreateAcademicRecord
         return $activeRole->carrera_id;
     }
 
-    private function ensureScopedRole(string $userId, string $careerId, RoleCode $role): void
+    private function scopedRole(string $userId, string $careerId, RoleCode $role): RoleAssignment
     {
-        $hasRole = RoleAssignment::query()
+        $assignment = RoleAssignment::query()
             ->effective()
             ->where('usuario_id', $userId)
             ->where('carrera_id', $careerId)
             ->whereHas('role', fn ($query) => $query->where('codigo', $role->value))
             ->whereHas('user', fn ($query) => $query->where('activo', true))
-            ->exists();
+            ->first();
 
-        if (! $hasRole) {
+        if (! $assignment instanceof RoleAssignment) {
             throw ValidationException::withMessages([
                 'user_id' => 'La persona no tiene el rol vigente requerido en esta carrera.',
             ]);
         }
+
+        return $assignment;
     }
 
     /** @param array<string, mixed> $data */

@@ -156,6 +156,7 @@ class CreateSyllabusTemplate
                         'origen_maestro' => $origin,
                         'editable_docente' => $origin === null,
                         'ia_habilitada' => $contentType === 'text',
+                        'ia_coordinacion_configurable' => $origin === null,
                         'posicion' => 1,
                     ]);
 
@@ -172,6 +173,7 @@ class CreateSyllabusTemplate
                                 'origen_maestro' => null,
                                 'editable_docente' => true,
                                 'ia_habilitada' => $inputType === 'markdown',
+                                'ia_coordinacion_configurable' => true,
                                 'opciones' => $options,
                                 'posicion' => $inputPosition + 2,
                             ]);

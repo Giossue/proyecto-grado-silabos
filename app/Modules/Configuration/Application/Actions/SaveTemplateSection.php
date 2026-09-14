@@ -94,6 +94,7 @@ class SaveTemplateSection
                     'heredado' => false,
                     'editable_docente' => true,
                     'ia_habilitada' => false,
+                    'ia_coordinacion_configurable' => true,
                     'posicion' => 1,
                 ]);
             }

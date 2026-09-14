@@ -622,7 +622,13 @@ class TemplateDocumentTest extends TestCase
         $url = route('admin.templates.blocks.document', [$template, $block]);
         $fingerprint = SaveTemplateDocument::fingerprint($block);
         $payload = ['document' => $this->document(), 'fingerprint' => $fingerprint, 'title' => 'Nuevo título',
-            'properties' => [['key' => $field->clave, 'label' => 'Objetivo actualizado', 'help' => 'Ayuda actualizada.', 'ai_enabled' => true]]];
+            'properties' => [[
+                'key' => $field->clave,
+                'label' => 'Objetivo actualizado',
+                'help' => 'Ayuda actualizada.',
+                'ai_enabled' => true,
+                'ai_coordinator_configurable' => false,
+            ]]];
         $this->patch($url, [...$payload, 'properties' => [...$payload['properties'], ['key' => 'descripcion', 'label' => 'Campo ajeno', 'help' => 'No debe guardarse.']]])
             ->assertSessionHasErrors('properties.1.key');
         $this->assertSame($fingerprint, SaveTemplateDocument::fingerprint($block->fresh()));
@@ -636,6 +642,7 @@ class TemplateDocumentTest extends TestCase
         $savedFields = TemplateDocument::nodes($block->fresh()->configuracion['document'], 'field');
         $this->assertSame('Objetivo actualizado', collect($savedFields)->firstWhere('attrs.key', $field->clave)['attrs']['label']);
         $this->assertTrue($field->fresh()->ia_habilitada);
+        $this->assertFalse($field->fresh()->ia_coordinacion_configurable);
         $this->assertSame($field->tipo, $field->fresh()->tipo);
         $this->patch($url, [...$payload, 'title' => 'Cambio obsoleto'])->assertSessionHasErrors('fingerprint');
         $this->assertSame('Nuevo título', $block->fresh()->titulo);

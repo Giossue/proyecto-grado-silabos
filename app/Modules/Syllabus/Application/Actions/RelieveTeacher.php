@@ -51,13 +51,14 @@ class RelieveTeacher
         if ($outgoingUserId === $incomingUserId) {
             throw ValidationException::withMessages(['incoming_user_id' => 'El docente entrante debe ser distinto del saliente.']);
         }
-        if (! $this->teachesInCareer($incomingUserId, $careerId)) {
+        $incomingRole = $this->teacherRoleInCareer($incomingUserId, $careerId);
+        if (! $incomingRole instanceof RoleAssignment) {
             throw ValidationException::withMessages(['incoming_user_id' => 'El docente entrante no tiene un rol docente vigente en la carrera.']);
         }
 
-        return DB::transaction(function () use ($activeRole, $actor, $careerId, $idempotencyKey, $incomingUserId, $outgoingUserId, $request): array {
+        return DB::transaction(function () use ($activeRole, $actor, $careerId, $idempotencyKey, $incomingRole, $incomingUserId, $outgoingUserId, $request): array {
             $assignments = TeacherAssignment::query()
-                ->where('usuario_id', $outgoingUserId)
+                ->forUser($outgoingUserId)
                 ->where('activo', true)
                 ->whereHas('parallel.scheduledSubject.subject.curriculum', fn ($query) => $query->where('carrera_id', $careerId))
                 ->with([
@@ -74,13 +75,13 @@ class RelieveTeacher
             }
 
             $collaborations = SyllabusCollaborator::query()
-                ->whereIn('asignacion_docente_id', $assignments->pluck('id'))
+                ->whereIn('docente_paralelo_id', $assignments->pluck('id'))
                 ->with('syllabus:id,estado,asignatura_id')
                 ->get();
             $underReview = $collaborations
                 ->filter(fn (SyllabusCollaborator $collaboration): bool => $collaboration->syllabus->estado === 'en_revision')
                 ->map(fn (SyllabusCollaborator $collaboration): string => $assignments
-                    ->firstWhere('id', $collaboration->asignacion_docente_id)?->parallel->scheduledSubject->subject->nombre ?? 'una materia');
+                    ->firstWhere('id', $collaboration->docente_paralelo_id)?->parallel->scheduledSubject->subject->nombre ?? 'una materia');
             if ($underReview->isNotEmpty()) {
                 throw ValidationException::withMessages([
                     'outgoing_user_id' => 'Hay sílabos en revisión ('.$underReview->unique()->implode(', ').'). Resuélvalos antes de relevar.',
@@ -94,12 +95,12 @@ class RelieveTeacher
 
             $movedWithoutSyllabus = 0;
             foreach ($assignments as $assignment) {
-                if ($collaborations->contains('asignacion_docente_id', $assignment->id)) {
+                if ($collaborations->contains('docente_paralelo_id', $assignment->id)) {
                     continue;
                 }
                 $assignment->update(['activo' => false]);
                 TeacherAssignment::query()->create([
-                    'usuario_id' => $incomingUserId,
+                    'asignacion_rol_id' => $incomingRole->id,
                     'paralelo_id' => $assignment->paralelo_id,
                     'activo' => true,
                 ]);
@@ -122,7 +123,7 @@ class RelieveTeacher
         });
     }
 
-    private function teachesInCareer(string $userId, string $careerId): bool
+    private function teacherRoleInCareer(string $userId, string $careerId): ?RoleAssignment
     {
         return RoleAssignment::query()
             ->effective()
@@ -130,6 +131,6 @@ class RelieveTeacher
             ->where('carrera_id', $careerId)
             ->whereHas('role', fn ($query) => $query->where('codigo', RoleCode::Teacher->value))
             ->whereHas('user', fn (Builder $query) => $query->where('activo', true))
-            ->exists();
+            ->first();
     }
 }

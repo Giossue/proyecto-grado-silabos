@@ -64,17 +64,12 @@ class ReplaceCoordinator
             $deactivated = false;
             if ($current !== null) {
                 $current->update(['activo' => false]);
-                // El rol en esta carrera se cierra con el nombramiento; los roles en
-                // otras carreras (o el de docente aquí) no se tocan.
-                $roleRemoved = RoleAssignment::query()
-                    ->effective()
-                    ->where('usuario_id', $current->usuario_id)
-                    ->where('carrera_id', $lockedCareer->id)
-                    ->whereHas('role', fn ($query) => $query->where('codigo', RoleCode::Coordinator->value))
-                    ->update(['activo' => false]) > 0;
+                // `CoordinatorAssignment` ya es la vista tipada de la asignación RBAC;
+                // no existe un segundo nombramiento que cerrar.
+                $roleRemoved = true;
             }
 
-            // Conceder el rol abre también el nombramiento (`CoordinationMandate::open`).
+            // La asignación RBAC con alcance de carrera es la coordinación efectiva.
             $this->assignRole->execute($incoming, [
                 'role_code' => RoleCode::Coordinator->value,
                 'career_id' => $lockedCareer->id,

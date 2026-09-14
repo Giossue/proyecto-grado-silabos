@@ -326,6 +326,7 @@ class TemplateAndSourceTest extends TestCase
                 'content_type' => 'text',
                 'help' => 'Redáctelo en infinitivo.',
                 'ai_enabled' => 1,
+                'ai_coordinator_configurable' => 0,
                 'required' => 0,
                 'teacher_editable' => 0,
                 'inherited' => 1,
@@ -336,6 +337,7 @@ class TemplateAndSourceTest extends TestCase
         $field->refresh();
         $this->assertSame('Redáctelo en infinitivo.', $field->ayuda);
         $this->assertTrue($field->ia_habilitada);
+        $this->assertFalse($field->ia_coordinacion_configurable);
         $this->assertTrue($field->obligatorio);
         $this->assertTrue($field->editable_docente);
         $this->assertFalse($field->heredado);
@@ -351,6 +353,7 @@ class TemplateAndSourceTest extends TestCase
                 'content_type' => 'institutional',
                 'help' => 'Se llena sola desde la malla y la programación de asignatura.',
                 'ai_enabled' => 1,
+                'ai_coordinator_configurable' => 1,
             ])
             ->assertRedirect()
             ->assertSessionHasNoErrors();
@@ -359,6 +362,7 @@ class TemplateAndSourceTest extends TestCase
         $this->assertTrue($identification->heredado);
         $this->assertSame('asignaturas', $identification->origen_maestro);
         $this->assertFalse($identification->ia_habilitada);
+        $this->assertFalse($identification->ia_coordinacion_configurable);
     }
 
     public function test_template_blocks_use_document_content_types(): void

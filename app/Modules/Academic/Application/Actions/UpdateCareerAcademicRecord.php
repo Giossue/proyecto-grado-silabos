@@ -191,7 +191,7 @@ class UpdateCareerAcademicRecord
             'malla', 'asignatura' => false,
             'programacion_asignatura' => SyllabusScope::query()->where('programacion_asignatura_id', $record->getKey())->exists(),
             'paralelo' => SyllabusScope::query()->where('paralelo_id', $record->getKey())->exists(),
-            'asignacion_docente' => SyllabusCollaborator::query()->where('asignacion_docente_id', $record->getKey())->exists(),
+            'asignacion_docente' => SyllabusCollaborator::query()->where('docente_paralelo_id', $record->getKey())->exists(),
             default => true,
         };
 
@@ -319,21 +319,21 @@ class UpdateCareerAcademicRecord
             ->lockForUpdate()->firstOrFail();
         $this->periodPlanning->assertParallelMayChange($parallel, 'parallel_id');
         $userId = $this->stringValue($data, 'user_id');
-        $hasRole = RoleAssignment::query()->effective()
+        $roleAssignment = RoleAssignment::query()->effective()
             ->where('usuario_id', $userId)
             ->where('carrera_id', $careerId)
             ->whereHas('role', fn ($query) => $query->where('codigo', RoleCode::Teacher->value))
             ->whereHas('user', fn ($query) => $query->where('activo', true))
-            ->exists();
+            ->first();
 
-        if (! $hasRole) {
+        if (! $roleAssignment instanceof RoleAssignment) {
             throw ValidationException::withMessages([
                 'user_id' => 'La persona no tiene un rol Docente vigente en esta carrera.',
             ]);
         }
 
         return [
-            'usuario_id' => $userId,
+            'asignacion_rol_id' => $roleAssignment->id,
             'paralelo_id' => $parallel->id,
         ];
     }

@@ -19,7 +19,7 @@ class DeleteManagedUser
 {
     /** Tablas donde una cuenta deja historia que no se puede borrar. */
     private const TRACES = [
-        'asignaciones_docente' => 'usuario_id',
+        'docentes_paralelo' => 'asignacion_rol_id',
         'colaboradores_silabo' => 'usuario_id',
         'eventos_auditoria' => 'actor_usuario_id',
         'observaciones_revision' => 'creado_por',
@@ -45,7 +45,13 @@ class DeleteManagedUser
                 ]);
             }
             foreach (self::TRACES as $table => $column) {
-                if (DB::table($table)->where($column, $locked->id)->exists()) {
+                $query = DB::table($table);
+                if ($table === 'docentes_paralelo') {
+                    $query->whereIn($column, DB::table('asignaciones_rol')->where('usuario_id', $locked->id)->select('id'));
+                } else {
+                    $query->where($column, $locked->id);
+                }
+                if ($query->exists()) {
                     throw ValidationException::withMessages([
                         'user' => 'La cuenta ya tiene actividad registrada. Desactívela en lugar de eliminarla.',
                     ]);
@@ -54,7 +60,7 @@ class DeleteManagedUser
 
             $email = $locked->correo_electronico;
             $name = $locked->nombre;
-            foreach (['notificaciones_internas' => 'usuario_id', 'sesiones' => 'user_id', 'asignaciones_coordinador' => 'usuario_id', 'asignaciones_rol' => 'usuario_id'] as $table => $column) {
+            foreach (['notificaciones_internas' => 'usuario_id', 'sesiones' => 'user_id', 'asignaciones_rol' => 'usuario_id'] as $table => $column) {
                 DB::table($table)->where($column, $locked->id)->delete();
             }
             $locked->delete();

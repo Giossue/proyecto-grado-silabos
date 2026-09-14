@@ -91,8 +91,9 @@ class OpenConvocation
                     'subject.curriculum', 'campus',
                     'parallels' => fn ($query) => $query->where('activo', true)->lockForUpdate()->with([
                         'teacherAssignments' => fn ($assignmentQuery) => $assignmentQuery
-                            ->where('activo', true)
-                            ->whereHas('user', fn ($userQuery) => $userQuery->where('activo', true))
+                            ->where('docentes_paralelo.activo', true)
+                            ->whereHas('roleAssignment.user', fn ($userQuery) => $userQuery->where('usuarios.activo', true))
+                            ->with('roleAssignment')
                             ->lockForUpdate(),
                     ]),
                 ])
@@ -141,8 +142,8 @@ class OpenConvocation
     {
         SyllabusCollaborator::query()->firstOrCreate([
             'silabo_id' => $syllabus->id,
-            'asignacion_docente_id' => $assignment->id,
-        ], ['usuario_id' => $assignment->usuario_id]);
+            'docente_paralelo_id' => $assignment->id,
+        ], ['usuario_id' => $assignment->roleAssignment->usuario_id]);
     }
 
     /** @param Collection<int, Parallel> $parallels */

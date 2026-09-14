@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /**
  * @property string $silabo_id
  * @property string $usuario_id
- * @property string $asignacion_docente_id
+ * @property string $docente_paralelo_id
  * @property-read Syllabus $syllabus
  */
 class SyllabusCollaborator extends Model
@@ -23,7 +23,7 @@ class SyllabusCollaborator extends Model
     protected $table = 'colaboradores_silabo';
 
     /** @var list<string> */
-    protected $fillable = ['silabo_id', 'usuario_id', 'asignacion_docente_id'];
+    protected $fillable = ['silabo_id', 'usuario_id', 'docente_paralelo_id'];
 
     /** @return BelongsTo<Syllabus, $this> */
     public function syllabus(): BelongsTo
@@ -40,6 +40,6 @@ class SyllabusCollaborator extends Model
     /** @return BelongsTo<TeacherAssignment, $this> */
     public function teacherAssignment(): BelongsTo
     {
-        return $this->belongsTo(TeacherAssignment::class, 'asignacion_docente_id');
+        return $this->belongsTo(TeacherAssignment::class, 'docente_paralelo_id');
     }
 }

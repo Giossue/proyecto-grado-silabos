@@ -132,7 +132,7 @@ class DashboardMetricsTest extends TestCase
         SyllabusCollaborator::query()->create([
             'silabo_id' => $propio->id,
             'usuario_id' => $teacher->id,
-            'asignacion_docente_id' => TeacherAssignment::query()->firstOrFail()->id,
+            'docente_paralelo_id' => TeacherAssignment::query()->firstOrFail()->id,
         ]);
 
         $this->actingAs($teacher)

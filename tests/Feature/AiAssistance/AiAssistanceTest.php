@@ -621,8 +621,8 @@ class AiAssistanceTest extends TestCase
         SyllabusCollaborator::query()->create([
             'silabo_id' => $syllabus->id,
             'usuario_id' => $this->teacher->id,
-            'asignacion_docente_id' => TeacherAssignment::query()
-                ->where('usuario_id', $this->teacher->id)
+            'docente_paralelo_id' => TeacherAssignment::query()
+                ->forUser($this->teacher->id)
                 ->valueOrFail('id'),
         ]);
         FieldValue::query()->create([

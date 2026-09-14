@@ -57,6 +57,7 @@ class SaveFieldDefinitionRequest extends ManageTemplatesRequest
             'master_source' => ['nullable', 'required_if:inherited,true', 'string', 'max:100'],
             'teacher_editable' => ['nullable', 'boolean'],
             'ai_enabled' => ['nullable', 'boolean'],
+            'ai_coordinator_configurable' => ['nullable', 'boolean'],
             'rules' => ['nullable', 'array'],
             'options' => ['nullable', 'array'],
             'document_marker' => ['nullable', 'string', 'max:160'],

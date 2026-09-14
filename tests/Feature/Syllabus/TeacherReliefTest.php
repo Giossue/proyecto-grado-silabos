@@ -74,13 +74,13 @@ class TeacherReliefTest extends TestCase
 
         $this->assertDatabaseHas('colaboradores_silabo', ['silabo_id' => $syllabus->id, 'usuario_id' => $this->replacement->id]);
         $this->assertDatabaseMissing('colaboradores_silabo', ['silabo_id' => $syllabus->id, 'usuario_id' => $this->teacher->id]);
-        $this->assertSame(0, TeacherAssignment::query()->where('usuario_id', $this->teacher->id)->where('activo', true)->count());
-        $this->assertDatabaseHas('asignaciones_docente', [
-            'usuario_id' => $this->replacement->id,
-            'paralelo_id' => $extra->id,
-            'activo' => true,
-            'sustento_numero' => null,
-        ]);
+        $this->assertSame(0, TeacherAssignment::query()->forUser($this->teacher->id)->where('activo', true)->count());
+        $this->assertTrue(TeacherAssignment::query()
+            ->forUser($this->replacement->id)
+            ->where('paralelo_id', $extra->id)
+            ->where('activo', true)
+            ->whereNull('sustento_numero')
+            ->exists());
         $this->assertDatabaseHas('eventos_auditoria', ['accion' => 'docente.relevo_global', 'recurso_id' => $this->teacher->id]);
         $this->assertDatabaseHas('eventos_auditoria', ['accion' => 'silabo.docente_transferido', 'recurso_id' => $syllabus->id]);
 
@@ -96,8 +96,8 @@ class TeacherReliefTest extends TestCase
         $this->relieve()->assertSessionHasErrors('outgoing_user_id');
 
         $this->assertDatabaseHas('colaboradores_silabo', ['silabo_id' => $syllabus->id, 'usuario_id' => $this->teacher->id]);
-        $this->assertDatabaseHas('asignaciones_docente', ['usuario_id' => $this->teacher->id, 'paralelo_id' => $extra->id, 'activo' => true]);
-        $this->assertSame(0, TeacherAssignment::query()->where('usuario_id', $this->replacement->id)->count());
+        $this->assertTrue(TeacherAssignment::query()->forUser($this->teacher->id)->where('paralelo_id', $extra->id)->where('activo', true)->exists());
+        $this->assertSame(0, TeacherAssignment::query()->forUser($this->replacement->id)->count());
     }
 
     public function test_global_relief_leaves_finished_period_assignments_in_history(): void
@@ -114,12 +114,9 @@ class TeacherReliefTest extends TestCase
             'silabo_id' => $syllabus->id,
             'usuario_id' => $this->teacher->id,
         ]);
-        $this->assertDatabaseHas('asignaciones_docente', [
-            'usuario_id' => $this->teacher->id,
-            'activo' => true,
-        ]);
+        $this->assertTrue(TeacherAssignment::query()->forUser($this->teacher->id)->where('activo', true)->exists());
         $this->assertSame(0, TeacherAssignment::query()
-            ->where('usuario_id', $this->replacement->id)
+            ->forUser($this->replacement->id)
             ->count());
     }
 

@@ -367,7 +367,7 @@ class AcademicStructureTest extends TestCase
 
         $this->assertDatabaseHas('programaciones_asignatura', ['id' => $scheduledSubject->id]);
         $this->assertDatabaseHas('paralelos', ['id' => $parallel->id]);
-        $this->assertDatabaseHas('asignaciones_docente', [
+        $this->assertDatabaseHas('docentes_paralelo', [
             'id' => $assignment->id,
             'activo' => true,
         ]);
@@ -426,52 +426,53 @@ class AcademicStructureTest extends TestCase
             ])
             ->assertRedirect();
         $career = Career::query()->where('codigo_institucional', 'CARR-DEMO')->firstOrFail();
-        $candidate = $this->userWithRole(RoleCode::Coordinator, $career);
+        $candidate = User::query()->create([
+            'nombre' => 'Coordinadora de demostración',
+            'correo_electronico' => 'coordinadora.demo@silabos.test',
+            'contrasena' => 'Temporal-2026!',
+            'activo' => true,
+        ]);
 
         $this->actingAsAdministrator()
-            ->post(route('admin.academic.store', 'asignacion_coordinador'), [
-                'user_id' => $candidate->id,
+            ->post(route('admin.users.roles.store', $candidate), [
+                'role_code' => RoleCode::Coordinator->value,
                 'career_id' => $career->id,
             ])
             ->assertRedirect();
 
-        $this->assertDatabaseHas('asignaciones_coordinador', [
-            'usuario_id' => $candidate->id,
-            'carrera_id' => $career->id,
-            'activo' => true,
-        ]);
+        $this->assertTrue(CoordinatorAssignment::query()
+            ->effective()
+            ->where('usuario_id', $candidate->id)
+            ->where('carrera_id', $career->id)
+            ->exists());
         $this->assertDatabaseHas('eventos_auditoria', [
-            'accion' => 'academico.asignacion_coordinador.creacion',
-            'tipo_recurso' => 'asignacion_coordinador',
-        ]);
-        // La persona queda vinculada a la coordinación.
-        $this->assertDatabaseHas('asignaciones_coordinador', [
-            'usuario_id' => $candidate->id,
+            'accion' => 'usuario.rol_asignado',
+            'tipo_recurso' => 'usuario',
         ]);
     }
 
     public function test_administration_can_assign_coordination_without_designation_or_document_data(): void
     {
         $career = Career::query()->where('codigo_institucional', 'SOFTWARE')->firstOrFail();
-        $acting = $this->userWithRole(RoleCode::Coordinator, $career);
-
         // La coordinación anterior se cierra primero: la base impide dos activas en la
         // misma carrera.
         CoordinatorAssignment::query()
             ->where('carrera_id', $career->id)
             ->update(['activo' => false]);
+        $acting = $this->userWithRole(RoleCode::Coordinator, $career);
 
         $this->actingAsAdministrator()
-            ->post(route('admin.academic.store', 'asignacion_coordinador'), [
-                'user_id' => $acting->id,
+            ->post(route('admin.users.roles.store', $acting), [
+                'role_code' => RoleCode::Coordinator->value,
                 'career_id' => $career->id,
             ])
             ->assertRedirect();
 
-        $this->assertDatabaseHas('asignaciones_coordinador', [
-            'usuario_id' => $acting->id,
-            'carrera_id' => $career->id,
-        ]);
+        $this->assertTrue(CoordinatorAssignment::query()
+            ->effective()
+            ->where('usuario_id', $acting->id)
+            ->where('carrera_id', $career->id)
+            ->exists());
     }
 
     public function test_each_career_can_create_only_one_current_curriculum_without_a_visible_version(): void
@@ -479,11 +480,6 @@ class AcademicStructureTest extends TestCase
         $career = $this->createCareer('MALLA-UNICA');
         $coordinator = $this->userWithRole(RoleCode::Coordinator, $career);
         $role = $coordinator->roleAssignments()->firstOrFail();
-        CoordinatorAssignment::query()->create([
-            'usuario_id' => $coordinator->id,
-            'carrera_id' => $career->id,
-            'activo' => true,
-        ]);
 
         $this->actingAs($coordinator)
             ->withSession(['active_role_assignment_id' => $role->id])
@@ -944,11 +940,6 @@ class AcademicStructureTest extends TestCase
         $career = $this->createCareer('MALLA-BORRABLE');
         $coordinator = $this->userWithRole(RoleCode::Coordinator, $career);
         $role = $coordinator->roleAssignments()->firstOrFail();
-        CoordinatorAssignment::query()->create([
-            'usuario_id' => $coordinator->id,
-            'carrera_id' => $career->id,
-            'activo' => true,
-        ]);
         $curriculum = Curriculum::query()->create([
             'carrera_id' => $career->id,
             'codigo' => 'MALLA-BORRABLE',
@@ -1490,11 +1481,11 @@ class AcademicStructureTest extends TestCase
             ])
             ->assertRedirect();
 
-        $this->assertDatabaseHas('asignaciones_docente', [
-            'usuario_id' => $teacher->id,
-            'paralelo_id' => $parallel->id,
-            'activo' => true,
-        ]);
+        $this->assertTrue(TeacherAssignment::query()
+            ->forUser($teacher->id)
+            ->where('paralelo_id', $parallel->id)
+            ->where('activo', true)
+            ->exists());
         $this->assertDatabaseHas('eventos_auditoria', [
             'accion' => 'academico.asignacion_docente.creacion',
             'tipo_recurso' => 'asignacion_docente',
@@ -1519,10 +1510,10 @@ class AcademicStructureTest extends TestCase
             ])
             ->assertSessionHasErrors('user_id');
 
-        $this->assertDatabaseMissing('asignaciones_docente', [
-            'usuario_id' => $otherTeacher->id,
-            'paralelo_id' => $parallel->id,
-        ]);
+        $this->assertFalse(TeacherAssignment::query()
+            ->forUser($otherTeacher->id)
+            ->where('paralelo_id', $parallel->id)
+            ->exists());
     }
 
     public function test_global_record_with_active_dependants_cannot_be_archived_by_administrator(): void
@@ -1593,7 +1584,7 @@ class AcademicStructureTest extends TestCase
             ->delete(route('coordination.academic.destroy', ['entity' => 'asignacion_docente', 'record' => $assignment->id]))
             ->assertRedirect()
             ->assertSessionHasNoErrors();
-        $this->assertDatabaseMissing('asignaciones_docente', ['id' => $assignment->id]);
+        $this->assertDatabaseMissing('docentes_paralelo', ['id' => $assignment->id]);
 
         $this->actingAsCoordinator()
             ->delete(route('coordination.academic.destroy', ['entity' => 'paralelo', 'record' => $parallel->id]))
@@ -1786,7 +1777,7 @@ class AcademicStructureTest extends TestCase
 
         $this->expectException(QueryException::class);
         TeacherAssignment::query()->create([
-            'usuario_id' => $existing->usuario_id,
+            'asignacion_rol_id' => $existing->asignacion_rol_id,
             'paralelo_id' => $existing->paralelo_id,
             'activo' => true,
         ]);

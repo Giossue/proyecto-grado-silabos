@@ -51,6 +51,7 @@ type TemplateField = {
     master_source: string | null;
     teacher_editable: boolean;
     ai_enabled: boolean;
+    ai_coordinator_configurable: boolean;
     document_marker: string | null;
     content_type: string;
 };
@@ -304,6 +305,7 @@ const addField = (
             inherited: false,
             teacher_editable: true,
             ai_enabled: false,
+            ai_coordinator_configurable: true,
         },
         requestOptions('Campo agregado.'),
     );
@@ -359,6 +361,7 @@ const fieldPayload = (
         master_source: field.master_source ?? '',
         teacher_editable: field.teacher_editable,
         ai_enabled: field.ai_enabled,
+        ai_coordinator_configurable: field.ai_coordinator_configurable,
         document_marker: field.document_marker ?? '',
     };
 };

@@ -8,7 +8,6 @@ use App\Modules\Academic\Domain\StudyModality;
 use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Campus;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
-use App\Modules\Academic\Infrastructure\Persistence\Models\CoordinatorAssignment;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CurriculumFieldDefinition;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Faculty;
@@ -154,25 +153,13 @@ class DatabaseSeeder extends Seeder
                 }
             }
 
-            $coordinatorScope = [
-                'usuario_id' => $users[RoleCode::Coordinator->value]->id,
-                'carrera_id' => $career->id,
-            ];
-            $coordinatorAssignment = CoordinatorAssignment::query()
-                ->where($coordinatorScope)
-                ->where('activo', true)
-                ->first();
-            if ($coordinatorAssignment === null) {
-                CoordinatorAssignment::query()->create([
-                    ...$coordinatorScope,
-                    'activo' => true,
-                ]);
-            } elseif (! $coordinatorAssignment->activo) {
-                $coordinatorAssignment->update(['activo' => true]);
-            }
-
-            $teacherScope = [
+            $teacherRole = RoleAssignment::query()->where([
                 'usuario_id' => $users[RoleCode::Teacher->value]->id,
+                'rol_id' => $roles[RoleCode::Teacher->value]->id,
+                'carrera_id' => $career->id,
+            ])->firstOrFail();
+            $teacherScope = [
+                'asignacion_rol_id' => $teacherRole->id,
                 'paralelo_id' => $parallel->id,
             ];
             $teacherAssignment = TeacherAssignment::query()

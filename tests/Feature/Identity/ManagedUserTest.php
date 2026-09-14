@@ -4,6 +4,8 @@ namespace Tests\Feature\Identity;
 
 use App\Models\User;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
+use App\Modules\Academic\Infrastructure\Persistence\Models\CoordinatorAssignment;
+use App\Modules\Academic\Infrastructure\Persistence\Models\TeacherAssignment;
 use App\Modules\Identity\Application\Actions\SetUserStatus;
 use App\Modules\Identity\Domain\Enums\RoleCode;
 use App\Modules\Identity\Infrastructure\Mail\ManagedUserCredentialsMail;
@@ -15,7 +17,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -242,11 +243,12 @@ class ManagedUserTest extends TestCase
             ->patch(route('admin.users.status.update', $this->coordinatorHolder()), ['active' => false])
             ->assertRedirect();
 
-        // Al retirarse quien la ejercía, el nombramiento anterior queda cerrado.
-        $this->assertDatabaseHas('asignaciones_coordinador', [
-            'usuario_id' => $this->coordinatorHolder()->id,
-            'activo' => false,
-        ]);
+        // Al retirarse quien la ejercía, el rol queda como historial; la cuenta inactiva
+        // ya no puede bloquear una coordinación nueva.
+        $this->assertTrue(CoordinatorAssignment::query()
+            ->where('usuario_id', $this->coordinatorHolder()->id)
+            ->where('activo', true)
+            ->exists());
 
         $this->actingAsAdministrator()
             ->post(route('admin.users.roles.store', $teacher), [
@@ -256,12 +258,11 @@ class ManagedUserTest extends TestCase
             ->assertRedirect()
             ->assertSessionHas('success');
 
-        // El rol por sí solo no basta: sin nombramiento no se puede activar.
-        $this->assertDatabaseHas('asignaciones_coordinador', [
-            'usuario_id' => $teacher->id,
-            'carrera_id' => $career->id,
-            'activo' => true,
-        ]);
+        $this->assertTrue(CoordinatorAssignment::query()
+            ->effective()
+            ->where('usuario_id', $teacher->id)
+            ->where('carrera_id', $career->id)
+            ->exists());
     }
 
     private function coordinatorHolder(): User
@@ -331,11 +332,11 @@ class ManagedUserTest extends TestCase
             'carrera_id' => $secondCareer->id,
             'activo' => true,
         ]);
-        $this->assertDatabaseHas('asignaciones_coordinador', [
-            'usuario_id' => $coordinator->id,
-            'carrera_id' => $secondCareer->id,
-            'activo' => true,
-        ]);
+        $this->assertTrue(CoordinatorAssignment::query()
+            ->effective()
+            ->where('usuario_id', $coordinator->id)
+            ->where('carrera_id', $secondCareer->id)
+            ->exists());
         $this->assertCount(2, $coordinator->fresh()->roleAssignments);
     }
 
@@ -450,12 +451,10 @@ class ManagedUserTest extends TestCase
         // Pendiente pero con huella (asignación docente): tampoco.
         $assigned = $this->pendingTeacher('asignado@silabos.test');
         $parallel = DB::table('paralelos')->first();
-        DB::table('asignaciones_docente')->insert([
-            'id' => (string) Str::uuid7(),
+        TeacherAssignment::query()->create([
             'usuario_id' => $assigned->id,
             'paralelo_id' => $parallel->id,
             'activo' => true,
-            'asignado_en' => now(),
         ]);
         $this->actingAsAdministrator()
             ->from(route('admin.users.index'))
@@ -515,13 +514,13 @@ class ManagedUserTest extends TestCase
         $career = Career::query()->where('codigo_institucional', 'SOFTWARE')->firstOrFail();
         // Un docente con paralelos pero sin sílabos en curso se archiva y sus asignaciones se cierran.
         $teacher = User::query()->where('correo_electronico', 'docente@silabos.test')->firstOrFail();
-        $this->assertDatabaseHas('asignaciones_docente', ['usuario_id' => $teacher->id, 'activo' => true]);
+        $this->assertTrue(TeacherAssignment::query()->forUser($teacher->id)->where('activo', true)->exists());
         $this->actingAsAdministrator()
             ->patch(route('admin.users.update', $teacher), ['nombre' => $teacher->nombre, 'correo_electronico' => $teacher->correo_electronico, 'active' => 0])
             ->assertRedirect()
             ->assertSessionHasNoErrors();
         $this->assertFalse($teacher->fresh()->activo);
-        $this->assertDatabaseMissing('asignaciones_docente', ['usuario_id' => $teacher->id, 'activo' => true]);
+        $this->assertFalse(TeacherAssignment::query()->forUser($teacher->id)->where('activo', true)->exists());
         $this->assertSame($career->id, RoleAssignment::query()->where('usuario_id', $teacher->id)->value('carrera_id'));
     }
 

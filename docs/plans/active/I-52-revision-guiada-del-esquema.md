@@ -118,3 +118,36 @@ relacionadas, PHPStan, Vue TypeScript y formato. El plan de revisión sigue abie
 - Continuar por la siguiente tabla que indique el responsable del producto.
 - Al cierre: comparación final local/remota, inventario de decisiones, prueba del esquema
   y actualización de la documentación de arquitectura.
+
+## Decisión en ejecución: roles y responsabilidades académicas
+
+El responsable del producto confirmó el 2026-09-14 que el sistema debe usar una sola
+relación RBAC con alcance: `asignaciones_rol(usuario_id, rol_id, carrera_id)`. Esta
+relación representa quién puede ejercer cada rol dentro de una carrera; no se creará una
+tabla por rol.
+
+`asignaciones_coordinador` duplica exactamente la asignación de rol `coordinador` por
+carrera y se retirará. La asignación operativa de docencia se conserva, pero se renombra
+a `docentes_paralelo` y pasa a referenciar `asignaciones_rol`, no directamente a
+`usuarios`. Así, solo una asignación de rol `docente` de la carrera correspondiente
+puede respaldar la responsabilidad de un paralelo.
+
+Antes de la migración se comprobó en producción, por consultas de catálogo y conteos sin
+datos personales, que las dos asignaciones docentes existentes tienen una asignación de
+rol `docente` activa para su carrera y que toda coordinación tiene su asignación RBAC
+equivalente. La migración podrá hacer el backfill sin inventar relaciones.
+
+### Implementación preparada el 14 de septiembre: migraciones `000056` a `000059`
+
+- `000056` elimina `asignaciones_coordinador`, renombra
+  `asignaciones_docente` a `docentes_paralelo` y sustituye su `usuario_id` por
+  `asignacion_rol_id`.
+- `000057` renombra la referencia de `colaboradores_silabo` a
+  `docente_paralelo_id`.
+- `000058` y `000059` protegen que cada carrera tenga una sola coordinación ejercible
+  usando un trigger; una cuenta inactiva no bloquea su reemplazo.
+- La migración local y las pruebas de estructura, identidad, relevo y transferencia
+  pasan. Producción recibió las migraciones el 14 de septiembre después de verificar un
+  respaldo lógico, cero responsabilidades docentes huérfanas y cero coordinaciones
+  ejercibles duplicadas. La comprobación posterior confirmó `docentes_paralelo`,
+  `colaboradores_silabo.docente_paralelo_id` y el trigger de coordinación.
