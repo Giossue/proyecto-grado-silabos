@@ -2,9 +2,9 @@
 
 ## Estado
 
-En preparación desde el 14 de septiembre de 2026. Este documento define el trabajo;
-todavía no afirma que el chat, la revisión integral ni la herencia de configuración estén
-implementados.
+En curso desde el 14 de septiembre de 2026. La primera rebanada visible integra la
+revisión global con el editor docente; el chat, el contexto cruzado y la herencia de
+configuración continúan pendientes.
 
 ## Trazabilidad
 
@@ -216,6 +216,23 @@ PV-13 y PV-14 definan hardware y modelo; no se añade una base vectorial por ant
 
 Cada rebanada debe terminar política, caso de uso, persistencia, interfaz, pruebas y
 documentación antes de empezar la siguiente. I-72.2 e I-72.3 no dependen del modelo final.
+
+## Avance del 14 de septiembre de 2026
+
+- [x] Corregido el contrato de presentación `estado/status` en la pantalla de análisis.
+- [x] Añadida una acción global que, después de una validación determinística limpia,
+      solicita análisis para todos los campos textuales habilitados que tengan contenido.
+- [x] Integrado un único `Sheet` derecho en el editor docente con fuentes, estados,
+      resultados por sección/campo, extractos citados y salto hacia la sección.
+- [x] Conservadas dentro del panel las decisiones ignorar/no útil y la comparación
+      explícita antes de aplicar una recomendación.
+- [x] Añadido sondeo del trabajo asíncrono sin bloquear edición, envío ni navegación.
+- [x] Puerta `composer verify` aprobada: seguridad, ESLint, Prettier, TypeScript,
+      PHPStan, build y 420 pruebas con 6.388 aserciones.
+
+Esta rebanada reutiliza las ejecuciones por campo existentes y todavía no crea la
+ejecución padre prevista en I-72.5. Tampoco presenta una caja de chat falsa: la
+conversación libre se añadirá en I-72.6 cuando exista su contrato y persistencia.
 
 ## Pruebas
 

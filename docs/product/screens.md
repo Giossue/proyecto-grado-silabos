@@ -121,6 +121,10 @@ paralelo. Son operaciones separadas y ninguna levanta los bloqueos académicos.
   obligatorios no muestra acciones de validación o envío; al completarlos ofrece
   **Validar sílabo** y, solo para la versión validada sin errores bloqueantes, cambia a
   **Enviar sílabo**. Las recomendaciones de IA permanecen opcionales y no bloquean.
+- DOC-04 ofrece un único acceso **Asistente IA** en la cabecera, nunca uno por sección o
+  campo. Abre un `Sheet` derecho con las fuentes disponibles y los resultados agrupados
+  por sección/campo. **Revisar sílabo** solo se habilita después de una validación limpia;
+  la edición y el envío continúan disponibles mientras la IA procesa o falla.
 - I-60 separa los dos estados de ADM-06. `/admin/plantilla/{id}` presenta la plantilla
   completa en solo lectura y ofrece **Editar**. `/admin/plantilla/{id}/editar` conserva
   la hoja y añade una cinta contextual: al seleccionar un bloque, campo o tabla muestra

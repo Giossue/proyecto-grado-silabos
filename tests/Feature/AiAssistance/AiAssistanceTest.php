@@ -115,7 +115,7 @@ class AiAssistanceTest extends TestCase
         $this->get(route('syllabi.ai.show', [$syllabus, $field]))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->where('executions.0.estado', 'completada')
+                ->where('executions.0.status', 'completada')
                 ->where('executions.0.evidence.0.source', 'Fuente IA 1')
                 ->where(
                     'executions.0.evidence.0.excerpt',
@@ -157,6 +157,58 @@ class AiAssistanceTest extends TestCase
         ])->assertRedirect();
         $this->assertSame(1, $syllabus->fresh()->version_bloqueo);
         $this->assertSame(1, AiFeedback::query()->where('decision', 'aplicada')->count());
+    }
+
+    public function test_teacher_requests_one_contextual_review_and_sees_it_inside_the_editor(): void
+    {
+        Queue::fake();
+        [$syllabus, $field] = $this->fixture();
+        $this->actAsTeacher();
+
+        $this->post(route('syllabi.ai.review', $syllabus), [
+            'idempotency_key' => (string) Str::uuid(),
+            'version_bloqueo' => $syllabus->version_bloqueo,
+        ])->assertSessionHasErrors('syllabus');
+        $this->assertDatabaseCount('ejecuciones_ia', 0);
+
+        $this->post(route('syllabi.validate', $syllabus))->assertRedirect();
+        $syllabus->refresh();
+
+        $this->get(route('syllabi.edit', $syllabus))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Teacher/Syllabi/Edit')
+                ->where('ai_assistance.available', true)
+                ->where('ai_assistance.sources.0', 'Fuente IA 1')
+                ->where('ai_assistance.executions', []));
+
+        $this->post(route('syllabi.ai.review', $syllabus), [
+            'idempotency_key' => (string) Str::uuid(),
+            'version_bloqueo' => $syllabus->version_bloqueo,
+        ])->assertRedirect();
+
+        $this->assertDatabaseCount('ejecuciones_ia', 1);
+        Queue::assertPushed(AnalyzeSyllabusFieldJob::class, 1);
+
+        $execution = AiExecution::query()->firstOrFail();
+        $this->get(route('syllabi.edit', $syllabus))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('ai_assistance.executions.0.status', 'pendiente')
+                ->where('ai_assistance.executions.0.section.title', 'Objetivos')
+                ->where('ai_assistance.executions.0.field.label', 'Objetivo general'));
+
+        $this->runJob($execution);
+
+        $this->get(route('syllabi.edit', $syllabus))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('ai_assistance.executions.0.status', 'completada')
+                ->where(
+                    'ai_assistance.executions.0.recommendations.0.title',
+                    'Normalización editorial reproducible',
+                )
+                ->where('ai_assistance.executions.0.evidence.0.source', 'Fuente IA 1'));
     }
 
     public function test_ia_neg_01_inactive_sources_are_excluded_and_missing_evidence_is_inconclusive(): void

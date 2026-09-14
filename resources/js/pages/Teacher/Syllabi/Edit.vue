@@ -3,6 +3,8 @@ import { Form, Head, router } from '@inertiajs/vue3';
 import { AlertTriangle, RotateCcw, Send, Trash2 } from '@lucide/vue';
 import { computed, onBeforeUnmount, reactive, ref } from 'vue';
 import SyllabusController from '@/actions/App/Modules/Syllabus/Presentation/Http/Controllers/SyllabusController';
+import SyllabusAiAssistantSheet from '@/components/domain/ai/SyllabusAiAssistantSheet.vue';
+import type { SyllabusAiAssistance } from '@/components/domain/ai/SyllabusAiAssistantSheet.vue';
 import TemplateDocumentView from '@/components/domain/configuration/TemplateDocumentView.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
 import SyllabusAcademicContext from '@/components/domain/syllabus/SyllabusAcademicContext.vue';
@@ -69,6 +71,7 @@ type DraftField = {
     required: boolean;
     inherited: boolean;
     teacher_editable: boolean;
+    ai_enabled: boolean;
     value: JsonValue;
     rows: DraftRow[];
 };
@@ -140,6 +143,7 @@ const props = defineProps<{
             reopened_by: string;
         } | null;
     };
+    ai_assistance: SyllabusAiAssistance;
 }>();
 
 defineOptions({
@@ -588,6 +592,13 @@ onBeforeUnmount(() => {
         :description="`${syllabus.code} · ${syllabus.convocation} · Paralelo(s) ${syllabus.parallels.join(', ')}`"
     >
         <template #actions>
+            <SyllabusAiAssistantSheet
+                v-if="ai_assistance.available"
+                :assistance="ai_assistance"
+                :syllabus-version="lockVersion"
+                :can-review="canSubmit"
+                :saving="globalSaving"
+            />
             <Button
                 v-if="canValidate"
                 type="button"

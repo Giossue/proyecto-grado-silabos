@@ -7,12 +7,14 @@ use App\Models\User;
 use App\Modules\AiAssistance\Application\Actions\ApplyAiRecommendation;
 use App\Modules\AiAssistance\Application\Actions\RecordAiFeedback;
 use App\Modules\AiAssistance\Application\Actions\RequestAiAnalysis;
+use App\Modules\AiAssistance\Application\Actions\RequestSyllabusAiReview;
 use App\Modules\AiAssistance\Infrastructure\Persistence\Models\AiEvidence;
 use App\Modules\AiAssistance\Infrastructure\Persistence\Models\AiExecution;
 use App\Modules\AiAssistance\Infrastructure\Persistence\Models\AiRecommendation;
 use App\Modules\AiAssistance\Presentation\Http\Requests\ApplyAiRecommendationRequest;
 use App\Modules\AiAssistance\Presentation\Http\Requests\RecordAiFeedbackRequest;
 use App\Modules\AiAssistance\Presentation\Http\Requests\RequestAiAnalysisRequest;
+use App\Modules\AiAssistance\Presentation\Http\Requests\RequestSyllabusAiReviewRequest;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\FieldDefinition;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\FieldValue;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\Syllabus;
@@ -64,7 +66,7 @@ class AiAssistanceController extends Controller
             ],
             'executions' => $executions->map(fn (AiExecution $execution): array => [
                 'id' => $execution->id,
-                'estado' => $execution->estado,
+                'status' => $execution->estado,
                 'requested_at' => $execution->solicitado_en->toIso8601String(),
                 'completed_at' => $execution->completado_en?->toIso8601String(),
                 'analysis_label' => 'Análisis con asistencia de IA',
@@ -113,6 +115,24 @@ class AiAssistanceController extends Controller
             ->with('success', 'La solicitud quedó registrada. Puede continuar editando mientras se procesa.');
     }
 
+    public function review(
+        Syllabus $syllabus,
+        RequestSyllabusAiReviewRequest $request,
+        RequestSyllabusAiReview $action,
+    ): RedirectResponse {
+        $actor = $request->user();
+        abort_unless($actor instanceof User, 401);
+        $count = $action->execute(
+            $syllabus,
+            $request->integer('version_bloqueo'),
+            $request->string('idempotency_key')->toString(),
+            $actor,
+            $request,
+        );
+
+        return back()->with('success', "Revisión de IA iniciada para {$count} campo(s)");
+    }
+
     public function feedback(
         Syllabus $syllabus,
         FieldDefinition $field,
@@ -154,8 +174,11 @@ class AiAssistanceController extends Controller
             $request,
         );
 
-        return to_route('syllabi.ai.show', [$syllabus, $field])
-            ->with('success', 'La recomendación se aplicó al campo después de verificar la versión del borrador.');
+        $redirect = $request->boolean('return_to_editor')
+            ? to_route('syllabi.edit', $syllabus)
+            : to_route('syllabi.ai.show', [$syllabus, $field]);
+
+        return $redirect->with('success', 'La recomendación se aplicó al campo después de verificar la versión del borrador');
     }
 
     private function assertField(Syllabus $syllabus, FieldDefinition $field): void

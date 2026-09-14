@@ -5,7 +5,7 @@ namespace App\Modules\AiAssistance\Presentation\Http\Requests;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\Syllabus;
 use Illuminate\Foundation\Http\FormRequest;
 
-class ApplyAiRecommendationRequest extends FormRequest
+class RequestSyllabusAiReviewRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -18,8 +18,8 @@ class ApplyAiRecommendationRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'idempotency_key' => ['required', 'uuid'],
             'version_bloqueo' => ['required', 'integer', 'min:0'],
-            'return_to_editor' => ['sometimes', 'boolean'],
         ];
     }
 }

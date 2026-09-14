@@ -99,6 +99,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('mis-silabos/{syllabus}/iniciar', [SyllabusController::class, 'start'])->name('syllabi.start');
         Route::get('mis-silabos/{syllabus}/editar', [SyllabusController::class, 'edit'])->name('syllabi.edit');
         Route::patch('mis-silabos/{syllabus}/campos/{field}', [SyllabusController::class, 'updateField'])->name('syllabi.fields.update');
+        Route::post('mis-silabos/{syllabus}/asistencia-ia/revisar', [AiAssistanceController::class, 'review'])
+            ->middleware('throttle:ai-analysis')
+            ->name('syllabi.ai.review');
         Route::get('mis-silabos/{syllabus}/campos/{field}/asistencia-ia', [AiAssistanceController::class, 'show'])->name('syllabi.ai.show');
         Route::post('mis-silabos/{syllabus}/campos/{field}/asistencia-ia', [AiAssistanceController::class, 'store'])
             ->middleware('throttle:ai-analysis')

@@ -18,6 +18,9 @@
 - La ejecución conserva huellas, modelos, parámetros, fuentes, respuesta y decisión.
 - Solicitudes equivalentes pueden reutilizar un resultado según una clave documentada.
 - Fallo, tiempo de espera o evidencia insuficiente no bloquea el proceso principal.
+- En DOC-04 hay un solo acceso global: después de validar sin errores puede solicitar en
+  una acción el análisis de todos los campos textuales habilitados que tengan contenido.
+  El panel agrupa el resultado por sección/campo y conserva las decisiones y citas.
 
 ## Límites
 
@@ -53,3 +56,11 @@
   el estado del sílabo.
 - `contract-simulator-v1` normaliza únicamente espacios y puntuación para demostrar el
   contrato. No es un modelo académico validado y no cierra `PV-13`, `PV-14` ni `PV-18`.
+
+## Ampliación I-72 en curso
+
+- La primera rebanada sustituye la navegación separada por campo en el recorrido normal
+  por un `Sheet` único dentro del editor y una solicitud global que reutiliza el análisis
+  por campo. El chat libre, el contexto cruzado entre secciones y la configuración
+  efectiva por carrera todavía no están implementados.
+- El contrato de presentación usa `status` de forma consistente entre Laravel y Vue.

@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 /**
  * @property string $id
  * @property string $version_reglas
+ * @property int $version_bloqueo
  * @property int $errores_bloqueantes
  * @property int $advertencias
  * @property string $porcentaje_completitud
