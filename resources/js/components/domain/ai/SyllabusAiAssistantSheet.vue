@@ -10,6 +10,26 @@ import {
     Sparkles,
 } from '@lucide/vue';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import {
+    Conversation,
+    ConversationContent,
+    ConversationScrollButton,
+} from '@/components/ai-elements/conversation';
+import {
+    InlineCitation,
+    InlineCitationCard,
+    InlineCitationCardBody,
+    InlineCitationCardTrigger,
+    InlineCitationSource,
+    InlineCitationText,
+} from '@/components/ai-elements/inline-citation';
+import { Message, MessageContent } from '@/components/ai-elements/message';
+import {
+    Sources,
+    SourcesContent,
+    SourcesTrigger,
+} from '@/components/ai-elements/sources';
+import { Suggestion, Suggestions } from '@/components/ai-elements/suggestion';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -287,278 +307,384 @@ onBeforeUnmount(stopPolling);
 
             <Separator />
 
-            <div
-                class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-4"
-                aria-live="polite"
+            <Conversation
+                aria-label="Resultados de la revisión del asistente IA"
+                class="min-h-0 flex-1"
             >
-                <Alert v-if="assistance.is_provisional_simulator">
-                    <Sparkles aria-hidden="true" />
-                    <AlertTitle>Modo de demostración</AlertTitle>
-                    <AlertDescription>
-                        El flujo y las citas son reales, pero el modelo actual
-                        todavía es el simulador técnico
-                    </AlertDescription>
-                </Alert>
+                <ConversationContent class="gap-4 px-4 py-4">
+                    <Alert v-if="assistance.is_provisional_simulator">
+                        <Sparkles aria-hidden="true" />
+                        <AlertTitle>Modo de demostración</AlertTitle>
+                        <AlertDescription>
+                            El flujo y las citas son reales, pero el modelo
+                            actual todavía es el simulador técnico
+                        </AlertDescription>
+                    </Alert>
 
-                <Card>
-                    <CardHeader>
-                        <div class="flex items-start gap-3">
-                            <div
-                                class="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted"
-                            >
-                                <Bot aria-hidden="true" />
-                            </div>
-                            <div class="flex min-w-0 flex-col gap-1">
-                                <CardTitle class="text-base">
-                                    Revisión contextual
-                                </CardTitle>
-                                <CardDescription>
-                                    Analizaré únicamente los campos habilitados
-                                    y las fuentes elegidas por Coordinación
-                                </CardDescription>
-                            </div>
-                        </div>
-                    </CardHeader>
-                    <CardContent
-                        v-if="assistance.sources.length > 0"
-                        class="flex flex-col gap-2"
-                    >
-                        <p class="text-xs font-medium text-muted-foreground">
-                            Fuentes disponibles
-                        </p>
-                        <div class="flex flex-wrap gap-2">
-                            <Badge
-                                v-for="source in assistance.sources"
-                                :key="source"
-                                variant="outline"
-                            >
-                                {{ source }}
-                            </Badge>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Empty v-if="!hasResults" class="min-h-64 border">
-                    <EmptyHeader>
-                        <EmptyMedia variant="icon">
-                            <FileText aria-hidden="true" />
-                        </EmptyMedia>
-                        <EmptyTitle>Aún no hay una revisión</EmptyTitle>
-                        <EmptyDescription v-if="canReview">
-                            El sílabo está listo. Inicia la revisión para
-                            recibir consejos organizados por sección
-                        </EmptyDescription>
-                        <EmptyDescription v-else>
-                            Completa los campos obligatorios y valida el sílabo
-                            para habilitar la revisión
-                        </EmptyDescription>
-                    </EmptyHeader>
-                    <EmptyContent v-if="canReview">
-                        <Button
-                            type="button"
-                            :disabled="requestingReview || saving"
-                            @click="requestReview"
-                        >
-                            <Spinner
-                                v-if="requestingReview"
-                                data-icon="inline-start"
-                            />
-                            <Sparkles
-                                v-else
-                                data-icon="inline-start"
-                                aria-hidden="true"
-                            />
-                            Revisar sílabo
-                        </Button>
-                    </EmptyContent>
-                </Empty>
-
-                <Card
-                    v-for="execution in assistance.executions"
-                    v-else
-                    :key="execution.id"
-                >
-                    <CardHeader>
-                        <div class="flex items-start justify-between gap-3">
-                            <div class="flex min-w-0 flex-col gap-1">
-                                <button
-                                    type="button"
-                                    class="flex items-center gap-1 text-left text-sm font-medium hover:underline"
-                                    @click="goToSection(execution.section.id)"
+                    <Message from="assistant" class="max-w-full">
+                        <MessageContent class="w-full">
+                            <Card>
+                                <CardHeader>
+                                    <div class="flex items-start gap-3">
+                                        <div
+                                            class="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted"
+                                        >
+                                            <Bot aria-hidden="true" />
+                                        </div>
+                                        <div
+                                            class="flex min-w-0 flex-col gap-1"
+                                        >
+                                            <CardTitle class="text-base">
+                                                Revisión contextual
+                                            </CardTitle>
+                                            <CardDescription>
+                                                Analizaré únicamente los campos
+                                                habilitados y las fuentes
+                                                elegidas por Coordinación
+                                            </CardDescription>
+                                        </div>
+                                    </div>
+                                </CardHeader>
+                                <CardContent
+                                    v-if="assistance.sources.length > 0"
                                 >
-                                    {{ execution.section.title }}
-                                    <ChevronRight aria-hidden="true" />
-                                </button>
-                                <CardTitle class="text-base">
-                                    {{ execution.field.label }}
-                                </CardTitle>
-                            </div>
-                            <Badge :variant="statusVariant(execution)">
+                                    <Sources class="mb-0">
+                                        <SourcesTrigger
+                                            :count="assistance.sources.length"
+                                            class="text-xs"
+                                        >
+                                            <span class="font-medium">
+                                                Fuentes seleccionadas
+                                            </span>
+                                        </SourcesTrigger>
+                                        <SourcesContent class="w-full">
+                                            <div class="flex flex-wrap gap-2">
+                                                <Badge
+                                                    v-for="source in assistance.sources"
+                                                    :key="source"
+                                                    variant="outline"
+                                                >
+                                                    {{ source }}
+                                                </Badge>
+                                            </div>
+                                        </SourcesContent>
+                                    </Sources>
+                                </CardContent>
+                            </Card>
+                        </MessageContent>
+                    </Message>
+
+                    <Suggestions
+                        v-if="hasResults"
+                        aria-label="Ir a los campos revisados"
+                    >
+                        <Suggestion
+                            v-for="execution in assistance.executions"
+                            :key="execution.id"
+                            :suggestion="execution.section.title"
+                            @click="goToSection(execution.section.id)"
+                        >
+                            {{ execution.section.title }}
+                        </Suggestion>
+                    </Suggestions>
+
+                    <Empty v-if="!hasResults" class="min-h-64 border">
+                        <EmptyHeader>
+                            <EmptyMedia variant="icon">
+                                <FileText aria-hidden="true" />
+                            </EmptyMedia>
+                            <EmptyTitle>Aún no hay una revisión</EmptyTitle>
+                            <EmptyDescription v-if="canReview">
+                                El sílabo está listo. Inicia la revisión para
+                                recibir consejos organizados por sección
+                            </EmptyDescription>
+                            <EmptyDescription v-else>
+                                Completa los campos obligatorios y valida el
+                                sílabo para habilitar la revisión
+                            </EmptyDescription>
+                        </EmptyHeader>
+                        <EmptyContent v-if="canReview">
+                            <Button
+                                type="button"
+                                :disabled="requestingReview || saving"
+                                @click="requestReview"
+                            >
                                 <Spinner
-                                    v-if="
-                                        execution.status === 'pendiente' ||
-                                        execution.status === 'en_ejecucion'
-                                    "
+                                    v-if="requestingReview"
                                     data-icon="inline-start"
                                 />
-                                {{ statusLabel(execution) }}
-                            </Badge>
-                        </div>
-                        <CardDescription v-if="execution.stale">
-                            El borrador cambió después de este análisis
-                        </CardDescription>
-                    </CardHeader>
+                                <Sparkles
+                                    v-else
+                                    data-icon="inline-start"
+                                    aria-hidden="true"
+                                />
+                                Revisar sílabo
+                            </Button>
+                        </EmptyContent>
+                    </Empty>
 
-                    <CardContent class="flex flex-col gap-4">
-                        <Alert
-                            v-if="
-                                execution.status === 'pendiente' ||
-                                execution.status === 'en_ejecucion'
-                            "
-                        >
-                            <Clock3 aria-hidden="true" />
-                            <AlertTitle>Revisión en curso</AlertTitle>
-                            <AlertDescription>
-                                Puedes continuar editando mientras termina
-                            </AlertDescription>
-                        </Alert>
+                    <Message
+                        v-for="execution in assistance.executions"
+                        v-else
+                        :key="execution.id"
+                        from="assistant"
+                        class="max-w-full"
+                    >
+                        <MessageContent class="w-full">
+                            <Card>
+                                <CardHeader>
+                                    <div
+                                        class="flex items-start justify-between gap-3"
+                                    >
+                                        <div
+                                            class="flex min-w-0 flex-col gap-1"
+                                        >
+                                            <button
+                                                type="button"
+                                                class="flex items-center gap-1 text-left text-sm font-medium hover:underline"
+                                                @click="
+                                                    goToSection(
+                                                        execution.section.id,
+                                                    )
+                                                "
+                                            >
+                                                {{ execution.section.title }}
+                                                <ChevronRight
+                                                    aria-hidden="true"
+                                                />
+                                            </button>
+                                            <CardTitle class="text-base">
+                                                {{ execution.field.label }}
+                                            </CardTitle>
+                                        </div>
+                                        <Badge
+                                            :variant="statusVariant(execution)"
+                                        >
+                                            <Spinner
+                                                v-if="
+                                                    execution.status ===
+                                                        'pendiente' ||
+                                                    execution.status ===
+                                                        'en_ejecucion'
+                                                "
+                                                data-icon="inline-start"
+                                            />
+                                            {{ statusLabel(execution) }}
+                                        </Badge>
+                                    </div>
+                                    <CardDescription v-if="execution.stale">
+                                        El borrador cambió después de este
+                                        análisis
+                                    </CardDescription>
+                                </CardHeader>
 
-                        <Alert
-                            v-else-if="execution.status === 'fallida'"
-                            variant="destructive"
-                        >
-                            <CircleAlert aria-hidden="true" />
-                            <AlertTitle
-                                >No se pudo revisar este campo</AlertTitle
-                            >
-                            <AlertDescription>
-                                {{ execution.error_message }} El sílabo sigue
-                                disponible
-                            </AlertDescription>
-                        </Alert>
+                                <CardContent class="flex flex-col gap-4">
+                                    <Alert
+                                        v-if="
+                                            execution.status === 'pendiente' ||
+                                            execution.status === 'en_ejecucion'
+                                        "
+                                    >
+                                        <Clock3 aria-hidden="true" />
+                                        <AlertTitle
+                                            >Revisión en curso</AlertTitle
+                                        >
+                                        <AlertDescription>
+                                            Puedes continuar editando mientras
+                                            termina
+                                        </AlertDescription>
+                                    </Alert>
 
-                        <Alert
-                            v-else-if="execution.status === 'no_concluyente'"
-                        >
-                            <FileText aria-hidden="true" />
-                            <AlertTitle>Sin recomendación</AlertTitle>
-                            <AlertDescription>
-                                {{ execution.reason }}
-                            </AlertDescription>
-                        </Alert>
+                                    <Alert
+                                        v-else-if="
+                                            execution.status === 'fallida'
+                                        "
+                                        variant="destructive"
+                                    >
+                                        <CircleAlert aria-hidden="true" />
+                                        <AlertTitle
+                                            >No se pudo revisar este
+                                            campo</AlertTitle
+                                        >
+                                        <AlertDescription>
+                                            {{ execution.error_message }} El
+                                            sílabo sigue disponible
+                                        </AlertDescription>
+                                    </Alert>
 
-                        <article
-                            v-for="recommendation in execution.recommendations"
-                            :key="recommendation.id"
-                            class="flex flex-col gap-3 rounded-md border p-3"
-                        >
-                            <div class="flex items-start justify-between gap-3">
-                                <div class="flex min-w-0 flex-col gap-1">
-                                    <h3 class="font-medium">
-                                        {{ recommendation.title }}
-                                    </h3>
-                                    <p class="text-sm text-muted-foreground">
-                                        {{ recommendation.explanation }}
-                                    </p>
-                                </div>
-                                <Badge
-                                    v-if="recommendation.applied"
-                                    variant="secondary"
-                                >
-                                    <Check
-                                        data-icon="inline-start"
-                                        aria-hidden="true"
-                                    />
-                                    Aplicada
-                                </Badge>
-                            </div>
+                                    <Alert
+                                        v-else-if="
+                                            execution.status ===
+                                            'no_concluyente'
+                                        "
+                                    >
+                                        <FileText aria-hidden="true" />
+                                        <AlertTitle
+                                            >Sin recomendación</AlertTitle
+                                        >
+                                        <AlertDescription>
+                                            {{ execution.reason }}
+                                        </AlertDescription>
+                                    </Alert>
 
-                            <div
-                                class="rounded-md bg-muted/50 p-3 text-sm whitespace-pre-wrap"
-                            >
-                                {{ recommendation.suggested_text }}
-                            </div>
+                                    <article
+                                        v-for="recommendation in execution.recommendations"
+                                        :key="recommendation.id"
+                                        class="flex flex-col gap-3 rounded-md border p-3"
+                                    >
+                                        <div
+                                            class="flex items-start justify-between gap-3"
+                                        >
+                                            <div
+                                                class="flex min-w-0 flex-col gap-1"
+                                            >
+                                                <h3 class="font-medium">
+                                                    {{ recommendation.title }}
+                                                </h3>
+                                                <p
+                                                    class="text-sm text-muted-foreground"
+                                                >
+                                                    {{
+                                                        recommendation.explanation
+                                                    }}
+                                                </p>
+                                            </div>
+                                            <Badge
+                                                v-if="recommendation.applied"
+                                                variant="secondary"
+                                            >
+                                                <Check
+                                                    data-icon="inline-start"
+                                                    aria-hidden="true"
+                                                />
+                                                Aplicada
+                                            </Badge>
+                                        </div>
 
-                            <details
-                                v-for="evidence in citedEvidence(
-                                    execution,
-                                    recommendation,
-                                )"
-                                :key="evidence.id"
-                                class="rounded-md border px-3 py-2"
-                            >
-                                <summary
-                                    class="cursor-pointer text-sm font-medium"
-                                >
-                                    {{ evidence.source }}
-                                </summary>
-                                <p
-                                    class="pt-2 text-sm whitespace-pre-wrap text-muted-foreground"
-                                >
-                                    {{ evidence.excerpt }}
-                                </p>
-                            </details>
+                                        <div
+                                            class="rounded-md bg-muted/50 p-3 text-sm whitespace-pre-wrap"
+                                        >
+                                            {{ recommendation.suggested_text }}
+                                        </div>
 
-                            <div
-                                v-if="!recommendation.applied"
-                                class="flex flex-wrap gap-2"
-                            >
-                                <Button
-                                    type="button"
-                                    size="sm"
-                                    :disabled="
-                                        execution.stale ||
-                                        decidingId === recommendation.id
-                                    "
-                                    @click="
-                                        reviewChange(execution, recommendation)
-                                    "
-                                >
-                                    Revisar cambio
-                                </Button>
-                                <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="ghost"
-                                    :disabled="
-                                        decidingId === recommendation.id ||
-                                        recommendation.my_decisions.includes(
-                                            'ignorada',
-                                        )
-                                    "
-                                    @click="
-                                        recordDecision(
-                                            recommendation,
-                                            'ignorada',
-                                        )
-                                    "
-                                >
-                                    Ignorar
-                                </Button>
-                                <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="ghost"
-                                    :disabled="
-                                        decidingId === recommendation.id ||
-                                        recommendation.my_decisions.includes(
-                                            'no_util',
-                                        )
-                                    "
-                                    @click="
-                                        recordDecision(
-                                            recommendation,
-                                            'no_util',
-                                        )
-                                    "
-                                >
-                                    No es útil
-                                </Button>
-                            </div>
-                        </article>
-                    </CardContent>
-                </Card>
-            </div>
+                                        <InlineCitation
+                                            v-if="
+                                                citedEvidence(
+                                                    execution,
+                                                    recommendation,
+                                                ).length > 0
+                                            "
+                                        >
+                                            <InlineCitationText
+                                                class="text-xs text-muted-foreground"
+                                            >
+                                                Basado en las fuentes
+                                                seleccionadas
+                                            </InlineCitationText>
+                                            <InlineCitationCard>
+                                                <InlineCitationCardTrigger
+                                                    :sources="
+                                                        citedEvidence(
+                                                            execution,
+                                                            recommendation,
+                                                        ).map(
+                                                            (evidence) =>
+                                                                evidence.source,
+                                                        )
+                                                    "
+                                                />
+                                                <InlineCitationCardBody>
+                                                    <div
+                                                        class="flex flex-col gap-3 p-3"
+                                                    >
+                                                        <InlineCitationSource
+                                                            v-for="evidence in citedEvidence(
+                                                                execution,
+                                                                recommendation,
+                                                            )"
+                                                            :key="evidence.id"
+                                                            :title="
+                                                                evidence.source
+                                                            "
+                                                            :description="
+                                                                evidence.excerpt
+                                                            "
+                                                        />
+                                                    </div>
+                                                </InlineCitationCardBody>
+                                            </InlineCitationCard>
+                                        </InlineCitation>
+
+                                        <div
+                                            v-if="!recommendation.applied"
+                                            class="flex flex-wrap gap-2"
+                                        >
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                :disabled="
+                                                    execution.stale ||
+                                                    decidingId ===
+                                                        recommendation.id
+                                                "
+                                                @click="
+                                                    reviewChange(
+                                                        execution,
+                                                        recommendation,
+                                                    )
+                                                "
+                                            >
+                                                Revisar cambio
+                                            </Button>
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                variant="ghost"
+                                                :disabled="
+                                                    decidingId ===
+                                                        recommendation.id ||
+                                                    recommendation.my_decisions.includes(
+                                                        'ignorada',
+                                                    )
+                                                "
+                                                @click="
+                                                    recordDecision(
+                                                        recommendation,
+                                                        'ignorada',
+                                                    )
+                                                "
+                                            >
+                                                Ignorar
+                                            </Button>
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                variant="ghost"
+                                                :disabled="
+                                                    decidingId ===
+                                                        recommendation.id ||
+                                                    recommendation.my_decisions.includes(
+                                                        'no_util',
+                                                    )
+                                                "
+                                                @click="
+                                                    recordDecision(
+                                                        recommendation,
+                                                        'no_util',
+                                                    )
+                                                "
+                                            >
+                                                No es útil
+                                            </Button>
+                                        </div>
+                                    </article>
+                                </CardContent>
+                            </Card>
+                        </MessageContent>
+                    </Message>
+                </ConversationContent>
+                <ConversationScrollButton />
+            </Conversation>
 
             <Separator />
 

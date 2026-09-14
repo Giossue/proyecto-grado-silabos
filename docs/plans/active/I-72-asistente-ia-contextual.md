@@ -3,8 +3,9 @@
 ## Estado
 
 En curso desde el 14 de septiembre de 2026. La primera rebanada visible integra la
-revisión global con el editor docente; el chat, el contexto cruzado y la herencia de
-configuración continúan pendientes.
+revisión global con el editor docente y sus resultados usan conversación, mensajes,
+fuentes y citas de AI Elements Vue. El chat funcional, el contexto cruzado y la herencia
+de configuración continúan pendientes.
 
 ## Trazabilidad
 
@@ -175,10 +176,13 @@ PV-13 y PV-14 definan hardware y modelo; no se añade una base vectorial por ant
   `Sheet` derecho; no vuelven botones por sección o campo.
 - Componentes previstos: `SyllabusAiSheet`, `AiConversation`, `AiMessage`,
   `AiCitation`, `AiReviewProgress`, `AiSuggestionCard` y el diálogo de comparación ya
-  existente adaptado al nuevo flujo.
+  existente adaptado al nuevo flujo. La rebanada visible ya usa `conversation`,
+  `message`, `sources`, `inline-citation` y `suggestion`; incorpora `loader` y
+  `prompt-input` como base para el chat funcional pendiente de su endpoint.
 - Primero se reutilizan `resources/js/components/`, `components/ui/` y componentes de
-  dominio. Los patrones de AI Elements sirven como referencia visual y de interacción;
-  no se instalan sus componentes React/Next ni un segundo sistema de UI.
+  dominio. Solo después se incorpora código fuente selectivo de AI Elements Vue, que se
+  apoya en las primitivas locales. No se instalan sus componentes React/Next ni un
+  segundo sistema de UI.
 - Estados mínimos: cerrado, vacío, conversando, revisión pendiente/en proceso,
   recomendaciones, sin hallazgos, evidencia insuficiente, servicio no disponible y
   resultado desactualizado.
@@ -309,4 +313,5 @@ conversación libre se añadirá en I-72.6 cuando exista su contrato y persisten
 - Elegir modelo desde la interfaz docente.
 - Aprobar, rechazar, calificar o modificar el sílabo automáticamente.
 - Consultar Internet o fuentes externas no seleccionadas por Coordinación.
-- Añadir React, Next.js o AI Elements como dependencia dentro de la aplicación Vue.
+- Añadir React, Next.js o los componentes React de AI Elements dentro de la aplicación
+  Vue.

@@ -6,6 +6,7 @@
 resources/js/
 ├── components/
 │   ├── ui/          primitivas shadcn-vue
+│   ├── ai-elements/ componentes conversacionales reutilizables
 │   └── domain/      estado, revisión, observación, evidencia, etc.
 ├── composables/     comportamiento compartido y pequeño
 ├── layouts/         autenticación, aplicación y rol
@@ -18,7 +19,10 @@ resources/js/
 ```
 
 Las páginas orquestan; los componentes de dominio representan patrones reutilizables;
-las primitivas no conocen reglas académicas.
+las primitivas no conocen reglas académicas. `components/ai-elements/` contiene código
+fuente selectivo de AI Elements Vue para conversaciones, mensajes, fuentes, citas y
+composición de prompts. Se apoya en las primitivas locales de `components/ui/`, no
+reemplaza ninguna de ellas y tampoco introduce React o Next.js.
 
 ## Inertia
 
