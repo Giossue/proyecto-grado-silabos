@@ -257,11 +257,6 @@ class ActiveRoleTest extends TestCase
             'carrera_id' => $career->id,
             'activo' => true,
         ]);
-        CoordinatorAssignment::query()->create([
-            'usuario_id' => $user->id,
-            'carrera_id' => $career->id,
-            'activo' => true,
-        ]);
     }
 
     public function test_audit_events_cannot_be_updated_or_deleted(): void

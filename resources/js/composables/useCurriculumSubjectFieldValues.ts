@@ -5,11 +5,7 @@ import type {
     FixedSubjectField,
 } from '@/types/academic';
 
-const HOUR_COMPONENT_KEYS = new Set([
-    'horas_ac',
-    'horas_pae',
-    'horas_aa',
-]);
+const HOUR_COMPONENT_KEYS = new Set(['horas_ac', 'horas_pae', 'horas_aa']);
 
 const fieldKey = (field: FixedSubjectField): string => field.system_key;
 
@@ -82,9 +78,7 @@ export function useCurriculumSubjectFieldValues(
 
     const totalHours = computed(() =>
         toValue(definitions)
-            .filter(
-                (field) => HOUR_COMPONENT_KEYS.has(field.system_key),
-            )
+            .filter((field) => HOUR_COMPONENT_KEYS.has(field.system_key))
             .reduce(
                 (total, field) =>
                     total + numericValue(values.value[fieldKey(field)] ?? ''),
@@ -97,10 +91,7 @@ export function useCurriculumSubjectFieldValues(
             ? totalHours.value
             : (values.value[fieldKey(field)] ?? '');
 
-    const updateValue = (
-        field: FixedSubjectField,
-        value: unknown,
-    ): void => {
+    const updateValue = (field: FixedSubjectField, value: unknown): void => {
         if (field.system_key === 'horas_totales') {
             return;
         }

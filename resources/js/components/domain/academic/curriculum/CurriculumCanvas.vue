@@ -134,8 +134,8 @@ const dominantUnit = (
 };
 
 const summaryLabel = (fieldId: string, label: string): string =>
-    props.fixedFields.find((field) => field.id === fieldId)
-        ?.system_label ?? label;
+    props.fixedFields.find((field) => field.id === fieldId)?.system_label ??
+    label;
 
 // La leyenda y el resumen se arman una sola vez y se reparten entre el panel de
 // escritorio y el desplegable de móvil.

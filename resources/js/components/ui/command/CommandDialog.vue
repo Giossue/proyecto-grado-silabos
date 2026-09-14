@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { DialogRootEmits, DialogRootProps } from "reka-ui"
 import { useForwardPropsEmits } from "reka-ui"
+import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import Command from "./Command.vue"
 
@@ -26,6 +27,11 @@ const forwarded = useForwardPropsEmits(props, emits)
       <Command>
         <slot v-bind="slotProps" />
       </Command>
+      <div class="border-t p-2 text-right">
+        <Button type="button" variant="ghost" size="sm" @click="emits('update:open', false)">
+          Cancelar
+        </Button>
+      </div>
     </DialogContent>
   </Dialog>
 </template>

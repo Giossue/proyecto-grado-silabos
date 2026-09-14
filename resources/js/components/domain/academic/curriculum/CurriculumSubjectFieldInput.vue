@@ -24,9 +24,7 @@ const emit = defineEmits<{
     'update:value': [value: unknown];
 }>();
 
-const inputName = computed(() =>
-    props.field.system_key,
-);
+const inputName = computed(() => props.field.system_key);
 const inputType = computed(() =>
     props.field.type === 'numero' || props.field.type === 'entero'
         ? 'number'

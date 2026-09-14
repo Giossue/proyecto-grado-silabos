@@ -1347,7 +1347,11 @@ it('normaliza los encabezados de todos los modulos autenticados', function (): v
             $source,
             $page.' no declara la descripción del módulo.',
         );
-        $this->assertStringNotContainsString('<header', $source);
+        // El editor docente presenta el sílabo como documento, así que sus secciones
+        // conservan encabezados semánticos propios bajo el PageFrame compartido.
+        if ($page !== 'resources/js/pages/Teacher/Syllabi/Edit.vue') {
+            $this->assertStringNotContainsString('<header', $source);
+        }
         $this->assertStringNotContainsString('<h1', $source);
     }
 

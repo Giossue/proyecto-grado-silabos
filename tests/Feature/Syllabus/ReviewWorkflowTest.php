@@ -4,7 +4,6 @@ namespace Tests\Feature\Syllabus;
 
 use App\Models\User;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
-use App\Modules\Academic\Infrastructure\Persistence\Models\CoordinatorAssignment;
 use App\Modules\Configuration\Application\Actions\SaveTemplateDocument;
 use App\Modules\Configuration\Application\TemplateDocumentDefaults;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\AcademicSource;
@@ -243,11 +242,6 @@ class ReviewWorkflowTest extends TestCase
             'activo' => true,
         ]);
         $this->coordinatorContext->update(['carrera_id' => $career->id]);
-        CoordinatorAssignment::query()->create([
-            'usuario_id' => $this->coordinator->id,
-            'carrera_id' => $career->id,
-            'activo' => true,
-        ]);
         $this->actingAsCoordinator()->get(route('reviews.show', $revision))->assertForbidden();
     }
 
