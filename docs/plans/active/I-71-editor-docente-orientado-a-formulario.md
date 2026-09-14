@@ -9,7 +9,7 @@ y únicamente las estructuras realmente tabulares conservan una cuadrícula edit
 
 ## Estado
 
-Implementado el 10 de septiembre y ampliado/verificado el 13 de septiembre de 2026.
+Implementado el 10 de septiembre y ampliado/verificado el 14 de septiembre de 2026.
 
 ## Trazabilidad
 
@@ -32,6 +32,9 @@ RF-037..044; RN-020..024; CU-07; DOC-03..05; CP-F. No depende de una decisión
       fallos recuperables o conflictos.
 - [x] Retirar los botones repetidos de asistencia de IA de los campos y tablas.
 - [x] Verificar tipos, lint, formato y la prueba focalizada de interfaz.
+- [x] Separar también la apariencia de captura de las tablas: la edición usa la
+      tipografía, superficies, bordes y colores semánticos de la aplicación sin alterar
+      el diseño institucional de revisión y exportación.
 
 ## Criterios de aceptación
 
@@ -39,6 +42,9 @@ RF-037..044; RN-020..024; CU-07; DOC-03..05; CP-F. No depende de una decisión
 - Los datos maestros se distinguen claramente como solo lectura.
 - Las tablas de planificación, evaluación y bibliografía siguen siendo editables como
   tablas porque la relación entre filas y columnas forma parte de la tarea.
+- Las tablas editables son visualmente coherentes con los demás controles del formulario
+  en tema claro y oscuro; los colores y tamaños guardados de la plantilla se reservan
+  para la representación documental.
 - Autoguardado, validación, IA, concurrencia y envío conservan su comportamiento.
 - La pantalla no introduce desplazamiento horizontal global a 360 px.
 - Todas las secciones aparecen una debajo de otra dentro del mismo flujo de captura.
@@ -52,6 +58,7 @@ RF-037..044; RN-020..024; CU-07; DOC-03..05; CP-F. No depende de una decisión
 
 ## Evidencia
 
-- `TeacherSyllabusEditorUiTest`: 1 prueba y 35 aserciones.
+- `TeacherSyllabusEditorUiTest`: prueba de estructura y presentación específica de
+  formulario para tablas docentes.
 - Suites focalizadas de sílabos y cabecera: 69 pruebas y 2.008 aserciones.
 - Prettier, ESLint, TypeScript, build de producción y `git diff --check` aprobados.

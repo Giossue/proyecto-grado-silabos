@@ -251,7 +251,7 @@ const widths = computed(() => columnWidths(props.layout));
                                 scope="col"
                                 :colspan="cell.colspan"
                                 :rowspan="cell.rowspan"
-                                class="border bg-[#DBE5F1] px-2 py-1.5 text-center text-xs font-semibold text-[#365F91]"
+                                class="border bg-muted px-2 py-1.5 text-center text-xs font-semibold text-foreground"
                             >
                                 {{ cell.label }}
                             </th>
@@ -259,7 +259,7 @@ const widths = computed(() => columnWidths(props.layout));
                                 v-if="rowIndex === 0"
                                 scope="col"
                                 :rowspan="header.length"
-                                class="w-10 border bg-[#DBE5F1]"
+                                class="w-10 border bg-muted"
                             >
                                 <span class="sr-only">Acciones</span>
                             </th>
@@ -347,7 +347,7 @@ const widths = computed(() => columnWidths(props.layout));
                             <td
                                 v-for="(column, index) in layout.columns"
                                 :key="column.key"
-                                class="border bg-[#B8CCE4] px-2 py-1.5 font-semibold text-[#365F91]"
+                                class="border bg-muted px-2 py-1.5 font-semibold text-foreground"
                                 :class="
                                     index === 0 ? 'text-end' : 'text-center'
                                 "
@@ -368,7 +368,7 @@ const widths = computed(() => columnWidths(props.layout));
                                     }}
                                 </template>
                             </td>
-                            <td class="border bg-[#B8CCE4]" />
+                            <td class="border bg-muted" />
                         </tr>
                     </tbody>
                 </table>

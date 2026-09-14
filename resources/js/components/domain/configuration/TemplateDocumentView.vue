@@ -46,6 +46,7 @@ const props = withDefaults(
         layout?: TableLayout | null;
         editable?: boolean;
         preview?: boolean;
+        presentation?: 'document' | 'form';
         fontFamily?: string;
         fontSize?: number;
         textColor?: string;
@@ -58,6 +59,7 @@ const props = withDefaults(
         layout: null,
         editable: false,
         preview: false,
+        presentation: 'document',
         fontFamily: 'Arial',
         fontSize: 11,
         textColor: '#000000',
@@ -72,14 +74,18 @@ const emit = defineEmits<{
 }>();
 const slots = useSlots();
 const prefix = useId();
-const documentStyle = computed((): CSSProperties & Record<string, string> => ({
-    fontFamily: props.fontFamily,
-    fontSize: `${props.fontSize}pt`,
-    color: props.textColor,
-    '--document-text-align': props.textAlign,
-    '--document-table-header-background': props.tableHeaderBackground,
-    '--document-table-header-color': props.tableHeaderColor,
-}));
+const documentStyle = computed((): CSSProperties & Record<string, string> =>
+    props.presentation === 'form'
+        ? {}
+        : {
+              fontFamily: props.fontFamily,
+              fontSize: `${props.fontSize}pt`,
+              color: props.textColor,
+              '--document-text-align': props.textAlign,
+              '--document-table-header-background': props.tableHeaderBackground,
+              '--document-table-header-color': props.tableHeaderColor,
+          },
+);
 const textFragments = (
     text: string,
     attributes: Record<string, unknown> = {},
@@ -155,6 +161,15 @@ const tableWithAction = (
     content: VNodeChild[],
 ): VNodeChild => {
     const tableAction = slots['table-action'];
+    const columnCount = Math.max(
+        0,
+        ...(table.content ?? []).map((row) =>
+            (row.content ?? []).reduce(
+                (count, cell) => count + Number(cell.attrs?.colspan ?? 1),
+                0,
+            ),
+        ),
+    );
     const repeatsHeader =
         table.content?.[0]?.content?.every(
             (cell) => cell.type === 'tableHeader',
@@ -163,18 +178,21 @@ const tableWithAction = (
         'table',
         {
             class: 'document-table',
+            'data-wide': columnCount > 3 ? '' : undefined,
             'data-page-repeat-header': repeatsHeader ? '' : undefined,
         },
         [columnGroup(table), h('tbody', {}, content)],
     );
 
-    if (!tableAction) {
+    if (!tableAction && props.presentation !== 'form') {
         return rendered;
     }
 
     return h('div', { class: 'document-table-container' }, [
         rendered,
-        h('div', { class: 'document-table-action' }, tableAction()),
+        tableAction
+            ? h('div', { class: 'document-table-action' }, tableAction())
+            : null,
     ]);
 };
 const markStyle = (
@@ -803,23 +821,37 @@ const draw = (
                         ? String(attrs.italic)
                         : undefined,
                 style: {
-                    backgroundColor: attrs.backgroundColor || undefined,
-                    color: textColor,
+                    backgroundColor:
+                        props.presentation === 'document'
+                            ? attrs.backgroundColor || undefined
+                            : undefined,
+                    color:
+                        props.presentation === 'document'
+                            ? textColor
+                            : undefined,
                     textAlign,
-                    fontSize,
+                    fontSize:
+                        props.presentation === 'document'
+                            ? fontSize
+                            : undefined,
                     fontWeight:
+                        props.presentation === 'document' &&
                         typeof attrs.bold === 'boolean'
                             ? attrs.bold
                                 ? '700'
                                 : '400'
                             : undefined,
                     fontStyle:
+                        props.presentation === 'document' &&
                         typeof attrs.italic === 'boolean'
                             ? attrs.italic
                                 ? 'italic'
                                 : 'normal'
                             : undefined,
-                    border: cellBorder(attrs.borderStyle),
+                    border:
+                        props.presentation === 'document'
+                            ? cellBorder(attrs.borderStyle)
+                            : undefined,
                 },
             },
             (node.content ?? []).map((child, index) =>
@@ -842,6 +874,7 @@ const Content = defineComponent({ setup: () => () => draw(props.document) });
         class="template-document-view"
         :data-preview="preview || undefined"
         :data-themed="preview || undefined"
+        :data-presentation="presentation"
         :style="documentStyle"
     >
         <Content />
@@ -959,5 +992,70 @@ const Content = defineComponent({ setup: () => () => draw(props.document) });
 .template-document-view :deep(ol) {
     list-style: decimal;
     padding-left: 24px;
+}
+.template-document-view[data-presentation='form'] {
+    color: var(--foreground);
+    background: transparent;
+    font-family: inherit;
+    font-size: 0.875rem;
+}
+.template-document-view[data-presentation='form']
+    :deep(.document-table-container) {
+    width: 100%;
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--card);
+    scrollbar-color: var(--border) transparent;
+    scrollbar-width: thin;
+}
+.template-document-view[data-presentation='form'] :deep(.document-table) {
+    margin: 0;
+}
+.template-document-view[data-presentation='form']
+    :deep(.document-table[data-wide]) {
+    min-width: 64rem;
+}
+.template-document-view[data-presentation='form'] :deep(td),
+.template-document-view[data-presentation='form'] :deep(th) {
+    padding: 0.5rem;
+    border: 0 !important;
+    border-right: 1px solid var(--border) !important;
+    border-bottom: 1px solid var(--border) !important;
+    color: var(--foreground) !important;
+    background: var(--card) !important;
+    font-family: inherit !important;
+    font-size: 0.875rem !important;
+}
+.template-document-view[data-presentation='form'] :deep(tr:last-child > *) {
+    border-bottom: 0 !important;
+}
+.template-document-view[data-presentation='form'] :deep(tr > :last-child) {
+    border-right: 0 !important;
+}
+.template-document-view[data-presentation='form'] :deep(.document-table th),
+.template-document-view[data-presentation='form']
+    :deep(.document-table > tbody > tr[data-row-role='unit'] > *),
+.template-document-view[data-presentation='form']
+    :deep(.document-table > tbody > tr[data-row-role='total'] > *) {
+    color: var(--foreground) !important;
+    background: var(--muted) !important;
+    font-weight: 600 !important;
+}
+.template-document-view[data-presentation='form']
+    :deep(.document-table :is(td, th) *) {
+    color: inherit !important;
+    font-family: inherit !important;
+    font-size: inherit !important;
+}
+.template-document-view[data-presentation='form'] :deep(.document-input) {
+    min-height: 2.25rem;
+    padding: 0.5rem 0.75rem;
+    color: var(--foreground);
+    background: var(--background);
+}
+.template-document-view[data-presentation='form']
+    :deep(textarea.document-input) {
+    min-height: 4rem;
 }
 </style>

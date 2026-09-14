@@ -13,6 +13,7 @@ test('el editor docente separa el formulario del formato de impresión', functio
         ->toBeString()
         ->toContain('<SyllabusAcademicContext')
         ->toContain("block.content_type === 'table'")
+        ->toContain('presentation="form"')
         ->toContain('v-for="field in formFields(block)"')
         ->toContain('v-for="section in syllabus.sections"')
         ->toContain('await flushPendingChanges()')
@@ -47,4 +48,15 @@ test('el editor docente separa el formulario del formato de impresión', functio
         ->toContain('md:grid-cols-2')
         ->toContain("value('nombre_asignatura')")
         ->toContain("value('nombre_docente')");
+
+    $documentView = file_get_contents(
+        $root.'/resources/js/components/domain/configuration/TemplateDocumentView.vue',
+    );
+
+    expect($documentView)
+        ->toBeString()
+        ->toContain("presentation?: 'document' | 'form'")
+        ->toContain("data-presentation='form'")
+        ->toContain('background: var(--muted) !important')
+        ->toContain('overflow-x: auto');
 });

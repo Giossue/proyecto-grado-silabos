@@ -42,7 +42,10 @@ por líneas visuales, tablas por grupos de filas y repiten cabeceras de continua
 I-71 — RF-037..044, RN-020..024, CU-07 y DOC-04:
 `SyllabusAcademicContext` separa los datos maestros de la ficha imprimible; el editor
 usa controles de formulario para prosa y listas, y reserva `TemplateDocumentView` para
-estructuras tabulares. `TeacherSyllabusEditorUiTest` impide que la ficha institucional
+estructuras tabulares. Su presentación `form` conserva la estructura de filas y columnas,
+pero sustituye el formato institucional por superficies, tipografía y colores semánticos
+de la aplicación; revisión, plantilla y exportación conservan la apariencia documental.
+`TeacherSyllabusEditorUiTest` impide que la ficha institucional
 o el panel redundante de colaboradores regresen a la captura docente. Las secciones se
 presentan consecutivamente, sin navegación paralela, y cada cambio usa la cola serial de
 autoguardado. La cabecera revela progresivamente **Validar sílabo** al completar los

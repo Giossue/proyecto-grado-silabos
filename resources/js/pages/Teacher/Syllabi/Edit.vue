@@ -773,6 +773,7 @@ onBeforeUnmount(() => {
                             :variables="syllabus.template_variables"
                             :layout="block.table"
                             :editable="!conflict"
+                            presentation="form"
                             :planning-expectations="
                                 syllabus.planning_expectations
                             "
