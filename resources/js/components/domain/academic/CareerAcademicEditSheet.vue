@@ -257,7 +257,7 @@ const planningPeriods = computed(() =>
                                             :key="item.id"
                                             :value="item.id"
                                         >
-                                            {{ item.nombre }}
+                                            {{ item.code ?? item.nombre }}
                                         </SelectItem>
                                     </SelectGroup></SelectContent
                                 >

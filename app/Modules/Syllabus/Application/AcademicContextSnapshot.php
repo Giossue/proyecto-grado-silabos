@@ -61,7 +61,7 @@ class AcademicContextSnapshot
             ],
             'scheduled_subject' => [
                 'id' => $scheduledSubject->id,
-                'period' => $scheduledSubject->academicPeriod->nombre,
+                'period' => $scheduledSubject->academicPeriod->codigo,
                 'teaching_weeks' => $scheduledSubject->academicPeriod->semanas_lectivas,
                 'campus' => $scheduledSubject->campus->nombre,
                 'modality' => $scheduledSubject->modalidad->label(),

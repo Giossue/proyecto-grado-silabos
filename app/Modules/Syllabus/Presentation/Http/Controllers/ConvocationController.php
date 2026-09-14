@@ -38,7 +38,7 @@ class ConvocationController extends Controller
                 // La convocatoria se identifica por el período institucional que abarca.
                 ->when($search, fn ($query, string $term) => $query->where(
                     fn ($outer) => $outer->whereHas('academicPeriod', fn ($period) => $period
-                        ->whereRaw('nombre ILIKE ?', ["%{$term}%"])),
+                        ->whereRaw('codigo ILIKE ?', ["%{$term}%"])),
                 ))
                 ->when($state, function ($query, string $value) use ($careerId): void {
                     if ($value === 'sin_iniciar') {
@@ -48,7 +48,7 @@ class ConvocationController extends Controller
                     }
                 })
                 ->with([
-                    'academicPeriod:id,nombre', 'template:id,nombre',
+                    'academicPeriod:id,codigo', 'template:id,nombre',
                     'convocations' => fn ($career) => $career->where('carrera_id', $careerId)->withCount('syllabi'),
                 ])
                 ->orderByDesc('inicia_en')
@@ -63,7 +63,7 @@ class ConvocationController extends Controller
                         'name' => $process->nombre,
                         'state' => $convocation->estado ?? 'sin_iniciar',
                         'process_state' => $process->estado,
-                        'period' => $process->academicPeriod->nombre,
+                        'period' => $process->academicPeriod->codigo,
                         'template' => $process->template->nombre,
                         'syllabi_count' => $convocation->syllabi_count ?? 0,
                     ];
@@ -97,7 +97,7 @@ class ConvocationController extends Controller
                     'name' => $convocation->process->nombre,
                     'state' => $convocation->process->estado,
                 ],
-                'period' => $convocation->process->academicPeriod->nombre,
+                'period' => $convocation->process->academicPeriod->codigo,
                 'template' => $convocation->process->template->nombre,
                 'sources' => $convocation->sources->map(fn (AcademicSource $source) => $source->nombre)->values(),
                 'start_date' => $convocation->deadlines->firstWhere('etapa', 'inicio')?->vence_en->toIso8601String(),

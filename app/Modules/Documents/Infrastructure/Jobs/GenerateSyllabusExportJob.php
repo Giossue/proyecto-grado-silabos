@@ -80,7 +80,7 @@ class GenerateSyllabusExportJob implements ShouldQueue
         $bundle = $renderer->render(new DocumentRenderInput(
             subject: $syllabus->academicSubjectName(),
             subjectCode: $syllabus->academicSubjectCode(),
-            academicPeriod: $syllabus->convocation->process->academicPeriod->nombre,
+            academicPeriod: $syllabus->convocation->process->academicPeriod->codigo,
             revisionNumber: $revision->numero_revision,
             revisionFingerprint: $revision->huella_sha256,
             templateId: $artifact->plantilla_id,

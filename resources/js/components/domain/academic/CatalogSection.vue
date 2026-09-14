@@ -99,12 +99,7 @@ const {
 } = useClientPagination(() => campusFilter.items.value);
 const periodFilter = useClientFilter(
     () => props.catalogs.periods,
-    (item) => [item.name, item.code],
-    {
-        estado: {
-            matches: (item, value) => item.active === (value === 'active'),
-        },
-    },
+    (item) => [item.code],
 );
 
 const {
@@ -419,39 +414,12 @@ const {
                 :filter="periodFilter"
                 input-id="periods-search"
                 label="Buscar periodo"
-                placeholder="Buscar por nombre o código"
-            >
-                <template #filters>
-                    <Field>
-                        <FieldLabel for="periods-search-state" class="sr-only"
-                            >Estado</FieldLabel
-                        >
-                        <Select v-model="periodFilter.values.estado.value">
-                            <SelectTrigger id="periods-search-state">
-                                <SelectValue placeholder="Todos los estados" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectGroup>
-                                    <SelectItem value="all"
-                                        >Todos los estados</SelectItem
-                                    >
-                                    <SelectItem value="active"
-                                        >Activos</SelectItem
-                                    >
-                                    <SelectItem value="inactive"
-                                        >Inactivos</SelectItem
-                                    >
-                                </SelectGroup>
-                            </SelectContent>
-                        </Select>
-                    </Field>
-                </template>
-            </ClientFilterBar>
+                placeholder="Buscar por código"
+            />
             <Table>
                 <TableHeader>
                     <TableRow>
-                        <TableHead>Periodo</TableHead>
-                        <TableHead>Código estable</TableHead>
+                        <TableHead>Período</TableHead>
                         <TableHead>Fechas</TableHead>
                         <TableHead>Semanas lectivas</TableHead>
                         <TableHead>Estado</TableHead>
@@ -461,7 +429,7 @@ const {
                 <TableBody>
                     <TableEmpty
                         v-if="catalogs.periods.length === 0"
-                        :colspan="6"
+                        :colspan="5"
                     >
                         No existen periodos académicos registrados.
                     </TableEmpty>
@@ -471,9 +439,8 @@ const {
                         :key="period.id"
                     >
                         <TableCell>
-                            {{ period.name }}
+                            {{ period.code }}
                         </TableCell>
-                        <TableCell>{{ period.code }}</TableCell>
                         <TableCell>
                             <time :datetime="period.starts_on">
                                 {{ period.starts_on }}
@@ -485,15 +452,14 @@ const {
                         </TableCell>
                         <TableCell>{{ period.teaching_weeks }}</TableCell>
                         <TableCell>
-                            {{ period.active ? 'Activo' : 'Inactivo' }}
+                            {{ period.status_label }}
                         </TableCell>
                         <TableCell class="text-right">
                             <CatalogActions
                                 entity="periodo"
                                 :record-id="period.id"
-                                :record-name="period.name"
+                                :record-name="period.code"
                                 :record-code="period.code"
-                                :active="period.active"
                                 :starts-on="period.starts_on"
                                 :ends-on="period.ends_on"
                                 :teaching-weeks="period.teaching_weeks"

@@ -55,7 +55,7 @@ const formatPeriod = (startsOn?: string, endsOn?: string): string =>
         : '';
 const periodLabel = (period: Option): string => {
     const dates = formatPeriod(period.starts_on, period.ends_on);
-    const name = period.nombre ?? period.name;
+    const name = period.code ?? '';
 
     return [name, dates].filter(Boolean).join(' · ');
 };
@@ -91,9 +91,7 @@ const emptyMessage = computed(() =>
 );
 const periodLockedLabel = computed(() =>
     selectedPeriodOption.value?.planning_enabled === false
-        ? selectedPeriodOption.value.status === 'finalizado'
-            ? 'El período finalizó. Su programación se conserva únicamente para consulta.'
-            : 'El período está inactivo. Su programación se conserva únicamente para consulta.'
+        ? 'El período finalizó. Su programación se conserva únicamente para consulta.'
         : null,
 );
 
@@ -239,9 +237,7 @@ watch(
                                 "
                                 :locked-label="
                                     !item.period_planning_enabled
-                                        ? item.period_status === 'finalizado'
-                                            ? 'Período finalizado: disponible solo para consulta'
-                                            : 'Período inactivo: disponible solo para consulta'
+                                        ? 'Período finalizado: disponible solo para consulta'
                                         : (lockReason ?? undefined)
                                 "
                                 :options="options"

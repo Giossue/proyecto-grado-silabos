@@ -41,7 +41,7 @@ final class AcademicPeriodPlanning
 
     public function mayPlan(AcademicPeriod $period): bool
     {
-        return $period->activo && $this->status($period) !== self::FINISHED;
+        return $this->status($period) !== self::FINISHED;
     }
 
     public function assertMayPlan(AcademicPeriod $period, string $field = 'period_id'): void
@@ -52,11 +52,6 @@ final class AcademicPeriodPlanning
             ]);
         }
 
-        if (! $period->activo) {
-            throw ValidationException::withMessages([
-                $field => 'El período está inactivo y no admite cambios de planificación.',
-            ]);
-        }
     }
 
     public function assertScheduledSubjectMayChange(ScheduledSubject $scheduledSubject, string $field = 'record'): void

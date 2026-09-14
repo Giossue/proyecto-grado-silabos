@@ -9,11 +9,9 @@ use Illuminate\Database\Eloquent\Model;
 /**
  * @property string $id
  * @property string $codigo
- * @property string $nombre
  * @property CarbonImmutable $fecha_inicio
  * @property CarbonImmutable $fecha_fin
  * @property int $semanas_lectivas
- * @property bool $activo
  */
 class AcademicPeriod extends Model
 {
@@ -26,11 +24,9 @@ class AcademicPeriod extends Model
     /** @var list<string> */
     protected $fillable = [
         'codigo',
-        'nombre',
         'fecha_inicio',
         'fecha_fin',
         'semanas_lectivas',
-        'activo',
     ];
 
     /** @return array<string, string> */
@@ -40,7 +36,6 @@ class AcademicPeriod extends Model
             'fecha_inicio' => 'immutable_date',
             'fecha_fin' => 'immutable_date',
             'semanas_lectivas' => 'integer',
-            'activo' => 'boolean',
         ];
     }
 }

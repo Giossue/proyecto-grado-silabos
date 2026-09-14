@@ -75,7 +75,7 @@ const dateRange = (period: Option): string =>
               dateFormatter.format(new Date(period.starts_on + 'T00:00:00Z')),
               dateFormatter.format(new Date(period.ends_on + 'T00:00:00Z')),
           ].join(' – ')
-        : (period.nombre ?? '');
+        : (period.code ?? '');
 const planningPeriods = computed(() =>
     props.options.periods.filter((period) => period.planning_enabled),
 );

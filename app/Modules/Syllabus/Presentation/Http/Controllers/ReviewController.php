@@ -45,7 +45,7 @@ class ReviewController extends Controller
             ->whereHas('convocation', fn ($convocation) => $convocation->where('carrera_id', $activeRole?->carrera_id))
             ->whereHas('revisions')
             ->with([
-                'convocation.process.academicPeriod:id,nombre',
+                'convocation.process.academicPeriod:id,codigo',
                 'subject:id,nombre,codigo_institucional',
                 'teachers:id,nombre',
                 'revisions' => fn ($revision) => $revision
@@ -77,7 +77,7 @@ class ReviewController extends Controller
                         'revision_number' => $revision?->numero_revision,
                         'subject' => $syllabus->academicSubjectName(),
                         'code' => $syllabus->academicSubjectCode(),
-                        'period' => $syllabus->convocation->process->academicPeriod->nombre,
+                        'period' => $syllabus->convocation->process->academicPeriod->codigo,
                         'state' => $syllabus->estado,
                         'teachers' => $syllabus->teachers->pluck('nombre')->values(),
                         'unresolved_observations' => (int) $syllabus->unresolved_observations_count,
@@ -203,7 +203,7 @@ class ReviewController extends Controller
                 'id' => $syllabus->id,
                 'subject' => $syllabus->academicSubjectName(),
                 'code' => $syllabus->academicSubjectCode(),
-                'period' => $syllabus->convocation->process->academicPeriod->nombre,
+                'period' => $syllabus->convocation->process->academicPeriod->codigo,
             ],
             'comparison' => $diff->compare($before, $after),
         ]);
@@ -233,7 +233,7 @@ class ReviewController extends Controller
                 'id' => $syllabus->id,
                 'subject' => $syllabus->academicSubjectName(),
                 'code' => $syllabus->academicSubjectCode(),
-                'period' => $syllabus->convocation->process->academicPeriod->nombre,
+                'period' => $syllabus->convocation->process->academicPeriod->codigo,
                 'state' => $syllabus->estado,
                 'teachers' => $syllabus->teachers->pluck('nombre')->values(),
             ],

@@ -414,6 +414,11 @@ conserva el tipo, número ni fecha de un documento de sustento. La responsabilid
 expresa mediante la asignación RBAC docente, el paralelo, su estado activo y
 `asignado_en`; el relevo conserva su trazabilidad operativa en auditoría.
 
+I-77 (14 de septiembre de 2026) simplifica `periodos_academicos`: el código único es la
+única etiqueta visible y se retiran `nombre` y `activo`. Próximo, En curso y Finalizado
+se derivan exclusivamente de las fechas. `semanas_lectivas` se conserva porque expresa
+las semanas efectivas que distribuye el sílabo y no puede deducirse del rango calendario.
+
 ## Propuesto
 
 I-52, actualización del 6 de septiembre: se retira `calidad` de las asignaciones de

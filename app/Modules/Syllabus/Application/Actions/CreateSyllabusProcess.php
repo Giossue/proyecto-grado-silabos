@@ -36,7 +36,7 @@ class CreateSyllabusProcess
         return DB::transaction(function () use ($actor, $activeRole, $data, $request, $template): SyllabusProcess {
             $active = SyllabusProcess::query()
                 ->inProgress()
-                ->with('academicPeriod:id,nombre')
+                ->with('academicPeriod:id,codigo')
                 ->lockForUpdate()
                 ->first(['id', 'periodo_academico_id']);
             if ($active !== null) {

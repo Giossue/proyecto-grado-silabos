@@ -182,7 +182,7 @@ class DocumentOperationsTest extends TestCase
         $input = new DocumentRenderInput(
             subject: $syllabus->subject()->valueOrFail('nombre'),
             subjectCode: $syllabus->subject()->valueOrFail('codigo_institucional'),
-            academicPeriod: $syllabus->convocation->process->academicPeriod()->valueOrFail('nombre'),
+            academicPeriod: $syllabus->convocation->process->academicPeriod()->valueOrFail('codigo'),
             revisionNumber: $revision->numero_revision,
             revisionFingerprint: $revision->huella_sha256,
             templateId: $syllabus->plantilla_id,

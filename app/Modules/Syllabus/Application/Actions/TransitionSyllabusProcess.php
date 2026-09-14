@@ -92,7 +92,7 @@ class TransitionSyllabusProcess
                 $other = SyllabusProcess::query()
                     ->inProgress()
                     ->whereKeyNot($locked->id)
-                    ->with('academicPeriod:id,nombre')
+                    ->with('academicPeriod:id,codigo')
                     ->first(['id', 'periodo_academico_id']);
                 if ($other !== null) {
                     throw ValidationException::withMessages([

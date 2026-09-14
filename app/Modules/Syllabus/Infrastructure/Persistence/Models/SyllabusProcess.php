@@ -67,8 +67,8 @@ class SyllabusProcess extends Model
     protected function nombre(): Attribute
     {
         return Attribute::get(fn (): string => $this->relationLoaded('academicPeriod')
-            ? $this->academicPeriod->nombre
-            : ($this->academicPeriod()->value('nombre') ?? 'Período'));
+            ? $this->academicPeriod->codigo
+            : ($this->academicPeriod()->value('codigo') ?? 'Período'));
     }
 
     /**

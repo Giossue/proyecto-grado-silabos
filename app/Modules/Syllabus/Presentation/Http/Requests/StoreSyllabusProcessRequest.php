@@ -31,7 +31,7 @@ class StoreSyllabusProcessRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'period_id' => ['required', 'uuid', Rule::exists('periodos_academicos', 'id')->where('activo', true)],
+            'period_id' => ['required', 'uuid', Rule::exists('periodos_academicos', 'id')],
             'starts_at' => ['required', 'date'],
             'due_at' => ['required', 'date', 'after:now', 'after:starts_at'],
         ];

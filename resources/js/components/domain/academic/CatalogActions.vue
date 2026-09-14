@@ -30,7 +30,7 @@ defineProps<{
     logoUrl?: string | null;
     recordName: string;
     recordCode: string | null;
-    active: boolean;
+    active?: boolean;
     facultyId?: string | null;
     modality?: string | null;
     campusId?: string | null;

@@ -63,7 +63,7 @@ class RelieveTeacher
                 ->whereHas('parallel.scheduledSubject.subject.curriculum', fn ($query) => $query->where('carrera_id', $careerId))
                 ->with([
                     'parallel.scheduledSubject.subject:id,nombre',
-                    'parallel.scheduledSubject.academicPeriod:id,fecha_inicio,fecha_fin,activo',
+                    'parallel.scheduledSubject.academicPeriod:id,fecha_inicio,fecha_fin',
                 ])
                 ->lockForUpdate()
                 ->get()

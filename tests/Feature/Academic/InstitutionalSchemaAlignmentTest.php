@@ -28,7 +28,6 @@ class InstitutionalSchemaAlignmentTest extends TestCase
             'nombre' => 'Mayo 2022 - Septiembre 2022',
             'fecha_inicio' => '2022-05-02',
             'fecha_fin' => '2022-09-30',
-            'activo' => true,
         ];
         AcademicPeriod::query()->create($atributos);
 

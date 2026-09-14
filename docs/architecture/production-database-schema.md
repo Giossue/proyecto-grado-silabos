@@ -143,10 +143,8 @@ modalidad VARCHAR NULL
 ~~~text
 id UUID (PK)
 codigo VARCHAR NOT NULL UNIQUE
-nombre VARCHAR NOT NULL
 fecha_inicio DATE NOT NULL
 fecha_fin DATE NOT NULL
-activo BOOLEAN NOT NULL
 semanas_lectivas SMALLINT NOT NULL
 ~~~
 

@@ -29,7 +29,7 @@ Word de identificación) se conservan para sílabos y revisiones anteriores sin 
 | Modalidad de estudio | `modality` | `programaciones_asignatura.modalidad` (valor fijo del RRA, heredado de la materia o de la carrera al programarla; I-35, I-37, I-62) |
 | Campus universitario | `campus` | `programaciones_asignatura.campus_id` → `campus.nombre` |
 | Asignatura | `subject` | `asignaturas.nombre` |
-| Periodo académico | `period` | `programaciones_asignatura.periodo_academico_id` → `periodos_academicos.nombre` |
+| Periodo académico | `period` | `programaciones_asignatura.periodo_academico_id` → `periodos_academicos.codigo` |
 | Ciclo | `cycle` | `asignaturas.ciclo` (número → «Séptimo») |
 | Paralelo | `parallel` | `paralelos.codigo` de los alcances del expediente (`alcances_silabo`) |
 | Jornada | `shift` | `paralelos.jornada` (matutina, vespertina, nocturna) |

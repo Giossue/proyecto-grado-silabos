@@ -66,11 +66,11 @@ export type AcademicStructureProps = {
         periods: {
             id: string;
             code: string;
-            name: string;
             starts_on: string;
             ends_on: string;
             teaching_weeks: number;
-            active: boolean;
+            status: 'proximo' | 'en_curso' | 'finalizado';
+            status_label: string;
         }[];
     };
     subjects: {

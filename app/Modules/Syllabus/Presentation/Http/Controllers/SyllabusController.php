@@ -64,10 +64,10 @@ class SyllabusController extends Controller
                         ->whereRaw("contexto_academico->'subject'->>'name' ILIKE ?", ["%{$term}%"])
                         ->orWhereRaw("contexto_academico->'subject'->>'code' ILIKE ?", ["%{$term}%"])
                         ->orWhereHas('convocation.process.academicPeriod', fn ($period) => $period
-                            ->whereRaw('nombre ILIKE ?', ["%{$term}%"])),
+                            ->whereRaw('codigo ILIKE ?', ["%{$term}%"])),
                 ))
                 ->when($state, fn ($query, string $value) => $query->where('estado', $value))
-                ->with(['convocation:id,carrera_id,proceso_id', 'convocation.career:id,nombre', 'convocation.process:id,periodo_academico_id', 'convocation.process.academicPeriod:id,nombre', 'subject:id,nombre,codigo_institucional', 'scopes.parallel:id,codigo'])
+                ->with(['convocation:id,carrera_id,proceso_id', 'convocation.career:id,nombre', 'convocation.process:id,periodo_academico_id', 'convocation.process.academicPeriod:id,codigo', 'subject:id,nombre,codigo_institucional', 'scopes.parallel:id,codigo'])
                 ->orderByRaw('guardado_en DESC NULLS LAST')
                 ->paginate(15)
                 ->withQueryString()
@@ -76,7 +76,7 @@ class SyllabusController extends Controller
                     'subject' => $syllabus->academicSubjectName(),
                     'code' => $syllabus->academicSubjectCode(),
                     'convocation' => $syllabus->convocation->nombre,
-                    'period' => $syllabus->convocation->process->academicPeriod->nombre,
+                    'period' => $syllabus->convocation->process->academicPeriod->codigo,
                     'state' => $syllabus->estado,
                     'completion' => (float) $syllabus->porcentaje_completitud,
                     'parallels' => $syllabus->scopes->pluck('parallel.codigo')->unique()->values(),
@@ -214,7 +214,7 @@ class SyllabusController extends Controller
             'subject' => $syllabus->academicSubjectName(),
             'code' => $syllabus->academicSubjectCode(),
             'convocation' => $syllabus->convocation->nombre,
-            'period' => $syllabus->convocation->process->academicPeriod->nombre,
+            'period' => $syllabus->convocation->process->academicPeriod->codigo,
             'state' => $syllabus->estado,
             'version_bloqueo' => $syllabus->version_bloqueo,
             'completion' => (float) $syllabus->porcentaje_completitud,

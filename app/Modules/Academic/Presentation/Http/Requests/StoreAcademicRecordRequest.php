@@ -64,7 +64,6 @@ class StoreAcademicRecordRequest extends FormRequest
                     'max:40',
                     Rule::unique('periodos_academicos', 'codigo'),
                 ],
-                'nombre' => ['required', 'string', 'max:120'],
                 'starts_on' => ['required', 'date'],
                 'ends_on' => ['required', 'date', 'after_or_equal:starts_on'],
                 'teaching_weeks' => ['required', 'integer', 'min:1', 'max:52'],
@@ -85,7 +84,7 @@ class StoreAcademicRecordRequest extends FormRequest
                 'period_id' => [
                     'required',
                     'uuid',
-                    Rule::exists('periodos_academicos', 'id')->where('activo', true),
+                    Rule::exists('periodos_academicos', 'id'),
                 ],
                 'subject_id' => [
                     'required',

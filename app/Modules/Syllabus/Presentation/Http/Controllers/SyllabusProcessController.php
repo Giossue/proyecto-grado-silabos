@@ -25,12 +25,12 @@ class SyllabusProcessController extends Controller
     public function index(ManageSyllabusProcessesRequest $request): Response
     {
         $activeProcess = SyllabusProcess::query()->inProgress()
-            ->with('academicPeriod:id,nombre')
+            ->with('academicPeriod:id,codigo')
             ->first(['id', 'periodo_academico_id', 'estado']);
 
         return Inertia::render('Admin/Processes/Index', [
             'processes' => SyllabusProcess::query()
-                ->with(['template:id,nombre', 'academicPeriod:id,nombre'])
+                ->with(['template:id,nombre', 'academicPeriod:id,codigo'])
                 ->withCount('convocations')
                 ->orderByDesc('inicia_en')
                 ->get()
@@ -40,7 +40,7 @@ class SyllabusProcessController extends Controller
                     'state' => $process->estado,
                     'template' => $process->template->nombre,
                     'period_id' => $process->periodo_academico_id,
-                    'period_name' => $process->academicPeriod->nombre,
+                    'period_name' => $process->academicPeriod->codigo,
                     'starts_at' => $process->inicia_en->toIso8601String(),
                     'due_at' => $process->entrega_en->toIso8601String(),
                     'convocations_count' => $process->convocations_count,
@@ -51,12 +51,11 @@ class SyllabusProcessController extends Controller
                 ->where('activo', true)
                 ->value('nombre'),
             'periods' => AcademicPeriod::query()
-                ->where('activo', true)
                 ->orderByDesc('fecha_inicio')
-                ->get(['id', 'nombre']),
+                ->get(['id', 'codigo']),
             'active_process' => $activeProcess === null ? null : [
                 'name' => $activeProcess->nombre,
-                'period' => $activeProcess->academicPeriod->nombre,
+                'period' => $activeProcess->academicPeriod->codigo,
                 'state' => $activeProcess->estado,
             ],
         ]);

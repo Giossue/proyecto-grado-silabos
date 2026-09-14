@@ -30,7 +30,6 @@ final class AcademicStructurePermissions
         'facultad',
         'carrera',
         'campus',
-        'periodo',
         'asignacion_coordinador',
     ];
 

@@ -43,7 +43,7 @@ trait CreatesSyllabusProcess
     ): SyllabusProcess {
         $attributes = [
             'plantilla_id' => $templateId,
-            'periodo_academico_id' => AcademicPeriod::query()->where('activo', true)->valueOrFail('id'),
+            'periodo_academico_id' => AcademicPeriod::query()->valueOrFail('id'),
             'inicia_en' => $startsAt ?? now()->subDay(),
             'entrega_en' => $dueAt ?? now()->addMonth(),
         ];

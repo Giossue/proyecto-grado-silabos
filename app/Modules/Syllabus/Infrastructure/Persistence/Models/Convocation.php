@@ -76,10 +76,10 @@ class Convocation extends Model
                 : $this->career()->value('nombre');
             $process = $this->relationLoaded('process')
                 ? $this->process
-                : $this->process()->with('academicPeriod:id,nombre')->firstOrFail();
+                : $this->process()->with('academicPeriod:id,codigo')->firstOrFail();
             $period = $process->relationLoaded('academicPeriod')
-                ? $process->academicPeriod->nombre
-                : $process->academicPeriod()->value('nombre');
+                ? $process->academicPeriod->codigo
+                : $process->academicPeriod()->value('codigo');
 
             return trim(($career ?? 'Carrera').' · '.($period ?? 'Período'));
         });

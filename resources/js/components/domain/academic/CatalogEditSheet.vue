@@ -235,7 +235,10 @@ const facultyOptions = computed(() =>
                         </Select>
                         <FieldError :errors="[errors.campus_id]" />
                     </Field>
-                    <Field :data-invalid="Boolean(errors.nombre)">
+                    <Field
+                        v-if="entity !== 'periodo'"
+                        :data-invalid="Boolean(errors.nombre)"
+                    >
                         <FieldLabel :for="`edit-name-${recordId}`" required>
                             Nombre
                         </FieldLabel>

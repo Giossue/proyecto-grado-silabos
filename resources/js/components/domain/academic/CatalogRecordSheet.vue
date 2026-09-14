@@ -220,7 +220,10 @@ const examples = computed(
                             <FieldError :errors="[errors.campus_id]" />
                         </Field>
 
-                        <Field :data-invalid="Boolean(errors.nombre)">
+                        <Field
+                            v-if="entity !== 'periodo'"
+                            :data-invalid="Boolean(errors.nombre)"
+                        >
                             <FieldLabel for="catalog-name" required>
                                 Nombre
                             </FieldLabel>

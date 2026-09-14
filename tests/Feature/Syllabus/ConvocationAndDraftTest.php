@@ -124,10 +124,8 @@ class ConvocationAndDraftTest extends TestCase
         $existing->convocation->process->update(['estado' => SyllabusProcess::STATE_CLOSED]);
         $otherPeriod = AcademicPeriod::query()->create([
             'codigo' => 'I-46-MALLA-INACTIVA',
-            'nombre' => 'Período para malla inactiva',
             'fecha_inicio' => '2027-01-01',
             'fecha_fin' => '2027-05-31',
-            'activo' => true,
         ]);
         $convocation = $this->createPreparedConvocation($otherPeriod->id);
         $this->actingAsCoordinator()

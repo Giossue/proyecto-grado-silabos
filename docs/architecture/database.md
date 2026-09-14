@@ -62,7 +62,8 @@ el error de negocio antes de llegar a la restricción.
 Estos catálogos no comparten una tabla polimórfica. `carreras.facultad_id` implementa la
 relación uno-a-muchos Facultad → Carreras con clave foránea y borrado restringido.
 `campus` y `periodos_academicos` conservan identidad propia; el período es institucional,
-de código único y declara `semanas_lectivas` entre 1 y 52, no depende de una carrera.
+se identifica y presenta por su código único, declara `semanas_lectivas` entre 1 y 52 y
+no depende de una carrera. Su estado se deriva exclusivamente de sus fechas.
 `programaciones_asignatura` relaciona cada período con una asignatura mediante claves
 foráneas. La modalidad no es tabla sino
 columna de texto con valores fijos (`carreras.modalidad` base, `asignaturas.modalidad`

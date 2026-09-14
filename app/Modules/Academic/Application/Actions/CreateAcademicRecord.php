@@ -115,11 +115,9 @@ class CreateAcademicRecord
             ]),
             'periodo' => AcademicPeriod::query()->create([
                 'codigo' => $data['code'],
-                'nombre' => $data['nombre'],
                 'fecha_inicio' => $data['starts_on'],
                 'fecha_fin' => $data['ends_on'],
                 'semanas_lectivas' => $data['teaching_weeks'],
-                'activo' => true,
             ]),
             'malla' => $this->createCurriculum($data, $this->careerId($activeRole)),
             'asignatura' => $this->createSubject($data, $this->careerId($activeRole)),
@@ -217,7 +215,6 @@ class CreateAcademicRecord
 
         $period = AcademicPeriod::query()
             ->whereKey($this->stringValue($data, 'period_id'))
-            ->where('activo', true)
             ->lockForUpdate()
             ->firstOrFail();
         $this->periodPlanning->assertMayPlan($period);

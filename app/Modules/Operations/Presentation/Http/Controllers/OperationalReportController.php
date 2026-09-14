@@ -36,7 +36,7 @@ class OperationalReportController extends Controller
         $averageCompletion = (float) ((clone $query)->avg('porcentaje_completitud') ?? 0);
         $convocations = Convocation::query()
             ->where('carrera_id', $careerId)
-            ->with(['career:id,nombre', 'process.academicPeriod:id,nombre'])
+            ->with(['career:id,nombre', 'process.academicPeriod:id,codigo'])
             ->orderByDesc(
                 SyllabusProcess::query()->select('inicia_en')
                     ->whereColumn('convocatorias_universidad.id', 'convocatorias_carreras.proceso_id'),
@@ -48,7 +48,7 @@ class OperationalReportController extends Controller
             ->join('periodos_academicos', 'periodos_academicos.id', '=', 'convocatorias_universidad.periodo_academico_id')
             ->selectRaw(<<<'SQL'
                 convocatorias_carreras.id,
-                periodos_academicos.nombre,
+                periodos_academicos.codigo,
                 COUNT(*) AS total,
                 COUNT(*) FILTER (WHERE silabos.estado = 'sin_iniciar') AS not_started,
                 COUNT(*) FILTER (WHERE silabos.estado = 'borrador') AS draft,
@@ -56,12 +56,12 @@ class OperationalReportController extends Controller
                 COUNT(*) FILTER (WHERE silabos.estado = 'correccion_solicitada') AS correction_requested,
                 COUNT(*) FILTER (WHERE silabos.estado = 'aprobado') AS approved
                 SQL)
-            ->groupBy('convocatorias_carreras.id', 'periodos_academicos.nombre')
-            ->orderBy('periodos_academicos.nombre')
+            ->groupBy('convocatorias_carreras.id', 'periodos_academicos.codigo')
+            ->orderBy('periodos_academicos.codigo')
             ->get()
             ->map(fn (Syllabus $row): array => [
                 'id' => $row->getAttribute('id'),
-                'name' => $row->getAttribute('nombre'),
+                'name' => $row->getAttribute('codigo'),
                 'total' => (int) $row->getAttribute('total'),
                 'not_started' => (int) $row->getAttribute('not_started'),
                 'draft' => (int) $row->getAttribute('draft'),
@@ -71,7 +71,7 @@ class OperationalReportController extends Controller
             ]);
         $detail = (clone $query)
             ->with([
-                'convocation.process.academicPeriod:id,nombre',
+                'convocation.process.academicPeriod:id,codigo',
                 'subject:id,nombre,codigo_institucional',
                 'teachers:id,nombre',
                 'revisions' => fn ($revision) => $revision->orderByDesc('numero_revision')->limit(1),
@@ -86,7 +86,7 @@ class OperationalReportController extends Controller
                 'subject' => $syllabus->subject->nombre,
                 'code' => $syllabus->subject->codigo_institucional,
                 'convocation' => $syllabus->convocation->nombre,
-                'period' => $syllabus->convocation->process->academicPeriod->nombre,
+                'period' => $syllabus->convocation->process->academicPeriod->codigo,
                 'state' => $syllabus->estado,
                 'completion' => (float) $syllabus->porcentaje_completitud,
                 'teachers' => $syllabus->teachers->pluck('nombre')->values(),
@@ -100,7 +100,7 @@ class OperationalReportController extends Controller
             'convocations' => $convocations->map(fn (Convocation $convocation): array => [
                 'id' => $convocation->id,
                 'name' => $convocation->nombre,
-                'period' => $convocation->process->academicPeriod->nombre,
+                'period' => $convocation->process->academicPeriod->codigo,
                 'state' => $convocation->estado,
             ]),
             'indicators' => [

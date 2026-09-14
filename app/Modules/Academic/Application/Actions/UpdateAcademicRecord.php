@@ -133,7 +133,6 @@ class UpdateAcademicRecord
             ],
             'periodo' => [
                 'codigo' => $data['code'],
-                'nombre' => $data['nombre'],
                 'fecha_inicio' => $data['starts_on'],
                 'fecha_fin' => $data['ends_on'],
                 'semanas_lectivas' => $data['teaching_weeks'],

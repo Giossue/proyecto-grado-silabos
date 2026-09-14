@@ -24,7 +24,7 @@ import {
 const props = defineProps<{
     /** Nombre de la plantilla institucional; nula si aún no existe. */
     template: string | null;
-    periods: { id: string; nombre: string }[];
+    periods: { id: string; codigo: string }[];
     /** Sin proceso se prepara uno nuevo; con proceso se corrige el existente. */
     process?: {
         id: string;
@@ -93,7 +93,7 @@ const formRoute = computed(() =>
                                         :key="period.id"
                                         :value="period.id"
                                     >
-                                        {{ period.nombre }}
+                                        {{ period.codigo }}
                                     </SelectItem>
                                 </SelectGroup>
                             </SelectContent>

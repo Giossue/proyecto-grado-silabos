@@ -188,7 +188,7 @@ class AcademicStructureTest extends TestCase
                 ->has('options.parallels', 1)
                 ->where(
                     'options.parallels.0.label',
-                    "{$scheduledSubject->subject->nombre} · {$scheduledSubject->academicPeriod->nombre} · Paralelo {$parallel->codigo}",
+                    "{$scheduledSubject->subject->nombre} · {$scheduledSubject->academicPeriod->codigo} · Paralelo {$parallel->codigo}",
                 )
                 ->where('options.teacherUsers.0.name', 'DOCENTE DEMO')
                 ->where('options.teacherUsers.0.email', 'docente@silabos.test'));
@@ -227,19 +227,15 @@ class AcademicStructureTest extends TestCase
         $reference = ScheduledSubject::query()->firstOrFail();
         $finished = AcademicPeriod::query()->create([
             'codigo' => '2025-B',
-            'nombre' => 'Segundo período 2025',
             'fecha_inicio' => '2025-09-01',
             'fecha_fin' => '2026-02-28',
             'semanas_lectivas' => 16,
-            'activo' => true,
         ]);
         $upcoming = AcademicPeriod::query()->create([
             'codigo' => '2027-A',
-            'nombre' => 'Primer período 2027',
             'fecha_inicio' => '2027-04-01',
             'fecha_fin' => '2027-08-31',
             'semanas_lectivas' => 16,
-            'activo' => true,
         ]);
         $historical = ScheduledSubject::query()->create([
             'periodo_academico_id' => $finished->id,
@@ -280,7 +276,6 @@ class AcademicStructureTest extends TestCase
         $scheduledSubject->academicPeriod()->update([
             'fecha_inicio' => '2025-05-01',
             'fecha_fin' => '2026-03-31',
-            'activo' => true,
         ]);
         $parallel = $scheduledSubject->parallels()->firstOrFail();
         $assignment = TeacherAssignment::query()->where('paralelo_id', $parallel->id)->firstOrFail();
@@ -380,7 +375,6 @@ class AcademicStructureTest extends TestCase
         $this->actingAsAdministrator()
             ->post(route('admin.academic.store', 'periodo'), [
                 'code' => '2027-A',
-                'nombre' => 'Primer periodo 2027',
                 'starts_on' => '2027-01-01',
                 'ends_on' => '2027-05-31',
                 'teaching_weeks' => 18,
@@ -395,7 +389,6 @@ class AcademicStructureTest extends TestCase
         $this->actingAsAdministrator()
             ->post(route('admin.academic.store', 'periodo'), [
                 'code' => '2027-B',
-                'nombre' => 'Periodo inválido',
                 'starts_on' => '2027-06-01',
                 'ends_on' => '2027-10-31',
                 'teaching_weeks' => 0,
@@ -758,10 +751,8 @@ class AcademicStructureTest extends TestCase
         $teacher = User::query()->where('correo_electronico', 'docente@silabos.test')->firstOrFail();
         $period = AcademicPeriod::query()->create([
             'codigo' => '2027-2028',
-            'nombre' => 'Periodo académico 2027-2028',
             'fecha_inicio' => '2027-05-01',
             'fecha_fin' => '2027-09-30',
-            'activo' => true,
         ]);
 
         // El campus no se edita en la programación de asignatura: lo fija la carrera (I-36).
@@ -1610,7 +1601,6 @@ class AcademicStructureTest extends TestCase
         $this->actingAsAdministrator()
             ->patch(route('admin.academic.update', ['entity' => 'periodo', 'record' => $period->id]), [
                 'code' => '2026-ACT',
-                'nombre' => 'Periodo actualizado',
                 'starts_on' => '2026-10-01',
                 'ends_on' => '2027-02-28',
                 'teaching_weeks' => 18,
@@ -1636,7 +1626,6 @@ class AcademicStructureTest extends TestCase
         $this->assertDatabaseHas('periodos_academicos', [
             'id' => $period->id,
             'codigo' => '2026-ACT',
-            'nombre' => 'Periodo actualizado',
             'fecha_inicio' => '2026-10-01',
             'fecha_fin' => '2027-02-28',
             'semanas_lectivas' => 18,
@@ -1718,7 +1707,6 @@ class AcademicStructureTest extends TestCase
         $this->actingAsAdministrator()
             ->patch(route('admin.academic.update', ['entity' => 'periodo', 'record' => $period->id]), [
                 'code' => $period->codigo,
-                'nombre' => $period->nombre,
                 'starts_on' => '2027-02-01',
                 'ends_on' => '2027-01-01',
                 'teaching_weeks' => 16,
