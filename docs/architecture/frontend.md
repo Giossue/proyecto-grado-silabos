@@ -139,6 +139,12 @@ la posición en filas y columnas sí tiene significado para la respuesta docente
 formato oficial sigue gobernando revisión y exportación sin convertir la captura diaria
 en una simulación de papel.
 
+El editor mantiene en memoria todos los `FieldState`, pero monta una sola sección a la
+vez. Antes de cambiar, `flushPendingChanges` mueve los debounce pendientes a una cola
+serial y espera también una petición ya iniciada. El índice lateral de escritorio y el
+`Select` móvil comparten `selectSection`; el fragmento `#section-{id}` permite recuperar
+el punto de trabajo sin persistirlo en PostgreSQL.
+
 `AppSidebarLayout` recorta su contenido al contorno redondeado del `SidebarInset` con
 `overflow-clip`; `PageFrame` recorta el exceso horizontal y la hoja mantiene su propio
 desplazamiento horizontal en pantallas estrechas.

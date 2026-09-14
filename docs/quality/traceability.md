@@ -43,7 +43,9 @@ I-71 — RF-037..044, RN-020..024, CU-07 y DOC-04:
 `SyllabusAcademicContext` separa los datos maestros de la ficha imprimible; el editor
 usa controles de formulario para prosa y listas, y reserva `TemplateDocumentView` para
 estructuras tabulares. `TeacherSyllabusEditorUiTest` impide que la ficha institucional
-o el panel redundante de colaboradores regresen a la captura docente.
+o el panel redundante de colaboradores regresen a la captura docente. Una sola sección
+se monta a la vez; índice lateral, selector móvil y acciones anterior/siguiente comparten
+una transición que espera la cola serial de autoguardado.
 
 - SRS v0.1: RF-001..075, RNF-001..036, RN-001..034, PV-01..20.
 - Modelado funcional: CU-01..18 y modelo de dominio.

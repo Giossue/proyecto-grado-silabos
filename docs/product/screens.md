@@ -188,6 +188,10 @@ paralelo. Son operaciones separadas y ninguna levanta los bloqueos académicos.
   planificación, evaluación, bibliografía y otras estructuras realmente tabulares
   conservan una cuadrícula, porque filas y columnas forman parte de sus datos. El diseño
   oficial permanece en la plantilla, las revisiones y las exportaciones.
+- El editor mantiene una sola sección activa. En escritorio muestra el índice lateral
+  con la sección actual; en pantallas pequeñas lo reemplaza por un selector. Las acciones
+  anterior y siguiente esperan el autoguardado antes de cambiar y reflejan la sección en
+  el fragmento de la URL, sin guardar navegación como dato académico.
 - ADM-06 no mezcla lectura y edición: la ruta normal nunca monta controles mutables. La
   ruta `/editar` reutiliza los mismos bloques, campos y documentos persistidos.
 - Las tablas repetibles conservan sus unidades, columnas tipadas y sumas. El diseño

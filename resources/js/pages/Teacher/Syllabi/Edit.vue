@@ -20,8 +20,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Card,
+    CardAction,
     CardContent,
     CardDescription,
+    CardFooter,
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
@@ -196,8 +198,22 @@ const globalSaving = ref(false);
 const validating = ref(false);
 const preparingSubmission = ref(false);
 const conflict = ref(false);
+const sectionChanging = ref(false);
 const pendingFieldIds = new Set<string>();
 const timers = new Map<string, ReturnType<typeof setTimeout>>();
+let queuePromise: Promise<void> | null = null;
+
+const sectionFromHash = window.location.hash.replace('#section-', '');
+const initialSectionIndex = Math.max(
+    0,
+    props.syllabus.sections.findIndex(
+        (section) => section.id === sectionFromHash,
+    ),
+);
+const activeSectionIndex = ref(initialSectionIndex);
+const activeSection = computed(
+    () => props.syllabus.sections[activeSectionIndex.value],
+);
 
 const saveLabel = computed(() => {
     if (conflict.value) {
@@ -409,15 +425,7 @@ const queueNow = (field: DraftField): void => {
 };
 
 const openAi = async (field: DraftField): Promise<void> => {
-    const timer = timers.get(field.id);
-
-    if (timer) {
-        clearTimeout(timer);
-        timers.delete(field.id);
-        pendingFieldIds.add(field.id);
-    }
-
-    await processQueue();
+    await flushPendingChanges();
 
     if (!conflict.value) {
         router.visit(
@@ -429,24 +437,35 @@ const openAi = async (field: DraftField): Promise<void> => {
     }
 };
 
-const processQueue = async (): Promise<void> => {
-    if (globalSaving.value || conflict.value) {
-        return;
+const processQueue = (): Promise<void> => {
+    if (conflict.value) {
+        return Promise.resolve();
     }
 
-    globalSaving.value = true;
+    if (queuePromise) {
+        return queuePromise;
+    }
 
-    while (pendingFieldIds.size > 0 && !conflict.value) {
-        const fieldId = pendingFieldIds.values().next().value as string;
-        pendingFieldIds.delete(fieldId);
-        const field = fieldsById.get(fieldId);
+    queuePromise = (async () => {
+        globalSaving.value = true;
 
-        if (field) {
-            await saveField(field);
+        try {
+            while (pendingFieldIds.size > 0 && !conflict.value) {
+                const fieldId = pendingFieldIds.values().next().value as string;
+                pendingFieldIds.delete(fieldId);
+                const field = fieldsById.get(fieldId);
+
+                if (field) {
+                    await saveField(field);
+                }
+            }
+        } finally {
+            globalSaving.value = false;
+            queuePromise = null;
         }
-    }
+    })();
 
-    globalSaving.value = false;
+    return queuePromise;
 };
 
 const saveField = async (field: DraftField): Promise<void> => {
@@ -532,7 +551,7 @@ const saveField = async (field: DraftField): Promise<void> => {
     }
 };
 
-const runValidation = async (): Promise<void> => {
+const flushPendingChanges = async (): Promise<boolean> => {
     for (const [fieldId, timer] of timers) {
         clearTimeout(timer);
         pendingFieldIds.add(fieldId);
@@ -541,7 +560,55 @@ const runValidation = async (): Promise<void> => {
     timers.clear();
     await processQueue();
 
-    if (conflict.value) {
+    return !conflict.value;
+};
+
+const selectSection = async (index: number): Promise<void> => {
+    if (
+        index < 0 ||
+        index >= props.syllabus.sections.length ||
+        index === activeSectionIndex.value ||
+        sectionChanging.value
+    ) {
+        return;
+    }
+
+    sectionChanging.value = true;
+
+    try {
+        if (!(await flushPendingChanges())) {
+            return;
+        }
+
+        activeSectionIndex.value = index;
+        const section = props.syllabus.sections[index];
+        window.history.replaceState(
+            window.history.state,
+            '',
+            `#section-${section.id}`,
+        );
+        requestAnimationFrame(() => {
+            document
+                .getElementById(`section-${section.id}`)
+                ?.scrollIntoView({ block: 'start' });
+        });
+    } finally {
+        sectionChanging.value = false;
+    }
+};
+
+const selectSectionById = (sectionId: unknown): void => {
+    const index = props.syllabus.sections.findIndex(
+        (section) => section.id === String(sectionId),
+    );
+
+    if (index >= 0) {
+        void selectSection(index);
+    }
+};
+
+const runValidation = async (): Promise<void> => {
+    if (!(await flushPendingChanges())) {
         return;
     }
 
@@ -563,17 +630,11 @@ const reloadAfterConflict = (): void => {
 };
 
 const goToSubmission = async (): Promise<void> => {
-    for (const [fieldId, timer] of timers) {
-        clearTimeout(timer);
-        pendingFieldIds.add(fieldId);
-    }
-
-    timers.clear();
     preparingSubmission.value = true;
-    await processQueue();
+    const canContinue = await flushPendingChanges();
     preparingSubmission.value = false;
 
-    if (!conflict.value) {
+    if (canContinue) {
         router.visit(
             SyllabusController.submitConfirmation.url(props.syllabus.id),
         );
@@ -716,8 +777,32 @@ onBeforeUnmount(() => {
             </AlertDescription>
         </Alert>
 
+        <Field v-if="activeSection" class="xl:hidden">
+            <FieldLabel for="syllabus-section">Sección del sílabo</FieldLabel>
+            <Select
+                :model-value="activeSection.id"
+                :disabled="sectionChanging || conflict"
+                @update:model-value="selectSectionById"
+            >
+                <SelectTrigger id="syllabus-section">
+                    <SelectValue placeholder="Seleccione una sección" />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectGroup>
+                        <SelectItem
+                            v-for="(section, index) in syllabus.sections"
+                            :key="section.id"
+                            :value="section.id"
+                        >
+                            {{ index + 1 }}. {{ section.title }}
+                        </SelectItem>
+                    </SelectGroup>
+                </SelectContent>
+            </Select>
+        </Field>
+
         <div class="grid gap-6 xl:grid-cols-[14rem_minmax(0,1fr)]">
-            <Card class="h-fit xl:sticky xl:top-4">
+            <Card class="hidden h-fit xl:sticky xl:top-4 xl:block">
                 <CardHeader>
                     <CardTitle>Secciones</CardTitle>
                     <CardDescription>
@@ -732,13 +817,22 @@ onBeforeUnmount(() => {
                                 :key="section.id"
                             >
                                 <Button
-                                    as-child
-                                    variant="ghost"
+                                    type="button"
+                                    :variant="
+                                        index === activeSectionIndex
+                                            ? 'secondary'
+                                            : 'ghost'
+                                    "
                                     class="h-auto w-full justify-start text-left whitespace-normal"
+                                    :aria-current="
+                                        index === activeSectionIndex
+                                            ? 'step'
+                                            : undefined
+                                    "
+                                    :disabled="sectionChanging || conflict"
+                                    @click="selectSection(index)"
                                 >
-                                    <a :href="`#section-${section.id}`">
-                                        {{ index + 1 }}. {{ section.title }}
-                                    </a>
+                                    {{ index + 1 }}. {{ section.title }}
                                 </Button>
                             </li>
                         </ol>
@@ -812,28 +906,34 @@ onBeforeUnmount(() => {
                 </Card>
 
                 <Card
-                    v-for="section in syllabus.sections"
-                    :id="`section-${section.id}`"
-                    :key="section.id"
+                    v-if="activeSection"
+                    :id="`section-${activeSection.id}`"
+                    :key="activeSection.id"
                     class="scroll-mt-4"
                 >
                     <CardHeader>
-                        <CardTitle>{{ section.title }}</CardTitle>
+                        <CardTitle>{{ activeSection.title }}</CardTitle>
                         <CardDescription>
                             {{
-                                section.description ??
+                                activeSection.description ??
                                 'Complete los campos aplicables.'
                             }}
                         </CardDescription>
+                        <CardAction>
+                            <Badge variant="outline">
+                                Sección {{ activeSectionIndex + 1 }} de
+                                {{ syllabus.sections.length }}
+                            </Badge>
+                        </CardAction>
                     </CardHeader>
                     <CardContent class="flex flex-col gap-6">
                         <div
-                            v-for="block in section.blocks"
+                            v-for="block in activeSection.blocks"
                             :key="block.id"
                             class="flex flex-col gap-5"
                         >
                             <h3
-                                v-if="section.blocks.length > 1"
+                                v-if="activeSection.blocks.length > 1"
                                 class="font-medium"
                             >
                                 {{ block.title }}
@@ -1246,6 +1346,33 @@ onBeforeUnmount(() => {
                             </Field>
                         </div>
                     </CardContent>
+                    <CardFooter class="justify-between gap-3">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            :disabled="
+                                activeSectionIndex === 0 ||
+                                sectionChanging ||
+                                conflict
+                            "
+                            @click="selectSection(activeSectionIndex - 1)"
+                        >
+                            Sección anterior
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            :disabled="
+                                activeSectionIndex ===
+                                    syllabus.sections.length - 1 ||
+                                sectionChanging ||
+                                conflict
+                            "
+                            @click="selectSection(activeSectionIndex + 1)"
+                        >
+                            Siguiente sección
+                        </Button>
+                    </CardFooter>
                 </Card>
             </main>
         </div>
