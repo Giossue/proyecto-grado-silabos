@@ -53,6 +53,8 @@ presentan consecutivamente, sin navegación paralela, y cada cambio usa la cola 
 autoguardado. La cabecera revela progresivamente **Validar sílabo** al completar los
 obligatorios y **Enviar sílabo** solo cuando la versión actual no tiene errores
 determinísticos; una edición invalida el resultado anterior y la IA permanece opcional.
+`FieldSet` y `FieldGroup` sustituyen las tarjetas repetidas de sección; el único panel de
+IA permanece fijo a la derecha en escritorio y vuelve al flujo en pantallas estrechas.
 
 - SRS v0.1: RF-001..075, RNF-001..036, RN-001..034, PV-01..20.
 - Modelado funcional: CU-01..18 y modelo de dominio.

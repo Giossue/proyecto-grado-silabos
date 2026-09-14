@@ -121,10 +121,12 @@ paralelo. Son operaciones separadas y ninguna levanta los bloqueos académicos.
   obligatorios no muestra acciones de validación o envío; al completarlos ofrece
   **Validar sílabo** y, solo para la versión validada sin errores bloqueantes, cambia a
   **Enviar sílabo**. Las recomendaciones de IA permanecen opcionales y no bloquean.
-- DOC-04 ofrece un único acceso **Asistente IA** en la cabecera, nunca uno por sección o
-  campo. Abre un `Sheet` derecho con las fuentes disponibles y los resultados agrupados
-  por sección/campo. **Revisar sílabo** solo se habilita después de una validación limpia;
-  la edición y el envío continúan disponibles mientras la IA procesa o falla.
+- DOC-04 ubica el único **Asistente IA** en una columna fija a la derecha del formulario
+  en escritorio, nunca uno por sección o campo. En pantallas estrechas se conserva dentro
+  del flujo, después del formulario. Muestra las fuentes disponibles y los resultados
+  agrupados por sección/campo. **Revisar sílabo** solo se habilita después de una
+  validación limpia; la edición y el envío continúan disponibles mientras la IA procesa
+  o falla.
 - I-60 separa los dos estados de ADM-06. `/admin/plantilla/{id}` presenta la plantilla
   completa en solo lectura y ofrece **Editar**. `/admin/plantilla/{id}/editar` conserva
   la hoja y añade una cinta contextual: al seleccionar un bloque, campo o tabla muestra
@@ -196,7 +198,10 @@ paralelo. Son operaciones separadas y ninguna levanta los bloqueos académicos.
   conservan una cuadrícula, porque filas y columnas forman parte de sus datos. El diseño
   oficial permanece en la plantilla, las revisiones y las exportaciones.
 - El editor presenta todas las secciones consecutivamente como un formulario continuo.
-  No añade un índice lateral, un selector de sección ni pasos anterior/siguiente.
+  No añade un índice lateral, un selector de sección ni pasos anterior/siguiente. Las
+  secciones se separan con encabezado y divisor, no con una tarjeta repetida; `FieldSet`
+  y `FieldGroup` agrupan los controles y evitan repetir el nombre del bloque cuando ya
+  coincide con el único campo que contiene.
 - DOC-04 no presenta acciones «Guardar ahora» por campo. Cada cambio activa el
   autoguardado y el único estado de guardado visible se mantiene en el encabezado.
 - ADM-06 no mezcla lectura y edición: la ruta normal nunca monta controles mutables. La

@@ -12,10 +12,15 @@ test('el editor docente separa el formulario del formato de impresión', functio
     expect($editor)
         ->toBeString()
         ->toContain('<SyllabusAcademicContext')
+        ->toContain('<FieldGroup')
         ->toContain("block.content_type === 'table'")
         ->toContain('presentation="form"')
         ->toContain('v-for="field in formFields(block)"')
         ->toContain('v-for="section in syllabus.sections"')
+        ->toContain('title=""')
+        ->toContain('xl:grid-cols-[minmax(0,1fr)_24rem]')
+        ->toContain('xl:sticky')
+        ->toContain('<SyllabusAiAssistantSheet')
         ->toContain('await flushPendingChanges()')
         ->toContain('scheduleSave(field)')
         ->toContain('v-if="canValidate"')
@@ -40,6 +45,17 @@ test('el editor docente separa el formulario del formato de impresión', functio
         ->not->toContain('selectSection')
         ->not->toContain('Secciones del sílabo')
         ->not->toContain('<CardTitle>Colaboradores</CardTitle>');
+
+    $assistant = file_get_contents(
+        $root.'/resources/js/components/domain/ai/SyllabusAiAssistantSheet.vue',
+    );
+
+    expect($assistant)
+        ->toBeString()
+        ->toContain('<Card')
+        ->toContain('Revisión contextual')
+        ->not->toContain('<Sheet')
+        ->not->toContain('SheetTrigger');
 
     expect($context)
         ->toBeString()

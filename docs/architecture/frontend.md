@@ -161,13 +161,14 @@ a 100 % ofrece **Validar sílabo**. Una ejecución solo se considera vigente cua
 la interfaz. Sin errores determinísticos se ofrece **Enviar sílabo**. Las recomendaciones
 de IA siguen un flujo separado, opcional y no bloqueante.
 
-I-72 reúne el acceso ordinario a IA en un solo `SyllabusAiAssistantSheet` situado en la
-cabecera del editor. Tras una validación vigente y limpia, una solicitud global crea o
-reutiliza el análisis de cada campo textual habilitado con contenido. El panel sondea el
-estado asíncrono, agrupa recomendaciones por sección/campo, expone los extractos citados
-y conserva comparación y confirmación antes de aplicar. No incorpora todavía chat libre:
-esa interfaz solo se habilitará junto con su contrato y persistencia, sin respuestas de
-demostración simuladas en cliente.
+I-72 reúne el acceso ordinario a IA en un solo `SyllabusAiAssistantSheet`, fijado a la
+derecha del editor en escritorio y dentro del flujo en pantallas estrechas. Tras una
+validación vigente y limpia, una solicitud global crea o reutiliza el análisis de cada
+campo textual habilitado con contenido. El panel sondea el estado asíncrono, agrupa
+recomendaciones por sección/campo, expone los extractos citados y conserva comparación y
+confirmación antes de aplicar. No incorpora todavía chat libre: esa interfaz solo se
+habilitará junto con su contrato y persistencia, sin respuestas de demostración simuladas
+en cliente.
 
 `AppSidebarLayout` recorta su contenido al contorno redondeado del `SidebarInset` con
 `overflow-clip`; `PageFrame` recorta el exceso horizontal y la hoja mantiene su propio

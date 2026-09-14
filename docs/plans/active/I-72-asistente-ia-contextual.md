@@ -172,8 +172,9 @@ PV-13 y PV-14 definan hardware y modelo; no se añade una base vectorial por ant
 - Coordinación recibe una configuración compacta por campos: valor heredado, excepción
   vigente y acción **Restablecer valores de Administración**. En la preparación del
   alcance elige las fuentes para IA.
-- Docencia recibe un solo botón global **Asistente IA** en la cabecera del editor y un
-  `Sheet` derecho; no vuelven botones por sección o campo.
+- Docencia recibe un solo **Asistente IA** en una columna fija a la derecha del editor en
+  escritorio y dentro del flujo en pantallas estrechas; no vuelven botones por sección o
+  campo.
 - Componentes previstos: `SyllabusAiSheet`, `AiConversation`, `AiMessage`,
   `AiCitation`, `AiReviewProgress`, `AiSuggestionCard` y el diálogo de comparación ya
   existente adaptado al nuevo flujo. La rebanada visible ya usa `conversation`,
@@ -212,8 +213,8 @@ PV-13 y PV-14 definan hardware y modelo; no se añade una base vectorial por ant
       ensamblador del sílabo, contrato de citas tipadas y pruebas contra inyección.
 - [ ] **I-72.5 — Revisión integral:** ejecución padre, trabajos hijos, progreso,
       idempotencia, integración con validación y sugerencias agrupadas por sección.
-- [ ] **I-72.6 — Chat único:** persistencia, endpoint, cola/streaming elegido, `Sheet`
-      derecho, citas navegables, sugerencias y experiencia responsive/accesible.
+- [ ] **I-72.6 — Chat único:** persistencia, endpoint, cola/streaming elegido, panel
+      derecho persistente, citas navegables, sugerencias y experiencia responsive/accesible.
 - [ ] **I-72.7 — Producción y evaluación:** comprobar servicio y worker, completar
       corpus de prueba, medir calidad/latencia y cerrar o mantener explícitamente PV-13,
       PV-14 y PV-18.
@@ -226,8 +227,8 @@ documentación antes de empezar la siguiente. I-72.2 e I-72.3 no dependen del mo
 - [x] Corregido el contrato de presentación `estado/status` en la pantalla de análisis.
 - [x] Añadida una acción global que, después de una validación determinística limpia,
       solicita análisis para todos los campos textuales habilitados que tengan contenido.
-- [x] Integrado un único `Sheet` derecho en el editor docente con fuentes, estados,
-      resultados por sección/campo, extractos citados y salto hacia la sección.
+- [x] Integrado un único panel derecho persistente en el editor docente con fuentes,
+      estados, resultados por sección/campo, extractos citados y salto hacia la sección.
 - [x] Conservadas dentro del panel las decisiones ignorar/no útil y la comparación
       explícita antes de aplicar una recomendación.
 - [x] Añadido sondeo del trabajo asíncrono sin bloquear edición, envío ni navegación.

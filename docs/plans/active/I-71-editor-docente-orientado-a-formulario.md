@@ -35,6 +35,8 @@ RF-037..044; RN-020..024; CU-07; DOC-03..05; CP-F. No depende de una decisión
 - [x] Separar también la apariencia de captura de las tablas: la edición usa la
       tipografía, superficies, bordes y colores semánticos de la aplicación sin alterar
       el diseño institucional de revisión y exportación.
+- [x] Sustituir las tarjetas repetidas por secciones de flujo continuo con divisor,
+      `FieldSet` y `FieldGroup`; conservar tarjetas solo para contenido autónomo.
 
 ## Criterios de aceptación
 
