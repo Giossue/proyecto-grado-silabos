@@ -7,5 +7,5 @@ it('limpia los tokens de recuperacion y restringe los hosts fuera de desarrollo'
 
     expect($console)
         ->toContain("Schedule::command('auth:clear-resets')->everyFifteenMinutes()->withoutOverlapping()")
-        ->and($application)->toContain('$middleware->trustHosts();');
+        ->and($application)->toContain('$middleware->trustHosts(at: [\'^127\\\\.0\\\\.0\\\\.1$\', \'^localhost$\']);');
 });

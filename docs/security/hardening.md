@@ -8,7 +8,9 @@
 - Rate limit en login, recuperación y acciones sensibles.
 - Revocación de sesiones y desactivación efectiva en la siguiente petición.
 - En ambientes expuestos, `SESSION_ENCRYPT=true`; el host permitido se deriva de
-  `APP_URL` para que los enlaces de recuperación no acepten un `Host` manipulado.
+  `APP_URL` para que los enlaces de recuperación no acepten un `Host` manipulado. Se
+  permiten exclusivamente `127.0.0.1` y `localhost` para el health check interno de
+  Dokploy; no amplían los hosts públicos aceptados.
 - El scheduler ejecuta `auth:clear-resets` cada quince minutos; el proceso de
   scheduler debe estar activo en el despliegue.
 - Cuentas gestionadas no se autoeliminan; la baja administrativa conserva referencias
