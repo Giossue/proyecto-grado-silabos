@@ -76,7 +76,7 @@ class InstitutionalLogosTest extends TestCase
             ->assertSessionHasNoErrors();
         $this->assertDatabaseHas('facultades', [
             'codigo_facultad' => 'FAC-SL',
-            'ruta_logo_facultad' => null,
+            'logo_objeto_id' => null,
         ]);
 
         $this->actingAsAdministrator()
@@ -89,8 +89,10 @@ class InstitutionalLogosTest extends TestCase
             ->assertSessionHasNoErrors();
 
         $faculty = Faculty::query()->where('codigo_facultad', 'FAC-CL')->firstOrFail();
-        $this->assertSame("logos/facultades/{$faculty->id}.png", $faculty->logo_ruta);
-        $this->assertStoredPngHasSize($faculty->logo_ruta, 600, 180);
+        $logo = $faculty->logoObject()->firstOrFail();
+        $this->assertStringStartsWith("logos/facultades/{$faculty->id}/", $logo->ruta_interna);
+        $this->assertSame('logo_facultad', $logo->clasificacion);
+        $this->assertStoredPngHasSize($logo->ruta_interna, 600, 180);
         $this->get(route('logos.faculty', $faculty))->assertOk()->assertHeader('Content-Type', 'image/png');
 
         // Sin subida propia, la facultad muestra el logo de fábrica.
@@ -101,7 +103,7 @@ class InstitutionalLogosTest extends TestCase
     public function test_coordinator_configures_only_the_faculty_of_the_active_career_from_the_dashboard(): void
     {
         $faculty = $this->coordinatorContext->career()->firstOrFail()->faculty()->firstOrFail();
-        $this->assertNull($faculty->logo_ruta);
+        $this->assertNull($faculty->logo_objeto_id);
 
         $this->actingAsCoordinator()
             ->post(route('coordination.faculty-logo.store'), [
@@ -111,8 +113,9 @@ class InstitutionalLogosTest extends TestCase
             ->assertSessionHasNoErrors();
 
         $faculty->refresh();
-        $this->assertSame("logos/facultades/{$faculty->id}.png", $faculty->logo_ruta);
-        $this->assertStoredPngHasSize($faculty->logo_ruta, 600, 180);
+        $logo = $faculty->logoObject()->firstOrFail();
+        $this->assertStringStartsWith("logos/facultades/{$faculty->id}/", $logo->ruta_interna);
+        $this->assertStoredPngHasSize($logo->ruta_interna, 600, 180);
         $this->assertDatabaseHas('eventos_auditoria', [
             'accion_evento_auditoria' => 'facultad.logo_actualizado',
             'recurso_id' => $faculty->id,

@@ -3,8 +3,10 @@
 namespace App\Modules\Configuration\Application;
 
 use App\Modules\Academic\Infrastructure\Persistence\Models\Faculty;
+use App\Modules\Documents\Infrastructure\Persistence\Models\StoredObject;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -53,9 +55,24 @@ class InstitutionalLogos
 
     public function storeFaculty(Faculty $faculty, UploadedFile $file): string
     {
-        $path = "logos/facultades/{$faculty->id}.png";
-        Storage::disk(self::DISK)->put($path, self::fit($file, self::FACULTY));
-        $faculty->forceFill(['logo_ruta' => $path])->save();
+        $content = self::fit($file, self::FACULTY);
+        $path = "logos/facultades/{$faculty->id}/".Str::uuid().'.png';
+        $disk = Storage::disk(self::DISK);
+        $disk->put($path, $content);
+
+        $object = StoredObject::query()->create([
+            'disco' => self::DISK,
+            'ruta_interna' => $path,
+            'nombre_logico' => "logo-facultad-{$faculty->id}.png",
+            'mime' => 'image/png',
+            'tamano_bytes' => strlen($content),
+            'huella_sha256' => hash('sha256', $content),
+            'clasificacion' => 'logo_facultad',
+            'estado' => 'activo',
+            'propietario_usuario_id' => null,
+            'carrera_id' => null,
+        ]);
+        $faculty->forceFill(['logo_objeto_id' => $object->id])->save();
 
         return $path;
     }
@@ -125,8 +142,9 @@ class InstitutionalLogos
     /** Ruta absoluta del logo de la facultad; el de fábrica si no tiene o no existe. */
     public function facultyPath(?Faculty $faculty): string
     {
-        $disk = Storage::disk(self::DISK);
-        $path = $faculty?->logo_ruta;
+        $logo = $faculty?->logoObject;
+        $path = $logo?->ruta_interna;
+        $disk = Storage::disk($logo?->disco ?? self::DISK);
 
         return is_string($path) && $path !== '' && $disk->exists($path)
             ? $disk->path($path)
@@ -141,11 +159,13 @@ class InstitutionalLogos
     /** El logo propio existe; el archivo de muestra no completa la puesta en marcha. */
     public function facultyIsConfigured(?Faculty $faculty): bool
     {
-        $path = $faculty?->logo_ruta;
+        $logo = $faculty?->logoObject;
+        $path = $logo?->ruta_interna;
 
         return is_string($path)
             && $path !== ''
-            && Storage::disk(self::DISK)->exists($path);
+            && $logo->clasificacion === 'logo_facultad'
+            && Storage::disk($logo->disco)->exists($path);
     }
 
     /** Marca de versión para que el navegador no cachee un logo reemplazado. */

@@ -139,6 +139,9 @@ detienen el trabajo docente sin borrar nada.
 
 `objetos_almacenados`, `artefactos_exportacion`, `notificaciones_internas`,
 `eventos_auditoria`, `eventos_salientes` (outbox transaccional), `ejecuciones_trabajo`.
+Los archivos persistentes se describen mediante `objetos_almacenados`: por ejemplo,
+`facultades.logo_objeto_id` referencia el objeto privado de su logo. La tabla de
+dominio nunca almacena una ruta del disco como dato de negocio.
 Los momentos funcionales se llaman respectivamente `almacenado_en`, `notificado_en`,
 `ocurrido_en` y `encolado_en`; no se duplican con timestamps técnicos de Eloquent.
 Las tablas de importación institucional (`ejecuciones_importacion`, `items_importacion`,

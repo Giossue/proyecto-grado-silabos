@@ -95,7 +95,7 @@ class UpdateAcademicRecord
 
             $record->fill($attributes);
             if ($record instanceof Faculty && ($data['logo'] ?? null) instanceof UploadedFile) {
-                $record->logo_ruta = $this->logos->storeFaculty($record, $data['logo']);
+                $this->logos->storeFaculty($record, $data['logo']);
             }
             $dirty = $record->getDirty();
 

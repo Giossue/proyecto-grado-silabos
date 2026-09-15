@@ -41,8 +41,9 @@ class AcademicStructureViewData
             'lock_reason' => $lockReason,
             'catalogs' => [
                 'faculties' => Faculty::query()
+                    ->with('logoObject')
                     ->orderBy('nombre')
-                    ->get(['id', 'codigo_facultad', 'nombre', 'logo_ruta', 'activo'])
+                    ->get(['id', 'codigo_facultad', 'nombre', 'logo_objeto_id', 'activo'])
                     ->map(fn (Faculty $faculty): array => [
                         'id' => $faculty->id,
                         'codigo_facultad' => $faculty->codigo_facultad,

@@ -215,6 +215,12 @@ asignación conserva usuario, carrera, estado e historial; el trigger de coordin
 consulta el valor de la propia fila y sigue permitiendo una sola coordinación ejercible
 por carrera.
 
+I-81 (15 de septiembre de 2026) retira `facultades.ruta_logo_facultad`. Un logo de
+facultad es un archivo privado y se referencia mediante `facultades.logo_objeto_id` a
+`objetos_almacenados`; el objeto conserva disco, ruta interna, MIME, tamaño, huella y
+clasificación. Cada reemplazo genera un objeto inmutable nuevo, sin perder la referencia
+histórica del archivo anterior.
+
 I-07 implementa un puerto de lectura, fixture sintético versionado, staging inmutable,
 simulación y exclusión humana. Demuestra idempotencia, conflicto y cero mutación del
 catálogo, pero no incorpora esquema, credenciales, red, reglas de identidad ni aplicador:

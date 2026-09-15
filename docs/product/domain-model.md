@@ -28,6 +28,8 @@ al entrar y puede sustituirla desde el menú, sin sumar alcances ni privilegios.
 
 Una `Facultad` agrupa muchas `Carrera`. `Campus` representa la ubicación física donde se
 dicta una carrera y sus materias; no es una subdivisión de la facultad.
+Su logo, cuando existe, es un `ObjetoAlmacenado` privado e inmutable referenciado por
+`logo_objeto_id`; la facultad no guarda rutas del sistema de archivos.
 
 `Campus` es catálogo; la modalidad no: son los valores fijos del Reglamento de Régimen
 Académico (`StudyModality`). La programación de asignatura no elige ninguno de los dos: hereda el campus de

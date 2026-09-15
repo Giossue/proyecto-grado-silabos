@@ -147,6 +147,17 @@ it('I-80 persiste los tres roles fijos en la asignación y no en un catálogo', 
         ->toContain('asignaciones_rol_alcance_valido_check');
 });
 
+it('I-81 referencia el logo de facultad como objeto almacenado', function () {
+    expect(Schema::hasColumn('facultades', 'logo_objeto_id'))->toBeTrue()
+        ->and(Schema::hasColumn('facultades', 'ruta_logo_facultad'))->toBeFalse();
+
+    $restricciones = collect(DB::select(
+        "SELECT conname FROM pg_constraint WHERE conrelid = 'facultades'::regclass",
+    ))->pluck('conname');
+
+    expect($restricciones)->toContain('facultades_logo_objeto_id_foreign');
+});
+
 it('I-62 persiste la programación de asignaturas con nombres e invariante propios', function () {
     expect(Schema::hasTable('programaciones_asignatura'))->toBeTrue()
         ->and(Schema::hasTable('ofertas_academicas'))->toBeFalse()
