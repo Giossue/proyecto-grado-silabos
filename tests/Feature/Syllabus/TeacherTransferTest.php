@@ -10,7 +10,6 @@ use App\Modules\Configuration\Infrastructure\Persistence\Models\AcademicSource;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\FieldDefinition;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
 use App\Modules\Identity\Domain\Enums\RoleCode;
-use App\Modules\Identity\Infrastructure\Persistence\Models\Role;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
 use App\Modules\Operations\Infrastructure\Persistence\Models\AuditEvent;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\Convocation;
@@ -196,7 +195,6 @@ class TeacherTransferTest extends TestCase
     private function createReplacementTeacher(): User
     {
         $career = Career::query()->where('codigo_carrera', 'SOFTWARE')->firstOrFail();
-        $role = Role::query()->where('codigo_rol', RoleCode::Teacher->value)->firstOrFail();
         $user = User::query()->create([
             'nombre' => 'Docente Suplente',
             'correo_electronico' => 'suplente@silabos.test',
@@ -205,7 +203,7 @@ class TeacherTransferTest extends TestCase
         ]);
         RoleAssignment::query()->create([
             'usuario_id' => $user->id,
-            'rol_id' => $role->id,
+            'rol' => RoleCode::Teacher->value,
             'carrera_id' => $career->id,
             'activo' => true,
         ]);

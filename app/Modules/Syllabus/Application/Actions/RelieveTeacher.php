@@ -129,7 +129,7 @@ class RelieveTeacher
             ->effective()
             ->where('usuario_id', $userId)
             ->where('carrera_id', $careerId)
-            ->whereHas('role', fn ($query) => $query->where('codigo_rol', RoleCode::Teacher->value))
+            ->where('rol', RoleCode::Teacher->value)
             ->whereHas('user', fn (Builder $query) => $query->where('activo', true))
             ->first();
     }

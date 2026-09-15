@@ -15,7 +15,6 @@ use App\Modules\Documents\Domain\Data\DocumentRenderInput;
 use App\Modules\Documents\Infrastructure\Jobs\GenerateSyllabusExportJob;
 use App\Modules\Documents\Infrastructure\Persistence\Models\ExportArtifact;
 use App\Modules\Documents\Infrastructure\Persistence\Models\StoredObject;
-use App\Modules\Identity\Infrastructure\Persistence\Models\Role;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
 use App\Modules\Operations\Application\Actions\RecordAuditEvent;
 use App\Modules\Operations\Application\Actions\RecordWorkflowOutbox;
@@ -105,7 +104,7 @@ class DocumentOperationsTest extends TestCase
         $outsider = User::factory()->create();
         $outsiderContext = RoleAssignment::query()->create([
             'usuario_id' => $outsider->id,
-            'rol_id' => Role::query()->where('codigo_rol', 'docente')->valueOrFail('id'),
+            'rol' => 'docente',
             'carrera_id' => $this->teacherContext->carrera_id,
             'activo' => true,
         ]);

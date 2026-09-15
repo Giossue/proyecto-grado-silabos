@@ -36,7 +36,9 @@
 
 ### Identidad
 
-`usuarios`, `roles`, `asignaciones_rol`. Las columnas de `usuarios` heredadas del
+`usuarios`, `asignaciones_rol`. Los roles son los tres valores fijos del enum de
+dominio (`administrador`, `coordinador`, `docente`), almacenados en
+`asignaciones_rol.rol`; no existe un catálogo administrable `roles`. Las columnas de `usuarios` heredadas del
 starter quedaron en español en I-28 y sus atributos de dominio son explícitos desde
 I-78 (`nombre_usuario`, `correo_electronico`, `contrasena`, `usuario_activo`,
 `codigo_recordarme`, `secreto_dos_factores`…); el modelo conserva `nombre` y `activo`
@@ -54,7 +56,7 @@ programadas de inicio o fin.
 `periodos_academicos`, `mallas`, `asignaturas`, `requisitos_asignatura`,
 `programaciones_asignatura`, `paralelos`, `asignaciones_paralelo`.
 
-`asignaciones_rol` es única relación RBAC: une usuario, rol y alcance de carrera. Una
+`asignaciones_rol` es única relación RBAC: une usuario, rol fijo y alcance de carrera. Una
 fila activa con rol `coordinador` expresa directamente quién coordina esa carrera; no
 existe segunda tabla de coordinación. Un trigger PostgreSQL garantiza como máximo una
 coordinación ejercible por carrera (rol activo y cuenta activa); la aplicación muestra

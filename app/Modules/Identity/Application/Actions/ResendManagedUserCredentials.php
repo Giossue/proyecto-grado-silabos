@@ -40,7 +40,7 @@ class ResendManagedUserCredentials
             $password = TemporaryPassword::generate();
             $locked->forceFill(['contrasena' => $password, 'debe_cambiar_contrasena' => true])->save();
             DB::table('sesiones')->where('user_id', $locked->id)->delete();
-            $roleName = $locked->roleAssignments()->where('activo', true)->with('role')->first()?->role->nombre_rol ?? 'Usuario';
+            $roleName = $locked->roleAssignments()->where('activo', true)->first()?->role->nombre_rol ?? 'Usuario';
 
             $this->audit->execute(
                 actorId: $actor->id,

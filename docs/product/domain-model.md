@@ -7,11 +7,10 @@
 - `Usuario`: persona autenticable, activa o inactiva. Su nombre se guarda normalizado
   (I-32): mayúsculas con tildes, primero nombres y luego apellidos, sin espacios
   sobrantes; `PersonName::normalize` lo aplica en toda escritura.
-- `Rol`: Administrador, Coordinador o Docente.
+- `Rol`: valor fijo: Administrador, Coordinador o Docente; no es una entidad ni catálogo.
 - `AsignacionRol`: relación RBAC de rol y alcance; una persona puede tener varias. Una
   asignación `coordinador` activa de carrera es coordinación efectiva.
-- `DocenteParalelo`: vincula una `AsignacionRol` de docente con un paralelo y guarda
-  referencia del acto que la respalda —tipo, número y fecha—. No hay tabla de
+- `DocenteParalelo`: vincula una `AsignacionRol` de docente con un paralelo. No hay tabla de
   coordinación separada ni tabla por rol. Ninguna relación programa inicio o fin:
   `activo` expresa estado actual.
 

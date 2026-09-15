@@ -62,7 +62,7 @@ class SetupChecklist
         $careerCount = (clone $careers)->count();
         $accounts = User::query()->where('activo', true)->whereHas('roleAssignments', fn (Builder $query) => $query
             ->where('activo', true)
-            ->whereHas('role', fn (Builder $role) => $role->where('codigo_rol', '!=', 'administrador')))->count();
+            ->where('rol', '!=', 'administrador'))->count();
 
         return $this->build(
             'Puesta en marcha de la institución',

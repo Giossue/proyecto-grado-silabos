@@ -133,6 +133,20 @@ it('I-79 nombra la responsabilidad operativa como asignación a un paralelo', fu
         ->toContain('asignaciones_paralelo_asignacion_rol_id_foreign');
 });
 
+it('I-80 persiste los tres roles fijos en la asignación y no en un catálogo', function () {
+    expect(Schema::hasTable('roles'))->toBeFalse()
+        ->and(Schema::hasColumn('asignaciones_rol', 'rol'))->toBeTrue()
+        ->and(Schema::hasColumn('asignaciones_rol', 'rol_id'))->toBeFalse();
+
+    $restricciones = collect(DB::select(
+        "SELECT conname FROM pg_constraint WHERE conrelid = 'asignaciones_rol'::regclass",
+    ))->pluck('conname');
+
+    expect($restricciones)
+        ->toContain('asignaciones_rol_rol_valido_check')
+        ->toContain('asignaciones_rol_alcance_valido_check');
+});
+
 it('I-62 persiste la programación de asignaturas con nombres e invariante propios', function () {
     expect(Schema::hasTable('programaciones_asignatura'))->toBeTrue()
         ->and(Schema::hasTable('ofertas_academicas'))->toBeFalse()

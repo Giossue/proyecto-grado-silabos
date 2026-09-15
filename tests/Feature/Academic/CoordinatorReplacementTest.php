@@ -6,7 +6,6 @@ use App\Models\User;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CoordinatorAssignment;
 use App\Modules\Identity\Domain\Enums\RoleCode;
-use App\Modules\Identity\Infrastructure\Persistence\Models\Role;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -57,9 +56,8 @@ class CoordinatorReplacementTest extends TestCase
 
         $this->assertTrue(CoordinatorAssignment::query()->effective()->where('carrera_id', $this->career->id)->where('usuario_id', $incoming->id)->exists());
         // Rol de coordinación: cerrado para quien sale, concedido a quien entra; el de docente del entrante sigue.
-        $coordinatorRole = Role::query()->where('codigo_rol', RoleCode::Coordinator->value)->firstOrFail();
-        $this->assertDatabaseHas('asignaciones_rol', ['usuario_id' => $this->coordinator->id, 'rol_id' => $coordinatorRole->id, 'carrera_id' => $this->career->id, 'asignacion_rol_activa' => false]);
-        $this->assertDatabaseHas('asignaciones_rol', ['usuario_id' => $incoming->id, 'rol_id' => $coordinatorRole->id, 'carrera_id' => $this->career->id, 'asignacion_rol_activa' => true]);
+        $this->assertDatabaseHas('asignaciones_rol', ['usuario_id' => $this->coordinator->id, 'rol' => RoleCode::Coordinator->value, 'carrera_id' => $this->career->id, 'asignacion_rol_activa' => false]);
+        $this->assertDatabaseHas('asignaciones_rol', ['usuario_id' => $incoming->id, 'rol' => RoleCode::Coordinator->value, 'carrera_id' => $this->career->id, 'asignacion_rol_activa' => true]);
         $this->assertSame(2, RoleAssignment::query()->effective()->where('usuario_id', $incoming->id)->count());
         // Sin `deactivate_outgoing`, la cuenta saliente sigue activa (puede seguir como docente).
         $this->assertTrue($this->coordinator->fresh()->activo);
@@ -76,8 +74,7 @@ class CoordinatorReplacementTest extends TestCase
     {
         $incoming = $this->activeTeacher('entrante@silabos.test');
         // La coordinadora sembrada también da clases: al reemplazarla no se desactiva.
-        $teacherRole = Role::query()->where('codigo_rol', RoleCode::Teacher->value)->firstOrFail();
-        RoleAssignment::query()->create(['usuario_id' => $this->coordinator->id, 'rol_id' => $teacherRole->id, 'carrera_id' => $this->career->id, 'activo' => true]);
+        RoleAssignment::query()->create(['usuario_id' => $this->coordinator->id, 'rol' => RoleCode::Teacher->value, 'carrera_id' => $this->career->id, 'activo' => true]);
 
         $this->actingAsAdministrator()
             ->post(route('admin.academic.careers.coordinator.replace', $this->career), ['incoming_user_id' => $incoming->id, 'deactivate_outgoing' => 1])
@@ -87,7 +84,7 @@ class CoordinatorReplacementTest extends TestCase
 
         // Ahora sale el entrante, que solo coordina: sí se desactiva.
         $third = $this->activeTeacher('tercero@silabos.test');
-        RoleAssignment::query()->where('usuario_id', $incoming->id)->where('rol_id', $teacherRole->id)->update(['activo' => false]);
+        RoleAssignment::query()->where('usuario_id', $incoming->id)->where('rol', RoleCode::Teacher->value)->update(['activo' => false]);
         $this->actingAsAdministrator()
             ->post(route('admin.academic.careers.coordinator.replace', $this->career), ['incoming_user_id' => $third->id, 'deactivate_outgoing' => 1])
             ->assertRedirect()
@@ -124,7 +121,7 @@ class CoordinatorReplacementTest extends TestCase
         $user = User::query()->create(['nombre' => 'Docente '.$email, 'correo_electronico' => $email, 'contrasena' => 'Temporal-2026!', 'activo' => true]);
         RoleAssignment::query()->create([
             'usuario_id' => $user->id,
-            'rol_id' => Role::query()->where('codigo_rol', RoleCode::Teacher->value)->firstOrFail()->id,
+            'rol' => RoleCode::Teacher->value,
             'carrera_id' => $this->career->id,
             'activo' => true,
         ]);

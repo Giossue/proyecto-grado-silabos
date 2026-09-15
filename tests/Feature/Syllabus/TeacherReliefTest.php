@@ -12,7 +12,6 @@ use App\Modules\Configuration\Infrastructure\Persistence\Models\AcademicSource;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\FieldDefinition;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
 use App\Modules\Identity\Domain\Enums\RoleCode;
-use App\Modules\Identity\Infrastructure\Persistence\Models\Role;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\Convocation;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\Syllabus;
@@ -193,7 +192,7 @@ class TeacherReliefTest extends TestCase
         $user = User::query()->create(['nombre' => 'Docente Suplente', 'correo_electronico' => $email, 'contrasena' => 'Temporal-2026!', 'activo' => true]);
         RoleAssignment::query()->create([
             'usuario_id' => $user->id,
-            'rol_id' => Role::query()->where('codigo_rol', RoleCode::Teacher->value)->firstOrFail()->id,
+            'rol' => RoleCode::Teacher->value,
             'carrera_id' => $career->id,
             'activo' => true,
         ]);

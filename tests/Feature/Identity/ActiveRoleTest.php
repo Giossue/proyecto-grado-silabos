@@ -7,7 +7,6 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CoordinatorAssignment;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Faculty;
 use App\Modules\Identity\Domain\Enums\RoleCode;
-use App\Modules\Identity\Infrastructure\Persistence\Models\Role;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
 use App\Modules\Operations\Infrastructure\Persistence\Models\AuditEvent;
 use Database\Seeders\DatabaseSeeder;
@@ -250,10 +249,9 @@ class ActiveRoleTest extends TestCase
             'nombre' => 'Carrera para segundo rol',
             'activo' => true,
         ]);
-        $coordinatorRole = Role::query()->where('codigo_rol', RoleCode::Coordinator->value)->firstOrFail();
         RoleAssignment::query()->create([
             'usuario_id' => $user->id,
-            'rol_id' => $coordinatorRole->id,
+            'rol' => RoleCode::Coordinator->value,
             'carrera_id' => $career->id,
             'activo' => true,
         ]);

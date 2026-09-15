@@ -127,7 +127,7 @@ class AcademicStructureViewData
                     ->whereIn('id', RoleAssignment::query()
                         ->select('usuario_id')
                         ->effective()
-                        ->whereHas('role', fn ($query) => $query->where('codigo_rol', RoleCode::Coordinator->value)))
+                        ->where('rol', RoleCode::Coordinator->value))
                     ->orderBy('nombre')
                     ->get(['id', 'nombre', 'correo_electronico']),
             ],
@@ -455,7 +455,7 @@ class AcademicStructureViewData
                         ->select('usuario_id')
                         ->effective()
                         ->where('carrera_id', $careerId)
-                        ->whereHas('role', fn ($query) => $query->where('codigo_rol', RoleCode::Teacher->value)))
+                        ->where('rol', RoleCode::Teacher->value))
                     ->orderBy('nombre')
                     ->get(['id', 'nombre', 'correo_electronico'])
                     ->map(fn (User $user): array => [

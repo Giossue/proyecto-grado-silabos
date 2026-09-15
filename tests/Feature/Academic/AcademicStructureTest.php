@@ -16,7 +16,6 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\Subject;
 use App\Modules\Academic\Infrastructure\Persistence\Models\SubjectRequirement;
 use App\Modules\Academic\Infrastructure\Persistence\Models\TeacherAssignment;
 use App\Modules\Identity\Domain\Enums\RoleCode;
-use App\Modules\Identity\Infrastructure\Persistence\Models\Role;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
 use App\Modules\Operations\Infrastructure\Persistence\Models\AuditEvent;
 use Database\Seeders\DatabaseSeeder;
@@ -1766,11 +1765,9 @@ class AcademicStructureTest extends TestCase
     private function userWithRole(RoleCode $roleCode, Career $career): User
     {
         $user = User::factory()->create();
-        $role = Role::query()->where('codigo_rol', $roleCode->value)->firstOrFail();
-
         RoleAssignment::query()->create([
             'usuario_id' => $user->id,
-            'rol_id' => $role->id,
+            'rol' => $roleCode->value,
             'carrera_id' => $career->id,
             'activo' => true,
         ]);

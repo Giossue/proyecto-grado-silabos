@@ -15,7 +15,6 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\Subject;
 use App\Modules\Academic\Infrastructure\Persistence\Models\TeacherAssignment;
 use App\Modules\Identity\Domain\Enums\RoleCode;
 use App\Modules\Identity\Domain\PersonName;
-use App\Modules\Identity\Infrastructure\Persistence\Models\Role;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -29,19 +28,6 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         DB::transaction(function (): void {
-            $roles = collect([
-                RoleCode::Administrator->value => 'Administrador',
-                RoleCode::Coordinator->value => 'Coordinador',
-                RoleCode::Teacher->value => 'Docente',
-            ])->mapWithKeys(function (string $name, string $code): array {
-                $role = Role::query()->firstOrCreate(
-                    ['codigo_rol' => $code],
-                    ['nombre_rol' => $name],
-                );
-
-                return [$code => $role];
-            });
-
             $faculty = Faculty::query()->firstOrCreate(
                 ['codigo_facultad' => 'FICAYA'],
                 ['nombre' => 'Facultad de Ciencias de la Ingeniería', 'activo' => true],
@@ -115,7 +101,7 @@ class DatabaseSeeder extends Seeder
             foreach ($users as $code => $user) {
                 $roleScope = [
                     'usuario_id' => $user->id,
-                    'rol_id' => $roles[$code]->id,
+                    'rol' => $code,
                     'carrera_id' => $code === RoleCode::Administrator->value ? null : $career->id,
                 ];
                 $assignment = RoleAssignment::query()
@@ -134,7 +120,7 @@ class DatabaseSeeder extends Seeder
 
             $teacherRole = RoleAssignment::query()->where([
                 'usuario_id' => $users[RoleCode::Teacher->value]->id,
-                'rol_id' => $roles[RoleCode::Teacher->value]->id,
+                'rol' => RoleCode::Teacher->value,
                 'carrera_id' => $career->id,
             ])->firstOrFail();
             $teacherScope = [

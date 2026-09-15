@@ -5,7 +5,6 @@ namespace App\Modules\Identity\Application\Actions;
 use App\Models\User;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Identity\Domain\Enums\RoleCode;
-use App\Modules\Identity\Infrastructure\Persistence\Models\Role;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
 use App\Modules\Operations\Application\Actions\RecordAuditEvent;
 use Illuminate\Http\Request;
@@ -25,7 +24,10 @@ class AssignRole
         $activeRole = $this->roles->resolve($request);
 
         return DB::transaction(function () use ($actor, $activeRole, $data, $request, $target): RoleAssignment {
-            $role = Role::query()->where('codigo_rol', $data['role_code'])->firstOrFail();
+            $role = RoleCode::tryFrom($data['role_code']);
+            if ($role === null) {
+                throw ValidationException::withMessages(['role_code' => 'El rol indicado no es válido.']);
+            }
             $careerId = $data['role_code'] === RoleCode::Administrator->value
                 ? null
                 : ($data['career_id'] ?? null);
@@ -35,7 +37,7 @@ class AssignRole
                     ->where('carrera_id', $careerId)
                     ->where('usuario_id', '!=', $target->id)
                     ->whereHas('user', fn ($query) => $query->where('activo', true))
-                    ->whereHas('role', fn ($query) => $query->where('codigo_rol', RoleCode::Coordinator->value))
+                    ->where('rol', RoleCode::Coordinator->value)
                     ->exists();
                 if ($alreadyCoordinated) {
                     throw ValidationException::withMessages([
@@ -46,7 +48,7 @@ class AssignRole
             $assignment = RoleAssignment::query()->firstOrCreate(
                 [
                     'usuario_id' => $target->id,
-                    'rol_id' => $role->id,
+                    'rol' => $role->value,
                     'carrera_id' => $careerId,
                 ],
                 [

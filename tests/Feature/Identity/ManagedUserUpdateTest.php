@@ -6,7 +6,6 @@ use App\Models\User;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CoordinatorAssignment;
 use App\Modules\Identity\Domain\Enums\RoleCode;
-use App\Modules\Identity\Infrastructure\Persistence\Models\Role;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -86,11 +85,10 @@ class ManagedUserUpdateTest extends TestCase
             ->assertRedirect()
             ->assertSessionHas('success');
 
-        $teacherRole = Role::query()->where('codigo_rol', RoleCode::Teacher->value)->firstOrFail();
         $this->assertDatabaseHas('asignaciones_rol', ['id' => $previousAssignmentId, 'asignacion_rol_activa' => true]);
         $this->assertDatabaseHas('asignaciones_rol', [
             'usuario_id' => $this->coordinator->id,
-            'rol_id' => $teacherRole->id,
+            'rol' => RoleCode::Teacher->value,
             'carrera_id' => $career->id,
             'asignacion_rol_activa' => true,
         ]);

@@ -12,7 +12,6 @@ use App\Modules\Identity\Application\Actions\ResendManagedUserCredentials;
 use App\Modules\Identity\Application\Actions\SetUserStatus;
 use App\Modules\Identity\Application\Actions\UpdateManagedUserProfile;
 use App\Modules\Identity\Domain\Enums\RoleCode;
-use App\Modules\Identity\Infrastructure\Persistence\Models\Role;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
 use App\Modules\Identity\Presentation\Http\Requests\AssignRoleRequest;
 use App\Modules\Identity\Presentation\Http\Requests\CreateManagedUserRequest;
@@ -72,7 +71,7 @@ class ManagedUserController extends Controller
                 'id',
                 RoleAssignment::query()
                     ->effective()
-                    ->whereHas('role', fn ($model) => $model->where('codigo_rol', $code))
+                    ->where('rol', $code)
                     ->select('usuario_id'),
             ))
             ->when($career, fn (Builder $query, string $careerId) => $query->whereIn(
@@ -85,7 +84,7 @@ class ManagedUserController extends Controller
             // Se cargan también las asignaciones archivadas: las columnas siguen
             // mostrando solo las vigentes y el panel de lectura muestra el historial.
             ->with(['roleAssignments' => fn ($query) => $query
-                ->with(['role:id,codigo_rol,nombre_rol', 'career:id,nombre'])
+                ->with(['career:id,nombre'])
                 ->orderByDesc('asignado_en')])
             ->orderBy('nombre')
             ->paginate(20)
@@ -127,9 +126,7 @@ class ManagedUserController extends Controller
                 'role' => $role,
                 'career' => $career,
             ],
-            'roles' => Role::query()
-                ->orderBy('nombre_rol')
-                ->get(['codigo_rol as codigo', 'nombre_rol as nombre']),
+            'roles' => $this->fixedRoles(),
             'careers' => Career::query()->where('activo', true)->orderBy('nombre')->get(['id', 'nombre']),
         ]);
     }
@@ -152,7 +149,7 @@ class ManagedUserController extends Controller
     public function show(User $user, ShowManagedUserRequest $request): Response
     {
         $user->load(['roleAssignments' => fn ($query) => $query
-            ->with(['role:id,codigo_rol,nombre_rol', 'career:id,nombre'])
+            ->with(['career:id,nombre'])
             ->orderByDesc('asignado_en')]);
 
         return Inertia::render('Admin/Users/Show', [
@@ -169,9 +166,7 @@ class ManagedUserController extends Controller
                     'effective' => $assignment->activo,
                 ])->values(),
             ],
-            'roles' => Role::query()
-                ->orderBy('nombre_rol')
-                ->get(['codigo_rol as codigo', 'nombre_rol as nombre']),
+            'roles' => $this->fixedRoles(),
             'careers' => Career::query()->where('activo', true)->orderBy('nombre')->get(['id', 'nombre']),
         ]);
     }
@@ -187,6 +182,15 @@ class ManagedUserController extends Controller
         ], $actor, $request);
 
         return back()->with('success', 'Rol asignado con su alcance.');
+    }
+
+    /** @return list<array{codigo: string, nombre: string}> */
+    private function fixedRoles(): array
+    {
+        return array_map(
+            fn (RoleCode $role): array => ['codigo' => $role->value, 'nombre' => $role->label()],
+            RoleCode::cases(),
+        );
     }
 
     public function setStatus(User $user, SetUserStatusRequest $request, SetUserStatus $action): RedirectResponse

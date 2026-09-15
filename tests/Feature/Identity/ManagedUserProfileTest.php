@@ -7,7 +7,6 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Faculty;
 use App\Modules\Identity\Domain\Enums\RoleCode;
 use App\Modules\Identity\Infrastructure\Mail\ManagedUserCredentialsMail;
-use App\Modules\Identity\Infrastructure\Persistence\Models\Role;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -186,7 +185,6 @@ class ManagedUserProfileTest extends TestCase
             'nombre' => 'Otra carrera',
             'activo' => true,
         ]);
-        $role = Role::query()->where('codigo_rol', RoleCode::Teacher->value)->firstOrFail();
         $user = User::query()->create([
             'nombre' => 'Docente Ajena',
             'correo_electronico' => 'ajena@silabos.test',
@@ -195,7 +193,7 @@ class ManagedUserProfileTest extends TestCase
         ]);
         RoleAssignment::query()->create([
             'usuario_id' => $user->id,
-            'rol_id' => $role->id,
+            'rol' => RoleCode::Teacher->value,
             'carrera_id' => $career->id,
             'activo' => true,
         ]);

@@ -26,7 +26,6 @@ use App\Modules\Configuration\Infrastructure\Persistence\Models\FieldDefinition;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateBlock;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\TemplateSection;
-use App\Modules\Identity\Infrastructure\Persistence\Models\Role;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
 use App\Modules\Operations\Application\Actions\RecordAuditEvent;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\Convocation;
@@ -476,7 +475,7 @@ class AiAssistanceTest extends TestCase
         $outsider = User::factory()->create(['correo_verificado_en' => now(), 'activo' => true]);
         $outsiderContext = RoleAssignment::query()->create([
             'usuario_id' => $outsider->id,
-            'rol_id' => Role::query()->where('codigo_rol', 'docente')->valueOrFail('id'),
+            'rol' => 'docente',
             'carrera_id' => $this->teacherContext->carrera_id,
             'activo' => true,
         ]);

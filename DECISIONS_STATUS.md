@@ -181,7 +181,7 @@ estado `POR VALIDAR`. La activación con datos institucionales requiere además 
 el tratamiento externo aplicable bajo `PV-12`.
 
 I-74 (14 de septiembre de 2026) normaliza roles y responsabilidades académicas: la
-única relación RBAC es `asignaciones_rol(usuario_id, rol_id, carrera_id)`. Se elimina
+única relación RBAC es `asignaciones_rol(usuario_id, rol, carrera_id)`. Se elimina
 `asignaciones_coordinador`, porque duplicaba el rol `coordinador` con alcance de carrera.
 La responsabilidad operativa de un paralelo no es un rol: `docentes_paralelo` referencia
 la asignación RBAC `docente` que la respalda. PostgreSQL impide más de una coordinación
@@ -207,6 +207,13 @@ I-79 (15 de septiembre de 2026) renombra la tabla física de responsabilidad doc
 `docentes_paralelo` a `asignaciones_paralelo`. La relación sigue vinculando un paralelo
 con la asignación RBAC docente que la respalda; conserva datos, restricciones y claves
 foráneas, sin modificar los nombres funcionales de la interfaz o las rutas.
+
+I-80 (15 de septiembre de 2026) simplifica los roles fijos del dominio: Administrador,
+Coordinador y Docente son valores cerrados de `asignaciones_rol.rol`, protegidos por
+`CHECK`; se elimina la tabla `roles`, su clave foránea y las consultas al catálogo. La
+asignación conserva usuario, carrera, estado e historial; el trigger de coordinación
+consulta el valor de la propia fila y sigue permitiendo una sola coordinación ejercible
+por carrera.
 
 I-07 implementa un puerto de lectura, fixture sintético versionado, staging inmutable,
 simulación y exclusión humana. Demuestra idempotencia, conflicto y cero mutación del

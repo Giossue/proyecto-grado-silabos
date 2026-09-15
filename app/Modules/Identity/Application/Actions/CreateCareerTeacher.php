@@ -5,7 +5,6 @@ namespace App\Modules\Identity\Application\Actions;
 use App\Models\User;
 use App\Modules\Identity\Application\ActiveRole;
 use App\Modules\Identity\Domain\Enums\RoleCode;
-use App\Modules\Identity\Infrastructure\Persistence\Models\Role;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
 use App\Modules\Operations\Application\Actions\RecordAuditEvent;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -62,10 +61,9 @@ class CreateCareerTeacher
                 ]);
             }
 
-            $teacherRole = Role::query()->where('codigo_rol', RoleCode::Teacher->value)->firstOrFail();
             $identity = [
                 'usuario_id' => $user->id,
-                'rol_id' => $teacherRole->id,
+                'rol' => RoleCode::Teacher->value,
                 'carrera_id' => $careerId,
             ];
             // Puede haber asignaciones históricas inactivas junto a una vigente.
