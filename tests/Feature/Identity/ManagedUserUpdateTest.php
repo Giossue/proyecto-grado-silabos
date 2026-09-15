@@ -86,7 +86,7 @@ class ManagedUserUpdateTest extends TestCase
             ->assertRedirect()
             ->assertSessionHas('success');
 
-        $teacherRole = Role::query()->where('codigo', RoleCode::Teacher->value)->firstOrFail();
+        $teacherRole = Role::query()->where('codigo_rol', RoleCode::Teacher->value)->firstOrFail();
         $this->assertDatabaseHas('asignaciones_rol', ['id' => $previousAssignmentId, 'activo' => true]);
         $this->assertDatabaseHas('asignaciones_rol', [
             'usuario_id' => $this->coordinator->id,

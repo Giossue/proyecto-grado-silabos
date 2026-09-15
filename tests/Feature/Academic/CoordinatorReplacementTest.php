@@ -57,7 +57,7 @@ class CoordinatorReplacementTest extends TestCase
 
         $this->assertTrue(CoordinatorAssignment::query()->effective()->where('carrera_id', $this->career->id)->where('usuario_id', $incoming->id)->exists());
         // Rol de coordinación: cerrado para quien sale, concedido a quien entra; el de docente del entrante sigue.
-        $coordinatorRole = Role::query()->where('codigo', RoleCode::Coordinator->value)->firstOrFail();
+        $coordinatorRole = Role::query()->where('codigo_rol', RoleCode::Coordinator->value)->firstOrFail();
         $this->assertDatabaseHas('asignaciones_rol', ['usuario_id' => $this->coordinator->id, 'rol_id' => $coordinatorRole->id, 'carrera_id' => $this->career->id, 'activo' => false]);
         $this->assertDatabaseHas('asignaciones_rol', ['usuario_id' => $incoming->id, 'rol_id' => $coordinatorRole->id, 'carrera_id' => $this->career->id, 'activo' => true]);
         $this->assertSame(2, RoleAssignment::query()->effective()->where('usuario_id', $incoming->id)->count());
@@ -76,7 +76,7 @@ class CoordinatorReplacementTest extends TestCase
     {
         $incoming = $this->activeTeacher('entrante@silabos.test');
         // La coordinadora sembrada también da clases: al reemplazarla no se desactiva.
-        $teacherRole = Role::query()->where('codigo', RoleCode::Teacher->value)->firstOrFail();
+        $teacherRole = Role::query()->where('codigo_rol', RoleCode::Teacher->value)->firstOrFail();
         RoleAssignment::query()->create(['usuario_id' => $this->coordinator->id, 'rol_id' => $teacherRole->id, 'carrera_id' => $this->career->id, 'activo' => true]);
 
         $this->actingAsAdministrator()
@@ -124,7 +124,7 @@ class CoordinatorReplacementTest extends TestCase
         $user = User::query()->create(['nombre' => 'Docente '.$email, 'correo_electronico' => $email, 'contrasena' => 'Temporal-2026!', 'activo' => true]);
         RoleAssignment::query()->create([
             'usuario_id' => $user->id,
-            'rol_id' => Role::query()->where('codigo', RoleCode::Teacher->value)->firstOrFail()->id,
+            'rol_id' => Role::query()->where('codigo_rol', RoleCode::Teacher->value)->firstOrFail()->id,
             'carrera_id' => $this->career->id,
             'activo' => true,
         ]);

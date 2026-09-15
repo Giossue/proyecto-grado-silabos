@@ -26,7 +26,7 @@ class UserPolicy
         $activeRole = $this->roles->resolve(request());
 
         return $actor->activo
-            && $activeRole?->role->codigo === RoleCode::Coordinator->value
+            && $activeRole?->role->codigo_rol === RoleCode::Coordinator->value
             && $activeRole->career?->activo === true;
     }
 
@@ -62,6 +62,6 @@ class UserPolicy
 
         $activeRole = $this->roles->resolve(request());
 
-        return $activeRole?->role->codigo === RoleCode::Administrator->value;
+        return $activeRole?->role->codigo_rol === RoleCode::Administrator->value;
     }
 }

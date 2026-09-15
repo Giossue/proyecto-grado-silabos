@@ -293,7 +293,7 @@ class ReviewController extends Controller
         $teacherIds = RoleAssignment::query()
             ->effective()
             ->where('carrera_id', $syllabus->convocation->carrera_id)
-            ->whereHas('role', fn ($role) => $role->where('codigo', RoleCode::Teacher->value))
+            ->whereHas('role', fn ($role) => $role->where('codigo_rol', RoleCode::Teacher->value))
             ->pluck('usuario_id');
 
         $payload = [];

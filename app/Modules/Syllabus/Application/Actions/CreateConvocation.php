@@ -29,7 +29,7 @@ class CreateConvocation
     public function execute(array $data, User $actor, Request $request): Convocation
     {
         $activeRole = $this->roles->resolve($request);
-        if ($activeRole?->role->codigo !== RoleCode::Coordinator->value || $activeRole->carrera_id === null) {
+        if ($activeRole?->role->codigo_rol !== RoleCode::Coordinator->value || $activeRole->carrera_id === null) {
             abort(403);
         }
 

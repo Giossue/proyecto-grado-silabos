@@ -35,8 +35,8 @@ class DatabaseSeeder extends Seeder
                 RoleCode::Teacher->value => 'Docente',
             ])->mapWithKeys(function (string $name, string $code): array {
                 $role = Role::query()->firstOrCreate(
-                    ['codigo' => $code],
-                    ['nombre' => $name],
+                    ['codigo_rol' => $code],
+                    ['nombre_rol' => $name],
                 );
 
                 return [$code => $role];

@@ -62,7 +62,7 @@ class CreateCareerTeacher
                 ]);
             }
 
-            $teacherRole = Role::query()->where('codigo', RoleCode::Teacher->value)->firstOrFail();
+            $teacherRole = Role::query()->where('codigo_rol', RoleCode::Teacher->value)->firstOrFail();
             $identity = [
                 'usuario_id' => $user->id,
                 'rol_id' => $teacherRole->id,

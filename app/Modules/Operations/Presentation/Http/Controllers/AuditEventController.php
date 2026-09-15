@@ -61,7 +61,7 @@ class AuditEventController extends Controller
                     'resource' => $this->resourceLabel($event->tipo_recurso),
                     'result' => $event->resultado,
                     'actor' => $this->actorName($event),
-                    'role' => $event->roleAssignment?->role->nombre,
+                    'role' => $event->roleAssignment?->role->nombre_rol,
                     'career' => $event->roleAssignment?->career?->nombre,
                     'details' => $this->safeDetails($event->metadatos),
                     'occurred_at' => $event->ocurrido_en->toIso8601String(),

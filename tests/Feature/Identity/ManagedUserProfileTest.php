@@ -186,7 +186,7 @@ class ManagedUserProfileTest extends TestCase
             'nombre' => 'Otra carrera',
             'activo' => true,
         ]);
-        $role = Role::query()->where('codigo', RoleCode::Teacher->value)->firstOrFail();
+        $role = Role::query()->where('codigo_rol', RoleCode::Teacher->value)->firstOrFail();
         $user = User::query()->create([
             'nombre' => 'Docente Ajena',
             'correo_electronico' => 'ajena@silabos.test',

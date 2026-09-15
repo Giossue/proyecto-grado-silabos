@@ -15,7 +15,7 @@ final class StoreFacultyLogoRequest extends FormRequest
         $activeRole = app(ActiveRole::class)->resolve($this);
 
         return $this->user()?->activo === true
-            && $activeRole?->role->codigo === RoleCode::Coordinator->value
+            && $activeRole?->role->codigo_rol === RoleCode::Coordinator->value
             && is_string($activeRole->carrera_id)
             && Career::query()->whereKey($activeRole->carrera_id)->whereHas('faculty')->exists();
     }

@@ -56,7 +56,7 @@ class CreateManagedUser
                     name: $user->nombre,
                     email: $user->correo_electronico,
                     temporaryPassword: $data['password'],
-                    roleName: $assignment->role->nombre,
+                    roleName: $assignment->role->nombre_rol,
                     loginUrl: route('login'),
                 ));
             });

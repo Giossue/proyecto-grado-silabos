@@ -302,7 +302,7 @@ class UpdateCareerAcademicRecord
         $roleAssignment = RoleAssignment::query()->effective()
             ->where('usuario_id', $userId)
             ->where('carrera_id', $careerId)
-            ->whereHas('role', fn ($query) => $query->where('codigo', RoleCode::Teacher->value))
+            ->whereHas('role', fn ($query) => $query->where('codigo_rol', RoleCode::Teacher->value))
             ->whereHas('user', fn ($query) => $query->where('activo', true))
             ->first();
 

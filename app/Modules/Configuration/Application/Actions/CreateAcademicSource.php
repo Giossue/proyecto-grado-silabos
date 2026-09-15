@@ -23,7 +23,7 @@ class CreateAcademicSource
     public function execute(array $data, User $actor, Request $request): AcademicSource
     {
         $activeRole = $this->roles->resolve($request);
-        if ($activeRole?->role->codigo !== RoleCode::Coordinator->value || $activeRole->carrera_id === null) {
+        if ($activeRole?->role->codigo_rol !== RoleCode::Coordinator->value || $activeRole->carrera_id === null) {
             abort(403);
         }
         // Con una convocatoria en curso los sílabos se apoyan en las fuentes: se pausa antes.

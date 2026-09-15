@@ -25,7 +25,7 @@ class AssignRole
         $activeRole = $this->roles->resolve($request);
 
         return DB::transaction(function () use ($actor, $activeRole, $data, $request, $target): RoleAssignment {
-            $role = Role::query()->where('codigo', $data['role_code'])->firstOrFail();
+            $role = Role::query()->where('codigo_rol', $data['role_code'])->firstOrFail();
             $careerId = $data['role_code'] === RoleCode::Administrator->value
                 ? null
                 : ($data['career_id'] ?? null);
@@ -35,7 +35,7 @@ class AssignRole
                     ->where('carrera_id', $careerId)
                     ->where('usuario_id', '!=', $target->id)
                     ->whereHas('user', fn ($query) => $query->where('activo', true))
-                    ->whereHas('role', fn ($query) => $query->where('codigo', RoleCode::Coordinator->value))
+                    ->whereHas('role', fn ($query) => $query->where('codigo_rol', RoleCode::Coordinator->value))
                     ->exists();
                 if ($alreadyCoordinated) {
                     throw ValidationException::withMessages([

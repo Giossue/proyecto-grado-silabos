@@ -51,7 +51,7 @@ class TransferSyllabusTeacher
     ): Syllabus {
         $activeRole = $this->roles->resolve($request);
         $careerId = $syllabus->convocation()->value('carrera_id');
-        if ($activeRole?->role->codigo !== RoleCode::Coordinator->value
+        if ($activeRole?->role->codigo_rol !== RoleCode::Coordinator->value
             || $activeRole->carrera_id !== $careerId) {
             abort(403);
         }
@@ -171,7 +171,7 @@ class TransferSyllabusTeacher
         return RoleAssignment::query()
             ->where('usuario_id', $userId)
             ->where('carrera_id', $careerId)
-            ->whereHas('role', fn ($query) => $query->where('codigo', RoleCode::Teacher->value))
+            ->whereHas('role', fn ($query) => $query->where('codigo_rol', RoleCode::Teacher->value))
             ->whereHas('user', fn (Builder $query) => $query->where('activo', true))
             ->effective()
             ->first();

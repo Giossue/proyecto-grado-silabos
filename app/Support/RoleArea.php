@@ -27,7 +27,7 @@ final class RoleArea
     /** Área del rol activo, o `null` mientras no se haya elegido rol. */
     public static function current(): ?string
     {
-        $code = app(ActiveRole::class)->resolve(request())?->role->codigo;
+        $code = app(ActiveRole::class)->resolve(request())?->role->codigo_rol;
 
         return match ($code) {
             RoleCode::Administrator->value => self::ADMIN,

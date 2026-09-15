@@ -72,7 +72,7 @@ class ManagedUserController extends Controller
                 'id',
                 RoleAssignment::query()
                     ->effective()
-                    ->whereHas('role', fn ($model) => $model->where('codigo', $code))
+                    ->whereHas('role', fn ($model) => $model->where('codigo_rol', $code))
                     ->select('usuario_id'),
             ))
             ->when($career, fn (Builder $query, string $careerId) => $query->whereIn(
@@ -85,7 +85,7 @@ class ManagedUserController extends Controller
             // Se cargan también las asignaciones archivadas: las columnas siguen
             // mostrando solo las vigentes y el panel de lectura muestra el historial.
             ->with(['roleAssignments' => fn ($query) => $query
-                ->with(['role:id,codigo,nombre', 'career:id,nombre'])
+                ->with(['role:id,codigo_rol,nombre_rol', 'career:id,nombre'])
                 ->orderByDesc('asignado_en')])
             ->orderBy('nombre')
             ->paginate(20)
@@ -104,7 +104,7 @@ class ManagedUserController extends Controller
                     'pending_first_login' => $user->debe_cambiar_contrasena,
                     'two_factor_enabled' => $user->dos_factores_confirmado_en !== null,
                     'roles' => $effective->map(fn ($assignment) => [
-                        'name' => $assignment->role->nombre,
+                        'name' => $assignment->role->nombre_rol,
                         'career_name' => $assignment->career?->nombre,
                     ])->values()->all(),
                     'careers' => $effective
@@ -112,7 +112,7 @@ class ManagedUserController extends Controller
                         ->values()->all(),
                     'assignments' => $user->roleAssignments->map(fn ($assignment) => [
                         'id' => $assignment->id,
-                        'role_name' => $assignment->role->nombre,
+                        'role_name' => $assignment->role->nombre_rol,
                         'career_name' => $assignment->career?->nombre,
                         'active' => $assignment->activo,
                     ])->values()->all(),
@@ -127,7 +127,9 @@ class ManagedUserController extends Controller
                 'role' => $role,
                 'career' => $career,
             ],
-            'roles' => Role::query()->orderBy('nombre')->get(['codigo', 'nombre']),
+            'roles' => Role::query()
+                ->orderBy('nombre_rol')
+                ->get(['codigo_rol as codigo', 'nombre_rol as nombre']),
             'careers' => Career::query()->where('activo', true)->orderBy('nombre')->get(['id', 'nombre']),
         ]);
     }
@@ -150,7 +152,7 @@ class ManagedUserController extends Controller
     public function show(User $user, ShowManagedUserRequest $request): Response
     {
         $user->load(['roleAssignments' => fn ($query) => $query
-            ->with(['role:id,codigo,nombre', 'career:id,nombre'])
+            ->with(['role:id,codigo_rol,nombre_rol', 'career:id,nombre'])
             ->orderByDesc('asignado_en')]);
 
         return Inertia::render('Admin/Users/Show', [
@@ -161,13 +163,15 @@ class ManagedUserController extends Controller
                 'active' => $user->activo,
                 'assignments' => $user->roleAssignments->map(fn ($assignment) => [
                     'id' => $assignment->id,
-                    'role_name' => $assignment->role->nombre,
+                    'role_name' => $assignment->role->nombre_rol,
                     'career_name' => $assignment->career?->nombre,
                     'active' => $assignment->activo,
                     'effective' => $assignment->activo,
                 ])->values(),
             ],
-            'roles' => Role::query()->orderBy('nombre')->get(['codigo', 'nombre']),
+            'roles' => Role::query()
+                ->orderBy('nombre_rol')
+                ->get(['codigo_rol as codigo', 'nombre_rol as nombre']),
             'careers' => Career::query()->where('activo', true)->orderBy('nombre')->get(['id', 'nombre']),
         ]);
     }

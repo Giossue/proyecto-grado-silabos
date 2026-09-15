@@ -195,7 +195,7 @@ class ManagedUserTest extends TestCase
             ->assertSessionHas('success');
 
         $created = User::query()->where('correo_electronico', 'nueva.docente@silabos.test')->firstOrFail();
-        $teacherRole = Role::query()->where('codigo', RoleCode::Teacher->value)->firstOrFail();
+        $teacherRole = Role::query()->where('codigo_rol', RoleCode::Teacher->value)->firstOrFail();
 
         $this->assertDatabaseHas('asignaciones_rol', [
             'usuario_id' => $created->id,
@@ -290,7 +290,7 @@ class ManagedUserTest extends TestCase
             ->assertRedirect()
             ->assertSessionHas('success');
 
-        $coordinatorRole = Role::query()->where('codigo', RoleCode::Coordinator->value)->firstOrFail();
+        $coordinatorRole = Role::query()->where('codigo_rol', RoleCode::Coordinator->value)->firstOrFail();
         $this->assertDatabaseHas('asignaciones_rol', ['id' => $previousAssignmentId, 'activo' => true]);
         $this->assertDatabaseHas('asignaciones_rol', [
             'usuario_id' => $teacher->id,
@@ -486,7 +486,7 @@ class ManagedUserTest extends TestCase
         $secondAdmin = User::query()->create(['nombre' => 'Segunda Admin', 'correo_electronico' => 'admin2@silabos.test', 'contrasena' => 'Temporal-2026!', 'activo' => true]);
         RoleAssignment::query()->create([
             'usuario_id' => $secondAdmin->id,
-            'rol_id' => Role::query()->where('codigo', RoleCode::Administrator->value)->firstOrFail()->id,
+            'rol_id' => Role::query()->where('codigo_rol', RoleCode::Administrator->value)->firstOrFail()->id,
             'carrera_id' => null,
             'activo' => true,
         ]);

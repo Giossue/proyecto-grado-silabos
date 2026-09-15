@@ -109,7 +109,7 @@ class AppServiceProvider extends ServiceProvider
             $activeRole = app(ActiveRole::class)->resolve(request());
 
             return $user->activo
-                && $activeRole?->role->codigo === RoleCode::Coordinator->value
+                && $activeRole?->role->codigo_rol === RoleCode::Coordinator->value
                 && $activeRole->carrera_id === $source->carrera_id;
         });
         RateLimiter::for('ai-analysis', function (Request $request): Limit {

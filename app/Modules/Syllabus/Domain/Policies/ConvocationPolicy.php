@@ -26,7 +26,7 @@ class ConvocationPolicy
         $activeRole = $this->roles->resolve(request());
 
         return $user->activo
-            && $activeRole?->role->codigo === RoleCode::Coordinator->value
+            && $activeRole?->role->codigo_rol === RoleCode::Coordinator->value
             && $activeRole->carrera_id === $convocation->carrera_id;
     }
 

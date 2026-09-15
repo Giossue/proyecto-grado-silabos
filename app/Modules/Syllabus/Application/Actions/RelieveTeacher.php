@@ -45,7 +45,7 @@ class RelieveTeacher
     ): array {
         $activeRole = $this->roles->resolve($request);
         $careerId = $activeRole?->carrera_id;
-        if ($activeRole?->role->codigo !== RoleCode::Coordinator->value || $careerId === null) {
+        if ($activeRole?->role->codigo_rol !== RoleCode::Coordinator->value || $careerId === null) {
             abort(403);
         }
         if ($outgoingUserId === $incomingUserId) {
@@ -129,7 +129,7 @@ class RelieveTeacher
             ->effective()
             ->where('usuario_id', $userId)
             ->where('carrera_id', $careerId)
-            ->whereHas('role', fn ($query) => $query->where('codigo', RoleCode::Teacher->value))
+            ->whereHas('role', fn ($query) => $query->where('codigo_rol', RoleCode::Teacher->value))
             ->whereHas('user', fn (Builder $query) => $query->where('activo', true))
             ->first();
     }

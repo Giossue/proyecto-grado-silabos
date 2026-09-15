@@ -16,7 +16,7 @@ class Role extends Model
     protected $table = 'roles';
 
     /** @var list<string> */
-    protected $fillable = ['codigo', 'nombre'];
+    protected $fillable = ['codigo_rol', 'nombre_rol'];
 
     /** @return BelongsToMany<User, $this> */
     public function users(): BelongsToMany

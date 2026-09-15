@@ -476,7 +476,7 @@ class AiAssistanceTest extends TestCase
         $outsider = User::factory()->create(['correo_verificado_en' => now(), 'activo' => true]);
         $outsiderContext = RoleAssignment::query()->create([
             'usuario_id' => $outsider->id,
-            'rol_id' => Role::query()->where('codigo', 'docente')->valueOrFail('id'),
+            'rol_id' => Role::query()->where('codigo_rol', 'docente')->valueOrFail('id'),
             'carrera_id' => $this->teacherContext->carrera_id,
             'activo' => true,
         ]);

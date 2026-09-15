@@ -1766,7 +1766,7 @@ class AcademicStructureTest extends TestCase
     private function userWithRole(RoleCode $roleCode, Career $career): User
     {
         $user = User::factory()->create();
-        $role = Role::query()->where('codigo', $roleCode->value)->firstOrFail();
+        $role = Role::query()->where('codigo_rol', $roleCode->value)->firstOrFail();
 
         RoleAssignment::query()->create([
             'usuario_id' => $user->id,

@@ -64,7 +64,7 @@ class TeacherAssignment extends Model
                 ->effective()
                 ->where('usuario_id', $userId)
                 ->where('carrera_id', $careerId)
-                ->whereHas('role', fn (Builder $role): Builder => $role->where('codigo', RoleCode::Teacher->value))
+                ->whereHas('role', fn (Builder $role): Builder => $role->where('codigo_rol', RoleCode::Teacher->value))
                 ->valueOrFail('id');
             $assignment->offsetUnset('usuario_id');
         });

@@ -21,13 +21,13 @@ class CoordinatorAssignment extends RoleAssignment
     {
         static::addGlobalScope('solo_coordinador', function (Builder $query): void {
             $query->whereHas('role', fn (Builder $role): Builder => $role
-                ->where('codigo', RoleCode::Coordinator->value));
+                ->where('codigo_rol', RoleCode::Coordinator->value));
         });
 
         static::creating(function (self $assignment): void {
             if (! array_key_exists('rol_id', $assignment->getAttributes())) {
                 $assignment->rol_id = Role::query()
-                    ->where('codigo', RoleCode::Coordinator->value)
+                    ->where('codigo_rol', RoleCode::Coordinator->value)
                     ->valueOrFail('id');
             }
         });

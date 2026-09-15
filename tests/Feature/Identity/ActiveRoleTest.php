@@ -250,7 +250,7 @@ class ActiveRoleTest extends TestCase
             'nombre' => 'Carrera para segundo rol',
             'activo' => true,
         ]);
-        $coordinatorRole = Role::query()->where('codigo', RoleCode::Coordinator->value)->firstOrFail();
+        $coordinatorRole = Role::query()->where('codigo_rol', RoleCode::Coordinator->value)->firstOrFail();
         RoleAssignment::query()->create([
             'usuario_id' => $user->id,
             'rol_id' => $coordinatorRole->id,

@@ -37,7 +37,7 @@ class ActiveRole
         $assignment = RoleAssignment::query()
             ->effective()
             ->where('usuario_id', $user->id)
-            ->with(['role:id,codigo,nombre', 'career:id,nombre,activo'])
+            ->with(['role:id,codigo_rol,nombre_rol', 'career:id,nombre,activo'])
             ->find($assignmentId);
 
         if ($assignment !== null && $this->isEligible($assignment)) {
@@ -55,7 +55,7 @@ class ActiveRole
 
     public function hasRole(Request $request, RoleCode $role): bool
     {
-        return $this->resolve($request)?->role->codigo === $role->value;
+        return $this->resolve($request)?->role->codigo_rol === $role->value;
     }
 
     /**
@@ -72,7 +72,7 @@ class ActiveRole
         return RoleAssignment::query()
             ->effective()
             ->where('usuario_id', $user->id)
-            ->with(['role:id,codigo,nombre', 'career:id,nombre,activo'])
+            ->with(['role:id,codigo_rol,nombre_rol', 'career:id,nombre,activo'])
             ->orderBy('asignado_en')
             ->orderBy('id')
             ->get()
@@ -101,14 +101,14 @@ class ActiveRole
 
     public function requiresExplicitSelection(RoleAssignment $assignment): bool
     {
-        return $assignment->role->codigo === RoleCode::Coordinator->value;
+        return $assignment->role->codigo_rol === RoleCode::Coordinator->value;
     }
 
     public function isEligible(RoleAssignment $assignment): bool
     {
         return $this->eligibility->allows(
             $assignment->usuario_id,
-            $assignment->role->codigo,
+            $assignment->role->codigo_rol,
             $assignment->carrera_id,
         );
     }

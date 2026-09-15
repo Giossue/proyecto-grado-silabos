@@ -43,7 +43,7 @@ class OpenConvocation
                 ->lockForUpdate()
                 ->with(['career.faculty', 'sources', 'process.template.sections.blocks.fields'])
                 ->findOrFail($convocationId);
-            if ($activeRole?->carrera_id !== $convocation->carrera_id || $activeRole->role->codigo !== 'coordinador') {
+            if ($activeRole?->carrera_id !== $convocation->carrera_id || $activeRole->role->codigo_rol !== 'coordinador') {
                 abort(403);
             }
             if ($convocation->estado !== 'preparacion') {

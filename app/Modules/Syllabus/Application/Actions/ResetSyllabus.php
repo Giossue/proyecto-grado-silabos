@@ -48,7 +48,7 @@ class ResetSyllabus
     public function execute(Syllabus $syllabus, string $reason, User $actor, Request $request): Syllabus
     {
         $activeRole = $this->roles->resolve($request);
-        if ($activeRole?->role->codigo !== RoleCode::Coordinator->value
+        if ($activeRole?->role->codigo_rol !== RoleCode::Coordinator->value
             || $activeRole->carrera_id !== $syllabus->convocation()->value('carrera_id')) {
             abort(403);
         }

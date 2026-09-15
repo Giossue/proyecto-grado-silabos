@@ -193,7 +193,7 @@ class TeacherReliefTest extends TestCase
         $user = User::query()->create(['nombre' => 'Docente Suplente', 'correo_electronico' => $email, 'contrasena' => 'Temporal-2026!', 'activo' => true]);
         RoleAssignment::query()->create([
             'usuario_id' => $user->id,
-            'rol_id' => Role::query()->where('codigo', RoleCode::Teacher->value)->firstOrFail()->id,
+            'rol_id' => Role::query()->where('codigo_rol', RoleCode::Teacher->value)->firstOrFail()->id,
             'carrera_id' => $career->id,
             'activo' => true,
         ]);

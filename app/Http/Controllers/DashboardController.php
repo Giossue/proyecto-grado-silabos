@@ -51,22 +51,22 @@ class DashboardController extends Controller
 
         $metrics = match (true) {
             $activeRole === null || ! $user instanceof User => [],
-            $activeRole->role->codigo === RoleCode::Administrator->value => $this->administratorMetrics(),
-            $activeRole->role->codigo === RoleCode::Coordinator->value => $this->coordinatorMetrics($activeRole->carrera_id, $schedule),
-            $activeRole->role->codigo === RoleCode::Teacher->value => $this->teacherMetrics($user, $activeRole->carrera_id, $schedule),
+            $activeRole->role->codigo_rol === RoleCode::Administrator->value => $this->administratorMetrics(),
+            $activeRole->role->codigo_rol === RoleCode::Coordinator->value => $this->coordinatorMetrics($activeRole->carrera_id, $schedule),
+            $activeRole->role->codigo_rol === RoleCode::Teacher->value => $this->teacherMetrics($user, $activeRole->carrera_id, $schedule),
             default => [],
         };
 
         // Puesta en marcha: lo que falta para que el rol pueda trabajar, en orden.
         $checklist = match (true) {
             $activeRole === null || ! $user instanceof User => null,
-            $activeRole->role->codigo === RoleCode::Administrator->value => $setup->forAdministrator(),
-            $activeRole->role->codigo === RoleCode::Coordinator->value => $setup->forCoordinator($activeRole->carrera_id),
-            $activeRole->role->codigo === RoleCode::Teacher->value => $setup->forTeacher($user, $activeRole->carrera_id),
+            $activeRole->role->codigo_rol === RoleCode::Administrator->value => $setup->forAdministrator(),
+            $activeRole->role->codigo_rol === RoleCode::Coordinator->value => $setup->forCoordinator($activeRole->carrera_id),
+            $activeRole->role->codigo_rol === RoleCode::Teacher->value => $setup->forTeacher($user, $activeRole->carrera_id),
             default => null,
         };
 
-        $facultyLogo = $activeRole?->role->codigo === RoleCode::Coordinator->value
+        $facultyLogo = $activeRole?->role->codigo_rol === RoleCode::Coordinator->value
             ? $this->facultyLogo($activeRole->carrera_id, $logos)
             : null;
 

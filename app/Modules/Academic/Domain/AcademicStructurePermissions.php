@@ -61,12 +61,12 @@ final class AcademicStructurePermissions
 
     public static function isGovernanceContext(?RoleAssignment $activeRole): bool
     {
-        return $activeRole?->role->codigo === RoleCode::Administrator->value;
+        return $activeRole?->role->codigo_rol === RoleCode::Administrator->value;
     }
 
     public static function isCareerContext(?RoleAssignment $activeRole): bool
     {
-        return $activeRole?->role->codigo === RoleCode::Coordinator->value
+        return $activeRole?->role->codigo_rol === RoleCode::Coordinator->value
             && $activeRole->carrera_id !== null
             && $activeRole->career?->activo === true;
     }

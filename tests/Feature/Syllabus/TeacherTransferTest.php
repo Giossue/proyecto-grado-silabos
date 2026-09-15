@@ -196,7 +196,7 @@ class TeacherTransferTest extends TestCase
     private function createReplacementTeacher(): User
     {
         $career = Career::query()->where('codigo_carrera', 'SOFTWARE')->firstOrFail();
-        $role = Role::query()->where('codigo', RoleCode::Teacher->value)->firstOrFail();
+        $role = Role::query()->where('codigo_rol', RoleCode::Teacher->value)->firstOrFail();
         $user = User::query()->create([
             'nombre' => 'Docente Suplente',
             'correo_electronico' => 'suplente@silabos.test',

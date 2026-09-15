@@ -25,7 +25,7 @@ class UpdateSyllabusProcess
     public function execute(SyllabusProcess $process, array $data, User $actor, Request $request): SyllabusProcess
     {
         $activeRole = $this->roles->resolve($request);
-        if ($activeRole?->role->codigo !== RoleCode::Administrator->value) {
+        if ($activeRole?->role->codigo_rol !== RoleCode::Administrator->value) {
             abort(403);
         }
 

@@ -41,7 +41,7 @@ class SetupChecklist
      */
     public function summaryFor(User $user, RoleAssignment $assignment): ?array
     {
-        $checklist = match ($assignment->role->codigo) {
+        $checklist = match ($assignment->role->codigo_rol) {
             RoleCode::Administrator->value => $this->forAdministrator(),
             RoleCode::Coordinator->value => $this->forCoordinator($assignment->carrera_id),
             RoleCode::Teacher->value => $this->forTeacher($user, $assignment->carrera_id),
@@ -62,7 +62,7 @@ class SetupChecklist
         $careerCount = (clone $careers)->count();
         $accounts = User::query()->where('activo', true)->whereHas('roleAssignments', fn (Builder $query) => $query
             ->where('activo', true)
-            ->whereHas('role', fn (Builder $role) => $role->where('codigo', '!=', 'administrador')))->count();
+            ->whereHas('role', fn (Builder $role) => $role->where('codigo_rol', '!=', 'administrador')))->count();
 
         return $this->build(
             'Puesta en marcha de la institución',

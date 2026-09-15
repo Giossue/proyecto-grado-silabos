@@ -45,8 +45,8 @@ class HandleInertiaRequests extends Middleware
             ? $activeRole->eligible($user)
                 ->map(fn ($assignment) => [
                     'id' => $assignment->id,
-                    'role' => $assignment->role->codigo,
-                    'role_name' => $assignment->role->nombre,
+                    'role' => $assignment->role->codigo_rol,
+                    'role_name' => $assignment->role->nombre_rol,
                     'career_id' => $assignment->carrera_id,
                     'career_name' => $assignment->career?->nombre,
                 ])

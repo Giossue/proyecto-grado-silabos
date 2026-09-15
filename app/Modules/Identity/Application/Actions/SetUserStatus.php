@@ -65,13 +65,13 @@ class SetUserStatus
         $isAdministrator = RoleAssignment::query()
             ->effective()
             ->where('usuario_id', $target->id)
-            ->whereHas('role', fn ($query) => $query->where('codigo', RoleCode::Administrator->value))
+            ->whereHas('role', fn ($query) => $query->where('codigo_rol', RoleCode::Administrator->value))
             ->exists();
         if ($isAdministrator) {
             $otherAdministrators = RoleAssignment::query()
                 ->effective()
                 ->where('usuario_id', '!=', $target->id)
-                ->whereHas('role', fn ($query) => $query->where('codigo', RoleCode::Administrator->value))
+                ->whereHas('role', fn ($query) => $query->where('codigo_rol', RoleCode::Administrator->value))
                 ->whereHas('user', fn ($query) => $query->where('activo', true))
                 ->exists();
             if (! $otherAdministrators) {

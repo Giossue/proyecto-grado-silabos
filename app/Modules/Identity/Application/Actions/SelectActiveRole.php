@@ -22,7 +22,7 @@ class SelectActiveRole
         $assignment = RoleAssignment::query()
             ->effective()
             ->where('usuario_id', $user->id)
-            ->with(['role:id,codigo,nombre', 'career:id,nombre'])
+            ->with(['role:id,codigo_rol,nombre_rol', 'career:id,nombre'])
             ->find($assignmentId);
 
         if ($assignment === null || ! $this->roles->isEligible($assignment)) {
@@ -37,7 +37,7 @@ class SelectActiveRole
                 resourceType: 'asignacion_rol',
                 resourceId: $assignment->id,
                 result: 'exito',
-                metadata: ['role' => $assignment->role->codigo],
+                metadata: ['role' => $assignment->role->codigo_rol],
                 correlationId: $request->attributes->getString('correlation_id') ?: null,
             );
 

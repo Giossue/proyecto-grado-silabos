@@ -28,10 +28,10 @@ class SyllabusPolicy
         if (! $user->activo || $activeRole === null) {
             return false;
         }
-        if ($activeRole->role->codigo === RoleCode::Coordinator->value) {
+        if ($activeRole->role->codigo_rol === RoleCode::Coordinator->value) {
             return $activeRole->carrera_id === $syllabus->convocation()->value('carrera_id');
         }
-        if ($activeRole->role->codigo !== RoleCode::Teacher->value
+        if ($activeRole->role->codigo_rol !== RoleCode::Teacher->value
             || $activeRole->carrera_id !== $syllabus->convocation()->value('carrera_id')) {
             return false;
         }
@@ -83,7 +83,7 @@ class SyllabusPolicy
         $activeRole = $this->roles->resolve(request());
 
         return $user->activo
-            && $activeRole?->role->codigo === RoleCode::Coordinator->value
+            && $activeRole?->role->codigo_rol === RoleCode::Coordinator->value
             && $activeRole->carrera_id === $syllabus->convocation()->value('carrera_id');
     }
 
@@ -92,7 +92,7 @@ class SyllabusPolicy
         $activeRole = $this->roles->resolve(request());
 
         return $user->activo
-            && $activeRole?->role->codigo === RoleCode::Teacher->value
+            && $activeRole?->role->codigo_rol === RoleCode::Teacher->value
             && $activeRole->carrera_id === $syllabus->convocation()->value('carrera_id')
             // En curso: abierta por la carrera y con el proceso institucional abierto. Una
             // pausa en cualquiera de los dos niveles detiene la edición.

@@ -44,7 +44,7 @@ class CareerTeacherTest extends TestCase
         $this->assertTrue($user->debe_cambiar_contrasena);
         $this->assertSame(1, $user->roleAssignments()->count());
         $assignment = $user->roleAssignments()->firstOrFail();
-        $this->assertSame('docente', $assignment->role->codigo);
+        $this->assertSame('docente', $assignment->role->codigo_rol);
         $this->assertSame($this->context->carrera_id, $assignment->carrera_id);
         $this->get(route('coordination.academic.teacher-assignments.index'))->assertOk()
             ->assertInertia(fn (Assert $page) => $page

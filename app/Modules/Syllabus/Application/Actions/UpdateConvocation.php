@@ -29,7 +29,7 @@ class UpdateConvocation
     public function execute(Convocation $convocation, array $data, User $actor, Request $request): Convocation
     {
         $activeRole = $this->roles->resolve($request);
-        if ($activeRole?->role->codigo !== RoleCode::Coordinator->value
+        if ($activeRole?->role->codigo_rol !== RoleCode::Coordinator->value
             || $activeRole->carrera_id !== $convocation->carrera_id) {
             abort(403);
         }

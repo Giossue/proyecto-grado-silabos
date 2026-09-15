@@ -25,7 +25,7 @@ final class SaveFacultyLogo
     {
         $activeRole = $this->roles->resolve($request);
         abort_unless(
-            $activeRole?->role->codigo === RoleCode::Coordinator->value
+            $activeRole?->role->codigo_rol === RoleCode::Coordinator->value
                 && is_string($activeRole->carrera_id),
             403,
         );
