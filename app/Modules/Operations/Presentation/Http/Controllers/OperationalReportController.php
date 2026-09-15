@@ -72,7 +72,7 @@ class OperationalReportController extends Controller
         $detail = (clone $query)
             ->with([
                 'convocation.process.academicPeriod:id,codigo',
-                'subject:id,nombre,codigo_institucional',
+                'subject:id,nombre,codigo_asignatura',
                 'teachers:id,nombre',
                 'revisions' => fn ($revision) => $revision->orderByDesc('numero_revision')->limit(1),
             ])
@@ -84,7 +84,7 @@ class OperationalReportController extends Controller
             ->through(fn (Syllabus $syllabus): array => [
                 'id' => $syllabus->id,
                 'subject' => $syllabus->subject->nombre,
-                'code' => $syllabus->subject->codigo_institucional,
+                'code' => $syllabus->subject->codigo_asignatura,
                 'convocation' => $syllabus->convocation->nombre,
                 'period' => $syllabus->convocation->process->academicPeriod->codigo,
                 'state' => $syllabus->estado,
@@ -131,7 +131,7 @@ class OperationalReportController extends Controller
             $escaped = addcslashes($search, '%_\\');
             $query->whereHas('subject', fn ($subject) => $subject
                 ->where('nombre', 'ilike', "%{$escaped}%")
-                ->orWhere('codigo_institucional', 'ilike', "%{$escaped}%"));
+                ->orWhere('codigo_asignatura', 'ilike', "%{$escaped}%"));
         }
 
         return $query;

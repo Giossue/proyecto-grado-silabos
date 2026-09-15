@@ -74,8 +74,14 @@ const submitLabel = computed(
         })[props.entity],
 );
 
-const codeLabel = computed(() =>
-    props.entity === 'periodo' ? 'Código estable' : 'Código institucional',
+const codeLabel = computed(
+    () =>
+        ({
+            facultad: 'Código de facultad',
+            carrera: 'Código de carrera',
+            campus: 'Código de campus',
+            periodo: 'Código estable',
+        })[props.entity],
 );
 
 const examples = computed(

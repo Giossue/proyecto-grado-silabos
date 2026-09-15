@@ -72,7 +72,7 @@ class ManagedUserUpdateTest extends TestCase
 
     public function test_an_administrator_adds_a_role_in_the_same_save(): void
     {
-        $career = Career::query()->where('codigo_institucional', 'SOFTWARE')->firstOrFail();
+        $career = Career::query()->where('codigo_carrera', 'SOFTWARE')->firstOrFail();
         $previousAssignmentId = $this->coordinator->roleAssignments()->firstOrFail()->id;
 
         $this->actingAsAdministrator()
@@ -181,7 +181,7 @@ class ManagedUserUpdateTest extends TestCase
 
     public function test_a_deactivation_closes_a_mandate_granted_in_the_same_save(): void
     {
-        $career = Career::query()->where('codigo_institucional', 'SOFTWARE')->firstOrFail();
+        $career = Career::query()->where('codigo_carrera', 'SOFTWARE')->firstOrFail();
 
         // La carrera solo admite una coordinación activa: se retira antes a quien la ejerce.
         $this->actingAsAdministrator()

@@ -26,7 +26,7 @@ class DocumentController extends Controller
     {
         $revision->load([
             'approval.approver:id,nombre',
-            'syllabus.subject:id,nombre,codigo_institucional',
+            'syllabus.subject:id,nombre,codigo_asignatura',
             'syllabus.convocation.process.academicPeriod:id,codigo',
         ]);
         abort_unless($revision->approval !== null, 404);

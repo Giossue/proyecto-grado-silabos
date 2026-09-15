@@ -85,7 +85,7 @@ class ConvocationController extends Controller
         abort_unless($request->user()?->can('view', $convocation) === true, 403);
         $convocation->load(['career', 'sources', 'deadlines', 'process.academicPeriod', 'process.template']);
         $syllabi = $convocation->syllabi()
-            ->with(['subject:id,nombre,codigo_institucional', 'scopes.parallel:id,codigo', 'teachers:id,nombre'])
+            ->with(['subject:id,nombre,codigo_asignatura', 'scopes.parallel:id,codigo', 'teachers:id,nombre'])
             ->orderBy('asignatura_id')->get();
 
         return Inertia::render('Coordination/Convocations/Show', [

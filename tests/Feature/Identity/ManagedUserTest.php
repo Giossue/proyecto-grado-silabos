@@ -91,7 +91,7 @@ class ManagedUserTest extends TestCase
 
     public function test_the_list_filters_by_role_career_and_state(): void
     {
-        $career = Career::query()->where('codigo_institucional', 'SOFTWARE')->firstOrFail();
+        $career = Career::query()->where('codigo_carrera', 'SOFTWARE')->firstOrFail();
 
         // Por rol: solo quien lo tenga vigente.
         $this->actingAsAdministrator()
@@ -181,7 +181,7 @@ class ManagedUserTest extends TestCase
 
     public function test_administrator_creates_user_with_scoped_role_and_audit_event(): void
     {
-        $career = Career::query()->where('codigo_institucional', 'SOFTWARE')->firstOrFail();
+        $career = Career::query()->where('codigo_carrera', 'SOFTWARE')->firstOrFail();
 
         $this->actingAsAdministrator()
             ->post(route('admin.users.store'), [
@@ -229,7 +229,7 @@ class ManagedUserTest extends TestCase
     public function test_granting_a_coordination_opens_its_mandate(): void
     {
         $teacher = User::query()->where('correo_electronico', 'docente@silabos.test')->firstOrFail();
-        $career = Career::query()->where('codigo_institucional', 'SOFTWARE')->firstOrFail();
+        $career = Career::query()->where('codigo_carrera', 'SOFTWARE')->firstOrFail();
 
         // Con la carrera ya coordinada, la concesión se rechaza y lo dice.
         $this->actingAsAdministrator()
@@ -273,7 +273,7 @@ class ManagedUserTest extends TestCase
     public function test_administrator_assigns_an_additional_role_without_overwriting_history(): void
     {
         $teacher = User::query()->where('correo_electronico', 'docente@silabos.test')->firstOrFail();
-        $career = Career::query()->where('codigo_institucional', 'SOFTWARE')->firstOrFail();
+        $career = Career::query()->where('codigo_carrera', 'SOFTWARE')->firstOrFail();
         $previousAssignmentId = $teacher->roleAssignments()->firstOrFail()->id;
 
         // Conceder la coordinación abre el nombramiento, y la base no admite dos activos
@@ -310,7 +310,7 @@ class ManagedUserTest extends TestCase
         $originalAssignment = $coordinator->roleAssignments()->firstOrFail();
         $secondCareer = Career::query()->create([
             'facultad_id' => Career::query()->firstOrFail()->facultad_id,
-            'codigo_institucional' => 'CARR-SEGUNDA-COORDINACION',
+            'codigo_carrera' => 'CARR-SEGUNDA-COORDINACION',
             'nombre' => 'Segunda carrera coordinada',
             'activo' => true,
         ]);
@@ -465,7 +465,7 @@ class ManagedUserTest extends TestCase
 
     private function pendingTeacher(string $email = 'pendiente@silabos.test'): User
     {
-        $career = Career::query()->where('codigo_institucional', 'SOFTWARE')->firstOrFail();
+        $career = Career::query()->where('codigo_carrera', 'SOFTWARE')->firstOrFail();
         $this->actingAsAdministrator()
             ->post(route('admin.users.store'), [
                 'nombre' => 'Docente Pendiente',
@@ -482,7 +482,7 @@ class ManagedUserTest extends TestCase
     /** I-39: archivar nunca deja la institución sin administración ni un paralelo a nombre de quien se fue. */
     public function test_the_last_administrator_cannot_be_archived_and_archiving_closes_teacher_assignments(): void
     {
-        $career = Career::query()->where('codigo_institucional', 'SOFTWARE')->firstOrFail();
+        $career = Career::query()->where('codigo_carrera', 'SOFTWARE')->firstOrFail();
         $secondAdmin = User::query()->create(['nombre' => 'Segunda Admin', 'correo_electronico' => 'admin2@silabos.test', 'contrasena' => 'Temporal-2026!', 'activo' => true]);
         RoleAssignment::query()->create([
             'usuario_id' => $secondAdmin->id,
@@ -511,7 +511,7 @@ class ManagedUserTest extends TestCase
 
     public function test_archiving_a_teacher_without_syllabi_in_progress_closes_its_assignments(): void
     {
-        $career = Career::query()->where('codigo_institucional', 'SOFTWARE')->firstOrFail();
+        $career = Career::query()->where('codigo_carrera', 'SOFTWARE')->firstOrFail();
         // Un docente con paralelos pero sin sílabos en curso se archiva y sus asignaciones se cierran.
         $teacher = User::query()->where('correo_electronico', 'docente@silabos.test')->firstOrFail();
         $this->assertTrue(TeacherAssignment::query()->forUser($teacher->id)->where('activo', true)->exists());

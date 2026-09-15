@@ -32,7 +32,7 @@ class TemporaryPasswordTest extends TestCase
 
     public function test_an_account_created_by_an_administrator_is_born_with_a_temporary_password(): void
     {
-        $career = Career::query()->where('codigo_institucional', 'SOFTWARE')->firstOrFail();
+        $career = Career::query()->where('codigo_carrera', 'SOFTWARE')->firstOrFail();
         $context = $this->administrator->roleAssignments()->firstOrFail();
 
         $this->actingAs($this->administrator)
@@ -54,7 +54,7 @@ class TemporaryPasswordTest extends TestCase
     public function test_the_user_list_shows_which_accounts_have_never_been_used(): void
     {
         $career = Career::query()
-            ->where('codigo_institucional', 'SOFTWARE')->firstOrFail();
+            ->where('codigo_carrera', 'SOFTWARE')->firstOrFail();
         $context = $this->administrator->roleAssignments()->firstOrFail();
 
         $this->actingAs($this->administrator)

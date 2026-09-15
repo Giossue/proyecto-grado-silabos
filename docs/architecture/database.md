@@ -19,6 +19,10 @@
   futuro una auditoría automática mediante triggers requiere una decisión y migración
   separadas.
 - tablas/columnas: plural y `snake_case`;
+- los códigos de negocio que se repiten entre entidades se nombran con la entidad que
+  identifican: `codigo_facultad`, `codigo_campus`, `codigo_carrera` y
+  `codigo_asignatura`. No se usa `codigo_institucional`, pues no identifica qué entidad
+  está codificada;
 - claves primarias internas: UUID generados por aplicación;
 - claves foráneas e índices explícitos;
 - tiempo: `timestamptz` en UTC; la conexión fija `DB_TIMEZONE=UTC` y la conversión a
@@ -186,7 +190,7 @@ Como mínimo, prueba/define:
 - filtros frecuentes por convocatoria, estado, asignación, plazo y fecha;
 - búsquedas de auditoría por recurso/actor/tiempo;
 - una sola malla actual por carrera mediante índice parcial único;
-- código institucional único por malla y datos académicos tipados por asignatura;
+- código de asignatura único dentro de su malla y datos académicos tipados por asignatura;
 - colas/outbox por estado y próximo intento.
 
 Usa índices parciales o constraints de exclusión PostgreSQL cuando expresen mejor la

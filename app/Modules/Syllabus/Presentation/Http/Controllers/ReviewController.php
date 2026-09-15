@@ -46,7 +46,7 @@ class ReviewController extends Controller
             ->whereHas('revisions')
             ->with([
                 'convocation.process.academicPeriod:id,codigo',
-                'subject:id,nombre,codigo_institucional',
+                'subject:id,nombre,codigo_asignatura',
                 'teachers:id,nombre',
                 'revisions' => fn ($revision) => $revision
                     ->orderByDesc('numero_revision')
@@ -62,7 +62,7 @@ class ReviewController extends Controller
             $escaped = addcslashes($search, '%_\\');
             $query->whereHas('subject', fn ($subject) => $subject
                 ->where('nombre', 'ilike', "%{$escaped}%")
-                ->orWhere('codigo_institucional', 'ilike', "%{$escaped}%"));
+                ->orWhere('codigo_asignatura', 'ilike', "%{$escaped}%"));
         }
 
         return Inertia::render('Coordination/Reviews/Index', [

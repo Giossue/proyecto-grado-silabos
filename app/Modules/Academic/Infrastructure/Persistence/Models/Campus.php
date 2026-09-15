@@ -14,5 +14,5 @@ class Campus extends Model
     protected $table = 'campus';
 
     /** @var list<string> */
-    protected $fillable = ['codigo_institucional', 'nombre', 'activo'];
+    protected $fillable = ['codigo_campus', 'nombre', 'activo'];
 }

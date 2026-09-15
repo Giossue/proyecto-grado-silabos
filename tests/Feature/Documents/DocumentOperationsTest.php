@@ -181,7 +181,7 @@ class DocumentOperationsTest extends TestCase
 
         $input = new DocumentRenderInput(
             subject: $syllabus->subject()->valueOrFail('nombre'),
-            subjectCode: $syllabus->subject()->valueOrFail('codigo_institucional'),
+            subjectCode: $syllabus->subject()->valueOrFail('codigo_asignatura'),
             academicPeriod: $syllabus->convocation->process->academicPeriod()->valueOrFail('codigo'),
             revisionNumber: $revision->numero_revision,
             revisionFingerprint: $revision->huella_sha256,
@@ -505,7 +505,7 @@ class DocumentOperationsTest extends TestCase
         $faculty = Faculty::query()->firstOrFail();
         $career = Career::query()->create([
             'facultad_id' => $faculty->id,
-            'codigo_institucional' => 'OTRA-CP-F',
+            'codigo_carrera' => 'OTRA-CP-F',
             'nombre' => 'Otra carrera CP-F',
             'activo' => true,
         ]);
@@ -516,7 +516,7 @@ class DocumentOperationsTest extends TestCase
         ]);
         $subject = Subject::query()->create([
             'malla_id' => $curriculum->id,
-            'codigo_institucional' => 'OTRA-101',
+            'codigo_asignatura' => 'OTRA-101',
             'nombre' => 'Asignatura fuera de alcance',
             'activo' => true,
         ]);

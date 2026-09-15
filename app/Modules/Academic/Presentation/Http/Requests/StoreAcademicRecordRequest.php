@@ -144,7 +144,11 @@ class StoreAcademicRecordRequest extends FormRequest
     private function namedCatalogRules(string $table, int $nameLength): array
     {
         return [
-            'code' => ['nullable', 'string', 'max:80', Rule::unique($table, 'codigo_institucional')],
+            'code' => ['nullable', 'string', 'max:80', Rule::unique($table, match ($table) {
+                'facultades' => 'codigo_facultad',
+                'campus' => 'codigo_campus',
+                'carreras' => 'codigo_carrera',
+            })],
             'nombre' => ['required', 'string', "max:{$nameLength}"],
         ];
     }
@@ -174,7 +178,7 @@ class StoreAcademicRecordRequest extends FormRequest
                 'required',
                 'string',
                 'max:80',
-                $this->uniqueWithin('asignaturas', 'codigo_institucional', 'malla_id', 'curriculum_id'),
+                $this->uniqueWithin('asignaturas', 'codigo_asignatura', 'malla_id', 'curriculum_id'),
             ],
             'nombre' => ['required', 'string', 'max:180'],
             'cycle' => ['required', 'integer', 'min:1', 'max:30'],

@@ -54,7 +54,7 @@ const facultyName = (facultyId: string): string =>
 
 const facultyFilter = useClientFilter(
     () => props.catalogs.faculties,
-    (item) => [item.nombre, item.codigo_institucional, item.codigo],
+    (item) => [item.nombre, item.codigo_facultad, item.codigo],
     {
         estado: {
             matches: (item, value) => item.activo === (value === 'active'),
@@ -84,7 +84,7 @@ const {
 } = useClientPagination(() => careerFilter.items.value);
 const campusFilter = useClientFilter(
     () => props.catalogs.campuses,
-    (item) => [item.nombre, item.codigo_institucional, item.codigo],
+    (item) => [item.nombre, item.codigo_campus, item.codigo],
     {
         estado: {
             matches: (item, value) => item.activo === (value === 'active'),
@@ -148,7 +148,7 @@ const {
                 <TableHeader>
                     <TableRow>
                         <TableHead>Facultad</TableHead>
-                        <TableHead>Código institucional</TableHead>
+                        <TableHead>Código de facultad</TableHead>
                         <TableHead>Carreras relacionadas</TableHead>
                         <TableHead>Estado</TableHead>
                         <TableHead class="text-right">Acciones</TableHead>
@@ -171,8 +171,8 @@ const {
                         </TableCell>
                         <TableCell>
                             {{
-                                faculty.codigo_institucional ||
-                                'Sin código institucional'
+                                faculty.codigo_facultad ||
+                                'Sin código de facultad'
                             }}
                         </TableCell>
                         <TableCell>
@@ -186,9 +186,7 @@ const {
                                 entity="facultad"
                                 :record-id="faculty.id"
                                 :record-name="faculty.nombre"
-                                :record-code="
-                                    faculty.codigo_institucional ?? null
-                                "
+                                :record-code="faculty.codigo_facultad ?? null"
                                 :active="faculty.activo"
                                 :logo-url="faculty.logo_url"
                                 :faculties="catalogs.faculties"
@@ -249,7 +247,7 @@ const {
                         <TableHead>Modalidad</TableHead>
                         <TableHead>Campus</TableHead>
                         <TableHead>Coordinación</TableHead>
-                        <TableHead>Código institucional</TableHead>
+                        <TableHead>Código de campus</TableHead>
                         <TableHead>Estado</TableHead>
                         <TableHead class="text-right">Acciones</TableHead>
                     </TableRow>
@@ -282,7 +280,7 @@ const {
                             {{ career.coordinator?.name ?? 'Sin coordinador' }}
                         </TableCell>
                         <TableCell>
-                            {{ career.code || 'Sin código institucional' }}
+                            {{ career.code || 'Sin código de carrera' }}
                         </TableCell>
                         <TableCell>
                             {{ career.active ? 'Activa' : 'Inactiva' }}
@@ -354,7 +352,7 @@ const {
                 <TableHeader>
                     <TableRow>
                         <TableHead>Campus</TableHead>
-                        <TableHead>Código institucional</TableHead>
+                        <TableHead>Código de campus</TableHead>
                         <TableHead>Estado</TableHead>
                         <TableHead class="text-right">Acciones</TableHead>
                     </TableRow>
@@ -375,10 +373,7 @@ const {
                             {{ campus.nombre }}
                         </TableCell>
                         <TableCell>
-                            {{
-                                campus.codigo_institucional ||
-                                'Sin código institucional'
-                            }}
+                            {{ campus.codigo_campus || 'Sin código de campus' }}
                         </TableCell>
                         <TableCell>
                             {{ campus.activo ? 'Activo' : 'Inactivo' }}
@@ -388,9 +383,7 @@ const {
                                 entity="campus"
                                 :record-id="campus.id"
                                 :record-name="campus.nombre"
-                                :record-code="
-                                    campus.codigo_institucional ?? null
-                                "
+                                :record-code="campus.codigo_campus ?? null"
                                 :active="campus.activo"
                                 :faculties="catalogs.faculties"
                                 :lock-reason="lock_reason"

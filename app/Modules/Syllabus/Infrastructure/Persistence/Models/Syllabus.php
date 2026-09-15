@@ -66,7 +66,7 @@ class Syllabus extends Model
     {
         $code = data_get($this->contexto_academico, 'subject.code');
 
-        return is_string($code) ? $code : $this->subject->codigo_institucional;
+        return is_string($code) ? $code : $this->subject->codigo_asignatura;
     }
 
     /** @return BelongsTo<Convocation, $this> */

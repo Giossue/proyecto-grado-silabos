@@ -246,7 +246,7 @@ class ActiveRoleTest extends TestCase
     {
         $career = Career::query()->create([
             'facultad_id' => Faculty::query()->firstOrFail()->id,
-            'codigo_institucional' => 'CARR-SEGUNDO-ROL',
+            'codigo_carrera' => 'CARR-SEGUNDO-ROL',
             'nombre' => 'Carrera para segundo rol',
             'activo' => true,
         ]);

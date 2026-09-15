@@ -38,7 +38,7 @@ defineProps<{
         configurable: boolean;
     };
     template: string | null;
-    periods: { id: string; nombre: string }[];
+    periods: { id: string; codigo: string }[];
 }>();
 
 const editOpen = ref(false);

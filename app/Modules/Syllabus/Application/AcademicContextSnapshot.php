@@ -21,7 +21,7 @@ class AcademicContextSnapshot
         $career = $curriculum->career;
         $requirementCodes = fn (string $type): array => $subject->requirements
             ->where('tipo', $type)
-            ->map(fn (SubjectRequirement $requirement): string => $requirement->requirement->codigo_institucional)
+            ->map(fn (SubjectRequirement $requirement): string => $requirement->requirement->codigo_asignatura)
             ->sort()
             ->values()
             ->all();
@@ -31,7 +31,7 @@ class AcademicContextSnapshot
             // La ficha de identificación (I-34) sale de aquí: carrera, facultad y requisitos.
             'career' => [
                 'id' => $career->id,
-                'code' => $career->codigo_institucional,
+                'code' => $career->codigo_carrera,
                 'name' => $career->nombre,
                 'faculty' => $career->faculty?->nombre,
                 'faculty_id' => $career->facultad_id,
@@ -43,7 +43,7 @@ class AcademicContextSnapshot
             ],
             'subject' => [
                 'id' => $subject->id,
-                'code' => $subject->codigo_institucional,
+                'code' => $subject->codigo_asignatura,
                 'name' => $subject->nombre,
                 'cycle' => $subject->ciclo,
                 'position' => $subject->orden_en_ciclo,

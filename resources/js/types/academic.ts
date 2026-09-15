@@ -5,7 +5,10 @@ export type Option = {
     label?: string;
     code?: string;
     codigo?: string;
-    codigo_institucional?: string;
+    codigo_facultad?: string;
+    codigo_campus?: string;
+    codigo_carrera?: string;
+    codigo_asignatura?: string;
     email?: string;
     correo_electronico?: string;
     starts_on?: string;
@@ -22,7 +25,8 @@ export type Option = {
 
 export type CatalogRecord = {
     id: string;
-    codigo_institucional?: string | null;
+    codigo_facultad?: string | null;
+    codigo_campus?: string | null;
     codigo?: string | null;
     nombre: string;
     activo: boolean;

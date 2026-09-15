@@ -22,7 +22,7 @@ class InheritMasterValues
         foreach ($fields->where('heredado', true) as $field) {
             $value = match ($field->origen_maestro) {
                 'asignaturas' => [
-                    'codigo' => $scheduledSubject->subject->codigo_institucional,
+                    'codigo' => $scheduledSubject->subject->codigo_asignatura,
                     'nombre' => $scheduledSubject->subject->nombre,
                     'ciclo' => $scheduledSubject->subject->ciclo,
                     'creditos' => $scheduledSubject->subject->creditos,

@@ -237,7 +237,7 @@ class ReviewWorkflowTest extends TestCase
 
         $career = Career::query()->create([
             'facultad_id' => Career::query()->firstOrFail()->facultad_id,
-            'codigo_institucional' => 'OTRA-CARRERA',
+            'codigo_carrera' => 'OTRA-CARRERA',
             'nombre' => 'Otra carrera',
             'activo' => true,
         ]);

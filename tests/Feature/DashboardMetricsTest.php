@@ -182,7 +182,7 @@ class DashboardMetricsTest extends TestCase
     {
         return Career::query()->create([
             'facultad_id' => Faculty::query()->firstOrFail()->id,
-            'codigo_institucional' => 'CARR-AJENA',
+            'codigo_carrera' => 'CARR-AJENA',
             'nombre' => 'Carrera ajena',
             'activo' => true,
         ]);

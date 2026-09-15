@@ -15,7 +15,7 @@ class Faculty extends Model
     protected $table = 'facultades';
 
     /** @var list<string> */
-    protected $fillable = ['codigo_institucional', 'nombre', 'logo_ruta', 'activo'];
+    protected $fillable = ['codigo_facultad', 'nombre', 'logo_ruta', 'activo'];
 
     /** @return HasMany<Career, $this> */
     public function careers(): HasMany

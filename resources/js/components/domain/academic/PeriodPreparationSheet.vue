@@ -115,7 +115,7 @@ const formError = computed(
 const reset = (): void => {
     rows.value = props.options.activeSubjects.map((subject) => ({
         id: subject.id,
-        code: subject.codigo_institucional ?? subject.code ?? 'Sin código',
+        code: subject.codigo_asignatura ?? subject.code ?? 'Sin código',
         name: subject.nombre ?? subject.name ?? 'Materia sin nombre',
         selected: false,
         parallels: [{ code: 'A', shift: '' }],

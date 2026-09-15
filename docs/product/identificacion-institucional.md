@@ -33,7 +33,7 @@ Word de identificación) se conservan para sílabos y revisiones anteriores sin 
 | Ciclo | `cycle` | `asignaturas.ciclo` (número → «Séptimo») |
 | Paralelo | `parallel` | `paralelos.codigo` de los alcances del expediente (`alcances_silabo`) |
 | Jornada | `shift` | `paralelos.jornada` (matutina, vespertina, nocturna) |
-| Código | `code` | `asignaturas.codigo_institucional` |
+| Código | `code` | `asignaturas.codigo_asignatura` |
 | Prerrequisitos | `prerequisites` | `requisitos_asignatura` con `tipo = prerrequisito` → código de la materia requerida |
 | Correquisitos | `corequisites` | `requisitos_asignatura` con `tipo = correquisito` |
 | Unidad de organización curricular | `organization_unit` | `asignaturas.unidad_organizacion_curricular`; marca X en Básica, Profesional o Titulación |

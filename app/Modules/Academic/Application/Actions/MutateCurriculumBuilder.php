@@ -167,7 +167,7 @@ class MutateCurriculumBuilder
                 ->delete();
             $metadata = [
                 'curriculum_id' => $curriculum->id,
-                'code' => $subject->codigo_institucional,
+                'code' => $subject->codigo_asignatura,
                 'name' => $subject->nombre,
             ];
             $subject->delete();

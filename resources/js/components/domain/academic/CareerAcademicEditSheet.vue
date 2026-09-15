@@ -225,7 +225,7 @@ const planningPeriods = computed(() =>
                                             v-for="item in options.activeSubjects"
                                             :key="item.id"
                                             :value="item.id"
-                                            >{{ item.codigo_institucional }} ·
+                                            >{{ item.codigo_asignatura }} ·
                                             {{ item.nombre }}</SelectItem
                                         >
                                     </SelectGroup></SelectContent

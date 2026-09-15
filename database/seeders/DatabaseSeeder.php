@@ -43,15 +43,15 @@ class DatabaseSeeder extends Seeder
             });
 
             $faculty = Faculty::query()->firstOrCreate(
-                ['codigo_institucional' => 'FICAYA'],
+                ['codigo_facultad' => 'FICAYA'],
                 ['nombre' => 'Facultad de Ciencias de la Ingeniería', 'activo' => true],
             );
             $campus = Campus::query()->firstOrCreate(
-                ['codigo_institucional' => 'MATRIZ'],
+                ['codigo_campus' => 'MATRIZ'],
                 ['nombre' => 'Campus Matriz', 'activo' => true],
             );
             $career = Career::query()->firstOrCreate(
-                ['codigo_institucional' => 'SOFTWARE'],
+                ['codigo_carrera' => 'SOFTWARE'],
                 ['facultad_id' => $faculty->id, 'modalidad' => StudyModality::Presencial, 'campus_id' => $campus->id, 'nombre' => 'Software', 'activo' => true],
             );
             $period = AcademicPeriod::query()->firstOrCreate(
@@ -69,7 +69,7 @@ class DatabaseSeeder extends Seeder
                 ],
             );
             $subject = Subject::query()->firstOrCreate(
-                ['malla_id' => $curriculum->id, 'codigo_institucional' => 'SW-601'],
+                ['malla_id' => $curriculum->id, 'codigo_asignatura' => 'SW-601'],
                 [
                     'nombre' => 'Arquitectura de Software',
                     'ciclo' => 6,

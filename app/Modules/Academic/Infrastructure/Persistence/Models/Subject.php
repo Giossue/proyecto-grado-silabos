@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * @property string $id
- * @property string $codigo_institucional
+ * @property string $codigo_asignatura
  * @property string $nombre
  * @property int|null $ciclo
  * @property int $orden_en_ciclo
@@ -39,7 +39,7 @@ class Subject extends Model
     /** @var list<string> */
     protected $fillable = [
         'malla_id',
-        'codigo_institucional',
+        'codigo_asignatura',
         'nombre',
         'ciclo',
         'orden_en_ciclo',

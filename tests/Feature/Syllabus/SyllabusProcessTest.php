@@ -435,7 +435,7 @@ class SyllabusProcessTest extends TestCase
                 'nombre' => 'Campus no permitido durante el proceso',
             ])
             ->assertSessionHasErrors('process');
-        $this->assertDatabaseMissing('campus', ['codigo_institucional' => 'NUEVO-EN-CURSO']);
+        $this->assertDatabaseMissing('campus', ['codigo_campus' => 'NUEVO-EN-CURSO']);
 
         // Pausar solo la convocatoria libera exclusivamente a esa carrera.
         $this->actingAsCoordinator()
@@ -461,7 +461,7 @@ class SyllabusProcessTest extends TestCase
             ])
             ->assertRedirect()
             ->assertSessionHasNoErrors();
-        $this->assertDatabaseHas('campus', ['codigo_institucional' => 'NUEVO-EN-PAUSA']);
+        $this->assertDatabaseHas('campus', ['codigo_campus' => 'NUEVO-EN-PAUSA']);
     }
 
     public function test_teachers_stop_working_while_the_career_or_the_institution_is_paused(): void

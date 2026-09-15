@@ -33,8 +33,9 @@ class UpdateCareerAcademicRecord
 {
     /** @var array<string, string> */
     private const FIELD_LABELS = [
-        'codigo' => 'Código',
-        'codigo_institucional' => 'Código',
+        'codigo' => 'Código de malla',
+        'codigo_asignatura' => 'Código de asignatura',
+        'codigo_paralelo' => 'Código de paralelo',
         'nombre' => 'Nombre',
         'ciclo' => 'Ciclo',
         'orden_en_ciclo' => 'Orden dentro del ciclo',
@@ -59,7 +60,8 @@ class UpdateCareerAcademicRecord
     /** @var array<string, string> */
     private const AUDIT_KEYS = [
         'codigo' => 'code',
-        'codigo_institucional' => 'code',
+        'codigo_asignatura' => 'code',
+        'codigo_paralelo' => 'code',
         'nombre' => 'name',
         'ciclo' => 'cycle',
         'orden_en_ciclo' => 'position',
@@ -216,7 +218,7 @@ class UpdateCareerAcademicRecord
         }
 
         $attributes = [
-            'codigo_institucional' => $data['code'],
+            'codigo_asignatura' => $data['code'],
             'nombre' => $data['nombre'],
             'ciclo' => $data['cycle'] ?? null,
             'modalidad' => $this->inheritance->subjectModality($data),

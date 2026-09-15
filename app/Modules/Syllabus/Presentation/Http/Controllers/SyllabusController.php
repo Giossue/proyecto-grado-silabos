@@ -67,7 +67,7 @@ class SyllabusController extends Controller
                             ->whereRaw('codigo ILIKE ?', ["%{$term}%"])),
                 ))
                 ->when($state, fn ($query, string $value) => $query->where('estado', $value))
-                ->with(['convocation:id,carrera_id,proceso_id', 'convocation.career:id,nombre', 'convocation.process:id,periodo_academico_id', 'convocation.process.academicPeriod:id,codigo', 'subject:id,nombre,codigo_institucional', 'scopes.parallel:id,codigo'])
+                ->with(['convocation:id,carrera_id,proceso_id', 'convocation.career:id,nombre', 'convocation.process:id,periodo_academico_id', 'convocation.process.academicPeriod:id,codigo', 'subject:id,nombre,codigo_asignatura', 'scopes.parallel:id,codigo'])
                 ->orderByRaw('guardado_en DESC NULLS LAST')
                 ->paginate(15)
                 ->withQueryString()

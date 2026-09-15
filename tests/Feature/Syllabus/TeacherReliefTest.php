@@ -189,7 +189,7 @@ class TeacherReliefTest extends TestCase
 
     private function createTeacher(string $email): User
     {
-        $career = Career::query()->where('codigo_institucional', 'SOFTWARE')->firstOrFail();
+        $career = Career::query()->where('codigo_carrera', 'SOFTWARE')->firstOrFail();
         $user = User::query()->create(['nombre' => 'Docente Suplente', 'correo_electronico' => $email, 'contrasena' => 'Temporal-2026!', 'activo' => true]);
         RoleAssignment::query()->create([
             'usuario_id' => $user->id,

@@ -61,7 +61,11 @@ class UpdateAcademicRecordRequest extends FormRequest
                 'nullable',
                 'string',
                 'max:80',
-                Rule::unique($table, 'codigo_institucional')->ignore($this->recordId()),
+                Rule::unique($table, match ($table) {
+                    'facultades' => 'codigo_facultad',
+                    'campus' => 'codigo_campus',
+                    'carreras' => 'codigo_carrera',
+                })->ignore($this->recordId()),
             ],
             'nombre' => ['required', 'string', "max:{$nameLength}"],
         ];

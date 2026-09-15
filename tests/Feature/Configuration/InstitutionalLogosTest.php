@@ -75,7 +75,7 @@ class InstitutionalLogosTest extends TestCase
             ->assertRedirect()
             ->assertSessionHasNoErrors();
         $this->assertDatabaseHas('facultades', [
-            'codigo_institucional' => 'FAC-SL',
+            'codigo_facultad' => 'FAC-SL',
             'logo_ruta' => null,
         ]);
 
@@ -88,13 +88,13 @@ class InstitutionalLogosTest extends TestCase
             ->assertRedirect()
             ->assertSessionHasNoErrors();
 
-        $faculty = Faculty::query()->where('codigo_institucional', 'FAC-CL')->firstOrFail();
+        $faculty = Faculty::query()->where('codigo_facultad', 'FAC-CL')->firstOrFail();
         $this->assertSame("logos/facultades/{$faculty->id}.png", $faculty->logo_ruta);
         $this->assertStoredPngHasSize($faculty->logo_ruta, 600, 180);
         $this->get(route('logos.faculty', $faculty))->assertOk()->assertHeader('Content-Type', 'image/png');
 
         // Sin subida propia, la facultad muestra el logo de fábrica.
-        $legacy = Faculty::query()->where('codigo_institucional', '!=', 'FAC-CL')->firstOrFail();
+        $legacy = Faculty::query()->where('codigo_facultad', '!=', 'FAC-CL')->firstOrFail();
         $this->get(route('logos.faculty', $legacy))->assertOk();
     }
 

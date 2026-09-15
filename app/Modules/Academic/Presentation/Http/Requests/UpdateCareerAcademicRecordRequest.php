@@ -153,7 +153,7 @@ class UpdateCareerAcademicRecordRequest extends FormRequest
                 'required',
                 'string',
                 'max:80',
-                Rule::unique('asignaturas', 'codigo_institucional')
+                Rule::unique('asignaturas', 'codigo_asignatura')
                     ->where('malla_id', $curriculumId)
                     ->ignore($this->recordId()),
             ],

@@ -138,7 +138,7 @@ class ManagedUserProfileTest extends TestCase
     public function test_creating_an_account_sends_its_credentials_by_email(): void
     {
         Mail::fake();
-        $career = Career::query()->where('codigo_institucional', 'SOFTWARE')->firstOrFail();
+        $career = Career::query()->where('codigo_carrera', 'SOFTWARE')->firstOrFail();
 
         $this->actingAsAdministrator()
             ->post(route('admin.users.store'), [
@@ -182,7 +182,7 @@ class ManagedUserProfileTest extends TestCase
         $faculty = Faculty::query()->firstOrFail();
         $career = Career::query()->create([
             'facultad_id' => $faculty->id,
-            'codigo_institucional' => 'OTRA',
+            'codigo_carrera' => 'OTRA',
             'nombre' => 'Otra carrera',
             'activo' => true,
         ]);

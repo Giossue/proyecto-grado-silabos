@@ -33,7 +33,7 @@ class CoordinatorReplacementTest extends TestCase
         $this->administrator = User::query()->where('correo_electronico', 'admin@silabos.test')->firstOrFail();
         $this->administratorContext = $this->administrator->roleAssignments()->firstOrFail();
         $this->coordinator = User::query()->where('correo_electronico', 'coordinador@silabos.test')->firstOrFail();
-        $this->career = Career::query()->where('codigo_institucional', 'SOFTWARE')->firstOrFail();
+        $this->career = Career::query()->where('codigo_carrera', 'SOFTWARE')->firstOrFail();
     }
 
     public function test_the_careers_table_shows_who_coordinates_today(): void

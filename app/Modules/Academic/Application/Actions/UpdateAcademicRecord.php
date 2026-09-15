@@ -34,8 +34,10 @@ class UpdateAcademicRecord
     /** @var array<string, string> */
     private const FIELD_LABELS = [
         'facultad_id' => 'Facultad',
-        'codigo_institucional' => 'Código institucional',
-        'codigo' => 'Código estable',
+        'codigo_facultad' => 'Código de facultad',
+        'codigo_campus' => 'Código de campus',
+        'codigo_carrera' => 'Código de carrera',
+        'codigo' => 'Código de período',
         'nombre' => 'Nombre',
         'fecha_inicio' => 'Fecha de inicio',
         'fecha_fin' => 'Fecha de fin',
@@ -44,7 +46,9 @@ class UpdateAcademicRecord
 
     /** @var array<string, string> */
     private const AUDIT_KEYS = [
-        'codigo_institucional' => 'code',
+        'codigo_facultad' => 'code',
+        'codigo_campus' => 'code',
+        'codigo_carrera' => 'code',
         'codigo' => 'code',
         'nombre' => 'name',
         'fecha_inicio' => 'starts_on',
@@ -120,15 +124,19 @@ class UpdateAcademicRecord
     private function attributes(string $entity, array $data): array
     {
         return match ($entity) {
-            'facultad', 'campus' => [
-                'codigo_institucional' => $data['code'] ?? null,
+            'facultad' => [
+                'codigo_facultad' => $data['code'] ?? null,
+                'nombre' => $data['nombre'],
+            ],
+            'campus' => [
+                'codigo_campus' => $data['code'] ?? null,
                 'nombre' => $data['nombre'],
             ],
             'carrera' => [
                 'facultad_id' => $data['faculty_id'],
                 'modalidad' => $data['modality'],
                 'campus_id' => $data['campus_id'],
-                'codigo_institucional' => $data['code'] ?? null,
+                'codigo_carrera' => $data['code'] ?? null,
                 'nombre' => $data['nombre'],
             ],
             'periodo' => [

@@ -66,7 +66,7 @@ class AcademicStructureTest extends TestCase
     public function test_administrator_sees_global_governance_split_by_catalog(): void
     {
         $faculty = Faculty::query()
-            ->where('codigo_institucional', 'FICAYA')
+            ->where('codigo_facultad', 'FICAYA')
             ->firstOrFail();
 
         $this->actingAsAdministrator()
@@ -125,7 +125,7 @@ class AcademicStructureTest extends TestCase
 
         Career::query()->create([
             'facultad_id' => (string) Str::uuid(),
-            'codigo_institucional' => 'CARR-SIN-FACULTAD',
+            'codigo_carrera' => 'CARR-SIN-FACULTAD',
             'nombre' => 'Carrera sin facultad',
             'activo' => true,
         ]);
@@ -163,7 +163,7 @@ class AcademicStructureTest extends TestCase
                 ->component('Coordination/Academic/ScheduledSubjects')
                 ->has('scheduledSubjects', 1)
                 ->where('selectedPeriodId', $scheduledSubject->periodo_academico_id)
-                ->where('scheduledSubjects.0.subject_code', $scheduledSubject->subject->codigo_institucional)
+                ->where('scheduledSubjects.0.subject_code', $scheduledSubject->subject->codigo_asignatura)
                 ->where('scheduledSubjects.0.subject_name', $scheduledSubject->subject->nombre)
                 ->where('scheduledSubjects.0.subject_cycle', $scheduledSubject->subject->ciclo)
                 ->where('scheduledSubjects.0.period_starts_on', $scheduledSubject->academicPeriod->fecha_inicio->toDateString())
@@ -282,7 +282,7 @@ class AcademicStructureTest extends TestCase
         $curriculum = $scheduledSubject->subject->curriculum;
         $newSubject = Subject::query()->create([
             'malla_id' => $curriculum->id,
-            'codigo_institucional' => 'SW-HIST-001',
+            'codigo_asignatura' => 'SW-HIST-001',
             'nombre' => 'Materia para verificar historial',
             'ciclo' => 2,
             'activo' => true,
@@ -405,7 +405,7 @@ class AcademicStructureTest extends TestCase
                 'logo' => $this->transparentPng(600, 180),
             ])
             ->assertRedirect();
-        $faculty = Faculty::query()->where('codigo_institucional', 'FAC-DEMO')->firstOrFail();
+        $faculty = Faculty::query()->where('codigo_facultad', 'FAC-DEMO')->firstOrFail();
 
         $this->actingAsAdministrator()
             ->post(route('admin.academic.store', 'carrera'), [
@@ -416,7 +416,7 @@ class AcademicStructureTest extends TestCase
                 'nombre' => 'Carrera de demostración',
             ])
             ->assertRedirect();
-        $career = Career::query()->where('codigo_institucional', 'CARR-DEMO')->firstOrFail();
+        $career = Career::query()->where('codigo_carrera', 'CARR-DEMO')->firstOrFail();
         $candidate = User::query()->create([
             'nombre' => 'Coordinadora de demostración',
             'correo_electronico' => 'coordinadora.demo@silabos.test',
@@ -444,7 +444,7 @@ class AcademicStructureTest extends TestCase
 
     public function test_administration_can_assign_coordination_without_designation_or_document_data(): void
     {
-        $career = Career::query()->where('codigo_institucional', 'SOFTWARE')->firstOrFail();
+        $career = Career::query()->where('codigo_carrera', 'SOFTWARE')->firstOrFail();
         // La coordinación anterior se cierra primero: la base impide dos activas en la
         // misma carrera.
         CoordinatorAssignment::query()
@@ -510,7 +510,7 @@ class AcademicStructureTest extends TestCase
 
         $this->assertDatabaseHas('asignaturas', [
             'malla_id' => $curriculum->id,
-            'codigo_institucional' => 'SW-701',
+            'codigo_asignatura' => 'SW-701',
             'ciclo' => 7,
             'orden_en_ciclo' => 0,
             'horas_totales' => 144,
@@ -605,8 +605,8 @@ class AcademicStructureTest extends TestCase
                 ])
                 ->assertRedirect();
         }
-        $first = Subject::query()->where('codigo_institucional', 'MALLA-101')->firstOrFail();
-        $second = Subject::query()->where('codigo_institucional', 'MALLA-201')->firstOrFail();
+        $first = Subject::query()->where('codigo_asignatura', 'MALLA-101')->firstOrFail();
+        $second = Subject::query()->where('codigo_asignatura', 'MALLA-201')->firstOrFail();
 
         $this->actingAsCoordinator()
             ->post(route('coordination.academic.curricula.requirements.store', $curriculum->id), [
@@ -687,7 +687,7 @@ class AcademicStructureTest extends TestCase
         $curriculum = Curriculum::query()->firstOrFail();
         $subject = Subject::query()->create([
             'malla_id' => $curriculum->id,
-            'codigo_institucional' => 'SW-710',
+            'codigo_asignatura' => 'SW-710',
             'nombre' => 'Materia provisional',
             'ciclo' => 7,
             'creditos' => 3,
@@ -728,7 +728,7 @@ class AcademicStructureTest extends TestCase
         ]);
         $this->assertDatabaseHas('asignaturas', [
             'id' => $subject->id,
-            'codigo_institucional' => 'SW-711',
+            'codigo_asignatura' => 'SW-711',
             'nombre' => 'Materia corregida',
             'ciclo' => 8,
             'horas_totales' => 144,
@@ -820,7 +820,7 @@ class AcademicStructureTest extends TestCase
                 'entity' => 'asignatura',
                 'record' => $subject->id,
             ]), [
-                'code' => $subject->codigo_institucional,
+                'code' => $subject->codigo_asignatura,
                 'nombre' => 'Nombre reescrito',
                 'cycle' => $subject->ciclo,
                 'organization_unit' => 'Unidad profesional',
@@ -861,7 +861,7 @@ class AcademicStructureTest extends TestCase
                 'creditos' => 3,
             ])
             ->assertRedirect();
-        $subject = Subject::query()->where('codigo_institucional', 'SW-INACTIVA')->firstOrFail();
+        $subject = Subject::query()->where('codigo_asignatura', 'SW-INACTIVA')->firstOrFail();
         $reference = ScheduledSubject::query()->firstOrFail();
 
         $this->actingAsCoordinator()
@@ -938,7 +938,7 @@ class AcademicStructureTest extends TestCase
             ->firstOrFail();
         $subject = Subject::query()->create([
             'malla_id' => $curriculum->id,
-            'codigo_institucional' => 'SW-901',
+            'codigo_asignatura' => 'SW-901',
             'nombre' => 'Materia sin historial',
             'ciclo' => 9,
             'creditos' => 3,
@@ -1007,7 +1007,7 @@ class AcademicStructureTest extends TestCase
 
         $otherSubject = Subject::query()->create([
             'malla_id' => $otherCurriculum->id,
-            'codigo_institucional' => 'OTR-102',
+            'codigo_asignatura' => 'OTR-102',
             'nombre' => 'Materia histórica ajena',
             'ciclo' => 1,
             'activo' => true,
@@ -1056,7 +1056,7 @@ class AcademicStructureTest extends TestCase
                 'nombre' => 'Carrera con modalidad inventada',
             ])
             ->assertSessionHasErrors('modality');
-        $this->assertDatabaseMissing('carreras', ['codigo_institucional' => 'SIN-MODA']);
+        $this->assertDatabaseMissing('carreras', ['codigo_carrera' => 'SIN-MODA']);
 
         $this->actingAsAdministrator()
             ->post(route('admin.academic.store', 'carrera'), [
@@ -1069,7 +1069,7 @@ class AcademicStructureTest extends TestCase
             ->assertRedirect()
             ->assertSessionHasNoErrors();
         $this->assertDatabaseHas('carreras', [
-            'codigo_institucional' => 'CARR-HIBRIDA',
+            'codigo_carrera' => 'CARR-HIBRIDA',
             'modalidad' => StudyModality::Hibrida->value,
         ]);
 
@@ -1077,7 +1077,7 @@ class AcademicStructureTest extends TestCase
         $curriculum = Curriculum::query()->active()->where('carrera_id', $career->id)->firstOrFail();
         $subject = Subject::query()->create([
             'malla_id' => $curriculum->id,
-            'codigo_institucional' => 'SW-MODA',
+            'codigo_asignatura' => 'SW-MODA',
             'nombre' => 'Materia que hereda modalidad',
             'ciclo' => 2,
             'activo' => true,
@@ -1098,7 +1098,7 @@ class AcademicStructureTest extends TestCase
         $career->forceFill(['modalidad' => null])->save();
         $another = Subject::query()->create([
             'malla_id' => $curriculum->id,
-            'codigo_institucional' => 'SW-MODA-2',
+            'codigo_asignatura' => 'SW-MODA-2',
             'nombre' => 'Materia sin modalidad heredable',
             'ciclo' => 2,
             'activo' => true,
@@ -1134,7 +1134,7 @@ class AcademicStructureTest extends TestCase
             ->post(route('coordination.academic.store', 'asignatura'), [...$payload, 'modality' => ''])
             ->assertRedirect()
             ->assertSessionHasNoErrors();
-        $subject = Subject::query()->where('codigo_institucional', 'SW-ONL')->firstOrFail();
+        $subject = Subject::query()->where('codigo_asignatura', 'SW-ONL')->firstOrFail();
         $this->assertNull($subject->modalidad);
         $this->actingAsAdministrator()
             ->get(route('admin.academic.index', 'carreras'))
@@ -1169,7 +1169,7 @@ class AcademicStructureTest extends TestCase
                 'faculty_id' => $career->facultad_id,
                 'modality' => 'en_linea',
                 'campus_id' => $career->campus_id,
-                'code' => $career->codigo_institucional,
+                'code' => $career->codigo_carrera,
                 'nombre' => $career->nombre,
             ])
             ->assertRedirect()
@@ -1187,7 +1187,7 @@ class AcademicStructureTest extends TestCase
         foreach (['SW-P1', 'SW-P2'] as $index => $code) {
             $subjects[] = Subject::query()->create([
                 'malla_id' => $curriculum->id,
-                'codigo_institucional' => $code,
+                'codigo_asignatura' => $code,
                 'nombre' => "Materia preparada {$index}",
                 'ciclo' => 5,
                 'orden_en_ciclo' => $index,
@@ -1232,7 +1232,7 @@ class AcademicStructureTest extends TestCase
         $career->forceFill(['campus_id' => null])->save();
         $subjectWithoutCampus = Subject::query()->create([
             'malla_id' => $curriculum->id,
-            'codigo_institucional' => 'SW-SIN-CAMPUS',
+            'codigo_asignatura' => 'SW-SIN-CAMPUS',
             'nombre' => 'Materia sin campus',
             'ciclo' => 5,
             'orden_en_ciclo' => 3,
@@ -1257,7 +1257,7 @@ class AcademicStructureTest extends TestCase
         $reference = ScheduledSubject::query()->firstOrFail();
         $subject = Subject::query()->create([
             'malla_id' => $curriculum->id,
-            'codigo_institucional' => 'SW-PREPARACION-SELECTIVA',
+            'codigo_asignatura' => 'SW-PREPARACION-SELECTIVA',
             'nombre' => 'Materia preparada selectivamente',
             'ciclo' => 6,
             'orden_en_ciclo' => 1,
@@ -1319,7 +1319,7 @@ class AcademicStructureTest extends TestCase
         $curriculum = Curriculum::query()->active()->firstOrFail();
         $subject = Subject::query()->create([
             'malla_id' => $curriculum->id,
-            'codigo_institucional' => 'SW-750',
+            'codigo_asignatura' => 'SW-750',
             'nombre' => 'Sistemas Distribuidos',
             'ciclo' => 7,
             'activo' => true,
@@ -1405,7 +1405,7 @@ class AcademicStructureTest extends TestCase
         ]);
         $subject = Subject::query()->create([
             'malla_id' => $curriculum->id,
-            'codigo_institucional' => 'OTRA-PAR-101',
+            'codigo_asignatura' => 'OTRA-PAR-101',
             'nombre' => 'Materia ajena',
             'ciclo' => 1,
             'activo' => true,
@@ -1485,7 +1485,7 @@ class AcademicStructureTest extends TestCase
 
     public function test_global_record_with_active_dependants_cannot_be_archived_by_administrator(): void
     {
-        $campus = Campus::query()->where('codigo_institucional', 'MATRIZ')->firstOrFail();
+        $campus = Campus::query()->where('codigo_campus', 'MATRIZ')->firstOrFail();
 
         $this->actingAsAdministrator()
             ->patch(route('admin.academic.status.update', [
@@ -1500,7 +1500,7 @@ class AcademicStructureTest extends TestCase
     public function test_administrator_archives_and_reactivates_an_independent_catalog_record(): void
     {
         $campus = Campus::query()->create([
-            'codigo_institucional' => 'CAMPUS-FLEX',
+            'codigo_campus' => 'CAMPUS-FLEX',
             'nombre' => 'Campus flexible',
             'activo' => true,
         ]);
@@ -1531,7 +1531,7 @@ class AcademicStructureTest extends TestCase
     public function test_unreferenced_catalogs_parallels_and_teacher_assignments_are_deleted_instead_of_archived(): void
     {
         $campus = Campus::query()->create([
-            'codigo_institucional' => 'CAMPUS-ELIMINABLE',
+            'codigo_campus' => 'CAMPUS-ELIMINABLE',
             'nombre' => 'Campus eliminable',
             'activo' => true,
         ]);
@@ -1562,14 +1562,14 @@ class AcademicStructureTest extends TestCase
 
     public function test_administrator_edits_all_global_catalogs_with_audited_before_and_after_values(): void
     {
-        $faculty = Faculty::query()->where('codigo_institucional', 'FICAYA')->firstOrFail();
+        $faculty = Faculty::query()->where('codigo_facultad', 'FICAYA')->firstOrFail();
         $destinationFaculty = Faculty::query()->create([
-            'codigo_institucional' => 'FAC-DESTINO',
+            'codigo_facultad' => 'FAC-DESTINO',
             'nombre' => 'Facultad de destino',
             'activo' => true,
         ]);
-        $career = Career::query()->where('codigo_institucional', 'SOFTWARE')->firstOrFail();
-        $campus = Campus::query()->where('codigo_institucional', 'MATRIZ')->firstOrFail();
+        $career = Career::query()->where('codigo_carrera', 'SOFTWARE')->firstOrFail();
+        $campus = Campus::query()->where('codigo_campus', 'MATRIZ')->firstOrFail();
         $period = AcademicPeriod::query()->firstOrFail();
 
         $this->actingAsAdministrator()
@@ -1609,18 +1609,18 @@ class AcademicStructureTest extends TestCase
 
         $this->assertDatabaseHas('facultades', [
             'id' => $faculty->id,
-            'codigo_institucional' => 'FICAYA-ACT',
+            'codigo_facultad' => 'FICAYA-ACT',
             'nombre' => 'Facultad de Ingeniería actualizada',
         ]);
         $this->assertDatabaseHas('carreras', [
             'id' => $career->id,
             'facultad_id' => $destinationFaculty->id,
-            'codigo_institucional' => 'SOFTWARE-ACT',
+            'codigo_carrera' => 'SOFTWARE-ACT',
             'nombre' => 'Ingeniería de Software',
         ]);
         $this->assertDatabaseHas('campus', [
             'id' => $campus->id,
-            'codigo_institucional' => 'MATRIZ-ACT',
+            'codigo_campus' => 'MATRIZ-ACT',
             'nombre' => 'Campus Central',
         ]);
         $this->assertDatabaseHas('periodos_academicos', [
@@ -1678,18 +1678,18 @@ class AcademicStructureTest extends TestCase
 
     public function test_catalog_updates_validate_unique_codes_dates_and_active_faculty_reassignment(): void
     {
-        $faculty = Faculty::query()->where('codigo_institucional', 'FICAYA')->firstOrFail();
+        $faculty = Faculty::query()->where('codigo_facultad', 'FICAYA')->firstOrFail();
         $archivedFaculty = Faculty::query()->create([
-            'codigo_institucional' => 'FAC-ARCHIVADA',
+            'codigo_facultad' => 'FAC-ARCHIVADA',
             'nombre' => 'Facultad archivada',
             'activo' => false,
         ]);
-        $career = Career::query()->where('codigo_institucional', 'SOFTWARE')->firstOrFail();
+        $career = Career::query()->where('codigo_carrera', 'SOFTWARE')->firstOrFail();
         $period = AcademicPeriod::query()->firstOrFail();
 
         $this->actingAsAdministrator()
             ->patch(route('admin.academic.update', ['entity' => 'facultad', 'record' => $faculty->id]), [
-                'code' => $archivedFaculty->codigo_institucional,
+                'code' => $archivedFaculty->codigo_facultad,
                 'nombre' => 'Código repetido',
             ])
             ->assertSessionHasErrors('code');
@@ -1699,7 +1699,7 @@ class AcademicStructureTest extends TestCase
                 'faculty_id' => $archivedFaculty->id,
                 'modality' => $career->modalidad->value,
                 'campus_id' => $career->campus_id,
-                'code' => $career->codigo_institucional,
+                'code' => $career->codigo_carrera,
                 'nombre' => $career->nombre,
             ])
             ->assertSessionHasErrors('faculty_id');
@@ -1713,13 +1713,13 @@ class AcademicStructureTest extends TestCase
             ])
             ->assertSessionHasErrors('ends_on');
 
-        $this->assertSame('FICAYA', $faculty->fresh()->codigo_institucional);
+        $this->assertSame('FICAYA', $faculty->fresh()->codigo_facultad);
         $this->assertNotSame($archivedFaculty->id, $career->fresh()->facultad_id);
     }
 
     public function test_non_administrator_cannot_edit_global_catalogs(): void
     {
-        $faculty = Faculty::query()->where('codigo_institucional', 'FICAYA')->firstOrFail();
+        $faculty = Faculty::query()->where('codigo_facultad', 'FICAYA')->firstOrFail();
 
         $this->actingAsCoordinator()
             ->patch(route('admin.academic.update', ['entity' => 'facultad', 'record' => $faculty->id]), [
@@ -1728,7 +1728,7 @@ class AcademicStructureTest extends TestCase
             ])
             ->assertForbidden();
 
-        $this->assertSame('FICAYA', $faculty->fresh()->codigo_institucional);
+        $this->assertSame('FICAYA', $faculty->fresh()->codigo_facultad);
         $this->assertDatabaseMissing('eventos_auditoria', [
             'accion' => 'academico.facultad.actualizacion',
             'recurso_id' => $faculty->id,
@@ -1750,14 +1750,14 @@ class AcademicStructureTest extends TestCase
     private function createCareer(string $code): Career
     {
         $faculty = Faculty::query()->create([
-            'codigo_institucional' => "FAC-{$code}",
+            'codigo_facultad' => "FAC-{$code}",
             'nombre' => "Facultad {$code}",
             'activo' => true,
         ]);
 
         return Career::query()->create([
             'facultad_id' => $faculty->id,
-            'codigo_institucional' => $code,
+            'codigo_carrera' => $code,
             'nombre' => "Carrera {$code}",
             'activo' => true,
         ]);

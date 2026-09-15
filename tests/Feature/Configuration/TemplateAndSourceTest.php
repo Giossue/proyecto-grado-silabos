@@ -610,7 +610,7 @@ class TemplateAndSourceTest extends TestCase
         $faculty = Faculty::query()->firstOrFail();
         $otherCareer = Career::query()->create([
             'facultad_id' => $faculty->id,
-            'codigo_institucional' => 'REDES',
+            'codigo_carrera' => 'REDES',
             'nombre' => 'Redes',
             'activo' => true,
         ]);

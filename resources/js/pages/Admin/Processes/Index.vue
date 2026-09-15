@@ -46,7 +46,7 @@ const props = defineProps<{
     processes: ProcessRow[];
     /** Nombre de la plantilla institucional; nula si aún no existe. */
     template: string | null;
-    periods: { id: string; nombre: string }[];
+    periods: { id: string; codigo: string }[];
     active_process: { name: string; period: string; state: string } | null;
 }>();
 
