@@ -45,7 +45,6 @@ it('ofrece el control de tema tambien sin haber entrado', function (string $arch
     expect($contenido)->toContain('AppearanceToggle');
 })->with([
     'resources/js/layouts/auth/AuthSimpleLayout.vue',
-    'resources/js/pages/Welcome.vue',
 ]);
 
 it('ofrece solo los temas claro y oscuro, sin seguir al sistema', function (): void {

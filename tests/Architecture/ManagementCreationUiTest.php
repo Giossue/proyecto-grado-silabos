@@ -1390,8 +1390,7 @@ it('normaliza los encabezados de todos los modulos autenticados', function (): v
 
         $relativePath = str_replace($root.'/', '', $file->getPathname());
         if (
-            $relativePath === 'resources/js/pages/Welcome.vue'
-            || $relativePath === 'resources/js/pages/Admin/Templates/Edit.vue'
+            $relativePath === 'resources/js/pages/Admin/Templates/Edit.vue'
             || str_starts_with($relativePath, 'resources/js/pages/auth/')
             || str_starts_with($relativePath, 'resources/js/pages/settings/')
         ) {

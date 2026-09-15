@@ -28,7 +28,7 @@ use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Facades\Route;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 
-Route::inertia('/', 'Welcome')->name('home');
+Route::redirect('/', '/login')->name('home');
 Route::get('/health/ready', ReadinessController::class)
     ->withoutMiddleware([
         StartSession::class,
