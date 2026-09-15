@@ -25,7 +25,7 @@ apuntando a la asignación RBAC docente.
    `roles` únicamente después del backfill validado.
 3. [x] Reemplazar consultas, modelos, seeders y pruebas para usar `RoleCode` y el atributo
    `rol`, sin catálogo persistido.
-4. [ ] Publicar la aplicación y aplicar la migración en producción conforme al runbook, verificar esquema e
+4. [x] Publicar la aplicación y aplicar la migración en producción conforme al runbook, verificar esquema e
    invariantes, y sincronizar la documentación del esquema.
 
 ## Recuperación
@@ -42,3 +42,6 @@ No se elimina ninguna asignación ni evidencia histórica.
 - Pint de los archivos modificados: correcto.
 - Larastan conserva 55 hallazgos preexistentes en módulos ajenos; el nuevo
   `RoleAssignment` no añade ninguno.
+- Producción: migración `000072` aplicada en lote 45. Se comprobó que `roles` y
+  `rol_id` no existen, `rol` existe, ambos `CHECK` y el trigger de coordinación están
+  presentes, y los únicos valores persistidos son los tres autorizados.

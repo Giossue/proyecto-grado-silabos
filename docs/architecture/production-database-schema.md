@@ -1,7 +1,7 @@
 # Base de datos actual de producción — Sílabos UEB
 
 **Fotografía verificada:** 15 de septiembre de 2026, migraciones hasta
-`2026_09_15_000071_rename_docentes_paralelo_to_asignaciones_paralelo` (lote 44).
+`2026_09_15_000072_store_fixed_role_on_role_assignments` (lote 45).
 # 1. Identidad y acceso
 
 ## usuarios
@@ -22,29 +22,21 @@ dos_factores_confirmado_en TIMESTAMPTZ NULL
 debe_cambiar_contrasena BOOLEAN NOT NULL
 ~~~
 
-## roles
-
-**Contexto:** catálogo de roles.
-
-~~~text
-id UUID (PK)
-codigo_rol VARCHAR NOT NULL UNIQUE
-nombre_rol VARCHAR NOT NULL
-~~~
-
 ## asignaciones_rol
 
-**Contexto:** rol otorgado a un usuario, global o por carrera.
+**Contexto:** rol fijo otorgado a un usuario, global o por carrera.
 
 ~~~text
 id UUID (PK)
 usuario_id UUID (FK → usuarios.id) NOT NULL
-rol_id UUID (FK → roles.id) NOT NULL
+rol VARCHAR NOT NULL
 carrera_id UUID (FK → carreras.id) NULL
 asignacion_rol_activa BOOLEAN NOT NULL
 asignado_en TIMESTAMPTZ NULL
 
-UNIQUE parcial: usuario_id, rol_id y carrera_id cuando asignacion_rol_activa
+CHECK (rol IN ('administrador', 'coordinador', 'docente'))
+CHECK (administrador sin carrera; coordinador/docente con carrera)
+UNIQUE parcial: usuario_id, rol y carrera_id cuando asignacion_rol_activa
 ~~~
 
 **Regla adicional:** un trigger de PostgreSQL permite una sola coordinación ejercible
@@ -91,10 +83,9 @@ created_at TIMESTAMPTZ NULL
 ### Cardinalidades
 
 ~~~text
-usuarios N:M roles mediante asignaciones_rol
 usuarios N:M carreras por roles con alcance en asignaciones_rol
-asignaciones_rol (docente) 1:N docentes_paralelo
-paralelos 1:N docentes_paralelo
+asignaciones_rol (docente) 1:N asignaciones_paralelo
+paralelos 1:N asignaciones_paralelo
 usuarios 1:N sesiones
 ~~~
 
@@ -453,7 +444,7 @@ UNIQUE (silabo_id, paralelo_id)
 id UUID (PK)
 silabo_id UUID (FK → silabos.id) NOT NULL
 usuario_id UUID (FK → usuarios.id) NOT NULL
-docente_paralelo_id UUID (FK → docentes_paralelo.id) NOT NULL
+docente_paralelo_id UUID (FK → asignaciones_paralelo.id) NOT NULL
 
 UNIQUE (silabo_id, docente_paralelo_id)
 ~~~
@@ -969,10 +960,9 @@ usuarios 1:N eventos_auditoria
 # 8. Resumen de relaciones N:M
 
 ~~~text
-usuarios N:M roles mediante asignaciones_rol
 usuarios N:M carreras por roles con alcance en asignaciones_rol
-asignaciones_rol (docente) 1:N docentes_paralelo
-paralelos 1:N docentes_paralelo
+asignaciones_rol (docente) 1:N asignaciones_paralelo
+paralelos 1:N asignaciones_paralelo
 convocatorias_carreras N:M fuentes_academicas mediante fuentes_convocatoria
 silabos N:M paralelos mediante alcances_silabo
 silabos N:M usuarios colaboradores mediante colaboradores_silabo
