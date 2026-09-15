@@ -1,4 +1,7 @@
 # Base de datos actual de producción — Sílabos UEB
+
+**Fotografía verificada:** 14 de septiembre de 2026, migraciones hasta
+`2026_09_14_000069_name_operation_columns_explicitly` (lote 42).
 # 1. Identidad y acceso
 
 ## usuarios
@@ -25,8 +28,8 @@ debe_cambiar_contrasena BOOLEAN NOT NULL
 
 ~~~text
 id UUID (PK)
-codigo VARCHAR NOT NULL UNIQUE
-nombre VARCHAR NOT NULL
+codigo_rol VARCHAR NOT NULL UNIQUE
+nombre_rol VARCHAR NOT NULL
 ~~~
 
 ## asignaciones_rol
@@ -38,10 +41,10 @@ id UUID (PK)
 usuario_id UUID (FK → usuarios.id) NOT NULL
 rol_id UUID (FK → roles.id) NOT NULL
 carrera_id UUID (FK → carreras.id) NULL
-activo BOOLEAN NOT NULL
+asignacion_rol_activa BOOLEAN NOT NULL
 asignado_en TIMESTAMPTZ NULL
 
-UNIQUE parcial: usuario_id, rol_id y carrera_id cuando activo
+UNIQUE parcial: usuario_id, rol_id y carrera_id cuando asignacion_rol_activa
 ~~~
 
 **Regla adicional:** un trigger de PostgreSQL permite una sola coordinación ejercible
@@ -56,7 +59,7 @@ de la misma carrera.
 id UUID (PK)
 asignacion_rol_id UUID (FK → asignaciones_rol.id) NOT NULL
 paralelo_id UUID (FK → paralelos.id) NOT NULL
-activo BOOLEAN NOT NULL
+docente_paralelo_activo BOOLEAN NOT NULL
 asignado_en TIMESTAMPTZ NULL
 
 UNIQUE (asignacion_rol_id, paralelo_id)
@@ -106,9 +109,9 @@ usuarios 1:N sesiones
 ~~~text
 id UUID (PK)
 codigo_facultad VARCHAR NULL UNIQUE
-nombre VARCHAR NOT NULL
-activo BOOLEAN NOT NULL
-logo_ruta VARCHAR NULL
+nombre_facultad VARCHAR NOT NULL
+facultad_activa BOOLEAN NOT NULL
+ruta_logo_facultad VARCHAR NULL
 ~~~
 
 ## campus
@@ -118,8 +121,8 @@ logo_ruta VARCHAR NULL
 ~~~text
 id UUID (PK)
 codigo_campus VARCHAR NULL UNIQUE
-nombre VARCHAR NOT NULL
-activo BOOLEAN NOT NULL
+nombre_campus VARCHAR NOT NULL
+campus_activo BOOLEAN NOT NULL
 ~~~
 
 ## carreras
@@ -130,10 +133,10 @@ activo BOOLEAN NOT NULL
 id UUID (PK)
 facultad_id UUID (FK → facultades.id) NOT NULL
 codigo_carrera VARCHAR NULL UNIQUE
-nombre VARCHAR NOT NULL
-activo BOOLEAN NOT NULL
+nombre_carrera VARCHAR NOT NULL
+carrera_activa BOOLEAN NOT NULL
 campus_id UUID (FK → campus.id) NULL
-modalidad VARCHAR NULL
+modalidad_carrera VARCHAR NULL
 ~~~
 
 ## periodos_academicos
@@ -142,10 +145,10 @@ modalidad VARCHAR NULL
 
 ~~~text
 id UUID (PK)
-codigo VARCHAR NOT NULL UNIQUE
-fecha_inicio DATE NOT NULL
-fecha_fin DATE NOT NULL
-semanas_lectivas SMALLINT NOT NULL
+codigo_periodo_academico VARCHAR NOT NULL UNIQUE
+fecha_inicio_periodo DATE NOT NULL
+fecha_fin_periodo DATE NOT NULL
+cantidad_semanas_lectivas SMALLINT NOT NULL
 ~~~
 
 ## mallas
@@ -155,12 +158,12 @@ semanas_lectivas SMALLINT NOT NULL
 ~~~text
 id UUID (PK)
 carrera_id UUID (FK → carreras.id) NOT NULL
-codigo VARCHAR NOT NULL
-estado VARCHAR NOT NULL
-numero_ciclos SMALLINT NOT NULL
+codigo_malla VARCHAR NOT NULL
+estado_malla VARCHAR NOT NULL
+cantidad_ciclos_malla SMALLINT NOT NULL
 
 UNIQUE (carrera_id)
-UNIQUE (carrera_id, codigo)
+UNIQUE (carrera_id, codigo_malla)
 ~~~
 
 ## asignaturas
@@ -171,20 +174,20 @@ UNIQUE (carrera_id, codigo)
 id UUID (PK)
 malla_id UUID (FK → mallas.id) NOT NULL
 codigo_asignatura VARCHAR NOT NULL
-nombre VARCHAR NOT NULL
-ciclo SMALLINT NULL
-creditos NUMERIC NULL
-horas_totales SMALLINT NULL
-activo BOOLEAN NOT NULL
+nombre_asignatura VARCHAR NOT NULL
+ciclo_asignatura SMALLINT NULL
+creditos_asignatura NUMERIC NULL
+total_horas_asignatura SMALLINT NULL
+asignatura_activa BOOLEAN NOT NULL
 horas_proyecto NUMERIC NULL
 horas_ap NUMERIC NULL
 horas_ac NUMERIC NULL
 horas_pae NUMERIC NULL
 horas_aa NUMERIC NULL
 horas_paec NUMERIC NULL
-orden_en_ciclo SMALLINT NOT NULL
-unidad_organizacion_curricular VARCHAR NULL
-modalidad VARCHAR NULL
+orden_asignatura_en_ciclo SMALLINT NOT NULL
+unidad_organizativa_curricular_asignatura VARCHAR NULL
+modalidad_asignatura VARCHAR NULL
 
 UNIQUE (malla_id, codigo_asignatura)
 ~~~
@@ -197,9 +200,9 @@ UNIQUE (malla_id, codigo_asignatura)
 id UUID (PK)
 asignatura_id UUID (FK → asignaturas.id) NOT NULL
 requisito_id UUID (FK → asignaturas.id) NOT NULL
-tipo VARCHAR NOT NULL
+tipo_requisito_asignatura VARCHAR NOT NULL
 
-UNIQUE (asignatura_id, requisito_id, tipo)
+UNIQUE (asignatura_id, requisito_id, tipo_requisito_asignatura)
 ~~~
 
 ## programaciones_asignatura
@@ -211,8 +214,8 @@ id UUID (PK)
 periodo_academico_id UUID (FK → periodos_academicos.id) NOT NULL
 asignatura_id UUID (FK → asignaturas.id) NOT NULL
 campus_id UUID (FK → campus.id) NOT NULL
-activo BOOLEAN NOT NULL
-modalidad VARCHAR NOT NULL
+programacion_asignatura_activa BOOLEAN NOT NULL
+modalidad_programacion_asignatura VARCHAR NOT NULL
 
 UNIQUE (periodo_academico_id, asignatura_id)
 ~~~
@@ -224,11 +227,11 @@ UNIQUE (periodo_academico_id, asignatura_id)
 ~~~text
 id UUID (PK)
 programacion_asignatura_id UUID (FK → programaciones_asignatura.id) NOT NULL
-codigo VARCHAR NOT NULL
-activo BOOLEAN NOT NULL
-jornada VARCHAR NULL
+codigo_paralelo VARCHAR NOT NULL
+paralelo_activo BOOLEAN NOT NULL
+jornada_paralelo VARCHAR NULL
 
-UNIQUE (programacion_asignatura_id, codigo)
+UNIQUE (programacion_asignatura_id, codigo_paralelo)
 ~~~
 
 ### Cardinalidades
@@ -255,10 +258,10 @@ programaciones_asignatura 1:N paralelos
 
 ~~~text
 id UUID (PK)
-nombre VARCHAR NOT NULL
-descripcion TEXT NULL
-activo BOOLEAN NOT NULL
-mapeo_documento JSONB NULL
+nombre_plantilla_silabo VARCHAR NOT NULL
+descripcion_plantilla_silabo TEXT NULL
+plantilla_silabo_activa BOOLEAN NOT NULL
+mapeo_documento_plantilla JSONB NULL
 
 UNIQUE constante: existe solo una plantilla
 ~~~
@@ -269,14 +272,14 @@ UNIQUE constante: existe solo una plantilla
 
 ~~~text
 id UUID (PK)
-clave VARCHAR NOT NULL
-titulo VARCHAR NOT NULL
-descripcion TEXT NULL
-posicion SMALLINT NOT NULL
+clave_seccion_plantilla VARCHAR NOT NULL
+titulo_seccion_plantilla VARCHAR NOT NULL
+descripcion_seccion_plantilla TEXT NULL
+posicion_seccion_plantilla SMALLINT NOT NULL
 plantilla_id UUID (FK → plantillas_silabo.id) NOT NULL
 
-UNIQUE (plantilla_id, clave)
-UNIQUE (plantilla_id, posicion)
+UNIQUE (plantilla_id, clave_seccion_plantilla)
+UNIQUE (plantilla_id, posicion_seccion_plantilla)
 ~~~
 
 ## bloques_plantilla
@@ -286,15 +289,15 @@ UNIQUE (plantilla_id, posicion)
 ~~~text
 id UUID (PK)
 seccion_plantilla_id UUID (FK → secciones_plantilla.id) NOT NULL
-clave VARCHAR NOT NULL
-tipo VARCHAR NOT NULL
-titulo VARCHAR NOT NULL
-configuracion JSONB NULL
-posicion SMALLINT NOT NULL
+clave_bloque_plantilla VARCHAR NOT NULL
+tipo_bloque_plantilla VARCHAR NOT NULL
+titulo_bloque_plantilla VARCHAR NOT NULL
+configuracion_bloque_plantilla JSONB NULL
+posicion_bloque_plantilla SMALLINT NOT NULL
 plantilla_id UUID (FK → plantillas_silabo.id) NOT NULL
 
-UNIQUE (plantilla_id, clave)
-UNIQUE (seccion_plantilla_id, posicion)
+UNIQUE (plantilla_id, clave_bloque_plantilla)
+UNIQUE (seccion_plantilla_id, posicion_bloque_plantilla)
 ~~~
 
 ## definiciones_campo
@@ -304,23 +307,23 @@ UNIQUE (seccion_plantilla_id, posicion)
 ~~~text
 id UUID (PK)
 bloque_plantilla_id UUID (FK → bloques_plantilla.id) NOT NULL
-clave VARCHAR NOT NULL
-etiqueta VARCHAR NOT NULL
-ayuda TEXT NULL
-tipo VARCHAR NOT NULL
+clave_definicion_campo VARCHAR NOT NULL
+etiqueta_definicion_campo VARCHAR NOT NULL
+ayuda_definicion_campo TEXT NULL
+tipo_definicion_campo VARCHAR NOT NULL
 obligatorio BOOLEAN NOT NULL
 heredado BOOLEAN NOT NULL
 origen_maestro VARCHAR NULL
 editable_docente BOOLEAN NOT NULL
 ia_habilitada BOOLEAN NOT NULL
-reglas JSONB NULL
-opciones JSONB NULL
+reglas_definicion_campo JSONB NULL
+opciones_definicion_campo JSONB NULL
 marcador_documento VARCHAR NULL
-posicion SMALLINT NOT NULL
+posicion_definicion_campo SMALLINT NOT NULL
 plantilla_id UUID (FK → plantillas_silabo.id) NOT NULL
 
-UNIQUE (plantilla_id, clave)
-UNIQUE (bloque_plantilla_id, posicion)
+UNIQUE (plantilla_id, clave_definicion_campo)
+UNIQUE (bloque_plantilla_id, posicion_definicion_campo)
 ~~~
 
 ## fuentes_academicas
@@ -330,12 +333,12 @@ UNIQUE (bloque_plantilla_id, posicion)
 ~~~text
 id UUID (PK)
 carrera_id UUID (FK → carreras.id) NOT NULL
-nombre VARCHAR NOT NULL
-descripcion TEXT NULL
-activo BOOLEAN NOT NULL
-contenido TEXT NULL
+nombre_fuente_academica VARCHAR NOT NULL
+descripcion_fuente_academica TEXT NULL
+fuente_academica_activa BOOLEAN NOT NULL
+contenido_fuente_academica TEXT NULL
 
-UNIQUE (carrera_id, nombre)
+UNIQUE (carrera_id, nombre_fuente_academica)
 ~~~
 
 ### Cardinalidades
@@ -363,7 +366,7 @@ Las dependencias desde plantilla, sección y bloque se eliminan en cascada.
 id UUID (PK)
 inicia_en TIMESTAMPTZ NOT NULL
 entrega_en TIMESTAMPTZ NOT NULL
-estado VARCHAR NOT NULL
+estado_convocatoria_universidad VARCHAR NOT NULL
 plantilla_id UUID (FK → plantillas_silabo.id) NOT NULL
 periodo_academico_id UUID (FK → periodos_academicos.id) NOT NULL
 
@@ -378,7 +381,7 @@ UNIQUE parcial: una convocatoria abierta o pausada
 ~~~text
 id UUID (PK)
 carrera_id UUID (FK → carreras.id) NOT NULL
-estado VARCHAR NOT NULL
+estado_convocatoria_carrera VARCHAR NOT NULL
 proceso_id UUID (FK → convocatorias_universidad.id) NOT NULL
 
 UNIQUE (carrera_id, proceso_id)
@@ -403,10 +406,10 @@ UNIQUE (convocatoria_id, fuente_academica_id)
 ~~~text
 id UUID (PK)
 convocatoria_id UUID (FK → convocatorias_carreras.id) NOT NULL
-etapa VARCHAR NOT NULL
+etapa_fecha_limite_convocatoria VARCHAR NOT NULL
 vence_en TIMESTAMPTZ NOT NULL
 
-UNIQUE (convocatoria_id, etapa)
+UNIQUE (convocatoria_id, etapa_fecha_limite_convocatoria)
 ~~~
 
 ## silabos
@@ -418,12 +421,12 @@ id UUID (PK)
 convocatoria_id UUID (FK → convocatorias_carreras.id) NOT NULL
 asignatura_id UUID (FK → asignaturas.id) NOT NULL
 malla_id UUID (FK → mallas.id) NOT NULL
-estado VARCHAR NOT NULL
+estado_silabo VARCHAR NOT NULL
 version_bloqueo INTEGER NOT NULL
 porcentaje_completitud NUMERIC NOT NULL
 iniciado_en TIMESTAMPTZ NULL
 guardado_en TIMESTAMPTZ NULL
-contexto_academico JSONB NOT NULL
+contexto_academico_silabo JSONB NOT NULL
 plantilla_id UUID (FK → plantillas_silabo.id) NOT NULL
 ~~~
 
@@ -463,9 +466,9 @@ UNIQUE (silabo_id, docente_paralelo_id)
 id UUID (PK)
 silabo_id UUID (FK → silabos.id) NOT NULL
 definicion_campo_id UUID (FK → definiciones_campo.id) NOT NULL
-valor JSONB NULL
+valor_campo JSONB NULL
 heredado BOOLEAN NOT NULL
-origen VARCHAR NULL
+origen_valor_campo VARCHAR NULL
 
 UNIQUE (silabo_id, definicion_campo_id)
 ~~~
@@ -478,10 +481,10 @@ UNIQUE (silabo_id, definicion_campo_id)
 id UUID (PK)
 silabo_id UUID (FK → silabos.id) NOT NULL
 definicion_campo_id UUID (FK → definiciones_campo.id) NOT NULL
-datos JSONB NOT NULL
-posicion SMALLINT NOT NULL
+datos_fila_repetible JSONB NOT NULL
+posicion_fila_repetible SMALLINT NOT NULL
 
-UNIQUE (silabo_id, definicion_campo_id, posicion)
+UNIQUE (silabo_id, definicion_campo_id, posicion_fila_repetible)
 ~~~
 
 ## ejecuciones_validacion
@@ -493,10 +496,10 @@ id UUID (PK)
 silabo_id UUID (FK → silabos.id) NOT NULL
 ejecutado_por UUID (FK → usuarios.id) NOT NULL
 version_reglas VARCHAR NOT NULL
-estado VARCHAR NOT NULL
+estado_ejecucion_validacion VARCHAR NOT NULL
 version_bloqueo INTEGER NOT NULL
 errores_bloqueantes SMALLINT NOT NULL
-advertencias SMALLINT NOT NULL
+cantidad_advertencias_validacion SMALLINT NOT NULL
 porcentaje_completitud NUMERIC NOT NULL
 completado_en TIMESTAMPTZ NOT NULL
 ~~~
@@ -509,9 +512,9 @@ completado_en TIMESTAMPTZ NOT NULL
 id UUID (PK)
 ejecucion_validacion_id UUID (FK → ejecuciones_validacion.id) NOT NULL
 definicion_campo_id UUID (FK → definiciones_campo.id) NULL
-codigo VARCHAR NOT NULL
-severidad VARCHAR NOT NULL
-mensaje VARCHAR NOT NULL
+codigo_resultado_validacion VARCHAR NOT NULL
+severidad_resultado_validacion VARCHAR NOT NULL
+mensaje_resultado_validacion VARCHAR NOT NULL
 ~~~
 
 ### Cardinalidades
@@ -545,13 +548,13 @@ tienen borrado en cascada.
 
 ~~~text
 id UUID (PK)
-tipo VARCHAR NOT NULL
-estado VARCHAR NOT NULL
+tipo_ejecucion_trabajo VARCHAR NOT NULL
+estado_ejecucion_trabajo VARCHAR NOT NULL
 clave_idempotencia VARCHAR NOT NULL UNIQUE
 correlacion_id UUID NULL
 intentos SMALLINT NOT NULL
 progreso SMALLINT NOT NULL
-resultado JSONB NULL
+resultado_ejecucion_trabajo JSONB NULL
 codigo_error VARCHAR NULL
 mensaje_error TEXT NULL
 iniciado_en TIMESTAMPTZ NULL
@@ -574,16 +577,16 @@ definicion_campo_id UUID (FK → definiciones_campo.id) NOT NULL
 ejecucion_trabajo_id UUID (FK → ejecuciones_trabajo.id) NULL UNIQUE
 clave_idempotencia UUID NOT NULL
 clave_funcional CHAR(64) NOT NULL
-estado VARCHAR NOT NULL
+estado_ejecucion_ia VARCHAR NOT NULL
 version_contrato VARCHAR NOT NULL
 version_instruccion VARCHAR NOT NULL
 version_pasarela_solicitada VARCHAR NOT NULL
 version_pasarela_ejecutada VARCHAR NULL
 idioma VARCHAR NOT NULL
-contenido_entrada TEXT NOT NULL
+contenido_entrada_ia TEXT NOT NULL
 huella_contenido CHAR(64) NOT NULL
 huella_conjunto_fuentes CHAR(64) NOT NULL
-metadatos_entrada JSONB NOT NULL
+metadatos_entrada_ia JSONB NOT NULL
 version_bloqueo_origen INTEGER NOT NULL
 motivo_no_concluyente VARCHAR NULL
 codigo_error VARCHAR NULL
@@ -608,7 +611,7 @@ id UUID (PK)
 ejecucion_ia_id UUID (FK → ejecuciones_ia.id) NOT NULL
 fuente_academica_id UUID (FK → fuentes_academicas.id) NOT NULL
 nombre_fuente VARCHAR NOT NULL
-extracto TEXT NOT NULL
+extracto_evidencia_ia TEXT NOT NULL
 huella_contenido CHAR(64) NOT NULL
 ~~~
 
@@ -621,9 +624,9 @@ id UUID (PK)
 ejecucion_ia_id UUID (FK → ejecuciones_ia.id) NOT NULL
 definicion_campo_id UUID (FK → definiciones_campo.id) NOT NULL
 ordinal SMALLINT NOT NULL
-tipo VARCHAR NOT NULL
-titulo VARCHAR NOT NULL
-explicacion TEXT NOT NULL
+tipo_recomendacion_ia VARCHAR NOT NULL
+titulo_recomendacion_ia VARCHAR NOT NULL
+explicacion_recomendacion_ia TEXT NOT NULL
 texto_sugerido TEXT NOT NULL
 
 UNIQUE (ejecucion_ia_id, ordinal)
@@ -650,14 +653,14 @@ id UUID (PK)
 recomendacion_ia_id UUID (FK → recomendaciones_ia.id) NOT NULL
 usuario_id UUID (FK → usuarios.id) NOT NULL
 asignacion_rol_id UUID (FK → asignaciones_rol.id) NULL
-decision VARCHAR NOT NULL
-contenido_antes TEXT NULL
-contenido_despues TEXT NULL
+decision_retroalimentacion_ia VARCHAR NOT NULL
+contenido_anterior_retroalimentacion_ia TEXT NULL
+contenido_posterior_retroalimentacion_ia TEXT NULL
 version_bloqueo_origen INTEGER NULL
 version_bloqueo_resultado INTEGER NULL
 decidido_en TIMESTAMPTZ NOT NULL
 
-UNIQUE (recomendacion_ia_id, usuario_id, decision)
+UNIQUE (recomendacion_ia_id, usuario_id, decision_retroalimentacion_ia)
 UNIQUE parcial: una sola decisión aplicada por recomendación
 ~~~
 
@@ -689,7 +692,7 @@ revision_anterior_id UUID (FK → revisiones_silabo.id) NULL
 numero_revision SMALLINT NOT NULL
 clave_idempotencia UUID NOT NULL
 version_bloqueo_origen INTEGER NOT NULL
-fotografia JSONB NOT NULL
+fotografia_revision_silabo JSONB NOT NULL
 huella_sha256 CHAR(64) NOT NULL
 enviado_por UUID (FK → usuarios.id) NOT NULL
 enviado_en TIMESTAMPTZ NOT NULL
@@ -708,8 +711,8 @@ id UUID (PK)
 revision_silabo_id UUID (FK → revisiones_silabo.id) NOT NULL
 clave_seccion VARCHAR NULL
 clave_campo VARCHAR NULL
-contenido TEXT NOT NULL
-estado VARCHAR NOT NULL
+contenido_observacion_revision TEXT NOT NULL
+estado_observacion_revision VARCHAR NOT NULL
 creado_por UUID (FK → usuarios.id) NOT NULL
 observado_en TIMESTAMPTZ NOT NULL
 ~~~
@@ -722,7 +725,7 @@ observado_en TIMESTAMPTZ NOT NULL
 id UUID (PK)
 silabo_id UUID (FK → silabos.id) NOT NULL
 revision_silabo_id UUID (FK → revisiones_silabo.id) NOT NULL UNIQUE
-justificacion TEXT NOT NULL
+justificacion_solicitud_correccion TEXT NOT NULL
 solicitado_por UUID (FK → usuarios.id) NOT NULL
 solicitado_en TIMESTAMPTZ NOT NULL
 ~~~
@@ -748,7 +751,7 @@ id UUID (PK)
 silabo_id UUID (FK → silabos.id) NOT NULL
 observacion_revision_id UUID (FK → observaciones_revision.id) NOT NULL UNIQUE
 revision_respuesta_id UUID (FK → revisiones_silabo.id) NULL
-contenido TEXT NOT NULL
+contenido_respuesta_observacion TEXT NOT NULL
 respondido_por UUID (FK → usuarios.id) NOT NULL
 respondido_en TIMESTAMPTZ NOT NULL
 ~~~
@@ -796,10 +799,10 @@ silabo_id UUID (FK → silabos.id) NOT NULL
 revision_silabo_id UUID (FK → revisiones_silabo.id) NULL
 estado_origen VARCHAR NOT NULL
 estado_destino VARCHAR NOT NULL
-accion VARCHAR NOT NULL
+accion_transicion_silabo VARCHAR NOT NULL
 actor_usuario_id UUID (FK → usuarios.id) NOT NULL
 asignacion_rol_id UUID (FK → asignaciones_rol.id) NULL
-metadatos JSONB NULL
+metadatos_transicion_silabo JSONB NULL
 ocurrido_en TIMESTAMPTZ NOT NULL
 ~~~
 
@@ -835,7 +838,7 @@ mime VARCHAR NOT NULL
 tamano_bytes BIGINT NOT NULL
 huella_sha256 CHAR(64) NOT NULL
 clasificacion VARCHAR NOT NULL
-estado VARCHAR NOT NULL
+estado_objeto_almacenado VARCHAR NOT NULL
 propietario_usuario_id UUID (FK → usuarios.id) NULL
 carrera_id UUID (FK → carreras.id) NULL
 almacenado_en TIMESTAMPTZ NOT NULL
@@ -857,7 +860,7 @@ objeto_pdf_id UUID (FK → objetos_almacenados.id) NULL UNIQUE
 version_renderizador VARCHAR NOT NULL
 idioma VARCHAR NOT NULL
 clave_idempotencia UUID NOT NULL
-estado VARCHAR NOT NULL
+estado_artefacto_exportacion VARCHAR NOT NULL
 solicitado_por UUID (FK → usuarios.id) NOT NULL
 asignacion_rol_id UUID (FK → asignaciones_rol.id) NULL
 solicitado_en TIMESTAMPTZ NOT NULL
@@ -875,9 +878,9 @@ UNIQUE (revision_silabo_id, clave_idempotencia)
 id UUID (PK)
 usuario_id UUID (FK → usuarios.id) NOT NULL
 clave_deduplicacion VARCHAR NOT NULL
-tipo VARCHAR NOT NULL
-titulo VARCHAR NOT NULL
-mensaje TEXT NOT NULL
+tipo_notificacion_interna VARCHAR NOT NULL
+titulo_notificacion_interna VARCHAR NOT NULL
+mensaje_notificacion_interna TEXT NOT NULL
 tipo_recurso VARCHAR NULL
 recurso_id UUID NULL
 leido_en TIMESTAMPTZ NULL
@@ -894,11 +897,11 @@ UNIQUE (usuario_id, clave_deduplicacion)
 id UUID (PK)
 actor_usuario_id UUID (FK → usuarios.id) NULL
 asignacion_rol_id UUID (FK → asignaciones_rol.id) NULL
-accion VARCHAR NOT NULL
+accion_evento_auditoria VARCHAR NOT NULL
 tipo_recurso VARCHAR NOT NULL
 recurso_id UUID NULL
-resultado VARCHAR NOT NULL
-metadatos JSONB NULL
+resultado_evento_auditoria VARCHAR NOT NULL
+metadatos_evento_auditoria JSONB NULL
 correlacion_id UUID NULL
 ocurrido_en TIMESTAMPTZ NOT NULL
 ~~~
@@ -913,8 +916,8 @@ tipo_agregado VARCHAR NOT NULL
 agregado_id UUID NOT NULL
 tipo_evento VARCHAR NOT NULL
 clave_deduplicacion VARCHAR NOT NULL UNIQUE
-contenido JSONB NOT NULL
-estado VARCHAR NOT NULL
+contenido_evento_saliente JSONB NOT NULL
+estado_evento_saliente VARCHAR NOT NULL
 intentos SMALLINT NOT NULL
 disponible_en TIMESTAMPTZ NOT NULL
 procesado_en TIMESTAMPTZ NULL
