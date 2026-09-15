@@ -105,7 +105,7 @@ usuarios 1:N sesiones
 
 ~~~text
 id UUID (PK)
-codigo_institucional VARCHAR NULL UNIQUE
+codigo_facultad VARCHAR NULL UNIQUE
 nombre VARCHAR NOT NULL
 activo BOOLEAN NOT NULL
 logo_ruta VARCHAR NULL
@@ -117,7 +117,7 @@ logo_ruta VARCHAR NULL
 
 ~~~text
 id UUID (PK)
-codigo_institucional VARCHAR NULL UNIQUE
+codigo_campus VARCHAR NULL UNIQUE
 nombre VARCHAR NOT NULL
 activo BOOLEAN NOT NULL
 ~~~
@@ -129,7 +129,7 @@ activo BOOLEAN NOT NULL
 ~~~text
 id UUID (PK)
 facultad_id UUID (FK → facultades.id) NOT NULL
-codigo_institucional VARCHAR NULL UNIQUE
+codigo_carrera VARCHAR NULL UNIQUE
 nombre VARCHAR NOT NULL
 activo BOOLEAN NOT NULL
 campus_id UUID (FK → campus.id) NULL
@@ -170,7 +170,7 @@ UNIQUE (carrera_id, codigo)
 ~~~text
 id UUID (PK)
 malla_id UUID (FK → mallas.id) NOT NULL
-codigo_institucional VARCHAR NOT NULL
+codigo_asignatura VARCHAR NOT NULL
 nombre VARCHAR NOT NULL
 ciclo SMALLINT NULL
 creditos NUMERIC NULL
@@ -186,7 +186,7 @@ orden_en_ciclo SMALLINT NOT NULL
 unidad_organizacion_curricular VARCHAR NULL
 modalidad VARCHAR NULL
 
-UNIQUE (malla_id, codigo_institucional)
+UNIQUE (malla_id, codigo_asignatura)
 ~~~
 
 ## requisitos_asignatura
