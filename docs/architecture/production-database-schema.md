@@ -1,7 +1,7 @@
 # Base de datos actual de producción — Sílabos UEB
 
 **Fotografía verificada:** 15 de septiembre de 2026, migraciones hasta
-`2026_09_15_000072_store_fixed_role_on_role_assignments` (lote 45).
+`2026_09_15_000073_reference_faculty_logo_as_stored_object` (lote 46).
 # 1. Identidad y acceso
 
 ## usuarios
@@ -102,7 +102,7 @@ id UUID (PK)
 codigo_facultad VARCHAR NULL UNIQUE
 nombre_facultad VARCHAR NOT NULL
 facultad_activa BOOLEAN NOT NULL
-ruta_logo_facultad VARCHAR NULL
+logo_objeto_id UUID (FK → objetos_almacenados.id) NULL UNIQUE
 ~~~
 
 ## campus
@@ -951,6 +951,7 @@ revisiones_silabo 1:N artefactos_exportacion
 ejecuciones_trabajo 1:0..1 artefactos_exportacion
 objetos_almacenados 1:0..1 artefactos_exportacion como DOCX
 objetos_almacenados 1:0..1 artefactos_exportacion como PDF
+objetos_almacenados 1:0..1 facultades como logo
 usuarios 1:N notificaciones_internas
 usuarios 1:N eventos_auditoria
 ~~~
