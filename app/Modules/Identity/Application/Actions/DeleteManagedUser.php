@@ -19,7 +19,7 @@ class DeleteManagedUser
 {
     /** Tablas donde una cuenta deja historia que no se puede borrar. */
     private const TRACES = [
-        'docentes_paralelo' => 'asignacion_rol_id',
+        'asignaciones_paralelo' => 'asignacion_rol_id',
         'colaboradores_silabo' => 'usuario_id',
         'eventos_auditoria' => 'actor_usuario_id',
         'observaciones_revision' => 'creado_por',
@@ -46,7 +46,7 @@ class DeleteManagedUser
             }
             foreach (self::TRACES as $table => $column) {
                 $query = DB::table($table);
-                if ($table === 'docentes_paralelo') {
+                if ($table === 'asignaciones_paralelo') {
                     $query->whereIn($column, DB::table('asignaciones_rol')->where('usuario_id', $locked->id)->select('id'));
                 } else {
                     $query->where($column, $locked->id);

@@ -4,10 +4,10 @@
 
 La relación laboral no se conoce de forma estable al crear ni administrar una cuenta, por
 lo que `usuarios` no almacena fechas de inicio o fin. La disponibilidad actual depende de
-`usuarios.activo` y del rol/asignación operativa que corresponda.
+`usuarios.usuario_activo` y del rol/asignación operativa que corresponda.
 
 > Actualización I-52 (5 de septiembre de 2026): la revisión guiada aplicó el mismo
-> criterio a `asignaciones_coordinador`; su estado actual depende de `activo` y ya no de
+> criterio a `asignaciones_coordinador`; su estado actual dependía de su indicador activo y ya no de
 > fechas programadas.
 
 ## Alcance

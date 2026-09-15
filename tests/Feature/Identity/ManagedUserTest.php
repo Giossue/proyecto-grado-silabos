@@ -358,7 +358,7 @@ class ManagedUserTest extends TestCase
             ->assertRedirect()
             ->assertSessionHas('success');
 
-        $this->assertDatabaseHas('usuarios', ['id' => $teacher->id, 'activo' => false]);
+        $this->assertDatabaseHas('usuarios', ['id' => $teacher->id, 'usuario_activo' => false]);
         $this->assertDatabaseMissing('sesiones', ['id' => 'teacher-session-to-revoke']);
         $this->assertDatabaseHas('asignaciones_rol', ['id' => $roleAssignmentId]);
         $this->assertDatabaseHas('eventos_auditoria', [

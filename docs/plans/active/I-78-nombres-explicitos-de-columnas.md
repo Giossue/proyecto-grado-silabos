@@ -27,9 +27,10 @@ Laravel. Las propiedades de presentación pueden continuar llamándose `name`, `
 
 | Tabla | Columnas actuales → nombres físicos explícitos |
 | --- | --- |
+| `usuarios` | `nombre` → `nombre_usuario`; `activo` → `usuario_activo` |
 | `roles` | `codigo` → `codigo_rol`; `nombre` → `nombre_rol` |
 | `asignaciones_rol` | `activo` → `asignacion_rol_activa` |
-| `docentes_paralelo` | `activo` → `docente_paralelo_activo` |
+| `asignaciones_paralelo` | `activo` → `docente_paralelo_activo` |
 | `facultades` | `nombre` → `nombre_facultad`; `activo` → `facultad_activa`; `logo_ruta` → `ruta_logo_facultad` |
 | `campus` | `nombre` → `nombre_campus`; `activo` → `campus_activo` |
 | `carreras` | `nombre` → `nombre_carrera`; `activo` → `carrera_activa`; `modalidad` → `modalidad_carrera` |
@@ -79,16 +80,38 @@ Laravel. Las propiedades de presentación pueden continuar llamándose `name`, `
 4. Verificar migración, restricciones e índices en PostgreSQL, luego actualizar la
    fotografía del esquema de producción una vez que la migración remota esté aplicada.
 
+## Remate de identidad
+
+La revisión posterior de la matriz encontró que `usuarios.nombre` y
+`usuarios.activo` habían quedado fuera de las migraciones `000064` a `000069`.
+La migración `000070` los renombra a `nombre_usuario` y `usuario_activo`, ajusta el
+índice de estado y vuelve a definir la función que impide dos coordinaciones activas
+para que consulte la columna explícita. El modelo conserva `nombre` y `activo` como
+contrato de aplicación mediante su mapa de columnas, igual que los demás modelos del
+incremento.
+
 ## Ejecución local
 
-Las migraciones `000064` a `000069` fueron aplicadas consecutivamente en PostgreSQL
+Las migraciones `000064` a `000070` fueron aplicadas consecutivamente en PostgreSQL
 local. Cubren identidad, configuración, estructura académica, convocatorias y
-revisión, IA y operación. Las restricciones y funciones PL/pgSQL afectadas se
-redefinieron en la misma migración que cambia las columnas que consultan.
+revisión, IA y operación. `000070` completa identidad: renombra `usuarios.nombre` y
+`usuarios.activo`, conserva los contratos del modelo y redefine la función PL/pgSQL
+de coordinación activa.
 
 La aplicación conserva los contratos de entrada y salida existentes mediante el
 mapeo temporal de los modelos hacia las columnas físicas explícitas; PostgreSQL no
 mantiene columnas duplicadas ni alias persistentes.
 
-La fotografía de producción no se modifica hasta aplicar estas seis migraciones en
-ese entorno, para que siga describiendo datos reales y no cambios solamente locales.
+Las migraciones `000064` a `000070` están aplicadas en producción. La consulta de
+verificación confirmó que `usuarios` expone `nombre_usuario` y `usuario_activo`; la
+fotografía de producción se actualizó con ese estado real.
+
+## Verificación
+
+- `SpanishSchemaTest`, identidad y los flujos académicos/docentes afectados: 94 pruebas
+  y 1.078 aserciones correctas.
+- Suite Feature y Architecture completa: 422 pruebas y 6.588 aserciones correctas.
+- Pint sobre los archivos modificados y `git diff --check`: correctos.
+- La puerta global no está verde por deuda previa ajena a este incremento: Pint reporta
+  `SetAcademicRecordStatus.php` sin formato y PHPStan reporta diagnósticos existentes
+  de modelos y tipos. La integración Redis local también estaba sin servicio.

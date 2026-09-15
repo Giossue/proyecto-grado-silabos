@@ -15,7 +15,7 @@ ciclos, orden y relaciones de requisito.
    presentan como conjunto fijo. El total se deriva de ACD + APE + AA.
 3. Retirar rutas, casos de uso y validación de `custom_values`.
 4. Mantener `requisitos_asignatura`, programación, paralelos y
-   `docentes_paralelo`: expresan relaciones reales, no atributos flexibles.
+   `asignaciones_paralelo`: expresan relaciones reales, no atributos flexibles.
 5. La migración `000060` aborta si encuentra definiciones libres o valores EAV, para
    evitar pérdida silenciosa.
 

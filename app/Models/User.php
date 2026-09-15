@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
+use App\Support\Database\MapsLegacyColumnNames;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -42,7 +43,12 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, HasUuids, Notifiable, TwoFactorAuthenticatable;
+    use HasFactory, HasUuids, MapsLegacyColumnNames, Notifiable, TwoFactorAuthenticatable;
+
+    protected const LEGACY_COLUMN_ALIASES = [
+        'nombre' => 'nombre_usuario',
+        'activo' => 'usuario_activo',
+    ];
 
     public $timestamps = false;
 

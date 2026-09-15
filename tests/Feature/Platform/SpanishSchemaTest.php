@@ -93,6 +93,46 @@ it('I-52 no conserva marcas genéricas de auditoría en tablas de dominio', func
     expect($columnas)->toBe([]);
 });
 
+it('I-78 usa nombres explícitos para todos los atributos genéricos de dominio', function () use ($tablasDeFramework) {
+    $nombresGenericos = [
+        'codigo', 'nombre', 'descripcion', 'activo', 'estado', 'tipo', 'titulo',
+        'contenido', 'valor', 'origen', 'clave', 'etiqueta', 'ayuda', 'reglas',
+        'opciones', 'posicion', 'modalidad', 'fecha_inicio', 'fecha_fin',
+        'semanas_lectivas', 'numero_ciclos', 'creditos', 'horas_totales',
+        'orden_en_ciclo', 'unidad_organizacion_curricular', 'mapeo_documento',
+        'configuracion', 'datos', 'advertencias', 'extracto', 'decision',
+        'fotografia', 'justificacion', 'accion', 'metadatos', 'resultado', 'mensaje',
+    ];
+
+    $columnas = DB::table('information_schema.columns')
+        ->where('table_schema', 'public')
+        ->whereNotIn('table_name', $tablasDeFramework)
+        ->whereIn('column_name', $nombresGenericos)
+        ->get(['table_name', 'column_name'])
+        ->map(fn ($column) => "{$column->table_name}.{$column->column_name}")
+        ->all();
+
+    expect($columnas)->toBe([])
+        ->and(Schema::hasColumn('usuarios', 'nombre_usuario'))->toBeTrue()
+        ->and(Schema::hasColumn('usuarios', 'usuario_activo'))->toBeTrue();
+});
+
+it('I-79 nombra la responsabilidad operativa como asignación a un paralelo', function () {
+    expect(Schema::hasTable('asignaciones_paralelo'))->toBeTrue()
+        ->and(Schema::hasTable('docentes_paralelo'))->toBeFalse();
+
+    $restricciones = collect(DB::select(
+        "SELECT conname
+         FROM pg_constraint
+         WHERE conrelid = 'asignaciones_paralelo'::regclass",
+    ))->pluck('conname');
+
+    expect($restricciones)
+        ->toContain('asignaciones_paralelo_pkey')
+        ->toContain('asignaciones_paralelo_paralelo_id_foreign')
+        ->toContain('asignaciones_paralelo_asignacion_rol_id_foreign');
+});
+
 it('I-62 persiste la programación de asignaturas con nombres e invariante propios', function () {
     expect(Schema::hasTable('programaciones_asignatura'))->toBeTrue()
         ->and(Schema::hasTable('ofertas_academicas'))->toBeFalse()

@@ -37,13 +37,14 @@
 ### Identidad
 
 `usuarios`, `roles`, `asignaciones_rol`. Las columnas de `usuarios` heredadas del
-starter quedaron en español en I-28 (`nombre`, `correo_electronico`, `contrasena`,
-`activo`, `codigo_recordarme`, `secreto_dos_factores`…);
-I-50 deja `activo` como estado actual y registra toda activación/desactivación en
+starter quedaron en español en I-28 y sus atributos de dominio son explícitos desde
+I-78 (`nombre_usuario`, `correo_electronico`, `contrasena`, `usuario_activo`,
+`codigo_recordarme`, `secreto_dos_factores`…); el modelo conserva `nombre` y `activo`
+como contrato de aplicación. I-50 deja `usuario_activo` como estado actual y registra toda activación/desactivación en
 `eventos_auditoria`, sin duplicar fecha de baja o cédula de la integración retirada.
-I-51 retira la vigencia laboral de la cuenta: su disponibilidad se expresa con `activo`
+I-51 retira la vigencia laboral de la cuenta: su disponibilidad se expresa con `usuario_activo`
 y sus asignaciones operativas. El modelo `User` declara los puentes que Fortify y el
-guard exigen. I-29 hace las asignaciones de rol manuales: `asignaciones_rol.activo`
+guard exigen. I-29 hace las asignaciones de rol manuales: `asignaciones_rol.asignacion_rol_activa`
 determina su efectividad, `asignado_en` ordena el historial y no existen fechas
 programadas de inicio o fin.
 
@@ -51,7 +52,7 @@ programadas de inicio o fin.
 
 `facultades`, `carreras`, `campus`,
 `periodos_academicos`, `mallas`, `asignaturas`, `requisitos_asignatura`,
-`programaciones_asignatura`, `paralelos`, `docentes_paralelo`.
+`programaciones_asignatura`, `paralelos`, `asignaciones_paralelo`.
 
 `asignaciones_rol` es única relación RBAC: une usuario, rol y alcance de carrera. Una
 fila activa con rol `coordinador` expresa directamente quién coordina esa carrera; no
@@ -59,7 +60,7 @@ existe segunda tabla de coordinación. Un trigger PostgreSQL garantiza como máx
 coordinación ejercible por carrera (rol activo y cuenta activa); la aplicación muestra
 el error de negocio antes de llegar a la restricción.
 
-`docentes_paralelo` vincula una asignación de rol `docente` con un paralelo, conserva
+`asignaciones_paralelo` vincula una asignación de rol `docente` con un paralelo, conserva
 `asignado_en`; no tiene intervalo de vigencia laboral. Su identidad única es
 `asignacion_rol_id + paralelo_id`; un relevo finaliza relación anterior y crea nueva.
 

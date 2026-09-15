@@ -123,7 +123,7 @@ class StoreAcademicRecordRequest extends FormRequest
                 ...$this->assignmentRules('carreras', 'career_id'),
             ],
             'asignacion_docente' => [
-                'user_id' => ['required', 'uuid', Rule::exists('usuarios', 'id')->where('activo', true)],
+                'user_id' => ['required', 'uuid', Rule::exists('usuarios', 'id')->where('usuario_activo', true)],
                 'parallel_id' => [
                     'required',
                     'uuid',
@@ -203,7 +203,7 @@ class StoreAcademicRecordRequest extends FormRequest
     private function assignmentRules(string $table, string $scope): array
     {
         return [
-            'user_id' => ['required', 'uuid', Rule::exists('usuarios', 'id')->where('activo', true)],
+            'user_id' => ['required', 'uuid', Rule::exists('usuarios', 'id')->where('usuario_activo', true)],
             $scope => ['required', 'uuid', Rule::exists($table, 'id')->where('carrera_activa', true)],
         ];
     }

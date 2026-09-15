@@ -197,10 +197,16 @@ tipados de `asignaturas`; ACD, APE, AA, créditos y total se muestran como conju
 fijo. Se retiran `definiciones_campo_malla` y `valores_campo_asignatura`; requisitos,
 programaciones, paralelos y responsabilidades docentes se mantienen como relaciones.
 
-I-78 (14 de septiembre de 2026) reemplaza el ambiguo `codigo_institucional` por el
-código propio de cada entidad académica: `codigo_facultad`, `codigo_campus`,
-`codigo_carrera` y `codigo_asignatura`. Los campos transversales y los códigos ya
-inequívocos por su tabla se conservan; no se prefijan artificialmente.
+I-78 (14 y 15 de septiembre de 2026) reemplaza los atributos físicos genéricos por
+nombres que expresan su concepto y entidad: entre ellos, `codigo_facultad`,
+`codigo_campus`, `codigo_carrera`, `codigo_asignatura`, `nombre_usuario` y
+`usuario_activo`. Los campos transversales, claves técnicas y códigos ya inequívocos
+por su tabla se conservan; no se prefijan artificialmente.
+
+I-79 (15 de septiembre de 2026) renombra la tabla física de responsabilidad docente
+`docentes_paralelo` a `asignaciones_paralelo`. La relación sigue vinculando un paralelo
+con la asignación RBAC docente que la respalda; conserva datos, restricciones y claves
+foráneas, sin modificar los nombres funcionales de la interfaz o las rutas.
 
 I-07 implementa un puerto de lectura, fixture sintético versionado, staging inmutable,
 simulación y exclusión humana. Demuestra idempotencia, conflicto y cero mutación del

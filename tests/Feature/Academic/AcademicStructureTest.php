@@ -360,7 +360,7 @@ class AcademicStructureTest extends TestCase
 
         $this->assertDatabaseHas('programaciones_asignatura', ['id' => $scheduledSubject->id]);
         $this->assertDatabaseHas('paralelos', ['id' => $parallel->id]);
-        $this->assertDatabaseHas('docentes_paralelo', [
+        $this->assertDatabaseHas('asignaciones_paralelo', [
             'id' => $assignment->id,
             'docente_paralelo_activo' => true,
         ]);
@@ -1551,7 +1551,7 @@ class AcademicStructureTest extends TestCase
             ->delete(route('coordination.academic.destroy', ['entity' => 'asignacion_docente', 'record' => $assignment->id]))
             ->assertRedirect()
             ->assertSessionHasNoErrors();
-        $this->assertDatabaseMissing('docentes_paralelo', ['id' => $assignment->id]);
+        $this->assertDatabaseMissing('asignaciones_paralelo', ['id' => $assignment->id]);
 
         $this->actingAsCoordinator()
             ->delete(route('coordination.academic.destroy', ['entity' => 'paralelo', 'record' => $parallel->id]))

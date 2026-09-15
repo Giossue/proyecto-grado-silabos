@@ -1,7 +1,7 @@
 # Base de datos actual de producción — Sílabos UEB
 
-**Fotografía verificada:** 14 de septiembre de 2026, migraciones hasta
-`2026_09_14_000069_name_operation_columns_explicitly` (lote 42).
+**Fotografía verificada:** 15 de septiembre de 2026, migraciones hasta
+`2026_09_15_000071_rename_docentes_paralelo_to_asignaciones_paralelo` (lote 44).
 # 1. Identidad y acceso
 
 ## usuarios
@@ -10,11 +10,11 @@
 
 ~~~text
 id UUID (PK)
-nombre VARCHAR NOT NULL
+nombre_usuario VARCHAR NOT NULL
 correo_electronico VARCHAR NOT NULL UNIQUE
 correo_verificado_en TIMESTAMPTZ NULL
 contrasena VARCHAR NOT NULL
-activo BOOLEAN NOT NULL
+usuario_activo BOOLEAN NOT NULL
 codigo_recordarme VARCHAR NULL
 secreto_dos_factores TEXT NULL
 codigos_recuperacion_dos_factores TEXT NULL
@@ -50,7 +50,7 @@ UNIQUE parcial: usuario_id, rol_id y carrera_id cuando asignacion_rol_activa
 **Regla adicional:** un trigger de PostgreSQL permite una sola coordinación ejercible
 por carrera: rol `coordinador` activo y cuenta activa.
 
-## docentes_paralelo
+## asignaciones_paralelo
 
 **Contexto:** responsabilidad docente sobre un paralelo, respaldada por un rol docente
 de la misma carrera.

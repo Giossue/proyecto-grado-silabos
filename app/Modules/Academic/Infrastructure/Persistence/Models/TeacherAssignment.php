@@ -30,7 +30,7 @@ class TeacherAssignment extends Model
 
     public const UPDATED_AT = null;
 
-    protected $table = 'docentes_paralelo';
+    protected $table = 'asignaciones_paralelo';
 
     /** @var list<string> */
     protected $fillable = [

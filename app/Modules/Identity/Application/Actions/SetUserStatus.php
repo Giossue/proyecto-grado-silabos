@@ -35,7 +35,7 @@ class SetUserStatus
                 DB::table('sesiones')->where('user_id', $target->id)->delete();
                 // Ningún paralelo queda a nombre de alguien que ya no está (I-39); los
                 // sílabos en curso se relevaron antes, porque `ensureMayDeactivate` lo exige.
-                $closedTeacherAssignments = DB::table('docentes_paralelo')
+                $closedTeacherAssignments = DB::table('asignaciones_paralelo')
                     ->whereIn('asignacion_rol_id', RoleAssignment::query()->where('usuario_id', $target->id)->select('id'))
                     ->where('docente_paralelo_activo', true)
                     ->update(['docente_paralelo_activo' => false]);

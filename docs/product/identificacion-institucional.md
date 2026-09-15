@@ -27,22 +27,22 @@ Word de identificación) se conservan para sílabos y revisiones anteriores sin 
 | Facultad | `faculty` | `carreras.facultad_id` → `facultades.nombre` |
 | Carrera | `career` | `mallas.carrera_id` → `carreras.nombre` |
 | Modalidad de estudio | `modality` | `programaciones_asignatura.modalidad` (valor fijo del RRA, heredado de la materia o de la carrera al programarla; I-35, I-37, I-62) |
-| Campus universitario | `campus` | `programaciones_asignatura.campus_id` → `campus.nombre` |
-| Asignatura | `subject` | `asignaturas.nombre` |
-| Periodo académico | `period` | `programaciones_asignatura.periodo_academico_id` → `periodos_academicos.codigo` |
-| Ciclo | `cycle` | `asignaturas.ciclo` (número → «Séptimo») |
-| Paralelo | `parallel` | `paralelos.codigo` de los alcances del expediente (`alcances_silabo`) |
-| Jornada | `shift` | `paralelos.jornada` (matutina, vespertina, nocturna) |
+| Campus universitario | `campus` | `programaciones_asignatura.campus_id` → `campus.nombre_campus` |
+| Asignatura | `subject` | `asignaturas.nombre_asignatura` |
+| Periodo académico | `period` | `programaciones_asignatura.periodo_academico_id` → `periodos_academicos.codigo_periodo_academico` |
+| Ciclo | `cycle` | `asignaturas.ciclo_asignatura` (número → «Séptimo») |
+| Paralelo | `parallel` | `paralelos.codigo_paralelo` de los alcances del expediente (`alcances_silabo`) |
+| Jornada | `shift` | `paralelos.jornada_paralelo` (matutina, vespertina, nocturna) |
 | Código | `code` | `asignaturas.codigo_asignatura` |
-| Prerrequisitos | `prerequisites` | `requisitos_asignatura` con `tipo = prerrequisito` → código de la materia requerida |
-| Correquisitos | `corequisites` | `requisitos_asignatura` con `tipo = correquisito` |
-| Unidad de organización curricular | `organization_unit` | `asignaturas.unidad_organizacion_curricular`; marca X en Básica, Profesional o Titulación |
+| Prerrequisitos | `prerequisites` | `requisitos_asignatura` con `tipo_requisito_asignatura = prerrequisito` → código de la materia requerida |
+| Correquisitos | `corequisites` | `requisitos_asignatura` con `tipo_requisito_asignatura = correquisito` |
+| Unidad de organización curricular | `organization_unit` | `asignaturas.unidad_organizativa_curricular_asignatura`; marca X en Básica, Profesional o Titulación |
 | Horas de docencia (ACD) | `hours_ac` | `asignaturas.horas_ac` |
 | Horas prácticas (APE) | `hours_pae` | `asignaturas.horas_pae` |
 | Horas autónomas (AA) | `hours_aa` | `asignaturas.horas_aa` |
-| Total de horas por periodo | `total_hours` | `asignaturas.horas_totales` |
-| Total, créditos | `credits` | `asignaturas.creditos` |
-| Nombre del docente | `teacher` | `colaboradores_silabo` → `usuarios.nombre` |
+| Total de horas por periodo | `total_hours` | `asignaturas.total_horas_asignatura` |
+| Total, créditos | `credits` | `asignaturas.creditos_asignatura` |
+| Nombre del docente | `teacher` | `colaboradores_silabo` → `usuarios.nombre_usuario` |
 | Correo institucional | `email` | `colaboradores_silabo` → `usuarios.correo_electronico` |
 | Estudiantes con discapacidad (Sí/No, tipo, adaptación) | `disability`, `disability_type`, `disability_description` | Lo escribe el docente: campos `discapacidad_tiene`, `discapacidad_tipo`, `discapacidad_adaptacion` del bloque de identificación (`valores_campo`) |
 | Formación y experiencia académica-investigativa | `formation` | Lo escribe el docente: campo `formacion_experiencia` del mismo bloque; última fila de la tabla |

@@ -21,7 +21,7 @@ class RelieveTeacherRequest extends FormRequest
     {
         return [
             'outgoing_user_id' => ['required', 'uuid', 'exists:usuarios,id'],
-            'incoming_user_id' => ['required', 'uuid', 'different:outgoing_user_id', Rule::exists('usuarios', 'id')->where('activo', true)],
+            'incoming_user_id' => ['required', 'uuid', 'different:outgoing_user_id', Rule::exists('usuarios', 'id')->where('usuario_activo', true)],
             'idempotency_key' => ['required', 'string', 'max:120'],
         ];
     }

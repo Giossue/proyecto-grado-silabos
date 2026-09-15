@@ -25,7 +25,7 @@ class TransferSyllabusTeacherRequest extends FormRequest
                 'required',
                 'uuid',
                 'different:outgoing_user_id',
-                Rule::exists('usuarios', 'id')->where('activo', true),
+                Rule::exists('usuarios', 'id')->where('usuario_activo', true),
             ],
             'idempotency_key' => ['required', 'string', 'max:120'],
         ];

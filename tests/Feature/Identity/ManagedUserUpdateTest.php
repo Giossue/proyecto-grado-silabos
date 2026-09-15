@@ -201,7 +201,7 @@ class ManagedUserUpdateTest extends TestCase
 
         // El estado de cuenta es la puerta exterior: el rol queda como historial, pero
         // una cuenta inactiva no puede ejercerlo ni bloquear la futura coordinación.
-        $this->assertDatabaseHas('usuarios', ['id' => $this->teacher->id, 'activo' => false]);
+        $this->assertDatabaseHas('usuarios', ['id' => $this->teacher->id, 'usuario_activo' => false]);
         $this->assertTrue(CoordinatorAssignment::query()
             ->where('usuario_id', $this->teacher->id)
             ->where('carrera_id', $career->id)

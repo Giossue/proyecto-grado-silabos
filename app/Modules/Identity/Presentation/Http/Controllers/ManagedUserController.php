@@ -56,7 +56,7 @@ class ManagedUserController extends Controller
             ])
             ->when($search, fn (Builder $query, string $term) => $query->where(
                 fn (Builder $searchQuery) => $searchQuery
-                    ->whereRaw('nombre ILIKE ?', ["%{$term}%"])
+                    ->whereRaw('nombre_usuario ILIKE ?', ["%{$term}%"])
                     ->orWhereRaw('correo_electronico ILIKE ?', ["%{$term}%"]),
             ))
             // Los tres estados de la lista, y cada uno significa lo mismo que su insignia:

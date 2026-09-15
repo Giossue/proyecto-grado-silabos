@@ -2,7 +2,7 @@
 
 ## Decisión
 
-`docentes_paralelo` conserva únicamente la responsabilidad vigente de una asignación
+`asignaciones_paralelo` conserva únicamente la responsabilidad vigente de una asignación
 RBAC docente sobre un paralelo. El relevo no registra `sustento_tipo`,
 `sustento_numero` ni `sustento_fecha`.
 
