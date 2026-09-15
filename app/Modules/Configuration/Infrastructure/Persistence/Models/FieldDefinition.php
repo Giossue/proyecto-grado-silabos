@@ -2,6 +2,7 @@
 
 namespace App\Modules\Configuration\Infrastructure\Persistence\Models;
 
+use App\Support\Database\MapsLegacyColumnNames;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -27,7 +28,17 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class FieldDefinition extends Model
 {
-    use HasUuids;
+    use HasUuids, MapsLegacyColumnNames;
+
+    protected const LEGACY_COLUMN_ALIASES = [
+        'clave' => 'clave_definicion_campo',
+        'etiqueta' => 'etiqueta_definicion_campo',
+        'ayuda' => 'ayuda_definicion_campo',
+        'tipo' => 'tipo_definicion_campo',
+        'reglas' => 'reglas_definicion_campo',
+        'opciones' => 'opciones_definicion_campo',
+        'posicion' => 'posicion_definicion_campo',
+    ];
 
     public $timestamps = false;
 

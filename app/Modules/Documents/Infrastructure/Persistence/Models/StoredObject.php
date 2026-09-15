@@ -2,6 +2,7 @@
 
 namespace App\Modules\Documents\Infrastructure\Persistence\Models;
 
+use App\Support\Database\MapsLegacyColumnNames;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -19,7 +20,9 @@ use LogicException;
  */
 class StoredObject extends Model
 {
-    use HasUuids;
+    use HasUuids, MapsLegacyColumnNames;
+
+    protected const LEGACY_COLUMN_ALIASES = ['estado' => 'estado_objeto_almacenado'];
 
     public const CREATED_AT = 'almacenado_en';
 

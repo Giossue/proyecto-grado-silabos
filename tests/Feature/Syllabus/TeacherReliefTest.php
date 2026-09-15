@@ -80,8 +80,8 @@ class TeacherReliefTest extends TestCase
             ->where('paralelo_id', $extra->id)
             ->where('activo', true)
             ->exists());
-        $this->assertDatabaseHas('eventos_auditoria', ['accion' => 'docente.relevo_global', 'recurso_id' => $this->teacher->id]);
-        $this->assertDatabaseHas('eventos_auditoria', ['accion' => 'silabo.docente_transferido', 'recurso_id' => $syllabus->id]);
+        $this->assertDatabaseHas('eventos_auditoria', ['accion_evento_auditoria' => 'docente.relevo_global', 'recurso_id' => $this->teacher->id]);
+        $this->assertDatabaseHas('eventos_auditoria', ['accion_evento_auditoria' => 'silabo.docente_transferido', 'recurso_id' => $syllabus->id]);
 
         // Repetirlo ya no encuentra paralelos: se dice, no se duplica.
         $this->relieve()->assertSessionHasErrors('outgoing_user_id');

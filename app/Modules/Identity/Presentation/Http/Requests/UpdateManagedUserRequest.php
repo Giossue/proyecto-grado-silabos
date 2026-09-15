@@ -55,7 +55,7 @@ class UpdateManagedUserRequest extends FormRequest
                 'nullable',
                 'required_unless:role_code,'.RoleCode::Administrator->value,
                 'uuid',
-                Rule::exists('carreras', 'id')->where('activo', true),
+                Rule::exists('carreras', 'id')->where('carrera_activa', true),
             ],
         ];
     }

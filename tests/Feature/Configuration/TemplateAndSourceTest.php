@@ -147,7 +147,7 @@ class TemplateAndSourceTest extends TestCase
             ])
             ->assertSessionHasErrors('fields.0.key');
 
-        $this->assertDatabaseMissing('secciones_plantilla', ['clave' => 'bloque_invalido']);
+        $this->assertDatabaseMissing('secciones_plantilla', ['clave_seccion_plantilla' => 'bloque_invalido']);
     }
 
     public function test_only_administrator_updates_controlled_template_appearance(): void
@@ -187,7 +187,7 @@ class TemplateAndSourceTest extends TestCase
         ];
         $this->assertEquals($expected, $template->fresh()->mapeo_documento['appearance']);
         $this->assertDatabaseHas('eventos_auditoria', [
-            'accion' => 'plantilla.apariencia_actualizada',
+            'accion_evento_auditoria' => 'plantilla.apariencia_actualizada',
             'recurso_id' => $template->id,
         ]);
 
@@ -227,7 +227,7 @@ class TemplateAndSourceTest extends TestCase
             $template->mapeo_documento['title_block'],
         );
         $this->assertDatabaseHas('eventos_auditoria', [
-            'accion' => 'plantilla.titulo_actualizado',
+            'accion_evento_auditoria' => 'plantilla.titulo_actualizado',
             'recurso_id' => $template->id,
         ]);
 
@@ -471,7 +471,7 @@ class TemplateAndSourceTest extends TestCase
         $this->assertSame('table', $block->fresh()->configuracion['content_type']);
         $this->assertSame(['contenidos', 'acd', 'ape', 'aa'], array_column($saved['columns'], 'key'));
         $this->assertTrue($saved['repeat']['enabled']);
-        $this->assertDatabaseHas('eventos_auditoria', ['accion' => 'plantilla.tabla_actualizada', 'recurso_id' => $block->id]);
+        $this->assertDatabaseHas('eventos_auditoria', ['accion_evento_auditoria' => 'plantilla.tabla_actualizada', 'recurso_id' => $block->id]);
 
         // Un grupo partido por otra columna no es una cabecera posible.
         $broken = $layout;
@@ -561,7 +561,7 @@ class TemplateAndSourceTest extends TestCase
 
         $this->assertSame("## Resultado\n\nDiseña software seguro.", $source->fresh()->contenido);
         $this->assertDatabaseHas('eventos_auditoria', [
-            'accion' => 'fuente.contenido_actualizado',
+            'accion_evento_auditoria' => 'fuente.contenido_actualizado',
             'recurso_id' => $source->id,
         ]);
 

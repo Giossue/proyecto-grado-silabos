@@ -3,6 +3,7 @@
 namespace App\Modules\Configuration\Infrastructure\Persistence\Models;
 
 use App\Modules\Configuration\Domain\TableLayout;
+use App\Support\Database\MapsLegacyColumnNames;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -22,7 +23,15 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class TemplateBlock extends Model
 {
-    use HasUuids;
+    use HasUuids, MapsLegacyColumnNames;
+
+    protected const LEGACY_COLUMN_ALIASES = [
+        'clave' => 'clave_bloque_plantilla',
+        'tipo' => 'tipo_bloque_plantilla',
+        'titulo' => 'titulo_bloque_plantilla',
+        'configuracion' => 'configuracion_bloque_plantilla',
+        'posicion' => 'posicion_bloque_plantilla',
+    ];
 
     public $timestamps = false;
 

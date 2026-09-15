@@ -87,7 +87,7 @@ class TeacherTransferTest extends TestCase
             ->where('activo', true)
             ->exists());
         $this->assertDatabaseHas('eventos_auditoria', [
-            'accion' => 'silabo.docente_transferido',
+            'accion_evento_auditoria' => 'silabo.docente_transferido',
             'recurso_id' => $syllabus->id,
         ]);
     }

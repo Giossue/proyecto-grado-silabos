@@ -22,7 +22,7 @@ class UpdateCurriculumConfigurationRequest extends FormRequest
                 'required',
                 'string',
                 'max:80',
-                Rule::unique('mallas', 'codigo')
+                Rule::unique('mallas', 'codigo_malla')
                     ->where('carrera_id', app(ActiveRole::class)->resolve($this)?->carrera_id)
                     ->ignore($this->route('curriculum')),
             ],

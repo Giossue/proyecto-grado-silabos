@@ -79,7 +79,7 @@ class ConvocationAndDraftTest extends TestCase
         $master = $syllabus->values()->where('heredado', true)->firstOrFail();
         $this->assertSame('Arquitectura de Software', $master->valor['nombre']);
         $this->assertDatabaseHas('eventos_auditoria', [
-            'accion' => 'convocatoria.abierta',
+            'accion_evento_auditoria' => 'convocatoria.abierta',
             'recurso_id' => $convocation->id,
         ]);
 
@@ -168,7 +168,7 @@ class ConvocationAndDraftTest extends TestCase
 
         $this->assertSame('preparacion', $convocation->fresh()->estado);
         $this->assertDatabaseCount('silabos', 0);
-        $this->assertDatabaseMissing('eventos_auditoria', ['accion' => 'convocatoria.abierta']);
+        $this->assertDatabaseMissing('eventos_auditoria', ['accion_evento_auditoria' => 'convocatoria.abierta']);
     }
 
     public function test_archived_source_blocks_convocation_opening(): void
@@ -315,8 +315,8 @@ class ConvocationAndDraftTest extends TestCase
         $this->assertDatabaseHas('resultados_validacion', [
             'ejecucion_validacion_id' => $run->id,
             'definicion_campo_id' => $field->id,
-            'codigo' => 'horas_planificacion_no_coinciden',
-            'severidad' => 'error',
+            'codigo_resultado_validacion' => 'horas_planificacion_no_coinciden',
+            'severidad_resultado_validacion' => 'error',
         ]);
     }
 
@@ -349,11 +349,11 @@ class ConvocationAndDraftTest extends TestCase
             ->assertJsonPath('rows.0.id', $secondRowId)
             ->assertJsonPath('rows.0.posicion', 1);
 
-        $this->assertDatabaseMissing('filas_repetibles', ['datos->texto' => 'Primera fila']);
+        $this->assertDatabaseMissing('filas_repetibles', ['datos_fila_repetible->texto' => 'Primera fila']);
         $this->assertDatabaseHas('filas_repetibles', [
             'id' => $secondRowId,
-            'posicion' => 1,
-            'datos->texto' => 'Segunda fila ajustada',
+            'posicion_fila_repetible' => 1,
+            'datos_fila_repetible->texto' => 'Segunda fila ajustada',
         ]);
     }
 

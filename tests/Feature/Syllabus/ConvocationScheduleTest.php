@@ -62,11 +62,11 @@ class ConvocationScheduleTest extends TestCase
 
         $this->assertDatabaseHas('fechas_limite_convocatoria', [
             'convocatoria_id' => $convocation->id,
-            'etapa' => 'inicio',
+            'etapa_fecha_limite_convocatoria' => 'inicio',
         ]);
         $this->assertDatabaseHas('fechas_limite_convocatoria', [
             'convocatoria_id' => $convocation->id,
-            'etapa' => 'borrador',
+            'etapa_fecha_limite_convocatoria' => 'borrador',
         ]);
     }
 

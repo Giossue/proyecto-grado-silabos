@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Modules\Operations\Infrastructure\Persistence\Models\JobExecution;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\Syllabus;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\SyllabusRevision;
+use App\Support\Database\MapsLegacyColumnNames;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -31,7 +32,9 @@ use LogicException;
  */
 class ExportArtifact extends Model
 {
-    use HasUuids;
+    use HasUuids, MapsLegacyColumnNames;
+
+    protected const LEGACY_COLUMN_ALIASES = ['estado' => 'estado_artefacto_exportacion'];
 
     public $timestamps = false;
 
@@ -90,7 +93,7 @@ class ExportArtifact extends Model
     protected static function booted(): void
     {
         static::updating(function (ExportArtifact $artifact): void {
-            if ($artifact->getOriginal('estado') === 'completado') {
+            if ($artifact->getOriginal('estado_artefacto_exportacion') === 'completado') {
                 throw new LogicException('Un artefacto completado es inmutable.');
             }
         });

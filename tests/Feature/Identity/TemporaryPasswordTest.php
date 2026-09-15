@@ -152,9 +152,9 @@ class TemporaryPasswordTest extends TestCase
         $this->assertTrue(Hash::check('Definitiva-2026!', $user->contrasena));
         $this->assertDatabaseHas('eventos_auditoria', [
             'actor_usuario_id' => $user->id,
-            'accion' => 'usuario.contrasena_temporal_cambiada',
+            'accion_evento_auditoria' => 'usuario.contrasena_temporal_cambiada',
             'recurso_id' => $user->id,
-            'resultado' => 'exito',
+            'resultado_evento_auditoria' => 'exito',
         ]);
 
         // Con la marca apagada, la sesión vuelve a operar donde antes rebotaba.
@@ -190,7 +190,7 @@ class TemporaryPasswordTest extends TestCase
             ->assertSessionHasErrors(['password' => 'La contraseña nueva debe ser distinta de la actual.']);
 
         $this->assertTrue($user->refresh()->debe_cambiar_contrasena);
-        $this->assertDatabaseMissing('eventos_auditoria', ['accion' => 'usuario.contrasena_temporal_cambiada']);
+        $this->assertDatabaseMissing('eventos_auditoria', ['accion_evento_auditoria' => 'usuario.contrasena_temporal_cambiada']);
     }
 
     public function test_the_audit_event_never_carries_the_password(): void

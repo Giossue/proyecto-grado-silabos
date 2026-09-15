@@ -109,7 +109,7 @@ class AiAssistanceTest extends TestCase
         );
         $this->assertDatabaseHas('notificaciones_internas', [
             'usuario_id' => $this->teacher->id,
-            'tipo' => 'ia.analisis.completada',
+            'tipo_notificacion_interna' => 'ia.analisis.completada',
         ]);
 
         $this->get(route('syllabi.ai.show', [$syllabus, $field]))
@@ -129,7 +129,7 @@ class AiAssistanceTest extends TestCase
         $this->assertDatabaseHas('retroalimentacion_ia', [
             'recomendacion_ia_id' => $recommendation->id,
             'usuario_id' => $this->teacher->id,
-            'decision' => 'aceptada',
+            'decision_retroalimentacion_ia' => 'aceptada',
         ]);
         $this->assertSame(0, $syllabus->fresh()->version_bloqueo);
 
@@ -148,8 +148,8 @@ class AiAssistanceTest extends TestCase
         $this->assertSame(0, $applied->version_bloqueo_origen);
         $this->assertSame(1, $applied->version_bloqueo_resultado);
         $this->assertDatabaseHas('eventos_auditoria', [
-            'accion' => 'ia.recomendacion_aplicada',
-            'resultado' => 'exito',
+            'accion_evento_auditoria' => 'ia.recomendacion_aplicada',
+            'resultado_evento_auditoria' => 'exito',
         ]);
 
         $this->post(route('syllabi.ai.apply', [$syllabus, $field, $recommendation]), [
@@ -385,7 +385,7 @@ class AiAssistanceTest extends TestCase
 
         $this->assertDatabaseCount('ejecuciones_ia', 1);
         Queue::assertPushed(AnalyzeSyllabusFieldJob::class, 1);
-        $this->assertDatabaseHas('eventos_auditoria', ['accion' => 'ia.analisis_reutilizado']);
+        $this->assertDatabaseHas('eventos_auditoria', ['accion_evento_auditoria' => 'ia.analisis_reutilizado']);
 
         $this->patchJson(route('syllabi.fields.update', [$syllabus, $field]), [
             'version_bloqueo' => 0,
@@ -426,10 +426,10 @@ class AiAssistanceTest extends TestCase
             $this->assertNotSame('Alterado', $recommendation->fresh()->titulo);
         }
         foreach ([
-            ['evidencias_ia', $evidence->id, ['extracto' => 'alterado']],
-            ['recomendaciones_ia', $recommendation->id, ['titulo' => 'alterado']],
-            ['retroalimentacion_ia', $feedback->id, ['decision' => 'ignorada']],
-            ['ejecuciones_ia', $execution->id, ['contenido_entrada' => 'alterado']],
+            ['evidencias_ia', $evidence->id, ['extracto_evidencia_ia' => 'alterado']],
+            ['recomendaciones_ia', $recommendation->id, ['titulo_recomendacion_ia' => 'alterado']],
+            ['retroalimentacion_ia', $feedback->id, ['decision_retroalimentacion_ia' => 'ignorada']],
+            ['ejecuciones_ia', $execution->id, ['contenido_entrada_ia' => 'alterado']],
         ] as [$table, $id, $changes]) {
             try {
                 DB::transaction(fn () => DB::table($table)->where('id', $id)->update($changes));

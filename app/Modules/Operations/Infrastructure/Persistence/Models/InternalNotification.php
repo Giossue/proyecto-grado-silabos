@@ -2,6 +2,7 @@
 
 namespace App\Modules\Operations\Infrastructure\Persistence\Models;
 
+use App\Support\Database\MapsLegacyColumnNames;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -20,7 +21,13 @@ use LogicException;
  */
 class InternalNotification extends Model
 {
-    use HasUuids;
+    use HasUuids, MapsLegacyColumnNames;
+
+    protected const LEGACY_COLUMN_ALIASES = [
+        'tipo' => 'tipo_notificacion_interna',
+        'titulo' => 'titulo_notificacion_interna',
+        'mensaje' => 'mensaje_notificacion_interna',
+    ];
 
     public const CREATED_AT = 'notificado_en';
 

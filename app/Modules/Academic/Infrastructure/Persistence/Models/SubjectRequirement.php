@@ -2,6 +2,7 @@
 
 namespace App\Modules\Academic\Infrastructure\Persistence\Models;
 
+use App\Support\Database\MapsLegacyColumnNames;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -14,7 +15,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class SubjectRequirement extends Model
 {
-    use HasUuids;
+    use HasUuids, MapsLegacyColumnNames;
+
+    protected const LEGACY_COLUMN_ALIASES = [
+        'tipo' => 'tipo_requisito_asignatura',
+    ];
 
     public $timestamps = false;
 

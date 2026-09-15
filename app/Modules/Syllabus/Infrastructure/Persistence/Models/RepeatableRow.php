@@ -2,6 +2,7 @@
 
 namespace App\Modules\Syllabus\Infrastructure\Persistence\Models;
 
+use App\Support\Database\MapsLegacyColumnNames;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 
@@ -13,7 +14,12 @@ use Illuminate\Database\Eloquent\Model;
  */
 class RepeatableRow extends Model
 {
-    use HasUuids;
+    use HasUuids, MapsLegacyColumnNames;
+
+    protected const LEGACY_COLUMN_ALIASES = [
+        'datos' => 'datos_fila_repetible',
+        'posicion' => 'posicion_fila_repetible',
+    ];
 
     public $timestamps = false;
 

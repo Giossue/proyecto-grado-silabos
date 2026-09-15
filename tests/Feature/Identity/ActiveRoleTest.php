@@ -159,8 +159,8 @@ class ActiveRoleTest extends TestCase
         $this->assertDatabaseHas('eventos_auditoria', [
             'actor_usuario_id' => $coordinator->id,
             'asignacion_rol_id' => $assignment->id,
-            'accion' => 'rol_activo.seleccionado',
-            'resultado' => 'exito',
+            'accion_evento_auditoria' => 'rol_activo.seleccionado',
+            'resultado_evento_auditoria' => 'exito',
         ]);
     }
 

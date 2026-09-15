@@ -45,7 +45,7 @@ class SaveFieldDefinitionRequest extends ManageTemplatesRequest
                 'string',
                 'regex:/^[a-z][a-z0-9_]*$/',
                 $fieldId === null ? 'max:100' : 'max:120',
-                Rule::unique('definiciones_campo', 'clave')
+                Rule::unique('definiciones_campo', 'clave_definicion_campo')
                     ->where('plantilla_id', $templateId)
                     ->ignore($fieldId),
             ],

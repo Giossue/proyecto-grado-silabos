@@ -23,7 +23,7 @@ class CreateSourceRequest extends FormRequest
                 'required',
                 'string',
                 'max:180',
-                Rule::unique('fuentes_academicas', 'nombre')->where('carrera_id', $careerId),
+                Rule::unique('fuentes_academicas', 'nombre_fuente_academica')->where('carrera_id', $careerId),
             ],
             'description' => ['nullable', 'string', 'max:2000'],
         ];

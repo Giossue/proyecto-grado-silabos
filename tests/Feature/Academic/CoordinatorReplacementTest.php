@@ -58,12 +58,12 @@ class CoordinatorReplacementTest extends TestCase
         $this->assertTrue(CoordinatorAssignment::query()->effective()->where('carrera_id', $this->career->id)->where('usuario_id', $incoming->id)->exists());
         // Rol de coordinación: cerrado para quien sale, concedido a quien entra; el de docente del entrante sigue.
         $coordinatorRole = Role::query()->where('codigo_rol', RoleCode::Coordinator->value)->firstOrFail();
-        $this->assertDatabaseHas('asignaciones_rol', ['usuario_id' => $this->coordinator->id, 'rol_id' => $coordinatorRole->id, 'carrera_id' => $this->career->id, 'activo' => false]);
-        $this->assertDatabaseHas('asignaciones_rol', ['usuario_id' => $incoming->id, 'rol_id' => $coordinatorRole->id, 'carrera_id' => $this->career->id, 'activo' => true]);
+        $this->assertDatabaseHas('asignaciones_rol', ['usuario_id' => $this->coordinator->id, 'rol_id' => $coordinatorRole->id, 'carrera_id' => $this->career->id, 'asignacion_rol_activa' => false]);
+        $this->assertDatabaseHas('asignaciones_rol', ['usuario_id' => $incoming->id, 'rol_id' => $coordinatorRole->id, 'carrera_id' => $this->career->id, 'asignacion_rol_activa' => true]);
         $this->assertSame(2, RoleAssignment::query()->effective()->where('usuario_id', $incoming->id)->count());
         // Sin `deactivate_outgoing`, la cuenta saliente sigue activa (puede seguir como docente).
         $this->assertTrue($this->coordinator->fresh()->activo);
-        $this->assertDatabaseHas('eventos_auditoria', ['accion' => 'academico.coordinacion.reemplazada', 'recurso_id' => $this->career->id]);
+        $this->assertDatabaseHas('eventos_auditoria', ['accion_evento_auditoria' => 'academico.coordinacion.reemplazada', 'recurso_id' => $this->career->id]);
 
         // La misma persona no se reemplaza a sí misma.
         $this->actingAsAdministrator()
@@ -93,7 +93,7 @@ class CoordinatorReplacementTest extends TestCase
             ->assertRedirect()
             ->assertSessionHas('success', 'Coordinación de Software reemplazada; la cuenta saliente quedó desactivada.');
         $this->assertFalse($incoming->fresh()->activo);
-        $this->assertDatabaseHas('eventos_auditoria', ['accion' => 'usuario.desactivado', 'recurso_id' => $incoming->id]);
+        $this->assertDatabaseHas('eventos_auditoria', ['accion_evento_auditoria' => 'usuario.desactivado', 'recurso_id' => $incoming->id]);
     }
 
     public function test_a_career_without_coordination_gets_one_assigned_with_the_same_action(): void

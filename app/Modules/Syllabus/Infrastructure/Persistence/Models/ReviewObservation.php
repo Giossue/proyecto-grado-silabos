@@ -3,6 +3,7 @@
 namespace App\Modules\Syllabus\Infrastructure\Persistence\Models;
 
 use App\Models\User;
+use App\Support\Database\MapsLegacyColumnNames;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -22,7 +23,12 @@ use LogicException;
  */
 class ReviewObservation extends Model
 {
-    use HasUuids;
+    use HasUuids, MapsLegacyColumnNames;
+
+    protected const LEGACY_COLUMN_ALIASES = [
+        'contenido' => 'contenido_observacion_revision',
+        'estado' => 'estado_observacion_revision',
+    ];
 
     public const CREATED_AT = 'observado_en';
 
@@ -63,7 +69,7 @@ class ReviewObservation extends Model
     protected static function booted(): void
     {
         static::updating(function (ReviewObservation $observation): void {
-            if (array_diff(array_keys($observation->getDirty()), ['estado']) !== []) {
+            if (array_diff(array_keys($observation->getDirty()), ['estado_observacion_revision']) !== []) {
                 throw new LogicException('El contenido de una observación es inmutable.');
             }
         });

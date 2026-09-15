@@ -37,8 +37,8 @@ class SetUserStatus
                 // sílabos en curso se relevaron antes, porque `ensureMayDeactivate` lo exige.
                 $closedTeacherAssignments = DB::table('docentes_paralelo')
                     ->whereIn('asignacion_rol_id', RoleAssignment::query()->where('usuario_id', $target->id)->select('id'))
-                    ->where('activo', true)
-                    ->update(['activo' => false]);
+                    ->where('docente_paralelo_activo', true)
+                    ->update(['docente_paralelo_activo' => false]);
             }
 
             $this->audit->execute(
@@ -86,10 +86,10 @@ class SetUserStatus
             ->join('convocatorias_carreras', 'convocatorias_carreras.id', '=', 'silabos.convocatoria_id')
             ->join('carreras', 'carreras.id', '=', 'convocatorias_carreras.carrera_id')
             ->where('colaboradores_silabo.usuario_id', $target->id)
-            ->whereIn('silabos.estado', ['borrador', 'en_revision', 'correccion_solicitada'])
-            ->where('convocatorias_carreras.estado', 'abierta')
-            ->groupBy('carreras.nombre')
-            ->selectRaw('carreras.nombre AS carrera, COUNT(*) AS total')
+            ->whereIn('silabos.estado_silabo', ['borrador', 'en_revision', 'correccion_solicitada'])
+            ->where('convocatorias_carreras.estado_convocatoria_carrera', 'abierta')
+            ->groupBy('carreras.nombre_carrera')
+            ->selectRaw('carreras.nombre_carrera AS carrera, COUNT(*) AS total')
             ->get();
         if ($inProgress->isNotEmpty()) {
             $detail = $inProgress->map(fn (object $row): string => "{$row->total} en {$row->carrera}")->implode(', ');

@@ -4,6 +4,7 @@ namespace App\Modules\Syllabus\Infrastructure\Persistence\Models;
 
 use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
+use App\Support\Database\MapsLegacyColumnNames;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -27,7 +28,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class SyllabusProcess extends Model
 {
-    use HasUuids;
+    use HasUuids, MapsLegacyColumnNames;
+
+    protected const LEGACY_COLUMN_ALIASES = ['estado' => 'estado_convocatoria_universidad'];
 
     public $timestamps = false;
 

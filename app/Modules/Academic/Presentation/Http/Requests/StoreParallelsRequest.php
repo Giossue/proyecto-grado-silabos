@@ -48,12 +48,12 @@ class StoreParallelsRequest extends FormRequest
                 'required',
                 'uuid',
                 Rule::exists('programaciones_asignatura', 'id')->where(fn ($query) => $query
-                    ->where('activo', true)
+                    ->where('programacion_asignatura_activa', true)
                     ->whereIn('asignatura_id', Subject::query()
                         ->select('id')
                         ->whereHas('curriculum', fn ($curricula) => $curricula
                             ->where('carrera_id', $careerId)
-                            ->where('estado', 'activa')))),
+                            ->where('estado_malla', 'activa')))),
             ],
             'codes' => ['required', 'array', 'min:1', 'max:50'],
             'codes.*' => ['required', 'string', 'max:30', 'distinct'],

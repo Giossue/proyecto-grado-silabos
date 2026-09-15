@@ -501,7 +501,7 @@ it('evita repetir el encabezado de pagina dentro de las tablas academicas', func
     expect($scheduledSubjects)
         ->toBeString()
         ->toContain('selectedPeriodId')
-        ->toContain('period_status')
+        ->toContain('status_label')
         ->toContain('Período académico')
         ->toContain('<template #filters>')
         ->toContain('<Field data-wide>')

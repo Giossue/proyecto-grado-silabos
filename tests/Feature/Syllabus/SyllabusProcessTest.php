@@ -53,8 +53,8 @@ class SyllabusProcessTest extends TestCase
             $this->assertFalse(Schema::hasColumn('convocatorias_universidad', $column));
         }
 
-        $this->assertTrue(Schema::hasColumns('convocatorias_carreras', ['id', 'carrera_id', 'proceso_id', 'estado']));
-        $this->assertTrue(Schema::hasColumns('convocatorias_universidad', ['id', 'periodo_academico_id', 'plantilla_id', 'inicia_en', 'entrega_en', 'estado']));
+        $this->assertTrue(Schema::hasColumns('convocatorias_carreras', ['id', 'carrera_id', 'proceso_id', 'estado_convocatoria_carrera']));
+        $this->assertTrue(Schema::hasColumns('convocatorias_universidad', ['id', 'periodo_academico_id', 'plantilla_id', 'inicia_en', 'entrega_en', 'estado_convocatoria_universidad']));
         $this->assertFalse(Schema::hasColumn('convocatorias_carreras', 'creado_en'));
         $this->assertFalse(Schema::hasColumn('convocatorias_universidad', 'creado_en'));
     }
@@ -88,7 +88,7 @@ class SyllabusProcessTest extends TestCase
         $process = SyllabusProcess::query()->firstOrFail();
         $this->assertSame('preparacion', $process->estado);
         $this->assertSame($process->academicPeriod->codigo, $process->nombre);
-        $this->assertDatabaseHas('eventos_auditoria', ['accion' => 'proceso_silabos.creado', 'recurso_id' => $process->id]);
+        $this->assertDatabaseHas('eventos_auditoria', ['accion_evento_auditoria' => 'proceso_silabos.creado', 'recurso_id' => $process->id]);
 
         $this->actingAsAdministrator()->get(route('admin.processes.index'))
             ->assertOk()
@@ -203,7 +203,7 @@ class SyllabusProcessTest extends TestCase
 
         $this->assertSame('pausado', $process->fresh()->estado);
         $this->assertDatabaseHas('eventos_auditoria', [
-            'accion' => 'proceso_silabos.pausado',
+            'accion_evento_auditoria' => 'proceso_silabos.pausado',
             'recurso_id' => $process->id,
         ]);
     }
@@ -240,12 +240,12 @@ class SyllabusProcessTest extends TestCase
         $this->assertTrue($convocation->sources()->whereKey($source->id)->exists());
         $this->assertDatabaseHas('fechas_limite_convocatoria', [
             'convocatoria_id' => $convocation->id,
-            'etapa' => 'inicio',
+            'etapa_fecha_limite_convocatoria' => 'inicio',
             'vence_en' => $process->inicia_en,
         ]);
         $this->assertDatabaseHas('fechas_limite_convocatoria', [
             'convocatoria_id' => $convocation->id,
-            'etapa' => 'borrador',
+            'etapa_fecha_limite_convocatoria' => 'borrador',
             'vence_en' => $process->entrega_en,
         ]);
 

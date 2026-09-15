@@ -91,7 +91,7 @@ class OpenConvocation
                     'subject.curriculum', 'campus',
                     'parallels' => fn ($query) => $query->where('activo', true)->lockForUpdate()->with([
                         'teacherAssignments' => fn ($assignmentQuery) => $assignmentQuery
-                            ->where('docentes_paralelo.activo', true)
+                            ->where('docentes_paralelo.docente_paralelo_activo', true)
                             ->whereHas('roleAssignment.user', fn ($userQuery) => $userQuery->where('usuarios.activo', true))
                             ->with('roleAssignment')
                             ->lockForUpdate(),

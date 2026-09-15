@@ -59,7 +59,7 @@ class ManagedUserProfileTest extends TestCase
         $this->assertSame('DOCENTE DEMO', $this->teacher->nombre);
         $this->assertSame('docente@silabos.test', $this->teacher->correo_electronico);
         $this->assertDatabaseMissing('eventos_auditoria', [
-            'accion' => 'usuario.perfil_actualizado',
+            'accion_evento_auditoria' => 'usuario.perfil_actualizado',
             'recurso_id' => $this->teacher->id,
         ]);
     }

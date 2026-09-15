@@ -3,6 +3,7 @@
 namespace App\Modules\Academic\Infrastructure\Persistence\Models;
 
 use App\Modules\Academic\Domain\StudyModality;
+use App\Support\Database\MapsLegacyColumnNames;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -30,7 +31,18 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Subject extends Model
 {
-    use HasUuids;
+    use HasUuids, MapsLegacyColumnNames;
+
+    protected const LEGACY_COLUMN_ALIASES = [
+        'nombre' => 'nombre_asignatura',
+        'ciclo' => 'ciclo_asignatura',
+        'creditos' => 'creditos_asignatura',
+        'horas_totales' => 'total_horas_asignatura',
+        'activo' => 'asignatura_activa',
+        'orden_en_ciclo' => 'orden_asignatura_en_ciclo',
+        'unidad_organizacion_curricular' => 'unidad_organizativa_curricular_asignatura',
+        'modalidad' => 'modalidad_asignatura',
+    ];
 
     public $timestamps = false;
 

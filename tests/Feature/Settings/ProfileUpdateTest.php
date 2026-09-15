@@ -46,7 +46,7 @@ class ProfileUpdateTest extends TestCase
         $this->assertSame('test@example.com', $user->correo_electronico);
         $this->assertNull($user->correo_verificado_en);
         $this->assertDatabaseHas('eventos_auditoria', [
-            'accion' => 'usuario.perfil_actualizado',
+            'accion_evento_auditoria' => 'usuario.perfil_actualizado',
             'actor_usuario_id' => $user->id,
             'recurso_id' => $user->id,
         ]);

@@ -2,6 +2,7 @@
 
 namespace App\Modules\Operations\Infrastructure\Persistence\Models;
 
+use App\Support\Database\MapsLegacyColumnNames;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -27,7 +28,13 @@ use Illuminate\Database\Eloquent\Model;
  */
 class JobExecution extends Model
 {
-    use HasUuids;
+    use HasUuids, MapsLegacyColumnNames;
+
+    protected const LEGACY_COLUMN_ALIASES = [
+        'tipo' => 'tipo_ejecucion_trabajo',
+        'estado' => 'estado_ejecucion_trabajo',
+        'resultado' => 'resultado_ejecucion_trabajo',
+    ];
 
     public const CREATED_AT = 'encolado_en';
 

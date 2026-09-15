@@ -204,7 +204,7 @@ class DocumentOperationsTest extends TestCase
         $this->assertSame($docxBytes, Storage::disk('private')->get($docx->ruta_interna));
         $this->assertDatabaseHas('notificaciones_internas', [
             'usuario_id' => $this->teacher->id,
-            'tipo' => 'documento.exportacion.completada',
+            'tipo_notificacion_interna' => 'documento.exportacion.completada',
         ]);
 
         $this->actingAsTeacher()
@@ -252,8 +252,8 @@ class DocumentOperationsTest extends TestCase
         $this->assertSame(3, $execution->intentos);
         $this->assertStringNotContainsString('SECRET', (string) $execution->mensaje_error);
         $this->assertDatabaseHas('eventos_auditoria', [
-            'accion' => 'documento.exportacion_fallida',
-            'resultado' => 'fallido',
+            'accion_evento_auditoria' => 'documento.exportacion_fallida',
+            'resultado_evento_auditoria' => 'fallido',
         ]);
         $this->actingAsAdministrator()
             ->get(route('admin.jobs.index', ['q' => 'Generación documental']))
@@ -323,14 +323,14 @@ class DocumentOperationsTest extends TestCase
 
         try {
             DB::transaction(fn () => DB::table('notificaciones_internas')
-                ->where('id', $notification->id)->update(['titulo' => 'Alterado']));
+                ->where('id', $notification->id)->update(['titulo_notificacion_interna' => 'Alterado']));
             $this->fail('PostgreSQL permitió alterar una notificación entregada.');
         } catch (QueryException) {
             $this->assertSame('Sílabo aprobado', $notification->fresh()->titulo);
         }
         try {
             DB::transaction(fn () => DB::table('eventos_salientes')
-                ->where('id', $first->id)->update(['contenido' => ['recipient_ids' => []]]));
+                ->where('id', $first->id)->update(['contenido_evento_saliente' => ['recipient_ids' => []]]));
             $this->fail('PostgreSQL permitió alterar el payload del outbox.');
         } catch (QueryException) {
             $this->assertSame([$this->coordinator->id], $first->fresh()->contenido['recipient_ids']);
@@ -419,7 +419,7 @@ class DocumentOperationsTest extends TestCase
         }
         try {
             DB::transaction(fn () => DB::table('eventos_auditoria')
-                ->where('id', $event->id)->update(['resultado' => 'fallida']));
+                ->where('id', $event->id)->update(['resultado_evento_auditoria' => 'fallida']));
             $this->fail('PostgreSQL permitió modificar auditoría histórica.');
         } catch (QueryException) {
             $this->assertSame('exito', $event->fresh()->resultado);

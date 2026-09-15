@@ -3,6 +3,7 @@
 namespace App\Modules\Syllabus\Infrastructure\Persistence\Models;
 
 use App\Models\User;
+use App\Support\Database\MapsLegacyColumnNames;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -20,7 +21,9 @@ use LogicException;
  */
 class ObservationResponse extends Model
 {
-    use HasUuids;
+    use HasUuids, MapsLegacyColumnNames;
+
+    protected const LEGACY_COLUMN_ALIASES = ['contenido' => 'contenido_respuesta_observacion'];
 
     public $timestamps = false;
 

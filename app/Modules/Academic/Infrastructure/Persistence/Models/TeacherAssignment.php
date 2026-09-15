@@ -4,6 +4,7 @@ namespace App\Modules\Academic\Infrastructure\Persistence\Models;
 
 use App\Modules\Identity\Domain\Enums\RoleCode;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
+use App\Support\Database\MapsLegacyColumnNames;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -19,7 +20,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class TeacherAssignment extends Model
 {
-    use HasUuids;
+    use HasUuids, MapsLegacyColumnNames;
+
+    protected const LEGACY_COLUMN_ALIASES = [
+        'activo' => 'docente_paralelo_activo',
+    ];
 
     public const CREATED_AT = 'asignado_en';
 

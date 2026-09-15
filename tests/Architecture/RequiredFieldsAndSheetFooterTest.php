@@ -207,7 +207,7 @@ it('conserva en el servidor las obligaciones minimas y condicionales', function 
         'Configuration/Presentation/Http/Requests/CreateSourceRequest.php' => [
             "'nombre' => [",
             "'required',",
-            "Rule::unique('fuentes_academicas', 'nombre')",
+            "Rule::unique('fuentes_academicas', 'nombre_fuente_academica')",
         ],
         'Configuration/Presentation/Http/Requests/SaveFieldDefinitionRequest.php' => [
             "'section_id' => [",

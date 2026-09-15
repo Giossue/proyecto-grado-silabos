@@ -3,6 +3,7 @@
 namespace App\Modules\AiAssistance\Infrastructure\Persistence\Models;
 
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\Concerns\ImmutableRecord;
+use App\Support\Database\MapsLegacyColumnNames;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,7 +11,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /** @property string $id @property string $decision @property string $usuario_id */
 class AiFeedback extends Model
 {
-    use HasUuids, ImmutableRecord;
+    use HasUuids, ImmutableRecord, MapsLegacyColumnNames;
+
+    protected const LEGACY_COLUMN_ALIASES = [
+        'decision' => 'decision_retroalimentacion_ia',
+        'contenido_antes' => 'contenido_anterior_retroalimentacion_ia',
+        'contenido_despues' => 'contenido_posterior_retroalimentacion_ia',
+    ];
 
     public $timestamps = false;
 

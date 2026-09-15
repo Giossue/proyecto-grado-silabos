@@ -2,6 +2,7 @@
 
 namespace App\Modules\Syllabus\Infrastructure\Persistence\Models;
 
+use App\Support\Database\MapsLegacyColumnNames;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -15,7 +16,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class ConvocationDeadline extends Model
 {
-    use HasUuids;
+    use HasUuids, MapsLegacyColumnNames;
+
+    protected const LEGACY_COLUMN_ALIASES = ['etapa' => 'etapa_fecha_limite_convocatoria'];
 
     public $timestamps = false;
 

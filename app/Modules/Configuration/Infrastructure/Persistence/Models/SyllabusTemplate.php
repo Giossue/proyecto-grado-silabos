@@ -2,6 +2,7 @@
 
 namespace App\Modules\Configuration\Infrastructure\Persistence\Models;
 
+use App\Support\Database\MapsLegacyColumnNames;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -19,7 +20,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class SyllabusTemplate extends Model
 {
-    use HasUuids;
+    use HasUuids, MapsLegacyColumnNames;
+
+    protected const LEGACY_COLUMN_ALIASES = [
+        'nombre' => 'nombre_plantilla_silabo',
+        'descripcion' => 'descripcion_plantilla_silabo',
+        'activo' => 'plantilla_silabo_activa',
+        'mapeo_documento' => 'mapeo_documento_plantilla',
+    ];
 
     /** Nombre universal: no se elige ni se cambia, porque solo hay una. */
     public const INSTITUTIONAL_NAME = 'Plantilla institucional de sílabo';

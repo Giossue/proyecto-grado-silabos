@@ -3,6 +3,7 @@
 namespace App\Modules\Syllabus\Infrastructure\Persistence\Models;
 
 use App\Modules\Configuration\Infrastructure\Persistence\Models\FieldDefinition;
+use App\Support\Database\MapsLegacyColumnNames;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,7 +11,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /** @property array<string, mixed>|list<mixed>|bool|float|int|string|null $valor @property bool $heredado */
 class FieldValue extends Model
 {
-    use HasUuids;
+    use HasUuids, MapsLegacyColumnNames;
+
+    protected const LEGACY_COLUMN_ALIASES = [
+        'valor' => 'valor_campo',
+        'origen' => 'origen_valor_campo',
+    ];
 
     public $timestamps = false;
 

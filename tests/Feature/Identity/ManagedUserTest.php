@@ -201,14 +201,14 @@ class ManagedUserTest extends TestCase
             'usuario_id' => $created->id,
             'rol_id' => $teacherRole->id,
             'carrera_id' => $career->id,
-            'activo' => true,
+            'asignacion_rol_activa' => true,
         ]);
         $this->assertDatabaseHas('eventos_auditoria', [
             'actor_usuario_id' => $this->administrator->id,
             'asignacion_rol_id' => $this->administratorContext->id,
-            'accion' => 'usuario.creado',
+            'accion_evento_auditoria' => 'usuario.creado',
             'recurso_id' => $created->id,
-            'resultado' => 'exito',
+            'resultado_evento_auditoria' => 'exito',
         ]);
     }
 
@@ -291,15 +291,15 @@ class ManagedUserTest extends TestCase
             ->assertSessionHas('success');
 
         $coordinatorRole = Role::query()->where('codigo_rol', RoleCode::Coordinator->value)->firstOrFail();
-        $this->assertDatabaseHas('asignaciones_rol', ['id' => $previousAssignmentId, 'activo' => true]);
+        $this->assertDatabaseHas('asignaciones_rol', ['id' => $previousAssignmentId, 'asignacion_rol_activa' => true]);
         $this->assertDatabaseHas('asignaciones_rol', [
             'usuario_id' => $teacher->id,
             'rol_id' => $coordinatorRole->id,
             'carrera_id' => $career->id,
-            'activo' => true,
+            'asignacion_rol_activa' => true,
         ]);
         $this->assertDatabaseHas('eventos_auditoria', [
-            'accion' => 'usuario.rol_asignado',
+            'accion_evento_auditoria' => 'usuario.rol_asignado',
             'recurso_id' => $teacher->id,
         ]);
     }
@@ -325,12 +325,12 @@ class ManagedUserTest extends TestCase
 
         $this->assertDatabaseHas('asignaciones_rol', [
             'id' => $originalAssignment->id,
-            'activo' => true,
+            'asignacion_rol_activa' => true,
         ]);
         $this->assertDatabaseHas('asignaciones_rol', [
             'usuario_id' => $coordinator->id,
             'carrera_id' => $secondCareer->id,
-            'activo' => true,
+            'asignacion_rol_activa' => true,
         ]);
         $this->assertTrue(CoordinatorAssignment::query()
             ->effective()
@@ -362,9 +362,9 @@ class ManagedUserTest extends TestCase
         $this->assertDatabaseMissing('sesiones', ['id' => 'teacher-session-to-revoke']);
         $this->assertDatabaseHas('asignaciones_rol', ['id' => $roleAssignmentId]);
         $this->assertDatabaseHas('eventos_auditoria', [
-            'accion' => 'usuario.desactivado',
+            'accion_evento_auditoria' => 'usuario.desactivado',
             'recurso_id' => $teacher->id,
-            'resultado' => 'exito',
+            'resultado_evento_auditoria' => 'exito',
         ]);
     }
 
@@ -395,7 +395,7 @@ class ManagedUserTest extends TestCase
         Mail::assertQueuedCount(2);
         Mail::assertQueued(ManagedUserCredentialsMail::class, fn (ManagedUserCredentialsMail $mail): bool => $mail->hasTo('pendiente@silabos.test')
             && Hash::check($mail->temporaryPassword, $pending->contrasena));
-        $this->assertDatabaseHas('eventos_auditoria', ['accion' => 'usuario.acceso_reenviado', 'recurso_id' => $pending->id]);
+        $this->assertDatabaseHas('eventos_auditoria', ['accion_evento_auditoria' => 'usuario.acceso_reenviado', 'recurso_id' => $pending->id]);
 
         // Activada por su titular: ya no se reenvía nada.
         $pending->forceFill(['debe_cambiar_contrasena' => false])->save();
@@ -418,7 +418,7 @@ class ManagedUserTest extends TestCase
             ->assertSessionHasNoErrors();
 
         Mail::assertQueued(ManagedUserCredentialsMail::class, fn (ManagedUserCredentialsMail $mail): bool => $mail->hasTo('corregido@silabos.test'));
-        $this->assertDatabaseHas('eventos_auditoria', ['accion' => 'usuario.acceso_reenviado', 'recurso_id' => $pending->id]);
+        $this->assertDatabaseHas('eventos_auditoria', ['accion_evento_auditoria' => 'usuario.acceso_reenviado', 'recurso_id' => $pending->id]);
 
         // Solo cambiar el nombre no reenvía nada.
         $this->actingAsAdministrator()
@@ -439,7 +439,7 @@ class ManagedUserTest extends TestCase
             ->assertRedirect(route('admin.users.index'));
         $this->assertDatabaseMissing('usuarios', ['id' => $pending->id]);
         $this->assertDatabaseMissing('asignaciones_rol', ['usuario_id' => $pending->id]);
-        $this->assertDatabaseHas('eventos_auditoria', ['accion' => 'usuario.eliminado', 'recurso_id' => $pending->id]);
+        $this->assertDatabaseHas('eventos_auditoria', ['accion_evento_auditoria' => 'usuario.eliminado', 'recurso_id' => $pending->id]);
 
         // Una cuenta activada no se borra.
         $teacher = User::query()->where('correo_electronico', 'docente@silabos.test')->firstOrFail();

@@ -4,6 +4,7 @@ namespace App\Modules\Identity\Infrastructure\Persistence\Models;
 
 use App\Models\User;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
+use App\Support\Database\MapsLegacyColumnNames;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -20,7 +21,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class RoleAssignment extends Model
 {
-    use HasUuids;
+    use HasUuids, MapsLegacyColumnNames;
+
+    protected const LEGACY_COLUMN_ALIASES = [
+        'activo' => 'asignacion_rol_activa',
+    ];
 
     public const CREATED_AT = 'asignado_en';
 

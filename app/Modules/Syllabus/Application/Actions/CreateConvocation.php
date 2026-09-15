@@ -50,7 +50,7 @@ class CreateConvocation
             $sourceCount = $this->sources->execute($convocation);
             foreach ([ConvocationSchedule::STAGE_START => $process->inicia_en, ConvocationSchedule::STAGE_DRAFT => $process->entrega_en] as $stage => $dueAt) {
                 DB::table('fechas_limite_convocatoria')->insert([
-                    'id' => (string) Str::uuid(), 'convocatoria_id' => $convocation->id, 'etapa' => $stage,
+                    'id' => (string) Str::uuid(), 'convocatoria_id' => $convocation->id, 'etapa_fecha_limite_convocatoria' => $stage,
                     'vence_en' => $dueAt,
                 ]);
             }

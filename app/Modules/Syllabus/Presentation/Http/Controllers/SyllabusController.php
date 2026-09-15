@@ -61,10 +61,10 @@ class SyllabusController extends Controller
                 // recuerda un expediente: por la materia y por el periodo en que se pidió.
                 ->when($search, fn ($query, string $term) => $query->where(
                     fn ($outer) => $outer
-                        ->whereRaw("contexto_academico->'subject'->>'name' ILIKE ?", ["%{$term}%"])
-                        ->orWhereRaw("contexto_academico->'subject'->>'code' ILIKE ?", ["%{$term}%"])
+                        ->whereRaw("contexto_academico_silabo->'subject'->>'name' ILIKE ?", ["%{$term}%"])
+                        ->orWhereRaw("contexto_academico_silabo->'subject'->>'code' ILIKE ?", ["%{$term}%"])
                         ->orWhereHas('convocation.process.academicPeriod', fn ($period) => $period
-                            ->whereRaw('codigo ILIKE ?', ["%{$term}%"])),
+                            ->whereRaw('codigo_periodo_academico ILIKE ?', ["%{$term}%"])),
                 ))
                 ->when($state, fn ($query, string $value) => $query->where('estado', $value))
                 ->with(['convocation:id,carrera_id,proceso_id', 'convocation.career:id,nombre', 'convocation.process:id,periodo_academico_id', 'convocation.process.academicPeriod:id,codigo', 'subject:id,nombre,codigo_asignatura', 'scopes.parallel:id,codigo'])

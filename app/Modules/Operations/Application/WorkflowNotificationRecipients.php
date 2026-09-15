@@ -32,7 +32,7 @@ class WorkflowNotificationRecipients
         $ids = SyllabusCollaborator::query()
             ->where('silabo_id', $syllabus->id)
             ->whereHas('teacherAssignment', fn ($query) => $query
-                ->where('docentes_paralelo.activo', true)
+                ->where('docentes_paralelo.docente_paralelo_activo', true)
                 ->whereHas('roleAssignment.user', fn ($query) => $query->where('usuarios.activo', true)))
             ->whereHas('user', fn ($query) => $query->where('activo', true))
             ->pluck('usuario_id')

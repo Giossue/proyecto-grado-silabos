@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Subject;
 use App\Modules\AiAssistance\Infrastructure\Persistence\Models\AiExecution;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
+use App\Support\Database\MapsLegacyColumnNames;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -31,7 +32,12 @@ use Illuminate\Database\Eloquent\Relations\HasManyThrough;
  */
 class Syllabus extends Model
 {
-    use HasUuids;
+    use HasUuids, MapsLegacyColumnNames;
+
+    protected const LEGACY_COLUMN_ALIASES = [
+        'estado' => 'estado_silabo',
+        'contexto_academico' => 'contexto_academico_silabo',
+    ];
 
     public $timestamps = false;
 

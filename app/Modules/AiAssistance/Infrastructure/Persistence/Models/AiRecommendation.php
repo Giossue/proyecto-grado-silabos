@@ -3,6 +3,7 @@
 namespace App\Modules\AiAssistance\Infrastructure\Persistence\Models;
 
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\Concerns\ImmutableRecord;
+use App\Support\Database\MapsLegacyColumnNames;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -22,7 +23,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class AiRecommendation extends Model
 {
-    use HasUuids, ImmutableRecord;
+    use HasUuids, ImmutableRecord, MapsLegacyColumnNames;
+
+    protected const LEGACY_COLUMN_ALIASES = [
+        'tipo' => 'tipo_recomendacion_ia',
+        'titulo' => 'titulo_recomendacion_ia',
+        'explicacion' => 'explicacion_recomendacion_ia',
+    ];
 
     public $timestamps = false;
 

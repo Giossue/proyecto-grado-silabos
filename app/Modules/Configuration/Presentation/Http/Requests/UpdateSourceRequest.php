@@ -19,7 +19,7 @@ class UpdateSourceRequest extends ManageAcademicSourceRequest
                 'required',
                 'string',
                 'max:180',
-                Rule::unique('fuentes_academicas', 'nombre')
+                Rule::unique('fuentes_academicas', 'nombre_fuente_academica')
                     ->where('carrera_id', $careerId)
                     ->ignore($sourceId),
             ],

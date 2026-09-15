@@ -49,7 +49,7 @@ class UpdateCareerAcademicRecordRequest extends FormRequest
                     'required',
                     'string',
                     'max:80',
-                    Rule::unique('mallas', 'codigo')
+                    Rule::unique('mallas', 'codigo_malla')
                         ->where('carrera_id', $this->careerId())
                         ->ignore($this->recordId()),
                 ],
@@ -65,11 +65,11 @@ class UpdateCareerAcademicRecordRequest extends FormRequest
                     'required',
                     'uuid',
                     Rule::exists('asignaturas', 'id')->where(fn ($query) => $query
-                        ->where('activo', true)
+                        ->where('asignatura_activa', true)
                         ->whereIn('malla_id', Curriculum::query()
                             ->select('id')
                             ->where('carrera_id', $this->careerId())
-                            ->where('estado', 'activa'))),
+                            ->where('estado_malla', 'activa'))),
                     Rule::unique('programaciones_asignatura', 'asignatura_id')
                         ->where('periodo_academico_id', $this->input('period_id'))
                         ->ignore($this->recordId()),
@@ -80,18 +80,18 @@ class UpdateCareerAcademicRecordRequest extends FormRequest
                     'required',
                     'uuid',
                     Rule::exists('programaciones_asignatura', 'id')->where(fn ($query) => $query
-                        ->where('activo', true)
+                        ->where('programacion_asignatura_activa', true)
                         ->whereIn('asignatura_id', Subject::query()
                             ->select('id')
                             ->whereHas('curriculum', fn ($curricula) => $curricula
                                 ->where('carrera_id', $this->careerId())
-                                ->where('estado', 'activa')))),
+                                ->where('estado_malla', 'activa')))),
                 ],
                 'code' => [
                     'required',
                     'string',
                     'max:30',
-                    Rule::unique('paralelos', 'codigo')
+                    Rule::unique('paralelos', 'codigo_paralelo')
                         ->where('programacion_asignatura_id', $this->input('scheduled_subject_id'))
                         ->ignore($this->recordId()),
                 ],
@@ -103,12 +103,12 @@ class UpdateCareerAcademicRecordRequest extends FormRequest
                     'required',
                     'uuid',
                     Rule::exists('paralelos', 'id')->where(fn ($query) => $query
-                        ->where('activo', true)
+                        ->where('paralelo_activo', true)
                         ->whereIn('programacion_asignatura_id', ScheduledSubject::query()
                             ->select('id')
                             ->whereHas('subject.curriculum', fn ($curricula) => $curricula
                                 ->where('carrera_id', $this->careerId())
-                                ->where('estado', 'activa')))),
+                                ->where('estado_malla', 'activa')))),
                 ],
             ],
             default => [],

@@ -4,6 +4,7 @@ namespace App\Modules\Syllabus\Infrastructure\Persistence\Models;
 
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\AcademicSource;
+use App\Support\Database\MapsLegacyColumnNames;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -23,7 +24,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Convocation extends Model
 {
-    use HasUuids;
+    use HasUuids, MapsLegacyColumnNames;
+
+    protected const LEGACY_COLUMN_ALIASES = ['estado' => 'estado_convocatoria_carrera'];
 
     public $timestamps = false;
 

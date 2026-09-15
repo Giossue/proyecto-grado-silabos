@@ -28,7 +28,7 @@ class SaveTemplateSectionRequest extends ManageTemplatesRequest
                 'string',
                 'regex:/^[a-z][a-z0-9_]*$/',
                 'max:100',
-                Rule::unique('secciones_plantilla', 'clave')
+                Rule::unique('secciones_plantilla', 'clave_seccion_plantilla')
                     ->where('plantilla_id', $templateId)
                     ->ignore($sectionId),
             ],
@@ -41,7 +41,7 @@ class SaveTemplateSectionRequest extends ManageTemplatesRequest
                 'distinct',
                 'regex:/^[a-z][a-z0-9_]*$/',
                 'max:100',
-                Rule::unique('definiciones_campo', 'clave')->where('plantilla_id', $templateId),
+                Rule::unique('definiciones_campo', 'clave_definicion_campo')->where('plantilla_id', $templateId),
             ],
             'fields.*.content_type' => ['required', Rule::in(self::CONTENT_TYPES)],
             'first_field_label' => [Rule::requiredIf($requiresLegacyField), 'nullable', 'string', 'max:180'],
@@ -51,7 +51,7 @@ class SaveTemplateSectionRequest extends ManageTemplatesRequest
                 'string',
                 'regex:/^[a-z][a-z0-9_]*$/',
                 'max:120',
-                Rule::unique('definiciones_campo', 'clave')->where('plantilla_id', $templateId),
+                Rule::unique('definiciones_campo', 'clave_definicion_campo')->where('plantilla_id', $templateId),
             ],
             'first_field_content_type' => [
                 Rule::requiredIf($requiresLegacyField),

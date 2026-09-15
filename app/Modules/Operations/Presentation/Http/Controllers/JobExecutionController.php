@@ -30,9 +30,9 @@ class JobExecutionController extends Controller
                 ->filter(fn (array $option): bool => str_contains(mb_strtolower($option['label']), mb_strtolower($search)))
                 ->pluck('value');
             $query->where(fn ($builder) => $builder
-                ->where('tipo', 'ilike', "%{$escaped}%")
+                ->where('tipo_ejecucion_trabajo', 'ilike', "%{$escaped}%")
                 ->orWhere('cola', 'ilike', "%{$escaped}%")
-                ->orWhereIn('tipo', $matchingTypes)
+                ->orWhereIn('tipo_ejecucion_trabajo', $matchingTypes)
                 ->orWhereIn('cola', $matchingQueues));
         }
         if ($status !== '') {

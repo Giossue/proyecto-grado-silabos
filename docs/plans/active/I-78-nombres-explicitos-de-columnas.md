@@ -78,3 +78,17 @@ Laravel. Las propiedades de presentación pueden continuar llamándose `name`, `
    únicamente como proyecciones; nunca como nombre físico de columna.
 4. Verificar migración, restricciones e índices en PostgreSQL, luego actualizar la
    fotografía del esquema de producción una vez que la migración remota esté aplicada.
+
+## Ejecución local
+
+Las migraciones `000064` a `000069` fueron aplicadas consecutivamente en PostgreSQL
+local. Cubren identidad, configuración, estructura académica, convocatorias y
+revisión, IA y operación. Las restricciones y funciones PL/pgSQL afectadas se
+redefinieron en la misma migración que cambia las columnas que consultan.
+
+La aplicación conserva los contratos de entrada y salida existentes mediante el
+mapeo temporal de los modelos hacia las columnas físicas explícitas; PostgreSQL no
+mantiene columnas duplicadas ni alias persistentes.
+
+La fotografía de producción no se modifica hasta aplicar estas seis migraciones en
+ese entorno, para que siga describiendo datos reales y no cambios solamente locales.

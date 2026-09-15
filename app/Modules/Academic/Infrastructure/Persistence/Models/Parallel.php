@@ -2,6 +2,7 @@
 
 namespace App\Modules\Academic\Infrastructure\Persistence\Models;
 
+use App\Support\Database\MapsLegacyColumnNames;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -16,7 +17,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Parallel extends Model
 {
-    use HasUuids;
+    use HasUuids, MapsLegacyColumnNames;
+
+    protected const LEGACY_COLUMN_ALIASES = [
+        'codigo' => 'codigo_paralelo',
+        'activo' => 'paralelo_activo',
+        'jornada' => 'jornada_paralelo',
+    ];
 
     public $timestamps = false;
 

@@ -27,7 +27,7 @@ class OperationalReportController extends Controller
         $query = $this->scopedQuery($careerId, $convocationId, $state, $search);
 
         $counts = array_fill_keys(self::STATES, 0);
-        foreach ((clone $query)->selectRaw('estado, COUNT(*) AS total')->groupBy('estado')->get() as $row) {
+        foreach ((clone $query)->selectRaw('estado_silabo, COUNT(*) AS total')->groupBy('estado_silabo')->get() as $row) {
             if (array_key_exists($row->estado, $counts)) {
                 $counts[$row->estado] = (int) $row->getAttribute('total');
             }
@@ -48,16 +48,16 @@ class OperationalReportController extends Controller
             ->join('periodos_academicos', 'periodos_academicos.id', '=', 'convocatorias_universidad.periodo_academico_id')
             ->selectRaw(<<<'SQL'
                 convocatorias_carreras.id,
-                periodos_academicos.codigo,
+                periodos_academicos.codigo_periodo_academico AS codigo,
                 COUNT(*) AS total,
-                COUNT(*) FILTER (WHERE silabos.estado = 'sin_iniciar') AS not_started,
-                COUNT(*) FILTER (WHERE silabos.estado = 'borrador') AS draft,
-                COUNT(*) FILTER (WHERE silabos.estado = 'en_revision') AS in_review,
-                COUNT(*) FILTER (WHERE silabos.estado = 'correccion_solicitada') AS correction_requested,
-                COUNT(*) FILTER (WHERE silabos.estado = 'aprobado') AS approved
+                COUNT(*) FILTER (WHERE silabos.estado_silabo = 'sin_iniciar') AS not_started,
+                COUNT(*) FILTER (WHERE silabos.estado_silabo = 'borrador') AS draft,
+                COUNT(*) FILTER (WHERE silabos.estado_silabo = 'en_revision') AS in_review,
+                COUNT(*) FILTER (WHERE silabos.estado_silabo = 'correccion_solicitada') AS correction_requested,
+                COUNT(*) FILTER (WHERE silabos.estado_silabo = 'aprobado') AS approved
                 SQL)
-            ->groupBy('convocatorias_carreras.id', 'periodos_academicos.codigo')
-            ->orderBy('periodos_academicos.codigo')
+            ->groupBy('convocatorias_carreras.id', 'periodos_academicos.codigo_periodo_academico')
+            ->orderBy('periodos_academicos.codigo_periodo_academico')
             ->get()
             ->map(fn (Syllabus $row): array => [
                 'id' => $row->getAttribute('id'),

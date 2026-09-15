@@ -2,6 +2,7 @@
 
 namespace App\Modules\Academic\Infrastructure\Persistence\Models;
 
+use App\Support\Database\MapsLegacyColumnNames;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -15,7 +16,14 @@ use Illuminate\Database\Eloquent\Model;
  */
 class AcademicPeriod extends Model
 {
-    use HasUuids;
+    use HasUuids, MapsLegacyColumnNames;
+
+    protected const LEGACY_COLUMN_ALIASES = [
+        'codigo' => 'codigo_periodo_academico',
+        'fecha_inicio' => 'fecha_inicio_periodo',
+        'fecha_fin' => 'fecha_fin_periodo',
+        'semanas_lectivas' => 'cantidad_semanas_lectivas',
+    ];
 
     public $timestamps = false;
 

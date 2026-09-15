@@ -149,7 +149,7 @@ class ReviewWorkflowTest extends TestCase
         $this->assertSame(app(CanonicalHasher::class)->hash($revision->fotografia), $revision->huella_sha256);
         $this->assertDatabaseHas('transiciones_silabo', [
             'silabo_id' => $syllabus->id,
-            'accion' => 'enviar',
+            'accion_transicion_silabo' => 'enviar',
             'estado_origen' => 'borrador',
             'estado_destino' => 'en_revision',
         ]);
@@ -583,7 +583,7 @@ class ReviewWorkflowTest extends TestCase
         $this->assertSame(0, $fresh->rows()->count());
         // La revisión enviada es historial y sigue ahí.
         $this->assertDatabaseHas('revisiones_silabo', ['id' => $revision->id]);
-        $this->assertDatabaseHas('eventos_auditoria', ['accion' => 'silabo.reiniciado', 'recurso_id' => $syllabus->id]);
+        $this->assertDatabaseHas('eventos_auditoria', ['accion_evento_auditoria' => 'silabo.reiniciado', 'recurso_id' => $syllabus->id]);
         $this->assertDatabaseHas('eventos_salientes', ['tipo_evento' => 'silabo.reiniciado']);
 
         // El docente vuelve a empezar de cero.

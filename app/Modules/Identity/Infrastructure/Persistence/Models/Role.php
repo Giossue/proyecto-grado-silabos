@@ -3,13 +3,19 @@
 namespace App\Modules\Identity\Infrastructure\Persistence\Models;
 
 use App\Models\User;
+use App\Support\Database\MapsLegacyColumnNames;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Role extends Model
 {
-    use HasUuids;
+    use HasUuids, MapsLegacyColumnNames;
+
+    protected const LEGACY_COLUMN_ALIASES = [
+        'codigo' => 'codigo_rol',
+        'nombre' => 'nombre_rol',
+    ];
 
     public $timestamps = false;
 
@@ -22,6 +28,6 @@ class Role extends Model
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'asignaciones_rol', 'rol_id', 'usuario_id')
-            ->withPivot(['id', 'carrera_id', 'activo', 'asignado_en']);
+            ->withPivot(['id', 'carrera_id', 'asignacion_rol_activa', 'asignado_en']);
     }
 }

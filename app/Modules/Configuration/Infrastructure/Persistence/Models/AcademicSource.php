@@ -3,6 +3,7 @@
 namespace App\Modules\Configuration\Infrastructure\Persistence\Models;
 
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
+use App\Support\Database\MapsLegacyColumnNames;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -19,7 +20,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class AcademicSource extends Model
 {
-    use HasUuids;
+    use HasUuids, MapsLegacyColumnNames;
+
+    protected const LEGACY_COLUMN_ALIASES = [
+        'nombre' => 'nombre_fuente_academica',
+        'descripcion' => 'descripcion_fuente_academica',
+        'contenido' => 'contenido_fuente_academica',
+        'activo' => 'fuente_academica_activa',
+    ];
 
     public $timestamps = false;
 

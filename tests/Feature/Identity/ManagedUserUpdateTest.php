@@ -61,11 +61,11 @@ class ManagedUserUpdateTest extends TestCase
         $this->assertSame('docente.corregida@silabos.test', $this->teacher->correo_electronico);
         $this->assertFalse($this->teacher->activo);
         $this->assertDatabaseHas('eventos_auditoria', [
-            'accion' => 'usuario.perfil_actualizado',
+            'accion_evento_auditoria' => 'usuario.perfil_actualizado',
             'recurso_id' => $this->teacher->id,
         ]);
         $this->assertDatabaseHas('eventos_auditoria', [
-            'accion' => 'usuario.desactivado',
+            'accion_evento_auditoria' => 'usuario.desactivado',
             'recurso_id' => $this->teacher->id,
         ]);
     }
@@ -87,15 +87,15 @@ class ManagedUserUpdateTest extends TestCase
             ->assertSessionHas('success');
 
         $teacherRole = Role::query()->where('codigo_rol', RoleCode::Teacher->value)->firstOrFail();
-        $this->assertDatabaseHas('asignaciones_rol', ['id' => $previousAssignmentId, 'activo' => true]);
+        $this->assertDatabaseHas('asignaciones_rol', ['id' => $previousAssignmentId, 'asignacion_rol_activa' => true]);
         $this->assertDatabaseHas('asignaciones_rol', [
             'usuario_id' => $this->coordinator->id,
             'rol_id' => $teacherRole->id,
             'carrera_id' => $career->id,
-            'activo' => true,
+            'asignacion_rol_activa' => true,
         ]);
         $this->assertDatabaseHas('eventos_auditoria', [
-            'accion' => 'usuario.rol_asignado',
+            'accion_evento_auditoria' => 'usuario.rol_asignado',
             'recurso_id' => $this->coordinator->id,
         ]);
     }
@@ -118,7 +118,7 @@ class ManagedUserUpdateTest extends TestCase
         $this->assertSame($assignmentsBefore, $this->teacher->roleAssignments()->count());
         // El estado no cambió, así que no se inventa un evento de activación.
         $this->assertDatabaseMissing('eventos_auditoria', [
-            'accion' => 'usuario.activado',
+            'accion_evento_auditoria' => 'usuario.activado',
             'recurso_id' => $this->teacher->id,
         ]);
     }

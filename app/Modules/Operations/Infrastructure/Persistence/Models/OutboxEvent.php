@@ -2,6 +2,7 @@
 
 namespace App\Modules\Operations\Infrastructure\Persistence\Models;
 
+use App\Support\Database\MapsLegacyColumnNames;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -20,7 +21,12 @@ use LogicException;
  */
 class OutboxEvent extends Model
 {
-    use HasUuids;
+    use HasUuids, MapsLegacyColumnNames;
+
+    protected const LEGACY_COLUMN_ALIASES = [
+        'contenido' => 'contenido_evento_saliente',
+        'estado' => 'estado_evento_saliente',
+    ];
 
     public $timestamps = false;
 
@@ -48,7 +54,7 @@ class OutboxEvent extends Model
     protected static function booted(): void
     {
         static::updating(function (OutboxEvent $event): void {
-            $mutable = ['estado', 'intentos', 'disponible_en', 'procesado_en', 'codigo_error', 'mensaje_error'];
+            $mutable = ['estado_evento_saliente', 'intentos', 'disponible_en', 'procesado_en', 'codigo_error', 'mensaje_error'];
             if (array_diff(array_keys($event->getDirty()), $mutable) !== []) {
                 throw new LogicException('La identidad y contenido del evento saliente son inmutables.');
             }

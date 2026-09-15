@@ -44,7 +44,7 @@ class InstitutionalLogosTest extends TestCase
             ->assertSessionHasNoErrors();
 
         Storage::disk('private')->assertExists('logos/institucion.png');
-        $this->assertDatabaseHas('eventos_auditoria', ['accion' => 'institucion.logo_actualizado']);
+        $this->assertDatabaseHas('eventos_auditoria', ['accion_evento_auditoria' => 'institucion.logo_actualizado']);
 
         // Sin sesión: la imagen es pública.
         $this->get(route('logos.institution'))->assertOk()->assertHeader('Content-Type', 'image/png');
@@ -76,7 +76,7 @@ class InstitutionalLogosTest extends TestCase
             ->assertSessionHasNoErrors();
         $this->assertDatabaseHas('facultades', [
             'codigo_facultad' => 'FAC-SL',
-            'logo_ruta' => null,
+            'ruta_logo_facultad' => null,
         ]);
 
         $this->actingAsAdministrator()
@@ -114,7 +114,7 @@ class InstitutionalLogosTest extends TestCase
         $this->assertSame("logos/facultades/{$faculty->id}.png", $faculty->logo_ruta);
         $this->assertStoredPngHasSize($faculty->logo_ruta, 600, 180);
         $this->assertDatabaseHas('eventos_auditoria', [
-            'accion' => 'facultad.logo_actualizado',
+            'accion_evento_auditoria' => 'facultad.logo_actualizado',
             'recurso_id' => $faculty->id,
             'asignacion_rol_id' => $this->coordinatorContext->id,
         ]);

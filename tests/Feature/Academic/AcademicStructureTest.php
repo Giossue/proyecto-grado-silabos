@@ -216,8 +216,8 @@ class AcademicStructureTest extends TestCase
             ->get(route('coordination.academic.curricula.index'))
             ->assertForbidden();
 
-        $this->assertDatabaseMissing('facultades', ['nombre' => 'No autorizada']);
-        $this->assertDatabaseMissing('mallas', ['codigo' => 'NO-ADMIN']);
+        $this->assertDatabaseMissing('facultades', ['nombre_facultad' => 'No autorizada']);
+        $this->assertDatabaseMissing('mallas', ['codigo_malla' => 'NO-ADMIN']);
     }
 
     public function test_materias_y_paralelos_selects_the_current_period_and_keeps_finished_periods_as_history(): void
@@ -242,7 +242,7 @@ class AcademicStructureTest extends TestCase
             'asignatura_id' => $reference->asignatura_id,
             'campus_id' => $reference->campus_id,
             'modalidad' => $reference->modalidad,
-            'activo' => true,
+            'docente_paralelo_activo' => true,
         ]);
 
         $this->actingAsCoordinator()
@@ -362,7 +362,7 @@ class AcademicStructureTest extends TestCase
         $this->assertDatabaseHas('paralelos', ['id' => $parallel->id]);
         $this->assertDatabaseHas('docentes_paralelo', [
             'id' => $assignment->id,
-            'activo' => true,
+            'docente_paralelo_activo' => true,
         ]);
         $this->assertDatabaseMissing('programaciones_asignatura', [
             'periodo_academico_id' => $scheduledSubject->periodo_academico_id,
@@ -382,8 +382,8 @@ class AcademicStructureTest extends TestCase
             ->assertRedirect();
 
         $this->assertDatabaseHas('periodos_academicos', [
-            'codigo' => '2027-A',
-            'semanas_lectivas' => 18,
+            'codigo_periodo_academico' => '2027-A',
+            'cantidad_semanas_lectivas' => 18,
         ]);
 
         $this->actingAsAdministrator()
@@ -437,7 +437,7 @@ class AcademicStructureTest extends TestCase
             ->where('carrera_id', $career->id)
             ->exists());
         $this->assertDatabaseHas('eventos_auditoria', [
-            'accion' => 'usuario.rol_asignado',
+            'accion_evento_auditoria' => 'usuario.rol_asignado',
             'tipo_recurso' => 'usuario',
         ]);
     }
@@ -511,9 +511,9 @@ class AcademicStructureTest extends TestCase
         $this->assertDatabaseHas('asignaturas', [
             'malla_id' => $curriculum->id,
             'codigo_asignatura' => 'SW-701',
-            'ciclo' => 7,
-            'orden_en_ciclo' => 0,
-            'horas_totales' => 144,
+            'ciclo_asignatura' => 7,
+            'orden_asignatura_en_ciclo' => 0,
+            'total_horas_asignatura' => 144,
         ]);
 
         $this->actingAs($coordinator)
@@ -642,7 +642,7 @@ class AcademicStructureTest extends TestCase
                 ->where('fixedFieldTotals.0.label', 'ACD')
                 ->where('fixedFieldTotals.0.value', 160));
         $this->assertDatabaseHas('eventos_auditoria', [
-            'accion' => 'academico.requisito_asignatura.creacion',
+            'accion_evento_auditoria' => 'academico.requisito_asignatura.creacion',
             'tipo_recurso' => 'requisito_asignatura',
         ]);
 
@@ -724,21 +724,21 @@ class AcademicStructureTest extends TestCase
 
         $this->assertDatabaseHas('mallas', [
             'id' => $curriculum->id,
-            'codigo' => 'MALLA-SW-EDITADA',
+            'codigo_malla' => 'MALLA-SW-EDITADA',
         ]);
         $this->assertDatabaseHas('asignaturas', [
             'id' => $subject->id,
             'codigo_asignatura' => 'SW-711',
-            'nombre' => 'Materia corregida',
-            'ciclo' => 8,
-            'horas_totales' => 144,
+            'nombre_asignatura' => 'Materia corregida',
+            'ciclo_asignatura' => 8,
+            'total_horas_asignatura' => 144,
         ]);
         $this->assertDatabaseHas('eventos_auditoria', [
-            'accion' => 'academico.malla.actualizacion',
+            'accion_evento_auditoria' => 'academico.malla.actualizacion',
             'recurso_id' => $curriculum->id,
         ]);
         $this->assertDatabaseHas('eventos_auditoria', [
-            'accion' => 'academico.asignatura.actualizacion',
+            'accion_evento_auditoria' => 'academico.asignatura.actualizacion',
             'recurso_id' => $subject->id,
         ]);
     }
@@ -897,7 +897,7 @@ class AcademicStructureTest extends TestCase
         $this->assertSame(0, Parallel::query()->whereIn('id', $parallelIds)->count());
         $this->assertSame(0, TeacherAssignment::query()->whereIn('paralelo_id', $parallelIds)->count());
         $this->assertDatabaseHas('eventos_auditoria', [
-            'accion' => 'academico.programacion_asignatura.eliminacion',
+            'accion_evento_auditoria' => 'academico.programacion_asignatura.eliminacion',
             'recurso_id' => $scheduledSubject->id,
         ]);
     }
@@ -920,7 +920,7 @@ class AcademicStructureTest extends TestCase
 
         $this->assertDatabaseMissing('mallas', ['id' => $curriculum->id]);
         $this->assertDatabaseHas('eventos_auditoria', [
-            'accion' => 'academico.malla.eliminacion',
+            'accion_evento_auditoria' => 'academico.malla.eliminacion',
             'recurso_id' => $curriculum->id,
         ]);
 
@@ -966,7 +966,7 @@ class AcademicStructureTest extends TestCase
         $this->assertDatabaseMissing('asignaturas', ['id' => $subject->id]);
         $this->assertDatabaseMissing('requisitos_asignatura', ['id' => $requirement->id]);
         $this->assertDatabaseHas('eventos_auditoria', [
-            'accion' => 'academico.asignatura.eliminacion',
+            'accion_evento_auditoria' => 'academico.asignatura.eliminacion',
             'recurso_id' => $subject->id,
         ]);
 
@@ -1070,7 +1070,7 @@ class AcademicStructureTest extends TestCase
             ->assertSessionHasNoErrors();
         $this->assertDatabaseHas('carreras', [
             'codigo_carrera' => 'CARR-HIBRIDA',
-            'modalidad' => StudyModality::Hibrida->value,
+            'modalidad_carrera' => StudyModality::Hibrida->value,
         ]);
 
         $career = Career::query()->findOrFail($this->coordinatorContext->carrera_id);
@@ -1285,17 +1285,17 @@ class AcademicStructureTest extends TestCase
             ->firstOrFail();
         $this->assertDatabaseHas('paralelos', [
             'programacion_asignatura_id' => $scheduledSubject->id,
-            'codigo' => 'B',
-            'jornada' => 'matutina',
+            'codigo_paralelo' => 'B',
+            'jornada_paralelo' => 'matutina',
         ]);
         $this->assertDatabaseHas('paralelos', [
             'programacion_asignatura_id' => $scheduledSubject->id,
-            'codigo' => 'C',
-            'jornada' => 'vespertina',
+            'codigo_paralelo' => 'C',
+            'jornada_paralelo' => 'vespertina',
         ]);
         $this->assertDatabaseMissing('paralelos', [
             'programacion_asignatura_id' => $scheduledSubject->id,
-            'codigo' => 'A',
+            'codigo_paralelo' => 'A',
         ]);
     }
 
@@ -1345,12 +1345,12 @@ class AcademicStructureTest extends TestCase
 
         $this->assertDatabaseHas('paralelos', [
             'programacion_asignatura_id' => $scheduledSubject->id,
-            'codigo' => 'A',
-            'jornada' => 'matutina',
-            'activo' => true,
+            'codigo_paralelo' => 'A',
+            'jornada_paralelo' => 'matutina',
+            'paralelo_activo' => true,
         ]);
         $this->assertDatabaseHas('eventos_auditoria', [
-            'accion' => 'academico.paralelo.creacion',
+            'accion_evento_auditoria' => 'academico.paralelo.creacion',
             'tipo_recurso' => 'paralelo',
         ]);
     }
@@ -1371,9 +1371,9 @@ class AcademicStructureTest extends TestCase
         foreach (['B', 'C'] as $code) {
             $this->assertDatabaseHas('paralelos', [
                 'programacion_asignatura_id' => $scheduledSubject->id,
-                'codigo' => $code,
-                'jornada' => 'vespertina',
-                'activo' => true,
+                'codigo_paralelo' => $code,
+                'jornada_paralelo' => 'vespertina',
+                'paralelo_activo' => true,
             ]);
         }
         $this->assertSame(2, AuditEvent::query()
@@ -1391,7 +1391,7 @@ class AcademicStructureTest extends TestCase
 
         $this->assertDatabaseMissing('paralelos', [
             'programacion_asignatura_id' => $scheduledSubject->id,
-            'codigo' => 'D',
+            'codigo_paralelo' => 'D',
         ]);
     }
 
@@ -1427,7 +1427,7 @@ class AcademicStructureTest extends TestCase
 
         $this->assertDatabaseMissing('paralelos', [
             'programacion_asignatura_id' => $scheduledSubject->id,
-            'codigo' => 'B',
+            'codigo_paralelo' => 'B',
         ]);
     }
 
@@ -1454,7 +1454,7 @@ class AcademicStructureTest extends TestCase
             ->where('activo', true)
             ->exists());
         $this->assertDatabaseHas('eventos_auditoria', [
-            'accion' => 'academico.asignacion_docente.creacion',
+            'accion_evento_auditoria' => 'academico.asignacion_docente.creacion',
             'tipo_recurso' => 'asignacion_docente',
         ]);
     }
@@ -1541,7 +1541,7 @@ class AcademicStructureTest extends TestCase
             ->assertSessionHasNoErrors();
         $this->assertDatabaseMissing('campus', ['id' => $campus->id]);
         $this->assertDatabaseHas('eventos_auditoria', [
-            'accion' => 'academico.campus.eliminacion',
+            'accion_evento_auditoria' => 'academico.campus.eliminacion',
             'recurso_id' => $campus->id,
         ]);
 
@@ -1610,25 +1610,25 @@ class AcademicStructureTest extends TestCase
         $this->assertDatabaseHas('facultades', [
             'id' => $faculty->id,
             'codigo_facultad' => 'FICAYA-ACT',
-            'nombre' => 'Facultad de Ingeniería actualizada',
+            'nombre_facultad' => 'Facultad de Ingeniería actualizada',
         ]);
         $this->assertDatabaseHas('carreras', [
             'id' => $career->id,
             'facultad_id' => $destinationFaculty->id,
             'codigo_carrera' => 'SOFTWARE-ACT',
-            'nombre' => 'Ingeniería de Software',
+            'nombre_carrera' => 'Ingeniería de Software',
         ]);
         $this->assertDatabaseHas('campus', [
             'id' => $campus->id,
             'codigo_campus' => 'MATRIZ-ACT',
-            'nombre' => 'Campus Central',
+            'nombre_campus' => 'Campus Central',
         ]);
         $this->assertDatabaseHas('periodos_academicos', [
             'id' => $period->id,
-            'codigo' => '2026-ACT',
-            'fecha_inicio' => '2026-10-01',
-            'fecha_fin' => '2027-02-28',
-            'semanas_lectivas' => 18,
+            'codigo_periodo_academico' => '2026-ACT',
+            'fecha_inicio_periodo' => '2026-10-01',
+            'fecha_fin_periodo' => '2027-02-28',
+            'cantidad_semanas_lectivas' => 18,
         ]);
 
         $this->assertSame(4, AuditEvent::query()
@@ -1730,7 +1730,7 @@ class AcademicStructureTest extends TestCase
 
         $this->assertSame('FICAYA', $faculty->fresh()->codigo_facultad);
         $this->assertDatabaseMissing('eventos_auditoria', [
-            'accion' => 'academico.facultad.actualizacion',
+            'accion_evento_auditoria' => 'academico.facultad.actualizacion',
             'recurso_id' => $faculty->id,
         ]);
     }

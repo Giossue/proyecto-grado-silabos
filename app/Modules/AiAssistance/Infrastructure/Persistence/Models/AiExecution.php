@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\FieldDefinition;
 use App\Modules\Operations\Infrastructure\Persistence\Models\JobExecution;
 use App\Modules\Syllabus\Infrastructure\Persistence\Models\Syllabus;
+use App\Support\Database\MapsLegacyColumnNames;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -44,7 +45,13 @@ use LogicException;
  */
 class AiExecution extends Model
 {
-    use HasUuids;
+    use HasUuids, MapsLegacyColumnNames;
+
+    protected const LEGACY_COLUMN_ALIASES = [
+        'estado' => 'estado_ejecucion_ia',
+        'contenido_entrada' => 'contenido_entrada_ia',
+        'metadatos_entrada' => 'metadatos_entrada_ia',
+    ];
 
     public $timestamps = false;
 
@@ -112,7 +119,7 @@ class AiExecution extends Model
     protected static function booted(): void
     {
         static::updating(function (AiExecution $execution): void {
-            if (in_array($execution->getOriginal('estado'), ['completada', 'no_concluyente', 'fallida'], true)) {
+            if (in_array($execution->getOriginal('estado_ejecucion_ia'), ['completada', 'no_concluyente', 'fallida'], true)) {
                 throw new LogicException('Una ejecución de IA terminal es inmutable.');
             }
         });

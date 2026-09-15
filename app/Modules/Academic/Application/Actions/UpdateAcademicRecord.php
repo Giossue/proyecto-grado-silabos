@@ -37,11 +37,13 @@ class UpdateAcademicRecord
         'codigo_facultad' => 'Código de facultad',
         'codigo_campus' => 'Código de campus',
         'codigo_carrera' => 'Código de carrera',
-        'codigo' => 'Código de período',
-        'nombre' => 'Nombre',
-        'fecha_inicio' => 'Fecha de inicio',
-        'fecha_fin' => 'Fecha de fin',
-        'semanas_lectivas' => 'Semanas lectivas',
+        'codigo_periodo_academico' => 'Código de período',
+        'nombre_facultad' => 'Nombre',
+        'nombre_campus' => 'Nombre',
+        'nombre_carrera' => 'Nombre',
+        'fecha_inicio_periodo' => 'Fecha de inicio',
+        'fecha_fin_periodo' => 'Fecha de fin',
+        'cantidad_semanas_lectivas' => 'Semanas lectivas',
     ];
 
     /** @var array<string, string> */
@@ -49,11 +51,13 @@ class UpdateAcademicRecord
         'codigo_facultad' => 'code',
         'codigo_campus' => 'code',
         'codigo_carrera' => 'code',
-        'codigo' => 'code',
-        'nombre' => 'name',
-        'fecha_inicio' => 'starts_on',
-        'fecha_fin' => 'ends_on',
-        'semanas_lectivas' => 'teaching_weeks',
+        'codigo_periodo_academico' => 'code',
+        'nombre_facultad' => 'name',
+        'nombre_campus' => 'name',
+        'nombre_carrera' => 'name',
+        'fecha_inicio_periodo' => 'starts_on',
+        'fecha_fin_periodo' => 'ends_on',
+        'cantidad_semanas_lectivas' => 'teaching_weeks',
     ];
 
     public function __construct(

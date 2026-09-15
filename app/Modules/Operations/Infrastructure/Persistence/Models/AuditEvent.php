@@ -4,6 +4,7 @@ namespace App\Modules\Operations\Infrastructure\Persistence\Models;
 
 use App\Models\User;
 use App\Modules\Identity\Infrastructure\Persistence\Models\RoleAssignment;
+use App\Support\Database\MapsLegacyColumnNames;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -26,7 +27,13 @@ use LogicException;
  */
 class AuditEvent extends Model
 {
-    use HasUuids;
+    use HasUuids, MapsLegacyColumnNames;
+
+    protected const LEGACY_COLUMN_ALIASES = [
+        'accion' => 'accion_evento_auditoria',
+        'resultado' => 'resultado_evento_auditoria',
+        'metadatos' => 'metadatos_evento_auditoria',
+    ];
 
     public $timestamps = false;
 

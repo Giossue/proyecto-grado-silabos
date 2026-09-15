@@ -3,6 +3,7 @@
 namespace App\Modules\Academic\Infrastructure\Persistence\Models;
 
 use App\Modules\Academic\Domain\StudyModality;
+use App\Support\Database\MapsLegacyColumnNames;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -20,7 +21,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Career extends Model
 {
-    use HasUuids;
+    use HasUuids, MapsLegacyColumnNames;
+
+    protected const LEGACY_COLUMN_ALIASES = [
+        'nombre' => 'nombre_carrera',
+        'activo' => 'carrera_activa',
+        'modalidad' => 'modalidad_carrera',
+    ];
 
     public $timestamps = false;
 

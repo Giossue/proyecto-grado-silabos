@@ -38,7 +38,7 @@ class ConvocationController extends Controller
                 // La convocatoria se identifica por el período institucional que abarca.
                 ->when($search, fn ($query, string $term) => $query->where(
                     fn ($outer) => $outer->whereHas('academicPeriod', fn ($period) => $period
-                        ->whereRaw('codigo ILIKE ?', ["%{$term}%"])),
+                        ->whereRaw('codigo_periodo_academico ILIKE ?', ["%{$term}%"])),
                 ))
                 ->when($state, function ($query, string $value) use ($careerId): void {
                     if ($value === 'sin_iniciar') {
