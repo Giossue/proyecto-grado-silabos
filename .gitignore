@@ -17,6 +17,7 @@
 .env
 .env.backup
 .env.production
+credenciales-produccion.txt
 .phpactor.json
 .phpunit.result.cache
 Homestead.json
