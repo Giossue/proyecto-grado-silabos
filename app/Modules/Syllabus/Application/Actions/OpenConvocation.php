@@ -3,7 +3,6 @@
 namespace App\Modules\Syllabus\Application\Actions;
 
 use App\Models\User;
-use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
 use App\Modules\Academic\Infrastructure\Persistence\Models\ScheduledSubject;
 use App\Modules\Academic\Infrastructure\Persistence\Models\TeacherAssignment;
@@ -72,23 +71,13 @@ class OpenConvocation
                 throw ValidationException::withMessages(['convocation' => 'Las fuentes fijadas deben continuar activas al abrir.']);
             }
 
-            if (! Curriculum::query()
-                ->where('carrera_id', $convocation->carrera_id)
-                ->active()
-                ->exists()) {
-                throw ValidationException::withMessages([
-                    'convocation' => 'La carrera no tiene una malla activa. Actívela antes de abrir nuevos procesos para docentes.',
-                ]);
-            }
-
             $scheduledSubjects = ScheduledSubject::query()
                 ->where('periodo_academico_id', $convocation->process->periodo_academico_id)
                 ->where('activo', true)
-                ->whereHas('subject.curriculum', fn ($query) => $query
-                    ->where('carrera_id', $convocation->carrera_id)
-                    ->where('estado', 'activa'))
+                ->whereHas('subject', fn ($query) => $query
+                    ->where('carrera_id', $convocation->carrera_id))
                 ->with([
-                    'subject.curriculum', 'campus',
+                    'subject.career', 'campus',
                     'parallels' => fn ($query) => $query->where('activo', true)->lockForUpdate()->with([
                         'teacherAssignments' => fn ($assignmentQuery) => $assignmentQuery
                             ->where('asignaciones_paralelo.docente_paralelo_activo', true)
@@ -152,7 +141,7 @@ class OpenConvocation
         $syllabus = Syllabus::query()->create([
             'convocatoria_id' => $convocation->id,
             'asignatura_id' => $scheduledSubject->subject->id,
-            'malla_id' => $scheduledSubject->subject->malla_id,
+            'carrera_id' => $scheduledSubject->subject->carrera_id,
             'plantilla_id' => $convocation->process->plantilla_id,
             'contexto_academico' => $this->academicContext->build($scheduledSubject),
             'estado' => 'sin_iniciar',

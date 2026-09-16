@@ -26,8 +26,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $horas_aa
  * @property string|null $horas_paec
  * @property bool $activo
- * @property string $malla_id
- * @property-read Curriculum $curriculum
+ * @property string $carrera_id
+ * @property-read Career $career
  */
 class Subject extends Model
 {
@@ -50,7 +50,7 @@ class Subject extends Model
 
     /** @var list<string> */
     protected $fillable = [
-        'malla_id',
+        'carrera_id',
         'codigo_asignatura',
         'nombre',
         'ciclo',
@@ -87,10 +87,10 @@ class Subject extends Model
         ];
     }
 
-    /** @return BelongsTo<Curriculum, $this> */
-    public function curriculum(): BelongsTo
+    /** @return BelongsTo<Career, $this> */
+    public function career(): BelongsTo
     {
-        return $this->belongsTo(Curriculum::class, 'malla_id');
+        return $this->belongsTo(Career::class, 'carrera_id');
     }
 
     /** @return HasMany<ScheduledSubject, $this> */

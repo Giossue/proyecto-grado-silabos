@@ -4,7 +4,6 @@ namespace Tests\Feature\Documents;
 
 use App\Models\User;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
-use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Faculty;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Subject;
 use App\Modules\Academic\Infrastructure\Persistence\Models\TeacherAssignment;
@@ -443,7 +442,7 @@ class DocumentOperationsTest extends TestCase
         $syllabus = Syllabus::query()->create([
             'convocatoria_id' => $convocation->id,
             'asignatura_id' => $subject->id,
-            'malla_id' => $subject->malla_id,
+            'carrera_id' => $subject->carrera_id,
             'plantilla_id' => $version->id,
             'estado' => 'aprobado',
             'version_bloqueo' => 2,
@@ -506,15 +505,12 @@ class DocumentOperationsTest extends TestCase
             'facultad_id' => $faculty->id,
             'codigo_carrera' => 'OTRA-CP-F',
             'nombre' => 'Otra carrera CP-F',
+            'codigo_malla' => 'OTRA-MALLA-CP-F',
+            'cantidad_ciclos_malla' => 8,
             'activo' => true,
         ]);
-        $curriculum = Curriculum::query()->create([
-            'carrera_id' => $career->id,
-            'codigo' => 'OTRA-MALLA-CP-F',
-            'estado' => 'activa',
-        ]);
         $subject = Subject::query()->create([
-            'malla_id' => $curriculum->id,
+            'carrera_id' => $career->id,
             'codigo_asignatura' => 'OTRA-101',
             'nombre' => 'Asignatura fuera de alcance',
             'activo' => true,
@@ -528,7 +524,7 @@ class DocumentOperationsTest extends TestCase
         return Syllabus::query()->create([
             'convocatoria_id' => $convocation->id,
             'asignatura_id' => $subject->id,
-            'malla_id' => $curriculum->id,
+            'carrera_id' => $career->id,
             'plantilla_id' => $template->id,
             'estado' => 'aprobado',
             'version_bloqueo' => 2,

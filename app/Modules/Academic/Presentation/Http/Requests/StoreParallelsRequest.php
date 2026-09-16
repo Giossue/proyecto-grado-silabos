@@ -51,9 +51,7 @@ class StoreParallelsRequest extends FormRequest
                     ->where('programacion_asignatura_activa', true)
                     ->whereIn('asignatura_id', Subject::query()
                         ->select('id')
-                        ->whereHas('curriculum', fn ($curricula) => $curricula
-                            ->where('carrera_id', $careerId)
-                            ->where('estado_malla', 'activa')))),
+                        ->where('carrera_id', $careerId))),
             ],
             'codes' => ['required', 'array', 'min:1', 'max:50'],
             'codes.*' => ['required', 'string', 'max:30', 'distinct'],

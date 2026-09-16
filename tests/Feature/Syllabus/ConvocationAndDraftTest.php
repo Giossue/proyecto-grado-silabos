@@ -3,8 +3,6 @@
 namespace Tests\Feature\Syllabus;
 
 use App\Models\User;
-use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
-use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
 use App\Modules\Academic\Infrastructure\Persistence\Models\ScheduledSubject;
 use App\Modules\Academic\Infrastructure\Persistence\Models\TeacherAssignment;
@@ -111,28 +109,13 @@ class ConvocationAndDraftTest extends TestCase
         $this->assertDatabaseCount('silabos', 0);
     }
 
-    public function test_inactive_curriculum_blocks_opening_without_changing_existing_history(): void
+    public function test_existing_syllabus_keeps_its_academic_snapshot_when_the_structure_changes(): void
     {
         $existing = $this->openConvocationAndGetSyllabus();
         $originalName = $existing->academicSubjectName();
-        $curriculum = Curriculum::query()->firstOrFail();
-        $curriculum->update(['estado' => 'inactiva']);
         $existing->subject->update(['nombre' => 'Nombre nuevo en la malla']);
 
         $this->assertSame($originalName, $existing->fresh()->academicSubjectName());
-
-        $existing->convocation->process->update(['estado' => SyllabusProcess::STATE_CLOSED]);
-        $otherPeriod = AcademicPeriod::query()->create([
-            'codigo' => 'I-46-MALLA-INACTIVA',
-            'fecha_inicio' => '2027-01-01',
-            'fecha_fin' => '2027-05-31',
-        ]);
-        $convocation = $this->createPreparedConvocation($otherPeriod->id);
-        $this->actingAsCoordinator()
-            ->post(route('convocations.open', $convocation))
-            ->assertSessionHasErrors('convocation');
-        $this->assertSame('preparacion', $convocation->fresh()->estado);
-        $this->assertDatabaseCount('silabos', 1);
     }
 
     public function test_explicit_per_parallel_mode_generates_one_syllabus_for_each_parallel(): void

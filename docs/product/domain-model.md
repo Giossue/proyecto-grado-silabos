@@ -42,7 +42,7 @@ carrera. La programación conserva las copias porque el sílabo toma de ahí cam
 carreras. Aunque la fuente histórica lo replique por carrera, el producto lo consolida
 como la ventana temporal común de la universidad (I-41).
 
-Una `Asignatura` se identifica dentro de su malla por su código visible, que es el que
+Una `Asignatura` se identifica dentro de su carrera por su código visible, que es el que
 leen las personas y el que usa el producto en programaciones, sílabos y documentos.
 
 Las relaciones que ya respaldan un sílabo se protegen y no se eliminan. Las que aún no
@@ -50,31 +50,24 @@ tienen dependencias se eliminan; roles, nombramientos y asignaciones se desactiv
 borrar su evidencia.
 
 El Administrador gobierna las entidades institucionales globales y asigna la coordinación
-de una carrera. El Coordinador mantiene la malla, asignaturas programadas, paralelos y
+de una carrera. El Coordinador mantiene su estructura curricular, asignaturas programadas, paralelos y
 asignaciones docentes solo dentro de esa carrera. Un periodo académico representa fechas
 y la cantidad explícita de semanas lectivas;
-el ciclo representa la posición de una materia dentro de la malla.
+el ciclo representa la posición de una materia dentro de la estructura curricular.
 
-Cada carrera tiene cero o una sola malla actual. La malla define su cantidad de ciclos y
-composición de tarjeta. Sus campos tienen clave estable, etiqueta, tipo, posición,
-visibilidad y capacidad de
-totalización; pueden proyectar un dato estructurado existente o conservar un valor
-adicional tipado por asignatura. Retirar un campo lo desactiva sin borrar sus valores.
-En cada materia, los campos activos son obligatorios. Las horas totales se derivan de la
-suma de los componentes horarios activos y nunca incluyen los créditos; el servidor
-recalcula este valor en cada alta o edición. Si el desglose no envía una posición, la
-materia se agrega después de la última del mismo ciclo.
-Una relación académica guarda origen, destino y tipo; el color del diagrama no constituye
-la regla. El desglose académico y el constructor visual son dos proyecciones del mismo
-agregado; las asignaturas se mantienen dentro de la malla y no como una
-colección de navegación independiente. La malla actual se edita sobre sí misma tanto
-activa como inactiva. Deshabilitarla bloquea nuevas programaciones y procesos; eliminarla solo
-es posible cuando no tiene materias programadas ni sílabos. `mallas` tiene una sola fila por carrera
-(I-32).
+Cada carrera tiene una sola estructura curricular, almacenada directamente en la carrera:
+su código y cantidad de ciclos. No hay una entidad, versiones ni estado activable de
+`mallas`. Las asignaturas pertenecen directamente a la carrera. Sus atributos académicos
+son fijos y obligatorios; ninguna carrera crea columnas, valores EAV o campos arbitrarios.
+Las horas totales se derivan de ACD + APE + AA y el servidor las recalcula en cada alta o
+edición. Si el desglose no envía una posición, la materia se agrega después de la última
+del mismo ciclo. Una relación académica guarda origen, destino y tipo; el color del
+diagrama no constituye la regla. El desglose académico y el constructor visual son dos
+proyecciones de la estructura curricular de la carrera.
 
 ### Programación por período
 
-`ProgramacionAsignatura` vincula una materia de la malla con el período en que se dicta.
+`ProgramacionAsignatura` vincula una materia de la carrera con el período en que se dicta.
 Sus paralelos y asignaciones docentes forman la organización operativa de esa
 programación; no son una nueva carrera o programa aprobado por el CES.
 
@@ -96,7 +89,7 @@ relevos aplican la misma protección en el servidor (I-64).
 
 No hay publicación: la estructura se comprueba al abrir o reanudar el proceso. Un sílabo
 sin enviar lee la plantilla en vivo; una revisión enviada conserva su copia completa y ya
-no depende de ella. Si la plantilla o la malla cambian con la convocatoria pausada, los
+no depende de ella. Si la plantilla o la estructura curricular cambian con la convocatoria pausada, los
 sílabos en curso sin enviar se borran previa confirmación; los ya enviados o con análisis
 de IA no se borran y el cambio se rechaza.
 
@@ -117,7 +110,7 @@ abierto; al abrirla, la plantilla debe estar completa y las fuentes activas.
 Una convocatoria está **en curso** cuando ella está abierta y su proceso también. Esa
 condición habilita a los docentes y, por lo mismo, congela lo que sostiene su trabajo:
 con el proceso abierto no se edita la plantilla ni la estructura institucional; con una
-convocatoria en curso no se editan malla, fuentes, programaciones, paralelos ni asignaciones
+convocatoria en curso no se edita la estructura curricular, las fuentes, programaciones, paralelos ni asignaciones
 genéricas de esa carrera. En un período que aún no finaliza, el relevo docente es la
 única excepción, porque traslada de forma atómica la responsabilidad y el historial.
 Para corregir se pausa: Administración
@@ -127,8 +120,8 @@ la del proceso solo alcanza a las convocatorias que se abran después.
 
 ### Sílabo
 
-`Silabo` identifica el expediente canónico por asignatura, periodo y malla. Fija en
-`contexto_academico` una fotografía de la malla, materia y su programación al momento de crearse,
+`Silabo` identifica el expediente canónico por asignatura, período y carrera. Fija en
+`contexto_academico` una fotografía de la estructura curricular, materia y su programación al momento de crearse,
 por lo que cambios posteriores no reescriben el expediente. Puede agrupar
 docentes/paralelos compatibles o registrar una excepción justificada.
 
@@ -179,11 +172,12 @@ establece; una recomendación de IA nunca bloquea por sí sola.
    evidencia es una fotografía inmutable del contenido citado.
 10. Word y PDF se generan desde la copia que guarda la propia revisión.
 11. Redis y el servicio de IA pueden fallar sin corromper el expediente.
-12. Cada carrera tiene como máximo una malla actual; su estado es activa o inactiva y
-    ambos admiten edición por Coordinación.
-13. Una materia, un campo o una relación de malla siempre pertenece a una única carrera
-    por medio de la malla.
-14. Programar materias y abrir procesos exige que la malla actual esté activa.
+12. La estructura curricular única de una carrera se guarda en sus atributos
+    `codigo_malla` y `cantidad_ciclos_malla`; no tiene versiones ni estado propio.
+13. Una materia o relación de requisito pertenece a una única carrera mediante la
+    asignatura.
+14. Programar materias y abrir procesos exige asignaturas activas, programadas con sus
+    paralelos y docentes, no una malla activable.
 15. Todo sílabo y toda revisión conservan el contexto académico fijado al crearse.
 16. Las horas totales de una materia se derivan de sus componentes horarios activos y no
     de un valor ingresado manualmente.

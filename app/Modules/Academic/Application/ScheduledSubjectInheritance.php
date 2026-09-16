@@ -36,8 +36,8 @@ class ScheduledSubjectInheritance
             return $subject->modalidad;
         }
 
-        $subject->loadMissing('curriculum.career');
-        $modality = $subject->curriculum->career->modalidad;
+        $subject->loadMissing('career');
+        $modality = $subject->career->modalidad;
         if (! $modality instanceof StudyModality) {
             throw ValidationException::withMessages([
                 'subject_id' => 'La carrera no tiene modalidad. Administración debe asignarla en Carreras antes de programar materias.',

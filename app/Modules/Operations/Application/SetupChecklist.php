@@ -7,7 +7,6 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Campus;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CoordinatorAssignment;
-use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Faculty;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
 use App\Modules\Academic\Infrastructure\Persistence\Models\ScheduledSubject;
@@ -87,11 +86,11 @@ class SetupChecklist
             return $this->build('Puesta en marcha de la carrera', '', []);
         }
 
-        $curriculum = Curriculum::query()->where('carrera_id', $careerId)->withCount('subjects')->first();
-        $faculty = Career::query()->with('faculty')->find($careerId)?->faculty;
-        $scheduledSubjects = ScheduledSubject::query()->whereHas('subject.curriculum', fn (Builder $query) => $query->where('carrera_id', $careerId));
-        $parallels = Parallel::query()->whereHas('scheduledSubject.subject.curriculum', fn (Builder $query) => $query->where('carrera_id', $careerId));
-        $assignments = TeacherAssignment::query()->where('activo', true)->whereHas('parallel.scheduledSubject.subject.curriculum', fn (Builder $query) => $query->where('carrera_id', $careerId));
+        $career = Career::query()->with(['faculty'])->withCount('subjects')->findOrFail($careerId);
+        $faculty = $career->faculty;
+        $scheduledSubjects = ScheduledSubject::query()->whereHas('subject', fn (Builder $query) => $query->where('carrera_id', $careerId));
+        $parallels = Parallel::query()->whereHas('scheduledSubject.subject', fn (Builder $query) => $query->where('carrera_id', $careerId));
+        $assignments = TeacherAssignment::query()->where('activo', true)->whereHas('parallel.scheduledSubject.subject', fn (Builder $query) => $query->where('carrera_id', $careerId));
         $processOpen = SyllabusProcess::query()->where('estado', SyllabusProcess::STATE_OPEN)->exists();
 
         return $this->build(
@@ -106,7 +105,7 @@ class SetupChecklist
                     route('coordination.dashboard'),
                     'faculty_logo',
                 ),
-                $this->step('curriculum', 'Armar la malla con sus materias', 'Ciclos, materias, horas, créditos y prerrequisitos.', $curriculum !== null && $curriculum->subjects_count > 0, route('coordination.academic.curricula.index')),
+                $this->step('curriculum', 'Armar la malla con sus materias', 'Ciclos, materias, horas, créditos y prerrequisitos.', $career->subjects_count > 0, route('coordination.academic.curricula.index')),
                 $this->step('scheduled_subjects', 'Programar las materias del período', 'Materia, período, campus y modalidad.', (clone $scheduledSubjects)->exists(), route('coordination.academic.scheduled-subjects.index')),
                 $this->step('parallels', 'Crear los paralelos', 'Desde Materias y paralelos, con su jornada: matutina, vespertina o nocturna.', (clone $parallels)->exists(), route('coordination.academic.scheduled-subjects.index')),
                 $this->step('teachers', 'Asignar un docente a cada paralelo', 'Los docentes ya deben tener cuenta (los crea Administración).', (clone $assignments)->exists(), route('coordination.academic.teacher-assignments.index')),

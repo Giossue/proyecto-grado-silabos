@@ -183,6 +183,8 @@ class ManagedUserProfileTest extends TestCase
             'facultad_id' => $faculty->id,
             'codigo_carrera' => 'OTRA',
             'nombre' => 'Otra carrera',
+            'codigo_malla' => 'PLAN-OTRA',
+            'cantidad_ciclos_malla' => 8,
             'activo' => true,
         ]);
         $user = User::query()->create([

@@ -21,13 +21,7 @@ const props = withDefaults(
     },
 );
 
-const actionLabel = computed(() => {
-    if (props.entity === 'malla') {
-        return props.active ? 'Deshabilitar' : 'Reactivar';
-    }
-
-    return props.active ? 'Desactivar' : 'Reactivar';
-});
+const actionLabel = computed(() => (props.active ? 'Desactivar' : 'Reactivar'));
 </script>
 
 <template>

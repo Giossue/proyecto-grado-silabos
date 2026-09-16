@@ -43,9 +43,8 @@ class CreateParallels
             $scheduledSubject = ScheduledSubject::query()
                 ->whereKey($data['scheduled_subject_id'])
                 ->where('activo', true)
-                ->whereHas('subject.curriculum', fn ($query) => $query
-                    ->where('carrera_id', $activeRole->carrera_id)
-                    ->where('estado', 'activa'))
+                ->whereHas('subject', fn ($query) => $query
+                    ->where('carrera_id', $activeRole->carrera_id))
                 ->lockForUpdate()
                 ->firstOrFail();
             $this->periodPlanning->assertScheduledSubjectMayChange($scheduledSubject, 'scheduled_subject_id');

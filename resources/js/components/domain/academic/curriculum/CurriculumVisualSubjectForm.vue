@@ -91,12 +91,6 @@ watch(
         @mousedown.stop
         @success="emit('saved')"
     >
-        <input
-            v-if="subject === null"
-            type="hidden"
-            name="curriculum_id"
-            :value="curriculum.id"
-        />
         <input type="hidden" name="cycle" :value="cycle" />
         <input type="hidden" name="position" :value="position" />
         <FieldGroup class="gap-3">

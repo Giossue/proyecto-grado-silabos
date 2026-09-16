@@ -55,8 +55,8 @@ class PreparePeriod
             $settingsBySubject = collect($data['subjects'])->keyBy('id');
             $subjectsQuery = Subject::query()
                 ->where('activo', true)
-                ->whereHas('curriculum', fn ($query) => $query->where('carrera_id', $careerId)->where('estado', 'activa'))
-                ->with('curriculum.career')
+                ->where('carrera_id', $careerId)
+                ->with('career')
                 ->orderBy('ciclo')
                 ->orderBy('orden_en_ciclo');
             $subjectsQuery->whereIn('id', $settingsBySubject->keys());

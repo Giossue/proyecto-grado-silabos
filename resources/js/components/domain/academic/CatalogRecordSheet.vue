@@ -260,6 +260,48 @@ const examples = computed(
                             <FieldError :errors="[errors.code]" />
                         </Field>
 
+                        <template v-if="entity === 'carrera'">
+                            <Field
+                                :data-invalid="Boolean(errors.curriculum_code)"
+                            >
+                                <FieldLabel
+                                    for="catalog-curriculum-code"
+                                    required
+                                >
+                                    Código de malla curricular
+                                </FieldLabel>
+                                <Input
+                                    id="catalog-curriculum-code"
+                                    name="curriculum_code"
+                                    placeholder="Ej. MALLA-SW-2026"
+                                    required
+                                    :aria-invalid="
+                                        Boolean(errors.curriculum_code)
+                                    "
+                                />
+                                <FieldError
+                                    :errors="[errors.curriculum_code]"
+                                />
+                            </Field>
+                            <Field :data-invalid="Boolean(errors.cycle_count)">
+                                <FieldLabel for="catalog-cycle-count" required>
+                                    Cantidad de ciclos
+                                </FieldLabel>
+                                <Input
+                                    id="catalog-cycle-count"
+                                    name="cycle_count"
+                                    type="number"
+                                    min="1"
+                                    max="30"
+                                    step="1"
+                                    value="8"
+                                    required
+                                    :aria-invalid="Boolean(errors.cycle_count)"
+                                />
+                                <FieldError :errors="[errors.cycle_count]" />
+                            </Field>
+                        </template>
+
                         <Field
                             v-if="entity === 'periodo'"
                             :data-invalid="Boolean(errors.starts_on)"

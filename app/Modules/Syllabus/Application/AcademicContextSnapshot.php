@@ -11,14 +11,13 @@ class AcademicContextSnapshot
     public function build(ScheduledSubject $scheduledSubject): array
     {
         $scheduledSubject->loadMissing([
-            'subject.curriculum.career.faculty',
+            'subject.career.faculty',
             'subject.requirements.requirement',
             'academicPeriod',
             'campus',
         ]);
         $subject = $scheduledSubject->subject;
-        $curriculum = $subject->curriculum;
-        $career = $curriculum->career;
+        $career = $subject->career;
         $requirementCodes = fn (string $type): array => $subject->requirements
             ->where('tipo', $type)
             ->map(fn (SubjectRequirement $requirement): string => $requirement->requirement->codigo_asignatura)
@@ -37,9 +36,9 @@ class AcademicContextSnapshot
                 'faculty_id' => $career->facultad_id,
             ],
             'curriculum' => [
-                'id' => $curriculum->id,
-                'code' => $curriculum->codigo,
-                'cycle_count' => $curriculum->numero_ciclos,
+                'id' => $career->id,
+                'code' => $career->codigo_malla,
+                'cycle_count' => $career->cantidad_ciclos_malla,
             ],
             'subject' => [
                 'id' => $subject->id,

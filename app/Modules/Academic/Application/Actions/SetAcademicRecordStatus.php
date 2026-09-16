@@ -5,11 +5,9 @@ namespace App\Modules\Academic\Application\Actions;
 use App\Models\User;
 use App\Modules\Academic\Application\AcademicPeriodPlanning;
 use App\Modules\Academic\Domain\AcademicStructurePermissions;
-use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Campus;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CoordinatorAssignment;
-use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Faculty;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
 use App\Modules\Academic\Infrastructure\Persistence\Models\ScheduledSubject;
@@ -33,7 +31,6 @@ class SetAcademicRecordStatus
         'facultad' => Faculty::class,
         'carrera' => Career::class,
         'campus' => Campus::class,
-        'malla' => Curriculum::class,
         'asignatura' => Subject::class,
         'programacion_asignatura' => ScheduledSubject::class,
         'paralelo' => Parallel::class,
@@ -73,7 +70,7 @@ class SetAcademicRecordStatus
         if (AcademicStructurePermissions::isCareerContext($activeRole)) {
             $this->locks->assertCareerEditable($activeRole->carrera_id);
         }
-        if (in_array($entity, ['malla', 'asignatura'], true) && AcademicStructurePermissions::isCareerContext($activeRole)) {
+        if ($entity === 'asignatura' && AcademicStructurePermissions::isCareerContext($activeRole)) {
             $this->work->requireConfirmation($request, $activeRole->carrera_id);
         }
 
@@ -94,9 +91,7 @@ class SetAcademicRecordStatus
                 $this->ensureMayDeactivate($entity, $recordId);
             }
 
-            $record->update($entity === 'malla'
-                ? ['estado' => $active ? 'activa' : 'inactiva']
-                : ['activo' => $active]);
+            $record->update(['activo' => $active]);
 
             $this->audit->execute(
                 actorId: $actor->id,
@@ -120,24 +115,20 @@ class SetAcademicRecordStatus
         }
 
         return match ($entity) {
-            'malla' => Curriculum::query()
-                ->where('carrera_id', $careerId)
-                ->lockForUpdate()
-                ->findOrFail($recordId),
             'asignatura' => Subject::query()->whereHas(
-                'curriculum',
-                fn ($query) => $query->where('carrera_id', $careerId),
+                'career',
+                fn ($query) => $query->whereKey($careerId),
             )->lockForUpdate()->findOrFail($recordId),
             'programacion_asignatura' => ScheduledSubject::query()->whereHas(
-                'subject.curriculum',
+                'subject',
                 fn ($query) => $query->where('carrera_id', $careerId),
             )->lockForUpdate()->findOrFail($recordId),
             'paralelo' => Parallel::query()->whereHas(
-                'scheduledSubject.subject.curriculum',
+                'scheduledSubject.subject',
                 fn ($query) => $query->where('carrera_id', $careerId),
             )->lockForUpdate()->findOrFail($recordId),
             'asignacion_docente' => TeacherAssignment::query()->whereHas(
-                'parallel.scheduledSubject.subject.curriculum',
+                'parallel.scheduledSubject.subject',
                 fn ($query) => $query->where('carrera_id', $careerId),
             )->lockForUpdate()->findOrFail($recordId),
             default => throw new AuthorizationException('El registro no pertenece a la gestión de carrera.'),
@@ -148,8 +139,7 @@ class SetAcademicRecordStatus
     {
         $hasActiveDependants = match ($entity) {
             'facultad' => Career::query()->where('facultad_id', $recordId)->where('activo', true)->exists(),
-            'carrera' => Curriculum::query()->where('carrera_id', $recordId)->active()->exists(),
-            'malla' => false,
+            'carrera' => Subject::query()->where('carrera_id', $recordId)->where('activo', true)->exists(),
             'campus' => ScheduledSubject::query()->where('campus_id', $recordId)->where('activo', true)->exists(),
             'asignatura' => ScheduledSubject::query()->where('asignatura_id', $recordId)->where('activo', true)->exists(),
             'programacion_asignatura' => Parallel::query()->where('programacion_asignatura_id', $recordId)->where('activo', true)->exists(),

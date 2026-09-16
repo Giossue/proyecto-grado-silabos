@@ -5,7 +5,6 @@ namespace Tests\Feature\AiAssistance;
 use App\Models\User;
 use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
-use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Subject;
 use App\Modules\Academic\Infrastructure\Persistence\Models\TeacherAssignment;
 use App\Modules\AiAssistance\Application\AiResultContract;
@@ -557,7 +556,6 @@ class AiAssistanceTest extends TestCase
         $career = Career::query()->firstOrFail();
         $period = AcademicPeriod::query()->firstOrFail();
         $subject = Subject::query()->firstOrFail();
-        $curriculum = Curriculum::query()->firstOrFail();
         $templateVersion = SyllabusTemplate::query()->create([
             'nombre' => 'Plantilla IA',
             'activo' => true,
@@ -610,7 +608,7 @@ class AiAssistanceTest extends TestCase
         $syllabus = Syllabus::query()->create([
             'convocatoria_id' => $convocation->id,
             'asignatura_id' => $subject->id,
-            'malla_id' => $curriculum->id,
+            'carrera_id' => $career->id,
             'plantilla_id' => $templateVersion->id,
             'estado' => 'borrador',
             'version_bloqueo' => 0,

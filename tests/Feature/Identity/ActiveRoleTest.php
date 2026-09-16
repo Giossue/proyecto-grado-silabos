@@ -188,11 +188,7 @@ class ActiveRoleTest extends TestCase
             ->assertSessionHas('active_role_assignment_id', $secondAssignment->id);
 
         $this->get(route('coordination.academic.curricula.index'))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('Coordination/Academic/Curricula')
-                ->where('career.name', 'Carrera para segundo rol')
-                ->missing('subjects'));
+            ->assertRedirect(route('coordination.academic.curricula.show', $secondAssignment->carrera_id));
     }
 
     public function test_coordinator_role_requires_an_effective_academic_coordination(): void
@@ -247,6 +243,8 @@ class ActiveRoleTest extends TestCase
             'facultad_id' => Faculty::query()->firstOrFail()->id,
             'codigo_carrera' => 'CARR-SEGUNDO-ROL',
             'nombre' => 'Carrera para segundo rol',
+            'codigo_malla' => 'PLAN-SEGUNDO-ROL',
+            'cantidad_ciclos_malla' => 8,
             'activo' => true,
         ]);
         RoleAssignment::query()->create([

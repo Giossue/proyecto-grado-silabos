@@ -308,6 +308,8 @@ class ManagedUserTest extends TestCase
             'facultad_id' => Career::query()->firstOrFail()->facultad_id,
             'codigo_carrera' => 'CARR-SEGUNDA-COORDINACION',
             'nombre' => 'Segunda carrera coordinada',
+            'codigo_malla' => 'PLAN-SEGUNDA-COORDINACION',
+            'cantidad_ciclos_malla' => 8,
             'activo' => true,
         ]);
 

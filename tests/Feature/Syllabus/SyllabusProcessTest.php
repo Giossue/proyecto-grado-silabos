@@ -4,7 +4,7 @@ namespace Tests\Feature\Syllabus;
 
 use App\Models\User;
 use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
-use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
+use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
 use App\Modules\Academic\Infrastructure\Persistence\Models\ScheduledSubject;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\AcademicSource;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
@@ -330,39 +330,47 @@ class SyllabusProcessTest extends TestCase
         $this->assertSame(13, $template->sections()->count());
     }
 
-    public function test_changing_the_curriculum_during_a_pause_asks_before_deleting_unsent_syllabi(): void
+    public function test_changing_the_career_structure_during_a_pause_asks_before_deleting_unsent_syllabi(): void
     {
         $convocation = $this->openedConvocation();
-        $curriculum = Curriculum::query()->firstOrFail();
+        $career = Career::query()->firstOrFail();
         $this->actingAsCoordinator()
             ->post(route('convocations.transition', [$convocation, 'pausar']), ['reason' => 'Corrección de la malla con expedientes abiertos.'])
             ->assertRedirect();
 
         $this->actingAsCoordinator()
-            ->patch(route('coordination.academic.update', ['entity' => 'malla', 'record' => $curriculum->id]), ['code' => 'MALLA-NUEVA'])
+            ->patch(route('coordination.academic.curricula.configuration.update', $career->id), [
+                'code' => 'MALLA-NUEVA',
+                'cycle_count' => $career->cantidad_ciclos_malla,
+            ])
             ->assertSessionHasErrors('purge_required');
         $this->assertDatabaseCount('silabos', 1);
 
         $this->actingAsCoordinator()
-            ->patch(route('coordination.academic.update', ['entity' => 'malla', 'record' => $curriculum->id]), ['code' => 'MALLA-NUEVA', 'confirm_purge' => 1])
+            ->patch(route('coordination.academic.curricula.configuration.update', $career->id), [
+                'code' => 'MALLA-NUEVA',
+                'cycle_count' => $career->cantidad_ciclos_malla,
+                'confirm_purge' => 1,
+            ])
             ->assertRedirect()
             ->assertSessionHasNoErrors();
         $this->assertDatabaseCount('silabos', 0);
-        $this->assertSame('MALLA-NUEVA', $curriculum->fresh()->codigo);
+        $this->assertSame('MALLA-NUEVA', $career->fresh()->codigo_malla);
     }
 
     public function test_a_running_convocation_freezes_curriculum_and_sources_of_its_career_only(): void
     {
         $convocation = $this->openedConvocation();
-        $curriculum = Curriculum::query()->firstOrFail();
+        $career = Career::query()->firstOrFail();
         $source = AcademicSource::query()->firstOrFail();
 
         $this->actingAsCoordinator()
-            ->patch(route('coordination.academic.update', ['entity' => 'malla', 'record' => $curriculum->id]), [
+            ->patch(route('coordination.academic.curricula.configuration.update', $career->id), [
                 'code' => 'MALLA-BLOQUEADA',
+                'cycle_count' => $career->cantidad_ciclos_malla,
             ])
             ->assertSessionHasErrors('process');
-        $this->assertSame('MALLA-SW-2024', $curriculum->fresh()->codigo);
+        $this->assertSame('MALLA-SW-2024', $career->fresh()->codigo_malla);
 
         $this->actingAsCoordinator()
             ->patch(route('sources.update', $source), [
@@ -373,7 +381,7 @@ class SyllabusProcessTest extends TestCase
         $this->assertNotSame('Fuente renombrada', $source->fresh()->nombre);
 
         $this->actingAsCoordinator()
-            ->get(route('coordination.academic.curricula.show', $curriculum))
+            ->get(route('coordination.academic.curricula.show', $career))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->where('curriculum.editable', false)
@@ -391,13 +399,14 @@ class SyllabusProcessTest extends TestCase
         // Con la convocatoria pausada la malla se edita; como hay un expediente sin
         // enviar, el cambio pide confirmación y lo borra (I-32).
         $this->actingAsCoordinator()
-            ->patch(route('coordination.academic.update', ['entity' => 'malla', 'record' => $curriculum->id]), [
+            ->patch(route('coordination.academic.curricula.configuration.update', $career->id), [
                 'code' => 'MALLA-CORREGIDA',
+                'cycle_count' => $career->cantidad_ciclos_malla,
                 'confirm_purge' => 1,
             ])
             ->assertRedirect()
             ->assertSessionHasNoErrors();
-        $this->assertSame('MALLA-CORREGIDA', $curriculum->fresh()->codigo);
+        $this->assertSame('MALLA-CORREGIDA', $career->fresh()->codigo_malla);
 
         $this->actingAsCoordinator()
             ->patch(route('sources.update', $source), [

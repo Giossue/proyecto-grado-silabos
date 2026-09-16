@@ -19,7 +19,7 @@ export type Option = {
     planning_enabled?: boolean;
     subject_id?: string;
     period_id?: string;
-    /** Materias de la malla activa: para agruparlas por ciclo al preparar un período. */
+    /** Materias de la carrera activa: para agruparlas por ciclo al preparar un período. */
     ciclo?: number | null;
 };
 
@@ -85,8 +85,6 @@ export type AcademicStructureProps = {
         credits: string | null;
         total_hours: number | null;
         active: boolean;
-        curriculum_code: string;
-        curriculum_id: string;
         career_name: string;
         editable: boolean;
     }[];
@@ -205,8 +203,6 @@ export type CurriculumBuilderProps = {
         id: string;
         code: string;
         cycle_count: number;
-        state: string;
-        active: boolean;
         editable: boolean;
         lock_reason: string | null;
     };

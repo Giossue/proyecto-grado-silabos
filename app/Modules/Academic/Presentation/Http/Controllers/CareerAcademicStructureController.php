@@ -7,7 +7,6 @@ use App\Models\User;
 use App\Modules\Academic\Application\Actions\CreateAcademicRecord;
 use App\Modules\Academic\Application\Actions\CreateParallels;
 use App\Modules\Academic\Application\Actions\DeleteAcademicRecord;
-use App\Modules\Academic\Application\Actions\DeleteCurriculum;
 use App\Modules\Academic\Application\Actions\DeleteScheduledSubject;
 use App\Modules\Academic\Application\Actions\MutateCurriculumBuilder;
 use App\Modules\Academic\Application\Actions\PreparePeriod;
@@ -38,15 +37,8 @@ class CareerAcademicStructureController extends Controller
         AcademicStructureViewData $viewData,
     ): Response|RedirectResponse {
         $careerId = $this->careerId($request, $roles);
-        $curriculumId = $viewData->currentCurriculumId($careerId);
-        if ($curriculumId !== null) {
-            return to_route('coordination.academic.curricula.show', $curriculumId);
-        }
 
-        return Inertia::render(
-            'Coordination/Academic/Curricula',
-            $viewData->curricula($careerId),
-        );
+        return to_route('coordination.academic.curricula.show', $careerId);
     }
 
     public function curriculumBuilder(
@@ -166,12 +158,6 @@ class CareerAcademicStructureController extends Controller
         $active = $request->boolean('active');
         $action->execute($entity, $record, $active, $actor, $request);
 
-        if ($entity === 'malla') {
-            return back()->with('success', $active
-                ? 'Malla reactivada. Los procesos nuevos vuelven a estar disponibles.'
-                : 'Malla deshabilitada. No se crearán procesos nuevos y el historial se conserva.');
-        }
-
         return back()->with('success', $active
             ? 'Registro activado.'
             : 'Registro desactivado sin borrar su historial.');
@@ -188,19 +174,6 @@ class CareerAcademicStructureController extends Controller
         $action->execute($entity, $record, $request->validated(), $actor, $request);
 
         return back()->with('success', 'Registro académico actualizado.');
-    }
-
-    public function destroyCurriculum(
-        string $curriculum,
-        ManageCareerAcademicStructureRequest $request,
-        DeleteCurriculum $action,
-    ): RedirectResponse {
-        $actor = $request->user();
-        abort_unless($actor instanceof User, 401);
-        $action->execute($curriculum, $actor, $request);
-
-        return to_route('coordination.academic.curricula.index')
-            ->with('success', 'Malla eliminada. La carrera queda sin estructura académica activa.');
     }
 
     public function destroyScheduledSubject(

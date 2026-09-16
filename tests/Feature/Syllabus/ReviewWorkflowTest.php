@@ -239,6 +239,8 @@ class ReviewWorkflowTest extends TestCase
             'facultad_id' => Career::query()->firstOrFail()->facultad_id,
             'codigo_carrera' => 'OTRA-CARRERA',
             'nombre' => 'Otra carrera',
+            'codigo_malla' => 'PLAN-OTRA-CARRERA',
+            'cantidad_ciclos_malla' => 8,
             'activo' => true,
         ]);
         $this->coordinatorContext->update(['carrera_id' => $career->id]);
@@ -447,7 +449,7 @@ class ReviewWorkflowTest extends TestCase
         $otherSyllabus = Syllabus::query()->create([
             'convocatoria_id' => $syllabus->convocatoria_id,
             'asignatura_id' => $syllabus->asignatura_id,
-            'malla_id' => $syllabus->malla_id,
+            'carrera_id' => $syllabus->carrera_id,
             'plantilla_id' => $syllabus->plantilla_id,
             'estado' => 'en_revision',
             'version_bloqueo' => 1,

@@ -3,6 +3,7 @@
 namespace App\Modules\Academic\Infrastructure\Persistence\Models;
 
 use App\Modules\Academic\Domain\StudyModality;
+use App\Modules\Syllabus\Infrastructure\Persistence\Models\Syllabus;
 use App\Support\Database\MapsLegacyColumnNames;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -16,6 +17,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $facultad_id
  * @property StudyModality|null $modalidad
  * @property string|null $campus_id
+ * @property string $codigo_malla
+ * @property int $cantidad_ciclos_malla
  * @property bool $activo
  * @property-read Campus|null $campus
  */
@@ -34,12 +37,19 @@ class Career extends Model
     protected $table = 'carreras';
 
     /** @var list<string> */
-    protected $fillable = ['facultad_id', 'modalidad', 'campus_id', 'codigo_carrera', 'nombre', 'activo'];
+    protected $fillable = [
+        'facultad_id', 'modalidad', 'campus_id', 'codigo_carrera', 'nombre', 'activo',
+        'codigo_malla', 'cantidad_ciclos_malla',
+    ];
 
     /** @return array<string, string> */
     protected function casts(): array
     {
-        return ['activo' => 'boolean', 'modalidad' => StudyModality::class];
+        return [
+            'activo' => 'boolean',
+            'modalidad' => StudyModality::class,
+            'cantidad_ciclos_malla' => 'integer',
+        ];
     }
 
     /** @return BelongsTo<Faculty, $this> */
@@ -59,5 +69,18 @@ class Career extends Model
     public function campus(): BelongsTo
     {
         return $this->belongsTo(Campus::class, 'campus_id');
+    }
+
+    /** Materias que forman la estructura curricular única de esta carrera. */
+    /** @return HasMany<Subject, $this> */
+    public function subjects(): HasMany
+    {
+        return $this->hasMany(Subject::class, 'carrera_id');
+    }
+
+    /** @return HasMany<Syllabus, $this> */
+    public function syllabi(): HasMany
+    {
+        return $this->hasMany(Syllabus::class, 'carrera_id');
     }
 }

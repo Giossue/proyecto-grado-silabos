@@ -18,7 +18,6 @@ final class AcademicStructurePermissions
 
     /** @var list<string> */
     public const CAREER_ENTITIES = [
-        'malla',
         'asignatura',
         'programacion_asignatura',
         'paralelo',
@@ -43,7 +42,6 @@ final class AcademicStructurePermissions
 
     /** @var list<string> */
     public const CAREER_UPDATE_ENTITIES = [
-        'malla',
         'asignatura',
         'programacion_asignatura',
         'paralelo',
@@ -52,7 +50,6 @@ final class AcademicStructurePermissions
 
     /** @var list<string> */
     public const CAREER_STATUS_ENTITIES = [
-        'malla',
         'asignatura',
         'programacion_asignatura',
         'paralelo',

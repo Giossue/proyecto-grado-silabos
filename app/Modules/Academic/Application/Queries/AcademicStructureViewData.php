@@ -10,7 +10,6 @@ use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Campus;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
 use App\Modules\Academic\Infrastructure\Persistence\Models\CoordinatorAssignment;
-use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Faculty;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
 use App\Modules\Academic\Infrastructure\Persistence\Models\ScheduledSubject;
@@ -148,9 +147,7 @@ class AcademicStructureViewData
 
     public function currentCurriculumId(string $careerId): ?string
     {
-        $id = Curriculum::query()
-            ->where('carrera_id', $careerId)
-            ->value('id');
+        $id = Career::query()->where('activo', true)->whereKey($careerId)->value('id');
 
         return is_string($id) ? $id : null;
     }
@@ -159,15 +156,16 @@ class AcademicStructureViewData
     public function curriculumBuilder(string $careerId, string $curriculumId): array
     {
         $career = $this->career($careerId);
-        $curriculum = Curriculum::query()
-            ->where('carrera_id', $careerId)
+        abort_unless($curriculumId === $careerId, 404);
+        $career = Career::query()
+            ->whereKey($careerId)
             ->with(['subjects' => fn ($query) => $query
                 ->orderBy('ciclo')
                 ->orderBy('orden_en_ciclo')
                 ->orderBy('nombre')])
-            ->findOrFail($curriculumId);
+            ->firstOrFail();
         $definitions = collect(CurriculumSystemFields::fixedDefinitions());
-        $subjectIds = $curriculum->subjects->pluck('id');
+        $subjectIds = $career->subjects->pluck('id');
         // La malla se congela mientras una convocatoria de la carrera está en curso; la
         // razón viaja a la pantalla para que explique el bloqueo con las mismas palabras.
         $lockReason = $this->locks->careerLockReason($careerId);
@@ -183,11 +181,9 @@ class AcademicStructureViewData
                 ],
             ],
             'curriculum' => [
-                'id' => $curriculum->id,
-                'code' => $curriculum->codigo,
-                'cycle_count' => $curriculum->numero_ciclos,
-                'state' => $curriculum->estado,
-                'active' => $curriculum->estado === 'activa',
+                'id' => $career->id,
+                'code' => $career->codigo_malla,
+                'cycle_count' => $career->cantidad_ciclos_malla,
                 'editable' => $lockReason === null,
                 'lock_reason' => $lockReason,
             ],
@@ -204,8 +200,8 @@ class AcademicStructureViewData
             ])->values(),
             'fixedFieldTotals' => $definitions
                 ->where('totalizable', true)
-                ->map(function (array $field) use ($curriculum): array {
-                    $value = $curriculum->subjects->sum(fn (Subject $subject): float|int => is_numeric(CurriculumSystemFields::value($subject, $field['system_key']))
+                ->map(function (array $field) use ($career): array {
+                    $value = $career->subjects->sum(fn (Subject $subject): float|int => is_numeric(CurriculumSystemFields::value($subject, $field['system_key']))
                             ? CurriculumSystemFields::value($subject, $field['system_key']) + 0
                             : 0);
 
@@ -215,7 +211,7 @@ class AcademicStructureViewData
                         'value' => $value,
                     ];
                 })->values(),
-            'subjects' => $curriculum->subjects->map(function (Subject $subject) use ($definitions): array {
+            'subjects' => $career->subjects->map(function (Subject $subject) use ($definitions): array {
                 return [
                     'id' => $subject->id,
                     'code' => $subject->codigo_asignatura,
@@ -262,8 +258,7 @@ class AcademicStructureViewData
         $career = $this->career($careerId);
         $lockReason = $this->locks->careerLockReason($careerId);
         $scheduledSubjects = ScheduledSubject::query()
-            ->whereHas('subject.curriculum', fn ($query) => $query
-                ->where('carrera_id', $careerId))
+            ->whereHas('subject', fn ($query) => $query->where('carrera_id', $careerId))
             ->with([
                 'academicPeriod:id,fecha_inicio,fecha_fin',
                 'subject:id,nombre,codigo_asignatura,ciclo',
@@ -360,18 +355,14 @@ class AcademicStructureViewData
                 'campuses' => Campus::query()->where('activo', true)->orderBy('nombre')->get(['id', 'nombre']),
                 'activeSubjects' => Subject::query()
                     ->where('activo', true)
-                    ->whereHas('curriculum', fn ($query) => $query
-                        ->where('carrera_id', $careerId)
-                        ->where('estado', 'activa'))
+                    ->where('carrera_id', $careerId)
                     ->orderBy('ciclo')
                     ->orderBy('orden_en_ciclo')
                     ->orderBy('nombre')
                     ->get(['id', 'codigo_asignatura', 'nombre', 'ciclo']),
                 'scheduledSubjects' => ScheduledSubject::query()
                     ->where('activo', true)
-                    ->whereHas('subject.curriculum', fn ($query) => $query
-                        ->where('carrera_id', $careerId)
-                        ->where('estado', 'activa'))
+                    ->whereHas('subject', fn ($query) => $query->where('carrera_id', $careerId))
                     ->with(['subject:id,codigo_asignatura,nombre', 'academicPeriod:id,codigo,fecha_inicio,fecha_fin'])
                     ->get()
                     ->filter(fn (ScheduledSubject $scheduledSubject): bool => $this->periodPlanning->mayPlan($scheduledSubject->academicPeriod))
@@ -392,7 +383,7 @@ class AcademicStructureViewData
         $lockReason = $this->locks->careerLockReason($careerId);
         $teacherAssignments = TeacherAssignment::query()
             ->whereHas(
-                'parallel.scheduledSubject.subject.curriculum',
+                'parallel.scheduledSubject.subject',
                 fn ($query) => $query->where('carrera_id', $careerId),
             )
             ->with([
@@ -435,10 +426,8 @@ class AcademicStructureViewData
                 'parallels' => Parallel::query()
                     ->where('activo', true)
                     ->whereHas(
-                        'scheduledSubject.subject.curriculum',
-                        fn ($query) => $query
-                            ->where('carrera_id', $careerId)
-                            ->where('estado', 'activa'),
+                        'scheduledSubject.subject',
+                        fn ($query) => $query->where('carrera_id', $careerId),
                     )
                     ->with([
                         'scheduledSubject.subject:id,codigo_asignatura,nombre',

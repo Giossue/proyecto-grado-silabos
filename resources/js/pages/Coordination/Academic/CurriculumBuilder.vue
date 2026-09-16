@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import { Link2, ListTree, Plus, PowerOff, Workflow } from '@lucide/vue';
+import { Link2, ListTree, Plus, Workflow } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import CurriculumCanvas from '@/components/domain/academic/curriculum/CurriculumCanvas.vue';
 import CurriculumConfigurationSheet from '@/components/domain/academic/curriculum/CurriculumConfigurationSheet.vue';
@@ -10,7 +10,6 @@ import CurriculumSubjectSheet from '@/components/domain/academic/curriculum/Curr
 import CurriculumActions from '@/components/domain/academic/CurriculumActions.vue';
 import PageFrame from '@/components/domain/PageFrame.vue';
 import ProcessLockAlert from '@/components/domain/ProcessLockAlert.vue';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { index as curriculaIndex } from '@/routes/coordination/academic/curricula';
@@ -117,15 +116,6 @@ const openSubject = (subject: CurriculumBuilderSubject): void => {
             title="Malla protegida durante la convocatoria"
             :reason="curriculum.lock_reason"
         />
-
-        <Alert v-if="!curriculum.active">
-            <PowerOff aria-hidden="true" />
-            <AlertTitle>Malla deshabilitada</AlertTitle>
-            <AlertDescription>
-                Puede seguir editándola, pero no se programarán materias ni se
-                crearán procesos nuevos para sus materias hasta reactivarla.
-            </AlertDescription>
-        </Alert>
 
         <Tabs v-model="activeMode" class="flex flex-col gap-4">
             <div class="flex items-center justify-between gap-2">

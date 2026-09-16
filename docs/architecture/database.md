@@ -53,7 +53,7 @@ programadas de inicio o fin.
 ### Académico
 
 `facultades`, `carreras`, `campus`,
-`periodos_academicos`, `mallas`, `asignaturas`, `requisitos_asignatura`,
+`periodos_academicos`, `asignaturas`, `requisitos_asignatura`,
 `programaciones_asignatura`, `paralelos`, `asignaciones_paralelo`.
 
 `asignaciones_rol` es única relación RBAC: une usuario, rol fijo y alcance de carrera. Una
@@ -80,15 +80,17 @@ opcional, `programaciones_asignatura.modalidad` copia heredada; migraciones `000
 jerarquía que presenta ADM-04 es una proyección de lectura y no una desnormalización de
 la persistencia.
 
-`mallas` contiene una sola fila por carrera y define su cantidad de ciclos. Su estado
-puede ser `activa` o `inactiva`. Los atributos académicos de `asignaturas` son fijos y
-tipados: ninguna carrera agrega columnas, valores EAV o campos arbitrarios. ACD, APE,
-AA, créditos y total son un conjunto fijo; el total se deriva de ACD + APE + AA.
+La estructura curricular no es una entidad separada: `carreras.codigo_malla` y
+`carreras.cantidad_ciclos_malla` definen el código y la cantidad de ciclos de la única
+estructura de esa carrera. `asignaturas.carrera_id` las relaciona directamente. Los
+atributos académicos de `asignaturas` son fijos y tipados: ninguna carrera agrega
+columnas, valores EAV o campos arbitrarios. ACD, APE, AA, créditos y total son un
+conjunto fijo; el total se deriva de ACD + APE + AA.
 `asignaturas.ciclo` y `orden_en_ciclo` determinan la posición reproducible del lienzo.
 Las coordenadas de pantalla no se persisten. `requisitos_asignatura.tipo` conserva la
 semántica explícita de cada flecha.
 
-`silabos.contexto_academico` conserva una fotografía JSON de la malla, la asignatura y su
+`silabos.contexto_academico` conserva una fotografía JSON de la estructura curricular, la asignatura y su
 programación al crear el expediente. Es evidencia histórica de lectura y exportación; no
 sustituye las relaciones transaccionales ni permite reconstruir autorizaciones.
 
@@ -168,7 +170,7 @@ edición funcional. Las correcciones agregan filas. Si es necesario corregir met
 administrativos, se registra el cambio y se preserva el valor anterior. ADM-04 implementa
 esta corrección mediante actualización transaccional del catálogo y un evento append-only
 con campos modificados y valores anterior/nuevo; no requiere desnormalizar ni duplicar la
-entidad. La malla actual no es una versión publicada: permanece editable y su historia se
+entidad. La estructura curricular de la carrera no es una versión publicada: permanece editable y su historia se
 protege mediante el contexto académico fijado en cada sílabo.
 
 ## Borrado
@@ -176,8 +178,8 @@ protege mediante el contexto académico fijado en cada sílabo.
 - `RESTRICT` para referencias históricas.
 - `CASCADE` únicamente entre padre e hijos que no tienen sentido independiente y aún no
   constituyen evidencia publicada.
-- la malla actual solo se elimina cuando no tiene materias programadas ni sílabos; con dependencias se
-  deshabilita.
+- las materias sin dependencias se eliminan; con programaciones o sílabos se protegen y
+  se explica el motivo.
 - un catálogo sin dependencias se elimina; si tiene historia, las claves foráneas lo
   protegen y la aplicación muestra el motivo. Las cuentas con historia se desactivan,
   porque su identidad participa en auditoría y revisiones.
@@ -195,8 +197,8 @@ Como mínimo, prueba/define:
 - claves de idempotencia únicas por operación;
 - filtros frecuentes por convocatoria, estado, asignación, plazo y fecha;
 - búsquedas de auditoría por recurso/actor/tiempo;
-- una sola malla actual por carrera mediante índice parcial único;
-- código de asignatura único dentro de su malla y datos académicos tipados por asignatura;
+- una estructura curricular única como atributos obligatorios de cada carrera;
+- código de asignatura único dentro de su carrera y datos académicos tipados por asignatura;
 - colas/outbox por estado y próximo intento.
 
 Usa índices parciales o constraints de exclusión PostgreSQL cuando expresen mejor la

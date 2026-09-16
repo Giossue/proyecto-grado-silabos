@@ -60,7 +60,7 @@ class RelieveTeacher
             $assignments = TeacherAssignment::query()
                 ->forUser($outgoingUserId)
                 ->where('activo', true)
-                ->whereHas('parallel.scheduledSubject.subject.curriculum', fn ($query) => $query->where('carrera_id', $careerId))
+                ->whereHas('parallel.scheduledSubject.subject', fn ($query) => $query->where('carrera_id', $careerId))
                 ->with([
                     'parallel.scheduledSubject.subject:id,nombre',
                     'parallel.scheduledSubject.academicPeriod:id,fecha_inicio,fecha_fin',

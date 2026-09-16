@@ -7,7 +7,6 @@ use App\Modules\Academic\Domain\StudyModality;
 use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Campus;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
-use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Faculty;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
 use App\Modules\Academic\Infrastructure\Persistence\Models\ScheduledSubject;
@@ -38,7 +37,15 @@ class DatabaseSeeder extends Seeder
             );
             $career = Career::query()->firstOrCreate(
                 ['codigo_carrera' => 'SOFTWARE'],
-                ['facultad_id' => $faculty->id, 'modalidad' => StudyModality::Presencial, 'campus_id' => $campus->id, 'nombre' => 'Software', 'activo' => true],
+                [
+                    'facultad_id' => $faculty->id,
+                    'modalidad' => StudyModality::Presencial,
+                    'campus_id' => $campus->id,
+                    'nombre' => 'Software',
+                    'activo' => true,
+                    'codigo_malla' => 'MALLA-SW-2024',
+                    'cantidad_ciclos_malla' => 8,
+                ],
             );
             $period = AcademicPeriod::query()->firstOrCreate(
                 ['codigo' => '2026-2027'],
@@ -48,14 +55,8 @@ class DatabaseSeeder extends Seeder
                     'semanas_lectivas' => 16,
                 ],
             );
-            $curriculum = Curriculum::query()->firstOrCreate(
-                ['carrera_id' => $career->id, 'codigo' => 'MALLA-SW-2024'],
-                [
-                    'estado' => 'activa',
-                ],
-            );
             $subject = Subject::query()->firstOrCreate(
-                ['malla_id' => $curriculum->id, 'codigo_asignatura' => 'SW-601'],
+                ['carrera_id' => $career->id, 'codigo_asignatura' => 'SW-601'],
                 [
                     'nombre' => 'Arquitectura de Software',
                     'ciclo' => 6,

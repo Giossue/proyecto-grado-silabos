@@ -164,7 +164,7 @@ class DashboardMetricsTest extends TestCase
         return Syllabus::query()->create([
             'convocatoria_id' => $convocation->id,
             'asignatura_id' => $subject->id,
-            'malla_id' => $subject->malla_id,
+            'carrera_id' => $subject->carrera_id,
             'plantilla_id' => $convocation->process->plantilla_id,
             'estado' => 'borrador',
         ]);
@@ -184,6 +184,8 @@ class DashboardMetricsTest extends TestCase
             'facultad_id' => Faculty::query()->firstOrFail()->id,
             'codigo_carrera' => 'CARR-AJENA',
             'nombre' => 'Carrera ajena',
+            'codigo_malla' => 'PLAN-AJENA',
+            'cantidad_ciclos_malla' => 8,
             'activo' => true,
         ]);
     }

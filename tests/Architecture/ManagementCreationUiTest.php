@@ -39,12 +39,6 @@ it('mantiene las altas de gestión que requieren datos dentro del sheet derecho 
             'component_file' => 'resources/js/components/domain/configuration/AcademicSourceEditSheet.vue',
             'action' => 'AcademicSourceController.update.form',
         ],
-        'Coordinador · mallas' => [
-            'page' => 'resources/js/pages/Coordination/Academic/Curricula.vue',
-            'component' => 'CurriculumRecordSheet',
-            'component_file' => 'resources/js/components/domain/academic/CurriculumRecordSheet.vue',
-            'action' => 'CareerAcademicStructureController.store.form',
-        ],
         'Coordinador · materias dentro de una malla' => [
             'page' => 'resources/js/pages/Coordination/Academic/CurriculumBuilder.vue',
             'component' => 'CurriculumSubjectSheet',
@@ -311,12 +305,9 @@ it('presenta la jerarquia academica en submenus y rutas sin mezclar catalogos', 
         ->toContain('<SidebarMenuSubButton');
 });
 
-it('presenta una sola malla por carrera sin buscador filtros cards ni versiones', function (): void {
+it('presenta la estructura curricular de una carrera sin entidad, versiones ni estado de malla', function (): void {
     $root = dirname(__DIR__, 2);
     $sidebar = file_get_contents($root.'/resources/js/components/AppSidebar.vue');
-    $curricula = file_get_contents(
-        $root.'/resources/js/pages/Coordination/Academic/Curricula.vue',
-    );
     $curriculumActions = file_get_contents(
         $root.'/resources/js/components/domain/academic/CurriculumActions.vue',
     );
@@ -338,31 +329,13 @@ it('presenta una sola malla por carrera sin buscador filtros cards ni versiones'
         ->toContain("title: 'Materias y paralelos'")
         ->toContain('href: scheduledSubjectsIndex()')
         ->not->toContain('parallelsIndex');
-    expect($curricula)
-        ->toBeString()
-        ->toContain('entity="malla"')
-        ->toContain('<Head title="Malla"')
-        ->toContain('<Empty')
-        ->toContain('<Inbox')
-        ->toContain('No hay una malla configurada')
-        ->not->toContain('ClientFilterBar')
-        ->not->toContain('TablePagination')
-        ->not->toContain('CurriculaTab')
-        ->not->toContain('version_number');
     expect($curriculumActions)
         ->toBeString()
-        ->toContain('entity="malla"')
-        ->toContain('destroyCurriculum.form')
-        ->toContain('<TableActionsMenu')
-        ->toContain('display="menu"')
-        ->toContain('@select="deleteOpen = true"')
-        ->toContain('@select="emit(\'configure\')"')
-        ->toContain('Eliminar')
-        ->toContain('Configurar')
-        ->toContain('<Dialog')
-        ->not->toContain('Editar')
-        ->not->toContain('CareerAcademicEditSheet')
-        ->not->toContain('<DialogTrigger');
+        ->toContain('Configurar malla')
+        ->not->toContain('destroyCurriculum')
+        ->not->toContain('Eliminar')
+        ->not->toContain('activar')
+        ->not->toContain('desactivar');
     expect($curriculumBuilder.$curriculumForm)
         ->toBeString()
         ->not->toContain('Malla publicada')
@@ -1299,7 +1272,6 @@ it('normaliza los encabezados de todos los modulos autenticados', function (): v
         'resources/js/pages/Admin/Users/Index.vue',
         'resources/js/pages/Admin/Users/Show.vue',
         'resources/js/pages/Role/Select.vue',
-        'resources/js/pages/Coordination/Academic/Curricula.vue',
         'resources/js/pages/Coordination/Academic/CurriculumBuilder.vue',
         'resources/js/pages/Coordination/Academic/ScheduledSubjects.vue',
         'resources/js/pages/Coordination/Academic/TeacherAssignments.vue',
@@ -1422,8 +1394,8 @@ it('normaliza los encabezados de todos los modulos autenticados', function (): v
         );
     }
 
-    $this->assertCount(29, $declaredPages);
-    $this->assertCount(30, $pages);
+    $this->assertCount(28, $declaredPages);
+    $this->assertCount(29, $pages);
 });
 
 it('mantiene explicitamente clasificadas las mutaciones store que permanecen en paginas completas', function (): void {

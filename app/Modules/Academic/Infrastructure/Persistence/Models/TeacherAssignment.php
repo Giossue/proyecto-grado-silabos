@@ -60,10 +60,10 @@ class TeacherAssignment extends Model
             $userId = $assignment->getAttributes()['usuario_id'] ?? null;
             $careerId = Parallel::query()
                 ->whereKey($assignment->paralelo_id)
-                ->whereHas('scheduledSubject.subject.curriculum')
-                ->with('scheduledSubject.subject.curriculum:id,carrera_id')
+                ->whereHas('scheduledSubject.subject')
+                ->with('scheduledSubject.subject:id,carrera_id')
                 ->firstOrFail()
-                ->scheduledSubject->subject->curriculum->carrera_id;
+                ->scheduledSubject->subject->carrera_id;
 
             $assignment->asignacion_rol_id = RoleAssignment::query()
                 ->effective()

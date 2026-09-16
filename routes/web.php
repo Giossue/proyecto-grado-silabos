@@ -181,9 +181,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('materias-programadas/{scheduledSubject}', [CareerAcademicStructureController::class, 'destroyScheduledSubject'])
             ->whereUuid('scheduledSubject')
             ->name('coordination.academic.scheduled-subjects.destroy');
-        Route::delete('malla/{curriculum}', [CareerAcademicStructureController::class, 'destroyCurriculum'])
-            ->whereUuid('curriculum')
-            ->name('coordination.academic.curricula.destroy');
         Route::patch('malla/{curriculum}/configuracion', [CareerAcademicStructureController::class, 'updateCurriculumConfiguration'])
             ->whereUuid('curriculum')
             ->name('coordination.academic.curricula.configuration.update');

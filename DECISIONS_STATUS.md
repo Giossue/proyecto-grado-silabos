@@ -126,13 +126,11 @@ Fecha de corte: **30 de agosto de 2026**.
   edición conserva valores anterior/nuevo en auditoría.
 - La posición curricular visible de una materia se denomina ciclo; periodo académico
   continúa siendo la ventana temporal con fechas.
-- Cada carrera tiene cero o una sola malla actual, configurable en ciclos y campos. El
-  documento de Software es una referencia visual, no una plantilla universal;
-  Coordinación edita la misma malla mediante constructor y formulario, puede
-  deshabilitarla/reactivarla y solo la elimina si no tiene materias programadas ni sílabos.
-- Sin una malla activa no se programan materias ni se abren procesos nuevos para docentes.
-  Los sílabos conservan una fotografía de su contexto académico y las revisiones siguen
-  siendo inmutables aunque la malla actual cambie.
+- Cada carrera tiene una sola estructura curricular, configurada por su código y número
+  de ciclos; no existe la entidad, versión ni estado propio `mallas`. El documento de
+  Software es una referencia visual, no una plantilla universal; Coordinación edita esa
+  estructura mediante constructor y formulario. Los sílabos conservan una fotografía de
+  su contexto académico y las revisiones siguen siendo inmutables aunque cambie.
 - El calendario académico oficial obliga a toda la universidad (I-31, 2 de septiembre
   de 2026): Administración abre el **proceso de sílabos** con plantilla y fechas;
   Coordinación convoca a su carrera dentro de ese proceso y hereda ambas. Con el
@@ -220,6 +218,12 @@ facultad es un archivo privado y se referencia mediante `facultades.logo_objeto_
 `objetos_almacenados`; el objeto conserva disco, ruta interna, MIME, tamaño, huella y
 clasificación. Cada reemplazo genera un objeto inmutable nuevo, sin perder la referencia
 histórica del archivo anterior.
+
+I-82 (15 de septiembre de 2026) elimina la entidad `mallas`: el producto no admite
+versiones, activación, desactivación ni agrupación de varias mallas por carrera.
+`carreras.codigo_malla` y `carreras.cantidad_ciclos_malla` guardan la única estructura
+curricular; `asignaturas.carrera_id` y `silabos.carrera_id` sustituyen sus antiguas
+claves foráneas. El nombre visible **Malla** se conserva solo para el editor curricular.
 
 I-07 implementa un puerto de lectura, fixture sintético versionado, staging inmutable,
 simulación y exclusión humana. Demuestra idempotencia, conflicto y cero mutación del

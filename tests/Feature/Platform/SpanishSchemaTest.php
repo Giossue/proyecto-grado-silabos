@@ -158,6 +158,28 @@ it('I-81 referencia el logo de facultad como objeto almacenado', function () {
     expect($restricciones)->toContain('facultades_logo_objeto_id_foreign');
 });
 
+it('I-82 guarda la estructura curricular en la carrera sin una entidad mallas', function () {
+    expect(Schema::hasTable('mallas'))->toBeFalse()
+        ->and(Schema::hasColumn('carreras', 'codigo_malla'))->toBeTrue()
+        ->and(Schema::hasColumn('carreras', 'cantidad_ciclos_malla'))->toBeTrue()
+        ->and(Schema::hasColumn('asignaturas', 'carrera_id'))->toBeTrue()
+        ->and(Schema::hasColumn('asignaturas', 'malla_id'))->toBeFalse()
+        ->and(Schema::hasColumn('silabos', 'carrera_id'))->toBeTrue()
+        ->and(Schema::hasColumn('silabos', 'malla_id'))->toBeFalse();
+
+    $restricciones = collect(DB::select(
+        "SELECT conname
+         FROM pg_constraint
+         WHERE conrelid IN ('carreras'::regclass, 'asignaturas'::regclass, 'silabos'::regclass)",
+    ))->pluck('conname');
+
+    expect($restricciones)
+        ->toContain('carreras_cantidad_ciclos_malla_check')
+        ->toContain('asignaturas_carrera_id_foreign')
+        ->toContain('asignaturas_carrera_id_codigo_asignatura_unique')
+        ->toContain('silabos_carrera_id_foreign');
+});
+
 it('I-62 persiste la programación de asignaturas con nombres e invariante propios', function () {
     expect(Schema::hasTable('programaciones_asignatura'))->toBeTrue()
         ->and(Schema::hasTable('ofertas_academicas'))->toBeFalse()

@@ -103,6 +103,7 @@ class AuditEventController extends Controller
             'academico.malla.actualizacion' => 'Malla actualizada',
             'academico.malla.eliminacion' => 'Malla eliminada',
             'academico.malla.configuracion_actualizada' => 'Configuración de malla actualizada',
+            'academico.carrera.plan_curricular_actualizado' => 'Plan curricular actualizado',
             'academico.campo_malla.creacion' => 'Campo de malla agregado',
             'academico.campo_malla.eliminacion' => 'Campo de malla retirado',
             'academico.asignatura.creacion' => 'Materia creada',

@@ -5,7 +5,6 @@ namespace App\Modules\Academic\Presentation\Http\Requests;
 use App\Modules\Academic\Domain\AcademicStructurePermissions;
 use App\Modules\Academic\Domain\CurriculumSystemFields;
 use App\Modules\Academic\Domain\StudyModality;
-use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
 use App\Modules\Academic\Infrastructure\Persistence\Models\ScheduledSubject;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Subject;
@@ -44,16 +43,6 @@ class UpdateCareerAcademicRecordRequest extends FormRequest
     public function rules(): array
     {
         return match ($this->route('entity')) {
-            'malla' => [
-                'code' => [
-                    'required',
-                    'string',
-                    'max:80',
-                    Rule::unique('mallas', 'codigo_malla')
-                        ->where('carrera_id', $this->careerId())
-                        ->ignore($this->recordId()),
-                ],
-            ],
             'asignatura' => $this->subjectRules(),
             'programacion_asignatura' => [
                 'period_id' => [
@@ -66,10 +55,7 @@ class UpdateCareerAcademicRecordRequest extends FormRequest
                     'uuid',
                     Rule::exists('asignaturas', 'id')->where(fn ($query) => $query
                         ->where('asignatura_activa', true)
-                        ->whereIn('malla_id', Curriculum::query()
-                            ->select('id')
-                            ->where('carrera_id', $this->careerId())
-                            ->where('estado_malla', 'activa'))),
+                        ->where('carrera_id', $this->careerId())),
                     Rule::unique('programaciones_asignatura', 'asignatura_id')
                         ->where('periodo_academico_id', $this->input('period_id'))
                         ->ignore($this->recordId()),
@@ -83,9 +69,7 @@ class UpdateCareerAcademicRecordRequest extends FormRequest
                         ->where('programacion_asignatura_activa', true)
                         ->whereIn('asignatura_id', Subject::query()
                             ->select('id')
-                            ->whereHas('curriculum', fn ($curricula) => $curricula
-                                ->where('carrera_id', $this->careerId())
-                                ->where('estado_malla', 'activa')))),
+                            ->where('carrera_id', $this->careerId()))),
                 ],
                 'code' => [
                     'required',
@@ -106,9 +90,8 @@ class UpdateCareerAcademicRecordRequest extends FormRequest
                         ->where('paralelo_activo', true)
                         ->whereIn('programacion_asignatura_id', ScheduledSubject::query()
                             ->select('id')
-                            ->whereHas('subject.curriculum', fn ($curricula) => $curricula
-                                ->where('carrera_id', $this->careerId())
-                                ->where('estado_malla', 'activa')))),
+                            ->whereHas('subject', fn ($subject) => $subject
+                                ->where('carrera_id', $this->careerId())))),
                 ],
             ],
             default => [],
@@ -122,23 +105,15 @@ class UpdateCareerAcademicRecordRequest extends FormRequest
         }
 
         return match ($entity) {
-            'malla' => Curriculum::query()->whereKey($recordId)
-                ->where('carrera_id', $careerId)->exists(),
-            'asignatura' => Subject::query()->whereKey($recordId)->whereHas(
-                'curriculum',
-                fn ($query) => $query->where('carrera_id', $careerId),
-            )->exists(),
+            'asignatura' => Subject::query()->whereKey($recordId)->where('carrera_id', $careerId)->exists(),
             'programacion_asignatura' => ScheduledSubject::query()->whereKey($recordId)->whereHas(
-                'subject.curriculum',
-                fn ($query) => $query->where('carrera_id', $careerId),
+                'subject', fn ($query) => $query->where('carrera_id', $careerId),
             )->exists(),
             'paralelo' => Parallel::query()->whereKey($recordId)->whereHas(
-                'scheduledSubject.subject.curriculum',
-                fn ($query) => $query->where('carrera_id', $careerId),
+                'scheduledSubject.subject', fn ($query) => $query->where('carrera_id', $careerId),
             )->exists(),
             'asignacion_docente' => TeacherAssignment::query()->whereKey($recordId)->whereHas(
-                'parallel.scheduledSubject.subject.curriculum',
-                fn ($query) => $query->where('carrera_id', $careerId),
+                'parallel.scheduledSubject.subject', fn ($query) => $query->where('carrera_id', $careerId),
             )->exists(),
             default => false,
         };
@@ -147,14 +122,14 @@ class UpdateCareerAcademicRecordRequest extends FormRequest
     /** @return array<string, list<mixed>> */
     private function subjectRules(): array
     {
-        $curriculumId = $this->subjectCurriculumId();
+        $careerId = $this->subjectCareerId();
         $rules = [
             'code' => [
                 'required',
                 'string',
                 'max:80',
                 Rule::unique('asignaturas', 'codigo_asignatura')
-                    ->where('malla_id', $curriculumId)
+                    ->where('carrera_id', $careerId)
                     ->ignore($this->recordId()),
             ],
             'nombre' => ['required', 'string', 'max:180'],
@@ -175,9 +150,9 @@ class UpdateCareerAcademicRecordRequest extends FormRequest
         return $rules;
     }
 
-    private function subjectCurriculumId(): string
+    private function subjectCareerId(): string
     {
-        return (string) Subject::query()->whereKey($this->recordId())->value('malla_id');
+        return (string) Subject::query()->whereKey($this->recordId())->value('carrera_id');
     }
 
     private function recordId(): string

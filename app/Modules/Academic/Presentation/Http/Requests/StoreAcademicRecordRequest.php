@@ -5,7 +5,6 @@ namespace App\Modules\Academic\Presentation\Http\Requests;
 use App\Modules\Academic\Domain\AcademicStructurePermissions;
 use App\Modules\Academic\Domain\CurriculumSystemFields;
 use App\Modules\Academic\Domain\StudyModality;
-use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
 use App\Modules\Academic\Infrastructure\Persistence\Models\ScheduledSubject;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Subject;
@@ -56,6 +55,8 @@ class StoreAcademicRecordRequest extends FormRequest
                 'modality' => ['required', 'string', Rule::in(StudyModality::values())],
                 'campus_id' => ['required', 'uuid', Rule::exists('campus', 'id')->where('campus_activo', true)],
                 ...$this->namedCatalogRules('carreras', 180),
+                'curriculum_code' => ['required', 'string', 'max:80'],
+                'cycle_count' => ['required', 'integer', 'min:1', 'max:30'],
             ],
             'periodo' => [
                 'code' => [
@@ -67,17 +68,6 @@ class StoreAcademicRecordRequest extends FormRequest
                 'starts_on' => ['required', 'date'],
                 'ends_on' => ['required', 'date', 'after_or_equal:starts_on'],
                 'teaching_weeks' => ['required', 'integer', 'min:1', 'max:52'],
-            ],
-            'malla' => [
-                'code' => [
-                    'required',
-                    'string',
-                    'max:80',
-                    Rule::unique('mallas', 'codigo_malla')->where(
-                        'carrera_id',
-                        app(ActiveRole::class)->resolve($this)?->carrera_id,
-                    ),
-                ],
             ],
             'asignatura' => $this->subjectRules(),
             'programacion_asignatura' => [
@@ -91,10 +81,7 @@ class StoreAcademicRecordRequest extends FormRequest
                     'uuid',
                     Rule::exists('asignaturas', 'id')->where(fn ($query) => $query
                         ->where('asignatura_activa', true)
-                        ->whereIn('malla_id', Curriculum::query()
-                            ->select('id')
-                            ->where('carrera_id', $this->careerId())
-                            ->where('estado_malla', 'activa'))),
+                        ->where('carrera_id', $this->careerId())),
                     Rule::unique('programaciones_asignatura', 'asignatura_id')
                         ->where('periodo_academico_id', $this->input('period_id')),
                 ],
@@ -107,9 +94,7 @@ class StoreAcademicRecordRequest extends FormRequest
                         ->where('programacion_asignatura_activa', true)
                         ->whereIn('asignatura_id', Subject::query()
                             ->select('id')
-                            ->whereHas('curriculum', fn ($curricula) => $curricula
-                                ->where('carrera_id', $this->careerId())
-                                ->where('estado_malla', 'activa')))),
+                            ->where('carrera_id', $this->careerId()))),
                 ],
                 'code' => [
                     'required',
@@ -131,9 +116,8 @@ class StoreAcademicRecordRequest extends FormRequest
                         ->where('paralelo_activo', true)
                         ->whereIn('programacion_asignatura_id', ScheduledSubject::query()
                             ->select('id')
-                            ->whereHas('subject.curriculum', fn ($curricula) => $curricula
-                                ->where('carrera_id', $this->careerId())
-                                ->where('estado_malla', 'activa')))),
+                            ->whereHas('subject', fn ($subject) => $subject
+                                ->where('carrera_id', $this->careerId())))),
                 ],
             ],
             default => [],
@@ -168,17 +152,12 @@ class StoreAcademicRecordRequest extends FormRequest
     private function subjectRules(): array
     {
         $rules = [
-            'curriculum_id' => [
-                'required',
-                'uuid',
-                Rule::exists('mallas', 'id')
-                    ->where('carrera_id', $this->careerId()),
-            ],
             'code' => [
                 'required',
                 'string',
                 'max:80',
-                $this->uniqueWithin('asignaturas', 'codigo_asignatura', 'malla_id', 'curriculum_id'),
+                Rule::unique('asignaturas', 'codigo_asignatura')
+                    ->where('carrera_id', $this->careerId()),
             ],
             'nombre' => ['required', 'string', 'max:180'],
             'cycle' => ['required', 'integer', 'min:1', 'max:30'],

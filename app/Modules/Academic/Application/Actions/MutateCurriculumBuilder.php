@@ -4,7 +4,7 @@ namespace App\Modules\Academic\Application\Actions;
 
 use App\Models\User;
 use App\Modules\Academic\Domain\AcademicStructurePermissions;
-use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
+use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Subject;
 use App\Modules\Academic\Infrastructure\Persistence\Models\SubjectRequirement;
 use App\Modules\Identity\Application\ActiveRole;
@@ -33,33 +33,33 @@ class MutateCurriculumBuilder
         array $data,
         User $actor,
         Request $request,
-    ): Curriculum {
-        return DB::transaction(function () use ($actor, $curriculumId, $data, $request): Curriculum {
-            [$role, $curriculum] = $this->currentCurriculum($curriculumId, $request);
+    ): Career {
+        return DB::transaction(function () use ($actor, $curriculumId, $data, $request): Career {
+            [$role, $career] = $this->currentCareer($curriculumId, $request);
             $this->work->requireConfirmation($request, $role->carrera_id);
             $cycleCount = (int) $data['cycle_count'];
 
-            $lastUsedCycle = (int) $curriculum->subjects()->max('ciclo');
+            $lastUsedCycle = (int) $career->subjects()->max('ciclo');
             if ($lastUsedCycle > $cycleCount) {
                 throw ValidationException::withMessages([
                     'cycle_count' => "Existen materias en el ciclo {$lastUsedCycle}. Muévalas antes de reducir la malla.",
                 ]);
             }
 
-            $beforeCode = $curriculum->codigo;
-            $beforeCycleCount = $curriculum->numero_ciclos;
-            $curriculum->update([
-                'codigo' => $data['code'],
-                'numero_ciclos' => $cycleCount,
+            $beforeCode = $career->codigo_malla;
+            $beforeCycleCount = $career->cantidad_ciclos_malla;
+            $career->update([
+                'codigo_malla' => $data['code'],
+                'cantidad_ciclos_malla' => $cycleCount,
             ]);
-            $this->record($actor, $role, $request, 'academico.malla.configuracion_actualizada', 'malla', $curriculum->id, [
+            $this->record($actor, $role, $request, 'academico.carrera.plan_curricular_actualizado', 'carrera', $career->id, [
                 'before_code' => $beforeCode,
-                'after_code' => $curriculum->codigo,
+                'after_code' => $career->codigo_malla,
                 'before_cycle_count' => $beforeCycleCount,
                 'after_cycle_count' => $cycleCount,
             ]);
 
-            return $curriculum;
+            return $career;
         });
     }
 
@@ -67,9 +67,9 @@ class MutateCurriculumBuilder
     public function createRequirement(string $curriculumId, array $data, User $actor, Request $request): SubjectRequirement
     {
         return DB::transaction(function () use ($actor, $curriculumId, $data, $request): SubjectRequirement {
-            [$role, $curriculum] = $this->currentCurriculum($curriculumId, $request);
+            [$role, $career] = $this->currentCareer($curriculumId, $request);
             $subjects = Subject::query()
-                ->where('malla_id', $curriculum->id)
+                ->where('carrera_id', $career->id)
                 ->whereIn('id', [$data['subject_id'], $data['requirement_id']])
                 ->lockForUpdate()
                 ->get();
@@ -80,7 +80,7 @@ class MutateCurriculumBuilder
                 ]);
             }
 
-            if ($data['type'] === 'prerrequisito' && $this->createsCycle($curriculum->id, $data['subject_id'], $data['requirement_id'])) {
+            if ($data['type'] === 'prerrequisito' && $this->createsCycle($career->id, $data['subject_id'], $data['requirement_id'])) {
                 throw ValidationException::withMessages([
                     'requirement_id' => 'La relación produciría un ciclo de prerrequisitos.',
                 ]);
@@ -95,7 +95,7 @@ class MutateCurriculumBuilder
                 return $requirement;
             }
             $this->record($actor, $role, $request, 'academico.requisito_asignatura.creacion', 'requisito_asignatura', $requirement->id, [
-                'curriculum_id' => $curriculum->id,
+                'career_id' => $career->id,
                 'subject_id' => $requirement->asignatura_id,
                 'requirement_id' => $requirement->requisito_id,
                 'type' => $requirement->tipo,
@@ -112,13 +112,13 @@ class MutateCurriculumBuilder
         Request $request,
     ): void {
         DB::transaction(function () use ($actor, $curriculumId, $requirementId, $request): void {
-            [$role, $curriculum] = $this->currentCurriculum($curriculumId, $request);
+            [$role, $career] = $this->currentCareer($curriculumId, $request);
             $requirement = SubjectRequirement::query()
-                ->whereHas('subject', fn ($query) => $query->where('malla_id', $curriculum->id))
-                ->whereHas('requirement', fn ($query) => $query->where('malla_id', $curriculum->id))
+                ->whereHas('subject', fn ($query) => $query->where('carrera_id', $career->id))
+                ->whereHas('requirement', fn ($query) => $query->where('carrera_id', $career->id))
                 ->lockForUpdate()
                 ->findOrFail($requirementId);
-            $metadata = ['curriculum_id' => $curriculum->id, 'type' => $requirement->tipo];
+            $metadata = ['career_id' => $career->id, 'type' => $requirement->tipo];
             $requirement->delete();
             $this->record($actor, $role, $request, 'academico.requisito_asignatura.eliminacion', 'requisito_asignatura', $requirementId, $metadata);
         });
@@ -131,10 +131,10 @@ class MutateCurriculumBuilder
         Request $request,
     ): void {
         DB::transaction(function () use ($actor, $curriculumId, $subjectId, $request): void {
-            [$role, $curriculum] = $this->currentCurriculum($curriculumId, $request);
+            [$role, $career] = $this->currentCareer($curriculumId, $request);
             $this->work->requireConfirmation($request, $role->carrera_id);
             $subject = Subject::query()
-                ->where('malla_id', $curriculum->id)
+                ->where('carrera_id', $career->id)
                 ->lockForUpdate()
                 ->findOrFail($subjectId);
 
@@ -166,7 +166,7 @@ class MutateCurriculumBuilder
                 ->orWhere('requisito_id', $subject->id)
                 ->delete();
             $metadata = [
-                'curriculum_id' => $curriculum->id,
+                'career_id' => $career->id,
                 'code' => $subject->codigo_asignatura,
                 'name' => $subject->nombre,
             ];
@@ -179,13 +179,13 @@ class MutateCurriculumBuilder
     public function updateSubjectLayout(string $curriculumId, array $data, User $actor, Request $request): Subject
     {
         return DB::transaction(function () use ($actor, $curriculumId, $data, $request): Subject {
-            [$role, $curriculum] = $this->currentCurriculum($curriculumId, $request);
-            if ((int) $data['cycle'] > $curriculum->numero_ciclos) {
+            [$role, $career] = $this->currentCareer($curriculumId, $request);
+            if ((int) $data['cycle'] > $career->cantidad_ciclos_malla) {
                 throw ValidationException::withMessages(['cycle' => 'El ciclo excede la configuración de la malla.']);
             }
 
             $subject = Subject::query()
-                ->where('malla_id', $curriculum->id)
+                ->where('carrera_id', $career->id)
                 ->whereKey($data['subject_id'])
                 ->lockForUpdate()
                 ->firstOrFail();
@@ -206,8 +206,8 @@ class MutateCurriculumBuilder
         });
     }
 
-    /** @return array{RoleAssignment, Curriculum} */
-    private function currentCurriculum(string $curriculumId, Request $request): array
+    /** @return array{RoleAssignment, Career} */
+    private function currentCareer(string $curriculumId, Request $request): array
     {
         $role = $this->roles->resolve($request);
         if (! $role instanceof RoleAssignment
@@ -218,19 +218,16 @@ class MutateCurriculumBuilder
         // Con una convocatoria en curso los sílabos se apoyan en la malla: se pausa antes.
         $this->locks->assertCareerEditable($role->carrera_id);
 
-        $curriculum = Curriculum::query()
-            ->where('carrera_id', $role->carrera_id)
-            ->lockForUpdate()
-            ->findOrFail($curriculumId);
+        $career = Career::query()->whereKey($role->carrera_id)->lockForUpdate()->findOrFail($curriculumId);
 
-        return [$role, $curriculum];
+        return [$role, $career];
     }
 
-    private function createsCycle(string $curriculumId, string $subjectId, string $requirementId): bool
+    private function createsCycle(string $careerId, string $subjectId, string $requirementId): bool
     {
         $relations = SubjectRequirement::query()
             ->where('tipo', 'prerrequisito')
-            ->whereHas('subject', fn ($query) => $query->where('malla_id', $curriculumId))
+            ->whereHas('subject', fn ($query) => $query->where('carrera_id', $careerId))
             ->get(['asignatura_id', 'requisito_id'])
             ->groupBy('asignatura_id');
         $pending = [$requirementId];

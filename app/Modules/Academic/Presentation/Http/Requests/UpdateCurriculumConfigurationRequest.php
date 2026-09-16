@@ -2,9 +2,7 @@
 
 namespace App\Modules\Academic\Presentation\Http\Requests;
 
-use App\Modules\Identity\Application\ActiveRole;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class UpdateCurriculumConfigurationRequest extends FormRequest
 {
@@ -18,14 +16,7 @@ class UpdateCurriculumConfigurationRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'code' => [
-                'required',
-                'string',
-                'max:80',
-                Rule::unique('mallas', 'codigo_malla')
-                    ->where('carrera_id', app(ActiveRole::class)->resolve($this)?->carrera_id)
-                    ->ignore($this->route('curriculum')),
-            ],
+            'code' => ['required', 'string', 'max:80'],
             'cycle_count' => ['required', 'integer', 'min:1', 'max:30'],
         ];
     }

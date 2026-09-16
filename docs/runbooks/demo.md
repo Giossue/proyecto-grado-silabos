@@ -97,8 +97,8 @@ Las cuentas creadas por el seeder usan exclusivamente datos sintéticos:
 1. Cierre sesión, ingrese como Coordinador y elija la card **Software**. Abra el menú de
    usuario y confirme que la carrera activa aparece bajo su nombre; si dispone de otra,
    use **Cambiar carrera o rol** y vuelva a Software.
-2. En **Malla**, abra la estructura actual o créela con el código `MALLA-SW-DEMO` si la
-   carrera todavía no tiene una. En **Desglose académico**, agregue `SW-701`, denominada
+2. En **Malla**, abra la estructura curricular de la carrera y, si corresponde, ajuste
+   su código a `MALLA-SW-DEMO`. En **Desglose académico**, agregue `SW-701`, denominada
    `Sistemas Distribuidos`, ciclo 7, cuatro créditos y 160 horas. Revise y edite la misma
    materia en **Constructor visual**; confirme que ambas vistas trabajan sobre la misma
    malla.

@@ -3,6 +3,7 @@
 namespace App\Modules\Syllabus\Infrastructure\Persistence\Models;
 
 use App\Models\User;
+use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Subject;
 use App\Modules\AiAssistance\Infrastructure\Persistence\Models\AiExecution;
 use App\Modules\Configuration\Infrastructure\Persistence\Models\SyllabusTemplate;
@@ -26,8 +27,9 @@ use Illuminate\Database\Eloquent\Relations\HasManyThrough;
  * @property CarbonImmutable|null $guardado_en
  * @property-read Convocation $convocation
  * @property-read Subject $subject
+ * @property-read Career $career
  * @property string $plantilla_id
- * @property string $malla_id
+ * @property string $carrera_id
  * @property-read SyllabusTemplate $template
  */
 class Syllabus extends Model
@@ -45,7 +47,7 @@ class Syllabus extends Model
 
     /** @var list<string> */
     protected $fillable = [
-        'convocatoria_id', 'asignatura_id', 'malla_id', 'plantilla_id', 'estado',
+        'convocatoria_id', 'asignatura_id', 'carrera_id', 'plantilla_id', 'estado',
         'contexto_academico', 'version_bloqueo', 'porcentaje_completitud', 'iniciado_en', 'guardado_en',
     ];
 
@@ -85,6 +87,12 @@ class Syllabus extends Model
     public function subject(): BelongsTo
     {
         return $this->belongsTo(Subject::class, 'asignatura_id');
+    }
+
+    /** @return BelongsTo<Career, $this> */
+    public function career(): BelongsTo
+    {
+        return $this->belongsTo(Career::class, 'carrera_id');
     }
 
     /** @return BelongsTo<SyllabusTemplate, $this> */

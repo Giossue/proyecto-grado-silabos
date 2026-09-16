@@ -612,6 +612,8 @@ class TemplateAndSourceTest extends TestCase
             'facultad_id' => $faculty->id,
             'codigo_carrera' => 'REDES',
             'nombre' => 'Redes',
+            'codigo_malla' => 'PLAN-REDES',
+            'cantidad_ciclos_malla' => 8,
             'activo' => true,
         ]);
         $source = AcademicSource::query()->create([

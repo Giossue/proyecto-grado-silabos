@@ -40,7 +40,7 @@ class DeleteScheduledSubject
 
         DB::transaction(function () use ($actor, $scheduledSubjectId, $request, $role): void {
             $scheduledSubject = ScheduledSubject::query()
-                ->whereHas('subject.curriculum', fn ($query) => $query->where('carrera_id', $role->carrera_id))
+                ->whereHas('subject', fn ($query) => $query->where('carrera_id', $role->carrera_id))
                 ->lockForUpdate()
                 ->findOrFail($scheduledSubjectId);
             $this->periodPlanning->assertScheduledSubjectMayChange($scheduledSubject, 'scheduledSubject');

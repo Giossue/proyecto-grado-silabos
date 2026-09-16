@@ -24,7 +24,6 @@ import { PARALLEL_SHIFTS as SHIFTS } from '@/lib/parallelShifts';
 import type { AcademicStructureProps } from '@/types/academic';
 
 export type CareerAcademicEntity =
-    | 'malla'
     | 'asignatura'
     | 'programacion_asignatura'
     | 'paralelo'
@@ -63,7 +62,6 @@ const open = defineModel<boolean>('open', { default: false });
 const entityLabel = computed(
     () =>
         ({
-            malla: 'malla',
             asignatura: 'materia',
             programacion_asignatura: 'programación de asignatura',
             paralelo: 'paralelo',
@@ -100,27 +98,7 @@ const planningPeriods = computed(() =>
                         <FieldError :errors="[errors.record]" />
                     </Field>
 
-                    <template v-if="entity === 'malla'">
-                        <Field :data-invalid="Boolean(errors.code)">
-                            <FieldLabel
-                                :for="`edit-curriculum-code-${record.id}`"
-                                required
-                            >
-                                Código
-                            </FieldLabel>
-                            <Input
-                                :id="`edit-curriculum-code-${record.id}`"
-                                name="code"
-                                :default-value="record.code"
-                                placeholder="Ej. MALLA-SW-2026"
-                                required
-                                :aria-invalid="Boolean(errors.code)"
-                            />
-                            <FieldError :errors="[errors.code]" />
-                        </Field>
-                    </template>
-
-                    <template v-else-if="entity === 'asignatura'">
+                    <template v-if="entity === 'asignatura'">
                         <Field :data-invalid="Boolean(errors.code)">
                             <FieldLabel
                                 :for="`edit-subject-code-${record.id}`"
@@ -204,7 +182,7 @@ const planningPeriods = computed(() =>
                             <FieldLabel
                                 :for="`edit-scheduled-subject-subject-${record.id}`"
                                 required
-                                >Materia de la malla activa</FieldLabel
+                                >Materia de la carrera</FieldLabel
                             >
                             <Select
                                 name="subject_id"

@@ -10,7 +10,6 @@ use App\Modules\Academic\Domain\CurriculumSystemFields;
 use App\Modules\Academic\Infrastructure\Persistence\Models\AcademicPeriod;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Campus;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Career;
-use App\Modules\Academic\Infrastructure\Persistence\Models\Curriculum;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Faculty;
 use App\Modules\Academic\Infrastructure\Persistence\Models\Parallel;
 use App\Modules\Academic\Infrastructure\Persistence\Models\ScheduledSubject;
@@ -58,7 +57,7 @@ class CreateAcademicRecord
         if (AcademicStructurePermissions::isCareerContext($activeRole)) {
             $this->locks->assertCareerEditable($activeRole->carrera_id);
         }
-        if (in_array($entity, ['malla', 'asignatura'], true)) {
+        if ($entity === 'asignatura') {
             // Lo que el sílabo copia de la malla cambia: el trabajo en curso se borra, con confirmación.
             $this->work->requireConfirmation($request, $activeRole->carrera_id);
         }
@@ -107,6 +106,8 @@ class CreateAcademicRecord
                 'codigo_carrera' => $data['code'] ?? null,
                 'nombre' => $data['nombre'],
                 'activo' => true,
+                'codigo_malla' => $data['curriculum_code'],
+                'cantidad_ciclos_malla' => $data['cycle_count'],
             ]),
             'campus' => Campus::query()->create([
                 'codigo_campus' => $data['code'] ?? null,
@@ -119,7 +120,6 @@ class CreateAcademicRecord
                 'fecha_fin' => $data['ends_on'],
                 'semanas_lectivas' => $data['teaching_weeks'],
             ]),
-            'malla' => $this->createCurriculum($data, $this->careerId($activeRole)),
             'asignatura' => $this->createSubject($data, $this->careerId($activeRole)),
             'programacion_asignatura' => $this->createScheduledSubject($data, $this->careerId($activeRole)),
             'paralelo' => $this->createParallel($data, $this->careerId($activeRole)),
@@ -131,43 +131,18 @@ class CreateAcademicRecord
     }
 
     /** @param array<string, mixed> $data */
-    private function createCurriculum(array $data, string $careerId): Curriculum
-    {
-        Career::query()->whereKey($careerId)->lockForUpdate()->firstOrFail();
-        if (Curriculum::query()->where('carrera_id', $careerId)->exists()) {
-            throw ValidationException::withMessages([
-                'curriculum' => 'La carrera ya tiene una malla. Edite la malla actual en lugar de crear otra.',
-            ]);
-        }
-
-        $curriculum = Curriculum::query()->create([
-            'carrera_id' => $careerId,
-            'codigo' => $data['code'],
-            'numero_ciclos' => 8,
-            'estado' => 'activa',
-        ]);
-
-        return $curriculum;
-    }
-
-    /** @param array<string, mixed> $data */
     private function createSubject(array $data, string $careerId): Subject
     {
-        $curriculum = Curriculum::query()
-            ->whereKey($this->stringValue($data, 'curriculum_id'))
-            ->where('carrera_id', $careerId)
+        $career = Career::query()->whereKey($careerId)->lockForUpdate()->firstOrFail();
 
-            ->lockForUpdate()
-            ->firstOrFail();
-
-        if (isset($data['cycle']) && (int) $data['cycle'] > $curriculum->numero_ciclos) {
+        if (isset($data['cycle']) && (int) $data['cycle'] > $career->cantidad_ciclos_malla) {
             throw ValidationException::withMessages([
                 'cycle' => 'El ciclo excede la configuración de esta malla.',
             ]);
         }
 
         $lastPosition = Subject::query()
-            ->where('malla_id', $curriculum->id)
+            ->where('carrera_id', $career->id)
             ->where('ciclo', $data['cycle'])
             ->max('orden_en_ciclo');
         $position = array_key_exists('position', $data)
@@ -175,7 +150,7 @@ class CreateAcademicRecord
             : ($lastPosition === null ? 0 : (int) $lastPosition + 1);
 
         $subject = Subject::query()->create([
-            'malla_id' => $curriculum->id,
+            'carrera_id' => $career->id,
             'codigo_asignatura' => $data['code'],
             'nombre' => $data['nombre'],
             'ciclo' => $data['cycle'] ?? null,
@@ -200,18 +175,11 @@ class CreateAcademicRecord
     private function createScheduledSubject(array $data, string $careerId): ScheduledSubject
     {
         $subject = Subject::query()
-            ->with('curriculum:id,estado,carrera_id')
+            ->with('career:id,campus_id')
             ->whereKey($this->stringValue($data, 'subject_id'))
-            ->whereHas('curriculum', fn ($query) => $query
-                ->where('carrera_id', $careerId))
+            ->where('carrera_id', $careerId)
             ->lockForUpdate()
             ->firstOrFail();
-
-        if ($subject->curriculum->estado !== 'activa') {
-            throw ValidationException::withMessages([
-                'subject_id' => 'La programación requiere una materia de la malla activa.',
-            ]);
-        }
 
         $period = AcademicPeriod::query()
             ->whereKey($this->stringValue($data, 'period_id'))
@@ -223,7 +191,7 @@ class CreateAcademicRecord
             'periodo_academico_id' => $period->id,
             'asignatura_id' => $subject->id,
             // Heredados: el campus lo fija la carrera; la modalidad, la carrera o la materia.
-            'campus_id' => $this->inheritance->campusFor($subject->curriculum->career)->id,
+            'campus_id' => $this->inheritance->campusFor($subject->career)->id,
             'modalidad' => $this->inheritance->modalityFor($subject),
             'activo' => true,
         ]);
@@ -235,10 +203,8 @@ class CreateAcademicRecord
         $scheduledSubject = ScheduledSubject::query()
             ->whereKey($this->stringValue($data, 'scheduled_subject_id'))
             ->whereHas(
-                'subject.curriculum',
-                fn ($query) => $query
-                    ->where('carrera_id', $careerId)
-                    ->where('estado', 'activa'),
+                'subject',
+                fn ($query) => $query->where('carrera_id', $careerId),
             )
             ->lockForUpdate()
             ->firstOrFail();
@@ -256,13 +222,11 @@ class CreateAcademicRecord
     private function createTeacherAssignment(array $data, string $careerId): TeacherAssignment
     {
         $parallel = Parallel::query()
-            ->with('scheduledSubject.subject.curriculum:id,carrera_id,estado')
+            ->with('scheduledSubject.subject.career:id')
             ->whereKey($this->stringValue($data, 'parallel_id'))
             ->whereHas(
-                'scheduledSubject.subject.curriculum',
-                fn ($query) => $query
-                    ->where('carrera_id', $careerId)
-                    ->where('estado', 'activa'),
+                'scheduledSubject.subject',
+                fn ($query) => $query->where('carrera_id', $careerId),
             )
             ->lockForUpdate()
             ->firstOrFail();

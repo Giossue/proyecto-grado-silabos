@@ -70,10 +70,10 @@ class DeleteAcademicRecord
                 }
             : match ($entity) {
                 'paralelo' => Parallel::query()
-                    ->whereHas('scheduledSubject.subject.curriculum', fn ($query) => $query->where('carrera_id', $role->carrera_id))
+                    ->whereHas('scheduledSubject.subject', fn ($query) => $query->where('carrera_id', $role->carrera_id))
                     ->lockForUpdate()->findOrFail($recordId),
                 'asignacion_docente' => TeacherAssignment::query()
-                    ->whereHas('parallel.scheduledSubject.subject.curriculum', fn ($query) => $query->where('carrera_id', $role->carrera_id))
+                    ->whereHas('parallel.scheduledSubject.subject', fn ($query) => $query->where('carrera_id', $role->carrera_id))
                     ->lockForUpdate()->findOrFail($recordId),
                 default => throw new \LogicException('Entidad de carrera no admitida.'),
             };
@@ -104,7 +104,7 @@ class DeleteAcademicRecord
     {
         $hasDependencies = match ($entity) {
             'facultad' => Career::query()->where('facultad_id', $record->getKey())->exists(),
-            'carrera' => DB::table('mallas')->where('carrera_id', $record->getKey())->exists()
+            'carrera' => Subject::query()->where('carrera_id', $record->getKey())->exists()
                 || DB::table('fuentes_academicas')->where('carrera_id', $record->getKey())->exists()
                 || DB::table('convocatorias_carreras')->where('carrera_id', $record->getKey())->exists()
                 || DB::table('asignaciones_rol')->where('carrera_id', $record->getKey())->exists(),

@@ -104,12 +104,6 @@ watch(
                 :reset-on-success="subject === null"
                 @success="close"
             >
-                <input
-                    v-if="subject === null"
-                    type="hidden"
-                    name="curriculum_id"
-                    :value="curriculum.id"
-                />
                 <FieldGroup>
                     <Field v-if="errors.record" data-invalid>
                         <FieldError :errors="[errors.record]" />
