@@ -44,24 +44,11 @@ const onLogout = (): void => {
                 v-bind="SecurityController.update.form()"
                 v-slot="{ errors, processing }"
                 :reset-on-error="[
-                    'current_password',
                     'password',
                     'password_confirmation',
                 ]"
                 class="space-y-4"
             >
-                <div class="grid gap-2">
-                    <Label for="temporary-current-password" required>
-                        Contraseña temporal
-                    </Label>
-                    <PasswordInput
-                        id="temporary-current-password"
-                        name="current_password"
-                        autocomplete="current-password"
-                        required
-                    />
-                    <InputError :message="errors.current_password" />
-                </div>
                 <div class="grid gap-2">
                     <Label for="temporary-new-password" required>
                         Contraseña nueva

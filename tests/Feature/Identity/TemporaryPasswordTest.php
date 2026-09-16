@@ -140,7 +140,6 @@ class TemporaryPasswordTest extends TestCase
 
         $this->actingAs($user)
             ->put(route('user-password.update'), [
-                'current_password' => 'Temporal-2026!',
                 'password' => 'Definitiva-2026!',
                 'password_confirmation' => 'Definitiva-2026!',
             ])
@@ -161,17 +160,16 @@ class TemporaryPasswordTest extends TestCase
         $this->actingAs($user)->followingRedirects()->get(route('notifications.index'))->assertOk();
     }
 
-    public function test_a_rejected_change_keeps_the_session_blocked(): void
+    public function test_reusing_the_temporary_password_keeps_the_session_blocked(): void
     {
         $user = $this->userWithTemporaryPassword();
 
         $this->actingAs($user)
             ->put(route('user-password.update'), [
-                'current_password' => 'la-que-no-es',
-                'password' => 'Definitiva-2026!',
-                'password_confirmation' => 'Definitiva-2026!',
+                'password' => 'Temporal-2026!',
+                'password_confirmation' => 'Temporal-2026!',
             ])
-            ->assertSessionHasErrors('current_password');
+            ->assertSessionHasErrors(['password' => 'La contraseña nueva debe ser distinta de la temporal.']);
 
         $this->assertTrue($user->refresh()->debe_cambiar_contrasena);
         $this->actingAs($user)->get(route('notifications.index'))->assertRedirect(route('dashboard'));
@@ -183,11 +181,10 @@ class TemporaryPasswordTest extends TestCase
 
         $this->actingAs($user)
             ->put(route('user-password.update'), [
-                'current_password' => 'Temporal-2026!',
                 'password' => 'Temporal-2026!',
                 'password_confirmation' => 'Temporal-2026!',
             ])
-            ->assertSessionHasErrors(['password' => 'La contraseña nueva debe ser distinta de la actual.']);
+            ->assertSessionHasErrors(['password' => 'La contraseña nueva debe ser distinta de la temporal.']);
 
         $this->assertTrue($user->refresh()->debe_cambiar_contrasena);
         $this->assertDatabaseMissing('eventos_auditoria', ['accion_evento_auditoria' => 'usuario.contrasena_temporal_cambiada']);
@@ -198,7 +195,6 @@ class TemporaryPasswordTest extends TestCase
         $user = $this->userWithTemporaryPassword();
 
         $this->actingAs($user)->put(route('user-password.update'), [
-            'current_password' => 'Temporal-2026!',
             'password' => 'Definitiva-2026!',
             'password_confirmation' => 'Definitiva-2026!',
         ]);

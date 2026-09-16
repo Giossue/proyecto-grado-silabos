@@ -27,6 +27,7 @@ it('presenta el cambio de contrasena temporal como un dialogo que no se descarta
         ->toContain('debe_cambiar_contrasena')
         ->toContain('SecurityController.update.form()')
         ->toContain('<Save')
+        ->not->toContain('name="current_password"')
         // Cerrar sesión es la única alternativa a cambiarla.
         ->toContain('logout()');
 });
