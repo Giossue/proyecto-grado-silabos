@@ -12,7 +12,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $id
  * @property string $codigo
  * @property string|null $jornada
- * @property bool $activo
  * @property-read ScheduledSubject $scheduledSubject
  */
 class Parallel extends Model
@@ -21,7 +20,6 @@ class Parallel extends Model
 
     protected const LEGACY_COLUMN_ALIASES = [
         'codigo' => 'codigo_paralelo',
-        'activo' => 'paralelo_activo',
         'jornada' => 'jornada_paralelo',
     ];
 
@@ -34,7 +32,7 @@ class Parallel extends Model
     public const SHIFTS = ['matutina', 'vespertina', 'nocturna'];
 
     /** @var list<string> */
-    protected $fillable = ['programacion_asignatura_id', 'codigo', 'jornada', 'activo'];
+    protected $fillable = ['programacion_asignatura_id', 'codigo', 'jornada'];
 
     /** @return BelongsTo<ScheduledSubject, $this> */
     public function scheduledSubject(): BelongsTo

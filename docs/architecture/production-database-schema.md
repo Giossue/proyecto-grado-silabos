@@ -1,7 +1,7 @@
 # Base de datos actual de producción — Sílabos UEB
 
 **Fotografía verificada:** 15 de septiembre de 2026, migraciones hasta
-`2026_09_15_000073_reference_faculty_logo_as_stored_object` (lote 46).
+`2026_09_15_000074_remove_curricula_as_a_separate_entity` (lote 47).
 # 1. Identidad y acceso
 
 ## usuarios
@@ -128,6 +128,8 @@ nombre_carrera VARCHAR NOT NULL
 carrera_activa BOOLEAN NOT NULL
 campus_id UUID (FK → campus.id) NULL
 modalidad_carrera VARCHAR NULL
+codigo_malla VARCHAR NOT NULL
+cantidad_ciclos_malla SMALLINT NOT NULL
 ~~~
 
 ## periodos_academicos
@@ -142,28 +144,13 @@ fecha_fin_periodo DATE NOT NULL
 cantidad_semanas_lectivas SMALLINT NOT NULL
 ~~~
 
-## mallas
+## asignaturas
 
-**Contexto:** malla curricular de una carrera.
+**Contexto:** materias de la estructura curricular única de una carrera.
 
 ~~~text
 id UUID (PK)
 carrera_id UUID (FK → carreras.id) NOT NULL
-codigo_malla VARCHAR NOT NULL
-estado_malla VARCHAR NOT NULL
-cantidad_ciclos_malla SMALLINT NOT NULL
-
-UNIQUE (carrera_id)
-UNIQUE (carrera_id, codigo_malla)
-~~~
-
-## asignaturas
-
-**Contexto:** materias de una malla.
-
-~~~text
-id UUID (PK)
-malla_id UUID (FK → mallas.id) NOT NULL
 codigo_asignatura VARCHAR NOT NULL
 nombre_asignatura VARCHAR NOT NULL
 ciclo_asignatura SMALLINT NULL
@@ -180,7 +167,7 @@ orden_asignatura_en_ciclo SMALLINT NOT NULL
 unidad_organizativa_curricular_asignatura VARCHAR NULL
 modalidad_asignatura VARCHAR NULL
 
-UNIQUE (malla_id, codigo_asignatura)
+UNIQUE (carrera_id, codigo_asignatura)
 ~~~
 
 ## requisitos_asignatura
@@ -230,8 +217,7 @@ UNIQUE (programacion_asignatura_id, codigo_paralelo)
 ~~~text
 facultades 1:N carreras
 campus 1:N carreras
-carreras 1:0..1 mallas
-mallas 1:N asignaturas
+carreras 1:N asignaturas
 asignaturas 1:N requisitos_asignatura, como asignatura y como requisito
 periodos_academicos 1:N programaciones_asignatura
 asignaturas 1:N programaciones_asignatura
@@ -411,7 +397,7 @@ UNIQUE (convocatoria_id, etapa_fecha_limite_convocatoria)
 id UUID (PK)
 convocatoria_id UUID (FK → convocatorias_carreras.id) NOT NULL
 asignatura_id UUID (FK → asignaturas.id) NOT NULL
-malla_id UUID (FK → mallas.id) NOT NULL
+carrera_id UUID (FK → carreras.id) NOT NULL
 estado_silabo VARCHAR NOT NULL
 version_bloqueo INTEGER NOT NULL
 porcentaje_completitud NUMERIC NOT NULL
@@ -973,15 +959,8 @@ solicitudes_correccion N:M observaciones_revision
 recomendaciones_ia N:M evidencias_ia mediante recomendacion_evidencias_ia
 ~~~
 
-# 9. Lo que aún no existe en producción
+# 9. Configuración IA disponible en producción
 
-La configuración IA pendiente de despliegue todavía no tiene estas estructuras en
-producción:
-
-~~~text
-definiciones_campo.ia_coordinacion_configurable
-plantillas_silabo.revision_configuracion
-preferencias_ia_carrera
-~~~
-
-Deben entrar por migraciones aditivas, no mediante cambios manuales en producción.
+La decisión de habilitar IA por campo y la posibilidad de que Coordinación la cambie
+se almacenan en `definiciones_campo` mediante `ia_habilitada` e
+`ia_coordinacion_configurable`.

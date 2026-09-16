@@ -80,6 +80,10 @@ opcional, `programaciones_asignatura.modalidad` copia heredada; migraciones `000
 jerarquía que presenta ADM-04 es una proyección de lectura y no una desnormalización de
 la persistencia.
 
+`paralelos` no tiene estado propio: antes de tener historia se elimina y, una vez que
+participa en un sílabo, se conserva. Su operatividad se deriva del período y de su
+programación, sin duplicar un booleano individual.
+
 La estructura curricular no es una entidad separada: `carreras.codigo_malla` y
 `carreras.cantidad_ciclos_malla` definen el código y la cantidad de ciclos de la única
 estructura de esa carrera. `asignaturas.carrera_id` las relaciona directamente. Los

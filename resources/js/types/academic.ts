@@ -108,7 +108,6 @@ export type AcademicStructureProps = {
             id: string;
             code: string;
             shift: string | null;
-            active: boolean;
         }[];
         active: boolean;
         editable: boolean;
@@ -118,7 +117,6 @@ export type AcademicStructureProps = {
         scheduled_subject_id: string;
         code: string;
         shift: string | null;
-        active: boolean;
         subject_code: string;
         subject_name: string;
         period_starts_on: string;

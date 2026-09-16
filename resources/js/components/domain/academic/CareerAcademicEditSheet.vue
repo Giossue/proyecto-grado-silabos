@@ -47,7 +47,6 @@ export type CareerAcademicEditableRecord = {
         id: string;
         code: string;
         shift: string | null;
-        active: boolean;
     }[];
 };
 

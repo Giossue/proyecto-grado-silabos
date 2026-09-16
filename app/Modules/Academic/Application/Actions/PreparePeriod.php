@@ -115,7 +115,6 @@ class PreparePeriod
                         'programacion_asignatura_id' => $scheduledSubject->id,
                         'codigo' => $parallelSetting['code'],
                         'jornada' => $parallelSetting['shift'] ?? null,
-                        'activo' => true,
                     ]);
                     $this->audit->execute(
                         actorId: $actor->id,

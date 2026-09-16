@@ -78,7 +78,7 @@ class OpenConvocation
                     ->where('carrera_id', $convocation->carrera_id))
                 ->with([
                     'subject.career', 'campus',
-                    'parallels' => fn ($query) => $query->where('activo', true)->lockForUpdate()->with([
+                    'parallels' => fn ($query) => $query->lockForUpdate()->with([
                         'teacherAssignments' => fn ($assignmentQuery) => $assignmentQuery
                             ->where('asignaciones_paralelo.docente_paralelo_activo', true)
                             ->whereHas('roleAssignment.user', fn ($userQuery) => $userQuery->where('usuarios.usuario_activo', true))

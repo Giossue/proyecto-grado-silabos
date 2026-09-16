@@ -33,7 +33,6 @@ class SetAcademicRecordStatus
         'campus' => Campus::class,
         'asignatura' => Subject::class,
         'programacion_asignatura' => ScheduledSubject::class,
-        'paralelo' => Parallel::class,
         'asignacion_coordinador' => CoordinatorAssignment::class,
         'asignacion_docente' => TeacherAssignment::class,
     ];
@@ -81,8 +80,6 @@ class SetAcademicRecordStatus
 
             if ($record instanceof ScheduledSubject) {
                 $this->periodPlanning->assertScheduledSubjectMayChange($record);
-            } elseif ($record instanceof Parallel) {
-                $this->periodPlanning->assertParallelMayChange($record);
             } elseif ($record instanceof TeacherAssignment) {
                 $this->periodPlanning->assertTeacherAssignmentMayChange($record);
             }
@@ -123,10 +120,6 @@ class SetAcademicRecordStatus
                 'subject',
                 fn ($query) => $query->where('carrera_id', $careerId),
             )->lockForUpdate()->findOrFail($recordId),
-            'paralelo' => Parallel::query()->whereHas(
-                'scheduledSubject.subject',
-                fn ($query) => $query->where('carrera_id', $careerId),
-            )->lockForUpdate()->findOrFail($recordId),
             'asignacion_docente' => TeacherAssignment::query()->whereHas(
                 'parallel.scheduledSubject.subject',
                 fn ($query) => $query->where('carrera_id', $careerId),
@@ -142,8 +135,7 @@ class SetAcademicRecordStatus
             'carrera' => Subject::query()->where('carrera_id', $recordId)->where('activo', true)->exists(),
             'campus' => ScheduledSubject::query()->where('campus_id', $recordId)->where('activo', true)->exists(),
             'asignatura' => ScheduledSubject::query()->where('asignatura_id', $recordId)->where('activo', true)->exists(),
-            'programacion_asignatura' => Parallel::query()->where('programacion_asignatura_id', $recordId)->where('activo', true)->exists(),
-            'paralelo' => TeacherAssignment::query()->where('paralelo_id', $recordId)->where('activo', true)->exists(),
+            'programacion_asignatura' => Parallel::query()->where('programacion_asignatura_id', $recordId)->exists(),
             default => false,
         };
 

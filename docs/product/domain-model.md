@@ -71,6 +71,10 @@ proyecciones de la estructura curricular de la carrera.
 Sus paralelos y asignaciones docentes forman la organización operativa de esa
 programación; no son una nueva carrera o programa aprobado por el CES.
 
+`Paralelo` no tiene estado individual: antes de relacionarse con un sílabo puede
+eliminarse; después se conserva como evidencia histórica. Su disponibilidad se deriva
+de la programación y el período.
+
 El estado temporal del período no se persiste: se deriva de `fecha_inicio` y
 `fecha_fin` con la fecha local de `America/Guayaquil`. Antes del inicio está
 **Próximo**, dentro del rango inclusivo está **En curso** y después de `fecha_fin` está

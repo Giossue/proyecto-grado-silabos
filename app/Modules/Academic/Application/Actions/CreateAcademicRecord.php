@@ -214,7 +214,6 @@ class CreateAcademicRecord
             'programacion_asignatura_id' => $scheduledSubject->id,
             'codigo' => $data['code'],
             'jornada' => $data['shift'] ?? null,
-            'activo' => true,
         ]);
     }
 

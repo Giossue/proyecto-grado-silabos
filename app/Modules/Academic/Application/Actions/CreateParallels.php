@@ -68,7 +68,6 @@ class CreateParallels
                     'programacion_asignatura_id' => $scheduledSubject->id,
                     'codigo' => $code,
                     'jornada' => $data['shift'] ?? null,
-                    'activo' => true,
                 ]);
                 $this->audit->execute(
                     actorId: $actor->id,

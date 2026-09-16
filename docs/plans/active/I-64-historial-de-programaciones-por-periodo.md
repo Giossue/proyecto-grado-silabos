@@ -26,7 +26,8 @@ confirmada por el responsable del producto el 2026-09-09. No depende de una puer
 - Los períodos finalizados y sus programaciones, paralelos, asignaciones y sílabos se
   conservan para consulta.
 - Una programación, paralelo o asignación docente de un período finalizado no se crea,
-  edita, elimina ni cambia de estado. La regla se aplica en casos de uso del servidor.
+  edita ni elimina. El estado solo existe para programación y asignación docente; el
+  paralelo no duplica ese estado. La regla se aplica en casos de uso del servidor.
 - Preparar período solo admite períodos activos que no hayan finalizado.
 - No se añade una columna de estado persistida ni una tarea de cierre: las fechas son la
   fuente de verdad.

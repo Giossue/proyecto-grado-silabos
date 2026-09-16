@@ -279,7 +279,6 @@ class UpdateCareerAcademicRecord
     private function teacherAssignmentAttributes(array $data, string $careerId): array
     {
         $parallel = Parallel::query()->whereKey($this->stringValue($data, 'parallel_id'))
-            ->where('activo', true)
             ->whereHas('scheduledSubject.subject', fn ($query) => $query->where('carrera_id', $careerId))
             ->lockForUpdate()->firstOrFail();
         $this->periodPlanning->assertParallelMayChange($parallel, 'parallel_id');

@@ -87,7 +87,6 @@ class UpdateCareerAcademicRecordRequest extends FormRequest
                     'required',
                     'uuid',
                     Rule::exists('paralelos', 'id')->where(fn ($query) => $query
-                        ->where('paralelo_activo', true)
                         ->whereIn('programacion_asignatura_id', ScheduledSubject::query()
                             ->select('id')
                             ->whereHas('subject', fn ($subject) => $subject

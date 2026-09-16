@@ -52,7 +52,6 @@ final class AcademicStructurePermissions
     public const CAREER_STATUS_ENTITIES = [
         'asignatura',
         'programacion_asignatura',
-        'paralelo',
         'asignacion_docente',
     ];
 

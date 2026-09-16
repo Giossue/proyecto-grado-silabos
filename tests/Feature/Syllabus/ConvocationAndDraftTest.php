@@ -124,7 +124,6 @@ class ConvocationAndDraftTest extends TestCase
         $parallel = Parallel::query()->create([
             'programacion_asignatura_id' => $scheduledSubject->id,
             'codigo' => 'B',
-            'activo' => true,
         ]);
         TeacherAssignment::query()->create([
             'usuario_id' => $this->teacher->id,
@@ -142,7 +141,7 @@ class ConvocationAndDraftTest extends TestCase
     public function test_opening_is_atomic_when_a_parallel_has_no_current_teacher(): void
     {
         $scheduledSubject = ScheduledSubject::query()->firstOrFail();
-        Parallel::query()->create(['programacion_asignatura_id' => $scheduledSubject->id, 'codigo' => 'B', 'activo' => true]);
+        Parallel::query()->create(['programacion_asignatura_id' => $scheduledSubject->id, 'codigo' => 'B']);
         $convocation = $this->createPreparedConvocation();
 
         $this->actingAsCoordinator()

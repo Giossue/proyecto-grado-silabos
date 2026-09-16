@@ -176,7 +176,7 @@ class TeacherReliefTest extends TestCase
     private function extraParallelFor(User $teacher): Parallel
     {
         $scheduledSubject = ScheduledSubject::query()->firstOrFail();
-        $parallel = Parallel::query()->create(['programacion_asignatura_id' => $scheduledSubject->id, 'codigo' => 'Z', 'activo' => true]);
+        $parallel = Parallel::query()->create(['programacion_asignatura_id' => $scheduledSubject->id, 'codigo' => 'Z']);
         TeacherAssignment::query()->create([
             'usuario_id' => $teacher->id,
             'paralelo_id' => $parallel->id,

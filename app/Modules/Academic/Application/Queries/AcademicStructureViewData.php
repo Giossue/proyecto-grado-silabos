@@ -265,7 +265,7 @@ class AcademicStructureViewData
                 'campus:id,nombre',
                 'parallels' => fn ($query) => $query
                     ->orderBy('codigo')
-                    ->select(['id', 'programacion_asignatura_id', 'codigo', 'jornada', 'activo']),
+                    ->select(['id', 'programacion_asignatura_id', 'codigo', 'jornada']),
             ])
             ->orderBy('asignatura_id')
             ->get();
@@ -332,7 +332,6 @@ class AcademicStructureViewData
                                 'id' => $parallel->id,
                                 'code' => $parallel->codigo,
                                 'shift' => $this->parallelShift($parallel),
-                                'active' => $parallel->activo,
                             ])
                             ->values()
                             ->all(),
@@ -424,7 +423,6 @@ class AcademicStructureViewData
             'options' => [
                 ...$this->emptyOptions(),
                 'parallels' => Parallel::query()
-                    ->where('activo', true)
                     ->whereHas(
                         'scheduledSubject.subject',
                         fn ($query) => $query->where('carrera_id', $careerId),
