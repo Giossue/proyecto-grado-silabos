@@ -498,7 +498,7 @@ it('evita repetir el encabezado de pagina dentro de las tablas academicas', func
 
     expect($parallelSheet)
         ->toBeString()
-        ->toContain('Paralelos registrados')
+        ->not->toContain('Paralelos registrados')
         ->toContain('<TableHead>Paralelo</TableHead>')
         ->toContain('<TableHead>Jornada</TableHead>')
         ->toContain('shiftLabel(parallel.shift)');

@@ -132,16 +132,7 @@ watch(open, (isOpen) => {
                         <FieldError :errors="[form.errors.shift]" />
                     </Field>
 
-                    <section
-                        class="space-y-2"
-                        aria-labelledby="parallel-summary-title"
-                    >
-                        <h3
-                            id="parallel-summary-title"
-                            class="text-sm font-medium"
-                        >
-                            Paralelos registrados
-                        </h3>
+                    <section class="space-y-2">
                         <div class="overflow-hidden rounded-md border">
                             <Table>
                                 <TableHeader>
