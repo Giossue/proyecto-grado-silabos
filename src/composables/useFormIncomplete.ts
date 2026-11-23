@@ -20,16 +20,25 @@ export function useFormIncomplete(button: RefObject<HTMLElement | null>): boolea
         const form = element.form;
         if (form === null || form.noValidate) return;
         const update = (): void => setIncomplete(hasMissingFields(form));
-        form.addEventListener('input', update, true);
-        form.addEventListener('change', update, true);
+        let pending: ReturnType<typeof setTimeout> | null = null;
+        const schedule = (): void => {
+            if (pending !== null) return;
+            pending = setTimeout(() => {
+                pending = null;
+                update();
+            }, 0);
+        };
+        form.addEventListener('input', schedule, true);
+        form.addEventListener('change', schedule, true);
         const observer = new MutationObserver(update);
         observer.observe(form, { childList: true, subtree: true, attributes: true, attributeFilter: ['required', 'aria-required', 'disabled'] });
         update();
 
         return () => {
-            form.removeEventListener('input', update, true);
-            form.removeEventListener('change', update, true);
+            form.removeEventListener('input', schedule, true);
+            form.removeEventListener('change', schedule, true);
             observer.disconnect();
+            if (pending !== null) clearTimeout(pending);
         };
     }, [button]);
 
