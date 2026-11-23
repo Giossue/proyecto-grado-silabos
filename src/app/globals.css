@@ -543,6 +543,15 @@
         display: none;
     }
 }
+.react-flow {
+    color-scheme: light;
+    --xy-background-color: transparent;
+}
+
+.dark .react-flow {
+    color-scheme: dark;
+}
+
 .vue-flow .vue-flow__pane.draggable,
 .vue-flow .vue-flow__pane.dragging,
 .react-flow .react-flow__pane.draggable,
