@@ -1,0 +1,47 @@
+.robot-avatar {
+  overflow: visible;
+}
+
+.robot-avatar #robot_root {
+  transform-box: view-box;
+  transform-origin: 0 0;
+}
+
+.robot-avatar[data-emotion="happy"] #robot_root {
+  animation: robot-avatar-bounce 520ms cubic-bezier(0.3, 0.7, 0.4, 1);
+}
+
+.robot-avatar[data-emotion="surprised"] #robot_root {
+  animation: robot-avatar-startle 420ms ease-out;
+}
+
+@keyframes robot-avatar-bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-10px);
+  }
+  70% {
+    transform: translateY(2px);
+  }
+}
+
+@keyframes robot-avatar-startle {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.06);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .robot-avatar * {
+    animation: none !important;
+  }
+}

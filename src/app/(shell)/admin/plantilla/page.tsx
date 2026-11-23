@@ -1,5 +1,5 @@
-import { PageFrame } from "@/components/domain/PageFrame"
+import AdminTemplatePage from "./AdminTemplatePage"
 
 export default function Page() {
-  return <PageFrame title="Plantilla" description="" />
+  return <AdminTemplatePage />
 }
