@@ -1,5 +1,6 @@
 "use client"
 
+import { SupportDocumentsButton } from "@/components/domain/academic/SupportDocumentsButton"
 import { ArrowLeft, Copy, Eye, FileSignature, FileText, Send } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from "react"
@@ -59,10 +60,6 @@ type CopySource = { id: string; parallel: string }
 const PAUSED_MESSAGE = "La convocatoria está en pausa. Podrá seguir editando cuando se reanude"
 const EDITABLE_STATES = ["borrador", "correccion_solicitada"]
 const NO_RESULTS: ValidationResult[] = []
-
-function SupportDocumentsSlot() {
-  return null
-}
 
 function useTracked<T>(initial: T): [T, (value: T) => void, { readonly current: T }] {
   const [value, setValue] = useState(initial)
@@ -534,7 +531,7 @@ export default function TeacherSyllabusDetailPage() {
         titleBadge={syllabus ? <SyllabusStateBadge state={syllabus.state} /> : undefined}
         tools={
           <>
-            {syllabus ? <SupportDocumentsSlot /> : null}
+            {syllabus ? <SupportDocumentsButton /> : null}
             {syllabus && showEditor ? (
               <IconTooltip label="Vista previa">
                 <Button

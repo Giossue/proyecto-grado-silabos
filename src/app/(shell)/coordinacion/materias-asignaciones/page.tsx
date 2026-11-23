@@ -1,5 +1,5 @@
-import { PageFrame } from "@/components/domain/PageFrame"
+import { CoordinationAcademicStructurePage } from "@/app/(shell)/coordinacion/malla/CoordinationAcademicStructurePage"
 
 export default function Page() {
-  return <PageFrame title="Materias y asignaciones" description="" />
+  return <CoordinationAcademicStructurePage mode="schedule" />
 }

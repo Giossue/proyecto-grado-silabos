@@ -1,0 +1,303 @@
+"use client"
+
+import { ChevronDown, Plus, X } from "lucide-react"
+import { useState, type FormEvent } from "react"
+import {
+  createCareerRecord,
+  createParallels,
+  deleteCareerRecord,
+  replaceParallelTeacher,
+  updateParallel,
+  type PurgeHandling,
+  type ScheduledSubjects,
+  type TeacherAssignments,
+} from "@/api/career-academics"
+import { ApiError } from "@/api/client"
+import { TeacherSelect } from "@/components/domain/academic/TeacherSelect"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Spinner } from "@/components/ui/spinner"
+import { FINALIZED_NOTICE, requestPurgeConfirmation } from "@/composables/usePurgeConfirmation"
+import { afterDialogExit } from "@/lib/dialogExit"
+import { nextParallelCode } from "@/lib/parallelCodes"
+import { deadlineState } from "@/state/deadline"
+
+type Row = ScheduledSubjects["scheduledSubjects"][number]
+type Parallel = Row["parallels"][number]
+
+type ParallelBulkActionsProps = {
+  items: Row[]
+  parallelIds: string[]
+  shiftOptions: ScheduledSubjects["options"]["shiftOptions"]
+  teacherUsers: TeacherAssignments["options"]["teacherUsers"]
+  assignments: TeacherAssignments["teacherAssignments"]
+  onChanged: (message: string) => void
+  onFailed: (message: string) => void
+  onClear: () => void
+}
+
+const NO_TEACHER = "none"
+const FINALIZED_MESSAGE =
+  "La convocatoria de su carrera ya finalizó. Estos cambios no afectan sus sílabos: conservan los datos que tenían. Se aplicarán en la próxima convocatoria, o en esta si la reabre con una prórroga. Si cancela, no se cambia nada."
+
+const shiftMessage = (count: number): string =>
+  count === 1
+    ? "El sílabo de 1 paralelo seleccionado ya está en revisión o aprobado. Cambiar la jornada lo elimina con todo su contenido (revisiones, aprobación, firmas y análisis de IA) y el docente lo empieza de nuevo. Si cancela, no se cambia ningún paralelo."
+    : `Los sílabos de ${count} paralelos seleccionados ya están en revisión o aprobados. Cambiar la jornada los elimina con todo su contenido (revisiones, aprobación, firmas y análisis de IA) y los docentes los empiezan de nuevo. Si cancela, no se cambia ningún paralelo.`
+
+const teacherMessage = (count: number): string =>
+  count === 1
+    ? "El sílabo de 1 paralelo seleccionado ya tiene trabajo del docente. Cambiar el docente lo elimina con todo su contenido (borrador, revisiones, aprobación, firmas y análisis de IA) y el nuevo docente lo empieza de cero. Si cancela, no se cambia ningún paralelo."
+    : `Los sílabos de ${count} paralelos seleccionados ya tienen trabajo de sus docentes. Cambiar el docente los elimina con todo su contenido (borrador, revisiones, aprobación, firmas y análisis de IA) y el nuevo docente los empieza de cero. Si cancela, no se cambia ningún paralelo.`
+
+const ask = (message: string, count: number, mode?: string): Promise<boolean> =>
+  new Promise((resolve) => {
+    requestPurgeConfirmation(
+      message,
+      count,
+      () => resolve(true),
+      () => resolve(false),
+      mode,
+    )
+  })
+
+const finalized = (): boolean => deadlineState.deadline.value?.state === "closed"
+
+const confirmBatch = async (affected = 0, message: (count: number) => string = shiftMessage): Promise<PurgeHandling | null> => {
+  if (finalized()) return (await ask(FINALIZED_MESSAGE, 0, FINALIZED_NOTICE)) ? "confirmed" : null
+  if (affected === 0) return "unconfirmed"
+
+  return (await ask(message(affected), affected)) ? "confirmed" : null
+}
+
+export function ParallelBulkActions({ items, parallelIds, shiftOptions, teacherUsers, assignments, onChanged, onFailed, onClear }: ParallelBulkActionsProps) {
+  const [busy, setBusy] = useState(false)
+  const [addOpen, setAddOpen] = useState(false)
+  const [addShift, setAddShift] = useState("")
+  const [addTeacher, setAddTeacher] = useState("")
+  const [addError, setAddError] = useState<string | null>(null)
+
+  const subjects = `${items.length} ${items.length === 1 ? "materia" : "materias"}`
+  const label =
+    parallelIds.length === 0
+      ? `${subjects} seleccionada${items.length === 1 ? "" : "s"}`
+      : `${subjects} y ${parallelIds.length} ${parallelIds.length === 1 ? "paralelo seleccionado" : "paralelos seleccionados"}`
+  const chosen = (item: Row): Parallel[] => item.parallels.filter((parallel) => parallelIds.includes(parallel.id))
+  const assignmentOf = (parallelId: string) => assignments.find((item) => item.parallel_id === parallelId && item.active) ?? null
+
+  const run = async (steps: Array<() => Promise<unknown>>, done: string, nothing: string, closing?: Promise<void>): Promise<void> => {
+    if (steps.length === 0) {
+      onChanged(nothing)
+      return
+    }
+    setBusy(true)
+    let failures = 0
+    let firstError = ""
+    for (const step of steps) {
+      try {
+        await step()
+      } catch (reason) {
+        failures += 1
+        firstError ||= reason instanceof ApiError ? reason.message : "No se pudo completar el cambio"
+      }
+    }
+    setBusy(false)
+    if (failures === 0) {
+      onChanged(done)
+    } else {
+      onFailed(`${steps.length - failures} de ${steps.length} cambios aplicados. ${firstError}`)
+      onChanged("Se aplicaron los cambios posibles")
+    }
+    await closing
+    onClear()
+  }
+
+  const openAdd = (): void => {
+    setAddShift(shiftOptions[0]?.value ?? "")
+    setAddTeacher("")
+    setAddError(null)
+    setAddOpen(true)
+  }
+
+  const addParallel = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
+    event.preventDefault()
+    if (busy) return
+    if (!addShift || !addTeacher) {
+      setAddError("Elija la jornada y el docente de los nuevos paralelos")
+      return
+    }
+    const shift = addShift
+    const userId = addTeacher
+    setAddOpen(false)
+    const purge = await confirmBatch()
+    if (purge === null) return
+    await run(
+      items.map((item) => () => createParallels({ subject_id: item.subject_id, codes: [nextParallelCode(item.parallels)], shift, user_id: userId }, purge)),
+      `Paralelo agregado a ${items.length} ${items.length === 1 ? "materia" : "materias"}`,
+      "No hay materias seleccionadas",
+      afterDialogExit(),
+    )
+  }
+
+  const setShift = async (shift: string): Promise<void> => {
+    const targets = items.flatMap((item) => chosen(item).filter((parallel) => parallel.editable !== false && parallel.shift !== shift))
+    if (targets.length === 0) {
+      onChanged("Los paralelos seleccionados ya tenían esa jornada")
+      return
+    }
+    const sent = targets.filter((parallel) => parallel.sent_syllabus)
+    const purge = await confirmBatch(sent.length)
+    if (purge === null) return
+    const closed = finalized()
+    await run(
+      targets.map(
+        (parallel) => () => updateParallel(parallel.id, { code: parallel.code, shift }, purge === "confirmed" && (closed || parallel.sent_syllabus) ? "confirmed" : "unconfirmed"),
+      ),
+      "Jornada actualizada en los paralelos seleccionados",
+      "Los paralelos seleccionados ya tenían esa jornada",
+    )
+  }
+
+  const setTeacher = async (userId: string): Promise<void> => {
+    const targets = items.flatMap((item) =>
+      chosen(item).filter((parallel) => assignmentOf(parallel.id)?.editable !== false && (assignmentOf(parallel.id)?.user_id ?? NO_TEACHER) !== userId),
+    )
+    if (targets.length === 0) {
+      onChanged("Los paralelos seleccionados ya tenían ese docente")
+      return
+    }
+    const started = userId === NO_TEACHER ? [] : targets.filter((parallel) => parallel.started_syllabus)
+    const purge = await confirmBatch(started.length, teacherMessage)
+    if (purge === null) return
+    const closed = finalized()
+    const handling = (parallel: Parallel): PurgeHandling => (purge === "confirmed" && (closed || parallel.started_syllabus) ? "confirmed" : "unconfirmed")
+    await run(
+      targets.map((parallel) => async () => {
+        const current = assignmentOf(parallel.id)
+        if (current && userId !== NO_TEACHER) await replaceParallelTeacher(parallel.id, userId, handling(parallel))
+        else if (current) await deleteCareerRecord("asignacion_docente", current.id)
+        else await createCareerRecord("asignacion_docente", { user_id: userId, parallel_id: parallel.id }, handling(parallel))
+      }),
+      userId === NO_TEACHER ? "Docente retirado de los paralelos seleccionados" : "Docente asignado a los paralelos seleccionados",
+      "Los paralelos seleccionados ya tenían ese docente",
+    )
+  }
+
+  return (
+    <Card className="flex-row flex-wrap items-center gap-2 px-3 py-2" role="region" aria-label="Acciones masivas de materias">
+      <span className="text-sm font-medium">{label}</span>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button type="button" size="sm" variant="outline" disabled={busy}>
+            {busy ? <Spinner data-icon="inline-start" /> : null}
+            Acciones masivas
+            <ChevronDown data-icon="inline-end" aria-hidden="true" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start">
+          <DropdownMenuGroup>
+            <DropdownMenuItem onSelect={openAdd}>Agregar un paralelo</DropdownMenuItem>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger disabled={parallelIds.length === 0}>Asignar jornada</DropdownMenuSubTrigger>
+              <DropdownMenuSubContent>
+                {shiftOptions.map((option) => (
+                  <DropdownMenuItem key={option.value} onSelect={() => void setShift(option.value)}>
+                    {option.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger disabled={parallelIds.length === 0}>Asignar docente</DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="max-h-72 overflow-y-auto">
+                <DropdownMenuItem onSelect={() => void setTeacher(NO_TEACHER)}>Sin docente</DropdownMenuItem>
+                {teacherUsers.map((teacher) => (
+                  <DropdownMenuItem key={teacher.id} onSelect={() => void setTeacher(teacher.id)}>
+                    {teacher.name}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+          </DropdownMenuGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <Button type="button" size="sm" variant="ghost" disabled={busy} onClick={onClear}>
+        <X data-icon="inline-start" aria-hidden="true" />
+        Quitar selección
+      </Button>
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Agregar un paralelo a las materias seleccionadas</DialogTitle>
+            <DialogDescription>Se crea el mismo paralelo en cada materia</DialogDescription>
+          </DialogHeader>
+          <form className="contents" onSubmit={(event) => void addParallel(event)}>
+            {addError ? (
+              <Alert variant="destructive">
+                <AlertDescription>{addError}</AlertDescription>
+              </Alert>
+            ) : null}
+            <FieldGroup>
+              <Field data-invalid={Boolean(addError) && !addShift}>
+                <FieldLabel htmlFor="bulk-parallel-shift" required>
+                  Jornada
+                </FieldLabel>
+                <Select value={addShift} onValueChange={setAddShift} required>
+                  <SelectTrigger id="bulk-parallel-shift" aria-invalid={Boolean(addError) && !addShift}>
+                    <SelectValue placeholder="Elija la jornada" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      {shiftOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </Field>
+              <Field data-invalid={Boolean(addError) && !addTeacher}>
+                <FieldLabel htmlFor="bulk-parallel-teacher" required>
+                  Docente
+                </FieldLabel>
+                <TeacherSelect
+                  id="bulk-parallel-teacher"
+                  value={addTeacher}
+                  onValueChange={setAddTeacher}
+                  teachers={teacherUsers}
+                  label="Docente de los nuevos paralelos"
+                  required
+                  invalid={Boolean(addError) && !addTeacher}
+                />
+              </Field>
+            </FieldGroup>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setAddOpen(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={busy || !addShift || !addTeacher}>
+                <Plus data-icon="inline-start" aria-hidden="true" />
+                Agregar paralelos
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </Card>
+  )
+}

@@ -1,5 +1,5 @@
-import { PageFrame } from "@/components/domain/PageFrame"
+import SupportDocumentsPage from "@/app/(shell)/docente/documentos-apoyo/SupportDocumentsPage"
 
 export default function Page() {
-  return <PageFrame title="Documentos de apoyo" description="" />
+  return <SupportDocumentsPage />
 }

@@ -1,5 +1,5 @@
-import { PageFrame } from "@/components/domain/PageFrame"
+import CoordinationSubjectProfilePage from "@/app/(shell)/coordinacion/proyecto-carrera/[subject]/CoordinationSubjectProfilePage"
 
 export default function Page() {
-  return <PageFrame title="Proyecto de carrera" description="" />
+  return <CoordinationSubjectProfilePage />
 }
