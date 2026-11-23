@@ -1,0 +1,200 @@
+{
+    "appKey": "base64:MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=",
+    "cookieName": "silabos-ueb-session",
+    "sessionId": "AbCdEfGhIjKlMnOpQrStUvWxYz0123456789abcd",
+    "csrfToken": "TokenDePruebaTokenDePruebaTokenDePrueba1",
+    "userId": "0193a3c2-1111-7000-8000-000000000001",
+    "roleId": "0193a3c2-2222-7000-8000-000000000002",
+    "passwordHash": "$2y$12$abcdefghijklmnopqrstuuJr0bZ1y6m2Qm8Yd3VnQh8l5wq3V2Gk.",
+    "loginKey": "login_web_59ba36addc2b2f9401580f014c7f58ea4e30989d",
+    "passwordHashForCookie": "89fb353c0d9dfea2cb86b4a08098e809a9f5dad343b9a4a11b723fbc4c9255d4",
+    "attributes": {
+        "_token": "TokenDePruebaTokenDePruebaTokenDePrueba1",
+        "_previous": {
+            "url": "http://localhost:3000/api/v1/session",
+            "route": "api.v1.session.show"
+        },
+        "_flash": {
+            "old": [],
+            "new": []
+        },
+        "login_web_59ba36addc2b2f9401580f014c7f58ea4e30989d": "0193a3c2-1111-7000-8000-000000000001",
+        "password_hash_web": "89fb353c0d9dfea2cb86b4a08098e809a9f5dad343b9a4a11b723fbc4c9255d4",
+        "active_role_assignment_id": "0193a3c2-2222-7000-8000-000000000002",
+        "nota": "Sesión con «acentos» y 😀"
+    },
+    "sessionPayload": "ZXlKcGRpSTZJalpFYnk5eFJFMVhialpRWVVsbVlqWkJZU3QyVkdjOVBTSXNJblpoYkhWbElqb2lOaXN6VG5GRVoyUkJabFYxV2xFclRqVlRZbVJyVkhCeWRpOXRUak4xYTJJd2ExQlhlblZqU2xWTE0xRk9Za3h5WVRaWFlrUlVMMnRMV2xGTldWbzJkSFZJVGxwdVdsWXJUbUZFTUVkVVFYRlRSbmhFVEZwbWJqSnpOMEZTZUhRNFkyb3hhRTVMVVUwNVFXMUxNblphTUd0dFlWcG1TMWgwTVZCVk5VbHlSVlk0WlVwTVZURlJiMmhHVUdwdE4wbG5WbmM1WjNZMGNESnFiVWRHV25ad05sTkhOMjlJTDNsellVVTFVSFZMZDI1R1dDdEdiMVZ4UmpkaFlXeFZkbk5pVmtaR2N5OWtXRVEzWVRGVGJ6aHBjVEpvY1RGek1YTnhkbm8wVkdFNFFtdFZORmgxVGl0MmMwMXFhMmhsY1hFMVVuWjFRMlJuVDBWTUszUnliVWhQYjNCREwzUnFaR1IwTUM5MFRqQnhkRmxrTDNCdkwzQkRhazh6Um1SbWNsaEdRV3hQYVdONU1UWlpXV1k0V2t0T1YzWkhaelZoVGtSbldXRlRja3hCTWtWSFpUSmxUVVEwTVZacmFrUnNjemgyYjNWNVFrODRlRXBvTjBGemFYVTVZVWxDUVhWM2RGTXJNa1U1TDBKTGIzTjZSREZhU25FMWVGVjBkVWQyTlZwRGF5OXJURUptU2t3NFpXSXZVMVE0VTFwT1VrbDBia3A1WW1od015czJXR0k1ZDFBM00yazFWSGgwUTB4ekwwRnpOSEJRU25vd09WUnRRMW92WkdaclRFcDJTamxZZVVnM2VXcFJlVlYxTTBSdFJ6TnRSRkkyYkU5NVRYWTJXSEo2ZVZNcmRTOUJjRWQ2VVRGSU9WTkdSRWgwYlV0M04zbHBjakZUTDJaQ1ptTnFUWEJqTVRaeFpteFlSMEpLVVdSd2VYQjJOWHBDVjBKWmF6UkhTMjl2UTAxaloyOHdha0ZvYm1sRVJESm5jVGwwY2pKNFRtNDVSazU0UldWclVXcEJjamxSV25OdlpqVm5VWFZaY2k5eU5EaHhSSGhHVTFodmJubFBNRUV5YkZsT1ptWkhUMFV5UkZGVlVYY3JWbFpaWlRSNWVuUXJkMGM0Wlc0NVkwMUxRM1JqU1hCcE5YSlFNbWh6VkdKeU1EQnFSVVJTU1ZFOVBTSXNJbTFoWXlJNkltUXpZekF4T1RNM1ltVTRZVEU0WkRjNVltTXlNMk13T1dJM056azNaVGcyTVRoaFptVXhNRFJtT0dZMFpXTTRPVGRpT0dObU56TXlZMkZqTnpVek5qSWlMQ0owWVdjaU9pSWlmUT09",
+    "sessionCookie": "eyJpdiI6IkVCRmxTdC80bDZxbndRLy95WXlDWUE9PSIsInZhbHVlIjoiaUhxMkwzb1VleTYxakRMVFhBaGs5MjU1QUFhU3RrK1NDWGxveWtEV0Z2ejRvbnlPWm83NGcvVVJpVzNZUzdwYzB5eDdFZk9QR1Z3cE90SkZ4cHNURVNzMCtsdEFYK0dscVBOWXJNQ3FFQm5vNGNSeVREYjZwaFNFYzdDRkZDTkoiLCJtYWMiOiJmZjI3Y2M2NGZiM2RkZTk3NTk2Yzc5ZTVmMGQyZTQwOWM3ZTFkZWExZDdmNTAwNmNkNGRlMDQyNWU2NDBjMDkxIiwidGFnIjoiIn0=",
+    "xsrfHeader": "eyJpdiI6IlFyNDJRU2tUUVZ6QlFsM0V4aDhESHc9PSIsInZhbHVlIjoiTFFQOWRmYUZJMFdIdzU3d1pyaG9WamlaLzl0Qy9JWlhYYnd3bEd5RE9CSW83bkNvbFZod01SNE14T0k4TE9OaEJ5Nk1jbDQ2d21yV0FmZ0k3dmswSU5TQ3pySEJVNVN4MFdOWU0xUmpFTXpJM1I3STJnYmlwZ3lSWEErZ2lWT2YiLCJtYWMiOiIyNTc3YTc0OTRjNzJlMmUwNmU0ZDc5ZTcxMzlhNjViMTRkMmZkOThlNGIzMDVhYjlhZmU4ZTEzNTg5Y2NiMjBiIiwidGFnIjoiIn0=",
+    "sessionPayloadWithOtherKey": "ZXlKcGRpSTZJbVpyYkUxa1VWWXdRakZVTkN0Q2F6SjNUVk5UZEdjOVBTSXNJblpoYkhWbElqb2lhWEJFV1Rrd00xZzNUR1J4SzJoTlkxYzVjelZoWjFoQkwwUkJURFpwUm5SeVQxbzRVRWRuV2l0SWJIQjJUbWhxU0V0eWEwRmlTM1pEVFU1WlkyWnVWa3hFVGpkdlNHaEVSSGh1TnpWYWNHdzBNRk5qVVc0d05ETklWRUo1V1hneGFtUnlhV3RWU1daelRUWTJLME5RWVZWWWNtSTVjV1JPT0VSamFrRktXR2h0V1VjelRsTmxlbmd3U1dsVVV6TlRVVlJHZFcxSFJYZERlbkpJUmpOMU9WWlhWbWR3TnpSTE5XbFpkVXQxTW5SWlpWUlBVM29yUldKTVlsWmFjbTAxU1hkVE1rd3lWSFV5TnpWM1QycFljRlppSzNSVFJYZFZlaXRZYVV0ck5VUTVkalJ6Y201TVlXRlhlbGxSVDBGMFRXNHpUbXRsWVRSNlJIaE1PRmNyWWtsNVdHbFBNblI0VDJsRVJuWktaMnBUTWtOc1EwSldUVTgwZERKMU1DOHdNMXA0WW1kdFJXUjJiRFIyYjBReGJUTTFLMGg0WTIxQmJHVkZaR3N6YTJSNmMxWnZiM3AyWlRSaWJYRklhM1JrVkdGTlpVeERRMHB1YkVadkszUllWWGRIVEd4UWRtdE9XalZvV2xvMk5HaHVURm96TVRBdlFrbHNlbVUxTWtJeFluWkVWamsyV25RdmFXdDVkbloxVGtWR1ZYUkdVRWt4VW01RVVqWk5VMEprSzNwSVMxbGtjM0F6VDJGTlNHUXdjVXhwVUhCaWJFa3hOemRuWXpSTmRrOW5SVXgwYnpKTGFURlRPRWhzVGpsRGVXbEdhVU0yUTB0dVdrMUVUbEZuWW1GamJWaG1aSGwwWVVFMFVucFFhbFZ1Y1hseU9HbEZXazlMYkd3MWNFUTFMelo0VldvNE1XWndNWEI0YkhOUmJFbzBRM2RwUlVab1RFZEpTemhtUkV4SlF6SXlXbWxSSzI5UVJ6bERlVEJIZURkd1lrTnVXbmx0VEhsdlQzSkdTMUV2U2tsMFVXeFBPWFpsVXpKWWFWRktaekJ0VjJkQkwyZFRaRlZ4ZEhOdVYwOXBTbkl5UlU1VlkycGhZek15UVZGNlVIUlJTa3g2TVZsbVZrRXZhV3RSWVhKcVlta3phSEoyVWk4eFVtWk5SMjFNTVdjOVBTSXNJbTFoWXlJNkltVmpOR0psTVRreFpHWmxZak5tT1RKaU5UQTNZakkyTVRCaE9UQm1Zek0yTUdVelpqRmhPVFE0WVRoaU9XUXhObU01TVRWbFpHRmtPVEkzWVRVek16UWlMQ0owWVdjaU9pSWlmUT09",
+    "errors": {
+        "unauthenticated": {
+            "status": 401,
+            "body": "{\"message\":\"Unauthenticated.\"}"
+        },
+        "inactive": {
+            "status": 403,
+            "body": "{\n    \"message\": \"La cuenta est\\u00e1 desactivada.\"\n}"
+        },
+        "unverified": {
+            "status": 403,
+            "body": "{\n    \"message\": \"Your email address is not verified.\"\n}"
+        },
+        "noActiveRole": {
+            "status": 409,
+            "body": "{\n    \"message\": \"Seleccione un rol vigente.\"\n}"
+        },
+        "csrf": {
+            "status": 419,
+            "body": "{\n    \"message\": \"CSRF token mismatch.\"\n}"
+        },
+        "invalidStatus": {
+            "status": 422,
+            "body": "{\"message\":\"El valor seleccionado en estado no es v\\u00e1lido.\",\"errors\":{\"status\":[\"El valor seleccionado en estado no es v\\u00e1lido.\"]}}"
+        },
+        "arrayStatus": {
+            "status": 422,
+            "body": "{\"message\":\"El campo estado debe ser una cadena de texto. (y 1 error m\\u00e1s)\",\"errors\":{\"status\":[\"El campo estado debe ser una cadena de texto.\",\"El valor seleccionado en estado no es v\\u00e1lido.\"]}}"
+        }
+    },
+    "jsonSamples": [
+        {
+            "value": [
+                "a/b",
+                "ñandú «x»",
+                "😀",
+                "l1\nl2\t\u0001",
+                "a\"b\\c",
+                1.5,
+                true,
+                null,
+                [],
+                {
+                    "k": "v"
+                }
+            ],
+            "json": "[\"a\\/b\",\"\\u00f1and\\u00fa \\u00abx\\u00bb\",\"\\ud83d\\ude00\",\"l1\\nl2\\t\\u0001\",\"a\\\"b\\\\c\",1.5,true,null,[],{\"k\":\"v\"}]"
+        }
+    ],
+    "paginators": [
+        {
+            "total": 0,
+            "page": 1,
+            "query": {},
+            "json": "{\"current_page\":1,\"data\":[],\"first_page_url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=1\",\"from\":null,\"last_page\":1,\"last_page_url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=1\",\"links\":[{\"url\":null,\"label\":\"pagination.previous\",\"page\":null,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=1\",\"label\":\"1\",\"page\":1,\"active\":true},{\"url\":null,\"label\":\"pagination.next\",\"page\":null,\"active\":false}],\"next_page_url\":null,\"path\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications\",\"per_page\":20,\"prev_page_url\":null,\"to\":null,\"total\":0}"
+        },
+        {
+            "total": 5,
+            "page": 1,
+            "query": {},
+            "json": "{\"current_page\":1,\"data\":[{\"n\":1},{\"n\":2},{\"n\":3},{\"n\":4},{\"n\":5}],\"first_page_url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=1\",\"from\":1,\"last_page\":1,\"last_page_url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=1\",\"links\":[{\"url\":null,\"label\":\"pagination.previous\",\"page\":null,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=1\",\"label\":\"1\",\"page\":1,\"active\":true},{\"url\":null,\"label\":\"pagination.next\",\"page\":null,\"active\":false}],\"next_page_url\":null,\"path\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications\",\"per_page\":20,\"prev_page_url\":null,\"to\":5,\"total\":5}"
+        },
+        {
+            "total": 45,
+            "page": 2,
+            "query": {
+                "status": "unread"
+            },
+            "json": "{\"current_page\":2,\"data\":[{\"n\":1},{\"n\":2},{\"n\":3},{\"n\":4},{\"n\":5},{\"n\":6},{\"n\":7},{\"n\":8},{\"n\":9},{\"n\":10},{\"n\":11},{\"n\":12},{\"n\":13},{\"n\":14},{\"n\":15},{\"n\":16},{\"n\":17},{\"n\":18},{\"n\":19},{\"n\":20}],\"first_page_url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?status=unread&page=1\",\"from\":21,\"last_page\":3,\"last_page_url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?status=unread&page=3\",\"links\":[{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?status=unread&page=1\",\"label\":\"pagination.previous\",\"page\":1,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?status=unread&page=1\",\"label\":\"1\",\"page\":1,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?status=unread&page=2\",\"label\":\"2\",\"page\":2,\"active\":true},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?status=unread&page=3\",\"label\":\"3\",\"page\":3,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?status=unread&page=3\",\"label\":\"pagination.next\",\"page\":3,\"active\":false}],\"next_page_url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?status=unread&page=3\",\"path\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications\",\"per_page\":20,\"prev_page_url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?status=unread&page=1\",\"to\":40,\"total\":45}"
+        },
+        {
+            "total": 45,
+            "page": 3,
+            "query": {
+                "page": "3",
+                "status": "all"
+            },
+            "json": "{\"current_page\":3,\"data\":[{\"n\":1},{\"n\":2},{\"n\":3},{\"n\":4},{\"n\":5}],\"first_page_url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?status=all&page=1\",\"from\":41,\"last_page\":3,\"last_page_url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?status=all&page=3\",\"links\":[{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?status=all&page=2\",\"label\":\"pagination.previous\",\"page\":2,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?status=all&page=1\",\"label\":\"1\",\"page\":1,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?status=all&page=2\",\"label\":\"2\",\"page\":2,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?status=all&page=3\",\"label\":\"3\",\"page\":3,\"active\":true},{\"url\":null,\"label\":\"pagination.next\",\"page\":null,\"active\":false}],\"next_page_url\":null,\"path\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications\",\"per_page\":20,\"prev_page_url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?status=all&page=2\",\"to\":45,\"total\":45}"
+        },
+        {
+            "total": 45,
+            "page": 9,
+            "query": {},
+            "json": "{\"current_page\":9,\"data\":[],\"first_page_url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=1\",\"from\":null,\"last_page\":3,\"last_page_url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=3\",\"links\":[{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=8\",\"label\":\"pagination.previous\",\"page\":8,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=1\",\"label\":\"1\",\"page\":1,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=2\",\"label\":\"2\",\"page\":2,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=3\",\"label\":\"3\",\"page\":3,\"active\":false},{\"url\":null,\"label\":\"pagination.next\",\"page\":null,\"active\":false}],\"next_page_url\":null,\"path\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications\",\"per_page\":20,\"prev_page_url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=8\",\"to\":null,\"total\":45}"
+        },
+        {
+            "total": 400,
+            "page": 1,
+            "query": {},
+            "json": "{\"current_page\":1,\"data\":[{\"n\":1},{\"n\":2},{\"n\":3},{\"n\":4},{\"n\":5},{\"n\":6},{\"n\":7},{\"n\":8},{\"n\":9},{\"n\":10},{\"n\":11},{\"n\":12},{\"n\":13},{\"n\":14},{\"n\":15},{\"n\":16},{\"n\":17},{\"n\":18},{\"n\":19},{\"n\":20}],\"first_page_url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=1\",\"from\":1,\"last_page\":20,\"last_page_url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=20\",\"links\":[{\"url\":null,\"label\":\"pagination.previous\",\"page\":null,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=1\",\"label\":\"1\",\"page\":1,\"active\":true},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=2\",\"label\":\"2\",\"page\":2,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=3\",\"label\":\"3\",\"page\":3,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=4\",\"label\":\"4\",\"page\":4,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=5\",\"label\":\"5\",\"page\":5,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=6\",\"label\":\"6\",\"page\":6,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=7\",\"label\":\"7\",\"page\":7,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=8\",\"label\":\"8\",\"page\":8,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=9\",\"label\":\"9\",\"page\":9,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=10\",\"label\":\"10\",\"page\":10,\"active\":false},{\"url\":null,\"label\":\"...\",\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=19\",\"label\":\"19\",\"page\":19,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=20\",\"label\":\"20\",\"page\":20,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=2\",\"label\":\"pagination.next\",\"page\":2,\"active\":false}],\"next_page_url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=2\",\"path\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications\",\"per_page\":20,\"prev_page_url\":null,\"to\":20,\"total\":400}"
+        },
+        {
+            "total": 400,
+            "page": 9,
+            "query": {
+                "x": "a b/c~d!'()*é"
+            },
+            "json": "{\"current_page\":9,\"data\":[{\"n\":1},{\"n\":2},{\"n\":3},{\"n\":4},{\"n\":5},{\"n\":6},{\"n\":7},{\"n\":8},{\"n\":9},{\"n\":10},{\"n\":11},{\"n\":12},{\"n\":13},{\"n\":14},{\"n\":15},{\"n\":16},{\"n\":17},{\"n\":18},{\"n\":19},{\"n\":20}],\"first_page_url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?x=a%20b%2Fc~d%21%27%28%29%2A%C3%A9&page=1\",\"from\":161,\"last_page\":20,\"last_page_url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?x=a%20b%2Fc~d%21%27%28%29%2A%C3%A9&page=20\",\"links\":[{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?x=a%20b%2Fc~d%21%27%28%29%2A%C3%A9&page=8\",\"label\":\"pagination.previous\",\"page\":8,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?x=a%20b%2Fc~d%21%27%28%29%2A%C3%A9&page=1\",\"label\":\"1\",\"page\":1,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?x=a%20b%2Fc~d%21%27%28%29%2A%C3%A9&page=2\",\"label\":\"2\",\"page\":2,\"active\":false},{\"url\":null,\"label\":\"...\",\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?x=a%20b%2Fc~d%21%27%28%29%2A%C3%A9&page=6\",\"label\":\"6\",\"page\":6,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?x=a%20b%2Fc~d%21%27%28%29%2A%C3%A9&page=7\",\"label\":\"7\",\"page\":7,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?x=a%20b%2Fc~d%21%27%28%29%2A%C3%A9&page=8\",\"label\":\"8\",\"page\":8,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?x=a%20b%2Fc~d%21%27%28%29%2A%C3%A9&page=9\",\"label\":\"9\",\"page\":9,\"active\":true},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?x=a%20b%2Fc~d%21%27%28%29%2A%C3%A9&page=10\",\"label\":\"10\",\"page\":10,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?x=a%20b%2Fc~d%21%27%28%29%2A%C3%A9&page=11\",\"label\":\"11\",\"page\":11,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?x=a%20b%2Fc~d%21%27%28%29%2A%C3%A9&page=12\",\"label\":\"12\",\"page\":12,\"active\":false},{\"url\":null,\"label\":\"...\",\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?x=a%20b%2Fc~d%21%27%28%29%2A%C3%A9&page=19\",\"label\":\"19\",\"page\":19,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?x=a%20b%2Fc~d%21%27%28%29%2A%C3%A9&page=20\",\"label\":\"20\",\"page\":20,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?x=a%20b%2Fc~d%21%27%28%29%2A%C3%A9&page=10\",\"label\":\"pagination.next\",\"page\":10,\"active\":false}],\"next_page_url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?x=a%20b%2Fc~d%21%27%28%29%2A%C3%A9&page=10\",\"path\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications\",\"per_page\":20,\"prev_page_url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?x=a%20b%2Fc~d%21%27%28%29%2A%C3%A9&page=8\",\"to\":180,\"total\":400}"
+        },
+        {
+            "total": 400,
+            "page": 12,
+            "query": {},
+            "json": "{\"current_page\":12,\"data\":[{\"n\":1},{\"n\":2},{\"n\":3},{\"n\":4},{\"n\":5},{\"n\":6},{\"n\":7},{\"n\":8},{\"n\":9},{\"n\":10},{\"n\":11},{\"n\":12},{\"n\":13},{\"n\":14},{\"n\":15},{\"n\":16},{\"n\":17},{\"n\":18},{\"n\":19},{\"n\":20}],\"first_page_url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=1\",\"from\":221,\"last_page\":20,\"last_page_url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=20\",\"links\":[{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=11\",\"label\":\"pagination.previous\",\"page\":11,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=1\",\"label\":\"1\",\"page\":1,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=2\",\"label\":\"2\",\"page\":2,\"active\":false},{\"url\":null,\"label\":\"...\",\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=9\",\"label\":\"9\",\"page\":9,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=10\",\"label\":\"10\",\"page\":10,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=11\",\"label\":\"11\",\"page\":11,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=12\",\"label\":\"12\",\"page\":12,\"active\":true},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=13\",\"label\":\"13\",\"page\":13,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=14\",\"label\":\"14\",\"page\":14,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=15\",\"label\":\"15\",\"page\":15,\"active\":false},{\"url\":null,\"label\":\"...\",\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=19\",\"label\":\"19\",\"page\":19,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=20\",\"label\":\"20\",\"page\":20,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=13\",\"label\":\"pagination.next\",\"page\":13,\"active\":false}],\"next_page_url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=13\",\"path\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications\",\"per_page\":20,\"prev_page_url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=11\",\"to\":240,\"total\":400}"
+        },
+        {
+            "total": 400,
+            "page": 20,
+            "query": {},
+            "json": "{\"current_page\":20,\"data\":[{\"n\":1},{\"n\":2},{\"n\":3},{\"n\":4},{\"n\":5},{\"n\":6},{\"n\":7},{\"n\":8},{\"n\":9},{\"n\":10},{\"n\":11},{\"n\":12},{\"n\":13},{\"n\":14},{\"n\":15},{\"n\":16},{\"n\":17},{\"n\":18},{\"n\":19},{\"n\":20}],\"first_page_url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=1\",\"from\":381,\"last_page\":20,\"last_page_url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=20\",\"links\":[{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=19\",\"label\":\"pagination.previous\",\"page\":19,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=1\",\"label\":\"1\",\"page\":1,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=2\",\"label\":\"2\",\"page\":2,\"active\":false},{\"url\":null,\"label\":\"...\",\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=11\",\"label\":\"11\",\"page\":11,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=12\",\"label\":\"12\",\"page\":12,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=13\",\"label\":\"13\",\"page\":13,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=14\",\"label\":\"14\",\"page\":14,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=15\",\"label\":\"15\",\"page\":15,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=16\",\"label\":\"16\",\"page\":16,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=17\",\"label\":\"17\",\"page\":17,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=18\",\"label\":\"18\",\"page\":18,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=19\",\"label\":\"19\",\"page\":19,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=20\",\"label\":\"20\",\"page\":20,\"active\":true},{\"url\":null,\"label\":\"pagination.next\",\"page\":null,\"active\":false}],\"next_page_url\":null,\"path\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications\",\"per_page\":20,\"prev_page_url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=19\",\"to\":400,\"total\":400}"
+        },
+        {
+            "total": 261,
+            "page": 14,
+            "query": {},
+            "json": "{\"current_page\":14,\"data\":[{\"n\":1}],\"first_page_url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=1\",\"from\":261,\"last_page\":14,\"last_page_url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=14\",\"links\":[{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=13\",\"label\":\"pagination.previous\",\"page\":13,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=1\",\"label\":\"1\",\"page\":1,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=2\",\"label\":\"2\",\"page\":2,\"active\":false},{\"url\":null,\"label\":\"...\",\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=5\",\"label\":\"5\",\"page\":5,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=6\",\"label\":\"6\",\"page\":6,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=7\",\"label\":\"7\",\"page\":7,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=8\",\"label\":\"8\",\"page\":8,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=9\",\"label\":\"9\",\"page\":9,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=10\",\"label\":\"10\",\"page\":10,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=11\",\"label\":\"11\",\"page\":11,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=12\",\"label\":\"12\",\"page\":12,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=13\",\"label\":\"13\",\"page\":13,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=14\",\"label\":\"14\",\"page\":14,\"active\":true},{\"url\":null,\"label\":\"pagination.next\",\"page\":null,\"active\":false}],\"next_page_url\":null,\"path\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications\",\"per_page\":20,\"prev_page_url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=13\",\"to\":261,\"total\":261}"
+        },
+        {
+            "total": 261,
+            "page": 7,
+            "query": {},
+            "json": "{\"current_page\":7,\"data\":[{\"n\":1},{\"n\":2},{\"n\":3},{\"n\":4},{\"n\":5},{\"n\":6},{\"n\":7},{\"n\":8},{\"n\":9},{\"n\":10},{\"n\":11},{\"n\":12},{\"n\":13},{\"n\":14},{\"n\":15},{\"n\":16},{\"n\":17},{\"n\":18},{\"n\":19},{\"n\":20}],\"first_page_url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=1\",\"from\":121,\"last_page\":14,\"last_page_url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=14\",\"links\":[{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=6\",\"label\":\"pagination.previous\",\"page\":6,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=1\",\"label\":\"1\",\"page\":1,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=2\",\"label\":\"2\",\"page\":2,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=3\",\"label\":\"3\",\"page\":3,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=4\",\"label\":\"4\",\"page\":4,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=5\",\"label\":\"5\",\"page\":5,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=6\",\"label\":\"6\",\"page\":6,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=7\",\"label\":\"7\",\"page\":7,\"active\":true},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=8\",\"label\":\"8\",\"page\":8,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=9\",\"label\":\"9\",\"page\":9,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=10\",\"label\":\"10\",\"page\":10,\"active\":false},{\"url\":null,\"label\":\"...\",\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=13\",\"label\":\"13\",\"page\":13,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=14\",\"label\":\"14\",\"page\":14,\"active\":false},{\"url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=8\",\"label\":\"pagination.next\",\"page\":8,\"active\":false}],\"next_page_url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=8\",\"path\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications\",\"per_page\":20,\"prev_page_url\":\"http:\\/\\/localhost:3000\\/api\\/v1\\/notifications?page=6\",\"to\":140,\"total\":261}"
+        }
+    ],
+    "pageInputs": [
+        {
+            "input": "1",
+            "page": 1
+        },
+        {
+            "input": "2",
+            "page": 2
+        },
+        {
+            "input": "0",
+            "page": 1
+        },
+        {
+            "input": "-1",
+            "page": 1
+        },
+        {
+            "input": "+3",
+            "page": 3
+        },
+        {
+            "input": "03",
+            "page": 1
+        },
+        {
+            "input": "abc",
+            "page": 1
+        },
+        {
+            "input": "2.5",
+            "page": 1
+        },
+        {
+            "input": "9223372036854775807",
+            "page": 9223372036854775807
+        },
+        {
+            "input": "9223372036854775808",
+            "page": 1
+        },
+        {
+            "input": "",
+            "page": 1
+        }
+    ]
+}
