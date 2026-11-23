@@ -236,3 +236,13 @@ export function createLibraryReviewRepository(): LibraryReviewRepository {
     },
   }
 }
+
+export async function libraryReviewCounts(): Promise<Record<string, number>> {
+  const filters: ReviewFilters = { state: null, search: null, facultyId: null, period: "actual", periodId: null, handledBy: null }
+  const where = sql.join(conditions(filters, await currentProcessId()), sql` and `)
+  const totals = await rows<{ outcome: string | null; total: string }>(sql`select resultado_envio as outcome, count(*) as total
+    from (select ${OUTCOME_SQL} as resultado_envio ${FROM} where ${where}) as envios group by resultado_envio`)
+  const counts: Record<string, number> = { pendiente: 0, firmado: 0, devuelto: 0, reemplazado: 0 }
+  for (const { outcome, total } of totals) if (outcome !== null && outcome in counts) counts[outcome] = Number(total)
+  return counts
+}

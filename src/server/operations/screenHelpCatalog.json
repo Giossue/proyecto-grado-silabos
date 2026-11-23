@@ -1,0 +1,166 @@
+{
+    "/admin/auditoria": {
+        "title": "Auditoría",
+        "content": "Aquí queda anotado quién hizo cada cambio importante y cuándo.\n\nSolo se puede consultar."
+    },
+    "/admin/configuracion/perfil": {
+        "title": "Perfil",
+        "content": "Aquí cambia su nombre. El correo solo se puede cambiar antes de activar la cuenta."
+    },
+    "/admin/configuracion/seguridad": {
+        "title": "Seguridad",
+        "content": "Aquí cambia su contraseña. Si no la recuerda, puede pedir un enlace por correo para crear otra.\n\nTambién puede activar la doble verificación: al entrar le pedirá un código del celular. Guarde los códigos de respaldo en un lugar seguro; sirven si pierde el celular.\n\nAbajo ve los dispositivos donde su cuenta está abierta. Si no reconoce alguno, use «Cerrar otras sesiones» (pide su contraseña) y cambie la contraseña."
+    },
+    "/admin/configuracion/sistema": {
+        "title": "Sistema",
+        "content": "Aquí se configuran los avisos por correo, el asistente y la conexión con la biblioteca.\n\nAbra cada parte para cambiarla. Algunas piden su contraseña antes de guardar."
+    },
+    "/admin/convocatorias": {
+        "title": "Convocatorias",
+        "content": "Aquí abre y controla el tiempo en que los docentes hacen sus sílabos. Solo puede haber una convocatoria en curso a la vez.\n\nAl pulsar una fila se abren sus opciones: pausar, reanudar, prorrogar el plazo, finalizar o eliminar la convocatoria; un período sin convocatoria se puede abrir o eliminar. Cada coordinación inicia después la convocatoria de su carrera.\n\nEl plazo se puede prorrogar 2 veces como máximo, y nunca después del último día de clases del período.\n\nFinalizar le muestra antes cuántos sílabos quedan sin aprobar, y esos quedan solo para consulta. Si no la finaliza, el sistema lo hace solo al terminar el último día de entrega; 3 días antes avisa a docentes y coordinación con sílabos sin aprobar. Una convocatoria finalizada se vuelve a abrir con «Prorrogar plazo», con los mismos límites, si no hay otra en curso y la plantilla está lista para usar. Mientras esté finalizada, los cambios de malla, proyecto de carrera, paralelos, docentes o coordinador no tocan sus sílabos; se aplican al reabrirlase.\n\nEliminar solo se puede con la convocatoria abierta o pausada. Borra todos sus sílabos, incluso los aprobados; antes le muestra cuántos se pierden y le pide un mensaje que llega por aviso y correo a docentes, coordinación y biblioteca.\n\nMientras la convocatoria esté abierta, la plantilla del sílabo no se puede modificar; para corregirla, pause el proceso.\n\nArriba están los indicadores de la convocatoria vigente. El botón rojo de check, abajo a la derecha, abre «Antes de empezar»: los pasos previos (facultades, carreras, cuentas, coordinadores y plantilla); al pulsar uno le muestra en el menú dónde se hace. El de la plantilla queda pendiente mientras no se pueda usar y dice qué le falta. «Nueva convocatoria» se habilita cuando están todos y no hay otra abierta o pausada."
+    },
+    "/admin/estructura-academica": {
+        "title": "Facultades y carreras",
+        "content": "Aquí están las facultades y las carreras de la universidad.\n\nPulse una fila para cambiar sus datos. Nada se borra: lo que ya no se usa se desactiva y se puede volver a activar. Las carreras también se pueden subir con un Excel.\n\nSi hay una convocatoria abierta, un aviso arriba le explica qué pasa con los sílabos si cambia algo."
+    },
+    "/admin/estructura-academica/:section": {
+        "title": "Facultades y carreras",
+        "content": "Aquí están las facultades y las carreras de la universidad.\n\nPulse una fila para cambiar sus datos. Nada se borra: lo que ya no se usa se desactiva y se puede volver a activar. Las carreras también se pueden subir con un Excel.\n\nSi hay una convocatoria abierta, un aviso arriba le explica qué pasa con los sílabos si cambia algo."
+    },
+    "/admin/notificaciones": {
+        "title": "Notificaciones",
+        "content": "Aquí están sus avisos del período actual.\n\nPulse «Abrir» para ir a donde corresponde, o «Marcar leída» para quitarlo de los nuevos."
+    },
+    "/admin/plantilla": {
+        "title": "Plantilla del sílabo",
+        "content": "Es el formato del sílabo, el mismo para todas las carreras.\n\n«Editar» abre el editor y pide escribir «editar plantilla». Ahí escribe directo en la hoja, marca si cada campo «Se puede editar» y pulsa «Guardar». El logo de la universidad y «Editar JSON» se guardan al instante, sin pasar por «Guardar».\n\nEn el editor puede insertar datos del sistema (con el botón o escribiendo «/»), duplicar, mover y arrastrar campos y secciones, y deshacer cualquier cambio. Con «Tipo de respuesta» pone respuestas para todas las carreras: obligatoria o no, ayuda, límites, lista o desplegable, y «Mostrar solo si». Con «Tabla repetible» crea tablas sin JSON. Con «Límite de caracteres» fija cuánto puede escribir el docente en un campo editable. El ojo muestra el borrador sin guardar y los problemas se marcan en rojo mientras edita. Antes de guardar se le avisa qué sílabos cambian.\n\nCon una convocatoria abierta la plantilla está bloqueada. Para cambiarla, pause la convocatoria. Al reanudar se le pedirá confirmación: los sílabos de este período se adaptan a la plantilla nueva, porque el formato es único para toda la universidad. Se conserva lo escrito en los campos que siguen encajando; los enviados o aprobados vuelven a borrador para enviarse y firmarse de nuevo.\n\nLos sílabos de períodos anteriores no se tocan."
+    },
+    "/admin/usuarios": {
+        "title": "Usuarios y roles",
+        "content": "Aquí crea las cuentas de coordinación, docentes y biblioteca, una por una o con un Excel. Cada persona recibe un correo para entrar por primera vez.\n\nPulse una persona para ver sus datos, cambiar sus roles o quitarle el acceso. Una persona puede tener más de un rol."
+    },
+    "/biblioteca/configuracion/notificaciones": {
+        "title": "Avisos por correo",
+        "content": "Elija qué avisos le llegan también a su correo. En el sistema los verá siempre."
+    },
+    "/biblioteca/configuracion/perfil": {
+        "title": "Perfil",
+        "content": "Aquí ve los datos de su cuenta. Si su nombre o correo están mal, pida el cambio a Administración."
+    },
+    "/biblioteca/configuracion/seguridad": {
+        "title": "Seguridad",
+        "content": "Aquí cambia su contraseña. Si no la recuerda, puede pedir un enlace por correo para crear otra.\n\nTambién puede activar la doble verificación: al entrar le pedirá un código del celular. Guarde los códigos de respaldo en un lugar seguro; sirven si pierde el celular.\n\nAbajo ve los dispositivos donde su cuenta está abierta. Si no reconoce alguno, use «Cerrar otras sesiones» (pide su contraseña) y cambie la contraseña."
+    },
+    "/biblioteca/historial": {
+        "title": "Historial de biblioteca",
+        "content": "Aquí están los sílabos de períodos que ya terminaron. Solo se pueden ver.\n\nFiltre por período o facultad. «Solo los míos» muestra los que usted atendió."
+    },
+    "/biblioteca/notificaciones": {
+        "title": "Notificaciones",
+        "content": "Aquí están sus avisos del período actual.\n\nPulse «Abrir» para ir a donde corresponde, o «Marcar leída» para quitarlo de los nuevos."
+    },
+    "/biblioteca/revisiones": {
+        "title": "Revisiones de biblioteca",
+        "content": "Aquí llegan, de todas las carreras, los sílabos que envían los docentes, para que revise sus libros antes que Coordinación.\n\nPulse uno para revisarlo. Si los libros están bien, lo firma y pasa a Coordinación, que da la aprobación final. Si algo falla, lo devuelve al docente.\n\nPuede filtrar por facultad si se reparten el trabajo; el sistema recuerda su elección. Lo de convocatorias anteriores está en «Historial»."
+    },
+    "/biblioteca/revisiones/:revision": {
+        "title": "Revisión de bibliografía",
+        "content": "Revise que los libros del sílabo estén en la biblioteca y que sus datos estén completos y bien escritos.\n\nSi todo está bien, pulse «Firmar y enviar a coordinación» y use su archivo de firma electrónica. Si hay un problema, pulse «Devolver al docente» y marque qué debe corregir. Cuando el docente lo corrija, vuelve directo a usted."
+    },
+    "/coordinacion/configuracion/notificaciones": {
+        "title": "Avisos por correo",
+        "content": "Elija qué avisos le llegan también a su correo. En el sistema los verá siempre."
+    },
+    "/coordinacion/configuracion/perfil": {
+        "title": "Perfil",
+        "content": "Aquí ve los datos de su cuenta. Si su nombre o correo están mal, pida el cambio a Administración."
+    },
+    "/coordinacion/configuracion/seguridad": {
+        "title": "Seguridad",
+        "content": "Aquí cambia su contraseña. Si no la recuerda, puede pedir un enlace por correo para crear otra.\n\nTambién puede activar la doble verificación: al entrar le pedirá un código del celular. Guarde los códigos de respaldo en un lugar seguro; sirven si pierde el celular.\n\nAbajo ve los dispositivos donde su cuenta está abierta. Si no reconoce alguno, use «Cerrar otras sesiones» (pide su contraseña) y cambie la contraseña."
+    },
+    "/coordinacion/docentes": {
+        "title": "Docentes de la carrera",
+        "content": "Aquí están los docentes de su carrera.\n\nCree uno o suba varios con un Excel; cada uno recibe un correo para entrar. Si la persona ya tiene cuenta, solo se suma a su carrera; si no, recibe el enlace de registro. Pulse un docente para ver sus datos, reenviarle la invitación si venció sin aceptarla o quitarlo de la carrera; su cuenta (contraseña y datos) la gestiona Administración. Mientras haya una convocatoria en curso no se puede quitar a nadie."
+    },
+    "/coordinacion/historial": {
+        "title": "Historial",
+        "content": "Aquí están los sílabos aprobados de su carrera en períodos que ya terminaron, del período más reciente al más antiguo. Solo se pueden ver.\n\nBusque por materia o código, o elija un período. «Elaborado por» es el docente que envió el sílabo, aunque ya no dicte ese paralelo ni esté en la carrera. Pulse una fila para ver el sílabo o el ícono «Ver PDF» para abrir el documento firmado."
+    },
+    "/coordinacion/malla": {
+        "title": "Malla curricular",
+        "content": "Aquí ve la malla de su carrera: sus ciclos, sus materias y qué materia es requisito de otra.\n\nPulse «Editar malla» para cambiarla. «Relaciones» muestra los requisitos en una lista.\n\nSi hay una convocatoria abierta, la malla no se puede cambiar; primero páusela."
+    },
+    "/coordinacion/materias-asignaciones": {
+        "title": "Materias y asignaciones",
+        "content": "Aquí prepara las materias del período: sus paralelos, su jornada y el docente de cada uno.\n\nMarque una o varias materias para hacer cambios a la vez, o pulse una para cambiar sus paralelos.\n\nSi cambia el docente de un paralelo, su sílabo empieza de cero. El sistema le pregunta antes."
+    },
+    "/coordinacion/notificaciones": {
+        "title": "Notificaciones",
+        "content": "Aquí están sus avisos del período actual.\n\nPulse «Abrir» para ir a donde corresponde, o «Marcar leída» para quitarlo de los nuevos."
+    },
+    "/coordinacion/proyecto-carrera": {
+        "title": "Proyecto de carrera",
+        "content": "Aquí escribe los campos de Carrera del sílabo de cada materia. Lo que escriba le llega fijo al docente; un campo que deje vacío lo escribe el docente.\n\nPulse una materia para abrir su página, o llene varias a la vez con «Importar desde Excel».\n\nEn «Documentos de apoyo» suba archivos para que sus docentes conozcan mejor sus materias.\n\nSi hay una convocatoria abierta, no se puede cambiar; primero páusela."
+    },
+    "/coordinacion/proyecto-carrera/:subject": {
+        "title": "Proyecto de carrera de una materia",
+        "content": "Elija una sección a la izquierda y escriba sus campos a la derecha. Lo que escriba le llega fijo al docente.\n\nCon «Espacio para el docente» deja un espacio para que él responda: texto libre, elegir una o elegir varias de una lista que usted escribe ahí mismo. Un campo que deje vacío lo escribe el docente completo.\n\nLas respuestas que puso Administración llegan ya puestas. Con «Opciones de la respuesta» cambia sus opciones para esta materia, no el tipo, y puede volver a las de la plantilla. No puede quitar una opción que la plantilla usa para mostrar u ocultar otra parte.\n\nEl ojo muestra cómo recibirá el sílabo el docente. Pulse «Guardar proyecto de carrera» antes de salir.\n\nSi hay una convocatoria abierta, no se puede cambiar; primero páusela."
+    },
+    "/coordinacion/revisiones": {
+        "title": "Revisión de sílabos",
+        "content": "Arriba ve el aviso con el plazo de entrega. Desde aquí abre, pausa o reanuda la convocatoria de su carrera.\n\nEl botón rojo de check abre «Antes de empezar»: lo que falta preparar antes de abrir la convocatoria.\n\n«Cola de revisión» tiene los sílabos cuya bibliografía ya verificó Biblioteca. Pulse uno para revisarlo: puede pedir correcciones o firmarlo y aprobarlo. «Seguimiento» muestra cómo va cada sílabo."
+    },
+    "/coordinacion/revisiones/:revision": {
+        "title": "Detalle de la revisión",
+        "content": "Aquí lee el sílabo que envió el docente, con la bibliografía ya verificada por Biblioteca.\n\nSi falta algo, pulse «Solicitar corrección» y escriba qué cambiar. Si está bien, pulse «Firmar y aprobar» y use su archivo de firma electrónica: el sílabo queda aprobado y se genera el PDF.\n\nCon «Historial» y «Comparar» ve qué cambió entre versiones."
+    },
+    "/coordinacion/revisiones/:revision/documentos": {
+        "title": "Documentos aprobados",
+        "content": "Aquí ve o descarga el PDF del sílabo aprobado, con las tres firmas.\n\nSi el PDF todavía se está preparando, espere un momento. Si falla, pulse «Reintentar»."
+    },
+    "/coordinacion/revisiones/:revision/historial": {
+        "title": "Historial de versiones",
+        "content": "Aquí ve cada versión que envió el docente y los comentarios de cada una.\n\nPulse una versión para verla. «Resaltar cambios» marca lo que cambió."
+    },
+    "/docente/configuracion/notificaciones": {
+        "title": "Avisos por correo",
+        "content": "Elija qué avisos le llegan también a su correo. En el sistema los verá siempre."
+    },
+    "/docente/configuracion/perfil": {
+        "title": "Perfil",
+        "content": "Aquí ve los datos de su cuenta. Si su nombre o correo están mal, pida el cambio a Administración.\n\nSu formación y experiencia se escribe una sola vez y pasa a todos sus sílabos."
+    },
+    "/docente/configuracion/seguridad": {
+        "title": "Seguridad",
+        "content": "Aquí cambia su contraseña. Si no la recuerda, puede pedir un enlace por correo para crear otra.\n\nTambién puede activar la doble verificación: al entrar le pedirá un código del celular. Guarde los códigos de respaldo en un lugar seguro; sirven si pierde el celular.\n\nAbajo ve los dispositivos donde su cuenta está abierta. Si no reconoce alguno, use «Cerrar otras sesiones» (pide su contraseña) y cambie la contraseña."
+    },
+    "/docente/documentos-apoyo": {
+        "title": "Documentos de apoyo",
+        "content": "Archivos que su coordinación le dejó para conocer mejor sus materias. Pulse uno para verlo."
+    },
+    "/docente/historial": {
+        "title": "Historial",
+        "content": "Aquí están sus sílabos de períodos anteriores. Pulse una carrera para verlos."
+    },
+    "/docente/historial/:career": {
+        "title": "Historial",
+        "content": "Sus sílabos de períodos anteriores en esta carrera. Pulse uno para verlo."
+    },
+    "/docente/mis-silabos": {
+        "title": "Mis sílabos",
+        "content": "Arriba ve el aviso con el plazo de la convocatoria.\n\nDebajo tiene un sílabo por cada materia que dicta. Pulse uno para empezar o seguir.\n\nCuando lo envía, no se puede cambiar mientras lo revisan. Si le piden correcciones, puede volver a editarlo. Sus sílabos de períodos anteriores están en «Historial». Si Coordinación compartió material de la carrera, el ícono de carpeta «Documentos de apoyo» lo muestra; cada documento se abre en una ventana aparte."
+    },
+    "/docente/mis-silabos/:syllabus": {
+        "title": "Su sílabo",
+        "content": "Aquí llena su sílabo. Los campos con asterisco son suyos; lo demás ya viene escrito. Todo se guarda solo mientras escribe.\n\nCuando termine, pulse «Enviar». La primera vez lo firma con su archivo de firma electrónica."
+    },
+    "/docente/notificaciones": {
+        "title": "Notificaciones",
+        "content": "Aquí están sus avisos del período actual.\n\nPulse «Abrir» para ir a donde corresponde, o «Marcar leída» para quitarlo de los nuevos."
+    },
+    "/docente/revisiones/:revision/documentos": {
+        "title": "Documentos aprobados",
+        "content": "Aquí ve o descarga el PDF del sílabo aprobado, con las tres firmas.\n\nSi el PDF todavía se está preparando, espere un momento. Si falla, pulse «Reintentar»."
+    }
+}

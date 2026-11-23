@@ -10,6 +10,8 @@ export type Rule =
   | { in: string[] }
   | { min: number }
   | { max: number }
+  | { regex: RegExp }
+  | { check: (value: PhpValue) => boolean; message: string }
   | { exists: (value: PhpValue) => Promise<boolean> }
 
 const MESSAGES = {
@@ -20,6 +22,7 @@ const MESSAGES = {
   boolean: "El campo :attribute debe ser verdadero o falso.",
   in: "El valor seleccionado en :attribute no es válido.",
   exists: "El valor seleccionado en :attribute no es válido.",
+  regex: "El formato del campo :attribute no es válido.",
   min: {
     array: "El campo :attribute debe tener al menos :min elementos.",
     numeric: "El campo :attribute debe ser al menos :min.",
@@ -85,6 +88,8 @@ async function passes(rule: Rule, value: PhpValue | undefined, rules: Rule[]): P
   if (typeof rule === "object" && "in" in rule) return !isPhpArray(value) && rule.in.includes(phpString(value))
   if (typeof rule === "object" && "min" in rule) return size(value, rules) >= rule.min
   if (typeof rule === "object" && "max" in rule) return size(value, rules) <= rule.max
+  if (typeof rule === "object" && "check" in rule) return rule.check(value as PhpValue)
+  if (typeof rule === "object" && "regex" in rule) return (typeof value === "string" || typeof value === "number") && rule.regex.test(String(value))
   if (typeof rule === "object" && "exists" in rule) return value === undefined ? true : rule.exists(value)
   return true
 }
@@ -94,6 +99,8 @@ function message(rule: Rule, attribute: string, rules: Rule[]): string {
   if (typeof rule === "string") template = MESSAGES[rule as "string"]
   else if ("in" in rule) template = MESSAGES.in
   else if ("exists" in rule) template = MESSAGES.exists
+  else if ("regex" in rule) template = MESSAGES.regex
+  else if ("check" in rule) template = rule.message
   else if ("min" in rule) template = MESSAGES.min[sizeType(rules)].replace(":min", String(rule.min))
   else template = MESSAGES.max[sizeType(rules)].replace(":max", String(rule.max))
   return template.replace(":attribute", attribute)
