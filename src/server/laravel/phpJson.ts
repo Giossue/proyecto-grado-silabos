@@ -1,3 +1,24 @@
+import { randomBytes } from "node:crypto"
+
+const FLOAT_TAG = `php-float-${randomBytes(8).toString("hex")}:`
+const FLOAT_MARKER = new RegExp(`"${FLOAT_TAG}(-?[0-9.eE+-]+)"`, "g")
+
+class PhpFloat {
+  constructor(readonly value: number) {}
+
+  toJSON(): string {
+    return `${FLOAT_TAG}${this.value}`
+  }
+}
+
+export function phpFloat(value: number): PhpFloat {
+  return new PhpFloat(value)
+}
+
+function writeFloat(literal: string): string {
+  return /^-?\d+$/.test(literal) ? `${literal}.0` : literal
+}
+
 function escapeForPhp(json: string): string {
   return json.replace(/[/\u007f-￿]/g, (character) => {
     if (character === "/") return "\\/"
@@ -7,5 +28,6 @@ function escapeForPhp(json: string): string {
 }
 
 export function phpJsonEncode(value: unknown, options: { pretty?: boolean } = {}): string {
-  return escapeForPhp(options.pretty ? JSON.stringify(value, null, 4) : JSON.stringify(value))
+  const json = options.pretty ? JSON.stringify(value, null, 4) : JSON.stringify(value)
+  return escapeForPhp(json.replace(FLOAT_MARKER, (_, literal: string) => writeFloat(literal)))
 }
