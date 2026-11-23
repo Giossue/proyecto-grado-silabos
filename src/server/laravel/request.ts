@@ -1,5 +1,9 @@
 const TRIMMED = /^[\s﻿​‎]+|[\s﻿​‎]+$/gu
 
+export function laravelTrim(value: string): string {
+  return value.replace(TRIMMED, "")
+}
+
 export type LaravelQuery = Map<string, string | null>
 
 export function laravelQuery(url: URL): LaravelQuery {

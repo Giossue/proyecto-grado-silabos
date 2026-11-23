@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<rss version="2.0" xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:atom="http://www.w3.org/2005/Atom">
+<channel>
+<title>Catálogo de prueba</title>
+<opensearch:totalResults>2</opensearch:totalResults>
+<item>
+<title> Proyectos de inversión: / </title>
+<dc:identifier>ISBN:9789563431063</dc:identifier>
+<link>/cgi-bin/koha/opac-detail.pl?biblionumber=10525</link>
+<guid>/cgi-bin/koha/opac-detail.pl?biblionumber=10525</guid>
+</item>
+<item>
+<title> Libro que falla </title>
+<link>/cgi-bin/koha/opac-detail.pl?biblionumber=999</link>
+<guid>/cgi-bin/koha/opac-detail.pl?biblionumber=999</guid>
+</item>
+</channel>
+</rss>

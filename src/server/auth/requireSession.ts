@@ -47,22 +47,26 @@ function decryptCookie(name: string, value: string | undefined, deps: BridgeDeps
   }
 }
 
-async function readAttributes(sessionId: string | null, store: SessionStore, deps: BridgeDeps): Promise<Record<string, unknown>> {
-  if (sessionId === null || !SESSION_ID.test(sessionId)) return {}
+type SessionRead = { attributes: Record<string, unknown>; liveId: string | null }
+
+async function readSession(sessionId: string | null, store: SessionStore, deps: BridgeDeps): Promise<SessionRead> {
+  const none: SessionRead = { attributes: {}, liveId: null }
+  if (sessionId === null || !SESSION_ID.test(sessionId)) return none
   const row = await store.findSession(sessionId)
-  if (!row || row.lastActivity < deps.now() - deps.config.lifetimeMinutes * 60) return {}
+  if (!row || row.lastActivity < deps.now() - deps.config.lifetimeMinutes * 60) return none
   let json: string
   try {
     json = decrypt(Buffer.from(row.payload, "base64").toString("utf8"), deps.config.key, true)
   } catch (error) {
-    if (error instanceof DecryptError) return {}
+    if (error instanceof DecryptError) return none
     throw error
   }
   try {
     const data: unknown = JSON.parse(json)
-    return typeof data === "object" && data !== null && !Array.isArray(data) ? (data as Record<string, unknown>) : {}
+    if (typeof data !== "object" || data === null || Array.isArray(data)) return none
+    return { attributes: data as Record<string, unknown>, liveId: sessionId }
   } catch {
-    return {}
+    return none
   }
 }
 
@@ -87,17 +91,24 @@ function passesCsrf(request: Request, attributes: Record<string, unknown>, deps:
   return typeof sessionToken === "string" && typeof token === "string" && hashEquals(sessionToken, token)
 }
 
-export async function authenticate(
+type Authentication = { outcome: LaravelSession | Response | Deferred; touch: string | null }
+
+async function authenticateAndTrack(request: Request, requirements: SessionRequirements, deps: BridgeDeps): Promise<Authentication> {
+  if (!isStateful(request, deps.config.statefulDomains)) return { outcome: unauthenticated(), touch: null }
+  const cookies = parseCookieHeader(request.headers.get("cookie"))
+  const sessionId = decryptCookie(deps.config.cookieName, cookies.get(deps.config.cookieName), deps)
+  const { attributes, liveId } = await readSession(sessionId, deps.store, deps)
+  if (!passesCsrf(request, attributes, deps)) return { outcome: laravelHttpError(419, "CSRF token mismatch."), touch: null }
+  return { outcome: await resolveUser(request, requirements, deps, cookies, attributes), touch: liveId }
+}
+
+async function resolveUser(
   request: Request,
   requirements: SessionRequirements,
   deps: BridgeDeps,
+  cookies: Map<string, string>,
+  attributes: Record<string, unknown>,
 ): Promise<LaravelSession | Response | Deferred> {
-  if (!isStateful(request, deps.config.statefulDomains)) return unauthenticated()
-  const cookies = parseCookieHeader(request.headers.get("cookie"))
-  const sessionId = decryptCookie(deps.config.cookieName, cookies.get(deps.config.cookieName), deps)
-  const attributes = await readAttributes(sessionId, deps.store, deps)
-  if (!passesCsrf(request, attributes, deps)) return laravelHttpError(419, "CSRF token mismatch.")
-
   const userId = attributes[loginSessionKey()]
   const user = typeof userId === "string" && UUID.test(userId) ? await deps.store.findUser(userId) : null
   if (!user) return cookies.has(recallerCookieName()) ? DEFER : unauthenticated()
@@ -108,6 +119,9 @@ export async function authenticate(
     typeof storedHash === "string" &&
     (hashEquals(hashPasswordForCookie(user.passwordHash, deps.config.appKey), storedHash) || hashEquals(user.passwordHash, storedHash))
   if (!validHash) return unauthenticated()
+
+  const early = requirements.afterAuthentication ? await requirements.afterAuthentication(user) : null
+  if (early) return early
 
   if (!user.active) return laravelHttpError(403, "La cuenta está desactivada.")
   if (requirements.verified && user.emailVerifiedAt === null) {
@@ -124,6 +138,14 @@ export async function authenticate(
   return { user, activeRole: resolution.assignment, eligibleRoles, attributes }
 }
 
+export async function authenticate(
+  request: Request,
+  requirements: SessionRequirements,
+  deps: BridgeDeps,
+): Promise<LaravelSession | Response | Deferred> {
+  return (await authenticateAndTrack(request, requirements, deps)).outcome
+}
+
 export function defaultBridgeDeps(): BridgeDeps {
   return {
     store: createSessionStore(),
@@ -138,7 +160,8 @@ export async function requireSession(
   requirements: SessionRequirements = {},
   deps: BridgeDeps = defaultBridgeDeps(),
 ): Promise<LaravelSession | Response> {
-  const outcome = await authenticate(request, requirements, deps)
+  const { outcome, touch } = await authenticateAndTrack(request, requirements, deps)
   if ("deferred" in outcome) return deps.forward(request)
+  if (touch !== null) await deps.store.touchSession(touch, deps.now())
   return outcome
 }

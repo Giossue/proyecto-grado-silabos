@@ -1,7 +1,7 @@
 import "server-only"
 import { sql, type SQL } from "drizzle-orm"
 import { db } from "@/db"
-import type { NotificationRecord, NotificationRepository } from "./notifications"
+import type { NotificationRecord, NotificationRepository, NotificationWriteRepository, StoredNotification } from "./notifications"
 import type { DestinationLookups } from "./notificationDestination"
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -79,6 +79,38 @@ export function createNotificationRepository(): NotificationRepository {
         sql`select count(*) as total from notificaciones n where ${visibleTo(userId)} and n.leido_en is null`,
       )
       return Number(total)
+    },
+  }
+}
+
+export function createNotificationWriteRepository(): NotificationWriteRepository {
+  return {
+    async find(id) {
+      const [row] = await rows<{
+        notificacion_id: string
+        usuario_id: string
+        tipo_notificacion: string
+        tipo_recurso: string | null
+        recurso_id: string | null
+        leido_en: string | null
+      }>(sql`select notificacion_id::text as notificacion_id, usuario_id::text as usuario_id, tipo_notificacion, tipo_recurso,
+               recurso_id::text as recurso_id, leido_en::text as leido_en
+             from notificaciones where notificacion_id = ${id} limit 1`)
+      if (!row) return null
+      return {
+        id: row.notificacion_id,
+        userId: row.usuario_id,
+        type: row.tipo_notificacion,
+        resourceType: row.tipo_recurso,
+        resourceId: row.recurso_id,
+        readAt: row.leido_en,
+      } satisfies StoredNotification
+    },
+    async markRead(id, at) {
+      await db.execute(sql`update notificaciones set leido_en = to_timestamp(${at}) where notificacion_id = ${id}`)
+    },
+    async markAllRead(userId, at) {
+      await db.execute(sql`update notificaciones n set leido_en = to_timestamp(${at}) where ${visibleTo(userId)} and n.leido_en is null`)
     },
   }
 }

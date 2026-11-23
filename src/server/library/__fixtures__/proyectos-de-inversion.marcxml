@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.loc.gov/MARC21/slim http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd"
+    xmlns="http://www.loc.gov/MARC21/slim">
+
+  <leader>01951nam a22003497a 4500</leader>
+  <controlfield tag="001">BHTM2663</controlfield>
+  <controlfield tag="005">20261020221322.0</controlfield>
+  <controlfield tag="006">a||||gr|||| 00| 0 </controlfield>
+  <controlfield tag="007">ta</controlfield>
+  <controlfield tag="008">161204t        ec ||||gr|||| 00| 0 spa d</controlfield>
+  <datafield tag="020" ind1=" " ind2=" ">
+    <subfield code="a">9789563431063</subfield>
+  </datafield>
+  <datafield tag="040" ind1=" " ind2=" ">
+    <subfield code="a">UEB</subfield>
+    <subfield code="b">spa</subfield>
+    <subfield code="c">UEB</subfield>
+  </datafield>
+  <datafield tag="041" ind1="0" ind2=" ">
+    <subfield code="a">spa</subfield>
+  </datafield>
+  <datafield tag="082" ind1="0" ind2="4">
+    <subfield code="a">658.404 </subfield>
+    <subfield code="b">S2411p</subfield>
+  </datafield>
+  <datafield tag="100" ind1="1" ind2=" ">
+    <subfield code="a">Sapag Chain, Nassir</subfield>
+    <subfield code="9">3788</subfield>
+  </datafield>
+  <datafield tag="245" ind1="1" ind2="0">
+    <subfield code="a">Proyectos de inversi&#xF3;n:</subfield>
+    <subfield code="c">formulaci&#xF3;n y evaluaci&#xF3;n / Nassir Sapag Chain</subfield>
+  </datafield>
+  <datafield tag="250" ind1=" " ind2=" ">
+    <subfield code="a">Segunda edici&#xF3;n</subfield>
+  </datafield>
+  <datafield tag="264" ind1=" " ind2="1">
+    <subfield code="a">Santiago de Chile, Chile :</subfield>
+    <subfield code="b">Pearson Educaci&#xF3;n, </subfield>
+    <subfield code="c">2011</subfield>
+  </datafield>
+  <datafield tag="300" ind1=" " ind2=" ">
+    <subfield code="a">544 p&#xE1;ginas ;</subfield>
+    <subfield code="b">gr&#xE1;ficas ;  tablas ;</subfield>
+    <subfield code="c">21 cm.</subfield>
+  </datafield>
+  <datafield tag="336" ind1=" " ind2=" ">
+    <subfield code="a">texto</subfield>
+  </datafield>
+  <datafield tag="337" ind1=" " ind2=" ">
+    <subfield code="a">sin mediaci&#xF3;n</subfield>
+  </datafield>
+  <datafield tag="338" ind1=" " ind2=" ">
+    <subfield code="a">volumen</subfield>
+  </datafield>
+  <datafield tag="500" ind1=" " ind2=" ">
+    <subfield code="a">Inclye &#xED;ndice.</subfield>
+  </datafield>
+  <datafield tag="505" ind1="0" ind2=" ">
+    <subfield code="a">Incluye &#xCD;ndice tem&#xE1;tico y Bibliograf&#xED;a.
+Conceptos introductorios - Estudio del mercado - T&#xE9;cnicas de predicci&#xF3;n - Estudio t&#xE9;cnico del proyecto - Aspectos tributarios y administrativos - Costos e inversiones - C&#xE1;lculo de beneficios del proyecto - C&#xF3;mo construir los flujos de caja - C&#xE1;lculo y an&#xE1;lisis de la rentabilidad - Riesgo e incertidumbre - C&#xF3;mo calcular el costo de capital - An&#xE1;lisis para la optimizaci&#xF3;n - Proyectos en empresas en marcha - Estudio de casos
+La estructura cl&#xE1;sica que divide el estudio de proyectos entre preparaci&#xF3;n y evaluaci&#xF3;n o entre formulaci&#xF3;n y evaluaci&#xF3;n. Se modific&#xF3; el proceso de estudio de proyectos en tres etapas: la formulaci&#xF3;n, la preparaci&#xF3;n y la evaluaci&#xF3;n. Este libro explica c&#xF3;mo construir los flujos de caja del negocio, del inversionista y de la capacidad de pago de deudas; los de creaci&#xF3;n de una nueva empresa y los de mejor en empresas en marcha.</subfield>
+  </datafield>
+  <datafield tag="650" ind1="1" ind2="4">
+    <subfield code="a">Mercado financiero. </subfield>
+    <subfield code="9">7054</subfield>
+  </datafield>
+  <datafield tag="650" ind1="2" ind2="4">
+    <subfield code="a">Estados financieros. </subfield>
+    <subfield code="9">62139</subfield>
+  </datafield>
+  <datafield tag="650" ind1="2" ind2="4">
+    <subfield code="a">Crecimiento econ&#xF3;mico.</subfield>
+    <subfield code="9">1203</subfield>
+  </datafield>
+  <datafield tag="650" ind1="2" ind2="4">
+    <subfield code="a">Recursos financieros. </subfield>
+    <subfield code="9">62140</subfield>
+  </datafield>
+  <datafield tag="650" ind1="2" ind2="4">
+    <subfield code="a">Recursos financieros.  </subfield>
+    <subfield code="9">62140</subfield>
+  </datafield>
+  <datafield tag="650" ind1="2" ind2="4">
+    <subfield code="a">Oferta y demanda. </subfield>
+    <subfield code="9">1199</subfield>
+  </datafield>
+  <datafield tag="942" ind1=" " ind2=" ">
+    <subfield code="c">BK</subfield>
+    <subfield code="2">ddc</subfield>
+  </datafield>
+  <datafield tag="999" ind1=" " ind2=" ">
+    <subfield code="c">10525</subfield>
+    <subfield code="d">10525</subfield>
+  </datafield>
+  <datafield tag="952" ind1=" " ind2=" ">
+    <subfield code="0">0</subfield>
+    <subfield code="1">0</subfield>
+    <subfield code="2">ddc</subfield>
+    <subfield code="4">0</subfield>
+    <subfield code="7">0</subfield>
+    <subfield code="a">BHTM</subfield>
+    <subfield code="b">BHTM</subfield>
+    <subfield code="d">2018-05-07</subfield>
+    <subfield code="g">41.34</subfield>
+    <subfield code="i">2998</subfield>
+    <subfield code="k">15403475</subfield>
+    <subfield code="l">37</subfield>
+    <subfield code="m">3</subfield>
+    <subfield code="o">658.404 S2411p </subfield>
+    <subfield code="p">15403475</subfield>
+    <subfield code="r">2020-09-29 00:00:00</subfield>
+    <subfield code="s">2019-11-29</subfield>
+    <subfield code="t">Ej.1</subfield>
+    <subfield code="w">2018-05-07</subfield>
+    <subfield code="y">BK</subfield>
+    <subfield code="z">ESTANTER&#xCD;A 20.D</subfield>
+  </datafield>
+  </record>

@@ -63,6 +63,10 @@ export function fakeStore(world: FakeWorld): SessionStore {
     findSession: async (id) => world.sessions.get(id) ?? null,
     findUser: async (id) => world.users.find((user) => user.id === id) ?? null,
     effectiveRoleAssignments: async (userId) => world.assignments.filter((assignment) => assignment.userId === userId),
+    touchSession: async (id, lastActivity) => {
+      const row = world.sessions.get(id)
+      if (row) world.sessions.set(id, { ...row, lastActivity })
+    },
   }
 }
 

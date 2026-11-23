@@ -203,3 +203,48 @@ describe("requireSession", () => {
     })
   })
 })
+
+describe("session keep-alive", () => {
+  const post = (headers: Record<string, string>) => apiRequest("/api/v1/notifications/read-all", { method: "POST", cookie, headers })
+
+  it("refreshes only last_activity when Next serves the request, like Laravel's database handler", async () => {
+    withSession(loggedInAttributes(), NOW - 600)
+    const before = world.sessions.get(SESSION_ID)?.payload
+    const result = await requireSession(apiRequest("/api/v1/notifications", { cookie }), { verified: true }, fakeDeps(world, forwarded))
+    expect(result).not.toBeInstanceOf(Response)
+    expect(world.sessions.get(SESSION_ID)).toEqual({ payload: before, lastActivity: NOW })
+  })
+
+  it("also refreshes it when the answer is an error Laravel renders inside the session", async () => {
+    withSession(loggedInAttributes({ active_role_assignment_id: undefined }), NOW - 600)
+    world.assignments = [makeAssignment(), makeAssignment({ id: "r-2" })]
+    await expectError(
+      await requireSession(apiRequest("/api/v1/dashboard", { cookie }), { verified: true, activeRole: "required" }, fakeDeps(world)),
+      409,
+      '{\n    "message": "Seleccione un rol vigente."\n}',
+    )
+    expect(world.sessions.get(SESSION_ID)?.lastActivity).toBe(NOW)
+  })
+
+  it("leaves the row alone on a CSRF mismatch, an expired session, or a request Laravel answers", async () => {
+    withSession(loggedInAttributes(), NOW - 600)
+    await requireSession(post({ "x-xsrf-token": xsrfHeader("other") }), {}, fakeDeps(world))
+    expect(world.sessions.get(SESSION_ID)?.lastActivity).toBe(NOW - 600)
+
+    withSession(loggedInAttributes(), NOW - 121 * 60)
+    await requireSession(apiRequest("/api/v1/notifications", { cookie }), {}, fakeDeps(world))
+    expect(world.sessions.get(SESSION_ID)?.lastActivity).toBe(NOW - 121 * 60)
+
+    withSession(loggedInAttributes({ active_role_assignment_id: undefined }), NOW - 600)
+    await requireSession(apiRequest("/api/v1/dashboard", { cookie }), { activeRole: "required" }, fakeDeps(world, forwarded))
+    expect(forwarded).toHaveLength(1)
+    expect(world.sessions.get(SESSION_ID)?.lastActivity).toBe(NOW - 600)
+  })
+
+  it("does not touch anything without a stateful Referer", async () => {
+    withSession(loggedInAttributes(), NOW - 600)
+    const request = new Request("http://localhost:3000/api/v1/notifications", { headers: { accept: "application/json", cookie } })
+    await requireSession(request, {}, fakeDeps(world))
+    expect(world.sessions.get(SESSION_ID)?.lastActivity).toBe(NOW - 600)
+  })
+})

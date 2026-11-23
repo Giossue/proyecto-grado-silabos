@@ -20,6 +20,7 @@ export interface SessionStore {
   findSession(id: string): Promise<SessionRecord | null>
   findUser(id: string): Promise<SessionUser | null>
   effectiveRoleAssignments(userId: string): Promise<RoleAssignmentRecord[]>
+  touchSession(id: string, lastActivity: number): Promise<void>
 }
 
 export type BridgeConfig = {
@@ -47,4 +48,5 @@ export type LaravelSession = {
 export type SessionRequirements = {
   verified?: boolean
   activeRole?: "required" | "optional"
+  afterAuthentication?: (user: SessionUser) => Promise<Response | null> | Response | null
 }

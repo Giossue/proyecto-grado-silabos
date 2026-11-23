@@ -65,5 +65,8 @@ export function createSessionStore(): SessionStore {
         }),
       )
     },
+    async touchSession(id, lastActivity) {
+      await db.execute(sql`update sesiones set last_activity = ${lastActivity} where id = ${id}`)
+    },
   }
 }
