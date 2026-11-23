@@ -28,7 +28,7 @@ export function laravelBridgeConfig(): BridgeConfig {
     key: parseAppKey(appKey),
     appKey,
     cookieName: process.env.LARAVEL_SESSION_COOKIE ?? `${laravelSlug(appName)}-session`,
-    lifetimeMinutes: Number(process.env.LARAVEL_SESSION_LIFETIME ?? 120),
+    lifetimeMinutes: Number(process.env.LARAVEL_SESSION_LIFETIME ?? 240),
     statefulDomains: (process.env.SANCTUM_STATEFUL_DOMAINS ?? "localhost:3000")
       .split(",")
       .map((domain) => domain.trim())

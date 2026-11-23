@@ -9,7 +9,6 @@ import { PasswordInput } from "@/components/PasswordInput"
 import { TextLink } from "@/components/TextLink"
 import { FeedbackAlert } from "@/components/domain/FeedbackAlert"
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Spinner } from "@/components/ui/spinner"
@@ -26,7 +25,6 @@ export default function LoginPage() {
   const status = statusValues.length === 1 ? statusValues[0] : null
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [remember, setRemember] = useState(false)
   const [errors, setErrors] = useState<Record<string, string[]>>({})
   const [error, setError] = useState<string | null>(null)
   const [processing, setProcessing] = useState(false)
@@ -43,7 +41,7 @@ export default function LoginPage() {
     setError(null)
     setErrors({})
     try {
-      const result = await login(email, password, remember)
+      const result = await login(email, password)
       if ("two_factor_required" in result) {
         router.replace(paths.twoFactorChallenge)
         return
@@ -81,10 +79,6 @@ export default function LoginPage() {
             </div>
             <PasswordInput id="password" value={password} onValueChange={setPassword} name="password" aria-required="true" autoComplete="current-password" placeholder="Contraseña" aria-invalid={Boolean(errors.password)} />
             <FieldError errors={errors.password} />
-          </Field>
-          <Field orientation="horizontal">
-            <Checkbox id="remember" checked={remember} onCheckedChange={(value) => setRemember(value === true)} />
-            <FieldLabel htmlFor="remember" className="font-normal">Mantener la sesión iniciada</FieldLabel>
           </Field>
           <Button ref={submitButton} type="submit" className="mt-4 w-full" disabled={processing || incomplete} data-test="login-button">
             {processing ? <Spinner data-icon="inline-start" /> : <LogIn data-icon="inline-start" aria-hidden="true" />}

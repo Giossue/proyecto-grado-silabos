@@ -47,7 +47,7 @@ describe("authentication pages", () => {
     await user.click(screen.getByRole("button", { name: "Ingresar" }))
 
     await waitFor(() => expect(navigation.replace).toHaveBeenCalledWith("/docente/mis-silabos"))
-    expect(login).toHaveBeenCalledWith("docente@example.test", "secret", false)
+    expect(login).toHaveBeenCalledWith("docente@example.test", "secret")
     expect(sessionState.current.value).toEqual(authenticatedSession)
   })
 
@@ -64,17 +64,11 @@ describe("authentication pages", () => {
     expect(container.querySelector("[required]")).toBeNull()
   })
 
-  it("keeps the session open when «Mantener la sesión iniciada» is checked", async () => {
-    vi.mocked(login).mockResolvedValue(authenticatedSession)
-    const user = userEvent.setup()
-    const { container } = render(<LoginPage />)
+  it("does not offer «Mantener la sesión iniciada»", () => {
+    render(<LoginPage />)
 
-    await user.type(container.querySelector<HTMLInputElement>('input[type="email"]')!, "docente@example.test")
-    await user.type(container.querySelector<HTMLInputElement>('input[type="password"]')!, "secret")
-    await user.click(screen.getByRole("checkbox", { name: "Mantener la sesión iniciada" }))
-    await user.click(screen.getByRole("button", { name: "Ingresar" }))
-
-    await waitFor(() => expect(login).toHaveBeenCalledWith("docente@example.test", "secret", true))
+    expect(screen.queryByText("Mantener la sesión iniciada")).toBeNull()
+    expect(screen.queryByRole("checkbox")).toBeNull()
   })
 
   it("returns to the remembered destination after logging in", async () => {
