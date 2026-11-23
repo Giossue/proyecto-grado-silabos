@@ -128,7 +128,7 @@ export function baseOptions(): Record<string, unknown> {
   }
 }
 
-function lockPayload(lock: CareerLock | null): Record<string, unknown> | null {
+export function lockPayload(lock: CareerLock | null): Record<string, unknown> | null {
   return lock === null
     ? null
     : { scope: "convocation", period: lock.period, institutional_pause: lock.institutionalPause, delivery_on: lock.deliveryOn }
@@ -185,7 +185,7 @@ function subjectPayload(subject: SubjectRecord): Record<string, unknown> {
   }
 }
 
-async function authorizedCareer(request: Request, deps: AcademicStructureDeps): Promise<CareerRecord | Response> {
+export async function authorizedCareer(request: Request, deps: AcademicStructureDeps): Promise<CareerRecord | Response> {
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
   const career = await careerContext(session, (careerId) => deps.academic.activeCareer(careerId))
