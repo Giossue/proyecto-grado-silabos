@@ -1,5 +1,5 @@
-import { PageFrame } from "@/components/domain/PageFrame"
+import AdminAuditPage from "./AdminAuditPage"
 
 export default function Page() {
-  return <PageFrame title="Auditoría" description="" />
+  return <AdminAuditPage />
 }

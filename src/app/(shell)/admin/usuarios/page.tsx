@@ -1,5 +1,5 @@
-import { PageFrame } from "@/components/domain/PageFrame"
+import AdminUsersPage from "./AdminUsersPage"
 
 export default function Page() {
-  return <PageFrame title="Usuarios y roles" description="" />
+  return <AdminUsersPage />
 }

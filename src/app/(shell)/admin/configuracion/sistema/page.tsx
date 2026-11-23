@@ -1,5 +1,5 @@
-import { PageFrame } from "@/components/domain/PageFrame"
+import AdminSystemSettingsPage from "./AdminSystemSettingsPage"
 
 export default function Page() {
-  return <PageFrame title="Sistema" description="" />
+  return <AdminSystemSettingsPage />
 }

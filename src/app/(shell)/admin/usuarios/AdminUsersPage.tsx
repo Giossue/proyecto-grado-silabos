@@ -1,0 +1,370 @@
+"use client"
+
+import { useRouter, useSearchParams } from "next/navigation"
+import { useCallback, useEffect, useState, type FormEvent, type KeyboardEvent } from "react"
+import { getManagedUsers, type ManagedUser, type ManagedUsersResponse } from "@/api/admin-users"
+import { ApiError } from "@/api/client"
+import { getSession } from "@/api/session"
+import { FilterToolbar } from "@/components/domain/FilterToolbar"
+import { ImportSpreadsheetDialog } from "@/components/domain/ImportSpreadsheetDialog"
+import { LoadErrorState } from "@/components/domain/LoadErrorState"
+import { LoadingSkeleton } from "@/components/domain/LoadingSkeleton"
+import { PageFrame } from "@/components/domain/PageFrame"
+import { StatusBadge } from "@/components/domain/StatusBadge"
+import { TablePagination } from "@/components/domain/TablePagination"
+import { ManagedUserAccessAction } from "@/components/domain/identity/ManagedUserAccessAction"
+import { ManagedUserDetailDialog, type ManagedUserAction } from "@/components/domain/identity/ManagedUserDetailDialog"
+import { ManagedUserDialog } from "@/components/domain/identity/ManagedUserDialog"
+import { ManagedUserPendingActions } from "@/components/domain/identity/ManagedUserPendingActions"
+import { Field, FieldLabel } from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { useLatestRequest } from "@/lib/latestRequest"
+import { managedUserStatus } from "@/lib/managedUserStatus"
+import { paths } from "@/lib/routes"
+import { activateRow } from "@/lib/rowActivation"
+import { toast } from "@/lib/toast"
+import { queryOf, queryPage, queryText, syncFilters } from "@/lib/urlFilters"
+import { cn } from "@/lib/utils"
+
+type UserFilters = { q: string; status: string; role: string; career: string }
+type RoleAssignment = ManagedUser["roles"][number]
+
+const NO_FILTERS: UserFilters = { q: "", status: "all", role: "all", career: "all" }
+
+const IMPORT_COLUMNS = [
+  { key: "nombre", label: "Nombre" },
+  { key: "correo", label: "Correo" },
+  { key: "rol", label: "Rol" },
+  { key: "carrera", label: "Carrera" },
+]
+
+const careerOf = (role: RoleAssignment): string => (role.code === "administrador" ? "-" : (role.career_name ?? "Todas las carreras"))
+
+const roleLine = (role: RoleAssignment): string => (role.career_name ? `${role.name} · ${role.career_name}` : role.name)
+
+export default function AdminUsersPage() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const requests = useLatestRequest()
+  const [initial] = useState(() => {
+    const query = queryOf(searchParams)
+
+    return {
+      page: queryPage(query.page),
+      filters: {
+        q: queryText(query.q),
+        status: queryText(query.status) || "all",
+        role: queryText(query.role) || "all",
+        career: queryText(query.career) || "all",
+      },
+    }
+  })
+  const [filters, setFilters] = useState<UserFilters>(initial.filters)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [result, setResult] = useState<ManagedUsersResponse | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [viewing, setViewing] = useState<ManagedUser | null>(null)
+  const [viewOpen, setViewOpen] = useState(false)
+  const [dialog, setDialog] = useState<ManagedUserAction | null>(null)
+  const filtersActive = filters.q !== "" || filters.status !== "all" || filters.role !== "all" || filters.career !== "all"
+
+  const fetchUsers = useCallback(
+    (page: number, current: UserFilters): Promise<void> => {
+      const ticket = requests.begin()
+      const isCurrent = (): boolean => requests.isCurrent(ticket)
+
+      return getSession()
+        .then(async (session) => {
+          if (!isCurrent()) return
+          if (session.active_role?.code !== "administrador") {
+            router.replace(paths.dashboard)
+            return
+          }
+          setCurrentUserId(session.user.id)
+          const response = await getManagedUsers({ q: current.q, status: current.status, role: current.role, career: current.career, page })
+          if (!isCurrent()) return
+          setResult(response)
+          syncFilters(router, current, page)
+        })
+        .catch((reason: unknown) => {
+          if (isCurrent()) setError(reason instanceof ApiError ? reason.message : "No se pudieron cargar los usuarios")
+        })
+        .finally(() => {
+          if (isCurrent()) setLoading(false)
+        })
+    },
+    [requests, router],
+  )
+
+  useEffect(() => {
+    void fetchUsers(initial.page, initial.filters)
+  }, [fetchUsers, initial])
+
+  const load = (page = 1, current: UserFilters = filters): Promise<void> => {
+    setLoading(true)
+    setError(null)
+    return fetchUsers(page, current)
+  }
+
+  const setFilter = (key: keyof UserFilters, value: string): void => setFilters((previous) => ({ ...previous, [key]: value }))
+
+  const submit = (event: FormEvent<HTMLFormElement>): void => {
+    event.preventDefault()
+    void load()
+  }
+
+  const clearFilters = (): void => {
+    setFilters(NO_FILTERS)
+    void load(1, NO_FILTERS)
+  }
+
+  const changed = async (notice: string): Promise<void> => {
+    toast.success(notice)
+    await load()
+  }
+
+  const openUser = (user: ManagedUser): void => {
+    setViewing(user)
+    setViewOpen(true)
+  }
+
+  const openFromKeyboard = (event: KeyboardEvent<HTMLTableRowElement>, user: ManagedUser): void => {
+    if (event.target !== event.currentTarget || (event.key !== "Enter" && event.key !== " ")) return
+    event.preventDefault()
+    openUser(user)
+  }
+
+  const closeDialog = (open: boolean): void => {
+    if (!open) setDialog(null)
+  }
+
+  return (
+    <PageFrame
+      title="Usuarios y roles"
+      description="Cuentas de coordinación, docencia y biblioteca"
+      size="wide"
+      loading={!result && !error}
+      actionsSkeleton={loading && !result ? ["w-44", "w-32"] : []}
+      actions={
+        result ? (
+          <>
+            <ImportSpreadsheetDialog title="Importar cuentas" kind="users" templateName="plantilla-usuarios.xlsx" columns={IMPORT_COLUMNS} onImported={(notice) => void changed(notice)} />
+            <ManagedUserDialog roles={result.roles} careers={result.careers} onSaved={(notice) => void changed(notice)} />
+          </>
+        ) : null
+      }
+    >
+      {error ? <LoadErrorState message={error} onRetry={() => void load()} /> : null}
+      {loading && !result ? <LoadingSkeleton variant="table" columns={4} filters={3} actions={false} cellLines={[2, 1, 1, 1]} badges={[4]} /> : null}
+
+      {result ? (
+        <div className="flex flex-col gap-4">
+          <form onSubmit={submit}>
+            <FilterToolbar
+              active={filtersActive}
+              onClear={clearFilters}
+              search={
+                <Field>
+                  <FieldLabel htmlFor="users-search" className="sr-only">
+                    Buscar por nombre o correo
+                  </FieldLabel>
+                  <Input
+                    id="users-search"
+                    value={filters.q}
+                    onChange={(event) => setFilter("q", event.target.value)}
+                    type="search"
+                    maxLength={120}
+                    placeholder="Buscar por nombre o correo"
+                  />
+                </Field>
+              }
+              filters={
+                <>
+                  <Field>
+                    <FieldLabel htmlFor="users-role" className="sr-only">
+                      Rol
+                    </FieldLabel>
+                    <Select value={filters.role} onValueChange={(value) => setFilter("role", value)} name="role">
+                      <SelectTrigger id="users-role">
+                        <SelectValue placeholder="Todos los roles" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          <SelectItem value="all">Todos los roles</SelectItem>
+                          {result.roles.map((item) => (
+                            <SelectItem key={item.codigo} value={item.codigo}>
+                              {item.nombre}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="users-career" className="sr-only">
+                      Carrera
+                    </FieldLabel>
+                    <Select value={filters.career} onValueChange={(value) => setFilter("career", value)} name="career">
+                      <SelectTrigger id="users-career">
+                        <SelectValue placeholder="Todas las carreras" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          <SelectItem value="all">Todas las carreras</SelectItem>
+                          {result.careers.map((item) => (
+                            <SelectItem key={item.id} value={item.id}>
+                              {item.nombre}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="users-status" className="sr-only">
+                      Estado
+                    </FieldLabel>
+                    <Select value={filters.status} onValueChange={(value) => setFilter("status", value)} name="status">
+                      <SelectTrigger id="users-status">
+                        <SelectValue placeholder="Todos los estados" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          <SelectItem value="all">Todos los estados</SelectItem>
+                          <SelectItem value="active">Activos</SelectItem>
+                          <SelectItem value="pending">Pendiente</SelectItem>
+                          <SelectItem value="inactive">Inactivos</SelectItem>
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                </>
+              }
+            />
+          </form>
+
+          <Table label="Usuarios y roles">
+            <TableHeader>
+              <TableRow>
+                <TableHead>Usuario</TableHead>
+                <TableHead>Roles</TableHead>
+                <TableHead>Carrera</TableHead>
+                <TableHead className="text-center">Estado</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {result.users.data.length === 0 ? (
+                <TableEmpty colSpan={4}>No se encontraron cuentas con estos filtros</TableEmpty>
+              ) : (
+                result.users.data.map((user) => {
+                  const status = managedUserStatus(user)
+
+                  return (
+                    <TableRow
+                      key={user.id}
+                      className="cursor-pointer"
+                      tabIndex={0}
+                      aria-label={`Ver ${user.nombre}`}
+                      onClick={(event) => activateRow(event.nativeEvent, () => openUser(user))}
+                      onKeyDown={(event) => openFromKeyboard(event, user)}
+                    >
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <span>{user.nombre}</span>
+                          <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                            <span className="text-sm text-muted-foreground">{user.correo_electronico}</span>
+                            <span className="sm:hidden">
+                              <StatusBadge label={status.label} tone={status.tone} />
+                            </span>
+                          </span>
+                          <div className="mt-3 flex flex-col gap-1 text-sm font-normal sm:hidden">
+                            <span data-user-roles-label className="text-xs font-medium text-muted-foreground">
+                              Roles
+                            </span>
+                            {user.roles.length ? (
+                              <ul className="flex flex-col gap-1">
+                                {user.roles.map((item) => (
+                                  <li key={item.id} data-user-role-line>
+                                    {roleLine(item)}
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <span className="text-muted-foreground">Sin rol vigente</span>
+                            )}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="h-px py-0" data-card-hide="true">
+                        {user.roles.length ? (
+                          <ul className="-mx-2 flex h-full min-h-11 flex-col">
+                            {user.roles.map((item, index) => (
+                              <li key={index} className="flex min-h-9 flex-1 items-center border-border px-2 not-first:border-t">
+                                {item.name}
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">Sin rol vigente</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="h-px py-0" data-card-hide="true">
+                        {user.roles.length ? (
+                          <ul className="-mx-2 flex h-full min-h-11 flex-col text-sm">
+                            {user.roles.map((item, index) => (
+                              <li
+                                key={index}
+                                className={cn("flex min-h-9 flex-1 items-center border-border px-2 not-first:border-t", !item.career_name && "text-muted-foreground")}
+                              >
+                                {careerOf(item)}
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center" data-card-hide="true">
+                        <StatusBadge label={status.label} tone={status.tone} />
+                      </TableCell>
+                    </TableRow>
+                  )
+                })
+              )}
+            </TableBody>
+          </Table>
+          {viewing ? (
+            <ManagedUserDetailDialog
+              key={viewing.id}
+              open={viewOpen}
+              onOpenChange={setViewOpen}
+              user={viewing}
+              roles={result.roles}
+              careers={result.careers}
+              canEdit={viewing.id !== currentUserId}
+              onSaved={(notice) => void changed(notice)}
+              onAction={setDialog}
+            />
+          ) : null}
+          {viewing ? <ManagedUserAccessAction open={dialog === "access"} onOpenChange={closeDialog} user={viewing} onChanged={(notice) => void changed(notice)} /> : null}
+          {viewing ? (
+            <ManagedUserPendingActions
+              resendOpen={dialog === "resend"}
+              onResendOpenChange={closeDialog}
+              deleteOpen={dialog === "delete"}
+              onDeleteOpenChange={closeDialog}
+              userId={viewing.id}
+              userName={viewing.nombre}
+              userEmail={viewing.correo_electronico}
+              onChanged={(notice) => void changed(notice)}
+            />
+          ) : null}
+          <TablePagination meta={result.users} label="Paginación de usuarios" onPageChange={(page) => void load(page)} />
+        </div>
+      ) : null}
+    </PageFrame>
+  )
+}
