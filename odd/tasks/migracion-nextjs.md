@@ -13,7 +13,7 @@ Copia de trabajo: `~/Documentos/proyecto-grado-silabos-nextjs/` (`backend/` y `f
 - S5. Fase 3: «Redis entra al final, cuando se pasen las colas (con BullMQ)». Colas `critica`, `documentos`, `ia`, `general`; caché y bloqueos.
 - S6. Sin comentarios en el código (solo anotaciones que lee una herramienta). Textos de la interfaz iguales a los de la SPA Vue.
 
-Supuesto: en fase 1 Laravel corre en `http://127.0.0.1:8000` y Next.js en `http://localhost:3000`; Laravel debe aceptar ese origen como dominio stateful de Sanctum.
+Supuesto: en fase 1 la copia de Laravel corre en `http://127.0.0.1:8001` y Next.js en `http://localhost:3000`; Laravel debe aceptar ese origen como dominio stateful de Sanctum.
 
 ## Tasks
 
@@ -22,7 +22,8 @@ Supuesto: en fase 1 Laravel corre en `http://127.0.0.1:8000` y Next.js en `http:
 | T0 | S1 | inline | hecho: copia creada, remotes quitados | — |
 | T1 | S2, S6 | inline | hecho: shadcn (radix-vega, neutral, lucide), Vitest, rewrites `fallback` a Laravel, lint | ver L6 |
 | T2 | S3 | inline | hecho: `src/api`, `src/types`, `src/lib` copiados; `signal`/`useSignal` reemplaza `ref`; sesión, `latestRequest`, `usePurgeConfirmation`, `blocks/runtime` portados | ver L6 |
-| T3 | S2 | inline | pendiente: shell (sidebar por rol, tema, notificaciones) + login y flujo de cuenta | — |
+| T3a | S2, S6 | delegada (paralelo con T3b; respaldo de contexto) | hecho: tema (`globals.css` desde `styles.css` + `accessibility.css`) y paridad de `components/ui` con la SPA | ver L8 |
+| T3b | S2, S6 | delegada (paralelo con T3a) | hecho: shell (sidebar por rol, encabezado, tema, notificaciones, accesibilidad), login, 2FA, recuperación, activación, `/rol`, guardas y eventos 401/409; 51 pantallas quedan como marcador con su título | ver L8 |
 | T4 | S2 | por definir tras el mapa | pendiente: pantallas de Administración | — |
 | T5 | S2 | por definir | pendiente: pantallas de Coordinación | — |
 | T6 | S2 | por definir | pendiente: pantallas de Biblioteca | — |
@@ -41,3 +42,5 @@ Supuesto: en fase 1 Laravel corre en `http://127.0.0.1:8000` y Next.js en `http:
 - L5: `openapi.json` trae 17 esquemas para 151 operaciones; los tipos reales están escritos a mano en `frontend/src/api/*.ts`, que no dependen de Vue. Reusarlos es más rápido y exacto que Orval.
 - L6: Verificado: `tsc` limpio, ESLint limpio (se excluye `src/components/ui/**`, igual que en la SPA), Vitest 31 archivos / 124 pruebas pasan (las 29 copiadas + `signal` y `latestRequest`). Login de Administración por el proxy de Next.js: `csrf-cookie` 204, `login` 200, `session` 200 con rol `administrador`.
 - L7: Lo que falta portar de la SPA: componentes `components/ui` personalizados (variantes y colores de la SPA; `globals.css` debe tomar los tokens de `frontend/src/styles.css`), `components/domain` (~15k líneas), layouts, `composables`, `state` y las 33 páginas (5,3k líneas). Siguiente: T3 (tema, shell y autenticación).
+- L8: T3a y T3b terminadas y verificadas por el padre: `tsc` y ESLint limpios, Vitest 53 archivos / 257 pruebas, `next build` genera 60 rutas, `/ingresar` responde 200 y el login por el proxy funciona. Cambios de API en `components/ui` respecto a shadcn React (los que portan pantallas deben usarlos): `DialogContent` usa `hideClose`/`layer` (no `showCloseButton`); `Sheet` no tiene `side` (es modal centrado como en la SPA); `Button` con variantes `success`, `document`, `dropzone` y tamaños `icon-sm`, `icon-lg`, `row`, `inline`, `dropzone`; `Badge` `neutral/success/warning/danger` y tamaño `step`; `Table` con `label` y `cards`; `Label`/`FieldLegend` con `required`. `components.json` sigue en `radix-vega`: todo `shadcn add` debe ir con `--dry-run`/`--diff` para no pisar las personalizaciones. La guarda de rutas es solo de interfaz (como en la SPA); la API de Laravel sigue autorizando, así que no cambia ningún límite de seguridad. Pendiente menor: `AppUpdatePrompt` (PWA), `LoadingSkeleton` solo tiene la variante `workspace`, y las libs `urlFilters`, `goBack`, `focusReturn`, `dialogExit`, `apiVisit` sin portar (se portan con la primera pantalla que las use). El código copiado de la SPA (`src/api`, `src/lib`, `src/types`) trae 79 líneas de comentarios heredadas; el código nuevo no tiene.
+- L9: Siguiente: T4-T7 con escritores en paralelo, divididos por carpeta de `components/domain` para no pisarse: configuración + IA (Administración), académico (Coordinación: malla, proyecto de carrera), sílabo (Docente, revisiones de Coordinación y Biblioteca, documentos) y cuenta (perfil, seguridad, notificaciones, preferencias).
