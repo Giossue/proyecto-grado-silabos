@@ -1,5 +1,5 @@
-import { PageFrame } from "@/components/domain/PageFrame"
+import AdminProcessesPage from "@/app/(shell)/admin/convocatorias/AdminProcessesPage"
 
 export default function Page() {
-  return <PageFrame title="Convocatorias" description="" />
+  return <AdminProcessesPage />
 }

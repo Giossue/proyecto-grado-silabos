@@ -1,5 +1,5 @@
-import { PageFrame } from "@/components/domain/PageFrame"
+import TeacherHistoryPage from "@/app/(shell)/docente/historial/TeacherHistoryPage"
 
 export default function Page() {
-  return <PageFrame title="Historial" description="" />
+  return <TeacherHistoryPage />
 }

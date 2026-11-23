@@ -1,5 +1,5 @@
-import { PageFrame } from "@/components/domain/PageFrame"
+import CoordinationReviewHistoryPage from "./CoordinationReviewHistoryPage"
 
 export default function Page() {
-  return <PageFrame title="Historial de versiones" description="" />
+  return <CoordinationReviewHistoryPage />
 }

@@ -1,0 +1,28 @@
+.convocation-step-next {
+  animation: convocation-step-next-enter 0.2s ease;
+}
+
+.convocation-step-back {
+  animation: convocation-step-back-enter 0.2s ease;
+}
+
+@keyframes convocation-step-next-enter {
+  from {
+    transform: translateX(2rem);
+    opacity: 0;
+  }
+}
+
+@keyframes convocation-step-back-enter {
+  from {
+    transform: translateX(-2rem);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .convocation-step-next,
+  .convocation-step-back {
+    animation: none;
+  }
+}

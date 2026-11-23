@@ -1,5 +1,5 @@
-import { PageFrame } from "@/components/domain/PageFrame"
+import LibraryReviewDetailPage from "./LibraryReviewDetailPage"
 
 export default function Page() {
-  return <PageFrame title="Revisión de bibliografía" description="" />
+  return <LibraryReviewDetailPage />
 }

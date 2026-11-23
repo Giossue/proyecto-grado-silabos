@@ -1,5 +1,5 @@
-import { PageFrame } from "@/components/domain/PageFrame"
+import TeacherSyllabiPage from "@/app/(shell)/docente/mis-silabos/TeacherSyllabiPage"
 
 export default function Page() {
-  return <PageFrame title="Mis sílabos" description="" />
+  return <TeacherSyllabiPage />
 }

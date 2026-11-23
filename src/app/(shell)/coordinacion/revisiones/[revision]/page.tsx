@@ -1,5 +1,5 @@
-import { PageFrame } from "@/components/domain/PageFrame"
+import CoordinationReviewDetailPage from "./CoordinationReviewDetailPage"
 
 export default function Page() {
-  return <PageFrame title="Detalle de revisión" description="" />
+  return <CoordinationReviewDetailPage />
 }

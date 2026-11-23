@@ -1,0 +1,244 @@
+"use client"
+
+import { useRouter } from "next/navigation"
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react"
+import { getAcademicGovernance, type AcademicGovernance } from "@/api/academic"
+import { ApiError } from "@/api/client"
+import { getDashboard, type Dashboard } from "@/api/dashboard"
+import { getProcesses, type Processes } from "@/api/processes"
+import { getSession } from "@/api/session"
+import { ClientFilterBar } from "@/components/domain/ClientFilterBar"
+import { LoadErrorState } from "@/components/domain/LoadErrorState"
+import { LoadingSkeleton } from "@/components/domain/LoadingSkeleton"
+import { MetricTiles } from "@/components/domain/MetricTiles"
+import { PageFrame } from "@/components/domain/PageFrame"
+import { ProcessLockAlert } from "@/components/domain/ProcessLockAlert"
+import { StatusBadge, type StatusTone } from "@/components/domain/StatusBadge"
+import { TableCardLine } from "@/components/domain/TableCardLine"
+import { TablePagination } from "@/components/domain/TablePagination"
+import { ConvocationOptionsDialog } from "@/components/domain/syllabus/ConvocationOptionsDialog"
+import { ConvocationPeriodDialog } from "@/components/domain/syllabus/ConvocationPeriodDialog"
+import { ConvocationRowActions, type ConvocationRowActionsHandle } from "@/components/domain/syllabus/ConvocationRowActions"
+import type { ConvocationRow } from "@/components/domain/syllabus/convocationRows"
+import { Field, FieldLabel } from "@/components/ui/field"
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { useClientFilter, type ClientFilterDefinition } from "@/composables/useClientFilter"
+import { useClientPagination } from "@/composables/useClientPagination"
+import { formatDateDisplay } from "@/lib/dateDisplay"
+import { paths } from "@/lib/routes"
+import { activateRow } from "@/lib/rowActivation"
+import { toast } from "@/lib/toast"
+import { setupChecklistState } from "@/state/setupChecklist"
+
+const STATE_LABELS = { abierto: "Abierto", pausado: "Pausado", cerrado: "Finalizado" } as const
+const STATE_TONES = { abierto: "success", pausado: "warning", cerrado: "info" } as const
+
+const stateLabel = (row: ConvocationRow): string => (row.process ? STATE_LABELS[row.process.state] : "Sin iniciar")
+const stateTone = (row: ConvocationRow): StatusTone => (row.process ? STATE_TONES[row.process.state] : "neutral")
+const formatDate = (value: string): string => formatDateDisplay(value, { dateStyle: "medium" })
+
+const searchable = (row: ConvocationRow): string[] => [row.code]
+
+const FILTERS: Record<string, ClientFilterDefinition<ConvocationRow>> = {
+  estado: { matches: (row, value) => (value === "sin_iniciar" ? row.process === null : row.process?.state === value) },
+}
+
+export default function AdminProcessesPage() {
+  const router = useRouter()
+  const [governance, setGovernance] = useState<AcademicGovernance | null>(null)
+  const [processData, setProcessData] = useState<Processes | null>(null)
+  const [summary, setSummary] = useState<Dashboard | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [sheetOpen, setSheetOpen] = useState(false)
+  const rowActions = useRef<ConvocationRowActionsHandle>(null)
+  const loaded = governance !== null && processData !== null
+  const setupReady = (summary?.setup?.steps ?? []).every((step) => step.key === "process" || step.done)
+
+  const rows = useMemo<ConvocationRow[]>(() => {
+    const byPeriod = new Map((processData?.processes ?? []).map((process) => [process.period_id, process]))
+
+    return [...(governance?.catalogs.periods ?? [])]
+      .sort((a, b) => b.starts_on.localeCompare(a.starts_on))
+      .map((period) => ({ ...period, process: byPeriod.get(period.id) ?? null }))
+  }, [governance, processData])
+  const filter = useClientFilter(rows, searchable, FILTERS)
+  const { items: page, meta, setPage } = useClientPagination(filter.items, 20, filter.criteria)
+  const inProgress = rows.some((row) => row.process?.state === "abierto" || row.process?.state === "pausado")
+  const current = rows.find((row) => row.id === selectedId) ?? null
+
+  const fetchAll = useCallback(
+    (previous: Dashboard | null): Promise<void> =>
+      getSession()
+        .then(async (session) => {
+          if (session.active_role?.code !== "administrador") {
+            router.replace(paths.dashboard)
+            return
+          }
+          const [nextGovernance, nextProcesses, nextSummary] = await Promise.all([getAcademicGovernance(), getProcesses(), getDashboard().catch(() => previous)])
+          setGovernance(nextGovernance)
+          setProcessData(nextProcesses)
+          setSummary(nextSummary)
+          if (nextSummary?.setup !== undefined) setupChecklistState.update(nextSummary.setup)
+        })
+        .catch((reason: unknown) => {
+          setError(reason instanceof ApiError ? reason.message : "No se pudieron cargar las convocatorias")
+        })
+        .finally(() => setLoading(false)),
+    [router],
+  )
+
+  useEffect(() => {
+    void fetchAll(null)
+  }, [fetchAll])
+
+  const load = (): Promise<void> => {
+    setLoading(true)
+    setError(null)
+    return fetchAll(summary)
+  }
+
+  const changed = async (notice: string): Promise<void> => {
+    toast.success(notice)
+    await load()
+  }
+
+  const select = (row: ConvocationRow): void => {
+    setSelectedId(row.id)
+    setSheetOpen(true)
+  }
+
+  const selectFromKeyboard = (event: KeyboardEvent<HTMLTableRowElement>, row: ConvocationRow): void => {
+    if (event.target !== event.currentTarget || (event.key !== "Enter" && event.key !== " ")) return
+    event.preventDefault()
+    select(row)
+  }
+
+  const runAction = (key: string): void => {
+    window.setTimeout(() => rowActions.current?.run(key), 0)
+  }
+
+  return (
+    <PageFrame
+      title="Convocatorias"
+      description="Periodos lectivos y sus fechas de clases y de elaboración de sílabos"
+      size="wide"
+      loading={!loaded && !error}
+      actionsSkeleton={loading && !loaded ? ["w-44"] : []}
+      banner={
+        loaded && inProgress ? (
+          <ProcessLockAlert banner title="Convocatoria en curso" message="Hay una convocatoria abierta o pausada. Finalícela o elimínela antes de abrir otra" hideAction />
+        ) : null
+      }
+      actions={
+        loaded && !setupReady ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="inline-flex" tabIndex={0}>
+                <ConvocationPeriodDialog disabled onSaved={(message) => void changed(message)} />
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>Complete «Antes de empezar» para abrir una convocatoria</TooltipContent>
+          </Tooltip>
+        ) : loaded ? (
+          <ConvocationPeriodDialog disabled={inProgress} onSaved={(message) => void changed(message)} />
+        ) : null
+      }
+    >
+      {error ? (
+        <LoadErrorState message={error} onRetry={() => void load()} />
+      ) : loading && !loaded ? (
+        <LoadingSkeleton variant="table" metrics columns={4} filters={1} filterWidth="lg:w-44" actions={false} badges={[4]} />
+      ) : null}
+      {loaded && summary?.metrics.length ? <MetricTiles metrics={summary.metrics} /> : null}
+      {loaded ? (
+        <div className="flex flex-col gap-4">
+          <ClientFilterBar
+            filter={filter}
+            inputId="processes-search"
+            label="Buscar período"
+            placeholder="Buscar por período"
+            filters={
+              <Field>
+                <FieldLabel htmlFor="processes-search-state" className="sr-only">
+                  Estado
+                </FieldLabel>
+                <Select value={filter.values.estado} onValueChange={(value) => filter.setValue("estado", value)}>
+                  <SelectTrigger id="processes-search-state">
+                    <SelectValue placeholder="Todos los estados" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectItem value="all">Todos los estados</SelectItem>
+                      <SelectItem value="sin_iniciar">Sin iniciar</SelectItem>
+                      <SelectItem value="abierto">Abiertos</SelectItem>
+                      <SelectItem value="pausado">Pausados</SelectItem>
+                      <SelectItem value="cerrado">Finalizados</SelectItem>
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </Field>
+            }
+          />
+
+          <Table label="Convocatorias">
+            <TableHeader>
+              <TableRow>
+                <TableHead>Período</TableHead>
+                <TableHead>Clases</TableHead>
+                <TableHead>Elaboración de sílabos</TableHead>
+                <TableHead className="text-center">Estado</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {page.length === 0 ? (
+                <TableEmpty colSpan={4}>{filter.active ? "Ningún período coincide con los filtros" : "No hay periodos registrados. Cree el primero con «Nueva convocatoria»"}</TableEmpty>
+              ) : (
+                page.map((row) => (
+                  <TableRow
+                    key={row.id}
+                    className="cursor-pointer"
+                    tabIndex={0}
+                    aria-label={`Opciones de ${row.code}`}
+                    onClick={(event) => activateRow(event.nativeEvent, () => select(row))}
+                    onKeyDown={(event) => selectFromKeyboard(event, row)}
+                  >
+                    <TableCell>
+                      {row.code}
+                      <TableCardLine>
+                        <StatusBadge label={stateLabel(row)} tone={stateTone(row)} />
+                      </TableCardLine>
+                    </TableCell>
+                    <TableCell>
+                      <time dateTime={row.starts_on}>{formatDate(row.starts_on)}</time> → <time dateTime={row.ends_on}>{formatDate(row.ends_on)}</time>
+                    </TableCell>
+                    {row.process ? (
+                      <TableCell>
+                        <time dateTime={row.process.starts_at}>{formatDate(row.process.starts_at)}</time> → <time dateTime={row.process.due_at}>{formatDate(row.process.due_at)}</time>
+                      </TableCell>
+                    ) : (
+                      <TableCell className="text-muted-foreground">Sin fechas</TableCell>
+                    )}
+                    <TableCell className="text-center" data-card-hide="true">
+                      <StatusBadge label={stateLabel(row)} tone={stateTone(row)} />
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+          <TablePagination meta={meta} label="Paginación de convocatorias" onPageChange={setPage} />
+        </div>
+      ) : null}
+      {current ? (
+        <>
+          <ConvocationOptionsDialog open={sheetOpen} onOpenChange={setSheetOpen} row={current} onAction={runAction} />
+          <ConvocationRowActions key={current.id} ref={rowActions} row={current} menu={false} onChanged={(message) => void changed(message)} />
+        </>
+      ) : null}
+    </PageFrame>
+  )
+}

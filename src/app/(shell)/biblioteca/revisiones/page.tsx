@@ -1,5 +1,5 @@
-import { PageFrame } from "@/components/domain/PageFrame"
+import LibraryReviewsPage from "@/app/(shell)/biblioteca/revisiones/LibraryReviewsPage"
 
 export default function Page() {
-  return <PageFrame title="Revisiones de biblioteca" description="" />
+  return <LibraryReviewsPage />
 }
