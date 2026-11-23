@@ -1,5 +1,5 @@
-import { PageFrame } from "@/components/domain/PageFrame"
+import TeacherFormationPage from "@/app/(shell)/configuracion/_account/TeacherFormationPage"
 
 export default function Page() {
-  return <PageFrame title="Perfil docente" description="" />
+  return <TeacherFormationPage />
 }

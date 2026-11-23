@@ -1,5 +1,5 @@
-import { PageFrame } from "@/components/domain/PageFrame"
+import SecurityPage from "@/app/(shell)/configuracion/_account/SecurityPage"
 
 export default function Page() {
-  return <PageFrame title="Seguridad" description="" />
+  return <SecurityPage />
 }

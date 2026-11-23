@@ -6,12 +6,12 @@ const linkClass = "cursor-pointer text-foreground underline decoration-border un
 
 type TextLinkProps =
   | { as?: undefined; href: string; tabIndex?: number; className?: string; children: ReactNode }
-  | { as: "button"; onClick?: () => void; tabIndex?: number; className?: string; children: ReactNode }
+  | { as: "button"; onClick?: () => void; disabled?: boolean; tabIndex?: number; className?: string; children: ReactNode }
 
 export function TextLink(props: TextLinkProps) {
   if (props.as === "button") {
     return (
-      <button type="button" tabIndex={props.tabIndex} className={cn(linkClass, props.className)} onClick={props.onClick}>
+      <button type="button" tabIndex={props.tabIndex} disabled={props.disabled} className={cn(linkClass, props.className)} onClick={props.onClick}>
         {props.children}
       </button>
     )

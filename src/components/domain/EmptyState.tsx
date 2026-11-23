@@ -11,11 +11,12 @@ type EmptyStateProps = {
   icon?: LucideIcon
   className?: string
   children?: ReactNode
+  "data-tour"?: string
 }
 
-export function EmptyState({ title, description, icon: Icon = Inbox, className, children }: EmptyStateProps) {
+export function EmptyState({ title, description, icon: Icon = Inbox, className, children, "data-tour": tour }: EmptyStateProps) {
   return (
-    <Card className={cn("py-0", className)}>
+    <Card data-tour={tour} className={cn("py-0", className)}>
       <Empty className="gap-3 border-0 p-6 md:p-10">
         <EmptyHeader className="gap-3">
           <EmptyMedia className="text-muted-foreground [&_svg]:size-6"><Icon aria-hidden="true" /></EmptyMedia>

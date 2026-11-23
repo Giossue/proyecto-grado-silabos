@@ -1,5 +1,5 @@
-import { PageFrame } from "@/components/domain/PageFrame"
+import EmailPreferencesPage from "@/app/(shell)/configuracion/_account/EmailPreferencesPage"
 
 export default function Page() {
-  return <PageFrame title="Notificaciones" description="" />
+  return <EmailPreferencesPage />
 }

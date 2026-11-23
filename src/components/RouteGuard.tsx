@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation"
 import { useEffect, useRef, useState, type ReactNode } from "react"
 import { useCurrentFullPath } from "@/composables/useCurrentUrl"
+import { trackNavigation } from "@/lib/goBack"
 import { rememberIntendedRoute } from "@/lib/intended-route"
 import { guardNavigation, requiresSession, type GuardResult } from "@/lib/navigationGuard"
 import { announcePage } from "@/lib/pageAnnouncement"
@@ -39,6 +40,7 @@ export default function RouteGuard({ children }: { children: ReactNode }) {
         return
       }
       trackSettingsReturn(fullPath, confirmed.current)
+      trackNavigation(fullPath, confirmed.current)
       announcePage(fullPath, confirmed.current)
       confirmed.current = fullPath
     }

@@ -1,5 +1,5 @@
-import { PageFrame } from "@/components/domain/PageFrame"
+import ProfilePage from "@/app/(shell)/configuracion/_account/ProfilePage"
 
 export default function Page() {
-  return <PageFrame title="Perfil" description="" />
+  return <ProfilePage />
 }
