@@ -3,7 +3,7 @@ import { randomBytes, randomInt } from "node:crypto"
 import { cookiePrefix } from "../laravel/cookies"
 import { decrypt, DecryptError, encrypt } from "../laravel/encrypter"
 import { phpJsonEncode } from "../laravel/phpJson"
-import type { BridgeDeps, StoredSession } from "./types"
+import type { BridgeDeps, OutgoingCookie, StoredSession } from "./types"
 
 export const SESSION_ID_LENGTH = 40
 const SESSION_ID = /^[A-Za-z0-9]{40}$/
@@ -85,14 +85,22 @@ export function encodePayload(json: string, deps: Pick<BridgeDeps, "config">): s
   return Buffer.from(encrypt(json, deps.config.key, true)).toString("base64")
 }
 
-export async function startSession(cookieValue: string | undefined, deps: SessionWriterDeps): Promise<SessionState> {
+export type OpenedSession = { state: SessionState; live: boolean; regenerated: boolean }
+
+export async function openSession(cookieValue: string | undefined, deps: SessionWriterDeps): Promise<OpenedSession> {
   const candidate = sessionIdFromCookie(cookieValue, deps)
   const id = candidate !== null && SESSION_ID.test(candidate) ? candidate : deps.random(SESSION_ID_LENGTH)
   const row = await deps.store.findSession(id)
   const state: SessionState = { id, attributes: {}, exists: row !== null }
-  if (row !== null && row.lastActivity >= deps.now() - deps.config.lifetimeMinutes * 60) state.attributes = decodePayload(row.payload, deps)
-  if (state.attributes._token === undefined || state.attributes._token === null) regenerateToken(state, deps)
-  return state
+  const live = row !== null && row.lastActivity >= deps.now() - deps.config.lifetimeMinutes * 60
+  if (live) state.attributes = decodePayload(row.payload, deps)
+  const regenerated = state.attributes._token === undefined || state.attributes._token === null
+  if (regenerated) regenerateToken(state, deps)
+  return { state, live, regenerated }
+}
+
+export async function startSession(cookieValue: string | undefined, deps: SessionWriterDeps): Promise<SessionState> {
+  return (await openSession(cookieValue, deps)).state
 }
 
 export function regenerateToken(state: SessionState, deps: Pick<SessionWriterDeps, "random">): void {
@@ -186,6 +194,11 @@ export function encryptCookieValue(name: string, value: string, deps: Pick<Bridg
   return encrypt(cookiePrefix(name, deps.config.key) + value, deps.config.key, false)
 }
 
+export function writerDepsOf(deps: BridgeDeps): SessionWriterDeps {
+  if ("lottery" in deps && "random" in deps && "cookie" in deps) return deps as SessionWriterDeps
+  return { ...deps, cookie: sessionCookieOptions(), random: laravelRandom, lottery: () => false }
+}
+
 export function setCookieHeader(name: string, encrypted: string, options: CookieOptions, expires: number, httpOnly: boolean, now: number): string {
   const parts = [`${name}=${encodeURIComponent(encrypted)}`, `expires=${new Date(expires * 1000).toUTCString()}`, `Max-Age=${expires - now}`]
   if (options.path) parts.push(`path=${options.path}`)
@@ -196,13 +209,30 @@ export function setCookieHeader(name: string, encrypted: string, options: Cookie
   return parts.join("; ")
 }
 
+function lifetimeCookie(name: string, plain: string, httpOnly: boolean, deps: SessionWriterDeps): OutgoingCookie {
+  const now = deps.now()
+  const expires = now + deps.config.lifetimeMinutes * 60
+  const { path, domain, secure, sameSite } = deps.cookie
+  return { name, value: encryptCookieValue(name, plain, deps), expires, maxAge: expires - now, path, domain, secure, httpOnly, sameSite }
+}
+
+export function serializeCookie(cookie: OutgoingCookie): string {
+  const { path, domain, secure, sameSite } = cookie
+  return setCookieHeader(cookie.name, cookie.value, { path, domain, secure, sameSite }, cookie.expires, cookie.httpOnly, cookie.expires - cookie.maxAge)
+}
+
+export function xsrfCookieOf(state: SessionState, deps: SessionWriterDeps): OutgoingCookie {
+  return lifetimeCookie(XSRF_COOKIE, typeof state.attributes._token === "string" ? state.attributes._token : "", false, deps)
+}
+
+export function sessionCookieOf(state: SessionState, deps: SessionWriterDeps): OutgoingCookie {
+  return lifetimeCookie(deps.config.cookieName, state.id, true, deps)
+}
+
 export function xsrfCookie(state: SessionState, deps: SessionWriterDeps): string {
-  const expires = deps.now() + deps.config.lifetimeMinutes * 60
-  const token = typeof state.attributes._token === "string" ? state.attributes._token : ""
-  return setCookieHeader(XSRF_COOKIE, encryptCookieValue(XSRF_COOKIE, token, deps), deps.cookie, expires, false, deps.now())
+  return serializeCookie(xsrfCookieOf(state, deps))
 }
 
 export function sessionCookie(state: SessionState, deps: SessionWriterDeps): string {
-  const expires = deps.now() + deps.config.lifetimeMinutes * 60
-  return setCookieHeader(deps.config.cookieName, encryptCookieValue(deps.config.cookieName, state.id, deps), deps.cookie, expires, true, deps.now())
+  return serializeCookie(sessionCookieOf(state, deps))
 }

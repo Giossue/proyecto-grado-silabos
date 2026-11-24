@@ -7,7 +7,6 @@ import * as auditEvents from "./admin/audit-events/route"
 import * as dashboard from "./dashboard/route"
 import * as dashboardDeadline from "./dashboard/deadline/route"
 import * as session from "./session/route"
-import * as twoFactor from "./authentication/two-factor/route"
 
 const PASS_THROUGH = ["HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"] as const
 const ROUTES = [
@@ -18,7 +17,6 @@ const ROUTES = [
   ["/api/v1/dashboard", dashboard],
   ["/api/v1/dashboard/deadline", dashboardDeadline],
   ["/api/v1/session", session],
-  ["/api/v1/authentication/two-factor", twoFactor],
 ] as [string, Record<string, (request: Request) => Promise<Response>>][]
 
 afterEach(() => {

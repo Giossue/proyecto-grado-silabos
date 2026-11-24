@@ -61,6 +61,7 @@ export type FakeWorld = {
   sessions: Map<string, SessionRecord>
   users: SessionUser[]
   assignments: RoleAssignmentRecord[]
+  rememberTokens?: Map<string, string | null>
 }
 
 export function fakeStore(world: FakeWorld): SessionStore {
@@ -85,6 +86,10 @@ export function fakeStore(world: FakeWorld): SessionStore {
     },
     collectGarbage: async (threshold) => {
       for (const [id, row] of world.sessions) if (row.lastActivity <= threshold) world.sessions.delete(id)
+    },
+    cycleRememberToken: async (userId, token) => {
+      const current = world.rememberTokens?.get(userId)
+      if (current !== undefined && current !== null && current !== "" && current !== "0") world.rememberTokens?.set(userId, token)
     },
   }
 }

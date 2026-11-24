@@ -27,6 +27,19 @@ export interface SessionStore {
   updateSession(id: string, row: StoredSession): Promise<void>
   destroySession(id: string): Promise<void>
   collectGarbage(threshold: number): Promise<void>
+  cycleRememberToken(userId: string, token: string): Promise<void>
+}
+
+export type OutgoingCookie = {
+  name: string
+  value: string
+  expires: number
+  maxAge: number
+  path: string
+  domain: string | null
+  secure: boolean
+  httpOnly: boolean
+  sameSite: string
 }
 
 export type BridgeConfig = {
@@ -42,6 +55,7 @@ export type BridgeDeps = {
   config: BridgeConfig
   now: () => number
   forward: (request: Request) => Promise<Response>
+  queueCookies?: (cookies: OutgoingCookie[]) => Promise<void>
 }
 
 export type LaravelSession = {

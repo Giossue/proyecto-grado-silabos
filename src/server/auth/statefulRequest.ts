@@ -17,7 +17,8 @@ import {
 import type { LaravelSession, RoleAssignmentRecord, SessionUser } from "./types"
 import { parseCookieHeader } from "../laravel/cookies"
 import { laravelRoot } from "../laravel/request"
-import { laravelHttpError, laravelJson, unauthenticated } from "../laravel/responses"
+import { laravelHttpError, unauthenticated } from "../laravel/responses"
+import { controllerJson, emptyResponse, fromController } from "./controllerResponse"
 import { hashPasswordForCookie, loginSessionKey, passwordHashSessionKey, recallerCookieName } from "../laravel/sessionGuard"
 import { timingSafeEqual } from "node:crypto"
 
@@ -30,20 +31,7 @@ export type Outcome = Response | typeof FORWARD
 
 export type StatefulOptions = { group: "web" | "api"; routeName?: string; authenticates?: boolean }
 
-const CONTROLLER_HEADERS = [...laravelJson(null).headers].filter(([name]) => !["content-type", "cache-control"].includes(name))
-
-export function fromController(response: Response): Response {
-  for (const [name, value] of CONTROLLER_HEADERS) response.headers.set(name, value)
-  return response
-}
-
-export function controllerJson(payload: unknown, status = 200): Response {
-  return fromController(laravelJson(payload, status))
-}
-
-export function emptyResponse(status = 204): Response {
-  return fromController(new Response(null, { status, headers: { "Cache-Control": "no-cache, private" } }))
-}
+export { controllerJson, emptyResponse, fromController }
 
 function sameHash(known: string, given: string): boolean {
   const left = Buffer.from(known)

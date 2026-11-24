@@ -86,5 +86,9 @@ export function sessionStoreOn(executor: SessionExecutor): SessionStore {
     async collectGarbage(threshold) {
       await executor.execute(sql`delete from sesiones where last_activity <= ${threshold}`)
     },
+    async cycleRememberToken(userId, token) {
+      await executor.execute(sql`update usuarios set codigo_recordarme = ${token}
+        where usuario_id = ${userId}::uuid and codigo_recordarme is not null and codigo_recordarme not in ('', '0')`)
+    },
   }
 }
