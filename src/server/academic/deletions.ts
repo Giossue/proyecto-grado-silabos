@@ -53,7 +53,7 @@ async function exists(executor: Executor, query: SQL): Promise<boolean> {
   return (await first<{ found: boolean }>(executor, sql`select exists (${query}) as found`))?.found === true
 }
 
-function deletionTx(tx: Executor): DeletionTx {
+export function deletionTx(tx: Executor): DeletionTx {
   return {
     async lockPeriod(id) {
       const row = await first<{ id: string; code: string }>(tx, sql`select periodo_academico_id::text as id, codigo_periodo_academico as code

@@ -130,7 +130,7 @@ function labelled(errors: Record<string, string[]>, labels: Record<string, strin
   return Object.fromEntries(Object.entries(errors).map(([key, messages]) => [key, messages.map((message) => message.replace(":attribute", labels[key] ?? key))]))
 }
 
-function phpIntCast(value: PhpValue | undefined): number {
+export function phpIntCast(value: PhpValue | undefined): number {
   if (typeof value === "number") return Math.trunc(value)
   if (typeof value === "boolean") return value ? 1 : 0
   if (typeof value === "string") {

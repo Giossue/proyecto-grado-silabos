@@ -7,6 +7,14 @@ import * as teacherDocuments from "./teacher/support-documents/route"
 import * as governanceRecord from "./admin/academic/[entity]/[record]/route"
 import * as careerRecord from "./coordination/academic/[entity]/[record]/route"
 import * as parallel from "./coordination/academic/parallels/[parallel]/route"
+import * as careerEntity from "./coordination/academic/[entity]/route"
+import * as parallels from "./coordination/academic/parallels/route"
+import * as parallelTeacher from "./coordination/academic/parallels/[parallel]/teacher/route"
+import * as curriculumConfiguration from "./coordination/academic/curriculum/[curriculum]/configuration/route"
+import * as curriculumRequirements from "./coordination/academic/curriculum/[curriculum]/requirements/route"
+import * as curriculumRequirement from "./coordination/academic/curriculum/[curriculum]/requirements/[requirement]/route"
+import * as curriculumSubject from "./coordination/academic/curriculum/[curriculum]/subjects/[subject]/route"
+import * as curriculumLayout from "./coordination/academic/curriculum/[curriculum]/subject-layout/route"
 
 const ID = "01a1c5bc-79ca-7331-8f0f-66d63f61c699"
 type Handler = (request: Request, context?: unknown) => Promise<Response>
@@ -30,8 +38,16 @@ describe("academic routes", () => {
     ["/api/v1/coordination/support-documents", coordinationDocuments, "GET"],
     ["/api/v1/teacher/support-documents", teacherDocuments, "GET"],
     [`/api/v1/admin/academic/periodo/${ID}`, governanceRecord, "DELETE,PATCH"],
-    [`/api/v1/coordination/academic/asignacion_docente/${ID}`, careerRecord, "DELETE"],
-    [`/api/v1/coordination/academic/parallels/${ID}`, parallel, "DELETE"],
+    [`/api/v1/coordination/academic/asignacion_docente/${ID}`, careerRecord, "DELETE,PATCH"],
+    [`/api/v1/coordination/academic/parallels/${ID}`, parallel, "DELETE,PATCH"],
+    ["/api/v1/coordination/academic/asignatura", careerEntity, "POST"],
+    ["/api/v1/coordination/academic/parallels", parallels, "POST"],
+    [`/api/v1/coordination/academic/parallels/${ID}/teacher`, parallelTeacher, "PUT"],
+    [`/api/v1/coordination/academic/curriculum/${ID}/configuration`, curriculumConfiguration, "PATCH"],
+    [`/api/v1/coordination/academic/curriculum/${ID}/requirements`, curriculumRequirements, "POST"],
+    [`/api/v1/coordination/academic/curriculum/${ID}/requirements/${ID}`, curriculumRequirement, "DELETE"],
+    [`/api/v1/coordination/academic/curriculum/${ID}/subjects/${ID}`, curriculumSubject, "DELETE"],
+    [`/api/v1/coordination/academic/curriculum/${ID}/subject-layout`, curriculumLayout, "PATCH"],
   ] as [string, RouteModule, string][])("serves %s in Next and sends every other method to Laravel", async (path, module, served) => {
     const fetchMock = stubLaravel()
     const servedMethods = served.split(",")
@@ -56,6 +72,31 @@ describe("academic routes", () => {
     })
     expect(response.status).toBe(401)
     expect(await response.text()).toBe('{"message":"Unauthenticated."}')
+  })
+
+  it("answers 401 in Next to a ported write without a session", async () => {
+    vi.stubEnv("LARAVEL_APP_KEY", `base64:${Buffer.alloc(32).toString("base64")}`)
+    const fetchMock = stubLaravel()
+    const response = await parallels.POST(
+      new Request("http://localhost:3000/api/v1/coordination/academic/parallels", {
+        method: "POST",
+        headers: { accept: "application/json", "content-type": "application/json" },
+        body: JSON.stringify({ codes: ["A"] }),
+      }),
+    )
+    expect(response.status).toBe(401)
+    expect(await response.text()).toBe('{"message":"Unauthenticated."}')
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it("sends a creation of any other coordination entity to Laravel without reading the session", async () => {
+    const fetchMock = stubLaravel()
+    const path = "/api/v1/coordination/academic/curriculum-import"
+    const response = await careerEntity.POST(new Request(`http://localhost:3000${path}`, { method: "POST", body: "{}" }), {
+      params: Promise.resolve({ entity: "curriculum-import" }),
+    })
+    expect(response.status).toBe(405)
+    expect((fetchMock.mock.calls as unknown as [string][])[0][0]).toBe(`http://127.0.0.1:8001${path}`)
   })
 
   it("sends a generic coordination delete of another entity to Laravel without reading the session", async () => {
