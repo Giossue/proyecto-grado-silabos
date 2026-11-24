@@ -42,7 +42,7 @@ const BY_ROLE: [string, [string, NoticeTexts][]][] = [
   ],
 ]
 
-function wants(preferences: unknown, type: string): boolean {
+export function wantsEmail(preferences: unknown, type: string): boolean {
   if (typeof preferences !== "object" || preferences === null) return true
   const key = SWITCH_OF[type] ?? type
   if (Array.isArray(preferences)) return true
@@ -56,5 +56,5 @@ export function emailOptionsFor(roles: string[], preferences: unknown): { type: 
     if (!roles.includes(role)) continue
     for (const [type, texts] of notices) types.set(type, texts)
   }
-  return [...types].map(([type, texts]) => ({ type, ...texts, enabled: wants(preferences, type) }))
+  return [...types].map(([type, texts]) => ({ type, ...texts, enabled: wantsEmail(preferences, type) }))
 }

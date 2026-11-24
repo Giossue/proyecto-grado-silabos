@@ -14,6 +14,7 @@ import { institutionToday } from "../dashboard/dashboardQueries"
 import { hasRole, PROCESS_OPEN, PROCESS_PAUSED, ROLE_ADMINISTRATOR } from "./policy"
 import { TEMPLATE_NAME } from "./convocations"
 import { createProcessRepository } from "./processQueries"
+import { NeedsLaravel } from "./snapshotDocuments"
 
 export type ProcessRow = {
   id: string
@@ -60,9 +61,8 @@ export function defaultProcessDeps(): ProcessDeps {
   return { bridge: defaultBridgeDeps(), processes: createProcessRepository(), templates: createTemplateStore(), today: institutionToday, now: () => Math.floor(Date.now() / 1000) }
 }
 
-class NeedsLaravel extends Error {}
 
-function display(day: string): string {
+export function display(day: string): string {
   const [year, month, date] = day.split("-")
   return `${date}/${month}/${year}`
 }
@@ -253,7 +253,7 @@ function localMoment(day: string, seconds: number): string {
   return `${new Date(time).toISOString().slice(0, 19)}+00:00`
 }
 
-function processDay(value: PhpValue | undefined, start: boolean): PhpValue | undefined {
+export function processDay(value: PhpValue | undefined, start: boolean): PhpValue | undefined {
   if (value === undefined || value === null) return value
   if (typeof value !== "string") throw new NeedsLaravel()
   let day: string

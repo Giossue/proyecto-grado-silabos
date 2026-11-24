@@ -1,11 +1,14 @@
 import { proxyToLaravel } from "@/server/laravel/proxy"
+import { resumeConvocation } from "@/server/syllabus/convocationWrites"
 import { pauseConvocation } from "@/server/syllabus/convocations"
 
 type Context = { params: Promise<{ convocation: string; transition: string }> }
 
 export async function POST(request: Request, context: Context): Promise<Response> {
   const { convocation, transition } = await context.params
-  return transition === "pausar" ? pauseConvocation(request, convocation) : proxyToLaravel(request)
+  if (transition === "pausar") return pauseConvocation(request, convocation)
+  if (transition === "reanudar") return resumeConvocation(request, convocation)
+  return proxyToLaravel(request)
 }
 
 export {
