@@ -7,6 +7,8 @@ $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
 $app->make(Illuminate\Contracts\Http\Kernel::class);
 
 use App\Modules\Configuration\Application\OfficialTemplate;
+use App\Modules\Configuration\Domain\Blocks\BlockDefinition;
+use App\Modules\Configuration\Domain\Blocks\RepeatableTable;
 use App\Modules\Configuration\Application\TemplateContext;
 use App\Modules\Configuration\Application\TemplateDraftProblems;
 use App\Modules\Configuration\Application\TemplateDraftRehearsal;
@@ -128,6 +130,53 @@ $cases = [
         $field('legado', 'coordinacion', $doc($paragraph([$text('Legado')])), ['max_length' => 300]),
     ])]),
 ];
+
+$practices = BlockDefinition::define('practicas', RepeatableTable::build(RepeatableTable::withKeys([
+    'kind' => 'practicas', 'label' => 'Prácticas de laboratorio', 'list' => 'practicas', 'item' => 'práctica', 'min' => 1, 'max' => 10, 'initial' => 2, 'band' => null,
+    'columns' => [
+        ['title' => 'Tema', 'type' => 'text', 'max_length' => 200, 'multiline' => false, 'width' => 200, 'required' => true],
+        ['title' => 'Modalidad', 'type' => 'choice', 'options' => [['label' => 'Presencial'], ['label' => 'Virtual']], 'width' => null, 'required' => false],
+    ],
+])), array_keys($definition->variables()));
+$block = fn (string $kind): array => ['type' => 'doc', 'content' => [['type' => 'documentBlock', 'attrs' => ['kind' => $kind, 'props' => [], 'value' => []]]]];
+$file = json_decode(file_get_contents(base_path(OfficialTemplate::PATH)), true);
+$file['version'] = 2;
+$cases += [
+    'html_content' => $draft([...$few, $extraSection([
+        $field('html', 'carrera', []),
+        $field('lineas', 'carrera', []),
+        $field('fija_html', 'institucional', []),
+        $field('numeros', 'carrera', []),
+        $field('variable_mala', 'carrera', []),
+        $field('vacia', 'carrera', []),
+    ])]),
+    'block_changes' => $draft([...$few, $extraSection([$field('practicas_lab', 'carrera', $block('practicas'))])], ['block_changes' => ['practicas' => $practices]]),
+    'block_changes_locked' => $draft($few, ['block_changes' => ['identificacion' => [...$definition->block('identificacion'), 'label' => 'Otra identificación']]]),
+    'block_changes_broken' => $draft($few, ['block_changes' => ['practicas' => [...$practices, 'rules' => [['code' => 'x', 'on' => 'submit', 'message' => 'm', 'checks' => [['filled' => 'practicas.*.nada', 'equals' => ['count' => 'practicas']]]]]]]]),
+    'block_changes_list' => $draft($few, ['block_changes' => [$practices]]),
+    'block_changes_version_2' => [...$file, 'block_changes' => ['identificacion' => [...$definition->block('identificacion'), 'label' => 'Otra identificación']]],
+    'lists' => $draft($official, ['lists' => [['block' => 'unidades', 'path' => 'units', 'min' => 1, 'max' => 6, 'initial' => 3], ['block' => 'unidades', 'path' => 'units.*.semanas', 'min' => 0, 'max' => 20, 'initial' => 2], 'suelta']]),
+    'lists_ok' => $draft([...$few, $extraSection([$field('unidades_lab', 'carrera', $block('unidades'))])], ['title' => '  Otro título  ', 'lists' => [['block' => 'unidades', 'path' => 'units', 'min' => 1, 'max' => 6, 'initial' => 3], ['block' => 'unidades', 'path' => 'units.*.semanas', 'min' => 0, 'max' => 20, 'initial' => 2]]]),
+    'lists_unknown_block' => $draft($few, ['lists' => [['block' => 'nada', 'path' => 'x', 'min' => 0, 'max' => 1, 'initial' => 0]]]),
+    'lists_bad_limits' => $draft($few, ['lists' => [['block' => 'unidades', 'path' => 'units', 'min' => 5, 'max' => 3, 'initial' => 3]]]),
+    'lists_bad_start' => $draft($few, ['lists' => [['block' => 'bibliografia', 'path' => 'libros', 'min' => 1, 'max' => 3, 'initial' => 9]]]),
+    'lists_bad_path' => $draft($few, ['lists' => [['block' => 'bibliografia', 'path' => 'libros.*.autor', 'min' => 0, 'max' => 3, 'initial' => 1]]]),
+    'version_2' => $file,
+    'version_2_bad_variable' => [...$file, 'variables' => ['Mala' => ['label' => 'x', 'source' => 'nada']]],
+    'version_2_unknown_source' => [...$file, 'variables' => [...$file['variables'], 'extra' => ['label' => 'Extra', 'source' => 'nada']]],
+    'version_2_missing_required' => [...$file, 'sections' => array_slice($file['sections'], 0, 3)],
+    'version_2_bad_block' => [...$file, 'blocks' => [...$file['blocks'], 'nueva' => ['label' => 'Nueva', 'layout' => '<p data-band="#aabbcc">x</p>']]],
+    'version_2_bad_preset' => [...$file, 'presets' => [['key' => 'p', 'label' => 'P', 'field' => 'nada']]],
+    'version_2_policy' => [...$file, 'response_policy' => 'abierta'],
+];
+$cases['html_content']['sections'][2]['fields'][0]['content'] = '<p>Hola <strong>mundo</strong> &amp; más</p><ul><li>uno</li><li>dos</li></ul><table><tr><th>A</th><td style="text-align:center">B</td></tr></table>';
+$cases['html_content']['sections'][2]['fields'][1]['content'] = ['<p>línea uno</p>', '<p style="text-align:center">línea dos</p>', '<ol><li>tres</li></ol>'];
+$cases['html_content']['sections'][2]['fields'][2]['content'] = '<p>Fija <span data-response=\'{"kind":"una","options":[{"const":"si","title":"Sí"}],"id":"fija_html"}\'></span></p>';
+$cases['html_content']['sections'][2]['fields'][3]['content'] = [1, 2];
+$cases['html_content']['sections'][2]['fields'][4]['content'] = '<p><span data-variable="nada"></span></p>';
+$cases['html_content']['sections'][2]['fields'][5]['content'] = '   ';
+$cases['html_ok'] = $cases['html_content'];
+$cases['html_ok']['sections'][2]['fields'] = array_slice($cases['html_content']['sections'][2]['fields'], 0, 2);
 
 $middleware = function (array $payload): array {
     $request = Request::create('/api/v1/admin/template/x/draft/check', 'POST', [], [], [], ['CONTENT_TYPE' => 'application/json', 'HTTP_ACCEPT' => 'application/json'], json_encode($payload));

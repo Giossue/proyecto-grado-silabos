@@ -200,22 +200,6 @@ describe("POST admin/template/{template}/draft/impact", () => {
 })
 
 describe("draft routes that stay in Laravel", () => {
-  it.each([
-    ["a version 2 import", { version: 2, sections: [] }],
-    ["HTML content", { version: 1, sections: [{ key: "a", title: "A", fields: [{ key: "b", quien_llena: "carrera", content: "<p>Hola</p>" }] }] }],
-    ["HTML lines", { version: 1, sections: [{ key: "a", title: "A", fields: [{ key: "b", quien_llena: "carrera", content: ["<p>Hola</p>"] }] }] }],
-    ["changed tables", { version: 1, sections: [], block_changes: { tabla: { label: "Tabla" } } }],
-    ["list limits", { version: 1, sections: [], lists: [{ block: "x", path: "y", min: 0, max: 1, initial: 0 }] }],
-  ])("forwards %s to Laravel untouched", async (_, body) => {
-    for (const action of ["check", "preview", "impact"] as const) {
-      forwarded = []
-      const response = await send(action, body)
-      expect(response).toMatchObject({ status: 299, text: "from-laravel" })
-      expect(forwarded).toHaveLength(1)
-      expect(await forwarded[0].text()).toBe(JSON.stringify(body))
-    }
-  })
-
   it("forwards when the template does not exist or the request is not JSON", async () => {
     templates.template = null
     expect((await send("preview", { version: 1, sections: [] })).status).toBe(299)

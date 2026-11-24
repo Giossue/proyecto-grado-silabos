@@ -50,10 +50,12 @@ export async function configuredFacultyUrl(request: Request, faculty: StoredFacu
   return `${laravelRoot(request)}/logos/facultad/${faculty.id}?v=${await fileModifiedAt(await facultyPath(faculty))}`
 }
 
-export async function facultyUrl(request: Request, facultyId: unknown, store: LogoStore): Promise<string> {
-  const configured = await configuredFacultyUrl(request, await findFaculty(facultyId, store))
-  if (configured !== null) return configured
+export async function defaultFacultyUrl(request: Request): Promise<string> {
   return `${laravelRoot(request)}/${DEFAULT_FACULTY}?v=${await fileModifiedAt(publicPath(DEFAULT_FACULTY))}`
+}
+
+export async function facultyUrl(request: Request, facultyId: unknown, store: LogoStore): Promise<string> {
+  return (await configuredFacultyUrl(request, await findFaculty(facultyId, store))) ?? defaultFacultyUrl(request)
 }
 
 export async function presentationLogos(request: Request, facultyId: unknown, store: LogoStore): Promise<{ institution: string; faculty: string }> {

@@ -1,6 +1,6 @@
 import { phpJsonEncode } from "../laravel/phpJson"
 import { validateInput, type Rule } from "../laravel/validation"
-import { isList, isPhpArray, isRecord, list, phpCount, phpString, phpTrim, record, type PhpRecord } from "./phpValues"
+import { isList, isPhpArray, isRecord, list, phpCount, phpIntCast, phpString, phpTrim, record, type PhpRecord } from "./phpValues"
 import {
   CAREER,
   defineCondition,
@@ -15,13 +15,15 @@ import {
   type TemplateDefinition,
 } from "./templateRuntime"
 import { defineDocumentStyle, documentWithLayout } from "./templateStyle"
+import { documentFromHtml } from "./documentHtml"
+import { DEFINITION_KEYS, defineTemplate, listLimitsOf, withBlocks, withListLimits } from "./templateDefinition"
 
 export const FORMAT_VERSION = 2
 export const RESPONSIBLES = [CAREER, INSTITUTIONAL]
 export const KEY_PATTERN = /^[a-z][a-z0-9_]*$/
 export const FIELD_LIMIT_INVALID = "El límite de caracteres debe ser un número entero entre 1 y 50 000."
 const FIELD_LIMIT_ONLY_CAREER = "Solo un campo editable (Carrera) puede tener límite de caracteres."
-const ROOT_KEYS = ["document", "variables", "blocks", "required_sections", "library_sections", "presets", "response_policy"]
+const ROOT_KEYS = DEFINITION_KEYS
 const SOURCE_KINDS = ["una", "varias"]
 const INSTITUTIONAL_RESPONSES = "Un campo Institucional no lleva tipos de respuesta. Cambie quién lo llena o quite la respuesta."
 
@@ -75,16 +77,7 @@ export function toRuntime(value: unknown): unknown {
   return Object.fromEntries(keys.map((key) => [key, toRuntime(value[key])]))
 }
 
-export function phpIntCast(value: unknown): number {
-  if (typeof value === "number") return Number.isFinite(value) ? Math.trunc(value) : 0
-  if (typeof value === "boolean") return value ? 1 : 0
-  if (typeof value === "string") {
-    const match = /^[ \t\n\r\v\f]*([+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?)/.exec(value)
-    return match ? Math.trunc(Number(match[1])) : 0
-  }
-  if (isPhpArray(value)) return phpCount(value) > 0 ? 1 : 0
-  return 0
-}
+export { phpIntCast }
 
 export function responsibleOf(value: unknown): unknown {
   return value === "docente" || value === "coordinacion" ? CAREER : value
@@ -116,20 +109,25 @@ function fieldsOf(section: unknown): unknown {
   return isPhpArray(fields) ? fields : []
 }
 
-export function forwardsToLaravel(input: PhpRecord): boolean {
-  if (phpIntCast(input.version) === FORMAT_VERSION) return true
-  for (const key of ["block_changes", "lists"]) {
-    if (isPhpArray(input[key]) && phpCount(input[key]) > 0) return true
+function htmlOrDocument(content: unknown): unknown {
+  return typeof content === "string" || (isPhpArray(content) && isPhpList(content)) ? documentFromHtml(content) : content
+}
+
+function fieldDocument(content: unknown): unknown {
+  return isPhpArray(content) && !isPhpList(content) ? content : documentFromHtml(content)
+}
+
+function htmlLines(value: unknown): boolean {
+  return typeof value === "string" || (isPhpArray(value) && isPhpList(value) && phpCount(value) > 0 && list(value).every((line) => typeof line === "string"))
+}
+
+function definingErrors<T>(work: () => T): T {
+  try {
+    return work()
+  } catch (error) {
+    if (error instanceof TemplateValidationError) throw new TemplateValidationError({ definition: flatten(error.errors) })
+    throw error
   }
-  const sections = input.sections
-  if (!isPhpArray(sections)) return false
-  return list(sections).some((section) =>
-    list(fieldsOf(section)).some((field) => {
-      if (!isPhpArray(field) || !Object.prototype.hasOwnProperty.call(field, "content")) return false
-      const content = at(field, "content")
-      return typeof content === "string" || (isPhpArray(content) && isPhpList(content))
-    }),
-  )
 }
 
 export function prepareDraft(input: PhpRecord): PhpRecord {
@@ -285,19 +283,46 @@ export class DraftRequest {
     return limits
   }
 
-  private withTitleAndLayout(definition: TemplateDefinition): TemplateDefinition {
-    let document = definition.document
+  private withTitleAndLayout(base: TemplateDefinition): TemplateDefinition {
+    let document = base.document
+    let definition = base
     const title = this.input.title
     if (typeof title === "string" && phpTrim(title) !== "") document = { ...document, title: { ...record(document.title), text: phpTrim(title) } }
     const layout = this.input.layout
+    const changes = this.input.block_changes
+    if (isPhpArray(changes) && phpCount(changes) > 0 && phpIntCast(this.input.version) !== FORMAT_VERSION) definition = withBlocks(definition, changes)
+    const lists = this.input.lists
+    if (isPhpArray(lists) && phpCount(lists) > 0) definition = withListLimits(definition, listLimitsOf(lists))
     if (!isPhpArray(layout)) return withDocument(definition, document)
     const picked = Object.fromEntries(entries(layout).filter(([key]) => ["margin_cm", "title_font_size", "section_font_size", "body_font_size"].includes(key)))
     return withDocument(definition, documentWithLayout(document, picked))
   }
 
+  private draftDefinition(): TemplateDefinition {
+    if (phpIntCast(this.input.version) !== FORMAT_VERSION) {
+      return definingErrors(() => withFieldLimits(withFieldConditions(this.withTitleAndLayout(this.current), this.fieldConditions()), this.fieldLimits()))
+    }
+    const sections = this.sectionList().map((section) => ({
+      key: given(section, "key"),
+      fields: list(fieldsOf(section)).map((field) => ({ key: given(field, "key"), quien_llena: given(field, "quien_llena"), content: htmlOrDocument(given(field, "content")) })),
+    }))
+    const root = Object.fromEntries(ROOT_KEYS.filter((key) => Object.prototype.hasOwnProperty.call(this.input, key)).map((key) => [key, this.input[key]]))
+    const defined = definingErrors(() => defineTemplate(root, sections))
+    const keys = sections.map((section) => phpString(section.key))
+    const required: [string, unknown][] = [
+      ["required_sections", defined.required_sections],
+      ["library_sections", defined.library_sections],
+    ]
+    for (const [name, wanted] of required) {
+      const missing = list(wanted).filter((key) => !keys.includes(phpString(key)))
+      if (missing.length > 0) throw new TemplateValidationError({ definition: [`«${name}» nombra secciones que no están en la plantilla: ${missing.map(phpString).join(", ")}.`] })
+    }
+    return definingErrors(() => withFieldLimits(withFieldConditions(this.withTitleAndLayout(defined), this.fieldConditions()), this.fieldLimits()))
+  }
+
   definition(): TemplateDefinition {
     if (this.definitionCache !== null) return this.definitionCache
-    this.definitionCache = withFieldLimits(withFieldConditions(this.withTitleAndLayout(this.current), this.fieldConditions()), this.fieldLimits())
+    this.definitionCache = this.draftDefinition()
     return this.definitionCache
   }
 
@@ -322,8 +347,9 @@ export class DraftRequest {
       : []
   }
 
-  private content(value: unknown, attribute: string): string[] {
-    if (!isPhpArray(value) || isPhpList(value)) return ["El contenido debe ser un documento, un texto HTML o una lista de líneas HTML."]
+  private content(raw: unknown, attribute: string): string[] {
+    const value = htmlLines(raw) ? documentFromHtml(raw) : raw
+    if (!htmlLines(raw) && (!isPhpArray(value) || isPhpList(value))) return ["El contenido debe ser un documento, un texto HTML o una lista de líneas HTML."]
     const definition = this.validDefinition()
     if (definition === null) return []
     try {
@@ -378,7 +404,7 @@ export class DraftRequest {
     this.sectionList().forEach((section, sectionIndex) => {
       list(fieldsOf(section)).forEach((field, fieldIndex) => {
         if (!isPhpArray(field)) return
-        const content = given(field, "content")
+        const content = htmlOrDocument(given(field, "content"))
         let document: unknown = null
         if (isPhpArray(content)) {
           try {
@@ -429,7 +455,7 @@ export function validatedSections(input: PhpRecord): DraftSection[] {
       key: phpString(given(field, "key")),
       label: given(field, "label") === null ? null : phpString(given(field, "label")),
       responsible: phpString(given(field, "quien_llena")),
-      content: record(given(field, "content")),
+      content: record(fieldDocument(given(field, "content"))),
     })),
   }))
 }
@@ -469,7 +495,7 @@ export async function draftProblems(payload: PhpRecord, current: TemplateDefinit
       const encoded = phpJsonEncode(content)
       if (!encoded.includes("data-response") && !encoded.includes('"type":"response"')) return
       try {
-        contentForField(INSTITUTIONAL, normalizeFieldDocument(content, current))
+        contentForField(INSTITUTIONAL, normalizeFieldDocument(fieldDocument(content), current))
       } catch (error) {
         if (!(error instanceof TemplateValidationError)) throw error
         for (const message of flatten(error.errors)) problems.push({ path: `sections.${sectionIndex}.fields.${fieldIndex}.content`, message, blocking: true })

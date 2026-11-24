@@ -4,7 +4,7 @@ import { isJsonRequest, laravelInput } from "../laravel/input"
 import { laravelJson, validationError } from "../laravel/responses"
 import { sharedRateLimiter, throttle, type RateLimiter, type Throttle } from "../laravel/throttle"
 import { phpShape, type PhpRecord } from "./phpValues"
-import { DraftRequest, draftProblems, forwardsToLaravel, prepareDraft, toRuntime, validatedSections } from "./templateDraft"
+import { DraftRequest, draftProblems, prepareDraft, toRuntime, validatedSections } from "./templateDraft"
 import { boundTemplate, FORBIDDEN, managesTemplates, type TemplateReadDeps } from "./templateReads"
 import { PREVIEW_UNAVAILABLE, rehearseImpact, rehearsePreview, type RehearsalStore } from "./templateRehearsal"
 import { createRehearsalStore } from "./templateRehearsalStore"
@@ -30,7 +30,6 @@ async function draftOf(
   if (!isJsonRequest(request)) return deps.bridge.forward(request)
   const original = request.clone()
   const input = toRuntime(await laravelInput(request)) as PhpRecord
-  if (forwardsToLaravel(input)) return deps.bridge.forward(original)
   const bound = await boundTemplate(original, templateId, deps, beforeBinding)
   if (bound instanceof Response) return bound
   const definition = bound.template.definition

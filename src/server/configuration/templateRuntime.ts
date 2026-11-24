@@ -446,7 +446,7 @@ export function pendingResponses(document: unknown): { unanswered: number; witho
   return pending
 }
 
-function schemaDigits(schema: PhpRecord): [number, number] {
+export function schemaDigits(schema: PhpRecord): [number, number] {
   const multiple = Number(schema.multipleOf)
   const decimals = multiple >= 1 ? 0 : Math.round(-Math.log10(multiple))
   return [String(Math.trunc(Math.floor(Number(schema.maximum)))).length, decimals]
@@ -604,13 +604,27 @@ const CHILDREN: Record<string, string[]> = {
   listItem: ["paragraph", "bulletList", "orderedList"],
 }
 
-export function normalizeTemplateDocument(document: unknown, variables: string[], definition: TemplateDefinition): PhpRecord {
+const LAYOUT_CHILDREN: Record<string, string[]> = {
+  doc: ["paragraph", "table", "bulletList", "orderedList", "group"],
+  paragraph: ["text", "hardBreak", "variable", "slot"],
+}
+
+const LAYOUT_DIRECTIVES = ["repeat", "when", "band"]
+
+export type LayoutRules = { directives(attrs: unknown[] | PhpRecord, type: string): PhpRecord; slot(attrs: unknown[] | PhpRecord): PhpRecord }
+
+function repeatsCells(table: PhpRecord): boolean {
+  return list(table.content).some((row) => list(given(row, "content") ?? []).some((cell) => given(given(cell, "attrs"), "repeat") !== null))
+}
+
+export function normalizeTemplateDocument(document: unknown, variables: string[], definition: TemplateDefinition, layout: LayoutRules | null = null): PhpRecord {
   if (phpJsonEncode(document).length > 2000000) fail("El diseño pasa el límite de 2 MB. Divida el contenido en varias secciones.")
   let count = 0
   const visit = (raw: unknown, parent: string, depth: number, insideTable: boolean): PhpRecord => {
     if (++count > 6000 || depth > 12 || !isPhpArray(raw)) fail("El diseño es demasiado grande o está mal formado.")
     const type = given(raw, "type") ?? ""
-    if (typeof type !== "string" || !(CHILDREN[parent] ?? []).includes(type)) fail("El diseño contiene un elemento no permitido.")
+    const allowed = layout !== null && LAYOUT_CHILDREN[parent] !== undefined ? LAYOUT_CHILDREN[parent] : (CHILDREN[parent] ?? [])
+    if (typeof type !== "string" || !allowed.includes(type)) fail("El diseño contiene un elemento no permitido.")
     const node: PhpRecord = { type }
     const attrs = isPhpArray(at(raw, "attrs")) ? (at(raw, "attrs") as unknown[] | PhpRecord) : []
     if (type === "text") {
@@ -620,6 +634,7 @@ export function normalizeTemplateDocument(document: unknown, variables: string[]
     }
     if (type === "documentBlock") node.attrs = normalizeDocumentBlock(attrs, definition)
     if (type === RESPONSE_NODE) node.attrs = responseAttrs(attrs)
+    if (type === "slot") node.attrs = layout === null ? [] : layout.slot(attrs)
     if (type === "variable") {
       const key = given(attrs, "id")
       if (typeof key !== "string" || !variables.includes(key)) fail("Seleccione una variable del catálogo.")
@@ -665,6 +680,7 @@ export function normalizeTemplateDocument(document: unknown, variables: string[]
       if ((bold !== null && typeof bold !== "boolean") || (italic !== null && typeof italic !== "boolean")) fail("Formato de celda no válido.")
       node.attrs = { colspan: span, rowspan: rows, colwidth: widths, backgroundColor: background, textColor, textAlign, bold, italic, borderStyle }
     }
+    if (layout !== null && LAYOUT_DIRECTIVES.some((key) => hasKey(attrs, key))) node.attrs = { ...record(node.attrs), ...layout.directives(attrs, type) }
     const rawMarks = given(raw, "marks")
     if (rawMarks !== null) {
       if (!["text", "variable", "slot", RESPONSE_NODE].includes(type) || !isPhpArray(rawMarks) || phpCount(rawMarks) > 4) fail("Formato de texto no válido.")
@@ -698,7 +714,7 @@ export function normalizeTemplateDocument(document: unknown, variables: string[]
     if (type === "tableRow") node.content ??= []
     const containers = ["doc", "table", "tableCell", "tableHeader", "bulletList", "orderedList", "listItem", "group"]
     if (containers.includes(type) && phpCount(node.content ?? []) === 0) fail("El diseño tiene una estructura vacía.")
-    if (type === "table") assertGrid(node)
+    if (type === "table" && (layout === null || !repeatsCells(node))) assertGrid(node)
     return node
   }
   return visit(document, "", 0, false)

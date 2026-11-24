@@ -109,6 +109,17 @@ export function phpEquals(left: unknown, right: unknown): boolean {
   return looseScalar(left, right)
 }
 
+export function phpIntCast(value: unknown): number {
+  if (typeof value === "number") return Number.isFinite(value) ? Math.trunc(value) : 0
+  if (typeof value === "boolean") return value ? 1 : 0
+  if (typeof value === "string") {
+    const match = /^[ \t\n\r\v\f]*([+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?)/.exec(value)
+    return match ? Math.trunc(Number(match[1])) : 0
+  }
+  if (isPhpArray(value)) return phpCount(value) > 0 ? 1 : 0
+  return 0
+}
+
 export function isScalar(value: unknown): value is string | number | boolean {
   return typeof value === "string" || typeof value === "number" || typeof value === "boolean"
 }
