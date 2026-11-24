@@ -1,0 +1,2230 @@
+[
+  {
+    "nombre": "Pedido vago que se aclara en la conversación",
+    "turnos": [
+      {
+        "mensaje": "quiero agregar algo de tutorías",
+        "espera": {
+          "resultado": "pregunta"
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "ver_plantilla"
+              }
+            ],
+            [
+              {
+                "funcion": "preguntar",
+                "argumentos": {
+                  "pregunta": "¿Qué debe registrar sobre las tutorías y en qué sección?"
+                }
+              }
+            ]
+          ]
+        }
+      },
+      {
+        "mensaje": "que el docente ponga su horario de tutorías y el lugar, en la parte de metodología al final",
+        "aplicar": true,
+        "espera": {
+          "resultado": "propuesta",
+          "funciones": [
+            "agregar_campo"
+          ],
+          "cambios": [
+            "Nuevo campo"
+          ]
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "agregar_campo",
+                "argumentos": {
+                  "seccion": "metodologia",
+                  "nombre": "7.6 Tutorías",
+                  "quien_llena": "carrera",
+                  "contenido_html": "<p>Horario de tutorías:</p><p></p><p>Lugar:</p><p></p>",
+                  "despues_de": "(final)"
+                }
+              }
+            ],
+            [
+              {
+                "funcion": "validar_borrador"
+              }
+            ],
+            [
+              {
+                "funcion": "responder",
+                "argumentos": {
+                  "mensaje": "Propongo el campo 7.6 Tutorías."
+                }
+              }
+            ]
+          ]
+        }
+      },
+      {
+        "mensaje": "ok, y que tenga una tablita con día, hora y lugar mejor",
+        "espera": {
+          "resultado": "propuesta",
+          "cambios": [
+            "Tutorías"
+          ]
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "ver_campo",
+                "argumentos": {
+                  "clave": "tutorias"
+                }
+              }
+            ],
+            [
+              {
+                "funcion": "cambiar_contenido_campo",
+                "argumentos": {
+                  "clave": "tutorias",
+                  "contenido_html": "<table><tr><th style=\"background:#C3D4EA;font-weight:bold\">Día</th><th style=\"background:#C3D4EA;font-weight:bold\">Hora</th><th style=\"background:#C3D4EA;font-weight:bold\">Lugar</th></tr><tr><td></td><td></td><td></td></tr></table>"
+                }
+              }
+            ],
+            [
+              {
+                "funcion": "validar_borrador"
+              }
+            ],
+            [
+              {
+                "funcion": "responder",
+                "argumentos": {
+                  "mensaje": "Cambié el campo por una tabla."
+                }
+              }
+            ]
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "nombre": "Cambios encadenados sobre una sección nueva",
+    "turnos": [
+      {
+        "mensaje": "Agrega una sección de Proyecto integrador después de la planificación de unidades, que la llene el docente",
+        "aplicar": true,
+        "espera": {
+          "resultado": "propuesta",
+          "funciones": [
+            "agregar_seccion",
+            "agregar_campo"
+          ],
+          "cambios": [
+            "Proyecto integrador"
+          ]
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "agregar_seccion",
+                "argumentos": {
+                  "titulo": "1. Proyecto integrador",
+                  "orientacion": "vertical",
+                  "despues_de": "planificacion"
+                }
+              }
+            ],
+            [
+              {
+                "funcion": "agregar_campo",
+                "argumentos": {
+                  "seccion": "proyecto_integrador",
+                  "nombre": "",
+                  "quien_llena": "carrera",
+                  "contenido_html": "<p></p>",
+                  "despues_de": "(final)"
+                }
+              },
+              {
+                "funcion": "renumerar"
+              }
+            ],
+            [
+              {
+                "funcion": "validar_borrador"
+              }
+            ],
+            [
+              {
+                "funcion": "responder",
+                "argumentos": {
+                  "mensaje": "Propongo la sección."
+                }
+              }
+            ]
+          ]
+        }
+      },
+      {
+        "mensaje": "también ponla en horizontal",
+        "aplicar": true,
+        "espera": {
+          "resultado": "propuesta",
+          "funciones": [
+            "cambiar_orientacion_seccion"
+          ],
+          "cambios": [
+            "horizontal"
+          ]
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "cambiar_orientacion_seccion",
+                "argumentos": {
+                  "clave": "proyecto_integrador",
+                  "orientacion": "horizontal"
+                }
+              }
+            ],
+            [
+              {
+                "funcion": "responder",
+                "argumentos": {
+                  "mensaje": "La pongo en horizontal."
+                }
+              }
+            ]
+          ]
+        }
+      },
+      {
+        "mensaje": "mmm no, mejor muévela al final antes de la bibliografía y déjala vertical",
+        "espera": {
+          "resultado": "propuesta",
+          "funciones": [
+            "mover_seccion"
+          ],
+          "cambios": [
+            "orden de las secciones"
+          ]
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "mover_seccion",
+                "argumentos": {
+                  "clave": "proyecto_integrador",
+                  "despues_de": "etica"
+                }
+              },
+              {
+                "funcion": "cambiar_orientacion_seccion",
+                "argumentos": {
+                  "clave": "proyecto_integrador",
+                  "orientacion": "vertical"
+                }
+              }
+            ],
+            [
+              {
+                "funcion": "renumerar"
+              }
+            ],
+            [
+              {
+                "funcion": "validar_borrador"
+              }
+            ],
+            [
+              {
+                "funcion": "responder",
+                "argumentos": {
+                  "mensaje": "La muevo antes de la bibliografía."
+                }
+              }
+            ]
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "nombre": "Tabla con colores de la institución",
+    "turnos": [
+      {
+        "mensaje": "En evaluación agrega una tabla de rúbrica con columnas Criterio, Excelente, Bueno y Regular, y una fila vacía para llenar",
+        "aplicar": true,
+        "espera": {
+          "resultado": "propuesta",
+          "funciones": [
+            "agregar_campo"
+          ],
+          "cambios": [
+            "Rúbrica|Rubrica"
+          ]
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "agregar_campo",
+                "argumentos": {
+                  "seccion": "evaluacion",
+                  "nombre": "Rúbrica",
+                  "quien_llena": "carrera",
+                  "contenido_html": "<table><tr><th style=\"background:#C3D4EA;font-weight:bold\">Criterio</th><th style=\"background:#C3D4EA;font-weight:bold\">Excelente</th><th style=\"background:#C3D4EA;font-weight:bold\">Bueno</th><th style=\"background:#C3D4EA;font-weight:bold\">Regular</th></tr><tr><td></td><td></td><td></td><td></td></tr></table>",
+                  "despues_de": "(final)"
+                }
+              }
+            ],
+            [
+              {
+                "funcion": "validar_borrador"
+              }
+            ],
+            [
+              {
+                "funcion": "responder",
+                "argumentos": {
+                  "mensaje": "Propongo la rúbrica."
+                }
+              }
+            ]
+          ]
+        }
+      },
+      {
+        "mensaje": "el encabezado ponlo en el azul institucional",
+        "aplicar": true,
+        "espera": {
+          "resultado": "propuesta",
+          "funciones": [
+            "cambiar_contenido_campo"
+          ]
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "ver_campo",
+                "argumentos": {
+                  "clave": "rubrica"
+                }
+              }
+            ],
+            [
+              {
+                "funcion": "cambiar_contenido_campo",
+                "argumentos": {
+                  "clave": "rubrica",
+                  "contenido_html": "<table><tr><th style=\"background:#4F81BD;color:#FFFFFF;font-weight:bold\">Criterio</th><th style=\"background:#4F81BD;color:#FFFFFF;font-weight:bold\">Excelente</th><th style=\"background:#4F81BD;color:#FFFFFF;font-weight:bold\">Bueno</th><th style=\"background:#4F81BD;color:#FFFFFF;font-weight:bold\">Regular</th></tr><tr><td></td><td></td><td></td><td></td></tr></table>"
+                }
+              }
+            ],
+            [
+              {
+                "funcion": "responder",
+                "argumentos": {
+                  "mensaje": "Encabezado en azul institucional."
+                }
+              }
+            ]
+          ]
+        }
+      },
+      {
+        "mensaje": "y la columna de criterio en celeste",
+        "espera": {
+          "resultado": "propuesta",
+          "funciones": [
+            "cambiar_contenido_campo"
+          ]
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "cambiar_contenido_campo",
+                "argumentos": {
+                  "clave": "rubrica",
+                  "contenido_html": "<table><tr><th style=\"background:#C3D4EA;font-weight:bold\">Criterio</th><th style=\"background:#4F81BD;color:#FFFFFF;font-weight:bold\">Excelente</th><th style=\"background:#4F81BD;color:#FFFFFF;font-weight:bold\">Bueno</th><th style=\"background:#4F81BD;color:#FFFFFF;font-weight:bold\">Regular</th></tr><tr><td></td><td></td><td></td><td></td></tr></table>"
+                }
+              }
+            ],
+            [
+              {
+                "funcion": "responder",
+                "argumentos": {
+                  "mensaje": "Criterio en celeste."
+                }
+              }
+            ]
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "nombre": "Sección obligatoria que no se puede quitar",
+    "turnos": [
+      {
+        "mensaje": "Quita la sección de conducta ética, ya no se usa",
+        "espera": {
+          "resultado": "respuesta|pregunta"
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "quitar_seccion",
+                "argumentos": {
+                  "clave": "etica"
+                }
+              }
+            ],
+            [
+              {
+                "funcion": "responder",
+                "argumentos": {
+                  "mensaje": "Esa sección es obligatoria y no se puede quitar. Puedo cambiar su contenido."
+                }
+              }
+            ]
+          ],
+          "errores": [
+            "es obligatoria y no se puede quitar"
+          ]
+        }
+      },
+      {
+        "mensaje": "bueno entonces deja el texto vacío y que lo llene el docente",
+        "espera": {
+          "resultado": "propuesta",
+          "funciones": [
+            "cambiar_responsable_campo"
+          ],
+          "cambios": [
+            "Carrera|Editable"
+          ]
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "cambiar_contenido_campo",
+                "argumentos": {
+                  "clave": "conducta_etica",
+                  "contenido_html": "<p></p>"
+                }
+              },
+              {
+                "funcion": "cambiar_responsable_campo",
+                "argumentos": {
+                  "clave": "conducta_etica",
+                  "quien_llena": "carrera"
+                }
+              }
+            ],
+            [
+              {
+                "funcion": "validar_borrador"
+              }
+            ],
+            [
+              {
+                "funcion": "responder",
+                "argumentos": {
+                  "mensaje": "Lo dejo vacío y editable."
+                }
+              }
+            ]
+          ]
+        }
+      },
+      {
+        "mensaje": "dale",
+        "espera": {
+          "resultado": "respuesta",
+          "mensaje": [
+            "Aplicar"
+          ]
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "responder",
+                "argumentos": {
+                  "mensaje": "Pulse «Aplicar» en la propuesta anterior."
+                }
+              }
+            ]
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "nombre": "Colores no permitidos y bibliografía",
+    "turnos": [
+      {
+        "mensaje": "pon los títulos de la tabla de bibliografía en rojo para que resalten",
+        "espera": {
+          "resultado": "respuesta|pregunta"
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "ver_plantilla"
+              }
+            ],
+            [
+              {
+                "funcion": "responder",
+                "argumentos": {
+                  "mensaje": "La bibliografía es un bloque con diseño fijo y el rojo no está permitido."
+                }
+              }
+            ]
+          ]
+        }
+      },
+      {
+        "mensaje": "entonces en azul",
+        "espera": {
+          "resultado": "respuesta|pregunta"
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "responder",
+                "argumentos": {
+                  "mensaje": "El diseño del bloque de bibliografía no se cambia."
+                }
+              }
+            ]
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "nombre": "Mensajes informales con faltas",
+    "turnos": [
+      {
+        "mensaje": "agregale un campo d competencias en resultados xfa q lo llene el profe",
+        "aplicar": true,
+        "espera": {
+          "resultado": "propuesta",
+          "funciones": [
+            "agregar_campo"
+          ],
+          "cambios": [
+            "Competencias"
+          ]
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "agregar_campo",
+                "argumentos": {
+                  "seccion": "resultados",
+                  "nombre": "Competencias",
+                  "quien_llena": "carrera",
+                  "contenido_html": "<p></p>",
+                  "despues_de": "(final)"
+                }
+              }
+            ],
+            [
+              {
+                "funcion": "validar_borrador"
+              }
+            ],
+            [
+              {
+                "funcion": "responder",
+                "argumentos": {
+                  "mensaje": "Propongo el campo Competencias, editable."
+                }
+              }
+            ]
+          ]
+        }
+      },
+      {
+        "mensaje": "no mejor q lo llene coordinacion",
+        "espera": {
+          "resultado": "respuesta|pregunta|propuesta",
+          "mensaje": [
+            "Coordinación|coordinacion"
+          ]
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "responder",
+                "argumentos": {
+                  "mensaje": "Ya es Editable: Coordinación lo escribe en el proyecto de carrera y el docente solo llena los espacios que le deje."
+                }
+              }
+            ]
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "nombre": "Reorganizar y mantener la numeración",
+    "turnos": [
+      {
+        "mensaje": "Mueve habilidades blandas después del perfil de egreso",
+        "aplicar": true,
+        "espera": {
+          "resultado": "propuesta",
+          "funciones": [
+            "mover_seccion",
+            "renumerar"
+          ],
+          "cambios": [
+            "orden de las secciones"
+          ]
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "ver_plantilla"
+              }
+            ],
+            [
+              {
+                "funcion": "mover_seccion",
+                "argumentos": {
+                  "clave": "habilidades",
+                  "despues_de": "perfil_egreso"
+                }
+              },
+              {
+                "funcion": "renumerar"
+              }
+            ],
+            [
+              {
+                "funcion": "validar_borrador"
+              }
+            ],
+            [
+              {
+                "funcion": "responder",
+                "argumentos": {
+                  "mensaje": "Muevo la sección y renumero."
+                }
+              }
+            ]
+          ]
+        }
+      },
+      {
+        "mensaje": "revisa que la numeración de todo quede bien, incluidos los subtítulos",
+        "espera": {
+          "resultado": "respuesta"
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "renumerar"
+              }
+            ],
+            [
+              {
+                "funcion": "responder",
+                "argumentos": {
+                  "mensaje": "La numeración ya está en orden."
+                }
+              }
+            ]
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "nombre": "Solo preguntas, sin cambios",
+    "turnos": [
+      {
+        "mensaje": "¿Qué pasa si cambio quién llena la descripción de la asignatura?",
+        "espera": {
+          "resultado": "respuesta"
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "ver_plantilla"
+              }
+            ],
+            [
+              {
+                "funcion": "responder",
+                "argumentos": {
+                  "mensaje": "Si pasa a No editable, Coordinación deja de escribirla."
+                }
+              }
+            ]
+          ]
+        }
+      },
+      {
+        "mensaje": "¿y qué secciones revisa biblioteca?",
+        "espera": {
+          "resultado": "respuesta",
+          "mensaje": [
+            "Bibliograf"
+          ]
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "responder",
+                "argumentos": {
+                  "mensaje": "Biblioteca revisa la sección de Bibliografía."
+                }
+              }
+            ]
+          ]
+        }
+      },
+      {
+        "mensaje": "¿cuántos campos llena el docente en total?",
+        "espera": {
+          "resultado": "respuesta"
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "responder",
+                "argumentos": {
+                  "mensaje": "Los campos Editables tienen espacios para el docente."
+                }
+              }
+            ]
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "nombre": "Editar un texto fijo largo",
+    "turnos": [
+      {
+        "mensaje": "En conducta ética quita el punto que habla de la plataforma ZOOM, ya no usamos eso",
+        "aplicar": true,
+        "espera": {
+          "resultado": "propuesta",
+          "funciones": [
+            "cambiar_contenido_campo"
+          ],
+          "cambios": [
+            "Cambia el contenido"
+          ]
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "ver_campo",
+                "argumentos": {
+                  "clave": "conducta_etica"
+                }
+              }
+            ],
+            [
+              {
+                "funcion": "cambiar_contenido_campo",
+                "argumentos": {
+                  "clave": "conducta_etica",
+                  "contenido_html": "<ul><li>Se aplicará el código de ética y políticas de acción afirmativa de la Universidad Estatal de Bolívar.</li><li>Se respetará la puntualidad y la asistencia a clases.</li></ul>"
+                }
+              }
+            ],
+            [
+              {
+                "funcion": "validar_borrador"
+              }
+            ],
+            [
+              {
+                "funcion": "responder",
+                "argumentos": {
+                  "mensaje": "Quito el punto de ZOOM."
+                }
+              }
+            ]
+          ]
+        }
+      },
+      {
+        "mensaje": "y agrega uno que diga que las clases virtuales son por Microsoft Teams con la cámara encendida",
+        "espera": {
+          "resultado": "propuesta",
+          "funciones": [
+            "cambiar_contenido_campo"
+          ]
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "ver_campo",
+                "argumentos": {
+                  "clave": "conducta_etica"
+                }
+              }
+            ],
+            [
+              {
+                "funcion": "cambiar_contenido_campo",
+                "argumentos": {
+                  "clave": "conducta_etica",
+                  "contenido_html": "<ul><li>Se aplicará el código de ética y políticas de acción afirmativa de la Universidad Estatal de Bolívar.</li><li>Se respetará la puntualidad y la asistencia a clases.</li><li>Las clases virtuales son por Microsoft Teams con la cámara encendida.</li></ul>"
+                }
+              }
+            ],
+            [
+              {
+                "funcion": "validar_borrador"
+              }
+            ],
+            [
+              {
+                "funcion": "responder",
+                "argumentos": {
+                  "mensaje": "Agrego el punto de Teams."
+                }
+              }
+            ]
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "nombre": "Sección nueva con varios campos de distinto responsable",
+    "turnos": [
+      {
+        "mensaje": "Crea una sección Prácticas preprofesionales después de evaluación con tres campos: objetivos de la práctica que llena el docente, lugar de prácticas que viene de coordinación, y horas que sea fijo con el texto Según el reglamento de prácticas vigente",
+        "aplicar": true,
+        "espera": {
+          "resultado": "propuesta",
+          "funciones": [
+            "agregar_seccion",
+            "agregar_campo"
+          ],
+          "cambios": [
+            "Prácticas preprofesionales"
+          ]
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "agregar_seccion",
+                "argumentos": {
+                  "titulo": "1. Prácticas preprofesionales",
+                  "orientacion": "vertical",
+                  "despues_de": "evaluacion"
+                }
+              }
+            ],
+            [
+              {
+                "funcion": "agregar_campo",
+                "argumentos": {
+                  "seccion": "practicas_preprofesionales",
+                  "nombre": "Objetivos de la práctica",
+                  "quien_llena": "carrera",
+                  "contenido_html": "<p></p>",
+                  "despues_de": "(final)"
+                }
+              },
+              {
+                "funcion": "agregar_campo",
+                "argumentos": {
+                  "seccion": "practicas_preprofesionales",
+                  "nombre": "Lugar de prácticas",
+                  "quien_llena": "carrera",
+                  "contenido_html": "<p></p>",
+                  "despues_de": "(final)"
+                }
+              },
+              {
+                "funcion": "agregar_campo",
+                "argumentos": {
+                  "seccion": "practicas_preprofesionales",
+                  "nombre": "Horas",
+                  "quien_llena": "institucional",
+                  "contenido_html": "<p>Según el reglamento de prácticas vigente</p>",
+                  "despues_de": "(final)"
+                }
+              },
+              {
+                "funcion": "renumerar"
+              }
+            ],
+            [
+              {
+                "funcion": "validar_borrador"
+              }
+            ],
+            [
+              {
+                "funcion": "responder",
+                "argumentos": {
+                  "mensaje": "Propongo la sección con tres campos."
+                }
+              }
+            ]
+          ]
+        }
+      },
+      {
+        "mensaje": "el de horas mejor que diga Según el reglamento de prácticas de la UEB",
+        "aplicar": true,
+        "espera": {
+          "resultado": "propuesta",
+          "funciones": [
+            "cambiar_contenido_campo"
+          ],
+          "cambios": [
+            "Horas"
+          ]
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "cambiar_contenido_campo",
+                "argumentos": {
+                  "clave": "horas",
+                  "contenido_html": "<p>Según el reglamento de prácticas de la UEB</p>"
+                }
+              }
+            ],
+            [
+              {
+                "funcion": "responder",
+                "argumentos": {
+                  "mensaje": "Cambio el texto."
+                }
+              }
+            ]
+          ]
+        }
+      },
+      {
+        "mensaje": "perfecto, ¿la numeración de las demás secciones quedó bien?",
+        "espera": {
+          "resultado": "respuesta"
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "ver_plantilla"
+              }
+            ],
+            [
+              {
+                "funcion": "responder",
+                "argumentos": {
+                  "mensaje": "Sí, quedó en orden."
+                }
+              }
+            ]
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "nombre": "Respuestas con ajustes",
+    "turnos": [
+      {
+        "mensaje": "En metodología agrega un campo Modalidad para elegir presencial, en línea o híbrida",
+        "aplicar": true,
+        "espera": {
+          "resultado": "propuesta",
+          "funciones": [
+            "agregar_campo"
+          ],
+          "cambios": [
+            "Modalidad"
+          ]
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "agregar_campo",
+                "argumentos": {
+                  "seccion": "metodologia",
+                  "nombre": "7.6 Modalidad",
+                  "quien_llena": "carrera",
+                  "contenido_html": "<p>Modalidad: <span data-response='{\"kind\":\"una\",\"options\":[{\"const\":\"o1\",\"title\":\"Presencial\"},{\"const\":\"o2\",\"title\":\"En línea\"},{\"const\":\"o3\",\"title\":\"Híbrida\"}]}'></span></p>",
+                  "despues_de": "(final)"
+                }
+              }
+            ],
+            [
+              {
+                "funcion": "validar_borrador"
+              }
+            ],
+            [
+              {
+                "funcion": "responder",
+                "argumentos": {
+                  "mensaje": "Propongo el campo Modalidad."
+                }
+              }
+            ]
+          ]
+        }
+      },
+      {
+        "mensaje": "que se muestre como desplegable y que no sea obligatoria",
+        "aplicar": true,
+        "espera": {
+          "resultado": "propuesta",
+          "funciones": [
+            "cambiar_contenido_campo"
+          ],
+          "cambios": [
+            "Modalidad"
+          ]
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "ver_campo",
+                "argumentos": {
+                  "clave": "modalidad"
+                }
+              }
+            ],
+            [
+              {
+                "funcion": "cambiar_contenido_campo",
+                "argumentos": {
+                  "clave": "modalidad",
+                  "contenido_html": "<p>Modalidad: <span data-response='{\"kind\":\"una\",\"options\":[{\"const\":\"o1\",\"title\":\"Presencial\"},{\"const\":\"o2\",\"title\":\"En línea\"},{\"const\":\"o3\",\"title\":\"Híbrida\"}],\"required\":false,\"display\":\"desplegable\"}'></span></p>"
+                }
+              }
+            ],
+            [
+              {
+                "funcion": "responder",
+                "argumentos": {
+                  "mensaje": "Desplegable y opcional."
+                }
+              }
+            ]
+          ]
+        }
+      },
+      {
+        "mensaje": "y ponle una ayuda que diga: elija la modalidad principal",
+        "espera": {
+          "resultado": "propuesta",
+          "funciones": [
+            "cambiar_contenido_campo"
+          ]
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "cambiar_contenido_campo",
+                "argumentos": {
+                  "clave": "modalidad",
+                  "contenido_html": "<p>Modalidad: <span data-response='{\"kind\":\"una\",\"options\":[{\"const\":\"o1\",\"title\":\"Presencial\"},{\"const\":\"o2\",\"title\":\"En línea\"},{\"const\":\"o3\",\"title\":\"Híbrida\"}],\"required\":false,\"display\":\"desplegable\",\"help\":\"Elija la modalidad principal.\"}'></span></p>"
+                }
+              }
+            ],
+            [
+              {
+                "funcion": "responder",
+                "argumentos": {
+                  "mensaje": "Agrego la ayuda."
+                }
+              }
+            ]
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "nombre": "Tabla repetible nueva",
+    "turnos": [
+      {
+        "mensaje": "En metodología agrega una tabla de salidas de campo donde el docente ponga el lugar, la fecha y las horas, máximo cinco",
+        "espera": {
+          "resultado": "propuesta",
+          "funciones": [
+            "crear_tabla_repetible",
+            "agregar_campo"
+          ],
+          "cambios": [
+            "Nueva tabla repetible"
+          ]
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "crear_tabla_repetible",
+                "argumentos": {
+                  "titulo": "Salidas de campo",
+                  "fila": "salida",
+                  "minimo": 0,
+                  "maximo": 5,
+                  "al_empezar": 1,
+                  "columnas": [
+                    {
+                      "nombre": "Lugar",
+                      "tipo": "texto",
+                      "obligatoria": false,
+                      "opciones": []
+                    },
+                    {
+                      "nombre": "Fecha",
+                      "tipo": "texto",
+                      "obligatoria": false,
+                      "opciones": []
+                    },
+                    {
+                      "nombre": "Horas",
+                      "tipo": "numero",
+                      "obligatoria": false,
+                      "opciones": []
+                    }
+                  ]
+                }
+              }
+            ],
+            [
+              {
+                "funcion": "agregar_campo",
+                "argumentos": {
+                  "seccion": "metodologia",
+                  "nombre": "7.6 Salidas de campo",
+                  "quien_llena": "carrera",
+                  "contenido_html": "<div data-block=\"tabla_salidas_de_campo\"></div>",
+                  "despues_de": "(final)"
+                }
+              }
+            ],
+            [
+              {
+                "funcion": "validar_borrador"
+              }
+            ],
+            [
+              {
+                "funcion": "responder",
+                "argumentos": {
+                  "mensaje": "Propongo la tabla."
+                }
+              }
+            ]
+          ]
+        }
+      },
+      {
+        "mensaje": "que el lugar sea obligatorio",
+        "espera": {
+          "resultado": "propuesta",
+          "funciones": [
+            "crear_tabla_repetible"
+          ],
+          "cambios": [
+            "Nueva tabla repetible"
+          ]
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "crear_tabla_repetible",
+                "argumentos": {
+                  "titulo": "Salidas de campo",
+                  "fila": "salida",
+                  "minimo": 0,
+                  "maximo": 5,
+                  "al_empezar": 1,
+                  "columnas": [
+                    {
+                      "nombre": "Lugar",
+                      "tipo": "texto",
+                      "obligatoria": true,
+                      "opciones": []
+                    },
+                    {
+                      "nombre": "Fecha",
+                      "tipo": "texto",
+                      "obligatoria": false,
+                      "opciones": []
+                    },
+                    {
+                      "nombre": "Horas",
+                      "tipo": "numero",
+                      "obligatoria": false,
+                      "opciones": []
+                    }
+                  ]
+                }
+              }
+            ],
+            [
+              {
+                "funcion": "agregar_campo",
+                "argumentos": {
+                  "seccion": "metodologia",
+                  "nombre": "7.6 Salidas de campo",
+                  "quien_llena": "carrera",
+                  "contenido_html": "<div data-block=\"tabla_salidas_de_campo\"></div>",
+                  "despues_de": "(final)"
+                }
+              }
+            ],
+            [
+              {
+                "funcion": "validar_borrador"
+              }
+            ],
+            [
+              {
+                "funcion": "responder",
+                "argumentos": {
+                  "mensaje": "Rehago la propuesta con el lugar obligatorio."
+                }
+              }
+            ]
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "nombre": "Mostrar solo si",
+    "turnos": [
+      {
+        "mensaje": "En metodología pregunta si la asignatura usa laboratorio, sí o no, y si responde sí que escriba cuál",
+        "aplicar": true,
+        "espera": {
+          "resultado": "propuesta"
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "ver_campo",
+                "argumentos": {
+                  "clave": "metodologia"
+                }
+              }
+            ],
+            [
+              {
+                "funcion": "cambiar_contenido_campo",
+                "argumentos": {
+                  "clave": "metodologia",
+                  "contenido_html": "<p></p><p>¿Usa laboratorio? <span data-response='{\"kind\":\"una\",\"options\":[{\"const\":\"o1\",\"title\":\"Sí\"},{\"const\":\"o2\",\"title\":\"No\"}],\"id\":\"usa_laboratorio\"}'></span></p><p>¿Cuál? <span data-response='{\"kind\":\"texto\",\"showIf\":{\"response\":\"usa_laboratorio\",\"options\":[\"o1\"]}}'></span></p>"
+                }
+              }
+            ],
+            [
+              {
+                "funcion": "validar_borrador"
+              }
+            ],
+            [
+              {
+                "funcion": "responder",
+                "argumentos": {
+                  "mensaje": "Agrego la pregunta y el espacio condicionado."
+                }
+              }
+            ]
+          ]
+        }
+      },
+      {
+        "mensaje": "y que técnicas de enseñanza solo aparezca si usa laboratorio",
+        "espera": {
+          "resultado": "propuesta",
+          "funciones": [
+            "mostrar_solo_si"
+          ],
+          "cambios": [
+            "se mostrará solo si"
+          ]
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "ver_campo",
+                "argumentos": {
+                  "clave": "metodologia"
+                }
+              }
+            ],
+            [
+              {
+                "funcion": "mostrar_solo_si",
+                "argumentos": {
+                  "clave": "tecnicas_ensenanza",
+                  "respuesta": "usa_laboratorio",
+                  "opciones": [
+                    "Sí"
+                  ]
+                }
+              }
+            ],
+            [
+              {
+                "funcion": "validar_borrador"
+              }
+            ],
+            [
+              {
+                "funcion": "responder",
+                "argumentos": {
+                  "mensaje": "Técnicas de enseñanza solo se mostrará si usa laboratorio."
+                }
+              }
+            ]
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "nombre": "Insertar datos del sistema",
+    "turnos": [
+      {
+        "mensaje": "En la sección 2 agrega al inicio un campo no editable que diga «Carrera de» con el nombre de la carrera y luego el nombre de la facultad",
+        "espera": {
+          "resultado": "propuesta",
+          "funciones": [
+            "agregar_campo"
+          ],
+          "cambios": [
+            "Nuevo campo"
+          ]
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "listar_variables"
+              }
+            ],
+            [
+              {
+                "funcion": "agregar_campo",
+                "argumentos": {
+                  "seccion": "descripcion",
+                  "nombre": "",
+                  "quien_llena": "institucional",
+                  "contenido_html": "<p>Carrera de <span data-variable=\"nombre_carrera\"></span>, <span data-variable=\"nombre_facultad\"></span>.</p>",
+                  "despues_de": "(inicio)"
+                }
+              }
+            ],
+            [
+              {
+                "funcion": "validar_borrador"
+              }
+            ],
+            [
+              {
+                "funcion": "responder",
+                "argumentos": {
+                  "mensaje": "Propongo el texto con los datos del sistema."
+                }
+              }
+            ]
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "nombre": "Explicar cómo insertar un dato del sistema en el editor",
+    "turnos": [
+      {
+        "mensaje": "¿Cómo pongo yo mismo el nombre de la facultad dentro de un campo desde el editor?",
+        "espera": {
+          "resultado": "respuesta",
+          "mensaje": [
+            "Insertar dato del sistema"
+          ]
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "responder",
+                "argumentos": {
+                  "mensaje": "Ponga el cursor en el campo y use «Insertar dato del sistema» en la cinta, o escriba «/»."
+                }
+              }
+            ]
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "nombre": "Duplicar un campo",
+    "turnos": [
+      {
+        "mensaje": "Duplica el campo de objetivos específicos",
+        "espera": {
+          "resultado": "propuesta",
+          "funciones": [
+            "duplicar_campo"
+          ],
+          "cambios": [
+            "(copia)"
+          ]
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "ver_plantilla"
+              }
+            ],
+            [
+              {
+                "funcion": "duplicar_campo",
+                "argumentos": {
+                  "clave": "objetivos_especificos"
+                }
+              }
+            ],
+            [
+              {
+                "funcion": "validar_borrador"
+              }
+            ],
+            [
+              {
+                "funcion": "responder",
+                "argumentos": {
+                  "mensaje": "Propongo una copia de Objetivos específicos."
+                }
+              }
+            ]
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "nombre": "Duplicar una sección",
+    "turnos": [
+      {
+        "mensaje": "Haz una copia de la sección de habilidades blandas justo debajo",
+        "espera": {
+          "resultado": "propuesta",
+          "funciones": [
+            "duplicar_seccion"
+          ],
+          "cambios": [
+            "(copia)"
+          ]
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "ver_plantilla"
+              }
+            ],
+            [
+              {
+                "funcion": "duplicar_seccion",
+                "argumentos": {
+                  "clave": "habilidades"
+                }
+              }
+            ],
+            [
+              {
+                "funcion": "renumerar"
+              }
+            ],
+            [
+              {
+                "funcion": "validar_borrador"
+              }
+            ],
+            [
+              {
+                "funcion": "responder",
+                "argumentos": {
+                  "mensaje": "Propongo una copia de la sección."
+                }
+              }
+            ]
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "nombre": "Mover un campo a otra sección",
+    "turnos": [
+      {
+        "mensaje": "Pasa el campo de recursos y medios didácticos al final de la sección de evaluación",
+        "espera": {
+          "resultado": "propuesta",
+          "funciones": [
+            "mover_campo"
+          ],
+          "cambios": [
+            "pasa a la sección"
+          ]
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "ver_plantilla"
+              }
+            ],
+            [
+              {
+                "funcion": "mover_campo",
+                "argumentos": {
+                  "clave": "recursos_medios",
+                  "seccion": "evaluacion",
+                  "despues_de": "(final)"
+                }
+              }
+            ],
+            [
+              {
+                "funcion": "validar_borrador"
+              }
+            ],
+            [
+              {
+                "funcion": "responder",
+                "argumentos": {
+                  "mensaje": "Muevo el campo a evaluación."
+                }
+              }
+            ]
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "nombre": "Deshacer en el editor",
+    "turnos": [
+      {
+        "mensaje": "Borré una sección en el editor por error y todavía no guardo, ¿cómo la recupero?",
+        "espera": {
+          "resultado": "respuesta",
+          "mensaje": [
+            "Deshacer"
+          ]
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "responder",
+                "argumentos": {
+                  "mensaje": "Pulse «Deshacer» en la cinta o Ctrl+Z; también puede salir sin guardar."
+                }
+              }
+            ]
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "nombre": "Respuesta opcional de texto con límite",
+    "turnos": [
+      {
+        "mensaje": "Agrega al final de evaluación un espacio opcional de observaciones de máximo 300 caracteres con la ayuda «Solo si hay algo que aclarar»",
+        "espera": {
+          "resultado": "propuesta",
+          "funciones": [
+            "agregar_campo"
+          ],
+          "cambios": [
+            "Observaciones"
+          ]
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "agregar_campo",
+                "argumentos": {
+                  "seccion": "evaluacion",
+                  "nombre": "Observaciones",
+                  "quien_llena": "carrera",
+                  "contenido_html": "<p>Observaciones: <span data-response='{\"kind\":\"texto\",\"required\":false,\"maxLength\":300,\"help\":\"Solo si hay algo que aclarar\"}'></span></p>",
+                  "despues_de": "(final)"
+                }
+              }
+            ],
+            [
+              {
+                "funcion": "validar_borrador"
+              }
+            ],
+            [
+              {
+                "funcion": "responder",
+                "argumentos": {
+                  "mensaje": "Propongo el espacio opcional."
+                }
+              }
+            ]
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "nombre": "Elegir varias con mínimo y máximo",
+    "turnos": [
+      {
+        "mensaje": "En recursos y medios didácticos que se puedan elegir entre una y dos opciones: aula, laboratorio o campo",
+        "espera": {
+          "resultado": "propuesta",
+          "funciones": [
+            "cambiar_contenido_campo"
+          ],
+          "cambios": [
+            "Recursos"
+          ]
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "ver_campo",
+                "argumentos": {
+                  "clave": "recursos_medios"
+                }
+              }
+            ],
+            [
+              {
+                "funcion": "cambiar_contenido_campo",
+                "argumentos": {
+                  "clave": "recursos_medios",
+                  "contenido_html": "<p><span data-response='{\"kind\":\"varias\",\"options\":[{\"const\":\"o1\",\"title\":\"Aula\"},{\"const\":\"o2\",\"title\":\"Laboratorio\"},{\"const\":\"o3\",\"title\":\"Campo\"}],\"minChoices\":1,\"maxChoices\":2}'></span></p><p></p>"
+                }
+              }
+            ],
+            [
+              {
+                "funcion": "validar_borrador"
+              }
+            ],
+            [
+              {
+                "funcion": "responder",
+                "argumentos": {
+                  "mensaje": "Agrego la respuesta de elegir varias."
+                }
+              }
+            ]
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "nombre": "Respuestas en un campo No editable",
+    "turnos": [
+      {
+        "mensaje": "Agrega en conducta ética un campo no editable con una pregunta de sí o no para que el docente acepte el código",
+        "espera": {
+          "resultado": "respuesta|pregunta"
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "agregar_campo",
+                "argumentos": {
+                  "seccion": "etica",
+                  "nombre": "Aceptación",
+                  "quien_llena": "institucional",
+                  "contenido_html": "<p>¿Acepta el código? <span data-response='{\"kind\":\"una\",\"options\":[{\"const\":\"o1\",\"title\":\"Sí\"},{\"const\":\"o2\",\"title\":\"No\"}]}'></span></p>",
+                  "despues_de": "(final)"
+                }
+              }
+            ],
+            [
+              {
+                "funcion": "responder",
+                "argumentos": {
+                  "mensaje": "Un campo No editable no lleva respuestas. Puedo hacerlo Editable si quiere."
+                }
+              }
+            ]
+          ],
+          "errores": [
+            "Un campo No editable (institucional) no lleva respuestas"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "nombre": "Convocatoria abierta",
+    "convocatoria": "abierta",
+    "turnos": [
+      {
+        "mensaje": "Agrega un campo de competencias al final de resultados de aprendizaje",
+        "espera": {
+          "resultado": "respuesta",
+          "mensaje": [
+            "paus"
+          ]
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "agregar_campo",
+                "argumentos": {
+                  "seccion": "resultados",
+                  "nombre": "Competencias",
+                  "quien_llena": "carrera",
+                  "contenido_html": "<p></p>",
+                  "despues_de": "(final)"
+                }
+              }
+            ],
+            [
+              {
+                "funcion": "responder",
+                "argumentos": {
+                  "mensaje": "La convocatoria está abierta: para cambiar la plantilla primero hay que pausarla."
+                }
+              }
+            ]
+          ],
+          "errores": [
+            "La convocatoria está abierta"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "nombre": "Condición sobre una respuesta que va después",
+    "turnos": [
+      {
+        "mensaje": "Agrega al final de metodología una pregunta de si usa laboratorio, sí o no",
+        "aplicar": true,
+        "espera": {
+          "resultado": "propuesta"
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "agregar_campo",
+                "argumentos": {
+                  "seccion": "metodologia",
+                  "nombre": "7.6 Laboratorio",
+                  "quien_llena": "carrera",
+                  "contenido_html": "<p>¿Usa laboratorio? <span data-response='{\"kind\":\"una\",\"options\":[{\"const\":\"o1\",\"title\":\"Sí\"},{\"const\":\"o2\",\"title\":\"No\"}],\"id\":\"usa_laboratorio\"}'></span></p>",
+                  "despues_de": "(final)"
+                }
+              }
+            ],
+            [
+              {
+                "funcion": "validar_borrador"
+              }
+            ],
+            [
+              {
+                "funcion": "responder",
+                "argumentos": {
+                  "mensaje": "Agrego la pregunta."
+                }
+              }
+            ]
+          ]
+        }
+      },
+      {
+        "mensaje": "que el objetivo general solo aparezca si usa laboratorio",
+        "espera": {
+          "resultado": "respuesta|pregunta"
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "mostrar_solo_si",
+                "argumentos": {
+                  "clave": "objetivo_general",
+                  "respuesta": "usa_laboratorio",
+                  "opciones": [
+                    "Sí"
+                  ]
+                }
+              }
+            ],
+            [
+              {
+                "funcion": "responder",
+                "argumentos": {
+                  "mensaje": "La pregunta del laboratorio va después del objetivo general; la respuesta que decide debe ir antes. ¿La muevo antes?"
+                }
+              }
+            ]
+          ],
+          "errores": [
+            "usa una respuesta que ya no está antes de esta parte"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "nombre": "Tabla sin columnas definidas",
+    "turnos": [
+      {
+        "mensaje": "Agrega una tabla en metodología",
+        "espera": {
+          "resultado": "pregunta"
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "ver_plantilla"
+              }
+            ],
+            [
+              {
+                "funcion": "preguntar",
+                "argumentos": {
+                  "pregunta": "¿Qué columnas lleva la tabla y el docente agrega filas?"
+                }
+              }
+            ]
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "nombre": "Renombrar sin decir cuál",
+    "turnos": [
+      {
+        "mensaje": "cambia el nombre del campo",
+        "espera": {
+          "resultado": "pregunta"
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "preguntar",
+                "argumentos": {
+                  "pregunta": "¿Qué campo quiere renombrar y cuál es el nombre nuevo?"
+                }
+              }
+            ]
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "nombre": "Ver como docente y vista previa",
+    "turnos": [
+      {
+        "mensaje": "¿Cómo veo cómo le quedará al docente antes de guardar?",
+        "espera": {
+          "resultado": "respuesta",
+          "mensaje": [
+            "Ver como docente|Vista previa"
+          ]
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "responder",
+                "argumentos": {
+                  "mensaje": "Use «Vista previa» en la cinta o «Ver como docente» arriba."
+                }
+              }
+            ]
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "nombre": "Sílabos afectados al guardar en pausa",
+    "convocatoria": "pausada",
+    "turnos": [
+      {
+        "mensaje": "Si guardo cambios ahora, ¿cómo sé qué sílabos se ven afectados?",
+        "espera": {
+          "resultado": "respuesta",
+          "mensaje": [
+            "afectados"
+          ]
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "ver_estado"
+              }
+            ],
+            [
+              {
+                "funcion": "responder",
+                "argumentos": {
+                  "mensaje": "Al pulsar «Guardar» el editor muestra «Sílabos afectados» antes de confirmar."
+                }
+              }
+            ]
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "nombre": "Coordinación ajusta las opciones",
+    "turnos": [
+      {
+        "mensaje": "¿Coordinación puede cambiar las opciones de una respuesta que puse en la plantilla?",
+        "espera": {
+          "resultado": "respuesta",
+          "mensaje": [
+            "opciones",
+            "tipo"
+          ]
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "responder",
+                "argumentos": {
+                  "mensaje": "Sí: en cada materia puede agregar, quitar o cambiar opciones, pero no el tipo ni borrar la respuesta."
+                }
+              }
+            ]
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "nombre": "Cambiar si se puede editar",
+    "turnos": [
+      {
+        "mensaje": "Que la escala de valoración sea editable",
+        "espera": {
+          "resultado": "propuesta",
+          "funciones": [
+            "cambiar_responsable_campo"
+          ],
+          "cambios": [
+            "Escala de valoración"
+          ]
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "ver_plantilla"
+              }
+            ],
+            [
+              {
+                "funcion": "cambiar_responsable_campo",
+                "argumentos": {
+                  "clave": "componentes_evaluacion",
+                  "quien_llena": "carrera"
+                }
+              }
+            ],
+            [
+              {
+                "funcion": "validar_borrador"
+              }
+            ],
+            [
+              {
+                "funcion": "responder",
+                "argumentos": {
+                  "mensaje": "La escala pasa a Editable."
+                }
+              }
+            ]
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "nombre": "Lista de libros con el contenido listo",
+    "turnos": [
+      {
+        "mensaje": "Agrega al final de la bibliografía un campo de lecturas recomendadas con una lista de libros",
+        "espera": {
+          "resultado": "propuesta",
+          "funciones": [
+            "usar_preset"
+          ],
+          "cambios": [
+            "Lecturas recomendadas"
+          ]
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "ver_plantilla"
+              }
+            ],
+            [
+              {
+                "funcion": "agregar_campo",
+                "argumentos": {
+                  "seccion": "bibliografia",
+                  "nombre": "Lecturas recomendadas",
+                  "quien_llena": "carrera",
+                  "contenido_html": "<p></p>",
+                  "despues_de": "(final)"
+                }
+              }
+            ],
+            [
+              {
+                "funcion": "listar_presets"
+              }
+            ],
+            [
+              {
+                "funcion": "usar_preset",
+                "argumentos": {
+                  "clave": "lecturas_recomendadas",
+                  "preset": "bibliografia_complementaria"
+                }
+              }
+            ],
+            [
+              {
+                "funcion": "validar_borrador"
+              }
+            ],
+            [
+              {
+                "funcion": "responder",
+                "argumentos": {
+                  "mensaje": "Propongo la lista de libros con el buscador de la biblioteca."
+                }
+              }
+            ]
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "nombre": "Mostrar solo si desde el editor",
+    "turnos": [
+      {
+        "mensaje": "¿Cómo hago yo en el editor para que un campo solo se muestre si eligieron una opción?",
+        "espera": {
+          "resultado": "respuesta",
+          "mensaje": [
+            "Mostrar solo si"
+          ]
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "responder",
+                "argumentos": {
+                  "mensaje": "Seleccione el campo y use «Mostrar solo si…» en la cinta."
+                }
+              }
+            ]
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "nombre": "Lo oculto no se borra",
+    "turnos": [
+      {
+        "mensaje": "Si el docente escribió en una parte que después queda oculta por una condición, ¿se pierde lo que escribió?",
+        "espera": {
+          "resultado": "respuesta",
+          "mensaje": [
+            "conserva|no se borra|no se pierde|se guarda"
+          ]
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "responder",
+                "argumentos": {
+                  "mensaje": "No se pierde: se conserva y vuelve a verse si cambia la respuesta; mientras está oculta no se exige ni se imprime."
+                }
+              }
+            ]
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "nombre": "Respuesta de tipo número",
+    "turnos": [
+      {
+        "mensaje": "Agrega al final de evaluación una respuesta de tipo número para el porcentaje de asistencia",
+        "espera": {
+          "resultado": "respuesta|pregunta",
+          "mensaje": [
+            "número|numero"
+          ]
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "responder",
+                "argumentos": {
+                  "mensaje": "No hay respuesta de tipo número: solo texto libre, elegir una o elegir varias. ¿Le pongo un texto libre con límite de caracteres?"
+                }
+              }
+            ]
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "nombre": "Cambiar columnas de una tabla repetible ya creada",
+    "turnos": [
+      {
+        "mensaje": "¿Cómo cambio las columnas de una tabla repetible que ya está en la plantilla?",
+        "espera": {
+          "resultado": "respuesta",
+          "mensaje": [
+            "Tabla repetible"
+          ]
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "responder",
+                "argumentos": {
+                  "mensaje": "Seleccione el campo y abra «Tabla repetible» en la cinta; en «En este campo» elija la tabla."
+                }
+              }
+            ]
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "nombre": "Límite de caracteres",
+    "turnos": [
+      {
+        "mensaje": "Que en la descripción de la asignatura el docente pueda escribir como máximo 500 caracteres",
+        "espera": {
+          "resultado": "propuesta",
+          "funciones": [
+            "limite_caracteres"
+          ],
+          "cambios": [
+            "hasta 500 caracteres"
+          ]
+        },
+        "guion": {
+          "pasos": [
+            [
+              {
+                "funcion": "limite_caracteres",
+                "argumentos": {
+                  "clave": "descripcion",
+                  "limite": 500
+                }
+              }
+            ],
+            [
+              {
+                "funcion": "validar_borrador"
+              }
+            ],
+            [
+              {
+                "funcion": "responder",
+                "argumentos": {
+                  "mensaje": "La descripción admitirá hasta 500 caracteres del docente."
+                }
+              }
+            ]
+          ]
+        }
+      }
+    ]
+  }
+]

@@ -1,0 +1,22 @@
+Agrega un campo "Competencias" al final de la sección de resultados de aprendizaje, que lo llene el docente.
+Que la descripción de la asignatura la escriba el docente y no Coordinación.
+Agrega una sección "Prácticas de laboratorio" después de la metodología, con una tabla de práctica, horas y lugar que llene el docente.
+Quita la sección de habilidades blandas.
+Mueve la bibliografía antes de la metodología.
+Pon la sección de planificación en vertical.
+En conducta ética agrega un punto sobre el uso responsable de la inteligencia artificial.
+Agrega un campo para los datos del docente.
+¿Qué campos llena Coordinación?
+Cambia el nombre del campo "Métodos de enseñanza – aprendizaje" por "Métodos de enseñanza y aprendizaje", sin perder la numeración.
+Pon el encabezado de la tabla de firmas en verde.
+Agrega una sección de lecturas recomendadas con una lista de libros que llene el docente, al final antes de revisión y aprobación.
+Agrega en la sección de perfil de egreso una tabla de competencias con encabezado azul institucional y una fila para responder.
+En metodología agrega un campo Modalidad para elegir presencial, en línea o híbrida, que se muestre como desplegable.
+Agrega al final de evaluación un espacio opcional de observaciones de máximo 300 caracteres con la ayuda "Solo si hay algo que aclarar".
+En la tabla de recursos que en una celda se puedan elegir entre una y dos opciones: aula, laboratorio o campo.
+En metodología agrega una tabla de prácticas de laboratorio con tema obligatorio, modalidad presencial o virtual y horas, de una a diez prácticas.
+En metodología pregunta si usa laboratorio (Sí o No), que escriba cuál solo si responde Sí, y que técnicas de enseñanza solo aparezca si usa laboratorio.
+Duplica el campo de objetivos específicos.
+Pasa el campo de recursos y medios didácticos a la sección de evaluación.
+¿Cómo inserto el nombre de la facultad desde el editor?
+Que en la descripción de la asignatura el docente pueda escribir como máximo 500 caracteres.
