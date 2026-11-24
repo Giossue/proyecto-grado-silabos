@@ -1,6 +1,7 @@
 import "server-only"
 import { sql, type SQL } from "drizzle-orm"
 import { db } from "@/db"
+import { accentMatches, iso8601 } from "../laravel/sql"
 import type { LibraryReviewRepository, ReviewFilters, ReviewRow, SyllabusSummary } from "./reviews"
 
 const OUTCOME_SQL = sql.raw(`CASE
@@ -26,25 +27,11 @@ const RESPONSIBLE_SQL = sql.raw(`COALESCE(
         )`)
 
 const STATE_SQL = sql`CASE (${OUTCOME_SQL}) WHEN 'pendiente' THEN 'pendiente' ELSE 'atendido' END`
-const FOLD_FROM = "áéíóúüñÁÉÍÓÚÜÑ"
-const FOLD_TO = "aeiouunAEIOUUN"
-const iso8601 = (column: SQL) => sql`to_char(${column} at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"+00:00"')`
-
 async function rows<T>(query: SQL): Promise<T[]> {
   return (await db.execute(query)).rows as T[]
 }
 
-function accentPattern(term: string): string {
-  const folded = [...term].map((character) => {
-    const index = [...FOLD_FROM].indexOf(character)
-    return index === -1 ? character : [...FOLD_TO][index]
-  })
-  return `%${folded.join("").replace(/[%_\\]/g, (character) => `\\${character}`)}%`
-}
-
-function matches(column: SQL, term: string): SQL {
-  return sql`translate(${column}, ${sql.raw(`'${FOLD_FROM}'`)}, ${sql.raw(`'${FOLD_TO}'`)}) ILIKE ${accentPattern(term)}`
-}
+const matches = accentMatches
 
 async function currentProcessId(): Promise<string | null> {
   const [row] = await rows<{ id: string }>(sql`select convocatoria_universidad_id::text as id from convocatorias_universidad

@@ -1,0 +1,58 @@
+import type { LaravelSession } from "../auth/types"
+
+export const ROLE_TEACHER = "docente"
+export const ROLE_COORDINATOR = "coordinador"
+export const ROLE_LIBRARIAN = "bibliotecario"
+export const ROLE_ADMINISTRATOR = "administrador"
+export const EDITABLE_STATES = ["borrador", "correccion_solicitada"]
+export const CONVOCATION_OPEN = "abierta"
+export const CONVOCATION_PAUSED = "pausada"
+export const PROCESS_OPEN = "abierto"
+export const PROCESS_PAUSED = "pausado"
+
+export type SyllabusFacts = {
+  id: string
+  state: string
+  careerId: string
+  convocationState: string
+  processState: string
+  dueOn: string
+  currentTeacher: boolean
+  writtenByUser: boolean
+  hasLibrarySubmission: boolean
+}
+
+export function hasRole(session: LaravelSession, role: string): boolean {
+  return session.user.active && session.activeRole?.role === role
+}
+
+function isReviewer(session: LaravelSession, facts: SyllabusFacts): boolean {
+  const role = session.activeRole
+  if (role === null) return false
+  if (role.role === ROLE_COORDINATOR) return role.careerId === facts.careerId
+  if (role.role === ROLE_LIBRARIAN) return facts.hasLibrarySubmission
+  return false
+}
+
+export function mayView(session: LaravelSession, facts: SyllabusFacts): boolean {
+  const role = session.activeRole
+  if (!session.user.active || role === null) return false
+  if (isReviewer(session, facts)) return true
+  if (role.role !== ROLE_TEACHER || role.careerId !== facts.careerId) return false
+  return facts.currentTeacher || facts.writtenByUser
+}
+
+function isCurrentTeacher(session: LaravelSession, facts: SyllabusFacts): boolean {
+  const role = session.activeRole
+  return session.user.active && role?.role === ROLE_TEACHER && role.careerId === facts.careerId && facts.currentTeacher
+}
+
+function canTeacherEdit(session: LaravelSession, facts: SyllabusFacts, today: string, enforceDeadline: boolean): boolean {
+  if (!isCurrentTeacher(session, facts)) return false
+  const running = facts.convocationState === CONVOCATION_OPEN && facts.processState === PROCESS_OPEN
+  return running && (!enforceDeadline || !(today > facts.dueOn))
+}
+
+export function mayEdit(session: LaravelSession, facts: SyllabusFacts, today: string): boolean {
+  return canTeacherEdit(session, facts, today, true) && EDITABLE_STATES.includes(facts.state)
+}

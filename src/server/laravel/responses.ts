@@ -34,3 +34,13 @@ export function validationError(errors: Record<string, string[]>): Response {
   const summary = extra > 0 ? `${messages[0]} (y ${extra} ${extra === 1 ? "error más" : "errores más"})` : messages[0]
   return laravelJson({ message: summary, errors }, 422)
 }
+
+export const FORBIDDEN_MESSAGE = "No tiene permiso para hacer esto."
+
+export function forbidden(): Response {
+  return laravelJson({ message: FORBIDDEN_MESSAGE }, 403)
+}
+
+export function aborted(status: number): Response {
+  return laravelHttpError(status, "")
+}

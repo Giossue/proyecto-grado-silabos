@@ -138,7 +138,7 @@ function skeleton(document: PhpRecord): { kind: unknown; props: unknown }[] {
     })
 }
 
-function sameStructure(template: PhpRecord, document: PhpRecord): boolean {
+export function sameStructure(template: PhpRecord, document: PhpRecord): boolean {
   return phpIdentical(skeleton(template), skeleton(document))
 }
 

@@ -142,8 +142,11 @@ describe("GET /api/v1/library/reviews", () => {
     expect(pages).toEqual([])
   })
 
-  it("answers Laravel's 500 when the faculty is not a UUID, since the exists query fails in PostgreSQL", async () => {
-    expect(await get(libraryReviews, "/api/v1/library/reviews?faculty=abc")).toMatchObject({ status: 500, text: '{\n    "message": "Server Error"\n}' })
+  it("rejects a faculty that is not a UUID without querying it, like Laravel's validator", async () => {
+    expect(await get(libraryReviews, "/api/v1/library/reviews?faculty=abc")).toMatchObject({
+      status: 422,
+      json: { message: "El campo facultad debe ser un UUID válido.", errors: { faculty: ["El campo facultad debe ser un UUID válido."] } },
+    })
   })
 
   it("is only for the library role", async () => {
