@@ -1,7 +1,7 @@
 import "server-only"
 import { sql } from "drizzle-orm"
 import { db } from "@/db"
-import { authenticateAndTrack, defaultBridgeDeps } from "../auth/requireSession"
+import { authenticateAndTrack, commitTracking, defaultBridgeDeps } from "../auth/requireSession"
 import type { BridgeDeps } from "../auth/types"
 import { laravelJson } from "../laravel/responses"
 import { isoFromSeconds } from "../syllabus/draftField"
@@ -58,11 +58,10 @@ export function deviceLabel(agent: string): string {
 }
 
 export async function activeSessions(request: Request, deps: ActiveSessionDeps = defaultActiveSessionDeps()): Promise<Response> {
-  const { outcome, touch } = await authenticateAndTrack(request, {}, deps.bridge)
+  const authentication = await authenticateAndTrack(request, {}, deps.bridge)
+  const { outcome, touch } = authentication
   if ("deferred" in outcome) return deps.bridge.forward(request)
-  const refresh = async () => {
-    if (touch !== null) await deps.bridge.store.touchSession(touch, deps.bridge.now())
-  }
+  const refresh = () => commitTracking(authentication, request, deps.bridge)
   if (outcome instanceof Response) {
     await refresh()
     return outcome

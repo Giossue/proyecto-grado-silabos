@@ -1,16 +1,18 @@
 import "server-only"
-import { sql } from "drizzle-orm"
+import { sql, type SQL } from "drizzle-orm"
 import { db } from "@/db"
 import type { RoleAssignmentRecord, SessionRecord, SessionStore, SessionUser } from "./types"
 
 type Row = Record<string, unknown>
 
-async function rows<T extends Row>(query: ReturnType<typeof sql>): Promise<T[]> {
-  const result = await db.execute(query)
-  return result.rows as T[]
-}
+export type SessionExecutor = { execute(query: SQL): Promise<{ rows: unknown[]; rowCount?: number | null }> }
 
 export function createSessionStore(): SessionStore {
+  return sessionStoreOn(db as unknown as SessionExecutor)
+}
+
+export function sessionStoreOn(executor: SessionExecutor): SessionStore {
+  const rows = async <T extends Row>(query: SQL): Promise<T[]> => (await executor.execute(query)).rows as T[]
   return {
     async findSession(id) {
       const [row] = await rows<{ payload: string; last_activity: number }>(
@@ -66,7 +68,23 @@ export function createSessionStore(): SessionStore {
       )
     },
     async touchSession(id, lastActivity) {
-      await db.execute(sql`update sesiones set last_activity = ${lastActivity} where id = ${id}`)
+      await executor.execute(sql`update sesiones set last_activity = ${lastActivity} where id = ${id}`)
+    },
+    async insertSession(id, row) {
+      const result = await executor.execute(sql`insert into sesiones (payload, last_activity, user_id, ip_address, user_agent, id)
+        values (${row.payload}, ${row.lastActivity}, ${row.userId}::uuid, ${row.ipAddress}, ${row.userAgent}, ${id})
+        on conflict (id) do nothing`)
+      return (result.rowCount ?? 0) > 0
+    },
+    async updateSession(id, row) {
+      await executor.execute(sql`update sesiones set payload = ${row.payload}, last_activity = ${row.lastActivity}, user_id = ${row.userId}::uuid,
+        ip_address = ${row.ipAddress}, user_agent = ${row.userAgent} where id = ${id}`)
+    },
+    async destroySession(id) {
+      await executor.execute(sql`delete from sesiones where id = ${id}`)
+    },
+    async collectGarbage(threshold) {
+      await executor.execute(sql`delete from sesiones where last_activity <= ${threshold}`)
     },
   }
 }

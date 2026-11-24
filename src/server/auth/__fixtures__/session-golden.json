@@ -1,0 +1,214 @@
+{
+    "loginKey": "login_web_59ba36addc2b2f9401580f014c7f58ea4e30989d",
+    "sessionId": "AbCdEfGhIjKlMnOpQrStUvWxYz0123456789abcd",
+    "cases": [
+        {
+            "name": "csrf cookie on a new session",
+            "operations": [
+                [
+                    "put",
+                    "_token",
+                    "TokenDePruebaTokenDePruebaTokenDePrueba1"
+                ],
+                [
+                    "put",
+                    "_previous.url",
+                    "http://localhost:3000/sanctum/csrf-cookie"
+                ],
+                [
+                    "put",
+                    "_previous.route",
+                    "sanctum.csrf-cookie"
+                ]
+            ],
+            "json": "{\"_token\":\"TokenDePruebaTokenDePruebaTokenDePrueba1\",\"_previous\":{\"url\":\"http:\\/\\/localhost:3000\\/sanctum\\/csrf-cookie\",\"route\":\"sanctum.csrf-cookie\"},\"_flash\":{\"old\":[],\"new\":[]}}",
+            "payload": "ZXlKcGRpSTZJbmMwVERWSEszWldOR2hoWTJReldHSTNkMUoxTTFFOVBTSXNJblpoYkhWbElqb2lhemRKZW1jd1UzUmpVbFJzYjFNM2QzUlRRalIyY1hNck4wWmFRV3BXVDBjMGJUaDRZbVJPWVdWM1RteGpWMnB4UmtsUlZYbERPRmwyZDBod2FHTmhPWFJzVTJWblJHMDJZV2c1Tm5KU2JucElOVkJsV0d4U1UxVk1hSGRYUVVJek1uSlZSR3RxVTAxYVNHWmliVzV6VFUxbVRXMWpUbXBvTkdKMlUxb3JOVVZzU0ROU016ZGthakpTYUVkUFpGUnFURUV3UldKcFdtVk1SMWRPUmpGRWJDczJNVGt4Y204d2JFdFhUbEJ5T0dsRlpHUm1ZWFYyTW5wWWRpc3lhVVJwZW5aTlNrcG5OV2w2TUdadmRUTTRkRW95T1ZBelZHMWhTRzVqUWxoTVNEWllhR2QxUTFFMU1UWlVURnBHVkZCWk5qZFhlVXN4YkhsclRGRllaalYxYUNJc0ltMWhZeUk2SWpjNU1HWXpOekpqTURjM05HRXlPRE16TURGbU16ZGlZMk5tTkRJMFlXVXpaRGd5WWpNNFpETTVaVGN3TURjd1lqSXpZemM1TkRVeVpERmpPR0ZpTnpnaUxDSjBZV2NpT2lJaWZRPT0="
+        },
+        {
+            "name": "login after the csrf cookie",
+            "operations": [
+                [
+                    "put",
+                    "_token",
+                    "TokenDePruebaTokenDePruebaTokenDePrueba1"
+                ],
+                [
+                    "put",
+                    "_previous.url",
+                    "http://localhost:3000/sanctum/csrf-cookie"
+                ],
+                [
+                    "put",
+                    "_previous.route",
+                    "sanctum.csrf-cookie"
+                ],
+                [
+                    "save"
+                ],
+                [
+                    "put",
+                    "login_web_59ba36addc2b2f9401580f014c7f58ea4e30989d",
+                    "0193a3c2-1111-7000-8000-000000000001"
+                ],
+                [
+                    "put",
+                    "_token",
+                    "OtroTokenOtroTokenOtroTokenOtroToken1234"
+                ],
+                [
+                    "put",
+                    "active_role_assignment_id",
+                    "0193a3c2-2222-7000-8000-000000000002"
+                ],
+                [
+                    "put",
+                    "password_hash_web",
+                    "89fb353c0d9dfea2cb86b4a08098e809a9f5dad343b9a4a11b723fbc4c9255d4"
+                ]
+            ],
+            "json": "{\"_token\":\"OtroTokenOtroTokenOtroTokenOtroToken1234\",\"_previous\":{\"url\":\"http:\\/\\/localhost:3000\\/sanctum\\/csrf-cookie\",\"route\":\"sanctum.csrf-cookie\"},\"_flash\":{\"old\":[],\"new\":[]},\"login_web_59ba36addc2b2f9401580f014c7f58ea4e30989d\":\"0193a3c2-1111-7000-8000-000000000001\",\"active_role_assignment_id\":\"0193a3c2-2222-7000-8000-000000000002\",\"password_hash_web\":\"89fb353c0d9dfea2cb86b4a08098e809a9f5dad343b9a4a11b723fbc4c9255d4\"}",
+            "payload": "ZXlKcGRpSTZJa2cwVnpGd05EWmhZV0pMTVVSSVRYZzBiR2czUkhjOVBTSXNJblpoYkhWbElqb2lVa1JoZG1ObldqbFhOMDVtZEZGYVVHdHRVVTFrUkRRNFZraEJZWHBJTkVobVVWTkVhM0puWWt0Rk9XUXlhbXQ1ZHpCM1JuWTRTbUZGYkVabE0yUXdZazVEYm5oQ1NFdExORU41ZG1welYzQjBla3BsWWpoemN6RjRlV1pYTlhwQ2QwcDRRMHh5VkVSbVkwWnVSWGN2YzNsMVFqWmFhSEJYTW1KcVptNHlhR3hCSzFWamRVZHlVa1FyTmpCWlNESlFTa1l3ZERScVpuZzRMMFpRVUVwMWFDODBlVUo0T1M4M1lrSmpNekZEYjBZM1Z6VklhREpqU0dsbU5VbGhaMWd5Y0daM09DdEhkVFl5ZDA5UWRuaG1jMVpCY2tOcE0xcElZMVZXY1UwMWJrVTVWVTlOUW5ac016TjFiVkl6VG5vdlN6UXlVbVZsTTJSQ1VqWmtUQzh3V0VOdWFURnBPRlIxUkcxYWNrcFZLMFF2Ym5sb2NUaHBjVGx0THpkcGNFaDBWSGxLT0hJM0szbGtXVWhPSzBoMWNITnlkMUYzYUhkdGNIQlBNbVZCVVN0a1VESXlNbFZZTVVwV2EzRktaUzkzWVhab1l6QmhLME5rZDNBcmMxTmlNMDE0VlRKdGJFbFZWRlZrYlZOblpsVm9ObVozTkhwemQxWXpTRXMzUlcxU1FXbE1UbEJhYXpoclNXaEdTVnBSTlRkNWJFcGtiRk5yVjJwdlRVd3pWbEpLYVVKdlRFdHJVMEV6TUUxTFNISmxRV05sVEdseFkySXhkWEJtZVVKRFYyMTBTREU1Tm5aM1l5OTJlVm92YkRodmRYWTBXalpOYld0a1dtczJiR2Q2UkUxeE1IbHpkM1IzTUVoWFowVmtUMHR2VURVMmVYcDVVM04zZW1GR2JUWm9TV1k1ZDNWd1JWQTRWbWhaZDBkSlltaFZja3AzVFhOblMya3lNalJoY2pkTWNtNVlkVll3ZVRoRlkyUjJkREk1V1VOcmF6SXlWazV1UWxSd01rdzViRWhVWlV3ME56Um9SVGxpVWxGUVJsWlpiMDFYVVQwOUlpd2liV0ZqSWpvaU5UWXpNelEwT1RsbE5qRm1aalk0T1dOa01qRXhOVGxrWWpka05XUXhZVFU0TW1Rd01qVm1PVFJsWXpoaU9ETXhNbUV4T1RneVlUWXpNRGRqWm1SbE55SXNJblJoWnlJNklpSjk="
+        },
+        {
+            "name": "two-factor hand-off and challenge",
+            "operations": [
+                [
+                    "put",
+                    "_token",
+                    "TokenDePruebaTokenDePruebaTokenDePrueba1"
+                ],
+                [
+                    "put",
+                    "login.id",
+                    "0193a3c2-1111-7000-8000-000000000001"
+                ],
+                [
+                    "put",
+                    "login.at",
+                    1800000000
+                ],
+                [
+                    "save"
+                ],
+                [
+                    "forget",
+                    [
+                        "login.id",
+                        "login.remember",
+                        "login.at"
+                    ]
+                ],
+                [
+                    "put",
+                    "login_web_59ba36addc2b2f9401580f014c7f58ea4e30989d",
+                    "0193a3c2-1111-7000-8000-000000000001"
+                ]
+            ],
+            "json": "{\"_token\":\"TokenDePruebaTokenDePruebaTokenDePrueba1\",\"login\":[],\"_flash\":{\"old\":[],\"new\":[]},\"login_web_59ba36addc2b2f9401580f014c7f58ea4e30989d\":\"0193a3c2-1111-7000-8000-000000000001\"}",
+            "payload": "ZXlKcGRpSTZJakpMT1hWc2RFVkJLMlptY1N0bloxbDRVMGc1Y1hjOVBTSXNJblpoYkhWbElqb2lXV1JMVmpOeGFTdG5aRTVDY1RFNFZGTm5kamhyTjBWWWJUWnlZamxaZG5sVGVGbE5TRzV3U3pKbU1VOTROVmRSVGpGelkxcFdaRE4wU3psRmVuSmlaRE5GZUdveFlsaERRa3h1WlhCekx6ZHpNbXhZT0V4MmVWQldNbGhhZERSNlprVjVPRzVxVGk5QlIwVkNZbEJ3ZERsV2EwMU5TRVZvTmpVd05EQlJLMjlvUTFOVmIzTkROMnhhTW5ReVRsY3hlRXB6VEZSc1UwRk1RbTVIYkROTE9HOUVlalUzWlU5cFFVdGxWMGN4ZUZKbmEwMHZTVWw0Um05YVUwTnlXbnBwUm1Gb1FsbHlTRXhVUmpCT05GcDNaMWx6Umt4cmF6RkZXbmcyWTBkaFZtUnJNMWgzUzFsRVNHMXdiUzlSUmxRMlNtUXhhVGhVYldKUE1sSkNUVk5qVm1KQk0yUjJUV0pWUVVWbVpHTkJOa3R4VTBOeFkxRTlQU0lzSW0xaFl5STZJalF5WTJVMFptUTNaall4WkdFM09UVXlPV05rTVRGbU5EVTBPRGt5TW1OaVpXSTNOamxtWVRoaU1UWmpNakprWXprMU5tTmtZekUyWWpNek9Ua3hPVFlpTENKMFlXY2lPaUlpZlE9PQ=="
+        },
+        {
+            "name": "stale role forgotten and the sole role put back",
+            "operations": [
+                [
+                    "put",
+                    "_token",
+                    "TokenDePruebaTokenDePruebaTokenDePrueba1"
+                ],
+                [
+                    "put",
+                    "active_role_assignment_id",
+                    "stale"
+                ],
+                [
+                    "put",
+                    "login_web_59ba36addc2b2f9401580f014c7f58ea4e30989d",
+                    "0193a3c2-1111-7000-8000-000000000001"
+                ],
+                [
+                    "save"
+                ],
+                [
+                    "forget",
+                    [
+                        "active_role_assignment_id"
+                    ]
+                ],
+                [
+                    "put",
+                    "active_role_assignment_id",
+                    "0193a3c2-2222-7000-8000-000000000002"
+                ]
+            ],
+            "json": "{\"_token\":\"TokenDePruebaTokenDePruebaTokenDePrueba1\",\"login_web_59ba36addc2b2f9401580f014c7f58ea4e30989d\":\"0193a3c2-1111-7000-8000-000000000001\",\"_flash\":{\"old\":[],\"new\":[]},\"active_role_assignment_id\":\"0193a3c2-2222-7000-8000-000000000002\"}",
+            "payload": "ZXlKcGRpSTZJbXhaUkVSd1NVUjBiR0l6VVZFM1YwdE1WREpCUTNjOVBTSXNJblpoYkhWbElqb2lURmxsZUN0bU5EbFpRWE5vUzI1bVpEQTJRWHBYWm5STFVHaG1PRmc1VVVvdk1qZDBlVEZZYkZSSloyRjViR05wTDBKWU5XTnVUV2t3ZDB4S1JWZEhUbEIxUW5Ga1ZGSjZiVFpGVlZSdEswTjJhbEpKVTIxb04wNHhZekJGUWtkbVdrRm5aVUpQTTB0RE1URlFWRGd2VkhOc2FqRk9kekZWZERBemVrSXpOWFpOT0ZWa2FIQnJSVTFuTW1OMVRpOVFPRlJqSzFaWU1VNXViVTVMTkVwV2FsVTVOVUZPT1N0R1dGZHRhQ3RYTVhkVlpqUjZWM040UkdKaVRDOVBWMmRTVnpGclJVWkRVWFZRT0ZKbVpVb3JiMU5FZG00MlZIVTNRblpXWnpSUFYzZFpRa1ZSVlN0MGVWaElUelEwTmt4SWMyVkZiazRyY0hab1dGWlBVV1pEYURWV1FrMXNWVGxDZUU1blYyTmFWMkZUWjNkeVRrZFlRV2RqUzFCdU5EQk5aVFJCTUd0R1NIZHBNa001YnpKUU4yOXRUblJTYzJ0aFYyUndlbXQ0Y3pFNGNXUXlMM0Y2ZVUxM1UySm9jamxJVFVGeVIwWjNQVDBpTENKdFlXTWlPaUk0T1RWaFltRTJPREptTnpRNFpUUmpaVFF5WW1FMFpUQTVPV1V6TW1aaU1EWm1OVEExTUROaFlUQXlNakJrT1RJd01qRTNPRE5qTm1WbU1tWTFNemxqSWl3aWRHRm5Jam9pSW4wPQ=="
+        },
+        {
+            "name": "logout flushes and keeps only the new token",
+            "operations": [
+                [
+                    "put",
+                    "_token",
+                    "TokenDePruebaTokenDePruebaTokenDePrueba1"
+                ],
+                [
+                    "put",
+                    "login_web_59ba36addc2b2f9401580f014c7f58ea4e30989d",
+                    "0193a3c2-1111-7000-8000-000000000001"
+                ],
+                [
+                    "save"
+                ],
+                [
+                    "flush"
+                ],
+                [
+                    "put",
+                    "_token",
+                    "OtroTokenOtroTokenOtroTokenOtroToken1234"
+                ]
+            ],
+            "json": "{\"_token\":\"OtroTokenOtroTokenOtroTokenOtroToken1234\",\"_flash\":{\"old\":[],\"new\":[]}}",
+            "payload": "ZXlKcGRpSTZJa0pTZWpCdU5VOW9OVEZHWm5aRFptdzBkMnRqVm5jOVBTSXNJblpoYkhWbElqb2lia3B5VW05RmFqSTVTVkU0YWxrNVdtdFlOeklyV0hOYWRVZGFOVU5TWlZGV1JFcDRRMjUxWVhwcWRYQnlWME5MTkVOM1dreHFlVE5hT0RaWVJ6TnJaSGs1UW5ocFVUZDZjRXRhZUZCNksyRnZlRVZMWjBSTFQzQlpTVXBaVVN0eGFVVjZSVEpSSzFKM05tOWtaR3hEZWpCUVZub3diU3RrVFVKeVNtOXVaa01pTENKdFlXTWlPaUkwWVRkbU1UWXlaR05pT0dJMlpqRm1NalZqTWpNNU16Y3laR0kwWlROa05EWmlNRE14TkRRd04ySm1ZbUptTVRRMk5USmhZemxpWVRCak1Ea3hZbVUySWl3aWRHRm5Jam9pSW4wPQ=="
+        },
+        {
+            "name": "escaped values",
+            "operations": [
+                [
+                    "put",
+                    "_token",
+                    "TokenDePruebaTokenDePruebaTokenDePrueba1"
+                ],
+                [
+                    "put",
+                    "_previous.url",
+                    "https://silabos.ueb.edu.ec/a/b?x=ñandú «y» 😀"
+                ],
+                [
+                    "put",
+                    "nota",
+                    "línea\n\"comillas\" \\ </script>"
+                ]
+            ],
+            "json": "{\"_token\":\"TokenDePruebaTokenDePruebaTokenDePrueba1\",\"_previous\":{\"url\":\"https:\\/\\/silabos.ueb.edu.ec\\/a\\/b?x=\\u00f1and\\u00fa \\u00aby\\u00bb \\ud83d\\ude00\"},\"nota\":\"l\\u00ednea\\n\\\"comillas\\\" \\\\ <\\/script>\",\"_flash\":{\"old\":[],\"new\":[]}}",
+            "payload": "ZXlKcGRpSTZJbXdyS3poMVpGWTRhRmhxTW5sYVVVWXlMME5zT0ZFOVBTSXNJblpoYkhWbElqb2lkMVpLUkdsd09YUlZSRk5hWVRCaWVpdG1aSEJVWVUxVGNWTnJaMUZ6WjJ0Rk1GTk1LelprWjFZMU5HaHZTVUp5YmpSMmNsZDJNM1ZOUm1KVE5VOVRRVEVyVjJ0alVUTXpNblJ4WTJwRVVFVTVVSEY2VjBkUmJrZG9NRU5FUkdremVreHpMMFJsUkd0c2FFeG9iRzlJY3pacGJrTmtOV1JvYXpOSlREZFdWMGh4WTFGcVIxaFhTamh3Y0dOdVJGSlphalIxVWpCM1EycGpXRFY0T1ZOWWNGVnJjMEZMYkVWd01rZDVPVXB5VUdWMGFFRklPSHBrZEZSYVJrTnRWR0YxTDFOS1psUlFWM0J0T1ZNeVVsUnZhV1J6TW1kSlJrZFNVRmhJVUVKcGMzaHpaelZpU1ZGRWJHc3phVVV2TUhGUWRFTTBha1Y1UzB4bmJXVnJOVEZOUms5V2NIVjJNamxWTlcxQ2MyOUdUbE5YYUdGblp6bGtSMXBoTVZKNlJrTldNR1JGVXk5a1MwZHpVa3BzYW1Ndk5XcEVkRFZIUW1zdllXRm5ValJDVTFOWWEwcGpOREowYW14TFlUVk5MMEZQY0ZJeGNYVjNQVDBpTENKdFlXTWlPaUkzWlRjMlpURmtPV1JtTmpNM01ESXpZMlV5TW1VeE1ESmlPV1ExWW1JNFkyUXpPREk1WldGbU5qZzRaRFUwWlRnMU9EQmhNV015TXpnM1pqUXpObVV4SWl3aWRHRm5Jam9pSW4wPQ=="
+        }
+    ],
+    "cookies": [
+        {
+            "name": "XSRF-TOKEN",
+            "value": "eyJpdiI6Im9LSFpuVWIxblBOL0dFWnZxWk5JUFE9PSIsInZhbHVlIjoiQ05BWmpMRDRiYUd6dSsxQ00wSTFzeHhsZW9KSUZEWnE2SUc0ay9XNUtsdzgyWUFJRE4rKzhaY1VOUUlNaDlqTTB0WmFqeTdvekxSZURxU1hEeVpuM0E9PSIsIm1hYyI6ImY5MWM5MDA5NDY1NDg1Y2FlY2EwODJjOWVjNzZhMzY0ZjAyMmFmOWRiNjJiOTFlNGY1ZWMxYjQyMGY4MDM1MWMiLCJ0YWciOiIifQ==",
+            "expires": 1795534335,
+            "httpOnly": false,
+            "header": "XSRF-TOKEN=eyJpdiI6Im9LSFpuVWIxblBOL0dFWnZxWk5JUFE9PSIsInZhbHVlIjoiQ05BWmpMRDRiYUd6dSsxQ00wSTFzeHhsZW9KSUZEWnE2SUc0ay9XNUtsdzgyWUFJRE4rKzhaY1VOUUlNaDlqTTB0WmFqeTdvekxSZURxU1hEeVpuM0E9PSIsIm1hYyI6ImY5MWM5MDA5NDY1NDg1Y2FlY2EwODJjOWVjNzZhMzY0ZjAyMmFmOWRiNjJiOTFlNGY1ZWMxYjQyMGY4MDM1MWMiLCJ0YWciOiIifQ%3D%3D; expires=Tue, 24 Nov 2026 15:32:15 GMT; Max-Age=14400; path=/; samesite=lax"
+        },
+        {
+            "name": "silabos-ueb-session",
+            "value": "eyJpdiI6IlM3UDRVZStpWVRoc09XTW5ESkk3cEE9PSIsInZhbHVlIjoiejlkT0tmMWliSWpFc25jRTRLeXhwblpWMGp1ZDd3cWUwZXhldUJhQnY2d2FVN2lDcFlyaHExM3R4WStneVcrK2QvMkVBcTJ4TTFWYkRGWkNtLytpR0E9PSIsIm1hYyI6IjAzYmE5Yzc2ZWZjZWI5YmEzMjM3N2E1MGEwZjk0MmU5MWZkM2JlZDdkMjc4Njk1ZTAzNmJhZDM4ZDg0MTg1NDciLCJ0YWciOiIifQ==",
+            "expires": 1795534335,
+            "httpOnly": true,
+            "header": "silabos-ueb-session=eyJpdiI6IlM3UDRVZStpWVRoc09XTW5ESkk3cEE9PSIsInZhbHVlIjoiejlkT0tmMWliSWpFc25jRTRLeXhwblpWMGp1ZDd3cWUwZXhldUJhQnY2d2FVN2lDcFlyaHExM3R4WStneVcrK2QvMkVBcTJ4TTFWYkRGWkNtLytpR0E9PSIsIm1hYyI6IjAzYmE5Yzc2ZWZjZWI5YmEzMjM3N2E1MGEwZjk0MmU5MWZkM2JlZDdkMjc4Njk1ZTAzNmJhZDM4ZDg0MTg1NDciLCJ0YWciOiIifQ%3D%3D; expires=Tue, 24 Nov 2026 15:32:15 GMT; Max-Age=14400; path=/; httponly; samesite=lax"
+        }
+    ],
+    "laravelSessionCookie": "eyJpdiI6ImcvRjB4UWN6eTkwdUpkN3NJSDhsNkE9PSIsInZhbHVlIjoiVmI2RXkwT1ZsN1pEb1orMXVINUM5amNSOGdGczR1dHpJQnNsYmNSYlBZbHllT296RExDc2R4enRCdnVjcS9JNHVLRERwVDRkL0hZZHpsT29pTUwxZ3pmLzVCUWZuTGgzUXhnU21aQ3lnRlpXYlN3NHp3Q1FPV2JtT0NDTWNJdTEiLCJtYWMiOiIzMjQ4ZmM5YjJhZjg1OWUwNmUwYzU5ZGFiZDgxOTQ5MWU4OTE2ZDg3OTc0MGI5YWRiMjRjNTM3MjRmMzJkZGQ2IiwidGFnIjoiIn0="
+}

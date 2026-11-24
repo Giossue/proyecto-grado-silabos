@@ -2,6 +2,7 @@ import "server-only"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
 import { bcryptHash, bcryptVerify } from "../auth/bcrypt"
 import type { BridgeDeps, LaravelSession } from "../auth/types"
+import type { SessionWriterDeps } from "../auth/sessionWriter"
 import { isUuid } from "../academic/structure"
 import { institutionToday } from "../dashboard/dashboardQueries"
 import { isJsonRequest, laravelInput, type PhpArray, type PhpValue } from "../laravel/input"
@@ -54,6 +55,7 @@ export type IdentityWriteDeps = {
   limiter: RateLimiter
   verifyPassword: (plain: string, hash: string) => Promise<boolean | null>
   session: Pick<SessionDeps, "profiles" | "today" | "timezone">
+  writer?: SessionWriterDeps
 }
 
 export function defaultIdentityWriteDeps(): IdentityWriteDeps {

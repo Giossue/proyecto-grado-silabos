@@ -1,6 +1,6 @@
 import golden from "../laravel/__fixtures__/laravel-golden.json"
 import { cookiePrefix } from "../laravel/cookies"
-import { encrypt, parseAppKey } from "../laravel/encrypter"
+import { decrypt, encrypt, parseAppKey } from "../laravel/encrypter"
 import { hashPasswordForCookie, loginSessionKey } from "../laravel/sessionGuard"
 import type { BridgeConfig, BridgeDeps, RoleAssignmentRecord, SessionRecord, SessionStore, SessionUser } from "./types"
 
@@ -25,6 +25,11 @@ export function xsrfHeader(token: string): string {
 
 export function sessionPayload(attributes: Record<string, unknown>): string {
   return Buffer.from(encrypt(JSON.stringify(attributes), testKey, true)).toString("base64")
+}
+
+export function storedJson(world: FakeWorld, id: string): string | null {
+  const row = world.sessions.get(id)
+  return row ? decrypt(Buffer.from(row.payload, "base64").toString("utf8"), testKey, true) : null
 }
 
 export function makeUser(overrides: Partial<SessionUser> = {}): SessionUser {
@@ -66,6 +71,20 @@ export function fakeStore(world: FakeWorld): SessionStore {
     touchSession: async (id, lastActivity) => {
       const row = world.sessions.get(id)
       if (row) world.sessions.set(id, { ...row, lastActivity })
+    },
+    insertSession: async (id, row) => {
+      if (world.sessions.has(id)) return false
+      world.sessions.set(id, { ...row })
+      return true
+    },
+    updateSession: async (id, row) => {
+      if (world.sessions.has(id)) world.sessions.set(id, { ...row })
+    },
+    destroySession: async (id) => {
+      world.sessions.delete(id)
+    },
+    collectGarbage: async (threshold) => {
+      for (const [id, row] of world.sessions) if (row.lastActivity <= threshold) world.sessions.delete(id)
     },
   }
 }

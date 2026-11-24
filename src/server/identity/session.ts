@@ -2,6 +2,7 @@ import "server-only"
 import { sql } from "drizzle-orm"
 import { db } from "@/db"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
+import { phpArrayCast } from "../auth/sessionWriter"
 import type { BridgeDeps, LaravelSession, RoleAssignmentRecord } from "../auth/types"
 import { institutionToday } from "../dashboard/dashboardQueries"
 import { laravelJson } from "../laravel/responses"
@@ -26,13 +27,7 @@ export type SessionDeps = {
   timezone: () => string
 }
 
-export function phpArrayCast(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(phpArrayCast)
-  if (typeof value !== "object" || value === null) return value
-  const entries = Object.entries(value)
-  if (entries.every(([key], index) => key === String(index))) return entries.map(([, item]) => phpArrayCast(item))
-  return Object.fromEntries(entries.map(([key, item]) => [key, phpArrayCast(item)]))
-}
+export { phpArrayCast }
 
 export function createProfileRepository(): ProfileRepository {
   return {

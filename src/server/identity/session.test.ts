@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it } from "vitest"
 import golden from "../laravel/__fixtures__/laravel-golden.json"
-import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
+import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, storedJson, type FakeWorld } from "../auth/testing"
 import { showSession, twoFactorStatus, type UserProfile } from "./session"
 
 const SESSION_ID = golden.sessionId
@@ -70,10 +70,13 @@ describe("session", () => {
     expect(json.available_roles).toHaveLength(2)
   })
 
-  it("sends Laravel the requests that would pick the sole role", async () => {
+  it("picks the sole role, answers it and keeps it in the session, like Laravel", async () => {
     world.sessions.set(SESSION_ID, { payload: sessionPayload(loggedInAttributes({ active_role_assignment_id: undefined })), lastActivity: NOW })
-    expect((await call(showSession, "/api/v1/session")).status).toBe(299)
-    expect(forwarded).toHaveLength(1)
+    const { status, text } = await call(showSession, "/api/v1/session")
+    expect(status).toBe(200)
+    expect(JSON.parse(text).active_role.id).toBe(golden.roleId)
+    expect(forwarded).toHaveLength(0)
+    expect(JSON.parse(storedJson(world, SESSION_ID) ?? "{}").active_role_assignment_id).toBe(golden.roleId)
   })
 })
 

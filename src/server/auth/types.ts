@@ -1,4 +1,6 @@
-export type SessionRecord = { payload: string; lastActivity: number }
+export type SessionRecord = { payload: string; lastActivity: number; userId?: string | null; ipAddress?: string | null; userAgent?: string | null }
+
+export type StoredSession = { payload: string; lastActivity: number; userId: string | null; ipAddress: string | null; userAgent: string }
 
 export type SessionUser = {
   id: string
@@ -21,6 +23,10 @@ export interface SessionStore {
   findUser(id: string): Promise<SessionUser | null>
   effectiveRoleAssignments(userId: string): Promise<RoleAssignmentRecord[]>
   touchSession(id: string, lastActivity: number): Promise<void>
+  insertSession(id: string, row: StoredSession): Promise<boolean>
+  updateSession(id: string, row: StoredSession): Promise<void>
+  destroySession(id: string): Promise<void>
+  collectGarbage(threshold: number): Promise<void>
 }
 
 export type BridgeConfig = {

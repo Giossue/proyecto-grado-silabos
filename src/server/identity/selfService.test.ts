@@ -1,9 +1,12 @@
 // @vitest-environment node
 import { createHash } from "node:crypto"
 import { describe, expect, it } from "vitest"
-import { recallerCookieName } from "../laravel/sessionGuard"
+import { loginSessionKey, recallerCookieName } from "../laravel/sessionGuard"
 import { destroyOtherSessions, destroySession, resendOwnActivation, updateAccessibility, updateFormation, updateProfile } from "./selfService"
 import { account, ACTOR, ACTOR_ROLE, CAREER, COOKIE, FORBIDDEN, harness, jsonRequest, NOW, SESSION_ID } from "./testing"
+import golden from "../laravel/__fixtures__/laravel-golden.json"
+import { storedJson, testKey } from "../auth/testing"
+import { decrypt } from "../laravel/encrypter"
 
 const ISSUER = "01a1c5bc-3333-7000-8000-000000000001"
 
@@ -67,11 +70,12 @@ describe("PUT /api/v1/authentication/accessibility", () => {
     })
   })
 
-  it("leaves to Laravel a session that still has to pick its only role", async () => {
+  it("picks the only role of a session that has none and saves the preferences, like Laravel", async () => {
     const test = harness({ role: "docente", careerId: CAREER }, { active_role_assignment_id: undefined })
     const response = await put(test, { high_contrast: true, text_size: "100", no_motion: true, wide_spacing: true })
-    expect(response.status).toBe(299)
-    expect(test.identity.accounts[0].accessibility).toBeNull()
+    expect(response.status).toBe(200)
+    expect(JSON.parse(await response.text()).active_role.code).toBe("docente")
+    expect(test.identity.accounts[0].accessibility).toEqual({ high_contrast: true, text_size: "100", no_motion: true, wide_spacing: true })
   })
 })
 
@@ -163,8 +167,27 @@ describe("DELETE /api/v1/authentication/sessions/others", () => {
     expect(test.identity.audits[0]).toMatchObject({ action: "sesiones.remotas_cerradas", metadata: { closed_sessions: 2 } })
   })
 
-  it("leaves a remembered device to Laravel, which renews its cookie", async () => {
+  it("logs a remembered device in again with a new session and a renewed remember cookie, like Laravel", async () => {
     const test = harness()
+    test.identity.sessions.push({ id: "uno", userId: ACTOR })
+    const response = await remove(test, { current_password: "secreto-actual" }, `${COOKIE}; ${recallerCookieName()}=valor`)
+    expect(response.status).toBe(200)
+    expect(await response.text()).toBe('{"message":"Se cerr\\u00f3 una sesi\\u00f3n adicional.","closed_sessions":1}')
+    const headers = response.headers.getSetCookie()
+    expect(headers.map((header) => header.slice(0, header.indexOf("=")))).toEqual(["XSRF-TOKEN", golden.cookieName, recallerCookieName()])
+    const value = (header: string) => decrypt(decodeURIComponent(header.slice(header.indexOf("=") + 1, header.indexOf(";"))), testKey, false).slice(41)
+    expect(value(headers[1])).toBe("a".repeat(40))
+    expect(value(headers[2])).toBe(`${ACTOR}|${"a".repeat(60)}|${golden.passwordHashForCookie}`)
+    expect(headers[2].slice(headers[2].indexOf(";"))).toBe(`; expires=${new Date((NOW + 34560000) * 1000).toUTCString()}; Max-Age=34560000; path=/; httponly; samesite=lax`)
+    expect(test.bridge.sessions.has(SESSION_ID)).toBe(false)
+    expect(JSON.parse(storedJson(test.bridge, "a".repeat(40)) ?? "{}")[loginSessionKey()]).toBe(ACTOR)
+    expect(test.identity.sessions.map((row) => row.id)).toEqual([SESSION_ID])
+    expect(test.identity.audits[0]).toMatchObject({ action: "sesiones.remotas_cerradas", metadata: { closed_sessions: 1 } })
+  })
+
+  it("leaves to Laravel a device that is only known by its remember cookie", async () => {
+    const test = harness()
+    test.bridge.sessions.clear()
     const response = await remove(test, { current_password: "secreto-actual" }, `${COOKIE}; ${recallerCookieName()}=valor`)
     expect(response.status).toBe(299)
     expect(test.identity.audits).toEqual([])

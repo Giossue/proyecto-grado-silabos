@@ -1,10 +1,12 @@
 import "server-only"
 import { createHash } from "node:crypto"
-import { authenticateAndTrack, requireSession } from "../auth/requireSession"
-import type { LaravelSession } from "../auth/types"
+import { authenticateAndTrack, commitTracking, requireSession } from "../auth/requireSession"
+import { withWriter } from "../auth/sessionWriter"
+import { controllerJson, FORWARD, fromController, statefulRequest, type Outcome } from "../auth/statefulRequest"
+import type { LaravelSession, SessionUser } from "../auth/types"
 import { parseCookieHeader } from "../laravel/cookies"
-import { isPhpArray, laravelInput, type PhpValue } from "../laravel/input"
-import { forbidden, laravelHttpError, laravelJson, validationError } from "../laravel/responses"
+import { isPhpArray, laravelInput, type PhpArray, type PhpValue } from "../laravel/input"
+import { forbidden, laravelHttpError, laravelJson, unauthenticated, validationError } from "../laravel/responses"
 import { recallerCookieName } from "../laravel/sessionGuard"
 import type { Throttle } from "../laravel/throttle"
 import { validateInput } from "../laravel/validation"
@@ -134,11 +136,10 @@ export async function resendOwnActivation(request: Request, deps: IdentityWriteD
 type Tracked = { session: LaravelSession; touch: string | null; refresh: () => Promise<void> }
 
 async function track(request: Request, original: Request, deps: IdentityWriteDeps): Promise<Tracked | Response> {
-  const { outcome, touch } = await authenticateAndTrack(request, {}, deps.bridge)
+  const authentication = await authenticateAndTrack(request, {}, deps.bridge)
+  const { outcome, touch } = authentication
   if ("deferred" in outcome) return deps.bridge.forward(original)
-  const refresh = async () => {
-    if (touch !== null) await deps.bridge.store.touchSession(touch, deps.bridge.now())
-  }
+  const refresh = () => commitTracking(authentication, original, deps.bridge)
   if (outcome instanceof Response) {
     await refresh()
     return outcome
@@ -179,30 +180,21 @@ const scalarPassword = (value: PhpValue | undefined): string | null => {
   return String(value)
 }
 
-export async function destroyOtherSessions(request: Request, deps: IdentityWriteDeps = defaultIdentityWriteDeps()): Promise<Response> {
-  const original = request.clone()
-  if (parseCookieHeader(request.headers.get("cookie")).has(recallerCookieName())) return deps.bridge.forward(original)
-  const tracked = await track(request, original, deps)
-  if (tracked instanceof Response) return tracked
-  const { session, touch, refresh } = tracked
-  if (!acceptsBody(request)) return deps.bridge.forward(original)
-  const input = await laravelInput(request)
-  if (isPhpArray(input.current_password ?? null)) return deps.bridge.forward(original)
+async function confirmCurrentPassword(input: PhpArray, user: SessionUser, deps: IdentityWriteDeps): Promise<Record<string, string[]> | null> {
+  if (isPhpArray(input.current_password ?? null)) return null
   const plain = scalarPassword(input.current_password)
-  const matches = plain === null ? false : await deps.verifyPassword(plain, session.user.passwordHash)
-  if (matches === null) return deps.bridge.forward(original)
-  const errors = await validateInput(
+  const matches = plain === null ? false : await deps.verifyPassword(plain, user.passwordHash)
+  if (matches === null) return null
+  return validateInput(
     input,
     { current_password: ["required", "string", { check: () => matches, message: "La contraseña actual no es correcta." }] },
     ACCOUNT_ATTRIBUTES,
   )
-  if (Object.keys(errors).length > 0) {
-    await refresh()
-    return validationError(errors)
-  }
-  const userId = session.user.id
-  const closed = await deps.accounts.direct(async (tx) => {
-    const deleted = await revokeSessions({ tx, services: deps.services }, userId, touch)
+}
+
+async function closeOtherSessions(deps: IdentityWriteDeps, userId: string, currentId: string | null, random = deps.services.random): Promise<number> {
+  return deps.accounts.direct(async (tx) => {
+    const deleted = await revokeSessions({ tx, services: { ...deps.services, random } }, userId, currentId)
     await tx.recordAudit({
       actorId: userId,
       roleAssignmentId: null,
@@ -215,6 +207,44 @@ export async function destroyOtherSessions(request: Request, deps: IdentityWrite
     })
     return deleted
   })
+}
+
+const closedMessage = (closed: number) => ({
+  message: closed === 1 ? "Se cerró una sesión adicional." : `Se cerraron ${closed} sesiones adicionales.`,
+  closed_sessions: closed,
+})
+
+function destroyRememberedOtherSessions(request: Request, deps: IdentityWriteDeps): Promise<Response> {
+  const writer = deps.writer ?? { ...withWriter(deps.bridge), random: deps.services.random }
+  return statefulRequest(request, writer, { group: "api", authenticates: true }, async (context): Promise<Outcome> => {
+    const user = context.user
+    if (user === null) return unauthenticated()
+    if (!acceptsBody(request)) return FORWARD
+    const errors = await confirmCurrentPassword(await laravelInput(request), user, deps)
+    if (errors === null) return FORWARD
+    if (Object.keys(errors).length > 0) return fromController(validationError(errors))
+    let token = ""
+    const closed = await closeOtherSessions(deps, user.id, context.state.id, (length) => (token = deps.services.random(length)))
+    await context.login(user)
+    context.queueRecaller(user, token)
+    return controllerJson(closedMessage(closed))
+  })
+}
+
+export async function destroyOtherSessions(request: Request, deps: IdentityWriteDeps = defaultIdentityWriteDeps()): Promise<Response> {
+  if (parseCookieHeader(request.headers.get("cookie")).has(recallerCookieName())) return destroyRememberedOtherSessions(request, deps)
+  const original = request.clone()
+  const tracked = await track(request, original, deps)
+  if (tracked instanceof Response) return tracked
+  const { session, touch, refresh } = tracked
+  if (!acceptsBody(request)) return deps.bridge.forward(original)
+  const errors = await confirmCurrentPassword(await laravelInput(request), session.user, deps)
+  if (errors === null) return deps.bridge.forward(original)
+  if (Object.keys(errors).length > 0) {
+    await refresh()
+    return validationError(errors)
+  }
+  const closed = await closeOtherSessions(deps, session.user.id, touch)
   await refresh()
-  return laravelJson({ message: closed === 1 ? "Se cerró una sesión adicional." : `Se cerraron ${closed} sesiones adicionales.`, closed_sessions: closed })
+  return laravelJson(closedMessage(closed))
 }

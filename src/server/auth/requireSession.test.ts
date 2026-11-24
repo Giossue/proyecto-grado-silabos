@@ -12,9 +12,11 @@ import {
   makeUser,
   sessionCookie,
   sessionPayload,
+  storedJson,
   xsrfHeader,
   type FakeWorld,
 } from "./testing"
+import { hashPasswordForCookie, loginSessionKey } from "../laravel/sessionGuard"
 
 const SESSION_ID = golden.sessionId
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(SESSION_ID))}`
@@ -123,12 +125,32 @@ describe("requireSession", () => {
     expect(await requireSession(request(), {}, fakeDeps(world))).not.toBeInstanceOf(Response)
   })
 
-  it("lets Laravel answer when the session role is stale, since Laravel forgets it", async () => {
-    withSession(loggedInAttributes({ active_role_assignment_id: "00000000-0000-0000-0000-000000000000" }))
+  it("forgets a stale session role and writes the session in place, like Laravel's ActiveRole", async () => {
+    withSession(loggedInAttributes({ active_role_assignment_id: "00000000-0000-0000-0000-000000000000" }), NOW - 60)
     world.assignments = [makeAssignment({ id: "r-1" }), makeAssignment({ id: "r-2", role: "bibliotecario", careerId: null })]
     const result = await requireSession(apiRequest("/api/v1/notifications", { cookie }), { activeRole: "required" }, fakeDeps(world, forwarded))
-    expect(forwarded).toHaveLength(1)
-    expect((result as Response).status).toBe(299)
+    await expectError(result, 409, golden.errors.noActiveRole.body)
+    expect(forwarded).toHaveLength(0)
+    expect(storedJson(world, SESSION_ID)).toBe(
+      JSON.stringify({ _token: golden.csrfToken, [loginSessionKey()]: golden.userId, password_hash_web: golden.passwordHashForCookie, _flash: { old: [], new: [] } }),
+    )
+    expect(world.sessions.get(SESSION_ID)).toMatchObject({ lastActivity: NOW, userId: golden.userId, ipAddress: null, userAgent: "" })
+  })
+
+  it("moves a stale role to the sole eligible one at the end of the session, like forget then put", async () => {
+    withSession(loggedInAttributes({ active_role_assignment_id: "00000000-0000-0000-0000-000000000000" }))
+    world.assignments = [makeAssignment({ id: "r-1" })]
+    const result = await requireSession(apiRequest("/api/v1/notifications", { cookie }), { activeRole: "required" }, fakeDeps(world, forwarded))
+    expect((result as { activeRole: { id: string } }).activeRole.id).toBe("r-1")
+    expect(storedJson(world, SESSION_ID)).toBe(
+      JSON.stringify({
+        _token: golden.csrfToken,
+        [loginSessionKey()]: golden.userId,
+        password_hash_web: golden.passwordHashForCookie,
+        active_role_assignment_id: "r-1",
+        _flash: { old: [], new: [] },
+      }),
+    )
   })
 
   it("answers 409 when there is no role in the session and no single eligible role", async () => {
@@ -145,15 +167,25 @@ describe("requireSession", () => {
     withSession(loggedInAttributes({ active_role_assignment_id: "r-1" }))
     world.assignments = [makeAssignment({ id: "r-1", role: "coordinador", careerId: null })]
     const result = await requireSession(apiRequest("/api/v1/notifications", { cookie }), { activeRole: "required" }, fakeDeps(world, forwarded))
-    expect(forwarded).toHaveLength(1)
-    expect((result as Response).status).toBe(299)
+    await expectError(result, 409, golden.errors.noActiveRole.body)
+    expect(forwarded).toHaveLength(0)
+    expect(JSON.parse(storedJson(world, SESSION_ID) ?? "{}")).not.toHaveProperty("active_role_assignment_id")
   })
 
-  it("lets Laravel pick the sole eligible role, since that writes the session", async () => {
+  it("picks the sole eligible role and stores it in the session, like Laravel", async () => {
     withSession(loggedInAttributes({ active_role_assignment_id: undefined }))
     const result = await requireSession(apiRequest("/api/v1/notifications", { cookie }), { activeRole: "optional" }, fakeDeps(world, forwarded))
-    expect(forwarded).toHaveLength(1)
-    expect((result as Response).status).toBe(299)
+    expect(forwarded).toHaveLength(0)
+    expect((result as { activeRole: { id: string } }).activeRole.id).toBe(golden.roleId)
+    expect(storedJson(world, SESSION_ID)).toBe(
+      JSON.stringify({
+        _token: golden.csrfToken,
+        [loginSessionKey()]: golden.userId,
+        password_hash_web: golden.passwordHashForCookie,
+        active_role_assignment_id: golden.roleId,
+        _flash: { old: [], new: [] },
+      }),
+    )
   })
 
   it("lets Laravel answer when only a remember-me cookie identifies the user", async () => {
@@ -163,9 +195,34 @@ describe("requireSession", () => {
     expect(forwarded).toHaveLength(1)
   })
 
-  it("lets Laravel answer when the session has no password hash yet", async () => {
+  it("stores the password hash when the session has none yet, like Sanctum's AuthenticateSession", async () => {
     withSession(loggedInAttributes({ password_hash_web: undefined }))
-    expect(((await requireSession(apiRequest("/api/v1/notifications", { cookie }), {}, fakeDeps(world, forwarded))) as Response).status).toBe(299)
+    const result = await requireSession(apiRequest("/api/v1/notifications", { cookie }), {}, fakeDeps(world, forwarded))
+    expect(result).not.toBeInstanceOf(Response)
+    expect(forwarded).toHaveLength(0)
+    expect(storedJson(world, SESSION_ID)).toBe(
+      JSON.stringify({
+        _token: golden.csrfToken,
+        [loginSessionKey()]: golden.userId,
+        active_role_assignment_id: golden.roleId,
+        password_hash_web: golden.passwordHashForCookie,
+        _flash: { old: [], new: [] },
+      }),
+    )
+  })
+
+  it("replaces a raw password hash in the session with the keyed hash", async () => {
+    withSession(loggedInAttributes({ password_hash_web: golden.passwordHash }))
+    expect(await requireSession(apiRequest("/api/v1/notifications", { cookie }), {}, fakeDeps(world))).not.toBeInstanceOf(Response)
+    expect(JSON.parse(storedJson(world, SESSION_ID) ?? "{}").password_hash_web).toBe(hashPasswordForCookie(golden.passwordHash, golden.appKey))
+  })
+
+  it("does not write the session of a deactivated account", async () => {
+    withSession(loggedInAttributes({ password_hash_web: undefined }), NOW - 60)
+    world.users = [makeUser({ active: false })]
+    await requireSession(apiRequest("/api/v1/notifications", { cookie }), {}, fakeDeps(world))
+    expect(world.sessions.get(SESSION_ID)?.lastActivity).toBe(NOW)
+    expect(JSON.parse(storedJson(world, SESSION_ID) ?? "{}")).not.toHaveProperty("password_hash_web")
   })
 
   it("lets Laravel answer an unverified user that does not expect JSON", async () => {
@@ -235,8 +292,9 @@ describe("session keep-alive", () => {
     await requireSession(apiRequest("/api/v1/notifications", { cookie }), {}, fakeDeps(world))
     expect(world.sessions.get(SESSION_ID)?.lastActivity).toBe(NOW - 121 * 60)
 
-    withSession(loggedInAttributes({ active_role_assignment_id: undefined }), NOW - 600)
-    await requireSession(apiRequest("/api/v1/dashboard", { cookie }), { activeRole: "required" }, fakeDeps(world, forwarded))
+    withSession(loggedInAttributes(), NOW - 600)
+    world.users = [makeUser({ emailVerifiedAt: null })]
+    await requireSession(apiRequest("/api/v1/dashboard", { cookie, headers: { accept: "text/html" } }), { verified: true }, fakeDeps(world, forwarded))
     expect(forwarded).toHaveLength(1)
     expect(world.sessions.get(SESSION_ID)?.lastActivity).toBe(NOW - 600)
   })
