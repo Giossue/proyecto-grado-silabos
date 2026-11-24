@@ -2,7 +2,10 @@ import "server-only"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
 import type { BridgeDeps, LaravelSession } from "../auth/types"
 import { laravelJson } from "../laravel/responses"
+import { createTemplateStore, type TemplateStore } from "../configuration/templateStore"
 import { createDashboardRepository, institutionToday } from "./dashboardQueries"
+import { administratorMetrics, administratorSetup, coordinatorReadiness, coordinatorSetup, SetupNeedsLaravel, type SetupRepository } from "./setupChecklist"
+import { createSetupRepository } from "./setupQueries"
 
 export type ProcessRecord = {
   id: string
@@ -26,7 +29,7 @@ export interface DashboardRepository {
   libraryCounts(): Promise<Record<string, number>>
 }
 
-export type DashboardDeps = { bridge: BridgeDeps; dashboard: DashboardRepository; today: () => string }
+export type DashboardDeps = { bridge: BridgeDeps; dashboard: DashboardRepository; today: () => string; setup: SetupRepository; templates: TemplateStore }
 
 type Deadline = Record<string, unknown>
 
@@ -38,7 +41,7 @@ const CONVOCATION_CLOSED = "cerrada"
 const CONVOCATION_PREPARATION = "preparacion"
 
 function defaultDeps(): DashboardDeps {
-  return { bridge: defaultBridgeDeps(), dashboard: createDashboardRepository(), today: institutionToday }
+  return { bridge: defaultBridgeDeps(), dashboard: createDashboardRepository(), today: institutionToday, setup: createSetupRepository(), templates: createTemplateStore() }
 }
 
 function daysBetween(from: string, to: string): number {
@@ -141,12 +144,57 @@ export async function dashboardDeadline(request: Request, deps: DashboardDeps = 
   return laravelJson({ deadline })
 }
 
+async function administratorDashboard(deps: DashboardDeps, today: string): Promise<Record<string, unknown>> {
+  return {
+    metrics: await administratorMetrics(await deps.dashboard.inProgressProcess(), deps.setup, today),
+    setup: await administratorSetup(deps.setup, deps.templates),
+    deadline: null,
+    coordination_convocation: null,
+  }
+}
+
+async function coordinatorDashboard(careerId: string | null, deps: DashboardDeps, today: string): Promise<Record<string, unknown>> {
+  const readiness =
+    careerId === null
+      ? null
+      : await coordinatorReadiness(careerId, await deps.dashboard.inProgressProcess(), (career, process) => deps.dashboard.convocation(career, process), deps.setup, deps.templates, today)
+  const process = readiness?.process ?? null
+  const convocation = readiness?.convocation ?? null
+  return {
+    metrics: [],
+    setup: await coordinatorSetup(careerId, readiness, deps.setup),
+    deadline:
+      process === null
+        ? null
+        : { ...deadlinePayload(process, convocation, today), career_pending: convocation === null || convocation.state === CONVOCATION_PREPARATION },
+    coordination_convocation:
+      careerId === null || readiness === null || process === null
+        ? null
+        : {
+            process_id: process.id,
+            period: process.period,
+            convocation_id: convocation?.id ?? null,
+            can_open: readiness.canOpen,
+            state: convocation?.state ?? null,
+            process_open: process.state === PROCESS_OPEN,
+          },
+  }
+}
+
 export async function dashboardIndex(request: Request, deps: DashboardDeps = defaultDeps()): Promise<Response> {
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
   const role = session.activeRole?.role
-  if (role !== "docente" && role !== "bibliotecario") return deps.bridge.forward(request)
   const today = deps.today()
+  if (role === "administrador" || role === "coordinador") {
+    try {
+      return laravelJson(role === "administrador" ? await administratorDashboard(deps, today) : await coordinatorDashboard(session.activeRole?.careerId ?? null, deps, today))
+    } catch (error) {
+      if (error instanceof SetupNeedsLaravel) return deps.bridge.forward(request)
+      throw error
+    }
+  }
+  if (role !== "docente" && role !== "bibliotecario") return deps.bridge.forward(request)
   return laravelJson({
     metrics: role === "bibliotecario" ? await libraryMetrics(deps) : [],
     setup: null,

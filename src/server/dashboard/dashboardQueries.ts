@@ -2,6 +2,7 @@ import "server-only"
 import { sql, type SQL } from "drizzle-orm"
 import { db } from "@/db"
 import { libraryReviewCounts } from "../library/reviewQueries"
+import { rowsOf, type Executor } from "../syllabus/teacherSyllabusQueries"
 import type { ConvocationRecord, DashboardRepository, ProcessRecord, TeacherSyllabus } from "./dashboard"
 
 const institutionTimezone = () => process.env.DISPLAY_TIMEZONE ?? "America/Guayaquil"
@@ -11,10 +12,6 @@ export function institutionToday(): string {
 }
 
 type ProcessRow = { id: string; state: string; period: string; starts_on: string; due_on: string; period_ends_on: string }
-
-async function rows<T>(query: SQL): Promise<T[]> {
-  return (await db.execute(query)).rows as T[]
-}
 
 const localDate = (column: string) => sql`to_char(${sql.raw(column)} at time zone ${institutionTimezone()}, 'YYYY-MM-DD')`
 
@@ -33,17 +30,18 @@ const CURRENT_TEACHER = (userId: string) => sql`exists (select 1 from docentes_v
   inner join usuarios usuario on usuario.usuario_id = docente.usuario_id
   where docente.silabo_id = silabo.silabo_id and docente.usuario_id = ${userId}::uuid and usuario.usuario_activo = true)`
 
-async function inProgressProcess(): Promise<ProcessRecord | null> {
-  const [row] = await rows<ProcessRow>(sql`select ${PROCESS_COLUMNS} ${PROCESS_FROM}
+async function inProgressProcess(executor: Executor): Promise<ProcessRecord | null> {
+  const [row] = await rowsOf<ProcessRow>(executor, sql`select ${PROCESS_COLUMNS} ${PROCESS_FROM}
     where proceso.estado_convocatoria_universidad in ('abierto', 'pausado') limit 1`)
   return row ? toProcess(row) : null
 }
 
-export function createDashboardRepository(): DashboardRepository {
+export function createDashboardRepository(executor: Executor = db as unknown as Executor): DashboardRepository {
+  const rows = <T>(query: SQL) => rowsOf<T>(executor, query)
   return {
-    inProgressProcess,
+    inProgressProcess: () => inProgressProcess(executor),
     async latestProcess() {
-      const current = await inProgressProcess()
+      const current = await inProgressProcess(executor)
       if (current !== null) return current
       const [row] = await rows<ProcessRow>(sql`select ${PROCESS_COLUMNS} ${PROCESS_FROM} order by periodo.fecha_inicio_periodo desc limit 1`)
       return row ? toProcess(row) : null

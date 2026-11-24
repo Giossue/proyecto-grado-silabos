@@ -3,6 +3,9 @@ import { beforeEach, describe, expect, it } from "vitest"
 import golden from "../laravel/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import { dashboardDeadline, dashboardIndex, type ConvocationRecord, type DashboardRepository, type ProcessRecord, type TeacherSyllabus } from "./dashboard"
+import type { CareerReadinessFacts, SetupRepository } from "./setupChecklist"
+import { fakeTemplateStore, goldenTemplate } from "../configuration/testing"
+import type { SyllabusTemplate } from "../configuration/templatePresentation"
 
 const SESSION_ID = golden.sessionId
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(SESSION_ID))}`
@@ -17,6 +20,56 @@ let teacherSyllabi: TeacherSyllabus[]
 let finalized: ConvocationRecord | null
 let forwarded: Request[]
 let calls: string[]
+let setup: SetupWorld
+let template: SyllabusTemplate | null
+
+type DashboardBody = {
+  metrics: unknown[]
+  setup: { done: number; steps: Record<string, unknown>[] }
+  deadline: unknown
+  coordination_convocation: unknown
+}
+
+type SetupWorld = {
+  activeFaculty: boolean
+  activeCareers: number
+  withoutCoordinator: number
+  roles: string[]
+  processExists: boolean
+  hasFields: boolean
+  counts: { total: number; approved: number; notStarted: number }
+  withoutConvocation: number
+  readiness: CareerReadinessFacts | null
+  activeTeacher: boolean
+}
+
+const SUBJECTS = ["30000000-0000-4000-8000-000000000001", "30000000-0000-4000-8000-000000000002"]
+const FACULTY = "40000000-0000-4000-8000-000000000001"
+const TEMPLATE_HINT = "Secciones y campos con un responsable: Docente, Coordinación o Institucional. El mismo editor permite texto, listas y tablas."
+
+function officialTemplate(): SyllabusTemplate {
+  const golden = goldenTemplate()
+  return { ...golden, sections: golden.sections.filter((section) => section.key !== "sinteticos") }
+}
+
+const setupRepository = (): SetupRepository => ({
+  activeFacultyExists: async () => setup.activeFaculty,
+  activeCareerCount: async () => setup.activeCareers,
+  activeCareersWithoutCoordinator: async () => setup.withoutCoordinator,
+  activeUserWithRole: async (role) => setup.roles.includes(role),
+  processExists: async () => setup.processExists,
+  templateHasFields: async () => setup.hasFields,
+  processSyllabusCounts: async (processId) => {
+    calls.push(`counts:${processId}`)
+    return setup.counts
+  },
+  careersWithoutConvocation: async () => setup.withoutConvocation,
+  careerReadiness: async (careerId) => {
+    calls.push(`readiness:${careerId}`)
+    return setup.readiness
+  },
+  careerHasActiveTeacher: async () => setup.activeTeacher,
+})
 
 const process = (overrides: Partial<ProcessRecord> = {}): ProcessRecord => ({
   id: PROCESS,
@@ -59,7 +112,13 @@ function asRole(role: string, careerId: string | null = "c-1") {
 }
 
 async function call(handler: typeof dashboardDeadline, path: string, today = "2026-11-23") {
-  const response = await handler(apiRequest(path, { cookie }), { bridge: fakeDeps(world, forwarded), dashboard: repository(), today: () => today })
+  const response = await handler(apiRequest(path, { cookie }), {
+    bridge: fakeDeps(world, forwarded),
+    dashboard: repository(),
+    today: () => today,
+    setup: setupRepository(),
+    templates: fakeTemplateStore({ template, values: [] }),
+  })
   const text = await response.text()
   return { status: response.status, text, json: response.status === 299 ? null : (JSON.parse(text) as Record<string, unknown>) }
 }
@@ -92,6 +151,26 @@ beforeEach(() => {
   finalized = null
   forwarded = []
   calls = []
+  template = officialTemplate()
+  setup = {
+    activeFaculty: true,
+    activeCareers: 2,
+    withoutCoordinator: 0,
+    roles: ["coordinador", "bibliotecario"],
+    processExists: true,
+    hasFields: true,
+    counts: { total: 13, approved: 1, notStarted: 11 },
+    withoutConvocation: 0,
+    readiness: {
+      subjectsCount: 2,
+      faculty: { id: FACULTY, logo: null },
+      scheduledSubjectIds: SUBJECTS,
+      scheduledWithParallels: 2,
+      parallelTotal: 2,
+      parallelsWithTeacher: 1,
+    },
+    activeTeacher: true,
+  }
 })
 
 describe("dashboard deadline", () => {
@@ -176,11 +255,143 @@ describe("dashboard", () => {
     expect((await call(dashboardIndex, "/api/v1/dashboard")).json).toEqual({ metrics: [], setup: null, deadline: null, coordination_convocation: null })
   })
 
-  it("leaves Administration and Coordination to Laravel", async () => {
-    for (const role of ["administrador", "coordinador"]) {
-      asRole(role)
-      expect((await call(dashboardIndex, "/api/v1/dashboard")).status).toBe(299)
-    }
+  it("gives Administration the process metrics and its checklist, without a deadline", async () => {
+    asRole("administrador", null)
+    const response = await call(dashboardIndex, "/api/v1/dashboard")
+    expect(response.status).toBe(200)
+    expect(response.json).toEqual({
+      metrics: [
+        { key: "progress", label: "Avance del proceso", value: 8, suffix: "%", hint: "1 de 13 sílabos aprobados" },
+        { key: "days_left", label: "Días para la entrega", value: 7, suffix: "días", hint: "Entrega hasta el 30 de noviembre" },
+        { key: "careers_without_convocation", label: "Carreras sin convocar", value: 0, suffix: null, hint: "Coordinaciones que aún no abren su convocatoria" },
+        { key: "not_started", label: "Sílabos sin iniciar", value: 11, suffix: null, hint: "Docentes que todavía no empiezan" },
+      ],
+      setup: {
+        title: "Antes de empezar",
+        intro: "En este orden. Cada paso habilita el siguiente; las coordinaciones no pueden empezar hasta que termine.",
+        done: 6,
+        total: 6,
+        steps: [
+          { key: "faculties", label: "Registrar las facultades", hint: "Elija el campus y cargue el logo de cada facultad; Coordinación lo necesita para abrir su convocatoria.", done: true, action: null },
+          { key: "careers", label: "Registrar las carreras", hint: "Cada carrera hereda el campus de su facultad y registra su modalidad aprobada. Puede importarlas desde Excel.", done: true, action: null },
+          { key: "accounts", label: "Crear las cuentas de coordinación y de biblioteca", hint: "Al menos una de cada una, también por importación desde Excel. Los docentes los crea cada Coordinación.", done: true, action: null },
+          { key: "coordinators", label: "Asignar un coordinador a cada carrera", hint: "Todas las carreras tienen coordinador.", done: true, action: null },
+          { key: "template", label: "Armar la plantilla del sílabo", hint: TEMPLATE_HINT, done: true, action: null },
+          {
+            key: "process",
+            label: "Abrir la convocatoria institucional",
+            hint: "Desde Convocatorias, indique las fechas del periodo lectivo y de elaboración y entrega; cada Coordinación abrirá después la de su carrera.",
+            done: true,
+            action: null,
+          },
+        ],
+      },
+      deadline: null,
+      coordination_convocation: null,
+    })
+    expect(response.text).toContain('"hint":"1 de 13 s\\u00edlabos aprobados"')
+    expect(calls).toContain(`counts:${PROCESS}`)
+  })
+
+  it("tells Administration the deadline has passed and that nothing runs without a process", async () => {
+    asRole("administrador", null)
+    let metrics = (await call(dashboardIndex, "/api/v1/dashboard", "2026-12-02")).json?.metrics as Record<string, unknown>[]
+    expect(metrics[1]).toEqual({ key: "days_left", label: "Días para la entrega", value: 0, suffix: "días", hint: "El plazo venció el 30 de noviembre" })
+    inProgress = null
+    metrics = (await call(dashboardIndex, "/api/v1/dashboard")).json?.metrics as Record<string, unknown>[]
+    expect(metrics.map((metric) => [metric.value, metric.hint])).toEqual([
+      [0, "Sin proceso en curso"],
+      [0, "Sin proceso en curso"],
+      [0, "Sin proceso en curso"],
+      [0, "Docentes que todavía no empiezan"],
+    ])
+  })
+
+  it("keeps the template step pending until the template can be used, and says what is missing", async () => {
+    asRole("administrador", null)
+    const templateStep = async () => ((await call(dashboardIndex, "/api/v1/dashboard")).json?.setup as { steps: Record<string, unknown>[] }).steps[4]
+    template = null
+    expect(await templateStep()).toMatchObject({ done: false, hint: TEMPLATE_HINT })
+    template = officialTemplate()
+    template.sections = template.sections.filter((section) => section.key !== "identificacion")
+    expect(await templateStep()).toMatchObject({ done: false, hint: "La plantilla no tiene las áreas obligatorias: identificacion." })
+    setup.processExists = false
+    expect(((await call(dashboardIndex, "/api/v1/dashboard")).json?.setup as { done: number }).done).toBe(4)
+  })
+
+  it("does not claim an active coordination without careers, and offers to open the process only when every step is done", async () => {
+    asRole("administrador", null)
+    const steps = async () => ((await call(dashboardIndex, "/api/v1/dashboard")).json?.setup as { steps: Record<string, unknown>[] }).steps
+    setup.processExists = false
+    setup.activeCareers = 0
+    expect((await steps())[3]).toMatchObject({ done: false, hint: "Primero registre las carreras." })
+    expect((await steps())[5].action).toBeNull()
+    setup.activeCareers = 3
+    setup.withoutCoordinator = 1
+    expect((await steps())[3]).toMatchObject({ done: false, hint: "Faltan 1 de 3 carreras." })
+    setup.withoutCoordinator = 0
+    expect((await steps())[5]).toMatchObject({ done: false, action: "open_process" })
+  })
+
+  it("gives Coordination its checklist in dependency order, its deadline and its convocation", async () => {
+    asRole("coordinador")
+    inProgress = process({ startsOn: "2026-11-25", dueOn: "2026-12-02" })
+    const response = await call(dashboardIndex, "/api/v1/dashboard")
+    expect(response.status).toBe(200)
+    const body = response.json as unknown as DashboardBody
+    expect(body.metrics).toEqual([])
+    expect(body.setup.steps.map((item) => item.key)).toEqual(["curriculum", "scheduled_subjects", "teachers", "parallels", "career_project", "convocation"])
+    expect(body.setup.steps[1].hint).toBe("Registre las materias que se impartirán en 2026-2.")
+    expect(body.setup.steps[3]).toMatchObject({ key: "parallels", done: false, hint: "1 de 2 paralelos tienen un docente vigente." })
+    expect(body.setup.steps[4]).toMatchObject({ done: true, hint: "Completo en las 2 materias." })
+    expect(body.setup.steps[5]).toEqual({
+      key: "convocation",
+      label: "Abrir la convocatoria de la carrera",
+      hint: "Administración debe cargar el logo de la facultad.",
+      done: false,
+      action: null,
+    })
+    expect(body.deadline).toEqual(deadline({ state: "upcoming", starts_at: "2026-11-25", due_at: "2026-12-02", days_until_start: 2, days_until_due: 9, career_pending: true }))
+    expect(body.coordination_convocation).toEqual({ process_id: PROCESS, period: "2026-2", convocation_id: null, can_open: false, state: null, process_open: true })
+    expect(calls).toContain("readiness:c-1")
+    expect(calls).toContain(`convocation:c-1:${PROCESS}`)
+  })
+
+  it("requires a complete career project before opening the convocation", async () => {
+    asRole("coordinador")
+    template = goldenTemplate()
+    const steps = ((await call(dashboardIndex, "/api/v1/dashboard")).json?.setup as { steps: Record<string, unknown>[] }).steps
+    expect(steps[4]).toMatchObject({ label: "Completar el proyecto de carrera", done: false, hint: "Falta en 2 de 2 materias." })
+    expect(steps[5].hint).toBe("Administración debe cargar el logo de la facultad.")
+  })
+
+  it("shows Coordination its open convocation and no checklist action once opened", async () => {
+    asRole("coordinador")
+    convocation = { id: CONVOCATION, state: "abierta" }
+    const body = (await call(dashboardIndex, "/api/v1/dashboard")).json as unknown as DashboardBody
+    expect(body.setup.done).toBe(5)
+    expect(body.setup.steps[5]).toMatchObject({ done: true, action: null, hint: "Administración debe cargar el logo de la facultad." })
+    expect(body.deadline).toEqual(deadline({ convocation_id: CONVOCATION }))
+    expect(body.coordination_convocation).toEqual({ process_id: PROCESS, period: "2026-2", convocation_id: CONVOCATION, can_open: false, state: "abierta", process_open: true })
+  })
+
+  it("waits for Administration without a process in progress", async () => {
+    asRole("coordinador")
+    inProgress = null
+    const body = (await call(dashboardIndex, "/api/v1/dashboard")).json as unknown as DashboardBody
+    expect(body.deadline).toBeNull()
+    expect(body.coordination_convocation).toBeNull()
+    expect(body.setup.steps[1].hint).toBe("Espera a que Administración abra la convocatoria institucional para conocer el período.")
+    expect(body.setup.steps[5].hint).toBe("Espera a que Administración abra la convocatoria institucional.")
+  })
+
+  it("leaves a missing career or an undefined template to Laravel", async () => {
+    asRole("coordinador")
+    setup.readiness = null
+    expect((await call(dashboardIndex, "/api/v1/dashboard")).status).toBe(299)
+    asRole("administrador", null)
+    template = { ...officialTemplate(), definition: null }
+    expect((await call(dashboardIndex, "/api/v1/dashboard")).status).toBe(299)
     expect(forwarded).toHaveLength(2)
   })
 

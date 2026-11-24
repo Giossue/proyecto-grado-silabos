@@ -5,12 +5,14 @@ import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW
 import { phpJsonEncode } from "../laravel/phpJson"
 import type { AuditEventInput } from "../operations/recordAuditEvent"
 import { fakeTemplateStore, goldenTemplate, type FakeTemplateWorld } from "../configuration/testing"
-import { pauseProcess, processImpact, syllabusProcesses, type ProcessDeps, type ProcessRow } from "./processes"
+import { createProcess, pauseProcess, processImpact, syllabusProcesses, type ProcessDeps, type ProcessRow } from "./processes"
 
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(golden.sessionId))}`
 const FORBIDDEN = '{"message":"No tiene permiso para hacer esto."}'
 const PROCESS = "cd000000-0000-4000-8000-000000000001"
 const CLOSED = "cd000000-0000-4000-8000-000000000002"
+const NEW_PROCESS = "cd000000-0000-4000-8000-000000000009"
+const PERIOD = "e0000000-0000-4000-8000-000000000002"
 
 let world: FakeWorld
 let templates: FakeTemplateWorld
@@ -21,6 +23,12 @@ let log: string[]
 let audits: AuditEventInput[]
 let today: string
 let hasFields: boolean
+let periodEnds: Map<string, string>
+let activeCareers: number
+let withoutCoordinator: number
+let inProgress: { id: string; period: string | null } | null
+let periodsWithProcess: Set<string>
+let created: { periodId: string; startsAt: string; dueAt: string }[]
 
 const process = (overrides: Partial<ProcessRow> = {}): ProcessRow => ({
   id: PROCESS,
@@ -50,6 +58,9 @@ function deps(): ProcessDeps {
         { state: "borrador", total: 3 },
         { state: "sin_iniciar", total: 5 },
       ],
+      periodEndsOn: async (id) => periodEnds.get(id) ?? null,
+      activeCareerCount: async () => activeCareers,
+      activeCareersWithoutCoordinator: async () => withoutCoordinator,
       transaction: async (work) => {
         log.push("begin")
         try {
@@ -64,6 +75,16 @@ function deps(): ProcessDeps {
             recordAudit: async (event) => {
               log.push("audit")
               audits.push(event)
+            },
+            lockInProgress: async () => {
+              log.push("lock:in-progress")
+              return inProgress
+            },
+            periodHasProcess: async (periodId) => periodsWithProcess.has(periodId),
+            createProcess: async (periodId, startsAt, dueAt) => {
+              log.push("create")
+              created.push({ periodId, startsAt, dueAt })
+              return NEW_PROCESS
             },
           })
           log.push("commit")
@@ -98,6 +119,12 @@ beforeEach(() => {
   audits = []
   today = "2026-11-23"
   hasFields = true
+  periodEnds = new Map([[PERIOD, "2027-03-12"]])
+  activeCareers = 2
+  withoutCoordinator = 0
+  inProgress = null
+  periodsWithProcess = new Set()
+  created = []
 })
 
 describe("GET /api/v1/admin/processes", () => {
@@ -214,5 +241,126 @@ describe("POST /api/v1/admin/processes/{process}/pausar", () => {
     lockedState = "cerrado"
     expect((await pause()).json?.errors).toEqual({ process: ["El proceso no está en un estado que admita esta acción."] })
     expect(audits).toEqual([])
+  })
+})
+
+describe("POST /api/v1/admin/processes", () => {
+  const officialTemplate = () => {
+    const template = goldenTemplate()
+    return { ...template, sections: template.sections.filter((section) => section.key !== "sinteticos") }
+  }
+  const store = (body: unknown) => send((request) => createProcess(request, deps()), "/api/v1/admin/processes", "POST", body)
+  const payload = (overrides: Record<string, unknown> = {}) => ({ period_id: PERIOD, starts_at: "2026-11-24", due_at: "2026-12-15", ...overrides })
+
+  beforeEach(() => {
+    templates.template = officialTemplate()
+  })
+
+  it("opens the institutional process with whole institution days and audits its creation and opening", async () => {
+    const response = await store(payload())
+    expect(response).toMatchObject({ status: 201, text: '{"message":"Convocatoria institucional abierta. Las coordinaciones ya pueden iniciar sus convocatorias."}' })
+    expect(created).toEqual([{ periodId: PERIOD, startsAt: "2026-11-24T05:00:00+00:00", dueAt: "2026-12-16T04:59:59+00:00" }])
+    expect(log).toEqual(["begin", "lock:in-progress", "create", "audit", "audit", "commit"])
+    expect(audits.map((event) => [event.action, event.resourceType, event.resourceId, event.result, event.metadata])).toEqual([
+      [
+        "proceso_silabos.creado",
+        "proceso_silabos",
+        NEW_PROCESS,
+        "exito",
+        { template_id: officialTemplate().id, period_id: PERIOD, starts_at: "2026-11-24T05:00:00+00:00", due_at: "2026-12-16T04:59:59+00:00" },
+      ],
+      ["proceso_silabos.abierto", "proceso_silabos", NEW_PROCESS, "exito", { previous_state: null }],
+    ])
+    expect(audits[0]).toMatchObject({ actorId: golden.userId, roleAssignmentId: golden.roleId, occurredAt: NOW })
+  })
+
+  it("takes the institution day of an ISO instant, so the start can be today when UTC already moved on", async () => {
+    today = "2026-11-23"
+    await store(payload({ starts_at: "2026-11-24T00:30:00Z", due_at: "2026-11-30T12:00:00+00:00" }))
+    expect(created).toEqual([{ periodId: PERIOD, startsAt: "2026-11-23T05:00:00+00:00", dueAt: "2026-12-01T04:59:59+00:00" }])
+  })
+
+  it("is reserved to Administration", async () => {
+    world.assignments = [makeAssignment({ role: "coordinador", careerId: "c-1" })]
+    expect(await store(payload())).toMatchObject({ status: 403, text: FORBIDDEN })
+    expect(created).toEqual([])
+  })
+
+  it("requires the period and both dates explicitly", async () => {
+    const response = await store({ period_id: PERIOD })
+    expect(response.status).toBe(422)
+    expect(response.json).toEqual({
+      message: "El campo fecha de inicio es obligatorio. (y 1 error más)",
+      errors: { starts_at: ["El campo fecha de inicio es obligatorio."], due_at: ["El campo fecha límite es obligatorio."] },
+    })
+    expect((await store(payload({ period_id: undefined }))).json?.errors).toEqual({ period_id: ["El campo periodo académico es obligatorio."] })
+    expect((await store(payload({ period_id: "e0000000-0000-4000-8000-0000000000ff" }))).json?.errors).toEqual({
+      period_id: ["El valor seleccionado en periodo académico no es válido."],
+    })
+    expect(created).toEqual([])
+  })
+
+  it("starts today at the earliest and keeps both dates inside the period", async () => {
+    expect((await store(payload({ starts_at: "2026-11-22" }))).json?.errors).toEqual({ starts_at: ["El inicio no puede ser anterior a hoy."] })
+    expect((await store(payload({ due_at: "2026-11-20" }))).json?.errors).toEqual({ due_at: ["La fecha de entrega debe ser posterior al inicio y a hoy."] })
+    expect((await store(payload({ starts_at: "2026-12-01", due_at: "2026-11-30" }))).json?.errors).toEqual({
+      due_at: ["La fecha de entrega debe ser posterior al inicio y a hoy."],
+    })
+    expect((await store(payload({ due_at: "2027-03-13" }))).json?.errors).toEqual({ due_at: ["La fecha no puede pasar del fin del período (12/03/2027)."] })
+    expect((await store(payload({ due_at: "2027-03-12" }))).status).toBe(201)
+  })
+
+  it("rejects a period that already ended", async () => {
+    periodEnds.set(PERIOD, "2026-11-20")
+    expect((await store(payload())).json?.errors).toEqual({ period_id: ["El período académico ya terminó (20/11/2026). Elija uno vigente."] })
+  })
+
+  it("does not open without a usable template, active careers or an active coordination for each", async () => {
+    templates.template = null
+    expect((await store(payload())).json).toEqual({
+      message: "La plantilla institucional está vacía. Aplique el formato oficial o configure sus bloques antes de abrir la convocatoria.",
+      errors: { process: ["La plantilla institucional está vacía. Aplique el formato oficial o configure sus bloques antes de abrir la convocatoria."] },
+    })
+    templates.template = officialTemplate()
+    templates.template.sections = templates.template.sections.filter((section) => section.key !== "revision")
+    expect((await store(payload())).json?.errors).toEqual({ process: ["La plantilla no tiene las áreas obligatorias: revision."] })
+    templates.template = officialTemplate()
+    activeCareers = 0
+    expect((await store(payload())).json?.errors).toEqual({ process: ["No existen carreras activas en la estructura institucional."] })
+    activeCareers = 2
+    withoutCoordinator = 1
+    expect((await store(payload())).json?.errors).toEqual({ process: ["La estructura institucional no está lista: 1 carrera(s) sin coordinación activa."] })
+    expect(created).toEqual([])
+    expect(log).toEqual([])
+  })
+
+  it("keeps a single process in progress and one process per period", async () => {
+    inProgress = { id: PROCESS, period: "2026-2" }
+    expect((await store(payload())).json?.errors).toEqual({
+      process: ["La convocatoria «2026-2» sigue vigente. Finalícela o elimínela antes de abrir otra convocatoria institucional."],
+    })
+    inProgress = null
+    periodsWithProcess.add(PERIOD)
+    expect((await store(payload())).json?.errors).toEqual({ period_id: ["Ya existe una convocatoria institucional para este período académico."] })
+    expect(created).toEqual([])
+    expect(log.filter((entry) => entry === "rollback")).toHaveLength(2)
+  })
+
+  it("leaves free-form dates, a non-UUID period, forms and an undefined template to Laravel", async () => {
+    expect((await store(payload({ starts_at: "mañana" }))).status).toBe(299)
+    expect((await store(payload({ due_at: "2026-02-30" }))).status).toBe(299)
+    expect((await store(payload({ due_at: 20261130 }))).status).toBe(299)
+    expect((await store(payload({ period_id: "abc" }))).status).toBe(299)
+    const form = await createProcess(
+      new Request(apiRequest("/api/v1/admin/processes", { cookie, method: "POST", headers: { "x-csrf-token": golden.csrfToken, "content-type": "application/x-www-form-urlencoded" } }), {
+        body: "period_id=x",
+      }),
+      deps(),
+    )
+    expect(form.status).toBe(299)
+    templates.template = { ...officialTemplate(), definition: null }
+    expect((await store(payload())).status).toBe(299)
+    expect(forwarded).toHaveLength(6)
+    expect(created).toEqual([])
   })
 })

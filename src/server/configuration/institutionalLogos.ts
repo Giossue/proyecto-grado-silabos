@@ -45,11 +45,14 @@ export async function institutionUrl(request: Request): Promise<string> {
   return `${laravelRoot(request)}/logos/institucion?v=${await fileModifiedAt(await institutionPath())}`
 }
 
+export async function configuredFacultyUrl(request: Request, faculty: StoredFaculty | null): Promise<string | null> {
+  if (faculty === null || !(await facultyIsConfigured(faculty))) return null
+  return `${laravelRoot(request)}/logos/facultad/${faculty.id}?v=${await fileModifiedAt(await facultyPath(faculty))}`
+}
+
 export async function facultyUrl(request: Request, facultyId: unknown, store: LogoStore): Promise<string> {
-  const faculty = await findFaculty(facultyId, store)
-  if (faculty !== null && (await facultyIsConfigured(faculty))) {
-    return `${laravelRoot(request)}/logos/facultad/${faculty.id}?v=${await fileModifiedAt(await facultyPath(faculty))}`
-  }
+  const configured = await configuredFacultyUrl(request, await findFaculty(facultyId, store))
+  if (configured !== null) return configured
   return `${laravelRoot(request)}/${DEFAULT_FACULTY}?v=${await fileModifiedAt(publicPath(DEFAULT_FACULTY))}`
 }
 

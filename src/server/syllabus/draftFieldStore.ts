@@ -3,6 +3,7 @@ import { sql } from "drizzle-orm"
 import { db } from "@/db"
 import { institutionDateSql } from "../laravel/sql"
 import { phpJsonEncode } from "../laravel/phpJson"
+import { phpShape } from "../configuration/phpValues"
 import { insertAuditEvent } from "../operations/recordAuditEvent"
 import { phpJsonDecode } from "../configuration/phpValues"
 import { createTemplateStore } from "../configuration/templateStore"
@@ -102,11 +103,11 @@ function draftTx(executor: Executor): DraftFieldTx {
         sql`select valor_campo_id::text as id from valores_campo where silabo_id = ${syllabusId}::uuid and definicion_campo_id = ${fieldId}::uuid limit 1`,
       )
       if (existing) {
-        await executor.execute(sql`update valores_campo set valor_campo = ${phpJsonEncode(document)}::jsonb where valor_campo_id = ${existing.id}::uuid`)
+        await executor.execute(sql`update valores_campo set valor_campo = ${phpJsonEncode(phpShape(document))}::jsonb where valor_campo_id = ${existing.id}::uuid`)
         return
       }
       await executor.execute(sql`insert into valores_campo (silabo_id, definicion_campo_id, valor_campo, valor_campo_id)
-        values (${syllabusId}::uuid, ${fieldId}::uuid, ${phpJsonEncode(document)}::jsonb, ${newId}::uuid)`)
+        values (${syllabusId}::uuid, ${fieldId}::uuid, ${phpJsonEncode(phpShape(document))}::jsonb, ${newId}::uuid)`)
     },
     async saveDraft(syllabusId, version, savedAt) {
       await executor.execute(sql`update silabos set version_borrador = ${version}, guardado_en = to_timestamp(${savedAt}) where silabo_id = ${syllabusId}::uuid`)

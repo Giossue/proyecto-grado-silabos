@@ -3,6 +3,7 @@ import { sql } from "drizzle-orm"
 import { db } from "@/db"
 import { institutionDateSql } from "../laravel/sql"
 import { insertAuditEvent } from "../operations/recordAuditEvent"
+import { uuid7 } from "../laravel/uuid7"
 import type { ProcessRepository, ProcessRow, ProcessTx } from "./processes"
 import { rowsOf, type Executor } from "./teacherSyllabusQueries"
 
@@ -44,6 +45,33 @@ function processTx(executor: Executor): ProcessTx {
     },
     async recordAudit(event) {
       await insertAuditEvent(executor, event)
+    },
+    async lockInProgress() {
+      const [row] = await rowsOf<{ id: string; period_id: string }>(
+        executor,
+        sql`select convocatoria_universidad_id::text as id, periodo_academico_id::text as period_id from convocatorias_universidad
+          where estado_convocatoria_universidad in ('abierto', 'pausado') limit 1 for update`,
+      )
+      if (!row) return null
+      const [period] = await rowsOf<{ code: string }>(
+        executor,
+        sql`select codigo_periodo_academico as code from periodos_academicos where periodo_academico_id = ${row.period_id}::uuid limit 1`,
+      )
+      return { id: row.id, period: period?.code ?? null }
+    },
+    async periodHasProcess(periodId) {
+      const [row] = await rowsOf<{ found: boolean }>(
+        executor,
+        sql`select exists (select 1 from convocatorias_universidad where periodo_academico_id = ${periodId}::uuid) as found`,
+      )
+      return row?.found === true
+    },
+    async createProcess(periodId, startsAt, dueAt) {
+      const id = uuid7()
+      await executor.execute(sql`insert into convocatorias_universidad
+          (periodo_academico_id, fecha_inicio, fecha_entrega, estado_convocatoria_universidad, convocatoria_universidad_id)
+        values (${periodId}::uuid, ${startsAt}::timestamptz, ${dueAt}::timestamptz, 'abierto', ${id}::uuid)`)
+      return id
     },
   }
 }
@@ -89,6 +117,25 @@ export function processRepositoryOn(executor: Executor, transaction: <T>(work: (
           where convocatorias_carreras.convocatoria_universidad_id = ${processId}::uuid group by silabos.estado_silabo`,
       )
       return found.map((row) => ({ state: row.state, total: Number(row.total) }))
+    },
+    async periodEndsOn(periodId) {
+      const [row] = await rowsOf<{ ends_on: string }>(
+        executor,
+        sql`select to_char(fecha_fin_periodo, 'YYYY-MM-DD') as ends_on from periodos_academicos where periodo_academico_id = ${periodId}::uuid limit 1`,
+      )
+      return row?.ends_on ?? null
+    },
+    async activeCareerCount() {
+      const [row] = await rowsOf<{ total: string }>(executor, sql`select count(*) as total from carreras where carrera_activa = true`)
+      return Number(row?.total ?? 0)
+    },
+    async activeCareersWithoutCoordinator() {
+      const [row] = await rowsOf<{ total: string }>(
+        executor,
+        sql`select count(*) as total from carreras where carrera_activa = true and not exists (select 1 from asignaciones_rol
+          where asignaciones_rol.carrera_id = carreras.carrera_id and asignaciones_rol.rol = 'coordinador' and asignaciones_rol.asignacion_rol_activa = true)`,
+      )
+      return Number(row?.total ?? 0)
     },
     transaction,
   }
