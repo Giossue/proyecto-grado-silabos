@@ -8,7 +8,9 @@ import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW
 import type { AuditEventInput } from "../operations/recordAuditEvent"
 import type { ReviewRevision } from "../syllabus/reviewDetails"
 import type { DetailSyllabus } from "../syllabus/syllabusDetail"
-import { downloadExport, revisionDocuments, type ArtifactRow, type DocumentDeps, type StoredArtifact } from "./revisionDocuments"
+import { createRateLimiter } from "../laravel/throttle"
+import { downloadExport, requestRevisionDocuments, revisionDocuments, type ArtifactRow, type DocumentDeps, type DocumentRequestDeps, type StoredArtifact } from "./revisionDocuments"
+import type { ExportArtifactRow } from "./syllabusExport"
 import { laravelSlug } from "./slug"
 
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(golden.sessionId))}`
@@ -156,6 +158,128 @@ describe("GET exports/{a}/pdf", () => {
     artifact = { ...artifact, object: null }
     expect((await downloadExport(get(`/api/v1/exports/${ARTIFACT}/pdf`), ARTIFACT, deps())).status).toBe(404)
     expect(audits).toEqual([])
+  })
+})
+
+describe("POST revisions/{r}/documents", () => {
+  const KEY = "9a5b0c3e-4f1d-4a2b-8c7d-6e5f4a3b2c1d"
+  const NEW_ARTIFACT = "0a000000-0000-7000-8000-000000000001"
+  type Requested = { id: string; revisionId: string; key: string; requestedBy: string; requestedAt: number; state: string }
+  let requested: Requested[]
+  let dispatched: string[]
+  let renderable: boolean
+  let approved: boolean
+  let limiter: ReturnType<typeof createRateLimiter>
+
+  function requestDeps(): DocumentRequestDeps {
+    const existing = async (revisionId: string, key: string): Promise<ExportArtifactRow | null> => {
+      const row = requested.find((item) => item.revisionId === revisionId && item.key === key)
+      return row ? { id: row.id, state: row.state, requestedBy: row.requestedBy } : null
+    }
+    return {
+      ...deps(),
+      limiter,
+      renderable: async () => renderable,
+      existing,
+      newId: () => NEW_ARTIFACT,
+      async transaction(work) {
+        const staged: Requested[] = []
+        const stagedDispatch: string[] = []
+        const result = await work({
+          existingArtifact: existing,
+          lockSyllabus: async (id) => id === SYLLABUS,
+          lockRevision: async (id) => (id === REVISION ? { syllabusId: SYLLABUS, number: 3 } : null),
+          approved: async () => approved,
+          insertArtifact: async (row) => void staged.push({ ...row, state: "pendiente" }),
+          dispatchExport: (id) => void stagedDispatch.push(id),
+          recordAudit: async (event) => void audits.push(event),
+        })
+        requested.push(...staged)
+        dispatched.push(...stagedDispatch)
+        return result
+      },
+    }
+  }
+
+  const post = async (body: unknown, headers: Record<string, string> = { "content-type": "application/json" }) => {
+    const request = new Request(apiRequest(`/api/v1/revisions/${REVISION}/documents`, { cookie, method: "POST", headers: { "x-csrf-token": golden.csrfToken, ...headers } }), {
+      body: typeof body === "string" ? body : JSON.stringify(body),
+    })
+    const response = await requestRevisionDocuments(request, REVISION, requestDeps())
+    return { status: response.status, text: await response.text(), limit: response.headers.get("x-ratelimit-limit"), remaining: response.headers.get("x-ratelimit-remaining") }
+  }
+
+  beforeEach(() => {
+    requested = []
+    dispatched = []
+    renderable = true
+    approved = true
+    limiter = createRateLimiter()
+  })
+
+  it("requests the PDF of an approved revision once per idempotency key", async () => {
+    expect(await post({ idempotency_key: KEY })).toEqual({ status: 202, text: `{"message":"El PDF se est\\u00e1 generando.","artifact_id":"${NEW_ARTIFACT}"}`, limit: "20", remaining: "19" })
+    expect(requested).toEqual([{ id: NEW_ARTIFACT, revisionId: REVISION, key: KEY, requestedBy: golden.userId, requestedAt: NOW, state: "pendiente" }])
+    expect(dispatched).toEqual([NEW_ARTIFACT])
+    expect(audits).toEqual([
+      {
+        actorId: golden.userId,
+        roleAssignmentId: golden.roleId,
+        action: "documento.exportacion_solicitada",
+        resourceType: "artefacto_exportacion",
+        resourceId: NEW_ARTIFACT,
+        result: "exito",
+        metadata: { revision_number: 3, renderer_version: "phpword-docx-v4+libreoffice-pdf-v1" },
+        occurredAt: NOW,
+      },
+    ])
+    expect((await post({ idempotency_key: KEY })).status).toBe(202)
+    expect([requested.length, dispatched.length, audits.length]).toEqual([1, 1, 1])
+  })
+
+  it("says the PDF was already available for a completed request", async () => {
+    requested = [{ id: ARTIFACT, revisionId: REVISION, key: KEY, requestedBy: golden.userId, requestedAt: NOW - 10, state: "completado" }]
+    expect((await post({ idempotency_key: KEY })).text).toBe(`{"message":"El PDF ya estaba disponible.","artifact_id":"${ARTIFACT}"}`)
+    expect(dispatched).toEqual([])
+  })
+
+  it("forbids reusing someone else's key", async () => {
+    requested = [{ id: ARTIFACT, revisionId: REVISION, key: KEY, requestedBy: "a1000000-0000-4000-8000-000000000009", requestedAt: NOW - 10, state: "pendiente" }]
+    expect(await post({ idempotency_key: KEY })).toMatchObject({ status: 403, text: NOT_FOUND })
+  })
+
+  it("only an approved revision generates documents", async () => {
+    approved = false
+    expect(await post({ idempotency_key: KEY })).toMatchObject({
+      status: 422,
+      text: '{"message":"Solo una revisi\\u00f3n aprobada puede generar documentos.","errors":{"revision":["Solo una revisi\\u00f3n aprobada puede generar documentos."]}}',
+    })
+    expect(requested).toEqual([])
+  })
+
+  it("validates the idempotency key and authorizes like viewing the revision", async () => {
+    expect((await post({ idempotency_key: "no-es-uuid" })).text).toBe(
+      '{"message":"El campo identificador de la solicitud debe ser un UUID v\\u00e1lido.","errors":{"idempotency_key":["El campo identificador de la solicitud debe ser un UUID v\\u00e1lido."]}}',
+    )
+    expect((await post({})).text).toBe('{"message":"El campo identificador de la solicitud es obligatorio.","errors":{"idempotency_key":["El campo identificador de la solicitud es obligatorio."]}}')
+    world.assignments = [makeAssignment({ role: "administrador", careerId: null, careerLabel: null })]
+    expect(await post({ idempotency_key: KEY })).toEqual({ status: 403, text: FORBIDDEN, limit: "20", remaining: "17" })
+    expect(requested).toEqual([])
+  })
+
+  it("throttles at 20 requests a minute", async () => {
+    for (let attempt = 0; attempt < 20; attempt++) await post({ idempotency_key: KEY })
+    const limited = await post({ idempotency_key: KEY })
+    expect([limited.status, limited.limit, limited.remaining]).toEqual([429, "20", "0"])
+  })
+
+  it("leaves to Laravel what Next cannot render or read", async () => {
+    renderable = false
+    expect((await post({ idempotency_key: KEY })).text).toBe("from-laravel")
+    renderable = true
+    expect((await post("idempotency_key=x", { "content-type": "application/x-www-form-urlencoded" })).text).toBe("from-laravel")
+    expect(requested).toEqual([])
+    expect(forwarded).toHaveLength(2)
   })
 })
 

@@ -1,11 +1,20 @@
 import "server-only"
 import { sql } from "drizzle-orm"
 import { db } from "@/db"
+import { record } from "../configuration/phpValues"
 import { iso8601 } from "../laravel/sql"
+import { uuid7 } from "../laravel/uuid7"
+import { systemNow } from "../notifications/queries"
+import { withAfterCommit } from "../queue/dispatch"
+import { revisionSnapshotOf } from "../syllabus/syllabusDetailQueries"
+import { gotenbergEnabled, gotenbergSettings } from "./gotenbergConverter"
+import { dispatchSyllabusExport } from "./syllabusExportJob"
+import { dbTransaction, exportRequestTxOn, type TransactionRunner } from "./syllabusExportStore"
+import { rendersInNext } from "./syllabusRenderer"
 import { insertAuditEvent } from "../operations/recordAuditEvent"
 import { reviewDetailStoreOn } from "../syllabus/reviewDetailQueries"
 import { rowsOf, type Executor } from "../syllabus/teacherSyllabusQueries"
-import type { DocumentStore } from "./revisionDocuments"
+import type { DocumentRequestDeps, DocumentStore } from "./revisionDocuments"
 
 export function documentStoreOn(executor: Executor): DocumentStore {
   const reviews = reviewDetailStoreOn(executor)
@@ -52,4 +61,25 @@ export function documentStoreOn(executor: Executor): DocumentStore {
 
 export function createDocumentStore(): DocumentStore {
   return documentStoreOn(db as unknown as Executor)
+}
+
+export type DocumentRequestOptions = { now?: () => number; newId?: () => string; dispatch?: (artifactId: string) => unknown }
+
+export function documentRequestPartsOn(
+  executor: Executor,
+  transaction: TransactionRunner,
+  options: DocumentRequestOptions = {},
+): Pick<DocumentRequestDeps, "renderable" | "existing" | "transaction" | "newId" | "now"> {
+  const dispatch = options.dispatch ?? dispatchSyllabusExport
+  return {
+    renderable: async (revisionId) => rendersInNext(record(await revisionSnapshotOf(executor, revisionId)), gotenbergEnabled(gotenbergSettings())),
+    existing: (revisionId, key) => exportRequestTxOn(executor, () => undefined, dispatch).existingArtifact(revisionId, key),
+    transaction: (work) => withAfterCommit((afterCommit) => transaction((inner) => work(exportRequestTxOn(inner, afterCommit, dispatch)))),
+    newId: options.newId ?? uuid7,
+    now: options.now ?? systemNow,
+  }
+}
+
+export function createDocumentRequestParts(): Pick<DocumentRequestDeps, "renderable" | "existing" | "transaction" | "newId" | "now"> {
+  return documentRequestPartsOn(db as unknown as Executor, dbTransaction)
 }

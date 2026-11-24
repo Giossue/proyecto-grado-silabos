@@ -4,12 +4,17 @@ import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
 import type { BridgeDeps, LaravelSession } from "../auth/types"
 import { isUuid } from "../academic/structure"
 import { diskExists, diskPath } from "../laravel/storage"
-import { aborted, forbidden, laravelJson } from "../laravel/responses"
+import { isJsonRequest, laravelInput, type PhpArray } from "../laravel/input"
+import { aborted, forbidden, laravelJson, validationError } from "../laravel/responses"
+import { sharedRateLimiter, throttle, type RateLimiter, type Throttle } from "../laravel/throttle"
+import { validateInput } from "../laravel/validation"
+import { Missing, settle } from "../syllabus/reviewDecisions"
+import { ExportForbidden, ExportMissing, ExportRejected, existingExport, requestExport, type ExportArtifactRow, type ExportRequestTx } from "./syllabusExport"
 import type { AuditEventInput } from "../operations/recordAuditEvent"
 import { mayView } from "../syllabus/policy"
 import type { ReviewRevision } from "../syllabus/reviewDetails"
 import type { DetailSyllabus } from "../syllabus/syllabusDetail"
-import { createDocumentStore } from "./revisionDocumentsStore"
+import { createDocumentRequestParts, createDocumentStore } from "./revisionDocumentsStore"
 import { laravelSlug } from "./slug"
 
 export type ArtifactRow = { id: string; state: string; requestedAt: string; completedAt: string | null; pdfSize: number | null }
@@ -126,7 +131,7 @@ export async function downloadExport(request: Request, artifactId: string, deps:
     metadata: { format: "pdf", revision_number: revision.number, object_id: found.object.id },
     occurredAt: deps.now(),
   })
-  const bytes = await readFile(file)
+  const bytes = await readFile(/*turbopackIgnore: true*/ file)
   const code = laravelSlug(syllabus.code) || "asignatura"
   return new Response(new Uint8Array(bytes), {
     status: 200,
@@ -138,4 +143,72 @@ export async function downloadExport(request: Request, artifactId: string, deps:
       "X-Content-Type-Options": "nosniff",
     },
   })
+}
+
+export type DocumentRequestDeps = DocumentDeps & {
+  limiter: RateLimiter
+  renderable(revisionId: string): Promise<boolean>
+  existing(revisionId: string, key: string): Promise<ExportArtifactRow | null>
+  transaction<T>(work: (tx: ExportRequestTx) => Promise<T>): Promise<T>
+  newId(): string
+}
+
+export function defaultDocumentRequestDeps(): DocumentRequestDeps {
+  return { ...defaultDocumentDeps(), limiter: sharedRateLimiter(), ...createDocumentRequestParts() }
+}
+
+async function settleRequest(original: Request, deps: DocumentRequestDeps, work: () => Promise<Response>): Promise<Response> {
+  return settle(original, deps, async () => {
+    try {
+      return await work()
+    } catch (error) {
+      if (error instanceof ExportForbidden) return aborted(403)
+      if (error instanceof ExportRejected) return validationError(error.errors)
+      if (error instanceof ExportMissing) throw new Missing()
+      throw error
+    }
+  })
+}
+
+export async function requestRevisionDocuments(request: Request, revisionId: string, deps: DocumentRequestDeps = defaultDocumentRequestDeps()): Promise<Response> {
+  const original = request.clone()
+  if (request.headers.get("content-type") !== null && !isJsonRequest(request)) return deps.bridge.forward(original)
+  if (!isUuid(revisionId)) return deps.bridge.forward(original)
+  let gate: Throttle | null = null
+  const finish = (response: Response) => (gate as Throttle | null)?.decorate(response) ?? response
+  let bound: { revision: ReviewRevision; syllabus: DetailSyllabus } | null = null
+  const session = await requireSession(
+    original,
+    {
+      verified: true,
+      activeRole: "required",
+      afterAuthentication: async (user) => {
+        gate = throttle(deps.limiter, { key: `throttle:20,1:${user.id}`, maxAttempts: 20, decaySeconds: 60 }, deps.bridge.now)
+        const limited = await gate.hit()
+        if (limited !== null) return limited
+        bound = await loaded(deps, revisionId, user.id)
+        return bound === null ? deps.bridge.forward(original) : null
+      },
+    },
+    deps.bridge,
+  )
+  if (session instanceof Response) return finish(session)
+  const found = bound as { revision: ReviewRevision; syllabus: DetailSyllabus } | null
+  if (found === null) return finish(await deps.bridge.forward(original))
+  const { revision, syllabus } = found
+  if (!mayView(session, syllabus)) return finish(forbidden())
+  const input: PhpArray = await laravelInput(request)
+  const errors = await validateInput(input, { idempotency_key: ["required", "uuid"] }, { idempotency_key: "identificador de la solicitud" })
+  if (Object.keys(errors).length > 0) return finish(validationError(errors))
+  if (!(await deps.renderable(revision.id))) return finish(await deps.bridge.forward(original))
+  const key = input.idempotency_key as string
+  const actor = { id: session.user.id, roleAssignmentId: session.activeRole?.id ?? null }
+  return finish(
+    await settleRequest(original, deps, async () => {
+      const artifact =
+        (await existingExport({ existingArtifact: deps.existing }, revision.id, key, actor.id)) ??
+        (await deps.transaction((tx) => requestExport(tx, { revisionId: revision.id, syllabusId: revision.syllabusId, key, actor, now: deps.now(), newId: deps.newId })))
+      return laravelJson({ message: artifact.state === COMPLETED ? "El PDF ya estaba disponible." : "El PDF se está generando.", artifact_id: artifact.id }, 202)
+    }),
+  )
 }
