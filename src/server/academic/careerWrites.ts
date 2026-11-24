@@ -328,30 +328,34 @@ export async function createCareerRecord(request: Request, entity: string, deps:
   const errors = await validateSubject(input, deps, careerId, null)
   if (Object.keys(errors).length > 0) return validationError(errors)
   return settle(original, deps, async () => {
-    await deps.transaction(async (tx) => {
-      if (await tx.careerLocked(careerId)) throw invalid("process", CONVOCATION_LOCK_REASON)
-      const career = await tx.lockCareer(careerId)
-      if (career === null) throw new Missing()
-      if (phpIntCast(input.cycle) > career.cycleCount) throw invalid("cycle", "El ciclo excede la configuración de esta malla.")
-      const last = await tx.lastPosition(career.id, input.cycle)
-      const position = "position" in input ? phpIntCast(input.position) : last === null ? 0 : last + 1
-      const id = await tx.insertSubject(career.id, {
-        codigo_asignatura: input.code,
-        nombre_asignatura: input.nombre,
-        ciclo_asignatura: input.cycle ?? null,
-        creditos_asignatura: input.creditos ?? null,
-        horas_docencia: input.horas_ac ?? null,
-        horas_practicas: input.horas_pae ?? null,
-        horas_autonomas: input.horas_aa ?? null,
-        orden_asignatura_en_ciclo: position,
-        unidad_curricular_asignatura: input.organization_unit ?? null,
-        modalidad_asignatura: subjectModality(input),
-        genera_silabo_asignatura: "generates_syllabus" in input ? laravelBoolean(input.generates_syllabus) : true,
-      })
-      await tx.recordAudit(careerAudit(context, deps.now(), "academico.asignatura.creacion", "asignatura", id))
-    })
+    await deps.transaction((tx) => insertCareerSubject(tx, context, deps.now, input))
     return laravelJson({ message: CREATED })
   })
+}
+
+export async function insertCareerSubject(tx: CareerWriteTx, context: CareerContext, now: () => number, input: PhpArray): Promise<string> {
+  const careerId = context.careerId
+  if (await tx.careerLocked(careerId)) throw invalid("process", CONVOCATION_LOCK_REASON)
+  const career = await tx.lockCareer(careerId)
+  if (career === null) throw new Missing()
+  if (phpIntCast(input.cycle) > career.cycleCount) throw invalid("cycle", "El ciclo excede la configuración de esta malla.")
+  const last = await tx.lastPosition(career.id, input.cycle)
+  const position = "position" in input ? phpIntCast(input.position) : last === null ? 0 : last + 1
+  const id = await tx.insertSubject(career.id, {
+    codigo_asignatura: input.code,
+    nombre_asignatura: input.nombre,
+    ciclo_asignatura: input.cycle ?? null,
+    creditos_asignatura: input.creditos ?? null,
+    horas_docencia: input.horas_ac ?? null,
+    horas_practicas: input.horas_pae ?? null,
+    horas_autonomas: input.horas_aa ?? null,
+    orden_asignatura_en_ciclo: position,
+    unidad_curricular_asignatura: input.organization_unit ?? null,
+    modalidad_asignatura: subjectModality(input),
+    genera_silabo_asignatura: "generates_syllabus" in input ? laravelBoolean(input.generates_syllabus) : true,
+  })
+  await tx.recordAudit(careerAudit(context, now(), "academico.asignatura.creacion", "asignatura", id))
+  return id
 }
 
 export async function updateCareerRecord(request: Request, entity: string, recordId: string, deps: CareerWriteDeps = defaultCareerWriteDeps()): Promise<Response> {

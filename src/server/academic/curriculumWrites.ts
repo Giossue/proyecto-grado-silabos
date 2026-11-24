@@ -64,19 +64,8 @@ async function curriculumChange(
   const input = await laravelInput(request)
   const errors = await validateInput(input, rules(input), labels)
   if (Object.keys(errors).length > 0) return validationError(errors)
-  const confirmed = laravelBoolean(input.confirm_purge)
   return settle(original, deps, async () => {
-    const message = await deps.transaction((tx) =>
-      tx.guard(confirmed, context.careerId, async () => {
-        if (await tx.careerLocked(context.careerId)) throw invalid("process", CONVOCATION_LOCK_REASON)
-        const career = await tx.lockCareer(context.careerId, ids[0])
-        if (career === null) throw new Missing()
-        const result = await mutate(tx, career, context, input, (action, type, id, metadata) =>
-          tx.recordAudit(careerAudit(context, deps.now(), action, type, id, metadata)),
-        )
-        return result
-      }),
-    )
+    const message = await deps.transaction((tx) => curriculumMutation(tx, context, deps.now, ids[0], input, mutate))
     return laravelJson({ message })
   })
 }
@@ -117,6 +106,44 @@ function createsCycle(relations: { subjectId: string; requirementId: string }[],
   return false
 }
 
+export async function addRequirement(
+  tx: CurriculumTx,
+  career: CurriculumCareer,
+  context: CareerContext,
+  input: PhpArray,
+  audit: (action: string, type: string, id: string, metadata: AuditEventInput["metadata"]) => Promise<void>,
+): Promise<string> {
+  const subjectId = input.subject_id as string
+  const requirementId = input.requirement_id as string
+  const type = input.type as string
+  const subjects = await tx.lockSubjects(career.id, [subjectId, requirementId])
+  if (subjects.length !== 2) throw invalid("requirement_id", "Ambas materias deben pertenecer a la malla actual.")
+  const subjectCycle = subjects.find((subject) => subject.id === subjectId)?.cycle ?? 0
+  const requirementCycle = subjects.find((subject) => subject.id === requirementId)?.cycle ?? 0
+  if (type === "prerrequisito" && requirementCycle >= subjectCycle) throw invalid("requirement_id", "Un prerrequisito debe estar en un ciclo anterior.")
+  if (type === "correquisito" && requirementCycle !== subjectCycle) throw invalid("requirement_id", "Un correquisito debe estar en el mismo ciclo.")
+  if (type === "prerrequisito" && createsCycle(await tx.prerequisites(career.id), subjectId, requirementId)) {
+    throw invalid("requirement_id", "La relación produciría un ciclo de prerrequisitos.")
+  }
+  const message = type === "correquisito" ? "Correquisito agregado." : "Prerrequisito agregado."
+  const existing = await tx.findRequirement(subjectId, requirementId)
+  if (existing !== null && existing.type !== type) throw invalid("requirement_id", "Esa materia ya está registrada con otro tipo de requisito.")
+  if (existing !== null) return message
+  const id = await tx.insertRequirement(subjectId, requirementId, type)
+  await audit("academico.requisito_asignatura.creacion", "requisito_asignatura", id, { career_id: career.id, subject_id: subjectId, requirement_id: requirementId, type })
+  await confirmedSync(tx, context, input)
+  return message
+}
+
+export async function curriculumMutation(tx: CurriculumTx, context: CareerContext, now: () => number, curriculumId: string, input: PhpArray, mutate: Mutation): Promise<string> {
+  return tx.guard(laravelBoolean(input.confirm_purge), context.careerId, async () => {
+    if (await tx.careerLocked(context.careerId)) throw invalid("process", CONVOCATION_LOCK_REASON)
+    const career = await tx.lockCareer(context.careerId, curriculumId)
+    if (career === null) throw new Missing()
+    return mutate(tx, career, context, input, (action, type, id, metadata) => tx.recordAudit(careerAudit(context, now(), action, type, id, metadata)))
+  })
+}
+
 export function createSubjectRequirement(request: Request, curriculumId: string, deps: CurriculumDeps = defaultCurriculumDeps()): Promise<Response> {
   return curriculumChange(
     request,
@@ -132,28 +159,7 @@ export function createSubjectRequirement(request: Request, curriculumId: string,
       type: ["required", "string", { max: 30 }, { in: ["prerrequisito", "correquisito"] }],
     }),
     { subject_id: "materia", requirement_id: "materia requisito", type: "tipo" },
-    async (tx, career, context, input, audit) => {
-      const subjectId = input.subject_id as string
-      const requirementId = input.requirement_id as string
-      const type = input.type as string
-      const subjects = await tx.lockSubjects(career.id, [subjectId, requirementId])
-      if (subjects.length !== 2) throw invalid("requirement_id", "Ambas materias deben pertenecer a la malla actual.")
-      const subjectCycle = subjects.find((subject) => subject.id === subjectId)?.cycle ?? 0
-      const requirementCycle = subjects.find((subject) => subject.id === requirementId)?.cycle ?? 0
-      if (type === "prerrequisito" && requirementCycle >= subjectCycle) throw invalid("requirement_id", "Un prerrequisito debe estar en un ciclo anterior.")
-      if (type === "correquisito" && requirementCycle !== subjectCycle) throw invalid("requirement_id", "Un correquisito debe estar en el mismo ciclo.")
-      if (type === "prerrequisito" && createsCycle(await tx.prerequisites(career.id), subjectId, requirementId)) {
-        throw invalid("requirement_id", "La relación produciría un ciclo de prerrequisitos.")
-      }
-      const message = type === "correquisito" ? "Correquisito agregado." : "Prerrequisito agregado."
-      const existing = await tx.findRequirement(subjectId, requirementId)
-      if (existing !== null && existing.type !== type) throw invalid("requirement_id", "Esa materia ya está registrada con otro tipo de requisito.")
-      if (existing !== null) return message
-      const id = await tx.insertRequirement(subjectId, requirementId, type)
-      await audit("academico.requisito_asignatura.creacion", "requisito_asignatura", id, { career_id: career.id, subject_id: subjectId, requirement_id: requirementId, type })
-      await confirmedSync(tx, context, input)
-      return message
-    },
+    addRequirement,
   )
 }
 

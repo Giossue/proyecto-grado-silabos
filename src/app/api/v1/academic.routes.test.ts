@@ -15,6 +15,14 @@ import * as curriculumRequirements from "./coordination/academic/curriculum/[cur
 import * as curriculumRequirement from "./coordination/academic/curriculum/[curriculum]/requirements/[requirement]/route"
 import * as curriculumSubject from "./coordination/academic/curriculum/[curriculum]/subjects/[subject]/route"
 import * as curriculumLayout from "./coordination/academic/curriculum/[curriculum]/subject-layout/route"
+import * as careerImport from "./admin/academic/careers/import/route"
+import * as careerImportTemplate from "./admin/academic/careers/import-template/route"
+import * as curriculumImport from "./coordination/academic/curriculum-import/route"
+import * as curriculumImportTemplate from "./coordination/academic/curriculum-import/template/route"
+import * as teacherImport from "./coordination/academic/teachers/import/route"
+import * as teacherImportTemplate from "./coordination/academic/teachers/import-template/route"
+import * as userImport from "./admin/users/import/route"
+import * as userImportTemplate from "./admin/users/import-template/route"
 
 const ID = "01a1c5bc-79ca-7331-8f0f-66d63f61c699"
 type Handler = (request: Request, context?: unknown) => Promise<Response>
@@ -48,6 +56,14 @@ describe("academic routes", () => {
     [`/api/v1/coordination/academic/curriculum/${ID}/requirements/${ID}`, curriculumRequirement, "DELETE"],
     [`/api/v1/coordination/academic/curriculum/${ID}/subjects/${ID}`, curriculumSubject, "DELETE"],
     [`/api/v1/coordination/academic/curriculum/${ID}/subject-layout`, curriculumLayout, "PATCH"],
+    ["/api/v1/admin/academic/careers/import", careerImport, "POST"],
+    ["/api/v1/admin/academic/careers/import-template", careerImportTemplate, "GET"],
+    ["/api/v1/coordination/academic/curriculum-import", curriculumImport, "POST"],
+    ["/api/v1/coordination/academic/curriculum-import/template", curriculumImportTemplate, "GET"],
+    ["/api/v1/coordination/academic/teachers/import", teacherImport, "POST"],
+    ["/api/v1/coordination/academic/teachers/import-template", teacherImportTemplate, "GET"],
+    ["/api/v1/admin/users/import", userImport, "POST"],
+    ["/api/v1/admin/users/import-template", userImportTemplate, "GET"],
   ] as [string, RouteModule, string][])("serves %s in Next and sends every other method to Laravel", async (path, module, served) => {
     const fetchMock = stubLaravel()
     const servedMethods = served.split(",")
@@ -84,6 +100,23 @@ describe("academic routes", () => {
         body: JSON.stringify({ codes: ["A"] }),
       }),
     )
+    expect(response.status).toBe(401)
+    expect(await response.text()).toBe('{"message":"Unauthenticated."}')
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ["/api/v1/admin/academic/careers/import", careerImport],
+    ["/api/v1/coordination/academic/curriculum-import", curriculumImport],
+    ["/api/v1/coordination/academic/teachers/import", teacherImport],
+    ["/api/v1/admin/users/import", userImport],
+  ] as [string, RouteModule][])("answers 401 in Next to an import upload without a session (%s)", async (path, module) => {
+    vi.stubEnv("LARAVEL_APP_KEY", `base64:${Buffer.alloc(32).toString("base64")}`)
+    vi.stubEnv("REDIS_URL", "redis://127.0.0.1:6399/15")
+    const fetchMock = stubLaravel()
+    const form = new FormData()
+    form.append("file", new File([new Uint8Array([80, 75])], "datos.xlsx"))
+    const response = await module.POST(new Request(`http://localhost:3000${path}`, { method: "POST", headers: { accept: "application/json" }, body: form }))
     expect(response.status).toBe(401)
     expect(await response.text()).toBe('{"message":"Unauthenticated."}')
     expect(fetchMock).not.toHaveBeenCalled()
