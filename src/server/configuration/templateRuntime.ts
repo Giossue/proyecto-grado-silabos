@@ -216,7 +216,7 @@ function responseSettings(kind: string, options: unknown[], attrs: unknown): Php
   return settings
 }
 
-function defineCondition(raw: unknown): PhpRecord {
+export function defineCondition(raw: unknown): PhpRecord {
   const response = isPhpArray(raw) ? given(raw, "response") : null
   const options = isPhpArray(raw) ? given(raw, "options") : null
   const keysOk = isRecord(raw) && Object.keys(raw).every((key) => key === "response" || key === "options")
@@ -421,7 +421,7 @@ function withoutLogic(node: unknown): unknown {
   return next
 }
 
-function unanswered(node: PhpRecord): PhpRecord {
+export function unanswered(node: PhpRecord): PhpRecord {
   let next = node
   if (at(node, "type") === RESPONSE_NODE) {
     next = { ...node, attrs: { ...record(node.attrs), value: emptyResponseValue(phpString(given(node.attrs, "kind"))) } }
@@ -430,7 +430,7 @@ function unanswered(node: PhpRecord): PhpRecord {
   return next
 }
 
-function foundResponses(node: unknown): unknown[] {
+export function foundResponses(node: unknown): unknown[] {
   if (!isPhpArray(node)) return []
   const found: unknown[] = at(node, "type") === RESPONSE_NODE ? [isPhpArray(at(node, "attrs")) ? at(node, "attrs") : []] : []
   for (const child of list(isPhpArray(at(node, "content")) ? at(node, "content") : [])) found.push(...foundResponses(child))
@@ -778,7 +778,7 @@ function answerOnly(node: unknown): boolean {
   return !["documentBlock", "variable", RESPONSE_NODE].includes(nodeType(node)) && content(node).every(answerOnly)
 }
 
-function matches(template: unknown, value: unknown, mode: "answer" | "career"): boolean {
+export function matches(template: unknown, value: unknown, mode: "answer" | "career"): boolean {
   if (nodeType(template) !== nodeType(value)) return false
   if (nodeType(template) === "tableHeader") return phpIdentical(template, value)
   if (nodeType(template) === RESPONSE_NODE) {
@@ -808,7 +808,7 @@ function matches(template: unknown, value: unknown, mode: "answer" | "career"): 
   return expected.every((child, index) => matches(child, actual[index], mode))
 }
 
-function adopt(template: unknown, value: PhpRecord, saving: boolean): PhpRecord {
+export function adopt(template: unknown, value: PhpRecord, saving: boolean): PhpRecord {
   const type = nodeType(template)
   if (type !== nodeType(value)) return value
   if (type === RESPONSE_NODE) {

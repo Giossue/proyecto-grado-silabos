@@ -7,16 +7,31 @@ export function isPhpArray(value: unknown): value is PhpArray {
   return typeof value === "object" && value !== null
 }
 
-function cleanString(value: string): string | null {
-  const trimmed = laravelTrim(value)
+const UNTRIMMED = [
+  "current_password",
+  "password",
+  "password_confirmation",
+  "content",
+  "content.*",
+  "value",
+  "value.*",
+  "values.*",
+  "values.*.*",
+  "sections.*.fields.*.content",
+  "sections.*.fields.*.content.*",
+].map((pattern) => new RegExp(`^${pattern.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*")}$`, "su"))
+
+function cleanString(value: string, key: string): string | null {
+  const trimmed = UNTRIMMED.some((pattern) => pattern.test(key)) ? value : laravelTrim(value)
   return trimmed === "" ? null : trimmed
 }
 
-function toPhp(value: unknown): PhpValue {
-  if (typeof value === "string") return cleanString(value)
+function toPhp(value: unknown, key: string): PhpValue {
+  const child = (name: string) => (key === "" ? name : `${key}.${name}`)
+  if (typeof value === "string") return cleanString(value, key)
   if (typeof value === "number" || typeof value === "boolean" || value === null) return value
-  if (Array.isArray(value)) return Object.fromEntries(value.map((item, index) => [String(index), toPhp(item)]))
-  if (typeof value === "object") return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, toPhp(item)]))
+  if (Array.isArray(value)) return Object.fromEntries(value.map((item, index) => [String(index), toPhp(item, child(String(index)))]))
+  if (typeof value === "object") return Object.fromEntries(Object.entries(value).map(([name, item]) => [name, toPhp(item, child(name))]))
   return null
 }
 
@@ -32,8 +47,8 @@ async function jsonBody(request: Request): Promise<PhpArray> {
   } catch {
     return {}
   }
-  if (isPhpArray(decoded)) return toPhp(decoded) as PhpArray
-  return decoded === null ? {} : { "0": toPhp(decoded) }
+  if (isPhpArray(decoded)) return toPhp(decoded, "") as PhpArray
+  return decoded === null ? {} : { "0": toPhp(decoded, "0") }
 }
 
 function nextIndex(target: PhpArray): string {
@@ -44,7 +59,7 @@ function nextIndex(target: PhpArray): string {
 export function phpQuery(url: URL): PhpArray {
   const result: PhpArray = {}
   for (const [rawName, rawValue] of url.searchParams) {
-    const value = cleanString(rawValue)
+    const value = cleanString(rawValue, rawName.replace(/\[([^\]]*)\]/g, ".$1"))
     const open = rawName.indexOf("[")
     const segments: string[] = []
     let base = rawName

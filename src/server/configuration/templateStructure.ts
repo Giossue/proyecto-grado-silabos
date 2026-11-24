@@ -1,0 +1,442 @@
+import { randomUUID } from "node:crypto"
+import { defaultBridgeDeps } from "../auth/requireSession"
+import type { LaravelSession } from "../auth/types"
+import { isUuid } from "../academic/structure"
+import { isJsonRequest, laravelInput, type PhpArray, type PhpValue } from "../laravel/input"
+import { laravelJson, validationError } from "../laravel/responses"
+import { uuid7 } from "../laravel/uuid7"
+import { validateInput, type Rule } from "../laravel/validation"
+import type { AuditEventInput } from "../operations/recordAuditEvent"
+import { phpIdentical, phpShape, phpString, phpTrim, type PhpRecord } from "./phpValues"
+import { contentForField, KEY_PATTERN, phpIntCast, RESPONSIBLES, toRuntime } from "./templateDraft"
+import { boundTemplate, FORBIDDEN, managesTemplates, type TemplateReadDeps } from "./templateReads"
+import { normalizeFieldDocument, TemplateValidationError, type TemplateDefinition } from "./templateRuntime"
+import type { SyllabusTemplate } from "./templatePresentation"
+import { createStructureStore } from "./templateStructureStore"
+import { createTemplateStore } from "./templateStore"
+
+export type DocumentBlock = { id: string; key: string; title: string; position: number }
+export type DocumentSection = { id: string; key: string; title: string; orientation: string; position: number; blocks: DocumentBlock[] }
+export type StoredField = { id: string; templateId: string; blockId: string; responsible: string; content: PhpRecord }
+export type FieldRecord = { id: string; templateId: string; blockId: string; responsible: string; content: unknown; key?: string; label?: string }
+export type FieldChanges = { responsible?: string; content?: PhpRecord }
+
+export interface StructureTx {
+  lockTemplate(templateId: string): Promise<SyllabusTemplate | null>
+  syncDocument(templateId: string, sections: DocumentSection[]): Promise<void>
+  insertField(field: StoredField): Promise<void>
+  updateField(id: string, changes: FieldChanges): Promise<void>
+  recordAudit(event: AuditEventInput): Promise<void>
+  reload?(templateId: string): Promise<SyllabusTemplate | null>
+}
+
+export interface StructureStore {
+  templateLocked(): Promise<boolean>
+  field(id: string): Promise<FieldRecord | null>
+  liveKeyTaken(templateId: string, key: string): Promise<boolean>
+  liveFieldBlocks(templateId: string, fieldIds: string[]): Promise<Map<string, string>>
+  transaction<T>(work: (tx: StructureTx) => Promise<T>): Promise<T>
+}
+
+export type StructureDeps = TemplateReadDeps & { structure: StructureStore; now: () => number; newId: () => string; newFieldId: () => string }
+
+export function defaultStructureDeps(): StructureDeps {
+  return {
+    bridge: defaultBridgeDeps(),
+    store: createTemplateStore(),
+    structure: createStructureStore(),
+    now: () => Math.floor(Date.now() / 1000),
+    newId: randomUUID,
+    newFieldId: uuid7,
+  }
+}
+
+const INVALID_ORDER = "El nuevo orden no es válido. Recargue la página e intente otra vez."
+const SECTION_ATTRIBUTES = { title: "título", orientation: "orientación", position: "posición", key: "código de referencia" }
+const FIELD_ATTRIBUTES = {
+  quien_llena: "quién lo llena",
+  content: "contenido",
+  label: "título",
+  key: "clave",
+  type: "tipo retirado",
+  config: "configuración retirada",
+  position: "posición",
+}
+
+class NotFound extends Error {}
+
+class Rejected extends Error {
+  constructor(readonly response: Response) {
+    super("rejected")
+  }
+}
+
+type Authorized = { session: LaravelSession; template: SyllabusTemplate; definition: TemplateDefinition; field: FieldRecord | null; original: Request }
+
+async function authorized(request: Request, templateId: string, deps: StructureDeps, fieldId?: string): Promise<Authorized | Response> {
+  const original = request.clone()
+  let field: FieldRecord | null = null
+  const bound = await boundTemplate(original, templateId, deps, async () => {
+    if (fieldId === undefined) return null
+    field = isUuid(fieldId) ? await deps.structure.field(fieldId) : null
+    return field === null ? deps.bridge.forward(original) : null
+  })
+  if (bound instanceof Response) return bound
+  if (bound.template.definition === null) return deps.bridge.forward(original)
+  if (!managesTemplates(bound.session)) return laravelJson({ message: FORBIDDEN }, 403)
+  return { ...bound, definition: bound.template.definition, field, original }
+}
+
+async function jsonInput(request: Request, original: Request, deps: StructureDeps): Promise<PhpArray | Response> {
+  if (!isJsonRequest(request)) return deps.bridge.forward(original)
+  return toRuntime(await laravelInput(request)) as PhpArray
+}
+
+export function documentOf(template: SyllabusTemplate): DocumentSection[] {
+  return template.sections.map((section) => ({
+    id: section.id,
+    key: section.key,
+    title: section.title,
+    orientation: section.orientation,
+    position: section.position,
+    blocks: section.blocks.map((block) => ({ id: block.id, key: block.key, title: block.title, position: block.position })),
+  }))
+}
+
+function sortedByPosition<T extends { position: number }>(items: T[]): T[] {
+  return items.map((item, index) => ({ item, index })).sort((left, right) => left.item.position - right.item.position || left.index - right.index).map(({ item }) => item)
+}
+
+function placed<T extends { id: string; position: number }>(items: T[], ids: string[]): T[] {
+  const byId = new Map(items.map((item) => [item.id, item]))
+  return ids.map((id, index) => ({ ...(byId.get(id) as T), position: index + 1 }))
+}
+
+function sameIds(current: string[], requested: string[]): boolean {
+  const order = (ids: string[]) => [...ids].sort((left, right) => Buffer.compare(Buffer.from(left), Buffer.from(right)))
+  return current.length === requested.length && order(current).every((id, index) => id === order(requested)[index])
+}
+
+function audit(session: LaravelSession, deps: StructureDeps, action: string, resourceType: string, resourceId: string): AuditEventInput {
+  return { actorId: session.user.id, roleAssignmentId: session.activeRole?.id ?? null, action, resourceType, resourceId, result: "exito", metadata: {}, occurredAt: deps.now() }
+}
+
+async function reloaded(tx: StructureTx, templateId: string): Promise<SyllabusTemplate> {
+  const template = await (tx.reload ?? tx.lockTemplate)(templateId)
+  if (template === null) throw new NotFound()
+  return template
+}
+
+async function locked(tx: StructureTx, templateId: string): Promise<SyllabusTemplate> {
+  const template = await tx.lockTemplate(templateId)
+  if (template === null) throw new NotFound()
+  return template
+}
+
+async function write(original: Request, deps: StructureDeps, work: (tx: StructureTx) => Promise<Response>): Promise<Response> {
+  if (await deps.structure.templateLocked()) return validationError({ process: ["Proceso activo"] })
+  try {
+    return await deps.structure.transaction(work)
+  } catch (error) {
+    if (error instanceof NotFound) return deps.bridge.forward(original)
+    if (error instanceof Rejected) return error.response
+    if (error instanceof TemplateValidationError) return validationError(error.errors)
+    throw error
+  }
+}
+
+function sectionRules(template: SyllabusTemplate | null): Record<string, Rule[]> {
+  const rules: Record<string, Rule[]> = {
+    title: ["required", "string", { max: 180 }],
+    orientation: ["sometimes", { in: ["portrait", "landscape"] }],
+    position: ["sometimes", "integer", { min: 1 }],
+  }
+  if (template !== null) {
+    rules.key = [
+      "required",
+      "string",
+      { regex: KEY_PATTERN },
+      { max: 100 },
+      { fails: (value) => (template.sections.some((section) => section.key === value) ? ["La clave ya está siendo utilizada por otra sección."] : []) },
+    ]
+  }
+  return rules
+}
+
+function requestedPosition(input: PhpArray, count: number): number {
+  const given = input.position === undefined || input.position === null ? count + 1 : phpIntCast(input.position)
+  return Math.min(Math.max(1, given), count + 1)
+}
+
+export async function storeSection(request: Request, templateId: string, deps: StructureDeps = defaultStructureDeps()): Promise<Response> {
+  const auth = await authorized(request, templateId, deps)
+  if (auth instanceof Response) return auth
+  const input = await jsonInput(request, auth.original, deps)
+  if (input instanceof Response) return input
+  const errors = await validateInput(input, sectionRules(auth.template), SECTION_ATTRIBUTES)
+  if (Object.keys(errors).length > 0) return validationError(errors)
+  let sectionId = ""
+  return write(auth.original, deps, async (tx) => {
+    const template = await locked(tx, auth.template.id)
+    const document = documentOf(template)
+    const count = document.length
+    sectionId = deps.newId()
+    const section: DocumentSection = {
+      id: sectionId,
+      key: phpString(input.key),
+      title: phpString(input.title),
+      orientation: input.orientation === undefined || input.orientation === null ? "portrait" : phpString(input.orientation),
+      position: count + 1,
+      blocks: [],
+    }
+    await tx.syncDocument(template.id, [...document, section])
+    const position = requestedPosition(input, count)
+    if (position <= count) {
+      const current = documentOf(await reloaded(tx, template.id))
+      const ids = sortedByPosition(current).map((entry) => entry.id).filter((id) => id !== sectionId)
+      ids.splice(position - 1, 0, sectionId)
+      await tx.syncDocument(template.id, placed(current, ids))
+    }
+    await tx.recordAudit(audit(auth.session, deps, "plantilla.seccion_creada", "seccion_plantilla", sectionId))
+    return laravelJson({ message: "Sección agregada a la plantilla.", section_id: sectionId }, 201)
+  })
+}
+
+export async function updateSection(request: Request, templateId: string, sectionId: string, deps: StructureDeps = defaultStructureDeps()): Promise<Response> {
+  const auth = await authorized(request, templateId, deps)
+  if (auth instanceof Response) return auth
+  const input = await jsonInput(request, auth.original, deps)
+  if (input instanceof Response) return input
+  const errors = await validateInput(input, sectionRules(null), SECTION_ATTRIBUTES)
+  if (Object.keys(errors).length > 0) return validationError(errors)
+  const section = auth.template.sections.find((candidate) => candidate.id === sectionId)
+  if (!section) return deps.bridge.forward(auth.original)
+  return write(auth.original, deps, async (tx) => {
+    const template = await locked(tx, auth.template.id)
+    const document = documentOf(template)
+    if (!document.some((entry) => entry.id === section.id)) throw new NotFound()
+    const orientation = input.orientation === undefined || input.orientation === null ? section.orientation : phpString(input.orientation)
+    await tx.syncDocument(
+      template.id,
+      document.map((entry) => (entry.id === section.id ? { ...entry, title: phpString(input.title), orientation } : entry)),
+    )
+    await tx.recordAudit(audit(auth.session, deps, "plantilla.seccion_actualizada", "seccion_plantilla", section.id))
+    return laravelJson({ message: "Sección actualizada." })
+  })
+}
+
+export async function reorderSections(request: Request, templateId: string, deps: StructureDeps = defaultStructureDeps()): Promise<Response> {
+  const auth = await authorized(request, templateId, deps)
+  if (auth instanceof Response) return auth
+  const input = await jsonInput(request, auth.original, deps)
+  if (input instanceof Response) return input
+  const errors = await validateInput(
+    input,
+    {
+      section_ids: ["required", "array", { min: 1 }],
+      "section_ids.*": [
+        "required",
+        "uuid",
+        "distinct",
+        {
+          fails: (value) =>
+            typeof value !== "string" || !auth.template.sections.some((section) => section.id === value) ? ["La sección seleccionada no pertenece a la plantilla."] : [],
+        },
+      ],
+    },
+    { section_ids: "secciones", "section_ids.*": "sección" },
+  )
+  if (Object.keys(errors).length > 0) return validationError(errors)
+  const ids = Object.values(input.section_ids as PhpArray).filter((id): id is string => typeof id === "string")
+  return write(auth.original, deps, async (tx) => {
+    const template = await locked(tx, auth.template.id)
+    const document = documentOf(template)
+    if (!sameIds(document.map((section) => section.id), ids)) throw new Rejected(validationError({ sections: [INVALID_ORDER] }))
+    await tx.syncDocument(template.id, placed(document, ids))
+    await tx.recordAudit(audit(auth.session, deps, "plantilla.secciones_reordenadas", "plantilla_silabo", template.id))
+    return laravelJson({ message: "Orden de secciones actualizado." })
+  })
+}
+
+export async function destroySection(request: Request, templateId: string, sectionId: string, deps: StructureDeps = defaultStructureDeps()): Promise<Response> {
+  const auth = await authorized(request, templateId, deps)
+  if (auth instanceof Response) return auth
+  const section = auth.template.sections.find((candidate) => candidate.id === sectionId)
+  if (!section) return deps.bridge.forward(auth.original)
+  return write(auth.original, deps, async (tx) => {
+    const template = await locked(tx, auth.template.id)
+    const document = documentOf(template)
+    if (!document.some((entry) => entry.id === section.id)) throw new NotFound()
+    await tx.syncDocument(
+      template.id,
+      document.filter((entry) => entry.id !== section.id),
+    )
+    await tx.recordAudit(audit(auth.session, deps, "plantilla.seccion_eliminada", "seccion_plantilla", section.id))
+    return laravelJson({ message: "Sección eliminada." })
+  })
+}
+
+function contentRule(definition: TemplateDefinition): Rule {
+  return {
+    aborts: (value, attribute) => {
+      try {
+        normalizeFieldDocument(value, definition, attribute)
+        return null
+      } catch (error) {
+        if (error instanceof TemplateValidationError) return error.errors
+        throw error
+      }
+    },
+  }
+}
+
+function fieldPayload(id: string, key: string, label: string, responsible: string, content: unknown): PhpRecord {
+  return { id, key, label, quien_llena: responsible, content: phpShape(content) }
+}
+
+export async function storeField(request: Request, templateId: string, sectionId: string, deps: StructureDeps = defaultStructureDeps()): Promise<Response> {
+  const auth = await authorized(request, templateId, deps)
+  if (auth instanceof Response) return auth
+  const input = await jsonInput(request, auth.original, deps)
+  if (input instanceof Response) return input
+  const errors = await validateInput(
+    input,
+    {
+      label: ["nullable", "string", { max: 180 }],
+      quien_llena: ["required", { in: RESPONSIBLES }],
+      content: ["required", "array", contentRule(auth.definition)],
+      type: ["prohibited"],
+      config: ["prohibited"],
+      position: ["sometimes", "integer", { min: 1 }],
+      key: ["required", "string", { regex: KEY_PATTERN }, { max: 100 }, { unique: async (value) => !(await deps.structure.liveKeyTaken(auth.template.id, phpString(value))) }],
+    },
+    FIELD_ATTRIBUTES,
+  )
+  if (Object.keys(errors).length > 0) return validationError(errors)
+  if (!auth.template.sections.some((section) => section.id === sectionId)) return deps.bridge.forward(auth.original)
+  return write(auth.original, deps, async (tx) => {
+    const template = await locked(tx, auth.template.id)
+    const document = documentOf(template)
+    const section = document.find((entry) => entry.id === sectionId)
+    if (!section) throw new NotFound()
+    const responsible = phpString(input.quien_llena)
+    const content = contentForField(responsible, normalizeFieldDocument(input.content, template.definition ?? auth.definition))
+    const label = phpTrim(input.label === undefined || input.label === null ? "" : phpString(input.label))
+    const count = section.blocks.length
+    const blockId = deps.newId()
+    const block: DocumentBlock = { id: blockId, key: phpString(input.key), title: label, position: count + 1 }
+    await tx.syncDocument(
+      template.id,
+      document.map((entry) => (entry.id === section.id ? { ...entry, blocks: [...entry.blocks, block] } : entry)),
+    )
+    const position = requestedPosition(input, count)
+    if (position <= count) {
+      const current = documentOf(await reloaded(tx, template.id))
+      const target = current.find((entry) => entry.id === section.id)
+      if (!target) throw new NotFound()
+      const ids = sortedByPosition(target.blocks).map((entry) => entry.id).filter((id) => id !== blockId)
+      ids.splice(position - 1, 0, blockId)
+      await tx.syncDocument(
+        template.id,
+        current.map((entry) => (entry.id === section.id ? { ...entry, blocks: placed(entry.blocks, ids) } : entry)),
+      )
+    }
+    const fieldId = deps.newFieldId()
+    await tx.insertField({ id: fieldId, templateId: template.id, blockId, responsible, content })
+    await tx.recordAudit(audit(auth.session, deps, "plantilla.campo_creado", "definicion_campo", fieldId))
+    return laravelJson({ message: "Campo agregado a la sección.", field: fieldPayload(fieldId, block.key, label, responsible, content) }, 201)
+  })
+}
+
+export async function updateField(request: Request, templateId: string, fieldId: string, deps: StructureDeps = defaultStructureDeps()): Promise<Response> {
+  const auth = await authorized(request, templateId, deps, fieldId)
+  if (auth instanceof Response) return auth
+  const field = auth.field as FieldRecord
+  const input = await jsonInput(request, auth.original, deps)
+  if (input instanceof Response) return input
+  const errors = await validateInput(
+    input,
+    {
+      label: ["nullable", "string", { max: 180 }],
+      quien_llena: ["sometimes", { in: RESPONSIBLES }],
+      content: ["sometimes", "array", contentRule(auth.definition)],
+      type: ["prohibited"],
+      config: ["prohibited"],
+    },
+    FIELD_ATTRIBUTES,
+  )
+  if (Object.keys(errors).length > 0) return validationError(errors)
+  if (field.templateId !== auth.template.id) return deps.bridge.forward(auth.original)
+  return write(auth.original, deps, async (tx) => {
+    const template = await locked(tx, auth.template.id)
+    const has = (key: string) => Object.prototype.hasOwnProperty.call(input, key)
+    const label = has("label") ? phpTrim(phpString(input.label as PhpValue)) : (field.label ?? "")
+    const responsible = input.quien_llena === undefined || input.quien_llena === null ? field.responsible : phpString(input.quien_llena)
+    const source = has("content") ? normalizeFieldDocument(input.content, template.definition ?? auth.definition) : field.content
+    const content = contentForField(responsible, source as PhpRecord)
+    const changes: FieldChanges = {}
+    if (responsible !== field.responsible) changes.responsible = responsible
+    if (!phpIdentical(content, field.content)) changes.content = content
+    if (Object.keys(changes).length > 0) await tx.updateField(field.id, changes)
+    const document = documentOf(template)
+    if (!document.some((section) => section.blocks.some((block) => block.id === field.blockId))) throw new NotFound()
+    await tx.syncDocument(
+      template.id,
+      document.map((section) => ({ ...section, blocks: section.blocks.map((block) => (block.id === field.blockId ? { ...block, title: label } : block)) })),
+    )
+    const key = document.flatMap((section) => section.blocks).find((block) => block.id === field.blockId)?.key ?? field.key ?? ""
+    await tx.recordAudit(audit(auth.session, deps, "plantilla.campo_actualizado", "definicion_campo", field.id))
+    return laravelJson({ message: "Campo actualizado.", field: fieldPayload(field.id, key, label, responsible, content) })
+  })
+}
+
+export async function reorderFields(request: Request, templateId: string, sectionId: string, deps: StructureDeps = defaultStructureDeps()): Promise<Response> {
+  const auth = await authorized(request, templateId, deps)
+  if (auth instanceof Response) return auth
+  const input = await jsonInput(request, auth.original, deps)
+  if (input instanceof Response) return input
+  const errors = await validateInput(
+    input,
+    { field_ids: ["required", "array", { min: 1 }], "field_ids.*": ["required", "uuid", "distinct"] },
+    { field_ids: "campos", "field_ids.*": "campo" },
+  )
+  if (Object.keys(errors).length > 0) return validationError(errors)
+  if (!auth.template.sections.some((section) => section.id === sectionId)) return deps.bridge.forward(auth.original)
+  const ids = Object.values(input.field_ids as PhpArray).filter((id): id is string => typeof id === "string")
+  const blockIds = await deps.structure.liveFieldBlocks(auth.template.id, ids)
+  if (blockIds.size !== ids.length) return validationError({ field_ids: [INVALID_ORDER] })
+  if (ids.some((id) => !blockIds.has(id))) return deps.bridge.forward(auth.original)
+  const requested = ids.map((id) => blockIds.get(id) as string)
+  return write(auth.original, deps, async (tx) => {
+    const template = await locked(tx, auth.template.id)
+    const document = documentOf(template)
+    const section = document.find((entry) => entry.id === sectionId)
+    if (!section) throw new NotFound()
+    if (!sameIds(section.blocks.map((block) => block.id), requested)) throw new Rejected(validationError({ blocks: [INVALID_ORDER] }))
+    await tx.syncDocument(
+      template.id,
+      document.map((entry) => (entry.id === section.id ? { ...entry, blocks: placed(entry.blocks, requested) } : entry)),
+    )
+    await tx.recordAudit(audit(auth.session, deps, "plantilla.bloques_reordenados", "plantilla_silabo", template.id))
+    return laravelJson({ message: "Orden de campos actualizado." })
+  })
+}
+
+export async function destroyField(request: Request, templateId: string, fieldId: string, deps: StructureDeps = defaultStructureDeps()): Promise<Response> {
+  const auth = await authorized(request, templateId, deps, fieldId)
+  if (auth instanceof Response) return auth
+  const field = auth.field as FieldRecord
+  if (field.templateId !== auth.template.id) return deps.bridge.forward(auth.original)
+  if (!auth.template.sections.some((section) => section.blocks.some((block) => block.id === field.blockId))) return deps.bridge.forward(auth.original)
+  return write(auth.original, deps, async (tx) => {
+    const template = await locked(tx, auth.template.id)
+    const document = documentOf(template)
+    if (!document.some((section) => section.blocks.some((block) => block.id === field.blockId))) throw new NotFound()
+    await tx.syncDocument(
+      template.id,
+      document.map((section) => ({ ...section, blocks: section.blocks.filter((block) => block.id !== field.blockId) })),
+    )
+    await tx.recordAudit(audit(auth.session, deps, "plantilla.bloque_eliminado", "bloque_plantilla", field.blockId))
+    return laravelJson({ message: "Campo eliminado." })
+  })
+}

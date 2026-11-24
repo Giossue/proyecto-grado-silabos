@@ -1,6 +1,6 @@
 import "server-only"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
-import type { BridgeDeps, LaravelSession } from "../auth/types"
+import type { BridgeDeps, LaravelSession, SessionUser } from "../auth/types"
 import { isUuid } from "../academic/structure"
 import { laravelJson, validationError } from "../laravel/responses"
 import { list, phpCount, phpShape, record, type PhpRecord } from "./phpValues"
@@ -25,6 +25,7 @@ export async function boundTemplate(
   request: Request,
   templateId: string,
   deps: TemplateReadDeps,
+  beforeBinding: (user: SessionUser) => Promise<Response | null> | Response | null = () => null,
 ): Promise<{ session: LaravelSession; template: SyllabusTemplate } | Response> {
   if (!isUuid(templateId)) return deps.bridge.forward(request)
   let template: SyllabusTemplate | null = null
@@ -33,7 +34,9 @@ export async function boundTemplate(
     {
       verified: true,
       activeRole: "required",
-      afterAuthentication: async () => {
+      afterAuthentication: async (user) => {
+        const early = await beforeBinding(user)
+        if (early) return early
         const found = await deps.store.template()
         template = found !== null && found.id === templateId.toLowerCase() ? found : null
         return template === null ? deps.bridge.forward(request) : null
