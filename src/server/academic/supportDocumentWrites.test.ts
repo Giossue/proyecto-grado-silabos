@@ -9,7 +9,6 @@ import golden from "../laravel/__fixtures__/laravel-golden.json"
 import { fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import { createRateLimiter } from "../laravel/throttle"
 import { createStorageWriter, type StorageWriter } from "../laravel/storageWriter"
-import type { AuditEventInput } from "../operations/recordAuditEvent"
 import { failSupportDocumentView, prepareSupportDocumentView, type SupportDocumentViewDeps, type SupportDocumentViewStore } from "./supportDocumentView"
 import {
   destroySupportDocument,
@@ -32,7 +31,6 @@ let root: string
 let storage: StorageWriter
 let documents: Map<string, SupportDocumentInput>
 let objects: Map<string, StoredObjectInput>
-let audits: AuditEventInput[]
 let dispatched: string[]
 let ids: number
 let converted: { filename: string; content: Buffer }[]
@@ -49,7 +47,7 @@ const store = (): SupportDocumentWriteStore => ({
   },
   async transaction(work) {
     const after: (() => unknown)[] = []
-    const staged = { documents: new Map(documents), objects: new Map(objects), audits: [...audits] }
+    const staged = { documents: new Map(documents), objects: new Map(objects) }
     const result = await work(
       {
         insertObject: async (row) => void staged.objects.set(row.id, row),
@@ -61,13 +59,11 @@ const store = (): SupportDocumentWriteStore => ({
         objects: async (list) => list.flatMap((id) => (staged.objects.has(id) ? [{ disk: staged.objects.get(id)!.disk, path: staged.objects.get(id)!.path }] : [])),
         deleteDocument: async (id) => void staged.documents.delete(id),
         deleteObjects: async (list) => list.forEach((id) => staged.objects.delete(id)),
-        recordAudit: async (event) => void staged.audits.push(event),
       },
       (callback) => void after.push(callback),
     )
     documents = staged.documents
     objects = staged.objects
-    audits = staged.audits
     for (const callback of after) await callback()
     return result
   },
@@ -148,7 +144,6 @@ beforeEach(() => {
   storage = createStorageWriter(root)
   documents = new Map()
   objects = new Map()
-  audits = []
   dispatched = []
   ids = 0
   converted = []
@@ -185,9 +180,6 @@ describe("POST /api/v1/coordination/support-documents", () => {
       },
     ])
     expect(documents.get(id)).toMatchObject({ careerId: CAREER, title: "Proyecto de carrera", previewId: "01a1c5bc-0000-7000-8000-000000000001", view: "lista", uploadedBy: golden.userId })
-    expect(audits).toEqual([
-      expect.objectContaining({ action: "academico.documento_apoyo.subida", resourceType: "documento_apoyo", resourceId: id, metadata: { carrera_id: CAREER, archivo_id: "01a1c5bc-0000-7000-8000-000000000001", tamano_bytes: PDF.length } }),
-    ])
     expect(dispatched).toEqual([])
 
     asRole("docente")
@@ -329,7 +321,6 @@ describe("DELETE /api/v1/coordination/support-documents/{document}", () => {
     expect(objects.size).toBe(0)
     for (const file of paths) expect(await storage.exists("private", file)).toBe(false)
     expect(await storage.exists("private", path.posix.dirname(paths[0]))).toBe(false)
-    expect(audits.at(-1)).toMatchObject({ action: "academico.documento_apoyo.eliminacion", resourceType: "documento_apoyo", resourceId: id, metadata: { carrera_id: CAREER } })
   })
 
   it("forwards unknown or malformed documents to Laravel", async () => {

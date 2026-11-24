@@ -101,7 +101,7 @@ describe("GET /api/v1/notifications", () => {
     expect(text).toBe(
       `{"filters":{"status":"all"},"notifications":{"current_page":1,"data":[{"id":"0193-n","tipo":"documento.exportacion_fallida",` +
         `"titulo":"T\\u00edtulo \\u00ab\\u00f1\\u00bb \\/ 1","mensaje":"Mensaje de prueba.","leido_en":null,"notificado_en":"2026-11-23T15:04:05+00:00",` +
-        `"has_destination":true,"context":"Administraci\\u00f3n"}],"first_page_url":"${url}?page=1","from":1,"last_page":1,` +
+        `"has_destination":false,"context":null}],"first_page_url":"${url}?page=1","from":1,"last_page":1,` +
         `"last_page_url":"${url}?page=1","links":[{"url":null,"label":"pagination.previous","page":null,"active":false},` +
         `{"url":"${url}?page=1","label":"1","page":1,"active":true},{"url":null,"label":"pagination.next","page":null,"active":false}],` +
         `"next_page_url":null,"path":"${url}","per_page":20,"prev_page_url":null,"to":1,"total":1},"unread_count":1}`,
@@ -124,15 +124,25 @@ describe("GET /api/v1/notifications", () => {
   })
 
   it("notices without a screen for the user have no destination and the rest do", async () => {
+    world.assignments = [makeAssignment({ id: "teach", role: "docente", careerId: "career-1", careerLabel: "Software" })]
+    world.sessions.set(SESSION_ID, { payload: sessionPayload(loggedInAttributes({ active_role_assignment_id: "teach" })), lastActivity: NOW })
+    lookups.convocationCareerIds = async (id) => (id === "conv-1" ? ["career-1"] : [])
     notifications = [
       notification({ id: "informational", type: "silabo.correccion_solicitada", resourceType: "silabo", resourceId: "s-missing" }),
-      notification({ id: "actionable", type: "documento.exportacion_fallida", resourceType: "artefacto_exportacion", resourceId: "x" }),
+      notification({ id: "actionable", type: "convocatoria.abierta", resourceType: "convocatoria", resourceId: "conv-1" }),
     ]
     const data = ((await getJson("/api/v1/notifications")).json.notifications as { data: Record<string, unknown>[] }).data
     const byId = Object.fromEntries(data.map((item) => [item.id, item]))
     expect(byId.informational.has_destination).toBe(false)
     expect(byId.informational.context).toBeNull()
     expect(byId.actionable.has_destination).toBe(true)
+  })
+
+  it("a failed export notice no longer sends Administración to Auditoría", async () => {
+    notifications = [notification({ id: "failed", type: "documento.exportacion_fallida", resourceType: "artefacto_exportacion", resourceId: "x" })]
+    const data = ((await getJson("/api/v1/notifications")).json.notifications as { data: Record<string, unknown>[] }).data
+    expect(data[0].has_destination).toBe(false)
+    expect(data[0].context).toBeNull()
   })
 
   it("teacher notices keep the teaching context even when coordination is active", async () => {

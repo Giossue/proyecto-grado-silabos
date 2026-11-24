@@ -4,7 +4,6 @@ import { nativeMethods, routerComparison } from "@/server/laravel/routerTesting"
 import * as help from "./help/route"
 import * as helpAvailable from "./help/available/route"
 import * as systemSettings from "./admin/system-settings/route"
-import * as auditEvents from "./admin/audit-events/route"
 import * as dashboard from "./dashboard/route"
 import * as dashboardDeadline from "./dashboard/deadline/route"
 import * as session from "./session/route"
@@ -14,7 +13,6 @@ const ROUTES = [
   ["/api/v1/help", help],
   ["/api/v1/help/available", helpAvailable],
   ["/api/v1/admin/system-settings", systemSettings],
-  ["/api/v1/admin/audit-events", auditEvents],
   ["/api/v1/dashboard", dashboard],
   ["/api/v1/dashboard/deadline", dashboardDeadline],
   ["/api/v1/session", session],

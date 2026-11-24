@@ -124,7 +124,7 @@ export function submissionDepsOn(
     async validate(request, syllabusId) {
       const bridge = { ...(options.bridge ?? defaultBridgeDeps()), forward: async () => new Response(null, { status: FORWARDED }) }
       const validation = draftValidationStoreOn(executor, (work) => transaction((inner) => work(validationTx(inner))))
-      const response = await validateDraft(request.clone(), syllabusId, { bridge, store: validation, today: institutionToday, now: () => Math.floor(now()) })
+      const response = await validateDraft(request.clone(), syllabusId, { bridge, store: validation, today: institutionToday })
       if (response.status !== 200) return null
       const body = (await response.json()) as { validation: { blocking_errors: number } }
       return body.validation.blocking_errors

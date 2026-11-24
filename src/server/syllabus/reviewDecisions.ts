@@ -6,7 +6,6 @@ import { isJsonRequest, laravelInput, type PhpArray } from "../laravel/input"
 import { forbidden, laravelJson, validationError } from "../laravel/responses"
 import { validateInput } from "../laravel/validation"
 import { scheduleWorkflowNotification, type NotificationScope } from "../notifications/store"
-import type { AuditEventInput } from "../operations/recordAuditEvent"
 import { decisionBlock, hasRole, mayReview, ROLE_COORDINATOR } from "./policy"
 import type { ReviewDetailStore, ReviewRevision } from "./reviewDetails"
 import { GenerationRejected } from "./inProgressWork"
@@ -24,7 +23,6 @@ export interface ReviewDecisionTx {
   teachersFor(syllabusId: string): Promise<string[]>
   lockedDecisionBlock(syllabusId: string): Promise<string | null>
   decisionBlock(syllabusId: string): Promise<string | null>
-  revisionCount(syllabusId: string): Promise<number>
   restartSyllabus(syllabus: DecisionSyllabus): Promise<string>
   lockSyllabus(id: string): Promise<DecisionSyllabus | null>
   latestRevisionId(syllabusId: string): Promise<string | null>
@@ -32,7 +30,6 @@ export interface ReviewDecisionTx {
   revisionStage(id: string): Promise<string | null>
   requestCorrection(revisionId: string, justification: string, stage: string, actorId: string, now: number): Promise<void>
   markCorrectionRequested(syllabusId: string, version: number, now: number): Promise<void>
-  recordAudit(event: AuditEventInput): Promise<void>
 }
 
 export type ReviewDecisionDeps = {
@@ -101,10 +98,6 @@ function rejectRevision(message: string): never {
   throw new Rejected(validationError({ revision: [message] }))
 }
 
-export function auditOf(session: LaravelSession, action: string, resourceType: string, resourceId: string, metadata: AuditEventInput["metadata"], occurredAt: number): AuditEventInput {
-  return { actorId: session.user.id, roleAssignmentId: session.activeRole?.id ?? null, action, resourceType, resourceId, result: "exito", metadata, occurredAt }
-}
-
 export async function requestCorrection(request: Request, revisionId: string, deps: ReviewDecisionDeps = defaultReviewDecisionDeps()): Promise<Response> {
   const original = request.clone()
   if (request.headers.get("content-type") !== null && !isJsonRequest(request)) return deps.bridge.forward(original)
@@ -132,14 +125,6 @@ export async function requestCorrection(request: Request, revisionId: string, de
       const now = deps.now()
       await tx.requestCorrection(revision.id, justification, COORDINATION, session.user.id, now)
       await tx.markCorrectionRequested(locked.id, locked.version + 1, now)
-      await tx.recordAudit(
-        auditOf(session, "silabo.correccion_solicitada", "revision_silabo", revision.id, {
-          revision_number: revision.number,
-          from_state: "en_revision",
-          to_state: "correccion_solicitada",
-          stage: COORDINATION,
-        }, now),
-      )
       await scheduleWorkflowNotification(tx.notifications, {
         syllabusId: locked.id,
         eventType: "silabo.correccion_solicitada",
@@ -196,11 +181,8 @@ export async function resetSyllabus(request: Request, syllabusId: string, deps: 
       if (locked.state !== "aprobado") reject("Solo se reinicia un sílabo aprobado.")
       const current = await tx.decisionBlock(locked.id)
       if (current !== null) reject(current)
-      const deleted = { previous_syllabus_id: locked.id, paralelo_id: locked.parallelId, revisions: await tx.revisionCount(locked.id), reason }
       const teachers = await tx.teachersFor(locked.id)
       const fresh = await tx.restartSyllabus(locked)
-      const now = deps.now()
-      await tx.recordAudit(auditOf(session, "silabo.eliminado", "silabo", fresh, deleted, now))
       await scheduleWorkflowNotification(tx.notifications, {
         syllabusId: fresh,
         eventType: "silabo.eliminado",

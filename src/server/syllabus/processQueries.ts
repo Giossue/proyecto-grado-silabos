@@ -2,7 +2,6 @@ import "server-only"
 import { sql } from "drizzle-orm"
 import { db } from "@/db"
 import { institutionDateSql } from "../laravel/sql"
-import { insertAuditEvent } from "../operations/recordAuditEvent"
 import { uuid7 } from "../laravel/uuid7"
 import type { ProcessRepository, ProcessRow, ProcessTx } from "./processes"
 import { rowsOf, type Executor } from "./teacherSyllabusQueries"
@@ -42,9 +41,6 @@ function processTx(executor: Executor): ProcessTx {
     async pause(id) {
       await executor.execute(sql`update convocatorias_universidad set estado_convocatoria_universidad = 'pausado' where convocatoria_universidad_id = ${id}::uuid`)
       await executor.execute(sql`update convocatorias_universidad set pausado_en = clock_timestamp() where convocatoria_universidad_id = ${id}::uuid`)
-    },
-    async recordAudit(event) {
-      await insertAuditEvent(executor, event)
     },
     async lockInProgress() {
       const [row] = await rowsOf<{ id: string; period_id: string }>(

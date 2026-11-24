@@ -5,7 +5,6 @@ import path from "node:path"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import golden from "../laravel/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
-import type { AuditEventInput } from "../operations/recordAuditEvent"
 import { decodePng } from "../files/png"
 import { createStorageWriter, type StorageWriter } from "../laravel/storageWriter"
 import type { StoredObjectInput } from "./supportDocumentWrites"
@@ -36,7 +35,6 @@ const NEW_ID = "01a2aaaa-0000-7000-8000-000000000001"
 let world: FakeWorld
 let forwarded: Request[]
 let log: string[]
-let audits: AuditEventInput[]
 let faculties: Map<string, FacultyRow & { active: boolean }>
 let careers: Map<string, CareerRow & { active: boolean; roles: boolean; inProgress: boolean }>
 let periods: Map<string, PeriodRow & { running: boolean }>
@@ -58,7 +56,6 @@ function deps(): GovernanceWriteDeps {
     files: { storage, newObjectId: () => "01a2aaaa-0000-7000-8000-00000000f11e", newLogoId: () => "6b1d0c1e-3a5f-4c2b-9d8e-7f6a5b4c3d2e" },
     async transaction(work) {
       log.push("begin")
-      const staged: AuditEventInput[] = []
       try {
         const result = await work({
           createCareer: async (data) => (created.push(data), NEW_ID),
@@ -69,7 +66,6 @@ function deps(): GovernanceWriteDeps {
           lockCareer: async (id) => careers.get(id) ?? null,
           lockPeriod: async (id) => periods.get(id) ?? null,
           lockActiveFaculty: async (id) => faculties.get(id)?.active === true,
-          facultyNames: async (ids) => new Map(ids.filter((id) => faculties.has(id)).map((id) => [id, faculties.get(id)?.name as string])),
           careersOfFaculty: async (id) => [...careers.values()].filter((career) => career.facultyId === id).map((career) => career.id),
           periodRunning: async (id) => periods.get(id)?.running === true,
           updateColumns: async (entity, id, columns) => void log.push(`update:${entity}:${id}:${JSON.stringify(columns)}`),
@@ -89,9 +85,7 @@ function deps(): GovernanceWriteDeps {
             return result
           },
           sync: async (confirmed, careerIds) => void log.push(`sync:${confirmed}:${careerIds.join(",")}`),
-          recordAudit: async (event) => void staged.push(event),
         })
-        audits.push(...staged)
         log.push("commit")
         return result
       } catch (error) {
@@ -130,7 +124,6 @@ beforeEach(() => {
   objects = []
   createdFaculties = []
   log = []
-  audits = []
   created = []
   purge = null
   finalized = false
@@ -159,7 +152,7 @@ async function sendForm(method: string, url: string, fields: Record<string, stri
 describe("faculties with their logo", () => {
   const LOGO_PATH = `logos/facultades/${NEW_ID}/6b1d0c1e-3a5f-4c2b-9d8e-7f6a5b4c3d2e.png`
 
-  it("creates a faculty with its catalog libraries and its logo fitted to 600 x 180, audited", async () => {
+  it("creates a faculty with its catalog libraries and its logo fitted to 600 x 180", async () => {
     const response = await sendForm("POST", "/api/v1/admin/academic/facultad", { nombre: "Facultad de Salud", campus: "Campus Laguacoto", catalog_libraries: '["UEB","SALUD"]' }, { name: "logo.png", content: logo("rgba-800x400.png") }, (request) =>
       createGovernanceRecord(request, "facultad", deps()),
     )
@@ -172,7 +165,6 @@ describe("faculties with their logo", () => {
       expect.objectContaining({ id: "01a2aaaa-0000-7000-8000-00000000f11e", disk: "private", path: LOGO_PATH, name: `logo-facultad-${NEW_ID}.png`, mime: "image/png", size: stored.length, classification: "logo_facultad", ownerId: null }),
     ])
     expect(log).toContain(`update:facultad:${NEW_ID}:${JSON.stringify({ logo_archivo_id: "01a2aaaa-0000-7000-8000-00000000f11e" })}`)
-    expect(audits).toEqual([expect.objectContaining({ action: "academico.facultad.creacion", resourceType: "facultad", resourceId: NEW_ID, metadata: {} })])
   })
 
   it("requires a transparent PNG logo and a known campus when creating", async () => {
@@ -188,16 +180,15 @@ describe("faculties with their logo", () => {
     expect(objects).toEqual([])
   })
 
-  it("replaces the logo of a faculty sent as POST with _method=PATCH and audits it without listing fields", async () => {
+  it("replaces the logo of a faculty sent as POST with _method=PATCH", async () => {
     const response = await sendForm("POST", `/api/v1/admin/academic/facultad/${FACULTY}`, { _method: "PATCH", nombre: "Facultad renovada", campus: "Campus Laguacoto" }, { name: "logo.png", content: logo("ga-300x300.png") }, (request) =>
       postGovernanceRecord(request, "facultad", FACULTY, deps()),
     )
-    expect(response).toEqual({ status: 200, text: '{"message":"Datos institucionales actualizados y auditados."}' })
+    expect(response).toEqual({ status: 200, text: '{"message":"Datos institucionales actualizados."}' })
     const logoPath = `logos/facultades/${FACULTY}/6b1d0c1e-3a5f-4c2b-9d8e-7f6a5b4c3d2e.png`
     expect(await storage.exists("private", logoPath)).toBe(true)
     expect(log).toContain(`update:facultad:${FACULTY}:${JSON.stringify({ nombre_facultad: "Facultad renovada", logo_archivo_id: "01a2aaaa-0000-7000-8000-00000000f11e" })}`)
     expect(log).toContain(`sync:false:${CAREER}`)
-    expect(audits).toEqual([expect.objectContaining({ action: "academico.facultad.actualizacion", resourceId: FACULTY, metadata: { changed_fields: "" } })])
   })
 
   it("rejects a logo that is not a file when updating", async () => {
@@ -208,12 +199,11 @@ describe("faculties with their logo", () => {
 })
 
 describe("POST /api/v1/admin/academic/{entity}", () => {
-  it("the administrator creates a career with its code and cycle count, audited", async () => {
+  it("the administrator creates a career with its code and cycle count", async () => {
     const response = await create("carrera", { faculty_id: FACULTY, modality: "Presencial", code: "SW-10", nombre: "Software nueva", cycle_count: "8" })
     expect(response.status).toBe(201)
     expect(response.text).toBe(`{"message":"Registro institucional creado.","id":"${NEW_ID}"}`)
     expect(created).toEqual([{ facultyId: FACULTY, modality: "Presencial", code: "SW-10", name: "Software nueva", cycleCount: 8 }])
-    expect(audits.map((event) => [event.action, event.resourceType, event.resourceId, event.metadata])).toEqual([["academico.carrera.creacion", "carrera", NEW_ID, {}]])
   })
 
   it("rejects a career without code or cycle count, a taken code and an inactive faculty", async () => {
@@ -260,9 +250,9 @@ describe("POST /api/v1/admin/academic/{entity}", () => {
 })
 
 describe("PATCH /api/v1/admin/academic/{entity}/{record}", () => {
-  it("updates only what changed in a career, audits before and after and keeps its syllabi in sync", async () => {
+  it("updates only what changed in a career and keeps its syllabi in sync", async () => {
     const response = await update("carrera", CAREER, { ...careerBody, faculty_id: OTHER_FACULTY, modality: "En línea", nombre: "Software renovada" })
-    expect(response.text).toBe('{"message":"Datos institucionales actualizados y auditados."}')
+    expect(response.text).toBe('{"message":"Datos institucionales actualizados."}')
     expect(log).toEqual([
       "begin",
       `guard:false:${CAREER}:null`,
@@ -270,27 +260,11 @@ describe("PATCH /api/v1/admin/academic/{entity}/{record}", () => {
       `sync:false:${CAREER}`,
       "commit",
     ])
-    expect(audits.map((event) => [event.action, event.metadata])).toEqual([
-      [
-        "academico.carrera.actualizacion",
-        {
-          changed_fields: "Facultad, Nombre, modalidad_carrera",
-          before_faculty_id: FACULTY,
-          after_faculty_id: OTHER_FACULTY,
-          before_faculty: "Facultad de Ciencias",
-          after_faculty: "Facultad Nueva",
-          before_name: "Software",
-          after_name: "Software renovada",
-          before_modalidad_carrera: "Presencial",
-          after_modalidad_carrera: "En línea",
-        },
-      ],
-    ])
   })
 
-  it("does not write or audit when nothing changed, and needs an active faculty to move a career", async () => {
+  it("does not write when nothing changed, and needs an active faculty to move a career", async () => {
     expect((await update("carrera", CAREER, careerBody)).status).toBe(200)
-    expect(audits).toEqual([])
+    expect(log.filter((entry) => entry.startsWith("update:"))).toEqual([])
     faculties.set(OTHER_FACULTY, { ...(faculties.get(OTHER_FACULTY) as FacultyRow & { active: boolean }), active: false })
     expect((await update("carrera", CAREER, { ...careerBody, faculty_id: OTHER_FACULTY })).json?.errors).toEqual({
       faculty_id: ["Seleccione una facultad activa para reasignar la carrera."],
@@ -310,13 +284,6 @@ describe("PATCH /api/v1/admin/academic/{entity}/{record}", () => {
 
   it("updates a faculty and syncs every career of it", async () => {
     expect((await update("facultad", FACULTY, { nombre: "Facultad renovada", campus: "Campus Laguacoto", catalog_libraries: ["UEB"] })).status).toBe(200)
-    expect(audits[0].metadata).toEqual({
-      changed_fields: "Nombre, Bibliotecas de Koha",
-      before_name: "Facultad de Ciencias",
-      after_name: "Facultad renovada",
-      before_catalog_libraries: "",
-      after_catalog_libraries: "UEB",
-    })
     expect(log).toContain(`sync:false:${CAREER}`)
   })
 
@@ -327,7 +294,6 @@ describe("PATCH /api/v1/admin/academic/{entity}/{record}", () => {
     purge = purgeRequired(3)
     expect((await update("periodo", PERIOD, { starts_on: "2026-11-02", ends_on: "2027-03-12", teaching_weeks: 15 })).json?.errors).toEqual(purge)
     expect((await update("periodo", PERIOD, { starts_on: "2026-11-02", ends_on: "2027-03-12", teaching_weeks: 15, confirm_purge: "1" })).status).toBe(200)
-    expect(audits.map((event) => event.metadata)).toEqual([{ changed_fields: "Semanas lectivas", before_teaching_weeks: 16, after_teaching_weeks: 15 }])
     expect((await update("periodo", PERIOD, { starts_on: "2026-11-02", ends_on: "2026-10-12" })).json?.errors).toEqual({
       ends_on: ["El campo fecha de fin debe ser una fecha posterior o igual a fecha de inicio."],
     })
@@ -335,13 +301,9 @@ describe("PATCH /api/v1/admin/academic/{entity}/{record}", () => {
 })
 
 describe("PATCH /api/v1/admin/academic/{entity}/{record}/status", () => {
-  it("deactivates and reactivates a career with audit, without deleting it", async () => {
+  it("deactivates and reactivates a career without deleting it", async () => {
     expect((await status("carrera", CAREER, { active: false })).text).toBe('{"message":"Registro desactivado sin borrar su historial."}')
     expect((await status("carrera", CAREER, { active: "1" })).text).toBe('{"message":"Registro reactivado."}')
-    expect(audits.map((event) => [event.action, event.metadata])).toEqual([
-      ["academico.carrera.desactivacion", { active: false, retired_users: 0 }],
-      ["academico.carrera.reactivacion", { active: true }],
-    ])
     expect(log.filter((entry) => entry.startsWith("active:"))).toEqual([`active:carrera:${CAREER}:false`, `active:carrera:${CAREER}:true`])
   })
 
@@ -349,7 +311,6 @@ describe("PATCH /api/v1/admin/academic/{entity}/{record}/status", () => {
     expect((await status("facultad", FACULTY, { active: false })).json?.errors).toEqual({ record: ["Desactive primero las carreras activas de esta facultad."] })
     careers.set(CAREER, { ...(careers.get(CAREER) as CareerRow & { active: boolean; roles: boolean; inProgress: boolean }), inProgress: true })
     expect((await status("carrera", CAREER, { active: false })).json?.errors).toEqual({ record: ["La carrera participa en una convocatoria en curso. Espere a que se cierre."] })
-    expect(audits).toEqual([])
   })
 
   it("leaves retiring the coordinator and teachers of a career to Laravel, and forbids coordinators", async () => {

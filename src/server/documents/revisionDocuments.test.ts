@@ -5,7 +5,6 @@ import path from "node:path"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 import golden from "../laravel/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
-import type { AuditEventInput } from "../operations/recordAuditEvent"
 import type { ReviewRevision } from "../syllabus/reviewDetails"
 import type { DetailSyllabus } from "../syllabus/syllabusDetail"
 import { createRateLimiter } from "../laravel/throttle"
@@ -30,7 +29,6 @@ let revision: ReviewRevision | null
 let approval: { approvedAt: string; approvedBy: string } | null
 let artifacts: ArtifactRow[]
 let artifact: StoredArtifact | null
-let audits: AuditEventInput[]
 
 function deps(): DocumentDeps {
   return {
@@ -41,7 +39,6 @@ function deps(): DocumentDeps {
       approval: async () => approval,
       artifacts: async () => artifacts,
       artifact: async (id) => (artifact !== null && artifact.id === id ? artifact : null),
-      recordAudit: async (event) => void audits.push(event),
     },
     now: () => NOW,
   }
@@ -96,7 +93,6 @@ beforeEach(() => {
     { id: "e1000000-0000-4000-8000-000000000003", state: "pendiente", requestedAt: "2026-11-20T13:00:00+00:00", completedAt: null, pdfSize: null },
   ]
   artifact = { id: ARTIFACT, revisionId: REVISION, state: "completado", object: { id: OBJECT, disk: "private", path: `exports/${REVISION}/${ARTIFACT}/syllabus.pdf` } }
-  audits = []
 })
 
 const get = (target: string) => apiRequest(target, { cookie })
@@ -127,7 +123,7 @@ describe("GET revisions/{r}/documents", () => {
 })
 
 describe("GET exports/{a}/pdf", () => {
-  it("downloads the stored PDF with the Laravel headers and audits it", async () => {
+  it("downloads the stored PDF with the Laravel headers", async () => {
     const response = await downloadExport(get(`/api/v1/exports/${ARTIFACT}/pdf`), ARTIFACT, deps())
     expect(response.status).toBe(200)
     expect(Buffer.from(await response.arrayBuffer()).toString()).toBe("%PDF-1.7 prueba\n%%EOF\n")
@@ -135,18 +131,6 @@ describe("GET exports/{a}/pdf", () => {
     expect(response.headers.get("content-length")).toBe("22")
     expect(response.headers.get("content-disposition")).toBe("attachment; filename=silabo-bio-101a-revision-3.pdf")
     expect(response.headers.get("x-content-type-options")).toBe("nosniff")
-    expect(audits).toEqual([
-      {
-        actorId: golden.userId,
-        roleAssignmentId: golden.roleId,
-        action: "documento.descargado",
-        resourceType: "artefacto_exportacion",
-        resourceId: ARTIFACT,
-        result: "exito",
-        metadata: { format: "pdf", revision_number: 3, object_id: OBJECT },
-        occurredAt: NOW,
-      },
-    ])
   })
 
   it("forbids incomplete exports and answers 404 when the file is gone", async () => {
@@ -157,7 +141,6 @@ describe("GET exports/{a}/pdf", () => {
     expect([gone.status, await gone.text()]).toEqual([404, NOT_FOUND])
     artifact = { ...artifact, object: null }
     expect((await downloadExport(get(`/api/v1/exports/${ARTIFACT}/pdf`), ARTIFACT, deps())).status).toBe(404)
-    expect(audits).toEqual([])
   })
 })
 
@@ -170,7 +153,6 @@ describe("POST revisions/{r}/documents", () => {
   let renderable: boolean
   let approved: boolean
   let limiter: ReturnType<typeof createRateLimiter>
-  let converterEnabled: boolean
 
   function requestDeps(): DocumentRequestDeps {
     const existing = async (revisionId: string, key: string): Promise<ExportArtifactRow | null> => {
@@ -181,7 +163,6 @@ describe("POST revisions/{r}/documents", () => {
       ...deps(),
       limiter,
       renderable: async () => renderable,
-      rendererVersion: () => (converterEnabled ? "phpword-docx-v4+libreoffice-pdf-v1" : "phpword-docx-v4+text-pdf-v2"),
       existing,
       newId: () => NEW_ARTIFACT,
       async transaction(work) {
@@ -194,7 +175,6 @@ describe("POST revisions/{r}/documents", () => {
           approved: async () => approved,
           insertArtifact: async (row) => void staged.push({ ...row, state: "pendiente" }),
           dispatchExport: (id) => void stagedDispatch.push(id),
-          recordAudit: async (event) => void audits.push(event),
         })
         requested.push(...staged)
         dispatched.push(...stagedDispatch)
@@ -217,33 +197,14 @@ describe("POST revisions/{r}/documents", () => {
     renderable = true
     approved = true
     limiter = createRateLimiter()
-    converterEnabled = true
-  })
-
-  it("records the plain-text renderer version when Gotenberg is off", async () => {
-    converterEnabled = false
-    expect((await post({ idempotency_key: KEY })).status).toBe(202)
-    expect(audits[0].metadata).toEqual({ revision_number: 3, renderer_version: "phpword-docx-v4+text-pdf-v2" })
   })
 
   it("requests the PDF of an approved revision once per idempotency key", async () => {
     expect(await post({ idempotency_key: KEY })).toEqual({ status: 202, text: `{"message":"El PDF se est\\u00e1 generando.","artifact_id":"${NEW_ARTIFACT}"}`, limit: "20", remaining: "19" })
     expect(requested).toEqual([{ id: NEW_ARTIFACT, revisionId: REVISION, key: KEY, requestedBy: golden.userId, requestedAt: NOW, state: "pendiente" }])
     expect(dispatched).toEqual([NEW_ARTIFACT])
-    expect(audits).toEqual([
-      {
-        actorId: golden.userId,
-        roleAssignmentId: golden.roleId,
-        action: "documento.exportacion_solicitada",
-        resourceType: "artefacto_exportacion",
-        resourceId: NEW_ARTIFACT,
-        result: "exito",
-        metadata: { revision_number: 3, renderer_version: "phpword-docx-v4+libreoffice-pdf-v1" },
-        occurredAt: NOW,
-      },
-    ])
     expect((await post({ idempotency_key: KEY })).status).toBe(202)
-    expect([requested.length, dispatched.length, audits.length]).toEqual([1, 1, 1])
+    expect([requested.length, dispatched.length]).toEqual([1, 1])
   })
 
   it("says the PDF was already available for a completed request", async () => {

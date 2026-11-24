@@ -75,7 +75,6 @@ function fichaApplyTx(executor: Executor, afterCommit: Parameters<typeof subject
       return row === undefined ? null : phpJsonDecode(row.valor_campo)
     },
     saveValue: profile.saveValue,
-    recordAudit: profile.recordAudit,
     keepContent: profile.keepContent,
   }
 }

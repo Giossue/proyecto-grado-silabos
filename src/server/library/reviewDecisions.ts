@@ -11,7 +11,7 @@ import { SignatureRejected, signatureSettings, type SignatureSettings } from "..
 import { decisionSignatureFrom } from "../signatures/decisionSignature"
 import { signDecision, type SignatureTx, type Verifier } from "../signatures/signDecision"
 import { decisionBlock, hasRole, mayReview, ROLE_LIBRARIAN } from "../syllabus/policy"
-import { auditOf, blockedDecision, Missing, Rejected, settle, type DecisionRevision, type DecisionSyllabus } from "../syllabus/reviewDecisions"
+import { blockedDecision, Missing, Rejected, settle, type DecisionRevision, type DecisionSyllabus } from "../syllabus/reviewDecisions"
 import type { ReviewDetailStore, ReviewRevision } from "../syllabus/reviewDetails"
 import type { DetailSyllabus } from "../syllabus/syllabusDetail"
 import { createLibraryDecisionDeps } from "./reviewDecisionStore"
@@ -121,7 +121,7 @@ export async function verifyLibraryReview(request: Request, revisionId: string, 
     const signature = decisionSignatureFrom(input.signature)
     if (!mayReview(session, syllabus) || decisionBlock(syllabus) !== null) return aborted(403)
     const settings = deps.settings()
-    const actor = { id: session.user.id, name: (await deps.store.userName(session.user.id)) ?? "", roleAssignmentId: session.activeRole?.id ?? null }
+    const actor = { id: session.user.id, name: (await deps.store.userName(session.user.id)) ?? "" }
     await deps.transaction(async (tx) => {
       const block = await tx.lockedDecisionBlock(revision.syllabusId)
       const locked = await tx.lockSyllabus(revision.syllabusId)
@@ -136,7 +136,6 @@ export async function verifyLibraryReview(request: Request, revisionId: string, 
       const now = deps.now()
       await signDecision(tx, { revision: { id: revision.id, syllabusId: locked.id, number: revision.number, fingerprint: revision.fingerprint }, role: LIBRARY, signature, actor, now }, settings, deps.verify)
       await tx.markVerified(submission.id, session.user.id, now)
-      await tx.recordAudit(auditOf(session, "biblioteca.verificado", "envio_biblioteca", submission.id, { revision_number: revision.number }, now))
       await scheduleWorkflowNotification(tx.notifications, {
         syllabusId: locked.id,
         eventType: "biblioteca.verificado",
@@ -195,9 +194,6 @@ export async function commentLibraryReview(request: Request, revisionId: string,
       const now = deps.now()
       await tx.requestCorrection(revision.id, justification, LIBRARY, session.user.id, now)
       await tx.markCorrectionRequested(locked.id, locked.version + 1, now)
-      await tx.recordAudit(
-        auditOf(session, "silabo.correccion_solicitada", "revision_silabo", revision.id, { revision_number: revision.number, from_state: "en_revision", to_state: "correccion_solicitada", stage: LIBRARY }, now),
-      )
       await scheduleWorkflowNotification(tx.notifications, {
         syllabusId: locked.id,
         eventType: "silabo.correccion_solicitada",

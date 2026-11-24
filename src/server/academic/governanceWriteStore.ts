@@ -1,10 +1,8 @@
 import "server-only"
 import { sql, type SQL } from "drizzle-orm"
 import { db } from "@/db"
-import { uuidList } from "../laravel/sql"
 import { uuid7 } from "../laravel/uuid7"
 import { notificationScope, systemNow, type WriteOptions } from "../notifications/queries"
-import { insertAuditEvent } from "../operations/recordAuditEvent"
 import { withAfterCommit, type AfterCommit } from "../queue/dispatch"
 import { FinalizedChangeNotice } from "../syllabus/finalizedChangeNotice"
 import { InProgressWork } from "../syllabus/inProgressWork"
@@ -78,13 +76,6 @@ export function governanceWriteTx(executor: Executor, afterCommit: AfterCommit, 
       const [row] = await rowsOf<{ active: boolean }>(executor, sql`select facultad_activa as active from facultades where facultad_id = ${id}::uuid limit 1 for update`)
       return row?.active === true
     },
-    async facultyNames(ids) {
-      const rows = await rowsOf<{ id: string; name: string }>(
-        executor,
-        sql`select facultad_id::text as id, nombre_facultad as name from facultades where facultad_id in (${uuidList(ids)})`,
-      )
-      return new Map(rows.map((row) => [row.id, row.name]))
-    },
     async careersOfFaculty(facultyId) {
       const rows = await rowsOf<{ id: string }>(executor, sql`select carrera_id::text as id from carreras where facultad_id = ${facultyId}::uuid`)
       return rows.map((row) => row.id)
@@ -127,9 +118,6 @@ export function governanceWriteTx(executor: Executor, afterCommit: AfterCommit, 
     guard: (confirmed, careerIds, change, periodId) => notice.guard(confirmed, careerIds, change, null, periodId),
     async sync(confirmed, careerIds) {
       await work.sync(confirmed, careerIds)
-    },
-    async recordAudit(event) {
-      await insertAuditEvent(executor, event)
     },
   }
 }

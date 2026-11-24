@@ -386,42 +386,6 @@
       "GET",
       "HEAD"
     ],
-    "uri": "api/v1/admin/reports",
-    "wheres": {},
-    "bindings": {}
-  },
-  {
-    "methods": [
-      "GET",
-      "HEAD"
-    ],
-    "uri": "api/v1/admin/reports/export",
-    "wheres": {},
-    "bindings": {}
-  },
-  {
-    "methods": [
-      "GET",
-      "HEAD"
-    ],
-    "uri": "api/v1/admin/audit-events/export",
-    "wheres": {},
-    "bindings": {}
-  },
-  {
-    "methods": [
-      "GET",
-      "HEAD"
-    ],
-    "uri": "api/v1/admin/audit-events",
-    "wheres": {},
-    "bindings": {}
-  },
-  {
-    "methods": [
-      "GET",
-      "HEAD"
-    ],
     "uri": "api/v1/admin/library-catalog/libraries",
     "wheres": {},
     "bindings": {}

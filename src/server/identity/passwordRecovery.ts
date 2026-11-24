@@ -13,7 +13,6 @@ import { throttle, type RateLimiter, type Throttle } from "../laravel/throttle"
 import { validateInput, type Rule } from "../laravel/validation"
 import type { QueuedMail } from "../mail/mailables"
 import { sharedMailer } from "../mail/mailer"
-import { insertAuditEvent, type AuditEventInput } from "../operations/recordAuditEvent"
 import { acceptsBody, stringOf } from "./accountWrites"
 import { filterEmailShape, transliterate } from "./authentication"
 import { lazyRateLimiter } from "./twoFactor"
@@ -33,7 +32,6 @@ export interface RecoveryStore {
   activate(userId: string, hash: string, at: number): Promise<void>
   useInvitation(id: string, at: number): Promise<void>
   invalidateOtherInvitations(userId: string, exceptId: string, at: number): Promise<void>
-  recordAudit(event: AuditEventInput): Promise<void>
 }
 
 export type RecoveryRepository = {
@@ -114,7 +112,6 @@ export function recoveryStoreOn(executor: Executor): RecoveryStore {
       await executor.execute(sql`update invitaciones_activacion set invalidada_en = to_timestamp(${at})
         where usuario_id = ${userId}::uuid and usada_en is null and invalidada_en is null and invitacion_activacion_id <> ${exceptId}::uuid`)
     },
-    recordAudit: (event) => insertAuditEvent(executor, event).then(() => undefined),
   }
 }
 
@@ -252,16 +249,6 @@ async function activationOutcome(request: Request, deps: RecoveryDeps): Promise<
       await store.setRememberToken(user.id, deps.writer.random(REMEMBER_LENGTH))
       await store.deleteSessions(user.id)
       await store.invalidateOtherInvitations(user.id, invitation.id, now)
-      await store.recordAudit({
-        actorId: user.id,
-        roleAssignmentId: null,
-        action: "usuario.activado",
-        resourceType: "usuario",
-        resourceId: user.id,
-        result: "exito",
-        metadata: {},
-        occurredAt: now,
-      })
     })
   } catch (error) {
     if (error instanceof Refused) return gate.decorate(fromController(validationError(error.errors)))

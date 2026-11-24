@@ -5,7 +5,6 @@ import golden from "../laravel/__fixtures__/laravel-golden.json"
 import { fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import { editPart, readBook, xlsx } from "../excel/testing"
 import { createRateLimiter } from "../laravel/throttle"
-import type { AuditEventInput } from "../operations/recordAuditEvent"
 import type { CareerWriteTx } from "./careerWrites"
 import type { CurriculumTx } from "./curriculumWrites"
 import type { GovernanceWriteTx } from "./governanceWrites"
@@ -23,7 +22,6 @@ type State = {
   careers: { id: string; code: string; name: string; cycles: number; active: boolean; columns?: Record<string, unknown> }[]
   subjects: Subject[]
   requirements: { id: string; subjectId: string; requirementId: string; type: string }[]
-  audits: AuditEventInput[]
   synced: number
   locked: boolean
 }
@@ -68,7 +66,6 @@ function careerTx(): CareerWriteTx {
       state.subjects.push({ id, careerId, code: String(columns.codigo_asignatura), cycle: Number(columns.ciclo_asignatura), position: Number(columns.orden_asignatura_en_ciclo), columns })
       return id
     },
-    recordAudit: async (event: AuditEventInput) => void state.audits.push(event),
   } as unknown as CareerWriteTx
 }
 
@@ -90,7 +87,6 @@ function requirementTx(): CurriculumTx {
       return id
     },
     sync: async () => void state.synced++,
-    recordAudit: async (event: AuditEventInput) => void state.audits.push(event),
   } as unknown as CurriculumTx
 }
 
@@ -102,7 +98,6 @@ function governanceTx(): GovernanceWriteTx {
       state.careers.push({ id, code: data.code, name: data.name, cycles: data.cycleCount, active: true, columns: { ...data } })
       return id
     },
-    recordAudit: async (event: AuditEventInput) => void state.audits.push(event),
   } as unknown as GovernanceWriteTx
 }
 
@@ -153,7 +148,6 @@ beforeEach(() => {
     careers: [{ id: CAREER, code: "SW-8", name: "Software", cycles: 4, active: true }],
     subjects: [{ id: "01a1c5bc-7cbf-7091-860c-63a02b91e998", careerId: CAREER, code: "SW-B1-001", cycle: 1, position: 0, columns: {} }],
     requirements: [],
-    audits: [],
     synced: 0,
     locked: false,
   }
@@ -188,7 +182,6 @@ describe("POST /api/v1/admin/academic/careers/import", () => {
       '{"rows":[{"line":2,"values":{"facultad":"FACULTAD DE CIENCIAS ADMINISTRATIVAS","modalidad":"en linea","codigo":"NC-1","nombre":"Carrera Uno","ciclos":"10"},"errors":[]}],"valid":true,"created":1}',
     )
     expect(state.careers[1]).toMatchObject({ code: "NC-1", name: "Carrera Uno", cycles: 10, columns: { facultyId: FACULTY, modality: "En línea" } })
-    expect(state.audits.map((event) => [event.action, event.resourceType])).toEqual([["academico.carrera.creacion", "carrera"]])
   })
 
   it("reports taken and repeated codes with the row of the first one", async () => {
@@ -295,12 +288,6 @@ describe("POST /api/v1/coordination/academic/curriculum-import", () => {
       [second.id, "prerrequisito"],
       [second.id, "prerrequisito"],
     ])
-    expect(state.audits.map((event) => event.action)).toEqual([
-      "academico.asignatura.creacion",
-      "academico.asignatura.creacion",
-      "academico.requisito_asignatura.creacion",
-      "academico.requisito_asignatura.creacion",
-    ])
     expect(state.synced).toBe(2)
   })
 
@@ -347,6 +334,5 @@ describe("POST /api/v1/coordination/academic/curriculum-import", () => {
     const response = await curriculum(file, { confirm: "1" })
     expect(await response.text()).toBe('{"message":"Convocatoria activa","errors":{"process":["Convocatoria activa"]}}')
     expect(state.subjects).toHaveLength(1)
-    expect(state.audits).toEqual([])
   })
 })

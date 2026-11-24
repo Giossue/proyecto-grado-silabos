@@ -6,7 +6,6 @@ import { phpEquals, phpShape, type PhpRecord } from "../configuration/phpValues"
 import { recipientsOn } from "../notifications/queries"
 import { storeInternalNotifications } from "../notifications/store"
 import { TEMPLATE_REDONE, workflowMessage } from "../notifications/workflowMessages"
-import { insertAuditEvent, type AuditEventInput } from "../operations/recordAuditEvent"
 import { decidedHandovers, returnApprovals } from "./coordinationHandover"
 import { dataGet } from "./identificationCard"
 import { InProgressWork, SENT_STATES, SYLLABUS_ALIVE, type WorkSyllabus } from "./inProgressWork"
@@ -90,13 +89,7 @@ export async function processSyllabusCounts(executor: Executor, processId: strin
   return counts
 }
 
-export async function adaptProcessToTemplate(
-  work: InProgressWork,
-  processId: string,
-  change: TemplateChange,
-  counts: Record<string, number>,
-  audit: Omit<AuditEventInput, "action" | "resourceType" | "resourceId" | "metadata" | "result">,
-): Promise<void> {
+export async function adaptProcessToTemplate(work: InProgressWork, processId: string, change: TemplateChange): Promise<void> {
   const executor = work.executor
   const convocations = await rowsOf<{ id: string }>(
     executor,
@@ -122,9 +115,6 @@ export async function adaptProcessToTemplate(
     resourceType: "proceso_silabos",
     resourceId: processId,
   })
-  const metadata: Record<string, number> = { total: Object.values(counts).reduce((sum, value) => sum + value, 0) }
-  for (const [state, count] of Object.entries(counts)) metadata[`estado_${state}`] = count
-  await insertAuditEvent(executor, { ...audit, action: TEMPLATE_REDONE, resourceType: "proceso_silabos", resourceId: processId, result: "exito", metadata })
 }
 
 export async function convocationsToReopen(executor: Executor, processId: string): Promise<string[]> {
@@ -252,9 +242,9 @@ export class ReopenCatchUp {
     if (careers.length === 0) return []
     const rows = await rowsOf<{ id: string }>(
       this.executor,
-      sql`select recurso_id::text as id from eventos_auditoria where accion = 'academico.coordinacion.reemplazada' and tipo_recurso = 'carrera'
-        and recurso_id in (${uuidList(careers)})
-        and ocurrido_en >= date_trunc('second', (select finalizada_en from convocatorias_universidad where convocatoria_universidad_id = ${processId}::uuid))`,
+      sql`select carrera_id::text as id from asignaciones_rol where rol = 'coordinador'
+        and carrera_id in (${uuidList(careers)})
+        and asignado_en >= date_trunc('second', (select finalizada_en from convocatorias_universidad where convocatoria_universidad_id = ${processId}::uuid))`,
     )
     return unique(rows.map((row) => row.id))
   }

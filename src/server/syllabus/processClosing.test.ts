@@ -2,7 +2,6 @@
 import { beforeEach, describe, expect, it } from "vitest"
 import golden from "../laravel/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
-import type { AuditEventInput } from "../operations/recordAuditEvent"
 import { closeProcess, type ClosingDeps } from "./processClosing"
 import type { ProcessRow } from "./processes"
 import { NeedsLaravel } from "./snapshotDocuments"
@@ -22,7 +21,6 @@ let lockedState: string | null
 let syllabi: { id: string; context: unknown }[]
 let snapshot: (id: string) => Record<string, unknown>
 let log: string[]
-let audits: AuditEventInput[]
 
 function deps(): ClosingDeps {
   return {
@@ -31,7 +29,6 @@ function deps(): ClosingDeps {
     now: () => NOW,
     async transaction(work) {
       log.push("begin")
-      const staged: AuditEventInput[] = []
       const result = await work({
         lockProcess: async (id) => {
           log.push(`lock:process:${id}`)
@@ -45,9 +42,7 @@ function deps(): ClosingDeps {
         snapshot: async (id) => snapshot(id),
         storeContext: async (id, context) => void log.push(`context:${id}:${JSON.stringify(context)}`),
         closeConvocations: async (id) => void log.push(`convocations:${id}`),
-        recordAudit: async (event) => void staged.push(event),
       })
-      audits.push(...staged)
       log.push("commit")
       return result
     },
@@ -79,11 +74,10 @@ beforeEach(() => {
   ]
   snapshot = (id) => ({ schema_version: 9, syllabus: id })
   log = []
-  audits = []
 })
 
 describe("POST admin/processes/{p}/cerrar", () => {
-  it("freezes the unsent syllabi, closes the convocations and the process and audits it", async () => {
+  it("freezes the unsent syllabi, closes the convocations and the process", async () => {
     expect(await close()).toMatchObject({ status: 200, json: { message: "Convocatoria cerrada. Sus sílabos quedan solo para consulta." } })
     expect(log).toEqual([
       "begin",
@@ -95,18 +89,6 @@ describe("POST admin/processes/{p}/cerrar", () => {
       `convocations:${PROCESS}`,
       "commit",
     ])
-    expect(audits).toEqual([
-      {
-        actorId: golden.userId,
-        roleAssignmentId: golden.roleId,
-        action: "proceso_silabos.cerrado",
-        resourceType: "proceso_silabos",
-        resourceId: PROCESS,
-        result: "exito",
-        metadata: { previous_state: "abierto" },
-        occurredAt: NOW,
-      },
-    ])
   })
 
   it("keeps the pause moment when it closes a paused process", async () => {
@@ -114,7 +96,6 @@ describe("POST admin/processes/{p}/cerrar", () => {
     lockedState = "pausado"
     await close()
     expect(log).toContain(`close:${PROCESS}:true`)
-    expect(audits[0].metadata).toEqual({ previous_state: "pausado" })
   })
 
   it("only lets Administration close an open or paused process", async () => {
@@ -133,7 +114,6 @@ describe("POST admin/processes/{p}/cerrar", () => {
     })
     lockedState = "cerrado"
     expect((await close()).json).toEqual({ message: "El proceso no está en un estado que admita esta acción.", errors: { process: ["El proceso no está en un estado que admita esta acción."] } })
-    expect(audits).toEqual([])
   })
 
   it("answers Laravel's model 404 for an unknown or malformed process", async () => {
@@ -146,6 +126,5 @@ describe("POST admin/processes/{p}/cerrar", () => {
       throw new NeedsLaravel()
     }
     expect((await close()).status).toBe(299)
-    expect(audits).toEqual([])
   })
 })

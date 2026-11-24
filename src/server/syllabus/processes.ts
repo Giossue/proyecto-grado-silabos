@@ -5,7 +5,6 @@ import { isUuid } from "../academic/structure"
 import { isJsonRequest, laravelInput, type PhpArray, type PhpValue } from "../laravel/input"
 import { forbidden, laravelJson, validationError } from "../laravel/responses"
 import { mergeErrors, validateInput } from "../laravel/validation"
-import type { AuditEventInput } from "../operations/recordAuditEvent"
 import { list, phpString } from "../configuration/phpValues"
 import { normalizeFieldDocument, TemplateValidationError, type TemplateDefinition } from "../configuration/templateRuntime"
 import type { SyllabusTemplate } from "../configuration/templatePresentation"
@@ -33,7 +32,6 @@ export type ProcessRow = {
 export interface ProcessTx {
   lockProcess(id: string): Promise<string | null>
   pause(id: string): Promise<void>
-  recordAudit(event: AuditEventInput): Promise<void>
   lockInProgress(): Promise<{ id: string; period: string | null } | null>
   periodHasProcess(periodId: string): Promise<boolean>
   createProcess(periodId: string, startsAt: string, dueAt: string): Promise<string>
@@ -202,16 +200,6 @@ export async function pauseProcess(request: Request, id: string, deps: ProcessDe
       if (state === null) throw new Missing()
       if (state !== PROCESS_OPEN) throw new StateChanged()
       await tx.pause(process.id)
-      await tx.recordAudit({
-        actorId: session.user.id,
-        roleAssignmentId: session.activeRole?.id ?? null,
-        action: "proceso_silabos.pausado",
-        resourceType: "proceso_silabos",
-        resourceId: process.id,
-        result: "exito",
-        metadata: { previous_state: state },
-        occurredAt: deps.now(),
-      })
     })
   } catch (error) {
     if (error instanceof StateChanged) return validationError({ process: ["El proceso no está en un estado que admita esta acción."] })
@@ -347,7 +335,7 @@ export async function createProcess(request: Request, deps: ProcessDeps = defaul
   const startsAt = input.starts_at as string
   const dueAt = input.due_at as string
   try {
-    const template = await assertInstitutionReady(deps)
+    await assertInstitutionReady(deps)
     await deps.processes.transaction(async (tx) => {
       const active = await tx.lockInProgress()
       if (active !== null) {
@@ -356,20 +344,7 @@ export async function createProcess(request: Request, deps: ProcessDeps = defaul
         })
       }
       if (await tx.periodHasProcess(periodId)) throw new CreateRejected({ period_id: ["Ya existe una convocatoria institucional para este período académico."] })
-      const id = await tx.createProcess(periodId, startsAt, dueAt)
-      const audit = (action: string, metadata: AuditEventInput["metadata"]) =>
-        tx.recordAudit({
-          actorId: session.user.id,
-          roleAssignmentId: session.activeRole?.id ?? null,
-          action,
-          resourceType: "proceso_silabos",
-          resourceId: id,
-          result: "exito",
-          metadata,
-          occurredAt: deps.now(),
-        })
-      await audit("proceso_silabos.creado", { template_id: template.id, period_id: periodId, starts_at: startsAt, due_at: dueAt })
-      await audit("proceso_silabos.abierto", { previous_state: null })
+      await tx.createProcess(periodId, startsAt, dueAt)
     })
   } catch (error) {
     if (error instanceof CreateRejected) return validationError(error.errors)

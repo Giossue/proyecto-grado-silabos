@@ -1,4 +1,3 @@
-import type { AuditEventInput } from "../operations/recordAuditEvent"
 import { signingStatement } from "../syllabus/snapshotDocuments"
 import { SignatureRejected, verifyCmsSignature, type SignatureSettings, type SignerCertificate } from "./cmsVerifier"
 import type { DecisionSignature } from "./decisionSignature"
@@ -21,11 +20,10 @@ export type SignatureRow = {
 export interface SignatureTx {
   signed(syllabusId: string, role: string): Promise<boolean>
   insertSignature(row: SignatureRow): Promise<string>
-  recordAudit(event: AuditEventInput): Promise<void>
 }
 
 export type SignedRevision = { id: string; syllabusId: string; number: number; fingerprint: string }
-export type Signer = { id: string; name: string; roleAssignmentId: string | null }
+export type Signer = { id: string; name: string }
 export type DecisionToSign = { revision: SignedRevision; role: string; signature: DecisionSignature | null; actor: Signer; now: number }
 export type Verifier = (content: string, signature: string, settings: SignatureSettings) => Promise<SignerCertificate>
 
@@ -60,16 +58,6 @@ export async function signDecision(
     issuer: certificate.issuer,
     validTo: certificate.validTo,
     signedAt: decision.now,
-  })
-  await tx.recordAudit({
-    actorId: actor.id,
-    roleAssignmentId: actor.roleAssignmentId,
-    action: "silabo.firmado",
-    resourceType: "firma_silabo",
-    resourceId: id,
-    result: "exito",
-    metadata: { role, revision_number: revision.number, statement: expected, certificate_holder: certificate.holder, certificate_serial: certificate.serial },
-    occurredAt: decision.now,
   })
   return id
 }

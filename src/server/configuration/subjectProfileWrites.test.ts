@@ -2,7 +2,6 @@
 import { beforeEach, describe, expect, it } from "vitest"
 import golden from "../laravel/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
-import type { AuditEventInput } from "../operations/recordAuditEvent"
 import { GenerationRejected, purgeRequired } from "../syllabus/inProgressWork"
 import type { PhpRecord } from "./phpValues"
 import { showSubjectProfile } from "./subjectProfile"
@@ -33,7 +32,6 @@ let subjects: Map<string, string>
 let lockedCareers: Set<string>
 let purge: Record<string, string[]> | null
 let log: string[]
-let audits: AuditEventInput[]
 
 function deps(): SubjectProfileWriteDeps {
   const tx: SubjectProfileTx = {
@@ -52,9 +50,6 @@ function deps(): SubjectProfileWriteDeps {
       log.push(`save:${field}`)
       templates.values = [...templates.values.filter((value) => !(value.subjectId === subjectId && value.fieldId === field)), { fieldId: field, subjectId, value: document }]
     },
-    recordAudit: async (event) => {
-      audits.push(event)
-    },
     keepContent: async (confirmed, careerId, subjectIds, change) => {
       log.push(`keep:${confirmed}:${careerId}:${subjectIds.join(",")}`)
       const result = await change()
@@ -67,10 +62,8 @@ function deps(): SubjectProfileWriteDeps {
     store: fakeTemplateStore(templates),
     subjectCareer: async (id) => subjects.get(id) ?? null,
     careerActive: async () => true,
-    now: () => NOW,
     async transaction(work) {
       const values = templates.values
-      const auditCount = audits.length
       log.push("begin")
       try {
         const result = await work(tx)
@@ -78,7 +71,6 @@ function deps(): SubjectProfileWriteDeps {
         return result
       } catch (error) {
         templates.values = values
-        audits.length = auditCount
         log.push("rollback")
         throw error
       }
@@ -112,12 +104,11 @@ beforeEach(() => {
   lockedCareers = new Set()
   purge = null
   log = []
-  audits = []
   asRole("coordinador", CAREER)
 })
 
 describe("PUT academic/asignaturas/{asignatura}/ficha", () => {
-  it("saves what coordination wrote, drops the fields left empty, audits the save and answers the profile like GET", async () => {
+  it("saves what coordination wrote, drops the fields left empty and answers the profile like GET", async () => {
     templates.values = [{ fieldId: OBJETIVO, subjectId: SUBJECT, value: stored("Objetivo anterior") }]
 
     const response = await put({ values: { [DESCRIPCION]: text("Texto de descripcion"), [OBJETIVO]: null } })
@@ -125,9 +116,6 @@ describe("PUT academic/asignaturas/{asignatura}/ficha", () => {
     expect(response.status).toBe(200)
     expect(log).toEqual(["begin", `keep:false:${CAREER}:${SUBJECT}`, `lock:subject:${SUBJECT}`, `save:${DESCRIPCION}`, `delete:${OBJETIVO}`, "commit"])
     expect(templates.values).toEqual([{ fieldId: DESCRIPCION, subjectId: SUBJECT, value: stored("Texto de descripcion") }])
-    expect(audits.map((event) => [event.action, event.resourceType, event.resourceId, event.metadata, event.actorId, event.roleAssignmentId])).toEqual([
-      ["academico.ficha_asignatura.guardada", "asignatura", SUBJECT, { campos: 2 }, golden.userId, golden.roleId],
-    ])
     const shown = await showSubjectProfile(apiRequest(`/api/v1/academic/asignaturas/${SUBJECT}/ficha`, { cookie }), SUBJECT, deps())
     expect(response.text).toBe(await shown.text())
   })
@@ -189,7 +177,6 @@ describe("PUT academic/asignaturas/{asignatura}/ficha", () => {
     asRole("docente", CAREER)
     expect(await put({ values: [] })).toMatchObject({ status: 403, text: EMPTY_FORBIDDEN })
     expect(log.filter((entry) => entry === "rollback")).toHaveLength(2)
-    expect(audits).toEqual([])
   })
 
   it("an open convocation of the career locks its career project", async () => {

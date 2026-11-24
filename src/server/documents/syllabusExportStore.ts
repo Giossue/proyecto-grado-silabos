@@ -6,7 +6,6 @@ import { storageWriter } from "../laravel/storageWriter"
 import { uuid7 } from "../laravel/uuid7"
 import { iso8601 } from "../laravel/sql"
 import { notificationScope, recipientsOn, systemNow, type Mail } from "../notifications/queries"
-import { insertAuditEvent } from "../operations/recordAuditEvent"
 import { withAfterCommit, type AfterCommit } from "../queue/dispatch"
 import { signaturesOf, signedFactsOf } from "../syllabus/syllabusDetailQueries"
 import { SUBJECT_CODE, SUBJECT_NAME, SYLLABUS_EXISTS, SYLLABUS_JOINS } from "../syllabus/syllabusSql"
@@ -53,9 +52,6 @@ export function exportRequestTxOn(executor: Executor, afterCommit: AfterCommit, 
     dispatchExport(artifactId) {
       afterCommit(() => dispatch(artifactId))
     },
-    async recordAudit(event) {
-      await insertAuditEvent(executor, event)
-    },
   }
 }
 
@@ -90,9 +86,6 @@ export function exportJobTxOn(executor: Executor, afterCommit: AfterCommit, now:
     },
     teachersFor: (syllabusId) => recipients.teachersFor(syllabusId),
     administrators: () => recipients.administrators(),
-    async recordAudit(event) {
-      await insertAuditEvent(executor, event)
-    },
   }
 }
 

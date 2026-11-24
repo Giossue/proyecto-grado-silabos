@@ -2,7 +2,6 @@
 import { beforeEach, describe, expect, it } from "vitest"
 import golden from "../laravel/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
-import type { AuditEventInput } from "../operations/recordAuditEvent"
 import { GenerationRejected } from "../syllabus/inProgressWork"
 import {
   createSubjectRequirement,
@@ -31,7 +30,6 @@ type Requirement = { id: string; subjectId: string; requirementId: string; type:
 let world: FakeWorld
 let forwarded: Request[]
 let log: string[]
-let audits: AuditEventInput[]
 let subjects: Subject[]
 let requirements: Requirement[]
 let locked: boolean
@@ -40,11 +38,9 @@ let finalized: boolean
 function deps(): CurriculumDeps {
   return {
     bridge: fakeDeps(world, forwarded),
-    now: () => NOW,
     careerActive: async (id) => id === CAREER,
     async transaction(work) {
       log.push("begin")
-      const staged: AuditEventInput[] = []
       try {
         const result = await work({
           careerLocked: async () => locked,
@@ -89,9 +85,7 @@ function deps(): CurriculumDeps {
             if (finalized && !confirmed) throw new GenerationRejected({ purge_required: ["finalizada"], purge_count: ["0"], purge_mode: ["convocatoria_finalizada"] })
             return result
           },
-          recordAudit: async (event) => void staged.push(event),
         })
-        audits.push(...staged)
         log.push("commit")
         return result
       } catch (error) {
@@ -127,7 +121,6 @@ beforeEach(() => {
   }
   forwarded = []
   log = []
-  audits = []
   locked = false
   finalized = false
   subjects = [
@@ -144,19 +137,15 @@ beforeEach(() => {
 })
 
 describe("PATCH /api/v1/coordination/academic/curriculum/{curriculum}/configuration", () => {
-  it("changes the cycle count, audits it and keeps the syllabi in sync", async () => {
+  it("changes the cycle count and keeps the syllabi in sync", async () => {
     const response = await configure({ cycle_count: "10" })
     expect(response.text).toBe('{"message":"Configuraci\\u00f3n de la malla actualizada."}')
     expect(log).toEqual(["begin", `guard:false:${CAREER}`, `cycles:${CAREER}:10`, `sync:false:${CAREER}`, "commit"])
-    expect(audits.map((event) => [event.action, event.resourceType, event.resourceId, event.metadata])).toEqual([
-      ["academico.carrera.plan_curricular_actualizado", "carrera", CAREER, { before_cycle_count: 4, after_cycle_count: 10 }],
-    ])
   })
 
   it("refuses fewer cycles than the last used one and an invalid count", async () => {
     expect((await configure({ cycle_count: 2 })).json?.errors).toEqual({ cycle_count: ["Existen materias en el ciclo 3. Muévalas antes de reducir la malla."] })
     expect((await configure({ cycle_count: 31 })).json?.errors).toEqual({ cycle_count: ["El campo cantidad de ciclos no debe ser mayor que 30."] })
-    expect(audits).toEqual([])
   })
 
   it("refuses while a convocation is open, leaves another curriculum to Laravel and is forbidden for a teacher", async () => {
@@ -179,7 +168,7 @@ describe("PATCH /api/v1/coordination/academic/curriculum/{curriculum}/configurat
 })
 
 describe("POST /api/v1/coordination/academic/curriculum/{curriculum}/requirements", () => {
-  it("adds a prerequisite from an earlier cycle and a corequisite of the same cycle, audited", async () => {
+  it("adds a prerequisite from an earlier cycle and a corequisite of the same cycle", async () => {
     expect((await relate({ subject_id: CALCULUS_II, requirement_id: CALCULUS, type: "prerrequisito" })).json).toEqual({ message: "Prerrequisito agregado." })
     expect((await relate({ subject_id: CALCULUS, requirement_id: ALGORITHMS, type: "correquisito" })).json).toEqual({ message: "Correquisito agregado." })
     expect(log.filter((line) => line.startsWith("requirement") || line.startsWith("sync"))).toEqual([
@@ -187,10 +176,6 @@ describe("POST /api/v1/coordination/academic/curriculum/{curriculum}/requirement
       `sync:false:${CAREER}`,
       `requirement:${CALCULUS}:${ALGORITHMS}:correquisito`,
       `sync:false:${CAREER}`,
-    ])
-    expect(audits.map((event) => [event.action, event.resourceType, event.resourceId, event.metadata])).toEqual([
-      ["academico.requisito_asignatura.creacion", "requisito_asignatura", NEW_ID, { career_id: CAREER, subject_id: CALCULUS_II, requirement_id: CALCULUS, type: "prerrequisito" }],
-      ["academico.requisito_asignatura.creacion", "requisito_asignatura", NEW_ID, { career_id: CAREER, subject_id: CALCULUS, requirement_id: ALGORITHMS, type: "correquisito" }],
     ])
   })
 
@@ -201,7 +186,6 @@ describe("POST /api/v1/coordination/academic/curriculum/{curriculum}/requirement
     expect((await relate({ subject_id: CALCULUS_II, requirement_id: CALCULUS, type: "prerrequisito" })).json?.errors).toEqual({
       requirement_id: ["Esa materia ya está registrada con otro tipo de requisito."],
     })
-    expect(audits).toEqual([])
   })
 
   it("enforces cycles, the curriculum and the acyclic prerequisites", async () => {
@@ -232,12 +216,9 @@ describe("POST /api/v1/coordination/academic/curriculum/{curriculum}/requirement
 })
 
 describe("DELETE /api/v1/coordination/academic/curriculum/{curriculum}/requirements/{requirement}", () => {
-  it("removes the relation, audits its type and keeps the syllabi in sync", async () => {
+  it("removes the relation and keeps the syllabi in sync", async () => {
     expect((await unrelate(REQUIREMENT)).json).toEqual({ message: "Relación académica eliminada." })
     expect(log).toEqual(["begin", `guard:false:${CAREER}`, `delete-requirement:${REQUIREMENT}`, `sync:false:${CAREER}`, "commit"])
-    expect(audits.map((event) => [event.action, event.resourceType, event.resourceId, event.metadata])).toEqual([
-      ["academico.requisito_asignatura.eliminacion", "requisito_asignatura", REQUIREMENT, { career_id: CAREER, type: "prerrequisito" }],
-    ])
   })
 
   it("leaves an unknown relation to Laravel and reads the confirmation from the query", async () => {
@@ -254,12 +235,9 @@ describe("DELETE /api/v1/coordination/academic/curriculum/{curriculum}/requireme
 })
 
 describe("DELETE /api/v1/coordination/academic/curriculum/{curriculum}/subjects/{subject}", () => {
-  it("deletes an unused subject with its relations, audited", async () => {
+  it("deletes an unused subject with its relations", async () => {
     expect((await removeSubject(CALCULUS)).json).toEqual({ message: "Materia eliminada de la malla." })
     expect(log).toEqual(["begin", `guard:false:${CAREER}`, `delete-subject:${CALCULUS}`, `sync:false:${CAREER}`, "commit"])
-    expect(audits.map((event) => [event.action, event.resourceType, event.resourceId, event.metadata])).toEqual([
-      ["academico.asignatura.eliminacion", "asignatura", CALCULUS, { career_id: CAREER, code: "SW-B1-004", name: "Cálculo I" }],
-    ])
   })
 
   it("refuses a subject with parallels or syllabi and says what it has", async () => {
@@ -277,7 +255,7 @@ describe("DELETE /api/v1/coordination/academic/curriculum/{curriculum}/subjects/
 })
 
 describe("PATCH /api/v1/coordination/academic/curriculum/{curriculum}/subject-layout", () => {
-  it("moves a subject inside its cycle, renumbering the others, audited", async () => {
+  it("moves a subject inside its cycle, renumbering the others", async () => {
     subjects.push({ id: "01a2dddd-0000-7000-8000-000000000001", code: "SW-T2", name: "Segunda", cycle: 1, position: 1, parallels: 0, syllabi: 0 })
     expect((await reposition({ subject_id: ALGORITHMS, cycle: 1, position: 2 })).json).toEqual({ message: "Posición de la materia actualizada." })
     expect(log).toEqual([
@@ -288,13 +266,11 @@ describe("PATCH /api/v1/coordination/academic/curriculum/{curriculum}/subject-la
       `sync:false:${CAREER}`,
       "commit",
     ])
-    expect(audits[0].metadata).toEqual({ before_cycle: 1, after_cycle: 1, before_position: 0, after_position: 2 })
   })
 
   it("only reorders inside the cycle and within the curriculum", async () => {
     expect((await reposition({ subject_id: ALGORITHMS, cycle: 2, position: 0 })).json?.errors).toEqual({ cycle: ["Una materia solo puede reordenarse dentro de su ciclo."] })
     expect((await reposition({ subject_id: ALGORITHMS, cycle: 5, position: 0 })).json?.errors).toEqual({ cycle: ["El ciclo excede la configuración de la malla."] })
     expect((await reposition({ subject_id: ALGORITHMS, cycle: 1, position: 1000 })).json?.errors).toEqual({ position: ["El campo posición no debe ser mayor que 999."] })
-    expect(audits).toEqual([])
   })
 })

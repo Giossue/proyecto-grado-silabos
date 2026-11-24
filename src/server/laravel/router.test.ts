@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { HTTP_ERROR_PAGE, NOT_FOUND_PAGE } from "./errorPages"
-import { proxyToLaravel } from "./proxy"
+import { laravelFallback, proxyToLaravel } from "./proxy"
 import { laravelFallbackEnabled, laravelRouter, laravelRoutesMatching, modelNotFound, routeAllows, unknownRoute } from "./router"
 
 const base = "http://localhost:3000"
@@ -154,5 +154,41 @@ describe("LARAVEL_FALLBACK", () => {
     const response = await proxyToLaravel(request("GET", "/api/v1/session?x=1"))
     expect(fetch).toHaveBeenCalledWith("http://laravel.test/api/v1/session?x=1", expect.objectContaining({ method: "GET" }))
     expect(response.status).toBe(201)
+  })
+})
+
+describe("Auditoría and Reportes removed from the system", () => {
+  const removed = ["api/v1/admin/audit-events", "api/v1/admin/audit-events/export", "api/v1/admin/reports", "api/v1/admin/reports/export"]
+
+  it("no longer lists their routes, so every method is an unknown route", () => {
+    for (const path of removed) expect(laravelRoutesMatching(`/${path}`)).toEqual([])
+  })
+
+  it.each(removed)("answers %s with Laravel's production 404 and never forwards it, even with the fallback on", async (path) => {
+    vi.stubEnv("LARAVEL_URL", "http://laravel.test")
+    const fetch = vi.fn(async () => new Response("{}", { status: 200 }))
+    vi.stubGlobal("fetch", fetch)
+    for (const method of ["GET", "HEAD", "POST", "DELETE", "OPTIONS"]) {
+      for (const variant of [`/${path}`, `/${path}?period=1`, `/${path.replace("admin/", "admin%2F").replace(/-/g, "%2D")}`]) {
+        expect(await snapshot(await laravelFallback(request(method, variant)))).toEqual(await snapshot(unknownRoute(request(method, variant))))
+        expect(await snapshot(await proxyToLaravel(request(method, variant)))).toEqual(await snapshot(unknownRoute(request(method, variant))))
+      }
+    }
+    expect(fetch).not.toHaveBeenCalled()
+    expect(await snapshot(await laravelFallback(request("GET", `/${path}`)))).toEqual({
+      status: 404,
+      contentType: "application/json",
+      cacheControl: "no-cache, private",
+      allow: null,
+      body: `{\n    "message": "The route ${path} could not be found."\n}`,
+    })
+  })
+
+  it("keeps forwarding the neighbouring admin routes that Laravel still serves", async () => {
+    vi.stubEnv("LARAVEL_URL", "http://laravel.test")
+    const fetch = vi.fn(async () => new Response("ok", { status: 201 }))
+    vi.stubGlobal("fetch", fetch)
+    expect((await laravelFallback(request("GET", "/api/v1/admin/reports-extra"))).status).toBe(201)
+    expect(fetch).toHaveBeenCalledTimes(1)
   })
 })

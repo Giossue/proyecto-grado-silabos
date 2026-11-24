@@ -5,7 +5,6 @@ import path from "node:path"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 import golden from "../laravel/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
-import type { AuditEventInput } from "../operations/recordAuditEvent"
 import { fakeTemplateStore, fieldId, goldenFields, goldenTemplate, type FakeTemplateWorld } from "../configuration/testing"
 import { fieldResponseNormalize } from "../configuration/templateRehearsal"
 import type { TemplateDefinition } from "../configuration/templateRuntime"
@@ -34,7 +33,6 @@ let world: FakeWorld
 let forwarded: Request[]
 let templates: FakeTemplateWorld
 let rows: Map<string, Row>
-let audits: AuditEventInput[]
 let log: string[]
 let previousSource: string | null
 let modifiedAtSeen: (string | null)[]
@@ -130,10 +128,6 @@ function tx(): DraftStartTx {
       const found = rows.get(syllabusId)!
       Object.assign(found, { state: "borrador", startedAt: found.startedAt ?? iso(now), savedAt: iso(now), version })
     },
-    async recordAudit(event) {
-      log.push("audit")
-      audits.push(event)
-    },
   }
 }
 
@@ -149,7 +143,6 @@ const deps = (): DraftStartDeps => ({
   now: () => NOW,
   async transaction(work) {
     const saved = clone(rows)
-    const savedAudits = [...audits]
     log.push("begin")
     try {
       const result = await work(tx())
@@ -157,7 +150,6 @@ const deps = (): DraftStartDeps => ({
       return result
     } catch (error) {
       rows = saved
-      audits = savedAudits
       log.push("rollback")
       throw error
     }
@@ -201,14 +193,13 @@ beforeEach(() => {
   }
   templates = { template: goldenTemplate(), values: [] }
   rows = new Map([[TARGET, row()]])
-  audits = []
   log = []
   previousSource = null
   modifiedAtSeen = []
 })
 
 describe("POST teacher/syllabi/{syllabus}/start", () => {
-  it("starts the draft from the template, audits it and returns the syllabus", async () => {
+  it("starts the draft from the template and returns the syllabus", async () => {
     templates.template = { ...goldenTemplate(), modifiedAt: "2026-11-23 16:10:54.932237+00" }
     const response = await start()
 
@@ -216,10 +207,7 @@ describe("POST teacher/syllabi/{syllabus}/start", () => {
     expect(Object.keys(response.json!)).toEqual(["message", "syllabus"])
     expect(response.json!.message).toBe("Borrador iniciado con la plantilla y los datos maestros fijados.")
     expect(response.json!.syllabus).toMatchObject({ id: TARGET, state: "borrador", iniciado_en: NOW_ISO, version_bloqueo: 1, guardado_en: NOW_ISO })
-    expect(log).toEqual(["begin", `lock:${TARGET}`, "start", "audit", "commit"])
-    expect(audits).toEqual([
-      { actorId: golden.userId, roleAssignmentId: golden.roleId, action: "silabo.borrador_iniciado", resourceType: "silabo", resourceId: TARGET, result: "exito", metadata: {}, occurredAt: NOW },
-    ])
+    expect(log).toEqual(["begin", `lock:${TARGET}`, "start", "commit"])
     expect(modifiedAtSeen).toEqual(["2026-11-23 16:10:54.932237+00"])
   })
 
@@ -229,7 +217,6 @@ describe("POST teacher/syllabi/{syllabus}/start", () => {
     expect(forwarded).toHaveLength(1)
     expect(log).toEqual(["begin", `lock:${TARGET}`, "rollback"])
     expect(rows.get(TARGET)!.state).toBe("sin_iniciar")
-    expect(audits).toEqual([])
   })
 
   it("refuses a draft that another session already started", async () => {
@@ -243,7 +230,6 @@ describe("POST teacher/syllabi/{syllabus}/start", () => {
       }),
     )
     expect(response).toMatchObject({ status: 422, json: { message: "El borrador ya fue iniciado o no está editable.", errors: { syllabus: ["El borrador ya fue iniciado o no está editable."] } } })
-    expect(audits).toEqual([])
   })
 
   it("only lets the current teacher start an unstarted draft of a running convocation before its deadline", async () => {
@@ -281,7 +267,7 @@ describe("POST teacher/syllabi/{syllabus}/copy-from/{source}", () => {
     rows.set(TARGET, row({ state: "borrador", version: 2, startedAt: "2026-11-21T10:00:00+00:00", values: new Map<string, unknown>([[bibliography, { type: "doc", content: [{ type: "paragraph" }] }]]) }))
   })
 
-  it("copies the teacher fields of another own parallel, replaces the previous answers and audits it", async () => {
+  it("copies the teacher fields of another own parallel and replaces the previous answers", async () => {
     const response = await copy({ version_bloqueo: 2 })
 
     expect(response.status).toBe(200)
@@ -292,8 +278,7 @@ describe("POST teacher/syllabi/{syllabus}/copy-from/{source}", () => {
     expect(copied.get(techniques)).toEqual(
       fieldResponseNormalize(goldenFields[fieldIndex("tecnicas_ensenanza")].content, goldenFields[fieldIndex("tecnicas_ensenanza")].stored, definition()),
     )
-    expect(log).toEqual(["begin", `lock:${TARGET}`, "delete", `insert:${techniques}`, "copied", "audit", "commit"])
-    expect(audits[0]).toMatchObject({ action: "silabo.contenido_copiado", resourceId: TARGET, metadata: { source_syllabus_id: SOURCE, lock_version: 3 }, roleAssignmentId: golden.roleId })
+    expect(log).toEqual(["begin", `lock:${TARGET}`, "delete", `insert:${techniques}`, "copied", "commit"])
   })
 
   it("starts an unstarted target while copying", async () => {
@@ -305,7 +290,6 @@ describe("POST teacher/syllabi/{syllabus}/copy-from/{source}", () => {
   it("answers a recoverable conflict for a stale version without writing", async () => {
     const response = await copy({ version_bloqueo: 1 })
     expect(response).toMatchObject({ status: 409, json: { message: "El borrador cambió en otra sesión. Recarga antes de continuar.", code: "conflicto_version_borrador", version_bloqueo_actual: 2 } })
-    expect(audits).toEqual([])
     expect(rows.get(TARGET)!.version).toBe(2)
   })
 
@@ -337,7 +321,6 @@ describe("POST teacher/syllabi/{syllabus}/copy-from/{source}", () => {
     expect(response.status).toBe(422)
     expect(response.json!.errors).toEqual({ value: ["El diseño contiene un elemento no permitido."] })
     expect(rows.get(TARGET)!.values.has(bibliography)).toBe(true)
-    expect(audits).toEqual([])
   })
 
   it("leaves forms, unknown syllabi and an undefined template to Laravel", async () => {
@@ -346,7 +329,6 @@ describe("POST teacher/syllabi/{syllabus}/copy-from/{source}", () => {
     templates.template = { ...goldenTemplate(), definition: null }
     expect((await copy({ version_bloqueo: 2 })).status).toBe(299)
     expect(forwarded).toHaveLength(2)
-    expect(audits).toEqual([])
   })
 })
 

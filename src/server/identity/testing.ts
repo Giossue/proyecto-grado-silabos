@@ -1,7 +1,6 @@
 import golden from "../laravel/__fixtures__/laravel-golden.json"
 import { createRateLimiter } from "../laravel/throttle"
 import type { QueuedMail } from "../mail/mailables"
-import type { AuditEventInput } from "../operations/recordAuditEvent"
 import { fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import type { Accessibility, Account, AccountRepository, AccountTx, RoleGrant } from "./accounts"
 import type { IdentityWriteDeps } from "./accountWrites"
@@ -27,7 +26,6 @@ export type FakeIdentity = {
   inProgress: Record<string, { careerLabel: string; total: number }[]>
   activity: string[]
   notifications: { userId: string }[]
-  audits: AuditEventInput[]
   mails: QueuedMail[]
   sequence: number
 }
@@ -64,7 +62,6 @@ export function emptyIdentity(): FakeIdentity {
     inProgress: {},
     activity: [],
     notifications: [],
-    audits: [],
     mails: [],
     sequence: 0,
   }
@@ -194,9 +191,6 @@ function fakeTx(world: FakeIdentity): AccountTx {
       world.accounts = world.accounts.filter((row) => row.id !== userId)
     },
     careerLocked: async (careerId) => world.careers.some((career) => career.id === careerId && career.locked),
-    async recordAudit(event) {
-      world.audits.push(event)
-    },
   }
 }
 

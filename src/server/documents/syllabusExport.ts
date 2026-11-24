@@ -1,6 +1,5 @@
 import type { PhpRecord } from "../configuration/phpValues"
 import { scheduleWorkflowNotification, type NotificationScope } from "../notifications/store"
-import type { AuditEventInput } from "../operations/recordAuditEvent"
 import { signedDocumentVariables, type SignatureRecord, type SignedFacts } from "../syllabus/snapshotDocuments"
 import { fingerprint, validateBundle, type DocumentBundle, type DocumentRenderInput, type RenderedDocument } from "./syllabusRenderer"
 
@@ -19,7 +18,7 @@ export class ExportRejected extends Error {
 export class ExportMissing extends Error {}
 
 export type ExportArtifactRow = { id: string; state: string; requestedBy: string }
-export type ExportActor = { id: string; roleAssignmentId: string | null }
+export type ExportActor = { id: string }
 
 export interface ExportRequestTx {
   existingArtifact(revisionId: string, key: string): Promise<ExportArtifactRow | null>
@@ -28,10 +27,9 @@ export interface ExportRequestTx {
   approved(revisionId: string): Promise<boolean>
   insertArtifact(row: { id: string; revisionId: string; key: string; requestedBy: string; requestedAt: number }): Promise<void>
   dispatchExport(artifactId: string): void
-  recordAudit(event: AuditEventInput): Promise<void>
 }
 
-export type ExportRequest = { revisionId: string; syllabusId: string; key: string; actor: ExportActor; now: number; newId: () => string; rendererVersion: string }
+export type ExportRequest = { revisionId: string; syllabusId: string; key: string; actor: ExportActor; now: number; newId: () => string }
 
 export async function existingExport(lookup: Pick<ExportRequestTx, "existingArtifact">, revisionId: string, key: string, actorId: string): Promise<ExportArtifactRow | null> {
   const artifact = await lookup.existingArtifact(revisionId, key)
@@ -50,16 +48,6 @@ export async function requestExport(tx: ExportRequestTx, request: ExportRequest)
   const id = request.newId()
   await tx.insertArtifact({ id, revisionId: request.revisionId, key: request.key, requestedBy: request.actor.id, requestedAt: request.now })
   tx.dispatchExport(id)
-  await tx.recordAudit({
-    actorId: request.actor.id,
-    roleAssignmentId: request.actor.roleAssignmentId,
-    action: "documento.exportacion_solicitada",
-    resourceType: "artefacto_exportacion",
-    resourceId: id,
-    result: "exito",
-    metadata: { revision_number: revision.number, renderer_version: request.rendererVersion },
-    occurredAt: request.now,
-  })
   return { id, state: "pendiente", requestedBy: request.actor.id }
 }
 
@@ -86,7 +74,6 @@ export interface ExportJobTx {
   markFailed(id: string): Promise<void>
   teachersFor(syllabusId: string): Promise<string[]>
   administrators(): Promise<string[]>
-  recordAudit(event: AuditEventInput): Promise<void>
 }
 
 export interface ExportJobStore {
@@ -177,35 +164,14 @@ export async function generateSyllabusExport(artifactId: string, deps: ExportJob
       revisionNumber: subject.revision.number,
       artifactId,
     })
-    await tx.recordAudit({
-      actorId: null,
-      roleAssignmentId: null,
-      action: "documento.exportacion_completada",
-      resourceType: "artefacto_exportacion",
-      resourceId: artifactId,
-      result: "exito",
-      metadata: { revision_number: subject.revision.number, pdf_object_id: pdf.id },
-      occurredAt: now,
-    })
   })
 }
 
-export async function failSyllabusExport(artifactId: string, deps: Pick<ExportJobDeps, "transaction" | "now">): Promise<void> {
+export async function failSyllabusExport(artifactId: string, deps: Pick<ExportJobDeps, "transaction">): Promise<void> {
   await deps.transaction(async (tx) => {
     const artifact = await tx.lockArtifact(artifactId)
     if (artifact === null || artifact.state === "completado") return
-    const now = deps.now()
     await tx.markFailed(artifactId)
-    await tx.recordAudit({
-      actorId: null,
-      roleAssignmentId: null,
-      action: "documento.exportacion_fallida",
-      resourceType: "artefacto_exportacion",
-      resourceId: artifactId,
-      result: "fallido",
-      metadata: { error_code: "exportacion_documento_fallida" },
-      occurredAt: now,
-    })
     await scheduleWorkflowNotification(tx.notifications, {
       syllabusId: artifact.syllabusId,
       eventType: "documento.exportacion_fallida",

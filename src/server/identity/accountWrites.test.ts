@@ -30,7 +30,6 @@ function seeded() {
   return test
 }
 
-const actions = (test: ReturnType<typeof harness>) => test.identity.audits.map((event) => event.action)
 const identityOf = (id: string, test: ReturnType<typeof harness>) => {
   const row = test.identity.accounts.find((candidate) => candidate.id === id)
   return { nombre: row?.name, correo_electronico: row?.email }
@@ -39,7 +38,7 @@ const identityOf = (id: string, test: ReturnType<typeof harness>) => {
 describe("POST /api/v1/admin/users", () => {
   const create = (test: ReturnType<typeof harness>, body: unknown) => storeManagedUser(jsonRequest("/api/v1/admin/users", "POST", body), test.deps)
 
-  it("creates the account with its scoped role, audits it and queues the activation mail after commit", async () => {
+  it("creates the account with its scoped role and queues the activation mail after commit", async () => {
     const test = seeded()
     const response = await create(test, {
       nombres: "Nueva  Luz",
@@ -55,8 +54,6 @@ describe("POST /api/v1/admin/users", () => {
     )
     expect(created).toMatchObject({ name: "NUEVA LUZ DOCENTE PRUEBA", email: "nueva.docente@silabos.test", active: true, verified: false, passwordHash: "hashed:64" })
     expect(test.identity.grants.at(-1)).toMatchObject({ userId: created?.id, role: "docente", careerId: CAREER, active: true })
-    expect(actions(test)).toEqual(["usuario.rol_asignado", "usuario.creado", "usuario.invitacion_activacion_enviada"])
-    expect(test.identity.audits[1]).toMatchObject({ actorId: ACTOR, roleAssignmentId: ACTOR_ROLE, resourceId: created?.id, metadata: { initial_role: "docente" } })
     expect(test.identity.invitations).toEqual([
       { userId: created?.id, hash: TOKEN_HASH, expiresAt: NOW + 7 * 86400, issuerId: ACTOR, createdAt: NOW, usedAt: null, invalidatedAt: null },
     ])
@@ -121,9 +118,6 @@ describe("PATCH /api/v1/admin/users/{user}", () => {
     expect(test.identity.accounts.find((row) => row.id === TEACHER)).toMatchObject({ name: "ANA MARÍA PÉREZ GÓMEZ", active: false, rememberToken: "a".repeat(60) })
     expect(test.identity.sessions.map((row) => row.userId)).not.toContain(TEACHER)
     expect(test.identity.parallels[0].active).toBe(false)
-    expect(actions(test)).toEqual(["usuario.perfil_actualizado", "usuario.desactivado"])
-    expect(test.identity.audits[0].metadata).toEqual({ previous_name: "DOCENTE DEMO", previous_email: "docente@silabos.test", name_changed: true, email_changed: false })
-    expect(test.identity.audits[1].metadata).toEqual({ closed_teacher_assignments: 1, closed_coordinations: "" })
   })
 
   it("keeps the email of an activated account", async () => {
@@ -138,13 +132,15 @@ describe("PATCH /api/v1/admin/users/{user}", () => {
     const test = seeded()
     await update(test, COORDINATOR, { ...identityOf(COORDINATOR, test), active: true, role_code: "docente", career_id: CAREER })
     expect(test.identity.grants.filter((row) => row.userId === COORDINATOR && row.active).map((row) => row.role)).toEqual(["coordinador", "docente"])
-    expect(actions(test)).toEqual(["usuario.rol_asignado"])
   })
 
-  it("registers nothing extra when only the identity changes", async () => {
+  it("changes nothing else when only the identity changes", async () => {
     const test = seeded()
     await update(test, TEACHER, { nombre: "Luisa Fernanda Mora Díaz", correo_electronico: "docente@silabos.test", active: true })
-    expect(actions(test)).toEqual(["usuario.perfil_actualizado"])
+    expect(test.identity.accounts.find((row) => row.id === TEACHER)).toMatchObject({ name: "LUISA FERNANDA MORA DÍAZ", email: "docente@silabos.test", active: true })
+    expect(test.identity.grants.filter((row) => row.userId === TEACHER && row.active).map((row) => row.role)).toEqual(["docente"])
+    expect(test.identity.sessions.map((row) => row.userId)).toContain(TEACHER)
+    expect(test.identity.mails).toEqual([])
   })
 
   it("lets the own account only correct its identity", async () => {
@@ -170,15 +166,13 @@ describe("PATCH /api/v1/admin/users/{user}", () => {
     const test = seeded()
     const asked = await update(test, TEACHER, { ...identityOf(TEACHER, test), role_code: "coordinador", career_id: CAREER })
     expect((await asked.json()).errors).toEqual({ replace_coordinator: ["La carrera ya tiene como coordinador a COORDINADOR DEMO."] })
-    expect(test.identity.audits).toEqual([])
+    expect(test.identity.grants.find((row) => row.id === COORDINATOR_ROLE)?.active).toBe(true)
     await update(test, TEACHER, { ...identityOf(TEACHER, test), role_code: "coordinador", career_id: CAREER, replace_coordinator: true })
     expect(test.identity.grants.find((row) => row.id === COORDINATOR_ROLE)?.active).toBe(false)
-    expect(actions(test)).toEqual(["academico.coordinacion.reemplazada", "usuario.rol_asignado"])
-    expect(test.identity.audits[0]).toMatchObject({
-      resourceType: "carrera",
-      resourceId: CAREER,
-      metadata: { previous_user_id: COORDINATOR, incoming_user_id: TEACHER, returned_to_review: 0 },
-    })
+    expect(test.identity.grants.filter((row) => row.userId === TEACHER && row.active).map((row) => [row.role, row.careerId])).toEqual([
+      ["docente", CAREER],
+      ["coordinador", CAREER],
+    ])
   })
 
   it("leaves a replacement that returns reviewed syllabi to Laravel without writing", async () => {
@@ -187,7 +181,6 @@ describe("PATCH /api/v1/admin/users/{user}", () => {
     const response = await update(test, TEACHER, { ...identityOf(TEACHER, test), role_code: "coordinador", career_id: CAREER, replace_coordinator: true })
     expect(response.status).toBe(299)
     expect(test.identity.grants.find((row) => row.id === COORDINATOR_ROLE)?.active).toBe(true)
-    expect(test.identity.audits).toEqual([])
     expect(await test.forwarded[0].json()).toMatchObject({ replace_coordinator: true })
   })
 
@@ -226,7 +219,7 @@ describe("PATCH /api/v1/admin/users/{user}", () => {
     const test = seeded()
     await update(test, COORDINATOR, { ...identityOf(COORDINATOR, test), active: false })
     expect(test.identity.grants.find((row) => row.id === COORDINATOR_ROLE)?.active).toBe(false)
-    expect(test.identity.audits[0].metadata).toEqual({ closed_teacher_assignments: 0, closed_coordinations: "Software" })
+    expect(test.identity.accounts.find((row) => row.id === COORDINATOR)?.active).toBe(false)
   })
 
   it("sends the access again to the corrected email of a pending account", async () => {
@@ -235,8 +228,6 @@ describe("PATCH /api/v1/admin/users/{user}", () => {
     await update(test, PENDING, { nombre: "Pendiente Demo", correo_electronico: "Corregido@Silabos.test" })
     expect(test.identity.invitations[0].invalidatedAt).toBe(NOW)
     expect(test.identity.invitations[1]).toMatchObject({ userId: PENDING, hash: TOKEN_HASH })
-    expect(actions(test)).toEqual(["usuario.perfil_actualizado", "usuario.invitacion_activacion_enviada"])
-    expect(test.identity.audits[1].metadata).toEqual({ reason: "correo_corregido" })
     expect(test.identity.mails.map((mail) => mail.to)).toEqual(["corregido@silabos.test"])
   })
 
@@ -260,7 +251,6 @@ describe("POST /api/v1/admin/users/{user}/resend-activation", () => {
     expect(await response.text()).toBe('{"message":"Invitaci\\u00f3n de activaci\\u00f3n enviada a pendiente@silabos.test."}')
     expect(response.headers.get("x-ratelimit-limit")).toBe("3")
     expect(response.headers.get("x-ratelimit-remaining")).toBe("2")
-    expect(test.identity.audits[0].metadata).toEqual({ reason: "reenvio" })
     expect(test.identity.mails).toHaveLength(1)
   })
 
@@ -294,7 +284,6 @@ describe("DELETE /api/v1/admin/users/{user}", () => {
     expect(await (await destroy(test, PENDING)).text()).toBe('{"message":"Cuenta eliminada."}')
     expect(test.identity.accounts.some((row) => row.id === PENDING)).toBe(false)
     expect(test.identity.notifications).toEqual([])
-    expect(test.identity.audits[0]).toMatchObject({ action: "usuario.eliminado", resourceId: PENDING, metadata: { email: "pendiente@silabos.test", name: "PENDIENTE DEMO" } })
     const other = seeded()
     other.identity.activity.push(PENDING)
     expect((await (await destroy(other, PENDING)).json()).errors).toEqual({ user: ["La cuenta ya tiene actividad registrada. Desactívela en lugar de eliminarla."] })
@@ -315,7 +304,6 @@ describe("DELETE /api/v1/admin/users/{user}/roles/{assignment}", () => {
     expect(test.identity.grants.find((row) => row.id === "01a1c5bc-1111-7000-8000-0000000000b1")?.active).toBe(false)
     expect(test.identity.parallels).toEqual([])
     expect(test.identity.sessions.some((row) => row.userId === COORDINATOR)).toBe(false)
-    expect(test.identity.audits[0].metadata).toEqual({ role: "docente", career_id: OTHER_CAREER, removed_parallel_assignments: 1 })
   })
 
   it("refuses the only role, a role of another account and a non administrator", async () => {

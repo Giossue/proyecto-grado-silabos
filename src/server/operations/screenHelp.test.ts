@@ -82,6 +82,16 @@ describe("screen help", () => {
     expect(library.help.map((item) => item.screen)).toEqual(Object.keys(HELP).filter((screen) => screen.startsWith("/biblioteca/")))
   })
 
+  it("has no help for Auditoría or Reportes, which are no longer part of the system", async () => {
+    asRole("administrador")
+    for (const screen of ["/admin/auditoria", "/admin/reportes"]) {
+      expect(await call(showScreenHelp, `/api/v1/help?screen=${encodeURIComponent(screen)}`)).toEqual({ status: 200, text: '{"help":null}' })
+    }
+    const admin = (JSON.parse((await call(availableScreenHelp, "/api/v1/help/available")).text) as { help: { screen: string; title: string; content: string }[] }).help
+    expect(admin.length).toBeGreaterThan(0)
+    expect(admin.filter((item) => /auditor|reporte/i.test(`${item.screen} ${item.title} ${item.content}`))).toEqual([])
+  })
+
   it("asks for an active role before answering", async () => {
     world.assignments = []
     world.sessions.set(SESSION_ID, { payload: sessionPayload(loggedInAttributes({ active_role_assignment_id: undefined })), lastActivity: NOW })

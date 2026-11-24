@@ -135,10 +135,6 @@ describe("template assistant API", () => {
 
     expect(world.proposals.find((proposal) => proposal.id === proposalId)?.state).toBe("aplicada")
     expect(AssistantDraft.fromTemplate(world.template as never).overview().flatMap((section) => section.campos as { clave: string }[]).some((field) => field.clave === "competencias")).toBe(false)
-    expect(world.audits.map((event) => [event.action, event.resourceType])).toEqual([
-      ["ia.plantilla_solicitada", "mensaje_ia_plantilla"],
-      ["plantilla.propuesta_ia_aplicada", "propuesta_ia_plantilla"],
-    ])
     const again = await apply(proposalId)
     expect(again.status).toBe(422)
     expect(Object.keys(((await again.json()) as { errors: Record<string, unknown> }).errors)).toEqual(["proposal"])
@@ -152,7 +148,6 @@ describe("template assistant API", () => {
     expect((await discard(proposal.id)).status).toBe(200)
 
     expect(world.proposals[0].state).toBe("descartada")
-    expect(world.audits.map((event) => event.action)).toContain("plantilla.propuesta_ia_descartada")
     expect((await apply(proposal.id)).status).toBe(422)
   })
 

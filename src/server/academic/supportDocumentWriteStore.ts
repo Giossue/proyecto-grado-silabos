@@ -1,7 +1,6 @@
 import "server-only"
 import { sql, type SQL } from "drizzle-orm"
 import { db } from "@/db"
-import { insertAuditEvent } from "../operations/recordAuditEvent"
 import { withAfterCommit } from "../queue/dispatch"
 import { uuidList } from "../laravel/sql"
 import { findActiveCareer } from "./structureQueries"
@@ -43,9 +42,6 @@ function writeTx(executor: Executor): SupportDocumentTx {
     },
     async deleteObjects(ids) {
       if (ids.length > 0) await executor.execute(sql`delete from archivos where archivo_id in (${uuidList(ids)})`)
-    },
-    async recordAudit(event) {
-      await insertAuditEvent(executor, event)
     },
   }
 }

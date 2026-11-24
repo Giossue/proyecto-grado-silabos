@@ -6,7 +6,6 @@ import { isJsonRequest, laravelInput, type PhpArray } from "../laravel/input"
 import { expectsJson } from "../laravel/request"
 import { aborted, forbidden, laravelJson, validationError } from "../laravel/responses"
 import { validateInput } from "../laravel/validation"
-import type { AuditEventInput } from "../operations/recordAuditEvent"
 import { createLogoStore, type LogoStore } from "../configuration/institutionalLogos"
 import { phpShape, type PhpRecord } from "../configuration/phpValues"
 import { profileTemplates } from "../configuration/subjectProfileFields"
@@ -37,7 +36,6 @@ export interface DraftStartTx {
   insertValue(syllabusId: string, fieldId: string, document: PhpRecord): Promise<void>
   start(syllabusId: string, now: number): Promise<void>
   copied(syllabusId: string, version: number, now: number): Promise<void>
-  recordAudit(event: AuditEventInput): Promise<void>
 }
 
 export type DraftStartDeps = {
@@ -103,10 +101,6 @@ async function payloadWithin(tx: DraftStartTx, request: Request, session: Larave
   return syllabusPayload(request, session, current, { bridge: deps.bridge, store: tx.detail, templates: tx.templateStore, logos: deps.logos, today: deps.today })
 }
 
-function audit(session: LaravelSession, action: string, resourceId: string, metadata: AuditEventInput["metadata"], occurredAt: number): AuditEventInput {
-  return { actorId: session.user.id, roleAssignmentId: session.activeRole?.id ?? null, action, resourceType: "silabo", resourceId, result: "exito", metadata, occurredAt }
-}
-
 async function run(original: Request, work: () => Promise<Response>): Promise<Response> {
   try {
     return await work()
@@ -150,7 +144,6 @@ export async function startDraft(request: Request, syllabusId: string, deps: Dra
         if ((await tx.previousPeriodSource(locked.id, locked.subjectId, session.user.id, template.modifiedAt)) !== null) throw new NeedsLaravel()
         const now = deps.now()
         await tx.start(locked.id, now)
-        await tx.recordAudit(audit(session, "silabo.borrador_iniciado", locked.id, {}, now))
         return payloadWithin(tx, request, session, locked.id, deps)
       })
       return laravelJson(phpShape({ message: "Borrador iniciado con la plantilla y los datos maestros fijados.", syllabus: payload }))
@@ -207,7 +200,6 @@ export async function copySyllabusContent(request: Request, syllabusId: string, 
         const version = locked.version + 1
         const now = deps.now()
         await tx.copied(locked.id, version, now)
-        await tx.recordAudit(audit(session, "silabo.contenido_copiado", locked.id, { source_syllabus_id: source.id, lock_version: version }, now))
         return payloadWithin(tx, request, session, locked.id, deps)
       })
       return laravelJson(phpShape({ message: `Contenido copiado desde el paralelo ${source.parallel}.`, syllabus: payload }))

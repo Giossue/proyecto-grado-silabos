@@ -6,7 +6,6 @@ import { isJsonRequest, laravelInput, type PhpArray, type PhpValue } from "../la
 import { expectsJson } from "../laravel/request"
 import { forbidden, laravelJson, validationError } from "../laravel/responses"
 import { validateInput } from "../laravel/validation"
-import type { AuditEventInput } from "../operations/recordAuditEvent"
 import { uuid7 } from "../laravel/uuid7"
 import { phpIntCast, toRuntime } from "../configuration/templateDraft"
 import { profileTemplates } from "../configuration/subjectProfileFields"
@@ -43,7 +42,6 @@ export interface DraftFieldTx {
   valueExists(syllabusId: string, fieldId: string): Promise<boolean>
   saveValue(syllabusId: string, fieldId: string, document: PhpRecord, newId: string): Promise<void>
   saveDraft(syllabusId: string, version: number, savedAt: number): Promise<void>
-  recordAudit(event: AuditEventInput): Promise<void>
 }
 
 export interface DraftFieldStore {
@@ -154,16 +152,6 @@ async function save(input: PhpArray, auth: Bound, deps: DraftFieldDeps, tx: Draf
   const version = locked.version + 1
   const savedAt = deps.now()
   await tx.saveDraft(locked.id, version, savedAt)
-  await tx.recordAudit({
-    actorId: auth.session.user.id,
-    roleAssignmentId: auth.session.activeRole?.id ?? null,
-    action: "silabo.campo_guardado",
-    resourceType: "silabo",
-    resourceId: locked.id,
-    result: "exito",
-    metadata: { field_key: field.key, lock_version: version },
-    occurredAt: savedAt,
-  })
   return { version, savedAt, definition }
 }
 

@@ -6,7 +6,6 @@ import { fakeDeps, NOW, sessionCookie, sessionPayload, xsrfHeader, type FakeWorl
 import type { SessionWriterDeps } from "../auth/sessionWriter"
 import type { OutgoingCookie } from "../auth/types"
 import { createRateLimiter } from "../laravel/throttle"
-import type { AuditEventInput } from "../operations/recordAuditEvent"
 import type { QueuedMail } from "../mail/mailables"
 import { activateAccount, resetPassword, sendResetLink, type Invitation, type RecoveryDeps, type RecoveryStore } from "./passwordRecovery"
 
@@ -23,7 +22,6 @@ let accounts: Account[]
 let resets: Map<string, { token: string; createdAt: number | null }>
 let invitations: Invitation[]
 let sessions: { id: string; userId: string }[]
-let audits: AuditEventInput[]
 let queued: OutgoingCookie[]
 let sequence: number
 let mails: QueuedMail[]
@@ -57,7 +55,6 @@ function store(): RecoveryStore {
         if (invitation.userId === userId && invitation.id !== exceptId && invitation.usedAt === null && invitation.invalidatedAt === null) invitation.invalidatedAt = at
       }
     },
-    recordAudit: async (event) => void audits.push(event),
   }
 }
 
@@ -113,7 +110,6 @@ beforeEach(() => {
     { id: "otra-sesion", userId: USER },
     { id: "ajena", userId: "otro" },
   ]
-  audits = []
   queued = []
   sequence = 0
   mails = []
@@ -188,7 +184,7 @@ describe("POST authentication/account-activation (ManagedUserTest)", () => {
     invitations = [invitation(), invitation({ id: "inv-0", hash: hashOf("vieja") })]
   })
 
-  it("sets the password, verifies the email, uses the invitation, closes sessions and audits", async () => {
+  it("sets the password, verifies the email, uses the invitation, closes sessions", async () => {
     const response = await activateAccount(post("account-activation", activation()), deps())
     expect(response.status).toBe(200)
     expect(await response.text()).toBe('{"message":"Cuenta activada. Ya puede iniciar sesi\\u00f3n."}')
@@ -196,7 +192,6 @@ describe("POST authentication/account-activation (ManagedUserTest)", () => {
     expect(accounts[0].remember).toMatch(/^[A-Z]{60}$/)
     expect(invitations).toMatchObject([{ id: "inv-1", usedAt: NOW, invalidatedAt: null }, { id: "inv-0", usedAt: null, invalidatedAt: NOW }])
     expect(sessions.map((session) => session.id)).toEqual(["ajena"])
-    expect(audits).toMatchObject([{ actorId: USER, roleAssignmentId: null, action: "usuario.activado", resourceType: "usuario", resourceId: USER, result: "exito", metadata: {} }])
   })
 
   it("refuses an expired, used or invalidated invitation", async () => {
@@ -216,7 +211,6 @@ describe("POST authentication/account-activation (ManagedUserTest)", () => {
       expect(response.status).toBe(422)
       expect((await response.json()).errors.token).toEqual(["El enlace de activación no es válido o ya fue utilizado."])
     }
-    expect(audits).toEqual([])
   })
 
   it("validates the token length and the confirmation", async () => {

@@ -2,7 +2,7 @@
 import { readdirSync, readFileSync } from "node:fs"
 import { join, relative, sep } from "node:path"
 import { describe, expect, it } from "vitest"
-import { LARAVEL_ROUTES, laravelRoutesMatching, type LaravelRoute } from "./router"
+import { LARAVEL_ROUTES, laravelRoutesMatching, REMOVED_ROUTES, type LaravelRoute } from "./router"
 
 type NextRoute = { file: string; segments: string[]; native: Set<string>; source: string }
 
@@ -20,20 +20,6 @@ const ALLOWLIST: Record<string, string> = {
   "GET storage/{path}": "Signed URLs of Laravel's local disk; nothing in the system creates them and Next never forwarded the path.",
   "HEAD storage/{path}": "Same as GET storage/{path}.",
   "PUT storage/{path}": "Signed upload URLs of Laravel's local disk; nothing in the system creates them and Next never forwarded the path.",
-  "GET plantilla.schema.json": "Pending: the handler needs src/app/plantilla.schema.json/route.ts, outside this task's edit surface; Next never forwarded it.",
-  "HEAD plantilla.schema.json": "Same as GET plantilla.schema.json.",
-  "GET logos/institucion": "Pending: served by src/server/configuration/logoRoutes.ts but the route file belongs in src/app/logos, outside this task's edit surface.",
-  "HEAD logos/institucion": "Same as GET logos/institucion.",
-  "GET logos/facultad/{faculty}": "Pending: served by src/server/configuration/logoRoutes.ts but the route file belongs in src/app/logos, outside this task's edit surface.",
-  "HEAD logos/facultad/{faculty}": "Same as GET logos/facultad/{faculty}.",
-  "GET api/v1/admin/audit-events": "Auditoría is being removed from the system; its unported edge cases stay as they are until then.",
-  "HEAD api/v1/admin/audit-events": "Same as GET api/v1/admin/audit-events.",
-  "GET api/v1/admin/audit-events/export": "Auditoría is being removed from the system; its unported edge cases stay as they are until then.",
-  "HEAD api/v1/admin/audit-events/export": "Same as GET api/v1/admin/audit-events/export.",
-  "GET api/v1/admin/reports": "Reportes is being removed from the system; an unknown process id is still forwarded until then.",
-  "HEAD api/v1/admin/reports": "Same as GET api/v1/admin/reports.",
-  "GET api/v1/admin/reports/export": "Reportes is being removed from the system; an unknown process id is still forwarded until then.",
-  "HEAD api/v1/admin/reports/export": "Same as GET api/v1/admin/reports/export.",
 }
 
 const FORWARD_SITES: Record<string, { sites: number; reason: string }> = {
@@ -84,7 +70,6 @@ const FORWARD_SITES: Record<string, { sites: number; reason: string }> = {
   "syllabus/inProgressWork.ts": { sites: 9, reason: "unknown id ×8, legacy snapshot" },
   "syllabus/processClosing.ts": { sites: 2, reason: "non-JSON body, re-raise" },
   "syllabus/processClosingStore.ts": { sites: 1, reason: "PHP float/date" },
-  "syllabus/processReport.ts": { sites: 2, reason: "unknown id ×2; Reportes is being removed" },
   "syllabus/processWrites.ts": { sites: 4, reason: "non-JSON body ×3, re-raise" },
   "syllabus/processes.ts": { sites: 12, reason: "re-raise ×3, PHP float/date ×3, legacy snapshot ×2, non-JSON body ×2, unknown id ×2" },
   "syllabus/reviewApproval.ts": { sites: 2, reason: "non-JSON body, unported rule" },
@@ -204,6 +189,11 @@ describe("route inventory", () => {
         .map((method) => `${method} ${path}`)
     })
     expect(shadowed).toEqual([])
+  })
+
+  it("serves none of the routes removed from the system and leaves them to the unknown-route answer", () => {
+    expect(REMOVED_ROUTES.filter((uri) => LARAVEL_ROUTES.some((route) => route.uri === uri))).toEqual([])
+    expect(REMOVED_ROUTES.map((uri) => nextRouteFor(uri.split("/"))?.file)).toEqual(REMOVED_ROUTES.map(() => join("src", "app", "api", "[...path]", "route.ts")))
   })
 
   it("keeps every allowlist entry tied to a real Laravel route", () => {

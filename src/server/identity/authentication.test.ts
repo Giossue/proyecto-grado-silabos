@@ -9,7 +9,6 @@ import { cookiePrefix } from "../laravel/cookies"
 import { decrypt } from "../laravel/encrypter"
 import { hashPasswordForCookie, loginSessionKey, recallerCookieName } from "../laravel/sessionGuard"
 import { createRateLimiter } from "../laravel/throttle"
-import type { AuditEventInput } from "../operations/recordAuditEvent"
 import { csrfCookie, filterEmailShape, leaveActiveRole, login, logout, selectActiveRole, updatePassword, type AuthenticationDeps } from "./authentication"
 import type { UserProfile } from "./session"
 
@@ -21,7 +20,6 @@ const TOKEN = golden.csrfToken
 const OTHER_ROLE = "0193a3c2-3333-7000-8000-000000000003"
 
 let world: FakeWorld
-let audits: AuditEventInput[]
 let remember: Map<string, string | null>
 let forwarded: Request[]
 let twoFactor: boolean
@@ -58,7 +56,6 @@ function deps(overrides: Partial<AuthenticationDeps> = {}): AuthenticationDeps {
         }
         return deleted
       },
-      recordAudit: async (event) => void audits.push(event),
     },
     profiles: { find: async (id) => (id === golden.userId ? profile : null) },
     today: () => "2026-10-21",
@@ -120,7 +117,6 @@ function cookies(response: Response): Record<string, { value: string; attributes
 
 beforeEach(() => {
   world = { sessions: new Map(), users: [makeUser({ passwordHash: HASH })], assignments: [makeAssignment()] }
-  audits = []
   remember = new Map([[golden.userId, "old-remember-token"]])
   forwarded = []
   twoFactor = false
@@ -140,6 +136,16 @@ describe("GET /sanctum/csrf-cookie", () => {
     expect(set[golden.cookieName]).toEqual({ value: "A".repeat(40), attributes: `; expires=${new Date((NOW + 7200) * 1000).toUTCString()}; Max-Age=7200; path=/; httponly; samesite=lax` })
     expect(storedJson(world, "A".repeat(40))).toBe(JSON.stringify({ ...anonymous(), _token: "B".repeat(40) }).replaceAll("/", "\\/"))
     expect(world.sessions.get("A".repeat(40))).toMatchObject({ userId: null, ipAddress: "::1" })
+  })
+
+  it("stores the full URL with its query sorted like Request::fullUrl() and leaves a query PHP rewrites to Laravel", async () => {
+    const response = await csrfCookie(new Request("http://localhost:3000/sanctum/csrf-cookie?b=2+x&a=1", { headers: { accept: "application/json", "x-forwarded-for": "::1" } }), deps())
+    expect(response.status).toBe(204)
+    expect(JSON.parse(storedJson(world, "A".repeat(40)) ?? "{}")._previous).toEqual({ url: "http://localhost:3000/sanctum/csrf-cookie?a=1&b=2%20x", route: "sanctum.csrf-cookie" })
+    expect(forwarded).toEqual([])
+    const rewritten = await csrfCookie(new Request("http://localhost:3000/sanctum/csrf-cookie?a[]=1", { headers: { accept: "application/json" } }), deps())
+    expect(rewritten.status).toBe(299)
+    expect(forwarded).toHaveLength(1)
   })
 })
 
@@ -188,7 +194,6 @@ describe("POST /api/v1/authentication/login", () => {
     )
     expect(set["XSRF-TOKEN"].value).toBe("D".repeat(40))
     expect(world.sessions.get(id)).toMatchObject({ userId: golden.userId, ipAddress: "::1", userAgent: "Prueba/1.0", lastActivity: NOW })
-    expect(audits).toEqual([{ actorId: golden.userId, roleAssignmentId: null, action: "sesion.iniciada", resourceType: "usuario", resourceId: golden.userId, result: "exito", metadata: {}, occurredAt: NOW }])
   })
 
   it("rejects wrong credentials with the generic message and keeps the session as guest", async () => {
@@ -198,7 +203,6 @@ describe("POST /api/v1/authentication/login", () => {
     expect(await response.text()).toBe('{"message":"Las credenciales proporcionadas no son v\\u00e1lidas."}')
     expect(cookies(response)[golden.cookieName].value).toBe(golden.sessionId)
     expect(JSON.parse(storedJson(world, golden.sessionId) ?? "{}")).toEqual(anonymous())
-    expect(audits).toEqual([])
   })
 
   it("validates with the Spanish messages of the login request", async () => {
@@ -249,7 +253,6 @@ describe("POST /api/v1/authentication/login", () => {
     expect(await response.text()).toBe('{"two_factor_required":true,"message":"Ingrese el c\\u00f3digo de su aplicaci\\u00f3n de autenticaci\\u00f3n."}')
     expect(cookies(response)[golden.cookieName].value).toBe(golden.sessionId)
     expect(JSON.parse(storedJson(world, golden.sessionId) ?? "{}")).toEqual({ ...anonymous(), login: { id: golden.userId, at: NOW } })
-    expect(audits).toEqual([])
   })
 
   it("rejects itself, without Laravel, the emails PHP's filter rejects", async () => {
@@ -262,7 +265,7 @@ describe("POST /api/v1/authentication/login", () => {
 })
 
 describe("POST /api/v1/authentication/logout", () => {
-  it("audits, cycles the remember token, deletes the session and starts a new guest one owned by the Sanctum user", async () => {
+  it("cycles the remember token, deletes the session and starts a new guest one owned by the Sanctum user", async () => {
     withSession(loggedIn())
     const response = await logout(call("/api/v1/authentication/logout", "POST"), deps())
     expect(response.status).toBe(204)
@@ -274,7 +277,6 @@ describe("POST /api/v1/authentication/logout", () => {
     expect(storedJson(world, "B".repeat(40))).toBe(`{"_token":"${"C".repeat(40)}","_flash":{"old":[],"new":[]}}`)
     expect(world.sessions.get("B".repeat(40))?.userId).toBe(golden.userId)
     expect(remember.get(golden.userId)).toBe("A".repeat(60))
-    expect(audits.map((event) => [event.action, event.roleAssignmentId])).toEqual([["sesion.cerrada", golden.roleId]])
   })
 
   it("keeps an empty remember token empty", async () => {
@@ -305,7 +307,7 @@ describe("PUT and DELETE /api/v1/active-role", () => {
     world.assignments = [makeAssignment({ role: "coordinador" }), makeAssignment({ id: OTHER_ROLE, role: "docente" })]
   })
 
-  it("selects a role, audits it and regenerates the session without deleting the old row", async () => {
+  it("selects a role and regenerates the session without deleting the old row", async () => {
     withSession(loggedIn({ active_role_assignment_id: undefined }))
     const response = await selectActiveRole(call("/api/v1/active-role", "PUT", { role_assignment_id: OTHER_ROLE }), deps())
     expect(response.status).toBe(200)
@@ -314,7 +316,6 @@ describe("PUT and DELETE /api/v1/active-role", () => {
     expect(id).not.toBe(golden.sessionId)
     expect(world.sessions.has(golden.sessionId)).toBe(true)
     expect(JSON.parse(storedJson(world, id) ?? "{}").active_role_assignment_id).toBe(OTHER_ROLE)
-    expect(audits.map((event) => [event.action, event.roleAssignmentId, event.metadata])).toEqual([["rol_activo.seleccionado", OTHER_ROLE, { role: "docente" }]])
   })
 
   it("validates the role and answers 404 for a role that is not the user's", async () => {
@@ -326,7 +327,6 @@ describe("PUT and DELETE /api/v1/active-role", () => {
     const missing = await selectActiveRole(call("/api/v1/active-role", "PUT", { role_assignment_id: "0193a3c2-9999-7000-8000-000000000009" }), deps())
     expect(missing.status).toBe(404)
     expect(await missing.text()).toBe('{\n    "message": ""\n}')
-    expect(audits).toEqual([])
   })
 
   it("sends a user with several roles back to choose again", async () => {
@@ -335,7 +335,6 @@ describe("PUT and DELETE /api/v1/active-role", () => {
     const body = JSON.parse(await response.text())
     expect(body.active_role).toBeNull()
     expect(body.available_roles).toHaveLength(2)
-    expect(audits.map((event) => [event.action, event.resourceId])).toEqual([["rol_activo.cerrado", golden.roleId]])
     expect(JSON.parse(storedJson(world, cookies(response)[golden.cookieName].value) ?? "{}")).not.toHaveProperty("active_role_assignment_id")
   })
 
@@ -344,7 +343,6 @@ describe("PUT and DELETE /api/v1/active-role", () => {
     withSession(loggedIn())
     const body = JSON.parse(await (await leaveActiveRole(call("/api/v1/active-role", "DELETE"), deps())).text())
     expect(body.active_role.id).toBe(golden.roleId)
-    expect(audits).toHaveLength(1)
   })
 
   it("answers 403 to an unverified account", async () => {
@@ -385,7 +383,6 @@ describe("PUT /api/v1/authentication/password", () => {
     expect(cookies(response)[golden.cookieName].value).toBe(golden.sessionId)
     expect(JSON.parse(storedJson(world, golden.sessionId) ?? "{}").password_hash_web).toBe(hashPasswordForCookie("hash:Nueva-Clave-2026", golden.appKey))
     expect(remember.get(golden.userId)).toBe("A".repeat(60))
-    expect(audits.map((event) => [event.action, event.roleAssignmentId])).toEqual([["usuario.contrasena_actualizada", golden.roleId]])
   })
 
   it("answers 401 to a guest and leaves production to Laravel's stronger password rule", async () => {

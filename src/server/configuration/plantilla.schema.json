@@ -1,0 +1,315 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "Plantilla del sílabo (formato 2)",
+    "description": "Estructura del JSON que exporta e importa «Plantilla como JSON». El servidor valida además las reglas que este esquema no puede expresar. Manual: docs/architecture/template-json.md.",
+    "type": "object",
+    "required": ["version", "sections"],
+    "additionalProperties": false,
+    "properties": {
+        "$schema": { "type": "string" },
+        "version": { "const": 2 },
+        "response_policy": { "const": "protected", "description": "El formato de Administración queda protegido; los demás solo completan párrafos y celdas vacíos." },
+        "document": { "$ref": "#/$defs/document" },
+        "variables": {
+            "type": "object",
+            "description": "Datos del sistema que se insertan con <span data-variable=\"clave\"></span>.",
+            "propertyNames": { "pattern": "^[a-z][a-z0-9_]{0,99}$" },
+            "additionalProperties": { "$ref": "#/$defs/variable" }
+        },
+        "blocks": {
+            "type": "object",
+            "description": "Piezas con datos, reglas y diseño propios. Se insertan con <div data-block=\"clave\"></div>.",
+            "propertyNames": { "pattern": "^[a-z][a-z0-9_]{0,40}$" },
+            "additionalProperties": { "$ref": "#/$defs/block" }
+        },
+        "required_sections": { "type": "array", "items": { "type": "string" }, "description": "Secciones que la plantilla no puede quitar." },
+        "library_sections": { "type": "array", "items": { "type": "string" }, "description": "Secciones que revisa Biblioteca." },
+        "presets": { "type": "array", "items": { "$ref": "#/$defs/preset" } },
+        "sections": { "type": "array", "maxItems": 60, "items": { "$ref": "#/$defs/section" } }
+    },
+    "$defs": {
+        "key": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$", "maxLength": 100 },
+        "html": {
+            "description": "Lista de líneas HTML, un texto HTML o un documento Tiptap.",
+            "anyOf": [
+                { "type": "array", "items": { "type": "string" } },
+                { "type": "string" },
+                { "type": "object", "required": ["type"], "properties": { "type": { "const": "doc" } } }
+            ]
+        },
+        "color": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+        "alignment": { "enum": ["left", "center", "right", "justify"] },
+        "document": {
+            "type": "object",
+            "description": "Estilo del documento: papel, márgenes, letra, colores, encabezado y pie.",
+            "properties": {
+                "paper": { "enum": ["letter", "a4", "legal"] },
+                "orientation": { "enum": ["portrait", "landscape"] },
+                "margin_cm": { "type": "number" },
+                "font_family": { "type": "string" },
+                "line_height": { "type": "number" },
+                "paragraph_spacing_pt": { "type": "number" },
+                "sizes": {
+                    "type": "object",
+                    "properties": { "title": { "type": "number" }, "section": { "type": "number" }, "body": { "type": "number" } }
+                },
+                "colors": {
+                    "type": "object",
+                    "properties": {
+                        "text": { "$ref": "#/$defs/color" },
+                        "title": { "$ref": "#/$defs/color" },
+                        "table_header_background": { "anyOf": [{ "$ref": "#/$defs/color" }, { "type": "null" }] },
+                        "table_header_text": { "anyOf": [{ "$ref": "#/$defs/color" }, { "type": "null" }] },
+                        "table_border": { "$ref": "#/$defs/color" },
+                        "empty_text": { "$ref": "#/$defs/color" }
+                    }
+                },
+                "title": {
+                    "type": "object",
+                    "properties": { "text": { "type": "string" }, "bold": { "type": "boolean" }, "italic": { "type": "boolean" }, "alignment": { "$ref": "#/$defs/alignment" } }
+                },
+                "section_title": {
+                    "type": "object",
+                    "properties": { "bold": { "type": "boolean" }, "italic": { "type": "boolean" }, "alignment": { "$ref": "#/$defs/alignment" } }
+                },
+                "body": { "type": "object", "properties": { "alignment": { "$ref": "#/$defs/alignment" } } },
+                "header": { "type": "object" },
+                "footer": { "anyOf": [{ "type": "object" }, { "type": "null" }] },
+                "metadata": { "anyOf": [{ "type": "object" }, { "type": "null" }] },
+                "empty_text": { "type": "string" },
+                "choices": { "type": "object" }
+            }
+        },
+        "variable": {
+            "type": "object",
+            "required": ["label", "source"],
+            "additionalProperties": false,
+            "properties": {
+                "label": { "type": "string", "maxLength": 120 },
+                "source": { "type": "string", "description": "Dato del sistema: identification.*, approval.* o signature.*." },
+                "sample": { "type": "string" },
+                "format": { "const": "number" },
+                "equals": { "type": "string", "description": "Muestra X cuando el dato es igual a este texto." }
+            }
+        },
+        "condition": {
+            "type": "object",
+            "description": "Una fuente (value, prop, item o variable) y una prueba (equals, empty o zero). Para negar, use false en la prueba.",
+            "minProperties": 2,
+            "maxProperties": 2,
+            "additionalProperties": false,
+            "properties": {
+                "value": { "type": "string" },
+                "prop": { "type": "string" },
+                "item": { "type": "string" },
+                "variable": { "type": "string" },
+                "equals": { "type": ["string", "number", "null"] },
+                "empty": { "type": "boolean" },
+                "zero": { "type": "boolean" }
+            }
+        },
+        "title": { "type": "string", "maxLength": 300, "description": "Nombre del dato en la pantalla y en los errores." },
+        "errorMessage": { "type": "string", "maxLength": 300, "description": "Mensaje propio al rechazar el dato." },
+        "text": {
+            "type": "object",
+            "required": ["type"],
+            "additionalProperties": false,
+            "properties": {
+                "type": { "const": "string" },
+                "title": { "$ref": "#/$defs/title" },
+                "errorMessage": { "$ref": "#/$defs/errorMessage" },
+                "keep_if": { "$ref": "#/$defs/condition" },
+                "maxLength": { "type": "integer", "minimum": 1, "maximum": 20000 },
+                "minLength": { "enum": [0, 1], "description": "1: obligatorio." },
+                "multiline": { "type": "boolean", "description": "Extensión propia: la pantalla muestra un cuadro de varias líneas." }
+            }
+        },
+        "choice": {
+            "type": "object",
+            "required": ["type", "oneOf"],
+            "additionalProperties": false,
+            "properties": {
+                "type": { "const": "string" },
+                "title": { "$ref": "#/$defs/title" },
+                "errorMessage": { "$ref": "#/$defs/errorMessage" },
+                "keep_if": { "$ref": "#/$defs/condition" },
+                "oneOf": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "object",
+                        "required": ["const", "title"],
+                        "additionalProperties": false,
+                        "properties": { "const": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,40}$" }, "title": { "type": "string", "maxLength": 120 } }
+                    }
+                }
+            }
+        },
+        "number": {
+            "type": "object",
+            "required": ["type"],
+            "additionalProperties": false,
+            "description": "Se guarda como texto con número («2», «1,5»).",
+            "properties": {
+                "type": { "const": "number" },
+                "title": { "$ref": "#/$defs/title" },
+                "errorMessage": { "$ref": "#/$defs/errorMessage" },
+                "keep_if": { "$ref": "#/$defs/condition" },
+                "maximum": { "type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1000000000 },
+                "multipleOf": { "enum": [1, 0.1, 0.01, 0.001, 0.0001, 0.00001, 0.000001] }
+            }
+        },
+        "object": {
+            "type": "object",
+            "required": ["type", "properties"],
+            "additionalProperties": false,
+            "properties": {
+                "type": { "const": "object" },
+                "title": { "$ref": "#/$defs/title" },
+                "errorMessage": { "$ref": "#/$defs/errorMessage" },
+                "keep_if": { "$ref": "#/$defs/condition" },
+                "properties": { "$ref": "#/$defs/values" }
+            }
+        },
+        "array": {
+            "type": "object",
+            "required": ["type", "items"],
+            "additionalProperties": false,
+            "properties": {
+                "type": { "const": "array" },
+                "title": { "$ref": "#/$defs/title" },
+                "errorMessage": { "$ref": "#/$defs/errorMessage" },
+                "keep_if": { "$ref": "#/$defs/condition" },
+                "minItems": { "type": "integer", "minimum": 0, "maximum": 100 },
+                "maxItems": { "type": "integer", "minimum": 1, "maximum": 100 },
+                "initial": { "type": "integer", "minimum": 0, "maximum": 100, "description": "Extensión propia: cuántos elementos tiene al empezar." },
+                "items": { "$ref": "#/$defs/value" }
+            }
+        },
+        "value": {
+            "anyOf": [
+                { "$ref": "#/$defs/text" },
+                { "$ref": "#/$defs/choice" },
+                { "$ref": "#/$defs/number" },
+                { "$ref": "#/$defs/object" },
+                { "$ref": "#/$defs/array" }
+            ]
+        },
+        "values": {
+            "type": "object",
+            "propertyNames": { "pattern": "^[a-z][a-z0-9_]{0,40}$" },
+            "additionalProperties": { "$ref": "#/$defs/value" }
+        },
+        "target": {
+            "anyOf": [
+                { "type": "number" },
+                { "type": "object", "required": ["variable"], "additionalProperties": false, "properties": { "variable": { "type": "string" } } },
+                { "type": "object", "required": ["count"], "additionalProperties": false, "properties": { "count": { "type": "string", "description": "Cantidad de elementos de una lista del valor." } } }
+            ]
+        },
+        "check": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "label": { "type": "string", "maxLength": 60 },
+                "count": { "type": "string" },
+                "filled": { "type": "string" },
+                "sum": { "type": "string" },
+                "equals": { "$ref": "#/$defs/target" },
+                "max": { "$ref": "#/$defs/target" },
+                "min": { "$ref": "#/$defs/target" }
+            }
+        },
+        "rule": {
+            "type": "object",
+            "required": ["code", "on", "message", "checks"],
+            "additionalProperties": false,
+            "properties": {
+                "code": { "type": "string" },
+                "on": { "enum": ["save", "submit"], "description": "save: rechaza el guardado. submit: impide enviar el sílabo." },
+                "message": { "type": "string" },
+                "hint": { "type": "string" },
+                "checks": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/check" } }
+            }
+        },
+        "block": {
+            "type": "object",
+            "required": ["label"],
+            "additionalProperties": false,
+            "properties": {
+                "label": { "type": "string", "maxLength": 120 },
+                "props": {
+                    "type": "object",
+                    "description": "Textos que fija la plantilla en cada aparición del bloque.",
+                    "propertyNames": { "pattern": "^[a-z][a-z0-9_]{0,40}$" },
+                    "additionalProperties": { "$ref": "#/$defs/text" }
+                },
+                "value": { "$ref": "#/$defs/values" },
+                "rules": { "type": "array", "items": { "$ref": "#/$defs/rule" } },
+                "layout": { "$ref": "#/$defs/html" },
+                "catalog": {
+                    "type": "object",
+                    "description": "Llena las filas de una lista del bloque con libros del catálogo de la biblioteca: «list» es la lista y «map» dice qué dato del libro va a cada columna de texto.",
+                    "required": ["list", "map"],
+                    "additionalProperties": false,
+                    "properties": {
+                        "list": { "$ref": "#/$defs/key" },
+                        "map": {
+                            "type": "object",
+                            "minProperties": 1,
+                            "propertyNames": { "enum": ["author", "title", "year", "place", "publisher", "isbn", "call_number", "format"] },
+                            "additionalProperties": { "$ref": "#/$defs/key" }
+                        }
+                    }
+                }
+            }
+        },
+        "preset": {
+            "type": "object",
+            "required": ["key", "label", "field"],
+            "properties": {
+                "key": { "$ref": "#/$defs/key" },
+                "label": { "type": "string", "maxLength": 120 },
+                "field": { "$ref": "#/$defs/key" }
+            }
+        },
+        "field": {
+            "type": "object",
+            "required": ["key", "quien_llena", "content"],
+            "additionalProperties": false,
+            "properties": {
+                "key": { "$ref": "#/$defs/key" },
+                "label": { "type": ["string", "null"], "maxLength": 180 },
+                "quien_llena": { "enum": ["carrera", "institucional"] },
+                "content": { "$ref": "#/$defs/html" },
+                "show_if": {
+                    "type": ["object", "null"],
+                    "description": "Mostrar el campo solo si una respuesta anterior de elegir una o varias tiene alguna de estas opciones.",
+                    "required": ["response", "options"],
+                    "additionalProperties": false,
+                    "properties": {
+                        "response": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,40}$" },
+                        "options": { "type": "array", "minItems": 1, "maxItems": 50, "items": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,40}$" } }
+                    }
+                },
+                "max_length": {
+                    "type": ["integer", "null"],
+                    "minimum": 1,
+                    "maximum": 50000,
+                    "description": "Límite de caracteres que el docente puede escribir en el campo: su texto libre y sus respuestas de texto. Solo en campos «carrera»."
+                }
+            }
+        },
+        "section": {
+            "type": "object",
+            "required": ["key", "title"],
+            "additionalProperties": false,
+            "properties": {
+                "key": { "$ref": "#/$defs/key" },
+                "title": { "type": "string", "maxLength": 180 },
+                "orientation": { "enum": ["portrait", "landscape"] },
+                "fields": { "type": "array", "maxItems": 60, "items": { "$ref": "#/$defs/field" } }
+            }
+        }
+    }
+}

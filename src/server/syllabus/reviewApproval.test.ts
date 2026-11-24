@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it } from "vitest"
 import golden from "../laravel/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import { canonicalHash } from "../documents/canonicalJson"
-import type { AuditEventInput } from "../operations/recordAuditEvent"
 import { SignatureRejected } from "../signatures/cmsVerifier"
 import type { SignatureRow } from "../signatures/signDecision"
 import { approveReview, type ReviewApprovalDeps } from "./reviewApproval"
@@ -16,7 +15,6 @@ const APPROVED = '{"message":"S\\u00edlabo firmado y aprobado."}'
 const CAREER = "c0000000-0000-4000-8000-000000000001"
 const SYLLABUS = "01a2094b-56da-719b-a847-c1c9a1aa0584"
 const REVISION = "70000000-0000-4000-8000-000000000001"
-const TEACHER = "a1000000-0000-4000-8000-000000000001"
 const FINGERPRINT = "cd".repeat(32)
 const STATEMENT = `silabos-ueb|silabo:${SYLLABUS}|accion:aprobacion_coordinacion|huella:${FINGERPRINT}`
 const KEY = "4f3c2b1a-0d9e-4c8b-a7f6-e5d4c3b2a190"
@@ -32,13 +30,11 @@ let lockedBlock: string | null
 let locked: { id: string; state: string; version: number; convocationId: string; parallelId: string } | null
 let latest: string | null
 let stage: string | null
-let submitter: string
 let review: string | null
 let approved: boolean
 let signedRoles: string[]
 let log: string[]
 let signatures: SignatureRow[]
-let audits: AuditEventInput[]
 let reviews: { id: string; revisionId: string; reviewerId: string; at: number }[]
 let approvals: { id: string; revisionId: string; key: string; fingerprint: string; approverId: string; at: number }[]
 let artifacts: { id: string; revisionId: string; key: string; requestedBy: string; requestedAt: number }[]
@@ -60,12 +56,11 @@ function deps(): ReviewApprovalDeps {
       return { holder: "MARIA JOSE PEREZ LOPEZ", serial: "0C", issuer: "C=EC, CN=AUTORIDAD", validTo: NOW + 1000 }
     },
     renderable: async () => renderable,
-    rendererVersion: () => "phpword-docx-v4+text-pdf-v2",
     now: () => NOW,
     newId: () => `0a000000-0000-7000-8000-${String(++ids).padStart(12, "0")}`,
     newKey: () => KEY,
     async transaction(work) {
-      const staged = { signatures: [] as SignatureRow[], audits: [] as AuditEventInput[], reviews: [] as typeof reviews, approvals: [] as typeof approvals, artifacts: [] as typeof artifacts, dispatched: [] as string[], log: [] as string[] }
+      const staged = { signatures: [] as SignatureRow[], reviews: [] as typeof reviews, approvals: [] as typeof approvals, artifacts: [] as typeof artifacts, dispatched: [] as string[], log: [] as string[] }
       const result = await work({
         lockedDecisionBlock: async () => {
           staged.log.push("lock:process+convocation")
@@ -78,7 +73,6 @@ function deps(): ReviewApprovalDeps {
         approvalExists: async () => approved,
         latestRevisionId: async () => latest,
         revisionStage: async () => stage,
-        submitterId: async () => submitter,
         coordinationReviewId: async () => review,
         insertCoordinationReview: async (row) => void staged.reviews.push(row),
         insertApproval: async (row) => void staged.approvals.push(row),
@@ -88,7 +82,6 @@ function deps(): ReviewApprovalDeps {
           staged.signatures.push(row)
           return "f0000000-0000-4000-8000-000000000001"
         },
-        recordAudit: async (event) => void staged.audits.push(event),
         exports: {
           existingArtifact: async (revisionId, key) => {
             const row = [...artifacts, ...staged.artifacts].find((item) => item.revisionId === revisionId && item.key === key)
@@ -99,11 +92,9 @@ function deps(): ReviewApprovalDeps {
           approved: async (id) => staged.approvals.some((row) => row.revisionId === id),
           insertArtifact: async (row) => void staged.artifacts.push(row),
           dispatchExport: (id) => void staged.dispatched.push(id),
-          recordAudit: async (event) => void staged.audits.push(event),
         },
       })
       signatures.push(...staged.signatures)
-      audits.push(...staged.audits)
       reviews.push(...staged.reviews)
       approvals.push(...staged.approvals)
       artifacts.push(...staged.artifacts)
@@ -123,7 +114,6 @@ async function approve(body: unknown, headers: Record<string, string> = { "conte
 }
 
 const signature = (statement = STATEMENT, cms = "firma-valida") => ({ signature: { statement, cms } })
-const actions = () => audits.map((event) => event.action)
 
 beforeEach(() => {
   forwarded = []
@@ -160,13 +150,11 @@ beforeEach(() => {
   locked = { id: SYLLABUS, state: "en_revision", version: 7, convocationId: syllabus.convocationId, parallelId: "d0000000-0000-4000-8000-000000000001" }
   latest = REVISION
   stage = "coordinacion"
-  submitter = TEACHER
   review = null
   approved = false
   signedRoles = ["docente", "biblioteca"]
   log = []
   signatures = []
-  audits = []
   reviews = []
   approvals = []
   artifacts = []
@@ -182,37 +170,24 @@ describe("POST coordination/reviews/{revision}/approve", () => {
     expect(reviews).toEqual([{ id: "0a000000-0000-7000-8000-000000000001", revisionId: REVISION, reviewerId: golden.userId, at: NOW }])
     const fingerprint = canonicalHash({ revision_id: REVISION, revision_fingerprint: FINGERPRINT, approved_by: golden.userId, approved_at: ISO_NOW, idempotency_key: KEY })
     expect(approvals).toEqual([{ id: "0a000000-0000-7000-8000-000000000002", revisionId: REVISION, key: KEY, fingerprint, approverId: golden.userId, at: NOW }])
-    expect(actions()).toEqual(["silabo.firmado", "silabo.revisado_coordinacion", "silabo.aprobado", "documento.exportacion_solicitada"])
-    expect(audits[1]).toMatchObject({ resourceType: "revision_coordinacion", resourceId: reviews[0].id, metadata: { revision_number: 2 }, roleAssignmentId: golden.roleId })
-    expect(audits[2]).toEqual({
-      actorId: golden.userId,
-      roleAssignmentId: golden.roleId,
-      action: "silabo.aprobado",
-      resourceType: "aprobacion",
-      resourceId: approvals[0].id,
-      result: "exito",
-      metadata: { revision_number: 2, from_state: "en_revision", to_state: "aprobado", fingerprint, self_approved: false },
-      occurredAt: NOW,
-    })
     expect(artifacts).toEqual([{ id: "0a000000-0000-7000-8000-000000000003", revisionId: REVISION, key: approvals[0].id, requestedBy: golden.userId, requestedAt: NOW }])
-    expect(audits[3]).toMatchObject({ resourceId: artifacts[0].id, metadata: { revision_number: 2, renderer_version: "phpword-docx-v4+text-pdf-v2" } })
     expect(dispatched).toEqual([artifacts[0].id])
   })
 
   it("is idempotent once the revision is approved", async () => {
     approved = true
     expect(await approve(signature("otra", "x"))).toEqual({ status: 200, text: APPROVED })
-    expect([signatures, reviews, approvals, artifacts, audits, dispatched]).toEqual([[], [], [], [], [], []])
+    expect([signatures, reviews, approvals, artifacts, dispatched]).toEqual([[], [], [], [], []])
   })
 
-  it("keeps an existing coordination review and marks a self approval", async () => {
+  it("keeps an existing coordination review and its signature when coordination approves its own submission", async () => {
     review = "0e000000-0000-4000-8000-000000000001"
-    submitter = golden.userId
     signedRoles = ["docente", "biblioteca", "coordinacion"]
     expect(await approve({})).toEqual({ status: 200, text: APPROVED })
     expect(reviews).toEqual([])
-    expect(actions()).toEqual(["silabo.aprobado", "documento.exportacion_solicitada"])
-    expect(audits[0].metadata.self_approved).toBe(true)
+    expect(signatures).toEqual([])
+    expect(approvals.map((row) => row.approverId)).toEqual([golden.userId])
+    expect(artifacts.map((row) => row.key)).toEqual([approvals[0].id])
   })
 
   it("asks for the coordination signature and rejects a statement for another decision", async () => {
@@ -224,7 +199,7 @@ describe("POST coordination/reviews/{revision}/approve", () => {
       status: 422,
       text: '{"message":"La declaraci\\u00f3n firmada no corresponde. Vuelva a firmar.","errors":{"signature":["La declaraci\\u00f3n firmada no corresponde. Vuelva a firmar."]}}',
     })
-    expect([signatures, reviews, approvals, artifacts, audits, dispatched]).toEqual([[], [], [], [], [], []])
+    expect([signatures, reviews, approvals, artifacts, dispatched]).toEqual([[], [], [], [], []])
   })
 
   it("validates the signature shape like Laravel", async () => {

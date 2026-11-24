@@ -6,7 +6,7 @@ import golden from "../__fixtures__/laravel-word-golden.json"
 import type { PhpRecord } from "../../configuration/phpValues"
 import { NeedsLaravel } from "../../syllabus/snapshotDocuments"
 import textGolden from "../__fixtures__/laravel-text-pdf-golden.json"
-import { renderDocx, rendererVersion, renderSyllabusDocuments, rendersInNext, validateBundle, type DocumentBundle, type DocumentRenderInput } from "../syllabusRenderer"
+import { renderDocx, renderSyllabusDocuments, rendersInNext, validateBundle, type DocumentBundle, type DocumentRenderInput } from "../syllabusRenderer"
 import { imageInfo, InvalidImage } from "./imageInfo"
 import { columnWidths } from "./tableGrid"
 
@@ -115,7 +115,6 @@ describe("Word document like PhpWordDocumentRenderer", () => {
     expect(bundle.pdf.bytes.toString("base64")).toBe(textGolden.cases[0].pdf)
     expect(bundle.pdf.reproducible).toBe(true)
     expect(bundle.docx.bytes.equals(await renderDocx(inputOf(plantilla), noLogos))).toBe(true)
-    expect([rendererVersion(true), rendererVersion(false)]).toEqual(["phpword-docx-v4+libreoffice-pdf-v1", "phpword-docx-v4+text-pdf-v2"])
   })
 })
 

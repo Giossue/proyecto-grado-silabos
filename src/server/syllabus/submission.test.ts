@@ -4,7 +4,6 @@ import golden from "../laravel/__fixtures__/laravel-golden.json"
 import signatures from "../signatures/__fixtures__/laravel-signatures-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import { fakeNotificationTransaction, notificationWorld, recipient, type NotificationWorld } from "../notifications/testing"
-import type { AuditEventInput } from "../operations/recordAuditEvent"
 import { canonicalHash } from "../documents/canonicalJson"
 import type { SignatureRow } from "../signatures/signDecision"
 import { NeedsLaravel } from "./snapshotDocuments"
@@ -40,7 +39,6 @@ let log: string[]
 let revisions: RevisionRow[]
 let submissions: LibrarySubmissionRow[]
 let stored: SignatureRow[]
-let audits: AuditEventInput[]
 
 function deps(): SubmissionDeps {
   return {
@@ -54,7 +52,7 @@ function deps(): SubmissionDeps {
       userName: async () => "Ana María Pérez López",
       async transaction(work) {
         log.push("begin")
-        const staged = { revisions: [] as RevisionRow[], submissions: [] as LibrarySubmissionRow[], stored: [] as SignatureRow[], audits: [] as AuditEventInput[] }
+        const staged = { revisions: [] as RevisionRow[], submissions: [] as LibrarySubmissionRow[], stored: [] as SignatureRow[] }
         const result = await fakeNotificationTransaction(notices, NOW, (notifications) =>
           work({
             notifications,
@@ -75,13 +73,11 @@ function deps(): SubmissionDeps {
               staged.stored.push(row)
               return "f0000000-0000-4000-8000-000000000001"
             },
-            recordAudit: async (event) => void staged.audits.push(event),
           }),
         )
         revisions.push(...staged.revisions)
         submissions.push(...staged.submissions)
         stored.push(...staged.stored)
-        audits.push(...staged.audits)
         log.push("commit")
         return result
       },
@@ -158,7 +154,6 @@ beforeEach(() => {
   revisions = []
   submissions = []
   stored = []
-  audits = []
 })
 
 describe("POST teacher/syllabi/{s}/signing-statement", () => {
@@ -250,25 +245,13 @@ describe("POST teacher/syllabi/{s}/submit", () => {
     expect(revisions).toEqual([])
   })
 
-  it("sends the first revision: snapshot, fingerprint, signature, library submission, state, audit and notice", async () => {
+  it("sends the first revision: snapshot, fingerprint, signature, library submission, state and notice", async () => {
     signedRoles = ["docente"]
     const response = await submit({ version_bloqueo: 7, idempotency_key: KEY })
     expect(response).toMatchObject({ status: 200, json: { message: "Revisión 1 enviada.", syllabus: { id: SYLLABUS, state: "en_revision" } } })
     expect(revisions).toEqual([{ id: NEW_ID, syllabusId: SYLLABUS, previousId: null, number: 1, key: KEY, version: 7, snapshot: SNAPSHOT, fingerprint: FINGERPRINT, submittedBy: golden.userId, submittedAt: NOW }])
     expect(submissions).toEqual([{ revisionId: NEW_ID, verifiedBy: null, verifiedAt: null, inherited: false }])
     expect(log).toEqual(["validate", "begin", `lock:${SYLLABUS}`, `submitted:${SYLLABUS}:8:${NOW}`, "commit"])
-    expect(audits).toEqual([
-      {
-        actorId: golden.userId,
-        roleAssignmentId: golden.roleId,
-        action: "silabo.enviado",
-        resourceType: "revision_silabo",
-        resourceId: NEW_ID,
-        result: "exito",
-        metadata: { revision_number: 1, from_state: "borrador", to_state: "en_revision", fingerprint: FINGERPRINT },
-        occurredAt: NOW,
-      },
-    ])
     expect(notices.notifications.map((row) => [row.userId, row.key, row.title])).toEqual([[LIBRARIAN, `flujo:silabo.enviado:${NEW_ID}`, "Sílabo enviado"]])
   })
 
@@ -281,7 +264,6 @@ describe("POST teacher/syllabi/{s}/submit", () => {
     await submit({ version_bloqueo: 7, idempotency_key: KEY })
     expect(revisions[0]).toMatchObject({ previousId: PREVIOUS, number: 3 })
     expect(submissions).toEqual([{ revisionId: NEW_ID, verifiedBy: VERIFIER, verifiedAt: NOW - 100, inherited: true }])
-    expect(audits.map((event) => [event.action, event.metadata.from_state])).toEqual([["silabo.reenviado", "correccion_solicitada"]])
     expect(notices.notifications).toEqual([])
   })
 

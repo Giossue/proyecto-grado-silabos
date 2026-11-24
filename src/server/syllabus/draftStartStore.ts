@@ -4,7 +4,6 @@ import { db } from "@/db"
 import { phpJsonEncode } from "../laravel/phpJson"
 import { uuidList } from "../laravel/sql"
 import { uuid7 } from "../laravel/uuid7"
-import { insertAuditEvent } from "../operations/recordAuditEvent"
 import { phpJsonDecode, phpShape } from "../configuration/phpValues"
 import { createTemplateStore } from "../configuration/templateStore"
 import type { DraftStartTx } from "./draftStart"
@@ -65,9 +64,6 @@ export function draftStartTx(executor: Executor): DraftStartTx {
     async copied(syllabusId, version, now) {
       await executor.execute(sql`update silabos set estado_silabo = 'borrador', iniciado_en = coalesce(iniciado_en, to_timestamp(${now})),
         guardado_en = to_timestamp(${now}), version_borrador = ${version} where silabo_id = ${syllabusId}::uuid`)
-    },
-    async recordAudit(event) {
-      await insertAuditEvent(executor, event)
     },
   }
 }

@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it } from "vitest"
 import golden from "../laravel/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import { phpJsonEncode } from "../laravel/phpJson"
-import type { AuditEventInput } from "../operations/recordAuditEvent"
 import {
   convocationDetail,
   convocations,
@@ -31,7 +30,6 @@ let record: ConvocationRecord | null
 let lockedState: string | null
 let syllabi: ConvocationSyllabus[]
 let log: string[]
-let audits: AuditEventInput[]
 
 const repository = (): ConvocationRepository => ({
   async page(filters, page) {
@@ -55,16 +53,11 @@ const repository = (): ConvocationRepository => ({
         updateState: async (id, state) => {
           log.push(`state:${id}:${state}`)
         },
-        recordAudit: async (event) => {
-          log.push("audit")
-          audits.push(event)
-        },
       })
       log.push("commit")
       return result
     } catch (error) {
       log.push("rollback")
-      audits = []
       throw error
     }
   },
@@ -107,7 +100,6 @@ beforeEach(() => {
   lockedState = "abierta"
   syllabi = []
   log = []
-  audits = []
 })
 
 describe("GET /api/v1/coordination/convocations", () => {
@@ -177,14 +169,11 @@ describe("GET /api/v1/coordination/convocations/{convocation}", () => {
 describe("POST /api/v1/coordination/convocations/{convocation}/pausar", () => {
   const pause = (id = CONVOCATION) => send((request) => pauseConvocation(request, id, deps()), `/api/v1/coordination/convocations/${id}/pausar`, "POST")
 
-  it("pauses an open convocation under a row lock and audits it", async () => {
+  it("pauses an open convocation under a row lock", async () => {
     const { status, text } = await pause()
     expect(status).toBe(200)
     expect(text).toBe(phpJsonEncode({ message: "Convocatoria en pausa. Los docentes de la carrera no editan ni envían; la malla queda editable." }))
-    expect(log).toEqual(["begin", `lock:${CONVOCATION}`, `state:${CONVOCATION}:pausada`, "audit", "commit"])
-    expect(audits).toEqual([
-      { actorId: golden.userId, roleAssignmentId: golden.roleId, action: "convocatoria.pausada", resourceType: "convocatoria", resourceId: CONVOCATION, result: "exito", metadata: {}, occurredAt: NOW },
-    ])
+    expect(log).toEqual(["begin", `lock:${CONVOCATION}`, `state:${CONVOCATION}:pausada`, "commit"])
   })
 
   it("forbids pausing a convocation that is not open or belongs to another career", async () => {

@@ -4,10 +4,9 @@ import type { BridgeDeps } from "../auth/types"
 import { laravelInput, type PhpArray } from "../laravel/input"
 import { laravelJson, validationError } from "../laravel/responses"
 import { validateInput, type Rule } from "../laravel/validation"
-import type { AuditEventInput } from "../operations/recordAuditEvent"
 import { laravelBoolean } from "../syllabus/inProgressWork"
 import { Missing, settle } from "../syllabus/reviewDecisions"
-import { careerAudit, careerSession, invalid, notJson, type CareerContext } from "./careerWrites"
+import { careerSession, invalid, notJson, type CareerContext } from "./careerWrites"
 import { createCurriculumDeps } from "./careerWriteStore"
 import { phpIntCast } from "./governanceWrites"
 import { CONVOCATION_LOCK_REASON } from "./structure"
@@ -34,12 +33,10 @@ export interface CurriculumTx {
   setPosition(subjectId: string, position: number): Promise<void>
   sync(confirmed: boolean, careerId: string): Promise<void>
   guard<T>(confirmed: boolean, careerId: string, change: () => Promise<T>): Promise<T>
-  recordAudit(event: AuditEventInput): Promise<void>
 }
 
 export type CurriculumDeps = {
   bridge: BridgeDeps
-  now: () => number
   careerActive(careerId: string): Promise<boolean>
   transaction<T>(work: (tx: CurriculumTx) => Promise<T>): Promise<T>
 }
@@ -48,7 +45,7 @@ export function defaultCurriculumDeps(): CurriculumDeps {
   return { bridge: defaultBridgeDeps(), ...createCurriculumDeps() }
 }
 
-type Mutation = (tx: CurriculumTx, career: CurriculumCareer, context: CareerContext, input: PhpArray, audit: (action: string, type: string, id: string, metadata: AuditEventInput["metadata"]) => Promise<void>) => Promise<string>
+type Mutation = (tx: CurriculumTx, career: CurriculumCareer, context: CareerContext, input: PhpArray) => Promise<string>
 
 async function curriculumChange(
   request: Request,
@@ -67,7 +64,7 @@ async function curriculumChange(
   const errors = await validateInput(input, rules(input), labels)
   if (Object.keys(errors).length > 0) return validationError(errors)
   return settle(original, deps, async () => {
-    const message = await deps.transaction((tx) => curriculumMutation(tx, context, deps.now, ids[0], input, mutate))
+    const message = await deps.transaction((tx) => curriculumMutation(tx, context, ids[0], input, mutate))
     return laravelJson({ message })
   })
 }
@@ -83,12 +80,11 @@ export function updateCurriculumConfiguration(request: Request, curriculumId: st
     deps,
     () => ({ cycle_count: ["required", "integer", { min: 1 }, { max: 30 }] }),
     { cycle_count: "cantidad de ciclos" },
-    async (tx, career, context, input, audit) => {
+    async (tx, career, context, input) => {
       const cycleCount = phpIntCast(input.cycle_count)
       const lastUsed = (await tx.maxCycle(career.id)) ?? 0
       if (lastUsed > cycleCount) throw invalid("cycle_count", `Existen materias en el ciclo ${lastUsed}. Muévalas antes de reducir la malla.`)
       await tx.updateCycleCount(career.id, cycleCount)
-      await audit("academico.carrera.plan_curricular_actualizado", "carrera", career.id, { before_cycle_count: career.cycleCount, after_cycle_count: cycleCount })
       await confirmedSync(tx, context, input)
       return "Configuración de la malla actualizada."
     },
@@ -108,13 +104,7 @@ function createsCycle(relations: { subjectId: string; requirementId: string }[],
   return false
 }
 
-export async function addRequirement(
-  tx: CurriculumTx,
-  career: CurriculumCareer,
-  context: CareerContext,
-  input: PhpArray,
-  audit: (action: string, type: string, id: string, metadata: AuditEventInput["metadata"]) => Promise<void>,
-): Promise<string> {
+export async function addRequirement(tx: CurriculumTx, career: CurriculumCareer, context: CareerContext, input: PhpArray): Promise<string> {
   const subjectId = input.subject_id as string
   const requirementId = input.requirement_id as string
   const type = input.type as string
@@ -131,18 +121,17 @@ export async function addRequirement(
   const existing = await tx.findRequirement(subjectId, requirementId)
   if (existing !== null && existing.type !== type) throw invalid("requirement_id", "Esa materia ya está registrada con otro tipo de requisito.")
   if (existing !== null) return message
-  const id = await tx.insertRequirement(subjectId, requirementId, type)
-  await audit("academico.requisito_asignatura.creacion", "requisito_asignatura", id, { career_id: career.id, subject_id: subjectId, requirement_id: requirementId, type })
+  await tx.insertRequirement(subjectId, requirementId, type)
   await confirmedSync(tx, context, input)
   return message
 }
 
-export async function curriculumMutation(tx: CurriculumTx, context: CareerContext, now: () => number, curriculumId: string, input: PhpArray, mutate: Mutation): Promise<string> {
+export async function curriculumMutation(tx: CurriculumTx, context: CareerContext, curriculumId: string, input: PhpArray, mutate: Mutation): Promise<string> {
   return tx.guard(laravelBoolean(input.confirm_purge), context.careerId, async () => {
     if (await tx.careerLocked(context.careerId)) throw invalid("process", CONVOCATION_LOCK_REASON)
     const career = await tx.lockCareer(context.careerId, curriculumId)
     if (career === null) throw new Missing()
-    return mutate(tx, career, context, input, (action, type, id, metadata) => tx.recordAudit(careerAudit(context, now(), action, type, id, metadata)))
+    return mutate(tx, career, context, input)
   })
 }
 
@@ -166,18 +155,17 @@ export function createSubjectRequirement(request: Request, curriculumId: string,
 }
 
 export function deleteSubjectRequirement(request: Request, curriculumId: string, requirementId: string, deps: CurriculumDeps = defaultCurriculumDeps()): Promise<Response> {
-  return curriculumChange(request, [curriculumId, requirementId], deps, () => ({}), {}, async (tx, career, context, input, audit) => {
+  return curriculumChange(request, [curriculumId, requirementId], deps, () => ({}), {}, async (tx, career, context, input) => {
     const requirement = await tx.lockRequirement(requirementId, career.id)
     if (requirement === null) throw new Missing()
     await tx.deleteRequirement(requirement.id)
-    await audit("academico.requisito_asignatura.eliminacion", "requisito_asignatura", requirementId, { career_id: career.id, type: requirement.type })
     await confirmedSync(tx, context, input)
     return "Relación académica eliminada."
   })
 }
 
 export function deleteCurriculumSubject(request: Request, curriculumId: string, subjectId: string, deps: CurriculumDeps = defaultCurriculumDeps()): Promise<Response> {
-  return curriculumChange(request, [curriculumId, subjectId], deps, () => ({}), {}, async (tx, career, context, input, audit) => {
+  return curriculumChange(request, [curriculumId, subjectId], deps, () => ({}), {}, async (tx, career, context, input) => {
     const subject = await tx.lockSubject(subjectId, career.id)
     if (subject === null) throw new Missing()
     const { parallels, syllabi } = await tx.subjectUsage(subject.id)
@@ -191,7 +179,6 @@ export function deleteCurriculumSubject(request: Request, curriculumId: string, 
       )
     }
     await tx.deleteSubject(subject.id)
-    await audit("academico.asignatura.eliminacion", "asignatura", subjectId, { career_id: career.id, code: subject.code, name: subject.name })
     await confirmedSync(tx, context, input)
     return "Materia eliminada de la malla."
   })
@@ -208,7 +195,7 @@ export function updateSubjectLayout(request: Request, curriculumId: string, deps
       position: ["required", "integer", { min: 0 }, { max: 999 }],
     }),
     { subject_id: "materia", cycle: "ciclo", position: "posición" },
-    async (tx, career, context, input, audit) => {
+    async (tx, career, context, input) => {
       const cycle = phpIntCast(input.cycle)
       if (cycle > career.cycleCount) throw invalid("cycle", "El ciclo excede la configuración de la malla.")
       const subject = await tx.lockSubject(input.subject_id as string, career.id)
@@ -223,12 +210,6 @@ export function updateSubjectLayout(request: Request, curriculumId: string, deps
         await tx.setPosition(item.id, index)
         item.position = index
       }
-      await audit("academico.asignatura.posicion_actualizada", "asignatura", subject.id, {
-        before_cycle: subject.cycle,
-        after_cycle: subject.cycle,
-        before_position: subject.position,
-        after_position: moving.position,
-      })
       await confirmedSync(tx, context, input)
       return "Posición de la materia actualizada."
     },

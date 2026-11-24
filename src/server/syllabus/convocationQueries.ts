@@ -3,7 +3,6 @@ import { sql, type SQL } from "drizzle-orm"
 import { db } from "@/db"
 import { careerLabelSql } from "../academic/careerLabel"
 import { accentMatches, institutionDateSql, uuidList } from "../laravel/sql"
-import { insertAuditEvent } from "../operations/recordAuditEvent"
 import type { ConvocationListFilters, ConvocationRepository, ConvocationTx, ProcessListRow } from "./convocations"
 import { teacherNamesOf } from "./coordinationReviewQueries"
 import { careerIs, SYLLABUS_EXISTS } from "./syllabusSql"
@@ -40,9 +39,6 @@ function convocationTx(executor: Executor): ConvocationTx {
     },
     async updateState(id, state) {
       await executor.execute(sql`update convocatorias_carreras set estado_convocatoria_carrera = ${state} where convocatoria_carrera_id = ${id}::uuid`)
-    },
-    async recordAudit(event) {
-      await insertAuditEvent(executor, event)
     },
   }
 }

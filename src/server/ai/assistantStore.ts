@@ -6,7 +6,6 @@ import type { SyllabusTemplate } from "../configuration/templatePresentation"
 import { loadTemplate } from "../configuration/templateStore"
 import { phpJsonEncode } from "../laravel/phpJson"
 import { iso8601, uuidList } from "../laravel/sql"
-import { insertAuditEvent, type AuditEventInput } from "../operations/recordAuditEvent"
 
 export type StoredMessage = { id: string; templateId: string; userId: string; content: PhpRecord; sentAt: string; hiddenAt: string | null }
 
@@ -51,7 +50,6 @@ export interface AssistantTx {
   updateMessage(id: string, content: PhpRecord): Promise<void>
   replacePendingProposals(templateId: string, userId: string): Promise<void>
   insertProposal(proposal: NewProposal): Promise<void>
-  recordAudit(event: AuditEventInput): Promise<void>
 }
 
 export interface AssistantStore {
@@ -185,9 +183,6 @@ export function assistantTx(executor: Executor): AssistantTx {
           estructura_propuesta, cambios_propuesta, huella_plantilla_base, version_borrador_propuesta, estado_propuesta)
         values (${proposal.id}::uuid, ${proposal.templateId}::uuid, ${proposal.messageId}::uuid, ${proposal.requestedBy}::uuid,
           ${jsonbOf(proposal.structure)}, ${jsonbOf(proposal.changes)}, ${proposal.fingerprint}, ${proposal.draftVersion}, 'pendiente')`)
-    },
-    async recordAudit(event) {
-      await insertAuditEvent(executor, event)
     },
   }
 }

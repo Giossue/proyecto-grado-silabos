@@ -5,7 +5,6 @@ import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
 import type { BridgeDeps, LaravelSession } from "../auth/types"
 import { isUuid } from "../academic/structure"
 import { aborted, laravelJson } from "../laravel/responses"
-import type { AuditEventInput } from "../operations/recordAuditEvent"
 import { fieldLimitCount, fieldLimitExceeded } from "../configuration/fieldLimit"
 import { isPhpArray, list, phpTrim, record, type PhpRecord } from "../configuration/phpValues"
 import { clearHidden, shownResponses, syllabusConditions, type Answers } from "../configuration/responseConditions"
@@ -51,7 +50,6 @@ export interface DraftValidationTx {
   values(id: string): Promise<Map<string, unknown>>
   identification(id: string): Promise<IdentificationSource>
   teachers(id: string): Promise<ValidationTeacher[]>
-  recordAudit(event: AuditEventInput): Promise<void>
 }
 
 export interface DraftValidationStore {
@@ -59,13 +57,11 @@ export interface DraftValidationStore {
   transaction<T>(work: (tx: DraftValidationTx) => Promise<T>): Promise<T>
 }
 
-export type DraftValidationDeps = { bridge: BridgeDeps; store: DraftValidationStore; today: () => string; now: () => number }
+export type DraftValidationDeps = { bridge: BridgeDeps; store: DraftValidationStore; today: () => string }
 
 export function defaultDraftValidationDeps(): DraftValidationDeps {
-  return { bridge: defaultBridgeDeps(), store: createDraftValidationStore(), today: institutionToday, now: () => Math.floor(Date.now() / 1000) }
+  return { bridge: defaultBridgeDeps(), store: createDraftValidationStore(), today: institutionToday }
 }
-
-const RULE_VERSION = "field-document-v13"
 
 class Missing extends Error {}
 
@@ -159,7 +155,7 @@ function fieldIssues(
   return [...issues, ...blockIssues(field, stored, variables, definition)]
 }
 
-async function runValidation(tx: DraftValidationTx, session: LaravelSession, syllabusId: string, now: () => number) {
+async function runValidation(tx: DraftValidationTx, session: LaravelSession, syllabusId: string) {
   const locked = await tx.lockSyllabus(syllabusId)
   if (locked === null) throw new Missing()
   const template = await tx.templateStore.template()
@@ -190,16 +186,6 @@ async function runValidation(tx: DraftValidationTx, session: LaravelSession, syl
       })
     }
   }
-  await tx.recordAudit({
-    actorId: session.user.id,
-    roleAssignmentId: session.activeRole?.id ?? null,
-    action: "silabo.validado",
-    resourceType: "silabo",
-    resourceId: locked.id,
-    result: "exito",
-    metadata: { rule_version: RULE_VERSION, blocking_errors: issues.length },
-    occurredAt: now(),
-  })
   return { version: locked.version, issues }
 }
 
@@ -223,7 +209,7 @@ export async function validateDraft(request: Request, syllabusId: string, deps: 
   if (!mayEdit(session, syllabus, deps.today())) return aborted(403)
   let result: Awaited<ReturnType<typeof runValidation>>
   try {
-    result = await deps.store.transaction((tx) => runValidation(tx, session, (syllabus as DraftSyllabus).id, deps.now))
+    result = await deps.store.transaction((tx) => runValidation(tx, session, (syllabus as DraftSyllabus).id))
   } catch (error) {
     if (error instanceof Missing) return deps.bridge.forward(original)
     throw error

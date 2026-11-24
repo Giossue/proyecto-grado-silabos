@@ -2,7 +2,6 @@
 import { beforeEach, describe, expect, it } from "vitest"
 import golden from "../laravel/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
-import type { AuditEventInput } from "../operations/recordAuditEvent"
 import { GenerationRejected } from "../syllabus/inProgressWork"
 import {
   createCareerRecord,
@@ -36,7 +35,6 @@ type Grant = { id: string; userId: string; careerId: string; role: string; activ
 let world: FakeWorld
 let forwarded: Request[]
 let log: string[]
-let audits: AuditEventInput[]
 let subjects: Map<string, SubjectRow & { active: boolean }>
 let parallels: Map<string, ParallelRow & { active: boolean }>
 let assignments: { id: string; parallelId: string; roleId: string }[]
@@ -80,7 +78,6 @@ function subjectRow(id: string, careerId: string, overrides: Partial<SubjectRow[
 function deps(): CareerWriteDeps {
   return {
     bridge: fakeDeps(world, forwarded),
-    now: () => NOW,
     careerActive: async (id) => id === CAREER || id === OTHER_CAREER,
     subjectInCareer: async (id, careerId) => subjects.get(id)?.careerId === careerId,
     activeSubjectInCareer: async (id, careerId) => subjects.get(id)?.careerId === careerId && subjects.get(id)?.active === true,
@@ -93,7 +90,6 @@ function deps(): CareerWriteDeps {
     },
     async transaction(work) {
       log.push("begin")
-      const staged: AuditEventInput[] = []
       try {
         const result = await work({
           careerLocked: async () => locked,
@@ -183,9 +179,7 @@ function deps(): CareerWriteDeps {
             if (purge !== null && !confirmed) throw new GenerationRejected(purge)
             return change()
           },
-          recordAudit: async (event) => void staged.push(event),
         })
-        audits.push(...staged)
         log.push("commit")
         return result
       } catch (error) {
@@ -222,7 +216,6 @@ beforeEach(() => {
   }
   forwarded = []
   log = []
-  audits = []
   sequence = 0
   subjects = new Map([
     [SUBJECT, subjectRow(SUBJECT, CAREER)],
@@ -246,7 +239,7 @@ beforeEach(() => {
 })
 
 describe("POST /api/v1/coordination/academic/asignatura", () => {
-  it("the coordinator creates a subject directly in its career, at the end of its cycle, audited", async () => {
+  it("the coordinator creates a subject directly in its career, at the end of its cycle", async () => {
     const response = await create("asignatura", subjectBody)
     expect(response.status).toBe(200)
     expect(response.text).toBe(CREATED)
@@ -266,9 +259,6 @@ describe("POST /api/v1/coordination/academic/asignatura", () => {
         genera_silabo_asignatura: true,
       })}`,
       "commit",
-    ])
-    expect(audits.map((event) => [event.action, event.resourceType, event.resourceId, event.metadata, event.roleAssignmentId])).toEqual([
-      ["academico.asignatura.creacion", "asignatura", "01a2aaaa-0000-7000-8000-000000000001", {}, golden.roleId],
     ])
   })
 
@@ -296,7 +286,6 @@ describe("POST /api/v1/coordination/academic/asignatura", () => {
     expect(exceeded.status).toBe(422)
     expect(exceeded.json?.errors).toEqual({ cycle: ["El ciclo excede la configuración de esta malla."] })
     expect(log).toEqual(["begin", "rollback"])
-    expect(audits).toEqual([])
   })
 
   it("refuses while a convocation of the career is open and is forbidden for an administrator", async () => {
@@ -323,9 +312,6 @@ describe("POST /api/v1/coordination/academic/asignacion_docente", () => {
     const response = await create("asignacion_docente", { user_id: TEACHER, parallel_id: PARALLEL })
     expect(response.text).toBe(CREATED)
     expect(log).toEqual(["begin", `guard:false:${CAREER}:${SUBJECT}`, `assign:${TEACHER_ROLE}:${PARALLEL}`, `restart:${PARALLEL}`, "commit"])
-    expect(audits.map((event) => [event.action, event.resourceType, event.resourceId, event.metadata])).toEqual([
-      ["academico.asignacion_docente.creacion", "asignacion_docente", "01a2aaaa-0000-7000-8000-000000000001", {}],
-    ])
   })
 
   it("asks before discarding a started syllabus and refuses a parallel that already has a teacher", async () => {
@@ -357,7 +343,6 @@ describe("POST /api/v1/coordination/academic/asignacion_docente", () => {
     expect((await create("asignacion_docente", { user_id: golden.userId, parallel_id: PARALLEL })).json?.errors).toEqual({
       user_id: ["Administración y Biblioteca no pueden tener los roles Docente ni Coordinador."],
     })
-    expect(audits).toEqual([])
   })
 
   it("validates the teacher and the parallel of the career", async () => {
@@ -375,12 +360,11 @@ describe("POST /api/v1/coordination/academic/asignacion_docente", () => {
     finalized = true
     expect((await create("asignacion_docente", { user_id: TEACHER, parallel_id: PARALLEL })).json?.errors).toEqual(FINALIZED)
     expect(log.at(-1)).toBe("rollback")
-    expect(audits).toEqual([])
   })
 })
 
 describe("PATCH /api/v1/coordination/academic/asignatura/{record}", () => {
-  it("updates only what changed, audits before and after and keeps the syllabi content", async () => {
+  it("updates only what changed and keeps the syllabi content", async () => {
     const response = await update("asignatura", SUBJECT, {
       code: "SW-B1-001",
       nombre: "Algoritmos II",
@@ -399,41 +383,16 @@ describe("PATCH /api/v1/coordination/academic/asignatura/{record}", () => {
       `update-subject:${SUBJECT}:${JSON.stringify({ nombre_asignatura: "Algoritmos II", ciclo_asignatura: 2, horas_practicas: "40.5", horas_autonomas: "47.5" })}`,
       "commit",
     ])
-    expect(audits.map((event) => [event.action, event.resourceId, event.metadata])).toEqual([
-      [
-        "academico.asignatura.actualizacion",
-        SUBJECT,
-        {
-          changed_fields: "nombre_asignatura, ciclo_asignatura, Horas PAE, Horas AA, Horas totales",
-          before_nombre_asignatura: "Algoritmos",
-          after_nombre_asignatura: "Algoritmos II",
-          before_ciclo_asignatura: 1,
-          after_ciclo_asignatura: 2,
-          before_horas_pae: "48.00",
-          after_horas_pae: "40.50",
-          before_horas_aa: "48.00",
-          after_horas_aa: "47.50",
-          before_total_hours: 144,
-          after_total_hours: 136,
-        },
-      ],
-    ])
   })
 
-  it("writes nothing and audits nothing when nothing changes, and reports an enum change without its new value", async () => {
+  it("writes nothing when nothing changes and only the changed columns otherwise", async () => {
     const same = { code: "SW-B1-001", nombre: "Algoritmos", cycle: "1", organization_unit: "basica", modality: "Presencial", creditos: 3, horas_ac: "48", horas_pae: "48.00", horas_aa: 48 }
     expect((await update("asignatura", SUBJECT, same)).status).toBe(200)
-    expect(audits).toEqual([])
-    await update("asignatura", SUBJECT, { ...same, organization_unit: "profesional", modality: null, position: 2 })
-    expect(audits[0].metadata).toEqual({
-      changed_fields: "orden_asignatura_en_ciclo, unidad_curricular_asignatura, modalidad_asignatura",
-      before_orden_asignatura_en_ciclo: 0,
-      after_orden_asignatura_en_ciclo: 2,
-      before_unidad_curricular_asignatura: "basica",
-      after_unidad_curricular_asignatura: null,
-      before_modalidad_asignatura: "Presencial",
-      after_modalidad_asignatura: null,
-    })
+    expect(log.filter((line) => line.startsWith("update-subject"))).toEqual([])
+    expect((await update("asignatura", SUBJECT, { ...same, organization_unit: "profesional", modality: null, position: 2 })).status).toBe(200)
+    expect(log.filter((line) => line.startsWith("update-subject"))).toEqual([
+      `update-subject:${SUBJECT}:${JSON.stringify({ orden_asignatura_en_ciclo: 2, unidad_curricular_asignatura: "profesional", modalidad_asignatura: null })}`,
+    ])
   })
 
   it("turning off syllabus generation replaces the subject syllabi after confirming", async () => {
@@ -443,7 +402,6 @@ describe("PATCH /api/v1/coordination/academic/asignatura/{record}", () => {
     log = []
     await update("asignatura", SUBJECT, { ...body, confirm_purge: true })
     expect(log.slice(0, 3)).toEqual(["begin", `guard:true:${CAREER}:null`, `replace:true:${JSON.stringify({ careerIds: CAREER, subjectId: SUBJECT })}`])
-    expect(audits[0].metadata.changed_fields).toContain("Puede generar sílabos")
   })
 
   it("is forbidden for a subject of another career, refuses while the convocation is open and leaves a null position to Laravel", async () => {
@@ -454,12 +412,11 @@ describe("PATCH /api/v1/coordination/academic/asignatura/{record}", () => {
     expect((await update("asignatura", SUBJECT, { ...subjectBody, position: null })).status).toBe(299)
     expect((await update("paralelo", SUBJECT, subjectBody)).status).toBe(404)
     expect(await update("asignatura", "abc", subjectBody)).toMatchObject({ status: 404, text: '{\n    "message": "The route api/v1/coordination/academic/asignatura/abc could not be found."\n}' })
-    expect(audits).toEqual([])
   })
 })
 
 describe("POST /api/v1/coordination/academic/parallels", () => {
-  it("creates every code with the selected teacher and audits both records", async () => {
+  it("creates every code with the selected teacher", async () => {
     const response = await storeParallels({ subject_id: SUBJECT, codes: [" B ", "C", 5, ""], shift: "vespertina", user_id: TEACHER })
     expect(response.json).toEqual({ message: "2 paralelos creados dentro de su carrera." })
     expect(log).toEqual([
@@ -473,12 +430,6 @@ describe("POST /api/v1/coordination/academic/parallels", () => {
       `assign:${TEACHER_ROLE}:01a2aaaa-0000-7000-8000-000000000003`,
       "restart:01a2aaaa-0000-7000-8000-000000000003",
       "commit",
-    ])
-    expect(audits.map((event) => [event.action, event.resourceId, event.metadata])).toEqual([
-      ["academico.paralelo.creacion", "01a2aaaa-0000-7000-8000-000000000001", { bulk: true }],
-      ["academico.asignacion_docente.creacion", "01a2aaaa-0000-7000-8000-000000000002", {}],
-      ["academico.paralelo.creacion", "01a2aaaa-0000-7000-8000-000000000003", { bulk: true }],
-      ["academico.asignacion_docente.creacion", "01a2aaaa-0000-7000-8000-000000000004", {}],
     ])
   })
 
@@ -500,13 +451,12 @@ describe("POST /api/v1/coordination/academic/parallels", () => {
     expect(log).toEqual(["begin", "rollback"])
   })
 
-  it("a teacher of another career rolls back the parallels and their audit", async () => {
+  it("a teacher of another career rolls back the parallels", async () => {
     grants[0].careerId = OTHER_CAREER
     expect((await storeParallels({ subject_id: SUBJECT, codes: ["B", "C"], shift: "matutina", user_id: TEACHER })).json?.errors).toEqual({
       user_id: ["El docente debe verificar su correo antes de recibir una asignación."],
     })
     expect(log.at(-1)).toBe("rollback")
-    expect(audits).toEqual([])
   })
 
   it("only a subject of the coordinator's career receives parallels", async () => {
@@ -519,16 +469,13 @@ describe("POST /api/v1/coordination/academic/parallels", () => {
 })
 
 describe("PATCH /api/v1/coordination/academic/parallels/{parallel}", () => {
-  it("edits code and shift with audit, trimming the code and refusing a code taken in the subject", async () => {
+  it("edits code and shift, trimming the code and refusing a code taken in the subject", async () => {
     parallels.set("01a2dddd-0000-7000-8000-000000000001", { id: "01a2dddd-0000-7000-8000-000000000001", subjectId: SUBJECT, code: "C", shift: "matutina", active: true })
     expect((await editParallel(PARALLEL, { code: "c", shift: "nocturna" })).json?.errors).toEqual({ code: ["Ya existe el paralelo c en esta materia."] })
     expect((await editParallel(PARALLEL, { code: "D", shift: null })).json?.errors).toEqual({ shift: ["El campo jornada es obligatorio."] })
     log = []
     expect((await editParallel(PARALLEL, { code: " D ", shift: "nocturna" })).json).toEqual({ message: "Paralelo actualizado." })
     expect(log).toEqual(["begin", `guard:false:${CAREER}:${SUBJECT}`, `update-parallel:${PARALLEL}:D:nocturna`, `refresh:${PARALLEL}`, "commit"])
-    expect(audits.map((event) => [event.action, event.resourceId, event.metadata])).toEqual([
-      ["academico.paralelo.actualizacion", PARALLEL, { before_code: "A", after_code: "D", before_shift: "matutina", after_shift: "nocturna" }],
-    ])
   })
 
   it("asks before restarting a sent syllabus, restarts it after confirming and writes nothing without changes", async () => {
@@ -544,10 +491,8 @@ describe("PATCH /api/v1/coordination/academic/parallels/{parallel}", () => {
     await editParallel(PARALLEL, { code: "A", shift: "vespertina", confirm_purge: "1" })
     expect(log).toEqual(["begin", `guard:true:${CAREER}:${SUBJECT}`, `update-parallel:${PARALLEL}:A:vespertina`, `restart-sent:${PARALLEL}`, `refresh:${PARALLEL}`, "commit"])
     log = []
-    audits = []
     await editParallel(PARALLEL, { code: "A", shift: "matutina" })
     expect(log).toEqual(["begin", `guard:false:${CAREER}:${SUBJECT}`, "commit"])
-    expect(audits).toEqual([])
   })
 
   it("a parallel of another career or an unknown one is left to Laravel", async () => {
@@ -571,10 +516,6 @@ describe("PUT /api/v1/coordination/academic/parallels/{parallel}/teacher", () =>
       `restart:${PARALLEL}`,
       "commit",
     ])
-    expect(audits.map((event) => [event.action, event.resourceId, event.metadata])).toEqual([
-      ["academico.asignacion_docente.eliminacion", CURRENT_ASSIGNMENT, { name: CURRENT_ASSIGNMENT }],
-      ["academico.asignacion_docente.creacion", "01a2aaaa-0000-7000-8000-000000000001", {}],
-    ])
   })
 
   it("warns first when the syllabus was started or a finalized process is reached, leaving the assignment as it was", async () => {
@@ -586,7 +527,6 @@ describe("PUT /api/v1/coordination/academic/parallels/{parallel}/teacher", () =>
     assignments = [{ id: CURRENT_ASSIGNMENT, parallelId: PARALLEL, roleId: TEACHER_ROLE }]
     finalized = true
     expect((await replaceTeacher(PARALLEL, { user_id: TEACHER })).json?.errors).toEqual(FINALIZED)
-    expect(audits).toEqual([])
   })
 
   it("validates the teacher with its own label and leaves a foreign parallel to Laravel", async () => {

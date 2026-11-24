@@ -4,7 +4,6 @@ import { db } from "@/db"
 import { institutionDateSql } from "../laravel/sql"
 import { phpJsonEncode } from "../laravel/phpJson"
 import { phpShape } from "../configuration/phpValues"
-import { insertAuditEvent } from "../operations/recordAuditEvent"
 import { phpJsonDecode } from "../configuration/phpValues"
 import { createTemplateStore } from "../configuration/templateStore"
 import type { DraftFieldRecord, DraftFieldStore, DraftFieldTx, DraftSyllabus } from "./draftField"
@@ -111,9 +110,6 @@ function draftTx(executor: Executor): DraftFieldTx {
     },
     async saveDraft(syllabusId, version, savedAt) {
       await executor.execute(sql`update silabos set version_borrador = ${version}, guardado_en = to_timestamp(${savedAt}) where silabo_id = ${syllabusId}::uuid`)
-    },
-    async recordAudit(event) {
-      await insertAuditEvent(executor, event)
     },
   }
 }

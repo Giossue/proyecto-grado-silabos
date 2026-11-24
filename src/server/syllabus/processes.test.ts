@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it } from "vitest"
 import golden from "../laravel/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import { phpJsonEncode } from "../laravel/phpJson"
-import type { AuditEventInput } from "../operations/recordAuditEvent"
 import { fakeTemplateStore, goldenTemplate, type FakeTemplateWorld } from "../configuration/testing"
 import { createProcess, pauseProcess, processImpact, syllabusProcesses, type ProcessDeps, type ProcessRow } from "./processes"
 
@@ -22,7 +21,6 @@ let forwarded: Request[]
 let rows: ProcessRow[]
 let lockedState: string | null
 let log: string[]
-let audits: AuditEventInput[]
 let today: string
 let hasFields: boolean
 let periodEnds: Map<string, string>
@@ -74,10 +72,6 @@ function deps(): ProcessDeps {
             pause: async (id) => {
               log.push(`pause:${id}`)
             },
-            recordAudit: async (event) => {
-              log.push("audit")
-              audits.push(event)
-            },
             lockInProgress: async () => {
               log.push("lock:in-progress")
               return inProgress
@@ -118,7 +112,6 @@ beforeEach(() => {
   rows = [process(), process({ id: CLOSED, state: "cerrado", period: "2026-1", startsOn: "2026-04-01", dueOn: "2026-05-01", periodEndsOn: "2026-08-30", extensions: 1, convocationsCount: 0 })]
   lockedState = "abierto"
   log = []
-  audits = []
   today = "2026-11-23"
   hasFields = true
   periodEnds = new Map([[PERIOD, "2027-03-12"]])
@@ -220,14 +213,11 @@ describe("GET /api/v1/admin/processes/{process}/impact", () => {
 describe("POST /api/v1/admin/processes/{process}/pausar", () => {
   const pause = (body?: unknown) => send((request) => pauseProcess(request, PROCESS, deps()), `/api/v1/admin/processes/${PROCESS}/pausar`, "POST", body)
 
-  it("pauses an open process under a row lock and audits the previous state", async () => {
+  it("pauses an open process under a row lock", async () => {
     const { status, text } = await pause({ reason: "Se corrige la configuración institucional." })
     expect(status).toBe(200)
     expect(text).toBe(phpJsonEncode({ message: "Proceso en pausa. Los envíos se detienen y la plantilla queda editable." }))
-    expect(log).toEqual(["begin", `lock:${PROCESS}`, `pause:${PROCESS}`, "audit", "commit"])
-    expect(audits).toEqual([
-      { actorId: golden.userId, roleAssignmentId: golden.roleId, action: "proceso_silabos.pausado", resourceType: "proceso_silabos", resourceId: PROCESS, result: "exito", metadata: { previous_state: "abierto" }, occurredAt: NOW },
-    ])
+    expect(log).toEqual(["begin", `lock:${PROCESS}`, `pause:${PROCESS}`, "commit"])
   })
 
   it("validates the rebuild confirmation", async () => {
@@ -243,7 +233,6 @@ describe("POST /api/v1/admin/processes/{process}/pausar", () => {
     rows = [process()]
     lockedState = "cerrado"
     expect((await pause()).json?.errors).toEqual({ process: ["El proceso no está en un estado que admita esta acción."] })
-    expect(audits).toEqual([])
   })
 })
 
@@ -259,22 +248,11 @@ describe("POST /api/v1/admin/processes", () => {
     templates.template = officialTemplate()
   })
 
-  it("opens the institutional process with whole institution days and audits its creation and opening", async () => {
+  it("opens the institutional process with whole institution days", async () => {
     const response = await store(payload())
     expect(response).toMatchObject({ status: 201, text: '{"message":"Convocatoria institucional abierta. Las coordinaciones ya pueden iniciar sus convocatorias."}' })
     expect(created).toEqual([{ periodId: PERIOD, startsAt: "2026-11-24T05:00:00+00:00", dueAt: "2026-12-16T04:59:59+00:00" }])
-    expect(log).toEqual(["begin", "lock:in-progress", "create", "audit", "audit", "commit"])
-    expect(audits.map((event) => [event.action, event.resourceType, event.resourceId, event.result, event.metadata])).toEqual([
-      [
-        "proceso_silabos.creado",
-        "proceso_silabos",
-        NEW_PROCESS,
-        "exito",
-        { template_id: officialTemplate().id, period_id: PERIOD, starts_at: "2026-11-24T05:00:00+00:00", due_at: "2026-12-16T04:59:59+00:00" },
-      ],
-      ["proceso_silabos.abierto", "proceso_silabos", NEW_PROCESS, "exito", { previous_state: null }],
-    ])
-    expect(audits[0]).toMatchObject({ actorId: golden.userId, roleAssignmentId: golden.roleId, occurredAt: NOW })
+    expect(log).toEqual(["begin", "lock:in-progress", "create", "commit"])
   })
 
   it("takes the institution day of an ISO instant, so the start can be today when UTC already moved on", async () => {

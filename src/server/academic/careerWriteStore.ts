@@ -4,7 +4,6 @@ import { db } from "@/db"
 import { careerDataLocked } from "../configuration/subjectProfileWriteStore"
 import { uuid7 } from "../laravel/uuid7"
 import { notificationScope, systemNow, type WriteOptions } from "../notifications/queries"
-import { insertAuditEvent } from "../operations/recordAuditEvent"
 import { withAfterCommit, type AfterCommit } from "../queue/dispatch"
 import { FinalizedChangeNotice, keepContent } from "../syllabus/finalizedChangeNotice"
 import { InProgressWork } from "../syllabus/inProgressWork"
@@ -195,9 +194,6 @@ export function careerWriteTx(executor: Executor, afterCommit: AfterCommit, now:
     guard: (confirmed, careerId, change, subjectIds) => notice.guard(confirmed, careerId, change, subjectIds),
     keepContent: (confirmed, careerId, change) => keepContent(progress, confirmed, careerId, change),
     replace: (confirmed, change, scope) => progress.replace(confirmed, change, scope),
-    async recordAudit(event) {
-      await insertAuditEvent(executor, event)
-    },
   }
 }
 
@@ -296,9 +292,6 @@ export function curriculumTx(executor: Executor, afterCommit: AfterCommit, now: 
       await progress.sync(confirmed, careerId)
     },
     guard: (confirmed, careerId, change) => notice.guard(confirmed, careerId, change),
-    async recordAudit(event) {
-      await insertAuditEvent(executor, event)
-    },
   }
 }
 
@@ -311,7 +304,6 @@ function sharedDeps(executor: Executor) {
 export function careerWriteDepsOn(executor: Executor, transaction: TransactionRunner, options: WriteOptions = {}): Omit<CareerWriteDeps, "bridge"> {
   const now = options.now ?? systemNow
   return {
-    now,
     ...sharedDeps(executor),
     subjectInCareer: (subjectId, careerId) => exists(executor, sql`select * from asignaturas where asignatura_id = ${subjectId}::uuid and carrera_id = ${careerId}::uuid`),
     activeSubjectInCareer: (subjectId, careerId) =>
@@ -336,7 +328,6 @@ export function careerWriteDepsOn(executor: Executor, transaction: TransactionRu
 export function curriculumDepsOn(executor: Executor, transaction: TransactionRunner, options: WriteOptions = {}): Omit<CurriculumDeps, "bridge"> {
   const now = options.now ?? systemNow
   return {
-    now,
     ...sharedDeps(executor),
     transaction: (run) => withAfterCommit((afterCommit) => transaction((inner) => run(curriculumTx(inner, afterCommit, now(), options)))),
   }

@@ -5,7 +5,6 @@ import settingsGolden from "./__fixtures__/system-settings-golden.json"
 import { fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, testKey, type FakeWorld } from "../auth/testing"
 import { decrypt, encrypt } from "../laravel/encrypter"
 import { createRateLimiter, type RateLimiter } from "../laravel/throttle"
-import type { AuditEventInput } from "./recordAuditEvent"
 import type { SettingsEnvironment } from "./systemSettings"
 import { testSystemSettings, updateSystemSettings, type SystemSettingsWriteDeps } from "./systemSettingsWrites"
 
@@ -29,7 +28,6 @@ let world: FakeWorld
 let stored: Map<string, unknown>
 let environment: SettingsEnvironment
 let limiter: RateLimiter
-let audits: AuditEventInput[]
 let writes: { field: string; value: unknown; actorId: string; at: number }[]
 let fetched: { url: string; init: RequestInit }[]
 let fetchResult: () => Promise<Response>
@@ -47,9 +45,6 @@ function deps(): SystemSettingsWriteDeps {
         writes.push({ field: row.field, value: row.value, actorId, at })
         stored.set(row.field, row.value)
       }
-    },
-    recordAudit: async (event) => {
-      audits.push(event)
     },
     fetch: async (url, init) => {
       fetched.push({ url, init })
@@ -94,7 +89,6 @@ beforeEach(() => {
   stored = new Map()
   environment = { ...ENVIRONMENT }
   limiter = createRateLimiter()
-  audits = []
   writes = []
   fetched = []
   fetchResult = async () => new Response("{}", { status: 200 })
@@ -115,7 +109,7 @@ describe("PUT admin/system-settings/{section}", () => {
     expect(saved).toEqual(sample.settings)
   })
 
-  it("saves the section, audits the changed fields and answers with the new description", async () => {
+  it("saves the section and answers with the new description", async () => {
     stored.set("notifications.emails", true)
     const response = await update("notificaciones", { emails: true, digest_time: "07:30" })
     expect(response.status).toBe(200)
@@ -126,18 +120,6 @@ describe("PUT admin/system-settings/{section}", () => {
       { field: "notifications.emails", value: true, actorId: golden.userId, at: NOW },
       { field: "notifications.digest_time", value: "07:30", actorId: golden.userId, at: NOW },
     ])
-    expect(audits).toEqual([
-      {
-        actorId: golden.userId,
-        roleAssignmentId: golden.roleId,
-        action: "ajustes.notificaciones.actualizados",
-        resourceType: "ajustes_sistema",
-        resourceId: null,
-        result: "exito",
-        metadata: { campos: "digest_time" },
-        occurredAt: NOW,
-      },
-    ])
     expect(response.json.notifications).toEqual({ emails: { value: true, source: "pantalla" }, digest_time: { value: "07:30", source: "pantalla" } })
   })
 
@@ -147,12 +129,10 @@ describe("PUT admin/system-settings/{section}", () => {
     const key = writes.find((write) => write.field === "ai.api_key")
     expect(typeof key?.value === "string" && decrypt(key.value, testKey, false)).toBe("sk-nueva")
     expect(writes.find((write) => write.field === "ai.base_url")?.value).toBe("https://api.deepseek.com")
-    expect(audits[0].metadata).toEqual({ campos: "driver, base_url, model, connect_timeout, timeout, api_key" })
     writes = []
     const kept = await update("ia", base)
     expect(writes.map((write) => write.field)).not.toContain("ai.api_key")
     expect((kept.json.ai as Record<string, unknown>).api_key).toEqual({ configured: true, source: "pantalla" })
-    expect(audits[1].metadata).toEqual({ campos: "" })
     writes = []
     await update("ia", { ...base, clear_api_key: true })
     expect(writes.find((write) => write.field === "ai.api_key")?.value).toBeNull()

@@ -4,7 +4,6 @@ import { beforeEach, describe, expect, it } from "vitest"
 import golden from "../configuration/__fixtures__/template-golden.json"
 import type { PhpRecord } from "../configuration/phpValues"
 import { fakeNotificationTransaction, notificationWorld, recipient, type NotificationWorld } from "../notifications/testing"
-import type { AuditEventInput } from "../operations/recordAuditEvent"
 import { jobOptions, uniqueJobId } from "../queue/job"
 import type { SignatureRecord } from "../syllabus/snapshotDocuments"
 import {
@@ -40,7 +39,6 @@ let notices: NotificationWorld
 let artifacts: Map<string, Artifact>
 let objects: StoredObject[]
 let files: Map<string, Buffer>
-let audits: AuditEventInput[]
 let renders: DocumentRenderInput[]
 let approval: { approver: string; at: number } | null
 let facts: { coordination: { reviewer: string; at: number } | null; verification: { verifier: string; at: number } | null }
@@ -87,7 +85,6 @@ function deps(): ExportJobDeps {
     },
     async transaction(work) {
       const staged = new Map<string, Artifact>()
-      const stagedAudits: AuditEventInput[] = []
       const current = (id: string) => staged.get(id) ?? artifacts.get(id)
       const result = await fakeNotificationTransaction(notices, NOW, (notifications) =>
         work({
@@ -101,11 +98,9 @@ function deps(): ExportJobDeps {
           complete: async (id, objectId, at) => void staged.set(id, { state: "completado", objectId, completedAt: at }),
           teachersFor: async () => [TEACHER],
           administrators: async () => [ADMIN],
-          recordAudit: async (event) => void stagedAudits.push(event),
         }),
       )
       for (const [id, artifact] of staged) artifacts.set(id, artifact)
-      audits.push(...stagedAudits)
       return result
     },
     render: async (input): Promise<DocumentBundle> => {
@@ -134,7 +129,6 @@ beforeEach(() => {
   artifacts = new Map([[ARTIFACT, { state: "pendiente", objectId: null, completedAt: null }]])
   objects = []
   files = new Map()
-  audits = []
   renders = []
   approval = { approver: "María José Pérez López", at: NOW - 600 }
   facts = { coordination: { reviewer: "María José Pérez López", at: NOW - 600 }, verification: { verifier: "Rosa Elena Yánez Campos", at: NOW - 86_400 } }
@@ -151,7 +145,7 @@ describe("GenerateSyllabusExportJob", () => {
     expect(jobOptions(job, { artifactId: ARTIFACT })).toMatchObject({ attempts: 3, jobId: `GenerateSyllabusExportJob-${ARTIFACT}` })
   })
 
-  it("generates a consistent private PDF, completes the artifact, notifies the teacher and audits", async () => {
+  it("generates a consistent private PDF, completes the artifact and notifies the teacher", async () => {
     await generateSyllabusExport(ARTIFACT, deps())
 
     expect(files.get(PATH)).toEqual(PDF)
@@ -182,18 +176,6 @@ describe("GenerateSyllabusExportJob", () => {
       }),
     ])
     expect(notices.mails).toEqual([expect.objectContaining({ mailable: "workflow", to: recipient(TEACHER).email })])
-    expect(audits).toEqual([
-      {
-        actorId: null,
-        roleAssignmentId: null,
-        action: "documento.exportacion_completada",
-        resourceType: "artefacto_exportacion",
-        resourceId: ARTIFACT,
-        result: "exito",
-        metadata: { revision_number: 3, pdf_object_id: "0b000000-0000-4000-8000-000000000001" },
-        occurredAt: NOW,
-      },
-    ])
     expect(renders[0]).toMatchObject({ subject: "Biología", subjectCode: "C2", academicPeriod: "2026-2", revisionNumber: 3, generatedAt: "2026-11-24T15:00:00+00:00", locale: "es-EC" })
   })
 
@@ -231,7 +213,6 @@ describe("GenerateSyllabusExportJob", () => {
     await generateSyllabusExport(ARTIFACT, deps())
     await generateSyllabusExport("e1000000-0000-4000-8000-000000000099", deps())
     expect(renders).toEqual([])
-    expect(audits).toEqual([])
     expect(artifacts.get(ARTIFACT)).toEqual({ state: "completado", objectId: "x", completedAt: NOW - 10 })
   })
 
@@ -258,18 +239,6 @@ describe("GenerateSyllabusExportJob", () => {
     artifacts.set(ARTIFACT, { state: "en_ejecucion", objectId: null, completedAt: null })
     await failSyllabusExport(ARTIFACT, deps())
     expect(artifacts.get(ARTIFACT)?.state).toBe("fallido")
-    expect(audits).toEqual([
-      {
-        actorId: null,
-        roleAssignmentId: null,
-        action: "documento.exportacion_fallida",
-        resourceType: "artefacto_exportacion",
-        resourceId: ARTIFACT,
-        result: "fallido",
-        metadata: { error_code: "exportacion_documento_fallida" },
-        occurredAt: NOW,
-      },
-    ])
     expect(notices.notifications).toEqual([
       expect.objectContaining({
         userId: ADMIN,
@@ -286,7 +255,6 @@ describe("GenerateSyllabusExportJob", () => {
     artifacts.set(ARTIFACT, { state: "completado", objectId: "x", completedAt: NOW })
     await failSyllabusExport(ARTIFACT, deps())
     expect(artifacts.get(ARTIFACT)?.state).toBe("completado")
-    expect(audits).toEqual([])
     expect(notices.notifications).toEqual([])
   })
 })
@@ -295,7 +263,6 @@ describe("RequestSyllabusExport", () => {
   type Row = { id: string; revisionId: string; key: string; requestedBy: string; requestedAt: number }
   let rows: Row[]
   let dispatched: string[]
-  let requestAudits: AuditEventInput[]
   let approved: boolean
   let revisionSyllabus: string
 
@@ -310,36 +277,22 @@ describe("RequestSyllabusExport", () => {
       approved: async () => approved,
       insertArtifact: async (row) => void rows.push(row),
       dispatchExport: (id) => void dispatched.push(id),
-      recordAudit: async (event) => void requestAudits.push(event),
     }
   }
-  const request = (key: string, actorId = TEACHER) => ({ revisionId: REVISION, syllabusId: SYLLABUS, key, actor: { id: actorId, roleAssignmentId: "r1" }, now: NOW, newId: () => ARTIFACT, rendererVersion: "phpword-docx-v4+libreoffice-pdf-v1" })
+  const request = (key: string, actorId = TEACHER) => ({ revisionId: REVISION, syllabusId: SYLLABUS, key, actor: { id: actorId }, now: NOW, newId: () => ARTIFACT })
   const KEY = "9a5b0c3e-4f1d-4a2b-8c7d-6e5f4a3b2c1d"
 
   beforeEach(() => {
     rows = []
     dispatched = []
-    requestAudits = []
     approved = true
     revisionSyllabus = SYLLABUS
   })
 
-  it("creates a pending artifact, dispatches the job and audits the renderer version", async () => {
+  it("creates a pending artifact and dispatches the job", async () => {
     expect(await requestExport(tx(), request(KEY))).toEqual({ id: ARTIFACT, state: "pendiente", requestedBy: TEACHER })
     expect(rows).toEqual([{ id: ARTIFACT, revisionId: REVISION, key: KEY, requestedBy: TEACHER, requestedAt: NOW }])
     expect(dispatched).toEqual([ARTIFACT])
-    expect(requestAudits).toEqual([
-      {
-        actorId: TEACHER,
-        roleAssignmentId: "r1",
-        action: "documento.exportacion_solicitada",
-        resourceType: "artefacto_exportacion",
-        resourceId: ARTIFACT,
-        result: "exito",
-        metadata: { revision_number: 3, renderer_version: "phpword-docx-v4+libreoffice-pdf-v1" },
-        occurredAt: NOW,
-      },
-    ])
   })
 
   it("is idempotent for the same requester and forbidden for anyone else", async () => {

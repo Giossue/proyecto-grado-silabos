@@ -9,13 +9,6 @@ import { plainTextPdf, syllabusLines } from "./plainTextPdf"
 
 export type { DocumentRenderInput, LogoSource } from "./docx/syllabusWordDocument"
 
-export const RENDERER_VERSION = "phpword-docx-v4+libreoffice-pdf-v1"
-export const TEXT_RENDERER_VERSION = "phpword-docx-v4+text-pdf-v2"
-
-export function rendererVersion(converterEnabled: boolean): string {
-  return converterEnabled ? RENDERER_VERSION : TEXT_RENDERER_VERSION
-}
-
 const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 const REQUIRED_ENTRIES = ["[Content_Types].xml", "_rels/.rels", "word/document.xml"]
 

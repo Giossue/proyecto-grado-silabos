@@ -11,7 +11,6 @@ import { laravelHttpError, laravelJson, validationError } from "../laravel/respo
 import { phpDirname, storageWriter, type StorageWriter } from "../laravel/storageWriter"
 import { sharedRateLimiter, throttle, type RateLimiter, type Throttle } from "../laravel/throttle"
 import { uuid7 } from "../laravel/uuid7"
-import type { AuditEventInput } from "../operations/recordAuditEvent"
 import { Missing, settle } from "../syllabus/reviewDecisions"
 import { laravelRouter, routeAllows } from "../laravel/router"
 
@@ -57,7 +56,6 @@ export interface SupportDocumentTx {
   objects(ids: string[]): Promise<StoredFile[]>
   deleteDocument(id: string): Promise<void>
   deleteObjects(ids: string[]): Promise<void>
-  recordAudit(event: AuditEventInput): Promise<void>
 }
 
 export interface SupportDocumentWriteStore {
@@ -211,10 +209,6 @@ async function readableCareer(session: LaravelSession, deps: SupportDocumentWrit
   return role.careerId
 }
 
-function audit(session: LaravelSession, deps: SupportDocumentWriteDeps, fields: Pick<AuditEventInput, "action" | "resourceId" | "metadata">): AuditEventInput {
-  return { actorId: session.user.id, roleAssignmentId: session.activeRole?.id ?? null, resourceType: "documento_apoyo", result: "exito", occurredAt: deps.now(), ...fields }
-}
-
 function iso8601(seconds: number): string {
   return `${new Date(seconds * 1000).toISOString().slice(0, 19)}+00:00`
 }
@@ -285,7 +279,6 @@ export async function storeSupportDocument(request: Request, deps: SupportDocume
         storedAt: now,
       })
       await tx.insertDocument({ id, careerId, title: title as string, objectId, previewId: isPdf ? objectId : null, view: isPdf ? VIEW_READY : VIEW_PENDING, uploadedBy: session.user.id, uploadedAt: now })
-      await tx.recordAudit(audit(session, deps, { action: "academico.documento_apoyo.subida", resourceId: id, metadata: { carrera_id: careerId, archivo_id: objectId, tamano_bytes: content.length } }))
     })
   } catch (error) {
     await deps.storage.deleteDirectory(SUPPORT_DISK, phpDirname(path))
@@ -318,7 +311,6 @@ export async function destroySupportDocument(request: Request, documentId: strin
       const objects = await tx.objects(objectIds)
       await tx.deleteDocument(locked.id)
       await tx.deleteObjects(objectIds)
-      await tx.recordAudit(audit(session, deps, { action: "academico.documento_apoyo.eliminacion", resourceId: locked.id, metadata: { carrera_id: locked.careerId } }))
       afterCommit(async () => {
         for (const object of objects) {
           await deps.storage.delete(object.disk, object.path)

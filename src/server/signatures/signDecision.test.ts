@@ -1,7 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest"
 import golden from "./__fixtures__/laravel-signatures-golden.json"
-import type { AuditEventInput } from "../operations/recordAuditEvent"
 import { SignatureRejected, type SignatureSettings } from "./cmsVerifier"
 import { decisionSignatureFrom } from "./decisionSignature"
 import { signDecision, type SignatureRow, type SignatureTx } from "./signDecision"
@@ -14,20 +13,18 @@ const settings: SignatureSettings & { requireHolderMatch: boolean } = { trustedB
 
 function fakeTx(signed: string[] = []) {
   const rows: SignatureRow[] = []
-  const audits: AuditEventInput[] = []
   const tx: SignatureTx = {
     signed: async (_syllabusId, role) => signed.includes(role),
     insertSignature: async (row) => {
       rows.push(row)
       return "f0000000-0000-4000-8000-000000000001"
     },
-    recordAudit: async (event) => void audits.push(event),
   }
-  return { tx, rows, audits }
+  return { tx, rows }
 }
 
 const revision = { id: REVISION, syllabusId: SYLLABUS, number: 2, fingerprint: FINGERPRINT }
-const actor = { id: "a0000000-0000-4000-8000-000000000001", name: "Ana María Pérez López", roleAssignmentId: "r0000000-0000-4000-8000-000000000001" }
+const actor = { id: "a0000000-0000-4000-8000-000000000001", name: "Ana María Pérez López" }
 
 async function rejection(work: () => Promise<unknown>): Promise<string> {
   try {
@@ -66,10 +63,9 @@ describe("DecisionSignature::from", () => {
 
 describe("SignSyllabusDecision", () => {
   it("does nothing when the role already signed the syllabus", async () => {
-    const { tx, rows, audits } = fakeTx(["docente"])
+    const { tx, rows } = fakeTx(["docente"])
     expect(await signDecision(tx, { revision, role: "docente", signature: null, actor, now: 1_800_000_000 }, settings)).toBeNull()
     expect(rows).toEqual([])
-    expect(audits).toEqual([])
   })
 
   it("asks for a signature when it is missing and checks the statement before the CMS", async () => {
@@ -92,8 +88,8 @@ describe("SignSyllabusDecision", () => {
     expect(stored).toHaveLength(1)
   })
 
-  it("stores the verified signature without whitespace and audits it", async () => {
-    const { tx, rows, audits } = fakeTx()
+  it("stores the verified signature without whitespace", async () => {
+    const { tx, rows } = fakeTx()
     const wrapped = `${VALID.slice(0, 40)}\n ${VALID.slice(40)}`
     const id = await signDecision(tx, { revision, role: "docente", signature: { statement: golden.statement, cms: wrapped }, actor, now: 1_800_000_123 }, settings)
     expect(id).toBe("f0000000-0000-4000-8000-000000000001")
@@ -110,18 +106,6 @@ describe("SignSyllabusDecision", () => {
         issuer: "C=EC, O=Universidad de prueba, OU=Firmas, CN=AUTORIDAD DE PRUEBA T12A",
         validTo: Date.UTC(2036, 0, 1) / 1000,
         signedAt: 1_800_000_123,
-      },
-    ])
-    expect(audits).toEqual([
-      {
-        actorId: actor.id,
-        roleAssignmentId: actor.roleAssignmentId,
-        action: "silabo.firmado",
-        resourceType: "firma_silabo",
-        resourceId: "f0000000-0000-4000-8000-000000000001",
-        result: "exito",
-        metadata: { role: "docente", revision_number: 2, statement: golden.statement, certificate_holder: "ANA MARÍA PÉREZ LÓPEZ", certificate_serial: "8F1234" },
-        occurredAt: 1_800_000_123,
       },
     ])
   })

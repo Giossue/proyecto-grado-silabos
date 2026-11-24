@@ -16,7 +16,7 @@ import {
 } from "./sessionWriter"
 import type { LaravelSession, RoleAssignmentRecord, SessionUser } from "./types"
 import { parseCookieHeader } from "../laravel/cookies"
-import { laravelRoot } from "../laravel/request"
+import { laravelFullUrl } from "../laravel/request"
 import { laravelHttpError, unauthenticated } from "../laravel/responses"
 import { controllerJson, emptyResponse, fromController } from "./controllerResponse"
 import { hashPasswordForCookie, loginSessionKey, passwordHashSessionKey, recallerCookieName } from "../laravel/sessionGuard"
@@ -110,10 +110,6 @@ export class StatefulContext {
   }
 }
 
-function previousUrl(request: Request): string {
-  return `${laravelRoot(request)}${new URL(request.url).pathname.replace(/\/+$/, "")}`
-}
-
 function storesCurrentUrl(request: Request): boolean {
   const prefetch = ["purpose", "sec-purpose", "x-moz"].some((name) => request.headers.get(name)?.toLowerCase() === "prefetch")
   return request.method === "GET" && request.headers.get("x-requested-with") !== "XMLHttpRequest" && !prefetch
@@ -140,7 +136,8 @@ export async function statefulRequest(
 ): Promise<Response> {
   const original = request.clone()
   if (options.group === "api" && !isStateful(request, deps.config.statefulDomains)) return stateless()
-  if (request.method === "GET" && new URL(request.url).search !== "") return deps.forward(original)
+  const fullUrl = laravelFullUrl(request)
+  if (request.method === "GET" && fullUrl === null) return deps.forward(original)
   const cookies = parseCookieHeader(request.headers.get("cookie"))
   const state = await startSession(cookies.get(deps.config.cookieName), deps)
   const loginId = state.attributes[loginSessionKey()]
@@ -168,7 +165,7 @@ export async function statefulRequest(
     state.attributes[passwordHashSessionKey] = hashPasswordForCookie(context.user.passwordHash, deps.config.appKey)
   }
   const xsrf = xsrfCookie(state, deps)
-  if (options.routeName && storesCurrentUrl(request)) putPrevious(state.attributes, previousUrl(request), options.routeName)
+  if (options.routeName && fullUrl !== null && storesCurrentUrl(request)) putPrevious(state.attributes, fullUrl, options.routeName)
   const guardId = options.authenticates && user !== null ? user.id : (context.user?.id ?? null)
   await saveSession(state, request, guardId, deps)
   return withCookies(outcome, [xsrf, sessionCookie(state, deps), ...context.queued])

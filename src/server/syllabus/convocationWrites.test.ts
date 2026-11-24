@@ -4,7 +4,6 @@ import golden from "../laravel/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import { phpJsonEncode } from "../laravel/phpJson"
 import { fakeNotificationTransaction, notificationWorld, recipient, type NotificationWorld } from "../notifications/testing"
-import type { AuditEventInput } from "../operations/recordAuditEvent"
 import { createConvocation, resumeConvocation, type ConvocationWriteDeps, type LockedConvocation, type LockedProcess } from "./convocationWrites"
 import type { ConvocationRecord } from "./convocations"
 import { GenerationRejected } from "./inProgressWork"
@@ -34,18 +33,15 @@ let problem: string | null
 let generation: number | GenerationRejected
 let counts: Map<string, number>
 let log: string[]
-let audits: AuditEventInput[]
 
 function deps(): ConvocationWriteDeps {
   return {
     bridge: fakeDeps(world, forwarded),
     convocation: async (id) => (record !== null && record.id === id.toLowerCase() ? record : null),
     openProcessExists: async (id) => openProcesses.has(id),
-    now: () => NOW,
     nowMs: () => NOW * 1000 + 123,
     async transaction(work) {
       log.push("begin")
-      const staged: AuditEventInput[] = []
       try {
         const result = await fakeNotificationTransaction(notices, NOW, (notifications) =>
           work({
@@ -75,12 +71,8 @@ function deps(): ConvocationWriteDeps {
             updateState: async (id, state) => {
               log.push(`state:${id}:${state}`)
             },
-            recordAudit: async (event) => {
-              staged.push(event)
-            },
           }),
         )
-        audits.push(...staged)
         log.push("commit")
         return result
       } catch (error) {
@@ -128,7 +120,6 @@ beforeEach(() => {
     [OTHER_TEACHER, 1],
   ])
   log = []
-  audits = []
 })
 
 describe("POST /api/v1/coordination/convocations", () => {
@@ -144,10 +135,6 @@ describe("POST /api/v1/coordination/convocations", () => {
       `generate:${CONVOCATION}:{}`,
       `state:${CONVOCATION}:abierta`,
       "commit",
-    ])
-    expect(audits.map((event) => [event.action, event.resourceType, event.resourceId, event.metadata])).toEqual([
-      ["convocatoria.iniciada", "convocatoria", CONVOCATION, { process_id: PROCESS, period_id: PERIOD }],
-      ["convocatoria.abierta", "convocatoria", CONVOCATION, { generated_count: 3 }],
     ])
     const message = "Se abrió la convocatoria de Software; la entrega vence el 10 de diciembre de 2026, 23:59."
     expect(notices.notifications.map((item) => [item.userId, item.key, item.title, item.message, item.resourceType, item.resourceId, item.periodId])).toEqual([
@@ -182,7 +169,6 @@ describe("POST /api/v1/coordination/convocations", () => {
     process = { id: PROCESS, state: "abierto", periodId: PERIOD }
     existing = true
     expect((await store({ process_id: PROCESS })).json?.errors).toEqual({ process_id: ["Esta carrera ya tiene una convocatoria para el período institucional."] })
-    expect(audits).toEqual([])
     expect(notices.notifications).toEqual([])
   })
 
@@ -199,7 +185,6 @@ describe("POST /api/v1/coordination/convocations", () => {
     generation = new GenerationRejected({ convocation: ["La materia Cálculo I debe tener exactamente un docente vigente por paralelo."] })
     expect((await store({ process_id: PROCESS })).json?.errors).toEqual({ convocation: ["La materia Cálculo I debe tener exactamente un docente vigente por paralelo."] })
     expect(log.filter((entry) => entry === "commit")).toEqual([])
-    expect(audits).toEqual([])
     expect(notices.mails).toEqual([])
   })
 })
@@ -212,7 +197,6 @@ describe("POST /api/v1/coordination/convocations/{convocation}/reanudar", () => 
       phpJsonEncode({ message: "Convocatoria reanudada. Los docentes vuelven a trabajar, los paralelos nuevos ya tienen su sílabo y la malla queda protegida." }),
     )
     expect(log).toEqual(["begin", `lock:convocation:${CONVOCATION}`, `generate:${CONVOCATION}:{}`, `state:${CONVOCATION}:abierta`, "commit"])
-    expect(audits.map((event) => [event.action, event.metadata])).toEqual([["convocatoria.abierta", { generated_count: 1 }]])
     const at = "20270115080000123"
     expect(notices.notifications.map((item) => [item.userId, item.key, item.title, item.message, item.resourceType])).toEqual([
       [TEACHER, `flujo:convocatoria.reanudada:${CONVOCATION}:${TEACHER}:${at}`, "Se reanudó la convocatoria", "Ya puede seguir con sus sílabos de Software.", "convocatoria"],
@@ -221,10 +205,10 @@ describe("POST /api/v1/coordination/convocations/{convocation}/reanudar", () => 
     expect(notices.mails).toHaveLength(2)
   })
 
-  it("audits without metadata when nothing new was generated", async () => {
+  it("resumes even when nothing new was generated", async () => {
     generation = 0
-    await resume()
-    expect(audits.map((event) => [event.action, event.metadata])).toEqual([["convocatoria.abierta", {}]])
+    expect((await resume()).status).toBe(200)
+    expect(log).toEqual(["begin", `lock:convocation:${CONVOCATION}`, `generate:${CONVOCATION}:{}`, `state:${CONVOCATION}:abierta`, "commit"])
   })
 
   it("is forbidden unless the coordinator of the career resumes a paused convocation", async () => {
@@ -246,7 +230,6 @@ describe("POST /api/v1/coordination/convocations/{convocation}/reanudar", () => 
     locked = { ...(locked as LockedConvocation), processState: "abierto" }
     generation = new GenerationRejected({ convocation: ["No existen paralelos de la carrera."] })
     expect((await resume()).json?.errors).toEqual({ convocation: ["No existen paralelos de la carrera."] })
-    expect(audits).toEqual([])
     expect(notices.notifications).toEqual([])
   })
 

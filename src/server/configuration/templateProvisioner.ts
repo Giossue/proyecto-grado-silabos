@@ -6,7 +6,6 @@ import { isJsonRequest, laravelInput } from "../laravel/input"
 import { laravelJson, validationError } from "../laravel/responses"
 import { validateInput } from "../laravel/validation"
 import { uuid7 } from "../laravel/uuid7"
-import type { AuditEventInput } from "../operations/recordAuditEvent"
 import { laravelBoolean } from "../syllabus/inProgressWork"
 import { Missing, Rejected, settle } from "../syllabus/reviewDecisions"
 import officialJson from "./officialTemplate.json"
@@ -38,21 +37,19 @@ export interface ProvisionTx {
 export interface ProvisionStore {
   templateLocked(): Promise<boolean>
   transaction<T>(work: (tx: ProvisionTx) => Promise<T>): Promise<T>
-  recordAudit(event: AuditEventInput): Promise<void>
 }
 
 export type ProvisionDeps = {
   bridge: BridgeDeps
   store: TemplateStore
   provision: ProvisionStore
-  now: () => number
   newTemplateId: () => string
   newBlockId: () => string
   newFieldId: () => string
 }
 
 export function defaultProvisionDeps(provision: ProvisionStore): ProvisionDeps {
-  return { bridge: defaultBridgeDeps(), store: createTemplateStore(), provision, now: () => Math.floor(Date.now() / 1000), newTemplateId: uuid7, newBlockId: randomUUID, newFieldId: uuid7 }
+  return { bridge: defaultBridgeDeps(), store: createTemplateStore(), provision, newTemplateId: uuid7, newBlockId: randomUUID, newFieldId: uuid7 }
 }
 
 type OfficialSection = (typeof officialJson.sections)[number]
@@ -109,10 +106,6 @@ async function lockedTemplate(tx: ProvisionTx, templateId: string): Promise<Syll
   return template
 }
 
-function audit(session: LaravelSession, deps: ProvisionDeps, action: string, templateId: string, metadata: AuditEventInput["metadata"] = {}): AuditEventInput {
-  return { actorId: session.user.id, roleAssignmentId: session.activeRole?.id ?? null, action, resourceType: "plantilla_silabo", resourceId: templateId, result: "exito", metadata, occurredAt: deps.now() }
-}
-
 async function guarded(original: Request, deps: ProvisionDeps, work: () => Promise<Response>): Promise<Response> {
   return settle(original, deps, async () => {
     try {
@@ -149,8 +142,6 @@ export async function createTemplate(request: Request, deps: ProvisionDeps): Pro
       if (isOfficial) await buildStructure(tx, deps, id, officialSections(), officialDefinition())
       return id
     })
-    await deps.provision.recordAudit(audit(session, deps, "plantilla.creada", templateId))
-    if (isOfficial) await deps.provision.recordAudit(audit(session, deps, "plantilla.formateada", templateId))
     return laravelJson({ message: isOfficial ? "Plantilla creada con el formato oficial." : "Plantilla vacía creada.", template_id: templateId }, 201)
   })
 }
@@ -175,7 +166,6 @@ export async function formatTemplate(request: Request, templateId: string, deps:
       await buildStructure(tx, deps, template.id, officialSections(), template.definition ?? officialDefinition())
       await tx.saveDefinition(template.id, officialDefinition())
     })
-    await deps.provision.recordAudit(audit(bound.session, deps, "plantilla.formateada", bound.template.id))
     return laravelJson({ message: "Plantilla restablecida al formato oficial." })
   })
 }
@@ -191,7 +181,6 @@ export async function clearTemplate(request: Request, templateId: string, deps: 
       const template = await lockedTemplate(tx, bound.template.id)
       await retireStructure(tx, template.id)
     })
-    await deps.provision.recordAudit(audit(bound.session, deps, "plantilla.vaciada", bound.template.id))
     return laravelJson({ message: "Plantilla vaciada." })
   })
 }
@@ -223,7 +212,6 @@ export async function importTemplateJson(request: Request, templateId: string, d
         if (old !== undefined && old !== fieldId) await tx.moveSubjectValues(old, fieldId)
       }
     })
-    await deps.provision.recordAudit(audit(bound.session, deps, "plantilla.importada", bound.template.id, { sections: sections.length }))
     return laravelJson({ message: "Plantilla importada desde el JSON." })
   })
 }

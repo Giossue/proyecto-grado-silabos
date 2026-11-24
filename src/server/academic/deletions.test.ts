@@ -2,7 +2,6 @@
 import { beforeEach, describe, expect, it } from "vitest"
 import golden from "../laravel/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
-import type { AuditEventInput } from "../operations/recordAuditEvent"
 import { deleteCareerRecord, deleteGovernanceRecord, deleteParallel, type AcademicDeletionStore, type DeletionTx } from "./deletions"
 
 const SESSION_ID = golden.sessionId
@@ -60,9 +59,6 @@ const store = (): AcademicDeletionStore => ({
       async deleteParallel(id) {
         staged.push({ op: "delete paralelos", id })
       },
-      async recordAudit(event: AuditEventInput) {
-        staged.push({ op: "insert eventos_auditoria", ...event })
-      },
     }
     const result = await work(tx)
     committed.push(...staged)
@@ -70,7 +66,7 @@ const store = (): AcademicDeletionStore => ({
   },
 })
 
-const deps = () => ({ bridge: fakeDeps(world, forwarded), store: store(), now: () => NOW })
+const deps = () => ({ bridge: fakeDeps(world, forwarded), store: store() })
 
 function remove(path: string, headers: Record<string, string> = { "x-csrf-token": golden.csrfToken }): Request {
   return apiRequest(path, { method: "DELETE", cookie, headers })
@@ -82,17 +78,6 @@ function asRole(role: string, careerId: string | null) {
 
 async function read(response: Response): Promise<{ status: number; text: string }> {
   return { status: response.status, text: await response.text() }
-}
-
-function audit(overrides: Row): Row {
-  return {
-    op: "insert eventos_auditoria",
-    actorId: golden.userId,
-    roleAssignmentId: golden.roleId,
-    result: "exito",
-    occurredAt: NOW,
-    ...overrides,
-  }
 }
 
 beforeEach(() => {
@@ -114,7 +99,7 @@ beforeEach(() => {
 describe("DELETE /api/v1/admin/academic/{entity}/{record}", () => {
   const path = `/api/v1/admin/academic/periodo/${PERIOD}`
 
-  it("deletes a period without a convocation, locking it first, and audits it with its code", async () => {
+  it("deletes a period without a convocation, locking it first", async () => {
     asRole("administrador", null)
     expect(await read(await deleteGovernanceRecord(remove(path), "periodo", PERIOD, deps()))).toEqual({
       status: 200,
@@ -123,7 +108,6 @@ describe("DELETE /api/v1/admin/academic/{entity}/{record}", () => {
     expect(locks).toEqual([`periodo:${PERIOD}`])
     expect(committed).toEqual([
       { op: "delete periodos_academicos", id: PERIOD },
-      audit({ action: "academico.periodo.eliminacion", resourceType: "periodo", resourceId: PERIOD, metadata: { name: "Abril-Agosto 2027" } }),
     ])
   })
 
@@ -178,7 +162,7 @@ describe("DELETE /api/v1/admin/academic/{entity}/{record}", () => {
 describe("DELETE /api/v1/coordination/academic/{entity}/{record}", () => {
   const path = `/api/v1/coordination/academic/asignacion_docente/${ASSIGNMENT}`
 
-  it("deletes a teacher assignment of the coordinator's career and audits it with its id", async () => {
+  it("deletes a teacher assignment of the coordinator's career", async () => {
     asRole("coordinador", CAREER)
     expect(await read(await deleteCareerRecord(remove(path), "asignacion_docente", ASSIGNMENT, deps()))).toEqual({
       status: 200,
@@ -187,7 +171,6 @@ describe("DELETE /api/v1/coordination/academic/{entity}/{record}", () => {
     expect(locks).toEqual([`asignacion_docente:${ASSIGNMENT}:${CAREER}`])
     expect(committed).toEqual([
       { op: "delete asignaciones_paralelo", id: ASSIGNMENT },
-      audit({ action: "academico.asignacion_docente.eliminacion", resourceType: "asignacion_docente", resourceId: ASSIGNMENT, metadata: { name: ASSIGNMENT } }),
     ])
   })
 
@@ -214,14 +197,13 @@ describe("DELETE /api/v1/coordination/academic/{entity}/{record}", () => {
 describe("DELETE /api/v1/coordination/academic/parallels/{parallel}", () => {
   const path = `/api/v1/coordination/academic/parallels/${PARALLEL}`
 
-  it("deletes the parallel and its untouched syllabi, then audits it with its code", async () => {
+  it("deletes the parallel and its untouched syllabi", async () => {
     asRole("coordinador", CAREER)
     expect(await read(await deleteParallel(remove(path), PARALLEL, deps()))).toEqual({ status: 200, text: '{"message":"Paralelo eliminado."}' })
     expect(locks).toEqual([`paralelo:${PARALLEL}:${CAREER}`])
     expect(committed).toEqual([
       { op: "delete silabos", parallel: PARALLEL, count: 1 },
       { op: "delete paralelos", id: PARALLEL },
-      audit({ action: "academico.paralelo.eliminacion", resourceType: "paralelo", resourceId: PARALLEL, metadata: { name: "A" } }),
     ])
   })
 

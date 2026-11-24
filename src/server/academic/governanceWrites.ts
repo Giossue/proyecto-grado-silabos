@@ -10,7 +10,6 @@ import { storageWriter, type StorageWriter } from "../laravel/storageWriter"
 import { uuid7 } from "../laravel/uuid7"
 import { forbidden, laravelJson, validationError } from "../laravel/responses"
 import { mergeErrors, validateInput, type Rule } from "../laravel/validation"
-import type { AuditEventInput } from "../operations/recordAuditEvent"
 import { GenerationRejected, laravelBoolean } from "../syllabus/inProgressWork"
 import { Missing, Rejected, settle } from "../syllabus/reviewDecisions"
 import { NeedsLaravel } from "../syllabus/snapshotDocuments"
@@ -44,7 +43,6 @@ export interface GovernanceWriteTx {
   lockCareer(id: string): Promise<CareerRow | null>
   lockPeriod(id: string): Promise<PeriodRow | null>
   lockActiveFaculty(id: string): Promise<boolean>
-  facultyNames(ids: string[]): Promise<Map<string, string>>
   careersOfFaculty(facultyId: string): Promise<string[]>
   periodRunning(periodId: string): Promise<boolean>
   updateColumns(entity: "facultad" | "carrera" | "periodo", id: string, columns: Record<string, unknown>): Promise<void>
@@ -55,7 +53,6 @@ export interface GovernanceWriteTx {
   replace<T>(confirmed: boolean, change: () => Promise<T>, periodId: string | null): Promise<T>
   guard<T>(confirmed: boolean, careerIds: string[] | null, change: () => Promise<T>, periodId: string | null): Promise<T>
   sync(confirmed: boolean, careerIds: string[]): Promise<void>
-  recordAudit(event: AuditEventInput): Promise<void>
 }
 
 export type GovernanceWriteDeps = {
@@ -141,29 +138,6 @@ export function defaultGovernanceWriteDeps(): GovernanceWriteDeps {
 const MONTHS = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
 const DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/
 const LIBRARY = /^[A-Za-z0-9_-]{1,20}$/
-const FIELD_LABELS: Record<string, string> = {
-  facultad_id: "Facultad",
-  campus_facultad: "Campus",
-  bibliotecas_koha_facultad: "Bibliotecas de Koha",
-  codigo_carrera: "Código de carrera",
-  codigo_periodo_academico: "Código de período",
-  nombre_facultad: "Nombre",
-  nombre_carrera: "Nombre",
-  fecha_inicio_periodo: "Fecha de inicio",
-  fecha_fin_periodo: "Fecha de fin",
-  cantidad_semanas_lectivas: "Semanas lectivas",
-}
-const AUDIT_KEYS: Record<string, string> = {
-  campus_facultad: "campus",
-  bibliotecas_koha_facultad: "catalog_libraries",
-  codigo_carrera: "code",
-  codigo_periodo_academico: "code",
-  nombre_facultad: "name",
-  nombre_carrera: "name",
-  fecha_inicio_periodo: "starts_on",
-  fecha_fin_periodo: "ends_on",
-  cantidad_semanas_lectivas: "teaching_weeks",
-}
 const END_BEFORE_START = "La fecha de fin debe ser igual o posterior a la fecha de inicio."
 
 function validDay(value: string): boolean {
@@ -266,10 +240,6 @@ async function forwardAuthenticated(request: Request, original: Request, deps: G
   return session instanceof Response ? session : deps.bridge.forward(original)
 }
 
-function audit(session: LaravelSession, deps: GovernanceWriteDeps, fields: Pick<AuditEventInput, "action" | "resourceType" | "resourceId" | "metadata">): AuditEventInput {
-  return { actorId: session.user.id, roleAssignmentId: session.activeRole?.id ?? null, result: "exito", occurredAt: deps.now(), ...fields }
-}
-
 async function run(original: Request, deps: GovernanceWriteDeps, work: () => Promise<Response>): Promise<Response> {
   return settle(original, deps, async () => {
     try {
@@ -345,7 +315,6 @@ export async function createGovernanceRecord(request: Request, entity: string, d
             const weeks = input.teaching_weeks === undefined || input.teaching_weeks === null ? periodWeeks(startsOn, endsOn) : phpIntCast(input.teaching_weeks)
             created = await tx.createPeriod({ code: periodLabel(startsOn, endsOn), startsOn, endsOn, weeks })
           }
-          await tx.recordAudit(audit(session, deps, { action: `academico.${entity}.creacion`, resourceType: entity, resourceId: created, metadata: {} }))
           return created
         },
         null,
@@ -357,14 +326,6 @@ export async function createGovernanceRecord(request: Request, entity: string, d
 
 type Dirty = { column: string; before: unknown; after: unknown }
 
-function changedFields(dirty: Dirty[]): string {
-  return dirty.map((item) => FIELD_LABELS[item.column] ?? item.column).join(", ")
-}
-
-function librariesText(value: unknown): string | null {
-  return Array.isArray(value) ? value.map((item) => (item === true ? "1" : item === false || item === null ? "" : String(item))).join(",") : null
-}
-
 function storedLibraries(raw: string | null): unknown {
   if (raw === null) return null
   try {
@@ -372,26 +333,6 @@ function storedLibraries(raw: string | null): unknown {
   } catch {
     return null
   }
-}
-
-async function updateMetadata(tx: GovernanceWriteTx, entity: string, dirty: Dirty[]): Promise<Record<string, string | number | boolean | null>> {
-  const metadata: Record<string, string | number | boolean | null> = { changed_fields: changedFields(dirty) }
-  for (const item of dirty) {
-    if (entity === "carrera" && item.column === "facultad_id") {
-      const before = String(item.before)
-      const after = String(item.after)
-      const names = await tx.facultyNames([before, after])
-      metadata.before_faculty_id = before
-      metadata.after_faculty_id = after
-      metadata.before_faculty = names.get(before) ?? null
-      metadata.after_faculty = names.get(after) ?? null
-      continue
-    }
-    const key = AUDIT_KEYS[item.column] ?? item.column
-    metadata[`before_${key}`] = item.column === "bibliotecas_koha_facultad" ? librariesText(storedLibraries(item.before as string | null)) : (item.before as string | number | null)
-    metadata[`after_${key}`] = item.column === "bibliotecas_koha_facultad" ? librariesText(item.after) : (item.after as string | number | null)
-  }
-  return metadata
 }
 
 function sameLibraries(before: string | null, after: unknown[]): boolean {
@@ -471,9 +412,7 @@ export async function updateGovernanceRecord(request: Request, entity: string, r
               async () => {
                 const dirty = columns.filter(([, before, after]) => before !== after).map(([column, before, after]) => ({ column, before, after }))
                 if (dirty.length === 0) return
-                const metadata = await updateMetadata(tx, entity, dirty)
                 await tx.updateColumns("periodo", period.id, Object.fromEntries(dirty.map((item) => [item.column, item.after])))
-                await tx.recordAudit(audit(session, deps, { action: "academico.periodo.actualizacion", resourceType: "periodo", resourceId: period.id, metadata }))
               },
               period.id,
             ),
@@ -497,10 +436,8 @@ export async function updateGovernanceRecord(request: Request, entity: string, r
             if (dirty.length === 0 && logo === null) return
             const columns: Record<string, unknown> = Object.fromEntries(dirty.map((item) => [item.column, item.after]))
             if (logo !== null) columns.logo_archivo_id = await storeFacultyLogo(tx, deps, faculty.id, logo)
-            const metadata = logo !== null ? { changed_fields: "" } : await updateMetadata(tx, entity, dirty)
             await tx.updateColumns("facultad", faculty.id, columns)
             await tx.sync(confirmed, await tx.careersOfFaculty(faculty.id))
-            await tx.recordAudit(audit(session, deps, { action: "academico.facultad.actualizacion", resourceType: "facultad", resourceId: faculty.id, metadata }))
           },
           null,
         )
@@ -522,15 +459,13 @@ export async function updateGovernanceRecord(request: Request, entity: string, r
           if (career.name !== input.nombre) dirty.push({ column: "nombre_carrera", before: career.name, after: input.nombre })
           if (career.modality !== input.modality) dirty.push({ column: "modalidad_carrera", before: career.modality, after: input.modality })
           if (dirty.length === 0) return
-          const metadata = await updateMetadata(tx, entity, dirty)
           await tx.updateColumns("carrera", career.id, Object.fromEntries(dirty.map((item) => [item.column, item.after])))
           await tx.sync(confirmed, [career.id])
-          await tx.recordAudit(audit(session, deps, { action: "academico.carrera.actualizacion", resourceType: "carrera", resourceId: career.id, metadata }))
         },
         null,
       )
     })
-    return laravelJson({ message: "Datos institucionales actualizados y auditados." })
+    return laravelJson({ message: "Datos institucionales actualizados." })
   })
 }
 
@@ -564,14 +499,6 @@ export async function setGovernanceStatus(request: Request, entity: string, reco
             if (entity === "carrera" && (await tx.careerHasActiveRoles(record.id))) throw new NeedsLaravel()
           }
           await tx.setActive(entity as "facultad" | "carrera", record.id, active)
-          await tx.recordAudit(
-            audit(session, deps, {
-              action: entity === "carrera" ? `academico.carrera.${active ? "reactivacion" : "desactivacion"}` : `academico.${entity}.cambio_estado`,
-              resourceType: entity,
-              resourceId: record.id,
-              metadata: entity === "carrera" && !active ? { active, retired_users: 0 } : { active },
-            }),
-          )
         },
         null,
       ),

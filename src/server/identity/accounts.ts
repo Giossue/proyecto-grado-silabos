@@ -1,6 +1,5 @@
 import { createHash } from "node:crypto"
 import type { QueuedMail } from "../mail/mailables"
-import type { AuditEventInput } from "../operations/recordAuditEvent"
 import type { AfterCommit } from "../queue/dispatch"
 import {
   hasCareerScope,
@@ -54,7 +53,6 @@ export interface AccountTx {
   hasActivity(userId: string): Promise<boolean>
   purgeAccount(userId: string): Promise<void>
   careerLocked(careerId: string): Promise<boolean>
-  recordAudit(event: AuditEventInput): Promise<void>
 }
 
 export interface AccountRepository {
@@ -101,18 +99,7 @@ const INVITATION_DAYS = 7
 export const RESEND = "reenvio"
 export const STILL_VALID = "La invitación sigue vigente; podrá reenviarla cuando venza."
 
-async function audit(
-  ctx: ActionContext,
-  action: string,
-  resourceType: string,
-  resourceId: string | null,
-  metadata: AuditEventInput["metadata"] = {},
-  actorId: string = ctx.actorId,
-): Promise<void> {
-  await ctx.tx.recordAudit({ actorId, roleAssignmentId: ctx.activeRoleId, action, resourceType, resourceId, result: "exito", metadata, occurredAt: ctx.now })
-}
-
-export async function issueInvitation(ctx: ActionContext, target: Account, reason: string): Promise<void> {
+export async function issueInvitation(ctx: ActionContext, target: Account): Promise<void> {
   const user = await ctx.tx.lockAccount(target.id)
   if (user === null) throw new NeedsLaravel()
   if (!user.active || user.verified) throw invalid("user", "La cuenta ya está activada o no está disponible para una invitación.")
@@ -125,7 +112,6 @@ export async function issueInvitation(ctx: ActionContext, target: Account, reaso
     issuerId: ctx.actorId,
     createdAt: ctx.now,
   })
-  await audit(ctx, "usuario.invitacion_activacion_enviada", "usuario", user.id, { reason })
   const grant = await ctx.tx.invitationRole(user.id)
   const roleName = grant === null ? "Usuario" : ROLE_LABELS[grant.role]
   const careerName = grant?.careerLabel ?? null
@@ -139,7 +125,7 @@ export async function resendActivation(ctx: ActionContext, target: Account, reas
   if (locked === null) throw new NeedsLaravel()
   if (locked.verified) throw invalid("user", "La cuenta ya fue activada por su titular; no se reenvía una invitación.")
   if (reason === RESEND && (await ctx.tx.hasActiveInvitation(locked.id, ctx.now))) throw invalid("user", STILL_VALID)
-  await issueInvitation(ctx, locked, reason)
+  await issueInvitation(ctx, locked)
 }
 
 export type RoleRequest = { roleCode: string; careerId: string | null; replaceCoordinator: boolean }
@@ -167,17 +153,11 @@ export async function assignRole(ctx: ActionContext, target: { id: string }, req
       if (request.replaceCoordinator !== true) throw invalid("replace_coordinator", `La carrera ya tiene como coordinador a ${holder.userName}.`)
       if (await tx.careerHasReviewedSyllabi(careerId)) throw new NeedsLaravel()
       await tx.setGrantActive(holder.grantId, false)
-      await audit(ctx, "academico.coordinacion.reemplazada", "carrera", careerId, {
-        previous_user_id: holder.userId,
-        incoming_user_id: target.id,
-        returned_to_review: 0,
-      })
     }
   }
   const grant = await tx.findGrant(target.id, role, careerId, false)
   if (grant === null) await tx.insertGrant(target.id, role, careerId, ctx.now)
   else if (!grant.active) await tx.setGrantActive(grant.id, true)
-  await audit(ctx, "usuario.rol_asignado", "usuario", target.id, { role, career_id: careerId })
 }
 
 export type NewAccount = { name: string; email: string } & RoleRequest
@@ -189,8 +169,7 @@ export async function createManagedUser(ctx: ActionContext, data: NewAccount): P
     passwordHash: await ctx.services.hashPassword(ctx.services.random(64)),
   })
   await assignRole(ctx, user, data)
-  await audit(ctx, "usuario.creado", "usuario", user.id, { initial_role: data.roleCode })
-  await issueInvitation(ctx, user, "alta")
+  await issueInvitation(ctx, user)
   return user
 }
 
@@ -213,20 +192,11 @@ async function ensureMayDeactivate(ctx: ActionContext, target: { id: string }): 
 export async function setUserStatus(ctx: ActionContext, target: { id: string }, active: boolean): Promise<void> {
   if (!active) await ensureMayDeactivate(ctx, target)
   await ctx.tx.setActive(target.id, active)
-  let closedTeacherAssignments = 0
-  const closedCoordinations: string[] = []
   if (!active) {
     await revokeSessions(ctx, target.id, null)
-    closedTeacherAssignments = await ctx.tx.closeParallelAssignments(target.id)
-    for (const coordination of await ctx.tx.lockEffectiveCoordinations(target.id)) {
-      await ctx.tx.setGrantActive(coordination.id, false)
-      closedCoordinations.push(coordination.label)
-    }
+    await ctx.tx.closeParallelAssignments(target.id)
+    for (const coordination of await ctx.tx.lockEffectiveCoordinations(target.id)) await ctx.tx.setGrantActive(coordination.id, false)
   }
-  await audit(ctx, active ? "usuario.activado" : "usuario.desactivado", "usuario", target.id, {
-    closed_teacher_assignments: closedTeacherAssignments,
-    closed_coordinations: closedCoordinations.join(", "),
-  })
 }
 
 export async function updateManagedUserProfile(ctx: ActionContext, target: { id: string }, data: { name: string; email: string }): Promise<Account> {
@@ -242,12 +212,6 @@ export async function updateManagedUserProfile(ctx: ActionContext, target: { id:
     )
   }
   await ctx.tx.updateIdentity(locked.id, name, email)
-  await audit(ctx, "usuario.perfil_actualizado", "usuario", locked.id, {
-    previous_name: locked.name,
-    previous_email: locked.email,
-    name_changed: locked.name !== name,
-    email_changed: locked.email !== email,
-  })
   const updated = { ...locked, name, email }
   if (locked.email !== email && !locked.verified) await resendActivation(ctx, updated, "correo_corregido")
   return updated
@@ -257,19 +221,11 @@ export async function removeUserRole(ctx: ActionContext, target: { id: string },
   const effective = await ctx.tx.lockEffectiveGrants(target.id)
   if (!effective.some((grant) => grant.id === assignment.id)) throw invalid("role", "Ese rol ya no está vigente.")
   if (effective.length === 1) throw invalid("role", "Es el único rol de la cuenta. Deshabilite el acceso en lugar de quitarlo.")
-  let removedParallels = 0
   if (assignment.role === ROLE_TEACHER) {
-    const parallels = await ctx.tx.lockActiveParallelAssignments(assignment.id)
-    for (const id of parallels) await ctx.tx.deleteParallelAssignment(id)
-    removedParallels = parallels.length
+    for (const id of await ctx.tx.lockActiveParallelAssignments(assignment.id)) await ctx.tx.deleteParallelAssignment(id)
   }
   await ctx.tx.setGrantActive(assignment.id, false)
   await ctx.tx.deleteSessions(target.id, null)
-  await audit(ctx, "usuario.rol_retirado", "usuario", target.id, {
-    role: assignment.role,
-    career_id: assignment.careerId,
-    removed_parallel_assignments: removedParallels,
-  })
 }
 
 export async function deleteManagedUser(ctx: ActionContext, target: { id: string }): Promise<void> {
@@ -278,7 +234,6 @@ export async function deleteManagedUser(ctx: ActionContext, target: { id: string
   if (locked.verified) throw invalid("user", "La cuenta ya fue activada por su titular. Desactívela en lugar de eliminarla.")
   if (await ctx.tx.hasActivity(locked.id)) throw invalid("user", "La cuenta ya tiene actividad registrada. Desactívela en lugar de eliminarla.")
   await ctx.tx.purgeAccount(locked.id)
-  await audit(ctx, "usuario.eliminado", "usuario", target.id, { email: locked.email, name: locked.name })
 }
 
 export async function teacherBlockedReason(tx: AccountTx, user: Account | null): Promise<string | null> {
@@ -325,8 +280,7 @@ export async function createCareerTeacher(ctx: ActionContext, data: { name: stri
     recentlyCreated = true
   }
   const attached = created || reactivated || recentlyCreated
-  if (attached) await audit(ctx, "usuario.docente_incorporado", "usuario", user.id, { carrera_id: careerId, cuenta_creada: created })
-  if (!user.verified && !(await tx.hasActiveInvitation(user.id, ctx.now))) await issueInvitation(ctx, user, "alta_coordinacion")
+  if (!user.verified && !(await tx.hasActiveInvitation(user.id, ctx.now))) await issueInvitation(ctx, user)
   return { created, attached }
 }
 
@@ -342,7 +296,6 @@ export async function removeCareerTeacher(ctx: ActionContext, target: { id: stri
     await revokeSessions(ctx, target.id, null)
     await tx.invalidateInvitations(target.id, ctx.now)
   }
-  await audit(ctx, "usuario.docente_retirado", "usuario", target.id, { carrera_id: careerId, removed_parallel_assignments: parallels.length })
   return parallels.length
 }
 
@@ -352,6 +305,5 @@ export async function updateTeacherFormation(ctx: ActionContext, userId: string,
   const value = formation.replace(/^[ \t\n\r\0\x0B]+|[ \t\n\r\0\x0B]+$/g, "")
   if (locked.formation === value) return false
   await ctx.tx.setFormation(userId, value)
-  await audit(ctx, "usuario.formacion_actualizada", "usuario", userId, {}, userId)
   return true
 }

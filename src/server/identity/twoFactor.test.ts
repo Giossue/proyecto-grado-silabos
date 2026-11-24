@@ -9,7 +9,6 @@ import type { OutgoingCookie } from "../auth/types"
 import { decrypt, encrypt } from "../laravel/encrypter"
 import { hashPasswordForCookie, loginSessionKey } from "../laravel/sessionGuard"
 import { createRateLimiter } from "../laravel/throttle"
-import type { AuditEventInput } from "../operations/recordAuditEvent"
 import {
   confirmTwoFactor,
   disableTwoFactor,
@@ -31,7 +30,6 @@ const MISSING = "Ingrese un código de autenticación o de recuperación."
 
 let world: FakeWorld
 let accounts: Map<string, TwoFactorAccount>
-let audits: AuditEventInput[]
 let replay: Map<string, number>
 let queued: OutgoingCookie[]
 let sequence: number
@@ -77,7 +75,6 @@ function deps(): TwoFactorDeps {
           ...(changes.confirmedAt === undefined ? {} : { confirmed: changes.confirmedAt !== null }),
         })
       },
-      recordAudit: async (event) => void audits.push(event),
     },
     replay: cache,
     throttles: createRateLimiter(),
@@ -120,7 +117,6 @@ const enabled = () => {
 beforeEach(() => {
   world = { sessions: new Map(), users: [makeUser({ passwordHash: HASH })], assignments: [makeAssignment()] }
   accounts = new Map([[golden.userId, account()]])
-  audits = []
   replay = new Map()
   queued = []
   sequence = 0
@@ -270,7 +266,7 @@ describe("POST authentication/two-factor/challenge (ApiSessionTest)", () => {
     expect(await response.text()).toBe('{"message":"Inicie sesi\\u00f3n desde la aplicaci\\u00f3n web."}')
   })
 
-  it("logs the user in with a valid authenticator code and audits the login", async () => {
+  it("logs the user in with a valid authenticator code", async () => {
     const response = await twoFactorChallenge(call("two-factor/challenge", "POST", { code: current() }), deps())
     expect(response.status).toBe(200)
     expect(await response.text()).toBe('{"message":"Segundo factor verificado."}')
@@ -279,7 +275,6 @@ describe("POST authentication/two-factor/challenge (ApiSessionTest)", () => {
     const stored = JSON.parse(storedJson(world, id) ?? "{}")
     expect(stored[LOGIN_KEY]).toBe(golden.userId)
     expect(stored.login).toEqual([])
-    expect(audits).toMatchObject([{ actorId: golden.userId, roleAssignmentId: null, action: "sesion.iniciada", resourceType: "usuario", resourceId: golden.userId, result: "exito" }])
   })
 
   it("accepts a recovery code only once and replaces it", async () => {
@@ -296,7 +291,6 @@ describe("POST authentication/two-factor/challenge (ApiSessionTest)", () => {
     expect(response.status).toBe(422)
     expect(await response.text()).toBe(`{"message":"El c\\u00f3digo de autenticaci\\u00f3n no es v\\u00e1lido.","errors":{"code":["El c\\u00f3digo de autenticaci\\u00f3n no es v\\u00e1lido."]}}`)
     expect(JSON.parse(storedJson(world, golden.sessionId) ?? "{}")).not.toHaveProperty(LOGIN_KEY)
-    expect(audits).toEqual([])
   })
 
   it("asks for a code or a recovery code", async () => {

@@ -11,6 +11,8 @@ const STATUS_TEXTS: Record<number, string> = { 404: "Not Found", 405: "Method No
 
 export const LARAVEL_ROUTES: readonly LaravelRoute[] = routeTable as LaravelRoute[]
 
+export const REMOVED_ROUTES: readonly string[] = ["api/v1/admin/audit-events", "api/v1/admin/audit-events/export", "api/v1/admin/reports", "api/v1/admin/reports/export"]
+
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&")
 }
@@ -54,6 +56,11 @@ export function laravelRoutesMatching(pathname: string): LaravelRoute[] {
   const decoded = rawUrlDecode(pathname.replace(/\/+$/, "") || "/")
   if (decoded === null) return []
   return COMPILED.filter(({ regex }) => regex.test(decoded)).map(({ route }) => route)
+}
+
+export function removedFromSystem(pathname: string): boolean {
+  const decoded = rawUrlDecode(pathname.replace(/\/+$/, "") || "/")
+  return decoded !== null && REMOVED_ROUTES.includes(decoded.replace(/^\/+/, ""))
 }
 
 export function routeAllows(request: Request): boolean {

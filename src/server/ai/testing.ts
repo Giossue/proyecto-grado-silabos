@@ -5,7 +5,6 @@ import { contentForField, fieldDocument } from "../configuration/templateDraft"
 import type { SyllabusTemplate, TemplateSection } from "../configuration/templatePresentation"
 import { officialDefinition, officialSections } from "../configuration/templateProvisioner"
 import { normalizeFieldDocument } from "../configuration/templateRuntime"
-import type { AuditEventInput } from "../operations/recordAuditEvent"
 import type { AssistantStore, AssistantTx, StoredMessage, StoredProposal } from "./assistantStore"
 import { aiConfig, type AiConfig } from "./config"
 import type { AiAgentGateway, AiAgentRequest, AiAgentStep } from "./gateway"
@@ -51,13 +50,12 @@ export type AssistantWorld = {
   template: SyllabusTemplate | null
   messages: StoredMessage[]
   proposals: StoredProposal[]
-  audits: AuditEventInput[]
   processes: string[]
   clock: number
 }
 
 export function assistantWorld(template: SyllabusTemplate | null = officialTemplate()): AssistantWorld {
-  return { template, messages: [], proposals: [], audits: [], processes: [], clock: 0 }
+  return { template, messages: [], proposals: [], processes: [], clock: 0 }
 }
 
 function stamp(world: AssistantWorld): string {
@@ -116,9 +114,6 @@ export function fakeAssistantStore(world: AssistantWorld): AssistantStore {
         createdAt: stamp(world),
       })
     },
-    recordAudit: async (event) => {
-      world.audits.push(event)
-    },
   })
   return {
     template: async () => (world.template === null ? null : copy(world.template)),
@@ -146,13 +141,12 @@ export function fakeAssistantStore(world: AssistantWorld): AssistantStore {
     lastProposal: async (templateId, userId) =>
       copy([...world.proposals].filter((proposal) => proposal.templateId === templateId && proposal.requestedBy === userId).sort((left, right) => (left.createdAt < right.createdAt ? 1 : -1))[0] ?? null),
     async transaction(work) {
-      const before = { messages: copy(world.messages), proposals: copy(world.proposals), audits: world.audits.length, clock: world.clock }
+      const before = { messages: copy(world.messages), proposals: copy(world.proposals), clock: world.clock }
       try {
         return await work(tx())
       } catch (error) {
         world.messages = before.messages
         world.proposals = before.proposals
-        world.audits.length = before.audits
         throw error
       }
     },

@@ -10,7 +10,6 @@ import { sharedRateLimiter, throttle, type RateLimiter, type Throttle } from "..
 import { validateInput } from "../laravel/validation"
 import { Missing, settle } from "../syllabus/reviewDecisions"
 import { ExportForbidden, ExportMissing, ExportRejected, existingExport, requestExport, type ExportArtifactRow, type ExportRequestTx } from "./syllabusExport"
-import type { AuditEventInput } from "../operations/recordAuditEvent"
 import { mayView } from "../syllabus/policy"
 import type { ReviewRevision } from "../syllabus/reviewDetails"
 import type { DetailSyllabus } from "../syllabus/syllabusDetail"
@@ -29,7 +28,6 @@ export interface DocumentStore {
   approval(revisionId: string): Promise<{ approvedAt: string; approvedBy: string } | null>
   artifacts(revisionId: string): Promise<ArtifactRow[]>
   artifact(id: string): Promise<StoredArtifact | null>
-  recordAudit(event: AuditEventInput): Promise<void>
 }
 
 export type DocumentDeps = { bridge: BridgeDeps; store: DocumentStore; now: () => number }
@@ -128,16 +126,6 @@ export async function downloadExport(request: Request, artifactId: string, deps:
   if (!mayView(session, syllabus) || found.state !== COMPLETED) return forbidden()
   const file = await storedFile(found.object)
   if (file === null || found.object === null) return aborted(404)
-  await deps.store.recordAudit({
-    actorId: session.user.id,
-    roleAssignmentId: session.activeRole?.id ?? null,
-    action: "documento.descargado",
-    resourceType: "artefacto_exportacion",
-    resourceId: found.id,
-    result: "exito",
-    metadata: { format: "pdf", revision_number: revision.number, object_id: found.object.id },
-    occurredAt: deps.now(),
-  })
   const bytes = await readFile(/*turbopackIgnore: true*/ file)
   const code = laravelSlug(syllabus.code) || "asignatura"
   return new Response(new Uint8Array(bytes), {
@@ -155,7 +143,6 @@ export async function downloadExport(request: Request, artifactId: string, deps:
 export type DocumentRequestDeps = DocumentDeps & {
   limiter: RateLimiter
   renderable(revisionId: string): Promise<boolean>
-  rendererVersion(): string
   existing(revisionId: string, key: string): Promise<ExportArtifactRow | null>
   transaction<T>(work: (tx: ExportRequestTx) => Promise<T>): Promise<T>
   newId(): string
@@ -209,12 +196,12 @@ export async function requestRevisionDocuments(request: Request, revisionId: str
   if (Object.keys(errors).length > 0) return finish(validationError(errors))
   if (!(await deps.renderable(revision.id))) return finish(await deps.bridge.forward(original))
   const key = input.idempotency_key as string
-  const actor = { id: session.user.id, roleAssignmentId: session.activeRole?.id ?? null }
+  const actor = { id: session.user.id }
   return finish(
     await settleRequest(original, deps, async () => {
       const artifact =
         (await existingExport({ existingArtifact: deps.existing }, revision.id, key, actor.id)) ??
-        (await deps.transaction((tx) => requestExport(tx, { revisionId: revision.id, syllabusId: revision.syllabusId, key, actor, now: deps.now(), newId: deps.newId, rendererVersion: deps.rendererVersion() })))
+        (await deps.transaction((tx) => requestExport(tx, { revisionId: revision.id, syllabusId: revision.syllabusId, key, actor, now: deps.now(), newId: deps.newId })))
       return laravelJson({ message: artifact.state === COMPLETED ? "El PDF ya estaba disponible." : "El PDF se está generando.", artifact_id: artifact.id }, 202)
     }),
   )

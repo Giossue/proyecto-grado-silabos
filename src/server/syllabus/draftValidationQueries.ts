@@ -51,7 +51,6 @@ function validationTx(executor: Executor): DraftValidationTx {
           where docentes_vigentes_silabo.silabo_id = ${id}::uuid`,
       )
     },
-    recordAudit: (event) => draft.recordAudit(event),
   }
 }
 

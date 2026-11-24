@@ -6,7 +6,7 @@ import { record } from "../configuration/phpValues"
 import { gotenbergEnabled, gotenbergSettings } from "../documents/gotenbergConverter"
 import { exportRequestTxOn } from "../documents/syllabusExportStore"
 import { dispatchSyllabusExport } from "../documents/syllabusExportJob"
-import { rendererVersion, rendersInNext } from "../documents/syllabusRenderer"
+import { rendersInNext } from "../documents/syllabusRenderer"
 import { uuid7 } from "../laravel/uuid7"
 import { systemNow, type WriteOptions } from "../notifications/queries"
 import { withAfterCommit, type AfterCommit } from "../queue/dispatch"
@@ -31,10 +31,6 @@ export function reviewApprovalTx(executor: Executor, afterCommit: AfterCommit, n
     async approvalExists(revisionId) {
       const [row] = await rowsOf<{ found: boolean }>(executor, sql`select exists (select 1 from aprobaciones where revision_silabo_id = ${revisionId}::uuid) as found`)
       return row?.found === true
-    },
-    async submitterId(revisionId) {
-      const [row] = await rowsOf<{ id: string | null }>(executor, sql`select enviado_por::text as id from revisiones_silabo where revision_silabo_id = ${revisionId}::uuid limit 1`)
-      return row?.id ?? null
     },
     async coordinationReviewId(revisionId) {
       const [row] = await rowsOf<{ id: string }>(
@@ -68,7 +64,6 @@ export function reviewApprovalDepsOn(executor: Executor, transaction: Transactio
   return {
     store: reviewDetailStoreOn(executor),
     renderable: (revisionId) => revisionRendersInNext(executor, revisionId),
-    rendererVersion: () => rendererVersion(gotenbergEnabled(gotenbergSettings())),
     now,
     newId: options.newId ?? uuid7,
     newKey: options.newKey ?? randomUUID,

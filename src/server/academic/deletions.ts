@@ -4,7 +4,6 @@ import { db } from "@/db"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
 import type { BridgeDeps, LaravelSession } from "../auth/types"
 import { laravelJson, validationError } from "../laravel/responses"
-import { insertAuditEvent, type AuditEventInput } from "../operations/recordAuditEvent"
 import { forbidden, isUuid } from "./structure"
 import { findActiveCareer } from "./structureQueries"
 import { laravelRouter, routeAllows } from "../laravel/router"
@@ -20,7 +19,6 @@ export interface DeletionTx {
   parallelHasTouchedSyllabus(id: string): Promise<boolean>
   deleteParallelSyllabi(id: string): Promise<void>
   deleteParallel(id: string): Promise<void>
-  recordAudit(event: AuditEventInput): Promise<void>
 }
 
 export interface AcademicDeletionStore {
@@ -28,7 +26,7 @@ export interface AcademicDeletionStore {
   transaction<T>(work: (tx: DeletionTx) => Promise<T>): Promise<T>
 }
 
-export type AcademicDeletionDeps = { bridge: BridgeDeps; store: AcademicDeletionStore; now: () => number }
+export type AcademicDeletionDeps = { bridge: BridgeDeps; store: AcademicDeletionStore }
 
 class RecordNotFound extends Error {}
 
@@ -94,9 +92,6 @@ export function deletionTx(tx: Executor): DeletionTx {
     async deleteParallel(id) {
       await tx.execute(sql`delete from paralelos where paralelo_id = ${id}::uuid`)
     },
-    async recordAudit(event) {
-      await insertAuditEvent(tx, event)
-    },
   }
 }
 
@@ -108,7 +103,7 @@ export function createAcademicDeletionStore(): AcademicDeletionStore {
 }
 
 function defaultDeps(): AcademicDeletionDeps {
-  return { bridge: defaultBridgeDeps(), store: createAcademicDeletionStore(), now: () => Math.floor(Date.now() / 1000) }
+  return { bridge: defaultBridgeDeps(), store: createAcademicDeletionStore() }
 }
 
 function rejectWith(message: string): never {
@@ -124,10 +119,6 @@ async function inTransaction(request: Request, deps: AcademicDeletionDeps, work:
     throw error
   }
   return laravelJson({ message })
-}
-
-function audit(session: LaravelSession, deps: AcademicDeletionDeps, fields: Pick<AuditEventInput, "action" | "resourceType" | "resourceId" | "metadata">): AuditEventInput {
-  return { actorId: session.user.id, roleAssignmentId: session.activeRole?.id ?? null, result: "exito", occurredAt: deps.now(), ...fields }
 }
 
 async function careerSession(request: Request, deps: AcademicDeletionDeps): Promise<{ session: LaravelSession; careerId: string } | Response> {
@@ -158,7 +149,6 @@ export async function deleteGovernanceRecord(
       if (period === null) throw new RecordNotFound()
       if (await tx.periodHasProcess(period.id)) rejectWith("Este período ya tiene una convocatoria con su historial, por eso no se puede eliminar.")
       await tx.deletePeriod(period.id)
-      await tx.recordAudit(audit(session, deps, { action: "academico.periodo.eliminacion", resourceType: "periodo", resourceId: recordId, metadata: { name: period.code } }))
     },
     "Registro institucional eliminado.",
   )
@@ -181,14 +171,6 @@ export async function deleteCareerRecord(
       const assignment = await tx.lockTeacherAssignment(recordId, context.careerId)
       if (assignment === null) throw new RecordNotFound()
       await tx.deleteTeacherAssignment(assignment.id)
-      await tx.recordAudit(
-        audit(context.session, deps, {
-          action: "academico.asignacion_docente.eliminacion",
-          resourceType: "asignacion_docente",
-          resourceId: recordId,
-          metadata: { name: assignment.id },
-        }),
-      )
     },
     "Registro académico eliminado.",
   )
@@ -209,9 +191,6 @@ export async function deleteParallel(request: Request, parallelId: string, deps:
       if (await tx.parallelHasTouchedSyllabus(parallel.id)) rejectWith("El paralelo ya tiene sílabo y no puede eliminarse.")
       await tx.deleteParallelSyllabi(parallel.id)
       await tx.deleteParallel(parallel.id)
-      await tx.recordAudit(
-        audit(context.session, deps, { action: "academico.paralelo.eliminacion", resourceType: "paralelo", resourceId: parallelId, metadata: { name: parallel.code } }),
-      )
     },
     "Paralelo eliminado.",
   )

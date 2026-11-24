@@ -1,5 +1,4 @@
 // @vitest-environment node
-import { createHash } from "node:crypto"
 import { describe, expect, it } from "vitest"
 import { loginSessionKey, recallerCookieName } from "../laravel/sessionGuard"
 import { destroyOtherSessions, destroySession, resendOwnActivation, updateAccessibility, updateFormation, updateProfile } from "./selfService"
@@ -26,7 +25,7 @@ describe("PUT /api/v1/authentication/profile", () => {
     const test = harness()
     const response = await put(test, { nombre: "carlos  ruiz", correo_electronico: "admin@silabos.test" })
     expect(await response.json()).toEqual(payload("CARLOS RUIZ"))
-    expect(test.identity.audits.map((event) => [event.action, event.actorId])).toEqual([["usuario.perfil_actualizado", ACTOR]])
+    expect(test.identity.accounts.find((row) => row.id === ACTOR)?.name).toBe("CARLOS RUIZ")
   })
 
   it("keeps the email of the activated account and validates like ProfileUpdateRequest", async () => {
@@ -42,7 +41,7 @@ describe("PUT /api/v1/authentication/profile", () => {
     expect((await (await put(test, { nombre: "Carlos", correo_electronico: "sin-arroba" })).json()).errors).toEqual({
       correo_electronico: ["El campo correo electrónico debe ser un correo electrónico válido."],
     })
-    expect(test.identity.audits).toEqual([])
+    expect(test.identity.accounts.find((row) => row.id === ACTOR)?.email).toBe("admin@silabos.test")
   })
 
   it("is only for the administrator role", async () => {
@@ -82,23 +81,12 @@ describe("PUT /api/v1/authentication/accessibility", () => {
 describe("PUT /api/v1/authentication/formation", () => {
   const put = (test: ReturnType<typeof harness>, body: unknown) => updateFormation(jsonRequest("/api/v1/authentication/formation", "PUT", body), test.deps)
 
-  it("trims the text, audits the change once and answers the session payload", async () => {
+  it("trims the text and answers the session payload", async () => {
     const test = harness({ role: "docente", careerId: CAREER })
     const response = await put(test, { formacion_experiencia: "  Magíster en Software  " })
     expect((await response.json()).user.formation).toBe("Magíster en Software")
-    await put(test, { formacion_experiencia: "Magíster en Software" })
-    expect(test.identity.audits).toEqual([
-      {
-        actorId: ACTOR,
-        roleAssignmentId: ACTOR_ROLE,
-        action: "usuario.formacion_actualizada",
-        resourceType: "usuario",
-        resourceId: ACTOR,
-        result: "exito",
-        metadata: {},
-        occurredAt: NOW,
-      },
-    ])
+    expect(test.identity.accounts.find((row) => row.id === ACTOR)?.formation).toBe("Magíster en Software")
+    expect((await (await put(test, { formacion_experiencia: "Magíster en Software" })).json()).user.formation).toBe("Magíster en Software")
     expect((await (await put(test, { formacion_experiencia: "   " })).json()).errors).toEqual({
       formacion_experiencia: ["El campo formación y experiencia es obligatorio."],
     })
@@ -124,7 +112,6 @@ describe("POST /api/v1/authentication/account-activation/resend", () => {
     test.identity.invitations.push({ userId: ACTOR, hash: "h", expiresAt: NOW + 9, issuerId: ISSUER, createdAt: NOW - 9, usedAt: null, invalidatedAt: null })
     expect((await post(test)).status).toBe(202)
     expect(test.identity.invitations[1]).toMatchObject({ issuerId: ISSUER })
-    expect(test.identity.audits[0]).toMatchObject({ actorId: ISSUER, roleAssignmentId: ACTOR_ROLE, metadata: { reason: "reenvio_titular" } })
     expect(test.identity.mails.map((mail) => mail.to)).toEqual(["admin@silabos.test"])
   })
 })
@@ -132,16 +119,11 @@ describe("POST /api/v1/authentication/account-activation/resend", () => {
 describe("DELETE /api/v1/authentication/sessions/{session}", () => {
   const remove = (test: ReturnType<typeof harness>, id: string) => destroySession(jsonRequest(`/api/v1/authentication/sessions/${id}`, "DELETE", undefined), id, test.deps)
 
-  it("closes another session of the same account and audits only its hash", async () => {
+  it("closes another session of the same account", async () => {
     const test = harness()
     test.identity.sessions.push({ id: "otra-sesion", userId: ACTOR })
     expect(await (await remove(test, "otra-sesion")).text()).toBe('{"message":"La sesi\\u00f3n seleccionada fue cerrada."}')
     expect(test.identity.sessions.map((row) => row.id)).toEqual([SESSION_ID])
-    expect(test.identity.audits[0]).toMatchObject({
-      action: "sesion.remota_cerrada",
-      roleAssignmentId: null,
-      metadata: { session_id_hash: createHash("sha256").update("otra-sesion").digest("hex") },
-    })
   })
 
   it("refuses to close the current session", async () => {
@@ -164,7 +146,6 @@ describe("DELETE /api/v1/authentication/sessions/others", () => {
     expect(await response.json()).toEqual({ message: "Se cerraron 2 sesiones adicionales.", closed_sessions: 2 })
     expect(test.identity.sessions.map((row) => row.id)).toEqual([SESSION_ID])
     expect(test.identity.accounts[0].rememberToken).toBe("a".repeat(60))
-    expect(test.identity.audits[0]).toMatchObject({ action: "sesiones.remotas_cerradas", metadata: { closed_sessions: 2 } })
   })
 
   it("logs a remembered device in again with a new session and a renewed remember cookie, like Laravel", async () => {
@@ -182,7 +163,6 @@ describe("DELETE /api/v1/authentication/sessions/others", () => {
     expect(test.bridge.sessions.has(SESSION_ID)).toBe(false)
     expect(JSON.parse(storedJson(test.bridge, "a".repeat(40)) ?? "{}")[loginSessionKey()]).toBe(ACTOR)
     expect(test.identity.sessions.map((row) => row.id)).toEqual([SESSION_ID])
-    expect(test.identity.audits[0]).toMatchObject({ action: "sesiones.remotas_cerradas", metadata: { closed_sessions: 1 } })
   })
 
   it("leaves to Laravel a device that is only known by its remember cookie", async () => {
@@ -190,6 +170,6 @@ describe("DELETE /api/v1/authentication/sessions/others", () => {
     test.bridge.sessions.clear()
     const response = await remove(test, { current_password: "secreto-actual" }, `${COOKIE}; ${recallerCookieName()}=valor`)
     expect(response.status).toBe(299)
-    expect(test.identity.audits).toEqual([])
+    expect(test.identity.sessions.map((row) => row.userId)).toEqual([ACTOR])
   })
 })

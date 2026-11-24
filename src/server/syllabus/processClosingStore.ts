@@ -18,7 +18,6 @@ function closingTx(executor: Executor): ClosingTx {
   const process = processTx(executor)
   return {
     lockProcess: (id) => process.lockProcess(id),
-    recordAudit: (event) => process.recordAudit(event),
     async closeProcess(id, keepPausedAt) {
       await executor.execute(sql`update convocatorias_universidad set estado_convocatoria_universidad = 'cerrado', finalizada_en = clock_timestamp()
         ${keepPausedAt ? sql`` : sql`, pausado_en = null`} where convocatoria_universidad_id = ${id}::uuid`)

@@ -10,8 +10,7 @@ import { revisionSnapshotOf } from "../syllabus/syllabusDetailQueries"
 import { gotenbergEnabled, gotenbergSettings } from "./gotenbergConverter"
 import { dispatchSyllabusExport } from "./syllabusExportJob"
 import { dbTransaction, exportRequestTxOn, type TransactionRunner } from "./syllabusExportStore"
-import { rendererVersion, rendersInNext } from "./syllabusRenderer"
-import { insertAuditEvent } from "../operations/recordAuditEvent"
+import { rendersInNext } from "./syllabusRenderer"
 import { reviewDetailStoreOn } from "../syllabus/reviewDetailQueries"
 import { rowsOf, type Executor } from "../syllabus/teacherSyllabusQueries"
 import type { DocumentRequestDeps, DocumentStore } from "./revisionDocuments"
@@ -53,9 +52,6 @@ export function documentStoreOn(executor: Executor): DocumentStore {
       if (!row) return null
       return { id: row.id, revisionId: row.revision_id, state: row.state, object: row.object_id === null ? null : { id: row.object_id, disk: row.disk ?? "", path: row.path ?? "" } }
     },
-    async recordAudit(event) {
-      await insertAuditEvent(executor, event)
-    },
   }
 }
 
@@ -69,11 +65,10 @@ export function documentRequestPartsOn(
   executor: Executor,
   transaction: TransactionRunner,
   options: DocumentRequestOptions = {},
-): Pick<DocumentRequestDeps, "renderable" | "rendererVersion" | "existing" | "transaction" | "newId" | "now"> {
+): Pick<DocumentRequestDeps, "renderable" | "existing" | "transaction" | "newId" | "now"> {
   const dispatch = options.dispatch ?? dispatchSyllabusExport
   return {
     renderable: async (revisionId) => rendersInNext(record(await revisionSnapshotOf(executor, revisionId)), gotenbergEnabled(gotenbergSettings())),
-    rendererVersion: () => rendererVersion(gotenbergEnabled(gotenbergSettings())),
     existing: (revisionId, key) => exportRequestTxOn(executor, () => undefined, dispatch).existingArtifact(revisionId, key),
     transaction: (work) => withAfterCommit((afterCommit) => transaction((inner) => work(exportRequestTxOn(inner, afterCommit, dispatch)))),
     newId: options.newId ?? uuid7,
@@ -81,6 +76,6 @@ export function documentRequestPartsOn(
   }
 }
 
-export function createDocumentRequestParts(): Pick<DocumentRequestDeps, "renderable" | "rendererVersion" | "existing" | "transaction" | "newId" | "now"> {
+export function createDocumentRequestParts(): Pick<DocumentRequestDeps, "renderable" | "existing" | "transaction" | "newId" | "now"> {
   return documentRequestPartsOn(db as unknown as Executor, dbTransaction)
 }

@@ -3,7 +3,6 @@ import { sql, type SQL } from "drizzle-orm"
 import { db } from "@/db"
 import { careerLabelSql } from "../academic/careerLabel"
 import { uuid7 } from "../laravel/uuid7"
-import { insertAuditEvent } from "../operations/recordAuditEvent"
 import type { Account, AccountRepository, AccountTx, RoleGrant } from "./accounts"
 
 type Row = Record<string, unknown>
@@ -233,9 +232,6 @@ export function accountTx(executor: AccountExecutor): AccountTx {
       return exists(sql`select * from convocatorias_carreras where carrera_id = ${careerId}::uuid and estado_convocatoria_carrera = 'abierta'
         and exists (select * from convocatorias_universidad where convocatorias_carreras.convocatoria_universidad_id = convocatorias_universidad.convocatoria_universidad_id
           and estado_convocatoria_universidad in ('abierto', 'pausado'))`)
-    },
-    async recordAudit(event) {
-      await insertAuditEvent(executor, event)
     },
   }
   return tx

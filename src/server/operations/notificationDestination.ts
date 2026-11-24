@@ -14,12 +14,10 @@ export type DestinationNotice = { type: string; resourceType: string | null; res
 
 export type Destination = { assignment: RoleAssignmentRecord | null; path: string }
 
-const ADMINISTRATOR = "administrador"
 const COORDINATOR = "coordinador"
 const TEACHER = "docente"
 const LIBRARIAN = "bibliotecario"
 
-const ADMINISTRATION_EVENTS = ["documento.exportacion_fallida"]
 const COORDINATION_EVENTS = ["biblioteca.verificado", "biblioteca.aprobado", "biblioteca.correccion_solicitada"]
 const LIBRARY_EVENTS = ["silabo.enviado", "silabo.reenviado_biblioteca", "coordinacion.aprobado"]
 const PROCESS_STAFF_EVENTS = ["proceso.reanudado"]
@@ -46,11 +44,6 @@ function preferActive(options: Destination[], active: RoleAssignmentRecord | nul
     if (preferred) return preferred
   }
   return options[0] ?? null
-}
-
-function phpHttpQuery(name: string, value: string): string {
-  const encode = (text: string) => encodeURIComponent(text).replace(/[!'()*~]/g, (c) => "%" + c.charCodeAt(0).toString(16).toUpperCase()).replace(/%20/g, "+")
-  return `${encode(name)}=${encode(value)}`
 }
 
 async function teacherOptions(
@@ -127,9 +120,6 @@ export async function resolveDestination(
   eligible: RoleAssignmentRecord[],
   lookups: DestinationLookups,
 ): Promise<Destination | null> {
-  if (ADMINISTRATION_EVENTS.includes(notice.type)) {
-    return withRole(eligible, ADMINISTRATOR, null, `/admin/auditoria?${phpHttpQuery("action", notice.type)}`)[0] ?? null
-  }
   if (notice.resourceType === "proceso_silabos" && notice.resourceId !== null) {
     const careers = await lookups.processCareerIds(notice.resourceId)
     if (PROCESS_TEACHER_EVENTS.includes(notice.type)) {

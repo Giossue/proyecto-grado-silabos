@@ -18,7 +18,6 @@ import { laravelHttpError, laravelJson, validationError } from "../laravel/respo
 import { sharedRateLimiter } from "../laravel/throttle"
 import type { Rule } from "../laravel/validation"
 import type { PhpArray, PhpValue } from "../laravel/input"
-import type { AuditEventInput } from "../operations/recordAuditEvent"
 import { laravelBoolean } from "../syllabus/inProgressWork"
 import { Rejected, settle } from "../syllabus/reviewDecisions"
 import { fichaClean, fichaCoverage, fichaDocument, fichaSchema } from "./fichaFieldValues"
@@ -44,7 +43,6 @@ export interface FichaApplyTx extends FichaReader {
   careerLocked(careerId: string): Promise<boolean>
   storedValue(subjectId: string, fieldId: string): Promise<unknown>
   saveValue(subjectId: string, fieldId: string, document: PhpRecord): Promise<void>
-  recordAudit(event: AuditEventInput): Promise<void>
   keepContent<T>(confirmed: boolean, careerId: string, subjectIds: string[], change: () => Promise<T>): Promise<T>
 }
 
@@ -273,8 +271,6 @@ async function applyEntries(
   preview: Preview,
   subjectIds: string[],
   fieldsBySubject: Map<string, string[]> | null,
-  session: LaravelSession,
-  deps: FichaImportDeps,
 ): Promise<number> {
   const careerId = preview.definition.careerId
   await tx.lockCareer(careerId)
@@ -313,16 +309,6 @@ async function applyEntries(
     applied++
   }
   if (applied === 0) rejectWith({ subjects: ["Elija al menos una materia con proyecto de carrera propuesto."] })
-  await tx.recordAudit({
-    actorId: session.user.id,
-    roleAssignmentId: session.activeRole?.id ?? null,
-    action: "academico.ficha_importacion_aplicada",
-    resourceType: "carrera",
-    resourceId: careerId,
-    result: "exito",
-    metadata: { subjects: applied },
-    occurredAt: deps.now(),
-  })
   return applied
 }
 
@@ -355,7 +341,7 @@ export async function applyFichaImport(request: Request, deps: FichaImportDeps =
         const careerId = preview.definition.careerId
         if (session.activeRole === null || session.activeRole.careerId !== careerId) return laravelHttpError(403, "")
         const applied = await deps.transaction((tx) =>
-          tx.keepContent(laravelBoolean(input.confirm_purge), careerId, subjectIds, () => applyEntries(tx, preview, subjectIds, fieldsBySubject, session, deps)),
+          tx.keepContent(laravelBoolean(input.confirm_purge), careerId, subjectIds, () => applyEntries(tx, preview, subjectIds, fieldsBySubject)),
         )
         return laravelJson({ message: "Proyecto de carrera aplicado.", applied })
       } catch (error) {

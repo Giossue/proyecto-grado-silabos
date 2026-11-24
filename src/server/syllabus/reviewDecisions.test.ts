@@ -4,7 +4,6 @@ import golden from "../laravel/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import { fakeNotificationTransaction, notificationWorld, recipient, type NotificationWorld } from "../notifications/testing"
 import { phpJsonEncode } from "../laravel/phpJson"
-import type { AuditEventInput } from "../operations/recordAuditEvent"
 import { requestCorrection, resetSyllabus, type DecisionRevision, type DecisionSyllabus, type ReviewDecisionDeps } from "./reviewDecisions"
 import type { ReviewRevision } from "./reviewDetails"
 import type { DetailSyllabus } from "./syllabusDetail"
@@ -35,7 +34,6 @@ let stage: string | null
 let lockedBlock: string | null
 let freshBlock: string | null
 let log: string[]
-let audits: AuditEventInput[]
 
 function deps(): ReviewDecisionDeps {
   return {
@@ -47,7 +45,6 @@ function deps(): ReviewDecisionDeps {
     now: () => NOW,
     async transaction(work) {
       log.push("begin")
-      const staged: AuditEventInput[] = []
       try {
         const result = await fakeNotificationTransaction(notices, NOW, (notifications) =>
           work({
@@ -58,7 +55,6 @@ function deps(): ReviewDecisionDeps {
               return lockedBlock
             },
             decisionBlock: async () => freshBlock,
-            revisionCount: async () => 2,
             restartSyllabus: async (target) => {
               log.push(`restart:${target.id}:${target.convocationId}:${target.parallelId}`)
               return FRESH
@@ -79,12 +75,8 @@ function deps(): ReviewDecisionDeps {
             markCorrectionRequested: async (id, version, now) => {
               log.push(`syllabus:${id}:correccion_solicitada:${version}:${now}`)
             },
-            recordAudit: async (event) => {
-              staged.push(event)
-            },
           }),
         )
-        audits.push(...staged)
         log.push("commit")
         return result
       } catch (error) {
@@ -147,11 +139,10 @@ beforeEach(() => {
   lockedBlock = null
   freshBlock = null
   log = []
-  audits = []
 })
 
 describe("POST /api/v1/coordination/reviews/{revision}/request-correction", () => {
-  it("requests the correction, bumps the draft version, audits and notifies the teacher after commit", async () => {
+  it("requests the correction, bumps the draft version and notifies the teacher after commit", async () => {
     const response = await post({ justification: `  ${JUSTIFICATION}  ` })
     expect(response.status).toBe(200)
     expect(response.text).toBe(phpJsonEncode({ message: "Corrección solicitada; el docente ya puede editar una nueva versión de trabajo." }))
@@ -163,18 +154,6 @@ describe("POST /api/v1/coordination/reviews/{revision}/request-correction", () =
       `correction:${REVISION}:coordinacion:${golden.userId}:${NOW}:${JUSTIFICATION}`,
       `syllabus:${SYLLABUS}:correccion_solicitada:5:${NOW}`,
       "commit",
-    ])
-    expect(audits).toEqual([
-      {
-        actorId: golden.userId,
-        roleAssignmentId: golden.roleId,
-        action: "silabo.correccion_solicitada",
-        resourceType: "revision_silabo",
-        resourceId: REVISION,
-        result: "exito",
-        metadata: { revision_number: 1, from_state: "en_revision", to_state: "correccion_solicitada", stage: "coordinacion" },
-        occurredAt: NOW,
-      },
     ])
     expect(notices.notifications).toEqual([
       {
@@ -241,7 +220,6 @@ describe("POST /api/v1/coordination/reviews/{revision}/request-correction", () =
     lockedBlock = PAUSED
     expect((await post({ justification: JUSTIFICATION })).json).toEqual({ message: PAUSED, errors: { revision: [PAUSED] } })
     expect(log.at(-1)).toBe("rollback")
-    expect(audits).toEqual([])
     expect(notices.notifications).toEqual([])
     expect(notices.mails).toEqual([])
   })
@@ -258,7 +236,6 @@ describe("POST /api/v1/coordination/reviews/{revision}/request-correction", () =
     lockedRevision = { ...(lockedRevision as DecisionRevision), correctionRequested: false }
     stage = "biblioteca"
     expect((await post({ justification: JUSTIFICATION })).json?.errors).toEqual({ revision: ["La revisión no está en su etapa; otro revisor la tiene ahora."] })
-    expect(audits).toEqual([])
     expect(notices.mails).toEqual([])
   })
 
@@ -291,23 +268,11 @@ describe("POST /api/v1/coordination/syllabi/{syllabus}/reset", () => {
     notices.subjects.set(FRESH, "Biología")
   })
 
-  it("restarts an approved syllabus with all its history, audits it on the fresh one and notifies the teacher", async () => {
+  it("restarts an approved syllabus with all its history and notifies the teacher", async () => {
     const response = await reset({ reason: `  ${REASON}  ` })
     expect(response.status).toBe(200)
     expect(response.text).toBe(phpJsonEncode({ message: "Sílabo reiniciado con todo su historial. El docente empieza de cero con la malla y la plantilla actuales." }))
     expect(log).toEqual(["begin", `lock:syllabus:${SYLLABUS}`, `restart:${SYLLABUS}:${syllabus.convocationId}:d0000000-0000-4000-8000-000000000001`, "commit"])
-    expect(audits).toEqual([
-      {
-        actorId: golden.userId,
-        roleAssignmentId: golden.roleId,
-        action: "silabo.eliminado",
-        resourceType: "silabo",
-        resourceId: FRESH,
-        result: "exito",
-        metadata: { previous_syllabus_id: SYLLABUS, paralelo_id: "d0000000-0000-4000-8000-000000000001", revisions: 2, reason: REASON },
-        occurredAt: NOW,
-      },
-    ])
     const message = `Coordinación eliminó el sílabo aprobado de Biología; elabórelo con la malla y la plantilla actuales. Motivo: ${REASON}`
     expect(notices.notifications).toMatchObject([
       { userId: TEACHER, key: `flujo:silabo.eliminado:${FRESH}`, type: "silabo.eliminado", title: "Su sílabo volvió a empezar", message, resourceType: "silabo", resourceId: FRESH },
@@ -350,7 +315,6 @@ describe("POST /api/v1/coordination/syllabi/{syllabus}/reset", () => {
     freshBlock = PAUSED
     expect((await reset({ reason: REASON })).json?.errors).toEqual({ syllabus: [PAUSED] })
     expect(log.filter((entry) => entry.startsWith("restart"))).toEqual([])
-    expect(audits).toEqual([])
     expect(notices.mails).toEqual([])
   })
 

@@ -10,7 +10,6 @@ import { teacherEditable, templateFields } from "../configuration/templatePresen
 import { keepOwnOptions, normalizeFieldDocument, plainText, responseTemplate, TemplateValidationError } from "../configuration/templateRuntime"
 import { fakeTemplateStore, goldenTemplate, type FakeTemplateWorld } from "../configuration/testing"
 import { createRateLimiter } from "../laravel/throttle"
-import type { AuditEventInput } from "../operations/recordAuditEvent"
 import { GenerationRejected } from "../syllabus/inProgressWork"
 import { applyFichaImport, fichaTemplate, previewFichaImport, type FichaApplyTx, type FichaImportDeps } from "./fichaImports"
 
@@ -26,7 +25,6 @@ const OWN = ["Aula", "Taller", "Campo"]
 
 let world: FakeWorld
 let templates: FakeTemplateWorld
-let audits: AuditEventInput[]
 let locked: boolean
 let purge: Record<string, string[]> | null
 let log: string[]
@@ -67,7 +65,6 @@ function deps(limiter = createRateLimiter()): FichaImportDeps {
     saveValue: async (subjectId, fieldId, document) => {
       templates.values = [...templates.values.filter((value) => !(value.subjectId === subjectId && value.fieldId === fieldId)), { fieldId, subjectId, value: document }]
     },
-    recordAudit: async (event) => void audits.push(event),
     keepContent: async (confirmed, careerId, subjectIds, change) => {
       log.push(`keep:${confirmed}:${careerId}:${subjectIds.join(",")}`)
       if (purge !== null && !confirmed) throw new GenerationRejected(purge)
@@ -89,12 +86,10 @@ function deps(limiter = createRateLimiter()): FichaImportDeps {
     },
     async transaction(work) {
       const values = templates.values
-      const count = audits.length
       try {
         return await work(tx)
       } catch (error) {
         templates.values = values
-        audits.length = count
         throw error
       }
     },
@@ -193,7 +188,6 @@ function ownSetup(options: string[]): PhpRecord {
 beforeEach(() => {
   signIn("coordinador")
   templates = { template: goldenTemplate(), values: [] }
-  audits = []
   locked = false
   purge = null
   log = []
@@ -219,18 +213,6 @@ describe("FichaImportTest", () => {
     expect(await applied.text()).toBe('{"message":"Proyecto de carrera aplicado.","applied":1}')
     expect(JSON.stringify(stored(SUBJECTS[0].id, "descripcion"))).toContain("Ficha completada en Excel")
     expect(stored(SUBJECTS[1].id, "descripcion")).toBeNull()
-    expect(audits).toEqual([
-      {
-        actorId: golden.userId,
-        roleAssignmentId: golden.roleId,
-        action: "academico.ficha_importacion_aplicada",
-        resourceType: "carrera",
-        resourceId: CAREER,
-        result: "exito",
-        metadata: { subjects: 1 },
-        occurredAt: NOW,
-      },
-    ])
     expect(log).toEqual([`keep:false:${CAREER}:${SUBJECTS[0].id}`, `lock:${CAREER}`])
   })
 
@@ -363,7 +345,6 @@ describe("FichaImportTest", () => {
     const strayField = await apply(file, detail, [[`fields[${SUBJECTS[1].id}][]`, "descripcion"]])
     expect(((await strayField.json()) as { errors: unknown }).errors).toEqual({ fields: ["Los campos deben pertenecer a las materias seleccionadas."] })
     expect(templates.values).toEqual([])
-    expect(audits).toEqual([])
   })
 })
 

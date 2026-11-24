@@ -1,8 +1,8 @@
+import { templateSchema } from "@/server/configuration/templateReads"
 import { laravelRouterHandler } from "@/server/laravel/router"
-import { listAuditEvents } from "@/server/operations/auditEvents"
 
 export function GET(request: Request): Promise<Response> {
-  return listAuditEvents(request)
+  return templateSchema(request)
 }
 
 export { laravelRouterHandler as POST, laravelRouterHandler as PUT, laravelRouterHandler as PATCH, laravelRouterHandler as DELETE, laravelRouterHandler as OPTIONS }

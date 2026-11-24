@@ -7,7 +7,6 @@ import { lengthAwarePaginator, resolveCurrentPage } from "../laravel/pagination"
 import { laravelQuery, laravelRequestUrl } from "../laravel/request"
 import { aborted, forbidden, laravelJson, validationError } from "../laravel/responses"
 import { validateInput } from "../laravel/validation"
-import type { AuditEventInput } from "../operations/recordAuditEvent"
 import { CONVOCATION_OPEN, hasRole, ROLE_COORDINATOR } from "./policy"
 import { convocationName } from "./syllabusSql"
 import { phpFalsy } from "./teacherSyllabi"
@@ -36,7 +35,6 @@ export type ConvocationSyllabus = {
 export interface ConvocationTx {
   lockConvocation(id: string): Promise<string | null>
   updateState(id: string, state: string): Promise<void>
-  recordAudit(event: AuditEventInput): Promise<void>
 }
 
 export interface ConvocationRepository {
@@ -173,16 +171,6 @@ export async function pauseConvocation(request: Request, id: string, deps: Convo
       if (state === null) throw new Missing()
       if (state !== CONVOCATION_OPEN) throw new StateChanged()
       await tx.updateState(convocation.id, "pausada")
-      await tx.recordAudit({
-        actorId: session.user.id,
-        roleAssignmentId: session.activeRole?.id ?? null,
-        action: "convocatoria.pausada",
-        resourceType: "convocatoria",
-        resourceId: convocation.id,
-        result: "exito",
-        metadata: {},
-        occurredAt: deps.now(),
-      })
     })
   } catch (error) {
     if (error instanceof StateChanged) return validationError({ convocation: ["Solo una convocatoria abierta puede pausarse."] })

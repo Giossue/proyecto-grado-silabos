@@ -3,12 +3,11 @@ import { requireSession } from "../auth/requireSession"
 import type { BridgeDeps, LaravelSession } from "../auth/types"
 import { isUuid } from "../academic/structure"
 import { FORBIDDEN, managesTemplates } from "../configuration/templateReads"
-import { list, phpCount, phpString, phpTrim, record, type PhpRecord } from "../configuration/phpValues"
+import { phpString, phpTrim, record, type PhpRecord } from "../configuration/phpValues"
 import { toRuntime } from "../configuration/templateDraft"
 import { isJsonRequest, laravelInput } from "../laravel/input"
 import { aborted, laravelHttpError, laravelJson, validationError } from "../laravel/responses"
 import { uuid7 } from "../laravel/uuid7"
-import type { AuditEventInput } from "../operations/recordAuditEvent"
 import { OPEN_STATES, type AssistantStore, type AssistantTx, type StoredMessage, type StoredProposal } from "./assistantStore"
 import { assistantAvailable, type AiConfig } from "./config"
 import { sendMessageErrors, validatedDraft } from "./sendMessageRequest"
@@ -120,10 +119,6 @@ export async function showAssistant(request: Request, deps: AssistantRouteDeps):
   })
 }
 
-function audit(session: LaravelSession, action: string, resourceType: string, resourceId: string, now: number, metadata: AuditEventInput["metadata"] = {}): AuditEventInput {
-  return { actorId: session.user.id, roleAssignmentId: session.activeRole?.id ?? null, action, resourceType, resourceId, result: "exito", metadata, occurredAt: now }
-}
-
 export async function storeAssistantMessage(request: Request, deps: AssistantRouteDeps): Promise<Response> {
   if (!isJsonRequest(request)) return deps.bridge.forward(request)
   const original = request.clone()
@@ -168,7 +163,6 @@ export async function storeAssistantMessage(request: Request, deps: AssistantRou
         content: { rol: "asistente", estado: "pendiente", entrada: { respuesta_a_id: questionId, borrador: draft, version_borrador: draftVersion }, contenido: "" },
       })
       dispatched.push(answer)
-      await tx.recordAudit(audit(session, "ia.plantilla_solicitada", "mensaje_ia_plantilla", answer, deps.bridge.now()))
       return answer
     })
     for (const id of dispatched) await deps.dispatchAnswer(id)
@@ -224,7 +218,7 @@ export async function showProposal(request: Request, id: string, deps: Assistant
   })
 }
 
-async function decide(request: Request, id: string, deps: AssistantRouteDeps, state: string, action: string, reply: string): Promise<Response> {
+async function decide(request: Request, id: string, deps: AssistantRouteDeps, state: string, reply: string): Promise<Response> {
   const bound = await boundProposal(request, id, deps)
   if (bound instanceof Response) return bound
   const { session, proposal } = bound
@@ -235,18 +229,16 @@ async function decide(request: Request, id: string, deps: AssistantRouteDeps, st
       const current = locked as StoredProposal
       if (current.requestedBy !== session.user.id) reject(aborted(404))
       if (current.state !== PENDING) reject(validationError({ proposal: [NOT_PENDING] }))
-      const now = deps.bridge.now()
-      await tx.decideProposal(current.id, state, session.user.id, now)
-      await tx.recordAudit(audit(session, action, "propuesta_ia_plantilla", current.id, now, { changes: phpCount(list(current.changes.lista)) }))
+      await tx.decideProposal(current.id, state, session.user.id, deps.bridge.now())
     })
     return laravelJson({ message: reply })
   })
 }
 
 export function applyProposal(request: Request, id: string, deps: AssistantRouteDeps): Promise<Response> {
-  return decide(request, id, deps, APPLIED, "plantilla.propuesta_ia_aplicada", "Propuesta aplicada en el editor.")
+  return decide(request, id, deps, APPLIED, "Propuesta aplicada en el editor.")
 }
 
 export function discardProposal(request: Request, id: string, deps: AssistantRouteDeps): Promise<Response> {
-  return decide(request, id, deps, DISCARDED, "plantilla.propuesta_ia_descartada", "Propuesta descartada.")
+  return decide(request, id, deps, DISCARDED, "Propuesta descartada.")
 }

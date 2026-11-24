@@ -14,7 +14,6 @@ import { validateInput, type Rule } from "../laravel/validation"
 import { catalogSettings } from "../library/catalogHandlers"
 import { createCatalog } from "../library/catalog"
 import { kohaFetch } from "../library/kohaHttp"
-import { insertAuditEvent, type AuditEventInput } from "./recordAuditEvent"
 import { describeSettings, effectiveSettings, SECRET, storedSettings, type SystemSettingsDeps } from "./systemSettings"
 
 export type SettingRow = { field: string; value: unknown }
@@ -23,7 +22,6 @@ export type SystemSettingsWriteDeps = SystemSettingsDeps & {
   limiter: RateLimiter
   verifyPassword: (plain: string, hash: string) => Promise<boolean | null>
   save: (rows: SettingRow[], actorId: string, at: number) => Promise<void>
-  recordAudit: (event: AuditEventInput) => Promise<void>
   fetch: (url: string, init: RequestInit) => Promise<Response>
   libraries: () => Promise<unknown[]>
 }
@@ -148,26 +146,12 @@ export async function updateSystemSettings(request: Request, section: string, de
   const errors = await validateInput(input, rulesFor(section, matches), ATTRIBUTES, { messages: MESSAGES })
   if (Object.keys(errors).length > 0) return finish(fromController(validationError(errors)))
   const key = deps.bridge.config.key
-  const before = await deps.stored()
-  const current = effectiveSettings(before, deps.environment(), key)
   const rows = sectionValues(section, input)
-  const changed = rows.filter((row) => current[row.field] !== row.value || !before.has(row.field)).map((row) => row.field.slice(row.field.indexOf(".") + 1))
-  const now = deps.bridge.now()
   await deps.save(
     rows.map((row) => ({ field: row.field, value: row.field === SECRET && typeof row.value === "string" ? encrypt(row.value, key, false) : row.value })),
     session.user.id,
-    now,
+    deps.bridge.now(),
   )
-  await deps.recordAudit({
-    actorId: session.user.id,
-    roleAssignmentId: session.activeRole?.id ?? null,
-    action: `ajustes.${section}.actualizados`,
-    resourceType: "ajustes_sistema",
-    resourceId: null,
-    result: "exito",
-    metadata: { campos: changed.join(", ") },
-    occurredAt: now,
-  })
   return finish(laravelJson(describeSettings(await deps.stored(), deps.environment(), key)))
 }
 
@@ -232,9 +216,6 @@ export function defaultSystemSettingsWriteDeps(): SystemSettingsWriteDeps {
     limiter: sharedRateLimiter(),
     verifyPassword: bcryptVerify,
     save: (rows, actorId, at) => db.transaction((tx) => saveSettingsOn(tx)(rows, actorId, at)),
-    recordAudit: async (event) => {
-      await insertAuditEvent(db, event)
-    },
     fetch: (url, init) => fetch(url, init),
     libraries: async () => createCatalog(await catalogSettings(), kohaFetch).libraries(),
   }

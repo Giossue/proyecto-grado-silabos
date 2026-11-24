@@ -4,7 +4,6 @@ import { db } from "@/db"
 import { careerLabelSql } from "../academic/careerLabel"
 import { uuidList } from "../laravel/sql"
 import { notificationScope, recipientsOn, systemNow, type Mail, type WriteOptions } from "../notifications/queries"
-import { insertAuditEvent } from "../operations/recordAuditEvent"
 import { withAfterCommit, type AfterCommit } from "../queue/dispatch"
 import { institutionalTemplateProblem } from "./convocationWriteStore"
 import { anotherProcessInProgress } from "./finalizedChangeNotice"
@@ -91,7 +90,7 @@ export function processWriteTx(executor: Executor, afterCommit: AfterCommit, now
     anotherInProgress: (processId) => anotherProcessInProgress(executor, processId),
     templateChange: (processId, reference) => templateChangedSince(executor, reference === "pause" ? "pausado_en" : "reopen", processId),
     syllabusCounts: (processId, toReopen) => processSyllabusCounts(executor, processId, toReopen),
-    adaptToTemplate: (processId, change, counts, audit) => adaptProcessToTemplate(work, processId, change, counts, audit),
+    adaptToTemplate: (processId, change) => adaptProcessToTemplate(work, processId, change),
     convocationsToReopen: (processId) => convocationsToReopen(executor, processId),
     reopenPlan: (convocationIds, processId, finalized) => catchUp.plan(convocationIds, processId, finalized),
     reopen: (processId) => reopenProcess(work, processId),
@@ -119,17 +118,7 @@ export function processWriteTx(executor: Executor, afterCommit: AfterCommit, now
       await executor.execute(sql`update convocatorias_universidad set fecha_entrega = ${dueAt}::timestamptz, cantidad_prorrogas = ${extension}
         where convocatoria_universidad_id = ${processId}::uuid`)
     },
-    async convocationCount(processId) {
-      const [row] = await rowsOf<{ count: number }>(
-        executor,
-        sql`select count(*)::int as count from convocatorias_carreras where convocatoria_universidad_id = ${processId}::uuid and ${PROCESS_ALIVE}`,
-      )
-      return Number(row.count)
-    },
     teachersWithPendingWork: (id) => recipients.teachersWithPendingWork(id),
-    async recordAudit(event) {
-      await insertAuditEvent(executor, event)
-    },
   }
 }
 

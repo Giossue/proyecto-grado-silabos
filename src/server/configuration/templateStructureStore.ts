@@ -2,7 +2,6 @@ import "server-only"
 import { sql, type SQL } from "drizzle-orm"
 import { db } from "@/db"
 import { phpJsonEncode } from "../laravel/phpJson"
-import { insertAuditEvent } from "../operations/recordAuditEvent"
 import { phpJsonDecode } from "./phpValues"
 import type { DocumentSection, FieldRecord, StructureStore, StructureTx } from "./templateStructure"
 import { loadTemplate } from "./templateStore"
@@ -101,9 +100,6 @@ export function structureTx(executor: Executor): StructureTx {
       if (changes.content !== undefined) assignments.push(sql`contenido_definicion_campo = ${phpJsonEncode(changes.content)}::jsonb`)
       if (assignments.length === 0) return
       await executor.execute(sql`update definiciones_campo set ${sql.join(assignments, sql`, `)} where definicion_campo_id = ${id}::uuid`)
-    },
-    async recordAudit(event) {
-      await insertAuditEvent(executor, event)
     },
   }
 }

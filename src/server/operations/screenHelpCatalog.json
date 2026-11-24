@@ -1,8 +1,4 @@
 {
-    "/admin/auditoria": {
-        "title": "Auditoría",
-        "content": "Aquí queda anotado quién hizo cada cambio importante y cuándo.\n\nSolo se puede consultar."
-    },
     "/admin/configuracion/perfil": {
         "title": "Perfil",
         "content": "Aquí cambia su nombre. El correo solo se puede cambiar antes de activar la cuenta."

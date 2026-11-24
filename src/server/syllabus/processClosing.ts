@@ -5,7 +5,6 @@ import { isUuid } from "../academic/structure"
 import { isJsonRequest, laravelInput } from "../laravel/input"
 import { forbidden, laravelJson, validationError } from "../laravel/responses"
 import { validateInput } from "../laravel/validation"
-import type { AuditEventInput } from "../operations/recordAuditEvent"
 import { isRecord, type PhpRecord } from "../configuration/phpValues"
 import { hasRole, PROCESS_OPEN, PROCESS_PAUSED, ROLE_ADMINISTRATOR } from "./policy"
 import type { ProcessRepository, ProcessRow } from "./processes"
@@ -23,7 +22,6 @@ export interface ClosingTx {
   snapshot(syllabusId: string): Promise<PhpRecord>
   storeContext(syllabusId: string, context: PhpRecord): Promise<void>
   closeConvocations(processId: string): Promise<void>
-  recordAudit(event: AuditEventInput): Promise<void>
 }
 
 export type ClosingDeps = {
@@ -85,16 +83,6 @@ export async function closeProcess(request: Request, id: string, deps: ClosingDe
         await tx.storeContext(syllabus.id, withClosedDocument(syllabus.context, await tx.snapshot(syllabus.id)))
       }
       await tx.closeConvocations(process.id)
-      await tx.recordAudit({
-        actorId: session.user.id,
-        roleAssignmentId: session.activeRole?.id ?? null,
-        action: "proceso_silabos.cerrado",
-        resourceType: "proceso_silabos",
-        resourceId: process.id,
-        result: "exito",
-        metadata: { previous_state: state },
-        occurredAt: deps.now(),
-      })
     })
   } catch (error) {
     if (error instanceof StateChanged) return validationError({ process: ["El proceso no está en un estado que admita esta acción."] })

@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it } from "vitest"
 import golden from "../laravel/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import { fakeNotificationTransaction, notificationWorld, recipient, type NotificationWorld } from "../notifications/testing"
-import type { AuditEventInput } from "../operations/recordAuditEvent"
 import type { SignatureRow } from "../signatures/signDecision"
 import type { ReviewRevision } from "../syllabus/reviewDetails"
 import type { DetailSyllabus } from "../syllabus/syllabusDetail"
@@ -39,7 +38,6 @@ let lockedRevision: { id: string; number: number; correctionRequested: boolean }
 let signedRoles: string[]
 let log: string[]
 let stored: SignatureRow[]
-let audits: AuditEventInput[]
 
 function deps(): LibraryDecisionDeps {
   return {
@@ -58,7 +56,7 @@ function deps(): LibraryDecisionDeps {
     now: () => NOW,
     async transaction(work) {
       log.push("begin")
-      const staged = { stored: [] as SignatureRow[], audits: [] as AuditEventInput[] }
+      const staged = { stored: [] as SignatureRow[] }
       const result = await fakeNotificationTransaction(notices, NOW, (notifications) =>
         work({
           notifications,
@@ -90,11 +88,9 @@ function deps(): LibraryDecisionDeps {
             staged.stored.push(row)
             return "f0000000-0000-4000-8000-000000000001"
           },
-          recordAudit: async (event) => void staged.audits.push(event),
         }),
       )
       stored.push(...staged.stored)
-      audits.push(...staged.audits)
       log.push("commit")
       return result
     },
@@ -154,11 +150,10 @@ beforeEach(() => {
   signedRoles = []
   log = []
   stored = []
-  audits = []
 })
 
 describe("POST library/reviews/{r}/verify", () => {
-  it("signs, records the verification, audits it and tells coordination", async () => {
+  it("signs, records the verification and tells coordination", async () => {
     expect(await verify({ signature: { statement: STATEMENT, cms: "firma-valida" } })).toMatchObject({ status: 201, json: { message: "Sílabo firmado y enviado a coordinación." } })
     expect(log).toEqual([
       "begin",
@@ -170,10 +165,6 @@ describe("POST library/reviews/{r}/verify", () => {
       "commit",
     ])
     expect(stored.map((row) => [row.role, row.holder, row.revisionId])).toEqual([["biblioteca", "ROSA ELENA YÁNEZ CAMPOS", REVISION]])
-    expect(audits.map((event) => [event.action, event.resourceType, event.resourceId, event.metadata])).toEqual([
-      ["silabo.firmado", "firma_silabo", "f0000000-0000-4000-8000-000000000001", expect.objectContaining({ role: "biblioteca", revision_number: 2 })],
-      ["biblioteca.verificado", "envio_biblioteca", SUBMISSION, { revision_number: 2 }],
-    ])
     expect(notices.notifications.map((row) => [row.userId, row.key, row.title])).toEqual([[COORDINATOR, `flujo:biblioteca.verificado:${REVISION}`, "Bibliografía verificada por Biblioteca"]])
   })
 
@@ -193,7 +184,6 @@ describe("POST library/reviews/{r}/verify", () => {
   it("does nothing more when the library already verified the revision", async () => {
     submission = { id: SUBMISSION, verified: true }
     expect((await verify({})).status).toBe(201)
-    expect(audits).toEqual([])
   })
 
   it("refuses revisions that no longer wait for the library and decisions blocked under the lock", async () => {
@@ -207,7 +197,6 @@ describe("POST library/reviews/{r}/verify", () => {
     expect((await verify({})).json).toEqual({ message: PAUSED, errors: { revision: [PAUSED] } })
     lockedBlock = null
     expect((await verify({})).json).toEqual({ message: "Firme con su firma electrónica.", errors: { signature: ["Firme con su firma electrónica."] } })
-    expect(audits).toEqual([])
   })
 
   it("answers Laravel's model 404 for unknown revisions", async () => {
@@ -228,9 +217,6 @@ describe("POST library/reviews/{r}/comments", () => {
       `correction:${REVISION}:biblioteca:${golden.userId}:${NOW}:El código del libro es incorrecto; Falta la 3.ª edición de Pressman.`,
       `syllabus:${SYLLABUS}:correccion_solicitada:9:${NOW}`,
       "commit",
-    ])
-    expect(audits.map((event) => [event.action, event.resourceType, event.resourceId, event.metadata])).toEqual([
-      ["silabo.correccion_solicitada", "revision_silabo", REVISION, { revision_number: 2, from_state: "en_revision", to_state: "correccion_solicitada", stage: "biblioteca" }],
     ])
     expect(notices.notifications.map((row) => [row.userId, row.key])).toEqual([[TEACHER, `flujo:silabo.correccion_solicitada:${REVISION}`]])
   })

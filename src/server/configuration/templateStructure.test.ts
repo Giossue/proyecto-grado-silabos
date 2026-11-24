@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it } from "vitest"
 import golden from "../laravel/__fixtures__/laravel-golden.json"
 import { fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import { phpJsonEncode } from "../laravel/phpJson"
-import type { AuditEventInput } from "../operations/recordAuditEvent"
 import { fakeTemplateStore, goldenTemplate, TEMPLATE_ID, type FakeTemplateWorld } from "./testing"
 import type { SyllabusTemplate } from "./templatePresentation"
 import {
@@ -27,7 +26,6 @@ const FORBIDDEN = '{"message":"No tiene permiso para hacer esto."}'
 const NEW_SECTION = "0b1c5ba0-aaaa-4000-8000-000000000001"
 const NEW_BLOCK = "0b1c5ba0-aaaa-4000-8000-000000000002"
 const NEW_FIELD = "01a1c5ba-ffff-7000-8000-000000000001"
-const ROLE_ID = golden.roleId
 
 let world: FakeWorld
 let templates: FakeTemplateWorld
@@ -35,7 +33,6 @@ let forwarded: Request[]
 let openProcess: boolean
 let log: string[]
 let syncs: DocumentSection[][]
-let audits: AuditEventInput[]
 let inserted: StoredField[]
 let updates: { id: string; changes: Record<string, unknown> }[]
 let ids: string[]
@@ -93,7 +90,7 @@ const structure = (): StructureStore => ({
       ),
     ),
   async transaction(work) {
-    const before = { template: templates.template, syncs: syncs.length, audits: audits.length, inserted: inserted.length, updates: updates.length }
+    const before = { template: templates.template, syncs: syncs.length, inserted: inserted.length, updates: updates.length }
     log.push("begin")
     try {
       const result = await work({
@@ -115,10 +112,6 @@ const structure = (): StructureStore => ({
           log.push(`update ${id}`)
           updates.push({ id, changes })
         },
-        recordAudit: async (event) => {
-          log.push(`audit ${event.action}`)
-          audits.push(event)
-        },
       })
       log.push("commit")
       return result
@@ -126,7 +119,6 @@ const structure = (): StructureStore => ({
       log.push("rollback")
       templates.template = before.template
       syncs.length = before.syncs
-      audits.length = before.audits
       inserted.length = before.inserted
       updates.length = before.updates
       throw error
@@ -138,7 +130,6 @@ const deps = (): StructureDeps => ({
   bridge: fakeDeps(world, forwarded),
   store: fakeTemplateStore(templates),
   structure: structure(),
-  now: () => NOW,
   newId: () => ids.shift() ?? "0b1c5ba0-aaaa-4000-8000-0000000000ff",
   newFieldId: () => NEW_FIELD,
 })
@@ -162,10 +153,6 @@ async function read(response: Promise<Response>) {
   return { status: resolved.status, text: await resolved.text() }
 }
 
-function audit(action: string, resourceType: string, resourceId: string): AuditEventInput {
-  return { actorId: golden.userId, roleAssignmentId: ROLE_ID, action, resourceType, resourceId, result: "exito", metadata: {}, occurredAt: NOW }
-}
-
 const sectionKeys = (sections: DocumentSection[]) => sections.map((section) => `${section.position}:${section.key}`)
 const message = (text: string, extra: Record<string, unknown> = {}) => phpJsonEncode({ message: text, ...extra })
 const invalid = (errors: Record<string, string[]>) => {
@@ -185,20 +172,18 @@ beforeEach(() => {
   openProcess = false
   log = []
   syncs = []
-  audits = []
   inserted = []
   updates = []
   ids = [NEW_SECTION, NEW_BLOCK]
 })
 
 describe("POST admin/template/{template}/structure/sections", () => {
-  it("adds the section at the end inside a locked transaction and audits it", async () => {
+  it("adds the section at the end inside a locked transaction", async () => {
     const before = documentOf(templates.template!)
     const response = await read(storeSection(request("POST", "sections", { key: "anexos", title: "  Anexos  " }), TEMPLATE_ID, deps()))
     expect(response).toEqual({ status: 201, text: message("Sección agregada a la plantilla.", { section_id: NEW_SECTION }) })
-    expect(log).toEqual(["process", "begin", `lock ${TEMPLATE_ID}`, `sync ${TEMPLATE_ID}`, "audit plantilla.seccion_creada", "commit"])
+    expect(log).toEqual(["process", "begin", `lock ${TEMPLATE_ID}`, `sync ${TEMPLATE_ID}`, "commit"])
     expect(syncs).toEqual([[...before, { id: NEW_SECTION, key: "anexos", title: "Anexos", orientation: "portrait", position: before.length + 1, blocks: [] }]])
-    expect(audits).toEqual([audit("plantilla.seccion_creada", "seccion_plantilla", NEW_SECTION)])
   })
 
   it("moves the new section to the requested position with a second sync", async () => {
@@ -248,7 +233,6 @@ describe("PATCH admin/template/{template}/structure/sections/{section}", () => {
     expect(response).toEqual({ status: 200, text: message("Sección actualizada.") })
     expect(syncs).toHaveLength(1)
     expect(syncs[0][1]).toEqual({ ...documentOf(goldenTemplate())[1], title: "Descripción nueva" })
-    expect(audits).toEqual([audit("plantilla.seccion_actualizada", "seccion_plantilla", section.id)])
   })
 
   it("leaves an unknown section to Laravel after validating the input", async () => {
@@ -270,7 +254,6 @@ describe("PATCH admin/template/{template}/structure/sections/order", () => {
     expect(response).toEqual({ status: 200, text: message("Orden de secciones actualizado.") })
     expect(syncs[0].map((section) => section.id)).toEqual(order)
     expect(syncs[0].map((section) => section.position)).toEqual(order.map((_, index) => index + 1))
-    expect(audits).toEqual([audit("plantilla.secciones_reordenadas", "plantilla_silabo", TEMPLATE_ID)])
   })
 
   it("rejects ids that are not sections of the template and an incomplete order", async () => {
@@ -297,19 +280,18 @@ describe("PATCH admin/template/{template}/structure/sections/order", () => {
 })
 
 describe("DELETE admin/template/{template}/structure/sections/{section}", () => {
-  it("removes the section from the document and audits it", async () => {
+  it("removes the section from the document", async () => {
     const section = templates.template!.sections[1]
     const response = await read(destroySection(request("DELETE", `sections/${section.id}`), TEMPLATE_ID, section.id, deps()))
     expect(response).toEqual({ status: 200, text: message("Sección eliminada.") })
     expect(syncs[0].map((entry) => entry.id)).toEqual(documentOf(goldenTemplate()).filter((entry) => entry.id !== section.id).map((entry) => entry.id))
-    expect(audits).toEqual([audit("plantilla.seccion_eliminada", "seccion_plantilla", section.id)])
   })
 })
 
 describe("POST admin/template/{template}/structure/sections/{section}/fields", () => {
   const content = { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Pregunta " }, { type: "response", attrs: { kind: "una", options: [{ const: "si", title: "Sí" }], value: "si", customOptions: true } }] }] }
 
-  it("adds the field at the end of the section with its definition and audit", async () => {
+  it("adds the field at the end of the section with its definition", async () => {
     const section = templates.template!.sections[1]
     const response = await read(storeField(request("POST", `sections/${section.id}/fields`, { key: "nuevo", label: "  Nuevo  ", quien_llena: "carrera", content }), TEMPLATE_ID, section.id, deps()))
     const stored = { type: "doc", content: [{ type: "paragraph", attrs: { textAlign: "left" }, content: [{ type: "text", text: "Pregunta " }, { type: "response", attrs: { kind: "una", options: [{ const: "si", title: "Sí" }], value: null } }] }] }
@@ -317,10 +299,9 @@ describe("POST admin/template/{template}/structure/sections/{section}/fields", (
       status: 201,
       text: message("Campo agregado a la sección.", { field: { id: NEW_FIELD, key: "nuevo", label: "Nuevo", quien_llena: "carrera", content: stored } }),
     })
-    expect(log).toEqual(["process", "begin", `lock ${TEMPLATE_ID}`, `sync ${TEMPLATE_ID}`, `insert ${NEW_FIELD}`, "audit plantilla.campo_creado", "commit"])
+    expect(log).toEqual(["process", "begin", `lock ${TEMPLATE_ID}`, `sync ${TEMPLATE_ID}`, `insert ${NEW_FIELD}`, "commit"])
     expect(syncs[0][1].blocks).toEqual([...documentOf(goldenTemplate())[1].blocks, { id: NEW_SECTION, key: "nuevo", title: "Nuevo", position: 2 }])
     expect(inserted).toEqual([{ id: NEW_FIELD, templateId: TEMPLATE_ID, blockId: NEW_SECTION, responsible: "carrera", content: stored }])
-    expect(audits).toEqual([audit("plantilla.campo_creado", "definicion_campo", NEW_FIELD)])
   })
 
   it("stops at the first invalid document like Laravel, keeping only that error", async () => {
@@ -360,7 +341,7 @@ describe("PATCH admin/template/{template}/structure/fields/{field}", () => {
     })
     expect(updates).toEqual([{ id: field.id, changes: { responsible: "institucional", content: stored } }])
     expect(syncs[0][1].blocks[0]).toEqual({ ...documentOf(goldenTemplate())[1].blocks[0], title: "Resumen" })
-    expect(log).toEqual(["process", "begin", `lock ${TEMPLATE_ID}`, `update ${field.id}`, `sync ${TEMPLATE_ID}`, "audit plantilla.campo_actualizado", "commit"])
+    expect(log).toEqual(["process", "begin", `lock ${TEMPLATE_ID}`, `update ${field.id}`, `sync ${TEMPLATE_ID}`, "commit"])
   })
 
   it("writes nothing to the definition when neither the responsible nor the content change", async () => {
@@ -386,7 +367,6 @@ describe("PATCH admin/template/{template}/structure/sections/{section}/fields/or
     const response = await read(reorderFields(request("PATCH", `sections/${section.id}/fields/order`, { field_ids: fieldIds }), TEMPLATE_ID, section.id, deps()))
     expect(response).toEqual({ status: 200, text: message("Orden de campos actualizado.") })
     expect(syncs[0][2].blocks.map((block) => `${block.position}:${block.key}`)).toEqual(["1:objetivos_especificos", "2:objetivo_general"])
-    expect(audits).toEqual([audit("plantilla.bloques_reordenados", "plantilla_silabo", TEMPLATE_ID)])
   })
 
   it("rejects unknown fields before checking the process and fields of another section inside the transaction", async () => {
@@ -406,11 +386,10 @@ describe("PATCH admin/template/{template}/structure/sections/{section}/fields/or
 })
 
 describe("DELETE admin/template/{template}/structure/fields/{field}", () => {
-  it("removes the block of the field and audits the block", async () => {
+  it("removes the block of the field", async () => {
     const block = templates.template!.sections[2].blocks[0]
     const response = await read(destroyField(request("DELETE", `fields/${block.fields[0].id}`), TEMPLATE_ID, block.fields[0].id, deps()))
     expect(response).toEqual({ status: 200, text: message("Campo eliminado.") })
     expect(syncs[0][2].blocks.map((entry) => entry.key)).toEqual(["objetivos_especificos"])
-    expect(audits).toEqual([audit("plantilla.bloque_eliminado", "bloque_plantilla", block.id)])
   })
 })

@@ -1,4 +1,6 @@
 import "server-only"
+import path from "node:path"
+import { fromController } from "../auth/controllerResponse"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
 import type { BridgeDeps, LaravelSession, SessionUser } from "../auth/types"
 import { isUuid } from "../academic/structure"
@@ -9,6 +11,7 @@ import { documentLines } from "./documentHtml"
 import { fieldConditions, fieldLimits, limitAllowed, TemplateValidationError, type TemplateDefinition } from "./templateRuntime"
 import { IDENTIFICATION_SAMPLE, syllabusSectionPayload, type SyllabusTemplate } from "./templatePresentation"
 import { createTemplateStore, type TemplateStore } from "./templateStore"
+import { binaryFileResponse } from "../files/binaryFileResponse"
 import { modelNotFound } from "../laravel/router"
 import { MODELS } from "../laravel/models"
 
@@ -76,6 +79,11 @@ const EXPORT_FORMAT_VERSION = 2
 
 function schemaUrl(request: Request): string {
   return `${laravelRoot(request)}/plantilla.schema.json`
+}
+
+export async function templateSchema(request: Request): Promise<Response> {
+  const file = path.join(/*turbopackIgnore: true*/ process.cwd(), "src", "server", "configuration", "plantilla.schema.json")
+  return fromController(await binaryFileResponse(request, file, { "Content-Type": "application/schema+json", "Cache-Control": "public" }))
 }
 
 function exportedBlock(block: PhpRecord): PhpRecord {

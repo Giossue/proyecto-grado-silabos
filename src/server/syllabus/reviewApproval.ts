@@ -25,7 +25,6 @@ export interface ReviewApprovalTx extends SignatureTx {
   approvalExists(revisionId: string): Promise<boolean>
   latestRevisionId(syllabusId: string): Promise<string | null>
   revisionStage(revisionId: string): Promise<string | null>
-  submitterId(revisionId: string): Promise<string | null>
   coordinationReviewId(revisionId: string): Promise<string | null>
   insertCoordinationReview(row: { id: string; revisionId: string; reviewerId: string; at: number }): Promise<void>
   insertApproval(row: { id: string; revisionId: string; key: string; fingerprint: string; approverId: string; at: number }): Promise<void>
@@ -38,7 +37,6 @@ export type ReviewApprovalDeps = {
   settings: () => SignatureSettings & { requireHolderMatch: boolean }
   verify?: Verifier
   renderable: (revisionId: string) => Promise<boolean>
-  rendererVersion: () => string
   now: () => number
   newId: () => string
   newKey: () => string
@@ -114,7 +112,7 @@ export async function approveReview(request: Request, revisionId: string, deps: 
   return settleExport(original, deps, async () => {
     const signature = decisionSignatureFrom(input.signature)
     const settings = deps.settings()
-    const actor = { id: session.user.id, name: (await deps.store.userName(session.user.id)) ?? "", roleAssignmentId: session.activeRole?.id ?? null }
+    const actor = { id: session.user.id, name: (await deps.store.userName(session.user.id)) ?? "" }
     await deps.transaction(async (tx) => {
       const lockedBlock = await tx.lockedDecisionBlock(revision.syllabusId)
       const locked = await tx.lockSyllabus(revision.syllabusId)
@@ -128,11 +126,8 @@ export async function approveReview(request: Request, revisionId: string, deps: 
       const signedRevision = { id: revision.id, syllabusId: revision.syllabusId, number: revision.number, fingerprint: revision.fingerprint }
       await signDecision(tx, { revision: signedRevision, role: COORDINATION, signature, actor, now: deps.now() }, settings, deps.verify)
       const approvedAt = deps.now()
-      let reviewId = await tx.coordinationReviewId(revision.id)
-      const reviewCreated = reviewId === null
-      if (reviewId === null) {
-        reviewId = deps.newId()
-        await tx.insertCoordinationReview({ id: reviewId, revisionId: revision.id, reviewerId: actor.id, at: approvedAt })
+      if ((await tx.coordinationReviewId(revision.id)) === null) {
+        await tx.insertCoordinationReview({ id: deps.newId(), revisionId: revision.id, reviewerId: actor.id, at: approvedAt })
       }
       const key = deps.newKey()
       const fingerprint = canonicalHash({
@@ -145,19 +140,8 @@ export async function approveReview(request: Request, revisionId: string, deps: 
       const approvalId = deps.newId()
       await tx.insertApproval({ id: approvalId, revisionId: revision.id, key, fingerprint, approverId: actor.id, at: approvedAt })
       await tx.markApproved(locked.id, locked.version + 1)
-      const audit = (action: string, resourceType: string, resourceId: string, metadata: Record<string, string | number | boolean | null>) =>
-        tx.recordAudit({ actorId: actor.id, roleAssignmentId: actor.roleAssignmentId, action, resourceType, resourceId, result: "exito", metadata, occurredAt: deps.now() })
-      if (reviewCreated) await audit("silabo.revisado_coordinacion", "revision_coordinacion", reviewId, { revision_number: revision.number })
-      await audit("silabo.aprobado", "aprobacion", approvalId, {
-        revision_number: revision.number,
-        from_state: "en_revision",
-        to_state: "aprobado",
-        fingerprint,
-        self_approved: (await tx.submitterId(revision.id)) === actor.id,
-      })
-      const exportActor = { id: actor.id, roleAssignmentId: actor.roleAssignmentId }
       if ((await existingExport(tx.exports, revision.id, approvalId, actor.id)) !== null) return
-      await requestExport(tx.exports, { revisionId: revision.id, syllabusId: revision.syllabusId, key: approvalId, actor: exportActor, now: deps.now(), newId: deps.newId, rendererVersion: deps.rendererVersion() })
+      await requestExport(tx.exports, { revisionId: revision.id, syllabusId: revision.syllabusId, key: approvalId, actor: { id: actor.id }, now: deps.now(), newId: deps.newId })
     })
     return laravelJson({ message: "Sílabo firmado y aprobado." })
   })

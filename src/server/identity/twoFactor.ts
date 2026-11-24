@@ -13,7 +13,6 @@ import { isPhpArray, laravelInput, type PhpArray, type PhpValue } from "../larav
 import { aborted, laravelHttpError, laravelJson, validationError } from "../laravel/responses"
 import { sharedRateLimiter, throttle, type RateLimiter } from "../laravel/throttle"
 import { mergeErrors, validateInput, type Rule } from "../laravel/validation"
-import { insertAuditEvent, type AuditEventInput } from "../operations/recordAuditEvent"
 import { acceptsBody } from "./accountWrites"
 import { twoFactorQrCodeSvg } from "./twoFactorQr"
 
@@ -24,7 +23,6 @@ export type TwoFactorChanges = { secret?: string | null; recoveryCodes?: string 
 export interface TwoFactorStore {
   account(userId: string, activeOnly: boolean): Promise<TwoFactorAccount | null>
   update(userId: string, changes: TwoFactorChanges): Promise<void>
-  recordAudit(event: AuditEventInput): Promise<void>
 }
 
 export type TwoFactorDeps = {
@@ -67,7 +65,6 @@ export function twoFactorStoreOn(executor: Executor): TwoFactorStore {
       if (sets.length === 0) return
       await executor.execute(sql`update usuarios set ${sql.join(sets, sql`, `)} where usuario_id = ${userId}::uuid`)
     },
-    recordAudit: (event) => insertAuditEvent(executor, event).then(() => undefined),
   }
 }
 
@@ -213,16 +210,6 @@ export function twoFactorChallenge(request: Request, deps: TwoFactorDeps = defau
       if (user === null) throw new Error("The verified account has no user.")
       await context.login(user)
       await regenerateSession(context.state, deps.writer)
-      await deps.store.recordAudit({
-        actorId: user.id,
-        roleAssignmentId: null,
-        action: "sesion.iniciada",
-        resourceType: "usuario",
-        resourceId: user.id,
-        result: "exito",
-        metadata: {},
-        occurredAt: deps.writer.now(),
-      })
       return gate.decorate(controllerJson({ message: "Segundo factor verificado." }))
     },
     () => laravelJson({ message: "Inicie sesión desde la aplicación web." }, 400),

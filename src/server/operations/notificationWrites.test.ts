@@ -142,10 +142,21 @@ describe("POST /api/v1/notifications/{notification}/read", () => {
 })
 
 describe("POST /api/v1/notifications/{notification}/open", () => {
-  it("marks it read and returns the screen of the active role", async () => {
+  it("marks a failed export notice read without a screen, now that Auditoría is gone", async () => {
     expect(await read(await openNotification(post(`/api/v1/notifications/${OWN}/open`), OWN, deps()))).toEqual({
       status: 200,
-      text: '{"path":"\\/admin\\/auditoria?action=documento.exportacion_fallida","role_changed":false}',
+      text: '{"path":null,"role_changed":false,"message":"Este aviso ya no tiene una pantalla disponible para sus roles actuales."}',
+    })
+    expect(stored[0].readAt).toBe(String(NOW))
+  })
+
+  it("marks it read and returns the screen of the active role", async () => {
+    world.assignments = [makeAssignment()]
+    stored[0] = notice({ type: "convocatoria.abierta", resourceType: "convocatoria", resourceId: MISSING })
+    lookups = { ...noLookups(), convocationCareerIds: async () => ["c-1"] }
+    expect(await read(await openNotification(post(`/api/v1/notifications/${OWN}/open`), OWN, deps()))).toEqual({
+      status: 200,
+      text: '{"path":"\\/docente\\/mis-silabos","role_changed":false}',
     })
     expect(stored[0].readAt).toBe(String(NOW))
   })

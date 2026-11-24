@@ -6,11 +6,10 @@ import { isJsonRequest, laravelInput } from "../laravel/input"
 import { forbidden, laravelJson, validationError } from "../laravel/responses"
 import { validateInput } from "../laravel/validation"
 import { notificationDate, storeInternalNotifications, type NotificationScope } from "../notifications/store"
-import type { AuditEventInput } from "../operations/recordAuditEvent"
 import type { ConvocationRecord } from "./convocations"
 import type { GenerateOptions } from "./inProgressWork"
 import { createConvocationWriteDeps } from "./convocationWriteStore"
-import { auditOf, Missing, Rejected, settle } from "./reviewDecisions"
+import { Missing, Rejected, settle } from "./reviewDecisions"
 import { modelNotFound } from "../laravel/router"
 import { MODELS } from "../laravel/models"
 
@@ -28,14 +27,12 @@ export interface ConvocationWriteTx {
   readinessBlockers(careerId: string): Promise<string[]>
   templateProblem(errorKey: string): Promise<string | null>
   updateState(id: string, state: string): Promise<void>
-  recordAudit(event: AuditEventInput): Promise<void>
 }
 
 export type ConvocationWriteDeps = {
   bridge: BridgeDeps
   convocation(id: string): Promise<ConvocationRecord | null>
   openProcessExists(id: string): Promise<boolean>
-  now: () => number
   nowMs: () => number
   transaction<T>(work: (tx: ConvocationWriteTx) => Promise<T>): Promise<T>
 }
@@ -57,7 +54,7 @@ const PROCESS_NOT_OPEN: Record<string, string> = {
   cerrado: "El proceso institucional ya se cerró. Prepare la convocatoria sobre un proceso vigente.",
 }
 
-async function openConvocation(tx: ConvocationWriteTx, session: LaravelSession, convocationId: string, now: number): Promise<void> {
+async function openConvocation(tx: ConvocationWriteTx, convocationId: string): Promise<void> {
   const convocation = await tx.lockConvocation(convocationId)
   if (convocation === null) throw new Missing()
   if (convocation.state !== "preparacion") reject({ convocation: ["Solo una convocatoria en preparación puede abrirse."] })
@@ -68,9 +65,8 @@ async function openConvocation(tx: ConvocationWriteTx, session: LaravelSession, 
   if (blockers.length > 0) reject({ convocation: blockers })
   const problem = await tx.templateProblem("convocation")
   if (problem !== null) reject({ convocation: [problem] })
-  const generated = await tx.generateConvocation(convocation.id)
+  await tx.generateConvocation(convocation.id)
   await tx.updateState(convocation.id, "abierta")
-  await tx.recordAudit(auditOf(session, "convocatoria.abierta", "convocatoria", convocation.id, { generated_count: generated }, now))
   const message = `Se abrió la convocatoria de ${convocation.careerLabel}; la entrega vence el ${notificationDate(convocation.dueAt)}.`
   for (const [teacherId, count] of await tx.teacherSyllabusCounts([convocation.id])) {
     await storeInternalNotifications(tx.notifications, {
@@ -103,9 +99,7 @@ export async function createConvocation(request: Request, deps: ConvocationWrite
       if (process.state !== "abierto") reject({ process_id: ["La convocatoria institucional todavía no está abierta."] })
       if (await tx.careerHasConvocation(careerId, process.id)) reject({ process_id: ["Esta carrera ya tiene una convocatoria para el período institucional."] })
       const convocationId = await tx.createConvocation(careerId, process.id)
-      const now = deps.now()
-      await tx.recordAudit(auditOf(session, "convocatoria.iniciada", "convocatoria", convocationId, { process_id: process.id, period_id: process.periodId }, now))
-      await openConvocation(tx, session, convocationId, now)
+      await openConvocation(tx, convocationId)
       return convocationId
     })
     return laravelJson({ message: "Convocatoria iniciada: se generó un sílabo por cada paralelo.", convocation_id: id }, 201)
@@ -159,9 +153,8 @@ export async function resumeConvocation(request: Request, id: string, deps: Conv
       if (locked.processState !== "abierto") {
         reject({ convocation: ["El proceso institucional no está abierto; la convocatoria se reanudará cuando Administración lo reanude."] })
       }
-      const generated = await tx.generateConvocation(locked.id)
+      await tx.generateConvocation(locked.id)
       await tx.updateState(locked.id, "abierta")
-      await tx.recordAudit(auditOf(session, "convocatoria.abierta", "convocatoria", locked.id, generated > 0 ? { generated_count: generated } : {}, deps.now()))
       await notifyConvocationResumed(tx, locked, timestampMs(deps.nowMs()))
     })
     return laravelJson({ message: "Convocatoria reanudada. Los docentes vuelven a trabajar, los paralelos nuevos ya tienen su sílabo y la malla queda protegida." })

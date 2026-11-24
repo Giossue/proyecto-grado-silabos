@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it } from "vitest"
 import golden from "../laravel/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import { phpJsonEncode } from "../laravel/phpJson"
-import type { AuditEventInput } from "../operations/recordAuditEvent"
 import { fakeTemplateStore, fieldId, goldenTemplate, TEMPLATE_ID, type FakeTemplateWorld } from "../configuration/testing"
 import type { PhpRecord } from "../configuration/phpValues"
 import { updateDraftField, type DraftFieldDeps, type DraftFieldRecord, type DraftSyllabus } from "./draftField"
@@ -30,7 +29,6 @@ let locked: { id: string; state: string; version: number; subjectId: string } | 
 let fields: Map<string, DraftFieldRecord>
 let values: Map<string, unknown>
 let log: string[]
-let audits: AuditEventInput[]
 let saved: { syllabusId: string; fieldId: string; document: PhpRecord; newId: string }[]
 let drafts: { id: string; version: number; savedAt: number }[]
 let committed: boolean
@@ -65,7 +63,7 @@ function deps(): DraftFieldDeps {
       transaction: async (work) => {
         log.push("begin")
         const before = new Map(values)
-        const writes = [saved.length, drafts.length, audits.length]
+        const writes = [saved.length, drafts.length]
         try {
           const result = await work({
             lockSyllabus: async (id) => {
@@ -87,10 +85,6 @@ function deps(): DraftFieldDeps {
               log.push("draft")
               drafts.push({ id, version, savedAt })
             },
-            recordAudit: async (event) => {
-              log.push("audit")
-              audits.push(event)
-            },
           })
           committed = true
           log.push("commit")
@@ -100,7 +94,6 @@ function deps(): DraftFieldDeps {
           for (const [key, value] of before) values.set(key, value)
           saved.length = writes[0]
           drafts.length = writes[1]
-          audits.length = writes[2]
           log.push("rollback")
           throw error
         }
@@ -144,7 +137,6 @@ beforeEach(() => {
   fields = new Map([TEXT_FIELD, UNITS_FIELD, INSTITUTIONAL_FIELD].map((id, index) => [id, liveField([8, 6, 15][index])]))
   values = new Map()
   log = []
-  audits = []
   saved = []
   drafts = []
   committed = false
@@ -160,25 +152,13 @@ describe("PATCH /api/v1/teacher/syllabi/{syllabus}/fields/{field}", () => {
     const value = { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Docente: " }, { type: "variable", attrs: { id: "nombre_docente" } }] }] }
     const { status, text, json } = await patch({ version_bloqueo: 3, value })
     expect(status).toBe(200)
-    expect(log).toEqual([`facts:${golden.userId}`, "begin", `lock:${SYLLABUS}`, "save", "draft", "audit", "commit", "stored"])
+    expect(log).toEqual([`facts:${golden.userId}`, "begin", `lock:${SYLLABUS}`, "save", "draft", "commit", "stored"])
     const normalized = {
       type: "doc",
       content: [{ type: "paragraph", attrs: { textAlign: "left" }, content: [{ type: "text", text: "Docente: " }, { type: "variable", attrs: { id: "nombre_docente", label: "nombre_docente" } }] }],
     }
     expect(saved).toEqual([{ syllabusId: SYLLABUS, fieldId: TEXT_FIELD, document: normalized, newId: NEW_VALUE }])
     expect(drafts).toEqual([{ id: SYLLABUS, version: 4, savedAt: Date.parse(SAVED_AT) / 1000 }])
-    expect(audits).toEqual([
-      {
-        actorId: golden.userId,
-        roleAssignmentId: golden.roleId,
-        action: "silabo.campo_guardado",
-        resourceType: "silabo",
-        resourceId: SYLLABUS,
-        result: "exito",
-        metadata: { field_key: "tecnicas_ensenanza", lock_version: 4 },
-        occurredAt: Date.parse(SAVED_AT) / 1000,
-      },
-    ])
     expect(Object.keys(json ?? {})).toEqual(["message", "version_bloqueo", "guardado_en", "document"])
     expect(json?.message).toBe("Borrador guardado.")
     expect(json?.version_bloqueo).toBe(4)
@@ -198,7 +178,6 @@ describe("PATCH /api/v1/teacher/syllabi/{syllabus}/fields/{field}", () => {
     )
     expect(saved).toEqual([])
     expect(drafts).toEqual([])
-    expect(audits).toEqual([])
     expect(log).toContain("rollback")
   })
 
@@ -320,7 +299,6 @@ describe("PATCH a field with a character limit", () => {
     const result = await patch({ version_bloqueo: 3, value: doc("Aprendizaje basado en problemas") })
     expect(result.status).toBe(200)
     expect(saved).toHaveLength(1)
-    expect(audits.map((event) => event.action)).toEqual(["silabo.campo_guardado"])
     expect(committed).toBe(true)
   })
 
@@ -331,7 +309,6 @@ describe("PATCH a field with a character limit", () => {
     expect(result).toMatchObject({ status: 422, json: { message: "Este campo admite hasta 5 caracteres.", errors: { value: ["Este campo admite hasta 5 caracteres."] } } })
     expect(values.get(`${SYLLABUS}:${TEXT_FIELD}`)).toEqual(doc("abc"))
     expect(drafts).toEqual([])
-    expect(audits).toEqual([])
     expect(committed).toBe(false)
   })
 

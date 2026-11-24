@@ -8,7 +8,6 @@ import { coordinatorReadiness, SetupNeedsLaravel, type CoordinatorReadiness } fr
 import { setupRepositoryOn } from "../dashboard/setupQueries"
 import { uuid7 } from "../laravel/uuid7"
 import { notificationScope, recipientsOn, systemNow, type Mail, type WriteOptions } from "../notifications/queries"
-import { insertAuditEvent } from "../operations/recordAuditEvent"
 import { withAfterCommit, type AfterCommit } from "../queue/dispatch"
 import { convocationRepositoryOn } from "./convocationQueries"
 import type { ConvocationWriteDeps, ConvocationWriteTx } from "./convocationWrites"
@@ -115,9 +114,6 @@ export function convocationWriteTx(executor: Executor, afterCommit: AfterCommit,
     async updateState(id, state) {
       await executor.execute(sql`update convocatorias_carreras set estado_convocatoria_carrera = ${state} where convocatoria_carrera_id = ${id}::uuid`)
     },
-    async recordAudit(event) {
-      await insertAuditEvent(executor, event)
-    },
   }
 }
 
@@ -133,7 +129,6 @@ export function convocationWriteDepsOn(executor: Executor, transaction: Transact
       )
       return row.found
     },
-    now,
     nowMs: options.now === undefined ? () => Date.now() : () => now() * 1000,
     transaction: (work) => withAfterCommit((afterCommit) => transaction((inner) => work(convocationWriteTx(inner, afterCommit, now(), options.mail)))),
   }

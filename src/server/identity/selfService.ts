@@ -1,5 +1,4 @@
 import "server-only"
-import { createHash } from "node:crypto"
 import { authenticateAndTrack, commitTracking, requireSession } from "../auth/requireSession"
 import { withWriter } from "../auth/sessionWriter"
 import { controllerJson, FORWARD, fromController, statefulRequest, type Outcome } from "../auth/statefulRequest"
@@ -127,7 +126,7 @@ export async function resendOwnActivation(request: Request, deps: IdentityWriteD
   if (session.user.emailVerifiedAt === null) {
     const issuer = await deps.accounts.direct((tx) => tx.latestInvitationIssuer(session.user.id))
     const target = { id: session.user.id } as Account
-    const outcome = await perform(deps, original, session, (ctx) => issueInvitation(ctx, target, "reenvio_titular"), issuer?.id ?? session.user.id)
+    const outcome = await perform(deps, original, session, (ctx) => issueInvitation(ctx, target), issuer?.id ?? session.user.id)
     if (outcome instanceof Response) return finish(outcome)
   }
   return finish(laravelJson({ message: RESEND_MESSAGE }, 202))
@@ -158,16 +157,6 @@ export async function destroySession(request: Request, id: string, deps: Identit
   const userId = session.user.id
   await deps.accounts.direct(async (tx) => {
     await tx.deleteSession(id, userId)
-    await tx.recordAudit({
-      actorId: userId,
-      roleAssignmentId: null,
-      action: "sesion.remota_cerrada",
-      resourceType: "usuario",
-      resourceId: userId,
-      result: "exito",
-      metadata: { session_id_hash: createHash("sha256").update(id).digest("hex") },
-      occurredAt: deps.bridge.now(),
-    })
   })
   await refresh()
   return laravelJson({ message: "La sesión seleccionada fue cerrada." })
@@ -195,16 +184,6 @@ async function confirmCurrentPassword(input: PhpArray, user: SessionUser, deps: 
 async function closeOtherSessions(deps: IdentityWriteDeps, userId: string, currentId: string | null, random = deps.services.random): Promise<number> {
   return deps.accounts.direct(async (tx) => {
     const deleted = await revokeSessions({ tx, services: { ...deps.services, random } }, userId, currentId)
-    await tx.recordAudit({
-      actorId: userId,
-      roleAssignmentId: null,
-      action: "sesiones.remotas_cerradas",
-      resourceType: "usuario",
-      resourceId: userId,
-      result: "exito",
-      metadata: { closed_sessions: deleted },
-      occurredAt: deps.bridge.now(),
-    })
     return deleted
   })
 }

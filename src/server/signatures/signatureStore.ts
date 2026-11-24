@@ -1,7 +1,6 @@
 import "server-only"
 import { sql } from "drizzle-orm"
 import { uuid7 } from "../laravel/uuid7"
-import { insertAuditEvent } from "../operations/recordAuditEvent"
 import { rowsOf, type Executor } from "../syllabus/teacherSyllabusQueries"
 import type { SignatureTx } from "./signDecision"
 
@@ -21,9 +20,6 @@ export function signatureTxOn(executor: Executor): SignatureTx {
         values (${id}::uuid, ${row.syllabusId}::uuid, ${row.revisionId}::uuid, ${row.role}, ${row.userId}::uuid, ${row.statement}, ${row.cms},
           ${row.holder}, ${row.serial}, ${row.issuer}, to_timestamp(${row.validTo}), to_timestamp(${row.signedAt}))`)
       return id
-    },
-    async recordAudit(event) {
-      await insertAuditEvent(executor, event)
     },
   }
 }

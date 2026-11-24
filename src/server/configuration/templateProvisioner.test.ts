@@ -2,7 +2,6 @@
 import { beforeEach, describe, expect, it } from "vitest"
 import golden from "../laravel/__fixtures__/laravel-golden.json"
 import { fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
-import type { AuditEventInput } from "../operations/recordAuditEvent"
 import officialJson from "./officialTemplate.json"
 import { fakeTemplateStore, goldenTemplate, TEMPLATE_ID, type FakeTemplateWorld } from "./testing"
 import {
@@ -24,7 +23,6 @@ let world: FakeWorld
 let templates: FakeTemplateWorld
 let forwarded: Request[]
 let log: string[]
-let audits: AuditEventInput[]
 let exists: boolean
 let locked: boolean
 let structure: boolean
@@ -63,9 +61,7 @@ function deps(): ProvisionDeps {
         log.push("commit")
         return result
       },
-      recordAudit: async (event) => void audits.push(event),
     },
-    now: () => NOW,
     newTemplateId: () => "01a2bbbb-0000-7000-8000-000000000001",
     newBlockId: () => `0000000${++ids}-0000-4000-8000-000000000000`.slice(0, 36),
     newFieldId: () => `01a2bbbb-0000-7000-8000-${String(++ids).padStart(12, "0")}`,
@@ -89,7 +85,6 @@ beforeEach(() => {
   templates = { template: goldenTemplate(), values: [] }
   forwarded = []
   log = []
-  audits = []
   exists = true
   locked = false
   structure = true
@@ -110,27 +105,22 @@ describe("official template", () => {
 })
 
 describe("POST /api/v1/admin/template", () => {
-  it("creates the empty template once, audited", async () => {
+  it("creates the empty template once", async () => {
     exists = false
     expect(await read(await createTemplate(send("POST", "/api/v1/admin/template"), deps()))).toEqual({
       status: 201,
       text: '{"message":"Plantilla vac\\u00eda creada.","template_id":"01a2bbbb-0000-7000-8000-000000000001"}',
     })
     expect(log).toEqual(["begin", "lock all", "insert 01a2bbbb-0000-7000-8000-000000000001", "sync 01a2bbbb-0000-7000-8000-000000000001 0", "commit"])
-    expect(audits.map((event) => event.action)).toEqual(["plantilla.creada"])
   })
 
-  it("creates it with the official format and audits both steps", async () => {
+  it("creates it with the official format", async () => {
     exists = false
     expect((await read(await createTemplate(send("POST", "/api/v1/admin/template", { official: true }), deps()))).text).toBe(
       '{"message":"Plantilla creada con el formato oficial.","template_id":"01a2bbbb-0000-7000-8000-000000000001"}',
     )
     expect(documents.at(-1)?.map((section) => section.key)).toEqual(officialJson.sections.map((section) => section.key))
     expect(fields).toHaveLength(officialJson.sections.reduce((sum, section) => sum + section.fields.length, 0))
-    expect(audits.map((event) => [event.action, event.resourceType, event.resourceId])).toEqual([
-      ["plantilla.creada", "plantilla_silabo", "01a2bbbb-0000-7000-8000-000000000001"],
-      ["plantilla.formateada", "plantilla_silabo", "01a2bbbb-0000-7000-8000-000000000001"],
-    ])
   })
 
   it("refuses a second template, an open process and other roles", async () => {
@@ -146,7 +136,6 @@ describe("POST /api/v1/admin/template", () => {
     })
     world.assignments = [makeAssignment({ role: "coordinador" })]
     expect((await read(await createTemplate(send("POST", "/api/v1/admin/template"), deps()))).text).toBe(FORBIDDEN)
-    expect(audits).toEqual([])
   })
 })
 
@@ -158,7 +147,6 @@ describe("POST /api/v1/admin/template/{template}/format and DELETE …/structure
     })
     expect(log.slice(0, 5)).toEqual(["begin", `lock ${TEMPLATE_ID}`, `sync ${TEMPLATE_ID} 0`, `suffix ${TEMPLATE_ID}`, `sync ${TEMPLATE_ID} 12`])
     expect(log.slice(-2)).toEqual([`definition ${TEMPLATE_ID}`, "commit"])
-    expect(audits.map((event) => event.action)).toEqual(["plantilla.formateada"])
   })
 
   it("clears the template only when it has a structure", async () => {
@@ -168,7 +156,6 @@ describe("POST /api/v1/admin/template/{template}/format and DELETE …/structure
     log = []
     await clearTemplate(send("DELETE", `/api/v1/admin/template/${TEMPLATE_ID}/structure`), TEMPLATE_ID, deps())
     expect(log).toEqual(["begin", `lock ${TEMPLATE_ID}`, "commit"])
-    expect(audits.map((event) => event.action)).toEqual(["plantilla.vaciada", "plantilla.vaciada"])
   })
 
   it("is blocked by an open process and forbidden to other roles", async () => {
@@ -183,7 +170,7 @@ describe("POST /api/v1/admin/template/{template}/format and DELETE …/structure
 describe("PUT /api/v1/admin/template/{template}/json", () => {
   const payload = { version: 2, sections: [{ key: "datos", title: "Datos", fields: [{ key: "resumen", label: "Resumen", quien_llena: "docente", content: "<p>Escriba</p>" }] }] }
 
-  it("replaces the structure, keeps the subject profiles by key and audits the number of sections", async () => {
+  it("replaces the structure and keeps the subject profiles by key", async () => {
     coordination = [new Map([["resumen", "old-field"]]), new Map([["resumen", "new-field"]])]
     expect(await read(await importTemplateJson(send("PUT", `/api/v1/admin/template/${TEMPLATE_ID}/json`, payload), TEMPLATE_ID, deps()))).toEqual({
       status: 200,
@@ -191,7 +178,6 @@ describe("PUT /api/v1/admin/template/{template}/json", () => {
     })
     expect(log).toEqual(["begin", `lock ${TEMPLATE_ID}`, "coordination resumen", `sync ${TEMPLATE_ID} 0`, `suffix ${TEMPLATE_ID}`, `definition ${TEMPLATE_ID}`, `sync ${TEMPLATE_ID} 1`, "coordination resumen", "move old-field new-field", "commit"])
     expect(fields).toEqual([{ templateId: TEMPLATE_ID, blockId: expect.any(String), responsible: "carrera" }])
-    expect(audits).toEqual([expect.objectContaining({ action: "plantilla.importada", resourceType: "plantilla_silabo", resourceId: TEMPLATE_ID, metadata: { sections: 1 } })])
   })
 
   it("validates the JSON before the process lock", async () => {

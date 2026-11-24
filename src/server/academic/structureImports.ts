@@ -202,17 +202,7 @@ export async function importCareers(request: Request, deps: StructureImportDeps 
           await tx.replace(
             false,
             async () => {
-              const id = await tx.createCareer({ facultyId: payload.faculty_id as string, modality: payload.modality as string, code: payload.code, name: payload.nombre, cycleCount: payload.cycle_count })
-              await tx.recordAudit({
-                actorId: session.user.id,
-                roleAssignmentId: session.activeRole?.id ?? null,
-                action: "academico.carrera.creacion",
-                resourceType: "carrera",
-                resourceId: id,
-                result: "exito",
-                metadata: {},
-                occurredAt: deps.now(),
-              })
+              await tx.createCareer({ facultyId: payload.faculty_id as string, modality: payload.modality as string, code: payload.code, name: payload.nombre, cycleCount: payload.cycle_count })
             },
             null,
           )
@@ -340,7 +330,7 @@ export async function importCurriculum(request: Request, deps: StructureImportDe
         for (const [key, value] of existing.entries) ids.entries.set(key, value)
         let count = 0
         for (const payload of payloads) {
-          ids.set(payload.key, await insertCareerSubject(subjects, context, deps.now, payload.data))
+          ids.set(payload.key, await insertCareerSubject(subjects, context, payload.data))
           count++
         }
         for (const payload of payloads) {
@@ -348,7 +338,6 @@ export async function importCurriculum(request: Request, deps: StructureImportDe
             await curriculumMutation(
               requirements,
               context,
-              deps.now,
               career.id,
               { subject_id: ids.get(payload.key) as string, requirement_id: ids.get(relation.code) as string, type: relation.type, confirm_purge: upload.input.confirm_purge ?? null },
               addRequirement,

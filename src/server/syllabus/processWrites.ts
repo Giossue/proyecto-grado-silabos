@@ -6,7 +6,6 @@ import { isJsonRequest, laravelInput, type PhpValue } from "../laravel/input"
 import { forbidden, laravelJson, validationError } from "../laravel/responses"
 import { validateInput } from "../laravel/validation"
 import { notificationDate, storeInternalNotifications, type NotificationScope } from "../notifications/store"
-import type { AuditEventInput } from "../operations/recordAuditEvent"
 import { notifyConvocationResumed, timestampMs } from "./convocationWrites"
 import { hasRole, ROLE_ADMINISTRATOR } from "./policy"
 import { display, processDay, type ProcessRow } from "./processes"
@@ -14,7 +13,7 @@ import { createProcessWriteDeps } from "./processWriteStore"
 import { deadlineBlockReason } from "./finalizedChangeNotice"
 import { laravelBoolean } from "./inProgressWork"
 import type { ReopenPlan, TemplateChange } from "./reopenCatchUp"
-import { auditOf, Missing, Rejected, settle } from "./reviewDecisions"
+import { Missing, Rejected, settle } from "./reviewDecisions"
 import { NeedsLaravel } from "./snapshotDocuments"
 import { modelNotFound } from "../laravel/router"
 import { MODELS } from "../laravel/models"
@@ -30,7 +29,6 @@ export type LockedSyllabusProcess = {
   finalized: boolean
 }
 
-export type AuditActor = { actorId: string; roleAssignmentId: string | null; occurredAt: number }
 export type OpenConvocation = { id: string; careerLabel: string }
 
 export interface ProcessWriteTx {
@@ -49,7 +47,7 @@ export interface ProcessWriteTx {
   anotherInProgress(processId: string): Promise<boolean>
   templateChange(processId: string, reference: "pause" | "reopen"): Promise<TemplateChange | null>
   syllabusCounts(processId: string, toReopen: boolean): Promise<Record<string, number>>
-  adaptToTemplate(processId: string, change: TemplateChange, counts: Record<string, number>, audit: AuditActor): Promise<void>
+  adaptToTemplate(processId: string, change: TemplateChange): Promise<void>
   convocationsToReopen(processId: string): Promise<string[]>
   reopenPlan(convocationIds: string[], processId: string, finalized: boolean): Promise<ReopenPlan>
   reopen(processId: string): Promise<string[]>
@@ -58,9 +56,7 @@ export interface ProcessWriteTx {
   openConvocations(processId: string): Promise<OpenConvocation[]>
   updateState(processId: string, state: string): Promise<void>
   extendDeadline(processId: string, dueAt: string, extension: number): Promise<void>
-  convocationCount(processId: string): Promise<number>
   teachersWithPendingWork(processId: string): Promise<string[]>
-  recordAudit(event: AuditEventInput): Promise<void>
 }
 
 export type ProcessWriteDeps = {
@@ -84,10 +80,6 @@ const CLOSED_TEMPLATE_CHANGED =
   "La plantilla cambió después de finalizar. Confirme para adaptar los sílabos del período: se conserva lo escrito y los enviados o aprobados vuelven a borrador."
 const PENDING_CHANGES =
   "Hubo cambios mientras la convocatoria estuvo finalizada. Confirme para aplicarlos: hay sílabos que volverán a borrador, volverán a Coordinación o perderán su contenido."
-
-function actorOf(session: LaravelSession, occurredAt: number): AuditActor {
-  return { actorId: session.user.id, roleAssignmentId: session.activeRole?.id ?? null, occurredAt }
-}
 
 function reject(errors: Record<string, string[]>): never {
   throw new Rejected(validationError(errors))
@@ -149,15 +141,6 @@ export async function deleteProcess(request: Request, id: string, deps: ProcessW
         resourceId: locked.periodId,
         periodId: locked.periodId,
       })
-      await tx.recordAudit(
-        auditOf(session, "proceso_silabos.eliminado", "proceso_silabos", process.id, {
-          period_id: locked.periodId,
-          previous_state: locked.state,
-          deleted_convocations: convocations.length,
-          deleted_syllabi: syllabi.length,
-          notified_people: recipients.length,
-        }, deps.now()),
-      )
     })
     return laravelJson({ message: "Convocatoria institucional eliminada." })
   })
@@ -204,14 +187,12 @@ export async function resumeProcess(request: Request, id: string, deps: ProcessW
       const problem = await tx.templateProblem("process")
       if (problem !== null) reject({ process: [problem] })
       const change = await tx.templateChange(locked.id, "pause")
-      let counts: Record<string, number> = {}
       if (change !== null) {
-        counts = await tx.syllabusCounts(locked.id, false)
+        const counts = await tx.syllabusCounts(locked.id, false)
         if (!laravelBoolean(input.confirmar_rehacer)) return counts
-        await tx.adaptToTemplate(locked.id, change, counts, actorOf(session, deps.now()))
+        await tx.adaptToTemplate(locked.id, change)
       }
       await tx.updateState(locked.id, "abierto")
-      await tx.recordAudit(auditOf(session, "proceso_silabos.abierto", "proceso_silabos", locked.id, { previous_state: locked.state }, deps.now()))
       await notifyProcessResumed(tx, locked, deps)
       return null
     })
@@ -268,7 +249,6 @@ export async function extendProcessDeadline(request: Request, id: string, deps: 
       if (requestedOn <= previousOn) reject({ due_at: [`La nueva fecha debe ser posterior a la vigente, que es el ${display(previousOn)}.`] })
       if (requestedOn > locked.periodEndsOn) reject({ due_at: [`La nueva fecha no puede pasar del último día de clases (${display(locked.periodEndsOn)}).`] })
       let change: TemplateChange | null = null
-      let counts: Record<string, number> = {}
       let reopened: string[] = []
       let convocationIds: string[] = []
       let plan: ReopenPlan | null = null
@@ -280,7 +260,7 @@ export async function extendProcessDeadline(request: Request, id: string, deps: 
         plan = await tx.reopenPlan(convocationIds, locked.id, locked.finalized)
         const pending = Object.values(plan.counts).reduce((sum, value) => sum + value, 0) > 0 ? plan.counts : null
         if (change !== null) {
-          counts = await tx.syllabusCounts(locked.id, true)
+          const counts = await tx.syllabusCounts(locked.id, true)
           if (!laravelBoolean(input.confirmar_rehacer)) return { code: "plantilla_cambiada", counts, pending }
         }
         if (pending !== null && !laravelBoolean(input.confirmar_cambios)) return { code: "cambios_pendientes", counts: pending, pending: null }
@@ -288,19 +268,9 @@ export async function extendProcessDeadline(request: Request, id: string, deps: 
       }
       const extension = locked.extensions + 1
       await tx.extendDeadline(locked.id, iso8601(requested), extension)
-      if (change !== null) await tx.adaptToTemplate(locked.id, change, counts, actorOf(session, deps.now()))
+      if (change !== null) await tx.adaptToTemplate(locked.id, change)
       if (plan !== null) await tx.applyPlan(plan, convocationIds, locked.periodId)
       if (reopened.length > 0) await tx.generateReopened(reopened)
-      await tx.recordAudit(
-        auditOf(session, "proceso_silabos.plazo_extendido", "proceso_silabos", locked.id, {
-          stage: "borrador",
-          previous_due_at: iso8601(locked.dueAt),
-          new_due_at: iso8601(requested),
-          convocations_reached: await tx.convocationCount(locked.id),
-          extension_number: extension,
-        }, deps.now()),
-      )
-      if (reopening) await tx.recordAudit(auditOf(session, "proceso_silabos.reabierto", "proceso_silabos", locked.id, { previous_state: "cerrado" }, deps.now()))
       await storeInternalNotifications(tx.notifications, {
         eventType: "proceso.plazo_extendido",
         deduplicationKey: `proceso.plazo_extendido:${locked.id}:${requested}`,

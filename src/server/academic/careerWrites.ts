@@ -5,7 +5,6 @@ import { ROLE_COMBINATION_MESSAGE, roleCombinationConflicts } from "../identity/
 import { isJsonRequest, isPhpArray, laravelInput, type PhpArray, type PhpValue } from "../laravel/input"
 import { forbidden, laravelJson, validationError } from "../laravel/responses"
 import { phpIsNumeric, validateInput, type Rule } from "../laravel/validation"
-import type { AuditEventInput } from "../operations/recordAuditEvent"
 import { laravelBoolean, type WorkScope } from "../syllabus/inProgressWork"
 import { Missing, Rejected, settle } from "../syllabus/reviewDecisions"
 import { createCareerWriteDeps } from "./careerWriteStore"
@@ -66,12 +65,10 @@ export interface CareerWriteTx {
   guard<T>(confirmed: boolean, careerId: string, change: () => Promise<T>, subjectIds: string[] | null): Promise<T>
   keepContent<T>(confirmed: boolean, careerId: string, change: () => Promise<T>): Promise<T>
   replace<T>(confirmed: boolean, change: () => Promise<T>, scope: WorkScope): Promise<T>
-  recordAudit(event: AuditEventInput): Promise<void>
 }
 
 export type CareerWriteDeps = {
   bridge: BridgeDeps
-  now: () => number
   careerActive(careerId: string): Promise<boolean>
   subjectInCareer(subjectId: string, careerId: string): Promise<boolean>
   activeSubjectInCareer(subjectId: string, careerId: string): Promise<boolean>
@@ -96,22 +93,6 @@ const PHP_TRIM = /^[ \t\n\r\0\x0B]+|[ \t\n\r\0\x0B]+$/g
 const SUBJECT_LABELS = { code: "código", nombre: "nombre", cycle: "ciclo", position: "posición", organization_unit: "unidad de organización curricular", modality: "modalidad" }
 const INTEGER_COLUMNS = new Set<SubjectColumn>(["ciclo_asignatura", "orden_asignatura_en_ciclo"])
 const DECIMAL_COLUMNS = new Set<SubjectColumn>(["creditos_asignatura", "horas_docencia", "horas_practicas", "horas_autonomas"])
-const ENUM_COLUMNS = new Set<SubjectColumn>(["unidad_curricular_asignatura", "modalidad_asignatura"])
-const HOUR_COLUMNS: SubjectColumn[] = ["horas_docencia", "horas_practicas", "horas_autonomas"]
-const FIELD_LABELS: Partial<Record<SubjectColumn, string>> = {
-  codigo_asignatura: "Código de asignatura",
-  horas_docencia: "Horas AC",
-  horas_practicas: "Horas PAE",
-  horas_autonomas: "Horas AA",
-  genera_silabo_asignatura: "Puede generar sílabos",
-}
-const AUDIT_KEYS: Partial<Record<SubjectColumn, string>> = {
-  codigo_asignatura: "code",
-  horas_docencia: "horas_ac",
-  horas_practicas: "horas_pae",
-  horas_autonomas: "horas_aa",
-  genera_silabo_asignatura: "generates_syllabus",
-}
 
 export function phpTrim(value: string): string {
   return value.replace(PHP_TRIM, "")
@@ -131,17 +112,6 @@ export async function careerSession(request: Request, bridge: BridgeDeps, career
   const role = session.activeRole
   if (!session.user.active || role?.role !== "coordinador" || role.careerId === null || !(await careerActive(role.careerId))) return forbidden()
   return { session, careerId: role.careerId }
-}
-
-export function careerAudit(
-  context: CareerContext,
-  now: number,
-  action: string,
-  resourceType: string,
-  resourceId: string,
-  metadata: AuditEventInput["metadata"] = {},
-): AuditEventInput {
-  return { actorId: context.session.user.id, roleAssignmentId: context.session.activeRole?.id ?? null, action, resourceType, resourceId, result: "exito", metadata, occurredAt: now }
 }
 
 export function decimalString(value: string | number, scale = 2): string {
@@ -233,37 +203,6 @@ function equivalent(column: SubjectColumn, attribute: PhpValue, original: Subjec
   return phpIsNumeric(attribute) && phpIsNumeric(original) && String(attribute) === String(original)
 }
 
-function castAfter(column: SubjectColumn, attribute: PhpValue): SubjectValue {
-  if (attribute === null || ENUM_COLUMNS.has(column)) return null
-  if (INTEGER_COLUMNS.has(column)) return phpIntCast(attribute)
-  if (DECIMAL_COLUMNS.has(column)) return decimalString(attribute as string | number)
-  if (column === "genera_silabo_asignatura") return Boolean(attribute)
-  return attribute as SubjectValue
-}
-
-function subjectAuditMetadata(subject: SubjectRow, dirty: SubjectColumn[], attributes: Partial<Record<SubjectColumn, PhpValue>>): AuditEventInput["metadata"] {
-  const metadata: AuditEventInput["metadata"] = { changed_fields: dirty.map((column) => FIELD_LABELS[column] ?? column).join(", ") }
-  for (const column of dirty) {
-    const key = AUDIT_KEYS[column] ?? column
-    metadata[`before_${key}`] = subject.columns[column]
-    metadata[`after_${key}`] = castAfter(column, attributes[column] as PhpValue)
-  }
-  if (HOUR_COLUMNS.some((column) => dirty.includes(column))) {
-    const after = Math.round(
-      HOUR_COLUMNS.reduce((total, column) => {
-        const value = column in attributes ? attributes[column] : subject.columns[column]
-        return total + (value === null || value === undefined ? 0 : Number(decimalString(value as string | number)))
-      }, 0),
-    )
-    if (after !== subject.totalHours) {
-      metadata.changed_fields += ", Horas totales"
-      metadata.before_total_hours = subject.totalHours
-      metadata.after_total_hours = after
-    }
-  }
-  return metadata
-}
-
 async function teacherRole(tx: CareerWriteTx, userId: string, careerId: string): Promise<string> {
   const coordinator = await tx.hasCoordinatorRole(userId, careerId)
   if (coordinator && roleCombinationConflicts("docente", await tx.effectiveRoles(userId))) throw invalid("user_id", ROLE_COMBINATION_MESSAGE)
@@ -277,7 +216,7 @@ async function teacherRole(tx: CareerWriteTx, userId: string, careerId: string):
   return roleId
 }
 
-async function assignTeacher(tx: CareerWriteTx, context: CareerContext, now: number, parallelId: string, userId: string, confirmed: boolean): Promise<void> {
+async function assignTeacher(tx: CareerWriteTx, context: CareerContext, parallelId: string, userId: string, confirmed: boolean): Promise<void> {
   if (!confirmed && (await tx.parallelsWithStartedSyllabus([parallelId])).length > 0) {
     throw new Rejected(validationError({ purge_required: [PURGE_STARTED], purge_count: ["1"] }))
   }
@@ -290,9 +229,8 @@ async function assignTeacher(tx: CareerWriteTx, context: CareerContext, now: num
       if (parallel === null) throw new Missing()
       const roleId = await teacherRole(tx, userId, context.careerId)
       if (await tx.parallelHasActiveTeacher(parallel.id)) throw invalid("user_id", "El paralelo ya tiene un docente asignado.")
-      const id = await tx.insertTeacherAssignment(roleId, parallel.id)
+      await tx.insertTeacherAssignment(roleId, parallel.id)
       await tx.restartForParallel(parallel.id)
-      await tx.recordAudit(careerAudit(context, now, "academico.asignacion_docente.creacion", "asignacion_docente", id))
     },
     subjects,
   )
@@ -323,19 +261,19 @@ export async function createCareerRecord(request: Request, entity: string, deps:
     )
     if (Object.keys(errors).length > 0) return validationError(errors)
     return settle(original, deps, async () => {
-      await deps.transaction((tx) => assignTeacher(tx, context, deps.now(), input.parallel_id as string, input.user_id as string, laravelBoolean(input.confirm_purge)))
+      await deps.transaction((tx) => assignTeacher(tx, context, input.parallel_id as string, input.user_id as string, laravelBoolean(input.confirm_purge)))
       return laravelJson({ message: CREATED })
     })
   }
   const errors = await validateSubject(input, deps, careerId, null)
   if (Object.keys(errors).length > 0) return validationError(errors)
   return settle(original, deps, async () => {
-    await deps.transaction((tx) => insertCareerSubject(tx, context, deps.now, input))
+    await deps.transaction((tx) => insertCareerSubject(tx, context, input))
     return laravelJson({ message: CREATED })
   })
 }
 
-export async function insertCareerSubject(tx: CareerWriteTx, context: CareerContext, now: () => number, input: PhpArray): Promise<string> {
+export async function insertCareerSubject(tx: CareerWriteTx, context: CareerContext, input: PhpArray): Promise<string> {
   const careerId = context.careerId
   if (await tx.careerLocked(careerId)) throw invalid("process", CONVOCATION_LOCK_REASON)
   const career = await tx.lockCareer(careerId)
@@ -356,7 +294,6 @@ export async function insertCareerSubject(tx: CareerWriteTx, context: CareerCont
     modalidad_asignatura: subjectModality(input),
     genera_silabo_asignatura: "generates_syllabus" in input ? laravelBoolean(input.generates_syllabus) : true,
   })
-  await tx.recordAudit(careerAudit(context, now(), "academico.asignatura.creacion", "asignatura", id))
   return id
 }
 
@@ -387,9 +324,7 @@ export async function updateCareerRecord(request: Request, entity: string, recor
         }
         const dirty = SUBJECT_COLUMNS.filter((column) => column in attributes && !equivalent(column, attributes[column] as PhpValue, subject.columns[column]))
         if (dirty.length === 0) return
-        const metadata = subjectAuditMetadata(subject, dirty, attributes)
         await tx.updateSubject(subject.id, Object.fromEntries(dirty.map((column) => [column, attributes[column] as PhpValue])))
-        await tx.recordAudit(careerAudit(context, deps.now(), "academico.asignatura.actualizacion", "asignatura", subject.id, metadata))
       }
       if (toggles) await tx.guard(confirmed, careerId, () => tx.replace(confirmed, change, { careerIds: careerId, subjectId: recordId }), null)
       else await tx.keepContent(confirmed, careerId, change)
@@ -438,8 +373,7 @@ export async function createParallels(request: Request, deps: CareerWriteDeps = 
       if (existing.length > 0) throw invalid("codes", `Ya existe el paralelo ${existing.join(", ")} para esta materia.`)
       for (const code of codes) {
         const parallelId = await tx.insertParallel(subjectId, code, input.shift)
-        await tx.recordAudit(careerAudit(context, deps.now(), "academico.paralelo.creacion", "paralelo", parallelId, { bulk: true }))
-        await assignTeacher(tx, context, deps.now(), parallelId, input.user_id as string, confirmed)
+        await assignTeacher(tx, context, parallelId, input.user_id as string, confirmed)
       }
     })
     return laravelJson({ message: `${codes.length} paralelos creados dentro de su carrera.` })
@@ -477,14 +411,6 @@ export async function updateParallel(request: Request, parallelId: string, deps:
           await tx.updateParallel(parallel.id, code, input.shift)
           if (sent) await tx.restartSentForParallel(parallel.id)
           await tx.refreshParallel(parallel.id)
-          await tx.recordAudit(
-            careerAudit(context, deps.now(), "academico.paralelo.actualizacion", "paralelo", parallel.id, {
-              before_code: parallel.code,
-              after_code: code,
-              before_shift: parallel.shift,
-              after_shift: input.shift as string,
-            }),
-          )
         },
         [parallel.subjectId],
       )
@@ -516,9 +442,8 @@ export async function replaceParallelTeacher(request: Request, parallelId: strin
         const assignment = await tx.lockTeacherAssignment(current, context.careerId)
         if (assignment === null) throw new Missing()
         await tx.deleteTeacherAssignment(assignment)
-        await tx.recordAudit(careerAudit(context, deps.now(), "academico.asignacion_docente.eliminacion", "asignacion_docente", current, { name: assignment }))
       }
-      await assignTeacher(tx, context, deps.now(), parallel.id, input.user_id as string, confirmed)
+      await assignTeacher(tx, context, parallel.id, input.user_id as string, confirmed)
     })
     return laravelJson({ message: CREATED })
   })

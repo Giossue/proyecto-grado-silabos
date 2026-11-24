@@ -1,12 +1,12 @@
 import "server-only"
 import { laravelBaseUrl } from "./config"
-import { laravelFallbackEnabled, laravelRouter, unknownRoute } from "./router"
+import { laravelFallbackEnabled, laravelRouter, removedFromSystem, unknownRoute } from "./router"
 
 const HOP_BY_HOP = ["connection", "keep-alive", "transfer-encoding", "upgrade", "proxy-connection", "te", "trailer", "host", "content-length"]
 
 export async function proxyToLaravel(request: Request): Promise<Response> {
-  if (!laravelFallbackEnabled()) return unknownRoute(request)
   const incoming = new URL(request.url)
+  if (!laravelFallbackEnabled() || removedFromSystem(incoming.pathname)) return unknownRoute(request)
   const target = `${laravelBaseUrl()}${incoming.pathname}${incoming.search}`
   const headers = new Headers(request.headers)
   for (const name of HOP_BY_HOP) headers.delete(name)

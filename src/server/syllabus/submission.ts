@@ -252,7 +252,7 @@ export async function submitSyllabus(request: Request, syllabusId: string, deps:
     if (blocking === null) throw new Missing()
     if (blocking > 0) reject("validation", "Corrija los errores determinísticos antes de enviar.")
     const settings = deps.settings()
-    const actor = { id: session.user.id, name: await deps.store.userName(session.user.id), roleAssignmentId: session.activeRole?.id ?? null }
+    const actor = { id: session.user.id, name: await deps.store.userName(session.user.id) }
     const number = await deps.store.transaction(async (tx) => {
       const locked = await tx.lockSyllabus(syllabus.id)
       if (locked === null) throw new Missing()
@@ -280,17 +280,6 @@ export async function submitSyllabus(request: Request, syllabusId: string, deps:
       const carried = previous?.correctionStage === "coordinacion" ? await unchangedVerification(tx, locked.id, snapshot) : null
       await tx.createLibrarySubmission({ revisionId: revision.id, verifiedBy: carried?.verifiedBy ?? null, verifiedAt: carried?.verifiedAt ?? null, inherited: carried !== null })
       await tx.markSubmitted(locked.id, locked.version + 1, now)
-      const first = locked.state === "borrador"
-      await tx.recordAudit({
-        actorId: session.user.id,
-        roleAssignmentId: session.activeRole?.id ?? null,
-        action: first ? "silabo.enviado" : "silabo.reenviado",
-        resourceType: "revision_silabo",
-        resourceId: revision.id,
-        result: "exito",
-        metadata: { revision_number: revision.number, from_state: locked.state, to_state: "en_revision", fingerprint: revision.fingerprint },
-        occurredAt: now,
-      })
       if (carried === null) {
         const event = previous?.correctionStage === "biblioteca" ? "silabo.reenviado_biblioteca" : "silabo.enviado"
         await scheduleWorkflowNotification(tx.notifications, {

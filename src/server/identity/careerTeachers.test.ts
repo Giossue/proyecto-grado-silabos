@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest"
 import { destroyCareerTeacher, resendCareerTeacherActivation, storeCareerTeacher } from "./careerTeachers"
-import { account, ACTOR, ACTOR_ROLE, CAREER, FORBIDDEN, grant, harness, jsonRequest, NOW, OTHER_CAREER } from "./testing"
+import { account, ACTOR, CAREER, FORBIDDEN, grant, harness, jsonRequest, NOW, OTHER_CAREER } from "./testing"
 
 const TEACHER = "01a1c5bc-2222-7000-8000-000000000001"
 const TEACHER_ROLE = "01a1c5bc-2222-7000-8000-0000000000a1"
@@ -25,7 +25,6 @@ function coordination() {
   return test
 }
 
-const actions = (test: ReturnType<typeof harness>) => test.identity.audits.map((event) => event.action)
 const store = (test: ReturnType<typeof harness>, body: unknown) => storeCareerTeacher(jsonRequest("/api/v1/coordination/academic/teachers", "POST", body), test.deps)
 const remove = (test: ReturnType<typeof harness>, id: string) =>
   destroyCareerTeacher(jsonRequest(`/api/v1/coordination/academic/teachers/${id}`, "DELETE", undefined), id, test.deps)
@@ -39,15 +38,13 @@ describe("POST /api/v1/coordination/academic/teachers", () => {
     expect(await first.text()).toBe('{"message":"Docente creado para su carrera. Recibir\\u00e1 un enlace de activaci\\u00f3n por correo."}')
     const created = test.identity.accounts.at(-1)
     expect(created).toMatchObject({ name: "NUEVA DOCENTE UNO", email: "nueva.docente@silabos.test", verified: false })
-    expect(actions(test)).toEqual(["usuario.rol_asignado", "usuario.creado", "usuario.invitacion_activacion_enviada", "usuario.docente_incorporado"])
-    expect(test.identity.audits[3]).toMatchObject({ roleAssignmentId: ACTOR_ROLE, metadata: { carrera_id: CAREER, cuenta_creada: true } })
-    expect(test.identity.audits[2].metadata).toEqual({ reason: "alta" })
+    expect(test.identity.grants.filter((row) => row.userId === created?.id).map((row) => [row.role, row.careerId, row.active])).toEqual([["docente", CAREER, true]])
     expect(test.identity.mails.map((mail) => [mail.to, mail.data])).toEqual([
       ["nueva.docente@silabos.test", expect.objectContaining({ roleName: "Docente", careerName: "Software" })],
     ])
     const again = await store(test, { nombres: "Otro", apellidos: "Nombre", correo_electronico: "nueva.docente@silabos.test" })
     expect(await again.json()).toEqual({ message: "El docente ya está disponible en su carrera. Conserva su nombre y acceso actuales." })
-    expect(test.identity.audits).toHaveLength(4)
+    expect(test.identity.accounts.filter((row) => row.email === "nueva.docente@silabos.test")).toHaveLength(1)
     expect(test.identity.mails).toHaveLength(1)
   })
 
@@ -56,7 +53,7 @@ describe("POST /api/v1/coordination/academic/teachers", () => {
     const response = await store(test, { nombres: "Cualquier", apellidos: "Nombre", correo_electronico: "derecho@silabos.test" })
     expect(await response.json()).toEqual({ message: "Docente incorporado a su carrera. Conserva su nombre y acceso actuales." })
     expect(test.identity.accounts.find((row) => row.id === FOREIGN)?.name).toBe("DOCENTE DERECHO")
-    expect(actions(test)).toEqual(["usuario.docente_incorporado"])
+    expect(test.identity.grants.filter((row) => row.userId === FOREIGN && row.active).map((row) => [row.role, row.careerId])).toContainEqual(["docente", CAREER])
     expect(test.identity.mails).toEqual([])
   })
 
@@ -64,8 +61,10 @@ describe("POST /api/v1/coordination/academic/teachers", () => {
     const test = coordination()
     test.identity.invitations.push({ userId: PENDING, hash: "old", expiresAt: NOW - 1, issuerId: ACTOR, createdAt: NOW - 9, usedAt: null, invalidatedAt: null })
     await store(test, { nombres: "Docente", apellidos: "Pendiente", correo_electronico: "pendiente@silabos.test" })
-    expect(actions(test)).toEqual(["usuario.invitacion_activacion_enviada"])
-    expect(test.identity.audits[0].metadata).toEqual({ reason: "alta_coordinacion" })
+    expect(test.identity.invitations.map((row) => [row.userId, row.invalidatedAt])).toEqual([
+      [PENDING, NOW],
+      [PENDING, null],
+    ])
     expect(test.identity.mails).toHaveLength(1)
   })
 
@@ -140,7 +139,7 @@ describe("DELETE /api/v1/coordination/academic/teachers/{user}", () => {
     expect(await response.json()).toEqual({ message: "Docente retirado de su carrera; sus 2 paralelos quedaron sin docente." })
     expect(test.identity.parallels).toEqual([])
     expect(test.identity.sessions.some((row) => row.userId === TEACHER)).toBe(true)
-    expect(test.identity.audits[0]).toMatchObject({ action: "usuario.docente_retirado", metadata: { carrera_id: CAREER, removed_parallel_assignments: 2 } })
+    expect(test.identity.grants.find((row) => row.id === TEACHER_ROLE)?.active).toBe(false)
   })
 
   it("cancels the pending invitation and the sessions of a teacher left without roles", async () => {

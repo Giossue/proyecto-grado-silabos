@@ -2,7 +2,6 @@ import "server-only"
 import { sql, type SQL } from "drizzle-orm"
 import { db } from "@/db"
 import { phpJsonEncode } from "../laravel/phpJson"
-import { insertAuditEvent } from "../operations/recordAuditEvent"
 import { phpShape, type PhpRecord } from "./phpValues"
 import { defaultProvisionDeps, type ProvisionDeps, type ProvisionStore, type ProvisionTx } from "./templateProvisioner"
 import { structureStoreOn, structureTx } from "./templateStructureStore"
@@ -67,7 +66,6 @@ export function provisionStoreOn(executor: Executor, transaction: <T>(work: (exe
   return {
     templateLocked: () => structure.templateLocked(),
     transaction: (work) => transaction((inner) => work(provisionTx(inner))),
-    recordAudit: async (event) => void (await insertAuditEvent(executor, event)),
   }
 }
 

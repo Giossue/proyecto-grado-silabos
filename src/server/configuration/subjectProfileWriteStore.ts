@@ -4,7 +4,6 @@ import { db } from "@/db"
 import { phpJsonEncode } from "../laravel/phpJson"
 import { uuid7 } from "../laravel/uuid7"
 import { notificationScope, systemNow, type WriteOptions } from "../notifications/queries"
-import { insertAuditEvent } from "../operations/recordAuditEvent"
 import { withAfterCommit, type AfterCommit } from "../queue/dispatch"
 import { keepContent } from "../syllabus/finalizedChangeNotice"
 import { InProgressWork } from "../syllabus/inProgressWork"
@@ -56,9 +55,6 @@ export function subjectProfileTx(executor: Executor, afterCommit: AfterCommit, n
           values (${uuid7()}::uuid, ${subjectId}::uuid, ${fieldId}::uuid, ${encoded}::jsonb)`)
       }
     },
-    async recordAudit(event) {
-      await insertAuditEvent(executor, event)
-    },
     keepContent: (confirmed, careerId, subjectIds, change) => keepContent(work, confirmed, careerId, change, subjectIds),
   }
 }
@@ -67,15 +63,14 @@ export function subjectProfileWriteDepsOn(
   executor: Executor,
   transaction: TransactionRunner,
   options: WriteOptions = {},
-): Pick<SubjectProfileWriteDeps, "now" | "transaction" | "store"> {
+): Pick<SubjectProfileWriteDeps, "transaction" | "store"> {
   const now = options.now ?? systemNow
   return {
-    now,
     store: createTemplateStore(executor),
     transaction: (work) => withAfterCommit((afterCommit) => transaction((inner) => work(subjectProfileTx(inner, afterCommit, now(), options)))),
   }
 }
 
-export function createSubjectProfileWriteDeps(): Pick<SubjectProfileWriteDeps, "now" | "transaction" | "store"> {
+export function createSubjectProfileWriteDeps(): Pick<SubjectProfileWriteDeps, "transaction" | "store"> {
   return subjectProfileWriteDepsOn(db as unknown as Executor, dbTransaction)
 }

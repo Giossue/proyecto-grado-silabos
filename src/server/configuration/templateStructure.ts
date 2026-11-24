@@ -6,7 +6,6 @@ import { isJsonRequest, laravelInput, type PhpArray, type PhpValue } from "../la
 import { laravelJson, validationError } from "../laravel/responses"
 import { uuid7 } from "../laravel/uuid7"
 import { validateInput, type Rule } from "../laravel/validation"
-import type { AuditEventInput } from "../operations/recordAuditEvent"
 import { phpIdentical, phpShape, phpString, phpTrim, type PhpRecord } from "./phpValues"
 import { contentForField, KEY_PATTERN, phpIntCast, RESPONSIBLES, toRuntime } from "./templateDraft"
 import { boundTemplate, FORBIDDEN, managesTemplates, type TemplateReadDeps } from "./templateReads"
@@ -26,7 +25,6 @@ export interface StructureTx {
   syncDocument(templateId: string, sections: DocumentSection[]): Promise<void>
   insertField(field: StoredField): Promise<void>
   updateField(id: string, changes: FieldChanges): Promise<void>
-  recordAudit(event: AuditEventInput): Promise<void>
   reload?(templateId: string): Promise<SyllabusTemplate | null>
 }
 
@@ -38,14 +36,13 @@ export interface StructureStore {
   transaction<T>(work: (tx: StructureTx) => Promise<T>): Promise<T>
 }
 
-export type StructureDeps = TemplateReadDeps & { structure: StructureStore; now: () => number; newId: () => string; newFieldId: () => string }
+export type StructureDeps = TemplateReadDeps & { structure: StructureStore; newId: () => string; newFieldId: () => string }
 
 export function defaultStructureDeps(): StructureDeps {
   return {
     bridge: defaultBridgeDeps(),
     store: createTemplateStore(),
     structure: createStructureStore(),
-    now: () => Math.floor(Date.now() / 1000),
     newId: randomUUID,
     newFieldId: uuid7,
   }
@@ -115,10 +112,6 @@ function placed<T extends { id: string; position: number }>(items: T[], ids: str
 function sameIds(current: string[], requested: string[]): boolean {
   const order = (ids: string[]) => [...ids].sort((left, right) => Buffer.compare(Buffer.from(left), Buffer.from(right)))
   return current.length === requested.length && order(current).every((id, index) => id === order(requested)[index])
-}
-
-function audit(session: LaravelSession, deps: StructureDeps, action: string, resourceType: string, resourceId: string): AuditEventInput {
-  return { actorId: session.user.id, roleAssignmentId: session.activeRole?.id ?? null, action, resourceType, resourceId, result: "exito", metadata: {}, occurredAt: deps.now() }
 }
 
 async function reloaded(tx: StructureTx, templateId: string): Promise<SyllabusTemplate> {
@@ -197,7 +190,6 @@ export async function storeSection(request: Request, templateId: string, deps: S
       ids.splice(position - 1, 0, sectionId)
       await tx.syncDocument(template.id, placed(current, ids))
     }
-    await tx.recordAudit(audit(auth.session, deps, "plantilla.seccion_creada", "seccion_plantilla", sectionId))
     return laravelJson({ message: "Sección agregada a la plantilla.", section_id: sectionId }, 201)
   })
 }
@@ -220,7 +212,6 @@ export async function updateSection(request: Request, templateId: string, sectio
       template.id,
       document.map((entry) => (entry.id === section.id ? { ...entry, title: phpString(input.title), orientation } : entry)),
     )
-    await tx.recordAudit(audit(auth.session, deps, "plantilla.seccion_actualizada", "seccion_plantilla", section.id))
     return laravelJson({ message: "Sección actualizada." })
   })
 }
@@ -253,7 +244,6 @@ export async function reorderSections(request: Request, templateId: string, deps
     const document = documentOf(template)
     if (!sameIds(document.map((section) => section.id), ids)) throw new Rejected(validationError({ sections: [INVALID_ORDER] }))
     await tx.syncDocument(template.id, placed(document, ids))
-    await tx.recordAudit(audit(auth.session, deps, "plantilla.secciones_reordenadas", "plantilla_silabo", template.id))
     return laravelJson({ message: "Orden de secciones actualizado." })
   })
 }
@@ -271,7 +261,6 @@ export async function destroySection(request: Request, templateId: string, secti
       template.id,
       document.filter((entry) => entry.id !== section.id),
     )
-    await tx.recordAudit(audit(auth.session, deps, "plantilla.seccion_eliminada", "seccion_plantilla", section.id))
     return laravelJson({ message: "Sección eliminada." })
   })
 }
@@ -343,7 +332,6 @@ export async function storeField(request: Request, templateId: string, sectionId
     }
     const fieldId = deps.newFieldId()
     await tx.insertField({ id: fieldId, templateId: template.id, blockId, responsible, content })
-    await tx.recordAudit(audit(auth.session, deps, "plantilla.campo_creado", "definicion_campo", fieldId))
     return laravelJson({ message: "Campo agregado a la sección.", field: fieldPayload(fieldId, block.key, label, responsible, content) }, 201)
   })
 }
@@ -385,7 +373,6 @@ export async function updateField(request: Request, templateId: string, fieldId:
       document.map((section) => ({ ...section, blocks: section.blocks.map((block) => (block.id === field.blockId ? { ...block, title: label } : block)) })),
     )
     const key = document.flatMap((section) => section.blocks).find((block) => block.id === field.blockId)?.key ?? field.key ?? ""
-    await tx.recordAudit(audit(auth.session, deps, "plantilla.campo_actualizado", "definicion_campo", field.id))
     return laravelJson({ message: "Campo actualizado.", field: fieldPayload(field.id, key, label, responsible, content) })
   })
 }
@@ -417,7 +404,6 @@ export async function reorderFields(request: Request, templateId: string, sectio
       template.id,
       document.map((entry) => (entry.id === section.id ? { ...entry, blocks: placed(entry.blocks, requested) } : entry)),
     )
-    await tx.recordAudit(audit(auth.session, deps, "plantilla.bloques_reordenados", "plantilla_silabo", template.id))
     return laravelJson({ message: "Orden de campos actualizado." })
   })
 }
@@ -436,7 +422,6 @@ export async function destroyField(request: Request, templateId: string, fieldId
       template.id,
       document.map((section) => ({ ...section, blocks: section.blocks.filter((block) => block.id !== field.blockId) })),
     )
-    await tx.recordAudit(audit(auth.session, deps, "plantilla.bloque_eliminado", "bloque_plantilla", field.blockId))
     return laravelJson({ message: "Campo eliminado." })
   })
 }

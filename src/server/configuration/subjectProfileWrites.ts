@@ -4,7 +4,6 @@ import type { LaravelSession } from "../auth/types"
 import { isJsonRequest, laravelInput, type PhpArray } from "../laravel/input"
 import { laravelHttpError, validationError } from "../laravel/responses"
 import { validateInput } from "../laravel/validation"
-import type { AuditEventInput } from "../operations/recordAuditEvent"
 import { laravelBoolean } from "../syllabus/inProgressWork"
 import { Missing, Rejected, settle } from "../syllabus/reviewDecisions"
 import { isPhpArray, phpEquals, type PhpRecord } from "./phpValues"
@@ -24,12 +23,10 @@ export interface SubjectProfileTx {
   careerLocked(careerId: string): Promise<boolean>
   deleteValue(subjectId: string, fieldId: string): Promise<void>
   saveValue(subjectId: string, fieldId: string, document: PhpRecord): Promise<void>
-  recordAudit(event: AuditEventInput): Promise<void>
   keepContent<T>(confirmed: boolean, careerId: string, subjectIds: string[], change: () => Promise<T>): Promise<T>
 }
 
 export type SubjectProfileWriteDeps = SubjectProfileDeps & {
-  now: () => number
   transaction<T>(work: (tx: SubjectProfileTx) => Promise<T>): Promise<T>
 }
 
@@ -69,16 +66,6 @@ async function saveValues(tx: SubjectProfileTx, session: LaravelSession, subject
     }
     await tx.saveValue(subjectId, fieldId, document)
   }
-  await tx.recordAudit({
-    actorId: session.user.id,
-    roleAssignmentId: session.activeRole?.id ?? null,
-    action: "academico.ficha_asignatura.guardada",
-    resourceType: "asignatura",
-    resourceId: subjectId,
-    result: "exito",
-    metadata: { campos: fieldIds.length },
-    occurredAt: deps.now(),
-  })
 }
 
 export async function updateSubjectProfile(request: Request, subjectId: string, deps: SubjectProfileWriteDeps = defaultSubjectProfileWriteDeps()): Promise<Response> {

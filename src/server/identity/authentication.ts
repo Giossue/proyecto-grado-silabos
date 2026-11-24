@@ -16,7 +16,6 @@ import { expectsJson } from "../laravel/request"
 import { aborted, laravelHttpError, laravelJson, unauthenticated, validationError } from "../laravel/responses"
 import { sharedRateLimiter, throttle, type RateLimiter } from "../laravel/throttle"
 import { validateInput } from "../laravel/validation"
-import { insertAuditEvent, type AuditEventInput } from "../operations/recordAuditEvent"
 import { acceptsBody } from "./accountWrites"
 import { createProfileRepository, sessionPayload, type ProfileRepository } from "./session"
 
@@ -28,7 +27,6 @@ export interface CredentialStore {
   setRememberToken(userId: string, token: string): Promise<void>
   setPassword(userId: string, hash: string): Promise<void>
   deleteOtherSessions(userId: string, exceptId: string): Promise<number>
-  recordAudit(event: AuditEventInput): Promise<void>
 }
 
 export type CredentialExecutor = { execute(query: SQL): Promise<{ rows: unknown[]; rowCount?: number | null }> }
@@ -54,9 +52,6 @@ export function credentialStoreOn(executor: CredentialExecutor): CredentialStore
     },
     async deleteOtherSessions(userId, exceptId) {
       return (await executor.execute(sql`delete from sesiones where user_id = ${userId}::uuid and id <> ${exceptId}`)).rowCount ?? 0
-    },
-    async recordAudit(event) {
-      await insertAuditEvent(executor, event)
     },
   }
 }
@@ -111,10 +106,6 @@ async function payloadOf(context: StatefulContext, deps: AuthenticationDeps): Pr
   const profile = await deps.profiles.find(session.user.id)
   if (profile === null) throw new Error("The authenticated user has no profile.")
   return controllerJson(sessionPayload(session, profile, deps))
-}
-
-function audit(deps: AuthenticationDeps, userId: string, roleAssignmentId: string | null, action: string, resourceType: string, resourceId: string, metadata: AuditEventInput["metadata"] = {}) {
-  return deps.credentials.recordAudit({ actorId: userId, roleAssignmentId, action, resourceType, resourceId, result: "exito", metadata, occurredAt: deps.writer.now() })
 }
 
 const ATOM = String.raw`[\x21\x23-\x27\x2A\x2B\x2D\x2F-\x39\x3D\x3F\x5E-\x7E]+`
@@ -207,7 +198,6 @@ export function login(request: Request, deps: AuthenticationDeps = defaultAuthen
       if (user === null) throw new Error("The credential has no user.")
       await context.login(user)
       await regenerateSession(context.state, deps.writer)
-      await audit(deps, user.id, null, "sesion.iniciada", "usuario", user.id)
       return gate.decorate(await payloadOf(context, deps))
     },
     () => laravelJson({ message: "Inicie sesión desde la aplicación web." }, 400),
@@ -219,7 +209,6 @@ export function logout(request: Request, deps: AuthenticationDeps = defaultAuthe
     const user = context.user
     if (user === null) return unauthenticated()
     if (parseCookieHeader(request.headers.get("cookie")).has(recallerCookieName())) return FORWARD
-    await audit(deps, user.id, (await context.activeRole())?.id ?? null, "sesion.cerrada", "usuario", user.id)
     if (((await deps.credentials.rememberToken(user.id)) ?? "") !== "") await deps.credentials.setRememberToken(user.id, deps.writer.random(60))
     context.logout()
     await invalidateSession(context.state, deps.writer)
@@ -248,7 +237,6 @@ export function selectActiveRole(request: Request, deps: AuthenticationDeps = de
     const id = stringInput(input.role_assignment_id)
     const assignment = (await deps.writer.store.effectiveRoleAssignments(user.id)).find((candidate) => candidate.id.toLowerCase() === id.toLowerCase())
     if (!assignment || !isEligible(assignment)) return fromController(aborted(404))
-    await audit(deps, user.id, assignment.id, "rol_activo.seleccionado", "asignacion_rol", assignment.id, { role: assignment.role })
     context.attributes.active_role_assignment_id = assignment.id
     await regenerateSession(context.state, deps.writer)
     context.rememberRole(null)
@@ -260,10 +248,8 @@ export function leaveActiveRole(request: Request, deps: AuthenticationDeps = def
   return statefulRequest(request, deps.writer, { group: "api", authenticates: true }, async (context): Promise<Outcome> => {
     const blocked = verifiedUser(context, request)
     if (blocked !== null) return blocked
-    const user = context.user!
     const current = await context.activeRole()
     if (current !== null) {
-      await audit(deps, user.id, current.id, "rol_activo.cerrado", "asignacion_rol", current.id, { role: current.role })
       delete context.attributes.active_role_assignment_id
       context.rememberRole(null)
       await regenerateSession(context.state, deps.writer)
@@ -306,7 +292,6 @@ export function updatePassword(request: Request, deps: AuthenticationDeps = defa
     await deps.credentials.setPassword(user.id, hash)
     await deps.credentials.setRememberToken(user.id, deps.writer.random(60))
     await deps.credentials.deleteOtherSessions(user.id, context.state.id)
-    await audit(deps, user.id, (await context.activeRole())?.id ?? null, "usuario.contrasena_actualizada", "usuario", user.id)
     context.user = { ...user, passwordHash: hash }
     return payloadOf(context, deps)
   })

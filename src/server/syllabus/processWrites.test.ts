@@ -4,7 +4,6 @@ import golden from "../laravel/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import { phpJsonEncode } from "../laravel/phpJson"
 import { fakeNotificationTransaction, notificationWorld, recipient, type NotificationWorld } from "../notifications/testing"
-import type { AuditEventInput } from "../operations/recordAuditEvent"
 import type { ProcessRow } from "./processes"
 import { deleteProcess, extendProcessDeadline, resumeProcess, type LockedSyllabusProcess, type ProcessWriteDeps } from "./processWrites"
 import type { ReopenPlan, TemplateChange } from "./reopenCatchUp"
@@ -35,7 +34,6 @@ const NO_PLAN: ReopenPlan = { period: false, subjects: [], teachers: [], paralle
 const COUNTS = { sin_iniciar: 3, borrador: 1, en_revision: 1, correccion_solicitada: 0, aprobado: 1 }
 const CHANGE: TemplateChange = { changedAt: "2026-11-23 16:10:54.932237+00", key: "2026-11-23T16:10:54.932237Z" }
 let log: string[]
-let audits: AuditEventInput[]
 
 function deps(): ProcessWriteDeps {
   return {
@@ -45,7 +43,6 @@ function deps(): ProcessWriteDeps {
     nowMs: () => NOW * 1000 + 7,
     async transaction(work) {
       log.push("begin")
-      const staged: AuditEventInput[] = []
       try {
         const result = await fakeNotificationTransaction(notices, NOW, (notifications) =>
           work({
@@ -85,8 +82,8 @@ function deps(): ProcessWriteDeps {
               log.push(`counts:${toReopen ? "reopen" : "open"}`)
               return COUNTS
             },
-            adaptToTemplate: async (id, change, counts, audit) => {
-              log.push(`adapt:${id}:${change.key}:${Object.values(counts).join(",")}:${audit.actorId}:${audit.roleAssignmentId}`)
+            adaptToTemplate: async (id, change) => {
+              log.push(`adapt:${id}:${change.key}`)
             },
             convocationsToReopen: async () => {
               log.push("lock:closed-convocations")
@@ -110,17 +107,12 @@ function deps(): ProcessWriteDeps {
             extendDeadline: async (id, dueAt, extension) => {
               log.push(`deadline:${id}:${dueAt}:${extension}`)
             },
-            convocationCount: async () => 2,
             teachersWithPendingWork: async () => [TEACHER],
             updateState: async (id, state) => {
               log.push(`state:${id}:${state}`)
             },
-            recordAudit: async (event) => {
-              staged.push(event)
-            },
           }),
         )
-        audits.push(...staged)
         log.push("commit")
         return result
       } catch (error) {
@@ -178,7 +170,6 @@ beforeEach(() => {
   otherInProgress = false
   plan = NO_PLAN
   log = []
-  audits = []
 })
 
 describe("DELETE /api/v1/admin/processes/{process}", () => {
@@ -193,14 +184,6 @@ describe("DELETE /api/v1/admin/processes/{process}", () => {
       [LIBRARIAN, `flujo:proceso.eliminado:${PROCESS}`, "Convocatoria eliminada", message, "periodo_academico", PERIOD, PERIOD],
     ])
     expect(notices.mails).toHaveLength(3)
-    expect(audits.map((event) => [event.action, event.resourceType, event.resourceId, event.metadata])).toEqual([
-      [
-        "proceso_silabos.eliminado",
-        "proceso_silabos",
-        PROCESS,
-        { period_id: PERIOD, previous_state: "abierto", deleted_convocations: 1, deleted_syllabi: 2, notified_people: 3 },
-      ],
-    ])
   })
 
   it("asks for the message with its own wording", async () => {
@@ -234,11 +217,10 @@ describe("POST /api/v1/admin/processes/{process}/reanudar", () => {
     locked = { ...(locked as LockedSyllabusProcess), state: "pausado" }
   })
 
-  it("reopens the process, audits it and tells teachers, coordination and the library", async () => {
+  it("reopens the process and tells teachers, coordination and the library", async () => {
     const response = await resume()
     expect(response.text).toBe(phpJsonEncode({ message: "Proceso reanudado. Los envíos vuelven a admitirse." }))
     expect(log).toEqual(["begin", `lock:process:${PROCESS}`, "template-change:pause", `state:${PROCESS}:abierto`, "commit"])
-    expect(audits.map((event) => [event.action, event.metadata])).toEqual([["proceso_silabos.abierto", { previous_state: "pausado" }]])
     const at = "20270115080000007"
     expect(notices.notifications.map((item) => [item.userId, item.key, item.title, item.message, item.resourceType])).toEqual([
       [TEACHER, `flujo:convocatoria.reanudada:${CONVOCATION}:${TEACHER}:${at}`, "Se reanudó la convocatoria", "Ya puede seguir con sus sílabos de Software.", "convocatoria"],
@@ -275,7 +257,6 @@ describe("POST /api/v1/admin/processes/{process}/reanudar", () => {
     locked = { ...(locked as LockedSyllabusProcess), state: "pausado" }
     problem = "La sección «Datos» de la plantilla está vacía."
     expect((await resume()).json?.errors).toEqual({ process: [problem] })
-    expect(audits).toEqual([])
     expect(notices.notifications).toEqual([])
   })
 
@@ -292,7 +273,6 @@ describe("POST /api/v1/admin/processes/{process}/reanudar", () => {
       }),
     )
     expect(log).toEqual(["begin", `lock:process:${PROCESS}`, "template-change:pause", "counts:open", "commit"])
-    expect(audits).toEqual([])
     expect(notices.notifications).toEqual([])
     expect((await resume({ confirmar_rehacer: "0" })).status).toBe(422)
   })
@@ -306,11 +286,10 @@ describe("POST /api/v1/admin/processes/{process}/reanudar", () => {
       `lock:process:${PROCESS}`,
       "template-change:pause",
       "counts:open",
-      `adapt:${PROCESS}:${CHANGE.key}:3,1,1,0,1:${golden.userId}:${golden.roleId}`,
+      `adapt:${PROCESS}:${CHANGE.key}`,
       `state:${PROCESS}:abierto`,
       "commit",
     ])
-    expect(audits.map((event) => event.action)).toEqual(["proceso_silabos.abierto"])
     expect(forwarded).toEqual([])
   })
 })
@@ -322,18 +301,6 @@ describe("POST /api/v1/admin/processes/{process}/deadline", () => {
     const response = await extend({ due_at: "2026-12-20" })
     expect(response.text).toBe(phpJsonEncode({ message: "Plazo prorrogado para todas las convocatorias del proceso." }))
     expect(log).toEqual(["begin", `lock:process:${PROCESS}`, `deadline:${PROCESS}:2026-12-21T04:59:59+00:00:1`, "commit"])
-    expect(audits.map((event) => [event.action, event.metadata])).toEqual([
-      [
-        "proceso_silabos.plazo_extendido",
-        {
-          stage: "borrador",
-          previous_due_at: "2026-12-11T04:59:59+00:00",
-          new_due_at: "2026-12-21T04:59:59+00:00",
-          convocations_reached: 2,
-          extension_number: 1,
-        },
-      ],
-    ])
     expect(notices.notifications.map((item) => [item.userId, item.key, item.title, item.message, item.resourceType])).toEqual([
       [
         TEACHER,
@@ -361,7 +328,6 @@ describe("POST /api/v1/admin/processes/{process}/deadline", () => {
     expect((await extend({ due_at: "2027-03-13" })).json?.errors).toEqual({ due_at: ["La nueva fecha no puede pasar del último día de clases (12/03/2027)."] })
     locked = { ...(locked as LockedSyllabusProcess), extensions: 2 }
     expect((await extend({ due_at: "2026-12-20" })).json?.errors).toEqual({ process: ["Ya se usaron las 2 prórrogas de esta convocatoria."] })
-    expect(audits).toEqual([])
   })
 
   describe("reopening a closed process", () => {
@@ -370,7 +336,7 @@ describe("POST /api/v1/admin/processes/{process}/deadline", () => {
       locked = { ...(locked as LockedSyllabusProcess), state: "cerrado", finalized: true }
     })
 
-    it("reopens the process, catches up the changes, generates the missing syllabi and audits both steps", async () => {
+    it("reopens the process, catches up the changes and generates the missing syllabi", async () => {
       const response = await extend({ due_at: "2026-12-20" })
       expect(response.text).toBe(phpJsonEncode({ message: "Plazo prorrogado. La convocatoria se volvió a abrir." }))
       expect(log).toEqual([
@@ -385,13 +351,6 @@ describe("POST /api/v1/admin/processes/{process}/deadline", () => {
         `apply:${CONVOCATION}:${PERIOD}`,
         `generate:${CONVOCATION}`,
         "commit",
-      ])
-      expect(audits.map((event) => [event.action, event.metadata])).toEqual([
-        [
-          "proceso_silabos.plazo_extendido",
-          { stage: "borrador", previous_due_at: "2026-12-11T04:59:59+00:00", new_due_at: "2026-12-21T04:59:59+00:00", convocations_reached: 2, extension_number: 1 },
-        ],
-        ["proceso_silabos.reabierto", { previous_state: "cerrado" }],
       ])
       expect(notices.notifications.map((item) => item.type)).toEqual(["proceso.plazo_extendido"])
       expect(forwarded).toEqual([])
@@ -412,7 +371,6 @@ describe("POST /api/v1/admin/processes/{process}/deadline", () => {
         }),
       )
       expect(log).not.toContain(`reopen:${PROCESS}`)
-      expect(audits).toEqual([])
     })
 
     it("asks to confirm the pending changes once the template change is confirmed", async () => {
@@ -430,8 +388,8 @@ describe("POST /api/v1/admin/processes/{process}/deadline", () => {
       )
       const confirmed = await extend({ due_at: "2026-12-20", confirmar_rehacer: true, confirmar_cambios: "1" })
       expect(confirmed.status).toBe(200)
-      expect(log).toContain(`adapt:${PROCESS}:${CHANGE.key}:3,1,1,0,1:${golden.userId}:${golden.roleId}`)
-      expect(log.indexOf(`adapt:${PROCESS}:${CHANGE.key}:3,1,1,0,1:${golden.userId}:${golden.roleId}`)).toBeLessThan(log.lastIndexOf(`apply:${CONVOCATION}:${PERIOD}`))
+      expect(log).toContain(`adapt:${PROCESS}:${CHANGE.key}`)
+      expect(log.indexOf(`adapt:${PROCESS}:${CHANGE.key}`)).toBeLessThan(log.lastIndexOf(`apply:${CONVOCATION}:${PERIOD}`))
     })
 
     it("refuses while another process is in progress", async () => {
@@ -442,7 +400,6 @@ describe("POST /api/v1/admin/processes/{process}/deadline", () => {
       expect((await extend({ due_at: "2026-12-20" })).json?.errors).toEqual({
         process: ["La plantilla no está lista para usarse. Complétela; «Antes de empezar» indica qué falta."],
       })
-      expect(audits).toEqual([])
     })
   })
 

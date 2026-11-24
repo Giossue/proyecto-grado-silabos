@@ -4,7 +4,6 @@ import golden from "../laravel/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import { fakeTemplateStore, goldenTemplate, type FakeTemplateWorld } from "../configuration/testing"
 import type { PhpRecord } from "../configuration/phpValues"
-import type { AuditEventInput } from "../operations/recordAuditEvent"
 import type { DraftSyllabus } from "./draftField"
 import { validateDraft, type DraftValidationDeps, type ValidationField, type ValidationTeacher } from "./draftValidation"
 
@@ -24,7 +23,6 @@ let locked: { id: string; state: string; version: number; subjectId: string } | 
 let values: Map<string, unknown>
 let teachers: ValidationTeacher[]
 let archived: boolean
-let audits: AuditEventInput[]
 let committed: boolean
 
 const template = goldenTemplate()
@@ -42,7 +40,6 @@ function deps(): DraftValidationDeps {
   return {
     bridge: fakeDeps(world, forwarded),
     today: () => "2027-01-15",
-    now: () => 1_800_000_000,
     store: {
       syllabus: async (id) => (facts !== null && facts.id === id.toLowerCase() ? facts : null),
       transaction: async (work) => {
@@ -54,9 +51,6 @@ function deps(): DraftValidationDeps {
           values: async () => values,
           identification: async () => ({ context: { subject: { name: "Redes" } }, parallelCode: "A", parallelShift: null, teachers: [] }),
           teachers: async () => teachers,
-          recordAudit: async (event) => {
-            audits.push(event)
-          },
         })
         committed = true
         return result
@@ -96,12 +90,11 @@ beforeEach(() => {
   values = new Map()
   teachers = [{ id: golden.userId, name: "Ana Pérez", formation: "Magíster en Redes" }]
   archived = false
-  audits = []
   committed = false
 })
 
 describe("POST teacher/syllabi/{syllabus}/validate", () => {
-  it("reports every empty answer the teacher still has to write and audits the check", async () => {
+  it("reports every empty answer the teacher still has to write", async () => {
     const { status, json } = await validate()
     expect(status).toBe(200)
     expect(json).toEqual({
@@ -116,18 +109,6 @@ describe("POST teacher/syllabi/{syllabus}/validate", () => {
         ],
       },
     })
-    expect(audits).toEqual([
-      {
-        actorId: golden.userId,
-        roleAssignmentId: golden.roleId,
-        action: "silabo.validado",
-        resourceType: "silabo",
-        resourceId: SYLLABUS,
-        result: "exito",
-        metadata: { rule_version: "field-document-v13", blocking_errors: 2 },
-        occurredAt: 1_800_000_000,
-      },
-    ])
     expect(committed).toBe(true)
   })
 
@@ -163,16 +144,14 @@ describe("POST teacher/syllabi/{syllabus}/validate", () => {
       { field_id: null, code: "formacion_docente_faltante", severity: "error", message: "Falta su formación y experiencia académica-investigativa. Complétela antes de enviar." },
       { field_id: null, code: "formacion_docente_faltante", severity: "error", message: "Falta la formación y experiencia académica-investigativa de Luis Mora." },
     ])
-    expect(audits[0].metadata).toEqual({ rule_version: "field-document-v13", blocking_errors: 3 })
   })
 
-  it("forbids reviewers and syllabi outside the editable window without auditing", async () => {
+  it("forbids reviewers and syllabi outside the editable window", async () => {
     world.assignments = [makeAssignment({ role: "coordinador", careerId: CAREER })]
     expect(await validate()).toMatchObject({ status: 403, text: '{\n    "message": ""\n}' })
     world.assignments = [makeAssignment({ role: "docente", careerId: CAREER })]
     facts = { ...facts!, convocationState: "pausada" }
     expect((await validate()).status).toBe(403)
-    expect(audits).toEqual([])
   })
 
   it("leaves unknown syllabi and drafts with archived answers to Laravel", async () => {
@@ -193,6 +172,5 @@ describe("POST teacher/syllabi/{syllabus}/validate", () => {
     }
     archived = true
     expect((await validate()).status).toBe(299)
-    expect(audits).toEqual([])
   })
 })

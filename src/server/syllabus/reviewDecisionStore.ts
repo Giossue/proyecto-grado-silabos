@@ -2,7 +2,6 @@ import "server-only"
 import { sql } from "drizzle-orm"
 import { db } from "@/db"
 import { notificationScope, recipientsOn, systemNow, type Mail, type WriteOptions } from "../notifications/queries"
-import { insertAuditEvent } from "../operations/recordAuditEvent"
 import { withAfterCommit, type AfterCommit } from "../queue/dispatch"
 import type { ReviewDecisionDeps, ReviewDecisionTx } from "./reviewDecisions"
 import { reviewDetailStoreOn } from "./reviewDetailQueries"
@@ -49,13 +48,6 @@ export function reviewDecisionTx(executor: Executor, afterCommit: AfterCommit, n
     teachersFor: (syllabusId) => recipients.teachersFor(syllabusId),
     lockedDecisionBlock: (syllabusId) => lockedDecisionBlock(executor, syllabusId),
     decisionBlock: (syllabusId) => lockedDecisionBlock(executor, syllabusId, false),
-    async revisionCount(syllabusId) {
-      const [row] = await rowsOf<{ count: number }>(
-        executor,
-        sql`select count(*)::int as count from revisiones_silabo where silabo_id = ${syllabusId}::uuid and ${REVISION_ALIVE}`,
-      )
-      return Number(row.count)
-    },
     restartSyllabus: (syllabus) => work.restartSyllabus(syllabus),
     async lockSyllabus(id) {
       const [row] = await rowsOf<{ id: string; state: string; version: number; convocation_id: string; parallel_id: string }>(
@@ -98,9 +90,6 @@ export function reviewDecisionTx(executor: Executor, afterCommit: AfterCommit, n
     async markCorrectionRequested(syllabusId, version, at) {
       await executor.execute(sql`update silabos set estado_silabo = 'correccion_solicitada', version_borrador = ${version}, guardado_en = to_timestamp(${at})
         where silabo_id = ${syllabusId}::uuid`)
-    },
-    async recordAudit(event) {
-      await insertAuditEvent(executor, event)
     },
   }
 }
