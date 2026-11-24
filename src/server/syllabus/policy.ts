@@ -49,10 +49,34 @@ function isCurrentTeacher(session: LaravelSession, facts: SyllabusFacts): boolea
 
 function canTeacherEdit(session: LaravelSession, facts: SyllabusFacts, today: string, enforceDeadline: boolean): boolean {
   if (!isCurrentTeacher(session, facts)) return false
-  const running = facts.convocationState === CONVOCATION_OPEN && facts.processState === PROCESS_OPEN
-  return running && (!enforceDeadline || !(today > facts.dueOn))
+  return isRunning(facts) && (!enforceDeadline || !(today > facts.dueOn))
 }
 
 export function mayEdit(session: LaravelSession, facts: SyllabusFacts, today: string): boolean {
   return canTeacherEdit(session, facts, today, true) && EDITABLE_STATES.includes(facts.state)
+}
+
+export function mayStart(session: LaravelSession, facts: SyllabusFacts, today: string): boolean {
+  return canTeacherEdit(session, facts, today, true) && facts.state === "sin_iniciar"
+}
+
+export function isRunning(facts: Pick<SyllabusFacts, "convocationState" | "processState">): boolean {
+  return facts.convocationState === CONVOCATION_OPEN && facts.processState === PROCESS_OPEN
+}
+
+export function mayReview(session: LaravelSession, facts: SyllabusFacts): boolean {
+  return session.user.active && session.activeRole !== null && isReviewer(session, facts)
+}
+
+const DECISIONS_CLOSED = "La convocatoria está cerrada: la revisión queda solo para consulta y no admite decisiones."
+
+export function convocationAllowsDecisions(state: string): boolean {
+  return state === CONVOCATION_OPEN || state === CONVOCATION_PAUSED
+}
+
+export function decisionBlock(facts: Pick<SyllabusFacts, "convocationState" | "processState">): string | null {
+  if (!convocationAllowsDecisions(facts.convocationState)) return DECISIONS_CLOSED
+  if (facts.convocationState === CONVOCATION_PAUSED) return "La convocatoria de la carrera está en pausa: las revisiones se retoman cuando se reanude."
+  if (facts.processState === PROCESS_PAUSED) return "Administración pausó la convocatoria institucional: las revisiones se retoman cuando se reanude."
+  return null
 }

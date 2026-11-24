@@ -136,8 +136,8 @@ describe("GET /api/v1/library/reviews", () => {
       faculty: ["El valor seleccionado en facultad no es válido."],
     })
     expect((await get(libraryReviews, "/api/v1/library/reviews?state=otro&q=" + "a".repeat(121))).json.errors).toEqual({
-      state: ["El valor seleccionado en state no es válido."],
-      q: ["El campo q no debe tener más de 120 caracteres."],
+      state: ["El valor seleccionado en estado no es válido."],
+      q: ["El campo búsqueda no debe tener más de 120 caracteres."],
     })
     expect(pages).toEqual([])
   })

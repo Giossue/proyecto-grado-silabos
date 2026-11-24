@@ -4,7 +4,7 @@ import { db } from "@/db"
 import { accentMatches, iso8601 } from "../laravel/sql"
 import type { LibraryReviewRepository, ReviewFilters, ReviewRow, SyllabusSummary } from "./reviews"
 
-const OUTCOME_SQL = sql.raw(`CASE
+export const OUTCOME_SQL = sql.raw(`CASE
             WHEN envios_biblioteca.verificado_en IS NOT NULL THEN 'firmado'
             WHEN revision.correccion_etapa = 'biblioteca' THEN 'devuelto'
             WHEN EXISTS (
@@ -14,7 +14,7 @@ const OUTCOME_SQL = sql.raw(`CASE
             ELSE 'pendiente'
         END`)
 
-const RESPONSIBLE_SQL = sql.raw(`COALESCE(
+export const RESPONSIBLE_SQL = sql.raw(`COALESCE(
             envios_biblioteca.verificado_por,
             CASE WHEN revision.correccion_etapa = 'biblioteca' THEN revision.correccion_solicitada_por END,
             (
@@ -26,7 +26,7 @@ const RESPONSIBLE_SQL = sql.raw(`COALESCE(
             )
         )`)
 
-const STATE_SQL = sql`CASE (${OUTCOME_SQL}) WHEN 'pendiente' THEN 'pendiente' ELSE 'atendido' END`
+export const STATE_SQL = sql`CASE (${OUTCOME_SQL}) WHEN 'pendiente' THEN 'pendiente' ELSE 'atendido' END`
 async function rows<T>(query: SQL): Promise<T[]> {
   return (await db.execute(query)).rows as T[]
 }
@@ -88,7 +88,7 @@ function conditions(filters: ReviewFilters, current: string | null): SQL[] {
   return where
 }
 
-const FROM = sql`from envios_biblioteca
+export const LIBRARY_FROM = sql`from envios_biblioteca
   inner join revisiones_silabo as revision on revision.revision_silabo_id = envios_biblioteca.revision_silabo_id
   inner join silabos as silabo on silabo.silabo_id = revision.silabo_id`
 
@@ -118,13 +118,13 @@ export function createLibraryReviewRepository(): LibraryReviewRepository {
   return {
     async page(filters, page, perPage) {
       const where = sql.join(conditions(filters, await currentProcessId()), sql` and `)
-      const [{ total }] = await rows<{ total: string }>(sql`select count(*) as total ${FROM} where ${where}`)
+      const [{ total }] = await rows<{ total: string }>(sql`select count(*) as total ${LIBRARY_FROM} where ${where}`)
       if (Number(total) === 0) return { total: 0, items: [] }
       const found = await rows<PageRow>(sql`select envios_biblioteca.*, revision.revision_silabo_id::text as revision_id,
           revision.silabo_id::text as silabo_id, revision.numero_revision as numero_revision,
           revision.enviado_por::text as enviado_por, ${iso8601(sql.raw("revision.enviado_en"))} as enviado_en,
           ${STATE_SQL} AS estado_envio, ${OUTCOME_SQL} AS resultado_envio, (${RESPONSIBLE_SQL})::text AS responsable_id
-        ${FROM}
+        ${LIBRARY_FROM}
         where ${where}
         order by revision.enviado_en desc
         limit ${perPage} offset ${(page - 1) * perPage}`)
@@ -228,7 +228,7 @@ export async function libraryReviewCounts(): Promise<Record<string, number>> {
   const filters: ReviewFilters = { state: null, search: null, facultyId: null, period: "actual", periodId: null, handledBy: null }
   const where = sql.join(conditions(filters, await currentProcessId()), sql` and `)
   const totals = await rows<{ outcome: string | null; total: string }>(sql`select resultado_envio as outcome, count(*) as total
-    from (select ${OUTCOME_SQL} as resultado_envio ${FROM} where ${where}) as envios group by resultado_envio`)
+    from (select ${OUTCOME_SQL} as resultado_envio ${LIBRARY_FROM} where ${where}) as envios group by resultado_envio`)
   const counts: Record<string, number> = { pendiente: 0, firmado: 0, devuelto: 0, reemplazado: 0 }
   for (const { outcome, total } of totals) if (outcome !== null && outcome in counts) counts[outcome] = Number(total)
   return counts

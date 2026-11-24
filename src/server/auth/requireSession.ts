@@ -91,9 +91,9 @@ function passesCsrf(request: Request, attributes: Record<string, unknown>, deps:
   return typeof sessionToken === "string" && typeof token === "string" && hashEquals(sessionToken, token)
 }
 
-type Authentication = { outcome: LaravelSession | Response | Deferred; touch: string | null }
+export type Authentication = { outcome: LaravelSession | Response | Deferred; touch: string | null }
 
-async function authenticateAndTrack(request: Request, requirements: SessionRequirements, deps: BridgeDeps): Promise<Authentication> {
+export async function authenticateAndTrack(request: Request, requirements: SessionRequirements, deps: BridgeDeps): Promise<Authentication> {
   if (!isStateful(request, deps.config.statefulDomains)) return { outcome: unauthenticated(), touch: null }
   const cookies = parseCookieHeader(request.headers.get("cookie"))
   const sessionId = decryptCookie(deps.config.cookieName, cookies.get(deps.config.cookieName), deps)

@@ -12,7 +12,10 @@ import { phpIntCast, toRuntime } from "../configuration/templateDraft"
 import { profileTemplates } from "../configuration/subjectProfileFields"
 import { fieldResponseNormalize, sameStructure } from "../configuration/templateRehearsal"
 import { resolveVariables, teacherEditable, type TemplateField } from "../configuration/templatePresentation"
+import { fieldLimitCount, fieldLimitMessage } from "../configuration/fieldLimit"
+import { syllabusConditions } from "../configuration/responseConditions"
 import {
+  fieldConditions,
   fieldLimits,
   limitAllowed,
   normalizeFieldDocument,
@@ -34,6 +37,7 @@ export type LockedSyllabus = { id: string; state: string; version: number; subje
 export interface DraftFieldTx {
   lockSyllabus(id: string): Promise<LockedSyllabus | null>
   templateStore: TemplateStore
+  values(syllabusId: string): Promise<Map<string, unknown>>
   valueExists(syllabusId: string, fieldId: string): Promise<boolean>
   saveValue(syllabusId: string, fieldId: string, document: PhpRecord, newId: string): Promise<void>
   saveDraft(syllabusId: string, version: number, savedAt: number): Promise<void>
@@ -132,7 +136,17 @@ async function save(input: PhpArray, auth: Bound, deps: DraftFieldDeps, tx: Draf
   const value = input.value === undefined || input.value === null ? EMPTY_DOCUMENT : input.value
   const document = fieldResponseNormalize(templates[field.id] ?? field.content, value, definition, "value")
   if (!sameStructure(normalizeFieldDocument(field.content, definition), document)) reject("value", "Los bloques de este campo los define la plantilla; el docente solo los responde.")
+  const limit = limitAllowed(field.responsible) ? (fieldLimits(definition)[field.key] ?? null) : null
+  const fieldTemplate = templates[field.id] ?? field.content
+  const conditions = (values: Map<string, unknown>) => syllabusConditions(template, fieldConditions(definition), values, templates)
+  const storedValues = limit === null ? null : await tx.values(locked.id)
+  const before = storedValues === null ? 0 : fieldLimitCount(fieldTemplate, storedValues.get(field.id) ?? null, conditions(storedValues).answers, definition)
   await tx.saveValue(locked.id, field.id, document, deps.newId())
+  if (limit !== null && storedValues !== null) {
+    const after = conditions(new Map([...storedValues, [field.id, document]]))
+    const written = after.hidden.has(field.id) ? 0 : fieldLimitCount(fieldTemplate, document, after.answers, definition)
+    if (written > limit && written > before) reject("value", fieldLimitMessage(limit))
+  }
   const version = locked.version + 1
   const savedAt = deps.now()
   await tx.saveDraft(locked.id, version, savedAt)
@@ -159,7 +173,6 @@ export async function updateDraftField(request: Request, syllabusId: string, fie
   const current = await deps.templates.template()
   if (current === null || current.definition === null) return deps.bridge.forward(original)
   const definition = current.definition
-  if (limitAllowed(auth.field.responsible) && fieldLimits(definition)[auth.field.key] !== undefined) return deps.bridge.forward(original)
   const input = toRuntime(await laravelInput(request)) as PhpArray
   const errors = await validateInput(
     input,

@@ -311,7 +311,7 @@ export function responseAnswered(attrs: unknown): boolean {
   return value !== null && value !== "" && !(isPhpArray(value) && phpCount(value) === 0)
 }
 
-function responseRequired(attrs: unknown): boolean {
+export function responseRequired(attrs: unknown): boolean {
   return setting(attrs, "required") !== false
 }
 
@@ -749,7 +749,7 @@ function responseSlot(cell: unknown): boolean {
   return nodeType(cell) === "tableCell" && inlines.length > 0 && paragraphs.every((child) => nodeType(child) === "paragraph") && inlines.every((inline) => nodeType(inline) === RESPONSE_NODE)
 }
 
-function listTable(table: unknown): boolean {
+export function listTable(table: unknown): boolean {
   const rows = [...content(table)]
   const last = rows.pop()
   return (

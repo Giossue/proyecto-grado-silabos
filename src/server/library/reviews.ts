@@ -1,6 +1,6 @@
 import "server-only"
 import { requireSession, defaultBridgeDeps } from "../auth/requireSession"
-import type { BridgeDeps, LaravelSession } from "../auth/types"
+import type { BridgeDeps, LaravelSession, SessionRequirements } from "../auth/types"
 import { isPhpArray, phpQuery, type PhpArray, type PhpValue } from "../laravel/input"
 import { lengthAwarePaginator, resolveCurrentPage } from "../laravel/pagination"
 import { laravelQuery, laravelRequestUrl } from "../laravel/request"
@@ -76,8 +76,8 @@ function exists(deps: LibraryReviewDeps, table: "facultades" | "periodos_academi
 
 type Listing = { session: LaravelSession; input: PhpArray }
 
-async function authorizeListing(request: Request, deps: LibraryReviewDeps): Promise<Listing | Response> {
-  const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
+export async function authorizeListing(request: Request, deps: LibraryReviewDeps, afterAuthentication?: SessionRequirements["afterAuthentication"]): Promise<Listing | Response> {
+  const session = await requireSession(request, { verified: true, activeRole: "required", afterAuthentication }, deps.bridge)
   if (session instanceof Response) return session
   if (session.activeRole?.role !== "bibliotecario") return laravelJson({ message: "No tiene permiso para hacer esto." }, 403)
   const input = phpQuery(new URL(request.url))
@@ -92,7 +92,7 @@ async function authorizeListing(request: Request, deps: LibraryReviewDeps): Prom
         period: ["nullable", "uuid", { exists: exists(deps, "periodos_academicos") }],
         mine: ["nullable", "boolean"],
       },
-      { faculty: "facultad", period: "período", mine: "solo los míos" },
+      { faculty: "facultad", period: "período", mine: "solo los míos", state: "estado", q: "búsqueda" },
     )
   } catch (error) {
     if (error instanceof QueryFailed) return laravelHttpError(500, "Server Error")

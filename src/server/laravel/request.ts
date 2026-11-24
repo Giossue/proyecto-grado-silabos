@@ -19,11 +19,15 @@ export function hasArrayParameter(url: URL, name: string): boolean {
   return [...url.searchParams.keys()].some((key) => key.startsWith(`${name}[`))
 }
 
-export function laravelRequestUrl(request: Request): string {
+export function laravelRoot(request: Request): string {
   const url = new URL(request.url)
   const host = request.headers.get("host") ?? url.host
   const scheme = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim() || url.protocol.replace(/:$/, "")
-  return `${scheme}://${host}${url.pathname.replace(/\/+$/, "")}`
+  return `${scheme}://${host}`
+}
+
+export function laravelRequestUrl(request: Request): string {
+  return `${laravelRoot(request)}${new URL(request.url).pathname.replace(/\/+$/, "")}`
 }
 
 export function expectsJson(request: Request): boolean {

@@ -71,6 +71,7 @@ function deps(): DraftFieldDeps {
               return locked
             },
             templateStore: fakeTemplateStore(templates),
+            values: async (syllabusId) => new Map([...values].filter(([key]) => key.startsWith(`${syllabusId}:`)).map(([key, value]) => [key.slice(syllabusId.length + 1), value])),
             valueExists: async (syllabusId, field) => {
               log.push("exists")
               return values.has(`${syllabusId}:${field}`)
@@ -294,17 +295,54 @@ describe("PATCH /api/v1/teacher/syllabi/{syllabus}/fields/{field}", () => {
     expect(saved).toEqual([])
   })
 
-  it("leaves unknown records, non JSON bodies and fields with a character limit to Laravel", async () => {
+  it("leaves unknown records and non JSON bodies to Laravel", async () => {
     expect((await patch({ version_bloqueo: 3, value: doc("x") }, { syllabus: "50000000-0000-4000-8000-00000000ffff" })).status).toBe(299)
     expect((await patch({ version_bloqueo: 3, value: doc("x") }, { field: "01a1c5ba-0000-7000-8000-00000000ffff" })).status).toBe(299)
     expect((await patch({ version_bloqueo: 3, value: doc("x") }, { syllabus: "no-es-uuid" })).status).toBe(299)
     expect((await patch("version_bloqueo=3", { headers: { "content-type": "application/x-www-form-urlencoded" } })).status).toBe(299)
-    const template = goldenTemplate()
-    if (template.definition) template.definition.field_limits = { tecnicas_ensenanza: 50 }
-    templates.template = template
-    expect((await patch({ version_bloqueo: 3, value: doc("x") })).status).toBe(299)
-    expect(forwarded).toHaveLength(5)
+    expect(forwarded).toHaveLength(4)
     expect(saved).toEqual([])
     expect(committed).toBe(false)
+  })
+})
+
+describe("PATCH a field with a character limit", () => {
+  const limitTo = (limit: number) => {
+    const template = goldenTemplate()
+    template.definition!.field_limits = { tecnicas_ensenanza: limit }
+    templates.template = template
+  }
+
+  it("saves an answer within the limit like any other field", async () => {
+    limitTo(50)
+    const result = await patch({ version_bloqueo: 3, value: doc("Aprendizaje basado en problemas") })
+    expect(result.status).toBe(200)
+    expect(saved).toHaveLength(1)
+    expect(audits.map((event) => event.action)).toEqual(["silabo.campo_guardado"])
+    expect(committed).toBe(true)
+  })
+
+  it("rejects an answer that grows past the limit and keeps the stored value", async () => {
+    limitTo(5)
+    values.set(`${SYLLABUS}:${TEXT_FIELD}`, doc("abc"))
+    const result = await patch({ version_bloqueo: 3, value: doc("Aprendizaje") })
+    expect(result).toMatchObject({ status: 422, json: { message: "Este campo admite hasta 5 caracteres.", errors: { value: ["Este campo admite hasta 5 caracteres."] } } })
+    expect(values.get(`${SYLLABUS}:${TEXT_FIELD}`)).toEqual(doc("abc"))
+    expect(drafts).toEqual([])
+    expect(audits).toEqual([])
+    expect(committed).toBe(false)
+  })
+
+  it("lets the teacher shorten an answer that was already over the limit", async () => {
+    limitTo(5)
+    values.set(`${SYLLABUS}:${TEXT_FIELD}`, doc("Aprendizaje basado"))
+    expect((await patch({ version_bloqueo: 3, value: doc("Aprendizaje") })).status).toBe(200)
+    expect(committed).toBe(true)
+  })
+
+  it("formats large limits with a space between thousands", async () => {
+    limitTo(1000)
+    const result = await patch({ version_bloqueo: 3, value: doc("x".repeat(1001)) })
+    expect(result.json).toMatchObject({ errors: { value: ["Este campo admite hasta 1 000 caracteres."] } })
   })
 })

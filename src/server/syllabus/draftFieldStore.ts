@@ -55,6 +55,21 @@ export async function syllabusFacts(executor: Executor, id: string, userId: stri
   }
 }
 
+export async function identificationSource(executor: Executor, syllabusId: string): Promise<IdentificationSource> {
+  const [syllabus] = await rowsOf<{ context: string; code: string | null; shift: string | null }>(
+    executor,
+    sql`select silabos.datos_academicos_silabo::text as context, paralelo.codigo_paralelo as code, paralelo.jornada_paralelo as shift
+      from silabos left join paralelos paralelo on paralelo.paralelo_id = silabos.paralelo_id where silabos.silabo_id = ${syllabusId}::uuid limit 1`,
+  )
+  const teachers = await rowsOf<{ name: string | null; email: string | null; formation: string | null }>(
+    executor,
+    sql`select usuarios.nombre_usuario as name, usuarios.correo_electronico as email, usuarios.formacion_experiencia_usuario as formation
+      from usuarios inner join docentes_vigentes_silabo on usuarios.usuario_id = docentes_vigentes_silabo.usuario_id
+      where docentes_vigentes_silabo.silabo_id in (${syllabusId}::uuid)`,
+  )
+  return { context: phpJsonDecode(syllabus?.context ?? "[]"), parallelCode: syllabus?.code ?? null, parallelShift: syllabus?.shift ?? null, teachers }
+}
+
 function draftTx(executor: Executor): DraftFieldTx {
   return {
     async lockSyllabus(id) {
@@ -67,6 +82,13 @@ function draftTx(executor: Executor): DraftFieldTx {
       return row ? { id: row.id, state: row.state, version: Number(row.version), subjectId: row.subject_id } : null
     },
     templateStore: createTemplateStore(executor),
+    async values(syllabusId) {
+      const rows = await rowsOf<{ field_id: string; value: string | null }>(
+        executor,
+        sql`select definicion_campo_id::text as field_id, valor_campo::text as value from valores_campo where silabo_id = ${syllabusId}::uuid`,
+      )
+      return new Map(rows.map((row) => [row.field_id, phpJsonDecode(row.value)]))
+    },
     async valueExists(syllabusId, fieldId) {
       const [row] = await rowsOf<{ found: boolean }>(
         executor,
@@ -119,20 +141,7 @@ export function draftFieldStoreOn(executor: Executor, transaction: <T>(work: (tx
       )
       return row ? phpJsonDecode(row.value) : null
     },
-    async identification(syllabusId): Promise<IdentificationSource> {
-      const [syllabus] = await rowsOf<{ context: string; code: string | null; shift: string | null }>(
-        executor,
-        sql`select silabos.datos_academicos_silabo::text as context, paralelo.codigo_paralelo as code, paralelo.jornada_paralelo as shift
-          from silabos left join paralelos paralelo on paralelo.paralelo_id = silabos.paralelo_id where silabos.silabo_id = ${syllabusId}::uuid limit 1`,
-      )
-      const teachers = await rowsOf<{ name: string | null; email: string | null; formation: string | null }>(
-        executor,
-        sql`select usuarios.nombre_usuario as name, usuarios.correo_electronico as email, usuarios.formacion_experiencia_usuario as formation
-          from usuarios inner join docentes_vigentes_silabo on usuarios.usuario_id = docentes_vigentes_silabo.usuario_id
-          where docentes_vigentes_silabo.silabo_id in (${syllabusId}::uuid)`,
-      )
-      return { context: phpJsonDecode(syllabus?.context ?? "[]"), parallelCode: syllabus?.code ?? null, parallelShift: syllabus?.shift ?? null, teachers }
-    },
+    identification: (syllabusId) => identificationSource(executor, syllabusId),
   }
 }
 

@@ -31,6 +31,38 @@ export function presentDefinition(definition: TemplateDefinition): PhpRecord {
   }
 }
 
+export function documentAppearance(document: PhpRecord): PhpRecord {
+  const sizes = record(document.sizes)
+  const colors = record(document.colors)
+  const title = record(document.title)
+  const section = record(document.section_title)
+  return {
+    font_family: document.font_family ?? null,
+    body_font_size: sizes.body ?? null,
+    title_font_size: sizes.title ?? null,
+    section_font_size: sizes.section ?? null,
+    field_font_size: sizes.body ?? null,
+    margin_cm: document.margin_cm ?? null,
+    orientation: document.orientation ?? null,
+    text_color: colors.text ?? null,
+    accent_color: colors.title ?? null,
+    table_header_background: colors.table_header_background ?? null,
+    table_header_color: colors.table_header_text ?? null,
+    table_border: colors.table_border ?? null,
+    title_bold: title.bold ?? null,
+    title_italic: title.italic ?? null,
+    title_alignment: title.alignment ?? null,
+    section_bold: section.bold ?? null,
+    section_italic: section.italic ?? null,
+    section_alignment: section.alignment ?? null,
+    body_alignment: record(document.body).alignment ?? null,
+  }
+}
+
+export function templatePresentationOf(definition: TemplateDefinition, logos: { institution: string; faculty: string }): PhpRecord {
+  return { document: definition.document, appearance: documentAppearance(definition.document), title: record(definition.document.title).text ?? null, logos }
+}
+
 export function identificationNumber(value: string): string {
   const trimmed = value.trim()
   if (!/^[ \t\n\r\v\f]*[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?[ \t\n\r\v\f]*$/.test(trimmed) || !trimmed.includes(".")) return trimmed

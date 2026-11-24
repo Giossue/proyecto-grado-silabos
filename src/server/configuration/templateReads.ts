@@ -2,6 +2,7 @@ import "server-only"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
 import type { BridgeDeps, LaravelSession, SessionUser } from "../auth/types"
 import { isUuid } from "../academic/structure"
+import { laravelRoot } from "../laravel/request"
 import { laravelJson, validationError } from "../laravel/responses"
 import { list, phpCount, phpShape, record, type PhpRecord } from "./phpValues"
 import { documentLines } from "./documentHtml"
@@ -73,10 +74,7 @@ export async function teacherPreview(request: Request, templateId: string, deps:
 const EXPORT_FORMAT_VERSION = 2
 
 function schemaUrl(request: Request): string {
-  const url = new URL(request.url)
-  const host = request.headers.get("host") ?? url.host
-  const scheme = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim() || url.protocol.replace(/:$/, "")
-  return `${scheme}://${host}/plantilla.schema.json`
+  return `${laravelRoot(request)}/plantilla.schema.json`
 }
 
 function exportedBlock(block: PhpRecord): PhpRecord {
