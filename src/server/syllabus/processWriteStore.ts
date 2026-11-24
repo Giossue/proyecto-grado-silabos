@@ -7,7 +7,9 @@ import { notificationScope, recipientsOn, systemNow, type Mail, type WriteOption
 import { insertAuditEvent } from "../operations/recordAuditEvent"
 import { withAfterCommit, type AfterCommit } from "../queue/dispatch"
 import { institutionalTemplateProblem } from "./convocationWriteStore"
+import { anotherProcessInProgress } from "./finalizedChangeNotice"
 import { InProgressWork, SYLLABUS_ALIVE } from "./inProgressWork"
+import { adaptProcessToTemplate, convocationsToReopen, processSyllabusCounts, ReopenCatchUp, reopenProcess, templateChangedSince } from "./reopenCatchUp"
 import { processRepositoryOn } from "./processQueries"
 import type { ProcessWriteDeps, ProcessWriteTx } from "./processWrites"
 import { dbTransaction, type TransactionRunner } from "./reviewDecisionStore"
@@ -16,16 +18,27 @@ import { rowsOf, type Executor } from "./teacherSyllabusQueries"
 const PROCESS_ALIVE = sql`exists (select 1 from convocatorias_universidad proceso where proceso.convocatoria_universidad_id = convocatorias_carreras.convocatoria_universidad_id)`
 
 export function processWriteTx(executor: Executor, afterCommit: AfterCommit, now: number, mail?: Mail): ProcessWriteTx {
-  const work = new InProgressWork(executor, afterCommit)
+  const notifications = notificationScope(executor, afterCommit, now, mail)
+  const work = new InProgressWork(executor, afterCommit, notifications)
+  const catchUp = new ReopenCatchUp(work, afterCommit)
   const recipients = recipientsOn(executor)
   return {
-    notifications: notificationScope(executor, afterCommit, now, mail),
+    notifications,
     async lockProcess(id) {
-      const [row] = await rowsOf<{ id: string; state: string; period_id: string; period: string | null; due_at: number; extensions: number; ends_on: string }>(
+      const [row] = await rowsOf<{
+        id: string
+        state: string
+        period_id: string
+        period: string | null
+        due_at: number
+        extensions: number
+        ends_on: string
+        finalized: boolean
+      }>(
         executor,
         sql`select proceso.convocatoria_universidad_id::text as id, proceso.estado_convocatoria_universidad as state, proceso.periodo_academico_id::text as period_id,
             periodo.codigo_periodo_academico as period, extract(epoch from proceso.fecha_entrega)::bigint as due_at, proceso.cantidad_prorrogas as extensions,
-            to_char(periodo.fecha_fin_periodo, 'YYYY-MM-DD') as ends_on
+            to_char(periodo.fecha_fin_periodo, 'YYYY-MM-DD') as ends_on, proceso.finalizada_en is not null as finalized
           from convocatorias_universidad proceso left join periodos_academicos periodo on periodo.periodo_academico_id = proceso.periodo_academico_id
           where proceso.convocatoria_universidad_id = ${id}::uuid limit 1 for update of proceso`,
       )
@@ -38,6 +51,7 @@ export function processWriteTx(executor: Executor, afterCommit: AfterCommit, now
             dueAt: Number(row.due_at),
             extensions: Number(row.extensions),
             periodEndsOn: row.ends_on,
+            finalized: row.finalized,
           }
         : null
     },
@@ -71,14 +85,24 @@ export function processWriteTx(executor: Executor, afterCommit: AfterCommit, now
       await executor.execute(sql`delete from convocatorias_universidad where convocatoria_universidad_id = ${processId}::uuid`)
     },
     templateProblem: (errorKey) => institutionalTemplateProblem(executor, errorKey),
-    async templateChangedDuringPause(processId) {
-      const [row] = await rowsOf<{ changed: boolean }>(
+    async lockOtherProcesses(processId) {
+      await anotherProcessInProgress(executor, processId, true)
+    },
+    anotherInProgress: (processId) => anotherProcessInProgress(executor, processId),
+    templateChange: (processId, reference) => templateChangedSince(executor, reference === "pause" ? "pausado_en" : "reopen", processId),
+    syllabusCounts: (processId, toReopen) => processSyllabusCounts(executor, processId, toReopen),
+    adaptToTemplate: (processId, change, counts, audit) => adaptProcessToTemplate(work, processId, change, counts, audit),
+    convocationsToReopen: (processId) => convocationsToReopen(executor, processId),
+    reopenPlan: (convocationIds, processId, finalized) => catchUp.plan(convocationIds, processId, finalized),
+    reopen: (processId) => reopenProcess(work, processId),
+    applyPlan: (plan, convocationIds, periodId) => catchUp.apply(plan, convocationIds, periodId),
+    async generateReopened(convocationIds) {
+      const locked = await rowsOf<{ id: string }>(
         executor,
-        sql`select coalesce((select plantilla.plantilla_modificada_en > proceso.pausado_en from convocatorias_universidad proceso,
-            (select plantilla_modificada_en from plantilla_silabo limit 1) plantilla
-          where proceso.convocatoria_universidad_id = ${processId}::uuid), false) as changed`,
+        sql`select convocatoria_carrera_id::text as id from convocatorias_carreras where convocatoria_carrera_id in (${uuidList(convocationIds)}) and ${PROCESS_ALIVE}
+          order by convocatoria_carrera_id asc for update`,
       )
-      return row?.changed === true
+      for (const convocation of locked) await work.generateConvocation(convocation.id, { allowEmpty: true, skipIncomplete: true })
     },
     async openConvocations(processId) {
       return rowsOf<{ id: string; careerLabel: string }>(

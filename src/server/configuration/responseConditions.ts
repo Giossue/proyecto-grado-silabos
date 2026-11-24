@@ -90,3 +90,28 @@ export function shownResponses(document: unknown, answers: Answers): PhpRecord {
   const shown = conditionResponses(document).filter((attrs) => responseVisible(attrs, answers))
   return { type: "doc", content: [{ type: "paragraph", content: shown.map((attrs) => ({ type: RESPONSE_NODE, attrs })) }] }
 }
+
+export const USED_OPTION_REMOVED =
+  "No puede quitar una opción que la plantilla usa para mostrar u ocultar otra parte del sílabo. Déjela o pida a Administración que cambie esa condición."
+
+export function usedOptions(fieldConditions: Record<string, PhpRecord>, documents: unknown[]): Map<string, string[]> {
+  const conditions: { response: string; options: string[] }[] = Object.values(fieldConditions).map(shape)
+  for (const document of documents) {
+    for (const attrs of conditionResponses(document)) {
+      if (isPhpArray(attrs[ATTR])) conditions.push(shape(attrs[ATTR]))
+    }
+  }
+  const used = new Map<string, string[]>()
+  for (const condition of conditions) used.set(condition.response, [...new Set([...(used.get(condition.response) ?? []), ...condition.options])])
+  return used
+}
+
+export function keepsUsedOptions(document: unknown, used: Map<string, string[]>): boolean {
+  for (const attrs of conditionResponses(document)) {
+    const id = attrs.id
+    if (typeof id !== "string" || !used.has(id)) continue
+    const kept = list(isPhpArray(attrs.options) ? attrs.options : []).map((option) => String(record(option).const ?? ""))
+    if ((used.get(id) ?? []).some((option) => !kept.includes(option))) return false
+  }
+  return true
+}

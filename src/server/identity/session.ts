@@ -2,7 +2,7 @@ import "server-only"
 import { sql } from "drizzle-orm"
 import { db } from "@/db"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
-import type { BridgeDeps, RoleAssignmentRecord } from "../auth/types"
+import type { BridgeDeps, LaravelSession, RoleAssignmentRecord } from "../auth/types"
 import { institutionToday } from "../dashboard/dashboardQueries"
 import { laravelJson } from "../laravel/responses"
 
@@ -75,12 +75,8 @@ function rolePayload(assignment: RoleAssignmentRecord) {
   return { id: assignment.id, code: assignment.role, career_id: assignment.careerId, career_name: assignment.careerLabel }
 }
 
-export async function showSession(request: Request, deps: SessionDeps = defaultDeps()): Promise<Response> {
-  const session = await requireSession(request, { activeRole: "optional" }, deps.bridge)
-  if (session instanceof Response) return session
-  const profile = await deps.profiles.find(session.user.id)
-  if (profile === null) return deps.bridge.forward(request)
-  return laravelJson({
+export function sessionPayload(session: LaravelSession, profile: UserProfile, deps: Pick<SessionDeps, "today" | "timezone">) {
+  return {
     user: {
       id: session.user.id,
       name: profile.name,
@@ -93,7 +89,15 @@ export async function showSession(request: Request, deps: SessionDeps = defaultD
     active_role: session.activeRole === null ? null : rolePayload(session.activeRole),
     available_roles: session.eligibleRoles.map(rolePayload),
     institution: { today: deps.today(), timezone: deps.timezone() },
-  })
+  }
+}
+
+export async function showSession(request: Request, deps: SessionDeps = defaultDeps()): Promise<Response> {
+  const session = await requireSession(request, { activeRole: "optional" }, deps.bridge)
+  if (session instanceof Response) return session
+  const profile = await deps.profiles.find(session.user.id)
+  if (profile === null) return deps.bridge.forward(request)
+  return laravelJson(sessionPayload(session, profile, deps))
 }
 
 export async function twoFactorStatus(request: Request, deps: SessionDeps = defaultDeps()): Promise<Response> {

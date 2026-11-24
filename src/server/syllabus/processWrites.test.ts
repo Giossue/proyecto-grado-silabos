@@ -7,7 +7,7 @@ import { fakeNotificationTransaction, notificationWorld, recipient, type Notific
 import type { AuditEventInput } from "../operations/recordAuditEvent"
 import type { ProcessRow } from "./processes"
 import { deleteProcess, extendProcessDeadline, resumeProcess, type LockedSyllabusProcess, type ProcessWriteDeps } from "./processWrites"
-import { NeedsLaravel } from "./snapshotDocuments"
+import type { ReopenPlan, TemplateChange } from "./reopenCatchUp"
 
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(golden.sessionId))}`
 const FORBIDDEN = phpJsonEncode({ message: "No tiene permiso para hacer esto." })
@@ -26,7 +26,12 @@ let notices: NotificationWorld
 let row: ProcessRow | null
 let locked: LockedSyllabusProcess | null
 let problem: string | null
-let templateChanged: boolean
+let templateChange: TemplateChange | null
+let otherInProgress: boolean
+let plan: ReopenPlan
+const NO_PLAN: ReopenPlan = { period: false, subjects: [], teachers: [], parallels: [], handovers: [], counts: { to_draft: 0, restarted: 0, to_coordination: 0 } }
+const COUNTS = { sin_iniciar: 3, borrador: 1, en_revision: 1, correccion_solicitada: 0, aprobado: 1 }
+const CHANGE: TemplateChange = { changedAt: "2026-11-23 16:10:54.932237+00", key: "2026-11-23T16:10:54.932237Z" }
 let log: string[]
 let audits: AuditEventInput[]
 
@@ -66,7 +71,39 @@ function deps(): ProcessWriteDeps {
               log.push(`delete:${id}:${convocations.join(",")}`)
             },
             templateProblem: async () => problem,
-            templateChangedDuringPause: async () => templateChanged,
+            lockOtherProcesses: async () => {
+              log.push("lock:others")
+            },
+            anotherInProgress: async () => otherInProgress,
+            templateChange: async (_id, reference) => {
+              log.push(`template-change:${reference}`)
+              return templateChange
+            },
+            syllabusCounts: async (_id, toReopen) => {
+              log.push(`counts:${toReopen ? "reopen" : "open"}`)
+              return COUNTS
+            },
+            adaptToTemplate: async (id, change, counts, audit) => {
+              log.push(`adapt:${id}:${change.key}:${Object.values(counts).join(",")}:${audit.actorId}:${audit.roleAssignmentId}`)
+            },
+            convocationsToReopen: async () => {
+              log.push("lock:closed-convocations")
+              return [CONVOCATION]
+            },
+            reopenPlan: async (ids, id, finalized) => {
+              log.push(`plan:${ids.join(",")}:${id}:${finalized}`)
+              return plan
+            },
+            reopen: async (id) => {
+              log.push(`reopen:${id}`)
+              return [CONVOCATION]
+            },
+            applyPlan: async (_plan, ids, periodId) => {
+              log.push(`apply:${ids.join(",")}:${periodId}`)
+            },
+            generateReopened: async (ids) => {
+              log.push(`generate:${ids.join(",")}`)
+            },
             openConvocations: async () => [{ id: CONVOCATION, careerLabel: "Software" }],
             extendDeadline: async (id, dueAt, extension) => {
               log.push(`deadline:${id}:${dueAt}:${extension}`)
@@ -117,9 +154,20 @@ beforeEach(() => {
     periods: new Map([[`convocatoria:${CONVOCATION}`, PERIOD], [`proceso_silabos:${PROCESS}`, PERIOD]]),
   })
   row = { id: PROCESS, state: "abierto", period: "2026-2", periodId: PERIOD, periodEndsOn: "2027-03-12", startsOn: "2026-11-10", dueOn: "2026-12-10", convocationsCount: 1, extensions: 0 }
-  locked = { id: PROCESS, state: "abierto", periodId: PERIOD, period: "2026-2", dueAt: Date.UTC(2026, 11, 11, 4, 59, 59) / 1000, extensions: 0, periodEndsOn: "2027-03-12" }
+  locked = {
+    id: PROCESS,
+    state: "abierto",
+    periodId: PERIOD,
+    period: "2026-2",
+    dueAt: Date.UTC(2026, 11, 11, 4, 59, 59) / 1000,
+    extensions: 0,
+    periodEndsOn: "2027-03-12",
+    finalized: false,
+  }
   problem = null
-  templateChanged = false
+  templateChange = null
+  otherInProgress = false
+  plan = NO_PLAN
   log = []
   audits = []
 })
@@ -180,7 +228,7 @@ describe("POST /api/v1/admin/processes/{process}/reanudar", () => {
   it("reopens the process, audits it and tells teachers, coordination and the library", async () => {
     const response = await resume()
     expect(response.text).toBe(phpJsonEncode({ message: "Proceso reanudado. Los envíos vuelven a admitirse." }))
-    expect(log).toEqual(["begin", `lock:process:${PROCESS}`, `state:${PROCESS}:abierto`, "commit"])
+    expect(log).toEqual(["begin", `lock:process:${PROCESS}`, "template-change:pause", `state:${PROCESS}:abierto`, "commit"])
     expect(audits.map((event) => [event.action, event.metadata])).toEqual([["proceso_silabos.abierto", { previous_state: "pausado" }]])
     const at = "20270115080000007"
     expect(notices.notifications.map((item) => [item.userId, item.key, item.title, item.message, item.resourceType])).toEqual([
@@ -222,14 +270,39 @@ describe("POST /api/v1/admin/processes/{process}/reanudar", () => {
     expect(notices.notifications).toEqual([])
   })
 
-  it("leaves a resume after a template change to Laravel, which asks to confirm and adapts the syllabi", async () => {
-    templateChanged = true
-    expect((await resume({ confirmar_rehacer: true })).status).toBe(299)
-    expect(log.at(-1)).toBe("rollback")
+  it("asks to confirm when the template changed during the pause, without touching anything", async () => {
+    templateChange = CHANGE
+    const response = await resume()
+    expect(response.status).toBe(422)
+    expect(response.text).toBe(
+      phpJsonEncode({
+        message:
+          "La plantilla cambió durante la pausa. Confirme para adaptar los sílabos del período: se conserva lo escrito y los enviados o aprobados vuelven a borrador.",
+        code: "plantilla_cambiada",
+        counts: COUNTS,
+      }),
+    )
+    expect(log).toEqual(["begin", `lock:process:${PROCESS}`, "template-change:pause", "counts:open", "commit"])
     expect(audits).toEqual([])
-    expect(forwarded).toHaveLength(1)
-    expect(await forwarded[0].text()).toBe('{"confirmar_rehacer":true}')
-    expect(NeedsLaravel).toBeDefined()
+    expect(notices.notifications).toEqual([])
+    expect((await resume({ confirmar_rehacer: "0" })).status).toBe(422)
+  })
+
+  it("adapts the syllabi to the new template when confirmed, then reopens the process", async () => {
+    templateChange = CHANGE
+    const response = await resume({ confirmar_rehacer: "1" })
+    expect(response.text).toBe(phpJsonEncode({ message: "Proceso reanudado. Los envíos vuelven a admitirse." }))
+    expect(log).toEqual([
+      "begin",
+      `lock:process:${PROCESS}`,
+      "template-change:pause",
+      "counts:open",
+      `adapt:${PROCESS}:${CHANGE.key}:3,1,1,0,1:${golden.userId}:${golden.roleId}`,
+      `state:${PROCESS}:abierto`,
+      "commit",
+    ])
+    expect(audits.map((event) => event.action)).toEqual(["proceso_silabos.abierto"])
+    expect(forwarded).toEqual([])
   })
 })
 
@@ -282,10 +355,89 @@ describe("POST /api/v1/admin/processes/{process}/deadline", () => {
     expect(audits).toEqual([])
   })
 
-  it("leaves reopening a closed process to Laravel and forbids non-administrators", async () => {
-    locked = { ...(locked as LockedSyllabusProcess), state: "cerrado" }
-    expect((await extend({ due_at: "2026-12-20" })).status).toBe(299)
-    expect(log.at(-1)).toBe("rollback")
+  describe("reopening a closed process", () => {
+    beforeEach(() => {
+      row = { ...(row as ProcessRow), state: "cerrado" }
+      locked = { ...(locked as LockedSyllabusProcess), state: "cerrado", finalized: true }
+    })
+
+    it("reopens the process, catches up the changes, generates the missing syllabi and audits both steps", async () => {
+      const response = await extend({ due_at: "2026-12-20" })
+      expect(response.text).toBe(phpJsonEncode({ message: "Plazo prorrogado. La convocatoria se volvió a abrir." }))
+      expect(log).toEqual([
+        "begin",
+        `lock:process:${PROCESS}`,
+        "lock:others",
+        "template-change:reopen",
+        "lock:closed-convocations",
+        `plan:${CONVOCATION}:${PROCESS}:true`,
+        `reopen:${PROCESS}`,
+        `deadline:${PROCESS}:2026-12-21T04:59:59+00:00:1`,
+        `apply:${CONVOCATION}:${PERIOD}`,
+        `generate:${CONVOCATION}`,
+        "commit",
+      ])
+      expect(audits.map((event) => [event.action, event.metadata])).toEqual([
+        [
+          "proceso_silabos.plazo_extendido",
+          { stage: "borrador", previous_due_at: "2026-12-11T04:59:59+00:00", new_due_at: "2026-12-21T04:59:59+00:00", convocations_reached: 2, extension_number: 1 },
+        ],
+        ["proceso_silabos.reabierto", { previous_state: "cerrado" }],
+      ])
+      expect(notices.notifications.map((item) => item.type)).toEqual(["proceso.plazo_extendido"])
+      expect(forwarded).toEqual([])
+    })
+
+    it("asks to confirm a template change after closing and reports the pending changes too", async () => {
+      templateChange = CHANGE
+      plan = { ...NO_PLAN, counts: { to_draft: 2, restarted: 0, to_coordination: 1 } }
+      const response = await extend({ due_at: "2026-12-20" })
+      expect(response.status).toBe(422)
+      expect(response.text).toBe(
+        phpJsonEncode({
+          message:
+            "La plantilla cambió después de finalizar. Confirme para adaptar los sílabos del período: se conserva lo escrito y los enviados o aprobados vuelven a borrador.",
+          code: "plantilla_cambiada",
+          counts: COUNTS,
+          pending_counts: { to_draft: 2, restarted: 0, to_coordination: 1 },
+        }),
+      )
+      expect(log).not.toContain(`reopen:${PROCESS}`)
+      expect(audits).toEqual([])
+    })
+
+    it("asks to confirm the pending changes once the template change is confirmed", async () => {
+      templateChange = CHANGE
+      plan = { ...NO_PLAN, counts: { to_draft: 0, restarted: 3, to_coordination: 0 } }
+      const response = await extend({ due_at: "2026-12-20", confirmar_rehacer: true })
+      expect(response.status).toBe(422)
+      expect(response.text).toBe(
+        phpJsonEncode({
+          message:
+            "Hubo cambios mientras la convocatoria estuvo finalizada. Confirme para aplicarlos: hay sílabos que volverán a borrador, volverán a Coordinación o perderán su contenido.",
+          code: "cambios_pendientes",
+          counts: { to_draft: 0, restarted: 3, to_coordination: 0 },
+        }),
+      )
+      const confirmed = await extend({ due_at: "2026-12-20", confirmar_rehacer: true, confirmar_cambios: "1" })
+      expect(confirmed.status).toBe(200)
+      expect(log).toContain(`adapt:${PROCESS}:${CHANGE.key}:3,1,1,0,1:${golden.userId}:${golden.roleId}`)
+      expect(log.indexOf(`adapt:${PROCESS}:${CHANGE.key}:3,1,1,0,1:${golden.userId}:${golden.roleId}`)).toBeLessThan(log.lastIndexOf(`apply:${CONVOCATION}:${PERIOD}`))
+    })
+
+    it("refuses while another process is in progress", async () => {
+      otherInProgress = true
+      expect((await extend({ due_at: "2026-12-20" })).json?.errors).toEqual({ process: ["Hay otra convocatoria en curso; finalícela o elimínela antes de reabrir esta"] })
+      otherInProgress = false
+      problem = "La sección «Datos» de la plantilla está vacía."
+      expect((await extend({ due_at: "2026-12-20" })).json?.errors).toEqual({
+        process: ["La plantilla no está lista para usarse. Complétela; «Antes de empezar» indica qué falta."],
+      })
+      expect(audits).toEqual([])
+    })
+  })
+
+  it("forbids non-administrators", async () => {
     world.assignments = [makeAssignment({ role: "coordinador", careerId: "c-1" })]
     expect((await extend({ due_at: "2026-12-20" })).text).toBe(FORBIDDEN)
   })

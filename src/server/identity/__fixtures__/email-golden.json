@@ -1,0 +1,226 @@
+[
+    {
+        "email": "docente@silabos.test",
+        "valid": true
+    },
+    {
+        "email": "nueva.docente@silabos.test",
+        "valid": true
+    },
+    {
+        "email": "Ana.Perez@UEB.edu.ec",
+        "valid": true
+    },
+    {
+        "email": "a@b.co",
+        "valid": true
+    },
+    {
+        "email": "a_b-c+d%e@sub-domain.example.org",
+        "valid": true
+    },
+    {
+        "email": "x@localhost",
+        "valid": true
+    },
+    {
+        "email": "x@123.com",
+        "valid": true
+    },
+    {
+        "email": "x@a.123",
+        "valid": true
+    },
+    {
+        "email": "x@1a.com",
+        "valid": true
+    },
+    {
+        "email": "user@xn--bcher-kva.ch",
+        "valid": true
+    },
+    {
+        "email": "0@0.ec",
+        "valid": true
+    },
+    {
+        "email": "a.b.c.d@e.f.g.h",
+        "valid": true
+    },
+    {
+        "email": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@ueb.edu.ec",
+        "valid": true
+    },
+    {
+        "email": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@ueb.edu.ec",
+        "valid": true
+    },
+    {
+        "email": "a@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.com",
+        "valid": true
+    },
+    {
+        "email": "a@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.com",
+        "valid": false
+    },
+    {
+        "email": "a@abcd.abcd.abcd.abcd.abcd.abcd.abcd.abcd.abcd.abcd.abcd.abcd.abcd.abcd.abcd.abcd.abcd.abcd.abcd.abcd.abcd.abcd.abcd.abcd.abcd.abcd.abcd.abcd.abcd.abcd.abcd.abcd.abcd.abcd.abcd.abcd.abcd.abcd.abcd.abcd.abcd.abcd.abcd.abcd.abcd.abcd.abcd.abcd.abcd.abcd.abcd.abcd.abcd.abcd.abcd.abcd.abcd.abcd.abcd.abcd.ec",
+        "valid": false
+    },
+    {
+        "email": "sin-arroba",
+        "valid": false
+    },
+    {
+        "email": "sin arroba",
+        "valid": false
+    },
+    {
+        "email": "",
+        "valid": false
+    },
+    {
+        "email": "@ueb.edu.ec",
+        "valid": false
+    },
+    {
+        "email": "docente@",
+        "valid": false
+    },
+    {
+        "email": "doc@@ueb.edu.ec",
+        "valid": false
+    },
+    {
+        "email": "a@b@c.com",
+        "valid": false
+    },
+    {
+        "email": ".docente@ueb.edu.ec",
+        "valid": false
+    },
+    {
+        "email": "docente.@ueb.edu.ec",
+        "valid": false
+    },
+    {
+        "email": "doc..ente@ueb.edu.ec",
+        "valid": false
+    },
+    {
+        "email": "docente@ueb..edu.ec",
+        "valid": false
+    },
+    {
+        "email": "docente@.ueb.edu.ec",
+        "valid": false
+    },
+    {
+        "email": "docente@ueb.edu.ec.",
+        "valid": false
+    },
+    {
+        "email": "docente@-ueb.edu.ec",
+        "valid": false
+    },
+    {
+        "email": "docente@ueb-.edu.ec",
+        "valid": false
+    },
+    {
+        "email": "doc ente@ueb.edu.ec",
+        "valid": false
+    },
+    {
+        "email": "docente@ueb edu.ec",
+        "valid": false
+    },
+    {
+        "email": "docente@ueb_edu.ec",
+        "valid": false
+    },
+    {
+        "email": "doc,ente@ueb.edu.ec",
+        "valid": false
+    },
+    {
+        "email": "doc;ente@ueb.edu.ec",
+        "valid": false
+    },
+    {
+        "email": "doc:ente@ueb.edu.ec",
+        "valid": false
+    },
+    {
+        "email": "docente@[127.0.0.1]",
+        "valid": true
+    },
+    {
+        "email": "\"doc ente\"@ueb.edu.ec",
+        "valid": true
+    },
+    {
+        "email": "doc(comentario)ente@ueb.edu.ec",
+        "valid": true
+    },
+    {
+        "email": "o'neil@ueb.edu.ec",
+        "valid": true
+    },
+    {
+        "email": "doc!#$&*=?^`{|}~@ueb.edu.ec",
+        "valid": true
+    },
+    {
+        "email": "dócente@ueb.edu.ec",
+        "valid": true
+    },
+    {
+        "email": "docente@uéb.edu.ec",
+        "valid": true
+    },
+    {
+        "email": "docente@ueb.edu.ec ",
+        "valid": false
+    },
+    {
+        "email": " docente@ueb.edu.ec",
+        "valid": false
+    },
+    {
+        "email": "docente@ueb.edu.ec\n",
+        "valid": false
+    },
+    {
+        "email": "doc\\ente@ueb.edu.ec",
+        "valid": false
+    },
+    {
+        "email": "docente@ueb.e",
+        "valid": true
+    },
+    {
+        "email": "docente@ueb.edu.c0m",
+        "valid": true
+    },
+    {
+        "email": "DOCENTE@UEB.EDU.EC",
+        "valid": true
+    },
+    {
+        "email": "a-@b.com",
+        "valid": true
+    },
+    {
+        "email": "-a@b.com",
+        "valid": true
+    },
+    {
+        "email": "a@b-c.d-e.com",
+        "valid": true
+    },
+    {
+        "email": "a@b.c-",
+        "valid": false
+    }
+]

@@ -1,0 +1,179 @@
+// @vitest-environment node
+import { describe, expect, it } from "vitest"
+import { destroyCareerTeacher, resendCareerTeacherActivation, storeCareerTeacher } from "./careerTeachers"
+import { account, ACTOR, ACTOR_ROLE, CAREER, FORBIDDEN, grant, harness, jsonRequest, NOW, OTHER_CAREER } from "./testing"
+
+const TEACHER = "01a1c5bc-2222-7000-8000-000000000001"
+const TEACHER_ROLE = "01a1c5bc-2222-7000-8000-0000000000a1"
+const FOREIGN = "01a1c5bc-2222-7000-8000-000000000002"
+const PENDING = "01a1c5bc-2222-7000-8000-000000000003"
+const PENDING_ROLE = "01a1c5bc-2222-7000-8000-0000000000a3"
+
+function coordination() {
+  const test = harness({ role: "coordinador", careerId: CAREER })
+  test.identity.accounts[0] = account({ id: ACTOR, name: "COORDINADOR DEMO", email: "coordinador@silabos.test" })
+  test.identity.accounts.push(
+    account({ id: TEACHER, name: "DOCENTE DEMO", email: "docente@silabos.test" }),
+    account({ id: FOREIGN, name: "DOCENTE DERECHO", email: "derecho@silabos.test" }),
+    account({ id: PENDING, name: "DOCENTE PENDIENTE", email: "pendiente@silabos.test", verified: false }),
+  )
+  test.identity.grants.push(
+    grant({ id: TEACHER_ROLE, userId: TEACHER, role: "docente", careerId: CAREER }),
+    grant({ id: "01a1c5bc-2222-7000-8000-0000000000a2", userId: FOREIGN, role: "docente", careerId: OTHER_CAREER }),
+    grant({ id: PENDING_ROLE, userId: PENDING, role: "docente", careerId: CAREER }),
+  )
+  return test
+}
+
+const actions = (test: ReturnType<typeof harness>) => test.identity.audits.map((event) => event.action)
+const store = (test: ReturnType<typeof harness>, body: unknown) => storeCareerTeacher(jsonRequest("/api/v1/coordination/academic/teachers", "POST", body), test.deps)
+const remove = (test: ReturnType<typeof harness>, id: string) =>
+  destroyCareerTeacher(jsonRequest(`/api/v1/coordination/academic/teachers/${id}`, "DELETE", undefined), id, test.deps)
+const resend = (test: ReturnType<typeof harness>, id: string) =>
+  resendCareerTeacherActivation(jsonRequest(`/api/v1/coordination/academic/teachers/${id}/resend-activation`, "POST", undefined), id, test.deps)
+
+describe("POST /api/v1/coordination/academic/teachers", () => {
+  it("creates only a teacher of the current career and is idempotent", async () => {
+    const test = coordination()
+    const first = await store(test, { nombres: "Nueva", apellidos: "Docente Uno", correo_electronico: "  Nueva.Docente@Silabos.test " })
+    expect(await first.text()).toBe('{"message":"Docente creado para su carrera. Recibir\\u00e1 un enlace de activaci\\u00f3n por correo."}')
+    const created = test.identity.accounts.at(-1)
+    expect(created).toMatchObject({ name: "NUEVA DOCENTE UNO", email: "nueva.docente@silabos.test", verified: false })
+    expect(actions(test)).toEqual(["usuario.rol_asignado", "usuario.creado", "usuario.invitacion_activacion_enviada", "usuario.docente_incorporado"])
+    expect(test.identity.audits[3]).toMatchObject({ roleAssignmentId: ACTOR_ROLE, metadata: { carrera_id: CAREER, cuenta_creada: true } })
+    expect(test.identity.audits[2].metadata).toEqual({ reason: "alta" })
+    expect(test.identity.mails.map((mail) => [mail.to, mail.data])).toEqual([
+      ["nueva.docente@silabos.test", expect.objectContaining({ roleName: "Docente", careerName: "Software" })],
+    ])
+    const again = await store(test, { nombres: "Otro", apellidos: "Nombre", correo_electronico: "nueva.docente@silabos.test" })
+    expect(await again.json()).toEqual({ message: "El docente ya está disponible en su carrera. Conserva su nombre y acceso actuales." })
+    expect(test.identity.audits).toHaveLength(4)
+    expect(test.identity.mails).toHaveLength(1)
+  })
+
+  it("incorporates a verified teacher of another career without touching its identity", async () => {
+    const test = coordination()
+    const response = await store(test, { nombres: "Cualquier", apellidos: "Nombre", correo_electronico: "derecho@silabos.test" })
+    expect(await response.json()).toEqual({ message: "Docente incorporado a su carrera. Conserva su nombre y acceso actuales." })
+    expect(test.identity.accounts.find((row) => row.id === FOREIGN)?.name).toBe("DOCENTE DERECHO")
+    expect(actions(test)).toEqual(["usuario.docente_incorporado"])
+    expect(test.identity.mails).toEqual([])
+  })
+
+  it("sends a new link to a pending teacher whose invitation expired", async () => {
+    const test = coordination()
+    test.identity.invitations.push({ userId: PENDING, hash: "old", expiresAt: NOW - 1, issuerId: ACTOR, createdAt: NOW - 9, usedAt: null, invalidatedAt: null })
+    await store(test, { nombres: "Docente", apellidos: "Pendiente", correo_electronico: "pendiente@silabos.test" })
+    expect(actions(test)).toEqual(["usuario.invitacion_activacion_enviada"])
+    expect(test.identity.audits[0].metadata).toEqual({ reason: "alta_coordinacion" })
+    expect(test.identity.mails).toHaveLength(1)
+  })
+
+  it("reactivates a removed teacher and refuses administrators, librarians and disabled accounts", async () => {
+    const test = coordination()
+    test.identity.grants.find((row) => row.id === TEACHER_ROLE)!.active = false
+    const back = await store(test, { nombres: "Docente", apellidos: "Demo", correo_electronico: "docente@silabos.test" })
+    expect((await back.json()).message).toBe("Docente incorporado a su carrera. Conserva su nombre y acceso actuales.")
+    expect(test.identity.grants.find((row) => row.id === TEACHER_ROLE)?.active).toBe(true)
+    test.identity.accounts.push(
+      account({ id: "01a1c5bc-2222-7000-8000-00000000000a", email: "admin2@silabos.test" }),
+      account({ id: "01a1c5bc-2222-7000-8000-00000000000b", email: "biblio@silabos.test" }),
+      account({ id: "01a1c5bc-2222-7000-8000-00000000000c", email: "inactivo@silabos.test", active: false }),
+    )
+    test.identity.grants.push(
+      grant({ id: "01a1c5bc-2222-7000-8000-0000000000ba", userId: "01a1c5bc-2222-7000-8000-00000000000a", role: "administrador", careerId: null }),
+      grant({ id: "01a1c5bc-2222-7000-8000-0000000000bb", userId: "01a1c5bc-2222-7000-8000-00000000000b", role: "bibliotecario", careerId: null }),
+    )
+    const errors = async (email: string) => (await (await store(test, { nombres: "Ana", apellidos: "Paz", correo_electronico: email })).json()).errors
+    expect(await errors("admin2@silabos.test")).toEqual({ correo_electronico: ["No se puede incorporar como docente una cuenta con el rol Administrador."] })
+    expect(await errors("biblio@silabos.test")).toEqual({ correo_electronico: ["No se puede incorporar como docente una cuenta con el rol Bibliotecario."] })
+    expect(await errors("inactivo@silabos.test")).toEqual({
+      correo_electronico: ["No se puede incorporar esta cuenta. Solicite a Administración que revise su acceso."],
+    })
+  })
+
+  it("does not let the coordinator choose the role, the career or the account state", async () => {
+    const test = coordination()
+    const response = await store(test, {
+      nombre: "Ana Paz",
+      correo_electronico: "ana@silabos.test",
+      password: "x",
+      role_code: "administrador",
+      career_id: OTHER_CAREER,
+      user_id: TEACHER,
+      active: true,
+      activo: true,
+    })
+    expect(await response.json()).toEqual({
+      message: "Los nombres son obligatorios. (y 8 errores más)",
+      errors: {
+        nombres: ["Los nombres son obligatorios."],
+        apellidos: ["Los apellidos son obligatorios."],
+        nombre: ["El campo nombre está prohibido."],
+        password: ["El campo contraseña está prohibido."],
+        role_code: ["El campo rol está prohibido."],
+        career_id: ["El campo carrera está prohibido."],
+        user_id: ["El campo usuario está prohibido."],
+        active: ["El campo activo está prohibido."],
+        activo: ["El campo activo está prohibido."],
+      },
+    })
+    expect(test.identity.accounts).toHaveLength(4)
+  })
+
+  it("is forbidden for other roles and for an inactive career", async () => {
+    const teacher = harness({ role: "docente", careerId: CAREER })
+    expect(await (await store(teacher, { nombres: "Ana", apellidos: "Paz", correo_electronico: "ana@silabos.test" })).text()).toBe(FORBIDDEN)
+    const test = coordination()
+    test.identity.careers[0].active = false
+    expect((await store(test, { nombres: "Ana", apellidos: "Paz", correo_electronico: "ana@silabos.test" })).status).toBe(403)
+  })
+})
+
+describe("DELETE /api/v1/coordination/academic/teachers/{user}", () => {
+  it("removes the teacher from the career and its parallels lose their teacher", async () => {
+    const test = coordination()
+    test.identity.grants.push(grant({ id: "01a1c5bc-2222-7000-8000-0000000000c1", userId: TEACHER, role: "docente", careerId: OTHER_CAREER }))
+    test.identity.parallels.push({ id: "p-1", grantId: TEACHER_ROLE, active: true }, { id: "p-2", grantId: TEACHER_ROLE, active: true })
+    test.identity.sessions.push({ id: "teacher-session", userId: TEACHER })
+    const response = await remove(test, TEACHER)
+    expect(await response.json()).toEqual({ message: "Docente retirado de su carrera; sus 2 paralelos quedaron sin docente." })
+    expect(test.identity.parallels).toEqual([])
+    expect(test.identity.sessions.some((row) => row.userId === TEACHER)).toBe(true)
+    expect(test.identity.audits[0]).toMatchObject({ action: "usuario.docente_retirado", metadata: { carrera_id: CAREER, removed_parallel_assignments: 2 } })
+  })
+
+  it("cancels the pending invitation and the sessions of a teacher left without roles", async () => {
+    const test = coordination()
+    test.identity.invitations.push({ userId: PENDING, hash: "h", expiresAt: NOW + 50, issuerId: ACTOR, createdAt: NOW - 9, usedAt: null, invalidatedAt: null })
+    test.identity.sessions.push({ id: "pending-session", userId: PENDING })
+    expect(await (await remove(test, PENDING)).text()).toBe('{"message":"Docente retirado de su carrera."}')
+    expect(test.identity.invitations[0].invalidatedAt).toBe(NOW)
+    expect(test.identity.accounts.find((row) => row.id === PENDING)?.rememberToken).toBe("a".repeat(60))
+    expect(test.identity.sessions.some((row) => row.userId === PENDING)).toBe(false)
+  })
+
+  it("waits while the convocation of the career is open and refuses teachers of another career", async () => {
+    const test = coordination()
+    test.identity.careers[0].locked = true
+    expect(await (await remove(test, TEACHER)).json()).toEqual({ message: "Convocatoria activa", errors: { process: ["Convocatoria activa"] } })
+    expect(test.identity.grants.find((row) => row.id === TEACHER_ROLE)?.active).toBe(true)
+    expect((await remove(test, FOREIGN)).status).toBe(403)
+  })
+})
+
+describe("POST /api/v1/coordination/academic/teachers/{user}/resend-activation", () => {
+  it("resends only once the invitation expired and only to teachers of its career", async () => {
+    const test = coordination()
+    test.identity.invitations.push({ userId: PENDING, hash: "h", expiresAt: NOW + 50, issuerId: ACTOR, createdAt: NOW - 9, usedAt: null, invalidatedAt: null })
+    expect((await (await resend(test, PENDING)).json()).errors).toEqual({ user: ["La invitación sigue vigente; podrá reenviarla cuando venza."] })
+    test.identity.invitations[0].expiresAt = NOW - 1
+    const response = await resend(test, PENDING)
+    expect(await response.json()).toEqual({ message: "Invitación de activación enviada a pendiente@silabos.test." })
+    expect(test.identity.mails).toHaveLength(1)
+    const other = coordination()
+    other.identity.accounts.find((row) => row.id === FOREIGN)!.verified = false
+    expect((await resend(other, FOREIGN)).status).toBe(403)
+    expect((await resend(other, TEACHER)).status).toBe(403)
+  })
+})

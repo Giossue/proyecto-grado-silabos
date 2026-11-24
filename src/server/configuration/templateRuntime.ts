@@ -869,16 +869,94 @@ function seal(template: unknown, value: PhpRecord): PhpRecord {
   return { ...value, content: expected.map((child, index) => seal(child, record(actual[index]))) }
 }
 
-function careerDocument(definitionContent: unknown, value: unknown, definition: TemplateDefinition): PhpRecord {
-  const document = normalizeFieldDocument(value, definition, "value")
+function within<T>(attribute: string, check: () => T): T {
+  try {
+    return check()
+  } catch (error) {
+    if (error instanceof TemplateValidationError) throw new TemplateValidationError({ [attribute]: Object.values(error.errors).flat() })
+    throw error
+  }
+}
+
+export function assertEnoughOptions(node: unknown): void {
+  if (!isPhpArray(node)) return
+  const attrs = at(node, "type") === RESPONSE_NODE && isPhpArray(at(node, "attrs")) ? at(node, "attrs") : null
+  if (attrs !== null && hasOptions(typeof at(attrs, "kind") === "string" ? (at(attrs, "kind") as string) : "")) {
+    const count = isPhpArray(at(attrs, "options")) ? phpCount(at(attrs, "options")) : 0
+    const plural = (limit: number) => (limit === 1 ? "1 opción" : `${limit} opciones`)
+    const min = given(attrs, "minChoices")
+    const max = given(attrs, "maxChoices")
+    if (typeof min === "number" && Number.isInteger(min) && min > count) fail(`Esta respuesta pide elegir al menos ${min}: deje al menos ${plural(min)}.`)
+    if (typeof max === "number" && Number.isInteger(max) && max > count) fail(`Esta respuesta permite elegir hasta ${max}: deje al menos ${plural(max)}.`)
+  }
+  for (const child of isPhpArray(at(node, "content")) ? list(at(node, "content")) : []) assertEnoughOptions(child)
+}
+
+export function careerResponse(definitionContent: unknown, value: unknown, definition: TemplateDefinition, attribute = "value", saving = true): PhpRecord {
+  if (saving) within(attribute, () => assertEnoughOptions(value))
+  const document = normalizeFieldDocument(value, definition, attribute)
   const template = responseTemplate(normalizeFieldDocument(definitionContent, definition))
   if (blank(document)) return template
   if (!responsesEnabled(definition)) return withoutBlankLines(document)
-  const adopted = adopt(template, document, false)
+  const shaped = saving ? record(withoutOwnOptions(document)) : document
+  const adopted = within(attribute, () => adopt(template, shaped, saving))
   if (!matches(template, adopted, "career")) {
-    fail("Complete solo los espacios de respuesta. El texto, los encabezados y la estructura los define Administración.", "value")
+    fail("Complete solo los espacios de respuesta. El texto, los encabezados y la estructura los define Administración.", attribute)
   }
   return seal(template, adopted)
+}
+
+function careerDocument(definitionContent: unknown, value: unknown, definition: TemplateDefinition): PhpRecord {
+  return careerResponse(definitionContent, value, definition, "value", false)
+}
+
+function carryDocument(template: PhpRecord, value: PhpRecord): PhpRecord {
+  const type = nodeType(template)
+  if (type !== nodeType(value) || type === "tableHeader") return template
+  if (type === RESPONSE_NODE) {
+    return responseAnswered(given(template, "attrs") ?? []) ? template : { ...template, attrs: carryResponse(record(given(template, "attrs") ?? []), given(value, "attrs") ?? []) }
+  }
+  if (type === "documentBlock") return matches(template, value, "answer") ? value : template
+  if (blank(template)) return answerOnly(value) && given(value, "content") !== null ? { ...template, content: value.content } : template
+  const expected = [...content(template)]
+  const actual = content(value)
+  if (type === "table" && listTable(template)) {
+    const row = expected.pop()
+    while (expected.length < Math.max(actual.length, content(template).length)) expected.push(row)
+  }
+  if (expected.length === 0 || expected.length !== actual.length) return template
+  return { ...template, content: expected.map((child, index) => carryDocument(record(child), record(actual[index]))) }
+}
+
+export function fieldFits(template: unknown, value: unknown, definition: TemplateDefinition): boolean {
+  try {
+    return matches(responseTemplate(normalizeFieldDocument(template, definition)), normalizeFieldDocument(value, definition), "answer")
+  } catch (error) {
+    if (error instanceof TemplateValidationError) return false
+    throw error
+  }
+}
+
+export function fieldCarried(template: unknown, value: unknown, definition: TemplateDefinition): unknown {
+  if (!isDocument(value)) return template
+  let current: PhpRecord
+  let document: PhpRecord
+  try {
+    current = responseTemplate(normalizeFieldDocument(template, definition))
+    document = carryDocument(current, normalizeFieldDocument(value, definition))
+  } catch (error) {
+    if (error instanceof TemplateValidationError) return template
+    throw error
+  }
+  return matches(current, document, "answer") ? document : template
+}
+
+export function responseOptionsOf(document: unknown): unknown[] {
+  return foundResponses(document).map((attrs) => given(attrs, "options") ?? [])
+}
+
+export function responseWithin(document: unknown): boolean {
+  return foundResponses(document).length > 0
 }
 
 export function templateFor(definitionContent: unknown, stored: unknown, definition: TemplateDefinition): unknown {

@@ -29,20 +29,23 @@ describe("academic routes", () => {
     ["/api/v1/coordination/academic/teacher-assignments", teacherAssignments, "GET"],
     ["/api/v1/coordination/support-documents", coordinationDocuments, "GET"],
     ["/api/v1/teacher/support-documents", teacherDocuments, "GET"],
-    [`/api/v1/admin/academic/periodo/${ID}`, governanceRecord, "DELETE"],
+    [`/api/v1/admin/academic/periodo/${ID}`, governanceRecord, "DELETE,PATCH"],
     [`/api/v1/coordination/academic/asignacion_docente/${ID}`, careerRecord, "DELETE"],
     [`/api/v1/coordination/academic/parallels/${ID}`, parallel, "DELETE"],
   ] as [string, RouteModule, string][])("serves %s in Next and sends every other method to Laravel", async (path, module, served) => {
     const fetchMock = stubLaravel()
-    const others = ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"].filter((method) => method !== served)
+    const servedMethods = served.split(",")
+    const others = ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"].filter((method) => !servedMethods.includes(method))
     for (const method of others) {
       const response = await module[method](new Request(`http://localhost:3000${path}`, { method, body: ["GET", "HEAD", "OPTIONS"].includes(method) ? undefined : "{}" }))
       expect(response.status).toBe(405)
     }
     expect(fetchMock).toHaveBeenCalledTimes(others.length)
     expect((fetchMock.mock.calls as unknown as [string][])[0][0]).toBe(`http://127.0.0.1:8001${path}`)
-    expect(module[served]).toBeTypeOf("function")
-    expect(module[served]).not.toBe(module[others[0]])
+    for (const method of servedMethods) {
+      expect(module[method]).toBeTypeOf("function")
+      expect(module[method]).not.toBe(module[others[0]])
+    }
   })
 
   it("answers 401 in Next to a ported request without a stateful Referer", async () => {
