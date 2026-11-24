@@ -113,7 +113,7 @@ function htmlOrDocument(content: unknown): unknown {
   return typeof content === "string" || (isPhpArray(content) && isPhpList(content)) ? documentFromHtml(content) : content
 }
 
-function fieldDocument(content: unknown): unknown {
+export function fieldDocument(content: unknown): unknown {
   return isPhpArray(content) && !isPhpList(content) ? content : documentFromHtml(content)
 }
 

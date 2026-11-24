@@ -37,9 +37,9 @@ export function stabilizePdf(pdf: Buffer, docx: Buffer, generatedAt: string): Bu
   return Buffer.from(stable, "latin1")
 }
 
-export async function convertDocx(docx: Buffer, generatedAt: string, settings: GotenbergSettings = gotenbergSettings(), fetcher: Fetcher = fetch): Promise<Buffer> {
+async function convert(content: Buffer, filename: string, settings: GotenbergSettings, fetcher: Fetcher): Promise<Buffer> {
   const form = new FormData()
-  form.append("files", new Blob([new Uint8Array(docx)]), "silabo.docx")
+  form.append("files", new Blob([new Uint8Array(content)]), filename)
   let response: Response
   let body: Buffer
   try {
@@ -49,5 +49,13 @@ export async function convertDocx(docx: Buffer, generatedAt: string, settings: G
     throw new Error("El servicio de conversión a PDF no respondió.", { cause: error })
   }
   if (!response.ok || !body.subarray(0, 5).equals(Buffer.from("%PDF-"))) throw new Error(`El servicio de conversión a PDF respondió ${response.status}.`)
-  return stabilizePdf(body, docx, generatedAt)
+  return body
+}
+
+export async function convertDocx(docx: Buffer, generatedAt: string, settings: GotenbergSettings = gotenbergSettings(), fetcher: Fetcher = fetch): Promise<Buffer> {
+  return stabilizePdf(await convert(docx, "silabo.docx", settings, fetcher), docx, generatedAt)
+}
+
+export function convertFile(content: Buffer, filename: string, settings: GotenbergSettings = gotenbergSettings(), fetcher: Fetcher = fetch): Promise<Buffer> {
+  return convert(content, filename, settings, fetcher)
 }

@@ -1,7 +1,13 @@
 import "server-only"
+import { createHash, randomUUID } from "node:crypto"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
 import type { BridgeDeps, LaravelSession } from "../auth/types"
+import { FACULTY_LOGO, isUploadedFile, logoErrors } from "../files/logos"
+import { fitPng, PngError } from "../files/png"
+import { isMultipart, laravelMultipart, postMaxSize, postTooLarge, spoofedMethod, type UploadedFile } from "../files/uploads"
 import { isJsonRequest, isPhpArray, laravelInput, type PhpArray, type PhpValue } from "../laravel/input"
+import { storageWriter, type StorageWriter } from "../laravel/storageWriter"
+import { uuid7 } from "../laravel/uuid7"
 import { forbidden, laravelJson, validationError } from "../laravel/responses"
 import { mergeErrors, validateInput, type Rule } from "../laravel/validation"
 import type { AuditEventInput } from "../operations/recordAuditEvent"
@@ -10,6 +16,7 @@ import { Missing, Rejected, settle } from "../syllabus/reviewDecisions"
 import { NeedsLaravel } from "../syllabus/snapshotDocuments"
 import { createGovernanceWriteDeps } from "./governanceWriteStore"
 import { CONVOCATION_LOCK_REASON, isUuid, STUDY_MODALITIES } from "./structure"
+import type { StoredObjectInput } from "./supportDocumentWrites"
 
 export const CAMPUSES = [
   "Campus Matriz Dr. Gabriel Galarza López",
@@ -24,10 +31,14 @@ export type CareerRow = { id: string; facultyId: string; code: string; name: str
 export type PeriodRow = { id: string; code: string; startsOn: string; endsOn: string; weeks: number | null }
 export type CareerData = { facultyId: string; modality: string; code: string; name: string; cycleCount: number }
 export type PeriodData = { code: string; startsOn: string; endsOn: string; weeks: number }
+export type FacultyData = { name: string; campus: string; libraries: PhpValue[] }
+export type GovernanceFiles = { storage: StorageWriter; newObjectId: () => string; newLogoId: () => string }
 
 export interface GovernanceWriteTx {
   createCareer(data: CareerData): Promise<string>
   createPeriod(data: PeriodData): Promise<string>
+  createFaculty(data: FacultyData): Promise<string>
+  insertObject(row: StoredObjectInput): Promise<void>
   lockFaculty(id: string): Promise<FacultyRow | null>
   lockCareer(id: string): Promise<CareerRow | null>
   lockPeriod(id: string): Promise<PeriodRow | null>
@@ -53,6 +64,73 @@ export type GovernanceWriteDeps = {
   facultyExists(id: string): Promise<boolean>
   careerCodeTaken(code: string, except: string | null): Promise<boolean>
   transaction<T>(work: (tx: GovernanceWriteTx) => Promise<T>): Promise<T>
+  files?: GovernanceFiles
+  maxPostSize?: number
+}
+
+function filesOf(deps: GovernanceWriteDeps): GovernanceFiles {
+  return deps.files ?? { storage: storageWriter(), newObjectId: uuid7, newLogoId: randomUUID }
+}
+
+const FACULTY_LOGO_DISK = "private"
+
+async function storeFacultyLogo(tx: GovernanceWriteTx, deps: GovernanceWriteDeps, facultyId: string, file: UploadedFile): Promise<string> {
+  let content: Buffer
+  try {
+    content = fitPng(file.bytes, FACULTY_LOGO)
+  } catch (error) {
+    if (error instanceof PngError) throw new Rejected(validationError({ logo: ["No se pudo leer el PNG."] }))
+    throw error
+  }
+  const files = filesOf(deps)
+  const path = `logos/facultades/${facultyId}/${files.newLogoId()}.png`
+  await files.storage.put(FACULTY_LOGO_DISK, path, content)
+  const objectId = files.newObjectId()
+  await tx.insertObject({
+    id: objectId,
+    disk: FACULTY_LOGO_DISK,
+    path,
+    name: `logo-facultad-${facultyId}.png`,
+    mime: "image/png",
+    size: content.length,
+    sha256: createHash("sha256").update(content).digest("hex"),
+    classification: "logo_facultad",
+    ownerId: null,
+    storedAt: deps.now(),
+  })
+  return objectId
+}
+
+type GovernanceBody = { input: PhpArray; files: Record<string, UploadedFile | null> }
+
+async function readGovernanceBody(request: Request, entity: string): Promise<GovernanceBody | null> {
+  if (entity === "facultad" && isMultipart(request)) return laravelMultipart(request)
+  if (request.headers.get("content-type") !== null && !isJsonRequest(request)) return null
+  return { input: await laravelInput(request), files: {} }
+}
+
+function phpDecoded(value: unknown): PhpValue {
+  if (Array.isArray(value)) return Object.fromEntries(value.map((item, index) => [String(index), phpDecoded(item)]))
+  if (typeof value === "object" && value !== null) return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, phpDecoded(item)]))
+  return value as PhpValue
+}
+
+function decodeLibraries(input: PhpArray): void {
+  const libraries = input.catalog_libraries
+  if (typeof libraries !== "string") return
+  try {
+    const decoded: unknown = JSON.parse(libraries)
+    if (typeof decoded === "object" && decoded !== null) input.catalog_libraries = phpDecoded(decoded)
+  } catch {}
+}
+
+function librariesNeedLaravel(libraries: PhpValue | undefined): boolean {
+  if (libraries === undefined) return false
+  return !isPhpArray(libraries) || Object.keys(libraries).length > 20 || Object.values(libraries).some((item) => typeof item !== "string" || !LIBRARY.test(item)) || new Set(Object.values(libraries)).size !== Object.keys(libraries).length
+}
+
+function logoOf(body: GovernanceBody): PhpValue | UploadedFile | undefined {
+  return body.files.logo !== undefined ? body.files.logo : body.input.logo
 }
 
 export function defaultGovernanceWriteDeps(): GovernanceWriteDeps {
@@ -198,15 +276,24 @@ async function run(original: Request, deps: GovernanceWriteDeps, work: () => Pro
 }
 
 export async function createGovernanceRecord(request: Request, entity: string, deps: GovernanceWriteDeps = defaultGovernanceWriteDeps()): Promise<Response> {
+  const tooLarge = postTooLarge(request, deps.maxPostSize ?? postMaxSize())
+  if (tooLarge !== null) return tooLarge
   const original = request.clone()
-  if (!["carrera", "periodo"].includes(entity)) return deps.bridge.forward(original)
-  if (request.headers.get("content-type") !== null && !isJsonRequest(request)) return deps.bridge.forward(original)
-  const session = await careerSession(request.clone(), deps)
+  if (!["facultad", "carrera", "periodo"].includes(entity)) return deps.bridge.forward(original)
+  const body = await readGovernanceBody(request.clone(), entity)
+  if (body === null || body.input._token !== undefined) return deps.bridge.forward(original)
+  const session = await careerSession(request, deps)
   if (session instanceof Response) return session
-  const input = await laravelInput(request)
+  const input = body.input
   let errors: Record<string, string[]>
   try {
-    if (entity === "carrera") {
+    if (entity === "facultad") {
+      decodeLibraries(input)
+      if (librariesNeedLaravel(input.catalog_libraries)) return deps.bridge.forward(original)
+      errors = labelled(await validateInput(input, { nombre: ["required", "string", { max: 180 }], campus: ["required", { in: CAMPUSES }] }, FACULTY_LABELS), FACULTY_LABELS)
+      const logo = logoErrors(logoOf(body), "logotipo", true)
+      if (logo.length > 0) errors.logo = logo
+    } else if (entity === "carrera") {
       errors = labelled(
         await validateInput(
           input,
@@ -234,7 +321,11 @@ export async function createGovernanceRecord(request: Request, entity: string, d
         false,
         async () => {
           let created: string
-          if (entity === "carrera") {
+          if (entity === "facultad") {
+            created = await tx.createFaculty({ name: input.nombre as string, campus: input.campus as string, libraries: isPhpArray(input.catalog_libraries) ? Object.values(input.catalog_libraries) : [] })
+            const objectId = await storeFacultyLogo(tx, deps, created, logoOf(body) as UploadedFile)
+            await tx.updateColumns("facultad", created, { logo_archivo_id: objectId })
+          } else if (entity === "carrera") {
             created = await tx.createCareer({
               facultyId: input.faculty_id as string,
               modality: input.modality as string,
@@ -268,7 +359,7 @@ function librariesText(value: unknown): string | null {
   return Array.isArray(value) ? value.map((item) => (item === true ? "1" : item === false || item === null ? "" : String(item))).join(",") : null
 }
 
-function decodeLibraries(raw: string | null): unknown {
+function storedLibraries(raw: string | null): unknown {
   if (raw === null) return null
   try {
     return JSON.parse(raw)
@@ -291,41 +382,42 @@ async function updateMetadata(tx: GovernanceWriteTx, entity: string, dirty: Dirt
       continue
     }
     const key = AUDIT_KEYS[item.column] ?? item.column
-    metadata[`before_${key}`] = item.column === "bibliotecas_koha_facultad" ? librariesText(decodeLibraries(item.before as string | null)) : (item.before as string | number | null)
+    metadata[`before_${key}`] = item.column === "bibliotecas_koha_facultad" ? librariesText(storedLibraries(item.before as string | null)) : (item.before as string | number | null)
     metadata[`after_${key}`] = item.column === "bibliotecas_koha_facultad" ? librariesText(item.after) : (item.after as string | number | null)
   }
   return metadata
 }
 
 function sameLibraries(before: string | null, after: unknown[]): boolean {
-  return JSON.stringify(decodeLibraries(before)) === JSON.stringify(after)
+  return JSON.stringify(storedLibraries(before)) === JSON.stringify(after)
 }
 
 export async function updateGovernanceRecord(request: Request, entity: string, recordId: string, deps: GovernanceWriteDeps = defaultGovernanceWriteDeps()): Promise<Response> {
+  const tooLarge = postTooLarge(request, deps.maxPostSize ?? postMaxSize())
+  if (tooLarge !== null) return tooLarge
   const original = request.clone()
   if (!["facultad", "carrera", "periodo"].includes(entity) || !isUuid(recordId)) return deps.bridge.forward(original)
-  if (request.headers.get("content-type") !== null && !isJsonRequest(request)) return deps.bridge.forward(original)
-  const session = await careerSession(request.clone(), deps)
+  const body = await readGovernanceBody(request.clone(), entity)
+  if (body === null || body.input._token !== undefined) return deps.bridge.forward(original)
+  const session = await careerSession(request, deps)
   if (session instanceof Response) return session
-  const input = await laravelInput(request)
-  if (typeof input.catalog_libraries === "string") {
-    try {
-      const decoded = JSON.parse(input.catalog_libraries) as unknown
-      if (decoded !== null && typeof decoded === "object") return deps.bridge.forward(original)
-    } catch {}
-  }
+  const input = body.input
+  let logo: UploadedFile | null = null
   let errors: Record<string, string[]>
   try {
     if (entity === "facultad") {
-      if (input.logo !== undefined && input.logo !== null) return deps.bridge.forward(original)
-      const libraries = input.catalog_libraries
-      if (libraries !== undefined && (!isPhpArray(libraries) || Object.keys(libraries).length > 20 || Object.values(libraries).some((item) => typeof item !== "string" || !LIBRARY.test(item)) || new Set(Object.values(libraries)).size !== Object.keys(libraries).length)) {
-        return deps.bridge.forward(original)
-      }
+      decodeLibraries(input)
+      if (librariesNeedLaravel(input.catalog_libraries)) return deps.bridge.forward(original)
       errors = labelled(
         await validateInput(input, { nombre: ["required", "string", { max: 180 }], campus: ["required", { in: CAMPUSES }], confirm_purge: ["nullable", "boolean"] }, FACULTY_LABELS),
         FACULTY_LABELS,
       )
+      const value = logoOf(body)
+      const logoProblems = logoErrors(value, "logotipo", false)
+      if (logoProblems.length > 0) {
+        const { confirm_purge: purgeErrors, ...rest } = errors
+        errors = { ...rest, logo: logoProblems, ...(purgeErrors ? { confirm_purge: purgeErrors } : {}) }
+      } else if (isUploadedFile(value)) logo = value
     } else if (entity === "carrera") {
       errors = labelled(
         await validateInput(
@@ -396,9 +488,11 @@ export async function updateGovernanceRecord(request: Request, entity: string, r
             if (faculty.name !== input.nombre) dirty.push({ column: "nombre_facultad", before: faculty.name, after: input.nombre })
             if (faculty.campus !== input.campus) dirty.push({ column: "campus_facultad", before: faculty.campus, after: input.campus })
             if (libraries !== null && !sameLibraries(faculty.libraries, libraries)) dirty.push({ column: "bibliotecas_koha_facultad", before: faculty.libraries, after: libraries })
-            if (dirty.length === 0) return
-            const metadata = await updateMetadata(tx, entity, dirty)
-            await tx.updateColumns("facultad", faculty.id, Object.fromEntries(dirty.map((item) => [item.column, item.after])))
+            if (dirty.length === 0 && logo === null) return
+            const columns: Record<string, unknown> = Object.fromEntries(dirty.map((item) => [item.column, item.after]))
+            if (logo !== null) columns.logo_archivo_id = await storeFacultyLogo(tx, deps, faculty.id, logo)
+            const metadata = logo !== null ? { changed_fields: "" } : await updateMetadata(tx, entity, dirty)
+            await tx.updateColumns("facultad", faculty.id, columns)
             await tx.sync(confirmed, await tx.careersOfFaculty(faculty.id))
             await tx.recordAudit(audit(session, deps, { action: "academico.facultad.actualizacion", resourceType: "facultad", resourceId: faculty.id, metadata }))
           },
@@ -478,4 +572,10 @@ export async function setGovernanceStatus(request: Request, entity: string, reco
     )
     return laravelJson({ message: active ? "Registro reactivado." : "Registro desactivado sin borrar su historial." })
   })
+}
+
+export async function postGovernanceRecord(request: Request, entity: string, recordId: string, deps: GovernanceWriteDeps = defaultGovernanceWriteDeps()): Promise<Response> {
+  const tooLarge = postTooLarge(request, deps.maxPostSize ?? postMaxSize())
+  if (tooLarge !== null) return tooLarge
+  return (await spoofedMethod(request)) === "PATCH" ? updateGovernanceRecord(request, entity, recordId, deps) : deps.bridge.forward(request)
 }

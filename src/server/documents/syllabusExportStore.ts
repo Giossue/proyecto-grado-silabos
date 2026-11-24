@@ -1,10 +1,8 @@
 import "server-only"
-import { chmod, mkdir, writeFile } from "node:fs/promises"
-import path from "node:path"
 import { sql } from "drizzle-orm"
 import { db } from "@/db"
 import { phpJsonDecode, record } from "../configuration/phpValues"
-import { diskPath } from "../laravel/storage"
+import { storageWriter } from "../laravel/storageWriter"
 import { uuid7 } from "../laravel/uuid7"
 import { iso8601 } from "../laravel/sql"
 import { notificationScope, recipientsOn, systemNow, type Mail } from "../notifications/queries"
@@ -180,11 +178,7 @@ export function exportJobStoreOn(executor: Executor): ExportJobStore {
 }
 
 export async function writePrivateObject(disk: string, relative: string, bytes: Buffer): Promise<void> {
-  const absolute = diskPath(disk, relative)
-  const directory = path.dirname(absolute)
-  await mkdir(/*turbopackIgnore: true*/ directory, { recursive: true, mode: 0o700 })
-  await writeFile(/*turbopackIgnore: true*/ absolute, bytes)
-  await chmod(/*turbopackIgnore: true*/ absolute, 0o600)
+  await storageWriter().put(disk, relative, bytes)
 }
 
 export type TransactionRunner = <T>(work: (executor: Executor) => Promise<T>) => Promise<T>

@@ -93,16 +93,26 @@ type EventRecord = {
   actor_carrera: string | null
   detalles: unknown
   occurred_at: string
+  occurred_local: string
 }
 
 async function page(filters: AuditFilters, currentPage: number, perPage: number): Promise<{ total: number; items: AuditEventRow[] }> {
   const where = conditions(filters, await resolveFilters(filters))
   const [{ total }] = await rows<{ total: string }>(sql`select count(*) as total from eventos_auditoria where ${where}`)
   if (Number(total) === 0) return { total: 0, items: [] }
+  return { total: Number(total), items: await loadEvents(where, sql`order by ocurrido_en desc limit ${perPage} offset ${(currentPage - 1) * perPage}`) }
+}
+
+async function all(filters: AuditFilters): Promise<AuditEventRow[]> {
+  return loadEvents(conditions(filters, await resolveFilters(filters)), sql`order by ocurrido_en asc`)
+}
+
+async function loadEvents(where: SQL, tail: SQL): Promise<AuditEventRow[]> {
   const events = await rows<EventRecord>(sql`select evento_auditoria_id::text as id, accion, tipo_recurso, recurso_id::text as recurso_id, resultado,
       usuario_id::text as usuario_id, asignacion_rol_id::text as asignacion_rol_id, actor_nombre, actor_rol, actor_carrera, detalles,
-      ${iso8601(sql`ocurrido_en`)} as occurred_at
-    from eventos_auditoria where ${where} order by ocurrido_en desc limit ${perPage} offset ${(currentPage - 1) * perPage}`)
+      ${iso8601(sql`ocurrido_en`)} as occurred_at,
+      to_char(ocurrido_en at time zone ${institutionTimezone()}, 'YYYY-MM-DD HH24:MI:SS') as occurred_local
+    from eventos_auditoria where ${where} ${tail}`)
   const userIds = [...new Set(events.flatMap((event) => (event.usuario_id === null ? [] : [event.usuario_id])))]
   const assignmentIds = [...new Set(events.flatMap((event) => (event.asignacion_rol_id === null ? [] : [event.asignacion_rol_id])))]
   const users = new Map(
@@ -122,9 +132,7 @@ async function page(filters: AuditFilters, currentPage: number, perPage: number)
             where asignacion.asignacion_rol_id = any(${uuids(assignmentIds)})`)
         ).map((assignment) => [assignment.id, assignment] as const),
   )
-  return {
-    total: Number(total),
-    items: events.map((event) => {
+  return events.map((event) => {
       const assignment = event.asignacion_rol_id === null ? undefined : assignments.get(event.asignacion_rol_id)
       return {
         id: event.id,
@@ -141,9 +149,9 @@ async function page(filters: AuditFilters, currentPage: number, perPage: number)
         assignmentCareer: assignment?.career ?? null,
         metadata: event.detalles,
         occurredAt: event.occurred_at,
+        occurredLocal: event.occurred_local,
       }
-    }),
-  }
+    })
 }
 
 async function pairs(query: SQL): Promise<Map<string, string>> {
@@ -280,6 +288,11 @@ async function roleAssignmentNames(list: SQL): Promise<Map<string, string>> {
 export function createAuditRepository(): AuditRepository {
   return {
     page,
+    all,
+    async periodCode(id) {
+      const [row] = await rows<{ code: string }>(sql`select codigo_periodo_academico as code from periodos_academicos where periodo_academico_id = ${id}::uuid limit 1`)
+      return row?.code ?? null
+    },
     async actionOptions() {
       return (await rows<{ accion: string }>(sql`select distinct accion from eventos_auditoria order by accion asc`)).map((row) => row.accion)
     },

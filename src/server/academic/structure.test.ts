@@ -195,11 +195,13 @@ describe("GET /api/v1/coordination/academic/curriculum/{curriculum}", () => {
     ])
   })
 
-  it("answers 401 without a session and defers to Laravel when the session role must be rewritten", async () => {
+  it("answers 401 without a session and 409 when the stale session role leaves no single eligible role", async () => {
     expect(await read(await curriculumBuilder(apiRequest(path), CAREER, deps()))).toEqual({ status: 401, text: '{"message":"Unauthenticated."}' })
     world.assignments = [makeAssignment({ role: "coordinador" }), makeAssignment({ id: "other-role", role: "docente" })]
     world.sessions.set(SESSION_ID, { payload: sessionPayload(loggedInAttributes({ active_role_assignment_id: "missing" })), lastActivity: NOW - 60 })
-    expect((await curriculumBuilder(get(path), CAREER, deps())).status).toBe(299)
+    const response = await read(await curriculumBuilder(get(path), CAREER, deps()))
+    expect(response.status).toBe(409)
+    expect(response.text).toContain("Seleccione un rol vigente.")
   })
 })
 

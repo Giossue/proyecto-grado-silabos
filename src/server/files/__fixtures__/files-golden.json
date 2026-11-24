@@ -1,0 +1,118 @@
+{
+    "tiny.pdf": {
+        "mime": "application/pdf",
+        "cells": null
+    },
+    "bom.pdf": {
+        "mime": "application/pdf",
+        "cells": null
+    },
+    "newline.pdf": {
+        "mime": "application/pdf",
+        "cells": null
+    },
+    "late.pdf": {
+        "mime": "application/octet-stream",
+        "cells": null
+    },
+    "too-late.pdf": {
+        "mime": "application/octet-stream",
+        "cells": null
+    },
+    "json.pdf": {
+        "mime": "application/json",
+        "cells": null
+    },
+    "empty.pdf": {
+        "mime": "application/x-empty",
+        "cells": null
+    },
+    "notes.txt": {
+        "mime": "text/plain",
+        "cells": null
+    },
+    "binary.doc": {
+        "mime": "application/octet-stream",
+        "cells": null
+    },
+    "habilidades.docx": {
+        "mime": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "cells": null
+    },
+    "workbook.xlsx": {
+        "mime": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "cells": null
+    },
+    "workbook.xls": {
+        "mime": "application/vnd.ms-excel",
+        "cells": null
+    },
+    "datos-5001.xlsx": {
+        "mime": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "cells": "La hoja de cálculo tiene más de 5.000 celdas con datos. Divídala en archivos más pequeños o súbala como PDF."
+    },
+    "datos-5000-styled.xlsx": {
+        "mime": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "cells": null
+    },
+    "datos-5001.xls": {
+        "mime": "application/vnd.ms-excel",
+        "cells": "La hoja de cálculo tiene más de 5.000 celdas con datos. Divídala en archivos más pequeños o súbala como PDF."
+    },
+    "datos-5000-styled.xls": {
+        "mime": "application/vnd.ms-excel",
+        "cells": null
+    },
+    "plain.zip": {
+        "mime": "application/zip",
+        "cells": null
+    },
+    "rels-first.docx": {
+        "mime": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "cells": null
+    },
+    "deep.docx": {
+        "mime": "application/octet-stream",
+        "cells": null
+    },
+    "sixth.xlsx": {
+        "mime": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "cells": "No se pudo leer la hoja de cálculo. Revise que el archivo no esté dañado."
+    },
+    "gap.xlsx": {
+        "mime": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "cells": "No se pudo leer la hoja de cálculo. Revise que el archivo no esté dañado."
+    },
+    "xl-first.xlsx": {
+        "mime": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "cells": "No se pudo leer la hoja de cálculo. Revise que el archivo no esté dañado."
+    },
+    "word.doc": {
+        "mime": "application/x-ole-storage",
+        "cells": null
+    },
+    "book.xls": {
+        "mime": "application/vnd.ms-excel",
+        "cells": "No se pudo leer la hoja de cálculo. Revise que el archivo no esté dañado."
+    },
+    "other.doc": {
+        "mime": "application/x-ole-storage",
+        "cells": null
+    },
+    "app-word.doc": {
+        "mime": "application/msword",
+        "cells": null
+    },
+    "app-other.xls": {
+        "mime": "application/vnd.ms-excel",
+        "cells": "No se pudo leer la hoja de cálculo. Revise que el archivo no esté dañado."
+    },
+    "app-none.doc": {
+        "mime": "application/vnd.ms-office",
+        "cells": null
+    },
+    "app-excel.doc": {
+        "mime": "application/vnd.ms-excel",
+        "cells": null
+    }
+}

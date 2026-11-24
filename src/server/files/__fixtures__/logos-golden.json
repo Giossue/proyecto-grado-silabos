@@ -1,0 +1,104 @@
+{
+    "exact-600x180.png": {
+        "faculty_errors": [],
+        "institution_errors": [],
+        "faculty_pixels": "f29ceca32b6daddb9a8e9e1dff78380fe4dcd1c513f21b73e73b0757a40a8e34",
+        "institution_pixels": "4a579d52006ccaffe0fc5dc893b111ee867daf27d8209a9699d27882ea133bf4"
+    },
+    "ga-300x300.png": {
+        "faculty_errors": [],
+        "institution_errors": [],
+        "faculty_pixels": "fdbb8870b497858b6f2576ab44e21c8060c1c5cc9410507b7b1a75b999352e69",
+        "institution_pixels": "69fdef4976188527021cb0791376e97f66b115b98790771062e8a2a36a71d588"
+    },
+    "interlaced-300x90.png": {
+        "faculty_errors": [],
+        "institution_errors": [],
+        "faculty_pixels": "db2c875898e560325a7fea89b5373412d0851ce9f01d1ed56b7180b4fbb18e4b",
+        "institution_pixels": "450e09987596baa18551ce563d3129c16e4f65ae17c4b009a7f6e860982adae9"
+    },
+    "jpeg-40.jpg": {
+        "faculty_errors": [
+            "El campo logotipo debe ser un archivo de tipo: image/png.",
+            "El archivo debe ser un PNG."
+        ],
+        "institution_errors": [
+            "El campo imagen del logo debe ser un archivo de tipo: image/png.",
+            "El archivo debe ser un PNG."
+        ],
+        "faculty_pixels": "error: No se pudo leer el PNG.",
+        "institution_pixels": "error: No se pudo leer el PNG."
+    },
+    "opaque-64.png": {
+        "faculty_errors": [
+            "El logo debe ser un PNG sin fondo (con transparencia)."
+        ],
+        "institution_errors": [
+            "El logo debe ser un PNG sin fondo (con transparencia)."
+        ],
+        "faculty_pixels": "80f883e2d3877ca826e01bd4ea94c0c962f2092f0d9cd35cc245a428eab5cf36",
+        "institution_pixels": "12fe6ba9bf363a7f3e1beb59914c9777d7746c502789c4bbde58ea0ad9919040"
+    },
+    "palette-64.png": {
+        "faculty_errors": [
+            "El logo debe ser un PNG sin fondo (con transparencia)."
+        ],
+        "institution_errors": [
+            "El logo debe ser un PNG sin fondo (con transparencia)."
+        ],
+        "faculty_pixels": "80f883e2d3877ca826e01bd4ea94c0c962f2092f0d9cd35cc245a428eab5cf36",
+        "institution_pixels": "12fe6ba9bf363a7f3e1beb59914c9777d7746c502789c4bbde58ea0ad9919040"
+    },
+    "rgba-800x400.png": {
+        "faculty_errors": [],
+        "institution_errors": [],
+        "faculty_pixels": "8803e4c901adb97f781da55c122df229cfad48b926393b459eb30c4c9732915d",
+        "institution_pixels": "ac62c01e133a370aa470813287adc2101dc714e9004ba7b70753ba610c38ec32"
+    },
+    "rgba16-1200x200.png": {
+        "faculty_errors": [],
+        "institution_errors": [],
+        "faculty_pixels": "ed3858fc7426fe4979a5a38ae02b9879f437725c0d95609f5f4f8b37653d2d37",
+        "institution_pixels": "04a35635f79a20b02901bf792db51a38325b96d26fb94536aa14593a4bce4365"
+    },
+    "small-50x20.png": {
+        "faculty_errors": [],
+        "institution_errors": [],
+        "faculty_pixels": "92fae7841db95bbcacec59fe08a6f568a51869b895f83ac0b9716f0d2a130f3f",
+        "institution_pixels": "4c8d78117fcc285f26b3466f1da75372868a45cd2236b376cf744958be9c9780"
+    },
+    "text.png": {
+        "faculty_errors": [
+            "El campo logotipo debe ser un archivo de tipo: image/png.",
+            "El archivo debe ser un PNG."
+        ],
+        "institution_errors": [
+            "El campo imagen del logo debe ser un archivo de tipo: image/png.",
+            "El archivo debe ser un PNG."
+        ],
+        "faculty_pixels": "error: No se pudo leer el PNG.",
+        "institution_pixels": "error: No se pudo leer el PNG."
+    },
+    "wide-4100x4.png": {
+        "faculty_errors": [
+            "El logo no puede superar 4000 × 4000 píxeles."
+        ],
+        "institution_errors": [
+            "El logo no puede superar 4000 × 4000 píxeles."
+        ],
+        "faculty_pixels": "1a5e64b08b33457aec1925824b65f6e87d411189c378b5a21a758a76031775f6",
+        "institution_pixels": "522c6f5842ccb84ded2fa517cf0f1c581eda3fdac9b69ecafc339e9ccef9735c"
+    },
+    "valor:texto": {
+        "institution_errors": [
+            "El campo imagen del logo debe ser un archivo.",
+            "El campo imagen del logo debe ser un archivo de tipo: image/png.",
+            "Suba un archivo PNG."
+        ]
+    },
+    "valor:vacio": {
+        "institution_errors": [
+            "El campo imagen del logo es obligatorio."
+        ]
+    }
+}

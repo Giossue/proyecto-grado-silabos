@@ -1,8 +1,10 @@
 // @vitest-environment node
+import ExcelJS from "exceljs"
 import { beforeEach, describe, expect, it } from "vitest"
+import { createRateLimiter } from "../laravel/throttle"
 import golden from "../laravel/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
-import { processReport, type ProcessReportRepository, type ReportProcess, type ReportSyllabus } from "./processReport"
+import { exportProcessReport, processReport, type ProcessReportRepository, type ReportProcess, type ReportSyllabus } from "./processReport"
 
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(golden.sessionId))}`
 const PROCESS = "60000000-0000-4000-8000-000000000001"
@@ -137,5 +139,29 @@ describe("GET admin/reports", () => {
     })
     world.assignments = [makeAssignment({ role: "coordinador", careerId: "c0000000-0000-4000-8000-000000000001" })]
     expect((await report()).status).toBe(403)
+  })
+})
+
+describe("GET admin/reports/export", () => {
+  async function exported(query = "") {
+    return exportProcessReport(apiRequest(`/api/v1/admin/reports/export${query}`, { cookie }), { bridge: fakeDeps(world, forwarded), reports: repository(), now: () => now, limiter: createRateLimiter() })
+  }
+
+  it("downloads the latest process report as a workbook with its four sheets", async () => {
+    const response = await exported()
+    expect(response.status).toBe(200)
+    expect(response.headers.get("content-disposition")).toBe("attachment; filename=reporte-2026-2.xlsx")
+    const book = new ExcelJS.Workbook()
+    await book.xlsx.load(await response.arrayBuffer())
+    expect(book.worksheets.map((sheet) => sheet.name)).toEqual(["Resumen", "Por carrera", "Envíos por día", "Pendientes"])
+    const summary = book.getWorksheet("Resumen") as ExcelJS.Worksheet
+    expect([summary.getCell("A6").value, summary.getCell("B6").value, summary.getCell("B7").value, summary.getCell("B8").value]).toEqual(["Aprobados (%)", 33, 50, 2.5])
+    expect((book.getWorksheet("Pendientes") as ExcelJS.Worksheet).getCell("F2").value).toMatch(/^(Sí|No)$/)
+  })
+
+  it("answers 404 without processes and forwards an unknown process to Laravel", async () => {
+    processes = []
+    expect(await (await exported()).text()).toBe('{\n    "message": "No hay convocatorias para reportar."\n}')
+    expect((await exported("?process=60000000-0000-4000-8000-000000000009")).status).toBe(299)
   })
 })

@@ -2,7 +2,11 @@ import "server-only"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
 import type { BridgeDeps } from "../auth/types"
 import { phpQuery } from "../laravel/input"
-import { forbidden, laravelJson, validationError } from "../laravel/responses"
+import { laravelSlug } from "../documents/slug"
+import { processReportWorkbook } from "../excel/reportWorkbooks"
+import { xlsxDownload } from "../excel/workbook"
+import { forbidden, laravelHttpError, laravelJson, validationError } from "../laravel/responses"
+import { sharedRateLimiter, throttle, type RateLimiter, type Throttle } from "../laravel/throttle"
 import { validateInput } from "../laravel/validation"
 import { createProcessReportRepository } from "./processReportQueries"
 import { phpCompareStrings } from "./syllabusDetailQueries"
@@ -132,4 +136,34 @@ export async function processReport(request: Request, deps: ProcessReportDeps = 
     options: await deps.reports.options(),
     report: process === null ? null : buildReport(process, await deps.reports.syllabi(process.id), deps.now()),
   })
+}
+
+export type ProcessReportExportDeps = ProcessReportDeps & { limiter: RateLimiter }
+
+export async function exportProcessReport(request: Request, deps: ProcessReportExportDeps = { ...defaultProcessReportDeps(), limiter: sharedRateLimiter() }): Promise<Response> {
+  let gate: Throttle | null = null
+  const finish = (response: Response) => (gate as Throttle | null)?.decorate(response) ?? response
+  const session = await requireSession(
+    request,
+    {
+      verified: true,
+      activeRole: "required",
+      afterAuthentication: (user) => {
+        gate = throttle(deps.limiter, { key: `throttle:10,1:${user.id}`, maxAttempts: 10, decaySeconds: 60 }, deps.bridge.now)
+        return gate.hit()
+      },
+    },
+    deps.bridge,
+  )
+  if (session instanceof Response) return finish(session)
+  if (!session.user.active || session.activeRole?.role !== "administrador") return finish(forbidden())
+  const input = phpQuery(new URL(request.url))
+  const errors = await validateInput(input, { process: ["nullable", "uuid"] }, { process: "convocatoria" })
+  if (Object.keys(errors).length > 0) return finish(validationError(errors))
+  const requested = typeof input.process === "string" && input.process !== "" ? input.process : null
+  const process = await deps.reports.process(requested)
+  if (requested !== null && process === null) return finish(await deps.bridge.forward(request))
+  if (process === null) return finish(laravelHttpError(404, "No hay convocatorias para reportar."))
+  const data = buildReport(process, await deps.reports.syllabi(process.id), deps.now())
+  return finish(xlsxDownload(await processReportWorkbook(data), `reporte-${laravelSlug(String(data.process.period ?? "convocatoria"))}.xlsx`))
 }

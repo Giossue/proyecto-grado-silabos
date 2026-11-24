@@ -1,8 +1,10 @@
 // @vitest-environment node
+import ExcelJS from "exceljs"
 import { beforeEach, describe, expect, it } from "vitest"
+import { createRateLimiter } from "../laravel/throttle"
 import golden from "../laravel/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
-import { listAuditEvents, safeDetails, type AuditEventRow, type AuditFilters, type AuditRepository } from "./auditEvents"
+import { exportAuditEvents, listAuditEvents, safeDetails, type AuditEventRow, type AuditFilters, type AuditRepository } from "./auditEvents"
 
 const SESSION_ID = golden.sessionId
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(SESSION_ID))}`
@@ -34,6 +36,11 @@ const row = (overrides: Partial<AuditEventRow> = {}): AuditEventRow => ({
 })
 
 const repository = (): AuditRepository => ({
+  async all(filters) {
+    pages.push({ filters, page: 0, perPage: 0 })
+    return rows
+  },
+  periodCode: async (id) => (id === PERIOD ? "Abril-Agosto 2027" : null),
   async page(filters, page, perPage) {
     pages.push({ filters, page, perPage })
     return { total: rows.length, items: rows.slice((page - 1) * perPage, page * perPage) }
@@ -190,5 +197,39 @@ describe("audit events", () => {
     ])
     expect(safeDetails(["a"])).toEqual([])
     expect(safeDetails(null)).toEqual([])
+  })
+})
+
+describe("GET /api/v1/admin/audit-events/export", () => {
+  async function exported(path: string) {
+    const response = await exportAuditEvents(apiRequest(path, { cookie }), { bridge: fakeDeps(world), audit: repository(), limiter: createRateLimiter(), today: () => "2026-11-24" })
+    return response
+  }
+
+  it("downloads the filtered events and their summary as an Excel workbook named after the period", async () => {
+    rows = [row({ occurredLocal: "2026-11-20 09:00:00" }), row({ id: "ev-2", action: "otra.cosa", result: "fallido", metadata: { activo: true }, assignmentCareer: null, occurredLocal: "2026-11-21 10:30:00" })]
+    const response = await exported(`/api/v1/admin/audit-events/export?period=${PERIOD}`)
+    expect(response.status).toBe(200)
+    expect(response.headers.get("content-type")).toBe("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    expect(response.headers.get("content-disposition")).toBe("attachment; filename=auditoria-abril-agosto-2027.xlsx")
+    expect(response.headers.get("x-ratelimit-limit")).toBe("10")
+    const book = new ExcelJS.Workbook()
+    await book.xlsx.load(await response.arrayBuffer())
+    expect(book.worksheets.map((sheet) => sheet.name)).toEqual(["Eventos", "Resumen"])
+    const events = book.getWorksheet("Eventos") as ExcelJS.Worksheet
+    expect((events.getRow(1).values as unknown[]).slice(1)).toEqual(["Fecha y hora", "Usuario", "Rol", "Carrera", "Acción", "Sobre qué", "Detalle", "Resultado"])
+    expect(events.getCell("A2").value).toEqual(new Date("2026-11-20T09:00:00.000Z"))
+    expect(events.getCell("A2").numFmt).toBe("yyyy-mm-dd hh:mm")
+    expect(events.getCell("H3").value).toBe("Fallido")
+    expect(events.getCell("D3").value).toBeNull()
+    expect(events.getColumn(7).width).toBe(60)
+    expect(book.title).toBe("Auditoría Abril-Agosto 2027")
+  })
+
+  it("names the file with today's date without a period and keeps the index rules", async () => {
+    expect((await exported("/api/v1/admin/audit-events/export")).headers.get("content-disposition")).toBe("attachment; filename=auditoria-2026-11-24.xlsx")
+    expect((await exported("/api/v1/admin/audit-events/export?result=otro")).status).toBe(422)
+    world.assignments = [makeAssignment({ role: "docente" })]
+    expect((await exported("/api/v1/admin/audit-events/export")).status).toBe(403)
   })
 })

@@ -11,6 +11,7 @@ import { InProgressWork } from "../syllabus/inProgressWork"
 import { dbTransaction, type TransactionRunner } from "../syllabus/reviewDecisionStore"
 import { rowsOf, type Executor } from "../syllabus/teacherSyllabusQueries"
 import type { GovernanceWriteDeps, GovernanceWriteTx } from "./governanceWrites"
+import { insertStoredObject } from "./supportDocumentWriteStore"
 
 const TABLES: Record<string, { table: SQL; key: SQL }> = {
   facultad: { table: sql`facultades`, key: sql`facultad_id` },
@@ -35,6 +36,13 @@ export function governanceWriteTx(executor: Executor, afterCommit: AfterCommit, 
         values (${id}::uuid, ${data.facultyId}::uuid, ${data.code}, ${data.name}, true, ${data.modality}, ${data.cycleCount})`)
       return id
     },
+    async createFaculty(data) {
+      const id = uuid7()
+      await executor.execute(sql`insert into facultades (facultad_id, nombre_facultad, campus_facultad, bibliotecas_koha_facultad, facultad_activa)
+        values (${id}::uuid, ${data.name}, ${data.campus}, ${JSON.stringify(data.libraries)}::jsonb, true)`)
+      return id
+    },
+    insertObject: (row) => insertStoredObject(executor, row),
     async createPeriod(data) {
       const id = uuid7()
       await executor.execute(sql`insert into periodos_academicos (periodo_academico_id, codigo_periodo_academico, fecha_inicio_periodo, fecha_fin_periodo, cantidad_semanas_lectivas)
@@ -96,7 +104,7 @@ export function governanceWriteTx(executor: Executor, afterCommit: AfterCommit, 
       const assignments = Object.entries(columns).map(([column, value]) => {
         if (column === "bibliotecas_koha_facultad") return sql`${sql.identifier(column)} = ${JSON.stringify(value)}::jsonb`
         if (column === "fecha_inicio_periodo" || column === "fecha_fin_periodo") return sql`${sql.identifier(column)} = ${value}::date`
-        if (column === "facultad_id") return sql`${sql.identifier(column)} = ${value}::uuid`
+        if (column === "facultad_id" || column === "logo_archivo_id") return sql`${sql.identifier(column)} = ${value}::uuid`
         return sql`${sql.identifier(column)} = ${value}`
       })
       await executor.execute(sql`update ${table} set ${sql.join(assignments, sql`, `)} where ${key} = ${id}::uuid`)

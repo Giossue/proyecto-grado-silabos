@@ -1,4 +1,8 @@
 import "server-only"
+import { laravelSlug } from "../documents/slug"
+import { auditWorkbook, type AuditExportRow } from "../excel/reportWorkbooks"
+import { xlsxDownload } from "../excel/workbook"
+import { sharedRateLimiter, throttle, type RateLimiter, type Throttle } from "../laravel/throttle"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
 import type { BridgeDeps } from "../auth/types"
 import { isYmdAfterOrEqual, passesYmdFormat } from "../laravel/dates"
@@ -36,12 +40,15 @@ export type AuditEventRow = {
   assignmentCareer: string | null
   metadata: unknown
   occurredAt: string
+  occurredLocal?: string
 }
 
 export type Option = { value: string; label: string }
 
 export interface AuditRepository {
   page(filters: AuditFilters, page: number, perPage: number): Promise<{ total: number; items: AuditEventRow[] }>
+  all(filters: AuditFilters): Promise<AuditEventRow[]>
+  periodCode(id: string): Promise<string | null>
   actionOptions(): Promise<string[]>
   periodOptions(): Promise<Option[]>
   careerOptions(): Promise<Option[]>
@@ -185,11 +192,7 @@ function defaultDeps(): AuditDeps {
   return { bridge: defaultBridgeDeps(), audit: createAuditRepository() }
 }
 
-export async function listAuditEvents(request: Request, deps: AuditDeps = defaultDeps()): Promise<Response> {
-  const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
-  if (session instanceof Response) return session
-  if (session.activeRole?.role !== "administrador") return laravelJson({ message: FORBIDDEN }, 403)
-
+async function auditFilters(request: Request): Promise<AuditFilters | Response> {
   const input = await laravelInput(request)
   const dateFormat = { check: passesYmdFormat, message: "El campo :attribute debe coincidir con el formato Y-m-d." }
   const errors = await validateInput(
@@ -222,6 +225,15 @@ export async function listAuditEvents(request: Request, deps: AuditDeps = defaul
     role: stringInput(input.role),
     career: stringInput(input.career),
   }
+  return filters
+}
+
+export async function listAuditEvents(request: Request, deps: AuditDeps = defaultDeps()): Promise<Response> {
+  const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
+  if (session instanceof Response) return session
+  if (session.activeRole?.role !== "administrador") return laravelJson({ message: FORBIDDEN }, 403)
+  const filters = await auditFilters(request)
+  if (filters instanceof Response) return filters
   const query = laravelQuery(new URL(request.url))
   const currentPage = resolveCurrentPage(query.get("page") ?? null)
   const { total, items } = await deps.audit.page(filters, currentPage, PER_PAGE)
@@ -256,4 +268,49 @@ export async function listAuditEvents(request: Request, deps: AuditDeps = defaul
       query,
     }),
   })
+}
+
+export type AuditExportDeps = AuditDeps & { limiter: RateLimiter; today: () => string }
+
+function defaultExportDeps(): AuditExportDeps {
+  return { ...defaultDeps(), limiter: sharedRateLimiter(), today: () => new Intl.DateTimeFormat("en-CA", { timeZone: process.env.DISPLAY_TIMEZONE ?? "America/Guayaquil" }).format(new Date()) }
+}
+
+export async function exportAuditEvents(request: Request, deps: AuditExportDeps = defaultExportDeps()): Promise<Response> {
+  let gate: Throttle | null = null
+  const finish = (response: Response) => (gate as Throttle | null)?.decorate(response) ?? response
+  const session = await requireSession(
+    request,
+    {
+      verified: true,
+      activeRole: "required",
+      afterAuthentication: (user) => {
+        gate = throttle(deps.limiter, { key: `throttle:10,1:${user.id}`, maxAttempts: 10, decaySeconds: 60 }, deps.bridge.now)
+        return gate.hit()
+      },
+    },
+    deps.bridge,
+  )
+  if (session instanceof Response) return finish(session)
+  if (session.activeRole?.role !== "administrador") return finish(laravelJson({ message: FORBIDDEN }, 403))
+  const filters = await auditFilters(request)
+  if (filters instanceof Response) return finish(filters)
+  const events = await deps.audit.all(filters)
+  const targets = new Map<string, string>()
+  for (let start = 0; start < events.length; start += 500) for (const [id, name] of await describeTargets(events.slice(start, start + 500), deps.audit)) targets.set(id, name)
+  const rows: AuditExportRow[] = events.map((event) => ({
+    occurredAt: event.occurredLocal ?? event.occurredAt,
+    actor: actorName(event),
+    role: event.actorRole ?? (event.assignmentRole === null ? null : (ROLE_LABELS[event.assignmentRole] ?? null)) ?? "",
+    career: event.actorCareer ?? event.assignmentCareer ?? "",
+    action: actionLabel(event.action),
+    target: (targets.get(event.id) ?? "") !== "" ? (targets.get(event.id) as string) : resourceLabel(event.resourceType),
+    details: safeDetails(event.metadata)
+      .map((detail) => `${detail.label}: ${typeof detail.value === "boolean" ? (detail.value ? "Sí" : "No") : String(detail.value)}`)
+      .join("; "),
+    result: event.result === "exito" ? "Éxito" : "Fallido",
+  }))
+  const period = filters.period !== "" ? await deps.audit.periodCode(filters.period) : null
+  const name = `auditoria-${period !== null ? laravelSlug(period) : deps.today()}.xlsx`
+  return finish(xlsxDownload(await auditWorkbook(rows, period), name))
 }

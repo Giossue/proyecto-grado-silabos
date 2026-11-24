@@ -35,9 +35,9 @@ describe("academic routes", () => {
   it.each([
     [`/api/v1/coordination/academic/curriculum/${ID}`, curriculum, "GET"],
     ["/api/v1/coordination/academic/teacher-assignments", teacherAssignments, "GET"],
-    ["/api/v1/coordination/support-documents", coordinationDocuments, "GET"],
+    ["/api/v1/coordination/support-documents", coordinationDocuments, "GET,POST"],
     ["/api/v1/teacher/support-documents", teacherDocuments, "GET"],
-    [`/api/v1/admin/academic/periodo/${ID}`, governanceRecord, "DELETE,PATCH"],
+    [`/api/v1/admin/academic/periodo/${ID}`, governanceRecord, "DELETE,PATCH,POST"],
     [`/api/v1/coordination/academic/asignacion_docente/${ID}`, careerRecord, "DELETE,PATCH"],
     [`/api/v1/coordination/academic/parallels/${ID}`, parallel, "DELETE,PATCH"],
     ["/api/v1/coordination/academic/asignatura", careerEntity, "POST"],

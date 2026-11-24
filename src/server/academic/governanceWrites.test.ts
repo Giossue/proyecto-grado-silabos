@@ -1,12 +1,19 @@
 // @vitest-environment node
-import { beforeEach, describe, expect, it } from "vitest"
+import { mkdtempSync, readFileSync, rmSync, statSync } from "node:fs"
+import { tmpdir } from "node:os"
+import path from "node:path"
+import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import golden from "../laravel/__fixtures__/laravel-golden.json"
 import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
 import type { AuditEventInput } from "../operations/recordAuditEvent"
+import { decodePng } from "../files/png"
+import { createStorageWriter, type StorageWriter } from "../laravel/storageWriter"
+import type { StoredObjectInput } from "./supportDocumentWrites"
 import { GenerationRejected, purgeRequired } from "../syllabus/inProgressWork"
 import {
   createGovernanceRecord,
   periodLabel,
+  postGovernanceRecord,
   periodWeeks,
   setGovernanceStatus,
   updateGovernanceRecord,
@@ -36,6 +43,10 @@ let periods: Map<string, PeriodRow & { running: boolean }>
 let created: (CareerData | PeriodData)[]
 let purge: Record<string, string[]> | null
 let finalized: boolean
+let root: string
+let storage: StorageWriter
+let objects: StoredObjectInput[]
+let createdFaculties: unknown[]
 
 function deps(): GovernanceWriteDeps {
   return {
@@ -44,6 +55,7 @@ function deps(): GovernanceWriteDeps {
     activeFacultyExists: async (id) => faculties.get(id)?.active === true,
     facultyExists: async (id) => faculties.has(id),
     careerCodeTaken: async (code, except) => [...careers.values()].some((career) => career.code === code && career.id !== except),
+    files: { storage, newObjectId: () => "01a2aaaa-0000-7000-8000-00000000f11e", newLogoId: () => "6b1d0c1e-3a5f-4c2b-9d8e-7f6a5b4c3d2e" },
     async transaction(work) {
       log.push("begin")
       const staged: AuditEventInput[] = []
@@ -51,6 +63,8 @@ function deps(): GovernanceWriteDeps {
         const result = await work({
           createCareer: async (data) => (created.push(data), NEW_ID),
           createPeriod: async (data) => (created.push(data), NEW_ID),
+          createFaculty: async (data) => (createdFaculties.push(data), NEW_ID),
+          insertObject: async (row) => void objects.push(row),
           lockFaculty: async (id) => faculties.get(id) ?? null,
           lockCareer: async (id) => careers.get(id) ?? null,
           lockPeriod: async (id) => periods.get(id) ?? null,
@@ -111,6 +125,10 @@ beforeEach(() => {
     assignments: [makeAssignment({ role: "administrador", careerId: null })],
   }
   forwarded = []
+  root = mkdtempSync(path.join(tmpdir(), "silabos-facultad-"))
+  storage = createStorageWriter(root)
+  objects = []
+  createdFaculties = []
   log = []
   audits = []
   created = []
@@ -122,6 +140,71 @@ beforeEach(() => {
   ])
   careers = new Map([[CAREER, { id: CAREER, facultyId: FACULTY, code: "SW-8", name: "Software", modality: "Presencial", active: true, roles: false, inProgress: false }]])
   periods = new Map([[PERIOD, { id: PERIOD, code: "Noviembre-Marzo 2026-2027", startsOn: "2026-11-02", endsOn: "2027-03-12", weeks: 16, running: false }]])
+})
+
+afterEach(() => rmSync(root, { recursive: true, force: true }))
+
+const logo = (name: string) => readFileSync(path.join(__dirname, "..", "files", "__fixtures__", "logos", name))
+
+async function sendForm(method: string, url: string, fields: Record<string, string>, file: { name: string; content: Buffer } | null, handler: (request: Request) => Promise<Response>) {
+  const form = new FormData()
+  for (const [key, value] of Object.entries(fields)) form.append(key, value)
+  if (file !== null) form.append("logo", new File([new Uint8Array(file.content)], file.name))
+  const base = apiRequest(url, { cookie, method, headers: { "x-csrf-token": golden.csrfToken } })
+  const response = await handler(new Request(base, { body: form }))
+  const text = await response.text()
+  return { status: response.status, text }
+}
+
+describe("faculties with their logo", () => {
+  const LOGO_PATH = `logos/facultades/${NEW_ID}/6b1d0c1e-3a5f-4c2b-9d8e-7f6a5b4c3d2e.png`
+
+  it("creates a faculty with its catalog libraries and its logo fitted to 600 x 180, audited", async () => {
+    const response = await sendForm("POST", "/api/v1/admin/academic/facultad", { nombre: "Facultad de Salud", campus: "Campus Laguacoto", catalog_libraries: '["UEB","SALUD"]' }, { name: "logo.png", content: logo("rgba-800x400.png") }, (request) =>
+      createGovernanceRecord(request, "facultad", deps()),
+    )
+    expect(response).toEqual({ status: 201, text: `{"message":"Registro institucional creado.","id":"${NEW_ID}"}` })
+    expect(createdFaculties).toEqual([{ name: "Facultad de Salud", campus: "Campus Laguacoto", libraries: ["UEB", "SALUD"] }])
+    const stored = readFileSync(storage.path("private", LOGO_PATH))
+    expect([decodePng(stored).width, decodePng(stored).height]).toEqual([600, 180])
+    expect(statSync(storage.path("private", LOGO_PATH)).mode & 0o777).toBe(0o600)
+    expect(objects).toEqual([
+      expect.objectContaining({ id: "01a2aaaa-0000-7000-8000-00000000f11e", disk: "private", path: LOGO_PATH, name: `logo-facultad-${NEW_ID}.png`, mime: "image/png", size: stored.length, classification: "logo_facultad", ownerId: null }),
+    ])
+    expect(log).toContain(`update:facultad:${NEW_ID}:${JSON.stringify({ logo_archivo_id: "01a2aaaa-0000-7000-8000-00000000f11e" })}`)
+    expect(audits).toEqual([expect.objectContaining({ action: "academico.facultad.creacion", resourceType: "facultad", resourceId: NEW_ID, metadata: {} })])
+  })
+
+  it("requires a transparent PNG logo and a known campus when creating", async () => {
+    expect(await sendForm("POST", "/api/v1/admin/academic/facultad", { nombre: "F", campus: "Otro" }, null, (request) => createGovernanceRecord(request, "facultad", deps()))).toEqual({
+      status: 422,
+      text: '{"message":"El valor seleccionado en campus no es v\\u00e1lido. (y 1 error m\\u00e1s)","errors":{"campus":["El valor seleccionado en campus no es v\\u00e1lido."],"logo":["El campo logotipo es obligatorio."]}}',
+    })
+    expect(await sendForm("POST", "/api/v1/admin/academic/facultad", { nombre: "F", campus: "Campus Laguacoto" }, { name: "logo.png", content: logo("opaque-64.png") }, (request) => createGovernanceRecord(request, "facultad", deps()))).toEqual({
+      status: 422,
+      text: '{"message":"El logo debe ser un PNG sin fondo (con transparencia).","errors":{"logo":["El logo debe ser un PNG sin fondo (con transparencia)."]}}',
+    })
+    expect(createdFaculties).toEqual([])
+    expect(objects).toEqual([])
+  })
+
+  it("replaces the logo of a faculty sent as POST with _method=PATCH and audits it without listing fields", async () => {
+    const response = await sendForm("POST", `/api/v1/admin/academic/facultad/${FACULTY}`, { _method: "PATCH", nombre: "Facultad renovada", campus: "Campus Laguacoto" }, { name: "logo.png", content: logo("ga-300x300.png") }, (request) =>
+      postGovernanceRecord(request, "facultad", FACULTY, deps()),
+    )
+    expect(response).toEqual({ status: 200, text: '{"message":"Datos institucionales actualizados y auditados."}' })
+    const logoPath = `logos/facultades/${FACULTY}/6b1d0c1e-3a5f-4c2b-9d8e-7f6a5b4c3d2e.png`
+    expect(await storage.exists("private", logoPath)).toBe(true)
+    expect(log).toContain(`update:facultad:${FACULTY}:${JSON.stringify({ nombre_facultad: "Facultad renovada", logo_archivo_id: "01a2aaaa-0000-7000-8000-00000000f11e" })}`)
+    expect(log).toContain(`sync:false:${CAREER}`)
+    expect(audits).toEqual([expect.objectContaining({ action: "academico.facultad.actualizacion", resourceId: FACULTY, metadata: { changed_fields: "" } })])
+  })
+
+  it("rejects a logo that is not a file when updating", async () => {
+    expect((await update("facultad", FACULTY, { nombre: "F", campus: "Campus Laguacoto", logo: "archivo" })).json?.errors).toEqual({
+      logo: ["El campo logotipo debe ser un archivo.", "El campo logotipo debe ser un archivo de tipo: image/png.", "Suba un archivo PNG."],
+    })
+  })
 })
 
 describe("POST /api/v1/admin/academic/{entity}", () => {
@@ -166,13 +249,13 @@ describe("POST /api/v1/admin/academic/{entity}", () => {
     expect((await create("periodo", { starts_on: "2027-02-30", ends_on: "2027-03-20" })).json?.errors).toEqual({ starts_on: ["El campo fecha de inicio debe ser una fecha válida."] })
   })
 
-  it("is forbidden for a coordinator and leaves faculties (they need a logo) and unusual dates to Laravel", async () => {
+  it("is forbidden for a coordinator and leaves unusual dates to Laravel", async () => {
     world.assignments = [makeAssignment({ role: "coordinador", careerId: CAREER })]
     expect((await create("carrera", { ...careerBody, cycle_count: 8 })).text).toBe(FORBIDDEN)
     world.assignments = [makeAssignment({ role: "administrador", careerId: null })]
-    expect((await create("facultad", { nombre: "F" })).status).toBe(299)
+    expect((await create("facultad", { nombre: "F" })).json?.errors).toEqual({ campus: ["El campo campus es obligatorio."], logo: ["El campo logotipo es obligatorio."] })
     expect((await create("periodo", { starts_on: "next monday", ends_on: "2027-03-20" })).status).toBe(299)
-    expect(forwarded).toHaveLength(2)
+    expect(forwarded).toHaveLength(1)
   })
 })
 
@@ -225,7 +308,7 @@ describe("PATCH /api/v1/admin/academic/{entity}/{record}", () => {
     expect((await update("carrera", CAREER, { ...careerBody, nombre: "Otra", confirm_purge: true })).status).toBe(200)
   })
 
-  it("updates a faculty and syncs every career of it, but leaves a logo upload to Laravel", async () => {
+  it("updates a faculty and syncs every career of it", async () => {
     expect((await update("facultad", FACULTY, { nombre: "Facultad renovada", campus: "Campus Laguacoto", catalog_libraries: ["UEB"] })).status).toBe(200)
     expect(audits[0].metadata).toEqual({
       changed_fields: "Nombre, Bibliotecas de Koha",
@@ -235,7 +318,6 @@ describe("PATCH /api/v1/admin/academic/{entity}/{record}", () => {
       after_catalog_libraries: "UEB",
     })
     expect(log).toContain(`sync:false:${CAREER}`)
-    expect((await update("facultad", FACULTY, { nombre: "F", campus: "Campus Laguacoto", logo: "archivo" })).status).toBe(299)
   })
 
   it("locks a period while its convocation runs and asks before regenerating its syllabi", async () => {

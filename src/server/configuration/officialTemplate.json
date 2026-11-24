@@ -1,0 +1,1014 @@
+{
+    "version": 2,
+    "document": {
+        "paper": "letter",
+        "orientation": "portrait",
+        "margin_cm": 1.5,
+        "font_family": "Arial",
+        "line_height": 1.15,
+        "paragraph_spacing_pt": 6,
+        "sizes": {
+            "title": 14,
+            "section": 11,
+            "body": 11
+        },
+        "colors": {
+            "text": "#000000",
+            "title": "#2F5496",
+            "table_header_background": "#C3D4EA",
+            "table_header_text": "#000000",
+            "table_border": "#333333",
+            "empty_text": "#595959"
+        },
+        "title": {
+            "text": "PROGRAMA DE ASIGNATURA (SÍLABO)",
+            "bold": true,
+            "italic": false,
+            "alignment": "center"
+        },
+        "section_title": {
+            "bold": true,
+            "italic": false,
+            "alignment": "left"
+        },
+        "body": {
+            "alignment": "left"
+        },
+        "header": {
+            "logos": [
+                {
+                    "source": "institution",
+                    "height_pt": 36
+                },
+                {
+                    "source": "faculty",
+                    "height_pt": 36
+                }
+            ],
+            "left_share": 0.638
+        },
+        "empty_text": "Sin contenido",
+        "choices": {
+            "margin_cm": [
+                1.5,
+                2,
+                2.5,
+                3
+            ],
+            "title": [
+                10,
+                14,
+                16,
+                18
+            ],
+            "section": [
+                10,
+                11,
+                12,
+                14
+            ],
+            "body": [
+                10,
+                11,
+                12
+            ]
+        }
+    },
+    "variables": {
+        "nombre_facultad": {
+            "label": "Nombre de la facultad",
+            "source": "identification.faculty",
+            "sample": "Ciencias Administrativas, Gestión Empresarial e Informática"
+        },
+        "nombre_carrera": {
+            "label": "Nombre de la carrera",
+            "source": "identification.career",
+            "sample": "Software"
+        },
+        "nombre_asignatura": {
+            "label": "Nombre de la asignatura",
+            "source": "identification.subject",
+            "sample": "Asignatura de ejemplo"
+        },
+        "codigo_asignatura": {
+            "label": "Código de la asignatura",
+            "source": "identification.code",
+            "sample": "SW-P7-037"
+        },
+        "modalidad_estudio": {
+            "label": "Modalidad de estudio",
+            "source": "identification.modality",
+            "sample": "Presencial"
+        },
+        "nombre_campus": {
+            "label": "Nombre del campus",
+            "source": "identification.campus",
+            "sample": "Matriz"
+        },
+        "nombre_periodo_academico": {
+            "label": "Nombre del período académico",
+            "source": "identification.period",
+            "sample": "Marzo – Julio 2026"
+        },
+        "ciclo_asignatura": {
+            "label": "Ciclo de la asignatura",
+            "source": "identification.cycle",
+            "sample": "Séptimo"
+        },
+        "codigo_paralelo": {
+            "label": "Código del paralelo",
+            "source": "identification.parallel",
+            "sample": "A"
+        },
+        "jornada_paralelo": {
+            "label": "Jornada del paralelo",
+            "source": "identification.shift",
+            "sample": "Matutina"
+        },
+        "prerrequisitos_asignatura": {
+            "label": "Prerrequisitos de la asignatura",
+            "source": "identification.prerequisites",
+            "sample": "SW-P6-032"
+        },
+        "correquisitos_asignatura": {
+            "label": "Correquisitos de la asignatura",
+            "source": "identification.corequisites",
+            "sample": "Ninguno"
+        },
+        "unidad_organizacion_curricular": {
+            "label": "Unidad de organización curricular",
+            "source": "identification.organization_unit",
+            "sample": "Unidad profesional"
+        },
+        "horas_docencia": {
+            "label": "Horas de docencia (ACD)",
+            "source": "identification.hours_ac",
+            "format": "number",
+            "sample": "32"
+        },
+        "horas_practicas": {
+            "label": "Horas de prácticas (APE)",
+            "source": "identification.hours_pae",
+            "format": "number",
+            "sample": "16"
+        },
+        "horas_autonomas": {
+            "label": "Horas de aprendizaje autónomo (AA)",
+            "source": "identification.hours_aa",
+            "format": "number",
+            "sample": "48"
+        },
+        "semanas_periodo": {
+            "label": "Semanas de clase del período",
+            "source": "identification.teaching_weeks",
+            "format": "number",
+            "sample": "16"
+        },
+        "horas_totales": {
+            "label": "Total de horas del período",
+            "source": "identification.total_hours",
+            "format": "number",
+            "sample": "96"
+        },
+        "creditos_asignatura": {
+            "label": "Créditos de la asignatura",
+            "source": "identification.credits",
+            "format": "number",
+            "sample": "2"
+        },
+        "nombre_docente": {
+            "label": "Nombre del docente",
+            "source": "identification.teacher",
+            "sample": "NOMBRE DEL DOCENTE"
+        },
+        "correo_docente": {
+            "label": "Correo institucional del docente",
+            "source": "identification.email",
+            "sample": "docente@ueb.edu.ec"
+        },
+        "formacion_docente": {
+            "label": "Formación y experiencia del docente",
+            "source": "identification.formation",
+            "sample": "Formación y experiencia en el área de la asignatura."
+        },
+        "marca_unidad_basica": {
+            "label": "Marca de unidad básica",
+            "source": "identification.organization_unit",
+            "equals": "Unidad básica"
+        },
+        "marca_unidad_profesional": {
+            "label": "Marca de unidad profesional",
+            "source": "identification.organization_unit",
+            "equals": "Unidad profesional",
+            "sample": "X"
+        },
+        "marca_unidad_titulacion": {
+            "label": "Marca de unidad de integración curricular",
+            "source": "identification.organization_unit",
+            "equals": "Unidad de integración curricular"
+        },
+        "fecha_entrega": {
+            "label": "Fecha de entrega del sílabo",
+            "source": "approval.submitted_on",
+            "sample": "14-08-2026"
+        },
+        "nombre_coordinador": {
+            "label": "Nombre de quien aprobó (coordinación)",
+            "source": "approval.coordinator",
+            "sample": "Ing. Galuth García"
+        },
+        "fecha_revision": {
+            "label": "Fecha de aprobación de coordinación",
+            "source": "approval.approved_on",
+            "sample": "14-08-2026"
+        },
+        "nombre_bibliotecario": {
+            "label": "Nombre de quien verificó la bibliografía",
+            "source": "approval.librarian",
+            "sample": "Lic. Nombre Apellido"
+        },
+        "fecha_verificacion": {
+            "label": "Fecha de verificación de biblioteca",
+            "source": "approval.verified_on",
+            "sample": "14-08-2026"
+        },
+        "firma_docente": {
+            "label": "Firma del docente",
+            "source": "signature.docente"
+        },
+        "firma_coordinador": {
+            "label": "Firma de coordinación",
+            "source": "signature.coordinacion"
+        },
+        "firma_bibliotecario": {
+            "label": "Firma de biblioteca",
+            "source": "signature.biblioteca"
+        }
+    },
+    "blocks": {
+        "identificacion": {
+            "label": "Identificación institucional",
+            "value": {
+                "disability": {
+                    "type": "object",
+                    "properties": {
+                        "answer": {
+                            "type": "string",
+                            "oneOf": [
+                                {
+                                    "const": "si",
+                                    "title": "Sí"
+                                },
+                                {
+                                    "const": "no",
+                                    "title": "No"
+                                }
+                            ],
+                            "title": "Estudiantes con discapacidad",
+                            "errorMessage": "La respuesta sobre estudiantes con discapacidad no es válida."
+                        },
+                        "type": {
+                            "type": "string",
+                            "maxLength": 500,
+                            "title": "Tipo de discapacidad",
+                            "errorMessage": "El texto sobre discapacidad admite hasta 500 caracteres.",
+                            "keep_if": {
+                                "value": "answer",
+                                "equals": "si"
+                            }
+                        },
+                        "description": {
+                            "type": "string",
+                            "maxLength": 500,
+                            "title": "Breve descripción",
+                            "errorMessage": "El texto sobre discapacidad admite hasta 500 caracteres.",
+                            "keep_if": {
+                                "value": "answer",
+                                "equals": "si"
+                            },
+                            "multiline": true
+                        }
+                    }
+                }
+            },
+            "layout": [
+                "<table>",
+                "<tr><th colspan=\"9\" data-width=\"144,66,38,28,50,25,109,84,81\" style=\"background:#4F81BD;color:#FFFFFF;font-weight:bold\">FACULTAD: <span data-variable=\"nombre_facultad\"></span></th></tr>",
+                "<tr><th style=\"background:#C3D4EA;font-weight:bold\">CARRERA:</th><td colspan=\"4\"><span data-variable=\"nombre_carrera\"></span></td><th colspan=\"2\" style=\"background:#C3D4EA;font-weight:bold\">MODALIDAD DE ESTUDIO O APRENDIZAJE</th><td colspan=\"2\"><span data-variable=\"modalidad_estudio\"></span></td></tr>",
+                "<tr><th colspan=\"2\" style=\"background:#C3D4EA;font-weight:bold\">CAMPUS UNIVERSITARIO:</th><td colspan=\"7\"><span data-variable=\"nombre_campus\"></span></td></tr>",
+                "<tr><th colspan=\"2\" style=\"background:#C3D4EA;font-weight:bold\">ASIGNATURA</th><th colspan=\"4\" style=\"background:#C3D4EA;font-weight:bold\">PERÍODO ACADÉMICO</th><th style=\"background:#C3D4EA;font-weight:bold\">CICLO</th><th style=\"background:#C3D4EA;font-weight:bold\">PARALELO</th><th style=\"background:#C3D4EA;font-weight:bold\">JORNADA</th></tr>",
+                "<tr><td colspan=\"2\"><span data-variable=\"nombre_asignatura\"></span></td><td colspan=\"4\"><span data-variable=\"nombre_periodo_academico\"></span></td><td><span data-variable=\"ciclo_asignatura\"></span></td><td><span data-variable=\"codigo_paralelo\"></span></td><td><span data-variable=\"jornada_paralelo\"></span></td></tr>",
+                "<tr><th style=\"background:#C3D4EA;font-weight:bold\">CÓDIGO:</th><td><span data-variable=\"codigo_asignatura\"></span></td><th colspan=\"3\" style=\"background:#C3D4EA;font-weight:bold\">PRERREQUISITOS:</th><td colspan=\"2\"><span data-variable=\"prerrequisitos_asignatura\"></span></td><th style=\"background:#C3D4EA;font-weight:bold\">CORREQUISITOS:</th><td><span data-variable=\"correquisitos_asignatura\"></span></td></tr>",
+                "<tr><th colspan=\"2\" rowspan=\"3\" style=\"background:#C3D4EA;font-weight:bold\">UNIDAD DE ORGANIZACIÓN CURRICULAR</th><td colspan=\"6\">Unidad Básica</td><td><span data-variable=\"marca_unidad_basica\"></span></td></tr>",
+                "<tr><td colspan=\"6\">Unidad Profesional</td><td><span data-variable=\"marca_unidad_profesional\"></span></td></tr>",
+                "<tr><td colspan=\"6\">Unidad de Titulación</td><td><span data-variable=\"marca_unidad_titulacion\"></span></td></tr>",
+                "<tr><th colspan=\"2\" rowspan=\"3\" style=\"background:#C3D4EA;font-weight:bold\">ESTUDIANTES CON DISCAPACIDAD</th><td rowspan=\"2\">Sí</td><td rowspan=\"2\"><span data-slot='{\"value\":\"disability.answer\",\"option\":\"si\"}'></span></td><td colspan=\"5\">Tipo de discapacidad: <span data-slot='{\"value\":\"disability.type\"}'></span></td></tr>",
+                "<tr><td colspan=\"5\">Breve descripción: <span data-slot='{\"value\":\"disability.description\"}'></span></td></tr>",
+                "<tr><td>No</td><td><span data-slot='{\"value\":\"disability.answer\",\"option\":\"no\"}'></span></td><td colspan=\"5\"></td></tr>",
+                "<tr><th colspan=\"2\" rowspan=\"4\" style=\"background:#C3D4EA;font-weight:bold\">COMPONENTES DE APRENDIZAJE EN EL PERÍODO ACADÉMICO</th><th colspan=\"3\" style=\"background:#C3D4EA;font-weight:bold\">HORAS DEL DOCENTE</th><th colspan=\"3\" style=\"background:#C3D4EA;font-weight:bold\">HORAS DEL ESTUDIANTE</th><th rowspan=\"2\" style=\"background:#C3D4EA;font-weight:bold\">TOTAL DE HORAS POR PERÍODO</th></tr>",
+                "<tr><th colspan=\"3\" style=\"background:#C3D4EA;font-weight:bold\">HORAS DE DOCENCIA (ACD)</th><th colspan=\"2\" style=\"background:#C3D4EA;font-weight:bold\">HORAS DE PRÁCTICAS DE APLICACIÓN O EXPERIMENTACIÓN (APE)</th><th style=\"background:#C3D4EA;font-weight:bold\">HORAS DE APRENDIZAJE AUTÓNOMO (AA)</th></tr>",
+                "<tr><td colspan=\"3\"><span data-variable=\"horas_docencia\"></span></td><td colspan=\"2\"><span data-variable=\"horas_practicas\"></span></td><td><span data-variable=\"horas_autonomas\"></span></td><td><span data-variable=\"horas_totales\"></span></td></tr>",
+                "<tr><th colspan=\"6\" style=\"background:#C3D4EA;font-weight:bold\">TOTAL, CRÉDITOS</th><td><span data-variable=\"creditos_asignatura\"></span></td></tr>",
+                "<tr><th colspan=\"2\" style=\"background:#C3D4EA;font-weight:bold\">NOMBRE DEL DOCENTE</th><td colspan=\"5\"><span data-variable=\"nombre_docente\"></span></td><th style=\"background:#C3D4EA;font-weight:bold\">CORREO INSTITUCIONAL</th><td><span data-variable=\"correo_docente\"></span></td></tr>",
+                "<tr><th colspan=\"9\" style=\"background:#C3D4EA;font-weight:bold\">FORMACIÓN Y EXPERIENCIA ACADÉMICA – INVESTIGATIVA</th></tr>",
+                "<tr><td colspan=\"9\"><span data-variable=\"formacion_docente\"></span></td></tr>",
+                "</table>"
+            ]
+        },
+        "unidades": {
+            "label": "Distribución y planificación de las unidades",
+            "value": {
+                "units": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 8,
+                    "initial": 4,
+                    "title": "unidad",
+                    "errorMessage": "La planificación admite de 1 a 8 unidades.",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "nombre": {
+                                "type": "string",
+                                "maxLength": 1000,
+                                "title": "Nombre de la unidad",
+                                "errorMessage": "El nombre de la unidad supera los 1000 caracteres."
+                            },
+                            "resultado": {
+                                "type": "string",
+                                "maxLength": 1000,
+                                "title": "Resultados de aprendizaje",
+                                "errorMessage": "El resultado de aprendizaje supera los 1000 caracteres.",
+                                "multiline": true
+                            },
+                            "semanas": {
+                                "type": "array",
+                                "minItems": 0,
+                                "maxItems": 52,
+                                "initial": 4,
+                                "title": "semana",
+                                "errorMessage": "Las unidades suman más semanas que el período.",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "contenidos": {
+                                            "type": "string",
+                                            "maxLength": 1000,
+                                            "errorMessage": "Una celda de la semana supera los 1000 caracteres.",
+                                            "title": "Contenidos temáticos",
+                                            "multiline": true
+                                        },
+                                        "acd_h": {
+                                            "type": "number",
+                                            "maximum": 999.99,
+                                            "multipleOf": 0.01,
+                                            "title": "ACD",
+                                            "errorMessage": "Las horas por semana deben ser un número."
+                                        },
+                                        "ape_h": {
+                                            "type": "number",
+                                            "maximum": 999.99,
+                                            "multipleOf": 0.01,
+                                            "title": "APE",
+                                            "errorMessage": "Las horas por semana deben ser un número."
+                                        },
+                                        "aa_h": {
+                                            "type": "number",
+                                            "maximum": 999.99,
+                                            "multipleOf": 0.01,
+                                            "title": "AA",
+                                            "errorMessage": "Las horas por semana deben ser un número."
+                                        },
+                                        "acd": {
+                                            "type": "string",
+                                            "maxLength": 1000,
+                                            "errorMessage": "Una celda de la semana supera los 1000 caracteres.",
+                                            "title": "Aprendizaje en contacto con el docente (ACD)",
+                                            "multiline": true
+                                        },
+                                        "ape": {
+                                            "type": "string",
+                                            "maxLength": 1000,
+                                            "errorMessage": "Una celda de la semana supera los 1000 caracteres.",
+                                            "title": "Aprendizaje práctico-experimental (APE)",
+                                            "multiline": true
+                                        },
+                                        "aa": {
+                                            "type": "string",
+                                            "maxLength": 1000,
+                                            "errorMessage": "Una celda de la semana supera los 1000 caracteres.",
+                                            "title": "Aprendizaje autónomo (AA)",
+                                            "multiline": true
+                                        },
+                                        "evaluacion": {
+                                            "type": "string",
+                                            "maxLength": 1000,
+                                            "errorMessage": "Una celda de la semana supera los 1000 caracteres.",
+                                            "title": "Evaluación de los aprendizajes",
+                                            "multiline": true
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "rules": [
+                {
+                    "code": "semanas_maximas",
+                    "on": "save",
+                    "message": "Las unidades suman más semanas que el período.",
+                    "checks": [
+                        {
+                            "count": "units.*.semanas",
+                            "max": {
+                                "variable": "semanas_periodo"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "code": "unidades_sin_nombre",
+                    "on": "submit",
+                    "message": "Escriba el nombre y el resultado de aprendizaje de cada unidad: {detail}.",
+                    "hint": "Cada unidad necesita su nombre y su resultado de aprendizaje para poder enviar",
+                    "checks": [
+                        {
+                            "label": "Nombres",
+                            "filled": "units.*.nombre",
+                            "equals": {
+                                "count": "units"
+                            }
+                        },
+                        {
+                            "label": "Resultados",
+                            "filled": "units.*.resultado",
+                            "equals": {
+                                "count": "units"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "code": "unidades_sin_semanas",
+                    "on": "submit",
+                    "message": "Cada unidad necesita al menos una semana: {detail}.",
+                    "hint": "Cada unidad necesita al menos una semana para poder enviar",
+                    "checks": [
+                        {
+                            "label": "Unidades con semanas",
+                            "filled": "units.*.semanas",
+                            "equals": {
+                                "count": "units"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "code": "semanas_unidades_incompletas",
+                    "on": "submit",
+                    "message": "Las unidades deben repartir las {expected} semanas del período: tienen {actual}.",
+                    "checks": [
+                        {
+                            "label": "Semanas",
+                            "count": "units.*.semanas",
+                            "equals": {
+                                "variable": "semanas_periodo"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "code": "horas_unidades_no_coinciden",
+                    "on": "submit",
+                    "message": "Las horas de las unidades deben sumar las de la asignatura: {detail}.",
+                    "hint": "Las horas deben coincidir con las de la asignatura para poder enviar",
+                    "checks": [
+                        {
+                            "label": "ACD",
+                            "sum": "units.*.semanas.*.acd_h",
+                            "equals": {
+                                "variable": "horas_docencia"
+                            }
+                        },
+                        {
+                            "label": "APE",
+                            "sum": "units.*.semanas.*.ape_h",
+                            "equals": {
+                                "variable": "horas_practicas"
+                            }
+                        },
+                        {
+                            "label": "AA",
+                            "sum": "units.*.semanas.*.aa_h",
+                            "equals": {
+                                "variable": "horas_autonomas"
+                            }
+                        }
+                    ]
+                }
+            ],
+            "layout": [
+                "<section data-repeat='{\"value\":\"units\"}'>",
+                "<table>",
+                "<tr><th rowspan=\"2\" style=\"background:#C3D4EA;text-align:center\"><strong><span style=\"color:#365F91\">Unidad No.</span></strong></th><th rowspan=\"2\" style=\"background:#C3D4EA;text-align:center\"><strong><span style=\"color:#365F91\"><span data-slot='{\"index\":true}'></span></span></strong></th><th colspan=\"3\" style=\"background:#C3D4EA;text-align:center\"><strong><span style=\"color:#365F91\">Nombre de la unidad</span></strong></th><td colspan=\"4\"><span data-slot='{\"value\":\"nombre\"}'></span></td></tr>",
+                "<tr><th colspan=\"3\" style=\"background:#C3D4EA;text-align:center\"><strong><span style=\"color:#365F91\">Resultados de aprendizaje</span></strong></th><td colspan=\"4\"><span data-slot='{\"value\":\"resultado\"}'></span></td></tr>",
+                "<tr><th rowspan=\"3\" style=\"background:#C3D4EA;text-align:center\"><strong><span style=\"color:#365F91\">Contenidos temáticos de la unidad</span></strong></th><th rowspan=\"3\" style=\"background:#C3D4EA;text-align:center\"><strong><span style=\"color:#365F91\">Semanas (<span data-variable=\"semanas_periodo\"></span>)</span></strong></th><th colspan=\"3\" style=\"background:#C3D4EA;text-align:center\"><strong><span style=\"color:#365F91\">Horas por semana — Organización del aprendizaje</span></strong></th><th colspan=\"3\" style=\"background:#C3D4EA;text-align:center\"><strong><span style=\"color:#365F91\">ACTIVIDADES DE APRENDIZAJE</span></strong></th><th rowspan=\"3\" style=\"background:#C3D4EA;text-align:center\"><strong><span style=\"color:#365F91\">Evaluación de los aprendizajes</span></strong></th></tr>",
+                "<tr><th style=\"background:#C3D4EA;text-align:center\"><strong><span style=\"color:#365F91\">DOCENCIA</span></strong></th><th colspan=\"2\" style=\"background:#C3D4EA;text-align:center\"><strong><span style=\"color:#365F91\">ESTUDIANTE</span></strong></th><th rowspan=\"2\" style=\"background:#C3D4EA;text-align:center\"><strong><span style=\"color:#365F91\">Aprendizaje en contacto con el docente (ACD)</span></strong></th><th rowspan=\"2\" style=\"background:#C3D4EA;text-align:center\"><strong><span style=\"color:#365F91\">Aprendizaje práctico-experimental (APE)</span></strong></th><th rowspan=\"2\" style=\"background:#C3D4EA;text-align:center\"><strong><span style=\"color:#365F91\">Aprendizaje autónomo (AA)</span></strong></th></tr>",
+                "<tr><th style=\"background:#C3D4EA;text-align:center\"><strong><span style=\"color:#365F91\">ACD</span></strong></th><th style=\"background:#C3D4EA;text-align:center\"><strong><span style=\"color:#365F91\">APE</span></strong></th><th style=\"background:#C3D4EA;text-align:center\"><strong><span style=\"color:#365F91\">AA</span></strong></th></tr>",
+                "<tr data-repeat='{\"value\":\"semanas\"}' data-band=\"#E1E9F4\"><td><span data-slot='{\"value\":\"contenidos\"}'></span></td><td style=\"text-align:center\"><span data-slot='{\"counter\":\"semana\"}'></span></td><td style=\"text-align:center\"><span data-slot='{\"value\":\"acd_h\"}'></span></td><td style=\"text-align:center\"><span data-slot='{\"value\":\"ape_h\"}'></span></td><td style=\"text-align:center\"><span data-slot='{\"value\":\"aa_h\"}'></span></td><td><span data-slot='{\"value\":\"acd\"}'></span></td><td><span data-slot='{\"value\":\"ape\"}'></span></td><td><span data-slot='{\"value\":\"aa\"}'></span></td><td><span data-slot='{\"value\":\"evaluacion\"}'></span></td></tr>",
+                "<tr><th colspan=\"2\" style=\"background:#C3D4EA;text-align:right\"><strong><span style=\"color:#365F91\">Total, horas</span></strong></th><th style=\"background:#C3D4EA;text-align:center\"><strong><span style=\"color:#365F91\"><span data-slot='{\"sum\":\"semanas.*.acd_h\"}'></span></span></strong></th><th style=\"background:#C3D4EA;text-align:center\"><strong><span style=\"color:#365F91\"><span data-slot='{\"sum\":\"semanas.*.ape_h\"}'></span></span></strong></th><th style=\"background:#C3D4EA;text-align:center\"><strong><span style=\"color:#365F91\"><span data-slot='{\"sum\":\"semanas.*.aa_h\"}'></span></span></strong></th><th colspan=\"4\" style=\"background:#C3D4EA;text-align:center\"></th></tr>",
+                "</table>",
+                "<p></p>",
+                "</section>"
+            ]
+        },
+        "evaluacion": {
+            "label": "Indicadores de evaluación por parcial",
+            "layout": [
+                "<table data-when='{\"variable\":\"horas_practicas\",\"zero\":false}'>",
+                "<tr><th rowspan=\"2\" style=\"background:#C3D4EA;font-weight:bold\">INDICADORES</th><th colspan=\"2\" style=\"background:#C3D4EA;font-weight:bold\">PRIMER PARCIAL</th><th colspan=\"2\" style=\"background:#C3D4EA;font-weight:bold\">SEGUNDO PARCIAL</th></tr>",
+                "<tr><th style=\"background:#C3D4EA;font-weight:bold\">(PUNTOS)</th><th style=\"background:#C3D4EA;font-weight:bold\">PONDERACIÓN</th><th style=\"background:#C3D4EA;font-weight:bold\">(PUNTOS)</th><th style=\"background:#C3D4EA;font-weight:bold\">PONDERACIÓN</th></tr>",
+                "<tr><th style=\"background:#C3D4EA;font-weight:bold\">Aprendizaje en contacto con el docente</th><td>2.5 PUNTOS</td><td>1.25</td><td>2.5 PUNTOS</td><td>1.25</td></tr>",
+                "<tr><th style=\"background:#C3D4EA;font-weight:bold\">Aprendizaje práctico-experimental</th><td>2.0 PUNTOS</td><td>1.0</td><td>2.0 PUNTOS</td><td>1.0</td></tr>",
+                "<tr><th style=\"background:#C3D4EA;font-weight:bold\">Aprendizaje autónomo</th><td>2.0 PUNTOS</td><td>1.0</td><td>2.0 PUNTOS</td><td>1.0</td></tr>",
+                "<tr><th style=\"background:#C3D4EA;font-weight:bold\">Evaluación parcial de los aprendizajes</th><td>3.5 PUNTOS</td><td>1.75</td><td>3.5 PUNTOS</td><td>1.75</td></tr>",
+                "<tr><th style=\"background:#C3D4EA;font-weight:bold\">TOTAL</th><td>10 PUNTOS</td><td>5 PUNTOS</td><td>10 PUNTOS</td><td>5 PUNTOS</td></tr>",
+                "</table>",
+                "<table data-when='{\"variable\":\"horas_practicas\",\"zero\":true}'>",
+                "<tr><th rowspan=\"2\" style=\"background:#C3D4EA;font-weight:bold\">INDICADORES</th><th colspan=\"2\" style=\"background:#C3D4EA;font-weight:bold\">PRIMER PARCIAL</th><th colspan=\"2\" style=\"background:#C3D4EA;font-weight:bold\">SEGUNDO PARCIAL</th></tr>",
+                "<tr><th style=\"background:#C3D4EA;font-weight:bold\">(PUNTOS)</th><th style=\"background:#C3D4EA;font-weight:bold\">PONDERACIÓN</th><th style=\"background:#C3D4EA;font-weight:bold\">(PUNTOS)</th><th style=\"background:#C3D4EA;font-weight:bold\">PONDERACIÓN</th></tr>",
+                "<tr><th style=\"background:#C3D4EA;font-weight:bold\">Aprendizaje en contacto con el docente</th><td>3.5 PUNTOS</td><td>1.75</td><td>3.5 PUNTOS</td><td>1.75</td></tr>",
+                "<tr><th style=\"background:#C3D4EA;font-weight:bold\">Aprendizaje autónomo</th><td>3.0 PUNTOS</td><td>1.5</td><td>3.0 PUNTOS</td><td>1.5</td></tr>",
+                "<tr><th style=\"background:#C3D4EA;font-weight:bold\">Evaluación parcial de los aprendizajes</th><td>3.5 PUNTOS</td><td>1.75</td><td>3.5 PUNTOS</td><td>1.75</td></tr>",
+                "<tr><th style=\"background:#C3D4EA;font-weight:bold\">TOTAL</th><td>10 PUNTOS</td><td>5 PUNTOS</td><td>10 PUNTOS</td><td>5 PUNTOS</td></tr>",
+                "</table>"
+            ]
+        },
+        "bibliografia": {
+            "label": "Bibliografía",
+            "value": {
+                "libros": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 40,
+                    "initial": 1,
+                    "title": "libro",
+                    "errorMessage": "La bibliografía admite de 1 a 40 libros.",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "autor": {
+                                "type": "string",
+                                "maxLength": 1000,
+                                "title": "Autor",
+                                "errorMessage": "El dato «Autor» del libro supera los 1000 caracteres."
+                            },
+                            "titulo": {
+                                "type": "string",
+                                "maxLength": 1000,
+                                "title": "Título",
+                                "errorMessage": "El dato «Título» del libro supera los 1000 caracteres."
+                            },
+                            "anio": {
+                                "type": "string",
+                                "maxLength": 1000,
+                                "title": "Año",
+                                "errorMessage": "El dato «Año» del libro supera los 1000 caracteres."
+                            },
+                            "ciudad": {
+                                "type": "string",
+                                "maxLength": 1000,
+                                "title": "Ciudad",
+                                "errorMessage": "El dato «Ciudad» del libro supera los 1000 caracteres."
+                            },
+                            "editorial": {
+                                "type": "string",
+                                "maxLength": 1000,
+                                "title": "Editorial",
+                                "errorMessage": "El dato «Editorial» del libro supera los 1000 caracteres."
+                            },
+                            "isbn": {
+                                "type": "string",
+                                "maxLength": 1000,
+                                "title": "ISBN",
+                                "errorMessage": "El dato «ISBN» del libro supera los 1000 caracteres."
+                            },
+                            "codigo": {
+                                "type": "string",
+                                "maxLength": 1000,
+                                "title": "Código",
+                                "errorMessage": "El dato «Código» del libro supera los 1000 caracteres."
+                            }
+                        }
+                    }
+                }
+            },
+            "rules": [
+                {
+                    "code": "libros_sin_titulo",
+                    "on": "submit",
+                    "message": "Escriba el título de cada libro: {detail}.",
+                    "hint": "Cada libro necesita su título para poder enviar",
+                    "checks": [
+                        {
+                            "label": "Títulos",
+                            "filled": "libros.*.titulo",
+                            "equals": {
+                                "count": "libros"
+                            }
+                        }
+                    ]
+                }
+            ],
+            "catalog": {
+                "list": "libros",
+                "map": {
+                    "author": "autor",
+                    "title": "titulo",
+                    "year": "anio",
+                    "place": "ciudad",
+                    "publisher": "editorial",
+                    "isbn": "isbn",
+                    "format": "codigo"
+                }
+            },
+            "layout": [
+                "<table>",
+                "<tr><th style=\"background:#C3D4EA;font-weight:bold\">Autor</th><th style=\"background:#C3D4EA;font-weight:bold\">Título</th><th style=\"background:#C3D4EA;font-weight:bold\">Año</th><th style=\"background:#C3D4EA;font-weight:bold\">Ciudad</th><th style=\"background:#C3D4EA;font-weight:bold\">Editorial</th><th style=\"background:#C3D4EA;font-weight:bold\">ISBN</th><th style=\"background:#C3D4EA;font-weight:bold\">Código</th></tr>",
+                "<tr data-repeat='{\"value\":\"libros\"}'><td><span data-slot='{\"value\":\"autor\"}'></span></td><td><span data-slot='{\"value\":\"titulo\"}'></span></td><td><span data-slot='{\"value\":\"anio\"}'></span></td><td><span data-slot='{\"value\":\"ciudad\"}'></span></td><td><span data-slot='{\"value\":\"editorial\"}'></span></td><td><span data-slot='{\"value\":\"isbn\"}'></span></td><td><span data-slot='{\"value\":\"codigo\"}'></span></td></tr>",
+                "</table>"
+            ]
+        }
+    },
+    "required_sections": [
+        "identificacion",
+        "descripcion",
+        "objetivos",
+        "resultados",
+        "habilidades",
+        "planificacion",
+        "metodologia",
+        "evaluacion",
+        "perfil_egreso",
+        "etica",
+        "bibliografia",
+        "revision"
+    ],
+    "library_sections": [
+        "bibliografia"
+    ],
+    "presets": [
+        {
+            "key": "identificacion",
+            "label": "Identificación institucional",
+            "field": "asignatura"
+        },
+        {
+            "key": "planificacion",
+            "label": "Distribución y planificación de las unidades curriculares",
+            "field": "unidades"
+        },
+        {
+            "key": "bibliografia_basica",
+            "label": "Bibliografía básica",
+            "field": "bibliografia"
+        },
+        {
+            "key": "bibliografia_complementaria",
+            "label": "Bibliografía complementaria",
+            "field": "bibliografia_complementaria"
+        },
+        {
+            "key": "verificacion_bibliografia",
+            "label": "Bibliografía verificada por",
+            "field": "verificacion_bibliografia"
+        },
+        {
+            "key": "firmas",
+            "label": "Firmas de revisión y aprobación",
+            "field": "firmas"
+        }
+    ],
+    "sections": [
+        {
+            "key": "identificacion",
+            "title": "1. Identificación institucional",
+            "orientation": "portrait",
+            "fields": [
+                {
+                    "key": "asignatura",
+                    "label": "",
+                    "quien_llena": "carrera",
+                    "content": [
+                        "<div data-block=\"identificacion\" data-props=\"{}\" data-value=\"{}\"></div>"
+                    ]
+                }
+            ]
+        },
+        {
+            "key": "descripcion",
+            "title": "2. Descripción de la asignatura",
+            "orientation": "portrait",
+            "fields": [
+                {
+                    "key": "descripcion",
+                    "label": "Descripción",
+                    "quien_llena": "carrera",
+                    "content": [
+                        "<p></p>"
+                    ]
+                }
+            ]
+        },
+        {
+            "key": "objetivos",
+            "title": "3. Objetivo(s) de la asignatura",
+            "orientation": "portrait",
+            "fields": [
+                {
+                    "key": "objetivo_general",
+                    "label": "Objetivo general",
+                    "quien_llena": "carrera",
+                    "content": [
+                        "<p></p>"
+                    ]
+                },
+                {
+                    "key": "objetivos_especificos",
+                    "label": "Objetivos específicos",
+                    "quien_llena": "carrera",
+                    "content": [
+                        "<p></p>"
+                    ]
+                }
+            ]
+        },
+        {
+            "key": "resultados",
+            "title": "4. Resultados de aprendizaje",
+            "orientation": "portrait",
+            "fields": [
+                {
+                    "key": "resultados_aprendizaje",
+                    "label": "Resultados de aprendizaje",
+                    "quien_llena": "carrera",
+                    "content": [
+                        "<p></p>"
+                    ]
+                }
+            ]
+        },
+        {
+            "key": "habilidades",
+            "title": "5. Habilidades blandas de la asignatura",
+            "orientation": "portrait",
+            "fields": [
+                {
+                    "key": "habilidades_blandas",
+                    "label": "Habilidades blandas",
+                    "quien_llena": "carrera",
+                    "content": [
+                        "<p></p>"
+                    ]
+                }
+            ]
+        },
+        {
+            "key": "planificacion",
+            "title": "6. Distribución y planificación de las unidades curriculares",
+            "orientation": "landscape",
+            "fields": [
+                {
+                    "key": "unidades",
+                    "label": "Unidades",
+                    "quien_llena": "carrera",
+                    "content": [
+                        "<div data-block=\"unidades\" data-props=\"{}\" data-value=\"{}\"></div>"
+                    ]
+                }
+            ]
+        },
+        {
+            "key": "metodologia",
+            "title": "7. Metodología y ambientes de aprendizaje",
+            "orientation": "portrait",
+            "fields": [
+                {
+                    "key": "metodologia",
+                    "label": "7.1 Métodos de enseñanza – aprendizaje",
+                    "quien_llena": "carrera",
+                    "content": [
+                        "<p></p>"
+                    ]
+                },
+                {
+                    "key": "tecnicas_ensenanza",
+                    "label": "7.2 Técnicas de enseñanza",
+                    "quien_llena": "carrera",
+                    "content": [
+                        "<p></p>"
+                    ]
+                },
+                {
+                    "key": "recursos_medios",
+                    "label": "7.3 Recursos y medios didácticos",
+                    "quien_llena": "carrera",
+                    "content": [
+                        "<p></p>"
+                    ]
+                },
+                {
+                    "key": "herramientas_tic",
+                    "label": "7.4 Herramientas pedagógicas, tecnologías de aprendizaje y conocimiento e inteligencia artificial en los procesos de enseñanza-aprendizaje",
+                    "quien_llena": "carrera",
+                    "content": [
+                        "<p></p>"
+                    ]
+                },
+                {
+                    "key": "ambientes_aprendizaje",
+                    "label": "7.5 Ambientes o escenarios de aprendizaje",
+                    "quien_llena": "carrera",
+                    "content": [
+                        "<p></p>"
+                    ]
+                }
+            ]
+        },
+        {
+            "key": "evaluacion",
+            "title": "8. Evaluación de los aprendizajes",
+            "orientation": "portrait",
+            "fields": [
+                {
+                    "key": "indicadores_evaluacion",
+                    "label": "Indicadores por parcial",
+                    "quien_llena": "institucional",
+                    "content": [
+                        "<div data-block=\"evaluacion\" data-props=\"{}\" data-value=\"{}\"></div>"
+                    ]
+                },
+                {
+                    "key": "componentes_evaluacion",
+                    "label": "Escala de valoración",
+                    "quien_llena": "institucional",
+                    "content": [
+                        "<table>",
+                        "<tr><th style=\"background:#C3D4EA;font-weight:bold\">ESCALA CUALITATIVA</th><th style=\"background:#C3D4EA;font-weight:bold\">ESCALA CUANTITATIVA GRADO Y POSGRADO</th><th style=\"background:#C3D4EA;font-weight:bold\">EQUIVALENCIAS</th><th style=\"background:#C3D4EA;font-weight:bold\">VALORACIÓN DE LA ASIGNATURA</th></tr>",
+                        "<tr><td>A</td><td>Igual a 10 o mayor o igual que 9</td><td>Excelente</td><td>Aprueba</td></tr>",
+                        "<tr><td>B</td><td>Menor que 9 o mayor o igual que 8</td><td>Muy Bueno</td><td>Aprueba</td></tr>",
+                        "<tr><td>C</td><td>Menor que 8 o mayor o igual que 7</td><td>Bueno</td><td>Aprueba</td></tr>",
+                        "<tr><td>D</td><td>Menor que 7 o mayor o igual que 6</td><td>Regular</td><td>Recuperación</td></tr>",
+                        "<tr><td>E</td><td>Menos de 6</td><td>Deficiente</td><td>No aprueba</td></tr>",
+                        "</table>"
+                    ]
+                }
+            ]
+        },
+        {
+            "key": "perfil_egreso",
+            "title": "9. Relación de la asignatura con los resultados de aprendizaje del perfil de egreso de la carrera",
+            "orientation": "portrait",
+            "fields": [
+                {
+                    "key": "contribucion_perfil",
+                    "label": "Resultados de la asignatura frente a los de la carrera",
+                    "quien_llena": "carrera",
+                    "content": [
+                        "<table>",
+                        "<tr><th rowspan=\"2\" style=\"background:#C3D4EA;font-weight:bold\">Resultados de aprendizaje de la asignatura</th><th colspan=\"3\" style=\"background:#C3D4EA;font-weight:bold\">Nivel de contribución (resultados de aprendizaje del perfil de egreso de la carrera)</th><th rowspan=\"2\" style=\"background:#C3D4EA;font-weight:bold\">Resultados de aprendizaje que aportan al perfil de egreso de la carrera</th></tr>",
+                        "<tr><th style=\"background:#C3D4EA;font-weight:bold\">ALTA (A)</th><th style=\"background:#C3D4EA;font-weight:bold\">MEDIA (M)</th><th style=\"background:#C3D4EA;font-weight:bold\">BAJA (B)</th></tr>",
+                        "<tr><td></td><td></td><td></td><td></td><td></td></tr>",
+                        "</table>"
+                    ]
+                }
+            ]
+        },
+        {
+            "key": "etica",
+            "title": "10. Conducta y comportamiento ético",
+            "orientation": "portrait",
+            "fields": [
+                {
+                    "key": "conducta_etica",
+                    "label": "Conducta y comportamiento ético",
+                    "quien_llena": "institucional",
+                    "content": [
+                        "<p>Se aplicará el código de ética y políticas de acción afirmativa de la Universidad Estatal de Bolívar, además es importante compartir los principios de respeto mutuo dentro del ambiente virtual o salón de clase, entre los que se destacan los siguientes:</p>",
+                        "<ul>",
+                        "<li><strong>Puntualidad:</strong> en las clases virtuales, considerando el plan emergente de la Universidad es necesario que exista el compromiso de asistir a las video conferencias ya que estas tendrán una duración aproximada de una hora, para lo cual es importante que el estudiante revise el material proporcionado por el profesor para poder avanzar en el aprendizaje.</li>",
+                        "<li><strong>Acceso a la Video Conferencia:</strong> Se utilizará la plataforma ZOOM los estudiantes deben tener instalada en sus computadoras o teléfonos celulares, se sugiere tener activado su video cámara mientras dure la sesión on-line de la clase, de igual manera permanecer silenciado su micrófono si no va a participar verbalmente.</li>",
+                        "<li><strong>Registro de Asistencia:</strong> Los estudiantes deben especificar su Nombre y Apellido el momento de ingresar a la conferencia on-line. De igual manera active o levante la mano del sistema para pedir la palabra.</li>",
+                        "<li><strong>Respeto:</strong> En las relaciones docente-estudiante y estudiante - estudiante será exigido en todo momento, garantizando un marco de respeto a la diversidad, de tal forma que se evidencie una convivencia armónica.</li>",
+                        "<li><strong>Trabajos de investigación:</strong> Se deberá incluir las citas y referencias de los autores consultados (de acuerdo a normativas aceptadas APA)</li>",
+                        "<li><strong>Entrega de Trabajos, Talleres y Pruebas:</strong> Deberán presentarse en las fechas y horas establecidas, caso contrario se calificará con una penalización.</li>",
+                        "<li><strong>Presentación de PAE:</strong> Las Prácticas de Aplicación y Experimentación se las desarrollará de acuerdo al formato suministrado por el profesor, y se lo entregará en las fechas establecidas.</li>",
+                        "<li><strong>Trabajo en Equipo:</strong> Reconocer y practicar el trabajo en equipo, la honestidad y la justicia en el tratamiento de la información, en el ámbito profesional y corporativo</li>",
+                        "</ul>",
+                        "<p><strong>Dentro de los estándares de comportamiento</strong> se considera lo siguiente:</p>",
+                        "<ul>",
+                        "<li>La copia de tarea o trabajo ocasiona la pérdida total del porcentaje asignado a este rubro.</li>",
+                        "<li>La copia del examen de medio término se sancionará con UNO sobre diez de calificación en este rubro</li>",
+                        "<li>Todas las ideas, comentarios, frases o trabajos de otros autores deberán llevar el crédito correspondiente</li>",
+                        "<li>Se considera inadmisible lo siguiente:",
+                        "<ul>",
+                        "<li>El plagio de frases u oraciones escritas, elementos gráficos, pruebas, ideas de trabajo de otros, publicadas o no publicadas</li>",
+                        "<li>La entrega o envío de trabajos o exámenes que no son propiedad del estudiante.</li>",
+                        "<li>La falsificación de datos.</li>",
+                        "</ul>",
+                        "</li>",
+                        "<li>Las violaciones serán analizadas por el profesor, el director de carrera y el estudiante</li>",
+                        "</ul>"
+                    ]
+                }
+            ]
+        },
+        {
+            "key": "bibliografia",
+            "title": "11. Bibliografía",
+            "orientation": "portrait",
+            "fields": [
+                {
+                    "key": "bibliografia",
+                    "label": "Básica",
+                    "quien_llena": "carrera",
+                    "content": [
+                        "<div data-block=\"bibliografia\"></div>"
+                    ]
+                },
+                {
+                    "key": "bibliografia_complementaria",
+                    "label": "Complementaria",
+                    "quien_llena": "carrera",
+                    "content": [
+                        "<div data-block=\"bibliografia\"></div>"
+                    ]
+                },
+                {
+                    "key": "verificacion_bibliografia",
+                    "label": "",
+                    "quien_llena": "institucional",
+                    "content": [
+                        "<table>",
+                        "<tr><th style=\"background:#C3D4EA;font-weight:bold\">Bibliografía verificada por</th></tr>",
+                        "<tr>",
+                        "<td>",
+                        "<p>Firma:</p>",
+                        "<p><span data-variable=\"firma_bibliotecario\"></span></p>",
+                        "</td>",
+                        "</tr>",
+                        "<tr>",
+                        "<td>",
+                        "<p><span data-variable=\"nombre_bibliotecario\"></span></p>",
+                        "<p>Biblioteca</p>",
+                        "</td>",
+                        "</tr>",
+                        "<tr><td>Fecha de verificación: <span data-variable=\"fecha_verificacion\"></span></td></tr>",
+                        "</table>"
+                    ]
+                }
+            ]
+        },
+        {
+            "key": "revision",
+            "title": "Revisión y aprobación",
+            "orientation": "portrait",
+            "fields": [
+                {
+                    "key": "firmas",
+                    "label": "Revisión y aprobación",
+                    "quien_llena": "institucional",
+                    "content": [
+                        "<table>",
+                        "<tr><th style=\"background:#C3D4EA;font-weight:bold\">Elaborado por</th><th style=\"background:#C3D4EA;font-weight:bold\">Revisado y aprobado por</th></tr>",
+                        "<tr>",
+                        "<td>",
+                        "<p>Firma:</p>",
+                        "<p><span data-variable=\"firma_docente\"></span></p>",
+                        "</td>",
+                        "<td>",
+                        "<p>Firma:</p>",
+                        "<p><span data-variable=\"firma_coordinador\"></span></p>",
+                        "</td>",
+                        "</tr>",
+                        "<tr>",
+                        "<td>",
+                        "<p><span data-variable=\"nombre_docente\"></span></p>",
+                        "<p>Docente – Investigador/a</p>",
+                        "</td>",
+                        "<td>",
+                        "<p><span data-variable=\"nombre_coordinador\"></span></p>",
+                        "<p>Coordinación de Carrera</p>",
+                        "</td>",
+                        "</tr>",
+                        "<tr><td>Fecha de entrega: <span data-variable=\"fecha_entrega\"></span></td><td>Fecha de revisión: <span data-variable=\"fecha_revision\"></span></td></tr>",
+                        "</table>"
+                    ]
+                }
+            ]
+        }
+    ],
+    "response_policy": "protected"
+}
