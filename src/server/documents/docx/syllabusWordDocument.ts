@@ -143,7 +143,7 @@ function renderDocuments(context: RenderContext, section: WordSection, snapshotS
   }
 }
 
-function variablesOf(snapshot: PhpRecord): Record<string, string> {
+export function variablesOf(snapshot: PhpRecord): Record<string, string> {
   const variables = isRecord(snapshot.template_variables) ? snapshot.template_variables : {}
   return Object.fromEntries(Object.entries(variables).map(([key, value]) => [key, typeof value === "string" ? value : String(value ?? "")]))
 }

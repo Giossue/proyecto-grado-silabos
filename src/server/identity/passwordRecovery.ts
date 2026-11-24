@@ -1,5 +1,5 @@
 import "server-only"
-import { createHash } from "node:crypto"
+import { createHash, createHmac } from "node:crypto"
 import { setTimeout as sleep } from "node:timers/promises"
 import { sql, type SQL } from "drizzle-orm"
 import { db } from "@/db"
@@ -7,10 +7,12 @@ import { bcryptHash, bcryptVerify } from "../auth/bcrypt"
 import { defaultBridgeDeps } from "../auth/requireSession"
 import { clientIp, writerDepsOf, type SessionWriterDeps } from "../auth/sessionWriter"
 import { controllerJson, FORWARD, fromController, statefulRequest, type Outcome } from "../auth/statefulRequest"
-import { laravelInput, type PhpArray } from "../laravel/input"
-import { validationError } from "../laravel/responses"
+import { isPhpArray, laravelInput, laravelRequestInput, type PhpArray } from "../laravel/input"
+import { serverError, validationError } from "../laravel/responses"
 import { throttle, type RateLimiter, type Throttle } from "../laravel/throttle"
 import { validateInput, type Rule } from "../laravel/validation"
+import type { QueuedMail } from "../mail/mailables"
+import { sharedMailer } from "../mail/mailer"
 import { insertAuditEvent, type AuditEventInput } from "../operations/recordAuditEvent"
 import { acceptsBody, stringOf } from "./accountWrites"
 import { filterEmailShape, transliterate } from "./authentication"
@@ -22,6 +24,7 @@ export interface RecoveryStore {
   userByEmail(email: string): Promise<{ id: string; email: string } | null>
   resetToken(email: string): Promise<{ token: string; createdAt: number | null } | null>
   deleteResetTokens(email: string): Promise<void>
+  insertResetToken(email: string, hash: string, at: number): Promise<void>
   setPassword(userId: string, hash: string): Promise<void>
   setRememberToken(userId: string, token: string): Promise<void>
   deleteSessions(userId: string): Promise<number>
@@ -48,6 +51,7 @@ export type RecoveryDeps = {
   hashPassword: (plain: string) => Promise<string>
   timebox: Timebox
   production: () => boolean
+  sendMail: (mail: QueuedMail) => Promise<unknown>
 }
 
 type Executor = { execute(query: SQL): Promise<{ rows: unknown[]; rowCount?: number | null }> }
@@ -68,6 +72,9 @@ export function recoveryStoreOn(executor: Executor): RecoveryStore {
     },
     async deleteResetTokens(email) {
       await executor.execute(sql`delete from restablecimientos_contrasena where email = ${email}`)
+    },
+    async insertResetToken(email, hash, at) {
+      await executor.execute(sql`insert into restablecimientos_contrasena (email, token, created_at) values (${email}, ${hash}, to_timestamp(${at}))`)
     },
     async setPassword(userId, hash) {
       await executor.execute(sql`update usuarios set contrasena = ${hash} where usuario_id = ${userId}::uuid`)
@@ -140,11 +147,14 @@ export function defaultRecoveryDeps(): RecoveryDeps {
     hashPassword: (plain) => bcryptHash(plain, cost),
     timebox: laravelTimebox(200),
     production: () => process.env.APP_ENV === "production",
+    sendMail: (mail) => sharedMailer().send(mail),
   }
 }
 
 const REMEMBER_LENGTH = 60
 const RESET_SECONDS = 3600
+const RESET_THROTTLE_SECONDS = 60
+const LINK_SENT = "Si el correo pertenece a una cuenta activa, recibirá un enlace para restablecer su contraseña."
 const INVALID_LINK = "El enlace para restablecer la contraseña no es válido o ya venció."
 const EXPIRED_INVITATION = "El enlace de activación no es válido o ya venció."
 const USED_INVITATION = "El enlace de activación no es válido o ya fue utilizado."
@@ -165,7 +175,6 @@ async function guarded(request: Request, deps: RecoveryDeps, fields: string[]): 
   if (deps.production() || !acceptsBody(request)) return FORWARD
   const input = await laravelInput(request)
   if (fields.some((name) => input[name] !== undefined && input[name] !== null && typeof input[name] !== "string")) return FORWARD
-  if (typeof input.email === "string" && filterEmailShape(input.email) === "unknown") return FORWARD
   const key = `password-recovery:${transliterate(`${stringOf(input.email).toLowerCase()}|${clientIp(request) ?? ""}`)}`
   const gate = throttle(deps.throttles, { key, maxAttempts: 3, decaySeconds: 60 }, deps.writer.now)
   const limited = await gate.hit()
@@ -259,6 +268,54 @@ async function activationOutcome(request: Request, deps: RecoveryDeps): Promise<
     throw error
   }
   return gate.decorate(controllerJson({ message: "Cuenta activada. Ya puede iniciar sesión." }))
+}
+
+const phpStringCast = (value: PhpArray[string] | undefined): string => (value === undefined || value === null || value === false ? "" : value === true ? "1" : String(value))
+
+async function linkOutcome(request: Request, deps: RecoveryDeps): Promise<Outcome> {
+  const input = await laravelRequestInput(request)
+  if (isPhpArray(input.email ?? null)) return serverError()
+  const email = transliterate(phpStringCast(input.email).toLowerCase())
+  const now = deps.writer.now
+  const gates = [
+    throttle(deps.throttles, { key: `password-recovery-link:${email}|${clientIp(request) ?? ""}`, maxAttempts: 3, decaySeconds: 60 }, now),
+    throttle(deps.throttles, { key: `password-recovery-link:dia:${email}`, maxAttempts: 10, decaySeconds: 86400 }, now),
+  ]
+  for (const gate of gates) {
+    const limited = await gate.hit()
+    if (limited) return limited
+  }
+  const finish = (response: Response) => gates.reduce((decorated, gate) => gate.merge(decorated), response)
+  const shape = filterEmailShape(input.email)
+  const errors = await validateInput(
+    input,
+    { email: ["required", "string", { max: 254 }, { check: () => shape === "valid", message: "El campo correo electrónico debe ser un correo electrónico válido." }] },
+    ATTRIBUTES,
+  )
+  if (Object.keys(errors).length > 0) return finish(fromController(validationError(errors)))
+  await deps.timebox(async () => {
+    const user = await deps.store.direct((store) => store.userByEmail(phpStringCast(input.email).toLowerCase()))
+    if (user === null) return
+    const record = await deps.store.direct((store) => store.resetToken(user.email))
+    if (record !== null && (record.createdAt ?? now()) + RESET_THROTTLE_SECONDS > now()) return
+    const token = createHmac("sha256", deps.writer.config.key).update(deps.writer.random(40)).digest("hex")
+    const hash = await deps.hashPassword(token)
+    await deps.store.direct(async (store) => {
+      await store.deleteResetTokens(user.email)
+      await store.insertResetToken(user.email, hash, now())
+    })
+    await deps.sendMail({ mailable: "resetPassword", to: user.email, data: { token, email: user.email, expireMinutes: RESET_SECONDS / 60 } })
+  })
+  return finish(controllerJson({ message: LINK_SENT }, 202))
+}
+
+export async function sendResetLink(request: Request, deps: RecoveryDeps = defaultRecoveryDeps()): Promise<Response> {
+  try {
+    return await served(request, deps, () => linkOutcome(request, deps))
+  } catch (error) {
+    console.error(error)
+    return serverError()
+  }
 }
 
 export function resetPassword(request: Request, deps: RecoveryDeps = defaultRecoveryDeps()): Promise<Response> {

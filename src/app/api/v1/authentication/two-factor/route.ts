@@ -1,4 +1,4 @@
-import { proxyToLaravel } from "@/server/laravel/proxy"
+import { laravelRouterHandler } from "@/server/laravel/router"
 import { twoFactorStatus } from "@/server/identity/session"
 import { disableTwoFactor, enableTwoFactor } from "@/server/identity/twoFactor"
 
@@ -14,4 +14,4 @@ export function DELETE(request: Request): Promise<Response> {
   return disableTwoFactor(request)
 }
 
-export { proxyToLaravel as HEAD, proxyToLaravel as PUT, proxyToLaravel as PATCH, proxyToLaravel as OPTIONS }
+export { laravelRouterHandler as PUT, laravelRouterHandler as PATCH, laravelRouterHandler as OPTIONS }

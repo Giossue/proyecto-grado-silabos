@@ -10,6 +10,8 @@ import { validateInput } from "../laravel/validation"
 import { hasRole, mayView, ROLE_COORDINATOR, type SyllabusFacts } from "./policy"
 import { revisionDiff } from "./revisionDiff"
 import { createCoordinationReviewRepository } from "./coordinationReviewQueries"
+import { modelNotFound } from "../laravel/router"
+import { MODELS } from "../laravel/models"
 
 export type ReviewListRow = {
   id: string
@@ -138,7 +140,6 @@ export async function coordinationHistory(request: Request, deps: CoordinationRe
 }
 
 export async function compareRevisions(request: Request, beforeId: string, afterId: string, deps: CoordinationReviewDeps = defaultCoordinationReviewDeps()): Promise<Response> {
-  if (!isUuid(beforeId) || !isUuid(afterId)) return deps.bridge.forward(request)
   let before: RevisionRecord | null = null
   let after: RevisionRecord | null = null
   const session = await requireSession(
@@ -147,9 +148,10 @@ export async function compareRevisions(request: Request, beforeId: string, after
       verified: true,
       activeRole: "required",
       afterAuthentication: async () => {
-        before = await deps.reviews.revision(beforeId)
-        after = before === null ? null : await deps.reviews.revision(afterId)
-        return before === null || after === null ? deps.bridge.forward(request) : null
+        before = isUuid(beforeId) ? await deps.reviews.revision(beforeId) : null
+        after = before === null || !isUuid(afterId) ? null : await deps.reviews.revision(afterId)
+        if (before === null) return modelNotFound(MODELS.revision, beforeId)
+        return after === null ? modelNotFound(MODELS.revision, afterId) : null
       },
     },
     deps.bridge,
@@ -157,7 +159,8 @@ export async function compareRevisions(request: Request, beforeId: string, after
   if (session instanceof Response) return session
   let first = before as RevisionRecord | null
   let second = after as RevisionRecord | null
-  if (first === null || second === null) return deps.bridge.forward(request)
+  if (first === null) return modelNotFound(MODELS.revision, beforeId)
+  if (second === null) return modelNotFound(MODELS.revision, afterId)
   for (const revision of [first, second]) {
     const facts = await deps.reviews.syllabus(revision.syllabusId, session.user.id)
     if (facts === null || !mayView(session, facts)) return aborted(403)

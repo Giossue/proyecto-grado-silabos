@@ -117,24 +117,21 @@ function audit(deps: AuthenticationDeps, userId: string, roleAssignmentId: strin
   return deps.credentials.recordAudit({ actorId: userId, roleAssignmentId, action, resourceType, resourceId, result: "exito", metadata, occurredAt: deps.writer.now() })
 }
 
-const SIMPLE_LOCAL = /^[A-Za-z0-9_%+-]+(?:\.[A-Za-z0-9_%+-]+)*$/
-const DOMAIN_LABEL = /^[a-z0-9]+(?:-+[a-z0-9]+)*$/i
-const TOP_LABEL = /^(?:[a-z][a-z0-9]*|xn--[a-z0-9]+)(?:-+[a-z0-9]+)*$/i
+const ATOM = String.raw`[\x21\x23-\x27\x2A\x2B\x2D\x2F-\x39\x3D\x3F\x5E-\x7E]+`
+const QUOTED = String.raw`\x22(?:[\x01-\x08\x0B\x0C\x0E-\x1F\x21\x23-\x5B\x5D-\x7F]|(?:\x5C[\x00-\x7F]))*\x22`
+const COUNTED = String.raw`(?:(?:\x22?\x5C[\x00-\x7E]\x22?)|(?:\x22?[^\x5C\x22]\x22?))`
+const OCTET = String.raw`(?:(?:25[0-5])|(?:2[0-4][0-9])|(?:1[0-9]{2})|(?:[1-9]?[0-9]))`
+const HOSTNAME = String.raw`(?:(?!.*[^.]{64,})(?:(?:(?:xn--)?[a-z0-9]+(?:-+[a-z0-9]+)*\.){1,126}){1,}(?:(?:[a-z][a-z0-9]*)|(?:(?:xn--)[a-z0-9]+))(?:-+[a-z0-9]+)*)`
+const IPV6 = String.raw`(?:IPv6:(?:(?:[a-f0-9]{1,4}(?::[a-f0-9]{1,4}){7})|(?:(?!(?:.*[a-f0-9][:\]]){7,})(?:[a-f0-9]{1,4}(?::[a-f0-9]{1,4}){0,5})?::(?:[a-f0-9]{1,4}(?::[a-f0-9]{1,4}){0,5})?)))`
+const IPV4_TAIL = String.raw`(?:(?:IPv6:(?:(?:[a-f0-9]{1,4}(?::[a-f0-9]{1,4}){5}:)|(?:(?!(?:.*[a-f0-9]:){5,})(?:[a-f0-9]{1,4}(?::[a-f0-9]{1,4}){0,3})?::(?:[a-f0-9]{1,4}(?::[a-f0-9]{1,4}){0,3}:)?)))?${OCTET}(?:\.${OCTET}){3})`
+const PHP_FILTER_EMAIL = new RegExp(
+  `^(?!${COUNTED}{255,})(?!${COUNTED}{65,}@)(?:(?:${ATOM})|(?:${QUOTED}))(?:\\.(?:(?:${ATOM})|(?:${QUOTED})))*@(?:${HOSTNAME}|(?:\\[(?:${IPV6}|${IPV4_TAIL})\\]))$`,
+  "i",
+)
 
-export function filterEmailShape(value: PhpValue | undefined): "valid" | "invalid" | "unknown" {
-  if (typeof value !== "string") return "invalid"
-  const at = value.lastIndexOf("@")
-  if (at <= 0 || at === value.length - 1) return "invalid"
-  const local = value.slice(0, at)
-  const labels = value.slice(at + 1).split(".")
-  const simple =
-    value.length <= 254 &&
-    local.length <= 64 &&
-    SIMPLE_LOCAL.test(local) &&
-    labels.length >= 2 &&
-    labels.every((label) => label.length < 64 && DOMAIN_LABEL.test(label)) &&
-    TOP_LABEL.test(labels[labels.length - 1])
-  return simple ? "valid" : "unknown"
+export function filterEmailShape(value: PhpValue | undefined): "valid" | "invalid" {
+  if (typeof value !== "string" || Buffer.byteLength(value) > 320) return "invalid"
+  return PHP_FILTER_EMAIL.test(value) ? "valid" : "invalid"
 }
 
 export function transliterate(value: string): string {
@@ -164,7 +161,6 @@ export function login(request: Request, deps: AuthenticationDeps = defaultAuthen
       const input = await laravelInput(request)
       if (hasArray(input, "email", "password", "correo_electronico")) return FORWARD
       const shape = filterEmailShape(input.email)
-      if (shape === "unknown") return FORWARD
       const ip = clientIp(request) ?? ""
       const throttled = "email" in input ? input.email : input.correo_electronico
       const gate = throttle(deps.throttles, { key: `login:${transliterate(stringInput(throttled).toLowerCase() + "|" + ip)}`, maxAttempts: 5, decaySeconds: 60 }, deps.writer.now)

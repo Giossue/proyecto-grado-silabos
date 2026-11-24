@@ -15,6 +15,8 @@ import {
   type ProcessListRow,
 } from "./convocations"
 
+const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\${model}] ${id}` }, null, 4)
+
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(golden.sessionId))}`
 const FORBIDDEN = '{"message":"No tiene permiso para hacer esto."}'
 const CAREER = "c0000000-0000-4000-8000-000000000001"
@@ -167,7 +169,8 @@ describe("GET /api/v1/coordination/convocations/{convocation}", () => {
     world.assignments = [makeAssignment({ role: "coordinador", careerId: "c0000000-0000-4000-8000-000000000009" })]
     const denied = await send((request) => convocationDetail(request, CONVOCATION, deps()), `/api/v1/coordination/convocations/${CONVOCATION}`)
     expect(denied).toMatchObject({ status: 403, text: '{\n    "message": ""\n}' })
-    expect((await send((request) => convocationDetail(request, "cc000000-0000-4000-8000-00000000ffff", deps()), "/api/v1/coordination/convocations/x")).status).toBe(299)
+    expect(await send((request) => convocationDetail(request, "cc000000-0000-4000-8000-00000000ffff", deps()), "/api/v1/coordination/convocations/x")).toMatchObject({ status: 404, text: modelNotFound("Convocation", "cc000000-0000-4000-8000-00000000ffff") })
+    expect(await send((request) => convocationDetail(request, "x", deps()), "/api/v1/coordination/convocations/x")).toMatchObject({ status: 404, text: modelNotFound("Convocation", "x") })
   })
 })
 
@@ -201,7 +204,8 @@ describe("POST /api/v1/coordination/convocations/{convocation}/pausar", () => {
     expect(log).toEqual(["begin", `lock:${CONVOCATION}`, "rollback"])
   })
 
-  it("leaves unknown convocations to Laravel", async () => {
-    expect((await pause("cc000000-0000-4000-8000-00000000ffff")).status).toBe(299)
+  it("answers Laravel's model 404 for unknown convocations", async () => {
+    expect(await pause("cc000000-0000-4000-8000-00000000ffff")).toMatchObject({ status: 404, text: modelNotFound("Convocation", "cc000000-0000-4000-8000-00000000ffff") })
+    expect(await pause("x")).toMatchObject({ status: 404, text: modelNotFound("Convocation", "x") })
   })
 })

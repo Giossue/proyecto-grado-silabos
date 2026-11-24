@@ -9,6 +9,8 @@ import type { PhpRecord } from "../configuration/phpValues"
 import { updateDraftField, type DraftFieldDeps, type DraftFieldRecord, type DraftSyllabus } from "./draftField"
 import type { IdentificationSource } from "./identificationCard"
 
+const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\${model}] ${id}` }, null, 4)
+
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(golden.sessionId))}`
 const FORBIDDEN = '{"message":"No tiene permiso para hacer esto."}'
 const CAREER = "c0000000-0000-4000-8000-000000000001"
@@ -296,11 +298,11 @@ describe("PATCH /api/v1/teacher/syllabi/{syllabus}/fields/{field}", () => {
   })
 
   it("leaves unknown records and non JSON bodies to Laravel", async () => {
-    expect((await patch({ version_bloqueo: 3, value: doc("x") }, { syllabus: "50000000-0000-4000-8000-00000000ffff" })).status).toBe(299)
-    expect((await patch({ version_bloqueo: 3, value: doc("x") }, { field: "01a1c5ba-0000-7000-8000-00000000ffff" })).status).toBe(299)
-    expect((await patch({ version_bloqueo: 3, value: doc("x") }, { syllabus: "no-es-uuid" })).status).toBe(299)
+    expect(await patch({ version_bloqueo: 3, value: doc("x") }, { syllabus: "50000000-0000-4000-8000-00000000ffff" })).toMatchObject({ status: 404, text: modelNotFound("Syllabus", "50000000-0000-4000-8000-00000000ffff") })
+    expect((await patch({ version_bloqueo: 3, value: doc("x") }, { field: "01a1c5ba-0000-7000-8000-00000000ffff" })).status).toBe(404)
+    expect(await patch({ version_bloqueo: 3, value: doc("x") }, { syllabus: "no-es-uuid" })).toMatchObject({ status: 404, text: modelNotFound("Syllabus", "no-es-uuid") })
     expect((await patch("version_bloqueo=3", { headers: { "content-type": "application/x-www-form-urlencoded" } })).status).toBe(299)
-    expect(forwarded).toHaveLength(4)
+    expect(forwarded).toHaveLength(1)
     expect(saved).toEqual([])
     expect(committed).toBe(false)
   })

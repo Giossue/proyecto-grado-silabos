@@ -1,5 +1,5 @@
 import { destroyManagedUser, updateManagedUser } from "@/server/identity/accountWrites"
-import { proxyToLaravel } from "@/server/laravel/proxy"
+import { laravelRouterHandler } from "@/server/laravel/router"
 
 type Context = { params: Promise<{ user: string }> }
 
@@ -11,10 +11,4 @@ export async function DELETE(request: Request, context: Context): Promise<Respon
   return destroyManagedUser(request, (await context.params).user)
 }
 
-export {
-  proxyToLaravel as HEAD,
-  proxyToLaravel as GET,
-  proxyToLaravel as POST,
-  proxyToLaravel as PUT,
-  proxyToLaravel as OPTIONS,
-}
+export { laravelRouterHandler as GET, laravelRouterHandler as HEAD, laravelRouterHandler as POST, laravelRouterHandler as PUT, laravelRouterHandler as OPTIONS }

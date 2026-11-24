@@ -1,4 +1,4 @@
-import { proxyToLaravel } from "@/server/laravel/proxy"
+import { laravelRouterHandler } from "@/server/laravel/router"
 import { markNotificationRead } from "@/server/operations/notifications"
 
 type Context = { params: Promise<{ notification: string }> }
@@ -8,11 +8,4 @@ export async function POST(request: Request, context: Context): Promise<Response
   return markNotificationRead(request, notification)
 }
 
-export {
-  proxyToLaravel as GET,
-  proxyToLaravel as HEAD,
-  proxyToLaravel as PUT,
-  proxyToLaravel as PATCH,
-  proxyToLaravel as DELETE,
-  proxyToLaravel as OPTIONS,
-}
+export { laravelRouterHandler as GET, laravelRouterHandler as HEAD, laravelRouterHandler as PUT, laravelRouterHandler as PATCH, laravelRouterHandler as DELETE, laravelRouterHandler as OPTIONS }

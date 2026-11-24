@@ -1,15 +1,8 @@
 import { logout } from "@/server/identity/authentication"
-import { proxyToLaravel } from "@/server/laravel/proxy"
+import { laravelRouterHandler } from "@/server/laravel/router"
 
 export function POST(request: Request): Promise<Response> {
   return logout(request)
 }
 
-export {
-  proxyToLaravel as HEAD,
-  proxyToLaravel as GET,
-  proxyToLaravel as PUT,
-  proxyToLaravel as PATCH,
-  proxyToLaravel as DELETE,
-  proxyToLaravel as OPTIONS,
-}
+export { laravelRouterHandler as GET, laravelRouterHandler as HEAD, laravelRouterHandler as PUT, laravelRouterHandler as PATCH, laravelRouterHandler as DELETE, laravelRouterHandler as OPTIONS }

@@ -7,6 +7,7 @@ import { laravelJson, validationError } from "../laravel/responses"
 import { insertAuditEvent, type AuditEventInput } from "../operations/recordAuditEvent"
 import { forbidden, isUuid } from "./structure"
 import { findActiveCareer } from "./structureQueries"
+import { laravelRouter, routeAllows } from "../laravel/router"
 
 export interface DeletionTx {
   lockPeriod(id: string): Promise<{ id: string; code: string } | null>
@@ -169,7 +170,7 @@ export async function deleteCareerRecord(
   recordId: string,
   deps: AcademicDeletionDeps = defaultDeps(),
 ): Promise<Response> {
-  if (entity !== "asignacion_docente" || !isUuid(recordId)) return deps.bridge.forward(request)
+  if (entity !== "asignacion_docente" || !routeAllows(request)) return laravelRouter(request)
   const context = await careerSession(request, deps)
   if (context instanceof Response) return context
 
@@ -194,7 +195,7 @@ export async function deleteCareerRecord(
 }
 
 export async function deleteParallel(request: Request, parallelId: string, deps: AcademicDeletionDeps = defaultDeps()): Promise<Response> {
-  if (!isUuid(parallelId)) return deps.bridge.forward(request)
+  if (!routeAllows(request)) return laravelRouter(request)
   const context = await careerSession(request, deps)
   if (context instanceof Response) return context
 

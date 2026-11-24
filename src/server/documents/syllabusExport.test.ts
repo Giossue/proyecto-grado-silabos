@@ -313,7 +313,7 @@ describe("RequestSyllabusExport", () => {
       recordAudit: async (event) => void requestAudits.push(event),
     }
   }
-  const request = (key: string, actorId = TEACHER) => ({ revisionId: REVISION, syllabusId: SYLLABUS, key, actor: { id: actorId, roleAssignmentId: "r1" }, now: NOW, newId: () => ARTIFACT })
+  const request = (key: string, actorId = TEACHER) => ({ revisionId: REVISION, syllabusId: SYLLABUS, key, actor: { id: actorId, roleAssignmentId: "r1" }, now: NOW, newId: () => ARTIFACT, rendererVersion: "phpword-docx-v4+libreoffice-pdf-v1" })
   const KEY = "9a5b0c3e-4f1d-4a2b-8c7d-6e5f4a3b2c1d"
 
   beforeEach(() => {

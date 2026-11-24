@@ -15,6 +15,8 @@ import { hasRole, PROCESS_OPEN, PROCESS_PAUSED, ROLE_ADMINISTRATOR } from "./pol
 import { TEMPLATE_NAME } from "./convocations"
 import { createProcessRepository } from "./processQueries"
 import { NeedsLaravel } from "./snapshotDocuments"
+import { modelNotFound } from "../laravel/router"
+import { MODELS } from "../laravel/models"
 
 export type ProcessRow = {
   id: string
@@ -154,7 +156,6 @@ export async function syllabusProcesses(request: Request, deps: ProcessDeps = de
 }
 
 async function boundProcess(request: Request, id: string, deps: ProcessDeps): Promise<{ session: LaravelSession; process: ProcessRow } | Response> {
-  if (!isUuid(id)) return deps.bridge.forward(request)
   let process: ProcessRow | null = null
   const session = await requireSession(
     request,
@@ -162,14 +163,14 @@ async function boundProcess(request: Request, id: string, deps: ProcessDeps): Pr
       verified: true,
       activeRole: "required",
       afterAuthentication: async () => {
-        process = await deps.processes.find(id)
-        return process === null ? deps.bridge.forward(request) : null
+        process = isUuid(id) ? await deps.processes.find(id) : null
+        return process === null ? modelNotFound(MODELS.process, id) : null
       },
     },
     deps.bridge,
   )
   if (session instanceof Response) return session
-  if (process === null) return deps.bridge.forward(request)
+  if (process === null) return modelNotFound(MODELS.process, id)
   return { session, process }
 }
 

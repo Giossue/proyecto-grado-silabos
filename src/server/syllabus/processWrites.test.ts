@@ -9,6 +9,8 @@ import type { ProcessRow } from "./processes"
 import { deleteProcess, extendProcessDeadline, resumeProcess, type LockedSyllabusProcess, type ProcessWriteDeps } from "./processWrites"
 import type { ReopenPlan, TemplateChange } from "./reopenCatchUp"
 
+const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\${model}] ${id}` }, null, 4)
+
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(golden.sessionId))}`
 const FORBIDDEN = phpJsonEncode({ message: "No tiene permiso para hacer esto." })
 const PROCESS = "cd000000-0000-4000-8000-000000000001"
@@ -141,6 +143,13 @@ async function send(handler: (request: Request) => Promise<Response>, path: stri
 
 const destroy = (body?: unknown, id = PROCESS) => send((request) => deleteProcess(request, id, deps()), `/api/v1/admin/processes/${id}`, "DELETE", body)
 const resume = (body?: unknown, id = PROCESS) => send((request) => resumeProcess(request, id, deps()), `/api/v1/admin/processes/${id}/reanudar`, "POST", body)
+
+describe("process binding", () => {
+  it("answers Laravel's model 404 for an unknown or malformed process", async () => {
+    expect(await destroy({ mensaje: "x" }, "cd000000-0000-4000-8000-00000000ffff")).toMatchObject({ status: 404, text: modelNotFound("SyllabusProcess", "cd000000-0000-4000-8000-00000000ffff") })
+    expect(await resume({}, "abc")).toMatchObject({ status: 404, text: modelNotFound("SyllabusProcess", "abc") })
+  })
+})
 
 beforeEach(() => {
   world = {

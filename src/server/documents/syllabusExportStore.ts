@@ -11,7 +11,7 @@ import { withAfterCommit, type AfterCommit } from "../queue/dispatch"
 import { signaturesOf, signedFactsOf } from "../syllabus/syllabusDetailQueries"
 import { SUBJECT_CODE, SUBJECT_NAME, SYLLABUS_EXISTS, SYLLABUS_JOINS } from "../syllabus/syllabusSql"
 import { rowsOf, type Executor } from "../syllabus/teacherSyllabusQueries"
-import { gotenbergSettings, convertDocx } from "./gotenbergConverter"
+import { convertDocx, gotenbergEnabled, gotenbergSettings } from "./gotenbergConverter"
 import { storedLogoSource } from "./rendererLogos"
 import { type ExportJobDeps, type ExportJobStore, type ExportJobTx, type ExportRequestTx, type ExportSubject, type StoredObjectRow } from "./syllabusExport"
 import { renderSyllabusDocuments } from "./syllabusRenderer"
@@ -193,7 +193,12 @@ export function exportJobDepsOn(executor: Executor, transaction: TransactionRunn
   return {
     store: exportJobStoreOn(executor),
     transaction: (work) => withAfterCommit((afterCommit) => transaction((inner) => work(exportJobTxOn(inner, afterCommit, now(), options.mail)))),
-    render: options.render ?? ((input) => renderSyllabusDocuments(input, logos, (docx, generatedAt) => convertDocx(docx, generatedAt, gotenbergSettings()))),
+    render:
+      options.render ??
+      ((input) => {
+        const settings = gotenbergSettings()
+        return renderSyllabusDocuments(input, logos, gotenbergEnabled(settings) ? (docx, generatedAt) => convertDocx(docx, generatedAt, settings) : null)
+      }),
     writeObject: options.writeObject ?? writePrivateObject,
     now,
     newId: uuid7,

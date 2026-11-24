@@ -15,6 +15,8 @@ import {
   type RevisionRecord,
 } from "./coordinationReviews"
 
+const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\${model}] ${id}` }, null, 4)
+
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(golden.sessionId))}`
 const FORBIDDEN = '{"message":"No tiene permiso para hacer esto."}'
 const CAREER = "c0000000-0000-4000-8000-000000000001"
@@ -259,7 +261,8 @@ describe("GET /api/v1/coordination/reviews/{before}/compare/{after}", () => {
     world.assignments = [makeAssignment({ role: "docente", careerId: CAREER })]
     facts.set(SYLLABUS, syllabusFacts({ writtenByUser: true }))
     expect((await compare(REVISION_1, REVISION_2)).status).toBe(200)
-    expect((await compare(REVISION_1, "70000000-0000-4000-8000-00000000ffff")).status).toBe(299)
-    expect(forwarded).toHaveLength(1)
+    expect(await compare(REVISION_1, "70000000-0000-4000-8000-00000000ffff")).toMatchObject({ status: 404, text: modelNotFound("SyllabusRevision", "70000000-0000-4000-8000-00000000ffff") })
+    expect(await compare("x", REVISION_2)).toMatchObject({ status: 404, text: modelNotFound("SyllabusRevision", "x") })
+    expect(forwarded).toHaveLength(0)
   })
 })

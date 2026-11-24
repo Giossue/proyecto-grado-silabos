@@ -7,6 +7,8 @@ import type { AuditEventInput } from "../operations/recordAuditEvent"
 import { fakeTemplateStore, goldenTemplate, type FakeTemplateWorld } from "../configuration/testing"
 import { createProcess, pauseProcess, processImpact, syllabusProcesses, type ProcessDeps, type ProcessRow } from "./processes"
 
+const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\${model}] ${id}` }, null, 4)
+
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(golden.sessionId))}`
 const FORBIDDEN = '{"message":"No tiene permiso para hacer esto."}'
 const PROCESS = "cd000000-0000-4000-8000-000000000001"
@@ -208,7 +210,8 @@ describe("GET /api/v1/admin/processes/{process}/impact", () => {
   })
 
   it("forbids other roles and leaves unknown processes to Laravel", async () => {
-    expect((await send((request) => processImpact(request, "cd000000-0000-4000-8000-00000000ffff", deps()), "/x")).status).toBe(299)
+    expect(await send((request) => processImpact(request, "cd000000-0000-4000-8000-00000000ffff", deps()), "/x")).toMatchObject({ status: 404, text: modelNotFound("SyllabusProcess", "cd000000-0000-4000-8000-00000000ffff") })
+    expect(await send((request) => processImpact(request, "abc", deps()), "/x")).toMatchObject({ status: 404, text: modelNotFound("SyllabusProcess", "abc") })
     world.assignments = [makeAssignment({ role: "docente" })]
     expect((await send((request) => processImpact(request, PROCESS, deps()), "/x")).text).toBe(FORBIDDEN)
   })

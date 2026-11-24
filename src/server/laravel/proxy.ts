@@ -1,9 +1,11 @@
 import "server-only"
 import { laravelBaseUrl } from "./config"
+import { laravelFallbackEnabled, laravelRouter, unknownRoute } from "./router"
 
 const HOP_BY_HOP = ["connection", "keep-alive", "transfer-encoding", "upgrade", "proxy-connection", "te", "trailer", "host", "content-length"]
 
 export async function proxyToLaravel(request: Request): Promise<Response> {
+  if (!laravelFallbackEnabled()) return unknownRoute(request)
   const incoming = new URL(request.url)
   const target = `${laravelBaseUrl()}${incoming.pathname}${incoming.search}`
   const headers = new Headers(request.headers)
@@ -22,4 +24,8 @@ export async function proxyToLaravel(request: Request): Promise<Response> {
   const responseHeaders = new Headers(upstream.headers)
   for (const name of ["content-encoding", "content-length", "transfer-encoding", "connection", "keep-alive"]) responseHeaders.delete(name)
   return new Response(upstream.body, { status: upstream.status, statusText: upstream.statusText, headers: responseHeaders })
+}
+
+export function laravelFallback(request: Request): Promise<Response> {
+  return laravelFallbackEnabled() ? proxyToLaravel(request) : Promise.resolve(laravelRouter(request))
 }

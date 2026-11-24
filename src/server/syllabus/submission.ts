@@ -18,6 +18,8 @@ import { hasRole, isRunning, ROLE_TEACHER } from "./policy"
 import { NeedsLaravel, signingStatement, snapshotDefinition } from "./snapshotDocuments"
 import type { DetailSyllabus } from "./syllabusDetail"
 import { createSubmissionDeps } from "./submissionStore"
+import { modelNotFound } from "../laravel/router"
+import { MODELS } from "../laravel/models"
 
 export type SubmissionSchedule = { convocationState: string; processState: string; startsOn: string; dueOn: string }
 export type KeyedRevision = { id: string; number: number; submittedBy: string }
@@ -146,7 +148,6 @@ async function assertSubmittable(original: Request, syllabus: DetailSyllabus, ex
 type Bound = { session: LaravelSession; syllabus: DetailSyllabus }
 
 async function bound(request: Request, syllabusId: string, deps: SubmissionDeps): Promise<Bound | Response> {
-  if (!isUuid(syllabusId)) return deps.bridge.forward(request)
   let syllabus: DetailSyllabus | null = null
   const session = await requireSession(
     request,
@@ -154,14 +155,14 @@ async function bound(request: Request, syllabusId: string, deps: SubmissionDeps)
       verified: true,
       activeRole: "required",
       afterAuthentication: async (user) => {
-        syllabus = await deps.store.syllabus(syllabusId, user.id)
-        return syllabus === null ? deps.bridge.forward(request) : null
+        syllabus = isUuid(syllabusId) ? await deps.store.syllabus(syllabusId, user.id) : null
+        return syllabus === null ? modelNotFound(MODELS.syllabus, syllabusId) : null
       },
     },
     deps.bridge,
   )
   if (session instanceof Response) return session
-  if (syllabus === null) return deps.bridge.forward(request)
+  if (syllabus === null) return modelNotFound(MODELS.syllabus, syllabusId)
   return { session, syllabus }
 }
 

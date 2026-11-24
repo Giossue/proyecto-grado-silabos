@@ -1,5 +1,5 @@
 import { setGovernanceStatus } from "@/server/academic/governanceWrites"
-import { proxyToLaravel } from "@/server/laravel/proxy"
+import { laravelRouterHandler } from "@/server/laravel/router"
 
 type Context = { params: Promise<{ entity: string; record: string }> }
 
@@ -8,4 +8,4 @@ export async function PATCH(request: Request, context: Context): Promise<Respons
   return setGovernanceStatus(request, entity, record)
 }
 
-export { proxyToLaravel as GET, proxyToLaravel as HEAD, proxyToLaravel as POST, proxyToLaravel as PUT, proxyToLaravel as DELETE, proxyToLaravel as OPTIONS }
+export { laravelRouterHandler as GET, laravelRouterHandler as HEAD, laravelRouterHandler as POST, laravelRouterHandler as PUT, laravelRouterHandler as DELETE, laravelRouterHandler as OPTIONS }

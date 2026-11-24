@@ -5,7 +5,8 @@ import { describe, expect, it } from "vitest"
 import golden from "../__fixtures__/laravel-word-golden.json"
 import type { PhpRecord } from "../../configuration/phpValues"
 import { NeedsLaravel } from "../../syllabus/snapshotDocuments"
-import { renderDocx, rendersInNext, validateBundle, type DocumentBundle, type DocumentRenderInput } from "../syllabusRenderer"
+import textGolden from "../__fixtures__/laravel-text-pdf-golden.json"
+import { renderDocx, rendererVersion, renderSyllabusDocuments, rendersInNext, validateBundle, type DocumentBundle, type DocumentRenderInput } from "../syllabusRenderer"
 import { imageInfo, InvalidImage } from "./imageInfo"
 import { columnWidths } from "./tableGrid"
 
@@ -105,7 +106,16 @@ describe("Word document like PhpWordDocumentRenderer", () => {
     expect(await rendersInNext(inputOf(plantilla, legacy).snapshot, true)).toBe(false)
     expect(await rendersInNext({ sections: [] }, true)).toBe(false)
     expect(await rendersInNext(inputOf(plantilla).snapshot, true)).toBe(true)
-    expect(await rendersInNext(inputOf(plantilla).snapshot, false)).toBe(false)
+    expect(await rendersInNext(inputOf(plantilla).snapshot, false)).toBe(true)
+    expect(await rendersInNext(inputOf(plantilla, legacy).snapshot, false)).toBe(false)
+  })
+
+  it("writes Laravel's plain-text PDF when Gotenberg is off", async () => {
+    const bundle = await renderSyllabusDocuments(inputOf(plantilla), noLogos, null)
+    expect(bundle.pdf.bytes.toString("base64")).toBe(textGolden.cases[0].pdf)
+    expect(bundle.pdf.reproducible).toBe(true)
+    expect(bundle.docx.bytes.equals(await renderDocx(inputOf(plantilla), noLogos))).toBe(true)
+    expect([rendererVersion(true), rendererVersion(false)]).toEqual(["phpword-docx-v4+libreoffice-pdf-v1", "phpword-docx-v4+text-pdf-v2"])
   })
 })
 

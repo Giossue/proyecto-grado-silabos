@@ -47,6 +47,8 @@ import {
 } from "./accounts"
 import { createAccountRepository } from "./accountStore"
 import { createProfileRepository, type SessionDeps } from "./session"
+import { modelNotFound } from "../laravel/router"
+import { MODELS } from "../laravel/models"
 
 export type IdentityWriteDeps = {
   bridge: BridgeDeps
@@ -142,9 +144,8 @@ export async function bindAccount(
   request: Request,
   id: string,
   deps: IdentityWriteDeps,
-  options: { throttled?: boolean; extra?: () => Promise<boolean> } = {},
+  options: { throttled?: boolean; extra?: () => Promise<boolean | Response> } = {},
 ): Promise<BoundAccount | Response> {
-  if (!isUuid(id)) return deps.bridge.forward(request)
   const original = request.clone()
   let target: Account | null = null
   let gate: Throttle | null = null
@@ -160,8 +161,11 @@ export async function bindAccount(
           const limited = await gate.hit()
           if (limited) return limited
         }
-        target = await deps.accounts.findAccount(id)
-        if (target === null || (options.extra && !(await options.extra()))) {
+        target = isUuid(id) ? await deps.accounts.findAccount(id) : null
+        if (target === null) return modelNotFound(MODELS.user, id)
+        const extra = options.extra ? await options.extra() : true
+        if (extra instanceof Response) return extra
+        if (!extra) {
           forwarded = true
           return deps.bridge.forward(original)
         }
@@ -310,12 +314,11 @@ export async function removeManagedUserRole(
   assignmentId: string,
   deps: IdentityWriteDeps = defaultIdentityWriteDeps(),
 ): Promise<Response> {
-  if (!isUuid(assignmentId)) return deps.bridge.forward(request)
   let assignment: RoleGrant | null = null
   const bound = await bindAccount(request, id, deps, {
     extra: async () => {
-      assignment = await deps.accounts.findGrant(assignmentId)
-      return assignment !== null
+      assignment = isUuid(assignmentId) ? await deps.accounts.findGrant(assignmentId) : null
+      return assignment === null ? modelNotFound(MODELS.roleAssignment, assignmentId) : true
     },
   })
   if (bound instanceof Response) return bound

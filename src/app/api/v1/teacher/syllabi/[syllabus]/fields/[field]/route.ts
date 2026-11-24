@@ -1,4 +1,4 @@
-import { proxyToLaravel } from "@/server/laravel/proxy"
+import { laravelRouterHandler } from "@/server/laravel/router"
 import { updateDraftField } from "@/server/syllabus/draftField"
 
 type Context = { params: Promise<{ syllabus: string; field: string }> }
@@ -8,11 +8,4 @@ export async function PATCH(request: Request, context: Context): Promise<Respons
   return updateDraftField(request, syllabus, field)
 }
 
-export {
-  proxyToLaravel as GET,
-  proxyToLaravel as HEAD,
-  proxyToLaravel as POST,
-  proxyToLaravel as PUT,
-  proxyToLaravel as DELETE,
-  proxyToLaravel as OPTIONS,
-}
+export { laravelRouterHandler as GET, laravelRouterHandler as HEAD, laravelRouterHandler as POST, laravelRouterHandler as PUT, laravelRouterHandler as DELETE, laravelRouterHandler as OPTIONS }

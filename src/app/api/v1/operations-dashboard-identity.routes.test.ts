@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from "vitest"
+import { nativeMethods, routerComparison } from "@/server/laravel/routerTesting"
 import * as help from "./help/route"
 import * as helpAvailable from "./help/available/route"
 import * as systemSettings from "./admin/system-settings/route"
@@ -25,15 +26,14 @@ afterEach(() => {
 })
 
 describe("operations, dashboard and identity routes", () => {
-  it.each(ROUTES)("serves GET on %s and sends the rest to Laravel", async (path, module) => {
+  it.each(ROUTES)("serves GET on %s and answers the rest like Laravel's router", async (path, module) => {
     const fetchMock = vi.fn(async () => new Response("{}", { status: 405 }))
     vi.stubGlobal("fetch", fetchMock)
-    for (const method of PASS_THROUGH) {
-      const response = await module[method](new Request(`http://localhost:3000${path}`, { method, body: ["HEAD", "OPTIONS"].includes(method) ? undefined : "{}" }))
-      expect(response.status).toBe(405)
+    for (const method of nativeMethods(module, ["GET"], [...PASS_THROUGH])) {
+      const { next, laravel } = await routerComparison(module, method, path)
+      expect(next).toEqual(laravel)
     }
-    expect(fetchMock).toHaveBeenCalledTimes(PASS_THROUGH.length)
-    expect((fetchMock.mock.calls as unknown as [string][])[1][0]).toBe(`http://127.0.0.1:8001${path}`)
+    expect(fetchMock).not.toHaveBeenCalled()
     expect(module.GET).not.toBe(module.POST)
   })
 

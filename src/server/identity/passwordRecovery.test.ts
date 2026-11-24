@@ -7,7 +7,8 @@ import type { SessionWriterDeps } from "../auth/sessionWriter"
 import type { OutgoingCookie } from "../auth/types"
 import { createRateLimiter } from "../laravel/throttle"
 import type { AuditEventInput } from "../operations/recordAuditEvent"
-import { activateAccount, resetPassword, type Invitation, type RecoveryDeps, type RecoveryStore } from "./passwordRecovery"
+import type { QueuedMail } from "../mail/mailables"
+import { activateAccount, resetPassword, sendResetLink, type Invitation, type RecoveryDeps, type RecoveryStore } from "./passwordRecovery"
 
 const USER = golden.userId
 const EMAIL = "docente@silabos.test"
@@ -25,6 +26,7 @@ let sessions: { id: string; userId: string }[]
 let audits: AuditEventInput[]
 let queued: OutgoingCookie[]
 let sequence: number
+let mails: QueuedMail[]
 
 function store(): RecoveryStore {
   const find = (id: string) => accounts.find((account) => account.id === id)
@@ -35,6 +37,7 @@ function store(): RecoveryStore {
     },
     resetToken: async (email) => resets.get(email) ?? null,
     deleteResetTokens: async (email) => void resets.delete(email),
+    insertResetToken: async (email, token, at) => void resets.set(email, { token, createdAt: at }),
     setPassword: async (id, hash) => void Object.assign(find(id) ?? {}, { passwordHash: hash }),
     setRememberToken: async (id, token) => void Object.assign(find(id) ?? {}, { remember: token }),
     deleteSessions: async (userId) => {
@@ -74,16 +77,17 @@ function deps(overrides: Partial<RecoveryDeps> = {}): RecoveryDeps {
     hashPassword: async (plain) => `hash:${plain}`,
     timebox: (work) => work(() => undefined),
     production: () => false,
+    sendMail: async (mail) => void mails.push(mail),
     ...overrides,
   }
 }
 
-function post(path: string, body: unknown, stateful = true): Request {
+function post(path: string, body: unknown, stateful = true, contentType = "application/json"): Request {
   return new Request(`http://localhost:3000/api/v1/authentication/${path}`, {
     method: "POST",
     headers: {
       accept: "application/json",
-      "content-type": "application/json",
+      "content-type": contentType,
       "x-forwarded-for": "203.0.113.5",
       ...(stateful
         ? {
@@ -93,7 +97,7 @@ function post(path: string, body: unknown, stateful = true): Request {
           }
         : {}),
     },
-    body: JSON.stringify(body),
+    body: typeof body === "string" ? body : JSON.stringify(body),
   })
 }
 
@@ -112,6 +116,7 @@ beforeEach(() => {
   audits = []
   queued = []
   sequence = 0
+  mails = []
 })
 
 describe("POST authentication/password-reset (PasswordResetTest)", () => {
@@ -221,5 +226,96 @@ describe("POST authentication/account-activation (ManagedUserTest)", () => {
       token: ["El campo enlace de activación no debe tener más de 128 caracteres."],
       password: ["La confirmación de contraseña no coincide."],
     })
+  })
+})
+
+describe("POST authentication/password-recovery (PasswordRecoveryTest)", () => {
+  const SENT = '{"message":"Si el correo pertenece a una cuenta activa, recibir\\u00e1 un enlace para restablecer su contrase\\u00f1a."}'
+
+  it("replaces the token, stores its hash and sends the reset mail right away", async () => {
+    resets.set(EMAIL, { token: "hash:viejo", createdAt: NOW - 61 })
+    const response = await sendResetLink(post("password-recovery", { email: "  Docente@Silabos.TEST " }), deps())
+    expect(response.status).toBe(202)
+    expect(await response.text()).toBe(SENT)
+    expect(response.headers.get("x-ratelimit-limit")).toBe("3")
+    expect(response.headers.get("x-ratelimit-remaining")).toBe("2")
+    expect(response.headers.get("x-frame-options")).toBe("DENY")
+    expect(mails).toHaveLength(1)
+    const mail = mails[0]
+    expect(mail.mailable).toBe("resetPassword")
+    expect(mail.to).toBe(EMAIL)
+    expect(mail.data).toEqual({ token: expect.stringMatching(/^[0-9a-f]{64}$/), email: EMAIL, expireMinutes: 60 })
+    expect(resets.get(EMAIL)).toEqual({ token: `hash:${(mail.data as { token: string }).token}`, createdAt: NOW })
+  })
+
+  it("answers the same 202 without a mail for an unknown address or a token created less than a minute ago", async () => {
+    for (const email of ["nadie@silabos.test", EMAIL]) {
+      resets.set(EMAIL, { token: "hash:reciente", createdAt: NOW - 59 })
+      const response = await sendResetLink(post("password-recovery", { email }), deps())
+      expect(response.status).toBe(202)
+      expect(await response.text()).toBe(SENT)
+    }
+    expect(mails).toEqual([])
+    expect(resets.get(EMAIL)).toEqual({ token: "hash:reciente", createdAt: NOW - 59 })
+  })
+
+  it("validates like SendPasswordResetLinkRequest", async () => {
+    const cases: [unknown, string][] = [
+      [{}, '{"message":"El campo correo electr\\u00f3nico es obligatorio.","errors":{"email":["El campo correo electr\\u00f3nico es obligatorio."]}}'],
+      [
+        { email: 123 },
+        '{"message":"El campo correo electr\\u00f3nico debe ser una cadena de texto. (y 1 error m\\u00e1s)","errors":{"email":["El campo correo electr\\u00f3nico debe ser una cadena de texto.","El campo correo electr\\u00f3nico debe ser un correo electr\\u00f3nico v\\u00e1lido."]}}',
+      ],
+      [{ email: "ana@localhost" }, '{"message":"El campo correo electr\\u00f3nico debe ser un correo electr\\u00f3nico v\\u00e1lido.","errors":{"email":["El campo correo electr\\u00f3nico debe ser un correo electr\\u00f3nico v\\u00e1lido."]}}'],
+    ]
+    for (const [body, expected] of cases) {
+      const response = await sendResetLink(post("password-recovery", body), deps())
+      expect(response.status).toBe(422)
+      expect(await response.text()).toBe(expected)
+    }
+    expect(mails).toEqual([])
+  })
+
+  it("fails like Laravel's limiter when the address is an array", async () => {
+    const response = await sendResetLink(post("password-recovery", { email: ["a@b.ec"] }), deps())
+    expect(response.status).toBe(500)
+    expect(await response.text()).toBe('{\n    "message": "Server Error"\n}')
+    expect(response.headers.get("x-ratelimit-limit")).toBeNull()
+  })
+
+  it("reads a form body like PHP and the query string when the body is not a form", async () => {
+    const form = await sendResetLink(post("password-recovery", "email=docente%40silabos.test", true, "application/x-www-form-urlencoded"), deps())
+    expect(form.status).toBe(202)
+    expect(mails.map((mail) => mail.to)).toEqual([EMAIL])
+    const text = await sendResetLink(post("password-recovery", "email=x", true, "text/plain"), deps())
+    expect(text.status).toBe(422)
+  })
+
+  it("allows three requests a minute per address and IP, and ten a day per address", async () => {
+    const limiter = createRateLimiter()
+    for (let attempt = 0; attempt < 3; attempt += 1) expect((await sendResetLink(post("password-recovery", { email: "nadie@silabos.test" }), deps({ throttles: limiter }))).status).toBe(202)
+    const limited = await sendResetLink(post("password-recovery", { email: "nadie@silabos.test" }), deps({ throttles: limiter }))
+    expect(limited.status).toBe(429)
+    expect(limited.headers.get("x-ratelimit-limit")).toBe("3")
+    const daily = createRateLimiter()
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      const request = post("password-recovery", { email: "nadie@silabos.test" })
+      request.headers.set("x-forwarded-for", `203.0.113.${attempt + 10}`)
+      const response = await sendResetLink(request, deps({ throttles: daily }))
+      expect(response.status).toBe(202)
+      if (attempt === 9) expect([response.headers.get("x-ratelimit-limit"), response.headers.get("x-ratelimit-remaining")]).toEqual(["10", "0"])
+    }
+    const blocked = post("password-recovery", { email: "nadie@silabos.test" })
+    blocked.headers.set("x-forwarded-for", "203.0.113.99")
+    const response = await sendResetLink(blocked, deps({ throttles: daily }))
+    expect(response.status).toBe(429)
+    expect(response.headers.get("x-ratelimit-limit")).toBe("10")
+  })
+
+  it("serves a request from outside the SPA without session cookies", async () => {
+    const response = await sendResetLink(post("password-recovery", { email: EMAIL }, false), deps())
+    expect(response.status).toBe(202)
+    expect(response.headers.getSetCookie()).toEqual([])
+    expect(mails).toHaveLength(1)
   })
 })

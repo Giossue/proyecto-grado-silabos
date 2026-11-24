@@ -1,5 +1,5 @@
 import { templateAssistant, templateAssistantClear } from "@/server/ai/assistantHandlers"
-import { proxyToLaravel } from "@/server/laravel/proxy"
+import { laravelRouterHandler } from "@/server/laravel/router"
 
 export function GET(request: Request): Promise<Response> {
   return templateAssistant(request)
@@ -9,4 +9,4 @@ export function DELETE(request: Request): Promise<Response> {
   return templateAssistantClear(request)
 }
 
-export { proxyToLaravel as HEAD, proxyToLaravel as POST, proxyToLaravel as PUT, proxyToLaravel as PATCH, proxyToLaravel as OPTIONS }
+export { laravelRouterHandler as POST, laravelRouterHandler as PUT, laravelRouterHandler as PATCH, laravelRouterHandler as OPTIONS }

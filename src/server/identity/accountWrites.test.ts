@@ -4,6 +4,8 @@ import { describe, expect, it } from "vitest"
 import { destroyManagedUser, removeManagedUserRole, resendManagedUserActivation, storeManagedUser, updateManagedUser } from "./accountWrites"
 import { account, ACTOR, ACTOR_ROLE, CAREER, FORBIDDEN, grant, harness, jsonRequest, NOW, OTHER_CAREER, SESSION_ID } from "./testing"
 
+const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Models\\${model}] ${id}` }, null, 4)
+
 const TEACHER = "01a1c5bc-1111-7000-8000-000000000001"
 const TEACHER_ROLE = "01a1c5bc-1111-7000-8000-0000000000a1"
 const COORDINATOR = "01a1c5bc-1111-7000-8000-000000000002"
@@ -240,9 +242,11 @@ describe("PATCH /api/v1/admin/users/{user}", () => {
 
   it("leaves unknown or malformed ids to Laravel", async () => {
     const test = seeded()
-    expect((await update(test, "no-uuid", {})).status).toBe(299)
-    expect((await update(test, "01a1c5bc-1111-7000-8000-00000000ffff", {})).status).toBe(299)
-    expect(test.forwarded).toHaveLength(2)
+    for (const id of ["no-uuid", "01a1c5bc-1111-7000-8000-00000000ffff"]) {
+      const response = await update(test, id, {})
+      expect({ status: response.status, text: await response.text() }).toEqual({ status: 404, text: modelNotFound("User", id) })
+    }
+    expect(test.forwarded).toHaveLength(0)
   })
 })
 

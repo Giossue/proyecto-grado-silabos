@@ -29,6 +29,8 @@ import { institutionToday } from "../dashboard/dashboardQueries"
 import { identificationOf, type IdentificationSource } from "./identificationCard"
 import { mayEdit, type SyllabusFacts } from "./policy"
 import { createDraftFieldStore } from "./draftFieldStore"
+import { modelNotFound } from "../laravel/router"
+import { MODELS } from "../laravel/models"
 
 export type DraftSyllabus = SyllabusFacts & { subjectId: string }
 export type DraftFieldRecord = { id: string; templateId: string; responsible: string; content: unknown; key: string; live: boolean }
@@ -102,15 +104,17 @@ async function bound(request: Request, syllabusId: string, fieldId: string, deps
       verified: true,
       activeRole: "required",
       afterAuthentication: async (user) => {
-        syllabus = await deps.store.syllabus(syllabusId, user.id)
-        field = syllabus === null ? null : await deps.store.field(fieldId)
-        return syllabus === null || field === null ? deps.bridge.forward(request) : null
+        syllabus = isUuid(syllabusId) ? await deps.store.syllabus(syllabusId, user.id) : null
+        if (syllabus === null) return modelNotFound(MODELS.syllabus, syllabusId)
+        field = isUuid(fieldId) ? await deps.store.field(fieldId) : null
+        return field === null ? modelNotFound(MODELS.field, fieldId) : null
       },
     },
     deps.bridge,
   )
   if (session instanceof Response) return session
-  if (syllabus === null || field === null) return deps.bridge.forward(request)
+  if (syllabus === null) return modelNotFound(MODELS.syllabus, syllabusId)
+  if (field === null) return modelNotFound(MODELS.field, fieldId)
   return { session, syllabus, field }
 }
 
@@ -164,7 +168,6 @@ async function save(input: PhpArray, auth: Bound, deps: DraftFieldDeps, tx: Draf
 }
 
 export async function updateDraftField(request: Request, syllabusId: string, fieldId: string, deps: DraftFieldDeps = defaultDraftFieldDeps()): Promise<Response> {
-  if (!isUuid(syllabusId) || !isUuid(fieldId)) return deps.bridge.forward(request)
   const original = request.clone()
   const auth = await bound(original, syllabusId, fieldId, deps)
   if (auth instanceof Response) return auth

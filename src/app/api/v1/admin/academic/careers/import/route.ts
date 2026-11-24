@@ -1,15 +1,18 @@
 import { importCareers } from "@/server/academic/structureImports"
-import { proxyToLaravel } from "@/server/laravel/proxy"
+import { laravelRouterHandler } from "@/server/laravel/router"
+import { deleteGovernanceRecord } from "@/server/academic/deletions"
+import { updateGovernanceRecord } from "@/server/academic/governanceWrites"
 
 export function POST(request: Request): Promise<Response> {
   return importCareers(request)
 }
 
-export {
-  proxyToLaravel as GET,
-  proxyToLaravel as HEAD,
-  proxyToLaravel as PUT,
-  proxyToLaravel as PATCH,
-  proxyToLaravel as DELETE,
-  proxyToLaravel as OPTIONS,
+export function PATCH(request: Request): Promise<Response> {
+  return updateGovernanceRecord(request, "careers", "import")
 }
+
+export function DELETE(request: Request): Promise<Response> {
+  return deleteGovernanceRecord(request, "careers", "import")
+}
+
+export { laravelRouterHandler as GET, laravelRouterHandler as HEAD, laravelRouterHandler as PUT, laravelRouterHandler as OPTIONS }

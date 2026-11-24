@@ -3,7 +3,6 @@ import { sql } from "drizzle-orm"
 import { db } from "@/db"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
 import type { BridgeDeps, LaravelSession } from "../auth/types"
-import { isUuid } from "../academic/structure"
 import { findActiveCareer } from "../academic/structureQueries"
 import { laravelHttpError, laravelJson, validationError } from "../laravel/responses"
 import { phpObject, phpShape } from "./phpValues"
@@ -11,6 +10,7 @@ import { normalizeFieldDocument, responsesEnabled, responseTemplate, TemplateVal
 import { fieldSection, presentDefinition, variableCatalog } from "./templatePresentation"
 import { createTemplateStore, type TemplateStore } from "./templateStore"
 import { profileComplete, profileFields, profilePositions, profileValues, type ProfileContext } from "./subjectProfileFields"
+import { laravelRouter, routeAllows } from "../laravel/router"
 
 export type SubjectProfileDeps = {
   bridge: BridgeDeps
@@ -49,7 +49,7 @@ export async function profileContext(store: TemplateStore): Promise<ProfileConte
 }
 
 export async function showSubjectProfile(request: Request, subjectId: string, deps: SubjectProfileDeps = defaultSubjectProfileDeps()): Promise<Response> {
-  if (!isUuid(subjectId)) return deps.bridge.forward(request)
+  if (!routeAllows(request)) return laravelRouter(request)
   let careerId: string | null = null
   const session = await requireSession(
     request,

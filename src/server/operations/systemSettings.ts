@@ -1,5 +1,5 @@
 import "server-only"
-import { sql } from "drizzle-orm"
+import { sql, type SQL } from "drizzle-orm"
 import { db } from "@/db"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
 import type { BridgeDeps } from "../auth/types"
@@ -14,7 +14,7 @@ export type SystemSettingsDeps = {
   environment: () => SettingsEnvironment
 }
 
-const SECRET = "ai.api_key"
+export const SECRET = "ai.api_key"
 const FIELDS: [field: string, section: "notifications" | "ai" | "library"][] = [
   ["notifications.emails", "notifications"],
   ["notifications.digest_time", "notifications"],
@@ -78,7 +78,18 @@ export function environmentSettings(environment: SettingsEnvironment): Record<st
   }
 }
 
-async function storedSettings(): Promise<Map<string, unknown>> {
+export function storedSettingsOn(executor: { execute(query: SQL): Promise<{ rows: unknown[] }> }): () => Promise<Map<string, unknown>> {
+  return async () => {
+    try {
+      const result = await executor.execute(sql`select clave_ajuste, valor_ajuste from ajustes_sistema`)
+      return new Map((result.rows as { clave_ajuste: string; valor_ajuste: unknown }[]).map((row) => [row.clave_ajuste, row.valor_ajuste]))
+    } catch {
+      return new Map()
+    }
+  }
+}
+
+export async function storedSettings(): Promise<Map<string, unknown>> {
   try {
     const result = await db.execute(sql`select clave_ajuste, valor_ajuste from ajustes_sistema`)
     return new Map((result.rows as { clave_ajuste: string; valor_ajuste: unknown }[]).map((row) => [row.clave_ajuste, row.valor_ajuste]))
@@ -91,10 +102,10 @@ function defaultDeps(): SystemSettingsDeps {
   return { bridge: defaultBridgeDeps(), stored: storedSettings, environment: () => process.env }
 }
 
-export function describeSettings(stored: Map<string, unknown>, environment: SettingsEnvironment, key: Buffer) {
+export function effectiveSettings(stored: Map<string, unknown>, environment: SettingsEnvironment, key: Buffer): Record<string, unknown> {
   const defaults = environmentSettings(environment)
-  const result: Record<string, Record<string, unknown>> = { notifications: {}, ai: {}, library: {} }
-  for (const [field, section] of FIELDS) {
+  const result: Record<string, unknown> = {}
+  for (const [field] of FIELDS) {
     const saved = stored.has(field)
     let value = saved ? stored.get(field) : defaults[field]
     if (saved && field === SECRET && typeof value === "string") {
@@ -105,7 +116,17 @@ export function describeSettings(stored: Map<string, unknown>, environment: Sett
         value = null
       }
     }
-    const source = saved ? "pantalla" : "entorno"
+    result[field] = value
+  }
+  return result
+}
+
+export function describeSettings(stored: Map<string, unknown>, environment: SettingsEnvironment, key: Buffer) {
+  const effective = effectiveSettings(stored, environment, key)
+  const result: Record<string, Record<string, unknown>> = { notifications: {}, ai: {}, library: {} }
+  for (const [field, section] of FIELDS) {
+    const value = effective[field]
+    const source = stored.has(field) ? "pantalla" : "entorno"
     const name = field.slice(field.indexOf(".") + 1)
     result[section][name] = field === SECRET ? { configured: typeof value === "string" && value !== "", source } : { value, source }
   }

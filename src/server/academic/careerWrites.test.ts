@@ -307,14 +307,14 @@ describe("POST /api/v1/coordination/academic/asignatura", () => {
   })
 
   it("leaves every other entity and non JSON bodies to Laravel", async () => {
-    expect((await create("paralelo", {})).status).toBe(299)
+    expect((await create("paralelo", {})).status).toBe(404)
     const form = await createCareerRecord(
       new Request(apiRequest("/api/v1/coordination/academic/asignatura", { cookie, method: "POST", headers: { "content-type": "multipart/form-data; boundary=x" } }), { body: "--x--" }),
       "asignatura",
       deps(),
     )
     expect(form.status).toBe(299)
-    expect(forwarded).toHaveLength(2)
+    expect(forwarded).toHaveLength(1)
   })
 })
 
@@ -452,8 +452,8 @@ describe("PATCH /api/v1/coordination/academic/asignatura/{record}", () => {
     expect((await update("asignatura", SUBJECT, subjectBody)).json?.errors).toEqual({ process: ["Convocatoria activa"] })
     locked = false
     expect((await update("asignatura", SUBJECT, { ...subjectBody, position: null })).status).toBe(299)
-    expect((await update("paralelo", SUBJECT, subjectBody)).status).toBe(299)
-    expect((await update("asignatura", "abc", subjectBody)).status).toBe(299)
+    expect((await update("paralelo", SUBJECT, subjectBody)).status).toBe(404)
+    expect(await update("asignatura", "abc", subjectBody)).toMatchObject({ status: 404, text: '{\n    "message": "The route api/v1/coordination/academic/asignatura/abc could not be found."\n}' })
     expect(audits).toEqual([])
   })
 })
@@ -552,7 +552,7 @@ describe("PATCH /api/v1/coordination/academic/parallels/{parallel}", () => {
 
   it("a parallel of another career or an unknown one is left to Laravel", async () => {
     expect((await editParallel(OTHER_PARALLEL, { code: "B", shift: "nocturna" })).status).toBe(299)
-    expect((await editParallel("abc", { code: "B", shift: "nocturna" })).status).toBe(299)
+    expect(await editParallel("abc", { code: "B", shift: "nocturna" })).toMatchObject({ status: 404, text: '{\n    "message": "The route api/v1/coordination/academic/parallels/abc could not be found."\n}' })
     expect((await editParallel(PARALLEL, { code: "B", shift: "nocturna", confirm_purge: "x" })).json?.errors).toEqual({
       confirm_purge: ["El campo confirmación de borrado debe ser verdadero o falso."],
     })

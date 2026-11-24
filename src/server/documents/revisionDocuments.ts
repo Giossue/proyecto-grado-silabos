@@ -16,6 +16,8 @@ import type { ReviewRevision } from "../syllabus/reviewDetails"
 import type { DetailSyllabus } from "../syllabus/syllabusDetail"
 import { createDocumentRequestParts, createDocumentStore } from "./revisionDocumentsStore"
 import { laravelSlug } from "./slug"
+import { modelNotFound } from "../laravel/router"
+import { MODELS } from "../laravel/models"
 
 export type ArtifactRow = { id: string; state: string; requestedAt: string; completedAt: string | null; pdfSize: number | null }
 export type StoredObject = { id: string; disk: string; path: string }
@@ -48,7 +50,12 @@ const DOWNLOAD_HEADERS: Record<string, string> = {
 
 type Bound = { session: LaravelSession; revision: ReviewRevision; syllabus: DetailSyllabus }
 
-async function bindRevision(request: Request, revisionId: string, deps: DocumentDeps, load: (userId: string) => Promise<{ revision: ReviewRevision; syllabus: DetailSyllabus } | null>): Promise<Bound | Response> {
+async function bindRevision(
+  request: Request,
+  revisionId: string,
+  deps: DocumentDeps,
+  load: (userId: string) => Promise<{ revision: ReviewRevision; syllabus: DetailSyllabus } | Response | null>,
+): Promise<Bound | Response> {
   let bound: { revision: ReviewRevision; syllabus: DetailSyllabus } | null = null
   const session = await requireSession(
     request,
@@ -56,7 +63,9 @@ async function bindRevision(request: Request, revisionId: string, deps: Document
       verified: true,
       activeRole: "required",
       afterAuthentication: async (user) => {
-        bound = await load(user.id)
+        const loadedRevision = await load(user.id)
+        if (loadedRevision instanceof Response) return loadedRevision
+        bound = loadedRevision
         return bound === null ? deps.bridge.forward(request) : null
       },
     },
@@ -69,14 +78,13 @@ async function bindRevision(request: Request, revisionId: string, deps: Document
 }
 
 async function loaded(deps: DocumentDeps, revisionId: string, userId: string): Promise<{ revision: ReviewRevision; syllabus: DetailSyllabus } | null> {
-  const revision = await deps.store.revision(revisionId)
+  const revision = isUuid(revisionId) ? await deps.store.revision(revisionId) : null
   const syllabus = revision === null ? null : await deps.store.syllabus(revision.syllabusId, userId)
   return revision === null || syllabus === null ? null : { revision, syllabus }
 }
 
 export async function revisionDocuments(request: Request, revisionId: string, deps: DocumentDeps = defaultDocumentDeps()): Promise<Response> {
-  if (!isUuid(revisionId)) return deps.bridge.forward(request)
-  const bound = await bindRevision(request, revisionId, deps, (userId) => loaded(deps, revisionId, userId))
+  const bound = await bindRevision(request, revisionId, deps, async (userId) => (await loaded(deps, revisionId, userId)) ?? modelNotFound(MODELS.revision, revisionId))
   if (bound instanceof Response) return bound
   const { session, revision, syllabus } = bound
   if (!mayView(session, syllabus)) return forbidden()
@@ -108,11 +116,10 @@ async function storedFile(object: StoredObject | null): Promise<string | null> {
 }
 
 export async function downloadExport(request: Request, artifactId: string, deps: DocumentDeps = defaultDocumentDeps()): Promise<Response> {
-  if (!isUuid(artifactId)) return deps.bridge.forward(request)
   let artifact: StoredArtifact | null = null
   const bound = await bindRevision(request, artifactId, deps, async (userId) => {
-    artifact = await deps.store.artifact(artifactId)
-    return artifact === null ? null : loaded(deps, artifact.revisionId, userId)
+    artifact = isUuid(artifactId) ? await deps.store.artifact(artifactId) : null
+    return artifact === null ? modelNotFound(MODELS.artifact, artifactId) : loaded(deps, artifact.revisionId, userId)
   })
   if (bound instanceof Response) return bound
   const found = artifact as StoredArtifact | null
@@ -148,6 +155,7 @@ export async function downloadExport(request: Request, artifactId: string, deps:
 export type DocumentRequestDeps = DocumentDeps & {
   limiter: RateLimiter
   renderable(revisionId: string): Promise<boolean>
+  rendererVersion(): string
   existing(revisionId: string, key: string): Promise<ExportArtifactRow | null>
   transaction<T>(work: (tx: ExportRequestTx) => Promise<T>): Promise<T>
   newId(): string
@@ -173,7 +181,6 @@ async function settleRequest(original: Request, deps: DocumentRequestDeps, work:
 export async function requestRevisionDocuments(request: Request, revisionId: string, deps: DocumentRequestDeps = defaultDocumentRequestDeps()): Promise<Response> {
   const original = request.clone()
   if (request.headers.get("content-type") !== null && !isJsonRequest(request)) return deps.bridge.forward(original)
-  if (!isUuid(revisionId)) return deps.bridge.forward(original)
   let gate: Throttle | null = null
   const finish = (response: Response) => (gate as Throttle | null)?.decorate(response) ?? response
   let bound: { revision: ReviewRevision; syllabus: DetailSyllabus } | null = null
@@ -186,15 +193,15 @@ export async function requestRevisionDocuments(request: Request, revisionId: str
         gate = throttle(deps.limiter, { key: `throttle:20,1:${user.id}`, maxAttempts: 20, decaySeconds: 60 }, deps.bridge.now)
         const limited = await gate.hit()
         if (limited !== null) return limited
-        bound = await loaded(deps, revisionId, user.id)
-        return bound === null ? deps.bridge.forward(original) : null
+        bound = isUuid(revisionId) ? await loaded(deps, revisionId, user.id) : null
+        return bound === null ? modelNotFound(MODELS.revision, revisionId) : null
       },
     },
     deps.bridge,
   )
   if (session instanceof Response) return finish(session)
   const found = bound as { revision: ReviewRevision; syllabus: DetailSyllabus } | null
-  if (found === null) return finish(await deps.bridge.forward(original))
+  if (found === null) return finish(modelNotFound(MODELS.revision, revisionId))
   const { revision, syllabus } = found
   if (!mayView(session, syllabus)) return finish(forbidden())
   const input: PhpArray = await laravelInput(request)
@@ -207,7 +214,7 @@ export async function requestRevisionDocuments(request: Request, revisionId: str
     await settleRequest(original, deps, async () => {
       const artifact =
         (await existingExport({ existingArtifact: deps.existing }, revision.id, key, actor.id)) ??
-        (await deps.transaction((tx) => requestExport(tx, { revisionId: revision.id, syllabusId: revision.syllabusId, key, actor, now: deps.now(), newId: deps.newId })))
+        (await deps.transaction((tx) => requestExport(tx, { revisionId: revision.id, syllabusId: revision.syllabusId, key, actor, now: deps.now(), newId: deps.newId, rendererVersion: deps.rendererVersion() })))
       return laravelJson({ message: artifact.state === COMPLETED ? "El PDF ya estaba disponible." : "El PDF se está generando.", artifact_id: artifact.id }, 202)
     }),
   )

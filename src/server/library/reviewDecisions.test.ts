@@ -9,6 +9,8 @@ import type { ReviewRevision } from "../syllabus/reviewDetails"
 import type { DetailSyllabus } from "../syllabus/syllabusDetail"
 import { commentLibraryReview, verifyLibraryReview, type LibraryDecisionDeps } from "./reviewDecisions"
 
+const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\${model}] ${id}` }, null, 4)
+
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(golden.sessionId))}`
 const FORBIDDEN = '{"message":"No tiene permiso para hacer esto."}'
 const ABORTED = '{\n    "message": ""\n}'
@@ -208,9 +210,9 @@ describe("POST library/reviews/{r}/verify", () => {
     expect(audits).toEqual([])
   })
 
-  it("leaves unknown revisions to Laravel", async () => {
+  it("answers Laravel's model 404 for unknown revisions", async () => {
     revision = null
-    expect((await verify({})).status).toBe(299)
+    expect(await verify({})).toMatchObject({ status: 404, text: modelNotFound("SyllabusRevision", REVISION) })
   })
 })
 

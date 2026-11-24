@@ -8,6 +8,8 @@ import type { AuditEventInput } from "../operations/recordAuditEvent"
 import type { DraftSyllabus } from "./draftField"
 import { validateDraft, type DraftValidationDeps, type ValidationField, type ValidationTeacher } from "./draftValidation"
 
+const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\${model}] ${id}` }, null, 4)
+
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(golden.sessionId))}`
 const CAREER = "c0000000-0000-4000-8000-000000000001"
 const SYLLABUS = "50000000-0000-4000-8000-000000000001"
@@ -174,9 +176,9 @@ describe("POST teacher/syllabi/{syllabus}/validate", () => {
   })
 
   it("leaves unknown syllabi and drafts with archived answers to Laravel", async () => {
-    expect((await validate("no-es-uuid")).status).toBe(299)
+    expect(await validate("no-es-uuid")).toMatchObject({ status: 404, text: modelNotFound("Syllabus", "no-es-uuid") })
     facts = null
-    expect((await validate()).status).toBe(299)
+    expect(await validate()).toMatchObject({ status: 404, text: modelNotFound("Syllabus", SYLLABUS) })
     facts = {
       id: SYLLABUS,
       state: "borrador",

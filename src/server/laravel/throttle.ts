@@ -46,6 +46,7 @@ export function sharedRateLimiter(): RateLimiter {
 export type Throttle = {
   hit(): Promise<Response | null>
   decorate(response: Response): Response
+  merge(response: Response): Response
 }
 
 export function throttle(limiter: RateLimiter, limit: RateLimit, now: () => number): Throttle {
@@ -69,6 +70,15 @@ export function throttle(limiter: RateLimiter, limit: RateLimit, now: () => numb
       if (remaining === null || response.headers.has("x-ratelimit-limit")) return response
       response.headers.set("X-RateLimit-Limit", String(limit.maxAttempts))
       response.headers.set("X-RateLimit-Remaining", String(Math.max(0, remaining)))
+      return response
+    },
+    merge(response) {
+      if (remaining === null) return response
+      const left = Math.max(0, remaining)
+      const current = response.headers.get("x-ratelimit-remaining")
+      if (current !== null && Number.parseInt(current, 10) <= left) return response
+      response.headers.set("X-RateLimit-Limit", String(limit.maxAttempts))
+      response.headers.set("X-RateLimit-Remaining", String(left))
       return response
     },
   }

@@ -10,6 +10,8 @@ import { createStorageWriter, type StorageWriter } from "../laravel/storageWrite
 import type { TemplateStore } from "./templateStore"
 import { uploadTemplateLogo } from "./templateLogo"
 
+const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Configuration\\Infrastructure\\Persistence\\Models\\${model}] ${id}` }, null, 4)
+
 const TEMPLATE = "01a1c5bc-7d00-7000-8000-000000000001"
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(golden.sessionId))}`
 const logo = (name: string) => readFileSync(path.join(__dirname, "..", "files", "__fixtures__", "logos", name))
@@ -67,7 +69,8 @@ describe("POST /api/v1/admin/template/{template}/logo", () => {
     world.assignments = [makeAssignment({ role: "coordinador" })]
     expect(await (await uploadTemplateLogo(post(TEMPLATE, { name: "logo.png", content: logo("rgba-800x400.png") }), TEMPLATE, deps())).text()).toBe('{"message":"No tiene permiso para hacer esto."}')
     world.assignments = [makeAssignment({ role: "administrador", careerId: null })]
-    expect((await uploadTemplateLogo(post("01a1c5bc-7d00-7000-8000-000000000999", null), "01a1c5bc-7d00-7000-8000-000000000999", deps())).status).toBe(299)
+    const unknown = await uploadTemplateLogo(post("01a1c5bc-7d00-7000-8000-000000000999", null), "01a1c5bc-7d00-7000-8000-000000000999", deps())
+    expect({ status: unknown.status, text: await unknown.text() }).toEqual({ status: 404, text: modelNotFound("SyllabusTemplate", "01a1c5bc-7d00-7000-8000-000000000999") })
   })
 
   it("answers 413 above the server limit", async () => {

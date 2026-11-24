@@ -9,6 +9,8 @@ import { createConvocation, resumeConvocation, type ConvocationWriteDeps, type L
 import type { ConvocationRecord } from "./convocations"
 import { GenerationRejected } from "./inProgressWork"
 
+const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\${model}] ${id}` }, null, 4)
+
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(golden.sessionId))}`
 const FORBIDDEN = phpJsonEncode({ message: "No tiene permiso para hacer esto." })
 const CAREER = "c0000000-0000-4000-8000-000000000001"
@@ -248,9 +250,9 @@ describe("POST /api/v1/coordination/convocations/{convocation}/reanudar", () => 
     expect(notices.notifications).toEqual([])
   })
 
-  it("forwards unknown convocations to Laravel", async () => {
+  it("answers Laravel's model 404 for unknown convocations", async () => {
     record = null
-    expect((await resume()).status).toBe(299)
-    expect((await resume("abc")).status).toBe(299)
+    expect(await resume()).toMatchObject({ status: 404, text: modelNotFound("Convocation", CONVOCATION) })
+    expect(await resume("abc")).toMatchObject({ status: 404, text: modelNotFound("Convocation", "abc") })
   })
 })

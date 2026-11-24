@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from "vitest"
+import { nativeMethods, routerComparison } from "@/server/laravel/routerTesting"
 import * as twoFactor from "./two-factor/route"
 import * as confirm from "./two-factor/confirm/route"
 import * as recoveryCodes from "./two-factor/recovery-codes/route"
@@ -24,16 +25,16 @@ afterEach(() => {
 })
 
 describe("two-factor, password reset and account activation routes", () => {
-  it.each(ROUTES)("sends the methods Next does not serve on %s to Laravel", async (path, module, served, forwarded) => {
+  it.each(ROUTES)("answers the methods Next does not serve on %s like Laravel's router", async (path, module, served, others) => {
     const fetchMock = vi.fn(async () => new Response("{}", { status: 405 }))
     vi.stubGlobal("fetch", fetchMock)
-    for (const method of forwarded) {
-      const response = await module[method](new Request(`http://localhost:3000${path}`, { method, body: ["HEAD", "GET", "OPTIONS"].includes(method) ? undefined : "{}" }))
-      expect(response.status).toBe(405)
+    const unserved = nativeMethods(module, served, others)
+    for (const method of unserved) {
+      const { next, laravel } = await routerComparison(module, method, path)
+      expect(next).toEqual(laravel)
     }
-    expect(fetchMock).toHaveBeenCalledTimes(forwarded.length)
-    expect((fetchMock.mock.calls as unknown as [string][])[0][0]).toBe(`http://127.0.0.1:8001${path}`)
-    for (const method of served) expect(forwarded.map((name) => module[name])).not.toContain(module[method])
+    expect(fetchMock).not.toHaveBeenCalled()
+    for (const method of served) expect(unserved.map((name) => module[name])).not.toContain(module[method])
   })
 
   it.each(ROUTES.filter(([path]) => !path.endsWith("/challenge") && !path.endsWith("-reset") && !path.endsWith("-activation")))(

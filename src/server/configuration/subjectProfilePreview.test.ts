@@ -182,10 +182,10 @@ describe("GET academic/asignaturas/{asignatura}/ficha/vista-previa", () => {
   it("leaves unknown subjects, non-UUID ids and an undefined template to Laravel", async () => {
     asRole("coordinador", CAREER)
     expect((await get("01a1c5bc-7a00-7000-8000-0000000000ff")).status).toBe(299)
-    expect((await get("abc")).status).toBe(299)
+    expect((await get("abc")).status).toBe(404)
     templates.template = { ...goldenTemplate(), definition: null }
     expect((await get()).status).toBe(299)
-    expect(forwarded).toHaveLength(3)
+    expect(forwarded).toHaveLength(2)
   })
 
   it("answers 401 without a session", async () => {

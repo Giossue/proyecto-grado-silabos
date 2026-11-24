@@ -6,7 +6,7 @@ import { record } from "../configuration/phpValues"
 import { gotenbergEnabled, gotenbergSettings } from "../documents/gotenbergConverter"
 import { exportRequestTxOn } from "../documents/syllabusExportStore"
 import { dispatchSyllabusExport } from "../documents/syllabusExportJob"
-import { rendersInNext } from "../documents/syllabusRenderer"
+import { rendererVersion, rendersInNext } from "../documents/syllabusRenderer"
 import { uuid7 } from "../laravel/uuid7"
 import { systemNow, type WriteOptions } from "../notifications/queries"
 import { withAfterCommit, type AfterCommit } from "../queue/dispatch"
@@ -68,6 +68,7 @@ export function reviewApprovalDepsOn(executor: Executor, transaction: Transactio
   return {
     store: reviewDetailStoreOn(executor),
     renderable: (revisionId) => revisionRendersInNext(executor, revisionId),
+    rendererVersion: () => rendererVersion(gotenbergEnabled(gotenbergSettings())),
     now,
     newId: options.newId ?? uuid7,
     newKey: options.newKey ?? randomUUID,

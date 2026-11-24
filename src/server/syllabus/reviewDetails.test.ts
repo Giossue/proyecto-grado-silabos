@@ -11,6 +11,8 @@ import { coordinationReviewDetail, libraryReviewDetail, type HistoryEntry, type 
 import type { DetailSyllabus, ReviewComment } from "./syllabusDetail"
 import type { SignatureRecord } from "./snapshotDocuments"
 
+const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\${model}] ${id}` }, null, 4)
+
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(golden.sessionId))}`
 const EMPTY_403 = '{\n    "message": ""\n}'
 const CAREER = "c0000000-0000-4000-8000-000000000001"
@@ -202,8 +204,8 @@ describe("GET coordination/reviews/{revision}", () => {
   it("forbids the review to a coordinator of another career and leaves unknown revisions to Laravel", async () => {
     world.assignments = [makeAssignment({ role: "coordinador", careerId: "c0000000-0000-4000-8000-000000000009" })]
     expect(await coordination()).toMatchObject({ status: 403, text: EMPTY_403 })
-    expect((await coordination("70000000-0000-4000-8000-000000000099")).status).toBe(299)
-    expect((await coordination("x")).status).toBe(299)
+    expect(await coordination("70000000-0000-4000-8000-000000000099")).toMatchObject({ status: 404, text: modelNotFound("SyllabusRevision", "70000000-0000-4000-8000-000000000099") })
+    expect(await coordination("x")).toMatchObject({ status: 404, text: modelNotFound("SyllabusRevision", "x") })
   })
 })
 
@@ -273,6 +275,6 @@ describe("GET library/reviews/{revision}", () => {
     expect(await library()).toMatchObject({ status: 404, text: '{\n    "message": ""\n}' })
     world.assignments = [makeAssignment({ role: "coordinador", careerId: CAREER })]
     expect(await library()).toMatchObject({ status: 403, text: '{"message":"No tiene permiso para hacer esto."}' })
-    expect((await library("70000000-0000-4000-8000-000000000099")).status).toBe(299)
+    expect(await library("70000000-0000-4000-8000-000000000099")).toMatchObject({ status: 404, text: modelNotFound("SyllabusRevision", "70000000-0000-4000-8000-000000000099") })
   })
 })

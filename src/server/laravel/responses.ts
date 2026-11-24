@@ -21,7 +21,11 @@ export function laravelJson(payload: unknown, status = 200): Response {
 }
 
 export function laravelHttpError(status: number, message: string): Response {
-  return jsonResponse(phpJsonEncode({ message }, { pretty: true }), status)
+  return jsonResponse(phpJsonEncode({ message }, { pretty: true, unescapedSlashes: true }), status)
+}
+
+export function serverError(): Response {
+  return laravelHttpError(500, "Server Error")
 }
 
 export function unauthenticated(): Response {

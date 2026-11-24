@@ -19,15 +19,15 @@ function writeFloat(literal: string): string {
   return /^-?\d+$/.test(literal) ? `${literal}.0` : literal
 }
 
-function escapeForPhp(json: string): string {
+function escapeForPhp(json: string, unescapedSlashes: boolean): string {
   return json.replace(/[/\u007f-￿]/g, (character) => {
-    if (character === "/") return "\\/"
+    if (character === "/") return unescapedSlashes ? character : "\\/"
     if (character === "\u007f") return character
     return "\\u" + character.charCodeAt(0).toString(16).padStart(4, "0")
   })
 }
 
-export function phpJsonEncode(value: unknown, options: { pretty?: boolean } = {}): string {
+export function phpJsonEncode(value: unknown, options: { pretty?: boolean; unescapedSlashes?: boolean } = {}): string {
   const json = options.pretty ? JSON.stringify(value, null, 4) : JSON.stringify(value)
-  return escapeForPhp(json.replace(FLOAT_MARKER, (_, literal: string) => writeFloat(literal)))
+  return escapeForPhp(json.replace(FLOAT_MARKER, (_, literal: string) => writeFloat(literal)), options.unescapedSlashes === true)
 }

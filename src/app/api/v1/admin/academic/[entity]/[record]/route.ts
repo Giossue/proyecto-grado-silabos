@@ -1,6 +1,6 @@
 import { deleteGovernanceRecord } from "@/server/academic/deletions"
 import { postGovernanceRecord, updateGovernanceRecord } from "@/server/academic/governanceWrites"
-import { proxyToLaravel } from "@/server/laravel/proxy"
+import { laravelRouterHandler } from "@/server/laravel/router"
 
 type Context = { params: Promise<{ entity: string; record: string }> }
 
@@ -19,4 +19,4 @@ export async function POST(request: Request, context: Context): Promise<Response
   return postGovernanceRecord(request, entity, record)
 }
 
-export { proxyToLaravel as GET, proxyToLaravel as HEAD, proxyToLaravel as PUT, proxyToLaravel as OPTIONS }
+export { laravelRouterHandler as GET, laravelRouterHandler as HEAD, laravelRouterHandler as PUT, laravelRouterHandler as OPTIONS }

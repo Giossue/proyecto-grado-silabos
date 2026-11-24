@@ -19,7 +19,7 @@ export function snapshotDefinition(snapshot: PhpRecord): TemplateDefinition {
   throw new NeedsLaravel()
 }
 
-function historicalDocument(field: PhpRecord): PhpRecord {
+export function historicalDocument(field: PhpRecord): PhpRecord {
   if (isPhpArray(field.document)) return record(field.document)
   const value = field.value ?? null
   if (isDocument(value)) return record(value)

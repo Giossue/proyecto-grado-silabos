@@ -334,7 +334,7 @@ describe("DELETE /api/v1/coordination/support-documents/{document}", () => {
 
   it("forwards unknown or malformed documents to Laravel", async () => {
     asRole("coordinador")
-    expect((await destroySupportDocument(request("DELETE", "/api/v1/coordination/support-documents/x"), "x", deps())).status).toBe(299)
+    expect((await destroySupportDocument(request("DELETE", "/api/v1/coordination/support-documents/x"), "x", deps())).status).toBe(404)
     const missing = "01a1c5bc-79ca-7331-8f0f-000000000000"
     expect((await destroySupportDocument(request("DELETE", `/api/v1/coordination/support-documents/${missing}`), missing, deps())).status).toBe(299)
   })

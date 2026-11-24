@@ -9,6 +9,8 @@ import { requestCorrection, resetSyllabus, type DecisionRevision, type DecisionS
 import type { ReviewRevision } from "./reviewDetails"
 import type { DetailSyllabus } from "./syllabusDetail"
 
+const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\${model}] ${id}` }, null, 4)
+
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(golden.sessionId))}`
 const FORBIDDEN = '{"message":"No tiene permiso para hacer esto."}'
 const CAREER = "c0000000-0000-4000-8000-000000000001"
@@ -260,11 +262,11 @@ describe("POST /api/v1/coordination/reviews/{revision}/request-correction", () =
     expect(notices.mails).toEqual([])
   })
 
-  it("forwards unknown or non-UUID revisions to Laravel", async () => {
+  it("answers Laravel's model 404 for unknown or non-UUID revisions", async () => {
     revision = null
-    expect((await post({ justification: JUSTIFICATION })).status).toBe(299)
-    expect((await post({ justification: JUSTIFICATION }, "abc")).status).toBe(299)
-    expect(forwarded).toHaveLength(2)
+    expect(await post({ justification: JUSTIFICATION })).toMatchObject({ status: 404, text: modelNotFound("SyllabusRevision", REVISION) })
+    expect(await post({ justification: JUSTIFICATION }, "abc")).toMatchObject({ status: 404, text: modelNotFound("SyllabusRevision", "abc") })
+    expect(forwarded).toHaveLength(0)
   })
 })
 
@@ -352,8 +354,8 @@ describe("POST /api/v1/coordination/syllabi/{syllabus}/reset", () => {
     expect(notices.mails).toEqual([])
   })
 
-  it("forwards unknown or non-UUID syllabi to Laravel", async () => {
-    expect((await reset({ reason: REASON }, "abc")).status).toBe(299)
-    expect(forwarded).toHaveLength(1)
+  it("answers Laravel's model 404 for unknown or non-UUID syllabi", async () => {
+    expect(await reset({ reason: REASON }, "abc")).toMatchObject({ status: 404, text: modelNotFound("Syllabus", "abc") })
+    expect(forwarded).toHaveLength(0)
   })
 })

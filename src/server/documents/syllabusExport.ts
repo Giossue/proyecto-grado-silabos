@@ -2,7 +2,7 @@ import type { PhpRecord } from "../configuration/phpValues"
 import { scheduleWorkflowNotification, type NotificationScope } from "../notifications/store"
 import type { AuditEventInput } from "../operations/recordAuditEvent"
 import { signedDocumentVariables, type SignatureRecord, type SignedFacts } from "../syllabus/snapshotDocuments"
-import { fingerprint, RENDERER_VERSION, validateBundle, type DocumentBundle, type DocumentRenderInput, type RenderedDocument } from "./syllabusRenderer"
+import { fingerprint, validateBundle, type DocumentBundle, type DocumentRenderInput, type RenderedDocument } from "./syllabusRenderer"
 
 export const EXPORT_DISK = "private"
 export const NOT_APPROVED = "Solo una revisión aprobada puede generar documentos."
@@ -31,7 +31,7 @@ export interface ExportRequestTx {
   recordAudit(event: AuditEventInput): Promise<void>
 }
 
-export type ExportRequest = { revisionId: string; syllabusId: string; key: string; actor: ExportActor; now: number; newId: () => string }
+export type ExportRequest = { revisionId: string; syllabusId: string; key: string; actor: ExportActor; now: number; newId: () => string; rendererVersion: string }
 
 export async function existingExport(lookup: Pick<ExportRequestTx, "existingArtifact">, revisionId: string, key: string, actorId: string): Promise<ExportArtifactRow | null> {
   const artifact = await lookup.existingArtifact(revisionId, key)
@@ -57,7 +57,7 @@ export async function requestExport(tx: ExportRequestTx, request: ExportRequest)
     resourceType: "artefacto_exportacion",
     resourceId: id,
     result: "exito",
-    metadata: { revision_number: revision.number, renderer_version: RENDERER_VERSION },
+    metadata: { revision_number: revision.number, renderer_version: request.rendererVersion },
     occurredAt: request.now,
   })
   return { id, state: "pendiente", requestedBy: request.actor.id }

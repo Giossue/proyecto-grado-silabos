@@ -17,6 +17,7 @@ import { NeedsLaravel } from "../syllabus/snapshotDocuments"
 import { createGovernanceWriteDeps } from "./governanceWriteStore"
 import { CONVOCATION_LOCK_REASON, isUuid, STUDY_MODALITIES } from "./structure"
 import type { StoredObjectInput } from "./supportDocumentWrites"
+import { laravelRouter } from "../laravel/router"
 
 export const CAMPUSES = [
   "Campus Matriz Dr. Gabriel Galarza López",
@@ -260,6 +261,11 @@ async function careerSession(request: Request, deps: GovernanceWriteDeps): Promi
   return session
 }
 
+async function forwardAuthenticated(request: Request, original: Request, deps: GovernanceWriteDeps): Promise<Response> {
+  const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
+  return session instanceof Response ? session : deps.bridge.forward(original)
+}
+
 function audit(session: LaravelSession, deps: GovernanceWriteDeps, fields: Pick<AuditEventInput, "action" | "resourceType" | "resourceId" | "metadata">): AuditEventInput {
   return { actorId: session.user.id, roleAssignmentId: session.activeRole?.id ?? null, result: "exito", occurredAt: deps.now(), ...fields }
 }
@@ -279,7 +285,7 @@ export async function createGovernanceRecord(request: Request, entity: string, d
   const tooLarge = postTooLarge(request, deps.maxPostSize ?? postMaxSize())
   if (tooLarge !== null) return tooLarge
   const original = request.clone()
-  if (!["facultad", "carrera", "periodo"].includes(entity)) return deps.bridge.forward(original)
+  if (!["facultad", "carrera", "periodo"].includes(entity)) return forwardAuthenticated(request, original, deps)
   const body = await readGovernanceBody(request.clone(), entity)
   if (body === null || body.input._token !== undefined) return deps.bridge.forward(original)
   const session = await careerSession(request, deps)
@@ -396,7 +402,7 @@ export async function updateGovernanceRecord(request: Request, entity: string, r
   const tooLarge = postTooLarge(request, deps.maxPostSize ?? postMaxSize())
   if (tooLarge !== null) return tooLarge
   const original = request.clone()
-  if (!["facultad", "carrera", "periodo"].includes(entity) || !isUuid(recordId)) return deps.bridge.forward(original)
+  if (!["facultad", "carrera", "periodo"].includes(entity) || !isUuid(recordId)) return forwardAuthenticated(request, original, deps)
   const body = await readGovernanceBody(request.clone(), entity)
   if (body === null || body.input._token !== undefined) return deps.bridge.forward(original)
   const session = await careerSession(request, deps)
@@ -530,7 +536,7 @@ export async function updateGovernanceRecord(request: Request, entity: string, r
 
 export async function setGovernanceStatus(request: Request, entity: string, recordId: string, deps: GovernanceWriteDeps = defaultGovernanceWriteDeps()): Promise<Response> {
   const original = request.clone()
-  if (!["facultad", "carrera"].includes(entity) || !isUuid(recordId)) return deps.bridge.forward(original)
+  if (!["facultad", "carrera"].includes(entity) || !isUuid(recordId)) return forwardAuthenticated(request, original, deps)
   if (request.headers.get("content-type") !== null && !isJsonRequest(request)) return deps.bridge.forward(original)
   const session = await careerSession(request.clone(), deps)
   if (session instanceof Response) return session
@@ -577,5 +583,8 @@ export async function setGovernanceStatus(request: Request, entity: string, reco
 export async function postGovernanceRecord(request: Request, entity: string, recordId: string, deps: GovernanceWriteDeps = defaultGovernanceWriteDeps()): Promise<Response> {
   const tooLarge = postTooLarge(request, deps.maxPostSize ?? postMaxSize())
   if (tooLarge !== null) return tooLarge
-  return (await spoofedMethod(request)) === "PATCH" ? updateGovernanceRecord(request, entity, recordId, deps) : deps.bridge.forward(request)
+  const method = await spoofedMethod(request)
+  if (method === "PATCH") return updateGovernanceRecord(request, entity, recordId, deps)
+  if (method === "POST") return laravelRouter(request)
+  return forwardAuthenticated(request.clone(), request, deps)
 }

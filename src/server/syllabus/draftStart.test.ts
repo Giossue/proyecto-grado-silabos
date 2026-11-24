@@ -12,6 +12,8 @@ import type { TemplateDefinition } from "../configuration/templateRuntime"
 import { copySyllabusContent, startDraft, type DraftStartDeps, type DraftStartTx } from "./draftStart"
 import type { CopySource, DetailSyllabus, SyllabusDetailStore } from "./syllabusDetail"
 
+const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\${model}] ${id}` }, null, 4)
+
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(golden.sessionId))}`
 const EMPTY_FORBIDDEN = '{\n    "message": ""\n}'
 const FORBIDDEN = '{"message":"No tiene permiso para hacer esto."}'
@@ -260,9 +262,9 @@ describe("POST teacher/syllabi/{syllabus}/start", () => {
   })
 
   it("leaves unknown syllabi and malformed ids to Laravel", async () => {
-    expect((await start("50000000-0000-4000-8000-0000000000ff")).status).toBe(299)
-    expect((await start("abc")).status).toBe(299)
-    expect(forwarded).toHaveLength(2)
+    expect(await start("50000000-0000-4000-8000-0000000000ff")).toMatchObject({ status: 404, text: modelNotFound("Syllabus", "50000000-0000-4000-8000-0000000000ff") })
+    expect(await start("abc")).toMatchObject({ status: 404, text: modelNotFound("Syllabus", "abc") })
+    expect(forwarded).toHaveLength(0)
   })
 })
 
@@ -340,10 +342,10 @@ describe("POST teacher/syllabi/{syllabus}/copy-from/{source}", () => {
 
   it("leaves forms, unknown syllabi and an undefined template to Laravel", async () => {
     expect((await copy("version_bloqueo=2", TARGET, SOURCE, { "content-type": "application/x-www-form-urlencoded" })).status).toBe(299)
-    expect((await copy({ version_bloqueo: 2 }, TARGET, "50000000-0000-4000-8000-0000000000ff")).status).toBe(299)
+    expect(await copy({ version_bloqueo: 2 }, TARGET, "50000000-0000-4000-8000-0000000000ff")).toMatchObject({ status: 404, text: modelNotFound("Syllabus", "50000000-0000-4000-8000-0000000000ff") })
     templates.template = { ...goldenTemplate(), definition: null }
     expect((await copy({ version_bloqueo: 2 })).status).toBe(299)
-    expect(forwarded).toHaveLength(3)
+    expect(forwarded).toHaveLength(2)
     expect(audits).toEqual([])
   })
 })

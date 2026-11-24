@@ -20,6 +20,8 @@ import { mayEdit, mayStart, mayView } from "./policy"
 import { NeedsLaravel } from "./snapshotDocuments"
 import { syllabusPayload, type DetailSyllabus, type SyllabusDetailStore } from "./syllabusDetail"
 import { createDraftStartStore } from "./draftStartStore"
+import { modelNotFound } from "../laravel/router"
+import { MODELS } from "../laravel/models"
 
 export type LockedDraft = { id: string; state: string; version: number; subjectId: string }
 export type TeacherField = { id: string; responsible: string; content: unknown }
@@ -81,15 +83,17 @@ async function bound(request: Request, syllabusId: string, sourceId: string | nu
       verified: true,
       activeRole: "required",
       afterAuthentication: async (user) => {
-        syllabus = await deps.store.syllabus(syllabusId, user.id)
-        source = syllabus === null || sourceId === null ? null : await deps.store.syllabus(sourceId, user.id)
-        return syllabus === null || (sourceId !== null && source === null) ? deps.bridge.forward(request) : null
+        syllabus = isUuid(syllabusId) ? await deps.store.syllabus(syllabusId, user.id) : null
+        if (syllabus === null) return modelNotFound(MODELS.syllabus, syllabusId)
+        source = sourceId === null || !isUuid(sourceId) ? null : await deps.store.syllabus(sourceId, user.id)
+        return sourceId !== null && source === null ? modelNotFound(MODELS.syllabus, sourceId) : null
       },
     },
     deps.bridge,
   )
   if (session instanceof Response) return session
-  if (syllabus === null || (sourceId !== null && source === null)) return deps.bridge.forward(request)
+  if (syllabus === null) return modelNotFound(MODELS.syllabus, syllabusId)
+  if (sourceId !== null && source === null) return modelNotFound(MODELS.syllabus, sourceId)
   return { session, syllabus, source }
 }
 
@@ -130,7 +134,6 @@ async function forwarding(deps: DraftStartDeps, work: () => Promise<Response>): 
 }
 
 export async function startDraft(request: Request, syllabusId: string, deps: DraftStartDeps = defaultDraftStartDeps()): Promise<Response> {
-  if (!isUuid(syllabusId)) return deps.bridge.forward(request)
   const original = request.clone()
   const auth = await bound(request, syllabusId, null, deps)
   if (auth instanceof Response) return auth
@@ -162,7 +165,6 @@ function conflict(request: Request, version: number): Response {
 }
 
 export async function copySyllabusContent(request: Request, syllabusId: string, sourceId: string, deps: DraftStartDeps = defaultDraftStartDeps()): Promise<Response> {
-  if (!isUuid(syllabusId) || !isUuid(sourceId)) return deps.bridge.forward(request)
   const original = request.clone()
   const auth = await bound(request, syllabusId, sourceId, deps)
   if (auth instanceof Response) return auth

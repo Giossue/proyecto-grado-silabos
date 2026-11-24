@@ -1,7 +1,6 @@
 import "server-only"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
 import type { BridgeDeps, LaravelSession } from "../auth/types"
-import { isUuid } from "../academic/structure"
 import { phpQuery, type PhpArray } from "../laravel/input"
 import { strnatcasecmp } from "../laravel/naturalSort"
 import { lengthAwarePaginator, resolveCurrentPage } from "../laravel/pagination"
@@ -11,6 +10,7 @@ import { validateInput } from "../laravel/validation"
 import { hasRole, ROLE_TEACHER } from "./policy"
 import { convocationName } from "./syllabusSql"
 import { createTeacherSyllabusRepository } from "./teacherSyllabusQueries"
+import { laravelRouter, routeAllows } from "../laravel/router"
 
 export type TeacherPageFilters = { userId: string; careerId: string | null; search: string | null; state: string | null }
 
@@ -118,7 +118,7 @@ export async function teacherHistory(request: Request, deps: TeacherSyllabusDeps
 }
 
 export async function teacherHistoryCareer(request: Request, career: string, deps: TeacherSyllabusDeps = defaultTeacherSyllabusDeps()): Promise<Response> {
-  if (!isUuid(career)) return deps.bridge.forward(request)
+  if (!routeAllows(request)) return laravelRouter(request)
   const authorized = await authorizedTeacher(request, deps)
   if (authorized instanceof Response) return authorized
   const syllabi = (await deps.syllabi.past(authorized.session.user.id, career)).sort((left, right) => (left.periodEndsOn === right.periodEndsOn ? 0 : left.periodEndsOn < right.periodEndsOn ? 1 : -1))

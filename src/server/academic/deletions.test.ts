@@ -195,9 +195,9 @@ describe("DELETE /api/v1/coordination/academic/{entity}/{record}", () => {
     asRole("coordinador", CAREER)
     assignments.set(ASSIGNMENT, { careerId: "otra" })
     expect((await deleteCareerRecord(remove(path), "asignacion_docente", ASSIGNMENT, deps())).status).toBe(299)
-    expect((await deleteCareerRecord(remove("/api/v1/coordination/academic/asignacion_docente/x"), "asignacion_docente", "x", deps())).status).toBe(299)
-    expect((await deleteCareerRecord(remove(`/api/v1/coordination/academic/teachers/${ASSIGNMENT}`), "teachers", ASSIGNMENT, deps())).status).toBe(299)
-    expect(forwarded).toHaveLength(3)
+    expect((await deleteCareerRecord(remove("/api/v1/coordination/academic/asignacion_docente/x"), "asignacion_docente", "x", deps())).status).toBe(404)
+    expect((await deleteCareerRecord(remove(`/api/v1/coordination/academic/teachers/${ASSIGNMENT}`), "teachers", ASSIGNMENT, deps())).status).toBe(404)
+    expect(forwarded).toHaveLength(1)
     expect(committed).toEqual([])
   })
 
@@ -251,7 +251,7 @@ describe("DELETE /api/v1/coordination/academic/parallels/{parallel}", () => {
     asRole("coordinador", CAREER)
     parallels.set(PARALLEL, { careerId: "otra", code: "A", teacherAssignments: 0, syllabi: [] })
     expect((await deleteParallel(remove(path), PARALLEL, deps())).status).toBe(299)
-    expect((await deleteParallel(remove("/api/v1/coordination/academic/parallels/x"), "x", deps())).status).toBe(299)
+    expect((await deleteParallel(remove("/api/v1/coordination/academic/parallels/x"), "x", deps())).status).toBe(404)
     expect(committed).toEqual([])
   })
 

@@ -1,5 +1,5 @@
 import { requestRevisionDocuments, revisionDocuments } from "@/server/documents/revisionDocuments"
-import { proxyToLaravel } from "@/server/laravel/proxy"
+import { laravelRouterHandler } from "@/server/laravel/router"
 
 type Context = { params: Promise<{ revision: string }> }
 
@@ -13,10 +13,4 @@ export async function POST(request: Request, context: Context): Promise<Response
   return requestRevisionDocuments(request, revision)
 }
 
-export {
-  proxyToLaravel as HEAD,
-  proxyToLaravel as PUT,
-  proxyToLaravel as PATCH,
-  proxyToLaravel as DELETE,
-  proxyToLaravel as OPTIONS,
-}
+export { laravelRouterHandler as PUT, laravelRouterHandler as PATCH, laravelRouterHandler as DELETE, laravelRouterHandler as OPTIONS }

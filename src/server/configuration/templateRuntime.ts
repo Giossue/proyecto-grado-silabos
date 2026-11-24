@@ -731,7 +731,7 @@ export function normalizeFieldDocument(value: unknown, definition: TemplateDefin
 }
 
 export function fieldDocumentIsEmpty(value: unknown, definition: TemplateDefinition): boolean {
-  return !isDocument(value) || plainText(value, definition).trim() === ""
+  return !isDocument(value) || phpTrim(plainText(value, definition)) === ""
 }
 
 export function responsesEnabled(definition: TemplateDefinition): boolean {

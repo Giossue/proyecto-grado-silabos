@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const laravelUrl = (process.env.LARAVEL_URL ?? "http://127.0.0.1:8001").replace(/\/$/, "");
+const laravelFallback = (process.env.LARAVEL_FALLBACK ?? "on").trim().toLowerCase() !== "off";
 
 const nextConfig: NextConfig = {
   turbopack: {
@@ -15,11 +16,7 @@ const nextConfig: NextConfig = {
     return {
       beforeFiles: [],
       afterFiles: [],
-      fallback: [
-        { source: "/api/:path*", destination: `${laravelUrl}/api/:path*` },
-        { source: "/sanctum/:path*", destination: `${laravelUrl}/sanctum/:path*` },
-        { source: "/logos/:path*", destination: `${laravelUrl}/logos/:path*` },
-      ],
+      fallback: laravelFallback ? [{ source: "/logos/:path*", destination: `${laravelUrl}/logos/:path*` }] : [],
     };
   },
 };

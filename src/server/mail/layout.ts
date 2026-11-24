@@ -4,7 +4,7 @@ import { MAIL_THEME_CSS } from "./theme"
 
 export type MailApp = { name: string; frontendUrl: string; locale: string }
 
-export type MarkdownMailBody = { html: string; text: string }
+export type MarkdownMailBody = { html: string; text: string; subcopy?: string }
 
 export function e(value: string): string {
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;")
@@ -37,7 +37,17 @@ export function textButton(url: string, label: string): string {
   return `${label}: ${url}\n`
 }
 
-function htmlLayout(app: MailApp, body: string): string {
+function htmlSubcopy(slot: string): string {
+  return `<table class="subcopy" width="100%" cellpadding="0" cellspacing="0" role="presentation">
+<tr>
+<td>
+${markdownToHtml(slot)}
+</td>
+</tr>
+</table>`
+}
+
+function htmlLayout(app: MailApp, body: string, subcopy: string): string {
   return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="${e(app.locale.replace(/_/g, "-"))}">
 <head>
@@ -86,7 +96,7 @@ ${e(app.name)}
 <td class="content-cell">
 ${markdownToHtml(body)}
 
-
+${subcopy}
 </td>
 </tr>
 </table>
@@ -120,8 +130,10 @@ function decodeEscaped(value: string): string {
 }
 
 export function renderMarkdownMail(app: MailApp, body: MarkdownMailBody): { html: string; text: string } {
-  const html = inlineCss(htmlLayout(app, bladeSlot(body.html)).replace(/\\\[/g, "["), MAIL_THEME_CSS)
+  const subcopy = body.subcopy === undefined ? "" : bladeSlot(htmlSubcopy(bladeSlot(body.subcopy)))
+  const html = inlineCss(htmlLayout(app, bladeSlot(body.html), subcopy).replace(/\\\[/g, "["), MAIL_THEME_CSS)
   const header = bladeSlot(textButton(e(app.frontendUrl), e(app.name)))
-  const text = decodeEscaped(`${stripTags(header)}\n\n${stripTags(bladeSlot(body.text))}\n\n\n`.replace(/[\r\n]{2,}/g, "\n\n"))
+  const textSubcopy = body.subcopy === undefined ? "" : `\n${stripTags(bladeSlot(body.subcopy))}\n`
+  const text = decodeEscaped(`${stripTags(header)}\n\n${stripTags(bladeSlot(body.text))}\n${textSubcopy}\n\n`.replace(/[\r\n]{2,}/g, "\n\n"))
   return { html, text }
 }

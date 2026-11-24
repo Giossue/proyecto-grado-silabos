@@ -1,7 +1,6 @@
 import "server-only"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
 import type { LaravelSession } from "../auth/types"
-import { isUuid } from "../academic/structure"
 import { isJsonRequest, laravelInput, type PhpArray } from "../laravel/input"
 import { laravelHttpError, validationError } from "../laravel/responses"
 import { validateInput } from "../laravel/validation"
@@ -17,6 +16,7 @@ import { toRuntime } from "./templateDraft"
 import { templateFields } from "./templatePresentation"
 import { careerResponse, fieldConditions, normalizeFieldDocument, responseTemplate, TemplateValidationError } from "./templateRuntime"
 import type { TemplateStore } from "./templateStore"
+import { laravelRouter, routeAllows } from "../laravel/router"
 
 export interface SubjectProfileTx {
   store: TemplateStore
@@ -83,7 +83,7 @@ async function saveValues(tx: SubjectProfileTx, session: LaravelSession, subject
 
 export async function updateSubjectProfile(request: Request, subjectId: string, deps: SubjectProfileWriteDeps = defaultSubjectProfileWriteDeps()): Promise<Response> {
   const original = request.clone()
-  if (!isUuid(subjectId)) return deps.bridge.forward(original)
+  if (!routeAllows(request)) return laravelRouter(request)
   if (request.headers.get("content-type") !== null && !isJsonRequest(request)) return deps.bridge.forward(original)
   let careerId: string | null = null
   const session = await requireSession(

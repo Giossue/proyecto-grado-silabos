@@ -188,10 +188,9 @@ describe("GET /api/v1/coordination/academic/curriculum/{curriculum}", () => {
 
   it("lets Laravel answer the 404 of another career's curriculum and of a non-UUID path", async () => {
     expect((await curriculumBuilder(get(`/api/v1/coordination/academic/curriculum/${OTHER}`), OTHER, deps())).status).toBe(299)
-    expect((await curriculumBuilder(get("/api/v1/coordination/academic/curriculum/abc"), "abc", deps())).status).toBe(299)
+    expect(await read(await curriculumBuilder(get("/api/v1/coordination/academic/curriculum/abc"), "abc", deps()))).toEqual({ status: 404, text: '{\n    "message": "The route api/v1/coordination/academic/curriculum/abc could not be found."\n}' })
     expect(forwarded.map((request) => new URL(request.url).pathname)).toEqual([
       `/api/v1/coordination/academic/curriculum/${OTHER}`,
-      "/api/v1/coordination/academic/curriculum/abc",
     ])
   })
 

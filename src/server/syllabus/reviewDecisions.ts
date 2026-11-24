@@ -13,6 +13,8 @@ import { GenerationRejected } from "./inProgressWork"
 import { NeedsLaravel } from "./snapshotDocuments"
 import type { DetailSyllabus } from "./syllabusDetail"
 import { createReviewDecisionDeps } from "./reviewDecisionStore"
+import { modelNotFound } from "../laravel/router"
+import { MODELS } from "../laravel/models"
 
 export type DecisionSyllabus = { id: string; state: string; version: number; convocationId: string; parallelId: string }
 export type DecisionRevision = { id: string; number: number; correctionRequested: boolean }
@@ -60,7 +62,6 @@ async function bindRevision(
   revisionId: string,
   deps: ReviewDecisionDeps,
 ): Promise<{ session: LaravelSession; revision: ReviewRevision; syllabus: DetailSyllabus } | Response> {
-  if (!isUuid(revisionId)) return deps.bridge.forward(request)
   let bound: { revision: ReviewRevision; syllabus: DetailSyllabus } | null = null
   const session = await requireSession(
     request,
@@ -68,16 +69,16 @@ async function bindRevision(
       verified: true,
       activeRole: "required",
       afterAuthentication: async (user) => {
-        const revision = await deps.store.revision(revisionId)
+        const revision = isUuid(revisionId) ? await deps.store.revision(revisionId) : null
         const syllabus = revision === null ? null : await deps.store.syllabus(revision.syllabusId, user.id)
         bound = revision === null || syllabus === null ? null : { revision, syllabus }
-        return bound === null ? deps.bridge.forward(request) : null
+        return bound === null ? modelNotFound(MODELS.revision, revisionId) : null
       },
     },
     deps.bridge,
   )
   if (session instanceof Response) return session
-  if (bound === null) return deps.bridge.forward(request)
+  if (bound === null) return modelNotFound(MODELS.revision, revisionId)
   return { session, ...(bound as { revision: ReviewRevision; syllabus: DetailSyllabus }) }
 }
 
@@ -154,7 +155,6 @@ export async function requestCorrection(request: Request, revisionId: string, de
 const PHP_TRIM = /^[ \t\n\r\0\x0B]+|[ \t\n\r\0\x0B]+$/g
 
 async function bindSyllabus(request: Request, syllabusId: string, deps: ReviewDecisionDeps): Promise<{ session: LaravelSession; syllabus: DetailSyllabus } | Response> {
-  if (!isUuid(syllabusId)) return deps.bridge.forward(request)
   let syllabus: DetailSyllabus | null = null
   const session = await requireSession(
     request,
@@ -162,14 +162,14 @@ async function bindSyllabus(request: Request, syllabusId: string, deps: ReviewDe
       verified: true,
       activeRole: "required",
       afterAuthentication: async (user) => {
-        syllabus = await deps.store.syllabus(syllabusId, user.id)
-        return syllabus === null ? deps.bridge.forward(request) : null
+        syllabus = isUuid(syllabusId) ? await deps.store.syllabus(syllabusId, user.id) : null
+        return syllabus === null ? modelNotFound(MODELS.syllabus, syllabusId) : null
       },
     },
     deps.bridge,
   )
   if (session instanceof Response) return session
-  if (syllabus === null) return deps.bridge.forward(request)
+  if (syllabus === null) return modelNotFound(MODELS.syllabus, syllabusId)
   return { session, syllabus }
 }
 

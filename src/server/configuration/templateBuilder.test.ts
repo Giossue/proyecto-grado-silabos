@@ -8,6 +8,8 @@ import { fakeTemplateStore, goldenTemplate, TEMPLATE_ID, type FakeTemplateWorld 
 import { designTemplateTable, templateIndex, templateShow, type TemplateBuilderDeps, type TemplateLock } from "./templateBuilder"
 import { institutionUrl } from "./institutionalLogos"
 
+const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Configuration\\Infrastructure\\Persistence\\Models\\${model}] ${id}` }, null, 4)
+
 const SESSION_ID = golden.sessionId
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(SESSION_ID))}`
 const FORBIDDEN = '{"message":"No tiene permiso para hacer esto."}'
@@ -146,10 +148,10 @@ describe("GET admin/template and admin/template/{template}", () => {
     expect([(await show()).status, await (await show()).text()]).toEqual([403, FORBIDDEN])
   })
 
-  it("leaves unknown templates and the assistant to Laravel", async () => {
-    await show("0199a1c5-0000-7000-8000-000000000999")
-    await show("assistant")
-    expect(forwarded).toHaveLength(2)
+  it("answers Laravel's model 404 for unknown templates", async () => {
+    const unknown = await show("0199a1c5-0000-7000-8000-000000000999")
+    expect({ status: unknown.status, text: await unknown.text() }).toEqual({ status: 404, text: modelNotFound("SyllabusTemplate", "0199a1c5-0000-7000-8000-000000000999") })
+    expect(forwarded).toHaveLength(0)
   })
 })
 

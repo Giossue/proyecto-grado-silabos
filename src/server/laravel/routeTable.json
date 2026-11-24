@@ -1,0 +1,1524 @@
+[
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "sanctum/csrf-cookie",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/authentication/login",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/authentication/password-recovery",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/authentication/password-reset",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/authentication/account-activation",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/authentication/two-factor/challenge",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/session",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/authentication/logout",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "PUT"
+    ],
+    "uri": "api/v1/authentication/password",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/authentication/account-activation/resend",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/authentication/two-factor",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/authentication/two-factor",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/authentication/two-factor/confirm",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/authentication/two-factor/recovery-codes",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "DELETE"
+    ],
+    "uri": "api/v1/authentication/two-factor",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/authentication/sessions",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "DELETE"
+    ],
+    "uri": "api/v1/authentication/sessions/others",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "DELETE"
+    ],
+    "uri": "api/v1/authentication/sessions/{session}",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "PUT"
+    ],
+    "uri": "api/v1/active-role",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "DELETE"
+    ],
+    "uri": "api/v1/active-role",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "PUT"
+    ],
+    "uri": "api/v1/authentication/profile",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "PUT"
+    ],
+    "uri": "api/v1/authentication/accessibility",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "PUT"
+    ],
+    "uri": "api/v1/authentication/formation",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/dashboard",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/dashboard/deadline",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/notifications",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/notifications/read-all",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/notifications/email-preferences",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "PUT"
+    ],
+    "uri": "api/v1/notifications/email-preferences",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/notifications/{notification}/read",
+    "wheres": {},
+    "bindings": {
+      "notification": "App\\Modules\\Operations\\Infrastructure\\Persistence\\Models\\InternalNotification"
+    }
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/notifications/{notification}/open",
+    "wheres": {},
+    "bindings": {
+      "notification": "App\\Modules\\Operations\\Infrastructure\\Persistence\\Models\\InternalNotification"
+    }
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/help/available",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/help",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/admin/users",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/admin/users",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/admin/users/import-template",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/admin/users/import",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "PATCH"
+    ],
+    "uri": "api/v1/admin/users/{user}",
+    "wheres": {},
+    "bindings": {
+      "user": "App\\Models\\User"
+    }
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/admin/users/{user}/resend-activation",
+    "wheres": {},
+    "bindings": {
+      "user": "App\\Models\\User"
+    }
+  },
+  {
+    "methods": [
+      "DELETE"
+    ],
+    "uri": "api/v1/admin/users/{user}/roles/{assignment}",
+    "wheres": {},
+    "bindings": {
+      "user": "App\\Models\\User",
+      "assignment": "App\\Modules\\Identity\\Infrastructure\\Persistence\\Models\\RoleAssignment"
+    }
+  },
+  {
+    "methods": [
+      "DELETE"
+    ],
+    "uri": "api/v1/admin/users/{user}",
+    "wheres": {},
+    "bindings": {
+      "user": "App\\Models\\User"
+    }
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/admin/system-settings",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "PUT"
+    ],
+    "uri": "api/v1/admin/system-settings/{section}",
+    "wheres": {
+      "section": "notificaciones|ia|biblioteca"
+    },
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/admin/system-settings/{section}/test",
+    "wheres": {
+      "section": "ia|biblioteca"
+    },
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/admin/reports",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/admin/reports/export",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/admin/audit-events/export",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/admin/audit-events",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/admin/library-catalog/libraries",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/admin/academic/{section?}",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/admin/academic/{entity}",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/admin/academic/careers/import-template",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/admin/academic/careers/import",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "PATCH"
+    ],
+    "uri": "api/v1/admin/academic/{entity}/{record}",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "PATCH"
+    ],
+    "uri": "api/v1/admin/academic/{entity}/{record}/status",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "DELETE"
+    ],
+    "uri": "api/v1/admin/academic/{entity}/{record}",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/admin/processes",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/admin/processes",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "DELETE"
+    ],
+    "uri": "api/v1/admin/processes/{process}",
+    "wheres": {},
+    "bindings": {
+      "process": "App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\SyllabusProcess"
+    }
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/admin/processes/{process}/impact",
+    "wheres": {},
+    "bindings": {
+      "process": "App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\SyllabusProcess"
+    }
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/admin/processes/{process}/deadline",
+    "wheres": {},
+    "bindings": {
+      "process": "App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\SyllabusProcess"
+    }
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/admin/processes/{process}/{transition}",
+    "wheres": {
+      "transition": "pausar|reanudar|cerrar"
+    },
+    "bindings": {
+      "process": "App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\SyllabusProcess"
+    }
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/admin/template",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/admin/template",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/admin/template/{template}/format",
+    "wheres": {},
+    "bindings": {
+      "template": "App\\Modules\\Configuration\\Infrastructure\\Persistence\\Models\\SyllabusTemplate"
+    }
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/admin/template/assistant",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/admin/template/assistant/messages",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "DELETE"
+    ],
+    "uri": "api/v1/admin/template/assistant",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/admin/template/assistant/proposals/{proposal}",
+    "wheres": {},
+    "bindings": {
+      "proposal": "App\\Modules\\AiAssistance\\Infrastructure\\Persistence\\Models\\TemplateAssistantProposal"
+    }
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/admin/template/assistant/proposals/{proposal}/apply",
+    "wheres": {},
+    "bindings": {
+      "proposal": "App\\Modules\\AiAssistance\\Infrastructure\\Persistence\\Models\\TemplateAssistantProposal"
+    }
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/admin/template/assistant/proposals/{proposal}/discard",
+    "wheres": {},
+    "bindings": {
+      "proposal": "App\\Modules\\AiAssistance\\Infrastructure\\Persistence\\Models\\TemplateAssistantProposal"
+    }
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/admin/template/{template}/teacher-preview",
+    "wheres": {},
+    "bindings": {
+      "template": "App\\Modules\\Configuration\\Infrastructure\\Persistence\\Models\\SyllabusTemplate"
+    }
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/admin/template/{template}/draft/preview",
+    "wheres": {},
+    "bindings": {
+      "template": "App\\Modules\\Configuration\\Infrastructure\\Persistence\\Models\\SyllabusTemplate"
+    }
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/admin/template/{template}/draft/impact",
+    "wheres": {},
+    "bindings": {
+      "template": "App\\Modules\\Configuration\\Infrastructure\\Persistence\\Models\\SyllabusTemplate"
+    }
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/admin/template/{template}/blocks/design",
+    "wheres": {},
+    "bindings": {
+      "template": "App\\Modules\\Configuration\\Infrastructure\\Persistence\\Models\\SyllabusTemplate"
+    }
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/admin/template/{template}/draft/check",
+    "wheres": {},
+    "bindings": {
+      "template": "App\\Modules\\Configuration\\Infrastructure\\Persistence\\Models\\SyllabusTemplate"
+    }
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/admin/template/{template}/json",
+    "wheres": {},
+    "bindings": {
+      "template": "App\\Modules\\Configuration\\Infrastructure\\Persistence\\Models\\SyllabusTemplate"
+    }
+  },
+  {
+    "methods": [
+      "PUT"
+    ],
+    "uri": "api/v1/admin/template/{template}/json",
+    "wheres": {},
+    "bindings": {
+      "template": "App\\Modules\\Configuration\\Infrastructure\\Persistence\\Models\\SyllabusTemplate"
+    }
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/admin/template/{template}/logo",
+    "wheres": {},
+    "bindings": {
+      "template": "App\\Modules\\Configuration\\Infrastructure\\Persistence\\Models\\SyllabusTemplate"
+    }
+  },
+  {
+    "methods": [
+      "DELETE"
+    ],
+    "uri": "api/v1/admin/template/{template}/structure",
+    "wheres": {},
+    "bindings": {
+      "template": "App\\Modules\\Configuration\\Infrastructure\\Persistence\\Models\\SyllabusTemplate"
+    }
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/admin/template/{template}",
+    "wheres": {},
+    "bindings": {
+      "template": "App\\Modules\\Configuration\\Infrastructure\\Persistence\\Models\\SyllabusTemplate"
+    }
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/admin/template/{template}/structure/sections",
+    "wheres": {},
+    "bindings": {
+      "template": "App\\Modules\\Configuration\\Infrastructure\\Persistence\\Models\\SyllabusTemplate"
+    }
+  },
+  {
+    "methods": [
+      "PATCH"
+    ],
+    "uri": "api/v1/admin/template/{template}/structure/sections/order",
+    "wheres": {},
+    "bindings": {
+      "template": "App\\Modules\\Configuration\\Infrastructure\\Persistence\\Models\\SyllabusTemplate"
+    }
+  },
+  {
+    "methods": [
+      "PATCH"
+    ],
+    "uri": "api/v1/admin/template/{template}/structure/sections/{section}",
+    "wheres": {},
+    "bindings": {
+      "template": "App\\Modules\\Configuration\\Infrastructure\\Persistence\\Models\\SyllabusTemplate"
+    }
+  },
+  {
+    "methods": [
+      "DELETE"
+    ],
+    "uri": "api/v1/admin/template/{template}/structure/sections/{section}",
+    "wheres": {},
+    "bindings": {
+      "template": "App\\Modules\\Configuration\\Infrastructure\\Persistence\\Models\\SyllabusTemplate"
+    }
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/admin/template/{template}/structure/sections/{section}/fields",
+    "wheres": {},
+    "bindings": {
+      "template": "App\\Modules\\Configuration\\Infrastructure\\Persistence\\Models\\SyllabusTemplate"
+    }
+  },
+  {
+    "methods": [
+      "PATCH"
+    ],
+    "uri": "api/v1/admin/template/{template}/structure/sections/{section}/fields/order",
+    "wheres": {},
+    "bindings": {
+      "template": "App\\Modules\\Configuration\\Infrastructure\\Persistence\\Models\\SyllabusTemplate"
+    }
+  },
+  {
+    "methods": [
+      "PATCH"
+    ],
+    "uri": "api/v1/admin/template/{template}/structure/fields/{field}",
+    "wheres": {},
+    "bindings": {
+      "template": "App\\Modules\\Configuration\\Infrastructure\\Persistence\\Models\\SyllabusTemplate",
+      "field": "App\\Modules\\Configuration\\Infrastructure\\Persistence\\Models\\FieldDefinition"
+    }
+  },
+  {
+    "methods": [
+      "DELETE"
+    ],
+    "uri": "api/v1/admin/template/{template}/structure/fields/{field}",
+    "wheres": {},
+    "bindings": {
+      "template": "App\\Modules\\Configuration\\Infrastructure\\Persistence\\Models\\SyllabusTemplate",
+      "field": "App\\Modules\\Configuration\\Infrastructure\\Persistence\\Models\\FieldDefinition"
+    }
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/coordination/convocations",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/coordination/convocations",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/coordination/convocations/{convocation}",
+    "wheres": {},
+    "bindings": {
+      "convocation": "App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\Convocation"
+    }
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/coordination/convocations/{convocation}/{transition}",
+    "wheres": {
+      "transition": "pausar|reanudar"
+    },
+    "bindings": {
+      "convocation": "App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\Convocation"
+    }
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/coordination/history",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/coordination/reviews",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/coordination/reviews/{before}/compare/{after}",
+    "wheres": {},
+    "bindings": {
+      "before": "App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\SyllabusRevision",
+      "after": "App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\SyllabusRevision"
+    }
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/coordination/reviews/{revision}",
+    "wheres": {},
+    "bindings": {
+      "revision": "App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\SyllabusRevision"
+    }
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/coordination/reviews/{revision}/request-correction",
+    "wheres": {},
+    "bindings": {
+      "revision": "App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\SyllabusRevision"
+    }
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/coordination/reviews/{revision}/approve",
+    "wheres": {},
+    "bindings": {
+      "revision": "App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\SyllabusRevision"
+    }
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/coordination/syllabi/{syllabus}/reset",
+    "wheres": {},
+    "bindings": {
+      "syllabus": "App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\Syllabus"
+    }
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/coordination/academic/curriculum/{curriculum}",
+    "wheres": {
+      "curriculum": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}"
+    },
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/academic/asignaturas/{asignatura}/ficha",
+    "wheres": {
+      "asignatura": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}"
+    },
+    "bindings": {
+      "asignatura": "App\\Modules\\Academic\\Infrastructure\\Persistence\\Models\\Subject"
+    }
+  },
+  {
+    "methods": [
+      "PUT"
+    ],
+    "uri": "api/v1/academic/asignaturas/{asignatura}/ficha",
+    "wheres": {
+      "asignatura": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}"
+    },
+    "bindings": {
+      "asignatura": "App\\Modules\\Academic\\Infrastructure\\Persistence\\Models\\Subject"
+    }
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/academic/asignaturas/{asignatura}/ficha/vista-previa",
+    "wheres": {
+      "asignatura": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}"
+    },
+    "bindings": {
+      "asignatura": "App\\Modules\\Academic\\Infrastructure\\Persistence\\Models\\Subject"
+    }
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/coordination/ficha-imports/template",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/coordination/ficha-imports/spreadsheet",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/coordination/ficha-imports/apply",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/coordination/academic/scheduled-subjects",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/coordination/academic/teacher-assignments",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/coordination/academic/teachers",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/coordination/academic/curriculum-import/template",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/coordination/academic/curriculum-import",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/coordination/academic/teachers/import-template",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/coordination/academic/teachers/import",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/coordination/academic/teachers/{user}/resend-activation",
+    "wheres": {},
+    "bindings": {
+      "user": "App\\Models\\User"
+    }
+  },
+  {
+    "methods": [
+      "DELETE"
+    ],
+    "uri": "api/v1/coordination/academic/teachers/{user}",
+    "wheres": {},
+    "bindings": {
+      "user": "App\\Models\\User"
+    }
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/coordination/support-documents",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/coordination/support-documents",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "DELETE"
+    ],
+    "uri": "api/v1/coordination/support-documents/{document}",
+    "wheres": {
+      "document": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}"
+    },
+    "bindings": {
+      "document": "App\\Modules\\Academic\\Infrastructure\\Persistence\\Models\\SupportDocument"
+    }
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/support-documents/{document}/view",
+    "wheres": {
+      "document": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}"
+    },
+    "bindings": {
+      "document": "App\\Modules\\Academic\\Infrastructure\\Persistence\\Models\\SupportDocument"
+    }
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/coordination/academic/parallels",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "PATCH"
+    ],
+    "uri": "api/v1/coordination/academic/parallels/{parallel}",
+    "wheres": {
+      "parallel": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}"
+    },
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "PUT"
+    ],
+    "uri": "api/v1/coordination/academic/parallels/{parallel}/teacher",
+    "wheres": {
+      "parallel": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}"
+    },
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "DELETE"
+    ],
+    "uri": "api/v1/coordination/academic/parallels/{parallel}",
+    "wheres": {
+      "parallel": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}"
+    },
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/coordination/academic/{entity}",
+    "wheres": {
+      "entity": "asignatura|asignacion_docente"
+    },
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "PATCH"
+    ],
+    "uri": "api/v1/coordination/academic/{entity}/{record}",
+    "wheres": {
+      "entity": "asignatura",
+      "record": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}"
+    },
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "DELETE"
+    ],
+    "uri": "api/v1/coordination/academic/{entity}/{record}",
+    "wheres": {
+      "entity": "asignacion_docente",
+      "record": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}"
+    },
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "PATCH"
+    ],
+    "uri": "api/v1/coordination/academic/curriculum/{curriculum}/configuration",
+    "wheres": {
+      "curriculum": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}"
+    },
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/coordination/academic/curriculum/{curriculum}/requirements",
+    "wheres": {
+      "curriculum": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}"
+    },
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "DELETE"
+    ],
+    "uri": "api/v1/coordination/academic/curriculum/{curriculum}/requirements/{requirement}",
+    "wheres": {
+      "curriculum": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}",
+      "requirement": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}"
+    },
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "DELETE"
+    ],
+    "uri": "api/v1/coordination/academic/curriculum/{curriculum}/subjects/{subject}",
+    "wheres": {
+      "curriculum": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}",
+      "subject": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}"
+    },
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "PATCH"
+    ],
+    "uri": "api/v1/coordination/academic/curriculum/{curriculum}/subject-layout",
+    "wheres": {
+      "curriculum": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}"
+    },
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/teacher/syllabi",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/teacher/history",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/teacher/history/{career}",
+    "wheres": {
+      "career": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}"
+    },
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/teacher/syllabi/{syllabus}",
+    "wheres": {},
+    "bindings": {
+      "syllabus": "App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\Syllabus"
+    }
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/teacher/syllabi/{syllabus}/start",
+    "wheres": {},
+    "bindings": {
+      "syllabus": "App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\Syllabus"
+    }
+  },
+  {
+    "methods": [
+      "PATCH"
+    ],
+    "uri": "api/v1/teacher/syllabi/{syllabus}/fields/{field}",
+    "wheres": {},
+    "bindings": {
+      "syllabus": "App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\Syllabus",
+      "field": "App\\Modules\\Configuration\\Infrastructure\\Persistence\\Models\\FieldDefinition"
+    }
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/teacher/syllabi/{syllabus}/copy-from/{source}",
+    "wheres": {},
+    "bindings": {
+      "syllabus": "App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\Syllabus",
+      "source": "App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\Syllabus"
+    }
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/teacher/syllabi/{syllabus}/validate",
+    "wheres": {},
+    "bindings": {
+      "syllabus": "App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\Syllabus"
+    }
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/teacher/syllabi/{syllabus}/signing-statement",
+    "wheres": {},
+    "bindings": {
+      "syllabus": "App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\Syllabus"
+    }
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/teacher/syllabi/{syllabus}/submit",
+    "wheres": {},
+    "bindings": {
+      "syllabus": "App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\Syllabus"
+    }
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/teacher/support-documents",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/teacher/library-catalog/search",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/revisions/{revision}/documents",
+    "wheres": {},
+    "bindings": {
+      "revision": "App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\SyllabusRevision"
+    }
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/revisions/{revision}/documents",
+    "wheres": {},
+    "bindings": {
+      "revision": "App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\SyllabusRevision"
+    }
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/exports/{artifact}/pdf",
+    "wheres": {},
+    "bindings": {
+      "artifact": "App\\Modules\\Documents\\Infrastructure\\Persistence\\Models\\ExportArtifact"
+    }
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/library/reviews",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/library/history",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "api/v1/library/reviews/{revision}",
+    "wheres": {},
+    "bindings": {
+      "revision": "App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\SyllabusRevision"
+    }
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/library/reviews/{revision}/verify",
+    "wheres": {},
+    "bindings": {
+      "revision": "App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\SyllabusRevision"
+    }
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "uri": "api/v1/library/reviews/{revision}/comments",
+    "wheres": {},
+    "bindings": {
+      "revision": "App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\SyllabusRevision"
+    }
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "health/live",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "/",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "health/ready",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "logos/institucion",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "logos/facultad/{faculty}",
+    "wheres": {
+      "faculty": "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}"
+    },
+    "bindings": {
+      "faculty": "App\\Modules\\Academic\\Infrastructure\\Persistence\\Models\\Faculty"
+    }
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "plantilla.schema.json",
+    "wheres": {},
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "uri": "storage/{path}",
+    "wheres": {
+      "path": ".*"
+    },
+    "bindings": {}
+  },
+  {
+    "methods": [
+      "PUT"
+    ],
+    "uri": "storage/{path}",
+    "wheres": {
+      "path": ".*"
+    },
+    "bindings": {}
+  }
+]

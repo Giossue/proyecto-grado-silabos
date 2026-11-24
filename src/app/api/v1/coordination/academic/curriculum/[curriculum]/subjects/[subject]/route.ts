@@ -1,5 +1,5 @@
 import { deleteCurriculumSubject } from "@/server/academic/curriculumWrites"
-import { proxyToLaravel } from "@/server/laravel/proxy"
+import { laravelRouterHandler } from "@/server/laravel/router"
 
 type Context = { params: Promise<{ curriculum: string; subject: string }> }
 
@@ -8,11 +8,4 @@ export async function DELETE(request: Request, context: Context): Promise<Respon
   return deleteCurriculumSubject(request, curriculum, subject)
 }
 
-export {
-  proxyToLaravel as GET,
-  proxyToLaravel as HEAD,
-  proxyToLaravel as POST,
-  proxyToLaravel as PUT,
-  proxyToLaravel as PATCH,
-  proxyToLaravel as OPTIONS,
-}
+export { laravelRouterHandler as GET, laravelRouterHandler as HEAD, laravelRouterHandler as POST, laravelRouterHandler as PUT, laravelRouterHandler as PATCH, laravelRouterHandler as OPTIONS }

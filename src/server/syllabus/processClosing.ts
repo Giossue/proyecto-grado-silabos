@@ -11,6 +11,8 @@ import { hasRole, PROCESS_OPEN, PROCESS_PAUSED, ROLE_ADMINISTRATOR } from "./pol
 import type { ProcessRepository, ProcessRow } from "./processes"
 import { NeedsLaravel } from "./snapshotDocuments"
 import { createClosingDeps } from "./processClosingStore"
+import { modelNotFound } from "../laravel/router"
+import { MODELS } from "../laravel/models"
 
 export const CLOSED_DOCUMENT = "closed_document"
 
@@ -46,7 +48,6 @@ export function withClosedDocument(context: unknown, snapshot: PhpRecord): PhpRe
 }
 
 async function boundProcess(request: Request, id: string, deps: ClosingDeps): Promise<{ session: LaravelSession; process: ProcessRow } | Response> {
-  if (!isUuid(id)) return deps.bridge.forward(request)
   let process: ProcessRow | null = null
   const session = await requireSession(
     request,
@@ -54,14 +55,14 @@ async function boundProcess(request: Request, id: string, deps: ClosingDeps): Pr
       verified: true,
       activeRole: "required",
       afterAuthentication: async () => {
-        process = await deps.processes.find(id)
-        return process === null ? deps.bridge.forward(request) : null
+        process = isUuid(id) ? await deps.processes.find(id) : null
+        return process === null ? modelNotFound(MODELS.process, id) : null
       },
     },
     deps.bridge,
   )
   if (session instanceof Response) return session
-  if (process === null) return deps.bridge.forward(request)
+  if (process === null) return modelNotFound(MODELS.process, id)
   return { session, process }
 }
 

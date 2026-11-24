@@ -102,6 +102,32 @@ export async function laravelInput(request: Request): Promise<PhpArray> {
   return merged
 }
 
+const FORM_METHODS = ["POST", "PUT", "PATCH", "DELETE"]
+
+async function formBody(request: Request): Promise<PhpArray> {
+  const type = (request.headers.get("content-type") ?? "").toLowerCase()
+  if (type.startsWith("application/x-www-form-urlencoded") && FORM_METHODS.includes(request.method)) {
+    return phpQuery(new URL(`http://localhost/?${await request.text()}`))
+  }
+  if (type.startsWith("multipart/form-data") && request.method === "POST") {
+    const fields = new URLSearchParams()
+    try {
+      for (const [name, value] of await request.formData()) if (typeof value === "string") fields.append(name, value)
+    } catch {
+      return {}
+    }
+    return phpQuery(new URL(`http://localhost/?${fields.toString()}`))
+  }
+  return {}
+}
+
+export async function laravelRequestInput(request: Request): Promise<PhpArray> {
+  if (isJsonRequest(request)) return laravelInput(request)
+  const merged: PhpArray = { ...(await formBody(request)) }
+  for (const [key, value] of Object.entries(phpQuery(new URL(request.url)))) if (!(key in merged)) merged[key] = value
+  return merged
+}
+
 export function phpCount(value: PhpArray): number {
   return Object.keys(value).length
 }

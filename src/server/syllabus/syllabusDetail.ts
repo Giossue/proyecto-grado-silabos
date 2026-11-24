@@ -17,6 +17,8 @@ import { isRunning, mayEdit, mayStart, mayView } from "./policy"
 import { NeedsLaravel, presentSnapshot, signedDocumentVariables, snapshotDefinition, type SignatureRecord, type SignedFacts } from "./snapshotDocuments"
 import { convocationName } from "./syllabusSql"
 import { createSyllabusDetailStore } from "./syllabusDetailQueries"
+import { modelNotFound } from "../laravel/router"
+import { MODELS } from "../laravel/models"
 
 export type DetailSyllabus = DraftSyllabus & {
   convocationId: string
@@ -196,7 +198,6 @@ export async function syllabusPayload(
 }
 
 export async function teacherSyllabusDetail(request: Request, syllabusId: string, deps: SyllabusDetailDeps = defaultSyllabusDetailDeps()): Promise<Response> {
-  if (!isUuid(syllabusId)) return deps.bridge.forward(request)
   let syllabus: DetailSyllabus | null = null
   const session = await requireSession(
     request,
@@ -204,14 +205,14 @@ export async function teacherSyllabusDetail(request: Request, syllabusId: string
       verified: true,
       activeRole: "required",
       afterAuthentication: async (user) => {
-        syllabus = await deps.store.syllabus(syllabusId, user.id)
-        return syllabus === null ? deps.bridge.forward(request) : null
+        syllabus = isUuid(syllabusId) ? await deps.store.syllabus(syllabusId, user.id) : null
+        return syllabus === null ? modelNotFound(MODELS.syllabus, syllabusId) : null
       },
     },
     deps.bridge,
   )
   if (session instanceof Response) return session
-  if (syllabus === null) return deps.bridge.forward(request)
+  if (syllabus === null) return modelNotFound(MODELS.syllabus, syllabusId)
   if (!mayView(session, syllabus)) return aborted(403)
   try {
     return laravelJson(phpShape({ syllabus: await syllabusPayload(request, session, syllabus, deps) }))

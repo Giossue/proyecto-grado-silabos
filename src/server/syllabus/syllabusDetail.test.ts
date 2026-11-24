@@ -12,6 +12,8 @@ import { identificationOf } from "./identificationCard"
 import { teacherSyllabusDetail, type CopySource, type DetailRevision, type DetailSyllabus, type ReviewComment, type SyllabusDetailStore } from "./syllabusDetail"
 import type { SignatureRecord } from "./snapshotDocuments"
 
+const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\${model}] ${id}` }, null, 4)
+
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(golden.sessionId))}`
 const FORBIDDEN = '{\n    "message": ""\n}'
 const CAREER = "c0000000-0000-4000-8000-000000000001"
@@ -290,9 +292,10 @@ describe("GET teacher/syllabi/{syllabus}", () => {
     archived = true
     expect((await show()).status).toBe(299)
     archived = false
+    expect(forwarded).toHaveLength(2)
     syllabus = null
-    expect((await show()).status).toBe(299)
-    expect((await show("no-es-uuid")).status).toBe(299)
-    expect(forwarded).toHaveLength(4)
+    expect(await show()).toMatchObject({ status: 404, text: modelNotFound("Syllabus", SYLLABUS) })
+    expect(await show("no-es-uuid")).toMatchObject({ status: 404, text: modelNotFound("Syllabus", "no-es-uuid") })
+    expect(forwarded).toHaveLength(2)
   })
 })

@@ -1,15 +1,8 @@
 import { destroyOtherSessions } from "@/server/identity/selfService"
-import { proxyToLaravel } from "@/server/laravel/proxy"
+import { laravelRouterHandler } from "@/server/laravel/router"
 
 export function DELETE(request: Request): Promise<Response> {
   return destroyOtherSessions(request)
 }
 
-export {
-  proxyToLaravel as HEAD,
-  proxyToLaravel as GET,
-  proxyToLaravel as POST,
-  proxyToLaravel as PUT,
-  proxyToLaravel as PATCH,
-  proxyToLaravel as OPTIONS,
-}
+export { laravelRouterHandler as GET, laravelRouterHandler as HEAD, laravelRouterHandler as POST, laravelRouterHandler as PUT, laravelRouterHandler as PATCH, laravelRouterHandler as OPTIONS }

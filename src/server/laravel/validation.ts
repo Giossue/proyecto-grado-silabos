@@ -1,3 +1,4 @@
+import { strIsUrl } from "./strIsUrl"
 import { isPhpArray, phpCount, type PhpArray, type PhpValue } from "./input"
 
 export type Rule =
@@ -24,6 +25,10 @@ export type Rule =
   | { unique: (value: PhpValue) => Promise<boolean> }
   | { compare: "gt" | "gte" | "lt" | "lte"; than: string | number }
   | { excludeUnless: string; equals: string }
+  | { required_if: string[] }
+  | { required_unless: string[] }
+  | { between: [number, number] }
+  | { url: string[] }
 
 export type ValidationOptions = { messages?: Record<string, string> }
 
@@ -42,6 +47,14 @@ const MESSAGES = {
   exists: "El valor seleccionado en :attribute no es válido.",
   unique: "El valor del campo :attribute ya está en uso.",
   regex: "El formato del campo :attribute no es válido.",
+  url: "El campo :attribute debe ser una URL válida.",
+  required_if: "El campo :attribute es obligatorio cuando :other sea :value.",
+  required_unless: "El campo :attribute es obligatorio a menos que :other esté en :values.",
+  between: {
+    array: "El campo :attribute debe tener entre :min y :max elementos.",
+    numeric: "El campo :attribute debe estar entre :min y :max.",
+    string: "El campo :attribute debe tener entre :min y :max caracteres.",
+  },
   min: {
     array: "El campo :attribute debe tener al menos :min elementos.",
     numeric: "El campo :attribute debe ser al menos :min.",
@@ -244,7 +257,34 @@ async function passes(rule: Rule, value: PhpValue | undefined, context: Context)
     return messages.length === 0 ? true : messages
   }
   if (typeof rule === "object" && "compare" in rule) return compares(rule, value, context)
+  if (typeof rule === "object" && "between" in rule) return size(value, rules) >= rule.between[0] && size(value, rules) <= rule.between[1]
+  if (typeof rule === "object" && "url" in rule) return strIsUrl(value, rule.url)
   return true
+}
+
+function dependentValues(values: string[], other: PhpValue | undefined): (PhpValue | undefined)[] {
+  if (typeof other === "boolean") return values.map((value) => (value === "true" ? true : value === "false" ? false : value))
+  if (other === undefined || other === null) return values.map((value) => (value.toLowerCase() === "null" ? null : value))
+  return values
+}
+
+function holdsDependency(other: PhpValue | undefined, values: string[]): boolean {
+  const strict = other === undefined || other === null || typeof other === "boolean"
+  const found = other === undefined ? null : other
+  return dependentValues(values, other).some((candidate) => (strict ? candidate === found : looseEquals(found, candidate)))
+}
+
+function requiresByDependency(rule: Rule, input: PhpArray): boolean {
+  if (typeof rule !== "object") return false
+  if ("required_if" in rule) return holdsDependency(dataGet(input, rule.required_if[0]), rule.required_if.slice(1))
+  if ("required_unless" in rule) return !holdsDependency(dataGet(input, rule.required_unless[0]), rule.required_unless.slice(1))
+  return false
+}
+
+function displayableValue(value: PhpValue | undefined): string {
+  if (typeof value === "boolean") return value ? "true" : "false"
+  if (value === undefined || value === null) return "empty"
+  return phpString(value)
 }
 
 function customMessage(options: ValidationOptions, context: Context, name: string): string | undefined {
@@ -277,7 +317,18 @@ function message(rule: Rule, context: Context, label: (name: string) => string, 
     else if ("min" in rule) template = MESSAGES.min[sizeType(rules)]
     else if ("max" in rule) template = MESSAGES.max[sizeType(rules)]
     else if ("compare" in rule) template = MESSAGES[rule.compare][sizeType(rules)]
+    else if ("url" in rule) template = MESSAGES.url
+    else if ("between" in rule) template = MESSAGES.between[sizeType(rules)]
+    else if ("required_if" in rule) template = MESSAGES.required_if
+    else if ("required_unless" in rule) template = MESSAGES.required_unless
     else template = ""
+  }
+  if (typeof rule === "object" && "between" in rule) template = template.replace(":min", String(rule.between[0])).replace(":max", String(rule.between[1]))
+  if (typeof rule === "object" && "required_if" in rule) {
+    template = template.replace(":other", label(rule.required_if[0])).replace(":value", displayableValue(dataGet(context.input, rule.required_if[0])))
+  }
+  if (typeof rule === "object" && "required_unless" in rule) {
+    template = template.replace(":other", label(rule.required_unless[0])).replace(":values", rule.required_unless.slice(1).join(", "))
   }
   if (typeof rule === "object" && "min" in rule) template = template.replace(":min", String(rule.min))
   if (typeof rule === "object" && "max" in rule) template = template.replace(":max", String(rule.max))
@@ -358,6 +409,11 @@ export async function validateAttributes(
       add(attribute, message("required", context, label, options))
       continue
     }
+    const unmet = rules.find((rule) => requiresByDependency(rule, input) && failsRequired(value))
+    if (unmet !== undefined) {
+      add(attribute, message(unmet, context, label, options))
+      continue
+    }
     if (rules.includes("prohibited") && !failsRequired(value)) {
       add(attribute, message("prohibited", context, label, options))
       continue
@@ -365,7 +421,7 @@ export async function validateAttributes(
     if (!present) continue
     if (value === null && rules.includes("nullable")) continue
     for (const rule of rules) {
-      if (["required", "nullable", "sometimes", "present", "prohibited"].includes(ruleName(rule))) continue
+      if (["required", "nullable", "sometimes", "present", "prohibited", "required_if", "required_unless"].includes(ruleName(rule))) continue
       if (typeof rule === "object" && "excludeUnless" in rule) continue
       if (typeof rule === "object" && "aborts" in rule) {
         const thrown = rule.aborts(value as PhpValue, attribute)

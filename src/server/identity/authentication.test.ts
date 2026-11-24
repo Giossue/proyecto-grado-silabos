@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it } from "vitest"
 import golden from "../laravel/__fixtures__/laravel-golden.json"
+import filterEmailGolden from "./__fixtures__/filter-email-golden.json"
 import { createMemoryAttemptLimiter } from "../auth/attemptLimiter"
 import { fakeDeps, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, storedJson, testKey, xsrfHeader, type FakeWorld } from "../auth/testing"
 import type { SessionWriterDeps } from "../auth/sessionWriter"
@@ -251,12 +252,12 @@ describe("POST /api/v1/authentication/login", () => {
     expect(audits).toEqual([])
   })
 
-  it("leaves to Laravel the emails whose shape needs PHP's filter", async () => {
+  it("rejects itself, without Laravel, the emails PHP's filter rejects", async () => {
     withSession(anonymous())
     const response = await login(call("/api/v1/authentication/login", "POST", { email: "ana@localhost", password: PASSWORD }), deps())
-    expect(response.status).toBe(299)
-    expect(forwarded).toHaveLength(1)
-    expect(JSON.parse(storedJson(world, golden.sessionId) ?? "{}")).toEqual(anonymous())
+    expect(response.status).toBe(422)
+    expect(await response.json()).toEqual({ message: "Ingrese un correo electrónico válido.", errors: { email: ["Ingrese un correo electrónico válido."] } })
+    expect(forwarded).toHaveLength(0)
   })
 })
 
@@ -399,11 +400,15 @@ describe("PUT /api/v1/authentication/password", () => {
 describe("email:filter", () => {
   const PHP_FILTER_VALIDATE_EMAIL: [string, boolean][] = [["docente@silabos.test", true], ["ana.perez@ueb.edu.ec", true], ["a+b_c%d-e@x-y.co", true], ["ana@localhost", false], ["ana@sub.123", false], ["ana@x.c0m", true], ["ana@xn--bcher-kva.ch", true], ["x@-a.com", false], ["x@a-.com", false], ["a..b@x.com", false], [".a@x.com", false], ["a@x..com", false], ["ñandú@x.com", false], ["ana@x.com ", false], ["no-es-correo", false], ["@x.com", false], ["a@", false], ["a@b@c.com", false], ["\"q\"@x.com", true], ["a@[127.0.0.1]", true], ["aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@x.com", true], ["aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@x.com", false], ["a@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.com", true], ["a@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.com", false], ["ANA@X.COM", true], ["a@x.museum", true], ["a@1x.com", true], ["a@x.1com", false]]
 
-  it("only calls valid or invalid what PHP's FILTER_VALIDATE_EMAIL agrees with, and leaves the rest to Laravel", () => {
-    for (const [email, valid] of PHP_FILTER_VALIDATE_EMAIL) {
-      const shape = filterEmailShape(email)
-      if (shape !== "unknown") expect([email, shape === "valid"]).toEqual([email, valid])
-    }
-    expect(PHP_FILTER_VALIDATE_EMAIL.filter(([email]) => filterEmailShape(email) === "valid")).toHaveLength(10)
+  it("decides every address exactly like PHP's FILTER_VALIDATE_EMAIL", () => {
+    const cases = [...PHP_FILTER_VALIDATE_EMAIL, ...(filterEmailGolden as [string, boolean][])]
+    expect(cases.map(([email]) => [email, filterEmailShape(email) === "valid"])).toEqual(cases)
+    expect(cases.filter(([email]) => !["valid", "invalid"].includes(filterEmailShape(email)))).toEqual([])
+  })
+
+  it("rejects what is not a string and anything longer than 320 bytes", () => {
+    expect(filterEmailShape(undefined)).toBe("invalid")
+    expect(filterEmailShape(123)).toBe("invalid")
+    expect(filterEmailShape(`${"a".repeat(60)}.${"b".repeat(60)}.${"c".repeat(60)}.${"d".repeat(60)}@${"e".repeat(60)}.${"f".repeat(19)}.ec`)).toBe("invalid")
   })
 })

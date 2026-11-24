@@ -13,7 +13,7 @@ import { sharedRateLimiter, throttle, type RateLimiter, type Throttle } from "..
 import { uuid7 } from "../laravel/uuid7"
 import type { AuditEventInput } from "../operations/recordAuditEvent"
 import { Missing, settle } from "../syllabus/reviewDecisions"
-import { isUuid } from "./structure"
+import { laravelRouter, routeAllows } from "../laravel/router"
 
 export const SUPPORT_DISK = "private"
 export const MAX_KILOBYTES = 20480
@@ -302,7 +302,7 @@ export async function storeSupportDocument(request: Request, deps: SupportDocume
 
 export async function destroySupportDocument(request: Request, documentId: string, deps: SupportDocumentWriteDeps): Promise<Response> {
   const original = request.clone()
-  if (!isUuid(documentId)) return deps.bridge.forward(original)
+  if (!routeAllows(request)) return laravelRouter(request)
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
   const documentCareer = await deps.store.documentCareer(documentId)
@@ -341,7 +341,7 @@ const VIEW_HEADERS: Record<string, string> = {
 }
 
 export async function viewSupportDocument(request: Request, documentId: string, deps: SupportDocumentWriteDeps): Promise<Response> {
-  if (!isUuid(documentId)) return deps.bridge.forward(request)
+  if (!routeAllows(request)) return laravelRouter(request)
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
   const document = await deps.store.readable(documentId)

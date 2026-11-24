@@ -10,7 +10,8 @@ import { laravelBoolean, type WorkScope } from "../syllabus/inProgressWork"
 import { Missing, Rejected, settle } from "../syllabus/reviewDecisions"
 import { createCareerWriteDeps } from "./careerWriteStore"
 import { phpIntCast } from "./governanceWrites"
-import { CONVOCATION_LOCK_REASON, CURRICULAR_UNITS, isUuid, SHIFTS, STUDY_MODALITIES } from "./structure"
+import { CONVOCATION_LOCK_REASON, CURRICULAR_UNITS, SHIFTS, STUDY_MODALITIES } from "./structure"
+import { laravelRouter, routeAllows } from "../laravel/router"
 
 export const SUBJECT_COLUMNS = [
   "codigo_asignatura",
@@ -305,7 +306,8 @@ async function prepared(request: Request, deps: CareerWriteDeps): Promise<{ cont
 
 export async function createCareerRecord(request: Request, entity: string, deps: CareerWriteDeps = defaultCareerWriteDeps()): Promise<Response> {
   const original = request.clone()
-  if (!["asignatura", "asignacion_docente"].includes(entity) || notJson(request)) return deps.bridge.forward(original)
+  if (!["asignatura", "asignacion_docente"].includes(entity) || !routeAllows(request)) return laravelRouter(request)
+  if (notJson(request)) return deps.bridge.forward(original)
   const ready = await prepared(request, deps)
   if (ready instanceof Response) return ready
   const { context, input } = ready
@@ -360,7 +362,8 @@ export async function insertCareerSubject(tx: CareerWriteTx, context: CareerCont
 
 export async function updateCareerRecord(request: Request, entity: string, recordId: string, deps: CareerWriteDeps = defaultCareerWriteDeps()): Promise<Response> {
   const original = request.clone()
-  if (entity !== "asignatura" || !isUuid(recordId) || notJson(request)) return deps.bridge.forward(original)
+  if (entity !== "asignatura" || !routeAllows(request)) return laravelRouter(request)
+  if (notJson(request)) return deps.bridge.forward(original)
   const ready = await prepared(request, deps)
   if (ready instanceof Response) return ready
   const { context, input } = ready
@@ -445,7 +448,8 @@ export async function createParallels(request: Request, deps: CareerWriteDeps = 
 
 export async function updateParallel(request: Request, parallelId: string, deps: CareerWriteDeps = defaultCareerWriteDeps()): Promise<Response> {
   const original = request.clone()
-  if (!isUuid(parallelId) || notJson(request)) return deps.bridge.forward(original)
+  if (!routeAllows(request)) return laravelRouter(request)
+  if (notJson(request)) return deps.bridge.forward(original)
   const ready = await prepared(request, deps)
   if (ready instanceof Response) return ready
   const { context, input } = ready
@@ -491,7 +495,8 @@ export async function updateParallel(request: Request, parallelId: string, deps:
 
 export async function replaceParallelTeacher(request: Request, parallelId: string, deps: CareerWriteDeps = defaultCareerWriteDeps()): Promise<Response> {
   const original = request.clone()
-  if (!isUuid(parallelId) || notJson(request)) return deps.bridge.forward(original)
+  if (!routeAllows(request)) return laravelRouter(request)
+  if (notJson(request)) return deps.bridge.forward(original)
   const ready = await prepared(request, deps)
   if (ready instanceof Response) return ready
   const { context, input } = ready

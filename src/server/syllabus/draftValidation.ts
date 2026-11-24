@@ -36,6 +36,8 @@ import type { DraftSyllabus, LockedSyllabus } from "./draftField"
 import { identificationOf, type IdentificationSource } from "./identificationCard"
 import { mayEdit } from "./policy"
 import { createDraftValidationStore } from "./draftValidationQueries"
+import { modelNotFound } from "../laravel/router"
+import { MODELS } from "../laravel/models"
 
 export type ValidationField = { id: string; key: string; responsible: string; content: unknown; displayName: string }
 export type ValidationTeacher = { id: string; name: string; formation: string | null }
@@ -202,7 +204,6 @@ async function runValidation(tx: DraftValidationTx, session: LaravelSession, syl
 }
 
 export async function validateDraft(request: Request, syllabusId: string, deps: DraftValidationDeps = defaultDraftValidationDeps()): Promise<Response> {
-  if (!isUuid(syllabusId)) return deps.bridge.forward(request)
   const original = request.clone()
   let syllabus: DraftSyllabus | null = null
   const session = await requireSession(
@@ -211,14 +212,14 @@ export async function validateDraft(request: Request, syllabusId: string, deps: 
       verified: true,
       activeRole: "required",
       afterAuthentication: async (user) => {
-        syllabus = await deps.store.syllabus(syllabusId, user.id)
-        return syllabus === null ? deps.bridge.forward(original) : null
+        syllabus = isUuid(syllabusId) ? await deps.store.syllabus(syllabusId, user.id) : null
+        return syllabus === null ? modelNotFound(MODELS.syllabus, syllabusId) : null
       },
     },
     deps.bridge,
   )
   if (session instanceof Response) return session
-  if (syllabus === null) return deps.bridge.forward(original)
+  if (syllabus === null) return modelNotFound(MODELS.syllabus, syllabusId)
   if (!mayEdit(session, syllabus, deps.today())) return aborted(403)
   let result: Awaited<ReturnType<typeof runValidation>>
   try {

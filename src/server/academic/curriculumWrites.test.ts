@@ -164,7 +164,7 @@ describe("PATCH /api/v1/coordination/academic/curriculum/{curriculum}/configurat
     expect((await configure({ cycle_count: 5 })).json?.errors).toEqual({ process: ["Convocatoria activa"] })
     locked = false
     expect((await configure({ cycle_count: 5 }, "01a1c5bc-79ce-710d-bc0a-31ddfa3fcff9")).status).toBe(299)
-    expect((await configure({ cycle_count: 5 }, "abc")).status).toBe(299)
+    expect(await configure({ cycle_count: 5 }, "abc")).toMatchObject({ status: 404, text: '{\n    "message": "The route api/v1/coordination/academic/curriculum/abc/configuration could not be found."\n}' })
     world.assignments = [makeAssignment({ role: "coordinador", careerId: OTHER_CAREER })]
     expect((await configure({ cycle_count: 5 })).text).toBe(FORBIDDEN)
   })

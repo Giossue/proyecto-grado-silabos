@@ -1,4 +1,4 @@
-import { proxyToLaravel } from "@/server/laravel/proxy"
+import { laravelRouter, laravelRouterHandler } from "@/server/laravel/router"
 import { closeProcess } from "@/server/syllabus/processClosing"
 import { pauseProcess } from "@/server/syllabus/processes"
 import { resumeProcess } from "@/server/syllabus/processWrites"
@@ -10,14 +10,7 @@ export async function POST(request: Request, context: Context): Promise<Response
   if (transition === "pausar") return pauseProcess(request, process)
   if (transition === "reanudar") return resumeProcess(request, process)
   if (transition === "cerrar") return closeProcess(request, process)
-  return proxyToLaravel(request)
+  return laravelRouter(request)
 }
 
-export {
-  proxyToLaravel as GET,
-  proxyToLaravel as HEAD,
-  proxyToLaravel as PUT,
-  proxyToLaravel as PATCH,
-  proxyToLaravel as DELETE,
-  proxyToLaravel as OPTIONS,
-}
+export { laravelRouterHandler as GET, laravelRouterHandler as HEAD, laravelRouterHandler as PUT, laravelRouterHandler as PATCH, laravelRouterHandler as DELETE, laravelRouterHandler as OPTIONS }

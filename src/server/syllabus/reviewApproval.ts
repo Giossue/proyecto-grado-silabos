@@ -15,6 +15,8 @@ import { blockedDecision, Missing, Rejected, settle, type DecisionSyllabus } fro
 import type { ReviewDetailStore, ReviewRevision } from "./reviewDetails"
 import { createReviewApprovalDeps } from "./reviewApprovalStore"
 import type { DetailSyllabus } from "./syllabusDetail"
+import { modelNotFound } from "../laravel/router"
+import { MODELS } from "../laravel/models"
 
 export interface ReviewApprovalTx extends SignatureTx {
   exports: ExportRequestTx
@@ -36,6 +38,7 @@ export type ReviewApprovalDeps = {
   settings: () => SignatureSettings & { requireHolderMatch: boolean }
   verify?: Verifier
   renderable: (revisionId: string) => Promise<boolean>
+  rendererVersion: () => string
   now: () => number
   newId: () => string
   newKey: () => string
@@ -53,7 +56,6 @@ const NOT_WAITING = "La revisión ya no espera la decisión de coordinación."
 type Bound = { session: LaravelSession; revision: ReviewRevision; syllabus: DetailSyllabus }
 
 async function bindRevision(request: Request, revisionId: string, deps: ReviewApprovalDeps): Promise<Bound | Response> {
-  if (!isUuid(revisionId)) return deps.bridge.forward(request)
   let bound: { revision: ReviewRevision; syllabus: DetailSyllabus } | null = null
   const session = await requireSession(
     request,
@@ -61,16 +63,16 @@ async function bindRevision(request: Request, revisionId: string, deps: ReviewAp
       verified: true,
       activeRole: "required",
       afterAuthentication: async (user) => {
-        const revision = await deps.store.revision(revisionId)
+        const revision = isUuid(revisionId) ? await deps.store.revision(revisionId) : null
         const syllabus = revision === null ? null : await deps.store.syllabus(revision.syllabusId, user.id)
         bound = revision === null || syllabus === null ? null : { revision, syllabus }
-        return bound === null ? deps.bridge.forward(request) : null
+        return bound === null ? modelNotFound(MODELS.revision, revisionId) : null
       },
     },
     deps.bridge,
   )
   if (session instanceof Response) return session
-  if (bound === null) return deps.bridge.forward(request)
+  if (bound === null) return modelNotFound(MODELS.revision, revisionId)
   return { session, ...(bound as { revision: ReviewRevision; syllabus: DetailSyllabus }) }
 }
 
@@ -155,7 +157,7 @@ export async function approveReview(request: Request, revisionId: string, deps: 
       })
       const exportActor = { id: actor.id, roleAssignmentId: actor.roleAssignmentId }
       if ((await existingExport(tx.exports, revision.id, approvalId, actor.id)) !== null) return
-      await requestExport(tx.exports, { revisionId: revision.id, syllabusId: revision.syllabusId, key: approvalId, actor: exportActor, now: deps.now(), newId: deps.newId })
+      await requestExport(tx.exports, { revisionId: revision.id, syllabusId: revision.syllabusId, key: approvalId, actor: exportActor, now: deps.now(), newId: deps.newId, rendererVersion: deps.rendererVersion() })
     })
     return laravelJson({ message: "Sílabo firmado y aprobado." })
   })

@@ -170,6 +170,7 @@ describe("POST revisions/{r}/documents", () => {
   let renderable: boolean
   let approved: boolean
   let limiter: ReturnType<typeof createRateLimiter>
+  let converterEnabled: boolean
 
   function requestDeps(): DocumentRequestDeps {
     const existing = async (revisionId: string, key: string): Promise<ExportArtifactRow | null> => {
@@ -180,6 +181,7 @@ describe("POST revisions/{r}/documents", () => {
       ...deps(),
       limiter,
       renderable: async () => renderable,
+      rendererVersion: () => (converterEnabled ? "phpword-docx-v4+libreoffice-pdf-v1" : "phpword-docx-v4+text-pdf-v2"),
       existing,
       newId: () => NEW_ARTIFACT,
       async transaction(work) {
@@ -215,6 +217,13 @@ describe("POST revisions/{r}/documents", () => {
     renderable = true
     approved = true
     limiter = createRateLimiter()
+    converterEnabled = true
+  })
+
+  it("records the plain-text renderer version when Gotenberg is off", async () => {
+    converterEnabled = false
+    expect((await post({ idempotency_key: KEY })).status).toBe(202)
+    expect(audits[0].metadata).toEqual({ revision_number: 3, renderer_version: "phpword-docx-v4+text-pdf-v2" })
   })
 
   it("requests the PDF of an approved revision once per idempotency key", async () => {

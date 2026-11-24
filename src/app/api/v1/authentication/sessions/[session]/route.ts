@@ -1,5 +1,5 @@
 import { destroySession } from "@/server/identity/selfService"
-import { proxyToLaravel } from "@/server/laravel/proxy"
+import { laravelRouterHandler } from "@/server/laravel/router"
 
 type Context = { params: Promise<{ session: string }> }
 
@@ -7,11 +7,4 @@ export async function DELETE(request: Request, context: Context): Promise<Respon
   return destroySession(request, (await context.params).session)
 }
 
-export {
-  proxyToLaravel as HEAD,
-  proxyToLaravel as GET,
-  proxyToLaravel as POST,
-  proxyToLaravel as PUT,
-  proxyToLaravel as PATCH,
-  proxyToLaravel as OPTIONS,
-}
+export { laravelRouterHandler as GET, laravelRouterHandler as HEAD, laravelRouterHandler as POST, laravelRouterHandler as PUT, laravelRouterHandler as PATCH, laravelRouterHandler as OPTIONS }

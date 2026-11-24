@@ -1,4 +1,4 @@
-import { proxyToLaravel } from "@/server/laravel/proxy"
+import { laravelRouterHandler } from "@/server/laravel/router"
 import { teacherSyllabusDetail } from "@/server/syllabus/syllabusDetail"
 
 type Context = { params: Promise<{ syllabus: string }> }
@@ -8,11 +8,4 @@ export async function GET(request: Request, context: Context): Promise<Response>
   return teacherSyllabusDetail(request, syllabus)
 }
 
-export {
-  proxyToLaravel as HEAD,
-  proxyToLaravel as POST,
-  proxyToLaravel as PUT,
-  proxyToLaravel as PATCH,
-  proxyToLaravel as DELETE,
-  proxyToLaravel as OPTIONS,
-}
+export { laravelRouterHandler as POST, laravelRouterHandler as PUT, laravelRouterHandler as PATCH, laravelRouterHandler as DELETE, laravelRouterHandler as OPTIONS }

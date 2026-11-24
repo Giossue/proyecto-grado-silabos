@@ -7,6 +7,8 @@ import { closeProcess, type ClosingDeps } from "./processClosing"
 import type { ProcessRow } from "./processes"
 import { NeedsLaravel } from "./snapshotDocuments"
 
+const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Syllabus\\Infrastructure\\Persistence\\Models\\${model}] ${id}` }, null, 4)
+
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(golden.sessionId))}`
 const FORBIDDEN = '{"message":"No tiene permiso para hacer esto."}'
 const PROCESS = "cd000000-0000-4000-8000-000000000001"
@@ -132,6 +134,11 @@ describe("POST admin/processes/{p}/cerrar", () => {
     lockedState = "cerrado"
     expect((await close()).json).toEqual({ message: "El proceso no está en un estado que admita esta acción.", errors: { process: ["El proceso no está en un estado que admita esta acción."] } })
     expect(audits).toEqual([])
+  })
+
+  it("answers Laravel's model 404 for an unknown or malformed process", async () => {
+    expect(await close({}, "cd000000-0000-4000-8000-00000000ffff")).toMatchObject({ status: 404, text: modelNotFound("SyllabusProcess", "cd000000-0000-4000-8000-00000000ffff") })
+    expect(await close({}, "abc")).toMatchObject({ status: 404, text: modelNotFound("SyllabusProcess", "abc") })
   })
 
   it("hands the whole closing to Laravel when a snapshot cannot be built here", async () => {

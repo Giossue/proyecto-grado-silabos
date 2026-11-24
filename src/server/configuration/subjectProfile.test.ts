@@ -124,9 +124,9 @@ describe("GET academic/asignaturas/{asignatura}/ficha", () => {
   it("leaves a missing subject, a non-UUID id and a missing template to Laravel", async () => {
     asRole("coordinador", CAREER)
     expect((await get("01a1c5bc-7a00-7000-8000-0000000000ff")).status).toBe(299)
-    expect((await get("no-es-uuid")).status).toBe(299)
+    expect((await get("no-es-uuid")).status).toBe(404)
     templates.template = null
     expect((await get()).status).toBe(299)
-    expect(forwarded).toHaveLength(3)
+    expect(forwarded).toHaveLength(2)
   })
 })

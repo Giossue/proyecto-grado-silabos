@@ -1,15 +1,17 @@
 import { userImportTemplate } from "@/server/identity/imports"
-import { proxyToLaravel } from "@/server/laravel/proxy"
+import { laravelRouterHandler } from "@/server/laravel/router"
+import { destroyManagedUser, updateManagedUser } from "@/server/identity/accountWrites"
 
 export function GET(request: Request): Promise<Response> {
   return userImportTemplate(request)
 }
 
-export {
-  proxyToLaravel as HEAD,
-  proxyToLaravel as POST,
-  proxyToLaravel as PUT,
-  proxyToLaravel as PATCH,
-  proxyToLaravel as DELETE,
-  proxyToLaravel as OPTIONS,
+export function PATCH(request: Request): Promise<Response> {
+  return updateManagedUser(request, "import-template")
 }
+
+export function DELETE(request: Request): Promise<Response> {
+  return destroyManagedUser(request, "import-template")
+}
+
+export { laravelRouterHandler as POST, laravelRouterHandler as PUT, laravelRouterHandler as OPTIONS }

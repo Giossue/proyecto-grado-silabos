@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from "vitest"
+import { nativeMethods, routerComparison } from "@/server/laravel/routerTesting"
 import * as curriculum from "./coordination/academic/curriculum/[curriculum]/route"
 import * as teacherAssignments from "./coordination/academic/teacher-assignments/route"
 import * as coordinationDocuments from "./coordination/support-documents/route"
@@ -56,24 +57,23 @@ describe("academic routes", () => {
     [`/api/v1/coordination/academic/curriculum/${ID}/requirements/${ID}`, curriculumRequirement, "DELETE"],
     [`/api/v1/coordination/academic/curriculum/${ID}/subjects/${ID}`, curriculumSubject, "DELETE"],
     [`/api/v1/coordination/academic/curriculum/${ID}/subject-layout`, curriculumLayout, "PATCH"],
-    ["/api/v1/admin/academic/careers/import", careerImport, "POST"],
-    ["/api/v1/admin/academic/careers/import-template", careerImportTemplate, "GET"],
+    ["/api/v1/admin/academic/careers/import", careerImport, "POST,PATCH,DELETE"],
+    ["/api/v1/admin/academic/careers/import-template", careerImportTemplate, "GET,PATCH,DELETE"],
     ["/api/v1/coordination/academic/curriculum-import", curriculumImport, "POST"],
     ["/api/v1/coordination/academic/curriculum-import/template", curriculumImportTemplate, "GET"],
-    ["/api/v1/coordination/academic/teachers/import", teacherImport, "POST"],
-    ["/api/v1/coordination/academic/teachers/import-template", teacherImportTemplate, "GET"],
-    ["/api/v1/admin/users/import", userImport, "POST"],
-    ["/api/v1/admin/users/import-template", userImportTemplate, "GET"],
-  ] as [string, RouteModule, string][])("serves %s in Next and sends every other method to Laravel", async (path, module, served) => {
+    ["/api/v1/coordination/academic/teachers/import", teacherImport, "POST,DELETE"],
+    ["/api/v1/coordination/academic/teachers/import-template", teacherImportTemplate, "GET,DELETE"],
+    ["/api/v1/admin/users/import", userImport, "POST,PATCH,DELETE"],
+    ["/api/v1/admin/users/import-template", userImportTemplate, "GET,PATCH,DELETE"],
+  ] as [string, RouteModule, string][])("serves %s in Next and answers every other method like Laravel's router", async (path, module, served) => {
     const fetchMock = stubLaravel()
     const servedMethods = served.split(",")
-    const others = ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"].filter((method) => !servedMethods.includes(method))
+    const others = nativeMethods(module, servedMethods, ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"])
     for (const method of others) {
-      const response = await module[method](new Request(`http://localhost:3000${path}`, { method, body: ["GET", "HEAD", "OPTIONS"].includes(method) ? undefined : "{}" }))
-      expect(response.status).toBe(405)
+      const { next, laravel } = await routerComparison(module, method, path)
+      expect(next).toEqual(laravel)
     }
-    expect(fetchMock).toHaveBeenCalledTimes(others.length)
-    expect((fetchMock.mock.calls as unknown as [string][])[0][0]).toBe(`http://127.0.0.1:8001${path}`)
+    expect(fetchMock).not.toHaveBeenCalled()
     for (const method of servedMethods) {
       expect(module[method]).toBeTypeOf("function")
       expect(module[method]).not.toBe(module[others[0]])
@@ -122,23 +122,19 @@ describe("academic routes", () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
-  it("sends a creation of any other coordination entity to Laravel without reading the session", async () => {
+  it("answers a creation of any other coordination entity like Laravel's router without reading the session", async () => {
     const fetchMock = stubLaravel()
-    const path = "/api/v1/coordination/academic/curriculum-import"
-    const response = await careerEntity.POST(new Request(`http://localhost:3000${path}`, { method: "POST", body: "{}" }), {
-      params: Promise.resolve({ entity: "curriculum-import" }),
-    })
-    expect(response.status).toBe(405)
-    expect((fetchMock.mock.calls as unknown as [string][])[0][0]).toBe(`http://127.0.0.1:8001${path}`)
+    const { next, laravel } = await routerComparison(careerEntity, "POST", "/api/v1/coordination/academic/paralelo", { entity: "paralelo" })
+    expect(next).toEqual(laravel)
+    expect(next.status).toBe(404)
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 
-  it("sends a generic coordination delete of another entity to Laravel without reading the session", async () => {
+  it("answers a generic coordination delete of another entity like Laravel's router without reading the session", async () => {
     const fetchMock = stubLaravel()
-    const path = `/api/v1/coordination/academic/teachers/${ID}`
-    const response = await careerRecord.DELETE(new Request(`http://localhost:3000${path}`, { method: "DELETE" }), {
-      params: Promise.resolve({ entity: "teachers", record: ID }),
-    })
-    expect(response.status).toBe(405)
-    expect((fetchMock.mock.calls as unknown as [string][])[0][0]).toBe(`http://127.0.0.1:8001${path}`)
+    const { next, laravel } = await routerComparison(careerRecord, "DELETE", `/api/v1/coordination/academic/asignatura/${ID}`, { entity: "asignatura", record: ID })
+    expect(next).toEqual(laravel)
+    expect(next.status).toBe(405)
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 })

@@ -16,6 +16,8 @@ import { laravelBoolean } from "./inProgressWork"
 import type { ReopenPlan, TemplateChange } from "./reopenCatchUp"
 import { auditOf, Missing, Rejected, settle } from "./reviewDecisions"
 import { NeedsLaravel } from "./snapshotDocuments"
+import { modelNotFound } from "../laravel/router"
+import { MODELS } from "../laravel/models"
 
 export type LockedSyllabusProcess = {
   id: string
@@ -92,7 +94,6 @@ function reject(errors: Record<string, string[]>): never {
 }
 
 async function bindProcess(request: Request, id: string, deps: ProcessWriteDeps): Promise<{ session: LaravelSession; process: ProcessRow } | Response> {
-  if (!isUuid(id)) return deps.bridge.forward(request)
   let process: ProcessRow | null = null
   const session = await requireSession(
     request,
@@ -100,14 +101,14 @@ async function bindProcess(request: Request, id: string, deps: ProcessWriteDeps)
       verified: true,
       activeRole: "required",
       afterAuthentication: async () => {
-        process = await deps.find(id)
-        return process === null ? deps.bridge.forward(request) : null
+        process = isUuid(id) ? await deps.find(id) : null
+        return process === null ? modelNotFound(MODELS.process, id) : null
       },
     },
     deps.bridge,
   )
   if (session instanceof Response) return session
-  if (process === null) return deps.bridge.forward(request)
+  if (process === null) return modelNotFound(MODELS.process, id)
   return { session, process }
 }
 

@@ -1,5 +1,5 @@
 import { destroySection, updateSection } from "@/server/configuration/templateStructure"
-import { proxyToLaravel } from "@/server/laravel/proxy"
+import { laravelRouterHandler } from "@/server/laravel/router"
 
 type Context = { params: Promise<{ template: string; section: string }> }
 
@@ -13,10 +13,4 @@ export async function DELETE(request: Request, context: Context): Promise<Respon
   return destroySection(request, template, section)
 }
 
-export {
-  proxyToLaravel as GET,
-  proxyToLaravel as HEAD,
-  proxyToLaravel as POST,
-  proxyToLaravel as PUT,
-  proxyToLaravel as OPTIONS,
-}
+export { laravelRouterHandler as GET, laravelRouterHandler as HEAD, laravelRouterHandler as POST, laravelRouterHandler as PUT, laravelRouterHandler as OPTIONS }

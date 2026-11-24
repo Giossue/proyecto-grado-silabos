@@ -9,6 +9,8 @@ import { documentLines } from "./documentHtml"
 import { fieldConditions, fieldLimits, limitAllowed, TemplateValidationError, type TemplateDefinition } from "./templateRuntime"
 import { IDENTIFICATION_SAMPLE, syllabusSectionPayload, type SyllabusTemplate } from "./templatePresentation"
 import { createTemplateStore, type TemplateStore } from "./templateStore"
+import { modelNotFound } from "../laravel/router"
+import { MODELS } from "../laravel/models"
 
 export const FORBIDDEN = "No tiene permiso para hacer esto."
 
@@ -28,7 +30,6 @@ export async function boundTemplate(
   deps: TemplateReadDeps,
   beforeBinding: (user: SessionUser) => Promise<Response | null> | Response | null = () => null,
 ): Promise<{ session: LaravelSession; template: SyllabusTemplate } | Response> {
-  if (!isUuid(templateId)) return deps.bridge.forward(request)
   let template: SyllabusTemplate | null = null
   const session = await requireSession(
     request,
@@ -38,15 +39,15 @@ export async function boundTemplate(
       afterAuthentication: async (user) => {
         const early = await beforeBinding(user)
         if (early) return early
-        const found = await deps.store.template()
+        const found = isUuid(templateId) ? await deps.store.template() : null
         template = found !== null && found.id === templateId.toLowerCase() ? found : null
-        return template === null ? deps.bridge.forward(request) : null
+        return template === null ? modelNotFound(MODELS.template, templateId) : null
       },
     },
     deps.bridge,
   )
   if (session instanceof Response) return session
-  if (template === null) return deps.bridge.forward(request)
+  if (template === null) return modelNotFound(MODELS.template, templateId)
   return { session, template }
 }
 

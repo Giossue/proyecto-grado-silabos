@@ -8,6 +8,8 @@ import { fakeTemplateStore, fieldId, goldenTemplate, TEMPLATE_ID, type FakeTempl
 import { checkTemplateDraft, previewTemplateDraft, templateDraftImpact, type TemplateDraftDeps } from "./templateDrafts"
 import type { RehearsalReads, RehearsalStore } from "./templateRehearsal"
 
+const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Configuration\\Infrastructure\\Persistence\\Models\\${model}] ${id}` }, null, 4)
+
 const SESSION_ID = golden.sessionId
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(SESSION_ID))}`
 const FORBIDDEN = '{"message":"No tiene permiso para hacer esto."}'
@@ -202,11 +204,11 @@ describe("POST admin/template/{template}/draft/impact", () => {
 describe("draft routes that stay in Laravel", () => {
   it("forwards when the template does not exist or the request is not JSON", async () => {
     templates.template = null
-    expect((await send("preview", { version: 1, sections: [] })).status).toBe(299)
+    expect(await send("preview", { version: 1, sections: [] })).toMatchObject({ status: 404, text: modelNotFound("SyllabusTemplate", TEMPLATE_ID) })
     templates.template = goldenTemplate()
     const response = await previewTemplateDraft(post("preview", "version=1", { headers: { "content-type": "application/x-www-form-urlencoded" } }), TEMPLATE_ID, deps())
     expect(response.status).toBe(299)
-    expect(forwarded).toHaveLength(2)
+    expect(forwarded).toHaveLength(1)
   })
 
   it("checks the CSRF token and the session before anything else", async () => {

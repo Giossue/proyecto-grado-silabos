@@ -10,7 +10,8 @@ import { Missing, settle } from "../syllabus/reviewDecisions"
 import { careerAudit, careerSession, invalid, notJson, type CareerContext } from "./careerWrites"
 import { createCurriculumDeps } from "./careerWriteStore"
 import { phpIntCast } from "./governanceWrites"
-import { CONVOCATION_LOCK_REASON, isUuid } from "./structure"
+import { CONVOCATION_LOCK_REASON } from "./structure"
+import { laravelRouter, routeAllows } from "../laravel/router"
 
 type CurriculumCareer = { id: string; cycleCount: number }
 type CurriculumSubject = { id: string; code: string; name: string; cycle: number | null; position: number }
@@ -58,7 +59,8 @@ async function curriculumChange(
   mutate: Mutation,
 ): Promise<Response> {
   const original = request.clone()
-  if (ids.some((id) => !isUuid(id)) || notJson(request)) return deps.bridge.forward(original)
+  if (!routeAllows(request)) return laravelRouter(request)
+  if (notJson(request)) return deps.bridge.forward(original)
   const context = await careerSession(request.clone(), deps.bridge, deps.careerActive)
   if (context instanceof Response) return context
   const input = await laravelInput(request)

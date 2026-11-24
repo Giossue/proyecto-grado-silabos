@@ -15,6 +15,8 @@ import { convocationAllowsDecisions, decisionBlock, mayReview } from "./policy"
 import { NeedsLaravel, presentSnapshot, signingStatement, snapshotDefinition, type SignatureRecord } from "./snapshotDocuments"
 import { signatureSummary, type DetailSyllabus, type ReviewComment } from "./syllabusDetail"
 import { createReviewDetailStore } from "./reviewDetailQueries"
+import { modelNotFound } from "../laravel/router"
+import { MODELS } from "../laravel/models"
 
 export type ReviewRevision = { id: string; syllabusId: string; number: number; submittedAt: number; submittedBy: string; fingerprint: string }
 
@@ -110,7 +112,7 @@ export function reviewTimeline(history: HistoryEntry[]): TimelineEvent[] {
 }
 
 async function bindRevision(request: Request, revisionId: string, deps: ReviewDetailDeps, userId: string) {
-  const revision = await deps.store.revision(revisionId)
+  const revision = isUuid(revisionId) ? await deps.store.revision(revisionId) : null
   const syllabus = revision === null ? null : await deps.store.syllabus(revision.syllabusId, userId)
   return revision === null || syllabus === null ? null : { revision, syllabus }
 }
@@ -126,7 +128,6 @@ async function respond(request: Request, deps: ReviewDetailDeps, build: () => Pr
 }
 
 export async function coordinationReviewDetail(request: Request, revisionId: string, deps: ReviewDetailDeps = defaultReviewDetailDeps()): Promise<Response> {
-  if (!isUuid(revisionId)) return deps.bridge.forward(request)
   const holder: { bound: Awaited<ReturnType<typeof bindRevision>> } = { bound: null }
   const session = await requireSession(
     request,
@@ -135,13 +136,13 @@ export async function coordinationReviewDetail(request: Request, revisionId: str
       activeRole: "required",
       afterAuthentication: async (user) => {
         holder.bound = await bindRevision(request, revisionId, deps, user.id)
-        return holder.bound === null ? deps.bridge.forward(request) : null
+        return holder.bound === null ? modelNotFound(MODELS.revision, revisionId) : null
       },
     },
     deps.bridge,
   )
   if (session instanceof Response) return session
-  if (holder.bound === null) return deps.bridge.forward(request)
+  if (holder.bound === null) return modelNotFound(MODELS.revision, revisionId)
   const { revision, syllabus } = holder.bound
   if (!mayReview(session, syllabus)) return aborted(403)
   return respond(request, deps, async () => {
@@ -215,14 +216,13 @@ export async function coordinationReviewDetail(request: Request, revisionId: str
 }
 
 export async function libraryReviewDetail(request: Request, revisionId: string, deps: ReviewDetailDeps = defaultReviewDetailDeps()): Promise<Response> {
-  if (!isUuid(revisionId)) return deps.bridge.forward(request)
   let revision: ReviewRevision | null = null
   const authorized = await authorizeListing(request, { bridge: deps.bridge, reviews: deps.libraryReviews }, async () => {
-    revision = await deps.store.revision(revisionId)
-    return revision === null ? deps.bridge.forward(request) : null
+    revision = isUuid(revisionId) ? await deps.store.revision(revisionId) : null
+    return revision === null ? modelNotFound(MODELS.revision, revisionId) : null
   })
   if (authorized instanceof Response) return authorized
-  if (revision === null) return deps.bridge.forward(request)
+  if (revision === null) return modelNotFound(MODELS.revision, revisionId)
   const bound = revision as ReviewRevision
   const { session } = authorized
   const submission = await deps.store.librarySubmission(bound.id)

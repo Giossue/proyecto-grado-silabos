@@ -4,6 +4,7 @@ import golden from "./__fixtures__/template-golden.json"
 import { phpJsonEncode } from "../laravel/phpJson"
 import { phpShape, type PhpRecord } from "./phpValues"
 import {
+  fieldDocumentIsEmpty,
   followTemplate,
   normalizeFieldDocument,
   openTemplate,
@@ -56,5 +57,21 @@ describe("template runtime conformance with the Laravel classes", () => {
       without_own_options: encode(withoutOwnOptions(templateFor(field.content, field.stored, definition))),
     }
     expect(actual).toEqual(field.expected)
+  })
+})
+
+describe("fieldDocumentIsEmpty", () => {
+  const doc = (text: string) => ({ type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text }] }] })
+
+  it("trims only the characters PHP's trim() removes", () => {
+    expect(fieldDocumentIsEmpty(doc(" \t\n\r\0\u000b"), definition)).toBe(true)
+    expect(fieldDocumentIsEmpty(doc("\u00a0"), definition)).toBe(false)
+    expect(fieldDocumentIsEmpty(doc("\u2003\u3000\ufeff"), definition)).toBe(false)
+    expect(fieldDocumentIsEmpty(doc("\u000c"), definition)).toBe(false)
+  })
+
+  it("treats a value that is not a document as empty", () => {
+    expect(fieldDocumentIsEmpty("texto", definition)).toBe(true)
+    expect(fieldDocumentIsEmpty(doc("Contenido"), definition)).toBe(false)
   })
 })

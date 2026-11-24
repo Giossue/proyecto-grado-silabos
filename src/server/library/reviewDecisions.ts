@@ -15,6 +15,8 @@ import { auditOf, blockedDecision, Missing, Rejected, settle, type DecisionRevis
 import type { ReviewDetailStore, ReviewRevision } from "../syllabus/reviewDetails"
 import type { DetailSyllabus } from "../syllabus/syllabusDetail"
 import { createLibraryDecisionDeps } from "./reviewDecisionStore"
+import { modelNotFound } from "../laravel/router"
+import { MODELS } from "../laravel/models"
 
 export type LockedLibrarySubmission = { id: string; verified: boolean }
 
@@ -60,7 +62,6 @@ export const LIBRARY_COMMENT_REASONS: Record<string, string> = {
 type Bound = { session: LaravelSession; revision: ReviewRevision; syllabus: DetailSyllabus }
 
 async function bindRevision(request: Request, revisionId: string, deps: LibraryDecisionDeps): Promise<Bound | Response> {
-  if (!isUuid(revisionId)) return deps.bridge.forward(request)
   let bound: { revision: ReviewRevision; syllabus: DetailSyllabus } | null = null
   const session = await requireSession(
     request,
@@ -68,16 +69,16 @@ async function bindRevision(request: Request, revisionId: string, deps: LibraryD
       verified: true,
       activeRole: "required",
       afterAuthentication: async (user) => {
-        const revision = await deps.store.revision(revisionId)
+        const revision = isUuid(revisionId) ? await deps.store.revision(revisionId) : null
         const syllabus = revision === null ? null : await deps.store.syllabus(revision.syllabusId, user.id)
         bound = revision === null || syllabus === null ? null : { revision, syllabus }
-        return bound === null ? deps.bridge.forward(request) : null
+        return bound === null ? modelNotFound(MODELS.revision, revisionId) : null
       },
     },
     deps.bridge,
   )
   if (session instanceof Response) return session
-  if (bound === null) return deps.bridge.forward(request)
+  if (bound === null) return modelNotFound(MODELS.revision, revisionId)
   return { session, ...(bound as { revision: ReviewRevision; syllabus: DetailSyllabus }) }
 }
 

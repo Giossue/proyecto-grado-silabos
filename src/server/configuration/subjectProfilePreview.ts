@@ -2,7 +2,7 @@ import "server-only"
 import { sql } from "drizzle-orm"
 import { db } from "@/db"
 import { requireSession } from "../auth/requireSession"
-import { CURRICULAR_UNITS, isUuid } from "../academic/structure"
+import { CURRICULAR_UNITS } from "../academic/structure"
 import { laravelHttpError, laravelJson, validationError } from "../laravel/responses"
 import { buildIdentification, dataGet } from "../syllabus/identificationCard"
 import { phpCompareStrings } from "../syllabus/syllabusDetailQueries"
@@ -13,6 +13,7 @@ import { profileTemplates } from "./subjectProfileFields"
 import { defaultSubjectProfileDeps, mayManageSubjectProfile, profileContext, type SubjectProfileDeps } from "./subjectProfile"
 import { syllabusSectionPayload, templatePresentationOf, type TemplateField } from "./templatePresentation"
 import { TemplateValidationError } from "./templateRuntime"
+import { laravelRouter, routeAllows } from "../laravel/router"
 
 export type SubjectContextRow = {
   id: string
@@ -115,7 +116,7 @@ export function defaultSubjectPreviewDeps(): SubjectPreviewDeps {
 }
 
 export async function previewSubjectProfile(request: Request, subjectId: string, deps: SubjectPreviewDeps = defaultSubjectPreviewDeps()): Promise<Response> {
-  if (!isUuid(subjectId)) return deps.bridge.forward(request)
+  if (!routeAllows(request)) return laravelRouter(request)
   let careerId: string | null = null
   const session = await requireSession(
     request,

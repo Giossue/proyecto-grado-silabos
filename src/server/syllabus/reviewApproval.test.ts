@@ -60,6 +60,7 @@ function deps(): ReviewApprovalDeps {
       return { holder: "MARIA JOSE PEREZ LOPEZ", serial: "0C", issuer: "C=EC, CN=AUTORIDAD", validTo: NOW + 1000 }
     },
     renderable: async () => renderable,
+    rendererVersion: () => "phpword-docx-v4+text-pdf-v2",
     now: () => NOW,
     newId: () => `0a000000-0000-7000-8000-${String(++ids).padStart(12, "0")}`,
     newKey: () => KEY,
@@ -194,7 +195,7 @@ describe("POST coordination/reviews/{revision}/approve", () => {
       occurredAt: NOW,
     })
     expect(artifacts).toEqual([{ id: "0a000000-0000-7000-8000-000000000003", revisionId: REVISION, key: approvals[0].id, requestedBy: golden.userId, requestedAt: NOW }])
-    expect(audits[3]).toMatchObject({ resourceId: artifacts[0].id, metadata: { revision_number: 2, renderer_version: "phpword-docx-v4+libreoffice-pdf-v1" } })
+    expect(audits[3]).toMatchObject({ resourceId: artifacts[0].id, metadata: { revision_number: 2, renderer_version: "phpword-docx-v4+text-pdf-v2" } })
     expect(dispatched).toEqual([artifacts[0].id])
   })
 

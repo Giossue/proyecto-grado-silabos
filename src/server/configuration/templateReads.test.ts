@@ -9,6 +9,8 @@ import { exportTemplateJson, teacherPreview, type TemplateReadDeps } from "./tem
 import { documentLines } from "./documentHtml"
 import templateGolden from "./__fixtures__/template-golden.json"
 
+const modelNotFound = (model: string, id: string) => JSON.stringify({ message: `No query results for model [App\\Modules\\Configuration\\Infrastructure\\Persistence\\Models\\${model}] ${id}` }, null, 4)
+
 const SESSION_ID = golden.sessionId
 const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(SESSION_ID))}`
 const FORBIDDEN = '{"message":"No tiene permiso para hacer esto."}'
@@ -84,11 +86,11 @@ describe("GET admin/template/{template}/teacher-preview", () => {
   })
 
   it("leaves an unknown template, a malformed id or a template without definition to Laravel", async () => {
-    expect((await preview("01a1c5ba-10b4-7129-925f-000000000000")).status).toBe(299)
-    expect((await preview("plantilla")).status).toBe(299)
+    expect(await read(await preview("01a1c5ba-10b4-7129-925f-000000000000"))).toEqual({ status: 404, text: modelNotFound("SyllabusTemplate", "01a1c5ba-10b4-7129-925f-000000000000") })
+    expect(await read(await preview("plantilla"))).toEqual({ status: 404, text: modelNotFound("SyllabusTemplate", "plantilla") })
     templates.template = { ...goldenTemplate(), definition: null }
     expect((await preview()).status).toBe(299)
-    expect(forwarded).toHaveLength(3)
+    expect(forwarded).toHaveLength(1)
   })
 })
 
@@ -146,6 +148,6 @@ describe("GET admin/template/{template}/json", () => {
     asRole("coordinador", "01a1c5bc-79ca-7331-8f0f-66d63f61c699")
     expect(await read(await exportJson())).toEqual({ status: 403, text: FORBIDDEN })
     asRole("administrador")
-    expect((await exportJson("01a1c5ba-10b4-7129-925f-000000000000")).status).toBe(299)
+    expect(await read(await exportJson("01a1c5ba-10b4-7129-925f-000000000000"))).toEqual({ status: 404, text: modelNotFound("SyllabusTemplate", "01a1c5ba-10b4-7129-925f-000000000000") })
   })
 })

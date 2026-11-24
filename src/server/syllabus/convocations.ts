@@ -12,6 +12,8 @@ import { CONVOCATION_OPEN, hasRole, ROLE_COORDINATOR } from "./policy"
 import { convocationName } from "./syllabusSql"
 import { phpFalsy } from "./teacherSyllabi"
 import { createConvocationRepository } from "./convocationQueries"
+import { modelNotFound } from "../laravel/router"
+import { MODELS } from "../laravel/models"
 
 export const TEMPLATE_NAME = "Plantilla institucional de sílabo"
 
@@ -101,7 +103,6 @@ export async function convocations(request: Request, deps: ConvocationDeps = def
 }
 
 async function boundConvocation(request: Request, id: string, deps: ConvocationDeps): Promise<{ session: LaravelSession; convocation: ConvocationRecord } | Response> {
-  if (!isUuid(id)) return deps.bridge.forward(request)
   let convocation: ConvocationRecord | null = null
   const session = await requireSession(
     request,
@@ -109,14 +110,14 @@ async function boundConvocation(request: Request, id: string, deps: ConvocationD
       verified: true,
       activeRole: "required",
       afterAuthentication: async () => {
-        convocation = await deps.convocations.convocation(id)
-        return convocation === null ? deps.bridge.forward(request) : null
+        convocation = isUuid(id) ? await deps.convocations.convocation(id) : null
+        return convocation === null ? modelNotFound(MODELS.convocation, id) : null
       },
     },
     deps.bridge,
   )
   if (session instanceof Response) return session
-  if (convocation === null) return deps.bridge.forward(request)
+  if (convocation === null) return modelNotFound(MODELS.convocation, id)
   return { session, convocation }
 }
 

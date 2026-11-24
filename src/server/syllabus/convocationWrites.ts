@@ -11,6 +11,8 @@ import type { ConvocationRecord } from "./convocations"
 import type { GenerateOptions } from "./inProgressWork"
 import { createConvocationWriteDeps } from "./convocationWriteStore"
 import { auditOf, Missing, Rejected, settle } from "./reviewDecisions"
+import { modelNotFound } from "../laravel/router"
+import { MODELS } from "../laravel/models"
 
 export type LockedProcess = { id: string; state: string; periodId: string }
 export type LockedConvocation = { id: string; careerId: string; careerLabel: string; state: string; processState: string; dueAt: number }
@@ -132,7 +134,6 @@ export async function notifyConvocationResumed(tx: Pick<ConvocationWriteTx, "not
 
 export async function resumeConvocation(request: Request, id: string, deps: ConvocationWriteDeps = defaultConvocationWriteDeps()): Promise<Response> {
   const original = request.clone()
-  if (!isUuid(id)) return deps.bridge.forward(original)
   let record: ConvocationRecord | null = null
   const session = await requireSession(
     request,
@@ -140,15 +141,15 @@ export async function resumeConvocation(request: Request, id: string, deps: Conv
       verified: true,
       activeRole: "required",
       afterAuthentication: async () => {
-        record = await deps.convocation(id)
-        return record === null ? deps.bridge.forward(original) : null
+        record = isUuid(id) ? await deps.convocation(id) : null
+        return record === null ? modelNotFound(MODELS.convocation, id) : null
       },
     },
     deps.bridge,
   )
   if (session instanceof Response) return session
   const convocation = record as ConvocationRecord | null
-  if (convocation === null) return deps.bridge.forward(original)
+  if (convocation === null) return modelNotFound(MODELS.convocation, id)
   if (!isCoordinatorOf(session, convocation.careerId) || convocation.state !== "pausada") return forbidden()
   return settle(original, deps, async () => {
     await deps.transaction(async (tx) => {

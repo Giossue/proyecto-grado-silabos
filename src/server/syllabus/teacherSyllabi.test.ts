@@ -213,9 +213,10 @@ describe("GET /api/v1/teacher/history/{career}", () => {
     expect(text).toBe('{\n    "message": ""\n}')
   })
 
-  it("leaves a non UUID career to Laravel's router", async () => {
-    const { status } = await historyCareer("/api/v1/teacher/history/abc", "abc")
-    expect(status).toBe(299)
-    expect(forwarded).toHaveLength(1)
+  it("answers a non UUID career like Laravel's router", async () => {
+    const { status, text } = await historyCareer("/api/v1/teacher/history/abc", "abc")
+    expect(status).toBe(404)
+    expect(text).toBe('{\n    "message": "The route api/v1/teacher/history/abc could not be found."\n}')
+    expect(forwarded).toHaveLength(0)
   })
 })

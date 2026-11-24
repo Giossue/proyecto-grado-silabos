@@ -5,6 +5,7 @@ import { phpIsNumeric } from "../laravel/validation"
 import { phpFloat } from "../laravel/phpJson"
 import { laravelJson } from "../laravel/responses"
 import { createAcademicStructureRepository } from "./structureQueries"
+import { laravelRouter, routeAllows } from "../laravel/router"
 
 export const FORBIDDEN = "No tiene permiso para hacer esto."
 export const CONVOCATION_LOCK_REASON = "Convocatoria activa"
@@ -197,7 +198,7 @@ export async function curriculumBuilder(
   curriculumId: string,
   deps: AcademicStructureDeps = defaultAcademicStructureDeps(),
 ): Promise<Response> {
-  if (!isUuid(curriculumId)) return deps.bridge.forward(request)
+  if (!routeAllows(request)) return laravelRouter(request)
   const career = await authorizedCareer(request, deps)
   if (career instanceof Response) return career
   if (curriculumId !== career.id) return deps.bridge.forward(request)

@@ -1,4 +1,4 @@
-import { proxyToLaravel } from "@/server/laravel/proxy"
+import { laravelRouterHandler } from "@/server/laravel/router"
 import { createConvocation } from "@/server/syllabus/convocationWrites"
 import { convocations } from "@/server/syllabus/convocations"
 
@@ -10,10 +10,4 @@ export function POST(request: Request): Promise<Response> {
   return createConvocation(request)
 }
 
-export {
-  proxyToLaravel as HEAD,
-  proxyToLaravel as PUT,
-  proxyToLaravel as PATCH,
-  proxyToLaravel as DELETE,
-  proxyToLaravel as OPTIONS,
-}
+export { laravelRouterHandler as PUT, laravelRouterHandler as PATCH, laravelRouterHandler as DELETE, laravelRouterHandler as OPTIONS }
