@@ -117,6 +117,10 @@
     }
 }
 
+@utility scroll-lock-offset {
+    margin-right: var(--removed-body-scroll-bar-size, 0px);
+}
+
 @layer utilities {
     body,
     html {
@@ -893,6 +897,7 @@
 }
 .driver-checklist.setup-checklist {
     z-index: 40;
+    margin-right: var(--removed-body-scroll-bar-size, 0px);
     --driver-checklist-offset-x: 1rem;
     --driver-checklist-offset-y: 9rem;
 }
@@ -1098,6 +1103,15 @@ tbody tr:nth-child(even) > [data-sticky-end] {
     [data-app-scroll] > [data-slot='scroll-area-scrollbar'] {
         display: none;
     }
+
+    html:has([data-slot="filter-sheet"][data-state="open"]) {
+        overflow: hidden;
+        scrollbar-gutter: stable;
+    }
+}
+
+.toaster[data-sonner-toaster] {
+    margin-right: var(--removed-body-scroll-bar-size, 0px);
 }
 
 .toaster[data-sonner-toaster] [data-sonner-toast] {

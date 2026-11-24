@@ -140,6 +140,22 @@ describe("Nueva facultad · paso de bibliotecas", () => {
     expect(createAcademicRecord).not.toHaveBeenCalled()
   })
 
+  it("el primer paso aparece quieto al abrir y solo se desliza al cambiar de paso", async () => {
+    await mountDialog()
+    const dataStep = (): HTMLElement => body().querySelector("#catalog-name")!.closest<HTMLElement>('[data-slot="field-group"]')!
+    expect(dataStep().className).not.toMatch(/animate-in|slide-in/)
+
+    await fillData()
+    await next()
+    const librariesStep = body().querySelector<HTMLElement>('[role="checkbox"]')!.closest<HTMLElement>("form > [data-slot=field-group] > *")!
+    expect(librariesStep.className).toContain("animate-in")
+    expect(librariesStep.className).toContain("slide-in-from-right-8")
+
+    fireEvent.click(buttonWithText("Atrás")!)
+    await flush()
+    expect(dataStep().className).toContain("slide-in-from-left-8")
+  })
+
   it("las carreras se crean en un solo paso", async () => {
     await mountDialog("carrera")
 

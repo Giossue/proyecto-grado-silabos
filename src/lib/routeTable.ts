@@ -48,8 +48,6 @@ export const routeTable: readonly RouteRecord[] = [
   { path: '/admin/estructura-academica/:section', meta: { ...admin, title: 'Facultades y carreras' } },
   { path: '/admin/convocatorias', meta: { ...admin, title: 'Convocatorias' } },
   { path: '/admin/plantilla', meta: { ...admin, title: 'Plantilla' } },
-  { path: '/admin/reportes', meta: { ...admin, title: 'Reportes' } },
-  { path: '/admin/auditoria', meta: { ...admin, title: 'Auditoría' } },
   { path: '/admin/configuracion/perfil', meta: { ...admin, title: 'Perfil' } },
   { path: '/admin/configuracion/seguridad', meta: { ...admin, title: 'Seguridad' } },
   { path: '/admin/configuracion/sistema', meta: { ...admin, title: 'Sistema' } },

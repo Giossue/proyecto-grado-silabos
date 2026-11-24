@@ -16,6 +16,16 @@ type FormDialogActionsProps = {
   secondary?: ReactNode
 }
 
+export function FormDialogFooter({ children }: { children?: ReactNode }) {
+  return (
+    <DialogFooter className="absolute inset-x-0 bottom-0 mx-0 flex-col bg-card p-4 pb-(--safe-footer-inset) sm:flex-col sm:justify-start">
+      <Field orientation="horizontal" className="flex-wrap justify-end">
+        {children}
+      </Field>
+    </DialogFooter>
+  )
+}
+
 export function FormDialogActions({
   label = "",
   close,
@@ -27,19 +37,17 @@ export function FormDialogActions({
   secondary,
 }: FormDialogActionsProps) {
   return (
-    <DialogFooter className="absolute inset-x-0 bottom-0 mx-0 flex-col bg-card p-4 pb-(--safe-footer-inset) sm:flex-col sm:justify-start">
-      <Field orientation="horizontal" className="flex-wrap justify-end">
-        {secondary}
-        <Button type="button" variant="outline" onClick={close}>
-          {closeOnly ? "Cerrar" : "Cancelar"}
+    <FormDialogFooter>
+      {secondary}
+      <Button type="button" variant="outline" onClick={close}>
+        {closeOnly ? "Cerrar" : "Cancelar"}
+      </Button>
+      {!closeOnly ? (
+        <Button type="submit" variant={destructive ? "destructive" : undefined} disabled={processing || disabled}>
+          {processing ? <Spinner data-icon="inline-start" /> : <Icon data-icon="inline-start" aria-hidden="true" />}
+          {label}
         </Button>
-        {!closeOnly ? (
-          <Button type="submit" variant={destructive ? "destructive" : undefined} disabled={processing || disabled}>
-            {processing ? <Spinner data-icon="inline-start" /> : <Icon data-icon="inline-start" aria-hidden="true" />}
-            {label}
-          </Button>
-        ) : null}
-      </Field>
-    </DialogFooter>
+      ) : null}
+    </FormDialogFooter>
   )
 }

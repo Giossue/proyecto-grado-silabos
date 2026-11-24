@@ -4,10 +4,10 @@ import { RotateCcw } from "lucide-react"
 import { useState, type FormEvent } from "react"
 import { ApiError } from "@/api/client"
 import { resetSyllabus, type ReviewDetail } from "@/api/reviews"
+import { ConfirmPhrase } from "@/components/domain/ConfirmPhrase"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Field, FieldError, FieldLabel } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
 import { Spinner } from "@/components/ui/spinner"
 import { Textarea } from "@/components/ui/textarea"
 import { useModelOpen, useOpened } from "@/composables/useModelOpen"
@@ -76,14 +76,7 @@ export function SyllabusRestartDialog({ syllabusId, subject, impact, open, onOpe
             <Textarea id="restart-reason" value={reason} rows={3} maxLength={500} aria-required="true" onChange={(event) => setReason(event.target.value)} />
             <FieldError errors={errors.reason} />
           </Field>
-          {needsName ? (
-            <Field>
-              <FieldLabel htmlFor="restart-name" required>
-                Escriba «{subject}» para confirmar
-              </FieldLabel>
-              <Input id="restart-name" value={typedName} autoComplete="off" onChange={(event) => setTypedName(event.target.value)} />
-            </Field>
-          ) : null}
+          {needsName ? <ConfirmPhrase id="restart-name" phrase={subject} value={typedName} onValueChange={setTypedName} /> : null}
           <FieldError errors={errors.syllabus} />
           <DialogFooter>
             <DialogClose asChild>

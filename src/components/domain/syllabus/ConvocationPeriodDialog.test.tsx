@@ -119,6 +119,29 @@ describe("ConvocationPeriodDialog", () => {
     unmount()
   })
 
+  it("el primer paso aparece quieto al abrir y solo se desliza al cambiar de paso", async () => {
+    const { unmount } = await mountDialog()
+    const step = (): HTMLElement => document.querySelector<HTMLElement>('[data-slot="field-set"]')!
+    expect(step().textContent).toContain("Periodo lectivo")
+    expect(step().className).not.toMatch(/animate-in|slide-in|convocation-step/)
+
+    const [starts, ends] = pickers()
+    choose(starts!, "2026-10-05")
+    choose(ends!, "2027-02-26")
+    await flush()
+    await submitForm()
+    expect(step().textContent).toContain("Elaboración de sílabos")
+    expect(step().className).toContain("animate-in")
+    expect(step().className).toContain("slide-in-from-right-8")
+
+    const back = [...document.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent?.trim() === "Atrás")!
+    fireEvent.click(back)
+    await flush()
+    expect(step().textContent).toContain("Periodo lectivo")
+    expect(step().className).toContain("slide-in-from-left-8")
+    unmount()
+  })
+
   it("si la apertura falla, el reintento no vuelve a crear el periodo", async () => {
     api.createAcademicRecord.mockResolvedValue({ message: "Registro institucional creado.", id: "p1" })
     api.createProcess.mockRejectedValueOnce(new ApiError("Error", 422, { process: ["Ya hay una convocatoria en curso."] })).mockResolvedValueOnce({ message: "Convocatoria institucional abierta." })

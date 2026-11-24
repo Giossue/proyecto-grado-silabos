@@ -9,12 +9,11 @@ import { DatePicker } from "@/components/DatePicker"
 import { FacultyLibraryChecks } from "@/components/domain/academic/FacultyLibraryChecks"
 import { FacultyLogoField } from "@/components/domain/academic/FacultyLogoField"
 import { DialogActions, type DialogAction } from "@/components/domain/DialogActions"
-import { FormDialogActions } from "@/components/domain/FormDialogActions"
+import { FormDialogActions, FormDialogFooter } from "@/components/domain/FormDialogActions"
 import { FormModal } from "@/components/domain/FormModal"
 import { IconTooltip } from "@/components/domain/IconTooltip"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
-import { DialogFooter } from "@/components/ui/dialog"
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -356,18 +355,16 @@ export function CatalogEditDialog({
               </div>
             ) : null}
             {viewing ? (
-              <DialogFooter className="absolute inset-x-0 bottom-0 mx-0 flex-col bg-card p-4 pb-(--safe-footer-inset) sm:flex-col sm:justify-start">
-                <Field orientation="horizontal" className="flex-wrap justify-end">
-                  {locked ? <DialogActions actions={actions} onSelect={(key) => onAction?.(key)} /> : null}
-                  <Button type="button" variant="outline" onClick={close}>
-                    Cerrar
-                  </Button>
-                  <Button type="button" disabled={locked} onClick={() => setViewing(false)}>
-                    <Pencil data-icon="inline-start" aria-hidden="true" />
-                    Editar
-                  </Button>
-                </Field>
-              </DialogFooter>
+              <FormDialogFooter>
+                {locked ? <DialogActions actions={actions} onSelect={(key) => onAction?.(key)} /> : null}
+                <Button type="button" variant="outline" onClick={close}>
+                  Cerrar
+                </Button>
+                <Button type="button" disabled={locked} onClick={() => setViewing(false)}>
+                  <Pencil data-icon="inline-start" aria-hidden="true" />
+                  Editar
+                </Button>
+              </FormDialogFooter>
             ) : (
               <FormDialogActions
                 close={reset}

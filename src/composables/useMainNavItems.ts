@@ -2,13 +2,11 @@ import {
     BookOpenCheck,
     Building2,
     CalendarRange,
-    ChartColumn,
     ClipboardCheck,
     FileStack,
     FileText,
     FolderOpen,
     Library,
-    ScrollText,
     UsersRound,
 } from 'lucide-react';
 import type { Session } from '@/api/session';
@@ -27,8 +25,6 @@ export const mainNavItemsFor = (session: Session | null): NavItem[] => {
                   { title: 'Usuarios y roles', href: paths.admin.users, icon: UsersRound },
                   { title: 'Facultades y carreras', href: paths.admin.academic, icon: Building2 },
                   { title: 'Plantilla', href: paths.admin.template, icon: FileStack },
-                  { title: 'Reportes', href: paths.admin.reports, icon: ChartColumn },
-                  { title: 'Auditoría', href: paths.admin.audit, icon: ScrollText },
               ]
             : []),
         ...(code === 'coordinador'

@@ -43,7 +43,7 @@ export function AccessibilityDialog({ floating, remote }: { floating?: boolean; 
         <IconTooltip label="Accesibilidad" side="left">
           <DialogTrigger asChild>
             {floating ? (
-              <Button type="button" size="icon" className="fixed right-4 bottom-4 z-40 size-12 rounded-full shadow-menu [&_svg]:size-5 max-sm:hidden" aria-label="Accesibilidad"><PersonStanding aria-hidden="true" /></Button>
+              <Button type="button" size="icon" className="fixed right-4 bottom-4 scroll-lock-offset z-40 size-12 rounded-full shadow-menu [&_svg]:size-5 max-sm:hidden" aria-label="Accesibilidad"><PersonStanding aria-hidden="true" /></Button>
             ) : (
               <Button type="button" variant="ghost" size="icon-sm" aria-label="Accesibilidad"><PersonStanding data-icon="inline-start" aria-hidden="true" /></Button>
             )}

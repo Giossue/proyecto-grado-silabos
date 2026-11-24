@@ -37,7 +37,7 @@ export function ChangeMarks({ root }: { root: HTMLElement | null }) {
   if (marks.length === 0) return null
 
   return (
-    <div className="pointer-events-none fixed top-14 right-3 bottom-0 z-20 hidden w-3 lg:block" aria-label="Cambios en el documento">
+    <div className="pointer-events-none fixed top-14 right-3 bottom-0 scroll-lock-offset z-20 hidden w-3 lg:block" aria-label="Cambios en el documento">
       {marks.map((mark, index) => (
         <Button
           key={index}

@@ -8,18 +8,17 @@ import type { CatalogLibrary } from "@/api/libraryCatalog"
 import { DatePicker } from "@/components/DatePicker"
 import { FacultyLibraryChecks } from "@/components/domain/academic/FacultyLibraryChecks"
 import { FacultyLogoField } from "@/components/domain/academic/FacultyLogoField"
-import { FormDialogActions } from "@/components/domain/FormDialogActions"
+import { FormDialogActions, FormDialogFooter } from "@/components/domain/FormDialogActions"
 import { FormModal } from "@/components/domain/FormModal"
 import { Button } from "@/components/ui/button"
-import { DialogFooter } from "@/components/ui/dialog"
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Spinner } from "@/components/ui/spinner"
 import { initialLibraries, librariesToStore, useCatalogLibraries } from "@/composables/useCatalogLibraries"
 import { useInstitutionToday } from "@/composables/useInstitutionDate"
+import { useFormSteps } from "@/composables/useFormSteps"
 import { useModelOpen, useOpened } from "@/composables/useModelOpen"
-import { cn } from "@/lib/utils"
 import { VALIDATION_LIMITS } from "@/lib/validationLimits"
 import type { AcademicStructureProps, GovernanceCatalogEntity } from "@/types/academic"
 
@@ -51,8 +50,7 @@ export function CatalogRecordDialog({ options, entity, disabled = false, showTri
   const [errors, setErrors] = useState<Errors>({})
   const [form, setForm] = useState<RecordForm>(EMPTY_FORM)
   const [logo, setLogo] = useState<File | null>(null)
-  const [step, setStep] = useState<1 | 2>(1)
-  const [forward, setForward] = useState(true)
+  const { step, goTo, reset: resetStep, stepClassName } = useFormSteps<1 | 2>(1)
   const [chosenLibraries, setChosenLibraries] = useState<string[]>([])
   const { libraries: koha, error: kohaError, load: loadKoha } = useCatalogLibraries()
   const minimumPeriodDate = useInstitutionToday()
@@ -63,8 +61,7 @@ export function CatalogRecordDialog({ options, entity, disabled = false, showTri
     setForm(EMPTY_FORM)
     setLogo(null)
     setErrors({})
-    setStep(1)
-    setForward(true)
+    resetStep()
     setChosenLibraries([])
   })
 
@@ -76,11 +73,6 @@ export function CatalogRecordDialog({ options, entity, disabled = false, showTri
     if (!isOpen || entity !== "facultad") return
     void loadKoha().then(markLibraries)
   }, [isOpen, entity, loadKoha])
-
-  const goTo = (target: 1 | 2): void => {
-    setForward(target > step)
-    setStep(target)
-  }
 
   const missingRequired = !{
     facultad: filled(form.nombre, form.campus),
@@ -149,8 +141,6 @@ export function CatalogRecordDialog({ options, entity, disabled = false, showTri
     }
   }
 
-  const stepClass = cn("animate-in fade-in-0 duration-200 motion-reduce:animate-none", forward ? "slide-in-from-right-8" : "slide-in-from-left-8")
-
   const selectField = (key: keyof RecordForm, id: string, label: string, placeholder: string, items: { value: string; label: string }[]) => (
     <Field data-invalid={Boolean(errors[key])}>
       <FieldLabel htmlFor={id} required>
@@ -198,7 +188,7 @@ export function CatalogRecordDialog({ options, entity, disabled = false, showTri
         <form onSubmit={(event) => void submit(event)}>
           <FieldGroup>
             {entity === "facultad" && step === 1 ? (
-              <FieldGroup key="datos" className={stepClass}>
+              <FieldGroup key="datos" className={stepClassName}>
                 {nameField}
                 {selectField("campus", "catalog-campus", "Campus", "Seleccione el campus de la facultad", options.campusOptions)}
                 <Field data-invalid={Boolean(errors.logo)}>
@@ -220,7 +210,7 @@ export function CatalogRecordDialog({ options, entity, disabled = false, showTri
               </FieldGroup>
             ) : null}
             {entity === "facultad" && step === 2 ? (
-              <div key="bibliotecas" className={stepClass}>
+              <div key="bibliotecas" className={stepClassName}>
                 <FacultyLibraryChecks
                   value={chosenLibraries}
                   onValueChange={setChosenLibraries}
@@ -295,31 +285,29 @@ export function CatalogRecordDialog({ options, entity, disabled = false, showTri
               </div>
             ) : null}
             {entity === "facultad" ? (
-              <DialogFooter className="absolute inset-x-0 bottom-0 mx-0 flex-col bg-card p-4 pb-(--safe-footer-inset) sm:flex-col sm:justify-start">
-                <Field orientation="horizontal" className="justify-end">
-                  {step === 1 ? (
-                    <Button type="button" variant="outline" onClick={close}>
-                      Cancelar
-                    </Button>
-                  ) : (
-                    <Button type="button" variant="outline" onClick={() => goTo(1)}>
-                      <ArrowLeft data-icon="inline-start" aria-hidden="true" />
-                      Atrás
-                    </Button>
-                  )}
-                  {step === 1 ? (
-                    <Button type="submit" disabled={missingRequired}>
-                      Siguiente
-                      <ArrowRight data-icon="inline-end" aria-hidden="true" />
-                    </Button>
-                  ) : (
-                    <Button type="submit" disabled={processing || (koha !== null && chosenLibraries.length === 0)}>
-                      {processing ? <Spinner data-icon="inline-start" /> : <Plus data-icon="inline-start" aria-hidden="true" />}
-                      {labels.submit}
-                    </Button>
-                  )}
-                </Field>
-              </DialogFooter>
+              <FormDialogFooter>
+                {step === 1 ? (
+                  <Button type="button" variant="outline" onClick={close}>
+                    Cancelar
+                  </Button>
+                ) : (
+                  <Button type="button" variant="outline" onClick={() => goTo(1)}>
+                    <ArrowLeft data-icon="inline-start" aria-hidden="true" />
+                    Atrás
+                  </Button>
+                )}
+                {step === 1 ? (
+                  <Button type="submit" disabled={missingRequired}>
+                    Siguiente
+                    <ArrowRight data-icon="inline-end" aria-hidden="true" />
+                  </Button>
+                ) : (
+                  <Button type="submit" disabled={processing || (koha !== null && chosenLibraries.length === 0)}>
+                    {processing ? <Spinner data-icon="inline-start" /> : <Plus data-icon="inline-start" aria-hidden="true" />}
+                    {labels.submit}
+                  </Button>
+                )}
+              </FormDialogFooter>
             ) : (
               <FormDialogActions close={close} processing={processing} disabled={missingRequired} icon={Plus} label={labels.submit} />
             )}

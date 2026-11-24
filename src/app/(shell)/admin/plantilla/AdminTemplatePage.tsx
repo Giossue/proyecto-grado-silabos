@@ -311,14 +311,14 @@ export default function AdminTemplatePage() {
             <>
               {assistantLoaded ? (
                 <aside
-                  className="fixed right-6 bottom-24 z-40 h-[min(var(--layout-assistant-height),calc(100dvh-7rem))] w-(--layout-syllabus-aside-width) max-w-[calc(100vw-2rem)] max-sm:inset-x-4 max-sm:top-20 max-sm:right-4 max-sm:h-auto max-sm:w-auto"
+                  className="fixed right-6 bottom-24 scroll-lock-offset z-40 h-[min(var(--layout-assistant-height),calc(100dvh-7rem))] w-(--layout-syllabus-aside-width) max-w-[calc(100vw-2rem)] max-sm:inset-x-4 max-sm:top-20 max-sm:right-4 max-sm:h-auto max-sm:w-auto"
                   style={assistantOpen ? undefined : { display: "none" }}
                   aria-label="Asistente de plantilla"
                 >
                   <TemplateAssistant refresh={assistantRefresh} draftVersion={draftVersion} snapshot={draftSnapshot} busy={deciding} onApply={(id) => void applyProposal(id)} onDiscard={(id) => void discardProposal(id)} />
                 </aside>
               ) : null}
-              <Button type="button" data-tour="template-assistant" className="fixed right-6 bottom-6 z-40 h-12 rounded-full px-5 shadow-menu" aria-expanded={assistantOpen} onClick={toggleAssistant}>
+              <Button type="button" data-tour="template-assistant" className="fixed right-6 bottom-6 scroll-lock-offset z-40 h-12 rounded-full px-5 shadow-menu transition-[color,background-color,box-shadow]" aria-expanded={assistantOpen} onClick={toggleAssistant}>
                 {assistantOpen ? <X data-icon="inline-start" aria-hidden="true" /> : <Bot data-icon="inline-start" aria-hidden="true" />}
                 {assistantOpen ? "Cerrar asistente" : "Asistente"}
               </Button>

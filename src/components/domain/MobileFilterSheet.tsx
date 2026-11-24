@@ -53,12 +53,8 @@ export function MobileFilterSheet({ className, children }: { className?: string;
       if (event.key === "Escape") setOpen(false)
     }
     window.addEventListener("keydown", onKey)
-    document.body.style.overflow = "hidden"
 
-    return () => {
-      window.removeEventListener("keydown", onKey)
-      document.body.style.overflow = ""
-    }
+    return () => window.removeEventListener("keydown", onKey)
   }, [open])
 
   return (
@@ -85,6 +81,7 @@ export function MobileFilterSheet({ className, children }: { className?: string;
 
       <div
         ref={panel}
+        data-slot="filter-sheet"
         className={cn(
           className,
           "max-sm:fixed max-sm:inset-x-0 max-sm:bottom-0 max-sm:z-50 max-sm:max-h-(--filter-sheet-max-height)",

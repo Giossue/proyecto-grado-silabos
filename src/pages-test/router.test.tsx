@@ -119,6 +119,14 @@ describe("navegación por ámbito activo", () => {
     expect(screen.getByText("Contenido")).toBeInTheDocument()
   })
 
+  it.each(["/admin/auditoria", "/admin/reportes"])("deja %s como página no encontrada para Administración", async (path) => {
+    await push(path)
+
+    expect(matchRoute(navigation.pathname).record.meta.title).toBe("Página no encontrada")
+    expect(navigation.fullPath).toBe(path)
+    expect(screen.getByText("Contenido")).toBeInTheDocument()
+  })
+
   it("envía un acceso profundo sin sesión al login con destino interno", async () => {
     sessionState.clear()
     await push("/admin/usuarios")

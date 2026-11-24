@@ -7,15 +7,16 @@ import { ApiError } from "@/api/client"
 import { createProcess } from "@/api/processes"
 import { DatePicker } from "@/components/DatePicker"
 import { ConfirmPhrase } from "@/components/domain/ConfirmPhrase"
+import { FormDialogFooter } from "@/components/domain/FormDialogActions"
 import { FormModal } from "@/components/domain/FormModal"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field"
 import { Spinner } from "@/components/ui/spinner"
+import { useFormSteps } from "@/composables/useFormSteps"
 import { useModelOpen, useOpened } from "@/composables/useModelOpen"
 import { useInstitutionToday } from "@/composables/useInstitutionDate"
 import { matchesPhrase } from "@/lib/confirmPhrase"
-import "./ConvocationPeriodDialog.css"
 
 type ConvocationPeriodDialogProps = {
   disabled?: boolean
@@ -42,15 +43,14 @@ export function ConvocationPeriodDialog({ disabled = false, open, onOpenChange, 
   const [errors, setErrors] = useState<Record<string, string[]>>({})
   const [form, setForm] = useState<Form>(EMPTY_FORM)
   const [createdPeriodId, setCreatedPeriodId] = useState<string | null>(null)
-  const [step, setStep] = useState<1 | 2>(1)
-  const [forward, setForward] = useState(true)
+  const { step, goTo, reset: resetStep, stepClassName } = useFormSteps<1 | 2>(1)
   useOpened(confirmOpen, () => setOpeningTyped(""))
   useOpened(isOpen, () => {
     setForm(EMPTY_FORM)
     setErrors({})
     setCreatedPeriodId(null)
     setConfirmOpen(false)
-    setStep(1)
+    resetStep()
   })
 
   const todayIso = useInstitutionToday()
@@ -61,11 +61,6 @@ export function ConvocationPeriodDialog({ disabled = false, open, onOpenChange, 
   const calendarWeeks = periodComplete ? Math.round((monday(form.ends_on) - monday(form.starts_on)) / 604_800_000) + 1 : null
   const processComplete = Boolean(form.starts_at && form.due_at)
   const periodCreated = createdPeriodId !== null
-
-  const goTo = (target: 1 | 2): void => {
-    setForward(target > step)
-    setStep(target)
-  }
 
   const update = (key: keyof Form, value: string): void =>
     setForm((current) => {
@@ -127,7 +122,7 @@ export function ConvocationPeriodDialog({ disabled = false, open, onOpenChange, 
               ) : null}
               <div className="relative overflow-hidden">
                 {step === 1 ? (
-                  <FieldSet key="period" className={forward ? "convocation-step-next" : "convocation-step-back"}>
+                  <FieldSet key="period" className={stepClassName}>
                     <FieldLegend>Periodo lectivo</FieldLegend>
                     <FieldDescription>{description("Fechas de inicio y fin de clases; la etiqueta se genera con el rango de meses y año")}</FieldDescription>
                     <div className="grid grid-cols-2 items-start gap-4">
@@ -153,7 +148,7 @@ export function ConvocationPeriodDialog({ disabled = false, open, onOpenChange, 
                     ) : null}
                   </FieldSet>
                 ) : (
-                  <FieldSet key="syllabus" className={forward ? "convocation-step-next" : "convocation-step-back"}>
+                  <FieldSet key="syllabus" className={stepClassName}>
                     <FieldLegend>Elaboración de sílabos</FieldLegend>
                     <FieldDescription>{description("Elija cuándo empieza la elaboración y hasta cuándo se entrega")}</FieldDescription>
                     <div className="grid grid-cols-2 items-start gap-4">
@@ -175,31 +170,29 @@ export function ConvocationPeriodDialog({ disabled = false, open, onOpenChange, 
                   </FieldSet>
                 )}
               </div>
-              <DialogFooter className="absolute inset-x-0 bottom-0 mx-0 flex-col bg-card p-4 pb-(--safe-footer-inset) sm:flex-col sm:justify-start">
-                <Field orientation="horizontal" className="justify-end">
-                  {step === 1 ? (
-                    <Button type="button" variant="outline" onClick={close}>
-                      Cancelar
-                    </Button>
-                  ) : (
-                    <Button type="button" variant="outline" onClick={() => goTo(1)}>
-                      <ArrowLeft data-icon="inline-start" aria-hidden="true" />
-                      Atrás
-                    </Button>
-                  )}
-                  {step === 1 ? (
-                    <Button type="submit" disabled={!periodComplete}>
-                      Siguiente
-                      <ArrowRight data-icon="inline-end" aria-hidden="true" />
-                    </Button>
-                  ) : (
-                    <Button type="submit" disabled={processing || disabled || !processComplete}>
-                      {processing ? <Spinner data-icon="inline-start" /> : <CalendarPlus data-icon="inline-start" aria-hidden="true" />}
-                      Abrir convocatoria
-                    </Button>
-                  )}
-                </Field>
-              </DialogFooter>
+              <FormDialogFooter>
+                {step === 1 ? (
+                  <Button type="button" variant="outline" onClick={close}>
+                    Cancelar
+                  </Button>
+                ) : (
+                  <Button type="button" variant="outline" onClick={() => goTo(1)}>
+                    <ArrowLeft data-icon="inline-start" aria-hidden="true" />
+                    Atrás
+                  </Button>
+                )}
+                {step === 1 ? (
+                  <Button type="submit" disabled={!periodComplete}>
+                    Siguiente
+                    <ArrowRight data-icon="inline-end" aria-hidden="true" />
+                  </Button>
+                ) : (
+                  <Button type="submit" disabled={processing || disabled || !processComplete}>
+                    {processing ? <Spinner data-icon="inline-start" /> : <CalendarPlus data-icon="inline-start" aria-hidden="true" />}
+                    Abrir convocatoria
+                  </Button>
+                )}
+              </FormDialogFooter>
             </FieldGroup>
           </form>
           <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>

@@ -157,9 +157,9 @@ export function PageFrame({
               data-tour="page-actions"
               className={cn(
                 "flex w-full shrink-0 flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap sm:justify-end",
-                "max-sm:fixed max-sm:z-40 max-sm:w-auto max-sm:flex-col max-sm:items-end",
+                "max-sm:fixed max-sm:scroll-lock-offset max-sm:z-40 max-sm:w-auto max-sm:flex-col max-sm:items-end",
                 "max-sm:right-(--page-mobile-actions-right) max-sm:bottom-(--page-mobile-actions-bottom)",
-                "max-sm:transition-all max-sm:duration-200 max-sm:ease-out",
+                "max-sm:transition-[translate,opacity] max-sm:duration-200 max-sm:ease-out",
                 floatingHidden && "max-sm:pointer-events-none max-sm:translate-y-24 max-sm:opacity-0",
               )}
             >
