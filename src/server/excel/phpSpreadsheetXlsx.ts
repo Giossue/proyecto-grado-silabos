@@ -66,6 +66,8 @@ export type PackageOptions = {
   sharedStrings: SharedStrings
   styles: string
   created: number
+  workbookPassword?: string
+  preCalculateFormulas?: boolean
 }
 
 function w3c(seconds: number): string {
@@ -146,8 +148,15 @@ function workbookXml(options: PackageOptions): string {
   return (
     `${XML_HEADER}<workbook xmlns="${MAIN}" xmlns:r="${RELATIONSHIPS}">` +
     '<fileVersion appName="xl" lastEdited="4" lowestEdited="4" rupBuild="4505"/><workbookPr codeName="ThisWorkbook"/>' +
+    (options.workbookPassword === undefined
+      ? ""
+      : `<workbookProtection lockRevision="false" lockStructure="true" lockWindows="false" workbookPassword="${options.workbookPassword}"/>`) +
     `<bookViews><workbookView activeTab="0" autoFilterDateGrouping="true" firstSheet="0" minimized="false" showHorizontalScroll="true" showSheetTabs="true" showVerticalScroll="true" tabRatio="600" visibility="visible"/></bookViews>` +
-    `<sheets>${sheets}</sheets><definedNames/><calcPr calcId="999999" calcMode="auto" calcCompleted="1" fullCalcOnLoad="0" forceFullCalc="0"/></workbook>`
+    `<sheets>${sheets}</sheets><definedNames/>` +
+    (options.preCalculateFormulas === false
+      ? '<calcPr calcId="999999" calcMode="auto" calcCompleted="0" fullCalcOnLoad="1" forceFullCalc="0"/>'
+      : '<calcPr calcId="999999" calcMode="auto" calcCompleted="1" fullCalcOnLoad="0" forceFullCalc="0"/>') +
+    "</workbook>"
   )
 }
 

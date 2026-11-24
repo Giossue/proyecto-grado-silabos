@@ -71,7 +71,7 @@ function fileErrors(value: PhpValue | UploadedFile | undefined, rules: ImportFil
         { check: () => false, message: messages.mimes },
         { max: rules.maxKilobytes },
       ],
-    }, { file: label }, rules.messages.max ? { messages: { "file.max": rules.messages.max } } : {}).then((errors) => errors.file ?? [])
+    }, { file: label }, { messages: Object.fromEntries(Object.entries({ "file.required": rules.messages.required, "file.max": rules.messages.max }).filter(([, text]) => text !== undefined)) as Record<string, string> }).then((errors) => errors.file ?? [])
   }
   const errors: string[] = []
   const extension = clientExtension(value.originalName).trim().toLowerCase()

@@ -1,0 +1,1034 @@
+{
+    "definition": {
+        "careerId": "01a1c5bc-0000-7000-8000-00000000c001",
+        "careerName": "Ingeniería de Software",
+        "fields": [
+            {
+                "key": "descripcion",
+                "label": "Descripción de la asignatura",
+                "columns": [],
+                "table": null,
+                "id": "01a2092c-0000-7000-8000-00000000f001",
+                "section": "2. Descripción",
+                "sheet": "01 Descripción de la asignatura",
+                "definition_hash": "ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb"
+            },
+            {
+                "key": "objetivos_especificos",
+                "label": "Objetivos específicos",
+                "columns": [],
+                "table": null,
+                "id": "01a2092c-0000-7000-8000-00000000f002",
+                "section": "3. Objetivos",
+                "sheet": "02 Objetivos específicos",
+                "definition_hash": "3e23e8160039594a33894f6564e1b1348bbd7a0088d42c4acb73eeaed59c009d"
+            },
+            {
+                "key": "relacion",
+                "label": "Relación de resultados",
+                "columns": [
+                    "Resultado",
+                    "Nivel"
+                ],
+                "table": {
+                    "type": "table",
+                    "content": [
+                        {
+                            "type": "tableRow",
+                            "content": [
+                                {
+                                    "type": "tableHeader",
+                                    "attrs": {
+                                        "colspan": 1,
+                                        "rowspan": 1
+                                    },
+                                    "content": [
+                                        {
+                                            "type": "paragraph",
+                                            "content": [
+                                                {
+                                                    "type": "text",
+                                                    "text": "Resultado"
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                },
+                                {
+                                    "type": "tableHeader",
+                                    "attrs": {
+                                        "colspan": 1,
+                                        "rowspan": 1
+                                    },
+                                    "content": [
+                                        {
+                                            "type": "paragraph",
+                                            "content": [
+                                                {
+                                                    "type": "text",
+                                                    "text": "Nivel"
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            "type": "tableRow",
+                            "content": [
+                                {
+                                    "type": "tableCell",
+                                    "attrs": {
+                                        "colspan": 1,
+                                        "rowspan": 1
+                                    },
+                                    "content": [
+                                        {
+                                            "type": "paragraph"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "type": "tableCell",
+                                    "attrs": {
+                                        "colspan": 1,
+                                        "rowspan": 1
+                                    },
+                                    "content": [
+                                        {
+                                            "type": "paragraph"
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                },
+                "id": "01a2092c-0000-7000-8000-00000000f003",
+                "section": "9. Relación",
+                "sheet": "03 Relación de resultados",
+                "definition_hash": "2e7d2c03a9507ae265ecf5b5356885a53393a2029d241394997265a1a25aefc6"
+            },
+            {
+                "key": "contribucion",
+                "label": "Contribución al perfil",
+                "columns": [
+                    "Competencia",
+                    "Aporte"
+                ],
+                "table": {
+                    "type": "table",
+                    "content": [
+                        {
+                            "type": "tableRow",
+                            "content": [
+                                {
+                                    "type": "tableHeader",
+                                    "attrs": {
+                                        "colspan": 1,
+                                        "rowspan": 1
+                                    },
+                                    "content": [
+                                        {
+                                            "type": "paragraph",
+                                            "content": [
+                                                {
+                                                    "type": "text",
+                                                    "text": "Competencia"
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                },
+                                {
+                                    "type": "tableHeader",
+                                    "attrs": {
+                                        "colspan": 1,
+                                        "rowspan": 1
+                                    },
+                                    "content": [
+                                        {
+                                            "type": "paragraph",
+                                            "content": [
+                                                {
+                                                    "type": "text",
+                                                    "text": "Aporte"
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            "type": "tableRow",
+                            "content": [
+                                {
+                                    "type": "tableCell",
+                                    "attrs": {
+                                        "colspan": 1,
+                                        "rowspan": 1
+                                    },
+                                    "content": [
+                                        {
+                                            "type": "paragraph",
+                                            "content": [
+                                                {
+                                                    "type": "text",
+                                                    "text": "Resuelve sistemas lineales"
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                },
+                                {
+                                    "type": "tableCell",
+                                    "attrs": {
+                                        "colspan": 1,
+                                        "rowspan": 1
+                                    },
+                                    "content": [
+                                        {
+                                            "type": "paragraph"
+                                        }
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            "type": "tableRow",
+                            "content": [
+                                {
+                                    "type": "tableCell",
+                                    "attrs": {
+                                        "colspan": 1,
+                                        "rowspan": 1
+                                    },
+                                    "content": [
+                                        {
+                                            "type": "paragraph",
+                                            "content": [
+                                                {
+                                                    "type": "text",
+                                                    "text": "Comunica resultados & <datos>"
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                },
+                                {
+                                    "type": "tableCell",
+                                    "attrs": {
+                                        "colspan": 1,
+                                        "rowspan": 1
+                                    },
+                                    "content": [
+                                        {
+                                            "type": "paragraph"
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                },
+                "id": "01a2092c-0000-7000-8000-00000000f004",
+                "section": "10. Perfil",
+                "sheet": "04 Contribución al perfil",
+                "definition_hash": "18ac3e7343f016890c510e93f935261169d9e3f565436429830faf0934f4f8e4"
+            },
+            {
+                "key": "libre",
+                "label": "Tabla sin plantilla",
+                "columns": [
+                    "Uno",
+                    "Dos"
+                ],
+                "table": null,
+                "id": "01a2092c-0000-7000-8000-00000000f005",
+                "section": "",
+                "sheet": "05 Tabla sin plantilla",
+                "definition_hash": "3f79bb7b435b05321651daefd374cdc681dc06faa65e374e38337b88ca046dea"
+            }
+        ],
+        "subjects": [
+            {
+                "id": "01a1c5bc-0000-7000-8000-0000000000a1",
+                "code": "SW-101",
+                "name": "Álgebra lineal",
+                "cycle": 1
+            },
+            {
+                "id": "01a1c5bc-0000-7000-8000-0000000000a2",
+                "code": "SW-102",
+                "name": "Programación & datos",
+                "cycle": 1
+            },
+            {
+                "id": "01a1c5bc-0000-7000-8000-0000000000a3",
+                "code": "SW-201",
+                "name": "Seminario",
+                "cycle": null
+            }
+        ],
+        "fingerprint": "2adb26190afeaf75588fce086673b024ebd57bb5eeac80bd9b1078f65c9ddae5"
+    },
+    "cases": {
+        "filled": {
+            "subjects": [
+                {
+                    "subject_id": "01a1c5bc-0000-7000-8000-0000000000a1",
+                    "code": "SW-101",
+                    "name": "Álgebra lineal",
+                    "cycle": 1,
+                    "state": "lista",
+                    "values": {
+                        "descripcion": "Descripción en Excel\nSegunda línea",
+                        "relacion": {
+                            "columns": [
+                                "Resultado",
+                                "Nivel"
+                            ],
+                            "rows": [
+                                [
+                                    "Resuelve problemas",
+                                    "Alto"
+                                ],
+                                [
+                                    "Comunica",
+                                    ""
+                                ]
+                            ]
+                        }
+                    },
+                    "error": null
+                },
+                {
+                    "subject_id": "01a1c5bc-0000-7000-8000-0000000000a2",
+                    "code": "SW-102",
+                    "name": "Programación & datos",
+                    "cycle": 1,
+                    "state": "lista",
+                    "values": {
+                        "objetivos_especificos": [
+                            "Analizar.",
+                            "Aplicar."
+                        ]
+                    },
+                    "error": null
+                },
+                {
+                    "subject_id": "01a1c5bc-0000-7000-8000-0000000000a3",
+                    "code": "SW-201",
+                    "name": "Seminario",
+                    "cycle": null,
+                    "state": "lista",
+                    "values": {
+                        "contribucion": {
+                            "columns": [
+                                "Competencia",
+                                "Aporte"
+                            ],
+                            "rows": [
+                                [
+                                    "Resuelve sistemas lineales",
+                                    "Alta (A)"
+                                ],
+                                [
+                                    "Comunica resultados & <datos>",
+                                    ""
+                                ]
+                            ]
+                        },
+                        "libre": {
+                            "columns": [
+                                "Uno",
+                                "Dos"
+                            ],
+                            "rows": [
+                                [
+                                    "x",
+                                    "y"
+                                ]
+                            ]
+                        }
+                    },
+                    "error": null
+                }
+            ]
+        },
+        "values": {
+            "subjects": [
+                {
+                    "subject_id": "01a1c5bc-0000-7000-8000-0000000000a1",
+                    "code": "SW-101",
+                    "name": "Álgebra lineal",
+                    "cycle": 1,
+                    "state": "lista",
+                    "values": {
+                        "descripcion": "12.5",
+                        "objetivos_especificos": "Texto enriquecido"
+                    },
+                    "error": null
+                },
+                {
+                    "subject_id": "01a1c5bc-0000-7000-8000-0000000000a2",
+                    "code": "SW-102",
+                    "name": "Programación & datos",
+                    "cycle": 1,
+                    "state": "lista",
+                    "values": {
+                        "descripcion": "1.0E+20",
+                        "relacion": {
+                            "columns": [
+                                "Resultado",
+                                "Nivel"
+                            ],
+                            "rows": [
+                                [
+                                    "7",
+                                    "0.3"
+                                ]
+                            ]
+                        }
+                    },
+                    "error": null
+                },
+                {
+                    "subject_id": "01a1c5bc-0000-7000-8000-0000000000a3",
+                    "code": "SW-201",
+                    "name": "Seminario",
+                    "cycle": null,
+                    "state": "lista",
+                    "values": {
+                        "descripcion": "TRUE",
+                        "objetivos_especificos": [
+                            "uno",
+                            "dos",
+                            "tres"
+                        ]
+                    },
+                    "error": null
+                }
+            ]
+        },
+        "formula": {
+            "errors": {
+                "file": [
+                    "Hoja «01 Descripción de la asignatura», celda D5: No se admiten fórmulas. Escriba o pegue solo el contenido."
+                ]
+            }
+        },
+        "formula_guide": {
+            "errors": {
+                "file": [
+                    "Hoja «Indicaciones», celda B3: No se admiten fórmulas. Escriba o pegue solo el contenido."
+                ]
+            }
+        },
+        "renamed_sheet": {
+            "errors": {
+                "file": [
+                    "Las hojas del Excel cambiaron. Descargue una plantilla nueva y conserve sus nombres y orden."
+                ]
+            }
+        },
+        "extra_row": {
+            "errors": {
+                "file": [
+                    "Hay datos fuera de las celdas de la plantilla. No agregue filas ni columnas."
+                ]
+            }
+        },
+        "extra_column": {
+            "errors": {
+                "file": [
+                    "Hay datos fuera de las celdas de la plantilla. No agregue filas ni columnas."
+                ]
+            }
+        },
+        "header_changed": {
+            "errors": {
+                "file": [
+                    "Hoja «03 Relación de resultados», celda E3: No modifique los encabezados ni los datos de las materias. Descargue una plantilla nueva si cambiaron."
+                ]
+            }
+        },
+        "code_changed": {
+            "errors": {
+                "file": [
+                    "Hoja «04 Contribución al perfil», celda B6: No modifique los encabezados ni los datos de las materias. Descargue una plantilla nueva si cambiaron."
+                ]
+            }
+        },
+        "title_changed": {
+            "errors": {
+                "file": [
+                    "No cambie los títulos ni la identificación de los campos de la plantilla."
+                ]
+            }
+        },
+        "fixed_changed": {
+            "errors": {
+                "file": [
+                    "Hoja «04 Contribución al perfil», celda D9: No modifique los encabezados ni los datos de las materias. Descargue una plantilla nueva si cambiaron."
+                ]
+            }
+        },
+        "too_long": {
+            "errors": {
+                "file": [
+                    "Hoja «01 Descripción de la asignatura», celda D5: El contenido supera el límite permitido."
+                ]
+            }
+        },
+        "table_too_long": {
+            "errors": {
+                "file": [
+                    "Hoja «03 Relación de resultados», celda D4: El contenido supera el límite permitido."
+                ]
+            }
+        },
+        "list_too_long": {
+            "errors": {
+                "file": [
+                    "Hoja «01 Descripción de la asignatura»: La lista admite hasta 60 elementos de 3 000 caracteres."
+                ]
+            }
+        },
+        "blank_list": {
+            "errors": {
+                "file": [
+                    "Hoja «01 Descripción de la asignatura»: El contenido no tiene el formato de este campo."
+                ]
+            }
+        },
+        "empty": {
+            "errors": {
+                "file": [
+                    "Complete al menos un campo antes de cargar el Excel. Las celdas vacías no cambian el proyecto de carrera actual."
+                ]
+            }
+        },
+        "wrong_structure": {
+            "errors": {
+                "file": [
+                    "El Excel no corresponde a la carrera o la estructura actual. Descargue una plantilla nueva."
+                ]
+            }
+        },
+        "wrong_career": {
+            "errors": {
+                "file": [
+                    "El Excel no corresponde a la carrera o la estructura actual. Descargue una plantilla nueva."
+                ]
+            }
+        },
+        "not_zip": {
+            "errors": {
+                "file": [
+                    "Use un archivo Excel .xlsx válido."
+                ]
+            }
+        },
+        "no_workbook": {
+            "errors": {
+                "file": [
+                    "Las hojas del Excel cambiaron. Descargue una plantilla nueva y conserve sus nombres y orden."
+                ]
+            }
+        },
+        "broken_sheet_xml": {
+            "errors": {
+                "file": [
+                    "No se pudo abrir el Excel. Use el archivo .xlsx descargado desde el sitio."
+                ]
+            }
+        },
+        "missing_shared_string": {
+            "errors": {
+                "file": [
+                    "No se pudo abrir el Excel. Use el archivo .xlsx descargado desde el sitio."
+                ]
+            }
+        },
+        "inline_string": {
+            "subjects": [
+                {
+                    "subject_id": "01a1c5bc-0000-7000-8000-0000000000a1",
+                    "code": "SW-101",
+                    "name": "Álgebra lineal",
+                    "cycle": 1,
+                    "state": "lista",
+                    "values": {
+                        "descripcion": "Descripción en Excel\nSegunda línea",
+                        "relacion": {
+                            "columns": [
+                                "Resultado",
+                                "Nivel"
+                            ],
+                            "rows": [
+                                [
+                                    "Resuelve problemas",
+                                    "Alto"
+                                ],
+                                [
+                                    "Comunica",
+                                    ""
+                                ]
+                            ]
+                        }
+                    },
+                    "error": null
+                },
+                {
+                    "subject_id": "01a1c5bc-0000-7000-8000-0000000000a2",
+                    "code": "SW-102",
+                    "name": "Programación & datos",
+                    "cycle": 1,
+                    "state": "lista",
+                    "values": {
+                        "descripcion": "Texto en línea",
+                        "objetivos_especificos": [
+                            "Analizar.",
+                            "Aplicar."
+                        ]
+                    },
+                    "error": null
+                },
+                {
+                    "subject_id": "01a1c5bc-0000-7000-8000-0000000000a3",
+                    "code": "SW-201",
+                    "name": "Seminario",
+                    "cycle": null,
+                    "state": "lista",
+                    "values": {
+                        "contribucion": {
+                            "columns": [
+                                "Competencia",
+                                "Aporte"
+                            ],
+                            "rows": [
+                                [
+                                    "Resuelve sistemas lineales",
+                                    "Alta (A)"
+                                ],
+                                [
+                                    "Comunica resultados & <datos>",
+                                    ""
+                                ]
+                            ]
+                        },
+                        "libre": {
+                            "columns": [
+                                "Uno",
+                                "Dos"
+                            ],
+                            "rows": [
+                                [
+                                    "x",
+                                    "y"
+                                ]
+                            ]
+                        }
+                    },
+                    "error": null
+                }
+            ]
+        },
+        "escaped_text": {
+            "subjects": [
+                {
+                    "subject_id": "01a1c5bc-0000-7000-8000-0000000000a1",
+                    "code": "SW-101",
+                    "name": "Álgebra lineal",
+                    "cycle": 1,
+                    "state": "lista",
+                    "values": {
+                        "descripcion": "Descripción en Excel\nSegunda línea",
+                        "relacion": {
+                            "columns": [
+                                "Resultado",
+                                "Nivel"
+                            ],
+                            "rows": [
+                                [
+                                    "Resuelve problemas",
+                                    "Alto"
+                                ],
+                                [
+                                    "Comunica",
+                                    ""
+                                ]
+                            ]
+                        }
+                    },
+                    "error": null
+                },
+                {
+                    "subject_id": "01a1c5bc-0000-7000-8000-0000000000a2",
+                    "code": "SW-102",
+                    "name": "Programación & datos",
+                    "cycle": 1,
+                    "state": "lista",
+                    "values": {
+                        "descripcion": "Uno\tdos_x0001_ tres",
+                        "objetivos_especificos": [
+                            "Analizar.",
+                            "Aplicar."
+                        ]
+                    },
+                    "error": null
+                },
+                {
+                    "subject_id": "01a1c5bc-0000-7000-8000-0000000000a3",
+                    "code": "SW-201",
+                    "name": "Seminario",
+                    "cycle": null,
+                    "state": "lista",
+                    "values": {
+                        "contribucion": {
+                            "columns": [
+                                "Competencia",
+                                "Aporte"
+                            ],
+                            "rows": [
+                                [
+                                    "Resuelve sistemas lineales",
+                                    "Alta (A)"
+                                ],
+                                [
+                                    "Comunica resultados & <datos>",
+                                    ""
+                                ]
+                            ]
+                        },
+                        "libre": {
+                            "columns": [
+                                "Uno",
+                                "Dos"
+                            ],
+                            "rows": [
+                                [
+                                    "x",
+                                    "y"
+                                ]
+                            ]
+                        }
+                    },
+                    "error": null
+                }
+            ]
+        },
+        "untyped_formula": {
+            "errors": {
+                "file": [
+                    "Hoja «01 Descripción de la asignatura», celda D5: No se admiten fórmulas. Escriba o pegue solo el contenido."
+                ]
+            }
+        },
+        "bool_error": {
+            "subjects": [
+                {
+                    "subject_id": "01a1c5bc-0000-7000-8000-0000000000a1",
+                    "code": "SW-101",
+                    "name": "Álgebra lineal",
+                    "cycle": 1,
+                    "state": "lista",
+                    "values": {
+                        "descripcion": "Descripción en Excel\nSegunda línea",
+                        "relacion": {
+                            "columns": [
+                                "Resultado",
+                                "Nivel"
+                            ],
+                            "rows": [
+                                [
+                                    "Resuelve problemas",
+                                    "Alto"
+                                ],
+                                [
+                                    "Comunica",
+                                    ""
+                                ]
+                            ]
+                        }
+                    },
+                    "error": null
+                },
+                {
+                    "subject_id": "01a1c5bc-0000-7000-8000-0000000000a2",
+                    "code": "SW-102",
+                    "name": "Programación & datos",
+                    "cycle": 1,
+                    "state": "lista",
+                    "values": {
+                        "descripcion": "FALSE",
+                        "objetivos_especificos": [
+                            "Analizar.",
+                            "Aplicar."
+                        ]
+                    },
+                    "error": null
+                },
+                {
+                    "subject_id": "01a1c5bc-0000-7000-8000-0000000000a3",
+                    "code": "SW-201",
+                    "name": "Seminario",
+                    "cycle": null,
+                    "state": "lista",
+                    "values": {
+                        "descripcion": "#N\/A",
+                        "contribucion": {
+                            "columns": [
+                                "Competencia",
+                                "Aporte"
+                            ],
+                            "rows": [
+                                [
+                                    "Resuelve sistemas lineales",
+                                    "Alta (A)"
+                                ],
+                                [
+                                    "Comunica resultados & <datos>",
+                                    ""
+                                ]
+                            ]
+                        },
+                        "libre": {
+                            "columns": [
+                                "Uno",
+                                "Dos"
+                            ],
+                            "rows": [
+                                [
+                                    "x",
+                                    "y"
+                                ]
+                            ]
+                        }
+                    },
+                    "error": null
+                }
+            ]
+        },
+        "untyped_number": {
+            "subjects": [
+                {
+                    "subject_id": "01a1c5bc-0000-7000-8000-0000000000a1",
+                    "code": "SW-101",
+                    "name": "Álgebra lineal",
+                    "cycle": 1,
+                    "state": "lista",
+                    "values": {
+                        "descripcion": "Descripción en Excel\nSegunda línea",
+                        "relacion": {
+                            "columns": [
+                                "Resultado",
+                                "Nivel"
+                            ],
+                            "rows": [
+                                [
+                                    "Resuelve problemas",
+                                    "Alto"
+                                ],
+                                [
+                                    "Comunica",
+                                    ""
+                                ]
+                            ]
+                        }
+                    },
+                    "error": null
+                },
+                {
+                    "subject_id": "01a1c5bc-0000-7000-8000-0000000000a2",
+                    "code": "SW-102",
+                    "name": "Programación & datos",
+                    "cycle": 1,
+                    "state": "lista",
+                    "values": {
+                        "descripcion": "7",
+                        "objetivos_especificos": [
+                            "Analizar.",
+                            "Aplicar."
+                        ]
+                    },
+                    "error": null
+                },
+                {
+                    "subject_id": "01a1c5bc-0000-7000-8000-0000000000a3",
+                    "code": "SW-201",
+                    "name": "Seminario",
+                    "cycle": null,
+                    "state": "lista",
+                    "values": {
+                        "descripcion": "Cadena",
+                        "contribucion": {
+                            "columns": [
+                                "Competencia",
+                                "Aporte"
+                            ],
+                            "rows": [
+                                [
+                                    "Resuelve sistemas lineales",
+                                    "Alta (A)"
+                                ],
+                                [
+                                    "Comunica resultados & <datos>",
+                                    ""
+                                ]
+                            ]
+                        },
+                        "libre": {
+                            "columns": [
+                                "Uno",
+                                "Dos"
+                            ],
+                            "rows": [
+                                [
+                                    "x",
+                                    "y"
+                                ]
+                            ]
+                        }
+                    },
+                    "error": null
+                }
+            ]
+        },
+        "merge_outside": {
+            "errors": {
+                "file": [
+                    "Hoja «01 Descripción de la asignatura»: Hay datos fuera de las celdas de la plantilla. No agregue filas ni columnas."
+                ]
+            }
+        },
+        "styled_cell_outside": {
+            "errors": {
+                "file": [
+                    "Hay datos fuera de las celdas de la plantilla. No agregue filas ni columnas."
+                ]
+            }
+        },
+        "late_row_out_of_order": {
+            "errors": {
+                "file": [
+                    "Hoja «01 Descripción de la asignatura»: Hay datos fuera de las celdas de la plantilla. No agregue filas ni columnas."
+                ]
+            }
+        },
+        "doctype": {
+            "errors": {
+                "file": [
+                    "No se pudo abrir el Excel. Use el archivo .xlsx descargado desde el sitio."
+                ]
+            }
+        },
+        "broken_workbook_xml": {
+            "errors": {
+                "file": [
+                    "Las hojas del Excel cambiaron. Descargue una plantilla nueva y conserve sus nombres y orden."
+                ]
+            }
+        },
+        "sheet_order": {
+            "errors": {
+                "file": [
+                    "Las hojas del Excel cambiaron. Descargue una plantilla nueva y conserve sus nombres y orden."
+                ]
+            }
+        },
+        "data_validation_outside": {
+            "errors": {
+                "file": [
+                    "Hoja «01 Descripción de la asignatura»: Hay datos fuera de las celdas de la plantilla. No agregue filas ni columnas."
+                ]
+            }
+        },
+        "crlf_shared": {
+            "subjects": [
+                {
+                    "subject_id": "01a1c5bc-0000-7000-8000-0000000000a1",
+                    "code": "SW-101",
+                    "name": "Álgebra lineal",
+                    "cycle": 1,
+                    "state": "lista",
+                    "values": {
+                        "descripcion": "Descripción en Excel\nSegunda\ntercera",
+                        "relacion": {
+                            "columns": [
+                                "Resultado",
+                                "Nivel"
+                            ],
+                            "rows": [
+                                [
+                                    "Resuelve problemas",
+                                    "Alto"
+                                ],
+                                [
+                                    "Comunica",
+                                    ""
+                                ]
+                            ]
+                        }
+                    },
+                    "error": null
+                },
+                {
+                    "subject_id": "01a1c5bc-0000-7000-8000-0000000000a2",
+                    "code": "SW-102",
+                    "name": "Programación & datos",
+                    "cycle": 1,
+                    "state": "lista",
+                    "values": {
+                        "objetivos_especificos": [
+                            "Analizar.",
+                            "Aplicar."
+                        ]
+                    },
+                    "error": null
+                },
+                {
+                    "subject_id": "01a1c5bc-0000-7000-8000-0000000000a3",
+                    "code": "SW-201",
+                    "name": "Seminario",
+                    "cycle": null,
+                    "state": "lista",
+                    "values": {
+                        "contribucion": {
+                            "columns": [
+                                "Competencia",
+                                "Aporte"
+                            ],
+                            "rows": [
+                                [
+                                    "Resuelve sistemas lineales",
+                                    "Alta (A)"
+                                ],
+                                [
+                                    "Comunica resultados & <datos>",
+                                    ""
+                                ]
+                            ]
+                        },
+                        "libre": {
+                            "columns": [
+                                "Uno",
+                                "Dos"
+                            ],
+                            "rows": [
+                                [
+                                    "x",
+                                    "y"
+                                ]
+                            ]
+                        }
+                    },
+                    "error": null
+                }
+            ]
+        }
+    }
+}

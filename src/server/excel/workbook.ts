@@ -72,13 +72,13 @@ export function excelSerial(localYmdHms: string): number {
 
 export const XLSX_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
-export function xlsxDownload(bytes: Buffer, filename: string): Response {
+export function xlsxDownload(bytes: Buffer, filename: string, cacheControl = "no-cache, private"): Response {
   return new Response(new Uint8Array(bytes), {
     status: 200,
     headers: {
       "Content-Type": XLSX_TYPE,
       "Content-Disposition": `attachment; filename=${filename}`,
-      "Cache-Control": "no-cache, private",
+      "Cache-Control": cacheControl,
       "X-Content-Type-Options": "nosniff",
       "X-Frame-Options": "DENY",
       "Referrer-Policy": "strict-origin-when-cross-origin",
