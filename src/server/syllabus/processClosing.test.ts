@@ -1,0 +1,144 @@
+// @vitest-environment node
+import { beforeEach, describe, expect, it } from "vitest"
+import golden from "../laravel/__fixtures__/laravel-golden.json"
+import { apiRequest, fakeDeps, loggedInAttributes, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, type FakeWorld } from "../auth/testing"
+import type { AuditEventInput } from "../operations/recordAuditEvent"
+import { closeProcess, type ClosingDeps } from "./processClosing"
+import type { ProcessRow } from "./processes"
+import { NeedsLaravel } from "./snapshotDocuments"
+
+const cookie = `${golden.cookieName}=${encodeURIComponent(sessionCookie(golden.sessionId))}`
+const FORBIDDEN = '{"message":"No tiene permiso para hacer esto."}'
+const PROCESS = "cd000000-0000-4000-8000-000000000001"
+const DRAFT = "50000000-0000-4000-8000-000000000001"
+const UNSTARTED = "50000000-0000-4000-8000-000000000002"
+
+let world: FakeWorld
+let forwarded: Request[]
+let process: ProcessRow | null
+let lockedState: string | null
+let syllabi: { id: string; context: unknown }[]
+let snapshot: (id: string) => Record<string, unknown>
+let log: string[]
+let audits: AuditEventInput[]
+
+function deps(): ClosingDeps {
+  return {
+    bridge: fakeDeps(world, forwarded),
+    processes: { find: async (id) => (process !== null && process.id === id ? process : null) },
+    now: () => NOW,
+    async transaction(work) {
+      log.push("begin")
+      const staged: AuditEventInput[] = []
+      const result = await work({
+        lockProcess: async (id) => {
+          log.push(`lock:process:${id}`)
+          return lockedState
+        },
+        closeProcess: async (id, keepPausedAt) => void log.push(`close:${id}:${keepPausedAt}`),
+        lockOpenSyllabi: async (id) => {
+          log.push(`lock:syllabi:${id}`)
+          return syllabi
+        },
+        snapshot: async (id) => snapshot(id),
+        storeContext: async (id, context) => void log.push(`context:${id}:${JSON.stringify(context)}`),
+        closeConvocations: async (id) => void log.push(`convocations:${id}`),
+        recordAudit: async (event) => void staged.push(event),
+      })
+      audits.push(...staged)
+      log.push("commit")
+      return result
+    },
+  }
+}
+
+async function close(body: unknown = {}, id = PROCESS) {
+  const request = new Request(
+    apiRequest(`/api/v1/admin/processes/${id}/cerrar`, { cookie, method: "POST", headers: { "x-csrf-token": golden.csrfToken, "content-type": "application/json" } }),
+    { body: JSON.stringify(body) },
+  )
+  const response = await closeProcess(request, id, deps())
+  const text = await response.text()
+  return { status: response.status, text, json: text.startsWith("{") ? (JSON.parse(text) as Record<string, unknown>) : null }
+}
+
+beforeEach(() => {
+  forwarded = []
+  world = {
+    sessions: new Map([[golden.sessionId, { id: golden.sessionId, userId: golden.userId, payload: sessionPayload(loggedInAttributes()), lastActivity: NOW }]]),
+    users: [makeUser()],
+    assignments: [makeAssignment({ role: "administrador", careerId: null, careerLabel: null })],
+  }
+  process = { id: PROCESS, state: "abierto", period: "2026-2", periodId: "p", periodEndsOn: "2027-03-01", startsOn: "2026-11-01", dueOn: "2026-12-01", convocationsCount: 2, extensions: 0 }
+  lockedState = "abierto"
+  syllabi = [
+    { id: DRAFT, context: { career: { name: "Software" } } },
+    { id: UNSTARTED, context: [] },
+  ]
+  snapshot = (id) => ({ schema_version: 9, syllabus: id })
+  log = []
+  audits = []
+})
+
+describe("POST admin/processes/{p}/cerrar", () => {
+  it("freezes the unsent syllabi, closes the convocations and the process and audits it", async () => {
+    expect(await close()).toMatchObject({ status: 200, json: { message: "Convocatoria cerrada. Sus sílabos quedan solo para consulta." } })
+    expect(log).toEqual([
+      "begin",
+      `lock:process:${PROCESS}`,
+      `close:${PROCESS}:false`,
+      `lock:syllabi:${PROCESS}`,
+      `context:${DRAFT}:${JSON.stringify({ career: { name: "Software" }, closed_document: { schema_version: 9, syllabus: DRAFT } })}`,
+      `context:${UNSTARTED}:${JSON.stringify({ closed_document: { schema_version: 9, syllabus: UNSTARTED } })}`,
+      `convocations:${PROCESS}`,
+      "commit",
+    ])
+    expect(audits).toEqual([
+      {
+        actorId: golden.userId,
+        roleAssignmentId: golden.roleId,
+        action: "proceso_silabos.cerrado",
+        resourceType: "proceso_silabos",
+        resourceId: PROCESS,
+        result: "exito",
+        metadata: { previous_state: "abierto" },
+        occurredAt: NOW,
+      },
+    ])
+  })
+
+  it("keeps the pause moment when it closes a paused process", async () => {
+    process = { ...process!, state: "pausado" }
+    lockedState = "pausado"
+    await close()
+    expect(log).toContain(`close:${PROCESS}:true`)
+    expect(audits[0].metadata).toEqual({ previous_state: "pausado" })
+  })
+
+  it("only lets Administration close an open or paused process", async () => {
+    world.assignments = [makeAssignment({ role: "coordinador" })]
+    expect((await close()).text).toBe(FORBIDDEN)
+    world.assignments = [makeAssignment({ role: "administrador", careerId: null, careerLabel: null })]
+    process = { ...process!, state: "cerrado" }
+    expect((await close()).text).toBe(FORBIDDEN)
+    expect(log).toEqual([])
+  })
+
+  it("validates the confirmation flag and the state under the lock", async () => {
+    expect((await close({ confirmar_rehacer: "quizás" })).json).toEqual({
+      message: "El campo confirmación para rehacer los sílabos debe ser verdadero o falso.",
+      errors: { confirmar_rehacer: ["El campo confirmación para rehacer los sílabos debe ser verdadero o falso."] },
+    })
+    lockedState = "cerrado"
+    expect((await close()).json).toEqual({ message: "El proceso no está en un estado que admita esta acción.", errors: { process: ["El proceso no está en un estado que admita esta acción."] } })
+    expect(audits).toEqual([])
+  })
+
+  it("hands the whole closing to Laravel when a snapshot cannot be built here", async () => {
+    snapshot = () => {
+      throw new NeedsLaravel()
+    }
+    expect((await close()).status).toBe(299)
+    expect(audits).toEqual([])
+  })
+})

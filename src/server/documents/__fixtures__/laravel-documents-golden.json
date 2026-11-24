@@ -1,0 +1,1440 @@
+{
+    "canonical": [
+        {
+            "value": {
+                "z": 1,
+                "a": {
+                    "b": 2,
+                    "A": 3,
+                    "á": 4,
+                    "10": 5,
+                    "9": 6
+                },
+                "list": [
+                    3,
+                    1,
+                    2
+                ],
+                "empty": [],
+                "nested": [
+                    {
+                        "y": true,
+                        "x": null
+                    }
+                ]
+            },
+            "json": "{\"a\":{\"10\":5,\"9\":6,\"A\":3,\"b\":2,\"á\":4},\"empty\":[],\"list\":[3,1,2],\"nested\":[{\"x\":null,\"y\":true}],\"z\":1}",
+            "hash": "d5e4f19b72c69f1a396476cbc686a8c449a9b0a2fbf1518a56dab022bb039cd0"
+        },
+        {
+            "value": {
+                "text": "línea\ncon \"comillas\" \\ barra / y \t tab \u0001 ctrl  \u2028\u2029 ñ € 😀"
+            },
+            "json": "{\"text\":\"línea\\ncon \\\"comillas\\\" \\\\ barra / y \\t tab \\u0001 ctrl  \\u2028\\u2029 ñ € 😀\"}",
+            "hash": "922c15439f1bf0c5b8390f4ea3a901a0bbc56254f5306cdb548c6d052169c971"
+        },
+        {
+            "value": {
+                "floats": [
+                    1.5,
+                    0.1,
+                    2.25,
+                    -0.75,
+                    1.0e-5,
+                    0.0001,
+                    123456.789
+                ]
+            },
+            "json": "{\"floats\":[1.5,0.1,2.25,-0.75,1.0e-5,0.0001,123456.789]}",
+            "hash": "6c38a9e30a11389f8aa7d2f6dc060e756eb6e9deaef1b7c108487b88a18b242f"
+        },
+        {
+            "value": {
+                "holes": {
+                    "0": "a",
+                    "2": "b"
+                },
+                "ints": {
+                    "5": "x",
+                    "1": "y"
+                },
+                "mixed": {
+                    "k": "v",
+                    "0": "z"
+                }
+            },
+            "json": "{\"holes\":{\"0\":\"a\",\"2\":\"b\"},\"ints\":{\"1\":\"y\",\"5\":\"x\"},\"mixed\":{\"0\":\"z\",\"k\":\"v\"}}",
+            "hash": "8369bee5955f08fd7cd2ce460efcd088640a0ad51370d4169df6aa850c3ee056"
+        },
+        {
+            "value": [
+                1,
+                "two",
+                false,
+                null,
+                3
+            ],
+            "json": "[1,\"two\",false,null,3]",
+            "hash": "43aac9fb5231e1992461c255024dfa133b8582e1938a6665ae57629b58a28087"
+        },
+        {
+            "value": "string",
+            "json": "\"string\"",
+            "hash": "e9e5c1c9e4f6277339d1bcde0733a59bd42f8731f449da6dc13010a916930d48"
+        },
+        {
+            "value": 42,
+            "json": "42",
+            "hash": "73475cb40a568e8da8a045ced110137e159f890ac4da883b6b17dc651b3a8049"
+        }
+    ],
+    "visible_sections": [
+        {
+            "sections": [
+                {
+                    "key": "a",
+                    "title": "A",
+                    "orientation": "portrait",
+                    "fields": [
+                        {
+                            "definition_id": "f1",
+                            "key": "pregunta",
+                            "label": "Pregunta",
+                            "quien_llena": "docente",
+                            "document": {
+                                "type": "doc",
+                                "content": [
+                                    {
+                                        "type": "paragraph",
+                                        "content": [
+                                            {
+                                                "type": "response",
+                                                "attrs": {
+                                                    "id": "r1",
+                                                    "kind": "una",
+                                                    "value": "si",
+                                                    "required": true,
+                                                    "options": [
+                                                        {
+                                                            "const": "si",
+                                                            "title": "Sí"
+                                                        },
+                                                        {
+                                                            "const": "no",
+                                                            "title": "No"
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "definition_id": "f2",
+                            "key": "detalle",
+                            "label": "Detalle",
+                            "quien_llena": "docente",
+                            "document": {
+                                "type": "doc",
+                                "content": [
+                                    {
+                                        "type": "paragraph",
+                                        "content": [
+                                            {
+                                                "type": "text",
+                                                "text": "oculto"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "definition_id": "f3",
+                            "key": "mixto",
+                            "label": "Mixto",
+                            "quien_llena": "docente",
+                            "document": {
+                                "type": "doc",
+                                "content": [
+                                    {
+                                        "type": "paragraph",
+                                        "content": [
+                                            {
+                                                "type": "text",
+                                                "text": "visible"
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "type": "paragraph",
+                                        "content": [
+                                            {
+                                                "type": "response",
+                                                "attrs": {
+                                                    "id": "r2",
+                                                    "kind": "una",
+                                                    "value": "no",
+                                                    "required": true,
+                                                    "options": [
+                                                        {
+                                                            "const": "si",
+                                                            "title": "Sí"
+                                                        },
+                                                        {
+                                                            "const": "no",
+                                                            "title": "No"
+                                                        }
+                                                    ],
+                                                    "showIf": {
+                                                        "response": "r1",
+                                                        "options": [
+                                                            "no"
+                                                        ]
+                                                    }
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "type": "paragraph",
+                                        "content": [
+                                            {
+                                                "type": "response",
+                                                "attrs": {
+                                                    "id": "r3",
+                                                    "kind": "una",
+                                                    "value": "si",
+                                                    "required": true,
+                                                    "options": [
+                                                        {
+                                                            "const": "si",
+                                                            "title": "Sí"
+                                                        },
+                                                        {
+                                                            "const": "no",
+                                                            "title": "No"
+                                                        }
+                                                    ],
+                                                    "showIf": {
+                                                        "response": "r1",
+                                                        "options": [
+                                                            "si"
+                                                        ]
+                                                    }
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "type": "table",
+                                        "content": [
+                                            {
+                                                "type": "tableRow",
+                                                "content": [
+                                                    {
+                                                        "type": "tableCell",
+                                                        "attrs": {
+                                                            "colspan": 1
+                                                        },
+                                                        "content": [
+                                                            {
+                                                                "type": "paragraph",
+                                                                "content": [
+                                                                    {
+                                                                        "type": "response",
+                                                                        "attrs": {
+                                                                            "id": "r4",
+                                                                            "kind": "una",
+                                                                            "value": "si",
+                                                                            "required": true,
+                                                                            "options": [
+                                                                                {
+                                                                                    "const": "si",
+                                                                                    "title": "Sí"
+                                                                                },
+                                                                                {
+                                                                                    "const": "no",
+                                                                                    "title": "No"
+                                                                                }
+                                                                            ],
+                                                                            "showIf": {
+                                                                                "response": "r1",
+                                                                                "options": [
+                                                                                    "no"
+                                                                                ]
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                ]
+                                                            }
+                                                        ]
+                                                    },
+                                                    {
+                                                        "type": "tableCell",
+                                                        "content": [
+                                                            {
+                                                                "type": "paragraph",
+                                                                "content": [
+                                                                    {
+                                                                        "type": "text",
+                                                                        "text": "celda"
+                                                                    }
+                                                                ]
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "type": "bulletList",
+                                        "content": [
+                                            {
+                                                "type": "listItem",
+                                                "content": [
+                                                    {
+                                                        "type": "paragraph",
+                                                        "content": [
+                                                            {
+                                                                "type": "response",
+                                                                "attrs": {
+                                                                    "id": "r5",
+                                                                    "kind": "una",
+                                                                    "value": "si",
+                                                                    "required": true,
+                                                                    "options": [
+                                                                        {
+                                                                            "const": "si",
+                                                                            "title": "Sí"
+                                                                        },
+                                                                        {
+                                                                            "const": "no",
+                                                                            "title": "No"
+                                                                        }
+                                                                    ],
+                                                                    "showIf": {
+                                                                        "response": "r1",
+                                                                        "options": [
+                                                                            "no"
+                                                                        ]
+                                                                    }
+                                                                }
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "type": "orderedList",
+                                        "content": [
+                                            {
+                                                "type": "listItem",
+                                                "content": [
+                                                    {
+                                                        "type": "paragraph",
+                                                        "content": [
+                                                            {
+                                                                "type": "text",
+                                                                "text": "uno"
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                "type": "listItem",
+                                                "content": [
+                                                    {
+                                                        "type": "paragraph",
+                                                        "content": [
+                                                            {
+                                                                "type": "response",
+                                                                "attrs": {
+                                                                    "id": "r6",
+                                                                    "kind": "una",
+                                                                    "value": "no",
+                                                                    "required": true,
+                                                                    "options": [
+                                                                        {
+                                                                            "const": "si",
+                                                                            "title": "Sí"
+                                                                        },
+                                                                        {
+                                                                            "const": "no",
+                                                                            "title": "No"
+                                                                        }
+                                                                    ],
+                                                                    "showIf": {
+                                                                        "response": "r1",
+                                                                        "options": [
+                                                                            "no"
+                                                                        ]
+                                                                    }
+                                                                }
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "type": "bulletList",
+                                        "content": []
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "key": "b",
+                    "title": "B",
+                    "orientation": "landscape",
+                    "fields": [
+                        {
+                            "definition_id": "f4",
+                            "key": "solo_oculto",
+                            "label": "Solo",
+                            "quien_llena": "coordinacion",
+                            "document": {
+                                "type": "doc",
+                                "content": [
+                                    {
+                                        "type": "paragraph",
+                                        "content": [
+                                            {
+                                                "type": "response",
+                                                "attrs": {
+                                                    "id": "r7",
+                                                    "kind": "una",
+                                                    "value": "si",
+                                                    "required": true,
+                                                    "options": [
+                                                        {
+                                                            "const": "si",
+                                                            "title": "Sí"
+                                                        },
+                                                        {
+                                                            "const": "no",
+                                                            "title": "No"
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "key": "c",
+                    "title": "C",
+                    "orientation": "portrait",
+                    "fields": []
+                },
+                {
+                    "key": "d",
+                    "title": "D",
+                    "orientation": "portrait",
+                    "fields": [
+                        {
+                            "definition_id": "f5",
+                            "key": "despues",
+                            "label": "Después",
+                            "quien_llena": "docente",
+                            "document": {
+                                "type": "doc",
+                                "content": [
+                                    {
+                                        "type": "paragraph",
+                                        "content": [
+                                            {
+                                                "type": "response",
+                                                "attrs": {
+                                                    "id": "r8",
+                                                    "kind": "una",
+                                                    "value": "no",
+                                                    "required": true,
+                                                    "options": [
+                                                        {
+                                                            "const": "si",
+                                                            "title": "Sí"
+                                                        },
+                                                        {
+                                                            "const": "no",
+                                                            "title": "No"
+                                                        }
+                                                    ],
+                                                    "showIf": {
+                                                        "response": "r7",
+                                                        "options": [
+                                                            "si"
+                                                        ]
+                                                    }
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "definition_id": "f6",
+                            "key": "sin_documento",
+                            "label": "Sin",
+                            "quien_llena": "docente"
+                        }
+                    ]
+                }
+            ],
+            "conditions": {
+                "detalle": {
+                    "response": "r1",
+                    "options": [
+                        "no"
+                    ]
+                },
+                "solo_oculto": {
+                    "response": "r1",
+                    "options": [
+                        "no"
+                    ]
+                }
+            },
+            "expected": [
+                {
+                    "key": "a",
+                    "title": "A",
+                    "orientation": "portrait",
+                    "fields": [
+                        {
+                            "definition_id": "f1",
+                            "key": "pregunta",
+                            "label": "Pregunta",
+                            "quien_llena": "docente",
+                            "document": {
+                                "type": "doc",
+                                "content": [
+                                    {
+                                        "type": "paragraph",
+                                        "content": [
+                                            {
+                                                "type": "response",
+                                                "attrs": {
+                                                    "id": "r1",
+                                                    "kind": "una",
+                                                    "value": "si",
+                                                    "required": true,
+                                                    "options": [
+                                                        {
+                                                            "const": "si",
+                                                            "title": "Sí"
+                                                        },
+                                                        {
+                                                            "const": "no",
+                                                            "title": "No"
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "definition_id": "f3",
+                            "key": "mixto",
+                            "label": "Mixto",
+                            "quien_llena": "docente",
+                            "document": {
+                                "type": "doc",
+                                "content": [
+                                    {
+                                        "type": "paragraph",
+                                        "content": [
+                                            {
+                                                "type": "text",
+                                                "text": "visible"
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "type": "paragraph",
+                                        "content": [
+                                            {
+                                                "type": "response",
+                                                "attrs": {
+                                                    "id": "r3",
+                                                    "kind": "una",
+                                                    "value": "si",
+                                                    "required": true,
+                                                    "options": [
+                                                        {
+                                                            "const": "si",
+                                                            "title": "Sí"
+                                                        },
+                                                        {
+                                                            "const": "no",
+                                                            "title": "No"
+                                                        }
+                                                    ],
+                                                    "showIf": {
+                                                        "response": "r1",
+                                                        "options": [
+                                                            "si"
+                                                        ]
+                                                    }
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "type": "table",
+                                        "content": [
+                                            {
+                                                "type": "tableRow",
+                                                "content": [
+                                                    {
+                                                        "type": "tableCell",
+                                                        "attrs": {
+                                                            "colspan": 1
+                                                        },
+                                                        "content": [
+                                                            {
+                                                                "type": "paragraph"
+                                                            }
+                                                        ]
+                                                    },
+                                                    {
+                                                        "type": "tableCell",
+                                                        "content": [
+                                                            {
+                                                                "type": "paragraph",
+                                                                "content": [
+                                                                    {
+                                                                        "type": "text",
+                                                                        "text": "celda"
+                                                                    }
+                                                                ]
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "type": "orderedList",
+                                        "content": [
+                                            {
+                                                "type": "listItem",
+                                                "content": [
+                                                    {
+                                                        "type": "paragraph",
+                                                        "content": [
+                                                            {
+                                                                "type": "text",
+                                                                "text": "uno"
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "type": "bulletList",
+                                        "content": []
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "key": "c",
+                    "title": "C",
+                    "orientation": "portrait",
+                    "fields": []
+                },
+                {
+                    "key": "d",
+                    "title": "D",
+                    "orientation": "portrait",
+                    "fields": [
+                        {
+                            "definition_id": "f5",
+                            "key": "despues",
+                            "label": "Después",
+                            "quien_llena": "docente",
+                            "document": {
+                                "type": "doc",
+                                "content": []
+                            }
+                        },
+                        {
+                            "definition_id": "f6",
+                            "key": "sin_documento",
+                            "label": "Sin",
+                            "quien_llena": "docente"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "sections": [
+                {
+                    "key": "a",
+                    "title": "A",
+                    "orientation": "portrait",
+                    "fields": [
+                        {
+                            "definition_id": "f1",
+                            "key": "pregunta",
+                            "label": "Pregunta",
+                            "quien_llena": "docente",
+                            "document": {
+                                "type": "doc",
+                                "content": [
+                                    {
+                                        "type": "paragraph",
+                                        "content": [
+                                            {
+                                                "type": "response",
+                                                "attrs": {
+                                                    "id": "r1",
+                                                    "kind": "una",
+                                                    "value": "si",
+                                                    "required": true,
+                                                    "options": [
+                                                        {
+                                                            "const": "si",
+                                                            "title": "Sí"
+                                                        },
+                                                        {
+                                                            "const": "no",
+                                                            "title": "No"
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "definition_id": "f2",
+                            "key": "detalle",
+                            "label": "Detalle",
+                            "quien_llena": "docente",
+                            "document": {
+                                "type": "doc",
+                                "content": [
+                                    {
+                                        "type": "paragraph",
+                                        "content": [
+                                            {
+                                                "type": "text",
+                                                "text": "oculto"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "definition_id": "f3",
+                            "key": "mixto",
+                            "label": "Mixto",
+                            "quien_llena": "docente",
+                            "document": {
+                                "type": "doc",
+                                "content": [
+                                    {
+                                        "type": "paragraph",
+                                        "content": [
+                                            {
+                                                "type": "text",
+                                                "text": "visible"
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "type": "paragraph",
+                                        "content": [
+                                            {
+                                                "type": "response",
+                                                "attrs": {
+                                                    "id": "r2",
+                                                    "kind": "una",
+                                                    "value": "no",
+                                                    "required": true,
+                                                    "options": [
+                                                        {
+                                                            "const": "si",
+                                                            "title": "Sí"
+                                                        },
+                                                        {
+                                                            "const": "no",
+                                                            "title": "No"
+                                                        }
+                                                    ],
+                                                    "showIf": {
+                                                        "response": "r1",
+                                                        "options": [
+                                                            "no"
+                                                        ]
+                                                    }
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "type": "paragraph",
+                                        "content": [
+                                            {
+                                                "type": "response",
+                                                "attrs": {
+                                                    "id": "r3",
+                                                    "kind": "una",
+                                                    "value": "si",
+                                                    "required": true,
+                                                    "options": [
+                                                        {
+                                                            "const": "si",
+                                                            "title": "Sí"
+                                                        },
+                                                        {
+                                                            "const": "no",
+                                                            "title": "No"
+                                                        }
+                                                    ],
+                                                    "showIf": {
+                                                        "response": "r1",
+                                                        "options": [
+                                                            "si"
+                                                        ]
+                                                    }
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "type": "table",
+                                        "content": [
+                                            {
+                                                "type": "tableRow",
+                                                "content": [
+                                                    {
+                                                        "type": "tableCell",
+                                                        "attrs": {
+                                                            "colspan": 1
+                                                        },
+                                                        "content": [
+                                                            {
+                                                                "type": "paragraph",
+                                                                "content": [
+                                                                    {
+                                                                        "type": "response",
+                                                                        "attrs": {
+                                                                            "id": "r4",
+                                                                            "kind": "una",
+                                                                            "value": "si",
+                                                                            "required": true,
+                                                                            "options": [
+                                                                                {
+                                                                                    "const": "si",
+                                                                                    "title": "Sí"
+                                                                                },
+                                                                                {
+                                                                                    "const": "no",
+                                                                                    "title": "No"
+                                                                                }
+                                                                            ],
+                                                                            "showIf": {
+                                                                                "response": "r1",
+                                                                                "options": [
+                                                                                    "no"
+                                                                                ]
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                ]
+                                                            }
+                                                        ]
+                                                    },
+                                                    {
+                                                        "type": "tableCell",
+                                                        "content": [
+                                                            {
+                                                                "type": "paragraph",
+                                                                "content": [
+                                                                    {
+                                                                        "type": "text",
+                                                                        "text": "celda"
+                                                                    }
+                                                                ]
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "type": "bulletList",
+                                        "content": [
+                                            {
+                                                "type": "listItem",
+                                                "content": [
+                                                    {
+                                                        "type": "paragraph",
+                                                        "content": [
+                                                            {
+                                                                "type": "response",
+                                                                "attrs": {
+                                                                    "id": "r5",
+                                                                    "kind": "una",
+                                                                    "value": "si",
+                                                                    "required": true,
+                                                                    "options": [
+                                                                        {
+                                                                            "const": "si",
+                                                                            "title": "Sí"
+                                                                        },
+                                                                        {
+                                                                            "const": "no",
+                                                                            "title": "No"
+                                                                        }
+                                                                    ],
+                                                                    "showIf": {
+                                                                        "response": "r1",
+                                                                        "options": [
+                                                                            "no"
+                                                                        ]
+                                                                    }
+                                                                }
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "type": "orderedList",
+                                        "content": [
+                                            {
+                                                "type": "listItem",
+                                                "content": [
+                                                    {
+                                                        "type": "paragraph",
+                                                        "content": [
+                                                            {
+                                                                "type": "text",
+                                                                "text": "uno"
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                "type": "listItem",
+                                                "content": [
+                                                    {
+                                                        "type": "paragraph",
+                                                        "content": [
+                                                            {
+                                                                "type": "response",
+                                                                "attrs": {
+                                                                    "id": "r6",
+                                                                    "kind": "una",
+                                                                    "value": "no",
+                                                                    "required": true,
+                                                                    "options": [
+                                                                        {
+                                                                            "const": "si",
+                                                                            "title": "Sí"
+                                                                        },
+                                                                        {
+                                                                            "const": "no",
+                                                                            "title": "No"
+                                                                        }
+                                                                    ],
+                                                                    "showIf": {
+                                                                        "response": "r1",
+                                                                        "options": [
+                                                                            "no"
+                                                                        ]
+                                                                    }
+                                                                }
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "type": "bulletList",
+                                        "content": []
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "key": "b",
+                    "title": "B",
+                    "orientation": "landscape",
+                    "fields": [
+                        {
+                            "definition_id": "f4",
+                            "key": "solo_oculto",
+                            "label": "Solo",
+                            "quien_llena": "coordinacion",
+                            "document": {
+                                "type": "doc",
+                                "content": [
+                                    {
+                                        "type": "paragraph",
+                                        "content": [
+                                            {
+                                                "type": "response",
+                                                "attrs": {
+                                                    "id": "r7",
+                                                    "kind": "una",
+                                                    "value": "si",
+                                                    "required": true,
+                                                    "options": [
+                                                        {
+                                                            "const": "si",
+                                                            "title": "Sí"
+                                                        },
+                                                        {
+                                                            "const": "no",
+                                                            "title": "No"
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "key": "c",
+                    "title": "C",
+                    "orientation": "portrait",
+                    "fields": []
+                },
+                {
+                    "key": "d",
+                    "title": "D",
+                    "orientation": "portrait",
+                    "fields": [
+                        {
+                            "definition_id": "f5",
+                            "key": "despues",
+                            "label": "Después",
+                            "quien_llena": "docente",
+                            "document": {
+                                "type": "doc",
+                                "content": [
+                                    {
+                                        "type": "paragraph",
+                                        "content": [
+                                            {
+                                                "type": "response",
+                                                "attrs": {
+                                                    "id": "r8",
+                                                    "kind": "una",
+                                                    "value": "no",
+                                                    "required": true,
+                                                    "options": [
+                                                        {
+                                                            "const": "si",
+                                                            "title": "Sí"
+                                                        },
+                                                        {
+                                                            "const": "no",
+                                                            "title": "No"
+                                                        }
+                                                    ],
+                                                    "showIf": {
+                                                        "response": "r7",
+                                                        "options": [
+                                                            "si"
+                                                        ]
+                                                    }
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "definition_id": "f6",
+                            "key": "sin_documento",
+                            "label": "Sin",
+                            "quien_llena": "docente"
+                        }
+                    ]
+                }
+            ],
+            "conditions": [],
+            "expected": [
+                {
+                    "key": "a",
+                    "title": "A",
+                    "orientation": "portrait",
+                    "fields": [
+                        {
+                            "definition_id": "f1",
+                            "key": "pregunta",
+                            "label": "Pregunta",
+                            "quien_llena": "docente",
+                            "document": {
+                                "type": "doc",
+                                "content": [
+                                    {
+                                        "type": "paragraph",
+                                        "content": [
+                                            {
+                                                "type": "response",
+                                                "attrs": {
+                                                    "id": "r1",
+                                                    "kind": "una",
+                                                    "value": "si",
+                                                    "required": true,
+                                                    "options": [
+                                                        {
+                                                            "const": "si",
+                                                            "title": "Sí"
+                                                        },
+                                                        {
+                                                            "const": "no",
+                                                            "title": "No"
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "definition_id": "f2",
+                            "key": "detalle",
+                            "label": "Detalle",
+                            "quien_llena": "docente",
+                            "document": {
+                                "type": "doc",
+                                "content": [
+                                    {
+                                        "type": "paragraph",
+                                        "content": [
+                                            {
+                                                "type": "text",
+                                                "text": "oculto"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "definition_id": "f3",
+                            "key": "mixto",
+                            "label": "Mixto",
+                            "quien_llena": "docente",
+                            "document": {
+                                "type": "doc",
+                                "content": [
+                                    {
+                                        "type": "paragraph",
+                                        "content": [
+                                            {
+                                                "type": "text",
+                                                "text": "visible"
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "type": "paragraph",
+                                        "content": [
+                                            {
+                                                "type": "response",
+                                                "attrs": {
+                                                    "id": "r3",
+                                                    "kind": "una",
+                                                    "value": "si",
+                                                    "required": true,
+                                                    "options": [
+                                                        {
+                                                            "const": "si",
+                                                            "title": "Sí"
+                                                        },
+                                                        {
+                                                            "const": "no",
+                                                            "title": "No"
+                                                        }
+                                                    ],
+                                                    "showIf": {
+                                                        "response": "r1",
+                                                        "options": [
+                                                            "si"
+                                                        ]
+                                                    }
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "type": "table",
+                                        "content": [
+                                            {
+                                                "type": "tableRow",
+                                                "content": [
+                                                    {
+                                                        "type": "tableCell",
+                                                        "attrs": {
+                                                            "colspan": 1
+                                                        },
+                                                        "content": [
+                                                            {
+                                                                "type": "paragraph"
+                                                            }
+                                                        ]
+                                                    },
+                                                    {
+                                                        "type": "tableCell",
+                                                        "content": [
+                                                            {
+                                                                "type": "paragraph",
+                                                                "content": [
+                                                                    {
+                                                                        "type": "text",
+                                                                        "text": "celda"
+                                                                    }
+                                                                ]
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "type": "orderedList",
+                                        "content": [
+                                            {
+                                                "type": "listItem",
+                                                "content": [
+                                                    {
+                                                        "type": "paragraph",
+                                                        "content": [
+                                                            {
+                                                                "type": "text",
+                                                                "text": "uno"
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "type": "bulletList",
+                                        "content": []
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "key": "b",
+                    "title": "B",
+                    "orientation": "landscape",
+                    "fields": [
+                        {
+                            "definition_id": "f4",
+                            "key": "solo_oculto",
+                            "label": "Solo",
+                            "quien_llena": "coordinacion",
+                            "document": {
+                                "type": "doc",
+                                "content": [
+                                    {
+                                        "type": "paragraph",
+                                        "content": [
+                                            {
+                                                "type": "response",
+                                                "attrs": {
+                                                    "id": "r7",
+                                                    "kind": "una",
+                                                    "value": "si",
+                                                    "required": true,
+                                                    "options": [
+                                                        {
+                                                            "const": "si",
+                                                            "title": "Sí"
+                                                        },
+                                                        {
+                                                            "const": "no",
+                                                            "title": "No"
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "key": "c",
+                    "title": "C",
+                    "orientation": "portrait",
+                    "fields": []
+                },
+                {
+                    "key": "d",
+                    "title": "D",
+                    "orientation": "portrait",
+                    "fields": [
+                        {
+                            "definition_id": "f5",
+                            "key": "despues",
+                            "label": "Después",
+                            "quien_llena": "docente",
+                            "document": {
+                                "type": "doc",
+                                "content": [
+                                    {
+                                        "type": "paragraph",
+                                        "content": [
+                                            {
+                                                "type": "response",
+                                                "attrs": {
+                                                    "id": "r8",
+                                                    "kind": "una",
+                                                    "value": "no",
+                                                    "required": true,
+                                                    "options": [
+                                                        {
+                                                            "const": "si",
+                                                            "title": "Sí"
+                                                        },
+                                                        {
+                                                            "const": "no",
+                                                            "title": "No"
+                                                        }
+                                                    ],
+                                                    "showIf": {
+                                                        "response": "r7",
+                                                        "options": [
+                                                            "si"
+                                                        ]
+                                                    }
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "definition_id": "f6",
+                            "key": "sin_documento",
+                            "label": "Sin",
+                            "quien_llena": "docente"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "sections": [
+                {
+                    "key": "x",
+                    "title": "X",
+                    "orientation": "portrait",
+                    "fields": [
+                        {
+                            "definition_id": "f9",
+                            "key": "k",
+                            "label": "K",
+                            "quien_llena": "docente",
+                            "document": {
+                                "type": "doc",
+                                "content": [
+                                    {
+                                        "type": "paragraph",
+                                        "content": [
+                                            {
+                                                "type": "text",
+                                                "text": "nada"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            ],
+            "conditions": [],
+            "expected": [
+                {
+                    "key": "x",
+                    "title": "X",
+                    "orientation": "portrait",
+                    "fields": [
+                        {
+                            "definition_id": "f9",
+                            "key": "k",
+                            "label": "K",
+                            "quien_llena": "docente",
+                            "document": {
+                                "type": "doc",
+                                "content": [
+                                    {
+                                        "type": "paragraph",
+                                        "content": [
+                                            {
+                                                "type": "text",
+                                                "text": "nada"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
