@@ -1,8 +1,8 @@
 # Migración de Sílabos UEB a React + TypeScript + Next.js + Redis
 
 Objetivo: reemplazar la SPA Vue y, después, la API Laravel por una sola app Next.js, por partes y con el sistema funcionando en todo momento.
-Rama: `main` del repositorio `web/` (sin remote, sin push). Entrega: commits por unidad de trabajo. Pruebas: Vitest + Testing Library; Playwright para e2e.
-Copia de trabajo: `~/Documentos/proyecto-grado-silabos-nextjs/` (`backend/` y `frontend/` son copias de referencia sin remote; `web/` es la app nueva).
+Rama: `main` del repositorio en la raíz (sin remote, sin push). Entrega: commits por unidad de trabajo. Pruebas: Vitest + Testing Library; Playwright para e2e.
+Carpeta: `~/Documentos/proyecto-grado-silabos-nextjs/` es la app (antes `web/`; las copias de referencia `backend/` y `frontend/` se borraron el 2026-11-25).
 
 ## Specs
 

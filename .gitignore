@@ -43,3 +43,7 @@ next-env.d.ts
 
 /tests/e2e/.firmas
 /storage
+
+# local data
+/storage/
+/respaldos/
