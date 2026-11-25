@@ -19,7 +19,7 @@ export function MobileFilterSheet({ className, children }: { className?: string;
     if (node === null) return
     setActiveCount(
       Array.from(node.querySelectorAll<HTMLSelectElement | HTMLInputElement>('select, input[type="hidden"]')).filter(
-        (field) => field.value !== "" && field.value !== "all",
+        (field) => field.value !== "" && field.value !== "all" && field.closest("[data-sort-select]") === null,
       ).length,
     )
   }, [])
