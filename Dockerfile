@@ -1,12 +1,13 @@
 FROM node:24-bookworm-slim AS deps
 WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm ci
+RUN corepack enable
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN pnpm install --frozen-lockfile
 
 FROM deps AS build
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1 NEXT_OUTPUT=standalone
-RUN npx next build
+RUN pnpm exec next build
 
 FROM node:24-bookworm-slim AS web
 WORKDIR /app
@@ -26,4 +27,4 @@ ENV NODE_ENV=production
 COPY . .
 RUN groupadd --system app && useradd --system --gid app app && chown -R app:app /app
 USER app
-CMD ["npx", "tsx", "--conditions=react-server", "src/server/queue/worker.ts"]
+CMD ["pnpm", "run", "worker"]

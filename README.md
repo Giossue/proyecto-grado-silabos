@@ -4,7 +4,7 @@ Next.js app (App Router, React 19) that serves both the web interface and the `/
 
 ## Requirements
 
-- Node.js 24 and npm
+- Node.js 24 and pnpm 12 (`corepack enable` installs the version pinned in `package.json`)
 - PostgreSQL 17 with the `silabos_ueb` database
 - Redis 7
 - Gotenberg 8 (optional: without it the PDF is the plain-text version)
@@ -34,17 +34,17 @@ Copy `.env.example` to `.env.local` and fill it in. The main variables:
 ## Run
 
 ```bash
-npm ci
-npm run dev       # http://localhost:3000
-npm run worker    # queues: critica, documentos, ia, general
+pnpm install --frozen-lockfile
+pnpm dev       # http://localhost:3000
+pnpm worker    # queues: critica, documentos, ia, general
 ```
 
 Production:
 
 ```bash
-npm run build
-npm run start     # or: NEXT_OUTPUT=standalone npx next build && node .next/standalone/server.js
-npm run worker
+pnpm build
+pnpm start     # or: NEXT_OUTPUT=standalone pnpm exec next build && node .next/standalone/server.js
+pnpm worker
 ```
 
 ## Database
@@ -52,19 +52,19 @@ npm run worker
 Drizzle owns the schema. Tables, the enum, checks, indexes, foreign keys and the `docentes_vigentes_silabo` view live in `src/db/schema/` (`tables.ts`, `views.ts`, `relations.ts`). The database functions and triggers the app relies on (append-only history, single administrator, single active coordination, template change marks, export and review integrity) cannot be modelled by Drizzle, so the baseline `src/db/drizzle/0000_legal_edwin_jarvis.sql` carries them as SQL after the generated tables.
 
 ```bash
-npm run db:migrate    # apply pending migrations
-npm run db:seed       # administrator, its credential and the official template (idempotent)
-npm run db:migrate-auth  # credential accounts and 2FA secrets of existing users for Better Auth (idempotent)
-npm run db:generate   # write a migration after changing src/db/schema
-npm run db:check      # migration history is consistent
-npm run db:baseline   # mark the baseline as applied on a database restored from a dump (idempotent)
+pnpm db:migrate    # apply pending migrations
+pnpm db:seed       # administrator, its credential and the official template (idempotent)
+pnpm db:migrate-auth  # credential accounts and 2FA secrets of existing users for Better Auth (idempotent)
+pnpm db:generate   # write a migration after changing src/db/schema
+pnpm db:check      # migration history is consistent
+pnpm db:baseline   # mark the baseline as applied on a database restored from a dump (idempotent)
 ```
 
-**New database.** `npm run db:migrate` creates the whole schema, including the Better Auth tables, then `npm run db:seed` creates the administrator with its credential account from `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` (optional `SEED_ADMIN_NAME`, default «Administrador») and the official template. System settings need no rows: they fall back to the environment until an administrator changes them. Running the seed again changes nothing.
+**New database.** `pnpm db:migrate` creates the whole schema, including the Better Auth tables, then `pnpm db:seed` creates the administrator with its credential account from `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` (optional `SEED_ADMIN_NAME`, default «Administrador») and the official template. System settings need no rows: they fall back to the environment until an administrator changes them. Running the seed again changes nothing.
 
-**Existing database.** Drizzle only applies migrations whose journal timestamp is newer than the last row of `drizzle.__drizzle_migrations`; it does not compare file hashes. Databases that already recorded the baseline (`npm run db:baseline`) and `0001_drop_audit_events` therefore skip both, and the rewritten baseline never runs on them. A database restored from a dump that has the tables but no migration rows needs `npm run db:baseline` once before `npm run db:migrate`; the command refuses to run on an empty database and does nothing when the baseline, or a later migration, is already recorded.
+**Existing database.** Drizzle only applies migrations whose journal timestamp is newer than the last row of `drizzle.__drizzle_migrations`; it does not compare file hashes. Databases that already recorded the baseline (`pnpm db:baseline`) and `0001_drop_audit_events` therefore skip both, and the rewritten baseline never runs on them. A database restored from a dump that has the tables but no migration rows needs `pnpm db:baseline` once before `pnpm db:migrate`; the command refuses to run on an empty database and does nothing when the baseline, or a later migration, is already recorded.
 
-**Authentication.** Login, sessions and 2FA use [Better Auth](https://better-auth.com) on the Drizzle adapter (`src/server/auth/betterAuth.ts`). Its user model is `usuarios` itself (`src/server/auth/authTables.ts` maps `nombre_usuario`, `correo_electronico`, `usuario_activo`, and reads `correo_verificado_en` and `dos_factores_confirmado_en` as flags); `0002_better_auth.sql` adds `sesiones_usuario` (with the session's active role), `cuentas_usuario`, `verificaciones_usuario` and `dos_factores_usuario`, and copies every bcrypt hash of `usuarios.contrasena` into a credential account. Passwords stay bcrypt (`$2y$`, `BCRYPT_ROUNDS`); every password write also updates `usuarios.contrasena`. On an existing database run `npm run db:migrate` and then `npm run db:migrate-auth`, which creates any missing credential account and moves the confirmed 2FA secrets and recovery codes the old system sealed with `APP_KEY` into `dos_factores_usuario`, so authenticator apps keep working. Everyone signs in again once. The old `sesiones` table is no longer read or written; it stays in the database until a later migration drops it.
+**Authentication.** Login, sessions and 2FA use [Better Auth](https://better-auth.com) on the Drizzle adapter (`src/server/auth/betterAuth.ts`). Its user model is `usuarios` itself (`src/server/auth/authTables.ts` maps `nombre_usuario`, `correo_electronico`, `usuario_activo`, and reads `correo_verificado_en` and `dos_factores_confirmado_en` as flags); `0002_better_auth.sql` adds `sesiones_usuario` (with the session's active role), `cuentas_usuario`, `verificaciones_usuario` and `dos_factores_usuario`, and copies every bcrypt hash of `usuarios.contrasena` into a credential account. Passwords stay bcrypt (`$2y$`, `BCRYPT_ROUNDS`); every password write also updates `usuarios.contrasena`. On an existing database run `pnpm db:migrate` and then `pnpm db:migrate-auth`, which creates any missing credential account and moves the confirmed 2FA secrets and recovery codes the old system sealed with `APP_KEY` into `dos_factores_usuario`, so authenticator apps keep working. Everyone signs in again once. The old `sesiones` table is no longer read or written; it stays in the database until a later migration drops it.
 
 `0001_drop_audit_events.sql` drops the `eventos_auditoria` table when it exists. The Laravel-only tables `migraciones`, `cola_trabajos`, `datos_temporales` and `bloqueos_temporales` stay in old databases but are not part of the schema, are not created in new ones and are ignored by `drizzle-kit` (`tablesFilter`). The unused `btree_gist` extension of old databases is not created either.
 
@@ -83,10 +83,10 @@ Mails are [React Email](https://react.email) components in `src/server/mail/temp
 ## Tests
 
 ```bash
-npm run typecheck
-npm run lint
-npm test              # Vitest
-npm run test:e2e      # Playwright against next start on port 3200 and the worker
+pnpm typecheck
+pnpm lint
+pnpm test              # Vitest
+pnpm test:e2e      # Playwright against next start on port 3200 and the worker
 ```
 
 The E2E suite needs `E2E_PASSWORD` and `E2E_P12_PASSWORD`, and the `.p12` signatures in `tests/e2e/.firmas` (or `E2E_SIGNATURES_DIR`). Redis-backed unit tests use database 15 of `REDIS_URL` or `REDIS_TEST_URL`.
@@ -102,4 +102,4 @@ cp .env.example .env   # set APP_KEY and POSTGRES_PASSWORD at least
 docker compose up --build
 ```
 
-A new PostgreSQL volume starts empty: run `npm run db:migrate` and `npm run db:seed` against it, or put a dump of `silabos_ueb` (`*.sql` or `*.sql.gz`) in `docker/postgres-init/` before the first start and then run `npm run db:baseline` and `npm run db:migrate`. Stored files live in the `storage` volume (`STORAGE_PATH=/data/storage`).
+A new PostgreSQL volume starts empty: run `pnpm db:migrate` and `pnpm db:seed` against it, or put a dump of `silabos_ueb` (`*.sql` or `*.sql.gz`) in `docker/postgres-init/` before the first start and then run `pnpm db:baseline` and `pnpm db:migrate`. Stored files live in the `storage` volume (`STORAGE_PATH=/data/storage`).

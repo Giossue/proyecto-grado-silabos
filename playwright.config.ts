@@ -61,7 +61,7 @@ export default defineConfig({
       ? []
       : [
           {
-            command: `npm run worker 2>&1 | tee -a ${JSON.stringify(path.join(scratch, "worker.log"))}`,
+            command: `pnpm worker 2>&1 | tee -a ${JSON.stringify(path.join(scratch, "worker.log"))}`,
             wait: { stdout: /worker-started/ },
             timeout: 120_000,
             env: { ...serverEnv, QUEUE_MAX_TIME: "0" },
