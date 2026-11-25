@@ -21,11 +21,11 @@ describe("passwordRules outside production, like Password::min(8)", () => {
 })
 
 describe("passwordRules in production, like Password::defaults() of AppServiceProvider", () => {
-  it("adds every failed check in Laravel's order, with the untranslated keys production shows", async () => {
+  it("adds every failed check in Laravel's order, with Spanish messages for the strong-password checks", async () => {
     const input = { password: "corta", password_confirmation: "corta" }
     const errors = await validateInput(input, { password: passwordRules(input, { production: true, pwned: vi.fn() }) }, ATTRIBUTES)
     expect(errors).toEqual({
-      password: ["El campo contraseña debe tener al menos 12 caracteres.", "validation.password.mixed", "validation.password.symbols", "validation.password.numbers"],
+      password: ["El campo contraseña debe tener al menos 12 caracteres.", "El campo contraseña debe contener al menos una letra mayúscula y una minúscula", "El campo contraseña debe contener al menos un símbolo", "El campo contraseña debe contener al menos un número"],
     })
   })
 
@@ -33,7 +33,7 @@ describe("passwordRules in production, like Password::defaults() of AppServicePr
     const password = "Segura#2026Larga"
     const pwned = vi.fn(async () => rangeFor(password, 3))
     const input = { password, password_confirmation: password }
-    expect(await validateInput(input, { password: passwordRules(input, { production: true, pwned }) }, ATTRIBUTES)).toEqual({ password: ["validation.password.uncompromised"] })
+    expect(await validateInput(input, { password: passwordRules(input, { production: true, pwned }) }, ATTRIBUTES)).toEqual({ password: ["El campo contraseña aparece en una filtración de datos conocida, escoge un valor diferente"] })
     expect(pwned).toHaveBeenCalledWith(createHash("sha1").update(password).digest("hex").toUpperCase().slice(0, 5))
   })
 
@@ -42,5 +42,14 @@ describe("passwordRules in production, like Password::defaults() of AppServicePr
     const input = { password, password_confirmation: password }
     expect(await validateInput(input, { password: passwordRules(input, { production: true, pwned: async () => rangeFor("otra", 9) }) }, ATTRIBUTES)).toEqual({})
     expect(await validateInput(input, { password: passwordRules(input, { production: true, pwned: async () => "" }) }, ATTRIBUTES)).toEqual({})
+  })
+})
+
+describe("passwordRules in production with a password without letters", () => {
+  it("asks for letters and the mixed case in Spanish", async () => {
+    const input = { password: "123456789012#", password_confirmation: "123456789012#" }
+    expect(await validateInput(input, { password: passwordRules(input, { production: true, pwned: vi.fn() }) }, ATTRIBUTES)).toEqual({
+      password: ["El campo contraseña debe contener al menos una letra mayúscula y una minúscula", "El campo contraseña debe contener al menos una letra"],
+    })
   })
 })

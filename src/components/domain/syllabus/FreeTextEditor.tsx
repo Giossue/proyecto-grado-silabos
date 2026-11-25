@@ -8,7 +8,7 @@ import { Color, TextStyle } from "@tiptap/extension-text-style"
 import { EditorContent, useEditor } from "@tiptap/react"
 import StarterKit from "@tiptap/starter-kit"
 import { Bold, Braces, ChevronDown, Italic, List, ListOrdered, Plus, Table2, Underline } from "lucide-react"
-import { useEffect, useImperativeHandle, useState, type ReactNode, type Ref } from "react"
+import { useEffect, useImperativeHandle, useMemo, useState, type ReactNode, type Ref } from "react"
 import { TemplateResponseTool } from "@/components/domain/configuration/TemplateResponseTool"
 import { IconTooltip } from "@/components/domain/IconTooltip"
 import { MenuTooltip } from "@/components/domain/MenuTooltip"
@@ -159,12 +159,14 @@ export function FreeTextEditor({
     extensions: editorExtensions({ bare, align, blocks, labels: Object.fromEntries(variables.map((item) => [item.key, item.label])) }),
   }))
 
+  const editorProps = useMemo(() => ({ ...setup.editorProps, attributes: { ...setup.editorProps.attributes, "aria-label": label } }), [setup, label])
+
   const editor = useEditor({
     immediatelyRender: false,
     shouldRerenderOnTransaction: true,
     content: setup.content,
     editable: !disabled,
-    editorProps: setup.editorProps,
+    editorProps,
     extensions: setup.extensions,
     onUpdate: ({ editor: current }) => {
       onValueChange?.(current.getJSON() as DocumentNode)

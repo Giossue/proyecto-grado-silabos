@@ -486,6 +486,7 @@ export function TemplateVisualBuilder({ template, processLock = null, logos, var
   }
   const reloadAfterJson = (): void => {
     toast.success("Plantilla actualizada desde el JSON")
+    cancelEditing()
     onChanged?.()
   }
   const togglePreview = async (): Promise<void> => {

@@ -393,9 +393,9 @@ describe("PUT /api/v1/authentication/password", () => {
     expect(response.status).toBe(422)
     expect((JSON.parse(await response.text()) as { errors: Record<string, string[]> }).errors.password).toEqual([
       "El campo contraseña debe tener al menos 12 caracteres.",
-      "validation.password.mixed",
-      "validation.password.symbols",
-      "validation.password.numbers",
+      "El campo contraseña debe contener al menos una letra mayúscula y una minúscula",
+      "El campo contraseña debe contener al menos un símbolo",
+      "El campo contraseña debe contener al menos un número",
     ])
   })
 })

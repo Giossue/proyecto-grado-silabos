@@ -1,5 +1,6 @@
 "use client"
 
+import { useRef } from "react"
 import { ArrowDown, ArrowUp, ChevronDown, Copy, FolderInput, RectangleHorizontal, RectangleVertical, Trash2 } from "lucide-react"
 import type { TemplateField, TemplatePreset, TemplateSectionPayload } from "@/api/template"
 import { IconTooltip } from "@/components/domain/IconTooltip"
@@ -32,6 +33,16 @@ type TemplateSelectionToolsProps = {
 
 export function TemplateSelectionTools({ selection, presets, locked, busy, targets, onResponsible, onPreset, onName, onMove, onRemove, onOrientation, onDuplicate, onMoveTo }: TemplateSelectionToolsProps) {
   const fieldName = selection?.kind === "field" ? selection.field.label.trim() || "Campo sin nombre" : ""
+  const naming = useRef(false)
+  const startNaming = (): void => {
+    naming.current = true
+  }
+  const nameAfterClosing = (event: Event): void => {
+    if (!naming.current) return
+    naming.current = false
+    event.preventDefault()
+    onName()
+  }
 
   return (
     <div data-tour="template-selection" className="flex shrink-0 items-center gap-0.5" role="group" aria-label={selection?.kind === "section" ? "Sección seleccionada" : "Campo seleccionado"}>
@@ -44,7 +55,7 @@ export function TemplateSelectionTools({ selection, presets, locked, busy, targe
                 <ChevronDown data-icon="inline-end" aria-hidden="true" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
+            <DropdownMenuContent align="start" onCloseAutoFocus={nameAfterClosing}>
               <DropdownMenuLabel>¿Se puede editar?</DropdownMenuLabel>
               <DropdownMenuRadioGroup value={selection.field.quien_llena} onValueChange={(value) => onResponsible(value as FieldResponsible)}>
                 {FIELD_EDITABILITY.map((item) => (
@@ -67,7 +78,7 @@ export function TemplateSelectionTools({ selection, presets, locked, busy, targe
               {!selection.field.label.trim() ? (
                 <>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onSelect={onName}>Ponerle nombre</DropdownMenuItem>
+                  <DropdownMenuItem onSelect={startNaming}>Ponerle nombre</DropdownMenuItem>
                 </>
               ) : null}
             </DropdownMenuContent>

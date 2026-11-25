@@ -35,6 +35,17 @@ describe("Editor de documentos compartido", () => {
     expect(container.querySelector('[aria-label="Insertar dato del sistema"]')).not.toBeNull()
   })
 
+  it("actualiza el nombre accesible del contenido cuando cambia la etiqueta", async () => {
+    const element = (label: string) => <FreeTextEditor id="libre" label={label} value={null} variables={variables} />
+    const view = render(element("Contenido de Campo sin nombre"))
+    await flush()
+    view.rerender(element("Contenido de Campo A"))
+    await flush()
+    view.rerender(element("Contenido de Campo A"))
+    await flush()
+    expect(view.container.querySelector('[role="textbox"]')!.getAttribute("aria-label")).toBe("Contenido de Campo A")
+  })
+
   it("guarda el color del texto elegido y lo conserva al volver a abrir", async () => {
     const first = mountEditor(doc("Unidad No."))
     await flush()

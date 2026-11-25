@@ -320,6 +320,33 @@ describe("TemplateVisualBuilder", () => {
     expect(body().querySelector<HTMLTextAreaElement>('[aria-label="Nombre del campo Campo sin nombre"]')!.value).toBe("")
   })
 
+  it("al importar un JSON deja el borrador y muestra la plantilla importada", async () => {
+    vi.mocked(templateApi.getTemplateJson).mockResolvedValue({ version: 1, sections: [] })
+    const { rerender, onChanged, onEditing } = await mountBuilder({ template, presets })
+    await typeInto("Sección Uno", "Uno editado")
+    expect(await advancedItems()).toContain("Editar JSON")
+    await chooseMenuItem("Editar JSON")
+    await settle()
+    await click(byText("button", "Aplicar y reemplazar"))
+    await settle()
+    expect(templateApi.importTemplateJson).toHaveBeenCalledWith("t1", { version: 1, sections: [] })
+    expect(onChanged).toHaveBeenCalled()
+    await rerender({ template: { ...template, sections: [{ id: "s9", key: "importada", title: "Importada", orientation: "portrait", fields: [] }] } })
+    expect(onEditing).toHaveBeenLastCalledWith(false)
+    expect(body().querySelector('[aria-label="Sección Uno editado"]')).toBeNull()
+    expect(body().querySelector("[data-section-title]")?.textContent).toBe("Importada")
+  })
+
+  it("«Ponerle nombre» deja el cursor en el nombre del campo", async () => {
+    const official: Template = { ...template, sections: [{ id: "s1", key: "datos", title: "Datos", orientation: "portrait", fields: [field("a", "", "carrera")] }] }
+    await mountBuilder({ template: official })
+    await selectField("a")
+    await press(byLabel("Si se puede editar el campo Campo sin nombre"))
+    await chooseMenuItem("Ponerle nombre")
+    await settle()
+    expect(document.activeElement).toBe(body().querySelector('[aria-label="Nombre del campo Campo sin nombre"]'))
+  })
+
   it("en la vista muestra el título y los logos sin controles de edición", async () => {
     await mountBuilder({ template, logos: { institution: "/institution.png", faculty: "/faculty.png", institution_size: { width: 120, height: 40 }, faculty_size: { width: 120, height: 40 } } }, { edit: false })
     expect(body().querySelector("h2")?.textContent).toBe("SÍLABO")

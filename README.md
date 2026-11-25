@@ -51,10 +51,13 @@ Drizzle owns the schema. `src/db/drizzle/schema.ts` and the baseline `src/db/dri
 ```bash
 npm run db:check      # migration history is consistent
 npm run db:generate   # write a migration after changing schema.ts
-npm run db:migrate    # apply pending migrations (the first run records the baseline in drizzle.__drizzle_migrations)
+npm run db:baseline   # mark the baseline as applied on an existing database (idempotent)
+npm run db:migrate    # apply pending migrations
 ```
 
-`src/db/pending/drop_audit_events.sql` drops the `eventos_auditoria` table. It is not part of the migration history on purpose: the original system still writes to that table. When it is safe, remove `eventosAuditoria` from `schema.ts`, run `npx drizzle-kit generate --custom --name drop_audit_events`, paste that SQL into the new file and run `npm run db:migrate`.
+On a database that already has the tables, run `npm run db:baseline` once before the first `npm run db:migrate`. It creates the `drizzle` schema and `drizzle.__drizzle_migrations` if they are missing and records the SHA-256 of `0000_legal_edwin_jarvis.sql` with the journal's `when`, the same row `drizzle-kit migrate` would write; running it again changes nothing. On an empty database, uncomment the baseline instead and run `npm run db:migrate`.
+
+`0001_drop_audit_events.sql` drops the `eventos_auditoria` table, its trigger and indexes.
 
 ## Tests
 
@@ -66,6 +69,8 @@ npm run test:e2e      # Playwright against next start on port 3200 and the worke
 ```
 
 The E2E suite needs `E2E_PASSWORD` and `E2E_P12_PASSWORD`, and the `.p12` signatures in `tests/e2e/.firmas` (or `E2E_SIGNATURES_DIR`). Redis-backed unit tests use database 15 of `REDIS_URL` or `REDIS_TEST_URL`.
+
+`tests/e2e/template-editing.spec.ts` needs the institutional convocation open: it pauses it, edits and saves the template, restores it from the exported JSON, resumes the convocation (syllabi adapt to the template), finalizes it and opens a new period. Restore the database backup after running it. The template assistant is answered inside the browser, so no request reaches the AI provider.
 
 ## Docker
 
