@@ -21,7 +21,7 @@ describe("Auditoría y Reportes ya no forman parte del sistema", () => {
   it("el menú de Administración no muestra Auditoría ni Reportes", () => {
     const items = mainNavItemsFor(administrator)
 
-    expect(items.map((item) => item.title)).toEqual(["Convocatorias", "Usuarios y roles", "Facultades y carreras", "Plantilla"])
+    expect(items.map((item) => item.title)).toEqual(["Facultades y carreras", "Usuarios y roles", "Plantilla", "Convocatorias"])
     expect(items.map((item) => item.href)).not.toEqual(expect.arrayContaining(REMOVED))
   })
 
