@@ -26,6 +26,11 @@ export function managesTemplates(session: AppSession): boolean {
   return session.user.active && session.activeRole?.role === "administrador"
 }
 
+export async function findTemplate(templateId: string, store: TemplateStore): Promise<SyllabusTemplate | null> {
+  const found = isUuid(templateId) ? await store.template() : null
+  return found !== null && found.id === templateId.toLowerCase() ? found : null
+}
+
 export async function boundTemplate(
   request: Request,
   templateId: string,
@@ -41,8 +46,7 @@ export async function boundTemplate(
       afterAuthentication: async (user) => {
         const early = await beforeBinding(user)
         if (early) return early
-        const found = isUuid(templateId) ? await deps.store.template() : null
-        template = found !== null && found.id === templateId.toLowerCase() ? found : null
+        template = await findTemplate(templateId, deps.store)
         return template === null ? modelNotFound(MODELS.template, templateId) : null
       },
     },
@@ -57,7 +61,10 @@ export async function teacherPreview(request: Request, templateId: string, deps:
   const bound = await boundTemplate(request, templateId, deps)
   if (bound instanceof Response) return bound
   if (!managesTemplates(bound.session)) return apiJson({ message: FORBIDDEN }, 403)
-  const { template } = bound
+  return teacherPreviewOf(bound.template)
+}
+
+export function teacherPreviewOf(template: SyllabusTemplate): Response {
   const definition = template.definition
   try {
     return apiJson(
@@ -99,9 +106,11 @@ export async function exportTemplateJson(request: Request, templateId: string, d
   const bound = await boundTemplate(request, templateId, deps)
   if (bound instanceof Response) return bound
   if (!managesTemplates(bound.session)) return apiJson({ message: FORBIDDEN }, 403)
-  const { template } = bound
-  const definition = template.definition
-  return apiJson(phpShape(templateExport(request, template, definition)))
+  return exportTemplateJsonOf(request, bound.template)
+}
+
+export function exportTemplateJsonOf(request: Request, template: SyllabusTemplate): Response {
+  return apiJson(phpShape(templateExport(request, template, template.definition)))
 }
 
 export function templateExport(request: Request, template: SyllabusTemplate, definition: TemplateDefinition): PhpRecord {

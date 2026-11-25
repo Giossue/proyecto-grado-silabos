@@ -3,7 +3,7 @@ import { defaultBridgeDeps } from "../auth/requireSession"
 import type { BridgeDeps } from "../auth/types"
 import { INSTITUTION_LOGO, logoErrors } from "../files/logos"
 import { fitPng, PngError } from "../files/png"
-import { requestBody, postMaxSize, postTooLarge } from "../files/uploads"
+import { requestBody, postMaxSize, postTooLarge, type MultipartInput } from "../files/uploads"
 import { requestRoot } from "../http/request"
 import { apiJson, validationError } from "../http/responses"
 import { storageWriter, type StorageWriter } from "../http/storageWriter"
@@ -25,6 +25,10 @@ export async function uploadTemplateLogo(request: Request, templateId: string, d
   const bound = await boundTemplate(request, templateId, deps)
   if (bound instanceof Response) return bound
   if (!managesTemplates(bound.session)) return apiJson({ message: FORBIDDEN }, 403)
+  return uploadTemplateLogoOf(request, body, deps)
+}
+
+export async function uploadTemplateLogoOf(request: Request, body: MultipartInput, deps: Pick<TemplateLogoDeps, "storage">): Promise<Response> {
   const logo = body.files.logo !== undefined ? body.files.logo : body.input.logo
   const errors = logoErrors(logo, "imagen del logo", true)
   if (errors.length > 0) return validationError({ logo: errors })

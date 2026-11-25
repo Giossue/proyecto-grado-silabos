@@ -31,6 +31,8 @@ export interface DashboardRepository {
 
 export type DashboardDeps = { bridge: BridgeDeps; dashboard: DashboardRepository; today: () => string; setup: SetupRepository; templates: TemplateStore }
 
+export type DashboardCoreDeps = Omit<DashboardDeps, "bridge">
+
 type Deadline = Record<string, unknown>
 
 const PROCESS_PAUSED = "pausado"
@@ -70,14 +72,14 @@ function deadlinePayload(process: ProcessRecord, convocation: ConvocationRecord 
   }
 }
 
-async function careerDeadline(careerId: string | null, deps: DashboardDeps, today: string): Promise<Deadline | null> {
+async function careerDeadline(careerId: string | null, deps: DashboardCoreDeps, today: string): Promise<Deadline | null> {
   const process = await deps.dashboard.latestProcess()
   if (process === null || careerId === null) return null
   const convocation = await deps.dashboard.convocation(careerId, process.id)
   return { ...deadlinePayload(process, convocation, today), career_pending: convocation === null || convocation.state === CONVOCATION_PREPARATION }
 }
 
-async function teacherDeadline(session: AppSession, deps: DashboardDeps, today: string): Promise<Deadline | null> {
+async function teacherDeadline(session: AppSession, deps: DashboardCoreDeps, today: string): Promise<Deadline | null> {
   const careerId = session.activeRole?.careerId ?? null
   const syllabi = await deps.dashboard.teacherOpenSyllabi(session.user.id, careerId)
   const [nearest] = syllabi.toSorted((left, right) => left.dueAt - right.dueAt)
@@ -96,17 +98,17 @@ async function teacherDeadline(session: AppSession, deps: DashboardDeps, today: 
   return convocation === null ? null : deadlinePayload(latest, convocation, today)
 }
 
-async function libraryDeadline(deps: DashboardDeps, today: string): Promise<Deadline | null> {
+async function libraryDeadline(deps: DashboardCoreDeps, today: string): Promise<Deadline | null> {
   const process = await deps.dashboard.latestProcess()
   return process === null ? null : deadlinePayload(process, null, today)
 }
 
-async function administratorPause(deps: DashboardDeps, today: string): Promise<Deadline | null> {
+async function administratorPause(deps: DashboardCoreDeps, today: string): Promise<Deadline | null> {
   const process = await deps.dashboard.latestProcess()
   return process === null || process.state === PROCESS_OPEN ? null : deadlinePayload(process, null, today)
 }
 
-async function libraryMetrics(deps: DashboardDeps) {
+async function libraryMetrics(deps: DashboardCoreDeps) {
   const totals = await deps.dashboard.libraryCounts()
   const count = (key: string) => totals[key] ?? 0
   return [
@@ -125,6 +127,10 @@ async function libraryMetrics(deps: DashboardDeps) {
 export async function dashboardDeadline(request: Request, deps: DashboardDeps = defaultDeps()): Promise<Response> {
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
+  return dashboardDeadlineFor(session, deps)
+}
+
+export async function dashboardDeadlineFor(session: AppSession, deps: DashboardCoreDeps): Promise<Response> {
   const today = deps.today()
   let deadline: Deadline | null = null
   switch (session.activeRole?.role) {
@@ -144,7 +150,7 @@ export async function dashboardDeadline(request: Request, deps: DashboardDeps = 
   return apiJson({ deadline })
 }
 
-async function administratorDashboard(deps: DashboardDeps, today: string): Promise<Record<string, unknown>> {
+async function administratorDashboard(deps: DashboardCoreDeps, today: string): Promise<Record<string, unknown>> {
   return {
     metrics: await administratorMetrics(await deps.dashboard.inProgressProcess(), deps.setup, today),
     setup: await administratorSetup(deps.setup, deps.templates),
@@ -153,7 +159,7 @@ async function administratorDashboard(deps: DashboardDeps, today: string): Promi
   }
 }
 
-async function coordinatorDashboard(careerId: string | null, deps: DashboardDeps, today: string): Promise<Record<string, unknown>> {
+async function coordinatorDashboard(careerId: string | null, deps: DashboardCoreDeps, today: string): Promise<Record<string, unknown>> {
   const readiness =
     careerId === null
       ? null
@@ -184,6 +190,10 @@ async function coordinatorDashboard(careerId: string | null, deps: DashboardDeps
 export async function dashboardIndex(request: Request, deps: DashboardDeps = defaultDeps()): Promise<Response> {
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
+  return dashboardFor(session, deps)
+}
+
+export async function dashboardFor(session: AppSession, deps: DashboardCoreDeps): Promise<Response> {
   const role = session.activeRole?.role
   const today = deps.today()
   if (role === "administrador" || role === "coordinador") {

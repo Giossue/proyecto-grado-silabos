@@ -2,7 +2,7 @@ import { HttpFailure, Missing } from "../http/failures"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
 import type { BridgeDeps, AppSession } from "../auth/types"
 import { isUuid } from "../academic/structure"
-import { requestInput } from "../http/input"
+import { requestInput, type PhpArray } from "../http/input"
 import { forbidden, apiJson, validationError } from "../http/responses"
 import { redoConfirmationSchema } from "@silabos/shared/schemas/syllabus"
 import { validateSchema } from "../http/schemaValidation"
@@ -66,9 +66,12 @@ export async function closeProcess(request: Request, id: string, deps: ClosingDe
   const original = request.clone()
   const bound = await boundProcess(original, id, deps)
   if (bound instanceof Response) return bound
-  const { session, process } = bound
+  return closeBoundProcess(bound.session, bound.process, await requestInput(request), deps)
+}
+
+export async function closeBoundProcess(session: AppSession, process: ProcessRow, input: PhpArray, deps: Pick<ClosingDeps, "transaction">): Promise<Response> {
   if (!hasRole(session, ROLE_ADMINISTRATOR) || !CLOSABLE.includes(process.state)) return forbidden()
-  const { errors } = await validateSchema(redoConfirmationSchema, await requestInput(request))
+  const { errors } = await validateSchema(redoConfirmationSchema, input)
   if (errors !== null) return validationError(errors)
   try {
     await deps.transaction(async (tx) => {

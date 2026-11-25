@@ -13,6 +13,7 @@ import { revisionDiff } from "./revisionDiff"
 import { createCoordinationReviewRepository } from "./coordinationReviewQueries"
 import { modelNotFound } from "../http/router"
 import { MODELS } from "../http/models"
+import { requireBound, type Binder } from "./boundSession"
 
 export type ReviewListRow = {
   id: string
@@ -71,6 +72,10 @@ export function reviewStage(row: { approved: boolean; verified: boolean }): stri
 async function coordinator(request: Request, deps: CoordinationReviewDeps): Promise<AppSession | Response> {
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
+  return coordinatorOnly(session)
+}
+
+function coordinatorOnly(session: AppSession): AppSession | Response {
   return hasRole(session, ROLE_COORDINATOR) ? session : forbidden()
 }
 
@@ -84,6 +89,12 @@ function currentPage(request: Request): number {
 
 export async function coordinationReviews(request: Request, deps: CoordinationReviewDeps = defaultCoordinationReviewDeps()): Promise<Response> {
   const session = await coordinator(request, deps)
+  if (session instanceof Response) return session
+  return coordinationReviewsFor(request, session, deps)
+}
+
+export async function coordinationReviewsFor(request: Request, authenticated: AppSession, deps: CoordinationReviewDeps): Promise<Response> {
+  const session = coordinatorOnly(authenticated)
   if (session instanceof Response) return session
   const input = phpQuery(new URL(request.url))
   const { errors } = await validateSchema(reviewSearchSchema, input)
@@ -111,6 +122,12 @@ export async function coordinationReviews(request: Request, deps: CoordinationRe
 export async function coordinationHistory(request: Request, deps: CoordinationReviewDeps = defaultCoordinationReviewDeps()): Promise<Response> {
   const session = await coordinator(request, deps)
   if (session instanceof Response) return session
+  return coordinationHistoryFor(request, session, deps)
+}
+
+export async function coordinationHistoryFor(request: Request, authenticated: AppSession, deps: CoordinationReviewDeps): Promise<Response> {
+  const session = coordinatorOnly(authenticated)
+  if (session instanceof Response) return session
   const input: PhpArray = phpQuery(new URL(request.url))
   const { errors } = await validateSchema(reviewHistorySchema((value) => deps.reviews.periodExists(String(value))), input)
   if (errors !== null) return validationError(errors)
@@ -135,28 +152,24 @@ export async function coordinationHistory(request: Request, deps: CoordinationRe
   return apiJson({ filters: { q: search === "" ? null : search, period: periodId }, periods, syllabi: paginate(request, data, total, page) })
 }
 
+export function comparisonBinder(beforeId: string, afterId: string, deps: Pick<CoordinationReviewDeps, "reviews">): Binder<{ before: RevisionRecord; after: RevisionRecord }> {
+  return async () => {
+    const before = isUuid(beforeId) ? await deps.reviews.revision(beforeId) : null
+    const after = before === null || !isUuid(afterId) ? null : await deps.reviews.revision(afterId)
+    if (before === null) return modelNotFound(MODELS.revision, beforeId)
+    return after === null ? modelNotFound(MODELS.revision, afterId) : { before, after }
+  }
+}
+
 export async function compareRevisions(request: Request, beforeId: string, afterId: string, deps: CoordinationReviewDeps = defaultCoordinationReviewDeps()): Promise<Response> {
-  let before: RevisionRecord | null = null
-  let after: RevisionRecord | null = null
-  const session = await requireSession(
-    request,
-    {
-      verified: true,
-      activeRole: "required",
-      afterAuthentication: async () => {
-        before = isUuid(beforeId) ? await deps.reviews.revision(beforeId) : null
-        after = before === null || !isUuid(afterId) ? null : await deps.reviews.revision(afterId)
-        if (before === null) return modelNotFound(MODELS.revision, beforeId)
-        return after === null ? modelNotFound(MODELS.revision, afterId) : null
-      },
-    },
-    deps.bridge,
-  )
-  if (session instanceof Response) return session
-  let first = before as RevisionRecord | null
-  let second = after as RevisionRecord | null
-  if (first === null) return modelNotFound(MODELS.revision, beforeId)
-  if (second === null) return modelNotFound(MODELS.revision, afterId)
+  const bound = await requireBound(request, comparisonBinder(beforeId, afterId, deps), deps.bridge)
+  if (bound instanceof Response) return bound
+  return compareRevisionsFor(bound.session, bound.bound, deps)
+}
+
+export async function compareRevisionsFor(session: AppSession, { before, after }: { before: RevisionRecord; after: RevisionRecord }, deps: CoordinationReviewDeps): Promise<Response> {
+  let first = before
+  let second = after
   for (const revision of [first, second]) {
     const facts = await deps.reviews.syllabus(revision.syllabusId, session.user.id)
     if (facts === null || !mayView(session, facts)) return aborted(403)

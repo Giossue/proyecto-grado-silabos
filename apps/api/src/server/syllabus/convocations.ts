@@ -14,6 +14,7 @@ import { phpFalsy } from "./teacherSyllabi"
 import { createConvocationRepository } from "./convocationQueries"
 import { modelNotFound } from "../http/router"
 import { MODELS } from "../http/models"
+import { requireBound, type Binder } from "./boundSession"
 
 export const TEMPLATE_NAME = "Plantilla institucional de sílabo"
 
@@ -71,6 +72,10 @@ function byteOrder(left: string, right: string): number {
 export async function convocations(request: Request, deps: ConvocationDeps = defaultConvocationDeps()): Promise<Response> {
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
+  return convocationsFor(request, session, deps)
+}
+
+export async function convocationsFor(request: Request, session: AppSession, deps: ConvocationDeps): Promise<Response> {
   if (!hasRole(session, ROLE_COORDINATOR)) return forbidden()
   const input = phpQuery(new URL(request.url))
   const { errors } = await validateSchema(listingFiltersSchema(CONVOCATION_STATES), input)
@@ -97,29 +102,26 @@ export async function convocations(request: Request, deps: ConvocationDeps = def
   })
 }
 
+export function convocationBinder(id: string, deps: Pick<ConvocationDeps, "convocations">): Binder<ConvocationRecord> {
+  return async () => {
+    const convocation = isUuid(id) ? await deps.convocations.convocation(id) : null
+    return convocation === null ? modelNotFound(MODELS.convocation, id) : convocation
+  }
+}
+
 async function boundConvocation(request: Request, id: string, deps: ConvocationDeps): Promise<{ session: AppSession; convocation: ConvocationRecord } | Response> {
-  let convocation: ConvocationRecord | null = null
-  const session = await requireSession(
-    request,
-    {
-      verified: true,
-      activeRole: "required",
-      afterAuthentication: async () => {
-        convocation = isUuid(id) ? await deps.convocations.convocation(id) : null
-        return convocation === null ? modelNotFound(MODELS.convocation, id) : null
-      },
-    },
-    deps.bridge,
-  )
-  if (session instanceof Response) return session
-  if (convocation === null) return modelNotFound(MODELS.convocation, id)
-  return { session, convocation }
+  const bound = await requireBound(request, convocationBinder(id, deps), deps.bridge)
+  if (bound instanceof Response) return bound
+  return { session: bound.session, convocation: bound.bound }
 }
 
 export async function convocationDetail(request: Request, id: string, deps: ConvocationDeps = defaultConvocationDeps()): Promise<Response> {
   const bound = await boundConvocation(request, id, deps)
   if (bound instanceof Response) return bound
-  const { session, convocation } = bound
+  return convocationDetailFor(bound.session, bound.convocation, deps)
+}
+
+export async function convocationDetailFor(session: AppSession, convocation: ConvocationRecord, deps: ConvocationDeps): Promise<Response> {
   if (!mayView(session, convocation)) return aborted(403)
   const syllabi = (await deps.convocations.syllabi(convocation.id))
     .map((item, index) => ({ item, index }))
@@ -158,7 +160,10 @@ class StateChanged extends Error {}
 export async function pauseConvocation(request: Request, id: string, deps: ConvocationDeps = defaultConvocationDeps()): Promise<Response> {
   const bound = await boundConvocation(request, id, deps)
   if (bound instanceof Response) return bound
-  const { session, convocation } = bound
+  return pauseConvocationFor(bound.session, bound.convocation, deps)
+}
+
+export async function pauseConvocationFor(session: AppSession, convocation: ConvocationRecord, deps: ConvocationDeps): Promise<Response> {
   if (!mayView(session, convocation) || convocation.state !== CONVOCATION_OPEN) return forbidden()
   try {
     await deps.convocations.transaction(async (tx) => {

@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises"
-import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
+import { defaultBridgeDeps } from "../auth/requireSession"
 import type { BridgeDeps, AppSession } from "../auth/types"
 import { isUuid } from "../academic/structure"
 import { diskExists, diskPath } from "../http/storage"
@@ -17,6 +17,7 @@ import { createDocumentRequestParts, createDocumentStore } from "./revisionDocum
 import { strSlug } from "./slug"
 import { modelNotFound } from "../http/router"
 import { MODELS } from "../http/models"
+import { requireBound, type Binder } from "../syllabus/boundSession"
 
 export type ArtifactRow = { id: string; state: string; requestedAt: string; completedAt: string | null; pdfSize: number | null }
 export type StoredObject = { id: string; disk: string; path: string }
@@ -46,45 +47,26 @@ const DOWNLOAD_HEADERS: Record<string, string> = {
   "Cross-Origin-Resource-Policy": "same-origin",
 }
 
-type Bound = { session: AppSession; revision: ReviewRevision; syllabus: DetailSyllabus }
+export type RevisionBound = { revision: ReviewRevision; syllabus: DetailSyllabus }
+export type ArtifactBound = RevisionBound & { artifact: StoredArtifact }
 
-async function bindRevision(
-  request: Request,
-  revisionId: string,
-  deps: DocumentDeps,
-  load: (userId: string) => Promise<{ revision: ReviewRevision; syllabus: DetailSyllabus } | Response | null>,
-): Promise<Bound | Response> {
-  let bound: { revision: ReviewRevision; syllabus: DetailSyllabus } | null = null
-  const session = await requireSession(
-    request,
-    {
-      verified: true,
-      activeRole: "required",
-      afterAuthentication: async (user) => {
-        const loadedRevision = await load(user.id)
-        if (loadedRevision instanceof Response) return loadedRevision
-        bound = loadedRevision
-        return bound === null ? modelNotFound(MODELS.revision, revisionId) : null
-      },
-    },
-    deps.bridge,
-  )
-  if (session instanceof Response) return session
-  if (bound === null) return modelNotFound(MODELS.revision, revisionId)
-  void revisionId
-  return { session, ...(bound as { revision: ReviewRevision; syllabus: DetailSyllabus }) }
-}
-
-async function loaded(deps: DocumentDeps, revisionId: string, userId: string): Promise<{ revision: ReviewRevision; syllabus: DetailSyllabus } | null> {
+async function loaded(deps: Pick<DocumentDeps, "store">, revisionId: string, userId: string): Promise<{ revision: ReviewRevision; syllabus: DetailSyllabus } | null> {
   const revision = isUuid(revisionId) ? await deps.store.revision(revisionId) : null
   const syllabus = revision === null ? null : await deps.store.syllabus(revision.syllabusId, userId)
   return revision === null || syllabus === null ? null : { revision, syllabus }
 }
 
+export function revisionDocumentsBinder(revisionId: string, deps: Pick<DocumentDeps, "store">): Binder<RevisionBound> {
+  return async (user) => (await loaded(deps, revisionId, user.id)) ?? modelNotFound(MODELS.revision, revisionId)
+}
+
 export async function revisionDocuments(request: Request, revisionId: string, deps: DocumentDeps = defaultDocumentDeps()): Promise<Response> {
-  const bound = await bindRevision(request, revisionId, deps, async (userId) => (await loaded(deps, revisionId, userId)) ?? modelNotFound(MODELS.revision, revisionId))
+  const bound = await requireBound(request, revisionDocumentsBinder(revisionId, deps), deps.bridge)
   if (bound instanceof Response) return bound
-  const { session, revision, syllabus } = bound
+  return revisionDocumentsFor(bound.session, bound.bound, deps)
+}
+
+export async function revisionDocumentsFor(session: AppSession, { revision, syllabus }: RevisionBound, deps: DocumentDeps): Promise<Response> {
   if (!mayView(session, syllabus)) return forbidden()
   const approval = await deps.store.approval(revision.id)
   if (approval === null) return aborted(404)
@@ -113,16 +95,22 @@ async function storedFile(object: StoredObject | null): Promise<string | null> {
   }
 }
 
+export function exportBinder(artifactId: string, deps: Pick<DocumentDeps, "store">): Binder<ArtifactBound> {
+  return async (user) => {
+    const artifact = isUuid(artifactId) ? await deps.store.artifact(artifactId) : null
+    if (artifact === null) return modelNotFound(MODELS.artifact, artifactId)
+    const revision = await loaded(deps, artifact.revisionId, user.id)
+    return revision === null ? modelNotFound(MODELS.revision, artifactId) : { ...revision, artifact }
+  }
+}
+
 export async function downloadExport(request: Request, artifactId: string, deps: DocumentDeps = defaultDocumentDeps()): Promise<Response> {
-  let artifact: StoredArtifact | null = null
-  const bound = await bindRevision(request, artifactId, deps, async (userId) => {
-    artifact = isUuid(artifactId) ? await deps.store.artifact(artifactId) : null
-    return artifact === null ? modelNotFound(MODELS.artifact, artifactId) : loaded(deps, artifact.revisionId, userId)
-  })
+  const bound = await requireBound(request, exportBinder(artifactId, deps), deps.bridge)
   if (bound instanceof Response) return bound
-  const found = artifact as StoredArtifact | null
-  if (found === null) return modelNotFound(MODELS.artifact, artifactId)
-  const { session, revision, syllabus } = bound
+  return downloadExportFor(bound.session, bound.bound)
+}
+
+export async function downloadExportFor(session: AppSession, { revision, syllabus, artifact: found }: ArtifactBound): Promise<Response> {
   if (!mayView(session, syllabus) || found.state !== COMPLETED) return forbidden()
   const file = await storedFile(found.object)
   if (file === null || found.object === null) return aborted(404)
@@ -163,42 +151,41 @@ async function settleRequest(original: Request, deps: DocumentRequestDeps, work:
   })
 }
 
+export function documentRequestBinder(revisionId: string, deps: Pick<DocumentDeps, "store">): Binder<RevisionBound> {
+  return async (user) => (isUuid(revisionId) ? await loaded(deps, revisionId, user.id) : null) ?? modelNotFound(MODELS.revision, revisionId)
+}
+
+export const DOCUMENT_REQUEST_LIMIT = { name: "throttle:20,1", maxAttempts: 20, decaySeconds: 60 }
+
 export async function requestRevisionDocuments(request: Request, revisionId: string, deps: DocumentRequestDeps = defaultDocumentRequestDeps()): Promise<Response> {
-  const original = request.clone()
   let gate: Throttle | null = null
   const finish = (response: Response) => (gate as Throttle | null)?.decorate(response) ?? response
-  let bound: { revision: ReviewRevision; syllabus: DetailSyllabus } | null = null
-  const session = await requireSession(
-    original,
-    {
-      verified: true,
-      activeRole: "required",
-      afterAuthentication: async (user) => {
-        gate = throttle(deps.limiter, { key: `throttle:20,1:${user.id}`, maxAttempts: 20, decaySeconds: 60 }, deps.bridge.now)
-        const limited = await gate.hit()
-        if (limited !== null) return limited
-        bound = isUuid(revisionId) ? await loaded(deps, revisionId, user.id) : null
-        return bound === null ? modelNotFound(MODELS.revision, revisionId) : null
-      },
+  const binder = documentRequestBinder(revisionId, deps)
+  const bound = await requireBound(
+    request.clone(),
+    async (user) => {
+      gate = throttle(deps.limiter, { key: `${DOCUMENT_REQUEST_LIMIT.name}:${user.id}`, maxAttempts: DOCUMENT_REQUEST_LIMIT.maxAttempts, decaySeconds: DOCUMENT_REQUEST_LIMIT.decaySeconds }, deps.bridge.now)
+      const limited = await gate.hit()
+      return limited ?? binder(user)
     },
     deps.bridge,
   )
-  if (session instanceof Response) return finish(session)
-  const found = bound as { revision: ReviewRevision; syllabus: DetailSyllabus } | null
-  if (found === null) return finish(modelNotFound(MODELS.revision, revisionId))
-  const { revision, syllabus } = found
-  if (!mayView(session, syllabus)) return finish(forbidden())
+  if (bound instanceof Response) return finish(bound)
+  return finish(await requestRevisionDocumentsFor(request, bound.session, bound.bound, deps))
+}
+
+export async function requestRevisionDocumentsFor(request: Request, session: AppSession, { revision, syllabus }: RevisionBound, deps: DocumentRequestDeps): Promise<Response> {
+  const original = request.clone()
+  if (!mayView(session, syllabus)) return forbidden()
   const input: PhpArray = await requestInput(request)
   const { errors } = await validateSchema(idempotencySchema, input)
-  if (errors !== null) return finish(validationError(errors))
+  if (errors !== null) return validationError(errors)
   const key = input.idempotency_key as string
   const actor = { id: session.user.id }
-  return finish(
-    await settleRequest(original, deps, async () => {
-      const artifact =
-        (await existingExport({ existingArtifact: deps.existing }, revision.id, key, actor.id)) ??
-        (await deps.transaction((tx) => requestExport(tx, { revisionId: revision.id, syllabusId: revision.syllabusId, key, actor, now: deps.now(), newId: deps.newId })))
-      return apiJson({ message: artifact.state === COMPLETED ? "El PDF ya estaba disponible." : "El PDF se está generando.", artifact_id: artifact.id }, 202)
-    }),
-  )
+  return settleRequest(original, deps, async () => {
+    const artifact =
+      (await existingExport({ existingArtifact: deps.existing }, revision.id, key, actor.id)) ??
+      (await deps.transaction((tx) => requestExport(tx, { revisionId: revision.id, syllabusId: revision.syllabusId, key, actor, now: deps.now(), newId: deps.newId })))
+    return apiJson({ message: artifact.state === COMPLETED ? "El PDF ya estaba disponible." : "El PDF se está generando.", artifact_id: artifact.id }, 202)
+  })
 }

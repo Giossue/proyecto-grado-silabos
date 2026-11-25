@@ -1,0 +1,1 @@
+export const SYLLABUS_IMAGES = Symbol("SYLLABUS_IMAGES")

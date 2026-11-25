@@ -1,0 +1,37 @@
+import { randomUUID } from "node:crypto"
+import { Prisma } from "../../../generated/prisma/client"
+import { CREDENTIAL_PROVIDER } from "../../../server/auth/credentials"
+import type { CredentialStore } from "../../../server/identity/authentication"
+import { rowsOf, type RawExecutor } from "./raw-executor"
+
+export async function storeCredentialPassword(executor: RawExecutor, userId: string, hash: string, id: string = randomUUID()): Promise<void> {
+  await executor.$executeRaw(Prisma.sql`insert into cuentas_usuario (id, account_id, provider_id, user_id, password)
+    values (${id}, ${userId}, ${CREDENTIAL_PROVIDER}, ${userId}::uuid, ${hash})
+    on conflict (provider_id, account_id) do update set password = excluded.password, updated_at = now()`)
+  await executor.$executeRaw(Prisma.sql`update usuarios set contrasena = ${hash} where usuario_id = ${userId}::uuid`)
+}
+
+export async function mirrorCredentialPassword(executor: RawExecutor, userId: string): Promise<void> {
+  await executor.$executeRaw(Prisma.sql`update usuarios set contrasena = c.password
+    from cuentas_usuario c
+    where usuarios.usuario_id = ${userId}::uuid and c.user_id = usuarios.usuario_id
+      and c.provider_id = ${CREDENTIAL_PROVIDER} and c.password is not null`)
+}
+
+export function deleteUserSessions(executor: RawExecutor, userId: string, exceptId: string | null = null): Promise<number> {
+  return executor.$executeRaw(
+    exceptId === null
+      ? Prisma.sql`delete from sesiones_usuario where user_id = ${userId}::uuid`
+      : Prisma.sql`delete from sesiones_usuario where user_id = ${userId}::uuid and id <> ${exceptId}`,
+  )
+}
+
+export function credentialStoreOn(executor: RawExecutor): CredentialStore {
+  return {
+    async findActiveUserByEmail(email) {
+      const [row] = await rowsOf<{ usuario_id: string }>(executor, Prisma.sql`select usuario_id from usuarios where correo_electronico = ${email} and usuario_activo = true limit 1`)
+      return row ? { id: String(row.usuario_id) } : null
+    },
+    mirrorPassword: (userId) => mirrorCredentialPassword(executor, userId),
+  }
+}

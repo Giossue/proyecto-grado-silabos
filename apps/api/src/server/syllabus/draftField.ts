@@ -1,6 +1,6 @@
 import { fromController } from "../auth/controllerResponse"
 import { HttpFailure, Missing, modelNotFoundResponse } from "../http/failures"
-import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
+import { defaultBridgeDeps } from "../auth/requireSession"
 import type { BridgeDeps, AppSession } from "../auth/types"
 import { isUuid } from "../academic/structure"
 import { requestInput, type PhpArray, type PhpValue } from "../http/input"
@@ -32,6 +32,7 @@ import { mayEdit, type SyllabusFacts } from "./policy"
 import { createDraftFieldStore } from "./draftFieldStore"
 import { modelNotFound } from "../http/router"
 import { MODELS } from "../http/models"
+import { requireBound, type Binder } from "./boundSession"
 
 export type DraftSyllabus = SyllabusFacts & { subjectId: string }
 export type DraftFieldRecord = { id: string; templateId: string; responsible: string; content: unknown; key: string; live: boolean }
@@ -91,29 +92,15 @@ export function isoFromSeconds(seconds: number): string {
   return new Date(seconds * 1000).toISOString().replace(/\.\d{3}Z$/, "+00:00")
 }
 
-type Bound = { session: AppSession; syllabus: DraftSyllabus; field: DraftFieldRecord }
+export type DraftFieldBound = { session: AppSession; syllabus: DraftSyllabus; field: DraftFieldRecord }
 
-async function bound(request: Request, syllabusId: string, fieldId: string, deps: DraftFieldDeps): Promise<Bound | Response> {
-  let syllabus: DraftSyllabus | null = null
-  let field: DraftFieldRecord | null = null
-  const session = await requireSession(
-    request,
-    {
-      verified: true,
-      activeRole: "required",
-      afterAuthentication: async (user) => {
-        syllabus = isUuid(syllabusId) ? await deps.store.syllabus(syllabusId, user.id) : null
-        if (syllabus === null) return modelNotFound(MODELS.syllabus, syllabusId)
-        field = isUuid(fieldId) ? await deps.store.field(fieldId) : null
-        return field === null ? modelNotFound(MODELS.field, fieldId) : null
-      },
-    },
-    deps.bridge,
-  )
-  if (session instanceof Response) return session
-  if (syllabus === null) return modelNotFound(MODELS.syllabus, syllabusId)
-  if (field === null) return modelNotFound(MODELS.field, fieldId)
-  return { session, syllabus, field }
+export function draftFieldBinder(syllabusId: string, fieldId: string, deps: Pick<DraftFieldDeps, "store">): Binder<{ syllabus: DraftSyllabus; field: DraftFieldRecord }> {
+  return async (user) => {
+    const syllabus = isUuid(syllabusId) ? await deps.store.syllabus(syllabusId, user.id) : null
+    if (syllabus === null) return modelNotFound(MODELS.syllabus, syllabusId)
+    const field = isUuid(fieldId) ? await deps.store.field(fieldId) : null
+    return field === null ? modelNotFound(MODELS.field, fieldId) : { syllabus, field }
+  }
 }
 
 function conflict(request: Request, version: number): Response {
@@ -122,7 +109,7 @@ function conflict(request: Request, version: number): Response {
     : apiJson({ message: CONFLICT }, 409)
 }
 
-async function save(input: PhpArray, auth: Bound, deps: DraftFieldDeps, tx: DraftFieldTx, original: Request): Promise<{ version: number; savedAt: number; definition: TemplateDefinition }> {
+async function save(input: PhpArray, auth: DraftFieldBound, deps: DraftFieldDeps, tx: DraftFieldTx, original: Request): Promise<{ version: number; savedAt: number; definition: TemplateDefinition }> {
   const locked = await tx.lockSyllabus(auth.syllabus.id)
   if (locked === null) throw new Missing(MODELS.syllabus, auth.syllabus.id)
   if (locked.version !== phpIntCast(input.version_bloqueo)) throw new Rejected(conflict(original, locked.version))
@@ -167,9 +154,13 @@ function documentErrors(value: PhpValue | undefined, definition: TemplateDefinit
 }
 
 export async function updateDraftField(request: Request, syllabusId: string, fieldId: string, deps: DraftFieldDeps = defaultDraftFieldDeps()): Promise<Response> {
+  const bound = await requireBound(request.clone(), draftFieldBinder(syllabusId, fieldId, deps), deps.bridge)
+  if (bound instanceof Response) return bound
+  return updateDraftFieldFor(request, { session: bound.session, ...bound.bound }, deps)
+}
+
+export async function updateDraftFieldFor(request: Request, auth: DraftFieldBound, deps: DraftFieldDeps): Promise<Response> {
   const original = request.clone()
-  const auth = await bound(original, syllabusId, fieldId, deps)
-  if (auth instanceof Response) return auth
   if (!mayEdit(auth.session, auth.syllabus, deps.today())) return forbidden()
   const current = await deps.templates.template()
   if (current === null) return fromController(modelNotFoundResponse(MODELS.template))

@@ -2,7 +2,7 @@ import { requireSession, defaultBridgeDeps } from "../auth/requireSession"
 import type { BridgeDeps, AppSession, SessionRequirements } from "../auth/types"
 import { isPhpArray, phpQuery, type PhpArray, type PhpValue } from "../http/input"
 import { lengthAwarePaginator, resolveCurrentPage } from "../http/pagination"
-import { queryParams, requestUrl } from "../http/request"
+import { queryParams, requestUrl, type QueryParams } from "../http/request"
 import { jsonError, apiJson, validationError } from "../http/responses"
 import { validateSchema } from "../http/schemaValidation"
 import { libraryReviewFiltersSchema, REVIEW_OUTCOMES, REVIEW_STATES } from "@silabos/shared/schemas/library"
@@ -65,12 +65,14 @@ export function defaultLibraryReviewDeps(): LibraryReviewDeps {
   return { bridge: defaultBridgeDeps(), reviews: createLibraryReviewRepository() }
 }
 
-function exists(deps: LibraryReviewDeps, table: "facultades" | "periodos_academicos") {
-  return async (value: unknown) => {
+export type FilterTable = "facultades" | "periodos_academicos"
+
+export function existenceCheck(reviews: LibraryReviewRepository, invalid: () => Error) {
+  return (table: FilterTable) => async (value: unknown) => {
     const values = isPhpArray(value) ? Object.values(value) : [value]
-    if (values.some((item) => typeof item !== "string" || !UUID.test(item))) throw new QueryFailed()
+    if (values.some((item) => typeof item !== "string" || !UUID.test(item))) throw invalid()
     const distinct = [...new Set(values as string[])]
-    return (await deps.reviews.existing(table, distinct)) >= distinct.length
+    return (await reviews.existing(table, distinct)) >= distinct.length
   }
 }
 
@@ -83,7 +85,7 @@ export async function authorizeListing(request: Request, deps: LibraryReviewDeps
   const input = phpQuery(new URL(request.url))
   let errors: Record<string, string[]> | null
   try {
-    errors = (await validateSchema(libraryReviewFiltersSchema((table) => exists(deps, table)), input)).errors
+    errors = (await validateSchema(libraryReviewFiltersSchema(existenceCheck(deps.reviews, () => new QueryFailed())), input)).errors
   } catch (error) {
     if (error instanceof QueryFailed) return jsonError(500, "Server Error")
     throw error
@@ -96,18 +98,23 @@ function optionalString(value: PhpValue | undefined): string | null {
   return typeof value === "string" ? value : null
 }
 
-async function listing(request: Request, deps: LibraryReviewDeps, input: PhpArray, period: ReviewPeriod, periodId: string | null, handledBy: string | null) {
+export type ListingLinks = { path: string; query: QueryParams }
+
+export function listingLinks(request: Request): ListingLinks {
+  return { path: requestUrl(request), query: queryParams(new URL(request.url)) }
+}
+
+async function listing(reviews: LibraryReviewRepository, links: ListingLinks, input: PhpArray, period: ReviewPeriod, periodId: string | null, handledBy: string | null) {
   const state = optionalString(input.state)
   const q = optionalString(input.q)
   const search = q === null ? null : q.replace(PHP_TRIM, "")
   const facultyId = optionalString(input.faculty)
-  const url = new URL(request.url)
-  const query = queryParams(url)
+  const { query } = links
   const currentPage = resolveCurrentPage(query.get("page") ?? null)
   const sort = listSortOf(LIBRARY_SORTS, input.sort, input.dir)
-  const { total, items } = await deps.reviews.page({ state, search, facultyId, period, periodId, handledBy }, currentPage, PER_PAGE, sort)
-  const syllabi = await deps.reviews.summaries([...new Set(items.map((item) => item.syllabusId))])
-  const names = await deps.reviews.userNames([...new Set(items.flatMap((item) => (item.responsibleId === null ? [] : [item.responsibleId])))])
+  const { total, items } = await reviews.page({ state, search, facultyId, period, periodId, handledBy }, currentPage, PER_PAGE, sort)
+  const syllabi = await reviews.summaries([...new Set(items.map((item) => item.syllabusId))])
+  const names = await reviews.userNames([...new Set(items.flatMap((item) => (item.responsibleId === null ? [] : [item.responsibleId])))])
   const data = items.map((item) => {
     const syllabus = syllabi.get(item.syllabusId) ?? null
     return {
@@ -131,22 +138,29 @@ async function listing(request: Request, deps: LibraryReviewDeps, input: PhpArra
   })
   return {
     filters: { q: search === null || search === "" || search === "0" ? null : search, state, faculty: facultyId, period: periodId, mine: handledBy !== null },
-    faculties: await deps.reviews.faculties(),
-    reviews: lengthAwarePaginator({ items: data, total, perPage: PER_PAGE, currentPage, path: requestUrl(request), query }),
+    faculties: await reviews.faculties(),
+    reviews: lengthAwarePaginator({ items: data, total, perPage: PER_PAGE, currentPage, path: links.path, query }),
   }
+}
+
+export function reviewsListing(reviews: LibraryReviewRepository, links: ListingLinks, input: PhpArray) {
+  return listing(reviews, links, input, "actual", null, null)
+}
+
+export async function historyListing(reviews: LibraryReviewRepository, links: ListingLinks, session: AppSession, input: PhpArray) {
+  const mine = input.mine === "1" || input.mine === 1 || input.mine === true
+  const result = await listing(reviews, links, input, "terminado", optionalString(input.period), mine ? session.user.id : null)
+  return { ...result, periods: await reviews.pastPeriods() }
 }
 
 export async function libraryReviews(request: Request, deps: LibraryReviewDeps = defaultLibraryReviewDeps()): Promise<Response> {
   const authorized = await authorizeListing(request, deps)
   if (authorized instanceof Response) return authorized
-  return apiJson(await listing(request, deps, authorized.input, "actual", null, null))
+  return apiJson(await reviewsListing(deps.reviews, listingLinks(request), authorized.input))
 }
 
 export async function libraryHistory(request: Request, deps: LibraryReviewDeps = defaultLibraryReviewDeps()): Promise<Response> {
   const authorized = await authorizeListing(request, deps)
   if (authorized instanceof Response) return authorized
-  const { session, input } = authorized
-  const mine = input.mine === "1" || input.mine === 1 || input.mine === true
-  const result = await listing(request, deps, input, "terminado", optionalString(input.period), mine ? session.user.id : null)
-  return apiJson({ ...result, periods: await deps.reviews.pastPeriods() })
+  return apiJson(await historyListing(deps.reviews, listingLinks(request), authorized.session, authorized.input))
 }

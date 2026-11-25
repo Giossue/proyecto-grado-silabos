@@ -2,7 +2,7 @@ import { MODELS } from "../http/models"
 import { randomUUID } from "node:crypto"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
 import type { BridgeDeps, AppSession } from "../auth/types"
-import { requestInput } from "../http/input"
+import { requestInput, type PhpArray } from "../http/input"
 import { apiJson, validationError } from "../http/responses"
 import { officialFormatSchema } from "@silabos/shared/schemas/template"
 import { validateSchema } from "../http/schemaValidation"
@@ -54,7 +54,7 @@ export function defaultProvisionDeps(provision: ProvisionStore): ProvisionDeps {
   return { bridge: defaultBridgeDeps(), store: createTemplateStore(), provision, newTemplateId: uuid7, newBlockId: randomUUID, newFieldId: uuid7 }
 }
 
-async function buildStructure(tx: ProvisionTx, deps: ProvisionDeps, templateId: string, structure: DraftSection[], definition: TemplateDefinition): Promise<void> {
+async function buildStructure(tx: ProvisionTx, deps: Pick<ProvisionDeps, "newBlockId" | "newFieldId">, templateId: string, structure: DraftSection[], definition: TemplateDefinition): Promise<void> {
   const sections: DocumentSection[] = []
   const fields: Omit<StoredField, "id">[] = []
   structure.forEach((section, sectionIndex) => {
@@ -81,7 +81,9 @@ async function lockedTemplate(tx: ProvisionTx, templateId: string): Promise<Syll
   return template
 }
 
-async function guarded(original: Request, deps: ProvisionDeps, work: () => Promise<Response>): Promise<Response> {
+export type ProvisionWriteDeps = Omit<ProvisionDeps, "store">
+
+async function guarded(original: Request, deps: ProvisionWriteDeps, work: () => Promise<Response>): Promise<Response> {
   return settle(original, deps, async () => {
     try {
       return await work()
@@ -92,7 +94,7 @@ async function guarded(original: Request, deps: ProvisionDeps, work: () => Promi
   })
 }
 
-async function processLock(deps: ProvisionDeps): Promise<Response | null> {
+async function processLock(deps: ProvisionWriteDeps): Promise<Response | null> {
   return (await deps.provision.templateLocked()) ? validationError({ process: [PROCESS_LOCK_REASON] }) : null
 }
 
@@ -102,6 +104,10 @@ export async function createTemplate(request: Request, deps: ProvisionDeps): Pro
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
   if (!managesTemplates(session)) return apiJson({ message: FORBIDDEN }, 403)
+  return createTemplateOf(original, input, deps)
+}
+
+export async function createTemplateOf(original: Request, input: PhpArray, deps: ProvisionWriteDeps): Promise<Response> {
   const { errors } = await validateSchema(officialFormatSchema, input)
   if (errors !== null) return validationError(errors)
   const isOfficial = requestBoolean(input.official)
@@ -131,11 +137,15 @@ export async function formatTemplate(request: Request, templateId: string, deps:
   const original = request.clone()
   const bound = await managed(request, templateId, deps)
   if (bound instanceof Response) return bound
+  return formatTemplateOf(original, bound.template, deps)
+}
+
+export async function formatTemplateOf(original: Request, bound: SyllabusTemplate, deps: ProvisionWriteDeps): Promise<Response> {
   const locked = await processLock(deps)
   if (locked !== null) return locked
   return guarded(original, deps, async () => {
     await deps.provision.transaction(async (tx) => {
-      const template = await lockedTemplate(tx, bound.template.id)
+      const template = await lockedTemplate(tx, bound.id)
       await retireStructure(tx, template.id)
       await buildStructure(tx, deps, template.id, officialSections(), template.definition ?? officialDefinition())
       await tx.saveDefinition(template.id, officialDefinition())
@@ -148,11 +158,15 @@ export async function clearTemplate(request: Request, templateId: string, deps: 
   const original = request.clone()
   const bound = await managed(request, templateId, deps)
   if (bound instanceof Response) return bound
+  return clearTemplateOf(original, bound.template, deps)
+}
+
+export async function clearTemplateOf(original: Request, bound: SyllabusTemplate, deps: ProvisionWriteDeps): Promise<Response> {
   const locked = await processLock(deps)
   if (locked !== null) return locked
   return guarded(original, deps, async () => {
     await deps.provision.transaction(async (tx) => {
-      const template = await lockedTemplate(tx, bound.template.id)
+      const template = await lockedTemplate(tx, bound.id)
       await retireStructure(tx, template.id)
     })
     return apiJson({ message: "Plantilla vaciada." })
@@ -161,10 +175,15 @@ export async function clearTemplate(request: Request, templateId: string, deps: 
 
 export async function importTemplateJson(request: Request, templateId: string, deps: ProvisionDeps): Promise<Response> {
   const original = request.clone()
-  const input = toRuntime(await requestInput(request.clone())) as PhpRecord
+  const input = await requestInput(request.clone())
   const bound = await managed(request, templateId, deps)
   if (bound instanceof Response) return bound
-  const current = bound.template.definition
+  return importTemplateJsonOf(original, input, bound.template, deps)
+}
+
+export async function importTemplateJsonOf(original: Request, raw: PhpArray, bound: SyllabusTemplate, deps: ProvisionWriteDeps): Promise<Response> {
+  const input = toRuntime(raw) as PhpRecord
+  const current = bound.definition
   return guarded(original, deps, async () => {
     const draft = new DraftRequest(prepareDraft(input), current)
     const errors = await draft.errors()
@@ -174,7 +193,7 @@ export async function importTemplateJson(request: Request, templateId: string, d
     const sections = validatedSections(draft.input)
     const definition = draft.definition()
     await deps.provision.transaction(async (tx) => {
-      const template = await lockedTemplate(tx, bound.template.id)
+      const template = await lockedTemplate(tx, bound.id)
       const previous = await tx.coordinationFields(template.id)
       await retireStructure(tx, template.id)
       await tx.saveDefinition(template.id, definition)

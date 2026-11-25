@@ -8,7 +8,7 @@ import { isUuid } from "../academic/structure"
 import { FORBIDDEN, managesTemplates } from "../configuration/templateReads"
 import { phpString, phpTrim, record, type PhpRecord } from "../configuration/phpValues"
 import { toRuntime } from "../configuration/templateDraft"
-import { requestInput } from "../http/input"
+import { requestInput, type PhpArray } from "../http/input"
 import { aborted, jsonError, apiJson, validationError } from "../http/responses"
 import { uuid7 } from "../http/uuid7"
 import { OPEN_STATES, type AssistantStore, type AssistantTx, type StoredMessage, type StoredProposal } from "./assistantStore"
@@ -98,6 +98,10 @@ export async function showAssistant(request: Request, deps: AssistantRouteDeps):
   const session = await admin(request, deps)
   if (session instanceof Response) return session
   if (!managesTemplates(session)) return apiJson({ message: FORBIDDEN }, 403)
+  return showAssistantOf(session, deps)
+}
+
+export async function showAssistantOf(session: AppSession, deps: AssistantRouteDeps): Promise<Response> {
   const locked = await deps.store.openProcess()
   const template = await deps.store.template()
   if (template === null) return fromController(modelNotFoundResponse(MODELS.template))
@@ -124,10 +128,15 @@ export async function showAssistant(request: Request, deps: AssistantRouteDeps):
 
 export async function storeAssistantMessage(request: Request, deps: AssistantRouteDeps): Promise<Response> {
   const original = request.clone()
-  const input = toRuntime(await requestInput(request)) as PhpRecord
+  const raw = await requestInput(request)
   const session = await admin(original.clone(), deps)
   if (session instanceof Response) return session
   if (!managesTemplates(session)) return apiJson({ message: FORBIDDEN }, 403)
+  return storeAssistantMessageOf(raw, session, deps)
+}
+
+export async function storeAssistantMessageOf(raw: PhpArray, session: AppSession, deps: AssistantRouteDeps): Promise<Response> {
+  const input = toRuntime(raw) as PhpRecord
   const template = await deps.store.template()
   if (template === null) return fromController(modelNotFoundResponse(MODELS.template))
   const config = deps.config()
@@ -176,11 +185,23 @@ export async function clearAssistant(request: Request, deps: AssistantRouteDeps)
   const session = await admin(request, deps)
   if (session instanceof Response) return session
   if (!managesTemplates(session)) return apiJson({ message: FORBIDDEN }, 403)
+  return clearAssistantOf(session, deps)
+}
+
+export async function clearAssistantOf(session: AppSession, deps: AssistantRouteDeps): Promise<Response> {
   const template = await deps.store.template()
   if (template === null) return fromController(modelNotFoundResponse(MODELS.template))
   if (await deps.store.conversationBusy(template.id, session.user.id)) return validationError({ chat: [BUSY] })
   await deps.store.hideConversation(template.id, session.user.id, deps.bridge.now())
   return apiJson({ message: "Nuevo chat iniciado." })
+}
+
+export function findProposal(id: string, store: AssistantStore): Promise<StoredProposal | null> {
+  return isUuid(id) ? store.proposal(id) : Promise.resolve(null)
+}
+
+export function proposalNotFound(id: string): Response {
+  return jsonError(404, `No query results for model [${PROPOSAL_MODEL}] ${id}`)
 }
 
 async function boundProposal(request: Request, id: string, deps: AssistantRouteDeps): Promise<{ session: AppSession; proposal: StoredProposal } | Response> {
@@ -191,8 +212,8 @@ async function boundProposal(request: Request, id: string, deps: AssistantRouteD
       verified: true,
       activeRole: "required",
       afterAuthentication: async () => {
-        proposal = isUuid(id) ? await deps.store.proposal(id) : null
-        return proposal === null ? jsonError(404, `No query results for model [${PROPOSAL_MODEL}] ${id}`) : null
+        proposal = await findProposal(id, deps.store)
+        return proposal === null ? proposalNotFound(id) : null
       },
     },
     deps.bridge,
@@ -205,7 +226,10 @@ async function boundProposal(request: Request, id: string, deps: AssistantRouteD
 export async function showProposal(request: Request, id: string, deps: AssistantRouteDeps): Promise<Response> {
   const bound = await boundProposal(request, id, deps)
   if (bound instanceof Response) return bound
-  const { session, proposal } = bound
+  return showProposalOf(bound.session, bound.proposal)
+}
+
+export function showProposalOf(session: AppSession, proposal: StoredProposal): Response {
   if (proposal.requestedBy !== session.user.id) return aborted(404)
   const structure = proposal.structure
   const blockChanges = structure.block_changes
@@ -223,7 +247,10 @@ export async function showProposal(request: Request, id: string, deps: Assistant
 async function decide(request: Request, id: string, deps: AssistantRouteDeps, state: string, reply: string): Promise<Response> {
   const bound = await boundProposal(request, id, deps)
   if (bound instanceof Response) return bound
-  const { session, proposal } = bound
+  return decideOf(bound.session, bound.proposal, deps, state, reply)
+}
+
+function decideOf(session: AppSession, proposal: StoredProposal, deps: AssistantRouteDeps, state: string, reply: string): Promise<Response> {
   return settled(async () => {
     await deps.store.transaction(async (tx) => {
       const locked = await tx.lockProposal(proposal.id)
@@ -243,4 +270,12 @@ export function applyProposal(request: Request, id: string, deps: AssistantRoute
 
 export function discardProposal(request: Request, id: string, deps: AssistantRouteDeps): Promise<Response> {
   return decide(request, id, deps, DISCARDED, "Propuesta descartada.")
+}
+
+export function applyProposalOf(session: AppSession, proposal: StoredProposal, deps: AssistantRouteDeps): Promise<Response> {
+  return decideOf(session, proposal, deps, APPLIED, "Propuesta aplicada en el editor.")
+}
+
+export function discardProposalOf(session: AppSession, proposal: StoredProposal, deps: AssistantRouteDeps): Promise<Response> {
+  return decideOf(session, proposal, deps, DISCARDED, "Propuesta descartada.")
 }

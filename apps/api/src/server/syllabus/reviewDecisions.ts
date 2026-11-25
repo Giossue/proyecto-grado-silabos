@@ -1,7 +1,7 @@
 import { HttpFailure, Missing, reportedServerError } from "../http/failures"
 
 export { Missing }
-import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
+import { defaultBridgeDeps } from "../auth/requireSession"
 import type { BridgeDeps, AppSession } from "../auth/types"
 import { isUuid } from "../academic/structure"
 import { requestInput, type PhpArray } from "../http/input"
@@ -16,6 +16,7 @@ import type { DetailSyllabus } from "./syllabusDetail"
 import { createReviewDecisionDeps } from "./reviewDecisionStore"
 import { modelNotFound } from "../http/router"
 import { MODELS } from "../http/models"
+import { requireBound, type Binder } from "./boundSession"
 
 export type DecisionSyllabus = { id: string; state: string; version: number; convocationId: string; parallelId: string }
 export type DecisionRevision = { id: string; number: number; correctionRequested: boolean }
@@ -54,29 +55,20 @@ export class Rejected extends Error {
 const COORDINATION = "coordinacion"
 const UNAVAILABLE = "La revisión dejó de estar disponible para solicitar corrección."
 
-async function bindRevision(
-  request: Request,
-  revisionId: string,
-  deps: ReviewDecisionDeps,
-): Promise<{ session: AppSession; revision: ReviewRevision; syllabus: DetailSyllabus } | Response> {
-  let bound: { revision: ReviewRevision; syllabus: DetailSyllabus } | null = null
-  const session = await requireSession(
-    request,
-    {
-      verified: true,
-      activeRole: "required",
-      afterAuthentication: async (user) => {
-        const revision = isUuid(revisionId) ? await deps.store.revision(revisionId) : null
-        const syllabus = revision === null ? null : await deps.store.syllabus(revision.syllabusId, user.id)
-        bound = revision === null || syllabus === null ? null : { revision, syllabus }
-        return bound === null ? modelNotFound(MODELS.revision, revisionId) : null
-      },
-    },
-    deps.bridge,
-  )
-  if (session instanceof Response) return session
-  if (bound === null) return modelNotFound(MODELS.revision, revisionId)
-  return { session, ...(bound as { revision: ReviewRevision; syllabus: DetailSyllabus }) }
+export function decisionRevisionBinder(revisionId: string, deps: Pick<ReviewDecisionDeps, "store">): Binder<{ revision: ReviewRevision; syllabus: DetailSyllabus }> {
+  return async (user) => {
+    const revision = isUuid(revisionId) ? await deps.store.revision(revisionId) : null
+    const syllabus = revision === null ? null : await deps.store.syllabus(revision.syllabusId, user.id)
+    return revision === null || syllabus === null ? modelNotFound(MODELS.revision, revisionId) : { revision, syllabus }
+  }
+}
+
+export type DecisionBound = { session: AppSession; revision: ReviewRevision; syllabus: DetailSyllabus }
+
+async function bindRevision(request: Request, revisionId: string, deps: ReviewDecisionDeps): Promise<DecisionBound | Response> {
+  const bound = await requireBound(request, decisionRevisionBinder(revisionId, deps), deps.bridge)
+  if (bound instanceof Response) return bound
+  return { session: bound.session, ...bound.bound }
 }
 
 export function blockedDecision(block: string): Response {
@@ -99,10 +91,13 @@ function rejectRevision(message: string): never {
 }
 
 export async function requestCorrection(request: Request, revisionId: string, deps: ReviewDecisionDeps = defaultReviewDecisionDeps()): Promise<Response> {
-  const original = request.clone()
   const bound = await bindRevision(request, revisionId, deps)
   if (bound instanceof Response) return bound
-  const { session, revision, syllabus } = bound
+  return requestCorrectionFor(request, bound, deps)
+}
+
+export async function requestCorrectionFor(request: Request, { session, revision, syllabus }: DecisionBound, deps: ReviewDecisionDeps): Promise<Response> {
+  const original = request.clone()
   if (!hasRole(session, ROLE_COORDINATOR) || !mayReview(session, syllabus)) return forbidden()
   const block = decisionBlock(syllabus)
   if (block !== null) return blockedDecision(block)
@@ -138,30 +133,21 @@ export async function requestCorrection(request: Request, revisionId: string, de
 
 const PHP_TRIM = /^[ \t\n\r\0\x0B]+|[ \t\n\r\0\x0B]+$/g
 
-async function bindSyllabus(request: Request, syllabusId: string, deps: ReviewDecisionDeps): Promise<{ session: AppSession; syllabus: DetailSyllabus } | Response> {
-  let syllabus: DetailSyllabus | null = null
-  const session = await requireSession(
-    request,
-    {
-      verified: true,
-      activeRole: "required",
-      afterAuthentication: async (user) => {
-        syllabus = isUuid(syllabusId) ? await deps.store.syllabus(syllabusId, user.id) : null
-        return syllabus === null ? modelNotFound(MODELS.syllabus, syllabusId) : null
-      },
-    },
-    deps.bridge,
-  )
-  if (session instanceof Response) return session
-  if (syllabus === null) return modelNotFound(MODELS.syllabus, syllabusId)
-  return { session, syllabus }
+export function decisionSyllabusBinder(syllabusId: string, deps: Pick<ReviewDecisionDeps, "store">): Binder<DetailSyllabus> {
+  return async (user) => {
+    const syllabus = isUuid(syllabusId) ? await deps.store.syllabus(syllabusId, user.id) : null
+    return syllabus === null ? modelNotFound(MODELS.syllabus, syllabusId) : syllabus
+  }
 }
 
 export async function resetSyllabus(request: Request, syllabusId: string, deps: ReviewDecisionDeps = defaultReviewDecisionDeps()): Promise<Response> {
-  const original = request.clone()
-  const bound = await bindSyllabus(request, syllabusId, deps)
+  const bound = await requireBound(request, decisionSyllabusBinder(syllabusId, deps), deps.bridge)
   if (bound instanceof Response) return bound
-  const { session, syllabus } = bound
+  return resetSyllabusFor(request, bound.session, bound.bound, deps)
+}
+
+export async function resetSyllabusFor(request: Request, session: AppSession, syllabus: DetailSyllabus, deps: ReviewDecisionDeps): Promise<Response> {
+  const original = request.clone()
   if (syllabus.state !== "aprobado" || !hasRole(session, ROLE_COORDINATOR) || !mayReview(session, syllabus)) return forbidden()
   const block = decisionBlock(syllabus)
   if (block !== null) return blockedDecision(block)

@@ -53,19 +53,25 @@ const LIBRARY = "biblioteca"
 const OTHER = OTHER_REASON
 export { LIBRARY_COMMENT_REASONS }
 
-type Bound = { session: AppSession; revision: ReviewRevision; syllabus: DetailSyllabus }
+export type BoundRevision = { revision: ReviewRevision; syllabus: DetailSyllabus }
+
+type Bound = BoundRevision & { session: AppSession }
+
+export async function loadBoundRevision(store: Pick<ReviewDetailStore, "revision" | "syllabus">, revisionId: string, userId: string): Promise<BoundRevision | null> {
+  const revision = isUuid(revisionId) ? await store.revision(revisionId) : null
+  const syllabus = revision === null ? null : await store.syllabus(revision.syllabusId, userId)
+  return revision === null || syllabus === null ? null : { revision, syllabus }
+}
 
 async function bindRevision(request: Request, revisionId: string, deps: LibraryDecisionDeps): Promise<Bound | Response> {
-  let bound: { revision: ReviewRevision; syllabus: DetailSyllabus } | null = null
+  let bound: BoundRevision | null = null
   const session = await requireSession(
     request,
     {
       verified: true,
       activeRole: "required",
       afterAuthentication: async (user) => {
-        const revision = isUuid(revisionId) ? await deps.store.revision(revisionId) : null
-        const syllabus = revision === null ? null : await deps.store.syllabus(revision.syllabusId, user.id)
-        bound = revision === null || syllabus === null ? null : { revision, syllabus }
+        bound = await loadBoundRevision(deps.store, revisionId, user.id)
         return bound === null ? modelNotFound(MODELS.revision, revisionId) : null
       },
     },
@@ -73,7 +79,7 @@ async function bindRevision(request: Request, revisionId: string, deps: LibraryD
   )
   if (session instanceof Response) return session
   if (bound === null) return modelNotFound(MODELS.revision, revisionId)
-  return { session, ...(bound as { revision: ReviewRevision; syllabus: DetailSyllabus }) }
+  return { session, ...(bound as BoundRevision) }
 }
 
 function rejectRevision(message: string): never {
@@ -110,6 +116,10 @@ export async function verifyLibraryReview(request: Request, revisionId: string, 
   const input: PhpArray = await requestInput(request)
   const { errors } = await validateSchema(signatureSchema, input)
   if (errors !== null) return validationError(errors)
+  return verifyBoundRevision(original, session, { revision, syllabus }, input, deps)
+}
+
+export async function verifyBoundRevision(original: Request, session: AppSession, { revision, syllabus }: BoundRevision, input: PhpArray, deps: LibraryDecisionDeps): Promise<Response> {
   return signedSettle(original, deps, async () => {
     const signature = decisionSignatureFrom(input.signature)
     if (!mayReview(session, syllabus) || decisionBlock(syllabus) !== null) return aborted(403)
@@ -141,17 +151,26 @@ export async function verifyLibraryReview(request: Request, revisionId: string, 
   })
 }
 
+export function commentRefusal(session: AppSession, syllabus: DetailSyllabus): Response | null {
+  if (!hasRole(session, ROLE_LIBRARIAN) || !mayReview(session, syllabus)) return forbidden()
+  const block = decisionBlock(syllabus)
+  return block === null ? null : blockedDecision(block)
+}
+
 export async function commentLibraryReview(request: Request, revisionId: string, deps: LibraryDecisionDeps = defaultLibraryDecisionDeps()): Promise<Response> {
   const original = request.clone()
   const bound = await bindRevision(original, revisionId, deps)
   if (bound instanceof Response) return bound
   const { session, revision, syllabus } = bound
-  if (!hasRole(session, ROLE_LIBRARIAN) || !mayReview(session, syllabus)) return forbidden()
-  const block = decisionBlock(syllabus)
-  if (block !== null) return blockedDecision(block)
+  const refusal = commentRefusal(session, syllabus)
+  if (refusal !== null) return refusal
   const input: PhpArray = await requestInput(request)
   const { errors } = await validateSchema(libraryCommentSchema, input)
   if (errors !== null) return validationError(errors)
+  return commentBoundRevision(original, session, { revision, syllabus }, input, deps)
+}
+
+export async function commentBoundRevision(original: Request, session: AppSession, { revision }: BoundRevision, input: PhpArray, deps: LibraryDecisionDeps): Promise<Response> {
   const justification = commentText(list(input.reasons) as string[], typeof input.other === "string" ? input.other : null)
   return settle(original, deps, async () => {
     await deps.transaction(async (tx) => {

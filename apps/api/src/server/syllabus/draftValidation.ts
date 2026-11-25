@@ -1,7 +1,7 @@
 import { HttpFailure, Missing } from "../http/failures"
 import { ruleFailures } from "@silabos/shared/lib/blocks/rules"
 import type { BlockRule } from "@silabos/shared/lib/blocks/types"
-import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
+import { defaultBridgeDeps } from "../auth/requireSession"
 import type { BridgeDeps, AppSession } from "../auth/types"
 import { isUuid } from "../academic/structure"
 import { aborted, apiJson } from "../http/responses"
@@ -37,6 +37,7 @@ import { mayEdit } from "./policy"
 import { createDraftValidationStore } from "./draftValidationQueries"
 import { modelNotFound } from "../http/router"
 import { MODELS } from "../http/models"
+import { requireBound, type Binder } from "./boundSession"
 
 export type ValidationField = { id: string; key: string; responsible: string; content: unknown; displayName: string }
 export type ValidationTeacher = { id: string; name: string; formation: string | null }
@@ -186,22 +187,20 @@ async function runValidation(tx: DraftValidationTx, session: AppSession, syllabu
   return { version: locked.version, issues }
 }
 
+export function draftValidationBinder(syllabusId: string, deps: Pick<DraftValidationDeps, "store">): Binder<DraftSyllabus> {
+  return async (user) => {
+    const syllabus = isUuid(syllabusId) ? await deps.store.syllabus(syllabusId, user.id) : null
+    return syllabus === null ? modelNotFound(MODELS.syllabus, syllabusId) : syllabus
+  }
+}
+
 export async function validateDraft(request: Request, syllabusId: string, deps: DraftValidationDeps = defaultDraftValidationDeps()): Promise<Response> {
-  let syllabus: DraftSyllabus | null = null
-  const session = await requireSession(
-    request,
-    {
-      verified: true,
-      activeRole: "required",
-      afterAuthentication: async (user) => {
-        syllabus = isUuid(syllabusId) ? await deps.store.syllabus(syllabusId, user.id) : null
-        return syllabus === null ? modelNotFound(MODELS.syllabus, syllabusId) : null
-      },
-    },
-    deps.bridge,
-  )
-  if (session instanceof Response) return session
-  if (syllabus === null) return modelNotFound(MODELS.syllabus, syllabusId)
+  const bound = await requireBound(request, draftValidationBinder(syllabusId, deps), deps.bridge)
+  if (bound instanceof Response) return bound
+  return validateDraftFor(bound.session, bound.bound, deps)
+}
+
+export async function validateDraftFor(session: AppSession, syllabus: DraftSyllabus, deps: DraftValidationDeps): Promise<Response> {
   if (!mayEdit(session, syllabus, deps.today())) return aborted(403)
   let result: Awaited<ReturnType<typeof runValidation>>
   try {

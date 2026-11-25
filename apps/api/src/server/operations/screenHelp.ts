@@ -1,6 +1,6 @@
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
-import type { BridgeDeps } from "../auth/types"
-import { requestInput } from "../http/input"
+import type { AppSession, BridgeDeps } from "../auth/types"
+import { requestInput, type PhpArray } from "../http/input"
 import { apiJson, validationError } from "../http/responses"
 import { screenHelpSchema } from "@silabos/shared/schemas/operations"
 import { validateSchema } from "../http/schemaValidation"
@@ -37,7 +37,10 @@ export function helpUnderPrefix(prefix: string): ScreenHelp[] {
 export async function showScreenHelp(request: Request, deps: ScreenHelpDeps = defaultDeps()): Promise<Response> {
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
-  const input = await requestInput(request)
+  return screenHelpFor(await requestInput(request))
+}
+
+export async function screenHelpFor(input: PhpArray): Promise<Response> {
   const { errors } = await validateSchema(screenHelpSchema, input)
   if (errors !== null) return validationError(errors)
   return apiJson({ help: helpForScreen(String(input.screen)) })
@@ -46,6 +49,10 @@ export async function showScreenHelp(request: Request, deps: ScreenHelpDeps = de
 export async function availableScreenHelp(request: Request, deps: ScreenHelpDeps = defaultDeps()): Promise<Response> {
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
+  return availableScreenHelpFor(session)
+}
+
+export function availableScreenHelpFor(session: AppSession): Response {
   const prefix = ROLE_PREFIXES[session.activeRole?.role ?? ""] ?? null
   return apiJson({ help: prefix === null ? [] : helpUnderPrefix(prefix) })
 }

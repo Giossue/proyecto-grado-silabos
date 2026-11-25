@@ -1,5 +1,5 @@
 import { HttpFailure, Missing, reportedServerError } from "../http/failures"
-import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
+import { defaultBridgeDeps } from "../auth/requireSession"
 import type { BridgeDeps, AppSession } from "../auth/types"
 import { isUuid } from "../academic/structure"
 import { requestInput, type PhpArray } from "../http/input"
@@ -21,6 +21,7 @@ import { syllabusPayload, type DetailSyllabus, type SyllabusDetailStore } from "
 import { createDraftStartStore } from "./draftStartStore"
 import { modelNotFound } from "../http/router"
 import { MODELS } from "../http/models"
+import { requireBound, type Binder } from "./boundSession"
 
 export type LockedDraft = { id: string; state: string; version: number; subjectId: string }
 export type TeacherField = { id: string; responsible: string; content: unknown }
@@ -68,29 +69,21 @@ class Rejected extends Error {
   }
 }
 
-type Bound = { session: AppSession; syllabus: DetailSyllabus; source: DetailSyllabus | null }
+export type DraftStartBound = { session: AppSession; syllabus: DetailSyllabus; source: DetailSyllabus | null }
 
-async function bound(request: Request, syllabusId: string, sourceId: string | null, deps: DraftStartDeps): Promise<Bound | Response> {
-  let syllabus: DetailSyllabus | null = null
-  let source: DetailSyllabus | null = null
-  const session = await requireSession(
-    request,
-    {
-      verified: true,
-      activeRole: "required",
-      afterAuthentication: async (user) => {
-        syllabus = isUuid(syllabusId) ? await deps.store.syllabus(syllabusId, user.id) : null
-        if (syllabus === null) return modelNotFound(MODELS.syllabus, syllabusId)
-        source = sourceId === null || !isUuid(sourceId) ? null : await deps.store.syllabus(sourceId, user.id)
-        return sourceId !== null && source === null ? modelNotFound(MODELS.syllabus, sourceId) : null
-      },
-    },
-    deps.bridge,
-  )
-  if (session instanceof Response) return session
-  if (syllabus === null) return modelNotFound(MODELS.syllabus, syllabusId)
-  if (sourceId !== null && source === null) return modelNotFound(MODELS.syllabus, sourceId)
-  return { session, syllabus, source }
+export function draftStartBinder(syllabusId: string, sourceId: string | null, deps: Pick<DraftStartDeps, "store">): Binder<{ syllabus: DetailSyllabus; source: DetailSyllabus | null }> {
+  return async (user) => {
+    const syllabus = isUuid(syllabusId) ? await deps.store.syllabus(syllabusId, user.id) : null
+    if (syllabus === null) return modelNotFound(MODELS.syllabus, syllabusId)
+    const source = sourceId === null || !isUuid(sourceId) ? null : await deps.store.syllabus(sourceId, user.id)
+    return sourceId !== null && source === null ? modelNotFound(MODELS.syllabus, sourceId) : { syllabus, source }
+  }
+}
+
+async function bound(request: Request, syllabusId: string, sourceId: string | null, deps: DraftStartDeps): Promise<DraftStartBound | Response> {
+  const auth = await requireBound(request, draftStartBinder(syllabusId, sourceId, deps), deps.bridge)
+  if (auth instanceof Response) return auth
+  return { session: auth.session, ...auth.bound }
 }
 
 async function payloadWithin(tx: DraftStartTx, request: Request, session: AppSession, syllabusId: string, deps: DraftStartDeps): Promise<PhpRecord> {
@@ -128,10 +121,13 @@ async function inheritPreviousPeriod(tx: DraftStartTx, template: SyllabusTemplat
 }
 
 export async function startDraft(request: Request, syllabusId: string, deps: DraftStartDeps = defaultDraftStartDeps()): Promise<Response> {
-  const original = request.clone()
   const auth = await bound(request, syllabusId, null, deps)
   if (auth instanceof Response) return auth
-  const { session, syllabus } = auth
+  return startDraftFor(request, auth, deps)
+}
+
+export async function startDraftFor(request: Request, { session, syllabus }: DraftStartBound, deps: DraftStartDeps): Promise<Response> {
+  const original = request.clone()
   if (!mayStart(session, syllabus, deps.today())) return aborted(403)
   return run(original, async () => {
       const payload = await deps.transaction(async (tx) => {
@@ -157,9 +153,13 @@ function conflict(request: Request, version: number): Response {
 }
 
 export async function copySyllabusContent(request: Request, syllabusId: string, sourceId: string, deps: DraftStartDeps = defaultDraftStartDeps()): Promise<Response> {
-  const original = request.clone()
   const auth = await bound(request, syllabusId, sourceId, deps)
   if (auth instanceof Response) return auth
+  return copySyllabusContentFor(request, auth, deps)
+}
+
+export async function copySyllabusContentFor(request: Request, auth: DraftStartBound, deps: DraftStartDeps): Promise<Response> {
+  const original = request.clone()
   const { session, syllabus } = auth
   const source = auth.source as DetailSyllabus
   const today = deps.today()

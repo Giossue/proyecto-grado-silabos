@@ -64,12 +64,28 @@ class Rejected extends Error {
 
 type Authorized = { session: AppSession; template: SyllabusTemplate; definition: TemplateDefinition; field: FieldRecord | null; original: Request }
 
+export type StructureTarget = { template: SyllabusTemplate; field: FieldRecord | null }
+
+export type StructureWriteDeps = Pick<StructureDeps, "structure" | "newId" | "newFieldId">
+
+export async function findField(fieldId: string, structure: StructureStore): Promise<FieldRecord | null> {
+  return isUuid(fieldId) ? structure.field(fieldId) : null
+}
+
+function targetOf(auth: Authorized): StructureTarget {
+  return { template: auth.template, field: auth.field }
+}
+
+function runtimeInput(input: PhpArray): PhpArray {
+  return toRuntime(input) as PhpArray
+}
+
 async function authorized(request: Request, templateId: string, deps: StructureDeps, fieldId?: string): Promise<Authorized | Response> {
   const original = request.clone()
   let field: FieldRecord | null = null
   const bound = await boundTemplate(original, templateId, deps, async () => {
     if (fieldId === undefined) return null
-    field = isUuid(fieldId) ? await deps.structure.field(fieldId) : null
+    field = await findField(fieldId, deps.structure)
     return field === null ? modelNotFound(MODELS.field, fieldId) : null
   })
   if (bound instanceof Response) return bound
@@ -77,8 +93,8 @@ async function authorized(request: Request, templateId: string, deps: StructureD
   return { ...bound, definition: bound.template.definition, field, original }
 }
 
-async function jsonInput(request: Request): Promise<PhpArray | Response> {
-  return toRuntime(await requestInput(request)) as PhpArray
+async function rawInput(request: Request): Promise<PhpArray> {
+  return requestInput(request)
 }
 
 export function documentOf(template: SyllabusTemplate): DocumentSection[] {
@@ -118,7 +134,7 @@ async function locked(tx: StructureTx, templateId: string): Promise<SyllabusTemp
   return template
 }
 
-async function write(original: Request, deps: StructureDeps, work: (tx: StructureTx) => Promise<Response>): Promise<Response> {
+async function write(deps: StructureWriteDeps, work: (tx: StructureTx) => Promise<Response>): Promise<Response> {
   if (await deps.structure.templateLocked()) return validationError({ process: ["Proceso activo"] })
   try {
     return await deps.structure.transaction(work)
@@ -142,12 +158,15 @@ function requestedPosition(input: PhpArray, count: number): number {
 export async function storeSection(request: Request, templateId: string, deps: StructureDeps = defaultStructureDeps()): Promise<Response> {
   const auth = await authorized(request, templateId, deps)
   if (auth instanceof Response) return auth
-  const input = await jsonInput(request)
-  if (input instanceof Response) return input
+  return storeSectionOf(await rawInput(request), targetOf(auth), deps)
+}
+
+export async function storeSectionOf(raw: PhpArray, auth: StructureTarget, deps: StructureWriteDeps): Promise<Response> {
+  const input = runtimeInput(raw)
   const { errors } = await validateSchema(sectionSchema(sectionKeys(auth.template)), input)
   if (errors !== null) return validationError(errors)
   let sectionId = ""
-  return write(auth.original, deps, async (tx) => {
+  return write(deps, async (tx) => {
     const template = await locked(tx, auth.template.id)
     const document = documentOf(template)
     const count = document.length
@@ -175,13 +194,16 @@ export async function storeSection(request: Request, templateId: string, deps: S
 export async function updateSection(request: Request, templateId: string, sectionId: string, deps: StructureDeps = defaultStructureDeps()): Promise<Response> {
   const auth = await authorized(request, templateId, deps)
   if (auth instanceof Response) return auth
-  const input = await jsonInput(request)
-  if (input instanceof Response) return input
+  return updateSectionOf(await rawInput(request), targetOf(auth), deps, sectionId)
+}
+
+export async function updateSectionOf(raw: PhpArray, auth: StructureTarget, deps: StructureWriteDeps, sectionId: string): Promise<Response> {
+  const input = runtimeInput(raw)
   const { errors } = await validateSchema(sectionSchema(null), input)
   if (errors !== null) return validationError(errors)
   const section = auth.template.sections.find((candidate) => candidate.id === sectionId)
   if (!section) return fromController(modelNotFound(MODELS.template, sectionId))
-  return write(auth.original, deps, async (tx) => {
+  return write(deps, async (tx) => {
     const template = await locked(tx, auth.template.id)
     const document = documentOf(template)
     if (!document.some((entry) => entry.id === section.id)) throw new Missing(MODELS.template, section.id)
@@ -197,12 +219,15 @@ export async function updateSection(request: Request, templateId: string, sectio
 export async function reorderSections(request: Request, templateId: string, deps: StructureDeps = defaultStructureDeps()): Promise<Response> {
   const auth = await authorized(request, templateId, deps)
   if (auth instanceof Response) return auth
-  const input = await jsonInput(request)
-  if (input instanceof Response) return input
+  return reorderSectionsOf(await rawInput(request), targetOf(auth), deps)
+}
+
+export async function reorderSectionsOf(raw: PhpArray, auth: StructureTarget, deps: StructureWriteDeps): Promise<Response> {
+  const input = runtimeInput(raw)
   const { errors } = await validateSchema(sectionOrderSchema(auth.template.sections.map((section) => section.id)), input)
   if (errors !== null) return validationError(errors)
   const ids = Object.values(input.section_ids as PhpArray).filter((id): id is string => typeof id === "string")
-  return write(auth.original, deps, async (tx) => {
+  return write(deps, async (tx) => {
     const template = await locked(tx, auth.template.id)
     const document = documentOf(template)
     if (!sameIds(document.map((section) => section.id), ids)) throw new Rejected(validationError({ sections: [INVALID_ORDER] }))
@@ -214,9 +239,13 @@ export async function reorderSections(request: Request, templateId: string, deps
 export async function destroySection(request: Request, templateId: string, sectionId: string, deps: StructureDeps = defaultStructureDeps()): Promise<Response> {
   const auth = await authorized(request, templateId, deps)
   if (auth instanceof Response) return auth
+  return destroySectionOf(targetOf(auth), deps, sectionId)
+}
+
+export async function destroySectionOf(auth: StructureTarget, deps: StructureWriteDeps, sectionId: string): Promise<Response> {
   const section = auth.template.sections.find((candidate) => candidate.id === sectionId)
   if (!section) return fromController(modelNotFound(MODELS.template, sectionId))
-  return write(auth.original, deps, async (tx) => {
+  return write(deps, async (tx) => {
     const template = await locked(tx, auth.template.id)
     const document = documentOf(template)
     if (!document.some((entry) => entry.id === section.id)) throw new Missing(MODELS.template, section.id)
@@ -246,20 +275,23 @@ function fieldPayload(id: string, key: string, label: string, responsible: strin
 export async function storeField(request: Request, templateId: string, sectionId: string, deps: StructureDeps = defaultStructureDeps()): Promise<Response> {
   const auth = await authorized(request, templateId, deps)
   if (auth instanceof Response) return auth
-  const input = await jsonInput(request)
-  if (input instanceof Response) return input
+  return storeFieldOf(await rawInput(request), targetOf(auth), deps, sectionId)
+}
+
+export async function storeFieldOf(raw: PhpArray, auth: StructureTarget, deps: StructureWriteDeps, sectionId: string): Promise<Response> {
+  const input = runtimeInput(raw)
   const errors =
-    contentErrors(input.content, auth.definition, !isBlank(input.content)) ??
+    contentErrors(input.content, auth.template.definition, !isBlank(input.content)) ??
     (await validateSchema(templateFieldSchema({ creating: true, keyAvailable: async (value) => !(await deps.structure.liveKeyTaken(auth.template.id, phpString(value as PhpValue))) }), input)).errors
   if (errors !== null) return validationError(errors)
   if (!auth.template.sections.some((section) => section.id === sectionId)) return fromController(modelNotFound(MODELS.template, sectionId))
-  return write(auth.original, deps, async (tx) => {
+  return write(deps, async (tx) => {
     const template = await locked(tx, auth.template.id)
     const document = documentOf(template)
     const section = document.find((entry) => entry.id === sectionId)
     if (!section) throw new Missing(MODELS.template, sectionId)
     const responsible = phpString(input.quien_llena)
-    const content = contentForField(responsible, normalizeFieldDocument(input.content, template.definition ?? auth.definition))
+    const content = contentForField(responsible, normalizeFieldDocument(input.content, template.definition ?? auth.template.definition))
     const label = phpTrim(input.label === undefined || input.label === null ? "" : phpString(input.label))
     const count = section.blocks.length
     const blockId = deps.newId()
@@ -289,18 +321,21 @@ export async function storeField(request: Request, templateId: string, sectionId
 export async function updateField(request: Request, templateId: string, fieldId: string, deps: StructureDeps = defaultStructureDeps()): Promise<Response> {
   const auth = await authorized(request, templateId, deps, fieldId)
   if (auth instanceof Response) return auth
+  return updateFieldOf(await rawInput(request), targetOf(auth), deps)
+}
+
+export async function updateFieldOf(raw: PhpArray, auth: StructureTarget, deps: StructureWriteDeps): Promise<Response> {
   const field = auth.field as FieldRecord
-  const input = await jsonInput(request)
-  if (input instanceof Response) return input
-  const errors = contentErrors(input.content, auth.definition, input.content !== undefined) ?? (await validateSchema(templateFieldSchema({ creating: false }), input)).errors
+  const input = runtimeInput(raw)
+  const errors = contentErrors(input.content, auth.template.definition, input.content !== undefined) ?? (await validateSchema(templateFieldSchema({ creating: false }), input)).errors
   if (errors !== null) return validationError(errors)
   if (field.templateId !== auth.template.id) return fromController(aborted(404))
-  return write(auth.original, deps, async (tx) => {
+  return write(deps, async (tx) => {
     const template = await locked(tx, auth.template.id)
     const has = (key: string) => Object.prototype.hasOwnProperty.call(input, key)
     const label = has("label") ? phpTrim(phpString(input.label as PhpValue)) : (field.label ?? "")
     const responsible = input.quien_llena === undefined || input.quien_llena === null ? field.responsible : phpString(input.quien_llena)
-    const source = has("content") ? normalizeFieldDocument(input.content, template.definition ?? auth.definition) : field.content
+    const source = has("content") ? normalizeFieldDocument(input.content, template.definition ?? auth.template.definition) : field.content
     const content = contentForField(responsible, source as PhpRecord)
     const changes: FieldChanges = {}
     if (responsible !== field.responsible) changes.responsible = responsible
@@ -320,8 +355,11 @@ export async function updateField(request: Request, templateId: string, fieldId:
 export async function reorderFields(request: Request, templateId: string, sectionId: string, deps: StructureDeps = defaultStructureDeps()): Promise<Response> {
   const auth = await authorized(request, templateId, deps)
   if (auth instanceof Response) return auth
-  const input = await jsonInput(request)
-  if (input instanceof Response) return input
+  return reorderFieldsOf(await rawInput(request), targetOf(auth), deps, sectionId)
+}
+
+export async function reorderFieldsOf(raw: PhpArray, auth: StructureTarget, deps: StructureWriteDeps, sectionId: string): Promise<Response> {
+  const input = runtimeInput(raw)
   const { errors } = await validateSchema(fieldOrderSchema, input)
   if (errors !== null) return validationError(errors)
   if (!auth.template.sections.some((section) => section.id === sectionId)) return fromController(modelNotFound(MODELS.template, sectionId))
@@ -330,7 +368,7 @@ export async function reorderFields(request: Request, templateId: string, sectio
   if (blockIds.size !== ids.length) return validationError({ field_ids: [INVALID_ORDER] })
   if (ids.some((id) => !blockIds.has(id))) return fromController(serverError())
   const requested = ids.map((id) => blockIds.get(id) as string)
-  return write(auth.original, deps, async (tx) => {
+  return write(deps, async (tx) => {
     const template = await locked(tx, auth.template.id)
     const document = documentOf(template)
     const section = document.find((entry) => entry.id === sectionId)
@@ -347,10 +385,14 @@ export async function reorderFields(request: Request, templateId: string, sectio
 export async function destroyField(request: Request, templateId: string, fieldId: string, deps: StructureDeps = defaultStructureDeps()): Promise<Response> {
   const auth = await authorized(request, templateId, deps, fieldId)
   if (auth instanceof Response) return auth
+  return destroyFieldOf(targetOf(auth), deps)
+}
+
+export async function destroyFieldOf(auth: StructureTarget, deps: StructureWriteDeps): Promise<Response> {
   const field = auth.field as FieldRecord
   if (field.templateId !== auth.template.id) return fromController(aborted(404))
   if (!auth.template.sections.some((section) => section.blocks.some((block) => block.id === field.blockId))) return fromController(modelNotFound(MODELS.template, field.blockId))
-  return write(auth.original, deps, async (tx) => {
+  return write(deps, async (tx) => {
     const template = await locked(tx, auth.template.id)
     const document = documentOf(template)
     if (!document.some((section) => section.blocks.some((block) => block.id === field.blockId))) throw new Missing(MODELS.template, field.blockId)

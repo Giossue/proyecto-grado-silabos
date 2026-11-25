@@ -95,19 +95,26 @@ async function administrator(request: Request, deps: SystemSettingsWriteDeps): P
     deps.bridge,
   )
   if (session instanceof Response) return finish(session)
-  if (!session.user.active || session.activeRole?.role !== "administrador") return finish(fromController(forbidden()))
+  const denied = administratorDenial(session)
+  if (denied !== null) return finish(denied)
   return { session, finish }
+}
+
+export function administratorDenial(session: AppSession): Response | null {
+  return !session.user.active || session.activeRole?.role !== "administrador" ? fromController(forbidden()) : null
 }
 
 export async function updateSystemSettings(request: Request, section: string, deps: SystemSettingsWriteDeps = defaultSystemSettingsWriteDeps()): Promise<Response> {
   const authorized = await administrator(request, deps)
   if (authorized instanceof Response) return authorized
-  const { session, finish } = authorized
-  const input = await requestInput(request)
+  return authorized.finish(await saveSystemSettings(authorized.session, section, await requestInput(request), deps))
+}
+
+export async function saveSystemSettings(session: AppSession, section: string, input: PhpArray, deps: SystemSettingsWriteDeps): Promise<Response> {
   const matches = await passwordMatches(section, input, session.user, deps)
-  if (matches === null) return finish(fromController(serverError()))
+  if (matches === null) return fromController(serverError())
   const { errors } = await validateSchema(systemSettingsSchema(section, input, matches), input)
-  if (errors !== null) return finish(fromController(validationError(errors)))
+  if (errors !== null) return fromController(validationError(errors))
   const key = deps.bridge.config.key
   const rows = sectionValues(section, input)
   await deps.save(
@@ -115,7 +122,7 @@ export async function updateSystemSettings(request: Request, section: string, de
     session.user.id,
     deps.bridge.now(),
   )
-  return finish(apiJson(describeSettings(await deps.stored(), deps.environment(), key)))
+  return apiJson(describeSettings(await deps.stored(), deps.environment(), key))
 }
 
 async function aiConnection(settings: Record<string, unknown>, deps: SystemSettingsWriteDeps): Promise<{ ok: boolean; message: string }> {
@@ -156,9 +163,13 @@ async function libraryConnection(settings: Record<string, unknown>, deps: System
 export async function testSystemSettings(request: Request, section: string, deps: SystemSettingsWriteDeps = defaultSystemSettingsWriteDeps()): Promise<Response> {
   const authorized = await administrator(request, deps)
   if (authorized instanceof Response) return authorized
+  return authorized.finish(await systemSettingsConnection(section, deps))
+}
+
+export async function systemSettingsConnection(section: string, deps: SystemSettingsWriteDeps): Promise<Response> {
   const settings = effectiveSettings(await deps.stored(), deps.environment(), deps.bridge.config.key)
   const result = section === "ia" ? await aiConnection(settings, deps) : await libraryConnection(settings, deps)
-  return authorized.finish(apiJson(result))
+  return apiJson(result)
 }
 
 export function saveSettingsOn(executor: { execute(query: SQL): Promise<unknown> }): SystemSettingsWriteDeps["save"] {

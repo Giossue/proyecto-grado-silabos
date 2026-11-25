@@ -1,5 +1,5 @@
 import { HttpFailure } from "../http/failures"
-import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
+import { defaultBridgeDeps } from "../auth/requireSession"
 import type { BridgeDeps, AppSession } from "../auth/types"
 import { isUuid } from "../academic/structure"
 import { aborted, apiJson, validationError } from "../http/responses"
@@ -17,6 +17,7 @@ import { signatureSummary, type DetailSyllabus, type ReviewComment } from "./syl
 import { createReviewDetailStore } from "./reviewDetailQueries"
 import { modelNotFound } from "../http/router"
 import { MODELS } from "../http/models"
+import { requireBound, type Binder } from "./boundSession"
 
 export type ReviewRevision = { id: string; syllabusId: string; number: number; submittedAt: number; submittedBy: string; fingerprint: string }
 
@@ -111,7 +112,7 @@ export function reviewTimeline(history: HistoryEntry[]): TimelineEvent[] {
   )
 }
 
-async function bindRevision(request: Request, revisionId: string, deps: ReviewDetailDeps, userId: string) {
+async function bindRevision(revisionId: string, deps: Pick<ReviewDetailDeps, "store">, userId: string) {
   const revision = isUuid(revisionId) ? await deps.store.revision(revisionId) : null
   const syllabus = revision === null ? null : await deps.store.syllabus(revision.syllabusId, userId)
   return revision === null || syllabus === null ? null : { revision, syllabus }
@@ -127,23 +128,22 @@ async function respond(request: Request, deps: ReviewDetailDeps, build: () => Pr
   }
 }
 
+export function reviewDetailBinder(revisionId: string, deps: Pick<ReviewDetailDeps, "store">): Binder<{ revision: ReviewRevision; syllabus: DetailSyllabus }> {
+  return async (user) => (await bindRevision(revisionId, deps, user.id)) ?? modelNotFound(MODELS.revision, revisionId)
+}
+
 export async function coordinationReviewDetail(request: Request, revisionId: string, deps: ReviewDetailDeps = defaultReviewDetailDeps()): Promise<Response> {
-  const holder: { bound: Awaited<ReturnType<typeof bindRevision>> } = { bound: null }
-  const session = await requireSession(
-    request,
-    {
-      verified: true,
-      activeRole: "required",
-      afterAuthentication: async (user) => {
-        holder.bound = await bindRevision(request, revisionId, deps, user.id)
-        return holder.bound === null ? modelNotFound(MODELS.revision, revisionId) : null
-      },
-    },
-    deps.bridge,
-  )
-  if (session instanceof Response) return session
-  if (holder.bound === null) return modelNotFound(MODELS.revision, revisionId)
-  const { revision, syllabus } = holder.bound
+  const bound = await requireBound(request, reviewDetailBinder(revisionId, deps), deps.bridge)
+  if (bound instanceof Response) return bound
+  return coordinationReviewDetailFor(request, bound.session, bound.bound, deps)
+}
+
+export async function coordinationReviewDetailFor(
+  request: Request,
+  session: AppSession,
+  { revision, syllabus }: { revision: ReviewRevision; syllabus: DetailSyllabus },
+  deps: ReviewDetailDeps,
+): Promise<Response> {
   if (!mayReview(session, syllabus)) return aborted(403)
   return respond(request, deps, async () => {
     const history = byNumber(await deps.store.history(syllabus.id))

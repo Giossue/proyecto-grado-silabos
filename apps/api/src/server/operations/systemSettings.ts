@@ -136,5 +136,9 @@ export async function showSystemSettings(request: Request, deps: SystemSettingsD
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
   if (session.activeRole?.role !== "administrador") return apiJson({ message: FORBIDDEN }, 403)
+  return systemSettingsOf(deps)
+}
+
+export async function systemSettingsOf(deps: SystemSettingsDeps): Promise<Response> {
   return apiJson(describeSettings(await deps.stored(), deps.environment(), deps.bridge.config.key))
 }

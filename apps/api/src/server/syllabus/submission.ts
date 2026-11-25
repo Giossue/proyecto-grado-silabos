@@ -1,5 +1,5 @@
 import { HttpFailure, Missing } from "../http/failures"
-import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
+import { defaultBridgeDeps } from "../auth/requireSession"
 import type { BridgeDeps, AppSession } from "../auth/types"
 import { isUuid } from "../academic/structure"
 import { requestInput, type PhpArray } from "../http/input"
@@ -22,6 +22,7 @@ import type { DetailSyllabus } from "./syllabusDetail"
 import { createSubmissionDeps } from "./submissionStore"
 import { modelNotFound } from "../http/router"
 import { MODELS } from "../http/models"
+import { requireBound, type Binder } from "./boundSession"
 
 export type SubmissionSchedule = { convocationState: string; processState: string; startsOn: string; dueOn: string }
 export type KeyedRevision = { id: string; number: number; submittedBy: string }
@@ -144,25 +145,19 @@ async function assertSubmittable(original: Request, syllabus: DetailSyllabus, ex
   if (syllabus.version !== expected) conflict(original, syllabus.version)
 }
 
-type Bound = { session: AppSession; syllabus: DetailSyllabus }
+export type SubmissionBound = { session: AppSession; syllabus: DetailSyllabus }
 
-async function bound(request: Request, syllabusId: string, deps: SubmissionDeps): Promise<Bound | Response> {
-  let syllabus: DetailSyllabus | null = null
-  const session = await requireSession(
-    request,
-    {
-      verified: true,
-      activeRole: "required",
-      afterAuthentication: async (user) => {
-        syllabus = isUuid(syllabusId) ? await deps.store.syllabus(syllabusId, user.id) : null
-        return syllabus === null ? modelNotFound(MODELS.syllabus, syllabusId) : null
-      },
-    },
-    deps.bridge,
-  )
-  if (session instanceof Response) return session
-  if (syllabus === null) return modelNotFound(MODELS.syllabus, syllabusId)
-  return { session, syllabus }
+export function submissionBinder(syllabusId: string, deps: Pick<SubmissionDeps, "store">): Binder<DetailSyllabus> {
+  return async (user) => {
+    const syllabus = isUuid(syllabusId) ? await deps.store.syllabus(syllabusId, user.id) : null
+    return syllabus === null ? modelNotFound(MODELS.syllabus, syllabusId) : syllabus
+  }
+}
+
+async function bound(request: Request, syllabusId: string, deps: SubmissionDeps): Promise<SubmissionBound | Response> {
+  const auth = await requireBound(request, submissionBinder(syllabusId, deps), deps.bridge)
+  if (auth instanceof Response) return auth
+  return { session: auth.session, syllabus: auth.bound }
 }
 
 async function settled(original: Request, deps: SubmissionDeps, work: () => Promise<Response>): Promise<Response> {
@@ -205,9 +200,13 @@ async function versionInput(request: Request, schema: z.ZodType): Promise<{ inpu
 }
 
 export async function submissionStatement(request: Request, syllabusId: string, deps: SubmissionDeps = defaultSubmissionDeps()): Promise<Response> {
-  const original = request.clone()
-  const auth = await bound(original, syllabusId, deps)
+  const auth = await bound(request.clone(), syllabusId, deps)
   if (auth instanceof Response) return auth
+  return submissionStatementFor(request, auth, deps)
+}
+
+export async function submissionStatementFor(request: Request, auth: SubmissionBound, deps: SubmissionDeps): Promise<Response> {
+  const original = request.clone()
   if (!maySubmit(auth.session, auth.syllabus)) return forbidden()
   const { input, errors } = await versionInput(request, lockVersionSchema)
   if (errors !== null) return validationError(errors)
@@ -222,9 +221,13 @@ export async function submissionStatement(request: Request, syllabusId: string, 
 }
 
 export async function submitSyllabus(request: Request, syllabusId: string, deps: SubmissionDeps = defaultSubmissionDeps()): Promise<Response> {
-  const original = request.clone()
-  const auth = await bound(original, syllabusId, deps)
+  const auth = await bound(request.clone(), syllabusId, deps)
   if (auth instanceof Response) return auth
+  return submitSyllabusFor(request, auth, deps)
+}
+
+export async function submitSyllabusFor(request: Request, auth: SubmissionBound, deps: SubmissionDeps): Promise<Response> {
+  const original = request.clone()
   const { session, syllabus } = auth
   if (!maySubmit(session, syllabus)) return forbidden()
   const { input, errors } = await versionInput(request, submissionSchema)

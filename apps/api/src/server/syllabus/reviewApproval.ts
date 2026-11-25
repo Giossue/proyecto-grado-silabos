@@ -1,4 +1,4 @@
-import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
+import { defaultBridgeDeps } from "../auth/requireSession"
 import type { BridgeDeps, AppSession } from "../auth/types"
 import { isUuid } from "../academic/structure"
 import { canonicalHash } from "../documents/canonicalJson"
@@ -17,6 +17,7 @@ import { createReviewApprovalDeps } from "./reviewApprovalStore"
 import type { DetailSyllabus } from "./syllabusDetail"
 import { modelNotFound } from "../http/router"
 import { MODELS } from "../http/models"
+import { requireBound, type Binder } from "./boundSession"
 
 export interface ReviewApprovalTx extends SignatureTx {
   exports: ExportRequestTx
@@ -50,27 +51,14 @@ const COORDINATION = "coordinacion"
 const NOT_CURRENT = "Solo puede aprobarse la revisión vigente."
 const NOT_WAITING = "La revisión ya no espera la decisión de coordinación."
 
-type Bound = { session: AppSession; revision: ReviewRevision; syllabus: DetailSyllabus }
+export type ApprovalBound = { session: AppSession; revision: ReviewRevision; syllabus: DetailSyllabus }
 
-async function bindRevision(request: Request, revisionId: string, deps: ReviewApprovalDeps): Promise<Bound | Response> {
-  let bound: { revision: ReviewRevision; syllabus: DetailSyllabus } | null = null
-  const session = await requireSession(
-    request,
-    {
-      verified: true,
-      activeRole: "required",
-      afterAuthentication: async (user) => {
-        const revision = isUuid(revisionId) ? await deps.store.revision(revisionId) : null
-        const syllabus = revision === null ? null : await deps.store.syllabus(revision.syllabusId, user.id)
-        bound = revision === null || syllabus === null ? null : { revision, syllabus }
-        return bound === null ? modelNotFound(MODELS.revision, revisionId) : null
-      },
-    },
-    deps.bridge,
-  )
-  if (session instanceof Response) return session
-  if (bound === null) return modelNotFound(MODELS.revision, revisionId)
-  return { session, ...(bound as { revision: ReviewRevision; syllabus: DetailSyllabus }) }
+export function approvalRevisionBinder(revisionId: string, deps: Pick<ReviewApprovalDeps, "store">): Binder<{ revision: ReviewRevision; syllabus: DetailSyllabus }> {
+  return async (user) => {
+    const revision = isUuid(revisionId) ? await deps.store.revision(revisionId) : null
+    const syllabus = revision === null ? null : await deps.store.syllabus(revision.syllabusId, user.id)
+    return revision === null || syllabus === null ? modelNotFound(MODELS.revision, revisionId) : { revision, syllabus }
+  }
 }
 
 function rejectRevision(message: string): never {
@@ -95,10 +83,13 @@ function iso8601(seconds: number): string {
 }
 
 export async function approveReview(request: Request, revisionId: string, deps: ReviewApprovalDeps = defaultReviewApprovalDeps()): Promise<Response> {
-  const original = request.clone()
-  const bound = await bindRevision(original, revisionId, deps)
+  const bound = await requireBound(request.clone(), approvalRevisionBinder(revisionId, deps), deps.bridge)
   if (bound instanceof Response) return bound
-  const { session, revision, syllabus } = bound
+  return approveReviewFor(request, { session: bound.session, ...bound.bound }, deps)
+}
+
+export async function approveReviewFor(request: Request, { session, revision, syllabus }: ApprovalBound, deps: ReviewApprovalDeps): Promise<Response> {
+  const original = request.clone()
   if (!hasRole(session, ROLE_COORDINATOR) || !mayReview(session, syllabus)) return forbidden()
   const block = decisionBlock(syllabus)
   if (block !== null) return blockedDecision(block)

@@ -1,4 +1,4 @@
-import { deleteGovernanceRecord } from "./deletions"
+import { deleteGovernanceRecord, type AcademicDeletionDeps } from "./deletions"
 import { HttpFailure } from "../http/failures"
 import { MODELS } from "../http/models"
 import { createHash, randomUUID } from "node:crypto"
@@ -61,6 +61,7 @@ export type GovernanceWriteDeps = {
   transaction<T>(work: (tx: GovernanceWriteTx) => Promise<T>): Promise<T>
   files?: GovernanceFiles
   maxPostSize?: number
+  deletions?: AcademicDeletionDeps
 }
 
 function filesOf(deps: GovernanceWriteDeps): GovernanceFiles {
@@ -436,6 +437,6 @@ export async function postGovernanceRecord(request: Request, entity: string, rec
   if (tooLarge !== null) return tooLarge
   const method = await spoofedMethod(request)
   if (method === "PATCH") return updateGovernanceRecord(request, entity, recordId, deps)
-  if (method === "DELETE") return deleteGovernanceRecord(request, entity, recordId)
+  if (method === "DELETE") return deleteGovernanceRecord(request, entity, recordId, deps.deletions)
   return unmatchedRoute(new Request(request.url, { method: method === "POST" ? "POST" : method, headers: request.headers }))
 }

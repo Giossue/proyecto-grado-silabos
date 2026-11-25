@@ -66,7 +66,7 @@ function presets(definition: TemplateDefinition): PhpRecord[] {
   })
 }
 
-async function builderProps(request: Request, template: SyllabusTemplate, definition: TemplateDefinition, deps: TemplateBuilderDeps): Promise<PhpRecord> {
+async function builderProps(request: Request, template: SyllabusTemplate, definition: TemplateDefinition, deps: Pick<TemplateBuilderDeps, "locks">): Promise<PhpRecord> {
   const lock = await deps.locks.processLock()
   const document = definition.document
   return {
@@ -106,7 +106,10 @@ export async function templateIndex(request: Request, deps: TemplateBuilderDeps 
   )
   if (session instanceof Response) return session
   if (!managesTemplates(session)) return apiJson({ message: FORBIDDEN }, 403)
-  const found = template as SyllabusTemplate | null
+  return templateIndexOf(request, template as SyllabusTemplate | null, deps)
+}
+
+export async function templateIndexOf(request: Request, found: SyllabusTemplate | null, deps: Pick<TemplateBuilderDeps, "locks">): Promise<Response> {
   if (found === null) {
     const lock = await deps.locks.processLock()
     return apiJson({ processLock: lock === null ? null : PROCESS_LOCK, processLockDetail: lockDetail(lock), template: null })
@@ -118,7 +121,10 @@ export async function templateShow(request: Request, templateId: string, deps: T
   const bound = await boundTemplate(request, templateId, deps)
   if (bound instanceof Response) return bound
   if (!managesTemplates(bound.session)) return apiJson({ message: FORBIDDEN }, 403)
-  const { template } = bound
+  return templateShowOf(request, bound.template, deps)
+}
+
+export async function templateShowOf(request: Request, template: SyllabusTemplate, deps: Pick<TemplateBuilderDeps, "locks">): Promise<Response> {
   return apiJson(phpShape(await builderProps(request, template, template.definition, deps)))
 }
 
@@ -165,8 +171,12 @@ export async function designTemplateTable(request: Request, templateId: string, 
   const input = await requestInput(request)
   const bound = await boundTemplate(original, templateId, deps)
   if (bound instanceof Response) return bound
-  const definition = bound.template.definition
   if (!managesTemplates(bound.session)) return apiJson({ message: FORBIDDEN }, 403)
+  return designTemplateTableOf(input, bound.template)
+}
+
+export async function designTemplateTableOf(input: PhpArray, template: SyllabusTemplate): Promise<Response> {
+  const definition = template.definition
   const { errors } = await validateSchema(tableDesignSchema(input), input)
   if (errors !== null) return validationError(errors)
   try {

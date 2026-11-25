@@ -52,6 +52,8 @@ export interface ProcessRepository {
 
 export type ProcessDeps = { bridge: BridgeDeps; processes: ProcessRepository; templates: TemplateStore; today: () => string; now: () => number }
 
+export type ProcessCoreDeps = Omit<ProcessDeps, "bridge">
+
 const MAX_EXTENSIONS = 2
 const ANOTHER_IN_PROGRESS = "Hay otra convocatoria en curso; finalícela o elimínela antes de reabrir esta"
 const TEMPLATE_NOT_READY = "La plantilla no está lista para usarse. Complétela; «Antes de empezar» indica qué falta."
@@ -117,6 +119,10 @@ async function administrator(request: Request, deps: ProcessDeps): Promise<AppSe
 export async function syllabusProcesses(request: Request, deps: ProcessDeps = defaultProcessDeps()): Promise<Response> {
   const session = await administrator(request, deps)
   if (session instanceof Response) return session
+  return processList(deps)
+}
+
+export async function processList(deps: ProcessCoreDeps): Promise<Response> {
   const template = await deps.templates.template()
   const rows = await deps.processes.list()
   const today = deps.today()
@@ -176,8 +182,12 @@ export async function processImpact(request: Request, id: string, deps: ProcessD
   const bound = await boundProcess(request, id, deps)
   if (bound instanceof Response) return bound
   if (!hasRole(bound.session, ROLE_ADMINISTRATOR)) return forbidden()
+  return processImpactOf(bound.process, deps)
+}
+
+export async function processImpactOf(process: ProcessRow, deps: ProcessCoreDeps): Promise<Response> {
   const syllabi: Record<string, number> = Object.fromEntries(EMPTY_COUNTS.map((state) => [state, 0]))
-  for (const row of await deps.processes.counts(bound.process.id)) syllabi[row.state] = row.total
+  for (const row of await deps.processes.counts(process.id)) syllabi[row.state] = row.total
   return apiJson({ syllabi, total: Object.values(syllabi).reduce((sum, value) => sum + value, 0) })
 }
 
@@ -187,9 +197,12 @@ export async function pauseProcess(request: Request, id: string, deps: ProcessDe
   const original = request.clone()
   const bound = await boundProcess(original, id, deps)
   if (bound instanceof Response) return bound
-  const { session, process } = bound
+  return pauseBoundProcess(bound.session, bound.process, await requestInput(request), deps)
+}
+
+export async function pauseBoundProcess(session: AppSession, process: ProcessRow, input: PhpArray, deps: ProcessCoreDeps): Promise<Response> {
   if (!hasRole(session, ROLE_ADMINISTRATOR) || process.state !== PROCESS_OPEN) return forbidden()
-  const { errors } = await validateSchema(redoConfirmationSchema, await requestInput(request))
+  const { errors } = await validateSchema(redoConfirmationSchema, input)
   if (errors !== null) return validationError(errors)
   try {
     await deps.processes.transaction(async (tx) => {
@@ -258,7 +271,7 @@ class CreateRejected extends Error {
   }
 }
 
-async function createValidation(input: PhpArray, deps: ProcessDeps): Promise<Record<string, string[]>> {
+async function createValidation(input: PhpArray, deps: ProcessCoreDeps): Promise<Record<string, string[]>> {
   const errors = (await validateSchema(processCreationSchema(async (value) => typeof value === "string" && (await deps.processes.periodEndsOn(value)) !== null), input)).errors ?? {}
   const today = deps.today()
   const startsOn = dayOf(input.starts_at)
@@ -279,7 +292,7 @@ async function createValidation(input: PhpArray, deps: ProcessDeps): Promise<Rec
   return errors
 }
 
-async function assertInstitutionReady(deps: ProcessDeps): Promise<SyllabusTemplate> {
+async function assertInstitutionReady(deps: ProcessCoreDeps): Promise<SyllabusTemplate> {
   const template = await deps.templates.template()
   const structured =
     template !== null && template.sections.length > 0 && template.sections.some((section) => section.blocks.length > 0) && (await deps.processes.templateHasFields(template.id))
@@ -299,7 +312,10 @@ async function assertInstitutionReady(deps: ProcessDeps): Promise<SyllabusTempla
 export async function createProcess(request: Request, deps: ProcessDeps = defaultProcessDeps()): Promise<Response> {
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
-  const input = await requestInput(request)
+  return createProcessFor(session, await requestInput(request), deps)
+}
+
+export async function createProcessFor(session: AppSession, input: PhpArray, deps: ProcessCoreDeps): Promise<Response> {
   input.starts_at = processDay(input.starts_at, true) as PhpValue
   input.due_at = processDay(input.due_at, false) as PhpValue
   if (!hasRole(session, ROLE_ADMINISTRATOR)) return forbidden()

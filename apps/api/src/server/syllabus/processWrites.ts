@@ -1,7 +1,7 @@
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
 import type { BridgeDeps, AppSession } from "../auth/types"
 import { isUuid } from "../academic/structure"
-import { requestInput, type PhpValue } from "../http/input"
+import { requestInput, type PhpArray, type PhpValue } from "../http/input"
 import { forbidden, apiJson, validationError } from "../http/responses"
 import { deadlineExtensionSchema, processDeletionSchema, redoConfirmationSchema } from "@silabos/shared/schemas/syllabus"
 import { validateSchema } from "../http/schemaValidation"
@@ -106,9 +106,11 @@ export async function deleteProcess(request: Request, id: string, deps: ProcessW
   const original = request.clone()
   const bound = await bindProcess(request, id, deps)
   if (bound instanceof Response) return bound
-  const { session, process } = bound
+  return deleteBoundProcess(original, bound.session, bound.process, await requestInput(request), deps)
+}
+
+export async function deleteBoundProcess(original: Request, session: AppSession, process: ProcessRow, input: PhpArray, deps: ProcessWriteDeps): Promise<Response> {
   if (!hasRole(session, ROLE_ADMINISTRATOR) || !["abierto", "pausado"].includes(process.state)) return forbidden()
-  const input = await requestInput(request)
   const { errors } = await validateSchema(processDeletionSchema, input)
   if (errors !== null) return validationError(errors)
   const notice = (input.mensaje as string).replace(PHP_TRIM, "")
@@ -165,9 +167,11 @@ export async function resumeProcess(request: Request, id: string, deps: ProcessW
   const original = request.clone()
   const bound = await bindProcess(original.clone(), id, deps)
   if (bound instanceof Response) return bound
-  const { session, process } = bound
+  return resumeBoundProcess(original, bound.session, bound.process, await requestInput(request), deps)
+}
+
+export async function resumeBoundProcess(original: Request, session: AppSession, process: ProcessRow, input: PhpArray, deps: ProcessWriteDeps): Promise<Response> {
   if (!hasRole(session, ROLE_ADMINISTRATOR) || process.state !== "pausado") return forbidden()
-  const input = await requestInput(request)
   const { errors } = await validateSchema(redoConfirmationSchema, input)
   if (errors !== null) return validationError(errors)
   return settle(original, deps, async () => {
@@ -208,9 +212,11 @@ export async function extendProcessDeadline(request: Request, id: string, deps: 
   const original = request.clone()
   const bound = await bindProcess(request, id, deps)
   if (bound instanceof Response) return bound
-  const { session, process } = bound
+  return extendBoundProcessDeadline(original, bound.session, bound.process, await requestInput(request), deps)
+}
+
+export async function extendBoundProcessDeadline(original: Request, session: AppSession, process: ProcessRow, input: PhpArray, deps: ProcessWriteDeps): Promise<Response> {
   if (!hasRole(session, ROLE_ADMINISTRATOR)) return forbidden()
-  const input = await requestInput(request)
   input.due_at = processDay(input.due_at, false) as PhpValue
   const { errors } = await validateSchema(deadlineExtensionSchema, input)
   if (errors !== null) return validationError(errors)

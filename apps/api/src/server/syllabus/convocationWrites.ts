@@ -12,6 +12,7 @@ import { createConvocationWriteDeps } from "./convocationWriteStore"
 import { Missing, Rejected, settle } from "./reviewDecisions"
 import { modelNotFound } from "../http/router"
 import { MODELS } from "../http/models"
+import { requireBound, type Binder } from "./boundSession"
 
 export type LockedProcess = { id: string; state: string; periodId: string }
 export type LockedConvocation = { id: string; careerId: string; careerLabel: string; state: string; processState: string; dueAt: number }
@@ -82,9 +83,13 @@ async function openConvocation(tx: ConvocationWriteTx, convocationId: string): P
 }
 
 export async function createConvocation(request: Request, deps: ConvocationWriteDeps = defaultConvocationWriteDeps()): Promise<Response> {
-  const original = request.clone()
   const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
   if (session instanceof Response) return session
+  return createConvocationFor(request, session, deps)
+}
+
+export async function createConvocationFor(request: Request, session: AppSession, deps: ConvocationWriteDeps): Promise<Response> {
+  const original = request.clone()
   if (!isCoordinatorOf(session, null)) return forbidden()
   const input = await requestInput(request)
   const { errors } = await validateSchema(convocationSchema((value) => deps.openProcessExists(String(value))), input)
@@ -125,24 +130,21 @@ export async function notifyConvocationResumed(tx: Pick<ConvocationWriteTx, "not
   }
 }
 
+export function resumableConvocationBinder(id: string, deps: Pick<ConvocationWriteDeps, "convocation">): Binder<ConvocationRecord> {
+  return async () => {
+    const record = isUuid(id) ? await deps.convocation(id) : null
+    return record === null ? modelNotFound(MODELS.convocation, id) : record
+  }
+}
+
 export async function resumeConvocation(request: Request, id: string, deps: ConvocationWriteDeps = defaultConvocationWriteDeps()): Promise<Response> {
+  const bound = await requireBound(request, resumableConvocationBinder(id, deps), deps.bridge)
+  if (bound instanceof Response) return bound
+  return resumeConvocationFor(request, bound.session, bound.bound, deps)
+}
+
+export async function resumeConvocationFor(request: Request, session: AppSession, convocation: ConvocationRecord, deps: ConvocationWriteDeps): Promise<Response> {
   const original = request.clone()
-  let record: ConvocationRecord | null = null
-  const session = await requireSession(
-    request,
-    {
-      verified: true,
-      activeRole: "required",
-      afterAuthentication: async () => {
-        record = isUuid(id) ? await deps.convocation(id) : null
-        return record === null ? modelNotFound(MODELS.convocation, id) : null
-      },
-    },
-    deps.bridge,
-  )
-  if (session instanceof Response) return session
-  const convocation = record as ConvocationRecord | null
-  if (convocation === null) return modelNotFound(MODELS.convocation, id)
   if (!isCoordinatorOf(session, convocation.careerId) || convocation.state !== "pausada") return forbidden()
   return settle(original, deps, async () => {
     await deps.transaction(async (tx) => {

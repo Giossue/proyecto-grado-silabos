@@ -1,0 +1,2 @@
+export const DOCUMENT_DEPS = Symbol("DOCUMENT_DEPS")
+export const DOCUMENT_REQUEST_DEPS = Symbol("DOCUMENT_REQUEST_DEPS")

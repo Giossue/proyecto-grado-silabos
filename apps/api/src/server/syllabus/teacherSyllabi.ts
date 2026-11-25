@@ -58,9 +58,7 @@ export function phpFalsy(value: string | null): boolean {
   return value === null || value === "" || value === "0"
 }
 
-async function authorizedTeacher(request: Request, deps: TeacherSyllabusDeps): Promise<{ session: AppSession; input: PhpArray } | Response> {
-  const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
-  if (session instanceof Response) return session
+async function teacherInput(request: Request, session: AppSession): Promise<{ session: AppSession; input: PhpArray } | Response> {
   if (!hasRole(session, ROLE_TEACHER)) return forbidden()
   const input = phpQuery(new URL(request.url))
   const { errors } = await validateSchema(listingFiltersSchema(SYLLABUS_STATES), input)
@@ -69,7 +67,13 @@ async function authorizedTeacher(request: Request, deps: TeacherSyllabusDeps): P
 }
 
 export async function teacherSyllabi(request: Request, deps: TeacherSyllabusDeps = defaultTeacherSyllabusDeps()): Promise<Response> {
-  const authorized = await authorizedTeacher(request, deps)
+  const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
+  if (session instanceof Response) return session
+  return teacherSyllabiFor(request, session, deps)
+}
+
+export async function teacherSyllabiFor(request: Request, authenticated: AppSession, deps: TeacherSyllabusDeps): Promise<Response> {
+  const authorized = await teacherInput(request, authenticated)
   if (authorized instanceof Response) return authorized
   const { session, input } = authorized
   const search = typeof input.q === "string" ? input.q.replace(PHP_TRIM, "") : null
@@ -98,7 +102,13 @@ export async function teacherSyllabi(request: Request, deps: TeacherSyllabusDeps
 }
 
 export async function teacherHistory(request: Request, deps: TeacherSyllabusDeps = defaultTeacherSyllabusDeps()): Promise<Response> {
-  const authorized = await authorizedTeacher(request, deps)
+  const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
+  if (session instanceof Response) return session
+  return teacherHistoryFor(request, session, deps)
+}
+
+export async function teacherHistoryFor(request: Request, authenticated: AppSession, deps: TeacherSyllabusDeps): Promise<Response> {
+  const authorized = await teacherInput(request, authenticated)
   if (authorized instanceof Response) return authorized
   const groups = new Map<string, { id: string; name: string; syllabi_count: number }>()
   for (const item of await deps.syllabi.past(authorized.session.user.id, null)) {
@@ -111,7 +121,13 @@ export async function teacherHistory(request: Request, deps: TeacherSyllabusDeps
 
 export async function teacherHistoryCareer(request: Request, career: string, deps: TeacherSyllabusDeps = defaultTeacherSyllabusDeps()): Promise<Response> {
   if (!routeAllows(request)) return unmatchedRoute(request)
-  const authorized = await authorizedTeacher(request, deps)
+  const session = await requireSession(request, { verified: true, activeRole: "required" }, deps.bridge)
+  if (session instanceof Response) return session
+  return teacherHistoryCareerFor(request, session, career, deps)
+}
+
+export async function teacherHistoryCareerFor(request: Request, authenticated: AppSession, career: string, deps: TeacherSyllabusDeps): Promise<Response> {
+  const authorized = await teacherInput(request, authenticated)
   if (authorized instanceof Response) return authorized
   const syllabi = (await deps.syllabi.past(authorized.session.user.id, career)).sort((left, right) => (left.periodEndsOn === right.periodEndsOn ? 0 : left.periodEndsOn < right.periodEndsOn ? 1 : -1))
   if (syllabi.length === 0) return aborted(404)

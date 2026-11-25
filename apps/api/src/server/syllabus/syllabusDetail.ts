@@ -1,7 +1,7 @@
 import { archivedSections } from "../documents/syllabusSnapshot"
 import { failModelNotFound, HttpFailure } from "../http/failures"
 import type { ArchivedField } from "./syllabusDetailQueries"
-import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
+import { defaultBridgeDeps } from "../auth/requireSession"
 import type { BridgeDeps, AppSession } from "../auth/types"
 import { isUuid } from "../academic/structure"
 import { aborted, apiJson, validationError } from "../http/responses"
@@ -21,6 +21,7 @@ import { convocationName } from "./syllabusSql"
 import { createSyllabusDetailStore } from "./syllabusDetailQueries"
 import { modelNotFound } from "../http/router"
 import { MODELS } from "../http/models"
+import { requireBound, type Binder } from "./boundSession"
 
 export type DetailSyllabus = DraftSyllabus & {
   convocationId: string
@@ -219,22 +220,20 @@ export async function syllabusPayload(
   }
 }
 
+export function syllabusDetailBinder(syllabusId: string, deps: Pick<SyllabusDetailDeps, "store">): Binder<DetailSyllabus> {
+  return async (user) => {
+    const syllabus = isUuid(syllabusId) ? await deps.store.syllabus(syllabusId, user.id) : null
+    return syllabus === null ? modelNotFound(MODELS.syllabus, syllabusId) : syllabus
+  }
+}
+
 export async function teacherSyllabusDetail(request: Request, syllabusId: string, deps: SyllabusDetailDeps = defaultSyllabusDetailDeps()): Promise<Response> {
-  let syllabus: DetailSyllabus | null = null
-  const session = await requireSession(
-    request,
-    {
-      verified: true,
-      activeRole: "required",
-      afterAuthentication: async (user) => {
-        syllabus = isUuid(syllabusId) ? await deps.store.syllabus(syllabusId, user.id) : null
-        return syllabus === null ? modelNotFound(MODELS.syllabus, syllabusId) : null
-      },
-    },
-    deps.bridge,
-  )
-  if (session instanceof Response) return session
-  if (syllabus === null) return modelNotFound(MODELS.syllabus, syllabusId)
+  const bound = await requireBound(request, syllabusDetailBinder(syllabusId, deps), deps.bridge)
+  if (bound instanceof Response) return bound
+  return teacherSyllabusDetailFor(request, bound.session, bound.bound, deps)
+}
+
+export async function teacherSyllabusDetailFor(request: Request, session: AppSession, syllabus: DetailSyllabus, deps: SyllabusDetailDeps): Promise<Response> {
   if (!mayView(session, syllabus)) return aborted(403)
   try {
     return apiJson(phpShape({ syllabus: await syllabusPayload(request, session, syllabus, deps) }))
