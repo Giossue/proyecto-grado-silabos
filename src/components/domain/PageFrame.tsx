@@ -170,9 +170,9 @@ export function PageFrame({
                 className={cn(
                   "contents",
                   needsTrigger && !expanded && "max-sm:hidden max-sm:[&>*]:hidden",
-                  "max-sm:[&>*]:shadow-menu",
+                  "max-sm:[&_button]:shadow-menu",
                   !needsTrigger &&
-                    "max-sm:[&_button]:size-14 max-sm:[&_button]:rounded-full max-sm:[&_button]:gap-0 max-sm:[&_button]:p-0 max-sm:[&_button]:text-[length:0] max-sm:[&_button]:[&_svg]:size-5",
+                    "max-sm:[&>*]:rounded-full max-sm:[&_button]:size-14 max-sm:[&_button]:rounded-full max-sm:[&_button]:gap-0 max-sm:[&_button]:p-0 max-sm:[&_button]:text-[length:0] max-sm:[&_button]:[&_svg]:size-5",
                 )}
               >
                 {actions}
