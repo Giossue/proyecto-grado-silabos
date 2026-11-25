@@ -81,13 +81,27 @@ const setSettings = (value: AccessibilitySettings): void => {
     settings.value = value;
 };
 
-let fromSystem = false;
+// Set while applying a change that did not come from this tab's user (system or another tab): nothing is saved.
+let external = false;
+// Set while restoring the defaults: the stored entry is removed instead of rewritten, so the system is followed again.
+let clearing = false;
+
+const withoutSaving = (apply: () => void): void => {
+    external = true;
+    try {
+        apply();
+    } finally {
+        external = false;
+    }
+};
 
 settings.subscribe(() => {
     const value = settings.value;
     applyAccessibility(value);
-    if (fromSystem) return;
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(value)); } catch { return; }
+    if (external) return;
+    if (!clearing) {
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(value)); } catch { return; }
+    }
     saveToAccount();
 });
 
@@ -100,8 +114,7 @@ sessionState.current.subscribe(() => {
         if (typeof window !== 'undefined') window.clearTimeout(timer);
         if (hadSession) {
             hadSession = false;
-            try { localStorage.removeItem(STORAGE_KEY); } catch { return; }
-            setSettings(defaultSettings());
+            reset();
         }
         return;
     }
@@ -126,12 +139,12 @@ const hasSavedSettings = (): boolean => {
 
 const followSystemMotion = (event: MediaQueryListEvent): void => {
     if (hasSavedSettings()) return;
-    fromSystem = true;
-    try {
-        setSettings({ ...settings.value, noMotion: event.matches });
-    } finally {
-        fromSystem = false;
-    }
+    withoutSaving(() => { setSettings({ ...settings.value, noMotion: event.matches }); });
+};
+
+const followOtherTabs = (event: StorageEvent): void => {
+    if (event.key !== STORAGE_KEY && event.key !== null) return;
+    withoutSaving(() => { setSettings(read()); });
 };
 
 let followingSystem = false;
@@ -143,13 +156,22 @@ export function initializeAccessibility(): void {
     if (followingSystem) return;
     followingSystem = true;
     window.matchMedia?.('(prefers-reduced-motion: reduce)')?.addEventListener?.('change', followSystemMotion);
+    window.addEventListener('storage', followOtherTabs);
 }
 
 const update = (patch: Partial<AccessibilitySettings>): void => {
     setSettings({ ...settings.value, ...patch });
 };
 
-const reset = (): void => { setSettings(defaultSettings()); };
+const reset = (): void => {
+    try { localStorage.removeItem(STORAGE_KEY); } catch { /* the defaults still apply */ }
+    clearing = true;
+    try {
+        setSettings(defaultSettings());
+    } finally {
+        clearing = false;
+    }
+};
 
 export const accessibilitySettings = {
     get value(): AccessibilitySettings {

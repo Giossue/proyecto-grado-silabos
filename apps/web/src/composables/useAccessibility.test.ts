@@ -85,6 +85,8 @@ describe("accesibilidad en la cuenta", () => {
     vi.advanceTimersByTime(600)
     expect(updateAccessibility).toHaveBeenLastCalledWith(expect.objectContaining({ dyslexia: true, text_size: "115" }))
     sessionState.clear()
+    expect(localStorage.getItem("silabos:accesibilidad")).toBeNull()
+    expect(accessibilitySettings.value.dyslexia).toBe(false)
     vi.useRealTimers()
   })
 })
@@ -116,6 +118,34 @@ describe("movimiento del sistema", () => {
     fresh.accessibilitySettings.update({ noMotion: false })
     listeners.forEach((listener) => listener({ matches: true } as MediaQueryListEvent))
     expect(document.documentElement.dataset.motion).toBe("normal")
+
+    fresh.accessibilitySettings.reset()
+    expect(localStorage.getItem("silabos:accesibilidad")).toBeNull()
+    listeners.forEach((listener) => listener({ matches: true } as MediaQueryListEvent))
+    expect(document.documentElement.dataset.motion).toBe("none")
     matchMedia.mockRestore()
+  })
+})
+
+describe("varias pestañas", () => {
+  it("aplica lo que otra pestaña guarda o restablece sin volver a guardarlo", () => {
+    localStorage.clear()
+    initializeAccessibility()
+    vi.mocked(updateAccessibility).mockClear()
+    const fromOtherTab = (value: string | null): void => {
+      if (value === null) localStorage.removeItem("silabos:accesibilidad")
+      else localStorage.setItem("silabos:accesibilidad", value)
+      window.dispatchEvent(new StorageEvent("storage", { key: "silabos:accesibilidad", newValue: value }))
+    }
+
+    fromOtherTab(JSON.stringify({ highContrast: true, textSize: "130", dyslexia: true }))
+    expect(accessibilitySettings.value).toMatchObject({ highContrast: true, textSize: "130", dyslexia: true })
+    expect(document.documentElement.dataset.contrast).toBe("high")
+
+    fromOtherTab(null)
+    expect(accessibilitySettings.value).toMatchObject({ highContrast: false, textSize: "100", dyslexia: false })
+    expect(document.documentElement.dataset.contrast).toBe("normal")
+    expect(localStorage.getItem("silabos:accesibilidad")).toBeNull()
+    expect(updateAccessibility).not.toHaveBeenCalled()
   })
 })
