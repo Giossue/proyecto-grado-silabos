@@ -6,6 +6,7 @@ import { withWriter, type SessionWriterDeps } from "../auth/sessionWriter"
 import { statefulRequest } from "../auth/statefulRequest"
 import { binaryFileResponse } from "../files/binaryFileResponse"
 import { expectsJson } from "../laravel/request"
+import { publicPath } from "../laravel/storage"
 import { laravelRouter, modelNotFound, routeAllows, unknownRoute } from "../laravel/router"
 import { createLogoStore, facultyPath, institutionPath, type LogoStore } from "./institutionalLogos"
 
@@ -34,4 +35,11 @@ export async function facultyLogo(request: Request, facultyId: string, deps: Log
     if (faculty === null) return expectsJson(request) ? modelNotFound(FACULTY_MODEL, facultyId) : unknownRoute(request)
     return logoFile(request, await facultyPath(faculty))
   })
+}
+
+const PUBLIC_SYLLABUS_IMAGES = new Set(["facultad.jpeg", "logo-universidad.png", "ueb.jpeg"])
+
+export async function publicSyllabusImage(request: Request, file: string): Promise<Response> {
+  if (!PUBLIC_SYLLABUS_IMAGES.has(file) || !["GET", "HEAD"].includes(request.method)) return unknownRoute(request)
+  return binaryFileResponse(request, publicPath(`images/silabo/${file}`), { "Cache-Control": "max-age=300, public" })
 }

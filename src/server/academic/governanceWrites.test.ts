@@ -322,3 +322,22 @@ describe("PATCH /api/v1/admin/academic/{entity}/{record}/status", () => {
     expect((await status("carrera", CAREER, { active: "x" })).status).toBe(403)
   })
 })
+
+describe("career and period forms sent as multipart, as the admin screens send them", () => {
+  it("creates a career from multipart form data without asking Laravel", async () => {
+    const response = await sendForm("POST", "/api/v1/admin/academic/carrera", { faculty_id: FACULTY, modality: "Presencial", nombre: "Software nueva", code: "SW-10", cycle_count: "8" }, null, (request) =>
+      createGovernanceRecord(request, "carrera", deps()),
+    )
+    expect(response).toEqual({ status: 201, text: `{"message":"Registro institucional creado.","id":"${NEW_ID}"}` })
+    expect(created).toEqual([{ facultyId: FACULTY, modality: "Presencial", code: "SW-10", name: "Software nueva", cycleCount: 8 }])
+    expect(forwarded).toEqual([])
+  })
+
+  it("updates a career from a multipart form with the spoofed PATCH method", async () => {
+    const response = await sendForm("POST", `/api/v1/admin/academic/carrera/${CAREER}`, { _method: "PATCH", ...careerBody, nombre: "Software renovada", cycle_count: "3" }, null, (request) =>
+      updateGovernanceRecord(request, "carrera", CAREER, deps()),
+    )
+    expect(response).toEqual({ status: 200, text: '{"message":"Datos institucionales actualizados."}' })
+    expect(forwarded).toEqual([])
+  })
+})

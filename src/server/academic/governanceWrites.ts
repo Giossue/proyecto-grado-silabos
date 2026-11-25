@@ -101,8 +101,8 @@ async function storeFacultyLogo(tx: GovernanceWriteTx, deps: GovernanceWriteDeps
 
 type GovernanceBody = { input: PhpArray; files: Record<string, UploadedFile | null> }
 
-async function readGovernanceBody(request: Request, entity: string): Promise<GovernanceBody | null> {
-  if (entity === "facultad" && isMultipart(request)) return laravelMultipart(request)
+async function readGovernanceBody(request: Request): Promise<GovernanceBody | null> {
+  if (isMultipart(request)) return laravelMultipart(request)
   if (request.headers.get("content-type") !== null && !isJsonRequest(request)) return null
   return { input: await laravelInput(request), files: {} }
 }
@@ -256,7 +256,7 @@ export async function createGovernanceRecord(request: Request, entity: string, d
   if (tooLarge !== null) return tooLarge
   const original = request.clone()
   if (!["facultad", "carrera", "periodo"].includes(entity)) return forwardAuthenticated(request, original, deps)
-  const body = await readGovernanceBody(request.clone(), entity)
+  const body = await readGovernanceBody(request.clone())
   if (body === null || body.input._token !== undefined) return deps.bridge.forward(original)
   const session = await careerSession(request, deps)
   if (session instanceof Response) return session
@@ -344,7 +344,7 @@ export async function updateGovernanceRecord(request: Request, entity: string, r
   if (tooLarge !== null) return tooLarge
   const original = request.clone()
   if (!["facultad", "carrera", "periodo"].includes(entity) || !isUuid(recordId)) return forwardAuthenticated(request, original, deps)
-  const body = await readGovernanceBody(request.clone(), entity)
+  const body = await readGovernanceBody(request.clone())
   if (body === null || body.input._token !== undefined) return deps.bridge.forward(original)
   const session = await careerSession(request, deps)
   if (session instanceof Response) return session

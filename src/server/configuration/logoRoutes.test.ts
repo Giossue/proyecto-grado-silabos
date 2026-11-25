@@ -7,7 +7,7 @@ import golden from "../laravel/__fixtures__/laravel-golden.json"
 import { fakeDeps, storedJson, type FakeWorld } from "../auth/testing"
 import type { SessionWriterDeps } from "../auth/sessionWriter"
 import { NOT_FOUND_PAGE } from "../laravel/errorPages"
-import { facultyLogo, institutionLogo } from "./logoRoutes"
+import { facultyLogo, institutionLogo, publicSyllabusImage } from "./logoRoutes"
 import { templateSchema } from "./templateReads"
 import type { LogoStore, StoredFaculty } from "./institutionalLogos"
 
@@ -163,5 +163,21 @@ describe("GET /plantilla.schema.json", () => {
     })
     expect(headers["last-modified"]).toMatch(/^[A-Z][a-z]{2}, \d{2} [A-Z][a-z]{2} \d{4} \d{2}:\d{2}:\d{2} GMT$/)
     expect(response.headers.getSetCookie()).toEqual([])
+  })
+})
+
+describe("GET /images/silabo/{file}", () => {
+  it("serves the default faculty logo that defaultFacultyUrl points to", async () => {
+    const response = await publicSyllabusImage(get("/images/silabo/facultad.jpeg?v=1789530560"), "facultad.jpeg")
+    expect(response.status).toBe(200)
+    expect(response.headers.get("content-type")).toBe("image/jpeg")
+    expect(Buffer.from(await response.arrayBuffer()).equals(JPEG)).toBe(true)
+  })
+
+  it("answers not found for files outside the public syllabus images", async () => {
+    for (const file of ["otro.png", "..%2F..%2F.env", "../index.php"]) {
+      const response = await publicSyllabusImage(get(`/images/silabo/${file}`), file)
+      expect(response.status).toBe(404)
+    }
   })
 })
