@@ -1,6 +1,8 @@
 import "server-only"
-import { sql } from "drizzle-orm"
+import { and, eq, sql } from "drizzle-orm"
 import { db } from "@/db"
+import { epochText } from "@/db/expressions"
+import { revisionesSilabo, usuarios } from "@/db/schema"
 import { iso8601 } from "../http/sql"
 import { LIBRARY_FROM, OUTCOME_SQL, RESPONSIBLE_SQL, STATE_SQL } from "../library/reviewQueries"
 import { teacherNamesOf } from "./coordinationReviewQueries"
@@ -37,16 +39,20 @@ export function reviewDetailStoreOn(executor: Executor): ReviewDetailStore {
   const syllabi = syllabusDetailStoreOn(executor)
   return {
     async revision(id) {
-      const [row] = await rowsOf<{ id: string; syllabus_id: string; number: number; submitted_at: string; submitted_by: string; fingerprint: string }>(
-        executor,
-        sql`select revisiones_silabo.revision_silabo_id::text as id, revisiones_silabo.silabo_id::text as syllabus_id, revisiones_silabo.numero_revision as number,
-            extract(epoch from revisiones_silabo.enviado_en)::bigint as submitted_at, usuarios.nombre_usuario as submitted_by, revisiones_silabo.hash_contenido as fingerprint
-          from revisiones_silabo left join usuarios on usuarios.usuario_id = revisiones_silabo.enviado_por
-          where revisiones_silabo.revision_silabo_id = ${id}::uuid and ${REVISION_EXISTS} limit 1`,
-      )
-      return row
-        ? { id: row.id, syllabusId: row.syllabus_id, number: Number(row.number), submittedAt: Number(row.submitted_at), submittedBy: row.submitted_by, fingerprint: row.fingerprint }
-        : null
+      const [row] = await executor
+        .select({
+          id: revisionesSilabo.revisionSilaboId,
+          syllabusId: revisionesSilabo.silaboId,
+          number: revisionesSilabo.numeroRevision,
+          submittedAt: epochText(revisionesSilabo.enviadoEn),
+          submittedBy: usuarios.nombreUsuario,
+          fingerprint: revisionesSilabo.hashContenido,
+        })
+        .from(revisionesSilabo)
+        .leftJoin(usuarios, eq(usuarios.usuarioId, revisionesSilabo.enviadoPor))
+        .where(and(eq(revisionesSilabo.revisionSilaboId, id), REVISION_EXISTS))
+        .limit(1)
+      return row ? { ...row, number: Number(row.number), submittedAt: Number(row.submittedAt), submittedBy: row.submittedBy as string } : null
     },
     syllabus: (id, userId) => syllabi.syllabus(id, userId),
     teachers: async (id) => (await teacherNamesOf(executor, [id])).get(id) ?? [],
@@ -103,7 +109,7 @@ export function reviewDetailStoreOn(executor: Executor): ReviewDetailStore {
         : null
     },
     async userName(id) {
-      const [row] = await rowsOf<{ name: string }>(executor, sql`select nombre_usuario as name from usuarios where usuario_id = ${id}::uuid limit 1`)
+      const [row] = await executor.select({ name: usuarios.nombreUsuario }).from(usuarios).where(eq(usuarios.usuarioId, id)).limit(1)
       return row?.name ?? null
     },
     comments: (syllabusId, stage) => reviewCommentsOf(executor, syllabusId, stage),
@@ -111,5 +117,5 @@ export function reviewDetailStoreOn(executor: Executor): ReviewDetailStore {
 }
 
 export function createReviewDetailStore(): ReviewDetailStore {
-  return reviewDetailStoreOn(db as unknown as Executor)
+  return reviewDetailStoreOn(db)
 }

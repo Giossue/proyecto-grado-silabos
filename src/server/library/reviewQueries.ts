@@ -1,7 +1,19 @@
 import "server-only"
-import { sql, type SQL } from "drizzle-orm"
+import { and, asc, count, desc, eq, inArray, isNotNull, ne, sql, type SQL } from "drizzle-orm"
+import { alias } from "drizzle-orm/pg-core"
 import { db } from "@/db"
-import { accentMatches, iso8601 } from "../http/sql"
+import { isoText } from "@/db/expressions"
+import {
+  convocatoriasUniversidad,
+  docentesVigentesSilabo,
+  enviosBiblioteca,
+  facultades,
+  periodosAcademicos,
+  revisionesSilabo,
+  silabos,
+  usuarios,
+} from "@/db/schema"
+import { accentMatches } from "../http/sql"
 import type { LibraryReviewRepository, ReviewFilters, ReviewRow, SyllabusSummary } from "./reviews"
 
 export const OUTCOME_SQL = sql.raw(`CASE
@@ -32,10 +44,17 @@ async function rows<T>(query: SQL): Promise<T[]> {
 }
 
 const matches = accentMatches
+const revision = alias(revisionesSilabo, "revision")
+const silabo = alias(silabos, "silabo")
+const REVISION_JOIN = eq(revision.revisionSilaboId, enviosBiblioteca.revisionSilaboId)
+const SYLLABUS_JOIN = eq(silabo.silaboId, revision.silaboId)
 
 async function currentProcessId(): Promise<string | null> {
-  const [row] = await rows<{ id: string }>(sql`select convocatoria_universidad_id::text as id from convocatorias_universidad
-    order by fecha_inicio desc, convocatoria_universidad_id desc limit 1`)
+  const [row] = await db
+    .select({ id: convocatoriasUniversidad.convocatoriaUniversidadId })
+    .from(convocatoriasUniversidad)
+    .orderBy(desc(convocatoriasUniversidad.fechaInicio), desc(convocatoriasUniversidad.convocatoriaUniversidadId))
+    .limit(1)
   return row?.id ?? null
 }
 
@@ -92,56 +111,55 @@ export const LIBRARY_FROM = sql`from envios_biblioteca
   inner join revisiones_silabo as revision on revision.revision_silabo_id = envios_biblioteca.revision_silabo_id
   inner join silabos as silabo on silabo.silabo_id = revision.silabo_id`
 
-type PageRow = {
-  revision_id: string
-  silabo_id: string
-  numero_revision: number
-  enviado_por: string
-  verificado_por: string | null
-  enviado_en: string
-  estado_envio: string
-  resultado_envio: string | null
-  responsable_id: string | null
-}
-
 export function createLibraryReviewRepository(): LibraryReviewRepository {
   const names = async (ids: string[]): Promise<Map<string, string>> => {
     if (ids.length === 0) return new Map()
-    const found = await rows<{ id: string; name: string }>(
-      sql`select usuario_id::text as id, nombre_usuario as name from usuarios where usuario_id in (${sql.join(
-        ids.map((id) => sql`${id}`),
-        sql`, `,
-      )})`,
-    )
+    const found = await db.select({ id: usuarios.usuarioId, name: usuarios.nombreUsuario }).from(usuarios).where(inArray(usuarios.usuarioId, ids))
     return new Map(found.map((row) => [row.id, row.name]))
   }
   return {
     async page(filters, page, perPage) {
-      const where = sql.join(conditions(filters, await currentProcessId()), sql` and `)
-      const [{ total }] = await rows<{ total: string }>(sql`select count(*) as total ${LIBRARY_FROM} where ${where}`)
-      if (Number(total) === 0) return { total: 0, items: [] }
-      const found = await rows<PageRow>(sql`select envios_biblioteca.*, revision.revision_silabo_id::text as revision_id,
-          revision.silabo_id::text as silabo_id, revision.numero_revision as numero_revision,
-          revision.enviado_por::text as enviado_por, ${iso8601(sql.raw("revision.enviado_en"))} as enviado_en,
-          ${STATE_SQL} AS estado_envio, ${OUTCOME_SQL} AS resultado_envio, (${RESPONSIBLE_SQL})::text AS responsable_id
-        ${LIBRARY_FROM}
-        where ${where}
-        order by revision.enviado_en desc
-        limit ${perPage} offset ${(page - 1) * perPage}`)
-      const people = await names([...new Set(found.flatMap((row) => [row.enviado_por, ...(row.verificado_por ? [String(row.verificado_por)] : [])]))])
+      const where = and(...conditions(filters, await currentProcessId()))
+      const [{ total }] = await db
+        .select({ total: count() })
+        .from(enviosBiblioteca)
+        .innerJoin(revision, REVISION_JOIN)
+        .innerJoin(silabo, SYLLABUS_JOIN)
+        .where(where)
+      if (total === 0) return { total: 0, items: [] }
+      const found = await db
+        .select({
+          revisionId: revision.revisionSilaboId,
+          syllabusId: revision.silaboId,
+          revisionNumber: revision.numeroRevision,
+          sentBy: revision.enviadoPor,
+          signedBy: enviosBiblioteca.verificadoPor,
+          sentAt: isoText(revision.enviadoEn),
+          state: sql<string>`${STATE_SQL}`,
+          outcome: sql<string | null>`${OUTCOME_SQL}`,
+          responsibleId: sql<string | null>`(${RESPONSIBLE_SQL})::text`,
+        })
+        .from(enviosBiblioteca)
+        .innerJoin(revision, REVISION_JOIN)
+        .innerJoin(silabo, SYLLABUS_JOIN)
+        .where(where)
+        .orderBy(desc(revision.enviadoEn))
+        .limit(perPage)
+        .offset((page - 1) * perPage)
+      const people = await names([...new Set(found.flatMap((row) => [row.sentBy, ...(row.signedBy ? [row.signedBy] : [])]))])
       return {
-        total: Number(total),
+        total,
         items: found.map(
           (row): ReviewRow => ({
-            revisionId: row.revision_id,
-            syllabusId: row.silabo_id,
-            revisionNumber: Number(row.numero_revision),
-            sentAt: row.enviado_en,
-            sentBy: people.get(row.enviado_por) ?? "",
-            signedBy: row.verificado_por ? (people.get(String(row.verificado_por)) ?? null) : null,
-            responsibleId: row.responsable_id,
-            state: row.estado_envio,
-            outcome: row.resultado_envio,
+            revisionId: row.revisionId,
+            syllabusId: row.syllabusId,
+            revisionNumber: Number(row.revisionNumber),
+            sentAt: row.sentAt,
+            sentBy: people.get(row.sentBy) ?? "",
+            signedBy: row.signedBy ? (people.get(row.signedBy) ?? null) : null,
+            responsibleId: row.responsibleId,
+            state: row.state,
+            outcome: row.outcome,
           }),
         ),
       }
@@ -180,10 +198,11 @@ export function createLibraryReviewRepository(): LibraryReviewRepository {
         inner join convocatorias_universidad cu on cu.convocatoria_universidad_id = cc.convocatoria_universidad_id
         inner join periodos_academicos pa on pa.periodo_academico_id = cu.periodo_academico_id
         where s.silabo_id in (${list})`)
-      const teachers = await rows<{ silabo_id: string; nombre_usuario: string }>(sql`select usuarios.usuario_id, usuarios.nombre_usuario,
-          docentes_vigentes_silabo.silabo_id::text as silabo_id
-        from usuarios inner join docentes_vigentes_silabo on usuarios.usuario_id = docentes_vigentes_silabo.usuario_id
-        where docentes_vigentes_silabo.silabo_id in (${list})`)
+      const teachers = await db
+        .select({ silabo_id: docentesVigentesSilabo.silaboId, nombre_usuario: usuarios.nombreUsuario })
+        .from(usuarios)
+        .innerJoin(docentesVigentesSilabo, eq(usuarios.usuarioId, docentesVigentesSilabo.usuarioId))
+        .where(inArray(docentesVigentesSilabo.silaboId, ids))
       return new Map(
         found.map((row): [string, SyllabusSummary] => [
           row.id,
@@ -200,27 +219,33 @@ export function createLibraryReviewRepository(): LibraryReviewRepository {
       )
     },
     userNames: names,
-    async faculties() {
-      return rows<{ id: string; name: string }>(sql`select facultad_id::text as id, nombre_facultad as name from facultades
-        where facultad_activa = true order by nombre_facultad asc`)
-    },
+    faculties: () =>
+      db
+        .select({ id: facultades.facultadId, name: facultades.nombreFacultad })
+        .from(facultades)
+        .where(eq(facultades.facultadActiva, true))
+        .orderBy(asc(facultades.nombreFacultad)),
     async pastPeriods() {
       const current = await currentProcessId()
-      const others = current === null ? sql`convocatoria_universidad_id is not null` : sql`convocatoria_universidad_id != ${current}`
-      return rows<{ id: string; code: string }>(sql`select periodo_academico_id::text as id, codigo_periodo_academico as code
-        from periodos_academicos
-        where periodo_academico_id in (select periodo_academico_id from convocatorias_universidad where ${others})
-        order by fecha_fin_periodo desc`)
+      const process = convocatoriasUniversidad.convocatoriaUniversidadId
+      return db
+        .select({ id: periodosAcademicos.periodoAcademicoId, code: periodosAcademicos.codigoPeriodoAcademico })
+        .from(periodosAcademicos)
+        .where(
+          inArray(
+            periodosAcademicos.periodoAcademicoId,
+            db
+              .select({ id: convocatoriasUniversidad.periodoAcademicoId })
+              .from(convocatoriasUniversidad)
+              .where(current === null ? isNotNull(process) : ne(process, current)),
+          ),
+        )
+        .orderBy(desc(periodosAcademicos.fechaFinPeriodo))
     },
-    async existing(table, ids) {
-      const list = sql.join(
-        ids.map((id) => sql`${id}`),
-        sql`, `,
-      )
-      const column = table === "facultades" ? sql.raw("facultad_id") : sql.raw("periodo_academico_id")
-      const [{ total }] = await rows<{ total: string }>(sql`select count(*) as total from ${sql.raw(table)} where ${column} in (${list})`)
-      return Number(total)
-    },
+    existing: (table, ids) =>
+      table === "facultades"
+        ? db.$count(facultades, inArray(facultades.facultadId, ids))
+        : db.$count(periodosAcademicos, inArray(periodosAcademicos.periodoAcademicoId, ids)),
   }
 }
 

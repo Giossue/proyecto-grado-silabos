@@ -1,6 +1,8 @@
 import "server-only"
-import { sql, type SQL } from "drizzle-orm"
-import { db } from "@/db"
+import { and, asc, eq, inArray, ne } from "drizzle-orm"
+import { db, type Executor } from "@/db"
+import { jsonText } from "@/db/expressions"
+import { camposPlantilla, definicionesCampo, plantillaSilabo, seccionesPlantilla, valoresCampo } from "@/db/schema"
 import { isRecord, phpCount, phpJsonDecode } from "./phpValues"
 import { officialDefinition } from "./officialTemplate"
 import { trustedDefinition } from "./templateRuntime"
@@ -16,56 +18,49 @@ export interface TemplateStore {
   liveFields(ids: string[], careerOnly: boolean): Promise<LiveField[]>
 }
 
-type Executor = { execute(query: SQL): Promise<{ rows: unknown[] }> }
-
-async function rows<T>(executor: Executor, query: SQL): Promise<T[]> {
-  return (await executor.execute(query)).rows as T[]
-}
-
-function uuidList(ids: string[]): SQL {
-  return sql.join(
-    ids.map((id) => sql`${id}::uuid`),
-    sql`, `,
-  )
-}
-
-type TemplateRow = { id: string; modified_at: string | null; definition: string | null }
-type SectionRow = { id: string; clave: string; titulo: string; orientacion: string | null; posicion: number }
-type BlockRow = SectionRow & { section_id: string }
-type FieldRow = { id: string; block_id: string; quien_llena: string; contenido: string; clave: string | null; titulo: string | null }
-
 export async function loadTemplate(executor: Executor, lock = false): Promise<SyllabusTemplate | null> {
-  const [row] = await rows<TemplateRow>(
-    executor,
-    sql`select plantilla_id::text as id, plantilla_modificada_en::text as modified_at, definicion_plantilla::text as definition
-      from plantilla_silabo limit 1 ${lock ? sql`for update` : sql``}`,
-  )
+  const query = executor
+    .select({ id: plantillaSilabo.plantillaId, modifiedAt: plantillaSilabo.plantillaModificadaEn, definition: jsonText(plantillaSilabo.definicionPlantilla) })
+    .from(plantillaSilabo)
+    .limit(1)
+  const [row] = await (lock ? query.for("update") : query)
   if (!row) return null
   const decoded = phpJsonDecode(row.definition)
   const definition = isRecord(decoded) && phpCount(decoded) > 0 ? trustedDefinition(decoded) : officialDefinition()
-  const sections = await rows<SectionRow>(
-    executor,
-    sql`select seccion_plantilla_id::text as id, clave_seccion_plantilla as clave, titulo_seccion_plantilla as titulo,
-        orientacion_seccion_plantilla as orientacion, posicion_seccion_plantilla as posicion
-      from secciones_plantilla where plantilla_id = ${row.id}::uuid and vigente_en_plantilla = true
-      order by posicion_seccion_plantilla asc, clave_seccion_plantilla asc`,
-  )
-  const blocks = await rows<BlockRow>(
-    executor,
-    sql`select campo_plantilla_id::text as id, seccion_plantilla_id::text as section_id, clave_campo_plantilla as clave,
-        titulo_campo_plantilla as titulo, posicion_campo_plantilla as posicion
-      from campos_plantilla where plantilla_id = ${row.id}::uuid and vigente_en_plantilla = true
-      order by posicion_campo_plantilla asc, clave_campo_plantilla asc`,
-  )
-  const fields = await rows<FieldRow>(
-    executor,
-    sql`select definiciones_campo.definicion_campo_id::text as id, definiciones_campo.campo_plantilla_id::text as block_id,
-        definiciones_campo.quien_llena_definicion_campo as quien_llena, definiciones_campo.contenido_definicion_campo::text as contenido,
-        bloque.clave_campo_plantilla as clave, bloque.titulo_campo_plantilla as titulo
-      from definiciones_campo
-      left join campos_plantilla bloque on bloque.campo_plantilla_id = definiciones_campo.campo_plantilla_id
-      where definiciones_campo.plantilla_id = ${row.id}::uuid and definiciones_campo.vigente_en_plantilla = true`,
-  )
+  const sections = await executor
+    .select({
+      id: seccionesPlantilla.seccionPlantillaId,
+      clave: seccionesPlantilla.claveSeccionPlantilla,
+      titulo: seccionesPlantilla.tituloSeccionPlantilla,
+      orientacion: seccionesPlantilla.orientacionSeccionPlantilla,
+      posicion: seccionesPlantilla.posicionSeccionPlantilla,
+    })
+    .from(seccionesPlantilla)
+    .where(and(eq(seccionesPlantilla.plantillaId, row.id), eq(seccionesPlantilla.vigenteEnPlantilla, true)))
+    .orderBy(asc(seccionesPlantilla.posicionSeccionPlantilla), asc(seccionesPlantilla.claveSeccionPlantilla))
+  const blocks = await executor
+    .select({
+      id: camposPlantilla.campoPlantillaId,
+      section_id: camposPlantilla.seccionPlantillaId,
+      clave: camposPlantilla.claveCampoPlantilla,
+      titulo: camposPlantilla.tituloCampoPlantilla,
+      posicion: camposPlantilla.posicionCampoPlantilla,
+    })
+    .from(camposPlantilla)
+    .where(and(eq(camposPlantilla.plantillaId, row.id), eq(camposPlantilla.vigenteEnPlantilla, true)))
+    .orderBy(asc(camposPlantilla.posicionCampoPlantilla), asc(camposPlantilla.claveCampoPlantilla))
+  const fields = await executor
+    .select({
+      id: definicionesCampo.definicionCampoId,
+      block_id: definicionesCampo.campoPlantillaId,
+      quien_llena: definicionesCampo.quienLlenaDefinicionCampo,
+      contenido: jsonText(definicionesCampo.contenidoDefinicionCampo),
+      clave: camposPlantilla.claveCampoPlantilla,
+      titulo: camposPlantilla.tituloCampoPlantilla,
+    })
+    .from(definicionesCampo)
+    .leftJoin(camposPlantilla, eq(camposPlantilla.campoPlantillaId, definicionesCampo.campoPlantillaId))
+    .where(and(eq(definicionesCampo.plantillaId, row.id), eq(definicionesCampo.vigenteEnPlantilla, true)))
   const fieldsByBlock = new Map<string, TemplateField[]>()
   for (const field of fields) {
     const list = fieldsByBlock.get(field.block_id) ?? []
@@ -93,44 +88,43 @@ export async function loadTemplate(executor: Executor, lock = false): Promise<Sy
     position: Number(section.posicion),
     blocks: blocksBySection.get(section.id) ?? [],
   }))
-  return { id: row.id, modifiedAt: row.modified_at, definition, sections: presented }
+  return { id: row.id, modifiedAt: row.modifiedAt, definition, sections: presented }
 }
 
-type ValueRow = { field_id: string; subject_id: string | null; value: string | null }
+const VALUE = { fieldId: valoresCampo.definicionCampoId, subjectId: valoresCampo.asignaturaId, value: jsonText(valoresCampo.valorCampo) }
 
-function toValue(row: ValueRow): StoredValue {
-  return { fieldId: row.field_id, subjectId: row.subject_id, value: phpJsonDecode(row.value) }
+function toValue(row: { fieldId: string; subjectId: string | null; value: string | null }): StoredValue {
+  return { ...row, value: phpJsonDecode(row.value) }
 }
 
-export function createTemplateStore(executor: Executor = db as unknown as Executor): TemplateStore {
+export function createTemplateStore(executor: Executor = db): TemplateStore {
   return {
     template: () => loadTemplate(executor),
     async subjectValues(subjectId) {
-      const found = await rows<ValueRow>(
-        executor,
-        sql`select definicion_campo_id::text as field_id, asignatura_id::text as subject_id, valor_campo::text as value
-          from valores_campo where asignatura_id = ${subjectId}::uuid`,
-      )
+      const found = await executor.select(VALUE).from(valoresCampo).where(eq(valoresCampo.asignaturaId, subjectId))
       return found.map(toValue)
     },
     async valuesForSubjects(subjectIds, fieldIds) {
       if (subjectIds.length === 0 || fieldIds.length === 0) return []
-      const found = await rows<ValueRow>(
-        executor,
-        sql`select definicion_campo_id::text as field_id, asignatura_id::text as subject_id, valor_campo::text as value
-          from valores_campo where asignatura_id in (${uuidList(subjectIds)}) and definicion_campo_id in (${uuidList(fieldIds)})`,
-      )
+      const found = await executor
+        .select(VALUE)
+        .from(valoresCampo)
+        .where(and(inArray(valoresCampo.asignaturaId, subjectIds), inArray(valoresCampo.definicionCampoId, fieldIds)))
       return found.map(toValue)
     },
     async liveFields(ids, careerOnly) {
       if (ids.length === 0) return []
-      const found = await rows<{ id: string; quien_llena: string; contenido: string }>(
-        executor,
-        sql`select definicion_campo_id::text as id, quien_llena_definicion_campo as quien_llena, contenido_definicion_campo::text as contenido
-          from definiciones_campo where definicion_campo_id in (${uuidList([...new Set(ids)])}) and vigente_en_plantilla = true
-          ${careerOnly ? sql`and quien_llena_definicion_campo != 'institucional'` : sql``}`,
-      )
-      return found.map((row) => ({ id: row.id, responsible: row.quien_llena, content: phpJsonDecode(row.contenido) }))
+      const found = await executor
+        .select({ id: definicionesCampo.definicionCampoId, responsible: definicionesCampo.quienLlenaDefinicionCampo, content: jsonText(definicionesCampo.contenidoDefinicionCampo) })
+        .from(definicionesCampo)
+        .where(
+          and(
+            inArray(definicionesCampo.definicionCampoId, [...new Set(ids)]),
+            eq(definicionesCampo.vigenteEnPlantilla, true),
+            careerOnly ? ne(definicionesCampo.quienLlenaDefinicionCampo, "institucional") : undefined,
+          ),
+        )
+      return found.map((row) => ({ ...row, content: phpJsonDecode(row.content) }))
     },
   }
 }

@@ -1,22 +1,22 @@
 import "server-only"
-import { sql, type SQL } from "drizzle-orm"
+import { and, count, desc, eq, isNull, sql, type SQL } from "drizzle-orm"
+import { alias, type AnyPgColumn } from "drizzle-orm/pg-core"
 import { db } from "@/db"
+import { fromEpoch, hasRows, isoText } from "@/db/expressions"
+import { convocatoriasCarreras, docentesVigentesSilabo, exportacionesSilabo, notificaciones, revisionesSilabo, silabos } from "@/db/schema"
 import type { NotificationRecord, NotificationRepository, NotificationWriteRepository, StoredNotification } from "./notifications"
 import type { DestinationLookups } from "./notificationDestination"
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const INSTITUTION_TIMEZONE = process.env.DISPLAY_TIMEZONE ?? "America/Guayaquil"
 
-async function rows<T>(query: SQL): Promise<T[]> {
-  const result = await db.execute(query)
-  return result.rows as T[]
-}
+const n = alias(notificaciones, "n")
+const cc = alias(convocatoriasCarreras, "cc")
+const syllabus = alias(silabos, "s")
 
-const iso8601 = (column: SQL) => sql`to_char(${column} at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"+00:00"')`
-
-function visibleTo(userId: string): SQL {
-  return sql`n.usuario_id = ${userId} and (
-    n.periodo_academico_id in (
+function visibleTo(table: { usuarioId: AnyPgColumn; periodoAcademicoId: AnyPgColumn }, userId: string): SQL {
+  return sql`${table.usuarioId} = ${userId} and (
+    ${table.periodoAcademicoId} in (
       select cu.periodo_academico_id from convocatorias_universidad cu
       where cu.convocatoria_universidad_id = (
         select latest.convocatoria_universidad_id from convocatorias_universidad latest
@@ -24,8 +24,8 @@ function visibleTo(userId: string): SQL {
       )
     )
     or (
-      n.periodo_academico_id not in (select any_process.periodo_academico_id from convocatorias_universidad any_process)
-      and n.periodo_academico_id in (
+      ${table.periodoAcademicoId} not in (select any_process.periodo_academico_id from convocatorias_universidad any_process)
+      and ${table.periodoAcademicoId} in (
         select p.periodo_academico_id from periodos_academicos p
         where p.fecha_fin_periodo::date >= (now() at time zone ${INSTITUTION_TIMEZONE})::date
       )
@@ -33,84 +33,68 @@ function visibleTo(userId: string): SQL {
   )`
 }
 
-type NotificationRow = {
-  notificacion_id: string
-  tipo_notificacion: string
-  titulo_notificacion: string
-  mensaje_notificacion: string
-  tipo_recurso: string | null
-  recurso_id: string | null
-  leido_en: string | null
-  notificado_en: string
+function visible(userId: string, onlyUnread: boolean): SQL | undefined {
+  return and(visibleTo(n, userId), onlyUnread ? isNull(n.leidoEn) : undefined)
+}
+
+async function visibleCount(where: SQL | undefined): Promise<number> {
+  const [row] = await db.select({ total: count() }).from(n).where(where)
+  return row?.total ?? 0
 }
 
 export function createNotificationRepository(): NotificationRepository {
   return {
     async page(userId, { page, perPage, onlyUnread }) {
-      const where = onlyUnread ? sql`${visibleTo(userId)} and n.leido_en is null` : visibleTo(userId)
-      const [{ total }] = await rows<{ total: string }>(sql`select count(*) as total from notificaciones n where ${where}`)
-      const count = Number(total)
-      if (count === 0) return { total: 0, items: [] }
-      const found = await rows<NotificationRow>(sql`
-        select n.notificacion_id, n.tipo_notificacion, n.titulo_notificacion, n.mensaje_notificacion, n.tipo_recurso,
-               n.recurso_id::text as recurso_id, ${iso8601(sql`n.leido_en`)} as leido_en, ${iso8601(sql`n.notificado_en`)} as notificado_en
-        from notificaciones n
-        where ${where}
-        order by n.notificado_en desc
-        limit ${perPage} offset ${(page - 1) * perPage}`)
-      return {
-        total: count,
-        items: found.map(
-          (row): NotificationRecord => ({
-            id: row.notificacion_id,
-            type: row.tipo_notificacion,
-            title: row.titulo_notificacion,
-            message: row.mensaje_notificacion,
-            resourceType: row.tipo_recurso,
-            resourceId: row.recurso_id,
-            readAt: row.leido_en,
-            notifiedAt: row.notificado_en,
-          }),
-        ),
-      }
+      const where = visible(userId, onlyUnread)
+      const total = await visibleCount(where)
+      if (total === 0) return { total: 0, items: [] }
+      const found = await db
+        .select({
+          id: n.notificacionId,
+          type: n.tipoNotificacion,
+          title: n.tituloNotificacion,
+          message: n.mensajeNotificacion,
+          resourceType: n.tipoRecurso,
+          resourceId: n.recursoId,
+          readAt: isoText(n.leidoEn) as SQL<string | null>,
+          notifiedAt: isoText(n.notificadoEn),
+        })
+        .from(n)
+        .where(where)
+        .orderBy(desc(n.notificadoEn))
+        .limit(perPage)
+        .offset((page - 1) * perPage)
+      return { total, items: found.map((row): NotificationRecord => row) }
     },
-    async unreadCount(userId) {
-      const [{ total }] = await rows<{ total: string }>(
-        sql`select count(*) as total from notificaciones n where ${visibleTo(userId)} and n.leido_en is null`,
-      )
-      return Number(total)
-    },
+    unreadCount: (userId) => visibleCount(visible(userId, true)),
   }
 }
 
 export function createNotificationWriteRepository(): NotificationWriteRepository {
   return {
     async find(id) {
-      const [row] = await rows<{
-        notificacion_id: string
-        usuario_id: string
-        tipo_notificacion: string
-        tipo_recurso: string | null
-        recurso_id: string | null
-        leido_en: string | null
-      }>(sql`select notificacion_id::text as notificacion_id, usuario_id::text as usuario_id, tipo_notificacion, tipo_recurso,
-               recurso_id::text as recurso_id, leido_en::text as leido_en
-             from notificaciones where notificacion_id = ${id} limit 1`)
-      if (!row) return null
-      return {
-        id: row.notificacion_id,
-        userId: row.usuario_id,
-        type: row.tipo_notificacion,
-        resourceType: row.tipo_recurso,
-        resourceId: row.recurso_id,
-        readAt: row.leido_en,
-      } satisfies StoredNotification
+      const [row] = await db
+        .select({
+          id: notificaciones.notificacionId,
+          userId: notificaciones.usuarioId,
+          type: notificaciones.tipoNotificacion,
+          resourceType: notificaciones.tipoRecurso,
+          resourceId: notificaciones.recursoId,
+          readAt: notificaciones.leidoEn,
+        })
+        .from(notificaciones)
+        .where(eq(notificaciones.notificacionId, id))
+        .limit(1)
+      return row ? (row satisfies StoredNotification) : null
     },
     async markRead(id, at) {
-      await db.execute(sql`update notificaciones set leido_en = to_timestamp(${at}) where notificacion_id = ${id}`)
+      await db.update(notificaciones).set({ leidoEn: fromEpoch(at) }).where(eq(notificaciones.notificacionId, id))
     },
     async markAllRead(userId, at) {
-      await db.execute(sql`update notificaciones n set leido_en = to_timestamp(${at}) where ${visibleTo(userId)} and n.leido_en is null`)
+      await db
+        .update(notificaciones)
+        .set({ leidoEn: fromEpoch(at) })
+        .where(and(visibleTo(notificaciones, userId), isNull(notificaciones.leidoEn)))
     },
   }
 }
@@ -118,11 +102,11 @@ export function createNotificationWriteRepository(): NotificationWriteRepository
 const visibleConvocation = sql`exists (select 1 from convocatorias_universidad cu where cu.convocatoria_universidad_id = cc.convocatoria_universidad_id)`
 const visibleSyllabus = sql`exists (select 1 from convocatorias_carreras cc where cc.convocatoria_carrera_id = s.convocatoria_carrera_id and ${visibleConvocation})`
 
-async function strings(query: SQL): Promise<string[]> {
-  return (await rows<{ value: string | null }>(query)).map((row) => row.value).filter((value): value is string => typeof value === "string")
+async function strings(query: PromiseLike<{ value: string | null }[]>): Promise<string[]> {
+  return (await query).map((row) => row.value).filter((value): value is string => typeof value === "string")
 }
 
-async function firstString(query: SQL): Promise<string | null> {
+async function firstString(query: PromiseLike<{ value: string | null }[]>): Promise<string | null> {
   return (await strings(query))[0] ?? null
 }
 
@@ -130,45 +114,74 @@ export function createDestinationLookups(): DestinationLookups {
   return {
     async processCareerIds(processId) {
       if (!UUID.test(processId)) return []
-      return strings(sql`select cc.carrera_id::text as value from convocatorias_carreras cc
-        where cc.convocatoria_universidad_id = ${processId} and ${visibleConvocation}`)
+      return strings(
+        db
+          .select({ value: cc.carreraId })
+          .from(cc)
+          .where(and(eq(cc.convocatoriaUniversidadId, processId), visibleConvocation)),
+      )
     },
     async convocationCareerIds(convocationId) {
       if (!UUID.test(convocationId)) return []
-      return strings(sql`select cc.carrera_id::text as value from convocatorias_carreras cc
-        where cc.convocatoria_carrera_id = ${convocationId} and ${visibleConvocation}`)
+      return strings(
+        db
+          .select({ value: cc.carreraId })
+          .from(cc)
+          .where(and(eq(cc.convocatoriaCarreraId, convocationId), visibleConvocation)),
+      )
     },
     async syllabusExists(syllabusId) {
       if (!UUID.test(syllabusId)) return false
-      return (await strings(sql`select s.silabo_id::text as value from silabos s where s.silabo_id = ${syllabusId} and ${visibleSyllabus}`)).length > 0
+      return hasRows(
+        db
+          .select({ value: syllabus.silaboId })
+          .from(syllabus)
+          .where(and(eq(syllabus.silaboId, syllabusId), visibleSyllabus)),
+      )
     },
     async syllabusCareerId(syllabusId) {
       if (!UUID.test(syllabusId)) return null
-      return firstString(sql`select cc.carrera_id::text as value from silabos s
-        join convocatorias_carreras cc on cc.convocatoria_carrera_id = s.convocatoria_carrera_id
-        where s.silabo_id = ${syllabusId} and ${visibleSyllabus} and ${visibleConvocation} limit 1`)
+      return firstString(
+        db
+          .select({ value: cc.carreraId })
+          .from(syllabus)
+          .innerJoin(cc, eq(cc.convocatoriaCarreraId, syllabus.convocatoriaCarreraId))
+          .where(and(eq(syllabus.silaboId, syllabusId), visibleSyllabus, visibleConvocation))
+          .limit(1),
+      )
     },
     async latestRevisionId(syllabusId) {
       if (!UUID.test(syllabusId)) return null
-      return firstString(sql`select r.revision_silabo_id::text as value from revisiones_silabo r
-        join silabos s on s.silabo_id = r.silabo_id
-        where r.silabo_id = ${syllabusId} and ${visibleSyllabus}
-        order by r.numero_revision desc limit 1`)
+      const revision = alias(revisionesSilabo, "r")
+      return firstString(
+        db
+          .select({ value: revision.revisionSilaboId })
+          .from(revision)
+          .innerJoin(syllabus, eq(syllabus.silaboId, revision.silaboId))
+          .where(and(eq(revision.silaboId, syllabusId), visibleSyllabus))
+          .orderBy(desc(revision.numeroRevision))
+          .limit(1),
+      )
     },
     async teacherAssignmentIds(syllabusId, userId) {
       if (!UUID.test(syllabusId)) return []
-      return strings(sql`select d.asignacion_rol_id::text as value from docentes_vigentes_silabo d
-        where d.silabo_id = ${syllabusId} and d.usuario_id = ${userId}`)
+      return strings(
+        db
+          .select({ value: docentesVigentesSilabo.asignacionRolId })
+          .from(docentesVigentesSilabo)
+          .where(and(eq(docentesVigentesSilabo.silaboId, syllabusId), eq(docentesVigentesSilabo.usuarioId, userId))),
+      )
     },
     async artifactRevision(artifactId) {
       if (!UUID.test(artifactId)) return null
-      const [row] = await rows<{ revision_id: string; syllabus_id: string }>(sql`
-        select r.revision_silabo_id::text as revision_id, s.silabo_id::text as syllabus_id
-        from exportaciones_silabo e
-        join revisiones_silabo r on r.revision_silabo_id = e.revision_silabo_id
-        join silabos s on s.silabo_id = r.silabo_id
-        where e.exportacion_silabo_id = ${artifactId} and ${visibleSyllabus} limit 1`)
-      return row ? { revisionId: row.revision_id, syllabusId: row.syllabus_id } : null
+      const [row] = await db
+        .select({ revisionId: revisionesSilabo.revisionSilaboId, syllabusId: syllabus.silaboId })
+        .from(exportacionesSilabo)
+        .innerJoin(revisionesSilabo, eq(revisionesSilabo.revisionSilaboId, exportacionesSilabo.revisionSilaboId))
+        .innerJoin(syllabus, eq(syllabus.silaboId, revisionesSilabo.silaboId))
+        .where(and(eq(exportacionesSilabo.exportacionSilaboId, artifactId), visibleSyllabus))
+        .limit(1)
+      return row ?? null
     },
   }
 }

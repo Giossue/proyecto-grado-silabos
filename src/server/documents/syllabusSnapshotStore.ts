@@ -19,5 +19,5 @@ export function snapshotSourceOn(executor: Executor): SnapshotSource {
 }
 
 export function createSnapshotSource(): SnapshotSource {
-  return snapshotSourceOn(db as unknown as Executor)
+  return snapshotSourceOn(db)
 }

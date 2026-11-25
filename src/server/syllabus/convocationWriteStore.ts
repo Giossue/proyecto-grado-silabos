@@ -1,6 +1,8 @@
 import "server-only"
-import { sql } from "drizzle-orm"
+import { and, eq, exists, sql } from "drizzle-orm"
 import { db } from "@/db"
+import { epochText, hasRows } from "@/db/expressions"
+import { carreras, convocatoriasCarreras, convocatoriasUniversidad } from "@/db/schema"
 import { careerLabelSql } from "../academic/careerLabel"
 import { createTemplateStore } from "../configuration/templateStore"
 import { createDashboardRepository } from "../dashboard/dashboardQueries"
@@ -16,7 +18,7 @@ import { templateProblem } from "./processes"
 import { dbTransaction, type TransactionRunner } from "./reviewDecisionStore"
 import { failModelNotFound } from "../http/failures"
 import { MODELS } from "../http/models"
-import { rowsOf, type Executor } from "./teacherSyllabusQueries"
+import type { Executor } from "./teacherSyllabusQueries"
 
 export function institutionDay(seconds: number): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: process.env.DISPLAY_TIMEZONE ?? "America/Guayaquil", year: "numeric", month: "2-digit", day: "2-digit" }).format(
@@ -55,42 +57,62 @@ export function convocationWriteTx(executor: Executor, afterCommit: AfterCommit,
     generateConvocation: (id, options) => work.generateConvocation(id, options),
     teacherSyllabusCounts: (ids) => recipients.teacherSyllabusCounts(ids),
     async lockProcess(id) {
-      const [row] = await rowsOf<{ id: string; state: string; period_id: string }>(
-        executor,
-        sql`select convocatoria_universidad_id::text as id, estado_convocatoria_universidad as state, periodo_academico_id::text as period_id
-          from convocatorias_universidad where convocatoria_universidad_id = ${id}::uuid limit 1 for update`,
-      )
-      return row ? { id: row.id, state: row.state, periodId: row.period_id } : null
+      const [row] = await executor
+        .select({
+          id: convocatoriasUniversidad.convocatoriaUniversidadId,
+          state: convocatoriasUniversidad.estadoConvocatoriaUniversidad,
+          periodId: convocatoriasUniversidad.periodoAcademicoId,
+        })
+        .from(convocatoriasUniversidad)
+        .where(eq(convocatoriasUniversidad.convocatoriaUniversidadId, id))
+        .limit(1)
+        .for("update")
+      return row ?? null
     },
     async careerHasConvocation(careerId, processId) {
-      const [row] = await rowsOf<{ found: boolean }>(
-        executor,
-        sql`select exists (select 1 from convocatorias_carreras convocatoria where convocatoria.carrera_id = ${careerId}::uuid
-          and convocatoria.convocatoria_universidad_id = ${processId}::uuid
-          and exists (select 1 from convocatorias_universidad proceso where proceso.convocatoria_universidad_id = convocatoria.convocatoria_universidad_id)) as found`,
+      return hasRows(
+        executor
+          .select({ id: convocatoriasCarreras.convocatoriaCarreraId })
+          .from(convocatoriasCarreras)
+          .where(
+            and(
+              eq(convocatoriasCarreras.carreraId, careerId),
+              eq(convocatoriasCarreras.convocatoriaUniversidadId, processId),
+              exists(
+                executor
+                  .select({ id: convocatoriasUniversidad.convocatoriaUniversidadId })
+                  .from(convocatoriasUniversidad)
+                  .where(eq(convocatoriasUniversidad.convocatoriaUniversidadId, convocatoriasCarreras.convocatoriaUniversidadId)),
+              ),
+            ),
+          )
+          .limit(1),
       )
-      return row.found
     },
     async createConvocation(careerId, processId) {
       const id = uuid7()
-      await executor.execute(sql`insert into convocatorias_carreras (convocatoria_carrera_id, carrera_id, convocatoria_universidad_id, estado_convocatoria_carrera)
-        values (${id}::uuid, ${careerId}::uuid, ${processId}::uuid, 'preparacion')`)
+      await executor
+        .insert(convocatoriasCarreras)
+        .values({ convocatoriaCarreraId: id, carreraId: careerId, convocatoriaUniversidadId: processId, estadoConvocatoriaCarrera: "preparacion" })
       return id
     },
     async lockConvocation(id) {
-      const [row] = await rowsOf<{ id: string; career_id: string; career_label: string; state: string; process_state: string; due_at: number }>(
-        executor,
-        sql`select convocatoria.convocatoria_carrera_id::text as id, convocatoria.carrera_id::text as career_id, ${careerLabelSql("carrera")} as career_label,
-            convocatoria.estado_convocatoria_carrera as state, proceso.estado_convocatoria_universidad as process_state,
-            extract(epoch from proceso.fecha_entrega)::bigint as due_at
-          from convocatorias_carreras convocatoria
-            inner join convocatorias_universidad proceso on proceso.convocatoria_universidad_id = convocatoria.convocatoria_universidad_id
-            inner join carreras carrera on carrera.carrera_id = convocatoria.carrera_id
-          where convocatoria.convocatoria_carrera_id = ${id}::uuid limit 1 for update of convocatoria`,
-      )
-      return row
-        ? { id: row.id, careerId: row.career_id, careerLabel: row.career_label, state: row.state, processState: row.process_state, dueAt: Number(row.due_at) }
-        : null
+      const [row] = await executor
+        .select({
+          id: convocatoriasCarreras.convocatoriaCarreraId,
+          careerId: convocatoriasCarreras.carreraId,
+          careerLabel: sql<string>`${careerLabelSql("carreras")}`,
+          state: convocatoriasCarreras.estadoConvocatoriaCarrera,
+          processState: convocatoriasUniversidad.estadoConvocatoriaUniversidad,
+          dueAt: epochText(convocatoriasUniversidad.fechaEntrega),
+        })
+        .from(convocatoriasCarreras)
+        .innerJoin(convocatoriasUniversidad, eq(convocatoriasUniversidad.convocatoriaUniversidadId, convocatoriasCarreras.convocatoriaUniversidadId))
+        .innerJoin(carreras, eq(carreras.carreraId, convocatoriasCarreras.carreraId))
+        .where(eq(convocatoriasCarreras.convocatoriaCarreraId, id))
+        .limit(1)
+        .for("update", { of: convocatoriasCarreras })
+      return row ? { ...row, dueAt: Number(row.dueAt) } : null
     },
     async readinessBlockers(careerId) {
       const dashboard = createDashboardRepository(executor)
@@ -106,7 +128,7 @@ export function convocationWriteTx(executor: Executor, afterCommit: AfterCommit,
     },
     templateProblem: (errorKey) => institutionalTemplateProblem(executor, errorKey),
     async updateState(id, state) {
-      await executor.execute(sql`update convocatorias_carreras set estado_convocatoria_carrera = ${state} where convocatoria_carrera_id = ${id}::uuid`)
+      await executor.update(convocatoriasCarreras).set({ estadoConvocatoriaCarrera: state }).where(eq(convocatoriasCarreras.convocatoriaCarreraId, id))
     },
   }
 }
@@ -116,18 +138,19 @@ export function convocationWriteDepsOn(executor: Executor, transaction: Transact
   const repository = convocationRepositoryOn(executor, () => Promise.reject(new Error("read only")))
   return {
     convocation: (id) => repository.convocation(id),
-    async openProcessExists(id) {
-      const [row] = await rowsOf<{ found: boolean }>(
-        executor,
-        sql`select exists (select 1 from convocatorias_universidad where convocatoria_universidad_id = ${id}::uuid and estado_convocatoria_universidad = 'abierto') as found`,
-      )
-      return row.found
-    },
+    openProcessExists: (id) =>
+      hasRows(
+        executor
+          .select({ id: convocatoriasUniversidad.convocatoriaUniversidadId })
+          .from(convocatoriasUniversidad)
+          .where(and(eq(convocatoriasUniversidad.convocatoriaUniversidadId, id), eq(convocatoriasUniversidad.estadoConvocatoriaUniversidad, "abierto")))
+          .limit(1),
+      ),
     nowMs: options.now === undefined ? () => Date.now() : () => now() * 1000,
     transaction: (work) => withAfterCommit((afterCommit) => transaction((inner) => work(convocationWriteTx(inner, afterCommit, now(), options.mail)))),
   }
 }
 
 export function createConvocationWriteDeps(): Omit<ConvocationWriteDeps, "bridge"> {
-  return convocationWriteDepsOn(db as unknown as Executor, dbTransaction)
+  return convocationWriteDepsOn(db, dbTransaction)
 }

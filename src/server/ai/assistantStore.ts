@@ -1,11 +1,12 @@
 import "server-only"
-import { sql, type SQL } from "drizzle-orm"
-import { db } from "@/db"
+import { and, asc, desc, eq, inArray, isNull, lt, notInArray, sql, type SQL } from "drizzle-orm"
+import { db, type Executor } from "@/db"
+import { fromEpoch, hasRows, isoText, jsonbValue, jsonText } from "@/db/expressions"
+import { convocatoriasUniversidad, mensajesIaPlantilla, plantillaSilabo, propuestasIaPlantilla } from "@/db/schema"
 import { phpJsonDecode, phpShape, record, type PhpRecord } from "../configuration/phpValues"
 import type { SyllabusTemplate } from "../configuration/templatePresentation"
 import { loadTemplate } from "../configuration/templateStore"
 import { phpJsonEncode } from "../http/phpJson"
-import { iso8601, uuidList } from "../http/sql"
 
 export type StoredMessage = { id: string; templateId: string; userId: string; content: PhpRecord; sentAt: string; hiddenAt: string | null }
 
@@ -66,123 +67,145 @@ export interface AssistantStore {
   transaction<T>(work: (tx: AssistantTx) => Promise<T>): Promise<T>
 }
 
-type Executor = { execute(query: SQL): Promise<{ rows: unknown[] }> }
-
-async function rows<T>(executor: Executor, query: SQL): Promise<T[]> {
-  return (await executor.execute(query)).rows as T[]
-}
-
 export const OPEN_STATES = ["pendiente", "en_ejecucion"]
 
-const MESSAGE_COLUMNS = sql`mensaje_ia_plantilla_id::text as id, plantilla_id::text as template_id, usuario_id::text as user_id,
-  contenido_mensaje::text as content, ${iso8601(sql.raw("enviado_en"))} as sent_at, ${iso8601(sql.raw("ocultado_en"))} as hidden_at`
-
-const PROPOSAL_COLUMNS = sql`propuesta_ia_plantilla_id::text as id, plantilla_id::text as template_id, mensaje_ia_plantilla_id::text as message_id,
-  solicitada_por::text as requested_by, estructura_propuesta::text as structure, cambios_propuesta::text as changes,
-  huella_plantilla_base as fingerprint, version_borrador_propuesta as draft_version, estado_propuesta as state,
-  decidida_por::text as decided_by, ${iso8601(sql.raw("creada_en"))} as created_at`
-
-type MessageRow = { id: string; template_id: string; user_id: string; content: string; sent_at: string; hidden_at: string | null }
-
-type ProposalRow = {
-  id: string
-  template_id: string
-  message_id: string
-  requested_by: string
-  structure: string
-  changes: string
-  fingerprint: string
-  draft_version: string
-  state: string
-  decided_by: string | null
-  created_at: string
+const MESSAGE = {
+  id: mensajesIaPlantilla.mensajeIaPlantillaId,
+  templateId: mensajesIaPlantilla.plantillaId,
+  userId: mensajesIaPlantilla.usuarioId,
+  content: jsonText(mensajesIaPlantilla.contenidoMensaje),
+  sentAt: isoText(mensajesIaPlantilla.enviadoEn),
+  hiddenAt: isoText(mensajesIaPlantilla.ocultadoEn) as SQL<string | null>,
 }
 
+const PROPOSAL = {
+  id: propuestasIaPlantilla.propuestaIaPlantillaId,
+  templateId: propuestasIaPlantilla.plantillaId,
+  messageId: propuestasIaPlantilla.mensajeIaPlantillaId,
+  requestedBy: propuestasIaPlantilla.solicitadaPor,
+  structure: jsonText(propuestasIaPlantilla.estructuraPropuesta),
+  changes: jsonText(propuestasIaPlantilla.cambiosPropuesta),
+  fingerprint: propuestasIaPlantilla.huellaPlantillaBase,
+  draftVersion: propuestasIaPlantilla.versionBorradorPropuesta,
+  state: propuestasIaPlantilla.estadoPropuesta,
+  decidedBy: propuestasIaPlantilla.decididaPor,
+  createdAt: isoText(propuestasIaPlantilla.creadaEn),
+}
+
+type MessageRow = { id: string; templateId: string; userId: string; content: string | null; sentAt: string; hiddenAt: string | null }
+
+type ProposalRow = Omit<StoredProposal, "structure" | "changes"> & { structure: string | null; changes: string | null }
+
 function messageOf(row: MessageRow): StoredMessage {
-  return { id: row.id, templateId: row.template_id, userId: row.user_id, content: record(phpJsonDecode(row.content)), sentAt: row.sent_at, hiddenAt: row.hidden_at }
+  return { ...row, content: record(phpJsonDecode(row.content)) }
 }
 
 function proposalOf(row: ProposalRow): StoredProposal {
-  return {
-    id: row.id,
-    templateId: row.template_id,
-    messageId: row.message_id,
-    requestedBy: row.requested_by,
-    structure: record(phpJsonDecode(row.structure)),
-    changes: record(phpJsonDecode(row.changes)),
-    fingerprint: row.fingerprint,
-    draftVersion: row.draft_version,
-    state: row.state,
-    decidedBy: row.decided_by,
-    createdAt: row.created_at,
-  }
+  return { ...row, structure: record(phpJsonDecode(row.structure)), changes: record(phpJsonDecode(row.changes)) }
 }
 
 export function jsonbOf(value: unknown): SQL {
-  return sql`${phpJsonEncode(phpShape(value))}::jsonb`
+  return jsonbValue(phpJsonEncode(phpShape(value)))
 }
 
 const conversationOf = (templateId: string, userId: string) =>
-  sql`plantilla_id = ${templateId}::uuid and usuario_id = ${userId}::uuid and ocultado_en is null`
+  and(eq(mensajesIaPlantilla.plantillaId, templateId), eq(mensajesIaPlantilla.usuarioId, userId), isNull(mensajesIaPlantilla.ocultadoEn))
 
-const openState = sql`(contenido_mensaje ->> 'estado') in ('pendiente', 'en_ejecucion')`
+const content = (path: string[]) =>
+  sql`(${mensajesIaPlantilla.contenidoMensaje}${sql.raw(path.slice(0, -1).map((key) => ` -> '${key}'`).join(""))} ->> ${sql.raw(`'${path[path.length - 1]}'`)})`
 
-async function busy(executor: Executor, templateId: string, userId: string): Promise<boolean> {
-  const [row] = await rows<{ found: boolean }>(executor, sql`select exists(select 1 from mensajes_ia_plantilla where ${conversationOf(templateId, userId)} and ${openState}) as found`)
-  return row?.found === true
+function busy(executor: Executor, templateId: string, userId: string): Promise<boolean> {
+  return hasRows(
+    executor
+      .select({ id: mensajesIaPlantilla.mensajeIaPlantillaId })
+      .from(mensajesIaPlantilla)
+      .where(and(conversationOf(templateId, userId), inArray(content(["estado"]), OPEN_STATES)))
+      .limit(1),
+  )
 }
+
+const messages = (executor: Executor) => executor.select(MESSAGE).from(mensajesIaPlantilla)
+const proposals = (executor: Executor) => executor.select(PROPOSAL).from(propuestasIaPlantilla)
 
 export function assistantTx(executor: Executor): AssistantTx {
   return {
     async lockTemplateId() {
-      const [row] = await rows<{ id: string }>(executor, sql`select plantilla_id::text as id from plantilla_silabo limit 1 for update`)
+      const [row] = await executor.select({ id: plantillaSilabo.plantillaId }).from(plantillaSilabo).limit(1).for("update")
       return row?.id ?? null
     },
     async questionByKey(templateId, userId, key) {
-      const [row] = await rows<{ id: string }>(
-        executor,
-        sql`select mensaje_ia_plantilla_id::text as id from mensajes_ia_plantilla
-          where plantilla_id = ${templateId}::uuid and usuario_id = ${userId}::uuid and (contenido_mensaje ->> 'rol') = 'usuario'
-            and ((contenido_mensaje -> 'entrada') ->> 'clave_idempotencia') = ${key} limit 1`,
-      )
+      const [row] = await executor
+        .select({ id: mensajesIaPlantilla.mensajeIaPlantillaId })
+        .from(mensajesIaPlantilla)
+        .where(
+          and(
+            eq(mensajesIaPlantilla.plantillaId, templateId),
+            eq(mensajesIaPlantilla.usuarioId, userId),
+            eq(content(["rol"]), "usuario"),
+            eq(content(["entrada", "clave_idempotencia"]), key),
+          ),
+        )
+        .limit(1)
       return row?.id ?? null
     },
     async answerTo(questionId) {
-      const [row] = await rows<{ id: string }>(
-        executor,
-        sql`select mensaje_ia_plantilla_id::text as id from mensajes_ia_plantilla where ((contenido_mensaje -> 'entrada') ->> 'respuesta_a_id') = ${questionId} limit 1`,
-      )
+      const [row] = await executor
+        .select({ id: mensajesIaPlantilla.mensajeIaPlantillaId })
+        .from(mensajesIaPlantilla)
+        .where(eq(content(["entrada", "respuesta_a_id"]), questionId))
+        .limit(1)
       return row?.id ?? null
     },
     conversationBusy: (templateId, userId) => busy(executor, templateId, userId),
     async insertMessage(message) {
-      await executor.execute(sql`insert into mensajes_ia_plantilla (mensaje_ia_plantilla_id, plantilla_id, usuario_id, contenido_mensaje)
-        values (${message.id}::uuid, ${message.templateId}::uuid, ${message.userId}::uuid, ${jsonbOf(message.content)})`)
+      await executor.insert(mensajesIaPlantilla).values({
+        mensajeIaPlantillaId: message.id,
+        plantillaId: message.templateId,
+        usuarioId: message.userId,
+        contenidoMensaje: jsonbOf(message.content),
+      })
     },
     async lockProposal(id) {
-      const [row] = await rows<ProposalRow>(executor, sql`select ${PROPOSAL_COLUMNS} from propuestas_ia_plantilla where propuesta_ia_plantilla_id = ${id}::uuid limit 1 for update`)
+      const [row] = await proposals(executor).where(eq(propuestasIaPlantilla.propuestaIaPlantillaId, id)).limit(1).for("update")
       return row ? proposalOf(row) : null
     },
     async decideProposal(id, state, actorId, at) {
-      await executor.execute(sql`update propuestas_ia_plantilla set estado_propuesta = ${state}, decidida_por = ${actorId}::uuid, decidida_en = to_timestamp(${at})
-        where propuesta_ia_plantilla_id = ${id}::uuid`)
+      await executor
+        .update(propuestasIaPlantilla)
+        .set({ estadoPropuesta: state, decididaPor: actorId, decididaEn: fromEpoch(at) })
+        .where(eq(propuestasIaPlantilla.propuestaIaPlantillaId, id))
     },
     async lockMessage(id) {
-      const [row] = await rows<MessageRow>(executor, sql`select ${MESSAGE_COLUMNS} from mensajes_ia_plantilla where mensaje_ia_plantilla_id = ${id}::uuid limit 1 for update`)
+      const [row] = await messages(executor).where(eq(mensajesIaPlantilla.mensajeIaPlantillaId, id)).limit(1).for("update")
       return row ? messageOf(row) : null
     },
-    async updateMessage(id, content) {
-      await executor.execute(sql`update mensajes_ia_plantilla set contenido_mensaje = ${jsonbOf(content)} where mensaje_ia_plantilla_id = ${id}::uuid`)
+    async updateMessage(id, value) {
+      await executor.update(mensajesIaPlantilla).set({ contenidoMensaje: jsonbOf(value) }).where(eq(mensajesIaPlantilla.mensajeIaPlantillaId, id))
     },
     async replacePendingProposals(templateId, userId) {
-      await executor.execute(sql`update propuestas_ia_plantilla set estado_propuesta = 'reemplazada'
-        where plantilla_id = ${templateId}::uuid and solicitada_por = ${userId}::uuid and estado_propuesta = 'pendiente'`)
+      await executor
+        .update(propuestasIaPlantilla)
+        .set({ estadoPropuesta: "reemplazada" })
+        .where(
+          and(
+            eq(propuestasIaPlantilla.plantillaId, templateId),
+            eq(propuestasIaPlantilla.solicitadaPor, userId),
+            eq(propuestasIaPlantilla.estadoPropuesta, "pendiente"),
+          ),
+        )
     },
     async insertProposal(proposal) {
-      await executor.execute(sql`insert into propuestas_ia_plantilla (propuesta_ia_plantilla_id, plantilla_id, mensaje_ia_plantilla_id, solicitada_por,
-          estructura_propuesta, cambios_propuesta, huella_plantilla_base, version_borrador_propuesta, estado_propuesta)
-        values (${proposal.id}::uuid, ${proposal.templateId}::uuid, ${proposal.messageId}::uuid, ${proposal.requestedBy}::uuid,
-          ${jsonbOf(proposal.structure)}, ${jsonbOf(proposal.changes)}, ${proposal.fingerprint}, ${proposal.draftVersion}, 'pendiente')`)
+      await executor.insert(propuestasIaPlantilla).values({
+        propuestaIaPlantillaId: proposal.id,
+        plantillaId: proposal.templateId,
+        mensajeIaPlantillaId: proposal.messageId,
+        solicitadaPor: proposal.requestedBy,
+        estructuraPropuesta: jsonbOf(proposal.structure),
+        cambiosPropuesta: jsonbOf(proposal.changes),
+        huellaPlantillaBase: proposal.fingerprint,
+        versionBorradorPropuesta: proposal.draftVersion,
+        estadoPropuesta: "pendiente",
+      })
     },
   }
 }
@@ -191,65 +214,78 @@ export function assistantStoreOn(executor: Executor, transaction: <T>(work: (tx:
   return {
     template: () => loadTemplate(executor),
     async conversation(templateId, userId) {
-      const messages = (
-        await rows<MessageRow>(executor, sql`select ${MESSAGE_COLUMNS} from mensajes_ia_plantilla where ${conversationOf(templateId, userId)} order by enviado_en asc`)
-      ).map(messageOf)
-      if (messages.length === 0) return []
-      const proposals = (
-        await rows<ProposalRow>(executor, sql`select ${PROPOSAL_COLUMNS} from propuestas_ia_plantilla where mensaje_ia_plantilla_id in (${uuidList(messages.map((message) => message.id))})`)
+      const found = (await messages(executor).where(conversationOf(templateId, userId)).orderBy(asc(mensajesIaPlantilla.enviadoEn))).map(messageOf)
+      if (found.length === 0) return []
+      const offers = (
+        await proposals(executor).where(
+          inArray(
+            propuestasIaPlantilla.mensajeIaPlantillaId,
+            found.map((message) => message.id),
+          ),
+        )
       ).map(proposalOf)
-      return messages.map((message) => ({ ...message, proposal: proposals.find((proposal) => proposal.messageId === message.id) ?? null }))
+      return found.map((message) => ({ ...message, proposal: offers.find((proposal) => proposal.messageId === message.id) ?? null }))
     },
     conversationBusy: (templateId, userId) => busy(executor, templateId, userId),
     async hideConversation(templateId, userId, at) {
-      await executor.execute(sql`update mensajes_ia_plantilla set ocultado_en = to_timestamp(${at}) where ${conversationOf(templateId, userId)}`)
+      await executor.update(mensajesIaPlantilla).set({ ocultadoEn: fromEpoch(at) }).where(conversationOf(templateId, userId))
     },
-    async openProcess() {
-      const [row] = await rows<{ id: string }>(
-        executor,
-        sql`select convocatoria_universidad_id::text as id from convocatorias_universidad where estado_convocatoria_universidad = 'abierto' limit 1`,
-      )
-      return row !== undefined
-    },
+    openProcess: () =>
+      hasRows(
+        executor
+          .select({ id: convocatoriasUniversidad.convocatoriaUniversidadId })
+          .from(convocatoriasUniversidad)
+          .where(eq(convocatoriasUniversidad.estadoConvocatoriaUniversidad, "abierto"))
+          .limit(1),
+      ),
     async processState() {
       for (const [state, name] of [
         ["abierto", "abierta"],
         ["pausado", "pausada"],
       ]) {
-        const [row] = await rows<{ found: boolean }>(
-          executor,
-          sql`select exists(select 1 from convocatorias_universidad where estado_convocatoria_universidad = ${state}) as found`,
+        const found = await hasRows(
+          executor
+            .select({ id: convocatoriasUniversidad.convocatoriaUniversidadId })
+            .from(convocatoriasUniversidad)
+            .where(eq(convocatoriasUniversidad.estadoConvocatoriaUniversidad, state))
+            .limit(1),
         )
-        if (row?.found === true) return name
+        if (found) return name
       }
       return "ninguna"
     },
     async proposal(id) {
-      const [row] = await rows<ProposalRow>(executor, sql`select ${PROPOSAL_COLUMNS} from propuestas_ia_plantilla where propuesta_ia_plantilla_id = ${id}::uuid limit 1`)
+      const [row] = await proposals(executor).where(eq(propuestasIaPlantilla.propuestaIaPlantillaId, id)).limit(1)
       return row ? proposalOf(row) : null
     },
     async message(id) {
-      const [row] = await rows<MessageRow>(executor, sql`select ${MESSAGE_COLUMNS} from mensajes_ia_plantilla where mensaje_ia_plantilla_id = ${id}::uuid limit 1`)
+      const [row] = await messages(executor).where(eq(mensajesIaPlantilla.mensajeIaPlantillaId, id)).limit(1)
       return row ? messageOf(row) : null
     },
     async history(message, questionId, limit) {
-      const found = await rows<MessageRow>(
-        executor,
-        sql`select ${MESSAGE_COLUMNS} from mensajes_ia_plantilla
-          where ${conversationOf(message.templateId, message.userId)}
-            and mensaje_ia_plantilla_id not in (${message.id}::uuid, ${questionId}::uuid)
-            and enviado_en < (select enviado_en from mensajes_ia_plantilla where mensaje_ia_plantilla_id = ${questionId}::uuid limit 1)
-            and (contenido_mensaje ->> 'estado') = 'completado'
-          order by enviado_en desc limit ${limit}`,
-      )
+      const question = executor
+        .select({ sentAt: mensajesIaPlantilla.enviadoEn })
+        .from(mensajesIaPlantilla)
+        .where(eq(mensajesIaPlantilla.mensajeIaPlantillaId, questionId))
+        .limit(1)
+      const found = await messages(executor)
+        .where(
+          and(
+            conversationOf(message.templateId, message.userId),
+            notInArray(mensajesIaPlantilla.mensajeIaPlantillaId, [message.id, questionId]),
+            lt(mensajesIaPlantilla.enviadoEn, sql`${question}`),
+            eq(content(["estado"]), "completado"),
+          ),
+        )
+        .orderBy(desc(mensajesIaPlantilla.enviadoEn))
+        .limit(limit)
       return found.map(messageOf)
     },
     async lastProposal(templateId, userId) {
-      const [row] = await rows<ProposalRow>(
-        executor,
-        sql`select ${PROPOSAL_COLUMNS} from propuestas_ia_plantilla where plantilla_id = ${templateId}::uuid and solicitada_por = ${userId}::uuid
-          order by creada_en desc limit 1`,
-      )
+      const [row] = await proposals(executor)
+        .where(and(eq(propuestasIaPlantilla.plantillaId, templateId), eq(propuestasIaPlantilla.solicitadaPor, userId)))
+        .orderBy(desc(propuestasIaPlantilla.creadaEn))
+        .limit(1)
       return row ? proposalOf(row) : null
     },
     transaction,

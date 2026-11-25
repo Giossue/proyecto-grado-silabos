@@ -1,51 +1,65 @@
 import "server-only"
-import { type Executor } from "../syllabus/teacherSyllabusQueries"
 import { notificationScope } from "../notifications/queries"
 import { returnApprovals } from "../syllabus/coordinationHandover"
 import { FinalizedChangeNotice } from "../syllabus/finalizedChangeNotice"
 import { InProgressWork } from "../syllabus/inProgressWork"
-import { sql, type SQL } from "drizzle-orm"
-import { db } from "@/db"
+import { and, countDistinct, desc, eq, exists, gt, inArray, isNotNull, isNull, ne, sql } from "drizzle-orm"
+import { db, type Executor } from "@/db"
+import { fromEpoch, hasRows } from "@/db/expressions"
+import {
+  archivos,
+  asignacionesParalelo,
+  asignacionesRol,
+  carreras,
+  convocatoriasCarreras,
+  convocatoriasUniversidad,
+  docentesVigentesSilabo,
+  exportacionesSilabo,
+  firmasSilabo,
+  invitacionesActivacion,
+  notificaciones,
+  revisionesSilabo,
+  sesiones,
+  silabos,
+  usuarios,
+} from "@/db/schema"
 import { careerLabelSql } from "../academic/careerLabel"
 import { uuid7 } from "../http/uuid7"
-import type { Account, AccountRepository, AccountTx, RoleGrant } from "./accounts"
+import type { AccountRepository, AccountTx } from "./accounts"
 
-type Row = Record<string, unknown>
-export type AccountExecutor = { execute(query: SQL): Promise<{ rows: unknown[]; rowCount?: number | null }> }
-
-const ACCOUNT_COLUMNS = sql.raw(
-  "usuario_id, nombre_usuario, correo_electronico, usuario_activo, correo_verificado_en is not null as verified",
-)
-const GRANT_COLUMNS = sql.raw("asignacion_rol_id, usuario_id, rol, carrera_id, asignacion_rol_activa")
-
-function toAccount(row: Row | undefined): Account | null {
-  if (!row) return null
-  return {
-    id: String(row.usuario_id),
-    name: String(row.nombre_usuario),
-    email: String(row.correo_electronico),
-    active: row.usuario_activo === true,
-    verified: row.verified === true,
-  }
+const ACCOUNT = {
+  id: usuarios.usuarioId,
+  name: usuarios.nombreUsuario,
+  email: usuarios.correoElectronico,
+  active: usuarios.usuarioActivo,
+  verified: isNotNull(usuarios.correoVerificadoEn).mapWith(Boolean),
 }
 
-function toGrant(row: Row | undefined): RoleGrant | null {
-  if (!row) return null
-  return {
-    id: String(row.asignacion_rol_id),
-    userId: String(row.usuario_id),
-    role: String(row.rol),
-    careerId: row.carrera_id === null ? null : String(row.carrera_id),
-    active: row.asignacion_rol_activa === true,
-  }
+const GRANT = {
+  id: asignacionesRol.asignacionRolId,
+  userId: asignacionesRol.usuarioId,
+  role: asignacionesRol.rol,
+  careerId: asignacionesRol.carreraId,
+  active: asignacionesRol.asignacionRolActiva,
 }
 
-const careerMatch = (careerId: string | null) => (careerId === null ? sql`carrera_id is null` : sql`carrera_id = ${careerId}::uuid`)
+const ACTIVE_GRANT = eq(asignacionesRol.asignacionRolActiva, true)
+const careerMatch = (careerId: string | null) => (careerId === null ? isNull(asignacionesRol.carreraId) : eq(asignacionesRol.carreraId, careerId))
+const careerLabel = sql<string>`${careerLabelSql("carreras")}`
+const PENDING_INVITATION = and(isNull(invitacionesActivacion.usadaEn), isNull(invitacionesActivacion.invalidadaEn))
 
-export function accountTx(executor: AccountExecutor): AccountTx {
-  const rows = async (query: SQL) => (await executor.execute(query)).rows as Row[]
-  const count = async (query: SQL) => (await executor.execute(query)).rowCount ?? 0
-  const exists = async (query: SQL) => (await rows(sql`select exists(${query}) as found`))[0]?.found === true
+async function first<T>(query: PromiseLike<T[]>): Promise<T | null> {
+  return (await query)[0] ?? null
+}
+
+async function careerLabelOf(executor: Executor, careerId: string): Promise<string | null> {
+  const row = await first(executor.select({ label: careerLabel }).from(carreras).where(eq(carreras.carreraId, careerId)))
+  return row ? String(row.label) : null
+}
+
+export function accountTx(executor: Executor): AccountTx {
+  const accounts = () => executor.select(ACCOUNT).from(usuarios)
+  const grants = () => executor.select(GRANT).from(asignacionesRol)
   let savepoints = 0
   const tx: AccountTx = {
     async nested(work) {
@@ -61,217 +75,284 @@ export function accountTx(executor: AccountExecutor): AccountTx {
         throw error
       }
     },
-    async lockAccount(id) {
-      return toAccount((await rows(sql`select ${ACCOUNT_COLUMNS} from usuarios where usuario_id = ${id}::uuid limit 1 for update`))[0])
-    },
-    async lockAccountByEmail(email) {
-      return toAccount((await rows(sql`select ${ACCOUNT_COLUMNS} from usuarios where lower(correo_electronico) = ${email} limit 1 for update`))[0])
-    },
+    lockAccount: (id) => first(accounts().where(eq(usuarios.usuarioId, id)).limit(1).for("update")),
+    lockAccountByEmail: (email) => first(accounts().where(sql`lower(${usuarios.correoElectronico}) = ${email}`).limit(1).for("update")),
     async insertAccount(account) {
       const id = uuid7()
-      await executor.execute(sql`insert into usuarios (usuario_id, nombre_usuario, correo_electronico, contrasena, usuario_activo, correo_verificado_en)
-        values (${id}::uuid, ${account.name}, ${account.email}, ${account.passwordHash}, true, null)`)
+      await executor.insert(usuarios).values({
+        usuarioId: id,
+        nombreUsuario: account.name,
+        correoElectronico: account.email,
+        contrasena: account.passwordHash,
+        usuarioActivo: true,
+        correoVerificadoEn: null,
+      })
       return { id, name: account.name, email: account.email, active: true, verified: false }
     },
     async updateIdentity(id, name, email) {
-      await executor.execute(sql`update usuarios set nombre_usuario = ${name}, correo_electronico = ${email} where usuario_id = ${id}::uuid`)
+      await executor.update(usuarios).set({ nombreUsuario: name, correoElectronico: email }).where(eq(usuarios.usuarioId, id))
     },
     async setActive(id, active) {
-      await executor.execute(sql`update usuarios set usuario_activo = ${active} where usuario_id = ${id}::uuid`)
+      await executor.update(usuarios).set({ usuarioActivo: active }).where(eq(usuarios.usuarioId, id))
     },
     async setRememberToken(id, token) {
-      await executor.execute(sql`update usuarios set codigo_recordarme = ${token} where usuario_id = ${id}::uuid`)
+      await executor.update(usuarios).set({ codigoRecordarme: token }).where(eq(usuarios.usuarioId, id))
     },
     async lockFormation(id) {
-      const [row] = await rows(sql`select formacion_experiencia_usuario from usuarios where usuario_id = ${id}::uuid limit 1 for update`)
-      return row ? { formation: (row.formacion_experiencia_usuario as string | null) ?? null } : null
+      const row = await first(
+        executor.select({ formation: usuarios.formacionExperienciaUsuario }).from(usuarios).where(eq(usuarios.usuarioId, id)).limit(1).for("update"),
+      )
+      return row ? { formation: row.formation ?? null } : null
     },
     async setFormation(id, formation) {
-      await executor.execute(sql`update usuarios set formacion_experiencia_usuario = ${formation} where usuario_id = ${id}::uuid`)
+      await executor.update(usuarios).set({ formacionExperienciaUsuario: formation }).where(eq(usuarios.usuarioId, id))
     },
     async setAccessibility(id, preferences) {
-      await executor.execute(sql`update usuarios set preferencias_accesibilidad_usuario = ${JSON.stringify(preferences)}::jsonb where usuario_id = ${id}::uuid`)
+      await executor.update(usuarios).set({ preferenciasAccesibilidadUsuario: preferences }).where(eq(usuarios.usuarioId, id))
     },
     async effectiveRoles(userId) {
-      return (await rows(sql`select rol from asignaciones_rol where usuario_id = ${userId}::uuid and asignacion_rol_activa = true`)).map((row) => String(row.rol))
+      const found = await executor.select({ role: asignacionesRol.rol }).from(asignacionesRol).where(and(eq(asignacionesRol.usuarioId, userId), ACTIVE_GRANT))
+      return found.map((row) => row.role)
     },
-    async lockEffectiveGrants(userId) {
-      const found = await rows(sql`select ${GRANT_COLUMNS} from asignaciones_rol where usuario_id = ${userId}::uuid and asignacion_rol_activa = true for update`)
-      return found.map((row) => toGrant(row) as RoleGrant)
-    },
+    lockEffectiveGrants: (userId) => grants().where(and(eq(asignacionesRol.usuarioId, userId), ACTIVE_GRANT)).for("update"),
     async lockCurrentCoordinator(careerId, exceptUserId) {
-      const [row] = await rows(sql`select asignacion.asignacion_rol_id, asignacion.usuario_id,
-          (select nombre_usuario from usuarios where usuarios.usuario_id = asignacion.usuario_id) as nombre_usuario
-        from asignaciones_rol asignacion
-        where asignacion.asignacion_rol_activa = true and asignacion.${careerMatch(careerId)} and asignacion.usuario_id <> ${exceptUserId}::uuid
-          and exists (select * from usuarios where asignacion.usuario_id = usuarios.usuario_id and usuario_activo = true)
-          and asignacion.rol = 'coordinador'
-        limit 1 for update of asignacion`)
-      return row ? { grantId: String(row.asignacion_rol_id), userId: String(row.usuario_id), userName: String(row.nombre_usuario) } : null
+      const row = await first(
+        executor
+          .select({ grantId: asignacionesRol.asignacionRolId, userId: asignacionesRol.usuarioId, userName: usuarios.nombreUsuario })
+          .from(asignacionesRol)
+          .innerJoin(usuarios, and(eq(usuarios.usuarioId, asignacionesRol.usuarioId), eq(usuarios.usuarioActivo, true)))
+          .where(and(ACTIVE_GRANT, careerMatch(careerId), ne(asignacionesRol.usuarioId, exceptUserId), eq(asignacionesRol.rol, "coordinador")))
+          .limit(1)
+          .for("update", { of: asignacionesRol }),
+      )
+      return row
     },
     async guardHandover(careerId, confirmed, afterCommit, now) {
-      const work = new InProgressWork(executor as unknown as Executor, afterCommit, notificationScope(executor as unknown as Executor, afterCommit, now))
+      const work = new InProgressWork(executor, afterCommit, notificationScope(executor, afterCommit, now))
       await new FinalizedChangeNotice(work, now).guardHandover(confirmed, careerId)
     },
     async returnApprovals(careerId, afterCommit, now) {
-      const work = new InProgressWork(executor as unknown as Executor, afterCommit, notificationScope(executor as unknown as Executor, afterCommit, now))
-      return returnApprovals(executor as unknown as Executor, afterCommit, careerId, (where) => work.syllabi(where, { lock: true }))
+      const work = new InProgressWork(executor, afterCommit, notificationScope(executor, afterCommit, now))
+      return returnApprovals(executor, afterCommit, careerId, (where) => work.syllabi(where, { lock: true }))
     },
-    async findGrant(userId, role, careerId, activeFirst) {
-      const order = activeFirst ? sql` order by asignacion_rol_activa desc` : sql``
-      return toGrant(
-        (await rows(sql`select ${GRANT_COLUMNS} from asignaciones_rol where usuario_id = ${userId}::uuid and rol = ${role} and ${careerMatch(careerId)}${order} limit 1`))[0],
-      )
+    findGrant: (userId, role, careerId, activeFirst) => {
+      const query = grants().where(and(eq(asignacionesRol.usuarioId, userId), eq(asignacionesRol.rol, role), careerMatch(careerId)))
+      return first((activeFirst ? query.orderBy(desc(asignacionesRol.asignacionRolActiva)) : query).limit(1))
     },
-    async lockActiveGrant(userId, role, careerId) {
-      return toGrant(
-        (
-          await rows(sql`select ${GRANT_COLUMNS} from asignaciones_rol where usuario_id = ${userId}::uuid and rol = ${role}
-            and carrera_id = ${careerId}::uuid and asignacion_rol_activa = true limit 1 for update`)
-        )[0],
-      )
-    },
+    lockActiveGrant: (userId, role, careerId) =>
+      first(
+        grants()
+          .where(and(eq(asignacionesRol.usuarioId, userId), eq(asignacionesRol.rol, role), eq(asignacionesRol.carreraId, careerId), ACTIVE_GRANT))
+          .limit(1)
+          .for("update"),
+      ),
     async insertGrant(userId, role, careerId, at) {
       const id = uuid7()
-      await executor.execute(sql`insert into asignaciones_rol (asignacion_rol_id, usuario_id, rol, carrera_id, asignacion_rol_activa, asignado_en)
-        values (${id}::uuid, ${userId}::uuid, ${role}, ${careerId}::uuid, true, to_timestamp(${at}))`)
+      await executor
+        .insert(asignacionesRol)
+        .values({ asignacionRolId: id, usuarioId: userId, rol: role, carreraId: careerId, asignacionRolActiva: true, asignadoEn: fromEpoch(at) })
       return { id, userId, role, careerId, active: true }
     },
     async setGrantActive(id, active) {
-      await executor.execute(sql`update asignaciones_rol set asignacion_rol_activa = ${active} where asignacion_rol_id = ${id}::uuid`)
+      await executor.update(asignacionesRol).set({ asignacionRolActiva: active }).where(eq(asignacionesRol.asignacionRolId, id))
     },
     async invitationRole(userId) {
-      const [row] = await rows(sql`select rol, carrera_id from asignaciones_rol where usuario_id = ${userId}::uuid and asignacion_rol_activa = true limit 1`)
+      const row = await first(
+        executor
+          .select({ role: asignacionesRol.rol, careerId: asignacionesRol.carreraId })
+          .from(asignacionesRol)
+          .where(and(eq(asignacionesRol.usuarioId, userId), ACTIVE_GRANT))
+          .limit(1),
+      )
       if (!row) return null
-      if (row.carrera_id === null) return { role: String(row.rol), careerLabel: null }
-      const [career] = await rows(sql`select ${careerLabelSql("carrera")} as label from carreras carrera where carrera.carrera_id = ${String(row.carrera_id)}::uuid`)
-      return { role: String(row.rol), careerLabel: career ? String(career.label) : null }
+      if (row.careerId === null) return { role: row.role, careerLabel: null }
+      return { role: row.role, careerLabel: await careerLabelOf(executor, row.careerId) }
     },
     async lockActiveParallelAssignments(grantId) {
-      const found = await rows(sql`select asignacion_paralelo_id from asignaciones_paralelo
-        where asignacion_rol_id = ${grantId}::uuid and asignacion_paralelo_activa = true for update`)
-      return found.map((row) => String(row.asignacion_paralelo_id))
+      const found = await executor
+        .select({ id: asignacionesParalelo.asignacionParaleloId })
+        .from(asignacionesParalelo)
+        .where(and(eq(asignacionesParalelo.asignacionRolId, grantId), eq(asignacionesParalelo.asignacionParaleloActiva, true)))
+        .for("update")
+      return found.map((row) => row.id)
     },
     async deleteParallelAssignment(id) {
-      await executor.execute(sql`delete from asignaciones_paralelo where asignacion_paralelo_id = ${id}::uuid`)
+      await executor.delete(asignacionesParalelo).where(eq(asignacionesParalelo.asignacionParaleloId, id))
     },
     async closeParallelAssignments(userId) {
-      return count(sql`update asignaciones_paralelo set asignacion_paralelo_activa = false
-        where asignacion_rol_id in (select asignacion_rol_id from asignaciones_rol where usuario_id = ${userId}::uuid)
-          and asignacion_paralelo_activa = true`)
+      const result = await executor
+        .update(asignacionesParalelo)
+        .set({ asignacionParaleloActiva: false })
+        .where(and(inArray(asignacionesParalelo.asignacionRolId, grantsOf(executor, userId)), eq(asignacionesParalelo.asignacionParaleloActiva, true)))
+      return result.rowCount ?? 0
     },
     async lockEffectiveCoordinations(userId) {
-      const found = await rows(sql`select asignacion.asignacion_rol_id, asignacion.carrera_id,
-          (select ${careerLabelSql("carrera")} from carreras carrera where carrera.carrera_id = asignacion.carrera_id) as label
-        from asignaciones_rol asignacion
-        where asignacion.asignacion_rol_activa = true and asignacion.usuario_id = ${userId}::uuid and asignacion.rol = 'coordinador'
-        for update of asignacion`)
-      return found.map((row) => ({ id: String(row.asignacion_rol_id), label: String(row.label ?? row.carrera_id ?? "") }))
+      const found = await executor
+        .select({ id: asignacionesRol.asignacionRolId, careerId: asignacionesRol.carreraId, label: careerLabel })
+        .from(asignacionesRol)
+        .leftJoin(carreras, eq(carreras.carreraId, asignacionesRol.carreraId))
+        .where(and(ACTIVE_GRANT, eq(asignacionesRol.usuarioId, userId), eq(asignacionesRol.rol, "coordinador")))
+        .for("update", { of: asignacionesRol })
+      return found.map((row) => ({ id: row.id, label: String(row.label ?? row.careerId ?? "") }))
     },
-    async isEffectiveAdministrator(userId) {
-      return exists(sql`select * from asignaciones_rol where asignacion_rol_activa = true and usuario_id = ${userId}::uuid and rol = 'administrador'`)
-    },
-    async otherActiveAdministratorExists(userId) {
-      return exists(sql`select * from asignaciones_rol where asignacion_rol_activa = true and usuario_id <> ${userId}::uuid and rol = 'administrador'
-        and exists (select * from usuarios where asignaciones_rol.usuario_id = usuarios.usuario_id and usuario_activo = true)`)
-    },
+    isEffectiveAdministrator: (userId) =>
+      hasRows(
+        executor
+          .select({ id: asignacionesRol.asignacionRolId })
+          .from(asignacionesRol)
+          .where(and(ACTIVE_GRANT, eq(asignacionesRol.usuarioId, userId), eq(asignacionesRol.rol, "administrador")))
+          .limit(1),
+      ),
+    otherActiveAdministratorExists: (userId) =>
+      hasRows(
+        executor
+          .select({ id: asignacionesRol.asignacionRolId })
+          .from(asignacionesRol)
+          .where(
+            and(
+              ACTIVE_GRANT,
+              ne(asignacionesRol.usuarioId, userId),
+              eq(asignacionesRol.rol, "administrador"),
+              exists(executor.select({ id: usuarios.usuarioId }).from(usuarios).where(and(eq(asignacionesRol.usuarioId, usuarios.usuarioId), eq(usuarios.usuarioActivo, true)))),
+            ),
+          )
+          .limit(1),
+      ),
     async syllabiInProgress(userId) {
-      const found = await rows(sql`select carreras.carrera_id as carrera_id, count(distinct silabos.silabo_id) as total
-        from docentes_vigentes_silabo
-        inner join silabos on silabos.silabo_id = docentes_vigentes_silabo.silabo_id
-        inner join convocatorias_carreras on convocatorias_carreras.convocatoria_carrera_id = silabos.convocatoria_carrera_id
-        inner join carreras on carreras.carrera_id = convocatorias_carreras.carrera_id
-        where docentes_vigentes_silabo.usuario_id = ${userId}::uuid
-          and silabos.estado_silabo in ('borrador', 'en_revision', 'correccion_solicitada')
-          and convocatorias_carreras.estado_convocatoria_carrera = 'abierta'
-        group by carreras.carrera_id`)
+      const found = await executor
+        .select({ careerId: carreras.carreraId, total: countDistinct(silabos.silaboId) })
+        .from(docentesVigentesSilabo)
+        .innerJoin(silabos, eq(silabos.silaboId, docentesVigentesSilabo.silaboId))
+        .innerJoin(convocatoriasCarreras, eq(convocatoriasCarreras.convocatoriaCarreraId, silabos.convocatoriaCarreraId))
+        .innerJoin(carreras, eq(carreras.carreraId, convocatoriasCarreras.carreraId))
+        .where(
+          and(
+            eq(docentesVigentesSilabo.usuarioId, userId),
+            inArray(silabos.estadoSilabo, ["borrador", "en_revision", "correccion_solicitada"]),
+            eq(convocatoriasCarreras.estadoConvocatoriaCarrera, "abierta"),
+          ),
+        )
+        .groupBy(carreras.carreraId)
       const result: { careerLabel: string; total: number }[] = []
-      for (const row of found) {
-        const [career] = await rows(sql`select ${careerLabelSql("carrera")} as label from carreras carrera where carrera.carrera_id = ${String(row.carrera_id)}::uuid`)
-        result.push({ careerLabel: career ? String(career.label) : "", total: Number(row.total) })
-      }
+      for (const row of found) result.push({ careerLabel: (await careerLabelOf(executor, row.careerId)) ?? "", total: row.total })
       return result
     },
-    async hasActiveInvitation(userId, now) {
-      return exists(sql`select * from invitaciones_activacion where usuario_id = ${userId}::uuid and usada_en is null and invalidada_en is null
-        and expira_en > to_timestamp(${now})`)
-    },
+    hasActiveInvitation: (userId, now) =>
+      hasRows(
+        executor
+          .select({ id: invitacionesActivacion.invitacionActivacionId })
+          .from(invitacionesActivacion)
+          .where(and(eq(invitacionesActivacion.usuarioId, userId), PENDING_INVITATION, gt(invitacionesActivacion.expiraEn, fromEpoch(now))))
+          .limit(1),
+      ),
     async invalidateInvitations(userId, now) {
-      await executor.execute(sql`update invitaciones_activacion set invalidada_en = to_timestamp(${now})
-        where usuario_id = ${userId}::uuid and usada_en is null and invalidada_en is null`)
+      await executor
+        .update(invitacionesActivacion)
+        .set({ invalidadaEn: fromEpoch(now) })
+        .where(and(eq(invitacionesActivacion.usuarioId, userId), PENDING_INVITATION))
     },
     async insertInvitation(invitation) {
-      await executor.execute(sql`insert into invitaciones_activacion
-          (invitacion_activacion_id, usuario_id, hash_activacion, expira_en, emitida_por_usuario_id, creada_en)
-        values (${uuid7()}::uuid, ${invitation.userId}::uuid, ${invitation.hash}, to_timestamp(${invitation.expiresAt}),
-          ${invitation.issuerId}::uuid, to_timestamp(${invitation.createdAt}))`)
+      await executor.insert(invitacionesActivacion).values({
+        invitacionActivacionId: uuid7(),
+        usuarioId: invitation.userId,
+        hashActivacion: invitation.hash,
+        expiraEn: fromEpoch(invitation.expiresAt),
+        emitidaPorUsuarioId: invitation.issuerId,
+        creadaEn: fromEpoch(invitation.createdAt),
+      })
     },
     async latestInvitationIssuer(userId) {
-      const [row] = await rows(sql`select emitida_por_usuario_id from invitaciones_activacion where usuario_id = ${userId}::uuid order by creada_en desc limit 1`)
-      if (!row || row.emitida_por_usuario_id === null) return null
-      return toAccount((await rows(sql`select ${ACCOUNT_COLUMNS} from usuarios where usuario_id = ${String(row.emitida_por_usuario_id)}::uuid limit 1`))[0])
+      const row = await first(
+        executor
+          .select({ issuerId: invitacionesActivacion.emitidaPorUsuarioId })
+          .from(invitacionesActivacion)
+          .where(eq(invitacionesActivacion.usuarioId, userId))
+          .orderBy(desc(invitacionesActivacion.creadaEn))
+          .limit(1),
+      )
+      if (!row || row.issuerId === null) return null
+      return first(accounts().where(eq(usuarios.usuarioId, row.issuerId)).limit(1))
     },
     async deleteSessions(userId, exceptId) {
-      const except = exceptId === null ? sql`` : sql` and id <> ${exceptId}`
-      return count(sql`delete from sesiones where user_id = ${userId}::uuid${except}`)
+      const result = await executor.delete(sesiones).where(and(eq(sesiones.userId, userId), exceptId === null ? undefined : ne(sesiones.id, exceptId)))
+      return result.rowCount ?? 0
     },
     async deleteSession(id, userId) {
-      await executor.execute(sql`delete from sesiones where id = ${id} and user_id = ${userId}::uuid`)
+      await executor.delete(sesiones).where(and(eq(sesiones.id, id), eq(sesiones.userId, userId)))
     },
     async hasActivity(userId) {
       const traces = [
-        sql`select * from asignaciones_paralelo where asignacion_rol_id in (select asignacion_rol_id from asignaciones_rol where usuario_id = ${userId}::uuid)`,
-        sql`select * from revisiones_silabo where enviado_por = ${userId}::uuid`,
-        sql`select * from exportaciones_silabo where solicitado_por = ${userId}::uuid`,
-        sql`select * from archivos where subido_por = ${userId}::uuid`,
-        sql`select * from firmas_silabo where usuario_id = ${userId}::uuid`,
+        () => executor.select({ id: asignacionesParalelo.asignacionParaleloId }).from(asignacionesParalelo).where(inArray(asignacionesParalelo.asignacionRolId, grantsOf(executor, userId))),
+        () => executor.select({ id: revisionesSilabo.revisionSilaboId }).from(revisionesSilabo).where(eq(revisionesSilabo.enviadoPor, userId)),
+        () => executor.select({ id: exportacionesSilabo.exportacionSilaboId }).from(exportacionesSilabo).where(eq(exportacionesSilabo.solicitadoPor, userId)),
+        () => executor.select({ id: archivos.archivoId }).from(archivos).where(eq(archivos.subidoPor, userId)),
+        () => executor.select({ id: firmasSilabo.firmaSilaboId }).from(firmasSilabo).where(eq(firmasSilabo.usuarioId, userId)),
       ]
-      for (const trace of traces) if (await exists(trace)) return true
+      for (const trace of traces) if (await hasRows(trace().limit(1))) return true
       return false
     },
     async purgeAccount(userId) {
-      await executor.execute(sql`delete from notificaciones where usuario_id = ${userId}::uuid`)
-      await executor.execute(sql`delete from sesiones where user_id = ${userId}::uuid`)
-      await executor.execute(sql`delete from asignaciones_rol where usuario_id = ${userId}::uuid`)
-      await executor.execute(sql`delete from usuarios where usuario_id = ${userId}::uuid`)
+      await executor.delete(notificaciones).where(eq(notificaciones.usuarioId, userId))
+      await executor.delete(sesiones).where(eq(sesiones.userId, userId))
+      await executor.delete(asignacionesRol).where(eq(asignacionesRol.usuarioId, userId))
+      await executor.delete(usuarios).where(eq(usuarios.usuarioId, userId))
     },
-    async careerLocked(careerId) {
-      return exists(sql`select * from convocatorias_carreras where carrera_id = ${careerId}::uuid and estado_convocatoria_carrera = 'abierta'
-        and exists (select * from convocatorias_universidad where convocatorias_carreras.convocatoria_universidad_id = convocatorias_universidad.convocatoria_universidad_id
-          and estado_convocatoria_universidad in ('abierto', 'pausado'))`)
-    },
+    careerLocked: (careerId) =>
+      hasRows(
+        executor
+          .select({ id: convocatoriasCarreras.convocatoriaCarreraId })
+          .from(convocatoriasCarreras)
+          .where(
+            and(
+              eq(convocatoriasCarreras.carreraId, careerId),
+              eq(convocatoriasCarreras.estadoConvocatoriaCarrera, "abierta"),
+              exists(
+                executor
+                  .select({ id: convocatoriasUniversidad.convocatoriaUniversidadId })
+                  .from(convocatoriasUniversidad)
+                  .where(
+                    and(
+                      eq(convocatoriasCarreras.convocatoriaUniversidadId, convocatoriasUniversidad.convocatoriaUniversidadId),
+                      inArray(convocatoriasUniversidad.estadoConvocatoriaUniversidad, ["abierto", "pausado"]),
+                    ),
+                  ),
+              ),
+            ),
+          )
+          .limit(1),
+      ),
   }
   return tx
 }
 
-export function accountRepositoryOn(executor: AccountExecutor, transaction: <T>(work: (tx: AccountTx) => Promise<T>) => Promise<T>): AccountRepository {
-  const rows = async (query: SQL) => (await executor.execute(query)).rows as Row[]
+function grantsOf(executor: Executor, userId: string) {
+  return executor.select({ id: asignacionesRol.asignacionRolId }).from(asignacionesRol).where(eq(asignacionesRol.usuarioId, userId))
+}
+
+export function accountRepositoryOn(executor: Executor, transaction: <T>(work: (tx: AccountTx) => Promise<T>) => Promise<T>): AccountRepository {
   return {
-    async findAccount(id) {
-      return toAccount((await rows(sql`select ${ACCOUNT_COLUMNS} from usuarios where usuario_id = ${id}::uuid limit 1`))[0])
-    },
-    async findGrant(id) {
-      return toGrant((await rows(sql`select ${GRANT_COLUMNS} from asignaciones_rol where asignacion_rol_id = ${id}::uuid limit 1`))[0])
-    },
+    findAccount: (id) => first(executor.select(ACCOUNT).from(usuarios).where(eq(usuarios.usuarioId, id)).limit(1)),
+    findGrant: (id) => first(executor.select(GRANT).from(asignacionesRol).where(eq(asignacionesRol.asignacionRolId, id)).limit(1)),
     async emailTaken(email, ignoreUserId) {
-      const ignore = ignoreUserId === null ? sql`` : sql` and usuario_id <> ${ignoreUserId}::uuid`
-      const [row] = await rows(sql`select count(*) as aggregate from usuarios where correo_electronico = ${email}${ignore}`)
-      return Number(row?.aggregate ?? 0) > 0
+      const total = await executor.$count(usuarios, and(eq(usuarios.correoElectronico, email), ignoreUserId === null ? undefined : ne(usuarios.usuarioId, ignoreUserId)))
+      return total > 0
     },
     async activeCareer(id) {
-      const [row] = await rows(sql`select count(*) as aggregate from carreras where carrera_id = ${id}::uuid and carrera_activa = true`)
-      return Number(row?.aggregate ?? 0) > 0
+      return (await executor.$count(carreras, and(eq(carreras.carreraId, id), eq(carreras.carreraActiva, true)))) > 0
     },
-    async hasEffectiveRole(userId, role, careerId) {
-      const [row] = await rows(sql`select exists(select * from asignaciones_rol where usuario_id = ${userId}::uuid and asignacion_rol_activa = true
-        and rol = ${role} and carrera_id = ${careerId}::uuid) as found`)
-      return row?.found === true
-    },
+    hasEffectiveRole: (userId, role, careerId) =>
+      hasRows(
+        executor
+          .select({ id: asignacionesRol.asignacionRolId })
+          .from(asignacionesRol)
+          .where(and(eq(asignacionesRol.usuarioId, userId), ACTIVE_GRANT, eq(asignacionesRol.rol, role), eq(asignacionesRol.carreraId, careerId)))
+          .limit(1),
+      ),
     direct: (work) => work(accountTx(executor)),
     transaction,
   }
 }
 
 export function createAccountRepository(): AccountRepository {
-  return accountRepositoryOn(db as unknown as AccountExecutor, (work) => db.transaction((tx) => work(accountTx(tx as unknown as AccountExecutor))))
+  return accountRepositoryOn(db, (work) => db.transaction((tx) => work(accountTx(tx))))
 }

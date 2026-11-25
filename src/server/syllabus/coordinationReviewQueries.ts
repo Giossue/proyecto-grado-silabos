@@ -1,12 +1,13 @@
 import "server-only"
-import { sql, type SQL } from "drizzle-orm"
+import { and, asc, desc, eq, exists, inArray, isNotNull, sql, type SQL } from "drizzle-orm"
 import { db } from "@/db"
-import { iso8601, uuidList } from "../http/sql"
+import { isoText, jsonText } from "@/db/expressions"
+import { aprobaciones, convocatoriasCarreras, convocatoriasUniversidad, docentesVigentesSilabo, enviosBiblioteca, periodosAcademicos, revisionesSilabo, silabos, usuarios } from "@/db/schema"
 import { phpJsonDecode } from "../configuration/phpValues"
 import type { CoordinationReviewRepository, HistoryFilters, HistoryRow, ReviewListRow } from "./coordinationReviews"
 import { syllabusFacts } from "./draftFieldStore"
 import { careerIs, convocationWhere, IN_CURRENT_PERIOD, IN_PAST_PERIOD, SYLLABUS_EXISTS } from "./syllabusSql"
-import { rowsOf, subjectSearch, syllabusDetails, type Executor } from "./teacherSyllabusQueries"
+import { subjectSearch, syllabusDetails, type Executor } from "./teacherSyllabusQueries"
 
 const REVISION_EXISTS = sql`exists (select 1 from silabos silabo_revision where silabo_revision.silabo_id = revisiones_silabo.silabo_id
   and exists (select 1 from convocatorias_carreras convocatoria_revision where convocatoria_revision.convocatoria_carrera_id = silabo_revision.convocatoria_carrera_id
@@ -43,63 +44,75 @@ function historyConditions(filters: Pick<HistoryFilters, "careerId">): SQL {
   )
 }
 
-type LatestRevision = { syllabus_id: string; id: string; number: number; submitted_at: string; approved: boolean; verified: boolean }
+const APPROVED = exists(db.select({ id: aprobaciones.aprobacionId }).from(aprobaciones).where(eq(aprobaciones.revisionSilaboId, revisionesSilabo.revisionSilaboId)))
 
-async function latestRevisions(executor: Executor, ids: string[]): Promise<Map<string, LatestRevision>> {
+async function latestRevisions(executor: Executor, ids: string[]) {
   if (ids.length === 0) return new Map()
-  const found = await rowsOf<LatestRevision>(
-    executor,
-    sql`select distinct on (revisiones_silabo.silabo_id) revisiones_silabo.silabo_id::text as syllabus_id, revisiones_silabo.revision_silabo_id::text as id,
-        revisiones_silabo.numero_revision as number, ${iso8601(sql.raw("revisiones_silabo.enviado_en"))} as submitted_at,
-        exists (select 1 from aprobaciones where aprobaciones.revision_silabo_id = revisiones_silabo.revision_silabo_id) as approved,
-        exists (select 1 from envios_biblioteca where envios_biblioteca.revision_silabo_id = revisiones_silabo.revision_silabo_id and envios_biblioteca.verificado_en is not null) as verified
-      from revisiones_silabo where revisiones_silabo.silabo_id in (${uuidList(ids)}) and ${REVISION_EXISTS}
-      order by revisiones_silabo.silabo_id, revisiones_silabo.numero_revision desc`,
-  )
-  return new Map(found.map((row) => [row.syllabus_id, row]))
+  const found = await executor
+    .selectDistinctOn([revisionesSilabo.silaboId], {
+      syllabusId: revisionesSilabo.silaboId,
+      id: revisionesSilabo.revisionSilaboId,
+      number: revisionesSilabo.numeroRevision,
+      submittedAt: isoText(revisionesSilabo.enviadoEn),
+      approved: sql<boolean>`${APPROVED}`,
+      verified: sql<boolean>`${exists(
+        executor
+          .select({ id: enviosBiblioteca.envioBibliotecaId })
+          .from(enviosBiblioteca)
+          .where(and(eq(enviosBiblioteca.revisionSilaboId, revisionesSilabo.revisionSilaboId), isNotNull(enviosBiblioteca.verificadoEn))),
+      )}`,
+    })
+    .from(revisionesSilabo)
+    .where(and(inArray(revisionesSilabo.silaboId, ids), REVISION_EXISTS))
+    .orderBy(revisionesSilabo.silaboId, desc(revisionesSilabo.numeroRevision))
+  return new Map(found.map((row) => [row.syllabusId, row]))
 }
 
-type ApprovedRevision = { syllabus_id: string; id: string; author: string | null; approved_at: string | null }
-
-async function latestApproved(executor: Executor, ids: string[]): Promise<Map<string, ApprovedRevision>> {
+async function latestApproved(executor: Executor, ids: string[]) {
   if (ids.length === 0) return new Map()
-  const found = await rowsOf<ApprovedRevision>(
-    executor,
-    sql`select distinct on (revisiones_silabo.silabo_id) revisiones_silabo.silabo_id::text as syllabus_id, revisiones_silabo.revision_silabo_id::text as id,
-        (select usuarios.nombre_usuario from usuarios where usuarios.usuario_id = revisiones_silabo.enviado_por) as author,
-        (select ${iso8601(sql.raw("aprobaciones.aprobado_en"))} from aprobaciones where aprobaciones.revision_silabo_id = revisiones_silabo.revision_silabo_id limit 1) as approved_at
-      from revisiones_silabo where revisiones_silabo.silabo_id in (${uuidList(ids)}) and ${REVISION_EXISTS}
-        and exists (select 1 from aprobaciones where aprobaciones.revision_silabo_id = revisiones_silabo.revision_silabo_id)
-      order by revisiones_silabo.silabo_id, revisiones_silabo.numero_revision desc`,
-  )
-  return new Map(found.map((row) => [row.syllabus_id, row]))
+  const found = await executor
+    .selectDistinctOn([revisionesSilabo.silaboId], {
+      syllabusId: revisionesSilabo.silaboId,
+      id: revisionesSilabo.revisionSilaboId,
+      author: sql<string | null>`(${executor.select({ name: usuarios.nombreUsuario }).from(usuarios).where(eq(usuarios.usuarioId, revisionesSilabo.enviadoPor))})`,
+      approvedAt: sql<string | null>`(${executor
+        .select({ at: isoText(aprobaciones.aprobadoEn) })
+        .from(aprobaciones)
+        .where(eq(aprobaciones.revisionSilaboId, revisionesSilabo.revisionSilaboId))
+        .limit(1)})`,
+    })
+    .from(revisionesSilabo)
+    .where(and(inArray(revisionesSilabo.silaboId, ids), REVISION_EXISTS, APPROVED))
+    .orderBy(revisionesSilabo.silaboId, desc(revisionesSilabo.numeroRevision))
+  return new Map(found.map((row) => [row.syllabusId, row]))
 }
 
 export async function teacherNamesOf(executor: Executor, ids: string[]): Promise<Map<string, string[]>> {
   const names = new Map<string, string[]>()
   if (ids.length === 0) return names
-  const found = await rowsOf<{ syllabus_id: string; name: string }>(
-    executor,
-    sql`select usuarios.nombre_usuario as name, docentes_vigentes_silabo.silabo_id::text as syllabus_id
-      from usuarios inner join docentes_vigentes_silabo on usuarios.usuario_id = docentes_vigentes_silabo.usuario_id
-      where docentes_vigentes_silabo.silabo_id in (${uuidList(ids)})`,
-  )
-  for (const row of found) names.set(row.syllabus_id, [...(names.get(row.syllabus_id) ?? []), row.name])
+  const found = await executor
+    .select({ name: usuarios.nombreUsuario, syllabusId: docentesVigentesSilabo.silaboId })
+    .from(usuarios)
+    .innerJoin(docentesVigentesSilabo, eq(usuarios.usuarioId, docentesVigentesSilabo.usuarioId))
+    .where(inArray(docentesVigentesSilabo.silaboId, ids))
+  for (const row of found) names.set(row.syllabusId, [...(names.get(row.syllabusId) ?? []), row.name])
   return names
 }
 
-export function createCoordinationReviewRepository(executor: Executor = db as unknown as Executor): CoordinationReviewRepository {
+export function createCoordinationReviewRepository(executor: Executor = db): CoordinationReviewRepository {
   return {
     async reviewPage(filters, page, perPage) {
       const where = reviewConditions(filters)
-      const [count] = await rowsOf<{ total: string }>(executor, sql`select count(*) as total from silabos where ${where}`)
-      const total = Number(count?.total ?? 0)
+      const total = await executor.$count(silabos, where)
       if (total === 0) return { total, items: [] }
       const ids = (
-        await rowsOf<{ id: string }>(
-          executor,
-          sql`select silabos.silabo_id::text as id from silabos where ${where} order by guardado_en DESC NULLS LAST limit ${perPage} offset ${(page - 1) * perPage}`,
-        )
+        await executor
+          .select({ id: silabos.silaboId })
+          .from(silabos)
+          .where(where)
+          .orderBy(sql`${silabos.guardadoEn} desc nulls last`)
+          .limit(perPage)
+          .offset((page - 1) * perPage)
       ).map((row) => row.id)
       const details = await syllabusDetails(executor, ids)
       const revisions = await latestRevisions(executor, ids)
@@ -113,7 +126,7 @@ export function createCoordinationReviewRepository(executor: Executor = db as un
           state: row.state,
           revisionId: revision?.id ?? null,
           revisionNumber: revision === null ? null : Number(revision.number),
-          submittedAt: revision?.submitted_at ?? null,
+          submittedAt: revision?.submittedAt ?? null,
           approved: revision?.approved ?? false,
           verified: revision?.verified ?? false,
         }
@@ -129,20 +142,24 @@ export function createCoordinationReviewRepository(executor: Executor = db as un
       }
       if (filters.search !== "") conditions.push(subjectSearch(filters.search))
       const where = sql.join(conditions, sql` and `)
-      const [count] = await rowsOf<{ total: string }>(executor, sql`select count(*) as total from silabos where ${where}`)
-      const total = Number(count?.total ?? 0)
+      const total = await executor.$count(silabos, where)
       if (total === 0) return { total, items: [] }
       const ids = (
-        await rowsOf<{ id: string }>(
-          executor,
-          sql`select silabos.silabo_id::text as id from silabos where ${where}
-            order by (select pa.fecha_fin_periodo from convocatorias_carreras as cc
+        await executor
+          .select({ id: silabos.silaboId })
+          .from(silabos)
+          .where(where)
+          .orderBy(
+            sql`(select pa.fecha_fin_periodo from convocatorias_carreras as cc
                 inner join convocatorias_universidad as cu on cu.convocatoria_universidad_id = cc.convocatoria_universidad_id
                 inner join periodos_academicos as pa on pa.periodo_academico_id = cu.periodo_academico_id
-                where cc.convocatoria_carrera_id = silabos.convocatoria_carrera_id) desc,
-              datos_academicos_silabo->'subject'->>'name', datos_academicos_silabo->'parallel'->>'code', silabos.silabo_id asc
-            limit ${perPage} offset ${(page - 1) * perPage}`,
-        )
+                where cc.convocatoria_carrera_id = silabos.convocatoria_carrera_id) desc`,
+            sql`${silabos.datosAcademicosSilabo}->'subject'->>'name'`,
+            sql`${silabos.datosAcademicosSilabo}->'parallel'->>'code'`,
+            asc(silabos.silaboId),
+          )
+          .limit(perPage)
+          .offset((page - 1) * perPage)
       ).map((row) => row.id)
       const details = await syllabusDetails(executor, ids)
       const approved = await latestApproved(executor, ids)
@@ -156,41 +173,53 @@ export function createCoordinationReviewRepository(executor: Executor = db as un
           parallel: row.parallel,
           revisionId: revision?.id ?? null,
           author: revision?.author ?? null,
-          approvedAt: revision?.approved_at ?? null,
+          approvedAt: revision?.approvedAt ?? null,
         }
       })
       return { total, items }
     },
-    async historyPeriods(careerId) {
-      return rowsOf<{ id: string; code: string }>(
-        executor,
-        sql`select periodo_academico_id::text as id, codigo_periodo_academico as code from periodos_academicos
-          where periodo_academico_id in (select cu.periodo_academico_id from convocatorias_universidad as cu
-            inner join convocatorias_carreras as cc on cc.convocatoria_universidad_id = cu.convocatoria_universidad_id
-            where cc.convocatoria_carrera_id in (select silabos.convocatoria_carrera_id from silabos where ${historyConditions({ careerId })}))
-          order by fecha_fin_periodo desc`,
-      )
-    },
-    async periodExists(id) {
-      const [row] = await rowsOf<{ total: string }>(executor, sql`select count(*) as total from periodos_academicos where periodo_academico_id = ${id}::uuid`)
-      return Number(row?.total ?? 0) > 0
-    },
+    historyPeriods: (careerId) =>
+      executor
+        .select({ id: periodosAcademicos.periodoAcademicoId, code: periodosAcademicos.codigoPeriodoAcademico })
+        .from(periodosAcademicos)
+        .where(
+          inArray(
+            periodosAcademicos.periodoAcademicoId,
+            executor
+              .select({ id: convocatoriasUniversidad.periodoAcademicoId })
+              .from(convocatoriasUniversidad)
+              .innerJoin(convocatoriasCarreras, eq(convocatoriasCarreras.convocatoriaUniversidadId, convocatoriasUniversidad.convocatoriaUniversidadId))
+              .where(
+                inArray(
+                  convocatoriasCarreras.convocatoriaCarreraId,
+                  executor.select({ id: silabos.convocatoriaCarreraId }).from(silabos).where(historyConditions({ careerId })),
+                ),
+              ),
+          ),
+        )
+        .orderBy(desc(periodosAcademicos.fechaFinPeriodo)),
+    periodExists: async (id) => (await executor.$count(periodosAcademicos, eq(periodosAcademicos.periodoAcademicoId, id))) > 0,
     async revision(id) {
-      const [row] = await rowsOf<{ id: string; syllabus_id: string; number: number; snapshot: string | null }>(
-        executor,
-        sql`select revision_silabo_id::text as id, silabo_id::text as syllabus_id, numero_revision as number, contenido_enviado::text as snapshot
-          from revisiones_silabo where revision_silabo_id = ${id}::uuid and ${REVISION_EXISTS} limit 1`,
-      )
-      return row ? { id: row.id, syllabusId: row.syllabus_id, number: Number(row.number), snapshot: phpJsonDecode(row.snapshot) } : null
+      const [row] = await executor
+        .select({
+          id: revisionesSilabo.revisionSilaboId,
+          syllabusId: revisionesSilabo.silaboId,
+          number: revisionesSilabo.numeroRevision,
+          snapshot: jsonText(revisionesSilabo.contenidoEnviado),
+        })
+        .from(revisionesSilabo)
+        .where(and(eq(revisionesSilabo.revisionSilaboId, id), REVISION_EXISTS))
+        .limit(1)
+      return row ? { id: row.id, syllabusId: row.syllabusId, number: Number(row.number), snapshot: phpJsonDecode(row.snapshot) } : null
     },
     syllabus: (id, userId) => syllabusFacts(executor, id, userId),
     async syllabusSummary(id) {
       const [detail] = await syllabusDetails(executor, [id])
-      const revisions = await rowsOf<{ id: string; number: number; submitted_at: string }>(
-        executor,
-        sql`select revision_silabo_id::text as id, numero_revision as number, ${iso8601(sql.raw("enviado_en"))} as submitted_at
-          from revisiones_silabo where silabo_id = ${id}::uuid and ${REVISION_EXISTS} order by numero_revision asc`,
-      )
+      const revisions = await executor
+        .select({ id: revisionesSilabo.revisionSilaboId, number: revisionesSilabo.numeroRevision, submitted_at: isoText(revisionesSilabo.enviadoEn) })
+        .from(revisionesSilabo)
+        .where(and(eq(revisionesSilabo.silaboId, id), REVISION_EXISTS))
+        .orderBy(asc(revisionesSilabo.numeroRevision))
       return {
         id,
         subject: detail?.subject ?? "",

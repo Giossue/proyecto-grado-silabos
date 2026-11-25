@@ -1,27 +1,18 @@
 import "server-only"
-import { sql, type SQL } from "drizzle-orm"
+import { and, asc, eq, exists, inArray, ne, sql, type SQL } from "drizzle-orm"
 import { TransactionRollbackError } from "drizzle-orm/errors"
-import { db } from "@/db"
+import { alias } from "drizzle-orm/pg-core"
+import { db, type Executor } from "@/db"
+import { jsonText } from "@/db/expressions"
+import { camposPlantilla, carreras, convocatoriasCarreras, convocatoriasUniversidad, definicionesCampo, paralelos, plantillaSilabo, silabos, valoresCampo } from "@/db/schema"
 import { phpJsonDecode } from "./phpValues"
-import type { RehearsalReads, RehearsalStore, RehearsedSyllabus } from "./templateRehearsal"
+import type { RehearsalReads, RehearsalStore } from "./templateRehearsal"
 import { createTemplateStore, loadTemplate } from "./templateStore"
 
 const TIMEOUT_STATES = ["57014", "55P03"]
 const LOCK_TIMEOUT = "2s"
 const STATEMENT_TIMEOUT = "20s"
-
-type Executor = { execute(query: SQL): Promise<{ rows: unknown[] }> }
-
-async function rows<T>(executor: Executor, query: SQL): Promise<T[]> {
-  return (await executor.execute(query)).rows as T[]
-}
-
-function uuidList(ids: string[]): SQL {
-  return sql.join(
-    ids.map((id) => sql`${id}::uuid`),
-    sql`, `,
-  )
-}
+const convocatoria = alias(convocatoriasCarreras, "convocatoria")
 
 export function sqlState(error: unknown): string | null {
   let current: unknown = error
@@ -36,41 +27,55 @@ export function sqlState(error: unknown): string | null {
 export function rehearsalReads(executor: Executor): RehearsalReads {
   return {
     async lockTemplate(templateId) {
-      await executor.execute(sql`select * from plantilla_silabo where plantilla_id = ${templateId}::uuid limit 1 for update`)
+      await executor.select().from(plantillaSilabo).where(eq(plantillaSilabo.plantillaId, templateId)).limit(1).for("update")
     },
     currentTemplate: () => loadTemplate(executor),
     async syllabi(processId) {
-      const found = await rows<{ id: string; state: string; subject_id: string; career: string | null }>(
-        executor,
-        sql`select silabos.silabo_id::text as id, silabos.estado_silabo as state, paralelos.asignatura_id::text as subject_id, carreras.nombre_carrera as career
-          from silabos
-          inner join paralelos on paralelos.paralelo_id = silabos.paralelo_id
-          inner join convocatorias_carreras on convocatorias_carreras.convocatoria_carrera_id = silabos.convocatoria_carrera_id
-          left join carreras on carreras.carrera_id = convocatorias_carreras.carrera_id
-          where exists (select * from convocatorias_carreras convocatoria where silabos.convocatoria_carrera_id = convocatoria.convocatoria_carrera_id
-              and convocatoria.convocatoria_universidad_id = ${processId}::uuid
-              and convocatoria.estado_convocatoria_carrera in ('abierta', 'pausada')
-              and exists (select * from convocatorias_universidad where convocatoria.convocatoria_universidad_id = convocatorias_universidad.convocatoria_universidad_id))
-            and silabos.estado_silabo != 'sin_iniciar'
-          order by silabos.silabo_id asc`,
-      )
-      return found.map((row): RehearsedSyllabus => ({ id: row.id, state: row.state, subjectId: row.subject_id, career: row.career }))
+      return executor
+        .select({ id: silabos.silaboId, state: silabos.estadoSilabo, subjectId: paralelos.asignaturaId, career: carreras.nombreCarrera })
+        .from(silabos)
+        .innerJoin(paralelos, eq(paralelos.paraleloId, silabos.paraleloId))
+        .innerJoin(convocatoriasCarreras, eq(convocatoriasCarreras.convocatoriaCarreraId, silabos.convocatoriaCarreraId))
+        .leftJoin(carreras, eq(carreras.carreraId, convocatoriasCarreras.carreraId))
+        .where(
+          and(
+            exists(
+              executor
+                .select({ id: convocatoria.convocatoriaCarreraId })
+                .from(convocatoria)
+                .where(
+                  and(
+                    eq(silabos.convocatoriaCarreraId, convocatoria.convocatoriaCarreraId),
+                    eq(convocatoria.convocatoriaUniversidadId, processId),
+                    inArray(convocatoria.estadoConvocatoriaCarrera, ["abierta", "pausada"]),
+                    exists(
+                      executor
+                        .select({ id: convocatoriasUniversidad.convocatoriaUniversidadId })
+                        .from(convocatoriasUniversidad)
+                        .where(eq(convocatoria.convocatoriaUniversidadId, convocatoriasUniversidad.convocatoriaUniversidadId)),
+                    ),
+                  ),
+                ),
+            ),
+            ne(silabos.estadoSilabo, "sin_iniciar"),
+          ),
+        )
+        .orderBy(asc(silabos.silaboId))
     },
     async syllabusValues(syllabusId) {
-      const found = await rows<{ field_id: string; value: string | null }>(
-        executor,
-        sql`select definicion_campo_id::text as field_id, valor_campo::text as value from valores_campo where silabo_id = ${syllabusId}::uuid`,
-      )
-      return found.map((row) => ({ fieldId: row.field_id, value: phpJsonDecode(row.value) }))
+      const found = await executor
+        .select({ fieldId: valoresCampo.definicionCampoId, value: jsonText(valoresCampo.valorCampo) })
+        .from(valoresCampo)
+        .where(eq(valoresCampo.silaboId, syllabusId))
+      return found.map((row) => ({ fieldId: row.fieldId, value: phpJsonDecode(row.value) }))
     },
     async fieldKeys(fieldIds) {
       if (fieldIds.length === 0) return new Map()
-      const found = await rows<{ id: string; key: string | null }>(
-        executor,
-        sql`select definiciones_campo.definicion_campo_id::text as id, campos_plantilla.clave_campo_plantilla as key
-          from definiciones_campo left join campos_plantilla on campos_plantilla.campo_plantilla_id = definiciones_campo.campo_plantilla_id
-          where definiciones_campo.definicion_campo_id in (${uuidList(fieldIds)})`,
-      )
+      const found = await executor
+        .select({ id: definicionesCampo.definicionCampoId, key: camposPlantilla.claveCampoPlantilla })
+        .from(definicionesCampo)
+        .leftJoin(camposPlantilla, eq(camposPlantilla.campoPlantillaId, definicionesCampo.campoPlantillaId))
+        .where(inArray(definicionesCampo.definicionCampoId, fieldIds))
       return new Map(found.map((row) => [row.id, row.key ?? ""]))
     },
     store: createTemplateStore(executor),
@@ -78,10 +83,11 @@ export function rehearsalReads(executor: Executor): RehearsalReads {
 }
 
 export async function pausedProcessOn(executor: Executor): Promise<string | null> {
-  const [row] = await rows<{ id: string }>(
-    executor,
-    sql`select convocatoria_universidad_id::text as id from convocatorias_universidad where estado_convocatoria_universidad = 'pausado' limit 1`,
-  )
+  const [row] = await executor
+    .select({ id: convocatoriasUniversidad.convocatoriaUniversidadId })
+    .from(convocatoriasUniversidad)
+    .where(eq(convocatoriasUniversidad.estadoConvocatoriaUniversidad, "pausado"))
+    .limit(1)
   return row?.id ?? null
 }
 
@@ -91,12 +97,12 @@ export function rehearsalSettings(): SQL {
 
 export function createRehearsalStore(): RehearsalStore {
   return {
-    pausedProcess: () => pausedProcessOn(db as unknown as Executor),
+    pausedProcess: () => pausedProcessOn(db),
     async rehearse(work) {
       let outcome: { value: Awaited<ReturnType<typeof work>> } | null = null
       try {
         await db.transaction(async (tx) => {
-          const executor = tx as unknown as Executor
+          const executor: Executor = tx
           await executor.execute(rehearsalSettings())
           outcome = { value: await work(rehearsalReads(executor)) }
           tx.rollback()

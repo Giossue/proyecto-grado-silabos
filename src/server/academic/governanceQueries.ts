@@ -1,81 +1,75 @@
 import "server-only"
-import { sql } from "drizzle-orm"
+import { and, asc, count, desc, eq, exists, inArray, isNotNull, ne, sql } from "drizzle-orm"
 import { db } from "@/db"
-import { uuidList } from "../http/sql"
+import { jsonText } from "@/db/expressions"
+import { archivos, asignacionesRol, carreras, convocatoriasCarreras, convocatoriasUniversidad, facultades, periodosAcademicos, usuarios } from "@/db/schema"
 import { phpJsonDecode } from "../configuration/phpValues"
-import { rowsOf, type Executor } from "../syllabus/teacherSyllabusQueries"
-import type { GovernanceCareer, GovernanceFaculty, GovernancePeriod, GovernanceProcess, GovernanceRepository } from "./governance"
-
-type FacultyRow = {
-  id: string
-  name: string
-  campus: string
-  libraries: string | null
-  active: boolean
-  has_logo: boolean
-  disk: string | null
-  path: string | null
-  classification: string | null
-}
-
-type CareerRow = {
-  id: string
-  faculty_id: string
-  coordinator_id: string | null
-  coordinator_name: string | null
-  modality: string | null
-  campus: string | null
-  code: string
-  name: string
-  active: boolean
-}
+import type { Executor } from "../syllabus/teacherSyllabusQueries"
+import type { GovernanceCareer, GovernanceFaculty, GovernancePeriod, GovernanceRepository } from "./governance"
 
 export function governanceRepositoryOn(executor: Executor): GovernanceRepository {
   return {
     processes: () =>
-      rowsOf<GovernanceProcess>(
-        executor,
-        sql`select convocatoria_universidad_id::text as "id", periodo_academico_id::text as "periodId", estado_convocatoria_universidad as "state"
-          from convocatorias_universidad`,
-      ),
+      executor
+        .select({
+          id: convocatoriasUniversidad.convocatoriaUniversidadId,
+          periodId: convocatoriasUniversidad.periodoAcademicoId,
+          state: convocatoriasUniversidad.estadoConvocatoriaUniversidad,
+        })
+        .from(convocatoriasUniversidad),
     async faculties(): Promise<GovernanceFaculty[]> {
-      const found = await rowsOf<FacultyRow>(
-        executor,
-        sql`select facultad.facultad_id::text as id, facultad.nombre_facultad as name, facultad.campus_facultad as campus,
-            facultad.bibliotecas_koha_facultad::text as libraries, facultad.facultad_activa as active,
-            archivo.archivo_id is not null as has_logo, archivo.disco as disk, archivo.ruta_archivo as path, archivo.categoria as classification
-          from facultades facultad left join archivos archivo on archivo.archivo_id = facultad.logo_archivo_id
-          order by facultad.nombre_facultad asc`,
-      )
+      const found = await executor
+        .select({
+          id: facultades.facultadId,
+          name: facultades.nombreFacultad,
+          campus: facultades.campusFacultad,
+          libraries: jsonText(facultades.bibliotecasKohaFacultad),
+          active: facultades.facultadActiva,
+          hasLogo: isNotNull(archivos.archivoId).mapWith(Boolean),
+          disk: archivos.disco,
+          path: archivos.rutaArchivo,
+          classification: archivos.categoria,
+        })
+        .from(facultades)
+        .leftJoin(archivos, eq(archivos.archivoId, facultades.logoArchivoId))
+        .orderBy(asc(facultades.nombreFacultad))
       return found.map((row) => ({
         id: row.id,
         name: row.name,
         campus: row.campus,
         libraries: phpJsonDecode(row.libraries),
         active: row.active,
-        logo: row.has_logo ? { disk: row.disk ?? "private", path: row.path, classification: row.classification } : null,
+        logo: row.hasLogo ? { disk: row.disk ?? "private", path: row.path, classification: row.classification } : null,
       }))
     },
     async careers(): Promise<GovernanceCareer[]> {
-      const found = await rowsOf<CareerRow>(
-        executor,
-        sql`select carrera.carrera_id::text as id, carrera.facultad_id::text as faculty_id, carrera.modalidad_carrera as modality,
-            carrera.codigo_carrera as code, carrera.nombre_carrera as name, carrera.carrera_activa as active, facultad.campus_facultad as campus,
-            coordinacion.usuario_id::text as coordinator_id, coordinacion.nombre_usuario as coordinator_name
-          from carreras carrera
-            left join facultades facultad on facultad.facultad_id = carrera.facultad_id
-            left join lateral (
-              select usuario.usuario_id, usuario.nombre_usuario from asignaciones_rol asignacion
-                left join usuarios usuario on usuario.usuario_id = asignacion.usuario_id
-              where asignacion.carrera_id = carrera.carrera_id and asignacion.rol = 'coordinador' and asignacion.asignacion_rol_activa = true
-              limit 1
-            ) coordinacion on true
-          order by carrera.nombre_carrera asc`,
-      )
+      const coordination = executor
+        .select({ id: usuarios.usuarioId, name: usuarios.nombreUsuario })
+        .from(asignacionesRol)
+        .leftJoin(usuarios, eq(usuarios.usuarioId, asignacionesRol.usuarioId))
+        .where(and(eq(asignacionesRol.carreraId, carreras.carreraId), eq(asignacionesRol.rol, "coordinador"), eq(asignacionesRol.asignacionRolActiva, true)))
+        .limit(1)
+        .as("coordinacion")
+      const found = await executor
+        .select({
+          id: carreras.carreraId,
+          facultyId: carreras.facultadId,
+          modality: carreras.modalidadCarrera,
+          code: carreras.codigoCarrera,
+          name: carreras.nombreCarrera,
+          active: carreras.carreraActiva,
+          campus: facultades.campusFacultad,
+          coordinatorId: coordination.id,
+          coordinatorName: coordination.name,
+        })
+        .from(carreras)
+        .leftJoin(facultades, eq(facultades.facultadId, carreras.facultadId))
+        .leftJoinLateral(coordination, sql`true`)
+        .orderBy(asc(carreras.nombreCarrera))
       return found.map((row) => ({
         id: row.id,
-        facultyId: row.faculty_id,
-        coordinator: row.coordinator_id === null || row.coordinator_name === null ? null : { id: row.coordinator_id, name: row.coordinator_name },
+        facultyId: row.facultyId,
+        coordinator: row.coordinatorId === null || row.coordinatorName === null ? null : { id: row.coordinatorId, name: row.coordinatorName },
         modality: row.modality,
         campus: row.campus,
         code: row.code,
@@ -84,39 +78,56 @@ export function governanceRepositoryOn(executor: Executor): GovernanceRepository
       }))
     },
     async periods(): Promise<GovernancePeriod[]> {
-      const found = await rowsOf<{ id: string; code: string; starts_on: string; ends_on: string; weeks: number | null }>(
-        executor,
-        sql`select periodo_academico_id::text as id, codigo_periodo_academico as code, to_char(fecha_inicio_periodo, 'YYYY-MM-DD') as starts_on,
-            to_char(fecha_fin_periodo, 'YYYY-MM-DD') as ends_on, cantidad_semanas_lectivas as weeks
-          from periodos_academicos order by fecha_inicio_periodo desc`,
-      )
-      return found.map((row) => ({ id: row.id, code: row.code, startsOn: row.starts_on, endsOn: row.ends_on, teachingWeeks: row.weeks === null ? null : Number(row.weeks) }))
+      const found = await executor
+        .select({
+          id: periodosAcademicos.periodoAcademicoId,
+          code: periodosAcademicos.codigoPeriodoAcademico,
+          startsOn: periodosAcademicos.fechaInicioPeriodo,
+          endsOn: periodosAcademicos.fechaFinPeriodo,
+          weeks: periodosAcademicos.cantidadSemanasLectivas,
+        })
+        .from(periodosAcademicos)
+        .orderBy(desc(periodosAcademicos.fechaInicioPeriodo))
+      return found.map((row) => ({ id: row.id, code: row.code, startsOn: row.startsOn, endsOn: row.endsOn, teachingWeeks: row.weeks === null ? null : Number(row.weeks) }))
     },
     async facultiesWithActiveCareers(facultyIds) {
-      const found = await rowsOf<{ id: string }>(
-        executor,
-        sql`select distinct facultad_id::text as id from carreras where facultad_id in (${uuidList(facultyIds)}) and carrera_activa = true`,
-      )
+      const found = await executor
+        .selectDistinct({ id: carreras.facultadId })
+        .from(carreras)
+        .where(and(inArray(carreras.facultadId, facultyIds), eq(carreras.carreraActiva, true)))
       return found.map((row) => row.id)
     },
     async careersInRunningConvocation(careerIds) {
-      const found = await rowsOf<{ id: string }>(
-        executor,
-        sql`select distinct convocatoria.carrera_id::text as id from convocatorias_carreras convocatoria
-          where convocatoria.carrera_id in (${uuidList(careerIds)}) and convocatoria.estado_convocatoria_carrera != 'cerrada'
-            and exists (select 1 from convocatorias_universidad proceso where proceso.convocatoria_universidad_id = convocatoria.convocatoria_universidad_id
-              and proceso.estado_convocatoria_universidad != 'cerrado')`,
-      )
+      const found = await executor
+        .selectDistinct({ id: convocatoriasCarreras.carreraId })
+        .from(convocatoriasCarreras)
+        .where(
+          and(
+            inArray(convocatoriasCarreras.carreraId, careerIds),
+            ne(convocatoriasCarreras.estadoConvocatoriaCarrera, "cerrada"),
+            exists(
+              executor
+                .select({ id: convocatoriasUniversidad.convocatoriaUniversidadId })
+                .from(convocatoriasUniversidad)
+                .where(
+                  and(
+                    eq(convocatoriasUniversidad.convocatoriaUniversidadId, convocatoriasCarreras.convocatoriaUniversidadId),
+                    ne(convocatoriasUniversidad.estadoConvocatoriaUniversidad, "cerrado"),
+                  ),
+                ),
+            ),
+          ),
+        )
       return found.map((row) => row.id)
     },
     async careerRoleCounts(careerIds) {
       if (careerIds.length === 0) return []
-      const found = await rowsOf<{ career_id: string; role: string; total: string }>(
-        executor,
-        sql`select carrera_id::text as career_id, rol as role, count(*) as total from asignaciones_rol
-          where carrera_id in (${uuidList(careerIds)}) and asignacion_rol_activa = true group by carrera_id, rol`,
-      )
-      return found.map((row) => ({ careerId: row.career_id, role: row.role, total: Number(row.total) }))
+      const found = await executor
+        .select({ careerId: asignacionesRol.carreraId, role: asignacionesRol.rol, total: count() })
+        .from(asignacionesRol)
+        .where(and(inArray(asignacionesRol.carreraId, careerIds), eq(asignacionesRol.asignacionRolActiva, true)))
+        .groupBy(asignacionesRol.carreraId, asignacionesRol.rol)
+      return found.map((row) => ({ careerId: row.careerId as string, role: row.role, total: row.total }))
     },
   }
 }

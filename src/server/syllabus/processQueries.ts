@@ -1,72 +1,81 @@
 import "server-only"
-import { sql } from "drizzle-orm"
+import { and, count, desc, eq, inArray, notExists, sql } from "drizzle-orm"
 import { db } from "@/db"
+import { hasRows } from "@/db/expressions"
+import { asignacionesRol, carreras, convocatoriasCarreras, convocatoriasUniversidad, definicionesCampo, periodosAcademicos, silabos } from "@/db/schema"
 import { institutionDateSql } from "../http/sql"
 import { uuid7 } from "../http/uuid7"
-import type { ProcessRepository, ProcessRow, ProcessTx } from "./processes"
-import { rowsOf, type Executor } from "./teacherSyllabusQueries"
+import type { ProcessRepository, ProcessTx } from "./processes"
+import type { Executor } from "./teacherSyllabusQueries"
 
-type Row = { id: string; state: string; period: string; period_id: string; period_ends_on: string; starts_on: string; due_on: string; convocations_count: string; extensions: number }
+const PROCESS = {
+  id: convocatoriasUniversidad.convocatoriaUniversidadId,
+  state: convocatoriasUniversidad.estadoConvocatoriaUniversidad,
+  period: periodosAcademicos.codigoPeriodoAcademico,
+  periodId: convocatoriasUniversidad.periodoAcademicoId,
+  periodEndsOn: periodosAcademicos.fechaFinPeriodo,
+  startsOn: sql<string>`${institutionDateSql(sql`${convocatoriasUniversidad.fechaInicio}`)}`,
+  dueOn: sql<string>`${institutionDateSql(sql`${convocatoriasUniversidad.fechaEntrega}`)}`,
+  convocationsCount: sql<number>`(select count(*) from convocatorias_carreras where ${convocatoriasUniversidad.convocatoriaUniversidadId} = convocatorias_carreras.convocatoria_universidad_id
+    and exists (select 1 from convocatorias_universidad vigente where vigente.convocatoria_universidad_id = convocatorias_carreras.convocatoria_universidad_id))`.mapWith(Number),
+  extensions: convocatoriasUniversidad.cantidadProrrogas,
+}
 
-const PROCESS_COLUMNS = sql`proceso.convocatoria_universidad_id::text as id, proceso.estado_convocatoria_universidad as state, periodo.codigo_periodo_academico as period,
-  proceso.periodo_academico_id::text as period_id, to_char(periodo.fecha_fin_periodo, 'YYYY-MM-DD') as period_ends_on,
-  ${institutionDateSql(sql.raw("proceso.fecha_inicio"))} as starts_on, ${institutionDateSql(sql.raw("proceso.fecha_entrega"))} as due_on,
-  (select count(*) from convocatorias_carreras where proceso.convocatoria_universidad_id = convocatorias_carreras.convocatoria_universidad_id
-    and exists (select 1 from convocatorias_universidad vigente where vigente.convocatoria_universidad_id = convocatorias_carreras.convocatoria_universidad_id)) as convocations_count,
-  proceso.cantidad_prorrogas as extensions`
-
-function toProcess(row: Row): ProcessRow {
-  return {
-    id: row.id,
-    state: row.state,
-    period: row.period,
-    periodId: row.period_id,
-    periodEndsOn: row.period_ends_on,
-    startsOn: row.starts_on,
-    dueOn: row.due_on,
-    convocationsCount: Number(row.convocations_count),
-    extensions: Number(row.extensions),
-  }
+function processes(executor: Executor) {
+  return executor
+    .select(PROCESS)
+    .from(convocatoriasUniversidad)
+    .innerJoin(periodosAcademicos, eq(periodosAcademicos.periodoAcademicoId, convocatoriasUniversidad.periodoAcademicoId))
 }
 
 function processTx(executor: Executor): ProcessTx {
   return {
     async lockProcess(id) {
-      const [row] = await rowsOf<{ state: string }>(
-        executor,
-        sql`select estado_convocatoria_universidad as state from convocatorias_universidad where convocatoria_universidad_id = ${id}::uuid limit 1 for update`,
-      )
+      const [row] = await executor
+        .select({ state: convocatoriasUniversidad.estadoConvocatoriaUniversidad })
+        .from(convocatoriasUniversidad)
+        .where(eq(convocatoriasUniversidad.convocatoriaUniversidadId, id))
+        .limit(1)
+        .for("update")
       return row?.state ?? null
     },
     async pause(id) {
-      await executor.execute(sql`update convocatorias_universidad set estado_convocatoria_universidad = 'pausado' where convocatoria_universidad_id = ${id}::uuid`)
-      await executor.execute(sql`update convocatorias_universidad set pausado_en = clock_timestamp() where convocatoria_universidad_id = ${id}::uuid`)
+      const process = eq(convocatoriasUniversidad.convocatoriaUniversidadId, id)
+      await executor.update(convocatoriasUniversidad).set({ estadoConvocatoriaUniversidad: "pausado" }).where(process)
+      await executor.update(convocatoriasUniversidad).set({ pausadoEn: sql`clock_timestamp()` }).where(process)
     },
     async lockInProgress() {
-      const [row] = await rowsOf<{ id: string; period_id: string }>(
-        executor,
-        sql`select convocatoria_universidad_id::text as id, periodo_academico_id::text as period_id from convocatorias_universidad
-          where estado_convocatoria_universidad in ('abierto', 'pausado') limit 1 for update`,
-      )
+      const [row] = await executor
+        .select({ id: convocatoriasUniversidad.convocatoriaUniversidadId, periodId: convocatoriasUniversidad.periodoAcademicoId })
+        .from(convocatoriasUniversidad)
+        .where(inArray(convocatoriasUniversidad.estadoConvocatoriaUniversidad, ["abierto", "pausado"]))
+        .limit(1)
+        .for("update")
       if (!row) return null
-      const [period] = await rowsOf<{ code: string }>(
-        executor,
-        sql`select codigo_periodo_academico as code from periodos_academicos where periodo_academico_id = ${row.period_id}::uuid limit 1`,
-      )
+      const [period] = await executor
+        .select({ code: periodosAcademicos.codigoPeriodoAcademico })
+        .from(periodosAcademicos)
+        .where(eq(periodosAcademicos.periodoAcademicoId, row.periodId))
+        .limit(1)
       return { id: row.id, period: period?.code ?? null }
     },
-    async periodHasProcess(periodId) {
-      const [row] = await rowsOf<{ found: boolean }>(
-        executor,
-        sql`select exists (select 1 from convocatorias_universidad where periodo_academico_id = ${periodId}::uuid) as found`,
-      )
-      return row?.found === true
-    },
+    periodHasProcess: (periodId) =>
+      hasRows(
+        executor
+          .select({ id: convocatoriasUniversidad.convocatoriaUniversidadId })
+          .from(convocatoriasUniversidad)
+          .where(eq(convocatoriasUniversidad.periodoAcademicoId, periodId))
+          .limit(1),
+      ),
     async createProcess(periodId, startsAt, dueAt) {
       const id = uuid7()
-      await executor.execute(sql`insert into convocatorias_universidad
-          (periodo_academico_id, fecha_inicio, fecha_entrega, estado_convocatoria_universidad, convocatoria_universidad_id)
-        values (${periodId}::uuid, ${startsAt}::timestamptz, ${dueAt}::timestamptz, 'abierto', ${id}::uuid)`)
+      await executor.insert(convocatoriasUniversidad).values({
+        periodoAcademicoId: periodId,
+        fechaInicio: startsAt,
+        fechaEntrega: dueAt,
+        estadoConvocatoriaUniversidad: "abierto",
+        convocatoriaUniversidadId: id,
+      })
       return id
     },
   }
@@ -74,71 +83,59 @@ function processTx(executor: Executor): ProcessTx {
 
 export function processRepositoryOn(executor: Executor, transaction: <T>(work: (tx: ProcessTx) => Promise<T>) => Promise<T>): ProcessRepository {
   return {
-    async list() {
-      const found = await rowsOf<Row>(
-        executor,
-        sql`select ${PROCESS_COLUMNS} from convocatorias_universidad proceso
-          inner join periodos_academicos periodo on periodo.periodo_academico_id = proceso.periodo_academico_id
-          order by proceso.fecha_inicio desc`,
-      )
-      return found.map(toProcess)
-    },
-    async templateHasFields(templateId) {
-      const [row] = await rowsOf<{ found: boolean }>(
-        executor,
-        sql`select exists (select 1 from definiciones_campo where plantilla_id = ${templateId}::uuid and vigente_en_plantilla = true) as found`,
-      )
-      return row?.found === true
-    },
-    async periods() {
-      return rowsOf<{ id: string; codigo: string }>(
-        executor,
-        sql`select periodo_academico_id::text as id, codigo_periodo_academico as codigo from periodos_academicos order by fecha_inicio_periodo desc`,
-      )
-    },
+    list: () => processes(executor).orderBy(desc(convocatoriasUniversidad.fechaInicio)),
+    templateHasFields: (templateId) =>
+      hasRows(
+        executor
+          .select({ id: definicionesCampo.definicionCampoId })
+          .from(definicionesCampo)
+          .where(and(eq(definicionesCampo.plantillaId, templateId), eq(definicionesCampo.vigenteEnPlantilla, true)))
+          .limit(1),
+      ),
+    periods: () =>
+      executor
+        .select({ id: periodosAcademicos.periodoAcademicoId, codigo: periodosAcademicos.codigoPeriodoAcademico })
+        .from(periodosAcademicos)
+        .orderBy(desc(periodosAcademicos.fechaInicioPeriodo)),
     async find(id) {
-      const [row] = await rowsOf<Row>(
-        executor,
-        sql`select ${PROCESS_COLUMNS} from convocatorias_universidad proceso
-          inner join periodos_academicos periodo on periodo.periodo_academico_id = proceso.periodo_academico_id
-          where proceso.convocatoria_universidad_id = ${id}::uuid limit 1`,
-      )
-      return row ? toProcess(row) : null
+      const [row] = await processes(executor).where(eq(convocatoriasUniversidad.convocatoriaUniversidadId, id)).limit(1)
+      return row ?? null
     },
-    async counts(processId) {
-      const found = await rowsOf<{ state: string; total: string }>(
-        executor,
-        sql`select silabos.estado_silabo as state, count(*) as total from silabos
-          inner join convocatorias_carreras on convocatorias_carreras.convocatoria_carrera_id = silabos.convocatoria_carrera_id
-          where convocatorias_carreras.convocatoria_universidad_id = ${processId}::uuid group by silabos.estado_silabo`,
-      )
-      return found.map((row) => ({ state: row.state, total: Number(row.total) }))
-    },
+    counts: (processId) =>
+      executor
+        .select({ state: silabos.estadoSilabo, total: count() })
+        .from(silabos)
+        .innerJoin(convocatoriasCarreras, eq(convocatoriasCarreras.convocatoriaCarreraId, silabos.convocatoriaCarreraId))
+        .where(eq(convocatoriasCarreras.convocatoriaUniversidadId, processId))
+        .groupBy(silabos.estadoSilabo),
     async periodEndsOn(periodId) {
-      const [row] = await rowsOf<{ ends_on: string }>(
-        executor,
-        sql`select to_char(fecha_fin_periodo, 'YYYY-MM-DD') as ends_on from periodos_academicos where periodo_academico_id = ${periodId}::uuid limit 1`,
-      )
-      return row?.ends_on ?? null
+      const [row] = await executor
+        .select({ endsOn: periodosAcademicos.fechaFinPeriodo })
+        .from(periodosAcademicos)
+        .where(eq(periodosAcademicos.periodoAcademicoId, periodId))
+        .limit(1)
+      return row?.endsOn ?? null
     },
-    async activeCareerCount() {
-      const [row] = await rowsOf<{ total: string }>(executor, sql`select count(*) as total from carreras where carrera_activa = true`)
-      return Number(row?.total ?? 0)
-    },
-    async activeCareersWithoutCoordinator() {
-      const [row] = await rowsOf<{ total: string }>(
-        executor,
-        sql`select count(*) as total from carreras where carrera_activa = true and not exists (select 1 from asignaciones_rol
-          where asignaciones_rol.carrera_id = carreras.carrera_id and asignaciones_rol.rol = 'coordinador' and asignaciones_rol.asignacion_rol_activa = true)`,
-      )
-      return Number(row?.total ?? 0)
-    },
+    activeCareerCount: () => executor.$count(carreras, eq(carreras.carreraActiva, true)),
+    activeCareersWithoutCoordinator: () =>
+      executor.$count(
+        carreras,
+        and(
+          eq(carreras.carreraActiva, true),
+          notExists(
+            executor
+              .select({ id: asignacionesRol.asignacionRolId })
+              .from(asignacionesRol)
+              .where(and(eq(asignacionesRol.carreraId, carreras.carreraId), eq(asignacionesRol.rol, "coordinador"), eq(asignacionesRol.asignacionRolActiva, true))),
+          ),
+        ),
+      ),
     transaction,
   }
 }
 
 export function createProcessRepository(): ProcessRepository {
-  return processRepositoryOn(db as unknown as Executor, (work) => db.transaction((tx) => work(processTx(tx as unknown as Executor))))
+  return processRepositoryOn(db, (work) => db.transaction((tx) => work(processTx(tx))))
 }
 
 export { processTx }

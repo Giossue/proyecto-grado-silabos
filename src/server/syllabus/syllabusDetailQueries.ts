@@ -1,8 +1,22 @@
 import "server-only"
-import { sql } from "drizzle-orm"
+import { and, desc, eq, inArray, isNotNull, lte, ne, sql } from "drizzle-orm"
+import { alias } from "drizzle-orm/pg-core"
 import { db } from "@/db"
+import { epochText, hasRows, isoText, jsonText } from "@/db/expressions"
+import {
+  camposPlantilla,
+  definicionesCampo,
+  enviosBiblioteca,
+  firmasSilabo,
+  paralelos,
+  revisionesCoordinacion,
+  revisionesSilabo,
+  seccionesPlantilla,
+  silabos,
+  usuarios,
+  valoresCampo,
+} from "@/db/schema"
 import { isUuid } from "../academic/structure"
-import { iso8601, uuidList } from "../http/sql"
 import { phpJsonDecode } from "../configuration/phpValues"
 import { teacherNamesOf } from "./coordinationReviewQueries"
 import { identificationSource, syllabusFacts } from "./draftFieldStore"
@@ -21,30 +35,44 @@ export function phpCompareStrings(left: string, right: string): number {
 const epoch = (column: string) => sql.raw(`extract(epoch from ${column})::bigint`)
 
 export async function signaturesOf(executor: Executor, syllabusId: string): Promise<SignatureRecord[]> {
-  const rows = await rowsOf<{ role: string; name: string; signed_at: string; certificate_name: string; serial: string; issuer: string }>(
-    executor,
-    sql`select firmas_silabo.firmado_como as role, usuarios.nombre_usuario as name, ${epoch("firmas_silabo.firmado_en")} as signed_at,
-        firmas_silabo.nombre_en_certificado as certificate_name, firmas_silabo.numero_certificado as serial, firmas_silabo.entidad_emisora as issuer
-      from firmas_silabo left join usuarios on usuarios.usuario_id = firmas_silabo.usuario_id where firmas_silabo.silabo_id = ${syllabusId}::uuid`,
-  )
+  const rows = await executor
+    .select({
+      role: firmasSilabo.firmadoComo,
+      name: usuarios.nombreUsuario,
+      signedAt: epochText(firmasSilabo.firmadoEn),
+      certificateName: firmasSilabo.nombreEnCertificado,
+      serial: firmasSilabo.numeroCertificado,
+      issuer: firmasSilabo.entidadEmisora,
+    })
+    .from(firmasSilabo)
+    .leftJoin(usuarios, eq(usuarios.usuarioId, firmasSilabo.usuarioId))
+    .where(eq(firmasSilabo.silaboId, syllabusId))
   const rank = (role: string) => Math.max(SIGNATURE_ORDER.indexOf(role), 0)
   return rows
-    .map((row) => ({ role: row.role, name: row.name, signedAt: Number(row.signed_at), certificateName: row.certificate_name, serial: row.serial, issuer: row.issuer }))
+    .map((row) => ({ ...row, name: row.name as string, signedAt: Number(row.signedAt) }))
     .sort((left, right) => rank(left.role) - rank(right.role))
 }
 
 export async function reviewCommentsOf(executor: Executor, syllabusId: string, stage: string | null): Promise<ReviewComment[]> {
-  const rows = await rowsOf<ReviewComment>(
-    executor,
-    sql`select coalesce(revisiones_silabo.correccion_etapa, '') as stage, coalesce(revisiones_silabo.correccion_justificacion, '') as comment,
-        ${iso8601(sql.raw("revisiones_silabo.correccion_solicitada_en"))} as commented_at, usuarios.nombre_usuario as commented_by,
-        revisiones_silabo.numero_revision as revision_number
-      from revisiones_silabo left join usuarios on usuarios.usuario_id = revisiones_silabo.correccion_solicitada_por
-      where revisiones_silabo.silabo_id = ${syllabusId}::uuid and revisiones_silabo.correccion_solicitada_en is not null
-        ${stage === null ? sql`` : sql`and revisiones_silabo.correccion_etapa = ${stage}`}
-      order by revisiones_silabo.correccion_solicitada_en desc`,
-  )
-  return rows.map((row) => ({ ...row, revision_number: Number(row.revision_number) }))
+  const rows = await executor
+    .select({
+      stage: sql<string>`coalesce(${revisionesSilabo.correccionEtapa}, '')`,
+      comment: sql<string>`coalesce(${revisionesSilabo.correccionJustificacion}, '')`,
+      commented_at: isoText(revisionesSilabo.correccionSolicitadaEn),
+      commented_by: usuarios.nombreUsuario,
+      revision_number: revisionesSilabo.numeroRevision,
+    })
+    .from(revisionesSilabo)
+    .leftJoin(usuarios, eq(usuarios.usuarioId, revisionesSilabo.correccionSolicitadaPor))
+    .where(
+      and(
+        eq(revisionesSilabo.silaboId, syllabusId),
+        isNotNull(revisionesSilabo.correccionSolicitadaEn),
+        stage === null ? undefined : eq(revisionesSilabo.correccionEtapa, stage),
+      ),
+    )
+    .orderBy(desc(revisionesSilabo.correccionSolicitadaEn))
+  return rows.map((row) => ({ ...row, commented_by: row.commented_by as string, revision_number: Number(row.revision_number) }))
 }
 
 type RevisionRow = {
@@ -89,28 +117,32 @@ export async function revisionsOf(executor: Executor, syllabusId: string): Promi
 }
 
 export async function revisionSnapshotOf(executor: Executor, revisionId: string): Promise<unknown> {
-  const [row] = await rowsOf<{ snapshot: string | null }>(executor, sql`select contenido_enviado::text as snapshot from revisiones_silabo where revision_silabo_id = ${revisionId}::uuid limit 1`)
+  const [row] = await executor
+    .select({ snapshot: jsonText(revisionesSilabo.contenidoEnviado) })
+    .from(revisionesSilabo)
+    .where(eq(revisionesSilabo.revisionSilaboId, revisionId))
+    .limit(1)
   return phpJsonDecode(row?.snapshot ?? null)
 }
 
 export async function signedFactsOf(executor: Executor, syllabusId: string, revision: Pick<DetailRevision, "id" | "number">) {
-  const [coordination] = await rowsOf<{ reviewer: string; at: string }>(
-    executor,
-    sql`select usuarios.nombre_usuario as reviewer, ${epoch("revisiones_coordinacion.revisado_en")} as at
-      from revisiones_coordinacion inner join revisiones_silabo on revisiones_silabo.revision_silabo_id = revisiones_coordinacion.revision_silabo_id
-        left join usuarios on usuarios.usuario_id = revisiones_coordinacion.revisado_por
-      where revisiones_silabo.silabo_id = ${syllabusId}::uuid and revisiones_silabo.numero_revision <= ${revision.number}
-      order by revisiones_coordinacion.revisado_en desc limit 1`,
-  )
-  const [verification] = await rowsOf<{ verifier: string; at: string }>(
-    executor,
-    sql`select usuarios.nombre_usuario as verifier, ${epoch("envios_biblioteca.verificado_en")} as at
-      from envios_biblioteca left join usuarios on usuarios.usuario_id = envios_biblioteca.verificado_por
-      where envios_biblioteca.revision_silabo_id = ${revision.id}::uuid and envios_biblioteca.verificado_en is not null limit 1`,
-  )
+  const [coordination] = await executor
+    .select({ reviewer: usuarios.nombreUsuario, at: epochText(revisionesCoordinacion.revisadoEn) })
+    .from(revisionesCoordinacion)
+    .innerJoin(revisionesSilabo, eq(revisionesSilabo.revisionSilaboId, revisionesCoordinacion.revisionSilaboId))
+    .leftJoin(usuarios, eq(usuarios.usuarioId, revisionesCoordinacion.revisadoPor))
+    .where(and(eq(revisionesSilabo.silaboId, syllabusId), lte(revisionesSilabo.numeroRevision, revision.number)))
+    .orderBy(desc(revisionesCoordinacion.revisadoEn))
+    .limit(1)
+  const [verification] = await executor
+    .select({ verifier: usuarios.nombreUsuario, at: epochText(enviosBiblioteca.verificadoEn) })
+    .from(enviosBiblioteca)
+    .leftJoin(usuarios, eq(usuarios.usuarioId, enviosBiblioteca.verificadoPor))
+    .where(and(eq(enviosBiblioteca.revisionSilaboId, revision.id), isNotNull(enviosBiblioteca.verificadoEn)))
+    .limit(1)
   return {
-    coordination: coordination ? { reviewer: coordination.reviewer, at: Number(coordination.at) } : null,
-    verification: verification ? { verifier: verification.verifier, at: Number(verification.at) } : null,
+    coordination: coordination ? { reviewer: coordination.reviewer as string, at: Number(coordination.at) } : null,
+    verification: verification ? { verifier: verification.verifier as string, at: Number(verification.at) } : null,
   }
 }
 
@@ -144,11 +176,11 @@ export function syllabusDetailStoreOn(executor: Executor): SyllabusDetailStore {
     },
     teachers: async (id) => (await teacherNamesOf(executor, [id])).get(id) ?? [],
     async values(id) {
-      const rows = await rowsOf<{ field_id: string; value: string | null }>(
-        executor,
-        sql`select definicion_campo_id::text as field_id, valor_campo::text as value from valores_campo where silabo_id = ${id}::uuid`,
-      )
-      return new Map(rows.map((row) => [row.field_id, phpJsonDecode(row.value)]))
+      const rows = await executor
+        .select({ fieldId: valoresCampo.definicionCampoId, value: jsonText(valoresCampo.valorCampo) })
+        .from(valoresCampo)
+        .where(eq(valoresCampo.silaboId, id))
+      return new Map(rows.map((row) => [row.fieldId, phpJsonDecode(row.value)]))
     },
     hasArchivedValues: (id) => syllabusHasArchivedValues(executor, id),
     archivedFields: (id) => archivedFieldsOf(executor, id),
@@ -158,40 +190,49 @@ export function syllabusDetailStoreOn(executor: Executor): SyllabusDetailStore {
     reviewComments: (id, stage) => reviewCommentsOf(executor, id, stage),
     signatures: (id) => signaturesOf(executor, id),
     async copySources(syllabus, userId) {
-      const rows = await rowsOf<{ id: string; parallel: string; state: string }>(
-        executor,
-        sql`select silabos.silabo_id::text as id, ${PARALLEL_CODE} as parallel, silabos.estado_silabo as state
-          from silabos inner join paralelos paralelo on paralelo.paralelo_id = silabos.paralelo_id
-          where silabos.convocatoria_carrera_id = ${syllabus.convocationId}::uuid and silabos.silabo_id != ${syllabus.id}::uuid
-            and silabos.estado_silabo != 'sin_iniciar' and paralelo.asignatura_id = ${syllabus.subjectId}::uuid
-            and ${currentTeacherSql(userId)} and ${SYLLABUS_EXISTS}`,
-      )
+      const paralelo = alias(paralelos, "paralelo")
+      const rows = await executor
+        .select({ id: silabos.silaboId, parallel: sql<string>`${PARALLEL_CODE}`, state: silabos.estadoSilabo })
+        .from(silabos)
+        .innerJoin(paralelo, eq(paralelo.paraleloId, silabos.paraleloId))
+        .where(
+          and(
+            eq(silabos.convocatoriaCarreraId, syllabus.convocationId),
+            ne(silabos.silaboId, syllabus.id),
+            ne(silabos.estadoSilabo, "sin_iniciar"),
+            eq(paralelo.asignaturaId, syllabus.subjectId),
+            currentTeacherSql(userId),
+            SYLLABUS_EXISTS,
+          ),
+        )
       return rows.sort((left, right) => phpCompareStrings(left.parallel, right.parallel))
     },
     identification: (id) => identificationSource(executor, id),
     async fieldContents(ids) {
       const valid = ids.filter(isUuid)
       if (valid.length === 0) return new Map()
-      const rows = await rowsOf<{ id: string; content: string | null }>(
-        executor,
-        sql`select definicion_campo_id::text as id, contenido_definicion_campo::text as content from definiciones_campo where definicion_campo_id in (${uuidList(valid)})`,
-      )
+      const rows = await executor
+        .select({ id: definicionesCampo.definicionCampoId, content: jsonText(definicionesCampo.contenidoDefinicionCampo) })
+        .from(definicionesCampo)
+        .where(inArray(definicionesCampo.definicionCampoId, valid))
       return new Map(rows.map((row) => [row.id, phpJsonDecode(row.content)]))
     },
   }
 }
 
 export function createSyllabusDetailStore(): SyllabusDetailStore {
-  return syllabusDetailStoreOn(db as unknown as Executor)
+  return syllabusDetailStoreOn(db)
 }
 
 export async function syllabusHasArchivedValues(executor: Executor, syllabusId: string): Promise<boolean> {
-  const [row] = await rowsOf<{ found: boolean }>(
-    executor,
-    sql`select exists (select 1 from valores_campo inner join definiciones_campo on definiciones_campo.definicion_campo_id = valores_campo.definicion_campo_id
-      where valores_campo.silabo_id = ${syllabusId}::uuid and definiciones_campo.vigente_en_plantilla = false) as found`,
+  return hasRows(
+    executor
+      .select({ id: valoresCampo.valorCampoId })
+      .from(valoresCampo)
+      .innerJoin(definicionesCampo, eq(definicionesCampo.definicionCampoId, valoresCampo.definicionCampoId))
+      .where(and(eq(valoresCampo.silaboId, syllabusId), eq(definicionesCampo.vigenteEnPlantilla, false)))
+      .limit(1),
   )
-  return row?.found === true
 }
 
 export type ArchivedField = {
@@ -208,41 +249,35 @@ export type ArchivedField = {
 
 export async function archivedFieldsOf(executor: Executor, syllabusId: string): Promise<ArchivedField[] | null> {
   if (!(await syllabusHasArchivedValues(executor, syllabusId))) return null
-  const rows = await rowsOf<{
-    section_id: string
-    section_key: string
-    section_title: string
-    orientation: string
-    id: string
-    key: string | null
-    label: string | null
-    responsible: string
-    stored: string | null
-    has_value: boolean
-    content: string | null
-  }>(
-    executor,
-    sql`select secciones_plantilla.seccion_plantilla_id::text as section_id, secciones_plantilla.clave_seccion_plantilla as section_key,
-        secciones_plantilla.titulo_seccion_plantilla as section_title, secciones_plantilla.orientacion_seccion_plantilla as orientation,
-        definiciones_campo.definicion_campo_id::text as id, campos_plantilla.clave_campo_plantilla as key, campos_plantilla.titulo_campo_plantilla as label,
-        definiciones_campo.quien_llena_definicion_campo as responsible, valores_campo.valor_campo::text as stored, valores_campo.silabo_id is not null as has_value,
-        definiciones_campo.contenido_definicion_campo::text as content
-      from definiciones_campo
-      inner join campos_plantilla on campos_plantilla.campo_plantilla_id = definiciones_campo.campo_plantilla_id
-      inner join secciones_plantilla on secciones_plantilla.seccion_plantilla_id = campos_plantilla.seccion_plantilla_id
-      left join valores_campo on valores_campo.definicion_campo_id = definiciones_campo.definicion_campo_id and valores_campo.silabo_id = ${syllabusId}::uuid
-      where definiciones_campo.definicion_campo_id in (select definicion_campo_id from valores_campo where silabo_id = ${syllabusId}::uuid)
-      order by secciones_plantilla.posicion_seccion_plantilla, campos_plantilla.posicion_campo_plantilla`,
-  )
-  return rows.map((row) => ({
-    sectionId: row.section_id,
-    sectionKey: row.section_key,
-    sectionTitle: row.section_title,
-    sectionOrientation: row.orientation,
-    id: row.id,
+  const rows = await executor
+    .select({
+      sectionId: seccionesPlantilla.seccionPlantillaId,
+      sectionKey: seccionesPlantilla.claveSeccionPlantilla,
+      sectionTitle: seccionesPlantilla.tituloSeccionPlantilla,
+      sectionOrientation: seccionesPlantilla.orientacionSeccionPlantilla,
+      id: definicionesCampo.definicionCampoId,
+      key: camposPlantilla.claveCampoPlantilla,
+      label: camposPlantilla.tituloCampoPlantilla,
+      responsible: definicionesCampo.quienLlenaDefinicionCampo,
+      stored: jsonText(valoresCampo.valorCampo),
+      hasValue: isNotNull(valoresCampo.silaboId).mapWith(Boolean),
+      content: jsonText(definicionesCampo.contenidoDefinicionCampo),
+    })
+    .from(definicionesCampo)
+    .innerJoin(camposPlantilla, eq(camposPlantilla.campoPlantillaId, definicionesCampo.campoPlantillaId))
+    .innerJoin(seccionesPlantilla, eq(seccionesPlantilla.seccionPlantillaId, camposPlantilla.seccionPlantillaId))
+    .leftJoin(valoresCampo, and(eq(valoresCampo.definicionCampoId, definicionesCampo.definicionCampoId), eq(valoresCampo.silaboId, syllabusId)))
+    .where(
+      inArray(
+        definicionesCampo.definicionCampoId,
+        executor.select({ id: valoresCampo.definicionCampoId }).from(valoresCampo).where(eq(valoresCampo.silaboId, syllabusId)),
+      ),
+    )
+    .orderBy(seccionesPlantilla.posicionSeccionPlantilla, camposPlantilla.posicionCampoPlantilla)
+  return rows.map(({ stored, hasValue, content, ...row }) => ({
+    ...row,
     key: row.key ?? "",
     label: row.label ?? "",
-    responsible: row.responsible,
-    content: row.has_value ? phpJsonDecode(row.stored) : phpJsonDecode(row.content),
+    content: hasValue ? phpJsonDecode(stored) : phpJsonDecode(content),
   }))
 }

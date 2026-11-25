@@ -1,8 +1,9 @@
 import "server-only"
-import { sql } from "drizzle-orm"
+import { and, asc, eq, inArray, isNotNull, sql } from "drizzle-orm"
 import { db } from "@/db"
+import { epochText } from "@/db/expressions"
+import { carreras, convocatoriasCarreras, convocatoriasUniversidad, periodosAcademicos, silabos } from "@/db/schema"
 import { careerLabelSql } from "../academic/careerLabel"
-import { uuidList } from "../http/sql"
 import { notificationScope, recipientsOn, systemNow, type Mail, type WriteOptions } from "../notifications/queries"
 import { withAfterCommit, type AfterCommit } from "../queue/dispatch"
 import { institutionalTemplateProblem } from "./convocationWriteStore"
@@ -12,7 +13,7 @@ import { adaptProcessToTemplate, convocationsToReopen, processSyllabusCounts, Re
 import { processRepositoryOn } from "./processQueries"
 import type { ProcessWriteDeps, ProcessWriteTx } from "./processWrites"
 import { dbTransaction, type TransactionRunner } from "./reviewDecisionStore"
-import { rowsOf, type Executor } from "./teacherSyllabusQueries"
+import type { Executor } from "./teacherSyllabusQueries"
 
 const PROCESS_ALIVE = sql`exists (select 1 from convocatorias_universidad proceso where proceso.convocatoria_universidad_id = convocatorias_carreras.convocatoria_universidad_id)`
 
@@ -24,49 +25,47 @@ export function processWriteTx(executor: Executor, afterCommit: AfterCommit, now
   return {
     notifications,
     async lockProcess(id) {
-      const [row] = await rowsOf<{
-        id: string
-        state: string
-        period_id: string
-        period: string | null
-        due_at: number
-        extensions: number
-        ends_on: string
-        finalized: boolean
-      }>(
-        executor,
-        sql`select proceso.convocatoria_universidad_id::text as id, proceso.estado_convocatoria_universidad as state, proceso.periodo_academico_id::text as period_id,
-            periodo.codigo_periodo_academico as period, extract(epoch from proceso.fecha_entrega)::bigint as due_at, proceso.cantidad_prorrogas as extensions,
-            to_char(periodo.fecha_fin_periodo, 'YYYY-MM-DD') as ends_on, proceso.finalizada_en is not null as finalized
-          from convocatorias_universidad proceso left join periodos_academicos periodo on periodo.periodo_academico_id = proceso.periodo_academico_id
-          where proceso.convocatoria_universidad_id = ${id}::uuid limit 1 for update of proceso`,
-      )
+      const [row] = await executor
+        .select({
+          id: convocatoriasUniversidad.convocatoriaUniversidadId,
+          state: convocatoriasUniversidad.estadoConvocatoriaUniversidad,
+          periodId: convocatoriasUniversidad.periodoAcademicoId,
+          period: periodosAcademicos.codigoPeriodoAcademico,
+          dueAt: epochText(convocatoriasUniversidad.fechaEntrega),
+          extensions: convocatoriasUniversidad.cantidadProrrogas,
+          periodEndsOn: periodosAcademicos.fechaFinPeriodo,
+          finalized: isNotNull(convocatoriasUniversidad.finalizadaEn).mapWith(Boolean),
+        })
+        .from(convocatoriasUniversidad)
+        .leftJoin(periodosAcademicos, eq(periodosAcademicos.periodoAcademicoId, convocatoriasUniversidad.periodoAcademicoId))
+        .where(eq(convocatoriasUniversidad.convocatoriaUniversidadId, id))
+        .limit(1)
+        .for("update", { of: convocatoriasUniversidad })
       return row
         ? {
-            id: row.id,
-            state: row.state,
-            periodId: row.period_id,
+            ...row,
             period: row.period ?? "Período",
-            dueAt: Number(row.due_at),
+            dueAt: Number(row.dueAt),
             extensions: Number(row.extensions),
-            periodEndsOn: row.ends_on,
-            finalized: row.finalized,
+            periodEndsOn: row.periodEndsOn as string,
           }
         : null
     },
     async lockConvocations(processId) {
-      const rows = await rowsOf<{ id: string }>(
-        executor,
-        sql`select convocatoria_carrera_id::text as id from convocatorias_carreras where convocatoria_universidad_id = ${processId}::uuid and ${PROCESS_ALIVE} for update`,
-      )
+      const rows = await executor
+        .select({ id: convocatoriasCarreras.convocatoriaCarreraId })
+        .from(convocatoriasCarreras)
+        .where(and(eq(convocatoriasCarreras.convocatoriaUniversidadId, processId), PROCESS_ALIVE))
+        .for("update")
       return rows.map((row) => row.id)
     },
     async lockSyllabi(convocationIds) {
       if (convocationIds.length === 0) return []
-      const rows = await rowsOf<{ id: string }>(
-        executor,
-        sql`select silabos.silabo_id::text as id from silabos where silabos.convocatoria_carrera_id in (${uuidList(convocationIds)}) and ${SYLLABUS_ALIVE} for update of silabos`,
-      )
+      const rows = await executor
+        .select({ id: silabos.silaboId })
+        .from(silabos)
+        .where(and(inArray(silabos.convocatoriaCarreraId, convocationIds), SYLLABUS_ALIVE))
+        .for("update", { of: silabos })
       return rows.map((row) => row.id)
     },
     teachersForProcess: (id) => recipients.teachersForProcess(id),
@@ -79,9 +78,9 @@ export function processWriteTx(executor: Executor, afterCommit: AfterCommit, now
     async deleteProcess(processId, convocationIds) {
       await executor.execute(sql`SET LOCAL app.reinicio_institucional = 'off'`)
       if (convocationIds.length > 0) {
-        await executor.execute(sql`delete from convocatorias_carreras where convocatoria_carrera_id in (${uuidList(convocationIds)}) and ${PROCESS_ALIVE}`)
+        await executor.delete(convocatoriasCarreras).where(and(inArray(convocatoriasCarreras.convocatoriaCarreraId, convocationIds), PROCESS_ALIVE))
       }
-      await executor.execute(sql`delete from convocatorias_universidad where convocatoria_universidad_id = ${processId}::uuid`)
+      await executor.delete(convocatoriasUniversidad).where(eq(convocatoriasUniversidad.convocatoriaUniversidadId, processId))
     },
     templateProblem: (errorKey) => institutionalTemplateProblem(executor, errorKey),
     async lockOtherProcesses(processId) {
@@ -96,27 +95,29 @@ export function processWriteTx(executor: Executor, afterCommit: AfterCommit, now
     reopen: (processId) => reopenProcess(work, processId),
     applyPlan: (plan, convocationIds, periodId) => catchUp.apply(plan, convocationIds, periodId),
     async generateReopened(convocationIds) {
-      const locked = await rowsOf<{ id: string }>(
-        executor,
-        sql`select convocatoria_carrera_id::text as id from convocatorias_carreras where convocatoria_carrera_id in (${uuidList(convocationIds)}) and ${PROCESS_ALIVE}
-          order by convocatoria_carrera_id asc for update`,
-      )
+      const locked = await executor
+        .select({ id: convocatoriasCarreras.convocatoriaCarreraId })
+        .from(convocatoriasCarreras)
+        .where(and(inArray(convocatoriasCarreras.convocatoriaCarreraId, convocationIds), PROCESS_ALIVE))
+        .orderBy(asc(convocatoriasCarreras.convocatoriaCarreraId))
+        .for("update")
       for (const convocation of locked) await work.generateConvocation(convocation.id, { allowEmpty: true, skipIncomplete: true })
     },
     async openConvocations(processId) {
-      return rowsOf<{ id: string; careerLabel: string }>(
-        executor,
-        sql`select convocatorias_carreras.convocatoria_carrera_id::text as id, ${careerLabelSql("carrera")} as "careerLabel"
-          from convocatorias_carreras inner join carreras carrera on carrera.carrera_id = convocatorias_carreras.carrera_id
-          where convocatorias_carreras.convocatoria_universidad_id = ${processId}::uuid and convocatorias_carreras.estado_convocatoria_carrera = 'abierta' and ${PROCESS_ALIVE}`,
-      )
+      return executor
+        .select({ id: convocatoriasCarreras.convocatoriaCarreraId, careerLabel: sql<string>`${careerLabelSql("carreras")}` })
+        .from(convocatoriasCarreras)
+        .innerJoin(carreras, eq(carreras.carreraId, convocatoriasCarreras.carreraId))
+        .where(and(eq(convocatoriasCarreras.convocatoriaUniversidadId, processId), eq(convocatoriasCarreras.estadoConvocatoriaCarrera, "abierta"), PROCESS_ALIVE))
     },
     async updateState(processId, state) {
-      await executor.execute(sql`update convocatorias_universidad set estado_convocatoria_universidad = ${state} where convocatoria_universidad_id = ${processId}::uuid`)
+      await executor.update(convocatoriasUniversidad).set({ estadoConvocatoriaUniversidad: state }).where(eq(convocatoriasUniversidad.convocatoriaUniversidadId, processId))
     },
     async extendDeadline(processId, dueAt, extension) {
-      await executor.execute(sql`update convocatorias_universidad set fecha_entrega = ${dueAt}::timestamptz, cantidad_prorrogas = ${extension}
-        where convocatoria_universidad_id = ${processId}::uuid`)
+      await executor
+        .update(convocatoriasUniversidad)
+        .set({ fechaEntrega: dueAt, cantidadProrrogas: extension })
+        .where(eq(convocatoriasUniversidad.convocatoriaUniversidadId, processId))
     },
     teachersWithPendingWork: (id) => recipients.teachersWithPendingWork(id),
   }
@@ -134,5 +135,5 @@ export function processWriteDepsOn(executor: Executor, transaction: TransactionR
 }
 
 export function createProcessWriteDeps(): Omit<ProcessWriteDeps, "bridge"> {
-  return processWriteDepsOn(db as unknown as Executor, dbTransaction)
+  return processWriteDepsOn(db, dbTransaction)
 }

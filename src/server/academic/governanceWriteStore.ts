@@ -1,28 +1,53 @@
 import "server-only"
 import { sessionRandom } from "../auth/sessionWriter"
-import { sql, type SQL } from "drizzle-orm"
+import { and, eq, exists, isNull, ne, sql, type SQL } from "drizzle-orm"
+import { alias } from "drizzle-orm/pg-core"
 import { db } from "@/db"
+import { byColumnName, hasRows, jsonText } from "@/db/expressions"
+import {
+  asignacionesParalelo,
+  asignacionesRol,
+  carreras,
+  convocatoriasCarreras,
+  convocatoriasUniversidad,
+  facultades,
+  invitacionesActivacion,
+  periodosAcademicos,
+  sesiones,
+  usuarios,
+} from "@/db/schema"
 import { uuid7 } from "../http/uuid7"
 import { notificationScope, systemNow, type WriteOptions } from "../notifications/queries"
 import { withAfterCommit, type AfterCommit } from "../queue/dispatch"
 import { FinalizedChangeNotice } from "../syllabus/finalizedChangeNotice"
 import { InProgressWork } from "../syllabus/inProgressWork"
 import { dbTransaction, type TransactionRunner } from "../syllabus/reviewDecisionStore"
-import { rowsOf, type Executor } from "../syllabus/teacherSyllabusQueries"
+import type { Executor } from "../syllabus/teacherSyllabusQueries"
 import type { GovernanceWriteDeps, GovernanceWriteTx } from "./governanceWrites"
 import { insertStoredObject } from "./supportDocumentWriteStore"
 
-const TABLES: Record<string, { table: SQL; key: SQL }> = {
-  facultad: { table: sql`facultades`, key: sql`facultad_id` },
-  carrera: { table: sql`carreras`, key: sql`carrera_id` },
-  periodo: { table: sql`periodos_academicos`, key: sql`periodo_academico_id` },
+const convocatoria = alias(convocatoriasCarreras, "convocatoria")
+const proceso = alias(convocatoriasUniversidad, "proceso")
+const TABLES = { facultad: [facultades, facultades.facultadId], carrera: [carreras, carreras.carreraId], periodo: [periodosAcademicos, periodosAcademicos.periodoAcademicoId] } as const
+const PERIOD = {
+  id: periodosAcademicos.periodoAcademicoId,
+  code: periodosAcademicos.codigoPeriodoAcademico,
+  startsOn: periodosAcademicos.fechaInicioPeriodo,
+  endsOn: periodosAcademicos.fechaFinPeriodo,
+  weeks: periodosAcademicos.cantidadSemanasLectivas,
 }
 
-const PROCESS_ALIVE = sql`exists (select 1 from convocatorias_universidad proceso where proceso.convocatoria_universidad_id = convocatoria.convocatoria_universidad_id`
+function processWhere(executor: Executor, ...conditions: (SQL | undefined)[]): SQL {
+  return exists(
+    executor
+      .select({ id: proceso.convocatoriaUniversidadId })
+      .from(proceso)
+      .where(and(eq(proceso.convocatoriaUniversidadId, convocatoria.convocatoriaUniversidadId), ...conditions)),
+  )
+}
 
-async function exists(executor: Executor, query: SQL): Promise<boolean> {
-  const [row] = await rowsOf<{ found: boolean }>(executor, sql`select exists (${query}) as found`)
-  return row?.found === true
+function convocationExists(executor: Executor, ...conditions: (SQL | undefined)[]): Promise<boolean> {
+  return hasRows(executor.select({ id: convocatoria.convocatoriaCarreraId }).from(convocatoria).where(and(...conditions, processWhere(executor))).limit(1))
 }
 
 export function governanceWriteTx(executor: Executor, afterCommit: AfterCommit, now: number, options: WriteOptions = {}): GovernanceWriteTx {
@@ -31,105 +56,118 @@ export function governanceWriteTx(executor: Executor, afterCommit: AfterCommit, 
   return {
     async createCareer(data) {
       const id = uuid7()
-      await executor.execute(sql`insert into carreras (carrera_id, facultad_id, codigo_carrera, nombre_carrera, carrera_activa, modalidad_carrera, numero_ciclos)
-        values (${id}::uuid, ${data.facultyId}::uuid, ${data.code}, ${data.name}, true, ${data.modality}, ${data.cycleCount})`)
+      await executor.insert(carreras).values({
+        carreraId: id,
+        facultadId: data.facultyId,
+        codigoCarrera: data.code,
+        nombreCarrera: data.name,
+        carreraActiva: true,
+        modalidadCarrera: data.modality as typeof carreras.$inferInsert.modalidadCarrera,
+        numeroCiclos: data.cycleCount,
+      })
       return id
     },
     async createFaculty(data) {
       const id = uuid7()
-      await executor.execute(sql`insert into facultades (facultad_id, nombre_facultad, campus_facultad, bibliotecas_koha_facultad, facultad_activa)
-        values (${id}::uuid, ${data.name}, ${data.campus}, ${JSON.stringify(data.libraries)}::jsonb, true)`)
+      await executor
+        .insert(facultades)
+        .values({ facultadId: id, nombreFacultad: data.name, campusFacultad: data.campus, bibliotecasKohaFacultad: data.libraries, facultadActiva: true })
       return id
     },
     insertObject: (row) => insertStoredObject(executor, row),
     async createPeriod(data) {
       const id = uuid7()
-      await executor.execute(sql`insert into periodos_academicos (periodo_academico_id, codigo_periodo_academico, fecha_inicio_periodo, fecha_fin_periodo, cantidad_semanas_lectivas)
-        values (${id}::uuid, ${data.code}, ${data.startsOn}::date, ${data.endsOn}::date, ${data.weeks})`)
+      await executor.insert(periodosAcademicos).values({
+        periodoAcademicoId: id,
+        codigoPeriodoAcademico: data.code,
+        fechaInicioPeriodo: data.startsOn,
+        fechaFinPeriodo: data.endsOn,
+        cantidadSemanasLectivas: data.weeks,
+      })
       return id
     },
     async lockFaculty(id) {
-      const [row] = await rowsOf<{ id: string; name: string; campus: string; libraries: string | null }>(
-        executor,
-        sql`select facultad_id::text as id, nombre_facultad as name, campus_facultad as campus, bibliotecas_koha_facultad::text as libraries
-          from facultades where facultad_id = ${id}::uuid limit 1 for update`,
-      )
+      const [row] = await executor
+        .select({ id: facultades.facultadId, name: facultades.nombreFacultad, campus: facultades.campusFacultad, libraries: jsonText(facultades.bibliotecasKohaFacultad) })
+        .from(facultades)
+        .where(eq(facultades.facultadId, id))
+        .limit(1)
+        .for("update")
       return row ?? null
     },
     async lockCareer(id) {
-      const [row] = await rowsOf<{ id: string; faculty_id: string; code: string; name: string; modality: string | null }>(
-        executor,
-        sql`select carrera_id::text as id, facultad_id::text as faculty_id, codigo_carrera as code, nombre_carrera as name, modalidad_carrera::text as modality
-          from carreras where carrera_id = ${id}::uuid limit 1 for update`,
-      )
-      return row ? { id: row.id, facultyId: row.faculty_id, code: row.code, name: row.name, modality: row.modality } : null
+      const [row] = await executor
+        .select({ id: carreras.carreraId, facultyId: carreras.facultadId, code: carreras.codigoCarrera, name: carreras.nombreCarrera, modality: carreras.modalidadCarrera })
+        .from(carreras)
+        .where(eq(carreras.carreraId, id))
+        .limit(1)
+        .for("update")
+      return row ?? null
     },
     async lockPeriod(id) {
-      const [row] = await rowsOf<{ id: string; code: string; starts_on: string; ends_on: string; weeks: number | null }>(
-        executor,
-        sql`select periodo_academico_id::text as id, codigo_periodo_academico as code, to_char(fecha_inicio_periodo, 'YYYY-MM-DD') as starts_on,
-            to_char(fecha_fin_periodo, 'YYYY-MM-DD') as ends_on, cantidad_semanas_lectivas as weeks
-          from periodos_academicos where periodo_academico_id = ${id}::uuid limit 1 for update`,
-      )
-      return row ? { id: row.id, code: row.code, startsOn: row.starts_on, endsOn: row.ends_on, weeks: row.weeks === null ? null : Number(row.weeks) } : null
+      const [row] = await executor.select(PERIOD).from(periodosAcademicos).where(eq(periodosAcademicos.periodoAcademicoId, id)).limit(1).for("update")
+      return row ? { ...row, weeks: row.weeks === null ? null : Number(row.weeks) } : null
     },
     async lockActiveFaculty(id) {
-      const [row] = await rowsOf<{ active: boolean }>(executor, sql`select facultad_activa as active from facultades where facultad_id = ${id}::uuid limit 1 for update`)
+      const [row] = await executor.select({ active: facultades.facultadActiva }).from(facultades).where(eq(facultades.facultadId, id)).limit(1).for("update")
       return row?.active === true
     },
     async careersOfFaculty(facultyId) {
-      const rows = await rowsOf<{ id: string }>(executor, sql`select carrera_id::text as id from carreras where facultad_id = ${facultyId}::uuid`)
+      const rows = await executor.select({ id: carreras.carreraId }).from(carreras).where(eq(carreras.facultadId, facultyId))
       return rows.map((row) => row.id)
     },
     periodRunning: (periodId) =>
-      exists(
+      convocationExists(
         executor,
-        sql`select 1 from convocatorias_carreras convocatoria where convocatoria.estado_convocatoria_carrera = 'abierta'
-          and exists (select 1 from convocatorias_universidad proceso where proceso.convocatoria_universidad_id = convocatoria.convocatoria_universidad_id
-            and proceso.estado_convocatoria_universidad = 'abierto')
-          and exists (select 1 from convocatorias_universidad proceso where proceso.convocatoria_universidad_id = convocatoria.convocatoria_universidad_id
-            and proceso.periodo_academico_id = ${periodId}::uuid)
-          and ${PROCESS_ALIVE})`,
+        eq(convocatoria.estadoConvocatoriaCarrera, "abierta"),
+        processWhere(executor, eq(proceso.estadoConvocatoriaUniversidad, "abierto")),
+        processWhere(executor, eq(proceso.periodoAcademicoId, periodId)),
       ),
     async updateColumns(entity, id, columns) {
-      const { table, key } = TABLES[entity]
-      const assignments = Object.entries(columns).map(([column, value]) => {
-        if (column === "bibliotecas_koha_facultad") return sql`${sql.identifier(column)} = ${JSON.stringify(value)}::jsonb`
-        if (column === "fecha_inicio_periodo" || column === "fecha_fin_periodo") return sql`${sql.identifier(column)} = ${value}::date`
-        if (column === "facultad_id" || column === "logo_archivo_id") return sql`${sql.identifier(column)} = ${value}::uuid`
-        return sql`${sql.identifier(column)} = ${value}`
-      })
-      await executor.execute(sql`update ${table} set ${sql.join(assignments, sql`, `)} where ${key} = ${id}::uuid`)
+      const [table, key] = TABLES[entity]
+      await executor.update(table).set(byColumnName(table, columns)).where(eq(key, id))
     },
-    facultyHasActiveCareers: (id) => exists(executor, sql`select 1 from carreras where facultad_id = ${id}::uuid and carrera_activa = true`),
+    facultyHasActiveCareers: (id) =>
+      hasRows(executor.select({ id: carreras.carreraId }).from(carreras).where(and(eq(carreras.facultadId, id), eq(carreras.carreraActiva, true))).limit(1)),
     careerInProgress: (id) =>
-      exists(
+      convocationExists(
         executor,
-        sql`select 1 from convocatorias_carreras convocatoria where convocatoria.carrera_id = ${id}::uuid and convocatoria.estado_convocatoria_carrera != 'cerrada'
-          and exists (select 1 from convocatorias_universidad proceso where proceso.convocatoria_universidad_id = convocatoria.convocatoria_universidad_id
-            and proceso.estado_convocatoria_universidad != 'cerrado')
-          and ${PROCESS_ALIVE})`,
+        eq(convocatoria.carreraId, id),
+        ne(convocatoria.estadoConvocatoriaCarrera, "cerrada"),
+        processWhere(executor, ne(proceso.estadoConvocatoriaUniversidad, "cerrado")),
       ),
     async retireCareerUsers(id) {
-      const assignments = (
-        await executor.execute(sql`select asignacion_rol_id::text as id, usuario_id::text as user_id from asignaciones_rol
-          where carrera_id = ${id}::uuid and asignacion_rol_activa = true for update`)
-      ).rows as { id: string; user_id: string }[]
+      const assignments = await executor
+        .select({ id: asignacionesRol.asignacionRolId, userId: asignacionesRol.usuarioId })
+        .from(asignacionesRol)
+        .where(and(eq(asignacionesRol.carreraId, id), eq(asignacionesRol.asignacionRolActiva, true)))
+        .for("update")
       for (const assignment of assignments) {
-        await executor.execute(sql`delete from asignaciones_paralelo where asignacion_rol_id = ${assignment.id}::uuid and asignacion_paralelo_activa = true`)
-        await executor.execute(sql`update asignaciones_rol set asignacion_rol_activa = false where asignacion_rol_id = ${assignment.id}::uuid`)
-        await executor.execute(sql`update usuarios set codigo_recordarme = ${sessionRandom(60)} where usuario_id = ${assignment.user_id}::uuid`)
-        await executor.execute(sql`delete from sesiones where user_id = ${assignment.user_id}::uuid`)
-        if (!(await exists(executor, sql`select 1 from asignaciones_rol where usuario_id = ${assignment.user_id}::uuid and asignacion_rol_activa = true`))) {
-          await executor.execute(sql`update invitaciones_activacion set invalidada_en = now()
-            where usuario_id = ${assignment.user_id}::uuid and usada_en is null and invalidada_en is null`)
+        await executor
+          .delete(asignacionesParalelo)
+          .where(and(eq(asignacionesParalelo.asignacionRolId, assignment.id), eq(asignacionesParalelo.asignacionParaleloActiva, true)))
+        await executor.update(asignacionesRol).set({ asignacionRolActiva: false }).where(eq(asignacionesRol.asignacionRolId, assignment.id))
+        await executor.update(usuarios).set({ codigoRecordarme: sessionRandom(60) }).where(eq(usuarios.usuarioId, assignment.userId))
+        await executor.delete(sesiones).where(eq(sesiones.userId, assignment.userId))
+        const stillActive = await hasRows(
+          executor
+            .select({ id: asignacionesRol.asignacionRolId })
+            .from(asignacionesRol)
+            .where(and(eq(asignacionesRol.usuarioId, assignment.userId), eq(asignacionesRol.asignacionRolActiva, true)))
+            .limit(1),
+        )
+        if (!stillActive) {
+          await executor
+            .update(invitacionesActivacion)
+            .set({ invalidadaEn: sql`now()` })
+            .where(and(eq(invitacionesActivacion.usuarioId, assignment.userId), isNull(invitacionesActivacion.usadaEn), isNull(invitacionesActivacion.invalidadaEn)))
         }
       }
       return assignments.length
     },
     async setActive(entity, id, active) {
-      if (entity === "facultad") await executor.execute(sql`update facultades set facultad_activa = ${active} where facultad_id = ${id}::uuid`)
-      else await executor.execute(sql`update carreras set carrera_activa = ${active} where carrera_id = ${id}::uuid`)
+      if (entity === "facultad") await executor.update(facultades).set({ facultadActiva: active }).where(eq(facultades.facultadId, id))
+      else await executor.update(carreras).set({ carreraActiva: active }).where(eq(carreras.carreraId, id))
     },
     replace: (confirmed, change, periodId) => (periodId === null ? change() : work.replace(confirmed, change, { periodId })),
     guard: (confirmed, careerIds, change, periodId) => notice.guard(confirmed, careerIds, change, null, periodId),
@@ -143,10 +181,17 @@ export function governanceWriteDepsOn(executor: Executor, transaction: Transacti
   const now = options.now ?? systemNow
   return {
     now,
-    activeFacultyExists: (id) => exists(executor, sql`select 1 from facultades where facultad_id = ${id}::uuid and facultad_activa = true`),
-    facultyExists: (id) => exists(executor, sql`select 1 from facultades where facultad_id = ${id}::uuid`),
+    activeFacultyExists: (id) =>
+      hasRows(executor.select({ id: facultades.facultadId }).from(facultades).where(and(eq(facultades.facultadId, id), eq(facultades.facultadActiva, true))).limit(1)),
+    facultyExists: (id) => hasRows(executor.select({ id: facultades.facultadId }).from(facultades).where(eq(facultades.facultadId, id)).limit(1)),
     careerCodeTaken: (code, except) =>
-      exists(executor, sql`select 1 from carreras where codigo_carrera = ${code} ${except === null ? sql`` : sql`and carrera_id::text <> ${except}`}`),
+      hasRows(
+        executor
+          .select({ id: carreras.carreraId })
+          .from(carreras)
+          .where(and(eq(carreras.codigoCarrera, code), except === null ? undefined : sql`${carreras.carreraId}::text <> ${except}`))
+          .limit(1),
+      ),
     transaction: (work) => withAfterCommit((afterCommit) => transaction((inner) => work(governanceWriteTx(inner, afterCommit, now(), options)))),
   }
 }

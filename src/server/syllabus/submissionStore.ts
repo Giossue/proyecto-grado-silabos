@@ -1,6 +1,8 @@
 import "server-only"
-import { sql } from "drizzle-orm"
+import { and, desc, eq, exists, isNotNull, sql } from "drizzle-orm"
 import { db } from "@/db"
+import { epochText, fromEpoch, jsonbValue, jsonText } from "@/db/expressions"
+import { convocatoriasCarreras, convocatoriasUniversidad, enviosBiblioteca, revisionesSilabo, silabos, usuarios } from "@/db/schema"
 import { defaultBridgeDeps } from "../auth/requireSession"
 import type { BridgeDeps } from "../auth/types"
 import { createLogoStore } from "../configuration/institutionalLogos"
@@ -21,16 +23,16 @@ import { dbTransaction, type TransactionRunner } from "./reviewDecisionStore"
 import type { SubmissionDeps, SubmissionStore, SubmissionTx } from "./submission"
 import { syllabusPayload } from "./syllabusDetail"
 import { syllabusDetailStoreOn } from "./syllabusDetailQueries"
-import { rowsOf, type Executor } from "./teacherSyllabusQueries"
+import type { Executor } from "./teacherSyllabusQueries"
 
 
 async function revisionByKey(executor: Executor, syllabusId: string, key: string) {
-  const [row] = await rowsOf<{ id: string; number: number; submitted_by: string }>(
-    executor,
-    sql`select revision_silabo_id::text as id, numero_revision as number, enviado_por::text as submitted_by from revisiones_silabo
-      where silabo_id = ${syllabusId}::uuid and clave_solicitud = ${key}::uuid limit 1`,
-  )
-  return row ? { id: row.id, number: Number(row.number), submittedBy: row.submitted_by } : null
+  const [row] = await executor
+    .select({ id: revisionesSilabo.revisionSilaboId, number: revisionesSilabo.numeroRevision, submittedBy: revisionesSilabo.enviadoPor })
+    .from(revisionesSilabo)
+    .where(and(eq(revisionesSilabo.silaboId, syllabusId), eq(revisionesSilabo.claveSolicitud, key)))
+    .limit(1)
+  return row ? { ...row, number: Number(row.number) } : null
 }
 
 function submissionTx(executor: Executor, notifications: SubmissionTx["notifications"]): SubmissionTx {
@@ -40,48 +42,79 @@ function submissionTx(executor: Executor, notifications: SubmissionTx["notificat
     notifications,
     librarians: () => recipients.librarians(),
     async lockSyllabus(id) {
-      const [row] = await rowsOf<{ id: string; state: string; version: number }>(
-        executor,
-        sql`select silabo_id::text as id, estado_silabo as state, version_borrador as version from silabos
-          where silabo_id = ${id}::uuid and exists (select 1 from convocatorias_carreras convocatoria where convocatoria.convocatoria_carrera_id = silabos.convocatoria_carrera_id)
-          limit 1 for update of silabos`,
-      )
+      const [row] = await executor
+        .select({ id: silabos.silaboId, state: silabos.estadoSilabo, version: silabos.versionBorrador })
+        .from(silabos)
+        .where(
+          and(
+            eq(silabos.silaboId, id),
+            exists(
+              executor
+                .select({ id: convocatoriasCarreras.convocatoriaCarreraId })
+                .from(convocatoriasCarreras)
+                .where(eq(convocatoriasCarreras.convocatoriaCarreraId, silabos.convocatoriaCarreraId)),
+            ),
+          ),
+        )
+        .limit(1)
+        .for("update", { of: silabos })
       return row ? { id: row.id, state: row.state, version: Number(row.version) } : null
     },
     revisionByKey: (syllabusId, key) => revisionByKey(executor, syllabusId, key),
     async lockLatestRevision(syllabusId) {
-      const [row] = await rowsOf<{ id: string; number: number; stage: string | null }>(
-        executor,
-        sql`select revision_silabo_id::text as id, numero_revision as number, correccion_etapa as stage from revisiones_silabo
-          where silabo_id = ${syllabusId}::uuid order by numero_revision desc limit 1 for update`,
-      )
+      const [row] = await executor
+        .select({ id: revisionesSilabo.revisionSilaboId, number: revisionesSilabo.numeroRevision, stage: revisionesSilabo.correccionEtapa })
+        .from(revisionesSilabo)
+        .where(eq(revisionesSilabo.silaboId, syllabusId))
+        .orderBy(desc(revisionesSilabo.numeroRevision))
+        .limit(1)
+        .for("update")
       return row ? { id: row.id, number: Number(row.number), correctionStage: row.stage } : null
     },
     snapshot: (syllabusId) => buildSyllabusSnapshot(syllabusId, snapshotSourceOn(executor)),
     async createRevision(row) {
-      await executor.execute(sql`insert into revisiones_silabo (revision_silabo_id, silabo_id, revision_anterior_id, numero_revision, clave_solicitud,
-          version_borrador, contenido_enviado, hash_contenido, enviado_por, enviado_en)
-        values (${row.id}::uuid, ${row.syllabusId}::uuid, ${row.previousId}::uuid, ${row.number}, ${row.key}::uuid, ${row.version},
-          ${canonicalJson(row.snapshot)}::jsonb, ${row.fingerprint}, ${row.submittedBy}::uuid, to_timestamp(${row.submittedAt}))`)
+      await executor.insert(revisionesSilabo).values({
+        revisionSilaboId: row.id,
+        silaboId: row.syllabusId,
+        revisionAnteriorId: row.previousId,
+        numeroRevision: row.number,
+        claveSolicitud: row.key,
+        versionBorrador: row.version,
+        contenidoEnviado: jsonbValue(canonicalJson(row.snapshot)),
+        hashContenido: row.fingerprint,
+        enviadoPor: row.submittedBy,
+        enviadoEn: fromEpoch(row.submittedAt),
+      })
     },
     async lastVerification(syllabusId) {
-      const [row] = await rowsOf<{ verified_by: string | null; verified_at: string; snapshot: string | null }>(
-        executor,
-        sql`select envio.verificado_por::text as verified_by, extract(epoch from envio.verificado_en)::bigint as verified_at, revision.contenido_enviado::text as snapshot
-          from envios_biblioteca envio inner join revisiones_silabo revision on revision.revision_silabo_id = envio.revision_silabo_id
-          where revision.silabo_id = ${syllabusId}::uuid and envio.verificado_en is not null order by revision.numero_revision desc limit 1`,
-      )
+      const [row] = await executor
+        .select({
+          verifiedBy: enviosBiblioteca.verificadoPor,
+          verifiedAt: epochText(enviosBiblioteca.verificadoEn),
+          snapshot: jsonText(revisionesSilabo.contenidoEnviado),
+        })
+        .from(enviosBiblioteca)
+        .innerJoin(revisionesSilabo, eq(revisionesSilabo.revisionSilaboId, enviosBiblioteca.revisionSilaboId))
+        .where(and(eq(revisionesSilabo.silaboId, syllabusId), isNotNull(enviosBiblioteca.verificadoEn)))
+        .orderBy(desc(revisionesSilabo.numeroRevision))
+        .limit(1)
       if (!row) return null
-      return { verifiedBy: row.verified_by ?? "", verifiedAt: Number(row.verified_at), snapshot: phpJsonDecode(row.snapshot) }
+      return { verifiedBy: row.verifiedBy ?? "", verifiedAt: Number(row.verifiedAt), snapshot: phpJsonDecode(row.snapshot) }
     },
     async createLibrarySubmission(row) {
-      await executor.execute(sql`insert into envios_biblioteca (envio_biblioteca_id, revision_silabo_id, verificado_por, verificado_en, verificacion_heredada)
-        values (${uuid7()}::uuid, ${row.revisionId}::uuid, ${row.verifiedBy}::uuid,
-          ${row.verifiedAt === null ? null : sql`to_timestamp(${row.verifiedAt})`}, ${row.inherited})`)
+      await executor.insert(enviosBiblioteca).values({
+        envioBibliotecaId: uuid7(),
+        revisionSilaboId: row.revisionId,
+        verificadoPor: row.verifiedBy,
+        verificadoEn: row.verifiedAt === null ? null : fromEpoch(row.verifiedAt),
+        verificacionHeredada: row.inherited,
+      })
     },
     async markSubmitted(syllabusId, version, at) {
-      await executor.execute(sql`update silabos set estado_silabo = 'en_revision', version_borrador = ${version}, guardado_en = to_timestamp(${at})
-        where silabo_id = ${syllabusId}::uuid`)
+      await executor
+        .update(silabos)
+        .set({ estadoSilabo: "en_revision", versionBorrador: version, guardadoEn: fromEpoch(at) })
+        .where(eq(silabos.silaboId, syllabusId))
     },
   }
 }
@@ -96,21 +129,25 @@ export function submissionDepsOn(
   const store: SubmissionStore = {
     syllabus: (id, userId) => detail.syllabus(id, userId),
     async schedule(syllabusId) {
-      const [row] = await rowsOf<{ convocation_state: string; process_state: string; starts_on: string; due_on: string }>(
-        executor,
-        sql`select convocatoria.estado_convocatoria_carrera as convocation_state, proceso.estado_convocatoria_universidad as process_state,
-            ${institutionDateSql(sql.raw("proceso.fecha_inicio"))} as starts_on, ${institutionDateSql(sql.raw("proceso.fecha_entrega"))} as due_on
-          from silabos inner join convocatorias_carreras convocatoria on convocatoria.convocatoria_carrera_id = silabos.convocatoria_carrera_id
-            inner join convocatorias_universidad proceso on proceso.convocatoria_universidad_id = convocatoria.convocatoria_universidad_id
-          where silabos.silabo_id = ${syllabusId}::uuid limit 1`,
-      )
-      return row ? { convocationState: row.convocation_state, processState: row.process_state, startsOn: row.starts_on, dueOn: row.due_on } : null
+      const [row] = await executor
+        .select({
+          convocationState: convocatoriasCarreras.estadoConvocatoriaCarrera,
+          processState: convocatoriasUniversidad.estadoConvocatoriaUniversidad,
+          startsOn: sql<string>`${institutionDateSql(sql`${convocatoriasUniversidad.fechaInicio}`)}`,
+          dueOn: sql<string>`${institutionDateSql(sql`${convocatoriasUniversidad.fechaEntrega}`)}`,
+        })
+        .from(silabos)
+        .innerJoin(convocatoriasCarreras, eq(convocatoriasCarreras.convocatoriaCarreraId, silabos.convocatoriaCarreraId))
+        .innerJoin(convocatoriasUniversidad, eq(convocatoriasUniversidad.convocatoriaUniversidadId, convocatoriasCarreras.convocatoriaUniversidadId))
+        .where(eq(silabos.silaboId, syllabusId))
+        .limit(1)
+      return row ?? null
     },
     revisionByKey: (syllabusId, key) => revisionByKey(executor, syllabusId, key),
     signed: (syllabusId, role) => signatureTxOn(executor).signed(syllabusId, role),
     snapshot: (syllabusId) => buildSyllabusSnapshot(syllabusId, snapshotSourceOn(executor)),
     async userName(id) {
-      const [row] = await rowsOf<{ name: string }>(executor, sql`select nombre_usuario as name from usuarios where usuario_id = ${id}::uuid limit 1`)
+      const [row] = await executor.select({ name: usuarios.nombreUsuario }).from(usuarios).where(eq(usuarios.usuarioId, id)).limit(1)
       return row?.name ?? ""
     },
     transaction: (work) =>
@@ -136,5 +173,5 @@ export function submissionDepsOn(
 }
 
 export function createSubmissionDeps(): Pick<SubmissionDeps, "store" | "validate" | "payload"> {
-  return submissionDepsOn(db as unknown as Executor, dbTransaction)
+  return submissionDepsOn(db, dbTransaction)
 }

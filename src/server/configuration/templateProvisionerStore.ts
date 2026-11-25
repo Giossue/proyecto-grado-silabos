@@ -1,66 +1,93 @@
 import "server-only"
-import { sql, type SQL } from "drizzle-orm"
-import { db } from "@/db"
+import { and, eq, isNotNull, ne, sql } from "drizzle-orm"
+import { db, type Executor } from "@/db"
+import { hasRows, jsonbValue } from "@/db/expressions"
+import { camposPlantilla, definicionesCampo, plantillaSilabo, seccionesPlantilla, valoresCampo } from "@/db/schema"
 import { phpJsonEncode } from "../http/phpJson"
 import { randomUUID } from "node:crypto"
 import { uuid7 } from "../http/uuid7"
 import { officialDefinition, officialSections } from "./officialTemplate"
 import { phpShape, type PhpRecord } from "./phpValues"
-import { contentForField, fieldDocument } from "./templateDraft"
-import { defaultProvisionDeps, type ProvisionDeps, type ProvisionStore, type ProvisionTx } from "./templateProvisioner"
-import { normalizeFieldDocument } from "./templateRuntime"
-import type { DocumentSection, StoredField } from "./templateStructure"
+import { buildStructure, defaultProvisionDeps, type ProvisionDeps, type ProvisionStore, type ProvisionTx } from "./templateProvisioner"
 import { structureStoreOn, structureTx } from "./templateStructureStore"
 
-type Executor = { execute(query: SQL): Promise<{ rows: unknown[] }> }
-
-async function rows<T>(executor: Executor, query: SQL): Promise<T[]> {
-  return (await executor.execute(query)).rows as T[]
-}
+const coordinationJoin = eq(camposPlantilla.campoPlantillaId, definicionesCampo.campoPlantillaId)
 
 export function provisionTx(executor: Executor): ProvisionTx {
   const structure = structureTx(executor)
   return {
-    async anyTemplate() {
-      const [row] = await rows<{ exists: boolean }>(executor, sql`select exists(select * from plantilla_silabo for update) as exists`)
-      return row?.exists === true
-    },
+    anyTemplate: () => hasRows(executor.select({ id: plantillaSilabo.plantillaId }).from(plantillaSilabo).limit(1).for("update")),
     lockTemplate: (templateId) => structure.lockTemplate(templateId),
     async insertTemplate(templateId, definition) {
-      await executor.execute(sql`insert into plantilla_silabo (definicion_plantilla, plantilla_id) values (${phpJsonEncode(phpShape(definition))}::jsonb, ${templateId}::uuid)`)
+      await executor.insert(plantillaSilabo).values({ definicionPlantilla: jsonbValue(phpJsonEncode(phpShape(definition))), plantillaId: templateId })
     },
     async hasStructure(templateId) {
-      const [row] = await rows<{ found: boolean }>(
-        executor,
-        sql`select exists (select 1 from secciones_plantilla where plantilla_id = ${templateId}::uuid and vigente_en_plantilla = true)
-            and exists (select 1 from campos_plantilla inner join secciones_plantilla on secciones_plantilla.seccion_plantilla_id = campos_plantilla.seccion_plantilla_id
-              where campos_plantilla.plantilla_id = ${templateId}::uuid and campos_plantilla.vigente_en_plantilla = true and secciones_plantilla.vigente_en_plantilla = true)
-            and exists (select 1 from definiciones_campo where plantilla_id = ${templateId}::uuid and vigente_en_plantilla = true) as found`,
+      return (
+        (await hasRows(
+          executor
+            .select({ id: seccionesPlantilla.seccionPlantillaId })
+            .from(seccionesPlantilla)
+            .where(and(eq(seccionesPlantilla.plantillaId, templateId), eq(seccionesPlantilla.vigenteEnPlantilla, true)))
+            .limit(1),
+        )) &&
+        (await hasRows(
+          executor
+            .select({ id: camposPlantilla.campoPlantillaId })
+            .from(camposPlantilla)
+            .innerJoin(seccionesPlantilla, eq(seccionesPlantilla.seccionPlantillaId, camposPlantilla.seccionPlantillaId))
+            .where(and(eq(camposPlantilla.plantillaId, templateId), eq(camposPlantilla.vigenteEnPlantilla, true), eq(seccionesPlantilla.vigenteEnPlantilla, true)))
+            .limit(1),
+        )) &&
+        (await hasRows(
+          executor
+            .select({ id: definicionesCampo.definicionCampoId })
+            .from(definicionesCampo)
+            .where(and(eq(definicionesCampo.plantillaId, templateId), eq(definicionesCampo.vigenteEnPlantilla, true)))
+            .limit(1),
+        ))
       )
-      return row?.found === true
     },
     syncDocument: (templateId, sections) => structure.syncDocument(templateId, sections),
     async suffixRetiredSections(templateId) {
-      await executor.execute(sql`update secciones_plantilla set clave_seccion_plantilla = clave_seccion_plantilla || '-' || substr(seccion_plantilla_id::text, 1, 8)
-        where plantilla_id = ${templateId}::uuid and vigente_en_plantilla = false
-          and right(clave_seccion_plantilla, 9) <> '-' || substr(seccion_plantilla_id::text, 1, 8)`)
+      const suffix = sql`'-' || substr(${seccionesPlantilla.seccionPlantillaId}::text, 1, 8)`
+      await executor
+        .update(seccionesPlantilla)
+        .set({ claveSeccionPlantilla: sql`${seccionesPlantilla.claveSeccionPlantilla} || ${suffix}` })
+        .where(
+          and(
+            eq(seccionesPlantilla.plantillaId, templateId),
+            eq(seccionesPlantilla.vigenteEnPlantilla, false),
+            sql`right(${seccionesPlantilla.claveSeccionPlantilla}, 9) <> ${suffix}`,
+          ),
+        )
     },
     insertField: (field) => structure.insertField({ ...field, content: phpShape(field.content) as PhpRecord }),
     async saveDefinition(templateId, definition) {
-      await executor.execute(sql`update plantilla_silabo set definicion_plantilla = ${phpJsonEncode(phpShape(definition))}::jsonb where plantilla_id = ${templateId}::uuid`)
+      await executor
+        .update(plantillaSilabo)
+        .set({ definicionPlantilla: jsonbValue(phpJsonEncode(phpShape(definition))) })
+        .where(eq(plantillaSilabo.plantillaId, templateId))
     },
     async coordinationFields(templateId) {
-      const found = await rows<{ key: string; id: string }>(
-        executor,
-        sql`select campos_plantilla.clave_campo_plantilla as key, definiciones_campo.definicion_campo_id::text as id from definiciones_campo
-          inner join campos_plantilla on campos_plantilla.campo_plantilla_id = definiciones_campo.campo_plantilla_id
-          where definiciones_campo.plantilla_id = ${templateId}::uuid and definiciones_campo.vigente_en_plantilla = true
-            and campos_plantilla.vigente_en_plantilla = true and definiciones_campo.quien_llena_definicion_campo != 'institucional'`,
-      )
+      const found = await executor
+        .select({ key: camposPlantilla.claveCampoPlantilla, id: definicionesCampo.definicionCampoId })
+        .from(definicionesCampo)
+        .innerJoin(camposPlantilla, coordinationJoin)
+        .where(
+          and(
+            eq(definicionesCampo.plantillaId, templateId),
+            eq(definicionesCampo.vigenteEnPlantilla, true),
+            eq(camposPlantilla.vigenteEnPlantilla, true),
+            ne(definicionesCampo.quienLlenaDefinicionCampo, "institucional"),
+          ),
+        )
       return new Map(found.map((row) => [row.key, row.id]))
     },
     async moveSubjectValues(from, to) {
-      await executor.execute(sql`update valores_campo set definicion_campo_id = ${to}::uuid where definicion_campo_id = ${from}::uuid and asignatura_id is not null`)
+      await executor
+        .update(valoresCampo)
+        .set({ definicionCampoId: to })
+        .where(and(eq(valoresCampo.definicionCampoId, from), isNotNull(valoresCampo.asignaturaId)))
     },
   }
 }
@@ -76,7 +103,7 @@ export function provisionStoreOn(executor: Executor, transaction: <T>(work: (exe
 }
 
 export function createProvisionDeps(): ProvisionDeps {
-  return defaultProvisionDeps(provisionStoreOn(db as unknown as Executor, (work) => db.transaction((tx) => work(tx as unknown as Executor))))
+  return defaultProvisionDeps(provisionStoreOn(db, (work) => db.transaction((tx) => work(tx))))
 }
 
 export async function provisionOfficialTemplate(tx: ProvisionTx, ids = { template: uuid7, block: randomUUID, field: uuid7 }): Promise<string | null> {
@@ -85,17 +112,6 @@ export async function provisionOfficialTemplate(tx: ProvisionTx, ids = { templat
   const definition = officialDefinition()
   await tx.insertTemplate(templateId, definition)
   await tx.syncDocument(templateId, [])
-  const sections: DocumentSection[] = []
-  const fields: Omit<StoredField, "id">[] = []
-  officialSections().forEach((section, sectionIndex) => {
-    const blocks = section.fields.map((field, fieldIndex) => {
-      const blockId = ids.block()
-      fields.push({ templateId, blockId, responsible: field.responsible, content: contentForField(field.responsible, normalizeFieldDocument(fieldDocument(field.content), definition)) })
-      return { id: blockId, key: field.key, title: field.label ?? "", position: fieldIndex + 1 }
-    })
-    sections.push({ id: ids.block(), key: section.key, title: section.title, orientation: section.orientation ?? "portrait", position: sectionIndex + 1, blocks })
-  })
-  await tx.syncDocument(templateId, sections)
-  for (const field of fields) await tx.insertField({ id: ids.field(), ...field })
+  await buildStructure(tx, { newBlockId: ids.block, newFieldId: ids.field } as ProvisionDeps, templateId, officialSections(), definition)
   return templateId
 }

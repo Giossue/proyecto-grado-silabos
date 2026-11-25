@@ -1,31 +1,37 @@
 import "server-only"
-import { sql, type SQL } from "drizzle-orm"
+import { and, asc, desc, eq, exists, getTableColumns, inArray, isNotNull, max, ne, or, sql, type SQL } from "drizzle-orm"
+import type { AnyPgColumn } from "drizzle-orm/pg-core"
 import { db } from "@/db"
+import { byColumnName, fromEpoch, hasRows } from "@/db/expressions"
+import { asignacionesParalelo, asignacionesRol, asignaturas, carreras, paralelos, requisitosAsignatura, silabos, usuarios } from "@/db/schema"
 import { careerDataLocked } from "../configuration/subjectProfileWriteStore"
 import { uuid7 } from "../http/uuid7"
 import { notificationScope, systemNow, type WriteOptions } from "../notifications/queries"
 import { withAfterCommit, type AfterCommit } from "../queue/dispatch"
 import { FinalizedChangeNotice, keepContent } from "../syllabus/finalizedChangeNotice"
-import { InProgressWork } from "../syllabus/inProgressWork"
+import { InProgressWork, SYLLABUS_ALIVE } from "../syllabus/inProgressWork"
 import { dbTransaction, type TransactionRunner } from "../syllabus/reviewDecisionStore"
-import { rowsOf, type Executor } from "../syllabus/teacherSyllabusQueries"
+import type { Executor } from "../syllabus/teacherSyllabusQueries"
 import { SUBJECT_COLUMNS, type CareerWriteDeps, type CareerWriteTx, type SubjectColumn, type SubjectValue } from "./careerWrites"
 import type { CurriculumDeps, CurriculumTx } from "./curriculumWrites"
 import { deletionTx } from "./deletions"
 
 const IN_CAREER = (careerId: string) => sql`exists (select * from asignaturas where paralelos.asignatura_id = asignaturas.asignatura_id and asignaturas.carrera_id = ${careerId}::uuid)`
-const TEXT_COLUMNS = new Set<SubjectColumn>(["creditos_asignatura", "horas_docencia", "horas_practicas", "horas_autonomas", "modalidad_asignatura"])
-
-async function exists(executor: Executor, query: SQL): Promise<boolean> {
-  const [row] = await rowsOf<{ found: boolean }>(executor, sql`select exists (${query}) as found`)
-  return row?.found === true
+const ACTIVE_ROLE = eq(asignacionesRol.asignacionRolActiva, true)
+const ELIGIBLE_USER = and(eq(usuarios.usuarioActivo, true), isNotNull(usuarios.correoVerificadoEn))
+const ACTIVE_ASSIGNMENT = (parallelId: string) => and(eq(asignacionesParalelo.paraleloId, parallelId), eq(asignacionesParalelo.asignacionParaleloActiva, true))
+const REQUIREMENT = { id: requisitosAsignatura.requisitoAsignaturaId, type: requisitosAsignatura.tipoRequisitoAsignatura }
+function subjectFields(): Record<SubjectColumn, AnyPgColumn> {
+  const columns = Object.values(getTableColumns(asignaturas))
+  return Object.fromEntries(SUBJECT_COLUMNS.map((name) => [name, columns.find((column) => column.name === name) as AnyPgColumn])) as Record<SubjectColumn, AnyPgColumn>
 }
 
-function subjectSelect(): SQL {
-  return sql.join(
-    SUBJECT_COLUMNS.map((column) => (TEXT_COLUMNS.has(column) ? sql`${sql.identifier(column)}::text as ${sql.identifier(column)}` : sql.identifier(column))),
-    sql`, `,
-  )
+function subjectInCareer(executor: Executor, subject: AnyPgColumn, careerId: string): SQL {
+  return exists(executor.select({ id: asignaturas.asignaturaId }).from(asignaturas).where(and(eq(asignaturas.asignaturaId, subject), eq(asignaturas.carreraId, careerId))))
+}
+
+function subjectExists(executor: Executor, ...conditions: (SQL | undefined)[]): Promise<boolean> {
+  return hasRows(executor.select({ id: asignaturas.asignaturaId }).from(asignaturas).where(and(...conditions)).limit(1))
 }
 
 function work(executor: Executor, afterCommit: AfterCommit, now: number, options: WriteOptions): { work: InProgressWork; notice: FinalizedChangeNotice } {
@@ -34,11 +40,13 @@ function work(executor: Executor, afterCommit: AfterCommit, now: number, options
 }
 
 async function lockCareer(executor: Executor, careerId: string, curriculumId: string = careerId): Promise<{ id: string; cycleCount: number } | null> {
-  const [row] = await rowsOf<{ id: string; cycle_count: number }>(
-    executor,
-    sql`select carrera_id::text as id, numero_ciclos as cycle_count from carreras where carrera_id = ${careerId}::uuid and carrera_id = ${curriculumId}::uuid limit 1 for update`,
-  )
-  return row ? { id: row.id, cycleCount: Number(row.cycle_count) } : null
+  const [row] = await executor
+    .select({ id: carreras.carreraId, cycleCount: carreras.numeroCiclos })
+    .from(carreras)
+    .where(and(eq(carreras.carreraId, careerId), eq(carreras.carreraId, curriculumId)))
+    .limit(1)
+    .for("update")
+  return row ? { id: row.id, cycleCount: Number(row.cycleCount) } : null
 }
 
 export function careerWriteTx(executor: Executor, afterCommit: AfterCommit, now: number, options: WriteOptions = {}): CareerWriteTx {
@@ -48,105 +56,107 @@ export function careerWriteTx(executor: Executor, afterCommit: AfterCommit, now:
     careerLocked: (careerId) => careerDataLocked(executor, careerId),
     lockCareer: (careerId) => lockCareer(executor, careerId),
     async lastPosition(careerId, cycle) {
-      const [row] = await rowsOf<{ position: number | null }>(
-        executor,
-        sql`select max(orden_asignatura_en_ciclo) as position from asignaturas where carrera_id = ${careerId}::uuid and ciclo_asignatura = ${cycle}`,
-      )
+      const [row] = await executor
+        .select({ position: max(asignaturas.ordenAsignaturaEnCiclo) })
+        .from(asignaturas)
+        .where(and(eq(asignaturas.carreraId, careerId), sql`${asignaturas.cicloAsignatura} = ${cycle}`))
       return row?.position === null || row?.position === undefined ? null : Number(row.position)
     },
     async insertSubject(careerId, columns) {
       const id = uuid7()
-      await executor.execute(sql`insert into asignaturas (asignatura_id, carrera_id, ${sql.join(
-        SUBJECT_COLUMNS.map((column) => sql.identifier(column)),
-        sql`, `,
-      )}, asignatura_activa)
-        values (${id}::uuid, ${careerId}::uuid, ${sql.join(
-          SUBJECT_COLUMNS.map((column) => sql`${columns[column]}`),
-          sql`, `,
-        )}, true)`)
+      await executor.insert(asignaturas).values({ ...byColumnName(asignaturas, columns), asignaturaId: id, carreraId: careerId, asignaturaActiva: true } as typeof asignaturas.$inferInsert)
       return id
     },
     async subjectGeneratesSyllabus(subjectId) {
-      const [row] = await rowsOf<{ value: boolean }>(executor, sql`select genera_silabo_asignatura as value from asignaturas where asignatura_id = ${subjectId}::uuid limit 1`)
+      const [row] = await executor.select({ value: asignaturas.generaSilaboAsignatura }).from(asignaturas).where(eq(asignaturas.asignaturaId, subjectId)).limit(1)
       return row ? row.value : null
     },
     async lockSubject(subjectId, careerId) {
-      const [row] = await rowsOf<Record<SubjectColumn, SubjectValue> & { id: string; career_id: string; total_hours: number | null }>(
-        executor,
-        sql`select asignatura_id::text as id, carrera_id::text as career_id, total_horas_asignatura as total_hours, ${subjectSelect()}
-          from asignaturas where asignatura_id = ${subjectId}::uuid and carrera_id = ${careerId}::uuid limit 1 for update`,
-      )
+      const [row] = await executor
+        .select({ id: asignaturas.asignaturaId, careerId: asignaturas.carreraId, totalHours: asignaturas.totalHorasAsignatura, columns: subjectFields() })
+        .from(asignaturas)
+        .where(and(eq(asignaturas.asignaturaId, subjectId), eq(asignaturas.carreraId, careerId)))
+        .limit(1)
+        .for("update")
       if (!row) return null
-      const columns = Object.fromEntries(SUBJECT_COLUMNS.map((column) => [column, row[column]])) as Record<SubjectColumn, SubjectValue>
-      return { id: row.id, careerId: row.career_id, totalHours: row.total_hours === null ? null : Number(row.total_hours), columns }
+      return { id: row.id, careerId: row.careerId, totalHours: row.totalHours === null ? null : Number(row.totalHours), columns: row.columns as Record<SubjectColumn, SubjectValue> }
     },
     async updateSubject(subjectId, columns) {
-      const assignments = Object.entries(columns).map(([column, value]) => sql`${sql.identifier(column)} = ${value}`)
-      await executor.execute(sql`update asignaturas set ${sql.join(assignments, sql`, `)} where asignatura_id = ${subjectId}::uuid`)
+      await executor.update(asignaturas).set(byColumnName(asignaturas, columns)).where(eq(asignaturas.asignaturaId, subjectId))
     },
     async subjectsOfParallel(parallelId) {
-      const rows = await rowsOf<{ id: string }>(executor, sql`select asignatura_id::text as id from paralelos where paralelo_id = ${parallelId}::uuid`)
+      const rows = await executor.select({ id: paralelos.asignaturaId }).from(paralelos).where(eq(paralelos.paraleloId, parallelId))
       return rows.map((row) => row.id)
     },
     parallelsWithStartedSyllabus: (parallelIds) => progress.parallelsWithStartedSyllabus(parallelIds),
     async lockParallel(parallelId, careerId) {
-      const [row] = await rowsOf<{ id: string; subject_id: string; code: string; shift: string }>(
-        executor,
-        sql`select paralelos.paralelo_id::text as id, paralelos.asignatura_id::text as subject_id, paralelos.codigo_paralelo as code, paralelos.jornada_paralelo as shift
-          from paralelos where paralelos.paralelo_id = ${parallelId}::uuid and ${IN_CAREER(careerId)} limit 1 for update`,
-      )
-      return row ? { id: row.id, subjectId: row.subject_id, code: row.code, shift: row.shift } : null
+      const [row] = await executor
+        .select({ id: paralelos.paraleloId, subjectId: paralelos.asignaturaId, code: paralelos.codigoParalelo, shift: paralelos.jornadaParalelo })
+        .from(paralelos)
+        .where(and(eq(paralelos.paraleloId, parallelId), IN_CAREER(careerId)))
+        .limit(1)
+        .for("update")
+      return row ?? null
     },
     hasCoordinatorRole: (userId, careerId) =>
-      exists(
-        executor,
-        sql`select * from asignaciones_rol where asignacion_rol_activa = true and usuario_id = ${userId}::uuid and carrera_id = ${careerId}::uuid and rol = 'coordinador'`,
+      hasRows(
+        executor
+          .select({ id: asignacionesRol.asignacionRolId })
+          .from(asignacionesRol)
+          .where(and(ACTIVE_ROLE, eq(asignacionesRol.usuarioId, userId), eq(asignacionesRol.carreraId, careerId), eq(asignacionesRol.rol, "coordinador")))
+          .limit(1),
       ),
     async effectiveRoles(userId) {
-      const rows = await rowsOf<{ role: string }>(executor, sql`select rol as role from asignaciones_rol where asignacion_rol_activa = true and usuario_id = ${userId}::uuid`)
+      const rows = await executor.select({ role: asignacionesRol.rol }).from(asignacionesRol).where(and(ACTIVE_ROLE, eq(asignacionesRol.usuarioId, userId)))
       return rows.map((row) => row.role)
     },
     async teacherGrant(userId, careerId) {
-      const [row] = await rowsOf<{ id: string; active: boolean }>(
-        executor,
-        sql`select asignacion_rol_id::text as id, asignacion_rol_activa as active from asignaciones_rol
-          where usuario_id = ${userId}::uuid and carrera_id = ${careerId}::uuid and rol = 'docente' order by asignacion_rol_activa desc limit 1`,
-      )
+      const [row] = await executor
+        .select({ id: asignacionesRol.asignacionRolId, active: asignacionesRol.asignacionRolActiva })
+        .from(asignacionesRol)
+        .where(and(eq(asignacionesRol.usuarioId, userId), eq(asignacionesRol.carreraId, careerId), eq(asignacionesRol.rol, "docente")))
+        .orderBy(desc(asignacionesRol.asignacionRolActiva))
+        .limit(1)
       return row ?? null
     },
     async insertTeacherGrant(userId, careerId) {
-      await executor.execute(sql`insert into asignaciones_rol (asignacion_rol_id, usuario_id, carrera_id, rol, asignacion_rol_activa, asignado_en)
-        values (${uuid7()}::uuid, ${userId}::uuid, ${careerId}::uuid, 'docente', true, to_timestamp(${now}))`)
+      await executor
+        .insert(asignacionesRol)
+        .values({ asignacionRolId: uuid7(), usuarioId: userId, carreraId: careerId, rol: "docente", asignacionRolActiva: true, asignadoEn: fromEpoch(now) })
     },
     async activateGrant(grantId) {
-      await executor.execute(sql`update asignaciones_rol set asignacion_rol_activa = true where asignacion_rol_id = ${grantId}::uuid`)
+      await executor.update(asignacionesRol).set({ asignacionRolActiva: true }).where(eq(asignacionesRol.asignacionRolId, grantId))
     },
     async eligibleTeacherRole(userId, careerId) {
-      const [row] = await rowsOf<{ id: string }>(
-        executor,
-        sql`select asignaciones_rol.asignacion_rol_id::text as id from asignaciones_rol
-          where asignacion_rol_activa = true and usuario_id = ${userId}::uuid and carrera_id = ${careerId}::uuid and rol = 'docente'
-            and exists (select * from usuarios where asignaciones_rol.usuario_id = usuarios.usuario_id and usuario_activo = true and correo_verificado_en is not null)
-          limit 1`,
-      )
+      const [row] = await executor
+        .select({ id: asignacionesRol.asignacionRolId })
+        .from(asignacionesRol)
+        .where(
+          and(
+            ACTIVE_ROLE,
+            eq(asignacionesRol.usuarioId, userId),
+            eq(asignacionesRol.carreraId, careerId),
+            eq(asignacionesRol.rol, "docente"),
+            exists(executor.select({ id: usuarios.usuarioId }).from(usuarios).where(and(eq(usuarios.usuarioId, asignacionesRol.usuarioId), ELIGIBLE_USER))),
+          ),
+        )
+        .limit(1)
       return row?.id ?? null
     },
     parallelHasActiveTeacher: (parallelId) =>
-      exists(executor, sql`select * from asignaciones_paralelo where paralelo_id = ${parallelId}::uuid and asignacion_paralelo_activa = true`),
+      hasRows(executor.select({ id: asignacionesParalelo.asignacionParaleloId }).from(asignacionesParalelo).where(ACTIVE_ASSIGNMENT(parallelId)).limit(1)),
     async insertTeacherAssignment(roleId, parallelId) {
       const id = uuid7()
-      await executor.execute(sql`insert into asignaciones_paralelo (asignacion_paralelo_id, asignacion_rol_id, paralelo_id, asignacion_paralelo_activa, asignado_en)
-        values (${id}::uuid, ${roleId}::uuid, ${parallelId}::uuid, true, to_timestamp(${now}))`)
+      await executor
+        .insert(asignacionesParalelo)
+        .values({ asignacionParaleloId: id, asignacionRolId: roleId, paraleloId: parallelId, asignacionParaleloActiva: true, asignadoEn: fromEpoch(now) })
       return id
     },
     async restartForParallel(parallelId) {
       await progress.restartForParallel(parallelId)
     },
     async activeTeacherAssignment(parallelId) {
-      const [row] = await rowsOf<{ id: string }>(
-        executor,
-        sql`select asignacion_paralelo_id::text as id from asignaciones_paralelo where paralelo_id = ${parallelId}::uuid and asignacion_paralelo_activa = true limit 1`,
-      )
+      const [row] = await executor.select({ id: asignacionesParalelo.asignacionParaleloId }).from(asignacionesParalelo).where(ACTIVE_ASSIGNMENT(parallelId)).limit(1)
       return row?.id ?? null
     },
     async lockTeacherAssignment(assignmentId, careerId) {
@@ -154,35 +164,36 @@ export function careerWriteTx(executor: Executor, afterCommit: AfterCommit, now:
     },
     deleteTeacherAssignment: (assignmentId) => deletions.deleteTeacherAssignment(assignmentId),
     async lockActiveSubject(subjectId, careerId) {
-      const [row] = await rowsOf<{ id: string }>(
-        executor,
-        sql`select asignatura_id::text as id from asignaturas where asignatura_id = ${subjectId}::uuid and asignatura_activa = true and carrera_id = ${careerId}::uuid
-          limit 1 for update`,
-      )
+      const [row] = await executor
+        .select({ id: asignaturas.asignaturaId })
+        .from(asignaturas)
+        .where(and(eq(asignaturas.asignaturaId, subjectId), eq(asignaturas.asignaturaActiva, true), eq(asignaturas.carreraId, careerId)))
+        .limit(1)
+        .for("update")
       return row?.id ?? null
     },
     async existingParallelCodes(subjectId, upperCodes) {
-      const rows = await rowsOf<{ code: string }>(
-        executor,
-        sql`select codigo_paralelo as code from paralelos where asignatura_id = ${subjectId}::uuid and upper(codigo_paralelo) in (${sql.join(
-          upperCodes.map((code) => sql`${code}`),
-          sql`, `,
-        )})`,
-      )
+      const rows = await executor
+        .select({ code: paralelos.codigoParalelo })
+        .from(paralelos)
+        .where(and(eq(paralelos.asignaturaId, subjectId), inArray(sql`upper(${paralelos.codigoParalelo})`, upperCodes)))
       return rows.map((row) => row.code)
     },
     async insertParallel(subjectId, code, shift) {
       const id = uuid7()
-      await executor.execute(sql`insert into paralelos (paralelo_id, asignatura_id, codigo_paralelo, jornada_paralelo) values (${id}::uuid, ${subjectId}::uuid, ${code}, ${shift})`)
+      await executor.insert(paralelos).values({ paraleloId: id, asignaturaId: subjectId, codigoParalelo: code, jornadaParalelo: shift as string })
       return id
     },
     parallelCodeTaken: (subjectId, exceptId, upperCode) =>
-      exists(
-        executor,
-        sql`select * from paralelos where asignatura_id = ${subjectId}::uuid and paralelo_id != ${exceptId}::uuid and upper(codigo_paralelo) = ${upperCode}`,
+      hasRows(
+        executor
+          .select({ id: paralelos.paraleloId })
+          .from(paralelos)
+          .where(and(eq(paralelos.asignaturaId, subjectId), ne(paralelos.paraleloId, exceptId), sql`upper(${paralelos.codigoParalelo}) = ${upperCode}`))
+          .limit(1),
       ),
     async updateParallel(parallelId, code, shift) {
-      await executor.execute(sql`update paralelos set codigo_paralelo = ${code}, jornada_paralelo = ${shift} where paralelo_id = ${parallelId}::uuid`)
+      await executor.update(paralelos).set({ codigoParalelo: code, jornadaParalelo: shift as string }).where(eq(paralelos.paraleloId, parallelId))
     },
     parallelHasSentSyllabus: (parallelId) => progress.parallelHasSentSyllabus(parallelId),
     async restartSentForParallel(parallelId) {
@@ -203,90 +214,98 @@ export function curriculumTx(executor: Executor, afterCommit: AfterCommit, now: 
     careerLocked: (careerId) => careerDataLocked(executor, careerId),
     lockCareer: (careerId, curriculumId) => lockCareer(executor, careerId, curriculumId),
     async maxCycle(careerId) {
-      const [row] = await rowsOf<{ cycle: number | null }>(executor, sql`select max(ciclo_asignatura) as cycle from asignaturas where carrera_id = ${careerId}::uuid`)
+      const [row] = await executor.select({ cycle: max(asignaturas.cicloAsignatura) }).from(asignaturas).where(eq(asignaturas.carreraId, careerId))
       return row?.cycle === null || row?.cycle === undefined ? null : Number(row.cycle)
     },
     async updateCycleCount(careerId, cycleCount) {
-      await executor.execute(sql`update carreras set numero_ciclos = ${cycleCount} where carrera_id = ${careerId}::uuid`)
+      await executor.update(carreras).set({ numeroCiclos: cycleCount }).where(eq(carreras.carreraId, careerId))
     },
     async lockSubjects(careerId, subjectIds) {
-      const rows = await rowsOf<{ id: string; cycle: number | null }>(
-        executor,
-        sql`select asignatura_id::text as id, ciclo_asignatura as cycle from asignaturas
-          where carrera_id = ${careerId}::uuid and asignatura_id in (${sql.join(
-            subjectIds.map((id) => sql`${id}::uuid`),
-            sql`, `,
-          )}) for update`,
-      )
+      const rows = await executor
+        .select({ id: asignaturas.asignaturaId, cycle: asignaturas.cicloAsignatura })
+        .from(asignaturas)
+        .where(and(eq(asignaturas.carreraId, careerId), inArray(asignaturas.asignaturaId, subjectIds)))
+        .for("update")
       return rows.map((row) => ({ id: row.id, cycle: row.cycle === null ? null : Number(row.cycle) }))
     },
     async prerequisites(careerId) {
-      return rowsOf<{ subjectId: string; requirementId: string }>(
-        executor,
-        sql`select requisitos_asignatura.asignatura_id::text as "subjectId", requisitos_asignatura.requisito_id::text as "requirementId" from requisitos_asignatura
-          where tipo_requisito_asignatura = 'prerrequisito'
-            and exists (select * from asignaturas where requisitos_asignatura.asignatura_id = asignaturas.asignatura_id and carrera_id = ${careerId}::uuid)`,
-      )
+      return executor
+        .select({ subjectId: requisitosAsignatura.asignaturaId, requirementId: requisitosAsignatura.requisitoId })
+        .from(requisitosAsignatura)
+        .where(and(eq(requisitosAsignatura.tipoRequisitoAsignatura, "prerrequisito"), subjectInCareer(executor, requisitosAsignatura.asignaturaId, careerId)))
     },
     async findRequirement(subjectId, requirementId) {
-      const [row] = await rowsOf<{ id: string; type: string }>(
-        executor,
-        sql`select requisito_asignatura_id::text as id, tipo_requisito_asignatura as type from requisitos_asignatura
-          where asignatura_id = ${subjectId}::uuid and requisito_id = ${requirementId}::uuid limit 1`,
-      )
+      const [row] = await executor
+        .select(REQUIREMENT)
+        .from(requisitosAsignatura)
+        .where(and(eq(requisitosAsignatura.asignaturaId, subjectId), eq(requisitosAsignatura.requisitoId, requirementId)))
+        .limit(1)
       return row ?? null
     },
     async insertRequirement(subjectId, requirementId, type) {
       const id = uuid7()
-      await executor.execute(sql`insert into requisitos_asignatura (requisito_asignatura_id, asignatura_id, requisito_id, tipo_requisito_asignatura)
-        values (${id}::uuid, ${subjectId}::uuid, ${requirementId}::uuid, ${type})`)
+      await executor.insert(requisitosAsignatura).values({ requisitoAsignaturaId: id, asignaturaId: subjectId, requisitoId: requirementId, tipoRequisitoAsignatura: type })
       return id
     },
     async lockRequirement(requirementId, careerId) {
-      const [row] = await rowsOf<{ id: string; type: string }>(
-        executor,
-        sql`select requisito_asignatura_id::text as id, tipo_requisito_asignatura as type from requisitos_asignatura
-          where exists (select * from asignaturas where requisitos_asignatura.asignatura_id = asignaturas.asignatura_id and carrera_id = ${careerId}::uuid)
-            and exists (select * from asignaturas where requisitos_asignatura.requisito_id = asignaturas.asignatura_id and carrera_id = ${careerId}::uuid)
-            and requisito_asignatura_id = ${requirementId}::uuid limit 1 for update`,
-      )
+      const [row] = await executor
+        .select(REQUIREMENT)
+        .from(requisitosAsignatura)
+        .where(
+          and(
+            subjectInCareer(executor, requisitosAsignatura.asignaturaId, careerId),
+            subjectInCareer(executor, requisitosAsignatura.requisitoId, careerId),
+            eq(requisitosAsignatura.requisitoAsignaturaId, requirementId),
+          ),
+        )
+        .limit(1)
+        .for("update")
       return row ?? null
     },
     async deleteRequirement(requirementId) {
-      await executor.execute(sql`delete from requisitos_asignatura where requisito_asignatura_id = ${requirementId}::uuid`)
+      await executor.delete(requisitosAsignatura).where(eq(requisitosAsignatura.requisitoAsignaturaId, requirementId))
     },
     async lockSubject(subjectId, careerId) {
-      const [row] = await rowsOf<{ id: string; code: string; name: string; cycle: number | null; position: number }>(
-        executor,
-        sql`select asignatura_id::text as id, codigo_asignatura as code, nombre_asignatura as name, ciclo_asignatura as cycle, orden_asignatura_en_ciclo as position
-          from asignaturas where carrera_id = ${careerId}::uuid and asignatura_id = ${subjectId}::uuid limit 1 for update`,
-      )
+      const [row] = await executor
+        .select({
+          id: asignaturas.asignaturaId,
+          code: asignaturas.codigoAsignatura,
+          name: asignaturas.nombreAsignatura,
+          cycle: asignaturas.cicloAsignatura,
+          position: asignaturas.ordenAsignaturaEnCiclo,
+        })
+        .from(asignaturas)
+        .where(and(eq(asignaturas.carreraId, careerId), eq(asignaturas.asignaturaId, subjectId)))
+        .limit(1)
+        .for("update")
       return row ? { ...row, cycle: row.cycle === null ? null : Number(row.cycle), position: Number(row.position) } : null
     },
     async subjectUsage(subjectId) {
-      const [row] = await rowsOf<{ parallels: number; syllabi: number }>(
-        executor,
-        sql`select (select count(*)::int from paralelos where asignatura_id = ${subjectId}::uuid) as parallels,
-          (select count(*)::int from silabos where exists (select * from paralelos where silabos.paralelo_id = paralelos.paralelo_id and asignatura_id = ${subjectId}::uuid)
-            and exists (select * from convocatorias_carreras where silabos.convocatoria_carrera_id = convocatorias_carreras.convocatoria_carrera_id
-              and exists (select * from convocatorias_universidad where convocatorias_carreras.convocatoria_universidad_id = convocatorias_universidad.convocatoria_universidad_id))) as syllabi`,
+      const parallels = await executor.$count(paralelos, eq(paralelos.asignaturaId, subjectId))
+      const syllabi = await executor.$count(
+        silabos,
+        and(
+          exists(executor.select({ id: paralelos.paraleloId }).from(paralelos).where(and(eq(paralelos.paraleloId, silabos.paraleloId), eq(paralelos.asignaturaId, subjectId)))),
+          SYLLABUS_ALIVE,
+        ),
       )
-      return { parallels: Number(row.parallels), syllabi: Number(row.syllabi) }
+      return { parallels, syllabi }
     },
     async deleteSubject(subjectId) {
-      await executor.execute(sql`delete from requisitos_asignatura where asignatura_id = ${subjectId}::uuid or requisito_id = ${subjectId}::uuid`)
-      await executor.execute(sql`delete from asignaturas where asignatura_id = ${subjectId}::uuid`)
+      await executor.delete(requisitosAsignatura).where(or(eq(requisitosAsignatura.asignaturaId, subjectId), eq(requisitosAsignatura.requisitoId, subjectId)))
+      await executor.delete(asignaturas).where(eq(asignaturas.asignaturaId, subjectId))
     },
     async lockCycleSubjects(careerId, cycle) {
-      const rows = await rowsOf<{ id: string; position: number }>(
-        executor,
-        sql`select asignatura_id::text as id, orden_asignatura_en_ciclo as position from asignaturas where carrera_id = ${careerId}::uuid and ciclo_asignatura = ${cycle}
-          order by orden_asignatura_en_ciclo asc, nombre_asignatura asc for update`,
-      )
+      const rows = await executor
+        .select({ id: asignaturas.asignaturaId, position: asignaturas.ordenAsignaturaEnCiclo })
+        .from(asignaturas)
+        .where(and(eq(asignaturas.carreraId, careerId), sql`${asignaturas.cicloAsignatura} = ${cycle}`))
+        .orderBy(asc(asignaturas.ordenAsignaturaEnCiclo), asc(asignaturas.nombreAsignatura))
+        .for("update")
       return rows.map((row) => ({ id: row.id, position: Number(row.position) }))
     },
     async setPosition(subjectId, position) {
-      await executor.execute(sql`update asignaturas set orden_asignatura_en_ciclo = ${position} where asignatura_id = ${subjectId}::uuid`)
+      await executor.update(asignaturas).set({ ordenAsignaturaEnCiclo: position }).where(eq(asignaturas.asignaturaId, subjectId))
     },
     async sync(confirmed, careerId) {
       await progress.sync(confirmed, careerId)
@@ -297,7 +316,8 @@ export function curriculumTx(executor: Executor, afterCommit: AfterCommit, now: 
 
 function sharedDeps(executor: Executor) {
   return {
-    careerActive: (careerId: string) => exists(executor, sql`select 1 from carreras where carrera_id = ${careerId}::uuid and carrera_activa = true`),
+    careerActive: (careerId: string) =>
+      hasRows(executor.select({ id: carreras.carreraId }).from(carreras).where(and(eq(carreras.carreraId, careerId), eq(carreras.carreraActiva, true))).limit(1)),
   }
 }
 
@@ -305,21 +325,36 @@ export function careerWriteDepsOn(executor: Executor, transaction: TransactionRu
   const now = options.now ?? systemNow
   return {
     ...sharedDeps(executor),
-    subjectInCareer: (subjectId, careerId) => exists(executor, sql`select * from asignaturas where asignatura_id = ${subjectId}::uuid and carrera_id = ${careerId}::uuid`),
+    subjectInCareer: (subjectId, careerId) => subjectExists(executor, eq(asignaturas.asignaturaId, subjectId), eq(asignaturas.carreraId, careerId)),
     activeSubjectInCareer: (subjectId, careerId) =>
-      exists(executor, sql`select * from asignaturas where asignatura_id = ${subjectId}::uuid and asignatura_activa = true and carrera_id = ${careerId}::uuid`),
+      subjectExists(executor, eq(asignaturas.asignaturaId, subjectId), eq(asignaturas.asignaturaActiva, true), eq(asignaturas.carreraId, careerId)),
     subjectCodeTaken: (careerId, code, except) =>
-      exists(
+      subjectExists(
         executor,
-        sql`select * from asignaturas where codigo_asignatura = ${code} and carrera_id = ${careerId}::uuid ${except === null ? sql`` : sql`and asignatura_id <> ${except}::uuid`}`,
+        eq(asignaturas.codigoAsignatura, code),
+        eq(asignaturas.carreraId, careerId),
+        except === null ? undefined : ne(asignaturas.asignaturaId, except),
       ),
     eligibleUserExists: (userId) =>
-      exists(executor, sql`select * from usuarios where usuario_id = ${userId}::uuid and usuario_activo = true and correo_verificado_en is not null`),
+      hasRows(executor.select({ id: usuarios.usuarioId }).from(usuarios).where(and(eq(usuarios.usuarioId, userId), ELIGIBLE_USER)).limit(1)),
     parallelInCareer: (parallelId, careerId) =>
-      exists(
-        executor,
-        sql`select * from paralelos where paralelo_id = ${parallelId}::uuid
-          and asignatura_id in (select asignatura_id from asignaturas where asignatura_activa = true and carrera_id = ${careerId}::uuid)`,
+      hasRows(
+        executor
+          .select({ id: paralelos.paraleloId })
+          .from(paralelos)
+          .where(
+            and(
+              eq(paralelos.paraleloId, parallelId),
+              inArray(
+                paralelos.asignaturaId,
+                executor
+                  .select({ id: asignaturas.asignaturaId })
+                  .from(asignaturas)
+                  .where(and(eq(asignaturas.asignaturaActiva, true), eq(asignaturas.carreraId, careerId))),
+              ),
+            ),
+          )
+          .limit(1),
       ),
     transaction: (run) => withAfterCommit((afterCommit) => transaction((inner) => run(careerWriteTx(inner, afterCommit, now(), options)))),
   }

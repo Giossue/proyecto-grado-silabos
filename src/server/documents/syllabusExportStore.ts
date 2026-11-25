@@ -1,6 +1,8 @@
 import "server-only"
-import { sql } from "drizzle-orm"
+import { and, eq, exists, sql } from "drizzle-orm"
 import { db } from "@/db"
+import { epochText, fromEpoch, hasRows } from "@/db/expressions"
+import { aprobaciones, archivos, exportacionesSilabo, revisionesSilabo, silabos, usuarios } from "@/db/schema"
 import { phpJsonDecode, record } from "../configuration/phpValues"
 import { storageWriter } from "../http/storageWriter"
 import { uuid7 } from "../http/uuid7"
@@ -20,34 +22,49 @@ const epoch = (column: string) => sql.raw(`extract(epoch from ${column})::bigint
 export function exportRequestTxOn(executor: Executor, afterCommit: AfterCommit, dispatch: (artifactId: string) => unknown): ExportRequestTx {
   return {
     async existingArtifact(revisionId, key) {
-      const [row] = await rowsOf<{ id: string; state: string; requested_by: string }>(
-        executor,
-        sql`select exportacion_silabo_id::text as id, estado_exportacion as state, solicitado_por::text as requested_by
-          from exportaciones_silabo where revision_silabo_id = ${revisionId}::uuid and clave_solicitud = ${key}::uuid limit 1`,
-      )
-      return row ? { id: row.id, state: row.state, requestedBy: row.requested_by } : null
+      const [row] = await executor
+        .select({ id: exportacionesSilabo.exportacionSilaboId, state: exportacionesSilabo.estadoExportacion, requestedBy: exportacionesSilabo.solicitadoPor })
+        .from(exportacionesSilabo)
+        .where(and(eq(exportacionesSilabo.revisionSilaboId, revisionId), eq(exportacionesSilabo.claveSolicitud, key)))
+        .limit(1)
+      return row ?? null
     },
     async lockSyllabus(syllabusId) {
-      const rows = await rowsOf<{ id: string }>(executor, sql`select silabo_id::text as id from silabos where silabo_id = ${syllabusId}::uuid and ${SYLLABUS_EXISTS} limit 1 for update of silabos`)
-      return rows.length > 0
+      return hasRows(
+        executor
+          .select({ id: silabos.silaboId })
+          .from(silabos)
+          .where(and(eq(silabos.silaboId, syllabusId), SYLLABUS_EXISTS))
+          .limit(1)
+          .for("update", { of: silabos }),
+      )
     },
     async lockRevision(revisionId) {
-      const [row] = await rowsOf<{ syllabus_id: string; number: number }>(
-        executor,
-        sql`select revisiones_silabo.silabo_id::text as syllabus_id, revisiones_silabo.numero_revision as number from revisiones_silabo
-          where revisiones_silabo.revision_silabo_id = ${revisionId}::uuid
-            and exists (select 1 from silabos where silabos.silabo_id = revisiones_silabo.silabo_id and ${SYLLABUS_EXISTS})
-          limit 1 for update of revisiones_silabo`,
-      )
-      return row ? { syllabusId: row.syllabus_id, number: Number(row.number) } : null
+      const [row] = await executor
+        .select({ syllabusId: revisionesSilabo.silaboId, number: revisionesSilabo.numeroRevision })
+        .from(revisionesSilabo)
+        .where(
+          and(
+            eq(revisionesSilabo.revisionSilaboId, revisionId),
+            exists(executor.select({ id: silabos.silaboId }).from(silabos).where(and(eq(silabos.silaboId, revisionesSilabo.silaboId), SYLLABUS_EXISTS))),
+          ),
+        )
+        .limit(1)
+        .for("update", { of: revisionesSilabo })
+      return row ? { syllabusId: row.syllabusId, number: Number(row.number) } : null
     },
     async approved(revisionId) {
-      const [row] = await rowsOf<{ found: boolean }>(executor, sql`select exists (select 1 from aprobaciones where revision_silabo_id = ${revisionId}::uuid) as found`)
-      return row?.found === true
+      return hasRows(executor.select({ id: aprobaciones.aprobacionId }).from(aprobaciones).where(eq(aprobaciones.revisionSilaboId, revisionId)).limit(1))
     },
     async insertArtifact(row) {
-      await executor.execute(sql`insert into exportaciones_silabo (exportacion_silabo_id, revision_silabo_id, clave_solicitud, estado_exportacion, solicitado_por, solicitado_en)
-        values (${row.id}::uuid, ${row.revisionId}::uuid, ${row.key}::uuid, 'pendiente', ${row.requestedBy}::uuid, to_timestamp(${row.requestedAt}))`)
+      await executor.insert(exportacionesSilabo).values({
+        exportacionSilaboId: row.id,
+        revisionSilaboId: row.revisionId,
+        claveSolicitud: row.key,
+        estadoExportacion: "pendiente",
+        solicitadoPor: row.requestedBy,
+        solicitadoEn: fromEpoch(row.requestedAt),
+      })
     },
     dispatchExport(artifactId) {
       afterCommit(() => dispatch(artifactId))
@@ -58,49 +75,56 @@ export function exportRequestTxOn(executor: Executor, afterCommit: AfterCommit, 
 export function exportJobTxOn(executor: Executor, afterCommit: AfterCommit, now: number, mail?: Mail): ExportJobTx {
   const recipients = recipientsOn(executor)
   const setState = async (id: string, state: string) => {
-    await executor.execute(sql`update exportaciones_silabo set estado_exportacion = ${state}
-      where exportacion_silabo_id = ${id}::uuid and estado_exportacion is distinct from ${state}`)
+    await executor
+      .update(exportacionesSilabo)
+      .set({ estadoExportacion: state })
+      .where(and(eq(exportacionesSilabo.exportacionSilaboId, id), sql`${exportacionesSilabo.estadoExportacion} is distinct from ${state}`))
   }
   return {
     notifications: notificationScope(executor, afterCommit, now, mail),
     async lockArtifact(id) {
-      const [row] = await rowsOf<{ state: string }>(
-        executor,
-        sql`select estado_exportacion as state from exportaciones_silabo where exportacion_silabo_id = ${id}::uuid limit 1 for update`,
-      )
+      const [row] = await executor
+        .select({ state: exportacionesSilabo.estadoExportacion })
+        .from(exportacionesSilabo)
+        .where(eq(exportacionesSilabo.exportacionSilaboId, id))
+        .limit(1)
+        .for("update")
       if (!row) return null
-      const [owner] = await rowsOf<{ syllabus_id: string | null; number: number | null }>(
-        executor,
-        sql`select silabos.silabo_id::text as syllabus_id, revisiones_silabo.numero_revision as number
-          from exportaciones_silabo inner join revisiones_silabo on revisiones_silabo.revision_silabo_id = exportaciones_silabo.revision_silabo_id
-            left join silabos on silabos.silabo_id = revisiones_silabo.silabo_id and ${SYLLABUS_EXISTS}
-          where exportaciones_silabo.exportacion_silabo_id = ${id}::uuid limit 1`,
-      )
-      return { state: row.state, syllabusId: owner?.syllabus_id ?? "", revisionNumber: Number(owner?.number ?? 0) }
+      const [owner] = await executor
+        .select({ syllabusId: silabos.silaboId, number: revisionesSilabo.numeroRevision })
+        .from(exportacionesSilabo)
+        .innerJoin(revisionesSilabo, eq(revisionesSilabo.revisionSilaboId, exportacionesSilabo.revisionSilaboId))
+        .leftJoin(silabos, and(eq(silabos.silaboId, revisionesSilabo.silaboId), SYLLABUS_EXISTS))
+        .where(eq(exportacionesSilabo.exportacionSilaboId, id))
+        .limit(1)
+      return { state: row.state, syllabusId: owner?.syllabusId ?? "", revisionNumber: Number(owner?.number ?? 0) }
     },
     markRunning: (id) => setState(id, "en_ejecucion"),
     markFailed: (id) => setState(id, "fallido"),
     async complete(id, objectId, at) {
-      await executor.execute(sql`update exportaciones_silabo set archivo_pdf_id = ${objectId}::uuid, estado_exportacion = 'completado', completado_en = to_timestamp(${at})
-        where exportacion_silabo_id = ${id}::uuid`)
+      await executor
+        .update(exportacionesSilabo)
+        .set({ archivoPdfId: objectId, estadoExportacion: "completado", completadoEn: fromEpoch(at) })
+        .where(eq(exportacionesSilabo.exportacionSilaboId, id))
     },
     teachersFor: (syllabusId) => recipients.teachersFor(syllabusId),
     administrators: () => recipients.administrators(),
   }
 }
 
-const OBJECT_COLUMNS = sql`archivo_id::text as id, tipo_archivo as mime, tamano_bytes::text as size, hash_archivo as fingerprint`
+const OBJECT = { id: archivos.archivoId, mime: archivos.tipoArchivo, size: archivos.tamanoBytes, fingerprint: archivos.hashArchivo }
 
-function objectOf(row: { id: string; mime: string; size: string; fingerprint: string }): StoredObjectRow {
+function objectOf(row: { id: string; mime: string; size: number; fingerprint: string }): StoredObjectRow {
   return { id: row.id, mime: row.mime, size: Number(row.size), fingerprint: row.fingerprint.trimEnd() }
 }
 
 export function exportJobStoreOn(executor: Executor): ExportJobStore {
   const findObject = async (disk: string, relative: string) => {
-    const [row] = await rowsOf<{ id: string; mime: string; size: string; fingerprint: string }>(
-      executor,
-      sql`select ${OBJECT_COLUMNS} from archivos where disco = ${disk} and ruta_archivo = ${relative} limit 1`,
-    )
+    const [row] = await executor
+      .select(OBJECT)
+      .from(archivos)
+      .where(and(eq(archivos.disco, disk), eq(archivos.rutaArchivo, relative)))
+      .limit(1)
     return row ? objectOf(row) : null
   }
   return {
@@ -145,12 +169,12 @@ export function exportJobStoreOn(executor: Executor): ExportJobStore {
       }
     },
     async approval(revisionId) {
-      const [row] = await rowsOf<{ approver: string | null; at: string }>(
-        executor,
-        sql`select usuarios.nombre_usuario as approver, ${epoch("aprobaciones.aprobado_en")} as at
-          from aprobaciones left join usuarios on usuarios.usuario_id = aprobaciones.aprobado_por
-          where aprobaciones.revision_silabo_id = ${revisionId}::uuid limit 1`,
-      )
+      const [row] = await executor
+        .select({ approver: usuarios.nombreUsuario, at: epochText(aprobaciones.aprobadoEn) })
+        .from(aprobaciones)
+        .leftJoin(usuarios, eq(usuarios.usuarioId, aprobaciones.aprobadoPor))
+        .where(eq(aprobaciones.revisionSilaboId, revisionId))
+        .limit(1)
       return row ? { approver: row.approver ?? "", at: Number(row.at) } : null
     },
     signedFacts: (syllabusId, revision) => signedFactsOf(executor, syllabusId, revision),
@@ -159,12 +183,22 @@ export function exportJobStoreOn(executor: Executor): ExportJobStore {
     async firstOrCreateObject(row) {
       const existing = await findObject(row.disk, row.path)
       if (existing !== null) return existing
-      const [created] = await rowsOf<{ id: string; mime: string; size: string; fingerprint: string }>(
-        executor,
-        sql`insert into archivos (archivo_id, disco, ruta_archivo, nombre_archivo, tipo_archivo, tamano_bytes, hash_archivo, categoria, subido_por, almacenado_en)
-          values (${row.id}::uuid, ${row.disk}, ${row.path}, ${row.name}, ${row.mime}, ${row.size}, ${row.fingerprint}, ${row.classification}, ${row.ownerId}::uuid, to_timestamp(${row.storedAt}))
-          on conflict (disco, ruta_archivo) do nothing returning ${OBJECT_COLUMNS}`,
-      )
+      const [created] = await executor
+        .insert(archivos)
+        .values({
+          archivoId: row.id,
+          disco: row.disk,
+          rutaArchivo: row.path,
+          nombreArchivo: row.name,
+          tipoArchivo: row.mime,
+          tamanoBytes: row.size,
+          hashArchivo: row.fingerprint,
+          categoria: row.classification,
+          subidoPor: row.ownerId,
+          almacenadoEn: fromEpoch(row.storedAt),
+        })
+        .onConflictDoNothing({ target: [archivos.disco, archivos.rutaArchivo] })
+        .returning(OBJECT)
       return created ? objectOf(created) : ((await findObject(row.disk, row.path)) as StoredObjectRow)
     },
   }
@@ -176,7 +210,7 @@ export async function writePrivateObject(disk: string, relative: string, bytes: 
 
 export type TransactionRunner = <T>(work: (executor: Executor) => Promise<T>) => Promise<T>
 
-export const dbTransaction: TransactionRunner = (work) => db.transaction((tx) => work(tx as unknown as Executor))
+export const dbTransaction: TransactionRunner = (work) => db.transaction((tx) => work(tx))
 
 export type ExportJobOptions = { now?: () => number; mail?: Mail; writeObject?: ExportJobDeps["writeObject"]; render?: ExportJobDeps["render"] }
 
@@ -199,5 +233,5 @@ export function exportJobDepsOn(executor: Executor, transaction: TransactionRunn
 }
 
 export function createExportJobDeps(): ExportJobDeps {
-  return exportJobDepsOn(db as unknown as Executor, dbTransaction)
+  return exportJobDepsOn(db, dbTransaction)
 }
