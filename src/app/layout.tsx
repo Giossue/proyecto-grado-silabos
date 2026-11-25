@@ -3,7 +3,6 @@ import "./globals.css";
 import { AppProviders } from "@/components/AppProviders";
 
 export const metadata: Metadata = {
-  title: "Sílabos UEB",
   description: "Sistema de gestión de sílabos de la Universidad Estatal de Bolívar: elaboración, revisión y aprobación de los sílabos de cada carrera.",
   icons: {
     icon: [
@@ -24,6 +23,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="es" suppressHydrationWarning>
       <head>
+        <title>Sílabos UEB</title>
         <script dangerouslySetInnerHTML={{ __html: preferencesScript }} />
       </head>
       <body>

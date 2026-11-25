@@ -8,7 +8,6 @@ import { useCurrentFullPath } from "@/composables/useCurrentUrl"
 import { useActiveNavItem } from "@/composables/useMainNavItems"
 import { usePageTitle } from "@/composables/usePageBreadcrumbs"
 import { useScrollDirection } from "@/composables/useScrollDirection"
-import { usePageHeading } from "@/lib/pageAnnouncement"
 import { withoutEndPeriod } from "@/lib/text"
 import { cn } from "@/lib/utils"
 
@@ -74,8 +73,6 @@ export function PageFrame({
     setTitle(title)
     return () => setTitle((current) => (current === title ? "" : current))
   }, [setTitle, title])
-
-  usePageHeading(title)
 
   const actionCount = loading ? 0 : countActions(actions)
   const needsTrigger = actionCount > 1

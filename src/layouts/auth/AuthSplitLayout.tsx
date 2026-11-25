@@ -3,10 +3,8 @@
 import Image from "next/image"
 import type { ReactNode } from "react"
 import { AppearanceToggle } from "@/components/AppearanceToggle"
-import { usePageHeading } from "@/lib/pageAnnouncement"
 
 export function AuthSplitLayout({ title, description, children }: { title?: string; description?: string; children: ReactNode }) {
-  usePageHeading(title ?? "")
 
   return (
     <div className="grid min-h-svh bg-background lg:grid-cols-2">

@@ -1,33 +1,31 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { announcePage, clearPageHeading, setPageHeading, tabTitle } from '@/lib/pageAnnouncement';
-
-describe('tabTitle', () => {
-  it('pone primero el título de la página, luego el área y al final la aplicación', () => {
-    expect(tabTitle('/admin/usuarios', 'Usuarios')).toBe('Usuarios · Admin · Sílabos UEB');
-    expect(tabTitle('/ingresar', 'Iniciar sesión')).toBe('Iniciar sesión · Sílabos UEB');
-  });
-
-  it('sin título de página conserva el área y la aplicación', () => {
-    expect(tabTitle('/docente')).toBe('Docente · Sílabos UEB');
-    expect(tabTitle('/')).toBe('Sílabos UEB');
-  });
-});
+import { announcePage, CONTENT_ID } from '@/lib/pageAnnouncement';
 
 describe('announcePage', () => {
-  afterEach(() => clearPageHeading('Revisiones'));
+  afterEach(() => document.getElementById(CONTENT_ID)?.remove());
 
-  it('usa el título de la página visible al anunciar la navegación', () => {
-    window.history.replaceState(null, '', '/coordinacion/revisiones');
-    setPageHeading('Revisiones');
-    expect(document.title).toBe('Revisiones · Coordinador · Sílabos UEB');
-    announcePage('/coordinacion/revisiones?pagina=2', null);
+  const content = (): HTMLElement => {
+    const element = document.createElement('main');
+    element.id = CONTENT_ID;
+    element.tabIndex = -1;
+    document.body.append(element);
+    return element;
+  };
+
+  it('al cambiar de página lleva el foco al contenido y no toca el título', () => {
+    const main = content();
+    document.title = 'Revisiones · Coordinador · Sílabos UEB';
+    announcePage('/coordinacion/historial', '/coordinacion/revisiones');
+
+    expect(document.activeElement).toBe(main);
     expect(document.title).toBe('Revisiones · Coordinador · Sílabos UEB');
   });
 
-  it('al salir de la página vuelve al título del área', () => {
-    window.history.replaceState(null, '', '/coordinacion/revisiones');
-    setPageHeading('Revisiones');
-    clearPageHeading('Revisiones');
-    expect(document.title).toBe('Coordinador · Sílabos UEB');
+  it('en la misma página, o al entrar por primera vez, no mueve el foco', () => {
+    content();
+    announcePage('/coordinacion/revisiones?pagina=2', '/coordinacion/revisiones');
+    announcePage('/coordinacion/revisiones', null);
+
+    expect(document.activeElement).toBe(document.body);
   });
 });
