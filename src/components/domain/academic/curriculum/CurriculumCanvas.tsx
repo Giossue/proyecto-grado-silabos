@@ -4,6 +4,7 @@ import "@xyflow/react/dist/style.css"
 import { ConnectionMode, NodeChangeset, ReactFlow, type Connection, type Edge, type Node } from "@xyflow/react"
 import { Info } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
+import { useFillHeight } from "@/composables/useFillHeight"
 import { ApiError } from "@/api/client"
 import { updateSubjectLayout } from "@/api/career-academics"
 import {
@@ -73,6 +74,8 @@ const sameList = (left: unknown[], right: unknown[]): boolean => left.length ===
 
 export function CurriculumCanvas({ curriculum, fixedFields, fixedFieldTotals, subjects, requirements, career, editing, fullScreen = false, organizationUnits, modalityOptions, onChanged }: CurriculumCanvasProps) {
   const scrollElement = useRef<HTMLDivElement>(null)
+  const canvasElement = useRef<HTMLDivElement>(null)
+  const fillHeight = useFillHeight(canvasElement, !fullScreen)
   const legendAnchor = useRef<HTMLSpanElement>(null)
   const [canvasWidth, setCanvasWidth] = useState(0)
   const [legendOpen, setLegendOpen] = useState(false)
@@ -308,7 +311,9 @@ export function CurriculumCanvas({ curriculum, fixedFields, fixedFieldTotals, su
 
   return (
     <div
-      className={cn("curriculum-canvas relative min-h-136 overflow-hidden bg-background", fullScreen ? "h-(--curriculum-canvas-full-height)" : "h-(--curriculum-canvas-height)")}
+      ref={canvasElement}
+      className={cn("curriculum-canvas relative min-h-96 overflow-hidden bg-background", fullScreen ? "h-(--curriculum-canvas-full-height)" : "h-(--curriculum-canvas-height)")}
+      style={fillHeight !== null ? { height: `${fillHeight}px` } : undefined}
       aria-label={editing ? "Editor interactivo de la malla" : "Vista de la malla"}
     >
       <CurriculumRelationPicker subjects={subjects} picker={relationPicker} onPickerChange={setRelationPicker} onPick={(pending) => void connect(pending)} />
