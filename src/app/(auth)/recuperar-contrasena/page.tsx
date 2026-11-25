@@ -2,8 +2,8 @@
 
 import { Send } from "lucide-react"
 import Link from "next/link"
-import { useRef, useState, type FormEvent } from "react"
-import { ApiError } from "@/api/client"
+import { useRef, useState } from "react"
+import { Controller } from "react-hook-form"
 import { requestPasswordRecovery } from "@/api/session"
 import { InputError } from "@/components/InputError"
 import { FeedbackAlert } from "@/components/domain/FeedbackAlert"
@@ -13,35 +13,26 @@ import { Label } from "@/components/ui/label"
 import { Spinner } from "@/components/ui/spinner"
 import { useFormIncomplete } from "@/composables/useFormIncomplete"
 import { AuthSplitLayout } from "@/layouts/auth/AuthSplitLayout"
+import { applyApiErrors, fieldMessage, serverMessage, useSchemaForm } from "@/lib/forms"
 import { paths } from "@/lib/routes"
+import { recoveryLinkSchema, type RecoveryLinkValues } from "@/schemas/auth"
 
 export default function PasswordRecoveryPage() {
-  const [email, setEmail] = useState("")
-  const [error, setError] = useState<string | null>(null)
-  const [errors, setErrors] = useState<Record<string, string[]>>({})
-  const [pending, setPending] = useState(false)
+  const form = useSchemaForm(recoveryLinkSchema, { defaultValues: { email: "" } })
+  const { errors, isSubmitting: pending } = form.formState
   const [sentMessage, setSentMessage] = useState<string | null>(null)
   const submitButton = useRef<HTMLButtonElement | null>(null)
   const incomplete = useFormIncomplete(submitButton)
 
-  const submit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
-    event.preventDefault()
-    setPending(true)
-    setError(null)
-    setErrors({})
+  const submit = async ({ email }: RecoveryLinkValues): Promise<void> => {
     try {
       setSentMessage((await requestPasswordRecovery(email.trim())).message)
     } catch (reason) {
-      if (reason instanceof ApiError) {
-        setErrors(reason.errors)
-        setError(reason.message)
-      } else {
-        setError("No se pudo solicitar el restablecimiento")
-      }
-    } finally {
-      setPending(false)
+      applyApiErrors(form.setError, reason, { fallback: "No se pudo solicitar el restablecimiento" })
     }
   }
+
+  const error = serverMessage(errors)
 
   return (
     <AuthSplitLayout title="Recuperar contraseña" description="Ingrese su correo para recibir un enlace de restablecimiento">
@@ -52,13 +43,19 @@ export default function PasswordRecoveryPage() {
             <p className="text-sm text-muted-foreground">Revise su bandeja de entrada y la carpeta de correo no deseado. El enlace tiene una vigencia limitada</p>
           </div>
         ) : (
-          <form onSubmit={(event) => void submit(event)}>
+          <form onSubmit={form.handleSubmit(submit)}>
             <div className="grid gap-2">
               <Label htmlFor="recovery-email" required>Correo electrónico</Label>
-              <Input id="recovery-email" value={email} type="email" autoComplete="off" maxLength={254} aria-required="true" placeholder="Ej. nombre@ueb.edu.ec" aria-invalid={Boolean(errors.email)} onChange={(event) => setEmail(event.target.value)} />
-              <InputError message={errors.email?.[0]} />
+              <Controller
+                name="email"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Input {...field} id="recovery-email" type="email" autoComplete="off" maxLength={254} aria-required="true" placeholder="Ej. nombre@ueb.edu.ec" aria-invalid={fieldState.invalid} />
+                )}
+              />
+              <InputError message={fieldMessage(errors, "email")} />
             </div>
-            {error && Object.keys(errors).length === 0 ? <FeedbackAlert message={error} /> : null}
+            {error ? <FeedbackAlert message={error} /> : null}
             <div className="my-6 flex items-center justify-start">
               <Button ref={submitButton} className="w-full" disabled={pending || incomplete} type="submit" data-test="email-password-reset-link-button">
                 {pending ? <Spinner data-icon="inline-start" /> : <Send data-icon="inline-start" aria-hidden="true" />}

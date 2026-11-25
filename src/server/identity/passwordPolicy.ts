@@ -1,9 +1,6 @@
 import { createHash } from "node:crypto"
-import { isPhpArray, type PhpArray, type PhpValue } from "../http/input"
-import type { Rule } from "../http/validation"
+import type { PasswordStrength } from "@/schemas/password"
 
-export const CONFIRMATION = "La confirmación de contraseña no coincide."
-const STRING = "El campo :attribute debe ser una cadena de texto."
 const MIN = "El campo :attribute debe tener al menos :min caracteres."
 const MIXED = "El campo :attribute debe contener al menos una letra mayúscula y una minúscula"
 const LETTERS = "El campo :attribute debe contener al menos una letra"
@@ -38,38 +35,22 @@ async function uncompromised(value: string, pwned: (prefix: string) => Promise<s
   })
 }
 
-function phpLength(value: PhpValue): number {
-  if (isPhpArray(value)) return Object.keys(value).length
-  if (typeof value === "boolean") return value ? 1 : 0
-  return [...String(value)].length
-}
-
-function strongPassword(minimum: number, pwned: ((prefix: string) => Promise<string>) | null): Rule {
-  return {
-    fails: async (value) => {
-      const messages: string[] = []
-      if (typeof value !== "string") messages.push(STRING)
-      if (phpLength(value) < minimum) messages.push(MIN.replace(":min", String(minimum)))
-      if (pwned !== null && typeof value === "string") {
-        if (!/(\p{Ll}+.*\p{Lu})|(\p{Lu}+.*\p{Ll})/u.test(value)) messages.push(MIXED)
-        if (!/\p{L}/u.test(value)) messages.push(LETTERS)
-        if (!/\p{Z}|\p{S}|\p{P}/u.test(value)) messages.push(SYMBOLS)
-        if (!/\p{N}/u.test(value)) messages.push(NUMBERS)
-      }
-      if (messages.length > 0 || pwned === null) return messages
-      return (await uncompromised(String(value), pwned)) ? [] : [UNCOMPROMISED]
-    },
-  }
-}
-
-export function passwordRules(input: PhpArray, options: PasswordPolicyOptions = {}): Rule[] {
+export function passwordStrength(label: string, options: PasswordPolicyOptions = {}): PasswordStrength {
   const production = options.production ?? process.env.APP_ENV === "production"
-  return [
-    "required",
-    "string",
-    production ? strongPassword(12, options.pwned ?? pwnedRange) : strongPassword(8, null),
-    { check: (value) => input.password_confirmation === value, message: CONFIRMATION },
-  ]
+  const minimum = production ? 12 : 8
+  const pwned = production ? (options.pwned ?? pwnedRange) : null
+  return async (value) => {
+    const failed: string[] = []
+    if ([...value].length < minimum) failed.push(MIN.replace(":min", String(minimum)))
+    if (pwned !== null) {
+      if (!/(\p{Ll}+.*\p{Lu})|(\p{Lu}+.*\p{Ll})/u.test(value)) failed.push(MIXED)
+      if (!/\p{L}/u.test(value)) failed.push(LETTERS)
+      if (!/\p{Z}|\p{S}|\p{P}/u.test(value)) failed.push(SYMBOLS)
+      if (!/\p{N}/u.test(value)) failed.push(NUMBERS)
+    }
+    if (failed.length === 0 && pwned !== null && !(await uncompromised(value, pwned))) failed.push(UNCOMPROMISED)
+    return failed.map((message) => message.replace(":attribute", label))
+  }
 }
 
 const BCRYPT_STORED = /^\$2y\$(\d{2})\$[./A-Za-z0-9]{53}$/

@@ -1,7 +1,8 @@
 "use client"
 
 import { Save, UserRound } from "lucide-react"
-import { useState, type FormEvent } from "react"
+import { useState } from "react"
+import { Controller } from "react-hook-form"
 import { ApiError } from "@/api/client"
 import { resendActivation, updateProfile } from "@/api/session"
 import { InputError } from "@/components/InputError"
@@ -14,57 +15,52 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Spinner } from "@/components/ui/spinner"
 import { SettingsLayout } from "@/layouts/settings/Layout"
+import { applyApiErrors, fieldMessage, SERVER_ERROR, serverMessage, useSchemaForm } from "@/lib/forms"
 import { toast } from "@/lib/toast"
+import { profileSchema, type ProfileValues } from "@/schemas/account"
 import { sessionState, useSession } from "@/state/session"
+
+const schema = profileSchema()
 
 export default function ProfilePage() {
   const { session } = useSession()
   const user = session?.user
-  const [name, setName] = useState(user?.name ?? "")
-  const [email, setEmail] = useState(user?.email ?? "")
+  const form = useSchemaForm(schema, { defaultValues: { nombre: user?.name ?? "", correo_electronico: user?.email ?? "" } })
+  const { errors, isSubmitting: processing } = form.formState
   const [syncedUser, setSyncedUser] = useState(user)
   if (syncedUser !== user) {
     setSyncedUser(user)
-    setName(user?.name ?? "")
-    setEmail(user?.email ?? "")
+    form.reset({ nombre: user?.name ?? "", correo_electronico: user?.email ?? "" })
   }
-  const [processing, setProcessing] = useState(false)
   const [resending, setResending] = useState(false)
-  const [errors, setErrors] = useState<Record<string, string>>({})
   const [openSection, setOpenSection] = useState("cuenta")
-  const unchanged = name.trim() === (user?.name ?? "") && email.trim() === (user?.email ?? "")
+  const [name, email] = form.watch(["nombre", "correo_electronico"])
+  const unchanged = name.trim() === (user?.name ?? "") && String(email ?? "").trim() === (user?.email ?? "")
 
-  const submit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
-    event.preventDefault()
-    setProcessing(true)
-    setErrors({})
+  const submit = async ({ nombre, correo_electronico }: ProfileValues): Promise<void> => {
     try {
-      sessionState.replace(await updateProfile(name, email))
+      sessionState.replace(await updateProfile(nombre, correo_electronico))
       toast.success("Perfil actualizado")
     } catch (reason) {
-      if (reason instanceof ApiError) {
-        const failed: Record<string, string> = Object.fromEntries(Object.entries(reason.errors).map(([key, values]) => [key, values[0] ?? reason.message]))
-        setErrors(Object.keys(failed).length === 0 ? { request: reason.message } : failed)
-      } else {
-        setErrors({ request: "No se pudo actualizar el perfil" })
-      }
-    } finally {
-      setProcessing(false)
+      applyApiErrors(form.setError, reason, { fallback: "No se pudo actualizar el perfil" })
     }
   }
 
   const resendVerification = async (): Promise<void> => {
     setResending(true)
-    setErrors({})
+    form.clearErrors()
     try {
       const response = await resendActivation()
       toast.success(response.message)
     } catch (reason) {
-      setErrors({ request: reason instanceof ApiError ? reason.message : "No se pudo reenviar el enlace de activación" })
+      form.setError(SERVER_ERROR, { type: "server", message: reason instanceof ApiError ? reason.message : "No se pudo reenviar el enlace de activación" })
     } finally {
       setResending(false)
     }
   }
+
+  const nameError = fieldMessage(errors, "nombre")
+  const emailError = fieldMessage(errors, "correo_electronico")
 
   return (
     <SettingsLayout loading={!user}>
@@ -79,49 +75,57 @@ export default function ProfilePage() {
             icon={UserRound}
             keepMounted
           >
-            <InputError message={errors.request} />
+            <InputError message={serverMessage(errors)} />
 
             {user.can_edit_identity ? (
-              <form data-tour="profile-form" className="flex flex-col gap-6" onSubmit={(event) => void submit(event)}>
+              <form data-tour="profile-form" className="flex flex-col gap-6" onSubmit={form.handleSubmit(submit)}>
                 <div className="grid gap-2">
                   <Label htmlFor="name" required>
                     Nombre completo
                   </Label>
-                  <Input
-                    id="name"
-                    value={name}
-                    onChange={(event) => setName(event.target.value)}
-                    className="mt-1 block w-full"
+                  <Controller
                     name="nombre"
-                    aria-required="true"
-                    autoComplete="name"
-                    placeholder="Ej. MARÍA JOSÉ PÉREZ LÓPEZ"
-                    aria-invalid={Boolean(errors.nombre)}
-                    aria-describedby={errors.nombre ? "name-error" : undefined}
+                    control={form.control}
+                    render={({ field }) => (
+                      <Input
+                        {...field}
+                        id="name"
+                        className="mt-1 block w-full"
+                        aria-required="true"
+                        autoComplete="name"
+                        placeholder="Ej. MARÍA JOSÉ PÉREZ LÓPEZ"
+                        aria-invalid={Boolean(nameError)}
+                        aria-describedby={nameError ? "name-error" : undefined}
+                      />
+                    )}
                   />
-                  <InputError id="name-error" className="mt-2" message={errors.nombre} />
+                  <InputError id="name-error" className="mt-2" message={nameError} />
                 </div>
 
                 <div className="grid gap-2">
                   <Label htmlFor="email" required>
                     Correo electrónico
                   </Label>
-                  <Input
-                    id="email"
-                    value={email}
-                    onChange={(event) => setEmail(event.target.value)}
-                    type="email"
-                    className="mt-1 block w-full"
+                  <Controller
                     name="correo_electronico"
-                    aria-required="true"
-                    autoComplete="username"
-                    placeholder="Ej. maria.perez@ueb.edu.ec"
-                    aria-invalid={Boolean(errors.correo_electronico)}
-                    aria-describedby={errors.correo_electronico ? "email-error" : undefined}
-                    disabled={user.email_verified}
+                    control={form.control}
+                    render={({ field }) => (
+                      <Input
+                        {...field}
+                        id="email"
+                        type="email"
+                        className="mt-1 block w-full"
+                        aria-required="true"
+                        autoComplete="username"
+                        placeholder="Ej. maria.perez@ueb.edu.ec"
+                        aria-invalid={Boolean(emailError)}
+                        aria-describedby={emailError ? "email-error" : undefined}
+                        disabled={user.email_verified}
+                      />
+                    )}
                   />
                   {user.email_verified ? <p className="text-sm text-muted-foreground">La cuenta ya fue activada: su correo no se puede cambiar</p> : null}
-                  <InputError id="email-error" className="mt-2" message={errors.correo_electronico} />
+                  <InputError id="email-error" className="mt-2" message={emailError} />
                 </div>
 
                 {!user.email_verified ? (

@@ -19,8 +19,8 @@ Orden propuesto (aceptado): 1) Zod + react-hook-form, 2) TanStack Query, 3) Driz
 
 | ID | Specs | Ruta | Estado | Commit |
 |---|---|---|---|---|
-| M1 | S1, S2 | delegada (en paralelo con M3) | en curso: esquemas Zod compartidos, formularios con react-hook-form, validación del servidor con Zod | — |
-| M3 | S4 | delegada (en paralelo con M1) | en curso: consultas y relaciones Drizzle, migraciones reales | — |
+| M1 | S1, S2 | delegada (en paralelo con M3) | hecho (parcial): esquemas Zod compartidos, formularios con react-hook-form, validación del servidor con Zod | — |
+| M3 | S4 | delegada (en paralelo con M1) | hecho (parcial, 51bb0ba): consultas y relaciones Drizzle, migraciones reales | — |
 | M2 | S3 | por definir | pendiente: TanStack Query | — |
 | M4 | S5 | por definir | pendiente: JSON normal y React Email | — |
 | M5 | S6 | por definir | pendiente: Better Auth | — |
@@ -28,3 +28,5 @@ Orden propuesto (aceptado): 1) Zod + react-hook-form, 2) TanStack Query, 3) Driz
 ## Log
 
 - L1 (2026-11-24): «una duda, con qué se hace ahora lo de la plantilla?…» → «prendelo y una duda, no había cosas ya mejores que se podría usar ahora que cambiamos de stack?» → se propuso la tabla de reemplazos y el orden 1) Zod + react-hook-form, 2) TanStack Query, 3) Drizzle, 4) JSON normal y React Email, 5) Better Auth → «ok, empecemos, me gusta».
+- L2: M3 (51bb0ba): esquema completo en `src/db/schema/`, línea base regenerada con funciones y disparadores, `db:migrate` + `db:seed` crean base desde cero (probado en base de prueba), relaciones, 13 de 42 archivos de consultas pasados a Drizzle (29 pendientes). Las bases existentes no cambian.
+- L3: M1: `src/schemas/` (mensajes, reglas, correo, contraseña, auth, 2FA, cuenta, personas), `src/lib/forms.ts` (`useSchemaForm`, `applyApiErrors`), `server/http/schemaValidation.ts`; migrados a Zod + react-hook-form login, recuperación, restablecimiento, activación, 2FA, perfil, seguridad, perfil docente, sesiones y usuarios administrados (cliente y servidor). Pendientes: 32 archivos del servidor con el validador viejo y los formularios de Administración (catálogos, periodos), Coordinación, sílabo, plantilla y `ApiForm`. Mismos 422 y mensajes. E2E: 3 fallos que también ocurren en HEAD (notificaciones sin avisos sin leer, copia de paralelo dependiente de otra suite, periodo nuevo bloqueado por una carrera importada sin coordinador): son de las pruebas, no del código.

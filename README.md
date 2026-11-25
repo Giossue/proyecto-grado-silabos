@@ -44,20 +44,27 @@ npm run start     # or: NEXT_OUTPUT=standalone npx next build && node .next/stan
 npm run worker
 ```
 
-## Database migrations
+## Database
 
-Drizzle owns the schema. `src/db/drizzle/schema.ts` and the baseline `src/db/drizzle/0000_legal_edwin_jarvis.sql` come from `drizzle-kit pull` on the current database; the baseline is commented out, so applying it changes nothing and only records it as applied.
+Drizzle owns the schema. Tables, the enum, checks, indexes, foreign keys and the `docentes_vigentes_silabo` view live in `src/db/schema/` (`tables.ts`, `views.ts`, `relations.ts`). The database functions and triggers the app relies on (append-only history, single administrator, single active coordination, template change marks, export and review integrity) cannot be modelled by Drizzle, so the baseline `src/db/drizzle/0000_legal_edwin_jarvis.sql` carries them as SQL after the generated tables.
 
 ```bash
-npm run db:check      # migration history is consistent
-npm run db:generate   # write a migration after changing schema.ts
-npm run db:baseline   # mark the baseline as applied on an existing database (idempotent)
 npm run db:migrate    # apply pending migrations
+npm run db:seed       # administrator and official template (idempotent)
+npm run db:generate   # write a migration after changing src/db/schema
+npm run db:check      # migration history is consistent
+npm run db:baseline   # mark the baseline as applied on a database restored from a dump (idempotent)
 ```
 
-On a database that already has the tables, run `npm run db:baseline` once before the first `npm run db:migrate`. It creates the `drizzle` schema and `drizzle.__drizzle_migrations` if they are missing and records the SHA-256 of `0000_legal_edwin_jarvis.sql` with the journal's `when`, the same row `drizzle-kit migrate` would write; running it again changes nothing. On an empty database, uncomment the baseline instead and run `npm run db:migrate`.
+**New database.** `npm run db:migrate` creates the whole schema, then `npm run db:seed` creates the administrator from `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` (optional `SEED_ADMIN_NAME`, default «Administrador») and the official template. System settings need no rows: they fall back to the environment until an administrator changes them. Running the seed again changes nothing.
 
-`0001_drop_audit_events.sql` drops the `eventos_auditoria` table, its trigger and indexes.
+**Existing database.** Drizzle only applies migrations whose journal timestamp is newer than the last row of `drizzle.__drizzle_migrations`; it does not compare file hashes. Databases that already recorded the baseline (`npm run db:baseline`) and `0001_drop_audit_events` therefore skip both, and the rewritten baseline never runs on them. A database restored from a dump that has the tables but no migration rows needs `npm run db:baseline` once before `npm run db:migrate`; the command refuses to run on an empty database and does nothing when the baseline, or a later migration, is already recorded.
+
+`0001_drop_audit_events.sql` drops the `eventos_auditoria` table when it exists. The Laravel-only tables `migraciones`, `cola_trabajos`, `datos_temporales` and `bloqueos_temporales` stay in old databases but are not part of the schema, are not created in new ones and are ignored by `drizzle-kit` (`tablesFilter`). The unused `btree_gist` extension of old databases is not created either.
+
+## Validation
+
+Request and form validation use [Zod](https://zod.dev). The shared schemas live in `src/schemas/`: the server parses the request input with them through `validateSchema` (`src/server/http/schemaValidation.ts`) and answers 422 with `{ message, errors: { field: [message] } }`; the React forms use the same field builders through `useSchemaForm` (`src/lib/forms.ts`, react-hook-form with `@hookform/resolvers/zod`). `applyApiErrors` puts the server's 422 errors on the matching fields, and a request without field errors shows its message above the form. Rules that need the database (unique email, active career) or the environment (production password strength) are passed to the schema factories only on the server. Some server routes still use the previous validator in `src/server/http/validation.ts` until they are migrated.
 
 ## Tests
 
@@ -81,4 +88,4 @@ cp .env.example .env   # set APP_KEY and POSTGRES_PASSWORD at least
 docker compose up --build
 ```
 
-A new PostgreSQL volume starts empty: put a dump of `silabos_ueb` (`*.sql` or `*.sql.gz`) in `docker/postgres-init/` before the first start, then run `npm run db:migrate`. Stored files live in the `storage` volume (`STORAGE_PATH=/data/storage`).
+A new PostgreSQL volume starts empty: run `npm run db:migrate` and `npm run db:seed` against it, or put a dump of `silabos_ueb` (`*.sql` or `*.sql.gz`) in `docker/postgres-init/` before the first start and then run `npm run db:baseline` and `npm run db:migrate`. Stored files live in the `storage` volume (`STORAGE_PATH=/data/storage`).

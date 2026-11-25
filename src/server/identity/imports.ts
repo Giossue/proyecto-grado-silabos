@@ -8,22 +8,19 @@ import type { ImportRow } from "../excel/spreadsheetReader"
 import { xlsxDownload } from "../excel/workbook"
 import type { PhpArray } from "../http/input"
 import { forbidden, apiJson } from "../http/responses"
-import { validateInput, type Rule } from "../http/validation"
+import { importedTeacherSchema, importedUserSchema, NAME_SUBJECTS, nameColumnMessages } from "@/schemas/people"
+import { validateSchema } from "../http/schemaValidation"
 import { systemNow } from "../notifications/queries"
 import {
   collapseName,
-  emailRule,
   fullName,
   isValidNamePart,
   NAME_MAX_LENGTH,
-  nameColumnMessages,
-  requiresCareer,
   ROLE_COORDINATOR,
   ROLE_LABELS,
-  roleCodeRule,
 } from "./accountRules"
 import { createCareerTeacher, createManagedUser, teacherBlockedReason } from "./accounts"
-import { ACCOUNT_ATTRIBUTES, defaultIdentityWriteDeps, isAdministrator, perform, uniqueEmail, type IdentityWriteDeps } from "./accountWrites"
+import { careerExists, defaultIdentityWriteDeps, isAdministrator, perform, uniqueEmail, type IdentityWriteDeps } from "./accountWrites"
 import { createIdentityImportStore } from "./importsStore"
 
 const PERSON_COLUMNS = { nombres: "Nombres", apellidos: "Apellidos" }
@@ -70,13 +67,13 @@ async function mayAddTeachers(session: AppSession, deps: IdentityImportDeps): Pr
 }
 
 function compose(values: Record<string, string>): [Record<string, string>, string[]] {
-  const messages = nameColumnMessages()
   const errors: string[] = []
   for (const key of Object.keys(PERSON_COLUMNS)) {
+    const messages = nameColumnMessages(NAME_SUBJECTS[key as keyof typeof NAME_SUBJECTS])
     const value = collapseName(values[key] ?? "")
-    if (value === "") errors.push(messages[`${key}.required`])
-    else if (phpLength(value) > NAME_MAX_LENGTH) errors.push(messages[`${key}.max`])
-    else if (!isValidNamePart(value)) errors.push(messages[`${key}.regex`])
+    if (value === "") errors.push(messages.required)
+    else if (phpLength(value) > NAME_MAX_LENGTH) errors.push(messages.max)
+    else if (!isValidNamePart(value)) errors.push(messages.regex)
   }
   const rest = Object.fromEntries(Object.entries(values).filter(([key]) => !(key in PERSON_COLUMNS)))
   return [{ nombre: fullName(values.nombres ?? "", values.apellidos ?? ""), ...rest }, errors]
@@ -133,7 +130,7 @@ async function checkTeachers(rows: ImportRow[], deps: IdentityImportDeps): Promi
     const [values, nameErrors] = compose(row.values)
     const email = values.correo.toLowerCase()
     const payload: PhpArray = { nombre: values.nombre, correo_electronico: email }
-    const validation = await validateInput(payload, { nombre: ["required", "string", { max: 180 }], correo_electronico: ["required", "string", emailRule(), { max: 255 }] }, ACCOUNT_ATTRIBUTES)
+    const validation = (await validateSchema(importedTeacherSchema, payload)).errors ?? {}
     const blocked = await deps.accounts.direct(async (tx) => teacherBlockedReason(tx, await tx.lockAccountByEmail(email)))
     const errors = [...nameErrors, ...messagesOf(validation), ...(blocked === null ? [] : [blocked])]
     seenCheck(seen, email, row.line, errors)
@@ -178,18 +175,8 @@ async function checkUsers(rows: ImportRow[], deps: IdentityImportDeps): Promise<
       role_code: roles.get(importKey(values.rol)) ?? values.rol,
       career_id: values.carrera === "" ? null : (careers.get(importKey(values.carrera)) ?? values.carrera),
     }
-    const rules: Record<string, Rule[]> = {
-      nombre: ["required", "string", { max: 180 }],
-      correo_electronico: ["required", "string", emailRule(), { max: 255 }, uniqueEmail(deps, null)],
-      password: ["prohibited"],
-      role_code: ["required", roleCodeRule()],
-      career_id: ["nullable", ...(requiresCareer(payload.role_code) ? (["required"] as Rule[]) : []), "uuid", { exists: (value) => deps.accounts.activeCareer(String(value)) }],
-      replace_coordinator: ["sometimes", "boolean"],
-      faculty_id: ["prohibited"],
-    }
-    const validation = await validateInput(payload, rules, ACCOUNT_ATTRIBUTES, {
-      messages: { "correo_electronico.unique": "Ya existe una cuenta con este correo.", "career_id.required": "Seleccione la carrera que limita este rol.", ...nameColumnMessages() },
-    })
+    const schema = importedUserSchema({ roleCode: payload.role_code, unique: uniqueEmail(deps, null), careerExists: careerExists(deps) })
+    const validation = (await validateSchema(schema, payload)).errors ?? {}
     const errors = [...nameErrors, ...messagesOf(validation)]
     seenCheck(seen, email, row.line, errors)
     checked.push({ line: row.line, values, errors: unique(errors) })

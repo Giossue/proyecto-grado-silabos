@@ -2,8 +2,8 @@
 
 import { UserCheck } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { useRef, useState, type FormEvent } from "react"
-import { ApiError } from "@/api/client"
+import { useRef } from "react"
+import { Controller } from "react-hook-form"
 import { activateAccount, logout } from "@/api/session"
 import { InputError } from "@/components/InputError"
 import { PasswordInput } from "@/components/PasswordInput"
@@ -14,32 +14,27 @@ import { Spinner } from "@/components/ui/spinner"
 import { useFormIncomplete } from "@/composables/useFormIncomplete"
 import { AuthSplitLayout } from "@/layouts/auth/AuthSplitLayout"
 import { clearIntendedRoute } from "@/lib/intended-route"
+import { applyApiErrors, fieldMessage, SERVER_ERROR, serverMessage, useSchemaForm } from "@/lib/forms"
 import { paths } from "@/lib/routes"
+import { newPasswordFormSchema, type NewPasswordFormValues } from "@/schemas/auth"
 import { sessionState } from "@/state/session"
 
 export default function ActivateAccountPage() {
   const router = useRouter()
   const tokens = useSearchParams().getAll("token")
   const token = tokens.length === 1 ? tokens[0] ?? "" : ""
-  const [password, setPassword] = useState("")
-  const [passwordConfirmation, setPasswordConfirmation] = useState("")
-  const [error, setError] = useState<string | null>(null)
-  const [errors, setErrors] = useState<Record<string, string[]>>({})
-  const [pending, setPending] = useState(false)
+  const form = useSchemaForm(newPasswordFormSchema, { defaultValues: { password: "", password_confirmation: "" } })
+  const { errors, isSubmitting: pending } = form.formState
   const submitButton = useRef<HTMLButtonElement | null>(null)
   const incomplete = useFormIncomplete(submitButton)
 
-  const submit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
-    event.preventDefault()
+  const submit = async ({ password, password_confirmation }: NewPasswordFormValues): Promise<void> => {
     if (!token) {
-      setError("El enlace de activación está incompleto")
+      form.setError(SERVER_ERROR, { type: "client", message: "El enlace de activación está incompleto" })
       return
     }
-    setPending(true)
-    setError(null)
-    setErrors({})
     try {
-      const result = await activateAccount(token, password, passwordConfirmation)
+      const result = await activateAccount(token, password, password_confirmation)
       if (sessionState.current.value) {
         await logout().catch(() => undefined)
         sessionState.clear()
@@ -47,32 +42,39 @@ export default function ActivateAccountPage() {
       clearIntendedRoute()
       router.replace(`${paths.login}?status=${encodeURIComponent(result.message)}`)
     } catch (reason) {
-      if (reason instanceof ApiError) {
-        setErrors(reason.errors)
-        setError(reason.message)
-      } else {
-        setError("No se pudo activar la cuenta")
-      }
-    } finally {
-      setPending(false)
+      applyApiErrors(form.setError, reason, { fallback: "No se pudo activar la cuenta" })
     }
   }
 
+  const error = serverMessage(errors)
+
   return (
     <AuthSplitLayout title="Activar cuenta" description="Verifique su correo y defina una contraseña para ingresar al sistema">
-      <form className="flex flex-col gap-6" onSubmit={(event) => void submit(event)}>
+      <form className="flex flex-col gap-6" onSubmit={form.handleSubmit(submit)}>
         <div className="grid gap-2">
           <Label htmlFor="activation-password" required>Contraseña</Label>
-          <PasswordInput id="activation-password" value={password} onValueChange={setPassword} autoComplete="new-password" aria-required="true" aria-invalid={Boolean(errors.password)} />
-          <InputError message={errors.password?.[0]} />
+          <Controller
+            name="password"
+            control={form.control}
+            render={({ field: { onChange, ...field }, fieldState }) => (
+              <PasswordInput {...field} id="activation-password" onValueChange={onChange} autoComplete="new-password" aria-required="true" aria-invalid={fieldState.invalid} />
+            )}
+          />
+          <InputError message={fieldMessage(errors, "password")} />
         </div>
         <div className="grid gap-2">
           <Label htmlFor="activation-password-confirmation" required>Confirmar contraseña</Label>
-          <PasswordInput id="activation-password-confirmation" value={passwordConfirmation} onValueChange={setPasswordConfirmation} autoComplete="new-password" aria-required="true" aria-invalid={Boolean(errors.password_confirmation)} />
-          <InputError message={errors.password_confirmation?.[0]} />
+          <Controller
+            name="password_confirmation"
+            control={form.control}
+            render={({ field: { onChange, ...field }, fieldState }) => (
+              <PasswordInput {...field} id="activation-password-confirmation" onValueChange={onChange} autoComplete="new-password" aria-required="true" aria-invalid={fieldState.invalid} />
+            )}
+          />
+          <InputError message={fieldMessage(errors, "password_confirmation")} />
         </div>
-        {error && Object.keys(errors).length === 0 ? <FeedbackAlert message={error} /> : null}
-        <InputError message={errors.token?.[0]} />
+        {error ? <FeedbackAlert message={error} /> : null}
+        <InputError message={fieldMessage(errors, "token")} />
         <Button ref={submitButton} type="submit" className="w-full" disabled={pending || !token || incomplete}>
           {pending ? <Spinner data-icon="inline-start" /> : <UserCheck data-icon="inline-start" aria-hidden="true" />}
           Activar cuenta

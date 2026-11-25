@@ -1,7 +1,8 @@
 "use client"
 
 import { LogOut, Monitor } from "lucide-react"
-import { useCallback, useEffect, useState, type FormEvent } from "react"
+import { useCallback, useEffect, useState } from "react"
+import { Controller } from "react-hook-form"
 import { ApiError } from "@/api/client"
 import { closeOtherDeviceSessions, getDeviceSessions, type DeviceSession } from "@/api/session"
 import { FeedbackAlert } from "@/components/domain/FeedbackAlert"
@@ -15,16 +16,20 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import { formatDateDisplay } from "@/lib/dateDisplay"
 import { afterDialogExit } from "@/lib/dialogExit"
+import { applyApiErrors, fieldMessage, serverMessage, useSchemaForm } from "@/lib/forms"
 import { toast } from "@/lib/toast"
+import { passwordConfirmationSchema, type PasswordConfirmationValues } from "@/schemas/twoFactor"
+
+const schema = passwordConfirmationSchema()
 
 export function OtherSessions() {
   const [sessions, setSessions] = useState<DeviceSession[] | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [open, setOpen] = useState(false)
-  const [password, setPassword] = useState("")
-  const [passwordError, setPasswordError] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [processing, setProcessing] = useState(false)
+  const form = useSchemaForm(schema, { defaultValues: { current_password: "" } })
+  const { errors, isSubmitting: processing } = form.formState
+  const password = form.watch("current_password")
+  const error = serverMessage(errors)
   const others = (sessions ?? []).filter((session) => !session.current).length
 
   const load = useCallback(async (): Promise<void> => {
@@ -41,29 +46,19 @@ export function OtherSessions() {
   }, [load])
 
   const openDialog = (): void => {
-    setPassword("")
-    setPasswordError(null)
-    setError(null)
+    form.reset()
     setOpen(true)
   }
 
-  const closeOthers = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
-    event.preventDefault()
-    if (!password || processing) return
-    setProcessing(true)
-    setPasswordError(null)
-    setError(null)
+  const closeOthers = async ({ current_password }: PasswordConfirmationValues): Promise<void> => {
     try {
-      const result = await closeOtherDeviceSessions(password)
+      const result = await closeOtherDeviceSessions(current_password)
       setOpen(false)
       toast.success(result.message)
       await afterDialogExit()
       await load()
     } catch (reason) {
-      if (reason instanceof ApiError && reason.errors.current_password) setPasswordError(reason.errors.current_password[0] ?? null)
-      else setError(reason instanceof ApiError ? reason.message : "No se pudieron cerrar las otras sesiones")
-    } finally {
-      setProcessing(false)
+      applyApiErrors(form.setError, reason, { fallback: "No se pudieron cerrar las otras sesiones" })
     }
   }
 
@@ -104,7 +99,7 @@ export function OtherSessions() {
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
-          <form className="flex flex-col gap-4" onSubmit={(event) => void closeOthers(event)}>
+          <form className="flex flex-col gap-4" onSubmit={form.handleSubmit(closeOthers)}>
             <DialogHeader>
               <DialogTitle>Cerrar otras sesiones</DialogTitle>
               <DialogDescription>
@@ -116,8 +111,14 @@ export function OtherSessions() {
               <Label htmlFor="other-sessions-password" required>
                 Contraseña actual
               </Label>
-              <PasswordInput id="other-sessions-password" value={password} onValueChange={setPassword} autoComplete="current-password" aria-required="true" />
-              <InputError message={passwordError ?? undefined} />
+              <Controller
+                name="current_password"
+                control={form.control}
+                render={({ field: { onChange, ...field } }) => (
+                  <PasswordInput {...field} id="other-sessions-password" onValueChange={onChange} autoComplete="current-password" aria-required="true" />
+                )}
+              />
+              <InputError message={fieldMessage(errors, "current_password")} />
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>

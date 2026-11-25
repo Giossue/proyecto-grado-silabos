@@ -1,7 +1,8 @@
 "use client"
 
 import { ShieldCheck, ShieldOff } from "lucide-react"
-import { useEffect, useRef, useState, type FormEvent } from "react"
+import { useEffect, useRef, useState } from "react"
+import { Controller } from "react-hook-form"
 import { ApiError } from "@/api/client"
 import { confirmTwoFactor, disableTwoFactor, enableTwoFactor, getTwoFactorStatus, regenerateRecoveryCodes } from "@/api/session"
 import { FeedbackAlert } from "@/components/domain/FeedbackAlert"
@@ -16,6 +17,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
+import { applyApiErrors, fieldMessage, serverMessage, useSchemaForm } from "@/lib/forms"
+import { twoFactorDisableSchema, type TwoFactorDisableValues } from "@/schemas/twoFactor"
+
+const disableSchema = twoFactorDisableSchema({ requireCode: true })
 
 const messageOf = (reason: unknown, fallback: string): string => (reason instanceof ApiError ? reason.message : fallback)
 
@@ -29,11 +34,12 @@ export function ManageTwoFactor({ onLoadingChange }: { onLoadingChange?: (loadin
   const [error, setError] = useState<string | null>(null)
   const [pendingEnable, setPendingEnable] = useState(false)
   const [disableOpen, setDisableOpen] = useState(false)
-  const [disablePassword, setDisablePassword] = useState("")
-  const [disableCode, setDisableCode] = useState("")
   const [useRecoveryCode, setUseRecoveryCode] = useState(false)
-  const [disableErrors, setDisableErrors] = useState<Record<string, string[]>>({})
-  const [disableError, setDisableError] = useState<string | null>(null)
+  const disableForm = useSchemaForm(disableSchema, { defaultValues: { current_password: "", code: "", recovery_code: "" } })
+  const disableErrors = disableForm.formState.errors
+  const disableError = serverMessage(disableErrors)
+  const disablePassword = disableForm.watch("current_password")
+  const disableCode = disableForm.watch(useRecoveryCode ? "recovery_code" : "code")
   const loadingListener = useRef(onLoadingChange)
 
   useEffect(() => {
@@ -91,34 +97,27 @@ export function ManageTwoFactor({ onLoadingChange }: { onLoadingChange?: (loadin
   }
 
   const openDisable = (): void => {
-    setDisablePassword("")
-    setDisableCode("")
+    disableForm.reset()
     setUseRecoveryCode(false)
-    setDisableErrors({})
-    setDisableError(null)
     setDisableOpen(true)
   }
 
   const toggleRecoveryCode = (): void => {
     setUseRecoveryCode((value) => !value)
-    setDisableCode("")
+    disableForm.setValue("code", "")
+    disableForm.setValue("recovery_code", "")
   }
 
-  const disable = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
-    event.preventDefault()
-    if (!disablePassword || !disableCode) return
+  const disable = async ({ current_password, code, recovery_code }: TwoFactorDisableValues): Promise<void> => {
     setProcessing(true)
     setError(null)
-    setDisableErrors({})
-    setDisableError(null)
     try {
-      const status = useRecoveryCode ? await disableTwoFactor(disablePassword, "", disableCode) : await disableTwoFactor(disablePassword, disableCode)
+      const status = useRecoveryCode ? await disableTwoFactor(current_password, "", recovery_code ?? "") : await disableTwoFactor(current_password, code ?? "")
       setEnabled(status.enabled)
       setRecoveryCodes([])
       setDisableOpen(false)
     } catch (reason) {
-      setDisableErrors(reason instanceof ApiError ? reason.errors : {})
-      setDisableError(messageOf(reason, "No se pudo desactivar el segundo factor"))
+      applyApiErrors(disableForm.setError, reason, { fallback: "No se pudo desactivar el segundo factor" })
     } finally {
       setProcessing(false)
     }
@@ -185,7 +184,7 @@ export function ManageTwoFactor({ onLoadingChange }: { onLoadingChange?: (loadin
       />
       <Dialog open={disableOpen} onOpenChange={setDisableOpen}>
         <DialogContent>
-          <form className="flex flex-col gap-4" onSubmit={(event) => void disable(event)}>
+          <form className="flex flex-col gap-4" onSubmit={disableForm.handleSubmit(disable)}>
             <DialogHeader>
               <DialogTitle>Desactivar la verificación en dos pasos</DialogTitle>
               <DialogDescription>Por seguridad, confirme su contraseña actual y un código de su aplicación de autenticación</DialogDescription>
@@ -194,30 +193,43 @@ export function ManageTwoFactor({ onLoadingChange }: { onLoadingChange?: (loadin
               <Label htmlFor="disable-current-password" required>
                 Contraseña actual
               </Label>
-              <PasswordInput id="disable-current-password" value={disablePassword} onValueChange={setDisablePassword} autoComplete="current-password" aria-required="true" />
-              <InputError message={disableErrors.current_password?.[0]} />
+              <Controller
+                name="current_password"
+                control={disableForm.control}
+                render={({ field: { onChange, ...field } }) => (
+                  <PasswordInput {...field} id="disable-current-password" onValueChange={onChange} autoComplete="current-password" aria-required="true" />
+                )}
+              />
+              <InputError message={fieldMessage(disableErrors, "current_password")} />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="disable-code" required>
                 {useRecoveryCode ? "Código de recuperación" : "Código de autenticación"}
               </Label>
-              <Input
-                id="disable-code"
-                value={disableCode}
-                onChange={(event) => setDisableCode(event.target.value)}
-                type="text"
-                autoComplete="one-time-code"
-                inputMode={useRecoveryCode ? "text" : "numeric"}
-                maxLength={useRecoveryCode ? 128 : 6}
-                placeholder={useRecoveryCode ? "Ej. ABCD-EFGH" : "Código de 6 dígitos"}
-                aria-required="true"
+              <Controller
+                key={useRecoveryCode ? "recovery_code" : "code"}
+                name={useRecoveryCode ? "recovery_code" : "code"}
+                control={disableForm.control}
+                render={({ field }) => (
+                  <Input
+                    {...field}
+                    value={field.value ?? ""}
+                    id="disable-code"
+                    type="text"
+                    autoComplete="one-time-code"
+                    inputMode={useRecoveryCode ? "text" : "numeric"}
+                    maxLength={useRecoveryCode ? 128 : 6}
+                    placeholder={useRecoveryCode ? "Ej. ABCD-EFGH" : "Código de 6 dígitos"}
+                    aria-required="true"
+                  />
+                )}
               />
-              <InputError message={disableErrors.code?.[0] ?? disableErrors.recovery_code?.[0]} />
+              <InputError message={fieldMessage(disableErrors, "code") ?? fieldMessage(disableErrors, "recovery_code")} />
               <Button type="button" variant="link" className="h-auto justify-start p-0 text-sm" onClick={toggleRecoveryCode}>
                 {useRecoveryCode ? "Usar un código de autenticación" : "Usar un código de recuperación"}
               </Button>
             </div>
-            {disableError && Object.keys(disableErrors).length === 0 ? <FeedbackAlert message={disableError} /> : null}
+            {disableError ? <FeedbackAlert message={disableError} /> : null}
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setDisableOpen(false)}>
                 Cancelar

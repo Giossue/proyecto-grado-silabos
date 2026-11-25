@@ -1,7 +1,8 @@
 "use client"
 
 import { Check, Trash2 } from "lucide-react"
-import { useState, type FormEvent } from "react"
+import { useState } from "react"
+import { Controller } from "react-hook-form"
 import { removeManagedUserRole, updateManagedUser, type ManagedUser } from "@/api/admin-users"
 import { ApiError } from "@/api/client"
 import { FeedbackAlert } from "@/components/domain/FeedbackAlert"
@@ -14,8 +15,10 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Spinner } from "@/components/ui/spinner"
 import { useShownWhileClosing } from "@/lib/dialogExit"
-import { joinName, NAME_PARTS, nameErrors, splitName, upperName, type NamePartKey } from "@/lib/personName"
+import { applyApiErrors, errorMessages, useSchemaForm } from "@/lib/forms"
+import { joinName, NAME_PARTS, splitName, upperName } from "@/lib/personName"
 import { roleNeedsCareer } from "@/lib/roles"
+import { managedUserEditFormSchema, type ManagedUserEditFormValues } from "@/schemas/people"
 
 type ManagedUserEditFormProps = {
   user: ManagedUser
@@ -27,17 +30,20 @@ type ManagedUserEditFormProps = {
 
 type Role = ManagedUser["roles"][number]
 
-const formFor = (user: ManagedUser) => ({ ...splitName(user.nombre), correo_electronico: user.correo_electronico, role_code: "", career_id: "" })
+const formFor = (user: ManagedUser): ManagedUserEditFormValues => ({ ...splitName(user.nombre), correo_electronico: user.correo_electronico, role_code: "", career_id: "" })
 
 export function ManagedUserEditForm({ user, roles, careers, onSaved, onCancel }: ManagedUserEditFormProps) {
   const [processing, setProcessing] = useState(false)
-  const [errors, setErrors] = useState<Record<string, string[]>>({})
-  const [form, setForm] = useState(() => formFor(user))
+  const savedName = joinName(splitName(user.nombre))
+  const form = useSchemaForm(
+    (values: ManagedUserEditFormValues) => managedUserEditFormSchema({ checkNames: joinName(values) !== savedName, roleCode: values.role_code }),
+    { defaultValues: formFor(user) },
+  )
+  const { errors } = form.formState
   const [formUser, setFormUser] = useState(user.id)
   if (formUser !== user.id) {
     setFormUser(user.id)
-    setForm(formFor(user))
-    setErrors({})
+    form.reset(formFor(user))
   }
   const [removing, setRemoving] = useState<Role | null>(null)
   const shownRemoving = useShownWhileClosing(removing)
@@ -53,11 +59,9 @@ export function ManagedUserEditForm({ user, roles, careers, onSaved, onCancel }:
           role.codigo === "coordinador" ||
           (role.codigo === "bibliotecario" && !user.roles.some((current) => current.code === "bibliotecario")),
       )
-  const update = (key: keyof ReturnType<typeof formFor>, value: string): void => setForm((current) => ({ ...current, [key]: value }))
-  const setPart = (key: NamePartKey, value: string): void => update(key, upperName(value))
-  const fullName = joinName(form)
-  const savedName = joinName(splitName(user.nombre))
-  const unchanged = fullName === savedName && form.correo_electronico === user.correo_electronico && !form.role_code
+  const values = form.watch()
+  const unchanged = joinName(values) === savedName && values.correo_electronico === user.correo_electronico && !values.role_code
+  const nameMessages = [...(errorMessages(errors.nombres) ?? []), ...(errorMessages(errors.apellidos) ?? []), ...(errorMessages((errors as Record<string, never>).nombre) ?? [])]
 
   const removeRole = async (): Promise<void> => {
     if (!removing) return
@@ -74,21 +78,15 @@ export function ManagedUserEditForm({ user, roles, careers, onSaved, onCancel }:
     }
   }
 
-  const submit = async (replaceCoordinator = false): Promise<void> => {
-    const invalid = fullName === savedName ? {} : nameErrors(form)
-    if (Object.keys(invalid).length > 0) {
-      setErrors({ nombre: Object.values(invalid).flat() })
-      return
-    }
+  const send = async (current: ManagedUserEditFormValues, replaceCoordinator = false): Promise<void> => {
     setProcessing(true)
-    setErrors({})
     const payload: { nombre: string; correo_electronico: string; role_code?: string; career_id?: string | null; replace_coordinator?: boolean } = {
-      nombre: fullName,
-      correo_electronico: form.correo_electronico,
+      nombre: joinName(current),
+      correo_electronico: current.correo_electronico,
     }
-    if (form.role_code) {
-      payload.role_code = form.role_code
-      payload.career_id = roleNeedsCareer(form.role_code) ? form.career_id : null
+    if (current.role_code) {
+      payload.role_code = current.role_code
+      payload.career_id = roleNeedsCareer(current.role_code) ? (current.career_id ?? "") : null
     }
     if (replaceCoordinator) payload.replace_coordinator = true
     try {
@@ -96,57 +94,57 @@ export function ManagedUserEditForm({ user, roles, careers, onSaved, onCancel }:
       setReplacement(null)
       onSaved(result.message)
     } catch (reason) {
-      const failed = reason instanceof ApiError ? reason.errors : {}
-      const message = failed.replace_coordinator?.[0] ?? null
+      const message = reason instanceof ApiError ? (reason.errors.replace_coordinator?.[0] ?? null) : null
       setReplacement(message)
-      if (message === null) setErrors(failed)
+      if (message === null && reason instanceof ApiError) applyApiErrors(form.setError, reason, { fallback: reason.message })
     } finally {
       setProcessing(false)
     }
   }
 
-  const onSubmit = (event: FormEvent<HTMLFormElement>): void => {
-    event.preventDefault()
-    void submit()
-  }
-
   return (
     <>
-      <form onSubmit={onSubmit}>
+      <form onSubmit={form.handleSubmit((current) => send(current))}>
         <FieldGroup>
           <div className="grid grid-cols-2 items-start gap-4">
             {NAME_PARTS.map((part) => (
-              <Field key={part.key} data-invalid={Boolean(errors.nombre)}>
-                <FieldLabel htmlFor={`managed-edit-${part.key}-${user.id}`} required>
-                  {part.label}
-                </FieldLabel>
-                <Input
-                  id={`managed-edit-${part.key}-${user.id}`}
-                  value={form[part.key]}
-                  lang="es"
-                  autoCapitalize="characters"
-                  placeholder={part.placeholder}
-                  aria-required="true"
-                  onChange={(event) => setPart(part.key, event.target.value)}
-                />
-              </Field>
+              <Controller
+                key={part.key}
+                name={part.key}
+                control={form.control}
+                render={({ field }) => (
+                  <Field data-invalid={nameMessages.length > 0}>
+                    <FieldLabel htmlFor={`managed-edit-${part.key}-${user.id}`} required>
+                      {part.label}
+                    </FieldLabel>
+                    <Input
+                      {...field}
+                      id={`managed-edit-${part.key}-${user.id}`}
+                      lang="es"
+                      autoCapitalize="characters"
+                      placeholder={part.placeholder}
+                      aria-required="true"
+                      onChange={(event) => field.onChange(upperName(event.target.value))}
+                    />
+                  </Field>
+                )}
+              />
             ))}
           </div>
-          <FieldError errors={errors.nombre} />
-          <Field data-invalid={Boolean(errors.correo_electronico)}>
-            <FieldLabel htmlFor={`managed-edit-email-${user.id}`} required>
-              Correo institucional
-            </FieldLabel>
-            <Input
-              id={`managed-edit-email-${user.id}`}
-              value={form.correo_electronico}
-              type="email"
-              aria-required="true"
-              disabled={!user.pending_activation}
-              onChange={(event) => update("correo_electronico", event.target.value)}
-            />
-            <FieldError errors={errors.correo_electronico} />
-          </Field>
+          <FieldError errors={nameMessages.length > 0 ? nameMessages : undefined} />
+          <Controller
+            name="correo_electronico"
+            control={form.control}
+            render={({ field, fieldState }) => (
+              <Field data-invalid={fieldState.invalid}>
+                <FieldLabel htmlFor={`managed-edit-email-${user.id}`} required>
+                  Correo institucional
+                </FieldLabel>
+                <Input {...field} id={`managed-edit-email-${user.id}`} type="email" aria-required="true" disabled={!user.pending_activation} />
+                <FieldError errors={errorMessages(fieldState.error)} />
+              </Field>
+            )}
+          />
           {user.roles.length > 1 ? (
             <Field>
               <FieldLabel>Roles vigentes</FieldLabel>
@@ -178,7 +176,7 @@ export function ManagedUserEditForm({ user, roles, careers, onSaved, onCancel }:
           {assignableRoles.length > 0 ? (
             <Field data-invalid={Boolean(errors.role_code)}>
               <FieldLabel htmlFor={`managed-edit-role-${user.id}`}>Agregar otro rol (opcional)</FieldLabel>
-              <Select value={form.role_code} onValueChange={(value) => update("role_code", value)}>
+              <Select value={values.role_code} onValueChange={(value) => form.setValue("role_code", value)}>
                 <SelectTrigger id={`managed-edit-role-${user.id}`}>
                   <SelectValue placeholder="No agregar otro rol" />
                 </SelectTrigger>
@@ -192,15 +190,15 @@ export function ManagedUserEditForm({ user, roles, careers, onSaved, onCancel }:
                   </SelectGroup>
                 </SelectContent>
               </Select>
-              <FieldError errors={errors.role_code} />
+              <FieldError errors={errorMessages(errors.role_code)} />
             </Field>
           ) : null}
-          {roleNeedsCareer(form.role_code) ? (
+          {roleNeedsCareer(values.role_code) ? (
             <Field data-invalid={Boolean(errors.career_id)}>
               <FieldLabel htmlFor={`managed-edit-career-${user.id}`} required>
                 Carrera
               </FieldLabel>
-              <Select value={form.career_id} onValueChange={(value) => update("career_id", value)} required>
+              <Select value={values.career_id ?? ""} onValueChange={(value) => form.setValue("career_id", value)} required>
                 <SelectTrigger id={`managed-edit-career-${user.id}`}>
                   <SelectValue placeholder="Seleccione" />
                 </SelectTrigger>
@@ -214,7 +212,7 @@ export function ManagedUserEditForm({ user, roles, careers, onSaved, onCancel }:
                   </SelectGroup>
                 </SelectContent>
               </Select>
-              <FieldError errors={errors.career_id} />
+              <FieldError errors={errorMessages(errors.career_id)} />
             </Field>
           ) : null}
           <FormDialogActions close={onCancel} processing={processing} disabled={unchanged} icon={Check} label="Guardar cambios" />
@@ -249,7 +247,7 @@ export function ManagedUserEditForm({ user, roles, careers, onSaved, onCancel }:
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <CoordinatorReplacementConfirm message={replacement} processing={processing} onConfirm={() => void submit(true)} onCancel={() => setReplacement(null)} />
+      <CoordinatorReplacementConfirm message={replacement} processing={processing} onConfirm={() => void send(form.getValues(), true)} onCancel={() => setReplacement(null)} />
     </>
   )
 }

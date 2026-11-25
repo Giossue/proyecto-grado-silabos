@@ -1,5 +1,7 @@
 import "server-only"
-import { passwordRules, storedPassword } from "./passwordPolicy"
+import { activeRoleSchema, loginSchema, passwordUpdateSchema } from "@/schemas/auth"
+import { filterEmailShape } from "@/schemas/email"
+import { passwordStrength, storedPassword } from "./passwordPolicy"
 import { sql, type SQL } from "drizzle-orm"
 import { db } from "@/db"
 import { bcryptHash, bcryptVerify } from "../auth/bcrypt"
@@ -16,7 +18,7 @@ import { isPhpArray, requestInput, type PhpValue } from "../http/input"
 import { expectsJson } from "../http/request"
 import { aborted, jsonError, apiJson, serverError, unauthenticated, validationError } from "../http/responses"
 import { sharedRateLimiter, throttle, type RateLimiter } from "../http/throttle"
-import { validateInput } from "../http/validation"
+import { validateSchema } from "../http/schemaValidation"
 import { createProfileRepository, sessionPayload, type ProfileRepository } from "./session"
 
 export type Credential = { id: string; passwordHash: string; twoFactorEnabled: boolean }
@@ -109,22 +111,7 @@ async function payloadOf(context: StatefulContext, deps: AuthenticationDeps): Pr
   return controllerJson(sessionPayload(session, profile, deps))
 }
 
-const ATOM = String.raw`[\x21\x23-\x27\x2A\x2B\x2D\x2F-\x39\x3D\x3F\x5E-\x7E]+`
-const QUOTED = String.raw`\x22(?:[\x01-\x08\x0B\x0C\x0E-\x1F\x21\x23-\x5B\x5D-\x7F]|(?:\x5C[\x00-\x7F]))*\x22`
-const COUNTED = String.raw`(?:(?:\x22?\x5C[\x00-\x7E]\x22?)|(?:\x22?[^\x5C\x22]\x22?))`
-const OCTET = String.raw`(?:(?:25[0-5])|(?:2[0-4][0-9])|(?:1[0-9]{2})|(?:[1-9]?[0-9]))`
-const HOSTNAME = String.raw`(?:(?!.*[^.]{64,})(?:(?:(?:xn--)?[a-z0-9]+(?:-+[a-z0-9]+)*\.){1,126}){1,}(?:(?:[a-z][a-z0-9]*)|(?:(?:xn--)[a-z0-9]+))(?:-+[a-z0-9]+)*)`
-const IPV6 = String.raw`(?:IPv6:(?:(?:[a-f0-9]{1,4}(?::[a-f0-9]{1,4}){7})|(?:(?!(?:.*[a-f0-9][:\]]){7,})(?:[a-f0-9]{1,4}(?::[a-f0-9]{1,4}){0,5})?::(?:[a-f0-9]{1,4}(?::[a-f0-9]{1,4}){0,5})?)))`
-const IPV4_TAIL = String.raw`(?:(?:IPv6:(?:(?:[a-f0-9]{1,4}(?::[a-f0-9]{1,4}){5}:)|(?:(?!(?:.*[a-f0-9]:){5,})(?:[a-f0-9]{1,4}(?::[a-f0-9]{1,4}){0,3})?::(?:[a-f0-9]{1,4}(?::[a-f0-9]{1,4}){0,3}:)?)))?${OCTET}(?:\.${OCTET}){3})`
-const PHP_FILTER_EMAIL = new RegExp(
-  `^(?!${COUNTED}{255,})(?!${COUNTED}{65,}@)(?:(?:${ATOM})|(?:${QUOTED}))(?:\\.(?:(?:${ATOM})|(?:${QUOTED})))*@(?:${HOSTNAME}|(?:\\[(?:${IPV6}|${IPV4_TAIL})\\]))$`,
-  "i",
-)
-
-export function filterEmailShape(value: PhpValue | undefined): "valid" | "invalid" {
-  if (typeof value !== "string" || Buffer.byteLength(value) > 320) return "invalid"
-  return PHP_FILTER_EMAIL.test(value) ? "valid" : "invalid"
-}
+export { filterEmailShape }
 
 export function transliterate(value: string): string {
   return value
@@ -147,22 +134,13 @@ export function login(request: Request, deps: AuthenticationDeps = defaultAuthen
     async (context): Promise<Outcome> => {
       const input = await requestInput(request)
       if (isPhpArray(("email" in input ? input.email : input.correo_electronico) ?? null)) return serverError()
-      const shape = filterEmailShape(input.email)
       const ip = clientIp(request) ?? ""
       const throttled = "email" in input ? input.email : input.correo_electronico
       const gate = throttle(deps.throttles, { key: `login:${transliterate(stringInput(throttled).toLowerCase() + "|" + ip)}`, maxAttempts: 5, decaySeconds: 60 }, deps.writer.now)
       const limited = await gate.hit()
       if (limited) return limited
-      const errors = await validateInput(
-        input,
-        {
-          email: ["required", { check: () => shape === "valid", message: "Ingrese un correo electrónico válido." }],
-          password: ["required", "string"],
-        },
-        { email: "correo electrónico", password: "contraseña" },
-        { messages: { "email.required": "Ingrese su correo electrónico.", "password.required": "Ingrese su contraseña." } },
-      )
-      if (Object.keys(errors).length > 0) return gate.decorate(fromController(validationError(errors)))
+      const { errors } = await validateSchema(loginSchema, input)
+      if (errors !== null) return gate.decorate(fromController(validationError(errors)))
       const email = stringInput(input.email).toLowerCase()
       const throttleKey = transliterate(`${email}|${ip}`)
       const tooMany = async (key: string) => {
@@ -225,10 +203,8 @@ export function selectActiveRole(request: Request, deps: AuthenticationDeps = de
     if (blocked !== null) return blocked
     const user = context.user!
     const input = await requestInput(request)
-    const errors = await validateInput(input, { role_assignment_id: ["required", "uuid"] }, {}, {
-      messages: { "role_assignment_id.required": "Seleccione un rol.", "role_assignment_id.uuid": "El rol seleccionado no es válido." },
-    })
-    if (Object.keys(errors).length > 0) return fromController(validationError(errors))
+    const { errors } = await validateSchema(activeRoleSchema, input)
+    if (errors !== null) return fromController(validationError(errors))
     const id = stringInput(input.role_assignment_id)
     const assignment = (await deps.writer.store.effectiveRoleAssignments(user.id)).find((candidate) => candidate.id.toLowerCase() === id.toLowerCase())
     if (!assignment || !isEligible(assignment)) return fromController(aborted(404))
@@ -263,18 +239,9 @@ export function updatePassword(request: Request, deps: AuthenticationDeps = defa
     const matches = current === undefined || current === null ? false : await deps.verifyPassword(stringInput(current), user.passwordHash)
     if (matches === null) return serverError()
     const password = input.password
-    const errors = await validateInput(
-      input,
-      {
-        current_password: ["required", "string", { check: () => matches, message: "La contraseña es incorrecta." }],
-        password: [
-          ...passwordRules(input, { production: deps.production(), pwned: deps.pwned }),
-          { check: (value) => "current_password" in input && input.current_password !== value, message: "La contraseña nueva debe ser distinta de la actual." },
-        ],
-      },
-      { current_password: "contraseña actual", password: "contraseña" },
-    )
-    if (Object.keys(errors).length > 0) return fromController(validationError(errors))
+    const strength = passwordStrength("contraseña", { production: deps.production(), pwned: deps.pwned })
+    const { errors } = await validateSchema(passwordUpdateSchema({ strength, currentMatches: matches }), input)
+    if (errors !== null) return fromController(validationError(errors))
     const hash = await storedPassword(stringInput(password), deps.hashPassword)
     if (hash === null) return serverError()
     await deps.credentials.setPassword(user.id, hash)

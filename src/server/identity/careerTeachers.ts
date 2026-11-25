@@ -3,10 +3,11 @@ import { requireSession } from "../auth/requireSession"
 import type { AppSession } from "../auth/types"
 import { requestInput } from "../http/input"
 import { forbidden, apiJson, validationError } from "../http/responses"
-import { validateInput } from "../http/validation"
-import { collapseNameColumns, emailRule, fullName, nameColumnMessages, nameColumnRules, ROLE_ADMINISTRATOR, ROLE_COORDINATOR, ROLE_TEACHER } from "./accountRules"
+import { careerTeacherSchema } from "@/schemas/people"
+import { validateSchema } from "../http/schemaValidation"
+import { collapseNameColumns, fullName, ROLE_ADMINISTRATOR, ROLE_COORDINATOR, ROLE_TEACHER } from "./accountRules"
 import { createCareerTeacher, RESEND, removeCareerTeacher, resendActivation, type Account } from "./accounts"
-import { ACCOUNT_ATTRIBUTES, bindAccount, defaultIdentityWriteDeps, perform, stringOf, type IdentityWriteDeps } from "./accountWrites"
+import { bindAccount, defaultIdentityWriteDeps, perform, stringOf, type IdentityWriteDeps } from "./accountWrites"
 
 const PHP_TRIM = /^[ \t\n\r\0\x0B]+|[ \t\n\r\0\x0B]+$/g
 
@@ -33,24 +34,8 @@ export async function storeCareerTeacher(request: Request, deps: IdentityWriteDe
   if (!(await mayAddTeachers(session, deps))) return forbidden()
   const input = collapseNameColumns(await requestInput(request))
   if (typeof input.correo_electronico === "string") input.correo_electronico = input.correo_electronico.replace(PHP_TRIM, "").toLowerCase()
-  const errors = await validateInput(
-    input,
-    {
-      nombres: nameColumnRules(),
-      apellidos: nameColumnRules(),
-      nombre: ["prohibited"],
-      correo_electronico: ["required", "string", emailRule(), { max: 255 }],
-      password: ["prohibited"],
-      role_code: ["prohibited"],
-      career_id: ["prohibited"],
-      user_id: ["prohibited"],
-      active: ["prohibited"],
-      activo: ["prohibited"],
-    },
-    ACCOUNT_ATTRIBUTES,
-    { messages: nameColumnMessages() },
-  )
-  if (Object.keys(errors).length > 0) return validationError(errors)
+  const { errors } = await validateSchema(careerTeacherSchema(), input)
+  if (errors !== null) return validationError(errors)
   const careerId = session.activeRole?.careerId as string
   const outcome = await perform(deps, original, session, (ctx) =>
     createCareerTeacher(ctx, { name: fullName(stringOf(input.nombres), stringOf(input.apellidos)), email: stringOf(input.correo_electronico) }, careerId),

@@ -1,7 +1,8 @@
 "use client"
 
 import { KeyRound, Mail, MonitorSmartphone, Save, ShieldCheck } from "lucide-react"
-import { useState, type FormEvent } from "react"
+import { useState } from "react"
+import { Controller } from "react-hook-form"
 import { ApiError } from "@/api/client"
 import { requestPasswordRecovery, updatePassword } from "@/api/session"
 import { FeedbackAlert } from "@/components/domain/FeedbackAlert"
@@ -18,28 +19,24 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, Di
 import { Label } from "@/components/ui/label"
 import { Spinner } from "@/components/ui/spinner"
 import { SettingsLayout } from "@/layouts/settings/Layout"
+import { applyApiErrors, fieldMessage, serverMessage, useSchemaForm } from "@/lib/forms"
 import { toast } from "@/lib/toast"
+import { passwordChangeFormSchema, type PasswordChangeFormValues } from "@/schemas/auth"
 import { sessionState, useSession } from "@/state/session"
 
 export default function SecurityPage() {
   const email = useSession().session?.user.email
   const [loading, setLoading] = useState(true)
   const [openSection, setOpenSection] = useState("contrasena")
-  const [currentPassword, setCurrentPassword] = useState("")
-  const [password, setPassword] = useState("")
-  const [passwordConfirmation, setPasswordConfirmation] = useState("")
-  const [processing, setProcessing] = useState(false)
-  const [errors, setErrors] = useState<Record<string, string>>({})
+  const form = useSchemaForm(passwordChangeFormSchema, { defaultValues: { current_password: "", password: "", password_confirmation: "" } })
+  const { errors, isSubmitting: processing } = form.formState
   const [passwordOpen, setPasswordOpen] = useState(false)
   const [recoveryOpen, setRecoveryOpen] = useState(false)
   const [recoveryError, setRecoveryError] = useState<string | null>(null)
   const [recoveryProcessing, setRecoveryProcessing] = useState(false)
 
   const openPasswordDialog = (): void => {
-    setCurrentPassword("")
-    setPassword("")
-    setPasswordConfirmation("")
-    setErrors({})
+    form.reset()
     setPasswordOpen(true)
   }
 
@@ -70,25 +67,27 @@ export default function SecurityPage() {
     }
   }
 
-  const submit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
-    event.preventDefault()
-    setProcessing(true)
-    setErrors({})
+  const submit = async ({ current_password, password, password_confirmation }: PasswordChangeFormValues): Promise<void> => {
     try {
-      sessionState.replace(await updatePassword(password, passwordConfirmation, currentPassword))
+      sessionState.replace(await updatePassword(password, password_confirmation, current_password))
       setPasswordOpen(false)
       toast.success("Contraseña actualizada")
     } catch (reason) {
-      if (reason instanceof ApiError) {
-        const failed: Record<string, string> = Object.fromEntries(Object.entries(reason.errors).map(([key, values]) => [key, values[0] ?? reason.message]))
-        setErrors(Object.keys(failed).length === 0 ? { request: reason.message } : failed)
-      } else {
-        setErrors({ request: "No se pudo actualizar la contraseña" })
-      }
-    } finally {
-      setProcessing(false)
+      applyApiErrors(form.setError, reason, { fallback: "No se pudo actualizar la contraseña" })
     }
   }
+
+  const requestError = serverMessage(errors)
+
+  const passwordField = (name: keyof PasswordChangeFormValues, id: string, autoComplete: string, placeholder: string) => (
+    <Controller
+      name={name}
+      control={form.control}
+      render={({ field: { onChange, ...field } }) => (
+        <PasswordInput {...field} id={id} onValueChange={onChange} aria-required="true" className="mt-1 block w-full" autoComplete={autoComplete} placeholder={placeholder} />
+      )}
+    />
+  )
 
   return (
     <SettingsLayout loading={loading}>
@@ -139,56 +138,32 @@ export default function SecurityPage() {
       </div>
       <Dialog open={passwordOpen} onOpenChange={setPasswordOpen}>
         <DialogContent>
-          <form className="flex flex-col gap-6" onSubmit={(event) => void submit(event)}>
+          <form className="flex flex-col gap-6" onSubmit={form.handleSubmit(submit)}>
             <DialogHeader>
               <DialogTitle>Actualizar contraseña</DialogTitle>
               <DialogDescription>Use una contraseña larga y única para proteger su cuenta</DialogDescription>
             </DialogHeader>
-            {errors.request ? <FeedbackAlert message={errors.request} /> : null}
+            {requestError ? <FeedbackAlert message={requestError} /> : null}
             <div className="grid gap-2">
               <Label htmlFor="current_password" required>
                 Contraseña actual
               </Label>
-              <PasswordInput
-                id="current_password"
-                value={currentPassword}
-                onValueChange={setCurrentPassword}
-                aria-required="true"
-                className="mt-1 block w-full"
-                autoComplete="current-password"
-                placeholder="Contraseña actual"
-              />
-              <InputError message={errors.current_password} />
+              {passwordField("current_password", "current_password", "current-password", "Contraseña actual")}
+              <InputError message={fieldMessage(errors, "current_password")} />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="password" required>
                 Contraseña nueva
               </Label>
-              <PasswordInput
-                id="password"
-                value={password}
-                onValueChange={setPassword}
-                aria-required="true"
-                className="mt-1 block w-full"
-                autoComplete="new-password"
-                placeholder="Contraseña nueva"
-              />
-              <InputError message={errors.password} />
+              {passwordField("password", "password", "new-password", "Contraseña nueva")}
+              <InputError message={fieldMessage(errors, "password")} />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="password_confirmation" required>
                 Confirmar contraseña
               </Label>
-              <PasswordInput
-                id="password_confirmation"
-                value={passwordConfirmation}
-                onValueChange={setPasswordConfirmation}
-                aria-required="true"
-                className="mt-1 block w-full"
-                autoComplete="new-password"
-                placeholder="Confirmar contraseña"
-              />
-              <InputError message={errors.password_confirmation} />
+              {passwordField("password_confirmation", "password_confirmation", "new-password", "Confirmar contraseña")}
+              <InputError message={fieldMessage(errors, "password_confirmation")} />
             </div>
             <DialogFooter>
               <DialogClose asChild>

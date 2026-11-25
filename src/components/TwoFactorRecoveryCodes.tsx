@@ -1,17 +1,23 @@
 "use client"
 
 import { Eye, EyeOff, LockKeyhole } from "lucide-react"
-import { useEffect, useRef, useState, type FormEvent } from "react"
+import { useEffect, useRef, useState } from "react"
+import { Controller } from "react-hook-form"
 import { PasswordInput } from "@/components/PasswordInput"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
+import { useSchemaForm } from "@/lib/forms"
+import { passwordConfirmationSchema, type PasswordConfirmationValues } from "@/schemas/twoFactor"
+
+const schema = passwordConfirmationSchema()
 
 type TwoFactorRecoveryCodesProps = { codes: string[]; processing: boolean; onRegenerate: (password: string) => void }
 
 export function TwoFactorRecoveryCodes({ codes, processing, onRegenerate }: TwoFactorRecoveryCodesProps) {
   const [visible, setVisible] = useState(false)
-  const [password, setPassword] = useState("")
+  const form = useSchemaForm(schema, { defaultValues: { current_password: "" } })
+  const password = form.watch("current_password")
   const section = useRef<HTMLDivElement>(null)
   const ToggleIcon = visible ? EyeOff : Eye
 
@@ -19,11 +25,9 @@ export function TwoFactorRecoveryCodes({ codes, processing, onRegenerate }: TwoF
     if (visible) section.current?.scrollIntoView({ behavior: "smooth" })
   }, [visible])
 
-  const regenerate = (event: FormEvent<HTMLFormElement>): void => {
-    event.preventDefault()
-    if (!password) return
-    onRegenerate(password)
-    setPassword("")
+  const regenerate = ({ current_password }: PasswordConfirmationValues): void => {
+    onRegenerate(current_password)
+    form.reset()
   }
 
   return (
@@ -45,11 +49,17 @@ export function TwoFactorRecoveryCodes({ codes, processing, onRegenerate }: TwoF
             <div className="grid gap-1 rounded-md bg-muted p-4 font-mono text-sm">
               {codes.length === 0 ? <div className="text-muted-foreground">Genere códigos nuevos para mostrarlos aquí</div> : codes.map((code) => <div key={code}>{code}</div>)}
             </div>
-            <form className="grid gap-3" onSubmit={regenerate}>
+            <form className="grid gap-3" onSubmit={form.handleSubmit(regenerate)}>
               <Label htmlFor="recovery-current-password" required>
                 Contraseña actual
               </Label>
-              <PasswordInput id="recovery-current-password" value={password} onValueChange={setPassword} autoComplete="current-password" aria-required="true" />
+              <Controller
+                name="current_password"
+                control={form.control}
+                render={({ field: { onChange, ...field } }) => (
+                  <PasswordInput {...field} id="recovery-current-password" onValueChange={onChange} autoComplete="current-password" aria-required="true" />
+                )}
+              />
               <Button className="w-fit" type="submit" variant="secondary" disabled={processing || !password}>
                 Regenerar códigos
               </Button>

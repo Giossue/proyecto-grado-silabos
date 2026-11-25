@@ -6,6 +6,8 @@ import { ApiError } from "@/api/client"
 import { ManagedUserEditForm } from "@/components/domain/identity/ManagedUserEditForm"
 import { flush, renderWithProviders } from "@/test/render"
 
+const CAREER_ID = "0195a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b"
+
 vi.mock("@/api/admin-users", () => ({ updateManagedUser: vi.fn(), removeManagedUserRole: vi.fn() }))
 const update = vi.mocked(updateManagedUser)
 const remove = vi.mocked(removeManagedUserRole)
@@ -43,7 +45,7 @@ describe("ManagedUserEditForm", () => {
     update.mockImplementationOnce(async () => ({ message: "Cuenta actualizada" }))
     const onSaved = vi.fn()
     const actor = userEvent.setup()
-    renderWithProviders(<ManagedUserEditForm user={user} roles={roles} careers={[{ id: "c1", nombre: "Software" }]} onSaved={onSaved} onCancel={vi.fn()} />)
+    renderWithProviders(<ManagedUserEditForm user={user} roles={roles} careers={[{ id: CAREER_ID, nombre: "Software" }]} onSaved={onSaved} onCancel={vi.fn()} />)
     await actor.click(screen.getByRole("combobox", { name: "Agregar otro rol (opcional)" }))
     await actor.click(await screen.findByRole("option", { name: "Coordinador" }))
     await actor.click(screen.getByRole("combobox", { name: /Carrera/ }))
@@ -56,7 +58,7 @@ describe("ManagedUserEditForm", () => {
     fireEvent.click(button("Reemplazar"))
     await flush()
 
-    expect(update).toHaveBeenLastCalledWith("u1", expect.objectContaining({ role_code: "coordinador", career_id: "c1", replace_coordinator: true }))
+    expect(update).toHaveBeenLastCalledWith("u1", expect.objectContaining({ role_code: "coordinador", career_id: CAREER_ID, replace_coordinator: true }))
     expect(onSaved.mock.calls).toEqual([["Cuenta actualizada"]])
   })
 

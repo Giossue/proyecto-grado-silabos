@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { joinName, nameErrors, splitName } from '@/lib/personName';
+import { joinName, splitName } from '@/lib/personName';
 
 describe('personName', () => {
   it('reparte un nombre guardado en nombres y apellidos y lo vuelve a unir igual', () => {
@@ -16,12 +16,5 @@ describe('personName', () => {
   it('con tres palabras toma un nombre y dos apellidos; con dos, uno y uno', () => {
     expect(splitName('ANA PÉREZ LÓPEZ')).toEqual({ nombres: 'ANA', apellidos: 'PÉREZ LÓPEZ' });
     expect(splitName('ADMINISTRADOR DEMO')).toEqual({ nombres: 'ADMINISTRADOR', apellidos: 'DEMO' });
-  });
-
-  it('valida como el servidor: obligatorios, hasta 90 caracteres y solo letras, espacios, apóstrofo y guion', () => {
-    expect(nameErrors({ nombres: 'MARÍA JOSÉ', apellidos: "DE LA CRUZ-O'NEIL" })).toEqual({});
-    expect(nameErrors({ nombres: '  ', apellidos: '' })).toEqual({ nombres: ['Los nombres son obligatorios'], apellidos: ['Los apellidos son obligatorios'] });
-    expect(nameErrors({ nombres: 'ANA 2', apellidos: 'PÉREZ' })).toEqual({ nombres: ['Los nombres solo admiten letras, espacios, apóstrofo y guion'] });
-    expect(nameErrors({ nombres: 'ANA', apellidos: 'A'.repeat(91) })).toEqual({ apellidos: ['Los apellidos admiten hasta 90 caracteres'] });
   });
 });

@@ -1,0 +1,46 @@
+import { z } from "zod"
+import { emailShape } from "./email"
+import { messages } from "./messages"
+import { addIssues, codePointLength, requiredBoolean, requiredText, requiredValue } from "./rules"
+
+export type UniqueCheck = (value: string) => Promise<boolean>
+
+export function emailField(label: string, options: { max: number; unique?: UniqueCheck; uniqueMessage?: string; required?: string }) {
+  return requiredValue(options.required ?? messages.required(label)).superRefine(async (raw, context) => {
+    const value = typeof raw === "string" ? raw.trim() : raw
+    const failed: string[] = []
+    if (typeof value !== "string") failed.push(messages.string(label))
+    if (emailShape(value) !== "valid") failed.push(messages.email(label))
+    if (codePointLength(String(value)) > options.max) failed.push(messages.max(label, options.max))
+    if (failed.length === 0 && options.unique && !(await options.unique(value))) failed.push(options.uniqueMessage ?? messages.unique(label))
+    addIssues(context, failed)
+  })
+}
+
+export function profileSchema(unique?: UniqueCheck) {
+  return z.object({
+    nombre: requiredText(messages.required("nombre"), messages.string("nombre")).refine((value) => codePointLength(value) <= 255, { message: messages.max("nombre", 255) }),
+    correo_electronico: emailField("correo electrónico", { max: 255, unique }),
+  })
+}
+
+export type ProfileValues = z.input<ReturnType<typeof profileSchema>>
+
+export const TEXT_SIZES = ["100", "115", "130", "150"] as const
+
+const preference = (label: string) => requiredBoolean(messages.required(label), messages.boolean(label))
+
+export const accessibilitySchema = z.object({
+  high_contrast: preference("alto contraste"),
+  text_size: requiredText(messages.required("tamaño del texto"), messages.string("tamaño del texto")).refine((value) => (TEXT_SIZES as readonly string[]).includes(value), {
+    message: messages.in("tamaño del texto"),
+  }),
+  no_motion: preference("sin animaciones"),
+  wide_spacing: preference("texto espaciado"),
+})
+
+export const teacherFormationSchema = z.object({
+  formacion_experiencia: requiredText(messages.required("formación y experiencia"), messages.string("formación y experiencia")),
+})
+
+export type TeacherFormationValues = z.input<typeof teacherFormationSchema>

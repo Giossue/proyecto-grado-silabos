@@ -10,24 +10,19 @@ import { institutionToday } from "../dashboard/dashboardQueries"
 import { isJsonRequest, requestInput, type PhpArray, type PhpValue } from "../http/input"
 import { aborted, forbidden, apiJson, validationError } from "../http/responses"
 import { sharedRateLimiter, throttle, type RateLimiter, type Throttle } from "../http/throttle"
-import { validateInput, type Rule } from "../http/validation"
+import { managedUserSchema, newManagedUserSchema, type ExistsCheck } from "@/schemas/people"
+import type { UniqueCheck } from "@/schemas/account"
+import { validateSchema } from "../http/schemaValidation"
 import { frontendUrl } from "../mail/config"
 import { queueMail } from "../mail/sendMailJob"
 import { withAfterCommit } from "../queue/dispatch"
 import {
   collapseNameColumns,
-  emailRule,
   fullName,
-  isValidFullName,
-  nameColumnMessages,
-  nameColumnRules,
-  normalizeName,
   phpBoolean,
   phpCastBool,
   randomString,
-  requiresCareer,
   ROLE_ADMINISTRATOR,
-  roleCodeRule,
 } from "./accountRules"
 import {
   AccountValidation,
@@ -74,20 +69,6 @@ export function defaultIdentityWriteDeps(): IdentityWriteDeps {
     verifyPassword: bcryptVerify,
     session: { profiles: createProfileRepository(), today: institutionToday, timezone: () => process.env.DISPLAY_TIMEZONE ?? "America/Guayaquil" },
   }
-}
-
-export const ACCOUNT_ATTRIBUTES: Record<string, string> = {
-  nombre: "nombre",
-  correo_electronico: "correo electrónico",
-  password: "contraseña",
-  role_code: "rol",
-  career_id: "carrera",
-  replace_coordinator: "reemplazo de coordinación",
-  faculty_id: "facultad",
-  active: "activo",
-  activo: "activo",
-  user_id: "usuario",
-  current_password: "contraseña actual",
 }
 
 export function isAdministrator(session: AppSession): boolean {
@@ -173,12 +154,12 @@ export async function bindAccount(
   return { session, target: target as unknown as Account, original, finish }
 }
 
-function careerRules(deps: IdentityWriteDeps, roleCode: PhpValue | undefined): Rule[] {
-  return ["nullable", ...(requiresCareer(roleCode) ? (["required"] as Rule[]) : []), "uuid", { exists: (value) => deps.accounts.activeCareer(String(value)) }]
+export function careerExists(deps: IdentityWriteDeps): ExistsCheck {
+  return (value) => deps.accounts.activeCareer(value)
 }
 
-export function uniqueEmail(deps: IdentityWriteDeps, ignore: string | null): Rule {
-  return { unique: async (value) => !(await deps.accounts.emailTaken(stringOf(value), ignore)) }
+export function uniqueEmail(deps: IdentityWriteDeps, ignore: string | null): UniqueCheck {
+  return async (value) => !(await deps.accounts.emailTaken(stringOf(value), ignore))
 }
 
 export async function storeManagedUser(request: Request, deps: IdentityWriteDeps = defaultIdentityWriteDeps()): Promise<Response> {
@@ -187,29 +168,8 @@ export async function storeManagedUser(request: Request, deps: IdentityWriteDeps
   if (session instanceof Response) return session
   if (!isAdministrator(session)) return forbidden()
   const input = collapseNameColumns(await requestInput(request))
-  const errors = await validateInput(
-    input,
-    {
-      nombres: nameColumnRules(),
-      apellidos: nameColumnRules(),
-      nombre: ["prohibited"],
-      correo_electronico: ["required", "string", emailRule(), { max: 255 }, uniqueEmail(deps, null)],
-      password: ["prohibited"],
-      role_code: ["required", roleCodeRule()],
-      career_id: careerRules(deps, input.role_code),
-      replace_coordinator: ["sometimes", "boolean"],
-      faculty_id: ["prohibited"],
-    },
-    ACCOUNT_ATTRIBUTES,
-    {
-      messages: {
-        "correo_electronico.unique": "Ya existe una cuenta con este correo.",
-        "career_id.required": "Seleccione la carrera que limita este rol.",
-        ...nameColumnMessages(),
-      },
-    },
-  )
-  if (Object.keys(errors).length > 0) return validationError(errors)
+  const { errors } = await validateSchema(newManagedUserSchema({ roleCode: input.role_code, unique: uniqueEmail(deps, null), careerExists: careerExists(deps) }), input)
+  if (errors !== null) return validationError(errors)
   const outcome = await perform(deps, original, session, (ctx) =>
     createManagedUser(ctx, {
       name: fullName(stringOf(input.nombres), stringOf(input.apellidos)),
@@ -232,34 +192,11 @@ export async function updateManagedUser(request: Request, id: string, deps: Iden
   const input = await requestInput(request)
   const governance = "active" in input || "role_code" in input
   if (!isAdministrator(session) || (governance && session.user.id === target.id)) return forbidden()
-  const errors = await validateInput(
+  const { errors } = await validateSchema(
+    managedUserSchema({ roleCode: input.role_code, unique: uniqueEmail(deps, target.id), careerExists: careerExists(deps), currentName: target.name }),
     input,
-    {
-      nombre: [
-        "required",
-        "string",
-        { max: 180 },
-        {
-          check: (value) => typeof value !== "string" || isValidFullName(value) || normalizeName(value) === normalizeName(target.name),
-          message: "Escriba los nombres y los apellidos, solo con letras.",
-        },
-      ],
-      correo_electronico: ["required", "string", emailRule(), { max: 255 }, uniqueEmail(deps, target.id)],
-      active: ["sometimes", "required", "boolean"],
-      role_code: ["sometimes", "required", roleCodeRule()],
-      ...(blank(input.role_code) ? {} : { career_id: careerRules(deps, input.role_code) }),
-      replace_coordinator: ["sometimes", "boolean"],
-      faculty_id: ["prohibited"],
-    },
-    ACCOUNT_ATTRIBUTES,
-    {
-      messages: {
-        "correo_electronico.unique": "Ya existe otra cuenta con este correo.",
-        "career_id.required": "El campo carrera es obligatorio a menos que rol esté en administrador, bibliotecario.",
-      },
-    },
   )
-  if (Object.keys(errors).length > 0) return validationError(errors)
+  if (errors !== null) return validationError(errors)
   const outcome = await perform(deps, original, session, async (ctx) => {
     await updateManagedUserProfile(ctx, target, { name: stringOf(input.nombre), email: stringOf(input.correo_electronico) })
     if ("role_code" in input) {

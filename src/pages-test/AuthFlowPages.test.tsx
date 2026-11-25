@@ -111,6 +111,34 @@ describe("authentication pages", () => {
     expect(navigation.replace).not.toHaveBeenCalled()
   })
 
+  it("shows the server's field errors under the matching input", async () => {
+    const { ApiError } = await vi.importActual<typeof import("@/api/client")>("@/api/client")
+    vi.mocked(login).mockRejectedValue(new ApiError("Demasiados intentos.", 422, { correo_electronico: ["Ingrese un correo electrónico válido."] }))
+    const user = userEvent.setup()
+    const { container } = render(<LoginPage />)
+
+    await user.type(container.querySelector<HTMLInputElement>('input[type="email"]')!, "docente@example.test")
+    await user.type(container.querySelector<HTMLInputElement>('input[type="password"]')!, "secret")
+    await user.click(screen.getByRole("button", { name: "Ingresar" }))
+
+    const email = container.querySelector<HTMLInputElement>('input[type="email"]')!
+    await waitFor(() => expect(email).toHaveAttribute("aria-invalid", "true"))
+    expect(screen.getByText("Ingrese un correo electrónico válido")).toBeInTheDocument()
+    expect(screen.queryByText("Demasiados intentos")).not.toBeInTheDocument()
+  })
+
+  it("checks the email shape with the server's schema before sending", async () => {
+    const user = userEvent.setup()
+    const { container } = render(<LoginPage />)
+
+    await user.type(container.querySelector<HTMLInputElement>('input[type="email"]')!, "docente@localhost")
+    await user.type(container.querySelector<HTMLInputElement>('input[type="password"]')!, "secret")
+    await user.click(screen.getByRole("button", { name: "Ingresar" }))
+
+    expect(await screen.findByText("Ingrese un correo electrónico válido")).toBeInTheDocument()
+    expect(login).not.toHaveBeenCalled()
+  })
+
   it("reloads the authenticated session after completing the second factor", async () => {
     vi.mocked(completeTwoFactorLogin).mockResolvedValue({ message: "ok" })
     vi.mocked(getSession).mockResolvedValue(authenticatedSession)

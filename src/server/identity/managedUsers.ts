@@ -6,7 +6,8 @@ import { phpQuery, type PhpValue } from "../http/input"
 import { lengthAwarePaginator, resolveCurrentPage } from "../http/pagination"
 import { queryParams, requestUrl } from "../http/request"
 import { forbidden, apiJson, validationError } from "../http/responses"
-import { validateInput } from "../http/validation"
+import { managedUserFiltersSchema } from "@/schemas/people"
+import { validateSchema } from "../http/schemaValidation"
 import { createManagedUserRepository } from "./managedUserQueries"
 
 export type ManagedUserFilters = { search: string | null; status: string | null; role: string | null; career: string | null }
@@ -54,18 +55,8 @@ export async function managedUsers(request: Request, deps: ManagedUserDeps = def
   if (session instanceof Response) return session
   if (!session.user.active || session.activeRole?.role !== "administrador") return forbidden()
   const input = phpQuery(new URL(request.url))
-  const errors = await validateInput(
-    input,
-    {
-      q: ["nullable", "string", { max: 120 }],
-      status: ["nullable", { in: ["all", ...STATUSES] }],
-      role: ["nullable", { in: ["all", ...ROLE_CODES] }],
-      career: ["nullable", "string", { max: 36 }],
-      page: ["nullable", "integer", { min: 1 }],
-    },
-    { q: "búsqueda", status: "estado", role: "rol", career: "carrera", page: "página" },
-  )
-  if (Object.keys(errors).length > 0) return validationError(errors)
+  const { errors } = await validateSchema(managedUserFiltersSchema, input)
+  if (errors !== null) return validationError(errors)
   const q = stringOrNull(input.q)
   const search = q === null ? null : q.replace(PHP_TRIM, "")
   const status = STATUSES.includes(stringOrNull(input.status) ?? "") ? (input.status as string) : null

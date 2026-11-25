@@ -14,7 +14,8 @@ import { decrypt, encrypt } from "../http/encrypter"
 import { isPhpArray, requestInput, type PhpArray, type PhpValue } from "../http/input"
 import { aborted, jsonError, apiJson, serverError, unauthenticated, validationError } from "../http/responses"
 import { sharedRateLimiter, throttle, type RateLimiter } from "../http/throttle"
-import { mergeErrors, validateInput, type Rule } from "../http/validation"
+import { validateSchema } from "../http/schemaValidation"
+import { passwordConfirmationSchema, twoFactorChallengeSchema, twoFactorConfirmationSchema, twoFactorDisableSchema } from "@/schemas/twoFactor"
 import { twoFactorQrCodeSvg } from "./twoFactorQr"
 
 export type TwoFactorAccount = { id: string; email: string; secret: string | null; recoveryCodes: string | null; confirmed: boolean }
@@ -103,22 +104,14 @@ export function defaultTwoFactorDeps(): TwoFactorDeps {
 const RECOVERY_CODES = 8
 const CHALLENGE_SECONDS = 600
 const INVALID_CODE = "El código de autenticación no es válido."
-const MISSING_CODE = "Ingrese un código de autenticación o de recuperación."
 const INVALID_SESSION = "La sesión de verificación ya no es válida. Ingrese nuevamente."
 const TOO_MANY = "Demasiados intentos. Intente nuevamente en unos minutos."
-const WRONG_PASSWORD = "La contraseña actual no es correcta."
 const NOT_ACTIVE = "Active primero la verificación en dos pasos."
-const ATTRIBUTES = { current_password: "contraseña actual", code: "código", recovery_code: "código de recuperación" }
 
 const sealed = (value: string, deps: TwoFactorDeps) => encrypt(value, deps.writer.config.key, true)
 const opened = (value: string, deps: TwoFactorDeps) => decrypt(value, deps.writer.config.key, true)
 const stringOf = (value: PhpValue | undefined): string => (typeof value === "string" ? value : value === undefined || value === null ? "" : String(value))
 const phpEmpty = (value: string | null): boolean => value === null || value === "" || value === "0"
-
-function filled(value: PhpValue | undefined): boolean {
-  if (typeof value === "boolean" || isPhpArray(value ?? null)) return true
-  return stringOf(value).trim() !== ""
-}
 
 function hasEnabled(account: TwoFactorAccount): boolean {
   return account.secret !== null && account.confirmed
@@ -187,9 +180,8 @@ export function twoFactorChallenge(request: Request, deps: TwoFactorDeps = defau
       const limited = await gate.hit()
       if (limited) return limited
       const input = await requestInput(request)
-      const errors = await validateInput(input, { code: ["nullable", "string", { max: 32 }], recovery_code: ["nullable", "string", { max: 128 }] }, ATTRIBUTES)
-      if (!filled(input.code) && !filled(input.recovery_code)) mergeErrors(errors, "code", [MISSING_CODE])
-      if (Object.keys(errors).length > 0) return gate.decorate(fromController(validationError(errors)))
+      const { errors } = await validateSchema(twoFactorChallengeSchema, input)
+      if (errors !== null) return gate.decorate(fromController(validationError(errors)))
       if (typeof loginId === "string" && !UUID.test(loginId)) return gate.decorate(fromController(serverError()))
       const account = typeof loginId === "string" ? await deps.store.account(loginId, true) : null
       if (account === null || !hasEnabled(account)) return gate.decorate(controllerJson({ message: INVALID_SESSION }, 422))
@@ -227,21 +219,19 @@ async function authenticated(request: Request, deps: TwoFactorDeps): Promise<Aut
   return { input, account, passwordHash: session.user.passwordHash }
 }
 
-async function passwordRule(input: PhpArray, passwordHash: string, deps: TwoFactorDeps): Promise<Rule[] | null> {
+async function passwordMatches(input: PhpArray, passwordHash: string, deps: TwoFactorDeps): Promise<boolean | null> {
   const given = input.current_password
   if (isPhpArray(given ?? null)) return null
-  const matches = given === undefined || given === null ? false : await deps.verifyPassword(phpString(given), passwordHash)
-  if (matches === null) return null
-  return ["required", "string", { check: () => matches, message: WRONG_PASSWORD }]
+  return given === undefined || given === null ? false : await deps.verifyPassword(phpString(given), passwordHash)
 }
 
 async function confirmedPassword(request: Request, deps: TwoFactorDeps): Promise<Authenticated | Response> {
   const context = await authenticated(request, deps)
   if (context instanceof Response) return context
-  const rule = await passwordRule(context.input, context.passwordHash, deps)
-  if (rule === null) return fromController(serverError())
-  const errors = await validateInput(context.input, { current_password: rule }, ATTRIBUTES)
-  if (Object.keys(errors).length > 0) return fromController(validationError(errors))
+  const matches = await passwordMatches(context.input, context.passwordHash, deps)
+  if (matches === null) return fromController(serverError())
+  const { errors } = await validateSchema(passwordConfirmationSchema(matches), context.input)
+  if (errors !== null) return fromController(validationError(errors))
   return context
 }
 
@@ -259,8 +249,8 @@ export async function confirmTwoFactor(request: Request, deps: TwoFactorDeps = d
   const context = await authenticated(request, deps)
   if (context instanceof Response) return context
   const { input, account } = context
-  const errors = await validateInput(input, { code: ["required", "string", { max: 32 }] }, ATTRIBUTES)
-  if (Object.keys(errors).length > 0) return fromController(validationError(errors))
+  const { errors } = await validateSchema(twoFactorConfirmationSchema, input)
+  if (errors !== null) return fromController(validationError(errors))
   const code = stringOf(input.code)
   const valid = !phpEmpty(account.secret) && !phpEmpty(code) && (await verifyTotp(opened(account.secret as string, deps), code, deps.replay, deps.writer.now()))
   if (!valid) return fromController(validationError({ code: [INVALID_CODE] }))
@@ -282,15 +272,10 @@ export async function disableTwoFactor(request: Request, deps: TwoFactorDeps = d
   const context = await authenticated(request, deps)
   if (context instanceof Response) return context
   const { input, account } = context
-  const rule = await passwordRule(input, context.passwordHash, deps)
-  if (rule === null) return fromController(serverError())
-  const errors = await validateInput(
-    input,
-    { current_password: rule, code: ["nullable", "string", { max: 32 }], recovery_code: ["nullable", "string", { max: 128 }] },
-    ATTRIBUTES,
-  )
-  if (hasEnabled(account) && !filled(input.code) && !filled(input.recovery_code)) mergeErrors(errors, "code", [MISSING_CODE])
-  if (Object.keys(errors).length > 0) return fromController(validationError(errors))
+  const matches = await passwordMatches(input, context.passwordHash, deps)
+  if (matches === null) return fromController(serverError())
+  const { errors } = await validateSchema(twoFactorDisableSchema({ matches, requireCode: hasEnabled(account) }), input)
+  if (errors !== null) return fromController(validationError(errors))
   if (hasEnabled(account)) {
     const key = `two-factor-disable:${account.id}`
     if (await deps.attempts.tooManyAttempts(key, 5)) return controllerJson({ message: TOO_MANY }, 429)

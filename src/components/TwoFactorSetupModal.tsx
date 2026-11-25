@@ -1,7 +1,8 @@
 "use client"
 
 import { Check, ScanLine } from "lucide-react"
-import { useState, type FormEvent } from "react"
+import { useState } from "react"
+import { Controller } from "react-hook-form"
 import { InputError } from "@/components/InputError"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -9,6 +10,8 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
+import { useSchemaForm } from "@/lib/forms"
+import { twoFactorConfirmationSchema, type TwoFactorConfirmationValues } from "@/schemas/twoFactor"
 
 type TwoFactorSetupModalProps = {
   open: boolean
@@ -21,19 +24,19 @@ type TwoFactorSetupModalProps = {
 
 export function TwoFactorSetupModal({ open, onOpenChange, qrCodeSvg, processing, error, onConfirm }: TwoFactorSetupModalProps) {
   const [verification, setVerification] = useState(false)
-  const [code, setCode] = useState("")
+  const form = useSchemaForm(twoFactorConfirmationSchema, { defaultValues: { code: "" } })
+  const code = form.watch("code")
   const [wasOpen, setWasOpen] = useState(open)
   if (open !== wasOpen) {
     setWasOpen(open)
     if (open) {
       setVerification(false)
-      setCode("")
+      form.reset()
     }
   }
 
-  const submit = (event: FormEvent<HTMLFormElement>): void => {
-    event.preventDefault()
-    if (code.length === 6 && !processing) onConfirm(code)
+  const submit = (values: TwoFactorConfirmationValues): void => {
+    if (values.code.length === 6 && !processing) onConfirm(values.code)
   }
   const qrImage = `data:image/svg+xml;utf8,${encodeURIComponent(qrCodeSvg ?? "")}`
 
@@ -67,18 +70,24 @@ export function TwoFactorSetupModal({ open, onOpenChange, qrCodeSvg, processing,
               )}
             </div>
           ) : (
-            <form id="two-factor-verify-form" className="flex w-full flex-col gap-4" onSubmit={submit}>
+            <form id="two-factor-verify-form" className="flex w-full flex-col gap-4" onSubmit={form.handleSubmit(submit)}>
               <div className="flex w-full flex-col items-center justify-center gap-3 py-2">
                 <Label htmlFor="otp" required>
                   Código de autenticación
                 </Label>
-                <InputOTP id="otp" value={code} onChange={setCode} maxLength={6} disabled={processing} aria-required="true">
-                  <InputOTPGroup>
-                    {[0, 1, 2, 3, 4, 5].map((index) => (
-                      <InputOTPSlot key={index} index={index} />
-                    ))}
-                  </InputOTPGroup>
-                </InputOTP>
+                <Controller
+                  name="code"
+                  control={form.control}
+                  render={({ field }) => (
+                    <InputOTP id="otp" ref={field.ref} value={field.value} onChange={field.onChange} onBlur={field.onBlur} maxLength={6} disabled={processing} aria-required="true">
+                      <InputOTPGroup>
+                        {[0, 1, 2, 3, 4, 5].map((index) => (
+                          <InputOTPSlot key={index} index={index} />
+                        ))}
+                      </InputOTPGroup>
+                    </InputOTP>
+                  )}
+                />
               </div>
             </form>
           )}

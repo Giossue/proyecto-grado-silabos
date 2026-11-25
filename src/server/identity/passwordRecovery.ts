@@ -1,5 +1,6 @@
 import "server-only"
-import { passwordRules as policyRules, storedPassword } from "./passwordPolicy"
+import { accountActivationSchema, passwordResetSchema, recoveryLinkSchema } from "@/schemas/auth"
+import { passwordStrength, storedPassword } from "./passwordPolicy"
 import { createHash, createHmac } from "node:crypto"
 import { setTimeout as sleep } from "node:timers/promises"
 import { sql, type SQL } from "drizzle-orm"
@@ -11,11 +12,11 @@ import { controllerJson, fromController, statefulRequest, type Outcome } from ".
 import { isPhpArray, requestInput, type PhpArray } from "../http/input"
 import { serverError, validationError } from "../http/responses"
 import { throttle, type RateLimiter, type Throttle } from "../http/throttle"
-import { validateInput, type Rule } from "../http/validation"
+import { validateSchema } from "../http/schemaValidation"
 import type { QueuedMail } from "../mail/mailables"
 import { sharedMailer } from "../mail/mailer"
 import { stringOf } from "./accountWrites"
-import { filterEmailShape, transliterate } from "./authentication"
+import { transliterate } from "./authentication"
 import { lazyRateLimiter } from "./twoFactor"
 
 export type Invitation = { id: string; userId: string; hash: string; expiresAt: number; usedAt: number | null; invalidatedAt: number | null }
@@ -157,16 +158,14 @@ const LINK_SENT = "Si el correo pertenece a una cuenta activa, recibirá un enla
 const INVALID_LINK = "El enlace para restablecer la contraseña no es válido o ya venció."
 const EXPIRED_INVITATION = "El enlace de activación no es válido o ya venció."
 const USED_INVITATION = "El enlace de activación no es válido o ya fue utilizado."
-const ATTRIBUTES = { email: "correo electrónico", token: "enlace de activación", password: "contraseña" }
-
 class Refused extends Error {
   constructor(readonly errors: Record<string, string[]>) {
     super("refused")
   }
 }
 
-function passwordRules(input: PhpArray, deps: RecoveryDeps): Rule[] {
-  return policyRules(input, { production: deps.production(), pwned: deps.pwned })
+function strengthOf(deps: RecoveryDeps) {
+  return passwordStrength("contraseña", { production: deps.production(), pwned: deps.pwned })
 }
 
 async function guarded(request: Request, deps: RecoveryDeps): Promise<{ input: PhpArray; gate: Throttle } | Outcome> {
@@ -187,17 +186,8 @@ async function resetOutcome(request: Request, deps: RecoveryDeps): Promise<Outco
   const guard = await guarded(request, deps)
   if (guard instanceof Response) return guard
   const { input, gate } = guard
-  const shape = filterEmailShape(input.email)
-  const errors = await validateInput(
-    input,
-    {
-      email: ["required", { check: () => shape === "valid", message: "El campo correo electrónico debe ser un correo electrónico válido." }],
-      token: ["required", "string"],
-      password: passwordRules(input, deps),
-    },
-    ATTRIBUTES,
-  )
-  if (Object.keys(errors).length > 0) return gate.decorate(fromController(validationError(errors)))
+  const { errors } = await validateSchema(passwordResetSchema(strengthOf(deps)), input)
+  if (errors !== null) return gate.decorate(fromController(validationError(errors)))
   const email = stringOf(input.email).toLowerCase()
   const status = await deps.timebox(async (returnEarly) => {
     const user = await deps.store.direct((store) => store.userByEmail(email))
@@ -229,8 +219,8 @@ async function activationOutcome(request: Request, deps: RecoveryDeps): Promise<
   const guard = await guarded(request, deps)
   if (guard instanceof Response) return guard
   const { input, gate } = guard
-  const errors = await validateInput(input, { token: ["required", "string", { max: 128 }], password: passwordRules(input, deps) }, ATTRIBUTES)
-  if (Object.keys(errors).length > 0) return gate.decorate(fromController(validationError(errors)))
+  const { errors } = await validateSchema(accountActivationSchema(strengthOf(deps)), input)
+  if (errors !== null) return gate.decorate(fromController(validationError(errors)))
   const now = deps.writer.now()
   const hash = await storedPassword(stringOf(input.password), deps.hashPassword)
   if (hash === null) return gate.decorate(fromController(serverError()))
@@ -271,13 +261,8 @@ async function linkOutcome(request: Request, deps: RecoveryDeps): Promise<Outcom
     if (limited) return limited
   }
   const finish = (response: Response) => gates.reduce((decorated, gate) => gate.merge(decorated), response)
-  const shape = filterEmailShape(input.email)
-  const errors = await validateInput(
-    input,
-    { email: ["required", "string", { max: 254 }, { check: () => shape === "valid", message: "El campo correo electrónico debe ser un correo electrónico válido." }] },
-    ATTRIBUTES,
-  )
-  if (Object.keys(errors).length > 0) return finish(fromController(validationError(errors)))
+  const { errors } = await validateSchema(recoveryLinkSchema, input)
+  if (errors !== null) return finish(fromController(validationError(errors)))
   await deps.timebox(async () => {
     const user = await deps.store.direct((store) => store.userByEmail(phpStringCast(input.email).toLowerCase()))
     if (user === null) return

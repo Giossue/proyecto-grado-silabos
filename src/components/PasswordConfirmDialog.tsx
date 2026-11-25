@@ -1,11 +1,16 @@
 "use client"
 
 import { ShieldCheck, ShieldOff } from "lucide-react"
-import { useState, type FormEvent } from "react"
+import { useState } from "react"
+import { Controller } from "react-hook-form"
 import { PasswordInput } from "@/components/PasswordInput"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
+import { useSchemaForm } from "@/lib/forms"
+import { passwordConfirmationSchema, type PasswordConfirmationValues } from "@/schemas/twoFactor"
+
+const schema = passwordConfirmationSchema()
 
 type PasswordConfirmDialogProps = {
   open: boolean
@@ -18,30 +23,35 @@ type PasswordConfirmDialogProps = {
 }
 
 export function PasswordConfirmDialog({ open, onOpenChange, title, description, confirmLabel, destructive, onConfirm }: PasswordConfirmDialogProps) {
-  const [password, setPassword] = useState("")
+  const form = useSchemaForm(schema, { defaultValues: { current_password: "" } })
+  const password = form.watch("current_password")
   const [wasOpen, setWasOpen] = useState(open)
   if (open !== wasOpen) {
     setWasOpen(open)
-    if (open) setPassword("")
+    if (open) form.reset()
   }
 
-  const submit = (event: FormEvent<HTMLFormElement>): void => {
-    event.preventDefault()
-    if (!password) return
-    onConfirm(password)
+  const submit = ({ current_password }: PasswordConfirmationValues): void => {
+    onConfirm(current_password)
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
-        <form className="flex flex-col gap-4" onSubmit={submit}>
+        <form className="flex flex-col gap-4" onSubmit={form.handleSubmit(submit)}>
           <DialogHeader>
             <DialogTitle>{title}</DialogTitle>
             <DialogDescription>{description}</DialogDescription>
           </DialogHeader>
           <div className="grid gap-2">
             <Label htmlFor="confirm-current-password" required>Contraseña actual</Label>
-            <PasswordInput id="confirm-current-password" value={password} onValueChange={setPassword} autoComplete="current-password" aria-required="true" />
+            <Controller
+              name="current_password"
+              control={form.control}
+              render={({ field: { onChange, ...field } }) => (
+                <PasswordInput {...field} id="confirm-current-password" onValueChange={onChange} autoComplete="current-password" aria-required="true" />
+              )}
+            />
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>

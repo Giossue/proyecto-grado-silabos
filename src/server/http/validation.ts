@@ -1,5 +1,8 @@
 import { strIsUrl } from "./strIsUrl"
 import { isPhpArray, phpCount, type PhpArray, type PhpValue } from "./input"
+import { phpFilterInt, phpIsNumeric } from "@/schemas/php"
+
+export { phpFilterInt, phpIsNumeric }
 
 export type Rule =
   | "required"
@@ -88,24 +91,7 @@ const MESSAGES = {
 }
 
 const UUID = /^[\da-fA-F]{8}-[\da-fA-F]{4}-[\da-fA-F]{4}-[\da-fA-F]{4}-[\da-fA-F]{12}$/
-const INT64_MIN = BigInt("-9223372036854775808")
-const INT64_MAX = BigInt("9223372036854775807")
 const NUMERIC_RULES = ["integer", "numeric"]
-
-export function phpIsNumeric(value: PhpValue | undefined): boolean {
-  if (typeof value === "number") return Number.isFinite(value)
-  return typeof value === "string" && /^[ \t\n\r\v\f]*[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?[ \t\n\r\v\f]*$/.test(value)
-}
-
-export function phpFilterInt(value: PhpValue | undefined): number | null {
-  if (typeof value === "number") return Number.isInteger(value) ? value : null
-  if (typeof value === "boolean") return value ? 1 : null
-  if (typeof value !== "string") return null
-  const trimmed = value.replace(/^[ \t\n\r\v\0]+|[ \t\n\r\v\0]+$/g, "")
-  if (!/^[+-]?(0|[1-9]\d*)$/.test(trimmed)) return null
-  const big = BigInt(trimmed)
-  return big < INT64_MIN || big > INT64_MAX ? null : Number(big)
-}
 
 function phpString(value: PhpValue | undefined): string {
   if (value === true) return "1"

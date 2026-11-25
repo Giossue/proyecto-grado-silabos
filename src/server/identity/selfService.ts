@@ -8,11 +8,12 @@ import { isPhpArray, requestInput, type PhpArray, type PhpValue } from "../http/
 import { forbidden, jsonError, apiJson, serverError, unauthenticated, validationError } from "../http/responses"
 import { recallerCookieName } from "../http/sessionGuard"
 import type { Throttle } from "../http/throttle"
-import { validateInput } from "../http/validation"
-import { emailRule, phpBoolean } from "./accountRules"
+import { accessibilitySchema, profileSchema, teacherFormationSchema } from "@/schemas/account"
+import { passwordConfirmationSchema } from "@/schemas/twoFactor"
+import { validateSchema } from "../http/schemaValidation"
+import { phpBoolean } from "./accountRules"
 import { issueInvitation, revokeSessions, updateManagedUserProfile, updateTeacherFormation, type Accessibility, type Account } from "./accounts"
 import {
-  ACCOUNT_ATTRIBUTES,
   defaultIdentityWriteDeps,
   isAdministrator,
   passwordRecoveryThrottle,
@@ -37,27 +38,13 @@ export async function updateProfile(request: Request, deps: IdentityWriteDeps = 
   if (session instanceof Response) return session
   if (!isAdministrator(session)) return forbidden()
   const input = await requestInput(request)
-  const errors = await validateInput(
-    input,
-    {
-      nombre: ["required", "string", { max: 255 }],
-      correo_electronico: ["required", "string", emailRule(), { max: 255 }, uniqueEmail(deps, session.user.id)],
-    },
-    ACCOUNT_ATTRIBUTES,
-  )
-  if (Object.keys(errors).length > 0) return validationError(errors)
+  const { errors } = await validateSchema(profileSchema(uniqueEmail(deps, session.user.id)), input)
+  if (errors !== null) return validationError(errors)
   const outcome = await perform(deps, original, session, (ctx) =>
     updateManagedUserProfile(ctx, session.user, { name: stringOf(input.nombre), email: stringOf(input.correo_electronico) }),
   )
   if (outcome instanceof Response) return outcome
   return answerSession(deps, session, original)
-}
-
-const ACCESSIBILITY_ATTRIBUTES = {
-  high_contrast: "alto contraste",
-  text_size: "tamaño del texto",
-  no_motion: "sin animaciones",
-  wide_spacing: "texto espaciado",
 }
 
 export async function updateAccessibility(request: Request, deps: IdentityWriteDeps = defaultIdentityWriteDeps()): Promise<Response> {
@@ -66,17 +53,8 @@ export async function updateAccessibility(request: Request, deps: IdentityWriteD
   if (session instanceof Response) return session
   if (!session.user.active) return forbidden()
   const input = await requestInput(request)
-  const errors = await validateInput(
-    input,
-    {
-      high_contrast: ["required", "boolean"],
-      text_size: ["required", "string", { in: ["100", "115", "130", "150"] }],
-      no_motion: ["required", "boolean"],
-      wide_spacing: ["required", "boolean"],
-    },
-    ACCESSIBILITY_ATTRIBUTES,
-  )
-  if (Object.keys(errors).length > 0) return validationError(errors)
+  const { errors } = await validateSchema(accessibilitySchema, input)
+  if (errors !== null) return validationError(errors)
   const preferences: Accessibility = {
     high_contrast: phpBoolean(input.high_contrast),
     text_size: stringOf(input.text_size),
@@ -93,8 +71,8 @@ export async function updateFormation(request: Request, deps: IdentityWriteDeps 
   if (session instanceof Response) return session
   if (!session.user.active) return forbidden()
   const input = await requestInput(request)
-  const errors = await validateInput(input, { formacion_experiencia: ["required", "string"] }, { formacion_experiencia: "formación y experiencia" })
-  if (Object.keys(errors).length > 0) return validationError(errors)
+  const { errors } = await validateSchema(teacherFormationSchema, input)
+  if (errors !== null) return validationError(errors)
   const outcome = await perform(deps, original, session, (ctx) => updateTeacherFormation(ctx, session.user.id, stringOf(input.formacion_experiencia)))
   if (outcome instanceof Response) return outcome
   return answerSession(deps, session, original)
@@ -168,11 +146,7 @@ async function confirmCurrentPassword(input: PhpArray, user: SessionUser, deps: 
   const plain = scalarPassword(input.current_password)
   const matches = plain === null ? false : await deps.verifyPassword(plain, user.passwordHash)
   if (matches === null) return null
-  return validateInput(
-    input,
-    { current_password: ["required", "string", { check: () => matches, message: "La contraseña actual no es correcta." }] },
-    ACCOUNT_ATTRIBUTES,
-  )
+  return (await validateSchema(passwordConfirmationSchema(matches), input)).errors ?? {}
 }
 
 async function closeOtherSessions(deps: IdentityWriteDeps, userId: string, currentId: string | null, random = deps.services.random): Promise<number> {

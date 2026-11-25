@@ -130,11 +130,24 @@ describe("Seguridad: restablecer la contraseña por correo", () => {
     await renderPage()
     fireEvent.click(screen.getByRole("button", { name: "Actualizar contraseña" }))
     await flush()
+    for (const id of ["current_password", "password", "password_confirmation"]) fireEvent.change(document.getElementById(id)!, { target: { value: "Clave-2026" } })
     fireEvent.submit(document.body.querySelector<HTMLFormElement>('[role="dialog"] form')!)
     await flush()
 
     expect(dialog()?.getAttribute("data-state")).toBe("open")
     expect(dialog()?.textContent).toContain("La contraseña actual no es correcta")
     expect(toast.success).not.toHaveBeenCalled()
+  })
+
+  it("valida en el navegador con el mismo esquema que el servidor y no envía un formulario incompleto", async () => {
+    await renderPage()
+    fireEvent.click(screen.getByRole("button", { name: "Actualizar contraseña" }))
+    await flush()
+    fireEvent.submit(document.body.querySelector<HTMLFormElement>('[role="dialog"] form')!)
+    await flush()
+
+    expect(updatePassword).not.toHaveBeenCalled()
+    expect(dialog()?.textContent).toContain("El campo contraseña actual es obligatorio")
+    expect(dialog()?.textContent).not.toContain("El campo contraseña actual es obligatorio.")
   })
 })

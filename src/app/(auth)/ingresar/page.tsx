@@ -2,8 +2,8 @@
 
 import { LogIn } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { useEffect, useRef, useState, type FormEvent } from "react"
-import { ApiError } from "@/api/client"
+import { useEffect, useRef } from "react"
+import { Controller } from "react-hook-form"
 import { login } from "@/api/session"
 import { PasswordInput } from "@/components/PasswordInput"
 import { TextLink } from "@/components/TextLink"
@@ -16,18 +16,17 @@ import { useFormIncomplete } from "@/composables/useFormIncomplete"
 import { AuthSplitLayout } from "@/layouts/auth/AuthSplitLayout"
 import { consumeIntendedRoute } from "@/lib/intended-route"
 import { paths, roleEntry } from "@/lib/routes"
+import { applyApiErrors, errorMessages, serverMessage, useSchemaForm } from "@/lib/forms"
 import { toast } from "@/lib/toast"
+import { loginSchema, type LoginValues } from "@/schemas/auth"
 import { sessionState } from "@/state/session"
 
 export default function LoginPage() {
   const router = useRouter()
   const statusValues = useSearchParams().getAll("status")
   const status = statusValues.length === 1 ? statusValues[0] : null
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [errors, setErrors] = useState<Record<string, string[]>>({})
-  const [error, setError] = useState<string | null>(null)
-  const [processing, setProcessing] = useState(false)
+  const form = useSchemaForm(loginSchema, { defaultValues: { email: "", password: "" } })
+  const { errors, isSubmitting: processing } = form.formState
   const submitButton = useRef<HTMLButtonElement | null>(null)
   const incomplete = useFormIncomplete(submitButton)
 
@@ -35,11 +34,7 @@ export default function LoginPage() {
     if (status) toast.success(status)
   }, [status])
 
-  const submit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
-    event.preventDefault()
-    setProcessing(true)
-    setError(null)
-    setErrors({})
+  const submit = async ({ email, password }: LoginValues): Promise<void> => {
     try {
       const result = await login(email, password)
       if ("two_factor_required" in result) {
@@ -49,37 +44,42 @@ export default function LoginPage() {
       sessionState.replace(result)
       router.replace(consumeIntendedRoute() ?? roleEntry(result.active_role?.code))
     } catch (reason) {
-      if (reason instanceof ApiError) {
-        setErrors(reason.errors)
-        setError(reason.message)
-      } else {
-        setError("No se pudo iniciar sesión")
-      }
-    } finally {
-      setProcessing(false)
+      applyApiErrors(form.setError, reason, { fallback: "No se pudo iniciar sesión", aliases: { correo_electronico: "email" } })
     }
   }
 
-  const emailErrors = errors.email ?? errors.correo_electronico
+  const error = serverMessage(errors)
 
   return (
     <AuthSplitLayout title="Iniciar sesión">
-      {error && Object.keys(errors).length === 0 ? <FeedbackAlert message={error} appearance="plain" /> : null}
-      <form className="flex flex-col gap-6" onSubmit={(event) => void submit(event)}>
+      {error ? <FeedbackAlert message={error} appearance="plain" /> : null}
+      <form className="flex flex-col gap-6" onSubmit={form.handleSubmit(submit)}>
         <FieldGroup>
-          <Field data-invalid={Boolean(emailErrors)}>
-            <FieldLabel htmlFor="email" required>Correo institucional</FieldLabel>
-            <Input id="email" value={email} type="email" name="email" aria-required="true" autoComplete="email" placeholder="Ej. nombre@ueb.edu.ec" aria-invalid={Boolean(emailErrors)} onChange={(event) => setEmail(event.target.value)} />
-            <FieldError errors={emailErrors} />
-          </Field>
-          <Field data-invalid={Boolean(errors.password)}>
-            <div className="flex items-center justify-between">
-              <FieldLabel htmlFor="password" required>Contraseña</FieldLabel>
-              <TextLink href={paths.passwordRecovery} className="text-sm">¿Olvidó su contraseña?</TextLink>
-            </div>
-            <PasswordInput id="password" value={password} onValueChange={setPassword} name="password" aria-required="true" autoComplete="current-password" placeholder="Contraseña" aria-invalid={Boolean(errors.password)} />
-            <FieldError errors={errors.password} />
-          </Field>
+          <Controller
+            name="email"
+            control={form.control}
+            render={({ field, fieldState }) => (
+              <Field data-invalid={fieldState.invalid}>
+                <FieldLabel htmlFor="email" required>Correo institucional</FieldLabel>
+                <Input {...field} id="email" type="email" aria-required="true" autoComplete="email" placeholder="Ej. nombre@ueb.edu.ec" aria-invalid={fieldState.invalid} />
+                <FieldError errors={errorMessages(fieldState.error)} />
+              </Field>
+            )}
+          />
+          <Controller
+            name="password"
+            control={form.control}
+            render={({ field: { onChange, ...field }, fieldState }) => (
+              <Field data-invalid={fieldState.invalid}>
+                <div className="flex items-center justify-between">
+                  <FieldLabel htmlFor="password" required>Contraseña</FieldLabel>
+                  <TextLink href={paths.passwordRecovery} className="text-sm">¿Olvidó su contraseña?</TextLink>
+                </div>
+                <PasswordInput {...field} id="password" onValueChange={onChange} aria-required="true" autoComplete="current-password" placeholder="Contraseña" aria-invalid={fieldState.invalid} />
+                <FieldError errors={errorMessages(fieldState.error)} />
+              </Field>
+            )}
+          />
           <Button ref={submitButton} type="submit" className="mt-4 w-full" disabled={processing || incomplete} data-test="login-button">
             {processing ? <Spinner data-icon="inline-start" /> : <LogIn data-icon="inline-start" aria-hidden="true" />}
             Ingresar

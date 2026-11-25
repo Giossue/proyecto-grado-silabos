@@ -2,8 +2,8 @@
 
 import { KeyRound } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { useRef, useState, type FormEvent } from "react"
-import { ApiError } from "@/api/client"
+import { useRef } from "react"
+import { Controller } from "react-hook-form"
 import { resetForgottenPassword } from "@/api/session"
 import { InputError } from "@/components/InputError"
 import { PasswordInput } from "@/components/PasswordInput"
@@ -14,7 +14,9 @@ import { Label } from "@/components/ui/label"
 import { Spinner } from "@/components/ui/spinner"
 import { useFormIncomplete } from "@/composables/useFormIncomplete"
 import { AuthSplitLayout } from "@/layouts/auth/AuthSplitLayout"
+import { applyApiErrors, fieldMessage, SERVER_ERROR, serverMessage, useSchemaForm } from "@/lib/forms"
 import { paths } from "@/lib/routes"
+import { newPasswordFormSchema, type NewPasswordFormValues } from "@/schemas/auth"
 import { sessionState } from "@/state/session"
 
 const singleValue = (values: string[]): string => (values.length === 1 ? values[0] ?? "" : "")
@@ -24,61 +26,60 @@ export default function ResetPasswordPage() {
   const searchParams = useSearchParams()
   const email = singleValue(searchParams.getAll("email"))
   const token = singleValue(searchParams.getAll("token"))
-  const [password, setPassword] = useState("")
-  const [passwordConfirmation, setPasswordConfirmation] = useState("")
-  const [error, setError] = useState<string | null>(null)
-  const [errors, setErrors] = useState<Record<string, string[]>>({})
-  const [pending, setPending] = useState(false)
+  const form = useSchemaForm(newPasswordFormSchema, { defaultValues: { password: "", password_confirmation: "" } })
+  const { errors, isSubmitting: pending } = form.formState
   const submitButton = useRef<HTMLButtonElement | null>(null)
   const incomplete = useFormIncomplete(submitButton)
 
-  const submit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
-    event.preventDefault()
+  const submit = async ({ password, password_confirmation }: NewPasswordFormValues): Promise<void> => {
     if (!email || !token) {
-      setError("El enlace de recuperación está incompleto")
+      form.setError(SERVER_ERROR, { type: "client", message: "El enlace de recuperación está incompleto" })
       return
     }
-    setPending(true)
-    setError(null)
-    setErrors({})
     try {
-      const result = await resetForgottenPassword(email, token, password, passwordConfirmation)
-      setPassword("")
-      setPasswordConfirmation("")
+      const result = await resetForgottenPassword(email, token, password, password_confirmation)
+      form.reset()
       sessionState.clear()
       router.replace(`${paths.login}?status=${encodeURIComponent(result.message)}`)
     } catch (reason) {
-      if (reason instanceof ApiError) {
-        setErrors(reason.errors)
-        setError(reason.message)
-      } else {
-        setError("No se pudo restablecer la contraseña")
-      }
-    } finally {
-      setPending(false)
+      applyApiErrors(form.setError, reason, { fallback: "No se pudo restablecer la contraseña" })
     }
   }
 
+  const error = serverMessage(errors)
+
   return (
     <AuthSplitLayout title="Restablecer contraseña" description="Ingrese su nueva contraseña">
-      <form onSubmit={(event) => void submit(event)}>
+      <form onSubmit={form.handleSubmit(submit)}>
         <div className="grid gap-6">
           <div className="grid gap-2">
             <Label htmlFor="reset-email" required>Correo electrónico</Label>
             <Input id="reset-email" type="email" value={email} autoComplete="email" className="mt-1 block w-full" placeholder="Ej. nombre@ueb.edu.ec" readOnly aria-required="true" />
-            <InputError message={errors.email?.[0]} className="mt-2" />
+            <InputError message={fieldMessage(errors, "email")} className="mt-2" />
           </div>
           <div className="grid gap-2">
             <Label htmlFor="new-password" required>Contraseña nueva</Label>
-            <PasswordInput id="new-password" value={password} onValueChange={setPassword} aria-required="true" autoComplete="new-password" className="mt-1 block w-full" placeholder="Contraseña nueva" aria-invalid={Boolean(errors.password)} />
-            <InputError message={errors.password?.[0]} />
+            <Controller
+              name="password"
+              control={form.control}
+              render={({ field: { onChange, ...field }, fieldState }) => (
+                <PasswordInput {...field} id="new-password" onValueChange={onChange} aria-required="true" autoComplete="new-password" className="mt-1 block w-full" placeholder="Contraseña nueva" aria-invalid={fieldState.invalid} />
+              )}
+            />
+            <InputError message={fieldMessage(errors, "password")} />
           </div>
           <div className="grid gap-2">
             <Label htmlFor="new-password-confirmation" required>Confirmar contraseña</Label>
-            <PasswordInput id="new-password-confirmation" value={passwordConfirmation} onValueChange={setPasswordConfirmation} aria-required="true" autoComplete="new-password" className="mt-1 block w-full" placeholder="Confirmar contraseña" aria-invalid={Boolean(errors.password_confirmation)} />
-            <InputError message={errors.password_confirmation?.[0]} />
+            <Controller
+              name="password_confirmation"
+              control={form.control}
+              render={({ field: { onChange, ...field }, fieldState }) => (
+                <PasswordInput {...field} id="new-password-confirmation" onValueChange={onChange} aria-required="true" autoComplete="new-password" className="mt-1 block w-full" placeholder="Confirmar contraseña" aria-invalid={fieldState.invalid} />
+              )}
+            />
+            <InputError message={fieldMessage(errors, "password_confirmation")} />
           </div>
-          {error && Object.keys(errors).length === 0 ? <FeedbackAlert message={error} /> : null}
+          {error ? <FeedbackAlert message={error} /> : null}
           <Button ref={submitButton} type="submit" className="mt-4 w-full" disabled={pending || !email || !token || incomplete} data-test="reset-password-button">
             {pending ? <Spinner data-icon="inline-start" /> : <KeyRound data-icon="inline-start" aria-hidden="true" />}
             Restablecer contraseña
