@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process"
 import fs from "node:fs"
 import path from "node:path"
-import { accounts } from "./support/accounts"
+import { accounts, mailLogPaths } from "./support/accounts"
 import { userName } from "./support/db"
 import { expect, test, watchPage } from "./support/fixtures"
 import { addTeacherParallel, fillBibliography, fillIdentification, fillOutcomes, fillPlanning, fillRichText, openCoordinationReview, openSection, approvedRevisionOf, openTrackedReview, stampCount, openTeacherSyllabus, restartFromReview, settleAutosave, teacherListItem, signWith, submitSyllabus, trackAutosave } from "./support/syllabus"
@@ -232,7 +232,18 @@ test.describe.serial("syllabus lifecycle", () => {
     const page = await actor("teacher")
     const health = watchPage(page)
     const coordinator = await actor("coordinator")
+    const sizes = new Map(mailLogPaths.map((file) => [file, fs.existsSync(file) ? fs.statSync(file).size : 0]))
     const code = await addTeacherParallel(coordinator, subject, await userName(accounts.teacher.email))
+    const notice = `Ya puede elaborar el sílabo de ${subject}, paralelo ${code}.`
+    const newMail = () =>
+      mailLogPaths
+        .map((file) => (fs.existsSync(file) ? fs.readFileSync(file).subarray(sizes.get(file) ?? 0).toString("latin1") : ""))
+        .map((raw) => Buffer.from(raw.replace(/=\r?\n/g, "").replace(/=([0-9A-F]{2})/g, (_, hex: string) => String.fromCharCode(parseInt(hex, 16))), "latin1").toString("utf8"))
+        .join("\n")
+    await expect.poll(() => { const mail = newMail(); return mail.includes(`To: ${accounts.teacher.email}`) && mail.includes(notice) }, { timeout: 30_000 }).toBe(true)
+    await page.goto("/docente/notificaciones")
+    await page.getByRole("navigation", { name: "Filtrar notificaciones" }).getByRole("button", { name: "Todas" }).click()
+    await expect(page.getByRole("main").getByRole("article").filter({ hasText: "Tiene un sílabo nuevo" }).filter({ hasText: notice.slice(0, -1) })).toHaveCount(1)
     await page.goto("/docente/mis-silabos")
     const target = page
       .getByRole("list", { name: "Mis sílabos" })

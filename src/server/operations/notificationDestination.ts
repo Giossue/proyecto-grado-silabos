@@ -25,6 +25,7 @@ const PROCESS_TEACHER_EVENTS = ["proceso.plantilla_rehecho", "proceso.plazo_exte
 const TEACHER_EVENTS = [
   "convocatoria.abierta",
   "convocatoria.reanudada",
+  "silabo.asignado",
   "silabo.correccion_solicitada",
   "silabo.devuelto_borrador",
   "silabo.eliminado",

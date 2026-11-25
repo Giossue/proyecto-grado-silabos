@@ -206,8 +206,8 @@ describe("GET /api/v1/notifications/email-preferences", () => {
 
   it("each role sees only its email notices, all on by default", async () => {
     expect(await types("docente")).toEqual([
-      "docente.resumen_diario:si", "convocatoria.abierta:si", "convocatoria.reanudada:si", "silabo.correccion_solicitada:si",
-      "silabo.devuelto_borrador:si", "silabo.aprobado:si", "silabo.reiniciado:si", "proceso.cierre_proximo:si",
+      "docente.resumen_diario:si", "convocatoria.abierta:si", "convocatoria.reanudada:si", "silabo.asignado:si",
+      "silabo.correccion_solicitada:si", "silabo.devuelto_borrador:si", "silabo.aprobado:si", "silabo.reiniciado:si", "proceso.cierre_proximo:si",
     ])
     expect(await types("coordinador")).toEqual(["coordinacion.resumen_diario:si", "biblioteca.verificado:si", "proceso.reanudado:si", "proceso.cierre_proximo:si"])
     expect(await types("bibliotecario")).toEqual(["biblioteca.resumen_diario:si", "silabo.enviado:si", "silabo.reenviado_biblioteca:si", "proceso.reanudado:si"])
@@ -222,16 +222,16 @@ describe("GET /api/v1/notifications/email-preferences", () => {
     const response = await showEmailPreferences(apiRequest("/api/v1/notifications/email-preferences", { cookie }), { bridge: fakeDeps(world) })
     const { options } = JSON.parse(await response.text()) as { options: { type: string; description: string }[] }
     expect(options.map((option) => option.type)).toEqual([
-      "docente.resumen_diario", "convocatoria.abierta", "convocatoria.reanudada", "silabo.correccion_solicitada", "silabo.devuelto_borrador",
-      "silabo.aprobado", "silabo.reiniciado", "proceso.cierre_proximo", "coordinacion.resumen_diario", "biblioteca.verificado", "proceso.reanudado",
+      "docente.resumen_diario", "convocatoria.abierta", "convocatoria.reanudada", "silabo.asignado", "silabo.correccion_solicitada",
+      "silabo.devuelto_borrador", "silabo.aprobado", "silabo.reiniciado", "proceso.cierre_proximo", "coordinacion.resumen_diario", "biblioteca.verificado", "proceso.reanudado",
     ])
-    expect(options[7].description).toBe("3 días antes del último día de entrega, si su carrera tiene sílabos sin aprobar")
+    expect(options[8].description).toBe("3 días antes del último día de entrega, si su carrera tiene sílabos sin aprobar")
   })
 
   it("shows a notice turned off and keeps the rest on", async () => {
     expect((await types("coordinador", { "coordinacion.resumen_diario": false }))[0]).toBe("coordinacion.resumen_diario:no")
-    expect((await types("docente", { "silabo.aprobado": false, "silabo.reiniciado": 0 }))[5]).toBe("silabo.aprobado:no")
-    expect((await types("docente", { "silabo.reiniciado": 0 }))[6]).toBe("silabo.reiniciado:si")
+    expect((await types("docente", { "silabo.aprobado": false, "silabo.reiniciado": 0 }))[6]).toBe("silabo.aprobado:no")
+    expect((await types("docente", { "silabo.reiniciado": 0 }))[7]).toBe("silabo.reiniciado:si")
   })
 
   it("renders the exact JSON Laravel renders", async () => {

@@ -41,7 +41,7 @@ export const SYLLABUS_ALIVE = sql`exists (select 1 from convocatorias_carreras v
 
 type ParallelRow = { id: string; subject_id: string; code: string; shift: string | null; subject: string; campus: string | null; modality: string | null; teachers: number }
 
-export type GenerateOptions = { subjectId?: string | null; subjectIds?: string[] | null; parallelId?: string | null; allowEmpty?: boolean; skipIncomplete?: boolean }
+export type GenerateOptions = { subjectId?: string | null; subjectIds?: string[] | null; parallelId?: string | null; allowEmpty?: boolean; skipIncomplete?: boolean; notifyTeacher?: boolean }
 
 export const CONFIRMATION_FIELD = "confirm_purge"
 export const DEFAULT_REASON = "cambió la base institucional (malla, período académico o plantilla)"
@@ -270,6 +270,19 @@ export class InProgressWork {
       message: `Se perdió el contenido anterior ${which} (borrador, revisiones, aprobación, firmas y análisis de IA) porque ${reason}. ${complete} otra vez.`,
       resourceType,
       resourceId,
+      periodId,
+    })
+  }
+
+  private async notifyAssigned(syllabusId: string, parallel: ParallelRow, periodId: string): Promise<void> {
+    await storeInternalNotifications(this.scope(), {
+      eventType: "silabo.asignado",
+      deduplicationKey: `silabo.asignado:${syllabusId}`,
+      recipientIds: (await this.currentTeachers([syllabusId])).get(syllabusId) ?? [],
+      title: "Tiene un sílabo nuevo",
+      message: `Ya puede elaborar el sílabo de ${parallel.subject}, paralelo ${parallel.code}.`,
+      resourceType: "silabo",
+      resourceId: syllabusId,
       periodId,
     })
   }
@@ -810,7 +823,8 @@ export class InProgressWork {
     let generated = 0
     for (const parallel of parallels) {
       if (covered.has(parallel.id) || (options.skipIncomplete && Number(parallel.teachers) !== 1)) continue
-      await this.generate(convocationId, periodId, parallel)
+      const id = await this.generate(convocationId, periodId, parallel)
+      if (options.notifyTeacher) await this.notifyAssigned(id, parallel, periodId)
       generated++
     }
     return generated

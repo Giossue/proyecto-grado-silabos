@@ -167,7 +167,7 @@ export function careerWriteTx(executor: Executor, afterCommit: AfterCommit, now:
       return row ?? null
     },
     async generateParallelSyllabus(convocationId, parallelId) {
-      await progress.generateConvocation(convocationId, { parallelId, allowEmpty: true, skipIncomplete: true })
+      await progress.generateConvocation(convocationId, { parallelId, allowEmpty: true, skipIncomplete: true, notifyTeacher: true })
     },
     async activeTeacherAssignment(parallelId) {
       const [row] = await executor.select({ id: asignacionesParalelo.asignacionParaleloId }).from(asignacionesParalelo).where(ACTIVE_ASSIGNMENT(parallelId)).limit(1)

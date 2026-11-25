@@ -61,7 +61,7 @@ describe("PUT /api/v1/notifications/email-preferences", () => {
     const result = await send({ preferences: { "silabo.aprobado": false } })
     expect(result.status).toBe(200)
     const options = result.json.options as { type: string; enabled: boolean }[]
-    expect(options[5]).toMatchObject({ type: "silabo.aprobado", enabled: false })
+    expect(options[6]).toMatchObject({ type: "silabo.aprobado", enabled: false })
     expect(options.filter((option) => !option.enabled)).toHaveLength(1)
     expect(saved).toEqual([[golden.userId, { "silabo.aprobado": false }]])
     expect(result.text).toContain('"label":"Sílabo aprobado"')

@@ -7,6 +7,7 @@ export type NotificationEmailConfig = { enabled: boolean; events: string[] }
 export const DEFAULT_EMAIL_EVENTS = [
   "convocatoria.abierta",
   "convocatoria.reanudada",
+  "silabo.asignado",
   "silabo.correccion_solicitada",
   "silabo.devuelto_borrador",
   "silabo.aprobado",

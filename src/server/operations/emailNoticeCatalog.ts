@@ -15,6 +15,7 @@ const BY_ROLE: [string, [string, NoticeTexts][]][] = [
       ["docente.resumen_diario", { label: "Resumen diario", description: "Sílabos por elaborar o corregir y el plazo, de lunes a viernes, solo si hay pendientes" }],
       ["convocatoria.abierta", { label: "Convocatoria abierta", description: "Tiene sílabos por elaborar" }],
       ["convocatoria.reanudada", { label: "Convocatoria reanudada", description: "Puede seguir con sus sílabos tras una pausa" }],
+      ["silabo.asignado", { label: "Sílabo nuevo", description: "Le asignaron un paralelo con la convocatoria abierta y ya tiene su sílabo" }],
       ["silabo.correccion_solicitada", { label: "Corrección solicitada", description: "Coordinación o Biblioteca le pide corregir un sílabo" }],
       ["silabo.devuelto_borrador", { label: "Sílabo devuelto a borrador", description: "Cambió un dato de la carrera, de la malla o la plantilla" }],
       ["silabo.aprobado", { label: "Sílabo aprobado", description: "Su sílabo quedó aprobado, con el PDF listo" }],
