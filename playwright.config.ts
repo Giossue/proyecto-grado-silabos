@@ -7,6 +7,7 @@ const baseURL = process.env.E2E_BASE_URL ?? `http://localhost:${port}`
 const scratch = process.env.E2E_SCRATCH_DIR ?? path.join(os.tmpdir(), "silabos-e2e")
 const serverEnv = {
   STATEFUL_DOMAINS: new URL(baseURL).host,
+  BETTER_AUTH_URL: baseURL,
 }
 
 export default defineConfig({

@@ -208,10 +208,10 @@ describe("draft routes that stay in Laravel", () => {
     expect(response.status).toBe(422)
   })
 
-  it("checks the CSRF token and the session before anything else", async () => {
+  it("checks the origin and the session before anything else", async () => {
+    expect(await send("preview", { version: 1, sections: [] }, { headers: { origin: "https://evil.example" } })).toMatchObject({ status: 401, text: '{"message":"Unauthenticated."}' })
     world.sessions.clear()
-    expect(await send("preview", { version: 1, sections: [] })).toMatchObject({ status: 419, text: '{"message":"CSRF token mismatch."}' })
-    const response = await send("preview", { version: 1, sections: [] }, { headers: { "sec-fetch-site": "same-origin" } })
+    const response = await send("preview", { version: 1, sections: [] })
     expect(response).toMatchObject({ status: 401, text: '{"message":"Unauthenticated."}' })
   })
 })

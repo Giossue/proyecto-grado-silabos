@@ -3,6 +3,7 @@ name: silabos-ueb
 x-app-environment: &app-environment
   APP_ENV: ${APP_ENV:-production}
   APP_KEY: ${APP_KEY:?APP_KEY is required}
+  BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET is required}
   APP_NAME: ${APP_NAME:-Sílabos UEB}
   DATABASE_URL: postgres://${POSTGRES_USER:-silabos}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/${POSTGRES_DB:-silabos_ueb}
   REDIS_URL: redis://redis:6379/0

@@ -1,7 +1,7 @@
 import "server-only"
 import { sql, type SQL } from "drizzle-orm"
 import { db } from "@/db"
-import type { RoleAssignmentRecord, SessionRecord, SessionStore, SessionUser } from "./types"
+import type { RoleAssignmentRecord, SessionStore, SessionUser } from "./types"
 
 type Row = Record<string, unknown>
 
@@ -14,12 +14,6 @@ export function createSessionStore(): SessionStore {
 export function sessionStoreOn(executor: SessionExecutor): SessionStore {
   const rows = async <T extends Row>(query: SQL): Promise<T[]> => (await executor.execute(query)).rows as T[]
   return {
-    async findSession(id) {
-      const [row] = await rows<{ payload: string; last_activity: number }>(
-        sql`select payload, last_activity from sesiones where id = ${id} limit 1`,
-      )
-      return row ? ({ payload: row.payload, lastActivity: Number(row.last_activity) } satisfies SessionRecord) : null
-    },
     async findUser(id) {
       const [row] = await rows<{
         usuario_id: string
@@ -27,10 +21,11 @@ export function sessionStoreOn(executor: SessionExecutor): SessionStore {
         usuario_activo: boolean
         correo_verificado_en: string | null
         preferencias_correo_usuario: unknown
-        codigo_recordarme: string | null
-      }>(sql`select usuario_id, contrasena, usuario_activo, correo_verificado_en::text as correo_verificado_en,
-               preferencias_correo_usuario, codigo_recordarme
-             from usuarios where usuario_id = ${id} limit 1`)
+      }>(sql`select u.usuario_id, coalesce(c.password, u.contrasena) as contrasena, u.usuario_activo,
+               u.correo_verificado_en::text as correo_verificado_en, u.preferencias_correo_usuario
+             from usuarios u
+             left join cuentas_usuario c on c.user_id = u.usuario_id and c.provider_id = 'credential'
+             where u.usuario_id = ${id} limit 1`)
       if (!row) return null
       return {
         id: row.usuario_id,
@@ -38,7 +33,6 @@ export function sessionStoreOn(executor: SessionExecutor): SessionStore {
         active: row.usuario_activo,
         emailVerifiedAt: row.correo_verificado_en,
         emailPreferences: row.preferencias_correo_usuario,
-        rememberToken: row.codigo_recordarme,
       } satisfies SessionUser
     },
     async effectiveRoleAssignments(userId) {
@@ -68,29 +62,6 @@ export function sessionStoreOn(executor: SessionExecutor): SessionStore {
           careerLabel: row.career_label,
         }),
       )
-    },
-    async touchSession(id, lastActivity) {
-      await executor.execute(sql`update sesiones set last_activity = ${lastActivity} where id = ${id}`)
-    },
-    async insertSession(id, row) {
-      const result = await executor.execute(sql`insert into sesiones (payload, last_activity, user_id, ip_address, user_agent, id)
-        values (${row.payload}, ${row.lastActivity}, ${row.userId}::uuid, ${row.ipAddress}, ${row.userAgent}, ${id})
-        on conflict (id) do nothing`)
-      return (result.rowCount ?? 0) > 0
-    },
-    async updateSession(id, row) {
-      await executor.execute(sql`update sesiones set payload = ${row.payload}, last_activity = ${row.lastActivity}, user_id = ${row.userId}::uuid,
-        ip_address = ${row.ipAddress}, user_agent = ${row.userAgent} where id = ${id}`)
-    },
-    async destroySession(id) {
-      await executor.execute(sql`delete from sesiones where id = ${id}`)
-    },
-    async collectGarbage(threshold) {
-      await executor.execute(sql`delete from sesiones where last_activity <= ${threshold}`)
-    },
-    async cycleRememberToken(userId, token) {
-      await executor.execute(sql`update usuarios set codigo_recordarme = ${token}
-        where usuario_id = ${userId}::uuid and codigo_recordarme is not null and codigo_recordarme not in ('', '0')`)
     },
   }
 }

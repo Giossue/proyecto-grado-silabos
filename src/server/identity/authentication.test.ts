@@ -1,395 +1,252 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it } from "vitest"
-import golden from "../http/__fixtures__/laravel-golden.json"
 import filterEmailGolden from "./__fixtures__/filter-email-golden.json"
 import { createMemoryAttemptLimiter } from "../auth/attemptLimiter"
-import { fakeDeps, makeAssignment, makeUser, NOW, sessionCookie, sessionPayload, storedJson, testKey, xsrfHeader, type FakeWorld } from "../auth/testing"
-import type { SessionWriterDeps } from "../auth/sessionWriter"
-import { cookiePrefix } from "../http/cookies"
-import { decrypt } from "../http/encrypter"
-import { hashPasswordForCookie, loginSessionKey, recallerCookieName } from "../http/sessionGuard"
+import { authWorld, browserRequest, cookieHeaderFrom, type AuthWorld } from "../auth/betterAuthTesting"
+import { bcryptVerify } from "../auth/bcrypt"
 import { createRateLimiter } from "../http/throttle"
-import { csrfCookie, filterEmailShape, leaveActiveRole, login, logout, selectActiveRole, updatePassword, type AuthenticationDeps } from "./authentication"
+import { filterEmailShape, leaveActiveRole, login, logout, selectActiveRole, updatePassword, type AuthenticationDeps } from "./authentication"
 import type { UserProfile } from "./session"
 
-const PASSWORD = "Demo-2026!"
-const HASH = `hash:${PASSWORD}`
-const EMAIL = "docente@silabos.test"
-const LOGIN_KEY = loginSessionKey()
-const TOKEN = golden.csrfToken
+const USER = "0193a3c2-1111-7000-8000-000000000001"
+const ROLE = "0193a3c2-2222-7000-8000-000000000001"
 const OTHER_ROLE = "0193a3c2-3333-7000-8000-000000000003"
+const PASSWORD = "Demo-2026!"
+const EMAIL = "docente@silabos.test"
 
-let world: FakeWorld
-let remember: Map<string, string | null>
-let twoFactor: boolean
-let sequence: number
+let world: AuthWorld
+let mirrored: string[]
 
 const profile: UserProfile = { name: "DOCENTE DEMO", email: EMAIL, formation: null, accessibility: null, twoFactorSecret: false, twoFactorConfirmed: false }
 
 function deps(overrides: Partial<AuthenticationDeps> = {}): AuthenticationDeps {
-  const writer: SessionWriterDeps = {
-    ...fakeDeps(world),
-    cookie: { path: "/", domain: null, secure: false, sameSite: "lax" },
-    random: (length) => String.fromCharCode(65 + (sequence++ % 26)).repeat(length),
-    lottery: () => false,
-  }
   return {
-    writer,
+    bridge: world.deps,
+    auth: () => world.auth,
     credentials: {
       findActiveUserByEmail: async (email) => {
-        const user = world.users.find((candidate) => candidate.active && email === EMAIL && candidate.id === golden.userId)
-        return user ? { id: user.id, passwordHash: user.passwordHash, twoFactorEnabled: twoFactor } : null
+        const user = world.db.user.find((row) => row.email === email && row.active === true)
+        return user ? { id: String(user.id) } : null
       },
-      rememberToken: async (id) => remember.get(id) ?? null,
-      setRememberToken: async (id, token) => void remember.set(id, token),
-      setPassword: async (id, hash) => {
-        world.users = world.users.map((user) => (user.id === id ? { ...user, passwordHash: hash } : user))
-      },
-      deleteOtherSessions: async (userId, exceptId) => {
-        let deleted = 0
-        for (const [id, row] of world.sessions) {
-          if (row.userId === userId && id !== exceptId) {
-            world.sessions.delete(id)
-            deleted += 1
-          }
-        }
-        return deleted
-      },
+      mirrorPassword: async (id) => void mirrored.push(id),
     },
-    profiles: { find: async (id) => (id === golden.userId ? profile : null) },
+    profiles: { find: async (id) => (id === USER ? profile : null) },
     today: () => "2026-10-21",
     timezone: () => "America/Guayaquil",
     throttles: createRateLimiter(),
-    attempts: createMemoryAttemptLimiter(() => NOW),
-    verifyPassword: async (plain, hash) => hash === `hash:${plain}`,
-    hashPassword: async (plain) => `hash:${plain}`,
-    dummyHash: async () => "dummy",
+    attempts: createMemoryAttemptLimiter(() => Math.floor(Date.now() / 1000)),
+    verifyPassword: bcryptVerify,
+    dummyHash: async () => "$2y$04$abcdefghijklmnopqrstuuJ0b0qz6bV1qz6bV1qz6bV1qz6bV1qz6",
     production: () => false,
     ...overrides,
   }
 }
 
-const COOKIE = `${golden.cookieName}=${encodeURIComponent(sessionCookie(golden.sessionId))}`
+const post = (path: string, body: unknown, cookie?: string, origin?: string | null) => browserRequest(path, { method: "POST", body, cookie, origin })
 
-function call(path: string, method: string, body?: unknown, headers: Record<string, string> = {}): Request {
-  return new Request(`http://localhost:3000${path}`, {
-    method,
-    headers: {
-      accept: "application/json",
-      referer: "http://localhost:3000/ingresar",
-      cookie: COOKIE,
-      "x-xsrf-token": xsrfHeader(TOKEN),
-      "x-forwarded-for": "::1",
-      "user-agent": "Prueba/1.0",
-      ...(body === undefined ? {} : { "content-type": "application/json" }),
-      ...headers,
-    },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  })
+async function signedIn(shared = deps()): Promise<string> {
+  const response = await login(post("/api/v1/authentication/login", { email: EMAIL, password: PASSWORD }), shared)
+  expect(response.status).toBe(200)
+  return cookieHeaderFrom(response.headers.getSetCookie())
 }
 
-function withSession(attributes: Record<string, unknown>, id = golden.sessionId): void {
-  world.sessions.set(id, { payload: sessionPayload(attributes), lastActivity: NOW - 60, userId: (attributes[LOGIN_KEY] as string) ?? null })
-}
-
-const anonymous = () => ({ _token: TOKEN, _previous: { url: "http://localhost:3000/sanctum/csrf-cookie", route: "sanctum.csrf-cookie" }, _flash: { old: [], new: [] } })
-const loggedIn = (extra: Record<string, unknown> = {}) => ({
-  _token: TOKEN,
-  _flash: { old: [], new: [] },
-  [LOGIN_KEY]: golden.userId,
-  active_role_assignment_id: golden.roleId,
-  password_hash_web: hashPasswordForCookie(HASH, golden.appKey),
-  ...extra,
-})
-
-function cookies(response: Response): Record<string, { value: string; attributes: string }> {
-  return Object.fromEntries(
-    response.headers.getSetCookie().map((header) => {
-      const name = header.slice(0, header.indexOf("="))
-      const encrypted = decodeURIComponent(header.slice(name.length + 1, header.indexOf(";")))
-      const plain = decrypt(encrypted, testKey, false)
-      expect(plain.startsWith(cookiePrefix(name, testKey))).toBe(true)
-      return [name, { value: plain.slice(41), attributes: header.slice(header.indexOf(";")) }]
-    }),
-  )
-}
-
-beforeEach(() => {
-  world = { sessions: new Map(), users: [makeUser({ passwordHash: HASH })], assignments: [makeAssignment()] }
-  remember = new Map([[golden.userId, "old-remember-token"]])
-  twoFactor = false
-  sequence = 0
-})
-
-describe("GET /sanctum/csrf-cookie", () => {
-  it("answers 204 with the XSRF and session cookies and stores the previous URL, like Sanctum", async () => {
-    const response = await csrfCookie(new Request("http://localhost:3000/sanctum/csrf-cookie", { headers: { accept: "application/json", "x-forwarded-for": "::1" } }), deps())
-    expect(response.status).toBe(204)
-    expect(await response.text()).toBe("")
-    expect(response.headers.get("content-type")).toBeNull()
-    expect(response.headers.get("x-frame-options")).toBe("DENY")
-    expect(response.headers.getSetCookie().map((header) => header.slice(0, header.indexOf("=")))).toEqual(["XSRF-TOKEN", golden.cookieName])
-    const set = cookies(response)
-    expect(set["XSRF-TOKEN"].value).toBe("B".repeat(40))
-    expect(set[golden.cookieName]).toEqual({ value: "A".repeat(40), attributes: `; expires=${new Date((NOW + 7200) * 1000).toUTCString()}; Max-Age=7200; path=/; httponly; samesite=lax` })
-    expect(storedJson(world, "A".repeat(40))).toBe(JSON.stringify({ ...anonymous(), _token: "B".repeat(40) }).replaceAll("/", "/"))
-    expect(world.sessions.get("A".repeat(40))).toMatchObject({ userId: null, ipAddress: "::1" })
-  })
-
-  it("stores the full URL with its query normalized like Request::fullUrl(), including bracketed keys", async () => {
-    const response = await csrfCookie(new Request("http://localhost:3000/sanctum/csrf-cookie?b=2+x&a=1", { headers: { accept: "application/json", "x-forwarded-for": "::1" } }), deps())
-    expect(response.status).toBe(204)
-    expect(JSON.parse(storedJson(world, "A".repeat(40)) ?? "{}")._previous).toEqual({ url: "http://localhost:3000/sanctum/csrf-cookie?a=1&b=2%20x", route: "sanctum.csrf-cookie" })
-    world.sessions.clear()
-    const rewritten = await csrfCookie(new Request("http://localhost:3000/sanctum/csrf-cookie?a[]=1", { headers: { accept: "application/json" } }), deps())
-    expect(rewritten.status).toBe(204)
-    const [id] = [...world.sessions.keys()]
-    expect(JSON.parse(storedJson(world, id) ?? "{}")._previous).toEqual({ url: "http://localhost:3000/sanctum/csrf-cookie?a%5B0%5D=1", route: "sanctum.csrf-cookie" })
-  })
+beforeEach(async () => {
+  world = authWorld()
+  mirrored = []
+  await world.addUser({ id: USER, email: EMAIL }, PASSWORD)
+  world.assignments.push({ id: ROLE, userId: USER, role: "docente", careerId: "c-1", careerLabel: "Software" })
 })
 
 describe("POST /api/v1/authentication/login", () => {
   it("answers 400 outside the web app without a session or a password check", async () => {
-    let checked = false
-    const request = new Request("http://localhost:3000/api/v1/authentication/login", {
-      method: "POST",
-      headers: { accept: "application/json", "content-type": "application/json" },
-      body: JSON.stringify({ email: EMAIL, password: PASSWORD }),
-    })
-    const response = await login(request, deps({ verifyPassword: async () => (checked = true) }))
+    const response = await login(post("/api/v1/authentication/login", { email: EMAIL, password: PASSWORD }, undefined, null), deps())
     expect(response.status).toBe(400)
-    expect(await response.text()).toBe('{"message":"Inicie sesión desde la aplicación web."}')
+    expect(await response.json()).toEqual({ message: "Inicie sesión desde la aplicación web." })
     expect(response.headers.getSetCookie()).toEqual([])
-    expect(world.sessions.size).toBe(0)
-    expect(checked).toBe(false)
+    const foreign = await login(post("/api/v1/authentication/login", { email: EMAIL, password: PASSWORD }, undefined, "https://evil.example"), deps())
+    expect(foreign.status).toBe(400)
+    expect(world.db.session).toHaveLength(0)
   })
 
-  it("answers 419 on a token mismatch and still stores the session, without the XSRF cookie", async () => {
-    const response = await login(call("/api/v1/authentication/login", "POST", { email: EMAIL, password: PASSWORD }, { cookie: "", "x-xsrf-token": "" }), deps())
-    expect(response.status).toBe(419)
-    expect(await response.text()).toBe('{"message":"CSRF token mismatch."}')
-    expect(Object.keys(cookies(response))).toEqual([golden.cookieName])
-    expect(storedJson(world, "A".repeat(40))).toBe(`{"_token":"${"B".repeat(40)}","_flash":{"old":[],"new":[]}}`)
-  })
-
-  it("logs in, regenerates the session, picks the sole role and never sets a remember cookie", async () => {
-    withSession(anonymous())
-    const response = await login(call("/api/v1/authentication/login", "POST", { email: EMAIL, password: PASSWORD, remember: true }), deps())
+  it("logs in with the stored bcrypt hash, sets the Better Auth cookie, picks the sole role and never remembers the user", async () => {
+    const response = await login(post("/api/v1/authentication/login", { email: EMAIL, password: PASSWORD }), deps())
     expect(response.status).toBe(200)
-    const body = JSON.parse(await response.text())
-    expect(body.user).toEqual({ id: golden.userId, name: "DOCENTE DEMO", email: EMAIL, email_verified: true, can_edit_identity: false, formation: null, accessibility: null })
-    expect(body.active_role.id).toBe(golden.roleId)
-    expect(response.headers.get("x-ratelimit-limit")).toBe("5")
-    expect(response.headers.get("x-ratelimit-remaining")).toBe("4")
-    const set = cookies(response)
-    expect(Object.keys(set)).toEqual(["XSRF-TOKEN", golden.cookieName])
-    expect(set).not.toHaveProperty(recallerCookieName())
-    const id = set[golden.cookieName].value
-    expect(id).toBe("C".repeat(40))
-    expect(world.sessions.has(golden.sessionId)).toBe(false)
-    expect(world.sessions.has("A".repeat(40))).toBe(false)
-    expect(storedJson(world, id)).toBe(
-      JSON.stringify({ ...anonymous(), _token: "D".repeat(40), [LOGIN_KEY]: golden.userId, password_hash_web: hashPasswordForCookie(HASH, golden.appKey), active_role_assignment_id: golden.roleId }).replaceAll("/", "/"),
-    )
-    expect(set["XSRF-TOKEN"].value).toBe("D".repeat(40))
-    expect(world.sessions.get(id)).toMatchObject({ userId: golden.userId, ipAddress: "::1", userAgent: "Prueba/1.0", lastActivity: NOW })
+    expect(await response.json()).toEqual({
+      user: { id: USER, name: "DOCENTE DEMO", email: EMAIL, email_verified: true, can_edit_identity: false, formation: null, accessibility: null },
+      active_role: { id: ROLE, code: "docente", career_id: "c-1", career_name: "Software" },
+      available_roles: [{ id: ROLE, code: "docente", career_id: "c-1", career_name: "Software" }],
+      institution: { today: "2026-10-21", timezone: "America/Guayaquil" },
+    })
+    const cookies = response.headers.getSetCookie()
+    expect(cookies).toHaveLength(1)
+    expect(cookies[0]).toMatch(/^silabos-ueb\.session_token=[^;]+; Max-Age=14400; Path=\/; HttpOnly; SameSite=Lax$/)
+    expect(cookies.join("\n")).not.toMatch(/remember|dont_remember|XSRF/i)
+    expect(world.db.session).toHaveLength(1)
+    expect(world.db.session[0]).toMatchObject({ userId: USER, activeRoleAssignmentId: ROLE, userAgent: "Mozilla/5.0 (X11; Linux x86_64) Chrome/140.0" })
   })
 
-  it("rejects wrong credentials with the generic message and keeps the session as guest", async () => {
-    withSession(anonymous())
-    const response = await login(call("/api/v1/authentication/login", "POST", { email: EMAIL, password: "otra" }), deps())
-    expect(response.status).toBe(422)
-    expect(await response.text()).toBe('{"message":"Las credenciales proporcionadas no son válidas."}')
-    expect(cookies(response)[golden.cookieName].value).toBe(golden.sessionId)
-    expect(JSON.parse(storedJson(world, golden.sessionId) ?? "{}")).toEqual(anonymous())
+  it("rejects wrong credentials and inactive accounts with the generic message", async () => {
+    const wrong = await login(post("/api/v1/authentication/login", { email: EMAIL, password: "otra" }), deps())
+    expect(wrong.status).toBe(422)
+    expect(await wrong.text()).toBe('{"message":"Las credenciales proporcionadas no son válidas."}')
+    world.user(USER)!.active = false
+    const inactive = await login(post("/api/v1/authentication/login", { email: EMAIL, password: PASSWORD }), deps())
+    expect(inactive.status).toBe(422)
+    expect(await inactive.json()).toEqual({ message: "Las credenciales proporcionadas no son válidas." })
+    expect(world.db.session).toHaveLength(0)
   })
 
   it("validates with the Spanish messages of the login request", async () => {
-    withSession(anonymous())
-    const response = await login(call("/api/v1/authentication/login", "POST", { email: "no-es-correo", password: "" }), deps())
+    const response = await login(post("/api/v1/authentication/login", { email: "no-es-correo", password: "" }), deps())
     expect(response.status).toBe(422)
     expect(await response.text()).toBe(
       '{"message":"Ingrese un correo electrónico válido. (y 1 error más)","errors":{"email":["Ingrese un correo electrónico válido."],"password":["Ingrese su contraseña."]}}',
     )
-    const missing = await login(call("/api/v1/authentication/login", "POST", {}), deps())
+    const missing = await login(post("/api/v1/authentication/login", {}), deps())
     expect(JSON.parse(await missing.text()).errors).toEqual({ email: ["Ingrese su correo electrónico."], password: ["Ingrese su contraseña."] })
   })
 
   it("scopes the throttle by email, so six people behind one IP can all try", async () => {
-    withSession(anonymous())
     const shared = deps()
     for (let attempt = 1; attempt <= 6; attempt += 1) {
-      const response = await login(call("/api/v1/authentication/login", "POST", { email: `persona${attempt}@silabos.test`, password: "incorrecta" }), shared)
+      const response = await login(post("/api/v1/authentication/login", { email: `persona${attempt}@silabos.test`, password: "incorrecta" }), shared)
       expect(response.status).toBe(422)
     }
   })
 
-  it("stops the sixth attempt of one email in a minute with the throttle middleware", async () => {
-    withSession(anonymous())
+  it("stops the sixth attempt of one email in a minute with the Redis-style throttle", async () => {
     const shared = deps()
-    for (let attempt = 1; attempt <= 5; attempt += 1) await login(call("/api/v1/authentication/login", "POST", { email: EMAIL, password: "incorrecta" }), shared)
-    const response = await login(call("/api/v1/authentication/login", "POST", { email: EMAIL, password: PASSWORD }), shared)
+    for (let attempt = 1; attempt <= 5; attempt += 1) await login(post("/api/v1/authentication/login", { email: EMAIL, password: "incorrecta" }), shared)
+    const response = await login(post("/api/v1/authentication/login", { email: EMAIL, password: PASSWORD }), shared)
     expect(response.status).toBe(429)
     expect(await response.text()).toBe('{"message":"Too Many Attempts."}')
-    expect(Object.keys(cookies(response))).toEqual(["XSRF-TOKEN", golden.cookieName])
+    expect(world.db.session).toHaveLength(0)
   })
 
   it("locks an account after twenty failures from any IP, with Retry-After", async () => {
-    withSession(anonymous())
     const shared = deps()
     for (let attempt = 0; attempt < 20; attempt += 1) await shared.attempts.hit(`login-account:${EMAIL}`, 3600)
-    const response = await login(call("/api/v1/authentication/login", "POST", { email: EMAIL, password: PASSWORD }), shared)
+    const response = await login(post("/api/v1/authentication/login", { email: EMAIL, password: PASSWORD }), shared)
     expect(response.status).toBe(429)
     expect(await response.text()).toBe('{"message":"Demasiados intentos. Intente nuevamente en unos minutos."}')
     expect(response.headers.get("retry-after")).toBe("3600")
   })
 
-  it("hands off to the second factor without logging in or regenerating the session", async () => {
-    withSession(anonymous())
-    twoFactor = true
-    const response = await login(call("/api/v1/authentication/login", "POST", { email: EMAIL, password: PASSWORD }), deps())
+  it("hands off to the second factor without keeping a session", async () => {
+    world.user(USER)!.twoFactorEnabled = true
+    world.db.twoFactor.push({ id: "tf-1", userId: USER, secret: "x", backupCodes: "x", verified: true, failedVerificationCount: 0, lockedUntil: null })
+    const response = await login(post("/api/v1/authentication/login", { email: EMAIL, password: PASSWORD }), deps())
     expect(response.status).toBe(202)
     expect(await response.text()).toBe('{"two_factor_required":true,"message":"Ingrese el código de su aplicación de autenticación."}')
-    expect(cookies(response)[golden.cookieName].value).toBe(golden.sessionId)
-    expect(JSON.parse(storedJson(world, golden.sessionId) ?? "{}")).toEqual({ ...anonymous(), login: { id: golden.userId, at: NOW } })
+    expect(world.db.session).toHaveLength(0)
+    expect(response.headers.getSetCookie().some((header) => header.startsWith("silabos-ueb.two_factor="))).toBe(true)
   })
 
-  it("rejects itself, without Laravel, the emails PHP's filter rejects", async () => {
-    withSession(anonymous())
-    const response = await login(call("/api/v1/authentication/login", "POST", { email: "ana@localhost", password: PASSWORD }), deps())
+  it("rejects itself the emails PHP's filter rejects", async () => {
+    const response = await login(post("/api/v1/authentication/login", { email: "ana@localhost", password: PASSWORD }), deps())
     expect(response.status).toBe(422)
     expect(await response.json()).toEqual({ message: "Ingrese un correo electrónico válido.", errors: { email: ["Ingrese un correo electrónico válido."] } })
   })
 })
 
 describe("POST /api/v1/authentication/logout", () => {
-  it("cycles the remember token, deletes the session and starts a new guest one owned by the Sanctum user", async () => {
-    withSession(loggedIn())
-    const response = await logout(call("/api/v1/authentication/logout", "POST"), deps())
+  it("deletes the session and expires the cookie", async () => {
+    const cookie = await signedIn()
+    const response = await logout(post("/api/v1/authentication/logout", undefined, cookie), deps())
     expect(response.status).toBe(204)
-    expect(await response.text()).toBe("")
-    expect(world.sessions.has(golden.sessionId)).toBe(false)
-    const set = cookies(response)
-    expect(set[golden.cookieName].value).toBe("B".repeat(40))
-    expect(set["XSRF-TOKEN"].value).toBe("C".repeat(40))
-    expect(storedJson(world, "B".repeat(40))).toBe(`{"_token":"${"C".repeat(40)}","_flash":{"old":[],"new":[]}}`)
-    expect(world.sessions.get("B".repeat(40))?.userId).toBe(golden.userId)
-    expect(remember.get(golden.userId)).toBe("A".repeat(60))
+    expect(world.db.session).toHaveLength(0)
+    expect(response.headers.getSetCookie().some((header) => header.startsWith("silabos-ueb.session_token=;") && /Max-Age=0/.test(header))).toBe(true)
   })
 
-  it("keeps an empty remember token empty", async () => {
-    withSession(loggedIn())
-    remember.set(golden.userId, null)
-    await logout(call("/api/v1/authentication/logout", "POST"), deps())
-    expect(remember.get(golden.userId)).toBeNull()
-  })
-
-  it("answers 401 to a guest, with the session cookies", async () => {
-    withSession(anonymous())
-    const response = await logout(call("/api/v1/authentication/logout", "POST"), deps())
-    expect(response.status).toBe(401)
-    expect(await response.text()).toBe('{"message":"Unauthenticated."}')
-    expect(Object.keys(cookies(response))).toEqual(["XSRF-TOKEN", golden.cookieName])
-  })
-
-  it("forgets the remember cookie on logout, like SessionGuard::clearUserDataFromStorage", async () => {
-    withSession(loggedIn())
-    const response = await logout(call("/api/v1/authentication/logout", "POST", undefined, { cookie: `${COOKIE}; ${recallerCookieName()}=x` }), deps())
-    expect(response.status).toBe(204)
-    expect(world.sessions.has(golden.sessionId)).toBe(false)
-    expect(response.headers.getSetCookie().find((cookie) => cookie.startsWith(`${recallerCookieName()}=`))).toMatch(/Max-Age=0/)
+  it("answers 401 to a guest", async () => {
+    expect((await logout(post("/api/v1/authentication/logout", undefined), deps())).status).toBe(401)
   })
 })
 
 describe("PUT and DELETE /api/v1/active-role", () => {
   beforeEach(() => {
-    world.assignments = [makeAssignment({ role: "coordinador" }), makeAssignment({ id: OTHER_ROLE, role: "docente" })]
+    world.assignments.push({ id: OTHER_ROLE, userId: USER, role: "coordinador", careerId: "c-2", careerLabel: "Redes" })
   })
 
-  it("selects a role and regenerates the session without deleting the old row", async () => {
-    withSession(loggedIn({ active_role_assignment_id: undefined }))
-    const response = await selectActiveRole(call("/api/v1/active-role", "PUT", { role_assignment_id: OTHER_ROLE }), deps())
+  it("stores the selected role on this session only", async () => {
+    const shared = deps()
+    const cookie = await signedIn(shared)
+    const other = await signedIn(shared)
+    const response = await selectActiveRole(browserRequest("/api/v1/active-role", { method: "PUT", cookie, body: { role_assignment_id: OTHER_ROLE } }), shared)
     expect(response.status).toBe(200)
-    expect(JSON.parse(await response.text()).active_role).toEqual({ id: OTHER_ROLE, code: "docente", career_id: "c-1", career_name: "Software" })
-    const id = cookies(response)[golden.cookieName].value
-    expect(id).not.toBe(golden.sessionId)
-    expect(world.sessions.has(golden.sessionId)).toBe(true)
-    expect(JSON.parse(storedJson(world, id) ?? "{}").active_role_assignment_id).toBe(OTHER_ROLE)
+    expect((await response.json()).active_role.id).toBe(OTHER_ROLE)
+    expect(world.db.session.map((row) => row.activeRoleAssignmentId ?? null).sort()).toEqual([OTHER_ROLE, null].sort())
+    expect(other).not.toBe(cookie)
   })
 
   it("validates the role and answers 404 for a role that is not the user's", async () => {
-    withSession(loggedIn())
-    const empty = await selectActiveRole(call("/api/v1/active-role", "PUT", {}), deps())
-    expect(await empty.text()).toBe('{"message":"Seleccione un rol.","errors":{"role_assignment_id":["Seleccione un rol."]}}')
-    const malformed = await selectActiveRole(call("/api/v1/active-role", "PUT", { role_assignment_id: "x" }), deps())
-    expect(JSON.parse(await malformed.text()).message).toBe("El rol seleccionado no es válido.")
-    const missing = await selectActiveRole(call("/api/v1/active-role", "PUT", { role_assignment_id: "0193a3c2-9999-7000-8000-000000000009" }), deps())
+    const cookie = await signedIn()
+    const invalid = await selectActiveRole(browserRequest("/api/v1/active-role", { method: "PUT", cookie, body: {} }), deps())
+    expect(invalid.status).toBe(422)
+    const missing = await selectActiveRole(browserRequest("/api/v1/active-role", { method: "PUT", cookie, body: { role_assignment_id: "0193a3c2-9999-7000-8000-000000000009" } }), deps())
     expect(missing.status).toBe(404)
-    expect(await missing.text()).toBe('{"message":""}')
   })
 
   it("sends a user with several roles back to choose again", async () => {
-    withSession(loggedIn())
-    const response = await leaveActiveRole(call("/api/v1/active-role", "DELETE"), deps())
-    const body = JSON.parse(await response.text())
-    expect(body.active_role).toBeNull()
-    expect(body.available_roles).toHaveLength(2)
-    expect(JSON.parse(storedJson(world, cookies(response)[golden.cookieName].value) ?? "{}")).not.toHaveProperty("active_role_assignment_id")
-  })
-
-  it("re-selects the only role right away, like Laravel's session payload does", async () => {
-    world.assignments = [makeAssignment()]
-    withSession(loggedIn())
-    const body = JSON.parse(await (await leaveActiveRole(call("/api/v1/active-role", "DELETE"), deps())).text())
-    expect(body.active_role.id).toBe(golden.roleId)
+    const cookie = await signedIn()
+    await selectActiveRole(browserRequest("/api/v1/active-role", { method: "PUT", cookie, body: { role_assignment_id: OTHER_ROLE } }), deps())
+    const response = await leaveActiveRole(browserRequest("/api/v1/active-role", { method: "DELETE", cookie }), deps())
+    expect(response.status).toBe(200)
+    expect((await response.json()).active_role).toBeNull()
+    expect(world.db.session[0].activeRoleAssignmentId ?? null).toBeNull()
   })
 
   it("answers 403 to an unverified account", async () => {
-    world.users = [makeUser({ passwordHash: HASH, emailVerifiedAt: null })]
-    withSession(loggedIn())
-    const response = await selectActiveRole(call("/api/v1/active-role", "PUT", { role_assignment_id: OTHER_ROLE }), deps())
+    world.user(USER)!.emailVerified = false
+    const cookie = await signedIn()
+    const response = await selectActiveRole(browserRequest("/api/v1/active-role", { method: "PUT", cookie, body: { role_assignment_id: OTHER_ROLE } }), deps())
     expect(response.status).toBe(403)
-    expect(await response.text()).toBe('{"message":"Your email address is not verified."}')
   })
 })
 
 describe("PUT /api/v1/authentication/password", () => {
-  const change = (body: unknown) => updatePassword(call("/api/v1/authentication/password", "PUT", body), deps())
+  const change = (cookie: string | undefined, body: unknown, shared = deps()) => updatePassword(browserRequest("/api/v1/authentication/password", { method: "PUT", cookie, body }), shared)
 
   it("validates the current password, the length, the confirmation and that it changes", async () => {
-    withSession(loggedIn())
-    expect(JSON.parse(await (await change({ current_password: "mala", password: "corta", password_confirmation: "otra" })).text())).toEqual({
+    const cookie = await signedIn()
+    expect(JSON.parse(await (await change(cookie, { current_password: "mala", password: "corta", password_confirmation: "otra" })).text())).toEqual({
       message: "La contraseña es incorrecta. (y 2 errores más)",
       errors: {
         current_password: ["La contraseña es incorrecta."],
         password: ["El campo contraseña debe tener al menos 8 caracteres.", "La confirmación de contraseña no coincide."],
       },
     })
-    expect(JSON.parse(await (await change({ current_password: PASSWORD, password: PASSWORD, password_confirmation: PASSWORD })).text()).errors).toEqual({
+    expect(JSON.parse(await (await change(cookie, { current_password: PASSWORD, password: PASSWORD, password_confirmation: PASSWORD })).text()).errors).toEqual({
       password: ["La contraseña nueva debe ser distinta de la actual."],
     })
-    expect(world.users[0].passwordHash).toBe(HASH)
+    expect(await bcryptVerify(PASSWORD, String(world.db.account[0].password))).toBe(true)
   })
 
-  it("changes the password, closes the other sessions and keeps the current one valid", async () => {
-    withSession(loggedIn())
-    withSession(loggedIn(), "Z".repeat(40))
-    const response = await change({ current_password: PASSWORD, password: "Nueva-Clave-2026", password_confirmation: "Nueva-Clave-2026" })
+  it("changes the password, revokes the other sessions and keeps this browser signed in with its role", async () => {
+    world.assignments.push({ id: OTHER_ROLE, userId: USER, role: "coordinador", careerId: "c-2", careerLabel: "Redes" })
+    const shared = deps()
+    const cookie = await signedIn(shared)
+    const other = await signedIn(shared)
+    await selectActiveRole(browserRequest("/api/v1/active-role", { method: "PUT", cookie, body: { role_assignment_id: OTHER_ROLE } }), shared)
+    const response = await change(cookie, { current_password: PASSWORD, password: "Nueva-Clave-2026", password_confirmation: "Nueva-Clave-2026" }, shared)
     expect(response.status).toBe(200)
-    expect(JSON.parse(await response.text()).user.id).toBe(golden.userId)
-    expect(world.users[0].passwordHash).toBe("hash:Nueva-Clave-2026")
-    expect([...world.sessions.keys()]).toEqual([golden.sessionId])
-    expect(cookies(response)[golden.cookieName].value).toBe(golden.sessionId)
-    expect(JSON.parse(storedJson(world, golden.sessionId) ?? "{}").password_hash_web).toBe(hashPasswordForCookie("hash:Nueva-Clave-2026", golden.appKey))
-    expect(remember.get(golden.userId)).toBe("A".repeat(60))
+    expect((await response.json()).active_role.id).toBe(OTHER_ROLE)
+    const stored = String(world.db.account[0].password)
+    expect(stored.startsWith("$2y$04$")).toBe(true)
+    expect(await bcryptVerify("Nueva-Clave-2026", stored)).toBe(true)
+    expect(mirrored).toEqual([USER])
+    expect(world.db.session).toHaveLength(1)
+    expect(world.db.session[0].activeRoleAssignmentId).toBe(OTHER_ROLE)
+    const renewed = cookieHeaderFrom(response.headers.getSetCookie(), cookie)
+    expect((await leaveActiveRole(browserRequest("/api/v1/active-role", { method: "DELETE", cookie: renewed }), shared)).status).toBe(200)
+    expect((await leaveActiveRole(browserRequest("/api/v1/active-role", { method: "DELETE", cookie: other }), shared)).status).toBe(401)
+    expect((await leaveActiveRole(browserRequest("/api/v1/active-role", { method: "DELETE", cookie }), shared)).status).toBe(401)
   })
 
-  it("answers 401 to a guest and applies the production password rule of Password::defaults()", async () => {
-    withSession(anonymous())
-    expect((await change({})).status).toBe(401)
-    withSession(loggedIn())
-    const body = { current_password: "secreto", password: "corta", password_confirmation: "corta" }
-    const response = await updatePassword(call("/api/v1/authentication/password", "PUT", body), deps({ production: () => true }))
+  it("answers 401 to a guest and applies the production password rule", async () => {
+    expect((await change(undefined, {})).status).toBe(401)
+    const cookie = await signedIn()
+    const response = await change(cookie, { current_password: "secreto", password: "corta", password_confirmation: "corta" }, deps({ production: () => true }))
     expect(response.status).toBe(422)
     expect((JSON.parse(await response.text()) as { errors: Record<string, string[]> }).errors.password).toEqual([
       "El campo contraseña debe tener al menos 12 caracteres.",

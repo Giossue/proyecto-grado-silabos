@@ -96,10 +96,10 @@ describe("POST /api/v1/notifications/read-all", () => {
     expect(world.sessions.get(SESSION_ID)?.lastActivity).toBe(NOW)
   })
 
-  it("needs the session, the CSRF token and an active account before writing", async () => {
+  it("needs the session, the web app's origin and an active account before writing", async () => {
     const guest = new Request("http://localhost:3000/api/v1/notifications/read-all", { method: "POST", headers: { accept: "application/json" } })
     expect(await read(await markAllNotificationsRead(guest, deps()))).toEqual({ status: 401, text: '{"message":"Unauthenticated."}' })
-    expect((await markAllNotificationsRead(post("/api/v1/notifications/read-all", { "x-csrf-token": "other" }), deps())).status).toBe(419)
+    expect((await markAllNotificationsRead(post("/api/v1/notifications/read-all", { origin: "https://evil.example" }), deps())).status).toBe(401)
     world.users = [makeUser({ active: false })]
     expect((await markAllNotificationsRead(post("/api/v1/notifications/read-all"), deps())).status).toBe(403)
     expect(writes).toEqual([])
@@ -178,10 +178,8 @@ describe("POST /api/v1/notifications/{notification}/open", () => {
     expect(response.status).toBe(200)
     expect(await response.json()).toMatchObject({ role_changed: true })
     expect(stored[0].readAt).not.toBeNull()
-    expect(world.sessions.has(SESSION_ID)).toBe(true)
-    const stored2 = [...world.sessions.keys()].filter((id) => id !== SESSION_ID)
-    expect(stored2).toHaveLength(1)
-    expect(JSON.parse(storedJson(world, stored2[0]) ?? "{}").active_role_assignment_id).toBe(golden.roleId)
+    expect([...world.sessions.keys()]).toEqual([SESSION_ID])
+    expect(JSON.parse(storedJson(world, SESSION_ID) ?? "{}").active_role_assignment_id).toBe(golden.roleId)
   })
 
   it("forbids another user's notice", async () => {

@@ -2,9 +2,7 @@
 import { describe, expect, it } from "vitest"
 import golden from "./__fixtures__/laravel-golden.json"
 import { DecryptError, decrypt, encrypt, parseAppKey } from "./encrypter"
-import { cookiePrefix, parseCookieHeader, stripValidCookiePrefix } from "./cookies"
 import { serializeString, unserializeString } from "./phpSerialize"
-import { hashPasswordForCookie, loginSessionKey, recallerCookieName } from "./sessionGuard"
 
 const key = parseAppKey(golden.appKey)
 
@@ -48,31 +46,6 @@ describe("Laravel encrypter", () => {
   })
 })
 
-describe("Laravel cookies", () => {
-  it("decrypts the session cookie and strips its HMAC prefix", () => {
-    const plain = decrypt(golden.sessionCookie, key, false)
-    expect(plain.startsWith(cookiePrefix(golden.cookieName, key))).toBe(true)
-    expect(stripValidCookiePrefix(golden.cookieName, plain, key)).toBe(golden.sessionId)
-  })
-
-  it("refuses a value whose prefix belongs to another cookie", () => {
-    const plain = decrypt(golden.sessionCookie, key, false)
-    expect(stripValidCookiePrefix("XSRF-TOKEN", plain, key)).toBeNull()
-  })
-
-  it("reads the XSRF header the SPA sends", () => {
-    const plain = decrypt(golden.xsrfHeader, key, false)
-    expect(stripValidCookiePrefix("XSRF-TOKEN", plain, key)).toBe(golden.csrfToken)
-  })
-
-  it("parses a cookie header with encoded values", () => {
-    expect(parseCookieHeader("a=1; silabos-ueb-session=eyJ%3D; b=x=y")).toEqual(
-      new Map([["a", "1"], ["silabos-ueb-session", "eyJ="], ["b", "x=y"]]),
-    )
-    expect(parseCookieHeader(null)).toEqual(new Map())
-  })
-})
-
 describe("PHP serialization", () => {
   it("unserializes multibyte strings by byte length", () => {
     const value = "«ñ» 😀 \"quoted\";"
@@ -84,16 +57,5 @@ describe("PHP serialization", () => {
     expect(() => unserializeString('a:0:{}')).toThrow()
     expect(() => unserializeString('s:5:"abc";')).toThrow()
     expect(() => unserializeString('s:3:"abc"')).toThrow()
-  })
-})
-
-describe("Session guard keys", () => {
-  it("uses the same login key and recaller cookie name as SessionGuard", () => {
-    expect(loginSessionKey()).toBe(golden.loginKey)
-    expect(recallerCookieName()).toBe(golden.loginKey.replace("login_", "remember_"))
-  })
-
-  it("hashes the password with the app key string as HMAC key", () => {
-    expect(hashPasswordForCookie(golden.passwordHash, golden.appKey)).toBe(golden.passwordHashForCookie)
   })
 })

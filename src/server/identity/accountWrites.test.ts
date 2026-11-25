@@ -113,7 +113,7 @@ describe("PATCH /api/v1/admin/users/{user}", () => {
     test.identity.parallels.push({ id: "p-1", grantId: TEACHER_ROLE, active: true })
     const response = await update(test, TEACHER, { nombre: "Ana María Pérez Gómez", correo_electronico: "docente@silabos.test", active: false })
     expect(await response.text()).toBe('{"message":"Cuenta actualizada."}')
-    expect(test.identity.accounts.find((row) => row.id === TEACHER)).toMatchObject({ name: "ANA MARÍA PÉREZ GÓMEZ", active: false, rememberToken: "a".repeat(60) })
+    expect(test.identity.accounts.find((row) => row.id === TEACHER)).toMatchObject({ name: "ANA MARÍA PÉREZ GÓMEZ", active: false })
     expect(test.identity.sessions.map((row) => row.userId)).not.toContain(TEACHER)
     expect(test.identity.parallels[0].active).toBe(false)
   })

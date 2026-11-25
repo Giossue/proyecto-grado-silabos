@@ -1,13 +1,12 @@
 // @vitest-environment node
 import { afterAll, beforeEach, describe, expect, it } from "vitest"
 import { clearPrefix, testRedis, testRedisUrl } from "../redis/testing"
-import { redisReplayCache, replayCacheKey, totpCode, totpCounter, verifyTotp } from "./totp"
+import { redisReplayGuard } from "./totp"
 
-const PREFIX = "t19-test:replay:"
-const SECRET = "JBSWY3DPEHPK3PXP"
-const NOW = 1_800_000_000
+const PREFIX = "m5-test:replay:"
+const USER = "a0000000-0000-4000-8000-000000000001"
 
-describe.skipIf(testRedisUrl() === null)("redisReplayCache, the 2FA replay protection Fortify kept in the cache", () => {
+describe.skipIf(testRedisUrl() === null)("redisReplayGuard, the 2FA replay protection kept in Redis", () => {
   const redis = testRedis()
 
   beforeEach(() => clearPrefix(redis, PREFIX))
@@ -16,20 +15,15 @@ describe.skipIf(testRedisUrl() === null)("redisReplayCache, the 2FA replay prote
     await redis.quit()
   })
 
-  it("keeps the used counter of each code for the window in minutes and refuses its reuse", async () => {
-    const cache = redisReplayCache(redis, PREFIX)
-    const code = totpCode(SECRET, totpCounter(NOW))
-    expect(await verifyTotp(SECRET, code, cache, NOW)).toBe(true)
-    expect(await redis.get(`${PREFIX}${replayCacheKey(code)}`)).toBe(String(totpCounter(NOW)))
-    expect(await redis.ttl(`${PREFIX}${replayCacheKey(code)}`)).toBeGreaterThan(55)
-    expect(await redis.ttl(`${PREFIX}${replayCacheKey(code)}`)).toBeLessThanOrEqual(60)
-    expect(await verifyTotp(SECRET, code, cache, NOW)).toBe(false)
-  })
-
-  it("answers null for a key it never stored or that holds something else", async () => {
-    const cache = redisReplayCache(redis, PREFIX)
-    expect(await cache.get("missing")).toBeNull()
-    await redis.set(`${PREFIX}odd`, "abc")
-    expect(await cache.get("odd")).toBeNull()
+  it("accepts a code once per user and refuses its reuse until it is released", async () => {
+    const guard = redisReplayGuard(redis, PREFIX)
+    expect(await guard.claim(USER, "123456")).toBe(true)
+    expect(await guard.claim(USER, "123456")).toBe(false)
+    expect(await guard.claim("a0000000-0000-4000-8000-000000000002", "123456")).toBe(true)
+    await guard.release(USER, "123456")
+    expect(await guard.claim(USER, "123456")).toBe(true)
+    const ttl = await redis.ttl(`${PREFIX}${(await import("./totp")).replayCacheKey(USER, "123456")}`)
+    expect(ttl).toBeGreaterThan(80)
+    expect(ttl).toBeLessThanOrEqual(90)
   })
 })

@@ -1,29 +1,11 @@
 import "server-only"
 import { cookies } from "next/headers"
-import type { OutgoingCookie } from "./types"
+import { parseSetCookieHeader, toCookieOptions } from "better-auth/cookies"
 
-type CookieOptions = { expires: Date; maxAge: number; path: string; domain?: string; secure: boolean; httpOnly: boolean; sameSite: "lax" | "strict" | "none" }
+type CookieJar = { set(name: string, value: string, options: ReturnType<typeof toCookieOptions>): unknown }
 
-export type CookieJar = { set(name: string, value: string, options: CookieOptions): unknown }
-
-function sameSiteOf(value: string): CookieOptions["sameSite"] {
-  const lower = value.toLowerCase()
-  return lower === "strict" || lower === "none" ? lower : "lax"
-}
-
-export function setOnJar(jar: CookieJar, cookie: OutgoingCookie): void {
-  jar.set(cookie.name, cookie.value, {
-    expires: new Date(cookie.expires * 1000),
-    maxAge: cookie.maxAge,
-    path: cookie.path,
-    ...(cookie.domain === null ? {} : { domain: cookie.domain }),
-    secure: cookie.secure,
-    httpOnly: cookie.httpOnly,
-    sameSite: sameSiteOf(cookie.sameSite),
-  })
-}
-
-export async function queueResponseCookies(outgoing: OutgoingCookie[]): Promise<void> {
+export async function queueResponseCookies(setCookies: string[]): Promise<void> {
+  if (setCookies.length === 0) return
   let jar: CookieJar
   try {
     jar = (await cookies()) as unknown as CookieJar
@@ -31,8 +13,15 @@ export async function queueResponseCookies(outgoing: OutgoingCookie[]): Promise<
     return
   }
   try {
-    for (const cookie of outgoing) setOnJar(jar, cookie)
+    for (const header of setCookies) {
+      for (const [name, attributes] of parseSetCookieHeader(header)) jar.set(name, attributes.value, toCookieOptions(attributes))
+    }
   } catch {
     return
   }
+}
+
+export function withSetCookies(response: Response, setCookies: string[]): Response {
+  for (const header of setCookies) response.headers.append("Set-Cookie", header)
+  return response
 }

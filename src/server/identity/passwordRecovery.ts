@@ -7,8 +7,9 @@ import { sql, type SQL } from "drizzle-orm"
 import { db } from "@/db"
 import { bcryptHash, bcryptVerify } from "../auth/bcrypt"
 import { defaultBridgeDeps } from "../auth/requireSession"
-import { clientIp, writerDepsOf, type SessionWriterDeps } from "../auth/sessionWriter"
-import { controllerJson, fromController, statefulRequest, type Outcome } from "../auth/statefulRequest"
+import { controllerJson, fromController } from "../auth/controllerResponse"
+import { deleteUserSessions, storeCredentialPassword } from "../auth/credentials"
+import { clientIp, runtimeOf, type AuthRuntime } from "../auth/runtime"
 import { isPhpArray, requestInput, type PhpArray } from "../http/input"
 import { serverError, validationError } from "../http/responses"
 import { throttle, type RateLimiter, type Throttle } from "../http/throttle"
@@ -27,7 +28,6 @@ export interface RecoveryStore {
   deleteResetTokens(email: string): Promise<void>
   insertResetToken(email: string, hash: string, at: number): Promise<void>
   setPassword(userId: string, hash: string): Promise<void>
-  setRememberToken(userId: string, token: string): Promise<void>
   deleteSessions(userId: string): Promise<number>
   lockInvitation(hash: string): Promise<Invitation | null>
   lockUser(userId: string): Promise<{ id: string; active: boolean; verified: boolean } | null>
@@ -44,7 +44,7 @@ export type RecoveryRepository = {
 export type Timebox = <T>(work: (returnEarly: () => void) => Promise<T>) => Promise<T>
 
 export type RecoveryDeps = {
-  writer: SessionWriterDeps
+  runtime: AuthRuntime
   store: RecoveryRepository
   throttles: RateLimiter
   verifyHash: (plain: string, hash: string) => Promise<boolean | null>
@@ -77,15 +77,8 @@ export function recoveryStoreOn(executor: Executor): RecoveryStore {
     async insertResetToken(email, hash, at) {
       await executor.execute(sql`insert into restablecimientos_contrasena (email, token, created_at) values (${email}, ${hash}, to_timestamp(${at}))`)
     },
-    async setPassword(userId, hash) {
-      await executor.execute(sql`update usuarios set contrasena = ${hash} where usuario_id = ${userId}::uuid`)
-    },
-    async setRememberToken(userId, token) {
-      await executor.execute(sql`update usuarios set codigo_recordarme = ${token} where usuario_id = ${userId}::uuid`)
-    },
-    async deleteSessions(userId) {
-      return (await executor.execute(sql`delete from sesiones where user_id = ${userId}::uuid`)).rowCount ?? 0
-    },
+    setPassword: (userId, hash) => storeCredentialPassword(executor, userId, hash),
+    deleteSessions: (userId) => deleteUserSessions(executor, userId),
     async lockInvitation(hash) {
       const [row] = await rows(sql`select invitacion_activacion_id, usuario_id, hash_activacion, ${epoch(sql`expira_en`)} as expires,
           ${epoch(sql`usada_en`)} as used, ${epoch(sql`invalidada_en`)} as invalidated
@@ -106,7 +99,8 @@ export function recoveryStoreOn(executor: Executor): RecoveryStore {
       return row ? { id: String(row.usuario_id), active: row.usuario_activo === true, verified: row.verified === true } : null
     },
     async activate(userId, hash, at) {
-      await executor.execute(sql`update usuarios set contrasena = ${hash}, correo_verificado_en = to_timestamp(${at}) where usuario_id = ${userId}::uuid`)
+      await storeCredentialPassword(executor, userId, hash)
+      await executor.execute(sql`update usuarios set correo_verificado_en = to_timestamp(${at}) where usuario_id = ${userId}::uuid`)
     },
     async useInvitation(id, at) {
       await executor.execute(sql`update invitaciones_activacion set usada_en = to_timestamp(${at}) where invitacion_activacion_id = ${id}::uuid`)
@@ -137,7 +131,7 @@ export function defaultRecoveryDeps(): RecoveryDeps {
   const executor = db as unknown as Executor
   const cost = Number.parseInt(process.env.BCRYPT_ROUNDS ?? "12", 10)
   return {
-    writer: writerDepsOf(defaultBridgeDeps()),
+    runtime: runtimeOf(defaultBridgeDeps()),
     store: {
       direct: (work) => work(recoveryStoreOn(executor)),
       transaction: (work) => db.transaction((tx) => work(recoveryStoreOn(tx as unknown as Executor))),
@@ -151,7 +145,6 @@ export function defaultRecoveryDeps(): RecoveryDeps {
   }
 }
 
-const REMEMBER_LENGTH = 60
 const RESET_SECONDS = 3600
 const RESET_THROTTLE_SECONDS = 60
 const LINK_SENT = "Si el correo pertenece a una cuenta activa, recibirá un enlace para restablecer su contraseña."
@@ -168,21 +161,17 @@ function strengthOf(deps: RecoveryDeps) {
   return passwordStrength("contraseña", { production: deps.production(), pwned: deps.pwned })
 }
 
-async function guarded(request: Request, deps: RecoveryDeps): Promise<{ input: PhpArray; gate: Throttle } | Outcome> {
+async function guarded(request: Request, deps: RecoveryDeps): Promise<{ input: PhpArray; gate: Throttle } | Response> {
   const input = await requestInput(request)
   if (isPhpArray(input.email ?? null)) return serverError()
   const key = `password-recovery:${transliterate(`${stringOf(input.email).toLowerCase()}|${clientIp(request) ?? ""}`)}`
-  const gate = throttle(deps.throttles, { key, maxAttempts: 3, decaySeconds: 60 }, deps.writer.now)
+  const gate = throttle(deps.throttles, { key, maxAttempts: 3, decaySeconds: 60 }, deps.runtime.now)
   const limited = await gate.hit()
   if (limited) return limited
   return { input, gate }
 }
 
-function served(request: Request, deps: RecoveryDeps, outcome: () => Promise<Outcome>): Promise<Response> {
-  return statefulRequest(request, deps.writer, { group: "api" }, outcome, outcome)
-}
-
-async function resetOutcome(request: Request, deps: RecoveryDeps): Promise<Outcome> {
+async function resetOutcome(request: Request, deps: RecoveryDeps): Promise<Response> {
   const guard = await guarded(request, deps)
   if (guard instanceof Response) return guard
   const { input, gate } = guard
@@ -193,8 +182,8 @@ async function resetOutcome(request: Request, deps: RecoveryDeps): Promise<Outco
     const user = await deps.store.direct((store) => store.userByEmail(email))
     if (user === null) return "invalid"
     const record = await deps.store.direct((store) => store.resetToken(user.email))
-    const createdAt = record?.createdAt ?? deps.writer.now()
-    if (record === null || createdAt + RESET_SECONDS < deps.writer.now()) return "invalid"
+    const createdAt = record?.createdAt ?? deps.runtime.now()
+    if (record === null || createdAt + RESET_SECONDS < deps.runtime.now()) return "invalid"
     const matches = await deps.verifyHash(stringOf(input.token), record.token)
     if (matches === null) return "failed"
     if (!matches) return "invalid"
@@ -202,8 +191,6 @@ async function resetOutcome(request: Request, deps: RecoveryDeps): Promise<Outco
     if (hash === null) return "failed"
     await deps.store.direct(async (store) => {
       await store.setPassword(user.id, hash)
-      await store.setRememberToken(user.id, deps.writer.random(REMEMBER_LENGTH))
-      await store.setRememberToken(user.id, deps.writer.random(REMEMBER_LENGTH))
       await store.deleteSessions(user.id)
       await store.deleteResetTokens(user.email)
     })
@@ -215,13 +202,13 @@ async function resetOutcome(request: Request, deps: RecoveryDeps): Promise<Outco
   return gate.decorate(controllerJson({ message: "Contraseña restablecida. Ya puede iniciar sesión." }))
 }
 
-async function activationOutcome(request: Request, deps: RecoveryDeps): Promise<Outcome> {
+async function activationOutcome(request: Request, deps: RecoveryDeps): Promise<Response> {
   const guard = await guarded(request, deps)
   if (guard instanceof Response) return guard
   const { input, gate } = guard
   const { errors } = await validateSchema(accountActivationSchema(strengthOf(deps)), input)
   if (errors !== null) return gate.decorate(fromController(validationError(errors)))
-  const now = deps.writer.now()
+  const now = deps.runtime.now()
   const hash = await storedPassword(stringOf(input.password), deps.hashPassword)
   if (hash === null) return gate.decorate(fromController(serverError()))
   try {
@@ -234,7 +221,6 @@ async function activationOutcome(request: Request, deps: RecoveryDeps): Promise<
       if (user === null || !user.active || user.verified) throw new Refused({ token: [USED_INVITATION] })
       await store.activate(user.id, hash, now)
       await store.useInvitation(invitation.id, now)
-      await store.setRememberToken(user.id, deps.writer.random(REMEMBER_LENGTH))
       await store.deleteSessions(user.id)
       await store.invalidateOtherInvitations(user.id, invitation.id, now)
     })
@@ -247,11 +233,11 @@ async function activationOutcome(request: Request, deps: RecoveryDeps): Promise<
 
 const phpStringCast = (value: PhpArray[string] | undefined): string => (value === undefined || value === null || value === false ? "" : value === true ? "1" : String(value))
 
-async function linkOutcome(request: Request, deps: RecoveryDeps): Promise<Outcome> {
+async function linkOutcome(request: Request, deps: RecoveryDeps): Promise<Response> {
   const input = await requestInput(request)
   if (isPhpArray(input.email ?? null)) return serverError()
   const email = transliterate(phpStringCast(input.email).toLowerCase())
-  const now = deps.writer.now
+  const now = deps.runtime.now
   const gates = [
     throttle(deps.throttles, { key: `password-recovery-link:${email}|${clientIp(request) ?? ""}`, maxAttempts: 3, decaySeconds: 60 }, now),
     throttle(deps.throttles, { key: `password-recovery-link:dia:${email}`, maxAttempts: 10, decaySeconds: 86400 }, now),
@@ -268,7 +254,7 @@ async function linkOutcome(request: Request, deps: RecoveryDeps): Promise<Outcom
     if (user === null) return
     const record = await deps.store.direct((store) => store.resetToken(user.email))
     if (record !== null && (record.createdAt ?? now()) + RESET_THROTTLE_SECONDS > now()) return
-    const token = createHmac("sha256", deps.writer.config.key).update(deps.writer.random(40)).digest("hex")
+    const token = createHmac("sha256", deps.runtime.config.key).update(deps.runtime.random(40)).digest("hex")
     const hash = await deps.hashPassword(token)
     await deps.store.direct(async (store) => {
       await store.deleteResetTokens(user.email)
@@ -281,7 +267,7 @@ async function linkOutcome(request: Request, deps: RecoveryDeps): Promise<Outcom
 
 export async function sendResetLink(request: Request, deps: RecoveryDeps = defaultRecoveryDeps()): Promise<Response> {
   try {
-    return await served(request, deps, () => linkOutcome(request, deps))
+    return await linkOutcome(request, deps)
   } catch (error) {
     console.error(error)
     return serverError()
@@ -289,9 +275,9 @@ export async function sendResetLink(request: Request, deps: RecoveryDeps = defau
 }
 
 export function resetPassword(request: Request, deps: RecoveryDeps = defaultRecoveryDeps()): Promise<Response> {
-  return served(request, deps, () => resetOutcome(request, deps))
+  return resetOutcome(request, deps)
 }
 
 export function activateAccount(request: Request, deps: RecoveryDeps = defaultRecoveryDeps()): Promise<Response> {
-  return served(request, deps, () => activationOutcome(request, deps))
+  return activationOutcome(request, deps)
 }

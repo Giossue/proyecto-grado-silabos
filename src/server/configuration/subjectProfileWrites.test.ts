@@ -194,13 +194,13 @@ describe("PUT academic/asignaturas/{asignatura}/ficha", () => {
     expect(log).toContain(`keep:true:${CAREER}:${SUBJECT}`)
   })
 
-  it("without a CSRF token answers 419 and answers Laravel's model 404 for an unknown subject", async () => {
+  it("without a session answers 401 and answers Laravel's model 404 for an unknown subject", async () => {
     const anonymous = await updateSubjectProfile(
       new Request(apiRequest(`/api/v1/academic/asignaturas/${SUBJECT}/ficha`, { method: "PUT", headers: { "content-type": "application/json" } }), { body: "{}" }),
       SUBJECT,
       deps(),
     )
-    expect(anonymous.status).toBe(419)
+    expect(anonymous.status).toBe(401)
     const unknown = await put({ values: [] }, "01a1c5bc-7a00-7000-8000-0000000000ff")
     expect([unknown.status, unknown.text]).toEqual([404, '{"message":"No query results for model [App\\\\Modules\\\\Academic\\\\Infrastructure\\\\Persistence\\\\Models\\\\Subject] 01a1c5bc-7a00-7000-8000-0000000000ff"}'])
     expect((await put({ values: [] }, "no-es-uuid")).status).toBe(404)

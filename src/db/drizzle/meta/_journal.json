@@ -15,6 +15,13 @@
       "when": 1795573801763,
       "tag": "0001_drop_audit_events",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795591036474,
+      "tag": "0002_better_auth",
+      "breakpoints": true
     }
   ]
 }

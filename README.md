@@ -15,13 +15,16 @@ Copy `.env.example` to `.env.local` and fill it in. The main variables:
 
 | Variable | Purpose |
 |---|---|
-| `APP_KEY` | Key that encrypts the session cookie and the session payload (`base64:` + 32 bytes). Keep the same value to keep users logged in. |
-| `APP_NAME` | Name shown in mails and 2FA apps; its slug names the session cookie unless `SESSION_COOKIE` is set. |
+| `APP_KEY` | Key (`base64:` + 32 bytes) that encrypts the stored AI API key and opens the 2FA secrets of the old system during `db:migrate-auth`. Keep the value the database was written with. |
+| `BETTER_AUTH_SECRET` | Secret of [Better Auth](https://better-auth.com): signs the session cookie and encrypts the 2FA secrets and recovery codes. Required; changing it signs everyone out and breaks the stored 2FA secrets. |
+| `BETTER_AUTH_URL` | Public base URL of the app; `FRONTEND_URL` when unset. |
+| `APP_NAME` | Name shown in mails and 2FA apps. |
 | `DATABASE_URL` | PostgreSQL connection string. |
 | `REDIS_URL`, `REDIS_PREFIX` | Redis connection and key prefix. |
 | `GOTENBERG_URL` | Gotenberg address for PDF conversion. |
-| `SESSION_LIFETIME` | Session lifetime in minutes (240 today). |
-| `STATEFUL_DOMAINS` | Hosts (with port) whose requests use the session cookie. |
+| `SESSION_LIFETIME` | Session lifetime in minutes (240 today); every request renews it, at most once a minute. |
+| `SESSION_COOKIE_PREFIX` | Prefix of the auth cookies (`silabos-ueb` gives `silabos-ueb.session_token`). |
+| `STATEFUL_DOMAINS` | Hosts (with port) of the web app. They are Better Auth's trusted origins: a request whose `Origin` (or `Referer`) is not one of them gets 401, and login answers 400. |
 | `STORAGE_PATH` | Root of the stored files (`private/` and `public/`). It must point at the same folder the database records refer to. |
 | `PUBLIC_ASSETS_PATH` | Folder with the default logos; `assets/` by default. |
 | `QUEUE_MAX_TIME` | Seconds before the worker exits; `0` keeps it running. |
@@ -50,15 +53,18 @@ Drizzle owns the schema. Tables, the enum, checks, indexes, foreign keys and the
 
 ```bash
 npm run db:migrate    # apply pending migrations
-npm run db:seed       # administrator and official template (idempotent)
+npm run db:seed       # administrator, its credential and the official template (idempotent)
+npm run db:migrate-auth  # credential accounts and 2FA secrets of existing users for Better Auth (idempotent)
 npm run db:generate   # write a migration after changing src/db/schema
 npm run db:check      # migration history is consistent
 npm run db:baseline   # mark the baseline as applied on a database restored from a dump (idempotent)
 ```
 
-**New database.** `npm run db:migrate` creates the whole schema, then `npm run db:seed` creates the administrator from `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` (optional `SEED_ADMIN_NAME`, default «Administrador») and the official template. System settings need no rows: they fall back to the environment until an administrator changes them. Running the seed again changes nothing.
+**New database.** `npm run db:migrate` creates the whole schema, including the Better Auth tables, then `npm run db:seed` creates the administrator with its credential account from `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` (optional `SEED_ADMIN_NAME`, default «Administrador») and the official template. System settings need no rows: they fall back to the environment until an administrator changes them. Running the seed again changes nothing.
 
 **Existing database.** Drizzle only applies migrations whose journal timestamp is newer than the last row of `drizzle.__drizzle_migrations`; it does not compare file hashes. Databases that already recorded the baseline (`npm run db:baseline`) and `0001_drop_audit_events` therefore skip both, and the rewritten baseline never runs on them. A database restored from a dump that has the tables but no migration rows needs `npm run db:baseline` once before `npm run db:migrate`; the command refuses to run on an empty database and does nothing when the baseline, or a later migration, is already recorded.
+
+**Authentication.** Login, sessions and 2FA use [Better Auth](https://better-auth.com) on the Drizzle adapter (`src/server/auth/betterAuth.ts`). Its user model is `usuarios` itself (`src/server/auth/authTables.ts` maps `nombre_usuario`, `correo_electronico`, `usuario_activo`, and reads `correo_verificado_en` and `dos_factores_confirmado_en` as flags); `0002_better_auth.sql` adds `sesiones_usuario` (with the session's active role), `cuentas_usuario`, `verificaciones_usuario` and `dos_factores_usuario`, and copies every bcrypt hash of `usuarios.contrasena` into a credential account. Passwords stay bcrypt (`$2y$`, `BCRYPT_ROUNDS`); every password write also updates `usuarios.contrasena`. On an existing database run `npm run db:migrate` and then `npm run db:migrate-auth`, which creates any missing credential account and moves the confirmed 2FA secrets and recovery codes the old system sealed with `APP_KEY` into `dos_factores_usuario`, so authenticator apps keep working. Everyone signs in again once. The old `sesiones` table is no longer read or written; it stays in the database until a later migration drops it.
 
 `0001_drop_audit_events.sql` drops the `eventos_auditoria` table when it exists. The Laravel-only tables `migraciones`, `cola_trabajos`, `datos_temporales` and `bloqueos_temporales` stay in old databases but are not part of the schema, are not created in new ones and are ignored by `drizzle-kit` (`tablesFilter`). The unused `btree_gist` extension of old databases is not created either.
 
@@ -66,7 +72,7 @@ npm run db:baseline   # mark the baseline as applied on a database restored from
 
 Request and form validation use [Zod](https://zod.dev). The shared schemas live in `src/schemas/`: the server parses the request input with them through `validateSchema` (`src/server/http/schemaValidation.ts`) and answers 422 with `{ message, errors: { field: [message] } }`; the React forms use the same field builders through `useSchemaForm` (`src/lib/forms.ts`, react-hook-form with `@hookform/resolvers/zod`). `applyApiErrors` puts the server's 422 errors on the matching fields, and a request without field errors shows its message above the form. Rules that need the database (unique email, active career) or the environment (production password strength) are passed to the schema factories only on the server. Every server route validates with these schemas. `src/schemas/fields.ts` holds the field builder (`field`, `requiredField`, `nullableField`, `sometimesField` and the `is.*` checks) that keeps the Spanish messages, the size rules (characters, numbers or list items) and the per-item checks of lists (`checkItems`); a schema can declare the order of its error keys with `.meta({ errorOrder })`.
 
-Client data goes through [TanStack Query](https://tanstack.com/query). `AppProviders` mounts one `QueryClientProvider` with the client from `getQueryClient()` (`src/lib/queryClient.ts`): no retries for 4xx answers, no refetch on window focus. Query keys and query options live per area in `src/queries/` (`dashboard`, `notifications`, `reviews`, `library`, `teacher`, `careerAcademics`, ...) and call the `src/api/*` functions, which keep the CSRF handling, the 401/409 events and `ApiError`. Lists keep the URL-synced filters in an "applied" state that is part of the query key, so the latest filter always wins, and `placeholderData: keepPreviousData` keeps the previous page on screen while the next one loads. Polling uses `refetchInterval` (the template assistant every 2.5 s, generated PDFs and support documents every 4 s while they are pending). Writes refresh with `invalidateQueries` or `setQueryData`; any successful write still fires `silabos:mutated`, which invalidates the `dashboard` queries (deadline and «Antes de empezar»). The session, the deadline, the setup checklist and the screen help stay readable outside React (`sessionState`, `deadlineState`, ...), but their data now lives in the same query cache. Editors that keep a local draft (syllabus, career project, template JSON) load through `queryClient.fetchQuery`. In Vitest, `renderWithProviders` and `createWrapper` (`src/test/render.tsx`) give every test a fresh `QueryClient` without retries.
+Client data goes through [TanStack Query](https://tanstack.com/query). `AppProviders` mounts one `QueryClientProvider` with the client from `getQueryClient()` (`src/lib/queryClient.ts`): no retries for 4xx answers, no refetch on window focus. Query keys and query options live per area in `src/queries/` (`dashboard`, `notifications`, `reviews`, `library`, `teacher`, `careerAcademics`, ...) and call the `src/api/*` functions, which keep the 401/409 events and `ApiError`; requests carry only the session cookie, since the server checks the origin instead of an XSRF token. Lists keep the URL-synced filters in an "applied" state that is part of the query key, so the latest filter always wins, and `placeholderData: keepPreviousData` keeps the previous page on screen while the next one loads. Polling uses `refetchInterval` (the template assistant every 2.5 s, generated PDFs and support documents every 4 s while they are pending). Writes refresh with `invalidateQueries` or `setQueryData`; any successful write still fires `silabos:mutated`, which invalidates the `dashboard` queries (deadline and «Antes de empezar»). The session, the deadline, the setup checklist and the screen help stay readable outside React (`sessionState`, `deadlineState`, ...), but their data now lives in the same query cache. Editors that keep a local draft (syllabus, career project, template JSON) load through `queryClient.fetchQuery`. In Vitest, `renderWithProviders` and `createWrapper` (`src/test/render.tsx`) give every test a fresh `QueryClient` without retries.
 
 ## JSON and mail
 

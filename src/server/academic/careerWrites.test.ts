@@ -303,7 +303,7 @@ describe("POST /api/v1/coordination/academic/asignatura", () => {
       "asignatura",
       deps(),
     )
-    expect(form.status).toBe(419)
+    expect(form.status).toBe(422)
   })
 })
 

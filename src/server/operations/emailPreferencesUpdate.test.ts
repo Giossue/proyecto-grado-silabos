@@ -126,8 +126,8 @@ describe("PUT /api/v1/notifications/email-preferences", () => {
     expect(result.headers.get("x-ratelimit-remaining")).toBe("19")
   })
 
-  it("needs the session and the CSRF token before counting", async () => {
-    expect((await send({ preferences: { "silabo.aprobado": false } }, { "x-csrf-token": "other" })).status).toBe(419)
+  it("needs the session and the web app's origin before counting", async () => {
+    expect((await send({ preferences: { "silabo.aprobado": false } }, { origin: "https://evil.example" })).status).toBe(401)
     expect((await send({ preferences: { "silabo.aprobado": false } }, { referer: "", cookie: "" })).status).toBe(401)
     expect(limiter.attempts(`throttle:20,1:${golden.userId}`, NOW)).toBe(0)
   })

@@ -23,16 +23,7 @@ const store = {
 }
 
 function deps() {
-  const bridge = fakeDeps(world)
-  const touch = bridge.store.touchSession
-  bridge.store = {
-    ...bridge.store,
-    touchSession: async (id, lastActivity) => {
-      log.push(`touch:${lastActivity}`)
-      await touch(id, lastActivity)
-    },
-  }
-  return { bridge, store }
+  return { bridge: fakeDeps(world), store }
 }
 
 beforeEach(() => {
@@ -54,18 +45,18 @@ beforeEach(() => {
 })
 
 describe("GET authentication/sessions", () => {
-  it("lists the user's sessions newest first with the current one as Laravel read it before refreshing it", async () => {
+  it("lists the user's live sessions newest first, the current one refreshed by this request", async () => {
     const response = await activeSessions(apiRequest("/api/v1/authentication/sessions", { cookie }), deps())
     expect(response.status).toBe(200)
     expect(await response.text()).toBe(
       JSON.stringify({
         sessions: [
+          { id: golden.sessionId, ip_address: "10.0.0.8", device: "Chrome en Linux", last_activity: "2027-01-15T08:00:00+00:00", current: true },
           { id: OTHER, ip_address: null, device: "Safari en iOS", last_activity: "2027-01-15T07:59:00+00:00", current: false },
-          { id: golden.sessionId, ip_address: "10.0.0.8", device: "Chrome en Linux", last_activity: "2027-01-15T07:50:00+00:00", current: true },
         ],
       }),
     )
-    expect(log).toEqual(["list", `touch:${NOW}`])
+    expect(log).toEqual(["list"])
     expect(world.sessions.get(golden.sessionId)?.lastActivity).toBe(NOW)
   })
 
@@ -75,7 +66,7 @@ describe("GET authentication/sessions", () => {
     world.sessions.set(golden.sessionId, { payload: sessionPayload(loggedInAttributes()), lastActivity: NOW - 600 })
     devices.set(golden.sessionId, { userId: golden.userId, ip: null, agent: null })
     const body = JSON.parse(await (await activeSessions(apiRequest("/api/v1/authentication/sessions", { cookie }), deps())).text()) as { sessions: { device: string }[] }
-    expect(body.sessions.map((session) => session.device)).toEqual(["Edge en Windows", "Navegador desconocido en dispositivo desconocido"])
+    expect(body.sessions.map((session) => session.device)).toEqual(["Navegador desconocido en dispositivo desconocido", "Edge en Windows"])
   })
 
   it("answers 401 without a session and lists nothing", async () => {

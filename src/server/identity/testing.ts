@@ -13,7 +13,7 @@ export const CAREER = "01a1c5bc-79ca-7331-8f0f-66d63f61c699"
 export const OTHER_CAREER = "01a1c5bc-79ca-7331-8f0f-66d63f61c6aa"
 export const FORBIDDEN = '{"message":"No tiene permiso para hacer esto."}'
 
-export type FakeAccount = Account & { rememberToken: string | null; formation: string | null; accessibility: unknown; passwordHash: string }
+export type FakeAccount = Account & { formation: string | null; accessibility: unknown; passwordHash: string }
 export type FakeInvitation = { userId: string; hash: string; expiresAt: number; issuerId: string; createdAt: number; usedAt: number | null; invalidatedAt: number | null }
 
 export type FakeIdentity = {
@@ -37,7 +37,6 @@ export function account(overrides: Partial<FakeAccount> & { id: string }): FakeA
     email: `${overrides.id.slice(0, 8)}@silabos.test`,
     active: true,
     verified: true,
-    rememberToken: null,
     formation: null,
     accessibility: null,
     passwordHash: golden.passwordHash,
@@ -102,9 +101,6 @@ function fakeTx(world: FakeIdentity): AccountTx {
     },
     async setActive(id, active) {
       Object.assign(find(id) as FakeAccount, { active })
-    },
-    async setRememberToken(id, token) {
-      Object.assign(find(id) as FakeAccount, { rememberToken: token })
     },
     lockFormation: async (id) => {
       const row = find(id)

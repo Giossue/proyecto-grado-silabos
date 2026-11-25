@@ -1,5 +1,4 @@
 import "server-only"
-import { sessionRandom } from "../auth/sessionWriter"
 import { and, eq, exists, isNull, ne, sql, type SQL } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
 import { db } from "@/db"
@@ -13,9 +12,8 @@ import {
   facultades,
   invitacionesActivacion,
   periodosAcademicos,
-  sesiones,
-  usuarios,
 } from "@/db/schema"
+import { sesionesUsuario } from "@/db/schema/auth"
 import { uuid7 } from "../http/uuid7"
 import { notificationScope, systemNow, type WriteOptions } from "../notifications/queries"
 import { withAfterCommit, type AfterCommit } from "../queue/dispatch"
@@ -147,8 +145,7 @@ export function governanceWriteTx(executor: Executor, afterCommit: AfterCommit, 
           .delete(asignacionesParalelo)
           .where(and(eq(asignacionesParalelo.asignacionRolId, assignment.id), eq(asignacionesParalelo.asignacionParaleloActiva, true)))
         await executor.update(asignacionesRol).set({ asignacionRolActiva: false }).where(eq(asignacionesRol.asignacionRolId, assignment.id))
-        await executor.update(usuarios).set({ codigoRecordarme: sessionRandom(60) }).where(eq(usuarios.usuarioId, assignment.userId))
-        await executor.delete(sesiones).where(eq(sesiones.userId, assignment.userId))
+        await executor.delete(sesionesUsuario).where(eq(sesionesUsuario.userId, assignment.userId))
         const stillActive = await hasRows(
           executor
             .select({ id: asignacionesRol.asignacionRolId })

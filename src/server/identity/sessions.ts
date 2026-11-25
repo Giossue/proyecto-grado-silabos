@@ -1,7 +1,7 @@
 import "server-only"
 import { sql } from "drizzle-orm"
 import { db } from "@/db"
-import { authenticateAndTrack, commitTracking, defaultBridgeDeps } from "../auth/requireSession"
+import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
 import type { BridgeDeps } from "../auth/types"
 import { apiJson } from "../http/responses"
 import { isoFromSeconds } from "../syllabus/draftField"
@@ -18,7 +18,8 @@ export function createActiveSessionStore(): ActiveSessionStore {
   return {
     async sessions(userId) {
       const result = await db.execute(
-        sql`select id, ip_address, user_agent, last_activity from sesiones where user_id = ${userId} order by last_activity desc`,
+        sql`select id, ip_address, user_agent, extract(epoch from updated_at)::bigint as last_activity from sesiones_usuario
+          where user_id = ${userId}::uuid and expires_at > now() order by updated_at desc, id asc`,
       )
       return (result.rows as { id: string; ip_address: string | null; user_agent: string | null; last_activity: string | number }[]).map((row) => ({
         id: row.id,
@@ -58,22 +59,16 @@ export function deviceLabel(agent: string): string {
 }
 
 export async function activeSessions(request: Request, deps: ActiveSessionDeps = defaultActiveSessionDeps()): Promise<Response> {
-  const authentication = await authenticateAndTrack(request, {}, deps.bridge)
-  const { outcome, touch } = authentication
-  const refresh = () => commitTracking(authentication, request, deps.bridge)
-  if (outcome instanceof Response) {
-    await refresh()
-    return outcome
-  }
-  const rows = await deps.store.sessions(outcome.user.id)
-  await refresh()
+  const session = await requireSession(request, {}, deps.bridge)
+  if (session instanceof Response) return session
+  const rows = await deps.store.sessions(session.user.id)
   return apiJson({
     sessions: rows.map((row) => ({
       id: row.id,
-      ip_address: row.ip,
+      ip_address: row.ip === "" ? null : row.ip,
       device: deviceLabel(row.agent ?? ""),
       last_activity: isoFromSeconds(row.lastActivity),
-      current: touch !== null && row.id === touch,
+      current: row.id === session.session.id,
     })),
   })
 }

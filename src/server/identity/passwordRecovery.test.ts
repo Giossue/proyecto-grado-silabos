@@ -2,9 +2,7 @@
 import { createHash } from "node:crypto"
 import { beforeEach, describe, expect, it } from "vitest"
 import golden from "../http/__fixtures__/laravel-golden.json"
-import { fakeDeps, NOW, sessionCookie, sessionPayload, xsrfHeader, type FakeWorld } from "../auth/testing"
-import type { SessionWriterDeps } from "../auth/sessionWriter"
-import type { OutgoingCookie } from "../auth/types"
+import { NOW, sessionCookie, testConfig } from "../auth/testing"
 import { createRateLimiter } from "../http/throttle"
 import type { QueuedMail } from "../mail/mailables"
 import { activateAccount, resetPassword, sendResetLink, type Invitation, type RecoveryDeps, type RecoveryStore } from "./passwordRecovery"
@@ -15,14 +13,12 @@ const TOKEN = "token-de-restablecimiento"
 const RESET_OK = '{"message":"Contraseña restablecida. Ya puede iniciar sesión."}'
 const INVALID_LINK = "El enlace para restablecer la contraseña no es válido o ya venció."
 
-type Account = { id: string; email: string; passwordHash: string; remember: string | null; active: boolean; verifiedAt: number | null }
+type Account = { id: string; email: string; passwordHash: string; active: boolean; verifiedAt: number | null }
 
-let world: FakeWorld
 let accounts: Account[]
 let resets: Map<string, { token: string; createdAt: number | null }>
 let invitations: Invitation[]
 let sessions: { id: string; userId: string }[]
-let queued: OutgoingCookie[]
 let sequence: number
 let mails: QueuedMail[]
 
@@ -37,7 +33,6 @@ function store(): RecoveryStore {
     deleteResetTokens: async (email) => void resets.delete(email),
     insertResetToken: async (email, token, at) => void resets.set(email, { token, createdAt: at }),
     setPassword: async (id, hash) => void Object.assign(find(id) ?? {}, { passwordHash: hash }),
-    setRememberToken: async (id, token) => void Object.assign(find(id) ?? {}, { remember: token }),
     deleteSessions: async (userId) => {
       const before = sessions.length
       sessions = sessions.filter((session) => session.userId !== userId)
@@ -59,15 +54,8 @@ function store(): RecoveryStore {
 }
 
 function deps(overrides: Partial<RecoveryDeps> = {}): RecoveryDeps {
-  const writer: SessionWriterDeps = {
-    ...fakeDeps(world),
-    queueCookies: async (cookies) => void queued.push(...cookies),
-    cookie: { path: "/", domain: null, secure: false, sameSite: "lax" },
-    random: (length) => String.fromCharCode(65 + (sequence++ % 26)).repeat(length),
-    lottery: () => false,
-  }
   return {
-    writer,
+    runtime: { config: testConfig, now: () => NOW, random: (length) => String.fromCharCode(65 + (sequence++ % 26)).repeat(length) },
     store: { direct: (work) => work(store()), transaction: (work) => work(store()) },
     throttles: createRateLimiter(),
     verifyHash: async (plain, hash) => hash === `hash:${plain}`,
@@ -90,7 +78,6 @@ function post(path: string, body: unknown, stateful = true, contentType = "appli
         ? {
             referer: "http://localhost:3000/restablecer-contrasena",
             cookie: `${golden.cookieName}=${encodeURIComponent(sessionCookie(golden.sessionId))}`,
-            "x-xsrf-token": xsrfHeader(golden.csrfToken),
           }
         : {}),
     },
@@ -101,8 +88,7 @@ function post(path: string, body: unknown, stateful = true, contentType = "appli
 const resetBody = (overrides: Record<string, unknown> = {}) => ({ email: EMAIL, token: TOKEN, password: "Josue123456*", password_confirmation: "Josue123456*", ...overrides })
 
 beforeEach(() => {
-  world = { sessions: new Map([[golden.sessionId, { payload: sessionPayload({ _token: golden.csrfToken }), lastActivity: NOW - 60 }]]), users: [], assignments: [] }
-  accounts = [{ id: USER, email: EMAIL, passwordHash: "hash:vieja", remember: "recordarme-viejo", active: true, verifiedAt: NOW - 86400 }]
+  accounts = [{ id: USER, email: EMAIL, passwordHash: "hash:vieja", active: true, verifiedAt: NOW - 86400 }]
   resets = new Map([[EMAIL, { token: `hash:${TOKEN}`, createdAt: NOW - 600 }]])
   invitations = []
   sessions = [
@@ -110,25 +96,21 @@ beforeEach(() => {
     { id: "otra-sesion", userId: USER },
     { id: "ajena", userId: "otro" },
   ]
-  queued = []
   sequence = 0
   mails = []
 })
 
 describe("POST authentication/password-reset (PasswordResetTest)", () => {
-  it("sets the new password, deletes the token, rotates the remember token and closes every session", async () => {
+  it("sets the new password, deletes the token and closes every session", async () => {
     const response = await resetPassword(post("password-reset", resetBody({ email: "Docente@Silabos.test" })), deps())
     expect(response.status).toBe(200)
     expect(await response.text()).toBe(RESET_OK)
     expect(accounts[0].passwordHash).toBe("hash:Josue123456*")
-    expect(accounts[0].remember).toMatch(/^[A-Z]{60}$/)
-    expect(accounts[0].remember).not.toBe("recordarme-viejo")
     expect(resets.has(EMAIL)).toBe(false)
     expect(sessions.map((session) => session.id)).toEqual(["ajena"])
     expect(response.headers.get("x-ratelimit-limit")).toBe("3")
     expect(response.headers.get("x-ratelimit-remaining")).toBe("2")
-    expect(queued.map((cookie) => cookie.name)).toEqual([])
-    expect(response.headers.getSetCookie().map((header) => header.slice(0, header.indexOf("=")))).toEqual(["XSRF-TOKEN", golden.cookieName])
+    expect(response.headers.getSetCookie()).toEqual([])
   })
 
   it("answers the same 422 for an unknown account, a wrong token and an expired one", async () => {
@@ -189,7 +171,6 @@ describe("POST authentication/account-activation (ManagedUserTest)", () => {
     expect(response.status).toBe(200)
     expect(await response.text()).toBe('{"message":"Cuenta activada. Ya puede iniciar sesión."}')
     expect(accounts[0]).toMatchObject({ passwordHash: "hash:Nueva-clave-2026!", verifiedAt: NOW })
-    expect(accounts[0].remember).toMatch(/^[A-Z]{60}$/)
     expect(invitations).toMatchObject([{ id: "inv-1", usedAt: NOW, invalidatedAt: null }, { id: "inv-0", usedAt: null, invalidatedAt: NOW }])
     expect(sessions.map((session) => session.id)).toEqual(["ajena"])
   })

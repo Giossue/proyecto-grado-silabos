@@ -2,7 +2,7 @@ import "server-only"
 import { sql } from "drizzle-orm"
 import { db } from "@/db"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
-import { phpArrayCast } from "../auth/sessionWriter"
+import { phpArrayCast } from "../auth/runtime"
 import type { BridgeDeps, AppSession, RoleAssignmentRecord } from "../auth/types"
 import { institutionToday } from "../dashboard/dashboardQueries"
 import { apiJson, unauthenticated } from "../http/responses"
@@ -33,9 +33,10 @@ export function createProfileRepository(): ProfileRepository {
   return {
     async find(userId) {
       const [row] = (
-        await db.execute(sql`select nombre_usuario, correo_electronico, formacion_experiencia_usuario, preferencias_accesibilidad_usuario,
-            secreto_dos_factores is not null as two_factor_secret, dos_factores_confirmado_en is not null as two_factor_confirmed
-          from usuarios where usuario_id = ${userId}::uuid`)
+        await db.execute(sql`select u.nombre_usuario, u.correo_electronico, u.formacion_experiencia_usuario, u.preferencias_accesibilidad_usuario,
+            d.id is not null as two_factor_secret, d.id is not null and u.dos_factores_confirmado_en is not null as two_factor_confirmed
+          from usuarios u left join dos_factores_usuario d on d.user_id = u.usuario_id
+          where u.usuario_id = ${userId}::uuid`)
       ).rows as {
         nombre_usuario: string
         correo_electronico: string

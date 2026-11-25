@@ -3,9 +3,6 @@ import { readFile, mkdir, mkdtemp, rm, utimes, writeFile } from "node:fs/promise
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
-import golden from "../http/__fixtures__/laravel-golden.json"
-import { fakeDeps, storedJson, type FakeWorld } from "../auth/testing"
-import type { SessionWriterDeps } from "../auth/sessionWriter"
 import { NOT_FOUND_PAGE } from "../http/errorPages"
 import { facultyLogo, institutionLogo, publicSyllabusImage } from "./logoRoutes"
 import { templateSchema } from "./templateReads"
@@ -26,20 +23,9 @@ const SECURITY = {
 }
 
 let root: string
-let world: FakeWorld
 let faculties: Map<string, StoredFaculty>
-let sequence: number
 
 const store: LogoStore = { faculty: async (id) => faculties.get(id) ?? null }
-
-function writer(): SessionWriterDeps {
-  return {
-    ...fakeDeps(world),
-    cookie: { path: "/", domain: null, secure: false, sameSite: "lax" },
-    random: (length) => String.fromCharCode(65 + (sequence++ % 26)).repeat(length),
-    lottery: () => false,
-  }
-}
 
 async function file(relative: string, content: Buffer, mtime: number) {
   const target = path.join(root, relative)
@@ -74,8 +60,6 @@ afterAll(async () => {
 })
 
 beforeEach(() => {
-  world = { sessions: new Map(), users: [], assignments: [] }
-  sequence = 0
   faculties = new Map([
     [FACULTY, { id: FACULTY, logo: { disk: "private", path: `logos/facultades/${FACULTY}/logo.png`, classification: "logo_facultad" } }],
     [BARE, { id: BARE, logo: null }],
@@ -83,8 +67,8 @@ beforeEach(() => {
 })
 
 describe("GET /logos/institucion", () => {
-  it("serves the logo file like BinaryFileResponse, inside the web session, with the versioned URL as the previous one", async () => {
-    const response = await institutionLogo(get("/logos/institucion?v=1789530561"), { writer: writer(), store })
+  it("serves the logo file like BinaryFileResponse without a session", async () => {
+    const response = await institutionLogo(get("/logos/institucion?v=1789530561"))
     expect(response.status).toBe(200)
     expect(Buffer.from(await response.arrayBuffer()).equals(PNG)).toBe(true)
     expect(headersOf(response)).toEqual({
@@ -96,48 +80,45 @@ describe("GET /logos/institucion", () => {
       ...SECURITY,
       "cross-origin-resource-policy": "cross-origin",
     })
-    expect(cookieNames(response)).toEqual(["XSRF-TOKEN", golden.cookieName])
-    expect(JSON.parse(storedJson(world, "A".repeat(40)) ?? "{}")._previous).toEqual({ url: "http://localhost:3000/logos/institucion?v=1789530561", route: "logos.institution" })
+    expect(cookieNames(response)).toEqual([])
   })
 
   it("answers HEAD with the same headers and no body, and a byte range with 206 like Symfony", async () => {
-    const head = await institutionLogo(get("/logos/institucion", {}, "HEAD"), { writer: writer(), store })
+    const head = await institutionLogo(get("/logos/institucion", {}, "HEAD"))
     expect(head.status).toBe(200)
     expect(head.headers.get("content-length")).toBe(String(PNG.length))
     expect((await head.arrayBuffer()).byteLength).toBe(0)
-    const range = await institutionLogo(get("/logos/institucion", { range: "bytes=2-5" }), { writer: writer(), store })
+    const range = await institutionLogo(get("/logos/institucion", { range: "bytes=2-5" }))
     expect(range.status).toBe(206)
     expect([range.headers.get("content-range"), range.headers.get("content-length")]).toEqual([`bytes 2-5/${PNG.length}`, "4"])
     expect(Buffer.from(await range.arrayBuffer()).equals(PNG.subarray(2, 6))).toBe(true)
-    const suffix = await institutionLogo(get("/logos/institucion", { range: "bytes=-3" }), { writer: writer(), store })
+    const suffix = await institutionLogo(get("/logos/institucion", { range: "bytes=-3" }))
     expect(Buffer.from(await suffix.arrayBuffer()).equals(PNG.subarray(PNG.length - 3))).toBe(true)
-    const outside = await institutionLogo(get("/logos/institucion", { range: "bytes=-99" }), { writer: writer(), store })
+    const outside = await institutionLogo(get("/logos/institucion", { range: "bytes=-99" }))
     expect([outside.status, outside.headers.get("content-range"), outside.headers.get("content-length")]).toEqual([416, `bytes */${PNG.length}`, "0"])
-    const stale = await institutionLogo(get("/logos/institucion", { range: "bytes=2-5", "if-range": "Mon, 01 Jan 2024 00:00:00 GMT" }), { writer: writer(), store })
+    const stale = await institutionLogo(get("/logos/institucion", { range: "bytes=2-5", "if-range": "Mon, 01 Jan 2024 00:00:00 GMT" }))
     expect([stale.status, stale.headers.get("content-length")]).toEqual([200, String(PNG.length)])
   })
 })
 
 describe("GET /logos/facultad/{faculty}", () => {
   it("serves the stored faculty logo and falls back to the default JPEG", async () => {
-    const stored = await facultyLogo(get(`/logos/facultad/${FACULTY}?v=1`), FACULTY, { writer: writer(), store })
+    const stored = await facultyLogo(get(`/logos/facultad/${FACULTY}?v=1`), FACULTY, { store })
     expect([stored.status, stored.headers.get("content-type"), stored.headers.get("last-modified")]).toEqual([200, "image/png", "Tue, 10 Nov 2026 13:53:45 GMT"])
-    const fallback = await facultyLogo(get(`/logos/facultad/${BARE}`), BARE, { writer: writer(), store })
+    const fallback = await facultyLogo(get(`/logos/facultad/${BARE}`), BARE, { store })
     expect([fallback.status, fallback.headers.get("content-type")]).toEqual([200, "image/jpeg"])
     expect(Buffer.from(await fallback.arrayBuffer()).equals(JPEG)).toBe(true)
   })
 
-  it("answers an unknown faculty with Laravel's 404 inside the session and a malformed id like an unknown route", async () => {
-    const html = await facultyLogo(get(`/logos/facultad/${MISSING}`), MISSING, { writer: writer(), store })
+  it("answers an unknown faculty with Laravel's 404 and a malformed id like an unknown route, without cookies", async () => {
+    const html = await facultyLogo(get(`/logos/facultad/${MISSING}`), MISSING, { store })
     expect([html.status, html.headers.get("content-type"), html.headers.get("cache-control"), html.headers.get("x-frame-options")]).toEqual([404, "text/html; charset=utf-8", "no-cache, private", null])
     expect(await html.text()).toBe(NOT_FOUND_PAGE)
-    expect(cookieNames(html)).toEqual(["XSRF-TOKEN", golden.cookieName])
-    const json = await facultyLogo(get(`/logos/facultad/${MISSING}`, { accept: "application/json" }), MISSING, { writer: writer(), store })
+    expect(cookieNames(html)).toEqual([])
+    const json = await facultyLogo(get(`/logos/facultad/${MISSING}`, { accept: "application/json" }), MISSING, { store })
     expect(await json.text()).toBe(`{"message":"No query results for model [${MODEL}] ${MISSING}"}`)
-    world.sessions.clear()
-    const malformed = await facultyLogo(get("/logos/facultad/abc"), "abc", { writer: writer(), store })
+    const malformed = await facultyLogo(get("/logos/facultad/abc"), "abc", { store })
     expect([malformed.status, await malformed.text(), cookieNames(malformed)]).toEqual([404, NOT_FOUND_PAGE, []])
-    expect(world.sessions.size).toBe(0)
   })
 })
 

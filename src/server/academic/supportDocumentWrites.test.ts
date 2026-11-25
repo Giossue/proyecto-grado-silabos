@@ -300,10 +300,13 @@ describe("POST /api/v1/coordination/support-documents", () => {
     expect(dispatched).toHaveLength(2)
   })
 
-  it("checks the CSRF token carried in the body like VerifyCsrfToken", async () => {
+  it("refuses an upload sent from another origin", async () => {
     asRole("coordinador")
-    expect((await storeSupportDocument(upload("Con token", { name: "a.pdf", content: PDF }, { _token: "x" }), deps())).status).toBe(419)
-    expect((await storeSupportDocument(upload("Con token", { name: "a.pdf", content: PDF }, { _token: golden.csrfToken }), deps())).status).toBe(201)
+    const form = new FormData()
+    form.append("title", "Desde otro sitio")
+    form.append("file", new File([PDF], "a.pdf"))
+    expect((await storeSupportDocument(request("POST", "/api/v1/coordination/support-documents", form, { origin: "https://evil.example" }), deps())).status).toBe(401)
+    expect((await storeSupportDocument(upload("Desde la aplicación", { name: "a.pdf", content: PDF }), deps())).status).toBe(201)
   })
 })
 

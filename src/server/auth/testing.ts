@@ -1,39 +1,29 @@
 import golden from "../http/__fixtures__/laravel-golden.json"
-import { cookiePrefix } from "../http/cookies"
-import { decrypt, encrypt, parseAppKey } from "../http/encrypter"
-import { hashPasswordForCookie, loginSessionKey, recallerCookieName } from "../http/sessionGuard"
-import type { BridgeConfig, BridgeDeps, RoleAssignmentRecord, SessionRecord, SessionStore, SessionUser } from "./types"
+import { parseAppKey } from "../http/encrypter"
+import type { BridgeConfig, BridgeDeps, ResolvedSession, RoleAssignmentRecord, SessionGateway, SessionStore, SessionUser } from "./types"
 
 export const testKey = parseAppKey(golden.appKey)
 export const NOW = 1_800_000_000
+export const USER_KEY = "user_id"
+export const TRUSTED_HOSTS = ["localhost:3000"]
 
 export const testConfig: BridgeConfig = {
   key: testKey,
-  appKey: golden.appKey,
-  cookieName: golden.cookieName,
   lifetimeMinutes: 120,
-  statefulDomains: ["localhost:3000"],
 }
+
+export type SessionRecord = { payload: string; lastActivity: number }
 
 export function sessionCookie(sessionId: string): string {
-  return encrypt(cookiePrefix(golden.cookieName, testKey) + sessionId, testKey, false)
-}
-
-export function recallerCookie(value: string): string {
-  return encrypt(cookiePrefix(recallerCookieName(), testKey) + value, testKey, false)
-}
-
-export function xsrfHeader(token: string): string {
-  return encrypt(cookiePrefix("XSRF-TOKEN", testKey) + token, testKey, false)
+  return sessionId
 }
 
 export function sessionPayload(attributes: Record<string, unknown>): string {
-  return Buffer.from(encrypt(JSON.stringify(attributes), testKey, true)).toString("base64")
+  return JSON.stringify(attributes)
 }
 
 export function storedJson(world: FakeWorld, id: string): string | null {
-  const row = world.sessions.get(id)
-  return row ? decrypt(Buffer.from(row.payload, "base64").toString("utf8"), testKey, true) : null
+  return world.sessions.get(id)?.payload ?? null
 }
 
 export function makeUser(overrides: Partial<SessionUser> = {}): SessionUser {
@@ -52,48 +42,79 @@ export function makeAssignment(overrides: Partial<RoleAssignmentRecord> = {}): R
 }
 
 export function loggedInAttributes(overrides: Record<string, unknown> = {}): Record<string, unknown> {
-  return {
-    _token: golden.csrfToken,
-    [loginSessionKey()]: golden.userId,
-    password_hash_web: hashPasswordForCookie(golden.passwordHash, golden.appKey),
-    active_role_assignment_id: golden.roleId,
-    ...overrides,
-  }
+  return { [USER_KEY]: golden.userId, active_role_assignment_id: golden.roleId, ...overrides }
 }
 
 export type FakeWorld = {
   sessions: Map<string, SessionRecord>
   users: SessionUser[]
   assignments: RoleAssignmentRecord[]
-  rememberTokens?: Map<string, string | null>
 }
 
 export function fakeStore(world: FakeWorld): SessionStore {
   return {
-    findSession: async (id) => world.sessions.get(id) ?? null,
     findUser: async (id) => world.users.find((user) => user.id === id) ?? null,
     effectiveRoleAssignments: async (userId) => world.assignments.filter((assignment) => assignment.userId === userId),
-    touchSession: async (id, lastActivity) => {
-      const row = world.sessions.get(id)
-      if (row) world.sessions.set(id, { ...row, lastActivity })
+  }
+}
+
+function cookieValue(header: string | null, name: string): string | null {
+  for (const part of (header ?? "").split(";")) {
+    const [key, ...rest] = part.trim().split("=")
+    if (key === name) return decodeURIComponent(rest.join("="))
+  }
+  return null
+}
+
+function attributesOf(record: SessionRecord): Record<string, unknown> {
+  const parsed: unknown = JSON.parse(record.payload)
+  return typeof parsed === "object" && parsed !== null && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : {}
+}
+
+export function fakeSessions(world: FakeWorld, config: BridgeConfig = testConfig, now: () => number = () => NOW): SessionGateway {
+  return {
+    async fromWebApp(request) {
+      const source = request.headers.get("origin") || request.headers.get("referer")
+      if (!source) return false
+      try {
+        return TRUSTED_HOSTS.includes(new URL(source).host)
+      } catch {
+        return false
+      }
     },
-    insertSession: async (id, row) => {
-      if (world.sessions.has(id)) return false
-      world.sessions.set(id, { ...row })
-      return true
+    async resolve(request) {
+      const id = cookieValue(request.headers.get("cookie"), golden.cookieName)
+      const record = id === null ? undefined : world.sessions.get(id)
+      if (id === null || record === undefined) return null
+      if (record.lastActivity < now() - config.lifetimeMinutes * 60) {
+        world.sessions.delete(id)
+        return null
+      }
+      const attributes = attributesOf(record)
+      const userId = attributes[USER_KEY]
+      if (typeof userId !== "string") return null
+      world.sessions.set(id, { ...record, lastActivity: now() })
+      const role = attributes.active_role_assignment_id
+      return { id, token: id, userId, activeRoleAssignmentId: typeof role === "string" ? role : null, cookies: [] } satisfies ResolvedSession
     },
-    updateSession: async (id, row) => {
-      if (world.sessions.has(id)) world.sessions.set(id, { ...row })
+    async find(token) {
+      const record = world.sessions.get(token)
+      const userId = record === undefined ? undefined : attributesOf(record)[USER_KEY]
+      if (record === undefined || typeof userId !== "string") return null
+      const role = attributesOf(record).active_role_assignment_id
+      return { id: token, token, userId, activeRoleAssignmentId: typeof role === "string" ? role : null, cookies: [] }
     },
-    destroySession: async (id) => {
-      world.sessions.delete(id)
+    async setActiveRole(session, assignmentId) {
+      const record = world.sessions.get(session.id)
+      if (record === undefined) return
+      const attributes = attributesOf(record)
+      if (assignmentId === null) delete attributes.active_role_assignment_id
+      else attributes.active_role_assignment_id = assignmentId
+      world.sessions.set(session.id, { ...record, payload: sessionPayload(attributes) })
+      session.activeRoleAssignmentId = assignmentId
     },
-    collectGarbage: async (threshold) => {
-      for (const [id, row] of world.sessions) if (row.lastActivity <= threshold) world.sessions.delete(id)
-    },
-    cycleRememberToken: async (userId, token) => {
-      const current = world.rememberTokens?.get(userId)
-      if (current !== undefined && current !== null && current !== "" && current !== "0") world.rememberTokens?.set(userId, token)
+    async revokeUser(userId) {
+      for (const [id, record] of world.sessions) if (attributesOf(record)[USER_KEY] === userId) world.sessions.delete(id)
     },
   }
 }
@@ -101,8 +122,10 @@ export function fakeStore(world: FakeWorld): SessionStore {
 export function fakeDeps(world: FakeWorld): BridgeDeps {
   return {
     store: fakeStore(world),
+    sessions: fakeSessions(world),
     config: testConfig,
     now: () => NOW,
+    queueCookies: async () => undefined,
   }
 }
 

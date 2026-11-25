@@ -88,7 +88,7 @@ describe("unmatchedRoute", () => {
   })
 
   it("renders Symfony's HTML 405 page outside the API", async () => {
-    expect(await snapshot(unmatchedRoute(request("PUT", "/sanctum/csrf-cookie")))).toEqual({
+    expect(await snapshot(unmatchedRoute(request("PUT", "/logos/institucion")))).toEqual({
       status: 405,
       contentType: "text/html; charset=utf-8",
       cacheControl: "no-cache, private",
@@ -131,7 +131,6 @@ describe("catch-all routes", () => {
   const catchAlls = [
     ["api/[...path]", () => import("@/app/api/[...path]/route")],
     ["api", () => import("@/app/api/route")],
-    ["sanctum/[...path]", () => import("@/app/sanctum/[...path]/route")],
   ] as const
 
   it.each(catchAlls)("%s answers like Laravel's production router and never calls another server", async (_, load) => {

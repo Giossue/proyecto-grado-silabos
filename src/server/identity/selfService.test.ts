@@ -1,11 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest"
-import { loginSessionKey, recallerCookieName } from "../http/sessionGuard"
 import { destroyOtherSessions, destroySession, resendOwnActivation, updateAccessibility, updateFormation, updateProfile } from "./selfService"
 import { account, ACTOR, ACTOR_ROLE, CAREER, COOKIE, FORBIDDEN, harness, jsonRequest, NOW, SESSION_ID } from "./testing"
-import golden from "../http/__fixtures__/laravel-golden.json"
-import { storedJson, testKey } from "../auth/testing"
-import { decrypt } from "../http/encrypter"
 
 const ISSUER = "01a1c5bc-3333-7000-8000-000000000001"
 
@@ -138,37 +134,20 @@ describe("DELETE /api/v1/authentication/sessions/others", () => {
   const remove = (test: ReturnType<typeof harness>, body: unknown, cookie = COOKIE) =>
     destroyOtherSessions(jsonRequest("/api/v1/authentication/sessions/others", "DELETE", body, { cookie }), test.deps)
 
-  it("checks the current password, closes the other sessions and rotates the remember token", async () => {
+  it("checks the current password and closes the other sessions of this account", async () => {
     const test = harness()
     expect((await (await remove(test, { current_password: "otra" })).json()).errors).toEqual({ current_password: ["La contraseña actual no es correcta."] })
-    test.identity.sessions.push({ id: "uno", userId: ACTOR }, { id: "dos", userId: ACTOR })
+    test.identity.sessions.push({ id: "uno", userId: ACTOR }, { id: "dos", userId: ACTOR }, { id: "ajena", userId: "otra-cuenta" })
     const response = await remove(test, { current_password: "secreto-actual" })
     expect(await response.json()).toEqual({ message: "Se cerraron 2 sesiones adicionales.", closed_sessions: 2 })
-    expect(test.identity.sessions.map((row) => row.id)).toEqual([SESSION_ID])
-    expect(test.identity.accounts[0].rememberToken).toBe("a".repeat(60))
+    expect(test.identity.sessions.map((row) => row.id)).toEqual([SESSION_ID, "ajena"])
+    expect(response.headers.getSetCookie()).toEqual([])
   })
 
-  it("logs a remembered device in again with a new session and a renewed remember cookie, like Laravel", async () => {
-    const test = harness()
-    test.identity.sessions.push({ id: "uno", userId: ACTOR })
-    const response = await remove(test, { current_password: "secreto-actual" }, `${COOKIE}; ${recallerCookieName()}=valor`)
-    expect(response.status).toBe(200)
-    expect(await response.text()).toBe('{"message":"Se cerró una sesión adicional.","closed_sessions":1}')
-    const headers = response.headers.getSetCookie()
-    expect(headers.map((header) => header.slice(0, header.indexOf("=")))).toEqual(["XSRF-TOKEN", golden.cookieName, recallerCookieName()])
-    const value = (header: string) => decrypt(decodeURIComponent(header.slice(header.indexOf("=") + 1, header.indexOf(";"))), testKey, false).slice(41)
-    expect(value(headers[1])).toBe("a".repeat(40))
-    expect(value(headers[2])).toBe(`${ACTOR}|${"a".repeat(60)}|${golden.passwordHashForCookie}`)
-    expect(headers[2].slice(headers[2].indexOf(";"))).toBe(`; expires=${new Date((NOW + 34560000) * 1000).toUTCString()}; Max-Age=34560000; path=/; httponly; samesite=lax`)
-    expect(test.bridge.sessions.has(SESSION_ID)).toBe(false)
-    expect(JSON.parse(storedJson(test.bridge, "a".repeat(40)) ?? "{}")[loginSessionKey()]).toBe(ACTOR)
-    expect(test.identity.sessions.map((row) => row.id)).toEqual([SESSION_ID])
-  })
-
-  it("answers 401 to a device that only has a remember cookie Laravel would not accept", async () => {
+  it("answers 401 without a live session and closes nothing", async () => {
     const test = harness()
     test.bridge.sessions.clear()
-    const response = await remove(test, { current_password: "secreto-actual" }, `${COOKIE}; ${recallerCookieName()}=valor`)
+    const response = await remove(test, { current_password: "secreto-actual" })
     expect(response.status).toBe(401)
     expect(test.identity.sessions.map((row) => row.userId)).toEqual([ACTOR])
   })

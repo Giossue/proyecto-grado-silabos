@@ -1,12 +1,8 @@
 import "server-only"
-import { authenticateAndTrack, commitTracking, requireSession } from "../auth/requireSession"
-import { withWriter } from "../auth/sessionWriter"
-import { controllerJson, fromController, statefulRequest, type Outcome } from "../auth/statefulRequest"
+import { requireSession } from "../auth/requireSession"
 import type { AppSession, SessionUser } from "../auth/types"
-import { parseCookieHeader } from "../http/cookies"
 import { isPhpArray, requestInput, type PhpArray, type PhpValue } from "../http/input"
 import { forbidden, jsonError, apiJson, serverError, unauthenticated, validationError } from "../http/responses"
-import { recallerCookieName } from "../http/sessionGuard"
 import type { Throttle } from "../http/throttle"
 import { accessibilitySchema, profileSchema, teacherFormationSchema } from "@/schemas/account"
 import { passwordConfirmationSchema } from "@/schemas/twoFactor"
@@ -105,32 +101,14 @@ export async function resendOwnActivation(request: Request, deps: IdentityWriteD
   return finish(apiJson({ message: RESEND_MESSAGE }, 202))
 }
 
-type Tracked = { session: AppSession; touch: string | null; refresh: () => Promise<void> }
-
-async function track(request: Request, original: Request, deps: IdentityWriteDeps): Promise<Tracked | Response> {
-  const authentication = await authenticateAndTrack(request, {}, deps.bridge)
-  const { outcome, touch } = authentication
-  const refresh = () => commitTracking(authentication, original, deps.bridge)
-  if (outcome instanceof Response) {
-    await refresh()
-    return outcome
-  }
-  return { session: outcome, touch, refresh }
-}
-
 export async function destroySession(request: Request, id: string, deps: IdentityWriteDeps = defaultIdentityWriteDeps()): Promise<Response> {
-  const tracked = await track(request, request, deps)
-  if (tracked instanceof Response) return tracked
-  const { session, touch, refresh } = tracked
-  if (touch !== null && touch === id) {
-    await refresh()
-    return jsonError(422, "La sesión actual se cierra desde la opción Cerrar sesión.")
-  }
+  const session = await requireSession(request, {}, deps.bridge)
+  if (session instanceof Response) return session
+  if (session.session.id === id) return jsonError(422, "La sesión actual se cierra desde la opción Cerrar sesión.")
   const userId = session.user.id
   await deps.accounts.direct(async (tx) => {
     await tx.deleteSession(id, userId)
   })
-  await refresh()
   return apiJson({ message: "La sesión seleccionada fue cerrada." })
 }
 
@@ -149,50 +127,17 @@ async function confirmCurrentPassword(input: PhpArray, user: SessionUser, deps: 
   return (await validateSchema(passwordConfirmationSchema(matches), input)).errors ?? {}
 }
 
-async function closeOtherSessions(deps: IdentityWriteDeps, userId: string, currentId: string | null, random = deps.services.random): Promise<number> {
-  return deps.accounts.direct(async (tx) => {
-    const deleted = await revokeSessions({ tx, services: { ...deps.services, random } }, userId, currentId)
-    return deleted
-  })
-}
-
 const closedMessage = (closed: number) => ({
   message: closed === 1 ? "Se cerró una sesión adicional." : `Se cerraron ${closed} sesiones adicionales.`,
   closed_sessions: closed,
 })
 
-function destroyRememberedOtherSessions(request: Request, deps: IdentityWriteDeps): Promise<Response> {
-  const writer = deps.writer ?? { ...withWriter(deps.bridge), random: deps.services.random }
-  return statefulRequest(request, writer, { group: "api", authenticates: true }, async (context): Promise<Outcome> => {
-    const user = context.user
-    if (user === null) return unauthenticated()
-    const errors = await confirmCurrentPassword(await requestInput(request), user, deps)
-    if (errors === null) return serverError()
-    if (Object.keys(errors).length > 0) return fromController(validationError(errors))
-    let token = ""
-    const closed = await closeOtherSessions(deps, user.id, context.state.id, (length) => (token = deps.services.random(length)))
-    await context.login(user)
-    context.queueRecaller(user, token)
-    return controllerJson(closedMessage(closed))
-  })
-}
-
 export async function destroyOtherSessions(request: Request, deps: IdentityWriteDeps = defaultIdentityWriteDeps()): Promise<Response> {
-  if (parseCookieHeader(request.headers.get("cookie")).has(recallerCookieName())) return destroyRememberedOtherSessions(request, deps)
-  const original = request.clone()
-  const tracked = await track(request, original, deps)
-  if (tracked instanceof Response) return tracked
-  const { session, touch, refresh } = tracked
+  const session = await requireSession(request, {}, deps.bridge)
+  if (session instanceof Response) return session
   const errors = await confirmCurrentPassword(await requestInput(request), session.user, deps)
-  if (errors === null) {
-    await refresh()
-    return serverError()
-  }
-  if (Object.keys(errors).length > 0) {
-    await refresh()
-    return validationError(errors)
-  }
-  const closed = await closeOtherSessions(deps, session.user.id, touch)
-  await refresh()
+  if (errors === null) return serverError()
+  if (Object.keys(errors).length > 0) return validationError(errors)
+  const closed = await deps.accounts.direct((tx) => revokeSessions({ tx }, session.user.id, session.session.id))
   return apiJson(closedMessage(closed))
 }

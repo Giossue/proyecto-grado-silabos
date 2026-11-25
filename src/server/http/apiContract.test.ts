@@ -85,7 +85,7 @@ describe("API contract", () => {
   const rows = API_ROUTES.flatMap((route) => route.methods.map((method) => ({ method, route })))
 
   it("is the committed route list, without the audit and report routes removed from the system", () => {
-    expect(rows.length).toBe(205)
+    expect(rows.length).toBe(203)
     expect(REMOVED_ROUTES.filter((uri) => API_ROUTES.some((route) => route.uri === uri))).toEqual([])
   })
 

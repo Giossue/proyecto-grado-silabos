@@ -1,5 +1,6 @@
 import { and, eq, isNull } from "drizzle-orm"
 import { bcryptHash } from "../server/auth/bcrypt"
+import { copyMissingCredentials, type CredentialExecutor } from "../server/auth/credentials"
 import { provisionOfficialTemplate, provisionTx } from "../server/configuration/templateProvisionerStore"
 import { uuid7 } from "../server/http/uuid7"
 import type { Executor } from "./index"
@@ -42,6 +43,7 @@ export async function seedDatabase(database: Executor, options: SeedOptions): Pr
       .from(asignacionesRol)
       .where(and(eq(asignacionesRol.usuarioId, admin.id), eq(asignacionesRol.rol, "administrador"), isNull(asignacionesRol.carreraId), eq(asignacionesRol.asignacionRolActiva, true)))
     if (!activeRole) await tx.insert(asignacionesRol).values({ asignacionRolId: uuid7(), usuarioId: admin.id, rol: "administrador", carreraId: null, asignacionRolActiva: true })
+    await copyMissingCredentials(tx as unknown as CredentialExecutor)
     const templateId = await provisionOfficialTemplate(provisionTx(tx))
     return { adminCreated: inserted.length === 1, adminRoleCreated: !activeRole, templateId }
   })

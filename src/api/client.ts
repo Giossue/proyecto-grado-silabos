@@ -14,24 +14,6 @@ export class ApiError extends Error {
 
 const baseUrl = '';
 
-const readCookie = (name: string): string | null => {
-  const prefix = `${name}=`;
-  const value = document.cookie.split('; ').find((cookie) => cookie.startsWith(prefix));
-
-  return value ? decodeURIComponent(value.slice(prefix.length)) : null;
-};
-
-export async function initializeCsrfProtection(): Promise<void> {
-  const response = await fetch(`${baseUrl}/sanctum/csrf-cookie`, {
-    credentials: 'include',
-    headers: { Accept: 'application/json' },
-  });
-
-  if (!response.ok) {
-    throw new ApiError('No se pudo preparar la sesión segura', response.status);
-  }
-}
-
 const isReadOnlyRequest = (method: string): boolean => method === 'GET' || method === 'HEAD';
 
 const notifyUnauthorized = (): void => {
@@ -49,8 +31,7 @@ const notifyRoleRequired = (): void => {
   window.dispatchEvent(new CustomEvent('silabos:role-required'));
 };
 
-const sendApiRequest = (path: string, init: RequestInit, method: string): Promise<Response> => {
-  const csrfToken = isReadOnlyRequest(method) ? null : readCookie('XSRF-TOKEN');
+const sendApiRequest = (path: string, init: RequestInit): Promise<Response> => {
   const isFormData = init.body instanceof FormData;
 
   return fetch(`${baseUrl}/api/v1${path}`, {
@@ -58,7 +39,6 @@ const sendApiRequest = (path: string, init: RequestInit, method: string): Promis
     headers: {
       Accept: 'application/json',
       ...(init.body && !isFormData ? { 'Content-Type': 'application/json' } : {}),
-      ...(csrfToken ? { 'X-XSRF-TOKEN': csrfToken } : {}),
       ...init.headers,
     },
     ...init,
@@ -68,16 +48,7 @@ const sendApiRequest = (path: string, init: RequestInit, method: string): Promis
 export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   const method = (init.method ?? 'GET').toUpperCase();
 
-  if (!isReadOnlyRequest(method) && readCookie('XSRF-TOKEN') === null) {
-    await initializeCsrfProtection();
-  }
-
-  let response = await sendApiRequest(path, init, method);
-
-  if (response.status === 419 && !isReadOnlyRequest(method)) {
-    await initializeCsrfProtection();
-    response = await sendApiRequest(path, init, method);
-  }
+  const response = await sendApiRequest(path, init);
 
   if (response.status === 401) notifyUnauthorized();
 

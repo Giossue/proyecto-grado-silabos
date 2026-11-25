@@ -135,10 +135,10 @@ describe("DELETE /api/v1/admin/academic/{entity}/{record}", () => {
     expect(transactions).toBe(0)
   })
 
-  it("answers 419 without the CSRF token and writes nothing", async () => {
+  it("answers 401 to a request from another origin and writes nothing", async () => {
     asRole("administrador", null)
-    const response = await deleteGovernanceRecord(remove(path, {}), "periodo", PERIOD, deps())
-    expect(response.status).toBe(419)
+    const response = await deleteGovernanceRecord(remove(path, { origin: "https://evil.example" }), "periodo", PERIOD, deps())
+    expect(response.status).toBe(401)
     expect(transactions).toBe(0)
   })
 

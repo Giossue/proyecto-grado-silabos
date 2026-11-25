@@ -19,10 +19,11 @@ import {
   invitacionesActivacion,
   notificaciones,
   revisionesSilabo,
-  sesiones,
   silabos,
   usuarios,
 } from "@/db/schema"
+import { cuentasUsuario, sesionesUsuario } from "@/db/schema/auth"
+import { CREDENTIAL_PROVIDER } from "../auth/credentials"
 import { careerLabelSql } from "../academic/careerLabel"
 import { uuid7 } from "../http/uuid7"
 import type { AccountRepository, AccountTx } from "./accounts"
@@ -87,6 +88,7 @@ export function accountTx(executor: Executor): AccountTx {
         usuarioActivo: true,
         correoVerificadoEn: null,
       })
+      await executor.insert(cuentasUsuario).values({ id: uuid7(), accountId: id, providerId: CREDENTIAL_PROVIDER, userId: id, password: account.passwordHash })
       return { id, name: account.name, email: account.email, active: true, verified: false }
     },
     async updateIdentity(id, name, email) {
@@ -94,9 +96,6 @@ export function accountTx(executor: Executor): AccountTx {
     },
     async setActive(id, active) {
       await executor.update(usuarios).set({ usuarioActivo: active }).where(eq(usuarios.usuarioId, id))
-    },
-    async setRememberToken(id, token) {
-      await executor.update(usuarios).set({ codigoRecordarme: token }).where(eq(usuarios.usuarioId, id))
     },
     async lockFormation(id) {
       const row = await first(
@@ -274,11 +273,11 @@ export function accountTx(executor: Executor): AccountTx {
       return first(accounts().where(eq(usuarios.usuarioId, row.issuerId)).limit(1))
     },
     async deleteSessions(userId, exceptId) {
-      const result = await executor.delete(sesiones).where(and(eq(sesiones.userId, userId), exceptId === null ? undefined : ne(sesiones.id, exceptId)))
+      const result = await executor.delete(sesionesUsuario).where(and(eq(sesionesUsuario.userId, userId), exceptId === null ? undefined : ne(sesionesUsuario.id, exceptId)))
       return result.rowCount ?? 0
     },
     async deleteSession(id, userId) {
-      await executor.delete(sesiones).where(and(eq(sesiones.id, id), eq(sesiones.userId, userId)))
+      await executor.delete(sesionesUsuario).where(and(eq(sesionesUsuario.id, id), eq(sesionesUsuario.userId, userId)))
     },
     async hasActivity(userId) {
       const traces = [
@@ -293,7 +292,7 @@ export function accountTx(executor: Executor): AccountTx {
     },
     async purgeAccount(userId) {
       await executor.delete(notificaciones).where(eq(notificaciones.usuarioId, userId))
-      await executor.delete(sesiones).where(eq(sesiones.userId, userId))
+      await executor.delete(sesionesUsuario).where(eq(sesionesUsuario.userId, userId))
       await executor.delete(asignacionesRol).where(eq(asignacionesRol.usuarioId, userId))
       await executor.delete(usuarios).where(eq(usuarios.usuarioId, userId))
     },

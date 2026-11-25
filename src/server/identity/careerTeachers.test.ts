@@ -148,7 +148,6 @@ describe("DELETE /api/v1/coordination/academic/teachers/{user}", () => {
     test.identity.sessions.push({ id: "pending-session", userId: PENDING })
     expect(await (await remove(test, PENDING)).text()).toBe('{"message":"Docente retirado de su carrera."}')
     expect(test.identity.invitations[0].invalidatedAt).toBe(NOW)
-    expect(test.identity.accounts.find((row) => row.id === PENDING)?.rememberToken).toBe("a".repeat(60))
     expect(test.identity.sessions.some((row) => row.userId === PENDING)).toBe(false)
   })
 

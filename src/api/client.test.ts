@@ -9,46 +9,23 @@ const jsonResponse = (status: number, payload: unknown = {}): Response =>
 
 describe('cliente API', () => {
   beforeEach(() => {
-    document.cookie = 'XSRF-TOKEN=; Max-Age=0; path=/';
     vi.restoreAllMocks();
   });
 
-  it('prepara CSRF antes de una mutación y envía la cookie decodificada', async () => {
+  it('envía una mutación en una sola petición con la cookie de sesión y sin token XSRF', async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      void input;
       void init;
-      if (String(input).endsWith('/sanctum/csrf-cookie')) {
-        document.cookie = 'XSRF-TOKEN=token%20seguro; path=/';
-        return new Response(null, { status: 204 });
-      }
-
       return jsonResponse(200, { saved: true });
     });
     vi.stubGlobal('fetch', fetchMock);
 
     await expect(api<{ saved: boolean }>('/resource', { method: 'POST', body: '{}' }))
       .resolves.toEqual({ saved: true });
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(fetchMock.mock.calls[1]?.[1]?.headers).toMatchObject({ 'X-XSRF-TOKEN': 'token seguro' });
-  });
-
-  it('renueva CSRF y reintenta una sola vez ante 419', async () => {
-    document.cookie = 'XSRF-TOKEN=anterior; path=/';
-    let apiAttempts = 0;
-    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-      void init;
-      if (String(input).endsWith('/sanctum/csrf-cookie')) {
-        document.cookie = 'XSRF-TOKEN=nuevo; path=/';
-        return new Response(null, { status: 204 });
-      }
-
-      apiAttempts += 1;
-      return apiAttempts === 1 ? jsonResponse(419, { message: 'CSRF expirado' }) : jsonResponse(200, { saved: true });
-    });
-    vi.stubGlobal('fetch', fetchMock);
-
-    await expect(api<{ saved: boolean }>('/resource', { method: 'PATCH', body: '{}' }))
-      .resolves.toEqual({ saved: true });
-    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(String(fetchMock.mock.calls[0]?.[0])).toBe('/api/v1/resource');
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({ credentials: 'include', method: 'POST' });
+    expect(fetchMock.mock.calls[0]?.[1]?.headers).not.toHaveProperty('X-XSRF-TOKEN');
   });
 
   it('notifica globalmente cuando la sesión dejó de ser válida', async () => {
@@ -82,20 +59,7 @@ describe('cliente API', () => {
     window.removeEventListener('silabos:unauthorized', listener);
   });
 
-  it('expone un 419 persistente después de un solo reintento', async () => {
-    document.cookie = 'XSRF-TOKEN=anterior; path=/';
-    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
-      if (String(input).endsWith('/sanctum/csrf-cookie')) return new Response(null, { status: 204 });
-      return jsonResponse(419, { message: 'CSRF expirado' });
-    });
-    vi.stubGlobal('fetch', fetchMock);
-
-    await expect(api('/resource', { method: 'POST', body: '{}' })).rejects.toMatchObject({ status: 419 });
-    expect(fetchMock).toHaveBeenCalledTimes(3);
-  });
-
   it('avisa cuando una mutación termina bien, para refrescar lo que depende de ella; una lectura no avisa', async () => {
-    document.cookie = 'XSRF-TOKEN=token; path=/';
     const listener = vi.fn();
     window.addEventListener('silabos:mutated', listener);
     vi.stubGlobal('fetch', vi.fn(async () => jsonResponse(200, { saved: true })));

@@ -16,7 +16,8 @@
     "db:migrate": "drizzle-kit migrate",
     "db:check": "drizzle-kit check",
     "db:baseline": "tsx --env-file-if-exists=.env.local src/db/markBaseline.ts",
-    "db:seed": "tsx --conditions=react-server --env-file-if-exists=.env.local src/db/seed.ts"
+    "db:seed": "tsx --conditions=react-server --env-file-if-exists=.env.local src/db/seed.ts",
+    "db:migrate-auth": "tsx --conditions=react-server --env-file-if-exists=.env.local src/db/migrateAuth.ts"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.3.0",
@@ -39,6 +40,7 @@
     "ai": "^7.0.180",
     "asn1js": "^4.1.0",
     "bcryptjs": "^3.0.3",
+    "better-auth": "^1.7.28",
     "bullmq": "^6.7.8",
     "class-variance-authority": "^0.7.1",
     "cmdk": "^1.1.1",

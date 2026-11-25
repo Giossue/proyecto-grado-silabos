@@ -1,15 +1,6 @@
 [
   {
     "methods": [
-      "GET",
-      "HEAD"
-    ],
-    "uri": "sanctum/csrf-cookie",
-    "wheres": {},
-    "bindings": {}
-  },
-  {
-    "methods": [
       "POST"
     ],
     "uri": "api/v1/authentication/login",

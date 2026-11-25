@@ -1,5 +1,5 @@
 import "server-only"
-import { requireSession, requireSessionWith, defaultBridgeDeps } from "../auth/requireSession"
+import { requireSession, defaultBridgeDeps } from "../auth/requireSession"
 import type { BridgeDeps, AppSession } from "../auth/types"
 import { lengthAwarePaginator, resolveCurrentPage } from "../http/pagination"
 import { hasArrayParameter, queryParams, requestUrl } from "../http/request"
@@ -158,18 +158,15 @@ export async function openNotification(
 ): Promise<Response> {
   let found: StoredNotification | null = null
   const requirements = notificationRequirements(id, deps, "optional", (value) => (found = value))
-  return requireSessionWith(request, requirements, deps.bridge, async (session, mutation) => {
-    const notification = found as StoredNotification | null
-    if (notification === null || notification.userId !== session.user.id) return apiJson({ message: FORBIDDEN }, 403)
-    if (notification.readAt === null) await deps.notifications.markRead(notification.id, deps.bridge.now())
-    const destination = await resolveDestination(notification, session.user.id, session.activeRole, session.eligibleRoles, deps.lookups)
-    if (destination === null) return apiJson({ path: null, role_changed: false, message: NO_SCREEN })
-    const target = destination.assignment
-    const changed = target !== null && target.id !== session.activeRole?.id
-    if (changed) {
-      mutation.put("active_role_assignment_id", target.id)
-      await mutation.regenerate()
-    }
-    return apiJson({ path: destination.path, role_changed: changed })
-  })
+  const session = await requireSession(request, requirements, deps.bridge)
+  if (session instanceof Response) return session
+  const notification = found as StoredNotification | null
+  if (notification === null || notification.userId !== session.user.id) return apiJson({ message: FORBIDDEN }, 403)
+  if (notification.readAt === null) await deps.notifications.markRead(notification.id, deps.bridge.now())
+  const destination = await resolveDestination(notification, session.user.id, session.activeRole, session.eligibleRoles, deps.lookups)
+  if (destination === null) return apiJson({ path: null, role_changed: false, message: NO_SCREEN })
+  const target = destination.assignment
+  const changed = target !== null && target.id !== session.activeRole?.id
+  if (changed) await deps.bridge.sessions.setActiveRole(session.session, target.id)
+  return apiJson({ path: destination.path, role_changed: changed })
 }

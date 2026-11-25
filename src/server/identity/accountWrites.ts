@@ -4,7 +4,6 @@ import { requestBoolean } from "../syllabus/inProgressWork"
 import { defaultBridgeDeps, requireSession } from "../auth/requireSession"
 import { bcryptHash, bcryptVerify } from "../auth/bcrypt"
 import type { BridgeDeps, AppSession } from "../auth/types"
-import type { SessionWriterDeps } from "../auth/sessionWriter"
 import { isUuid } from "../academic/structure"
 import { institutionToday } from "../dashboard/dashboardQueries"
 import { isJsonRequest, requestInput, type PhpArray, type PhpValue } from "../http/input"
@@ -52,7 +51,6 @@ export type IdentityWriteDeps = {
   limiter: RateLimiter
   verifyPassword: (plain: string, hash: string) => Promise<boolean | null>
   session: Pick<SessionDeps, "profiles" | "today" | "timezone">
-  writer?: SessionWriterDeps
 }
 
 export function defaultIdentityWriteDeps(): IdentityWriteDeps {

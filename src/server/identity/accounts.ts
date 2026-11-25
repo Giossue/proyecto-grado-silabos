@@ -26,7 +26,6 @@ export interface AccountTx {
   insertAccount(account: { name: string; email: string; passwordHash: string }): Promise<Account>
   updateIdentity(id: string, name: string, email: string): Promise<void>
   setActive(id: string, active: boolean): Promise<void>
-  setRememberToken(id: string, token: string): Promise<void>
   lockFormation(id: string): Promise<{ formation: string | null } | null>
   setFormation(id: string, formation: string): Promise<void>
   setAccessibility(id: string, preferences: Accessibility): Promise<void>
@@ -171,8 +170,7 @@ export async function createManagedUser(ctx: ActionContext, data: NewAccount): P
   return user
 }
 
-export async function revokeSessions(ctx: Pick<ActionContext, "tx" | "services">, userId: string, exceptId: string | null): Promise<number> {
-  await ctx.tx.setRememberToken(userId, ctx.services.random(60))
+export async function revokeSessions(ctx: Pick<ActionContext, "tx">, userId: string, exceptId: string | null): Promise<number> {
   return ctx.tx.deleteSessions(userId, exceptId)
 }
 
