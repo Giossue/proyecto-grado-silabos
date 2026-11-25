@@ -1,4 +1,4 @@
-import { hashKey, isServer, QueryClient, type QueryKey } from "@tanstack/react-query"
+import { hashKey, isServer, notifyManager, QueryClient, type QueryKey } from "@tanstack/react-query"
 import { ApiError } from "@/api/client"
 import type { ReadonlySignal } from "@/lib/signal"
 
@@ -35,7 +35,7 @@ export const cachedValue = <T>(queryKey: () => QueryKey | null, fallback: T): Re
       .getQueryCache()
       .subscribe((event) => {
         const key = queryKey()
-        if (key && event.query.queryHash === hashKey(key)) listener()
+        if (key && event.query.queryHash === hashKey(key)) notifyManager.schedule(listener)
       })
   },
 })
