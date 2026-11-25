@@ -23,12 +23,28 @@ Rama: `main` (repositorio privado). Entrega: commits por etapa. Pruebas: Vitest,
 - S4. Contrato: la API conserva rutas (`/api/v1/...`), métodos, cuerpos, códigos (401, 403, 409, 422 con errores por campo), cabeceras (`X-RateLimit-*`) y textos; el frontend no cambia su comportamiento. Las instantáneas firmadas, sus SHA-256 y el Word siguen idénticos.
 - S5. Pendientes de TICs (no bloquean): SIANET, endpoint de firma .p12, repositorio «Plantilla UEB», UEB Design System (token de GitHub Packages en `temp/keycloack.md`; va en `.npmrc` con variable de entorno, nunca en el repositorio).
 
+## Reglas comunes de N2 (para cada escritor de área)
+
+- Leer `README.md` «Porting an area to Nest» y copiar el patrón de `apps/api/src/modules/notifications/` (controlador delgado con `@Authenticated()`/`@Roles()`, DTO con `createZodDto` desde `packages/shared`, servicio que reutiliza `apps/api/src/server/**`, repositorio Prisma, prueba de equivalencia con Supertest contra el handler viejo: estado, cuerpo, cabeceras y escrituras idénticos).
+- Consultas: pasar de Drizzle a Prisma (cliente tipado; `$queryRaw`/`$executeRaw` con `Prisma.sql` solo donde el código ya usaba SQL crudo: joins laterales, CASE jsonb, SAVEPOINT/SET LOCAL, bloqueos `for update`/`for share`); conservar transacciones, bloqueos y orden. Sin cambios en `apps/api/prisma/schema.prisma` ni migraciones (si hace falta, avisar).
+- NO editar los archivos compartidos: `apps/api/src/modules/ported-routes.ts`, `apps/api/src/modules/legacy/legacy-routes.ts`, `apps/api/src/app.module.ts`, `apps/api/prisma/**`; NO borrar archivos de rutas en `apps/api/src/app/**` (el padre integra al final: registra controladores, borra rutas y regenera el puente). La prueba de equivalencia monta su propio módulo de prueba con su controlador.
+- En `packages/shared` solo crear archivos nuevos del área (`src/schemas/<area>*.ts`) o editar los del área; no tocar los de otras áreas.
+- Sin git, sin formateadores globales, sin instalar paquetes, sin E2E. Sin comentarios en el código; textos en español idénticos.
+- Prueba primero: la equivalencia falla (RED) sin el controlador y pasa (GREEN) con él.
+- Verificación: `pnpm --filter @silabos/api typecheck`, `pnpm --filter @silabos/api lint`, `pnpm --filter @silabos/api test` (las fallas en archivos de otra área en curso se reportan, no se tocan). Informar `S#` cubiertos, rutas portadas (método + ruta), consultas que siguen en SQL crudo y por qué, riesgos y rutas de scratch.
+
 ## Tasks
 
 | ID | Specs | Ruta | Estado | Commit |
 |---|---|---|---|---|
 | N1 | S2, S3, S4 | escritor delegado (camino crítico; respaldo de contexto) | hecho, sin commit (lo hace el padre): monorepo `apps/web` + `apps/api` + `packages/shared`; NestJS 12.6 en el puerto 8000 con prefijo `api/v1`, Swagger en `/api/docs`; Prisma 7 (esquema por introspección, migración `0_baseline` marcada como aplicada); `nestjs-zod`; sesión y roles como guards; `notifications` portado de punta a punta con prueba de equivalencia; puente `legacy` para las demás rutas; Next reenvía `/api/*` a la API; worker en `apps/api` (ver L3) | — |
-| N2 | S2-S4 | escritores en paralelo por módulo (tras N1) | pendiente: portar los demás módulos y sus consultas a Prisma | — |
+| N2a | S2-S4 | escritor paralelo | en curso: identidad (authentication/*, session, active-role, admin/users) | — |
+| N2b | S2-S4 | escritor paralelo | en curso: operaciones (admin/processes, admin/system-settings, dashboard, help) | — |
+| N2c | S2-S4 | escritor paralelo | en curso: plantilla e IA (admin/template/**) | — |
+| N2d | S2-S4 | escritor paralelo | en curso: estructura académica (admin/academic, admin/library-catalog, coordination/academic, coordination/ficha-imports, coordination/support-documents, academic/asignaturas, support-documents) | — |
+| N2e | S2-S4 | escritor paralelo | en curso: flujo del sílabo (coordination/convocations, coordination/reviews, coordination/history, coordination/syllabi, teacher/**, revisions, exports) | — |
+| N2f | S2-S4 | escritor paralelo | en curso: biblioteca (library/**) | — |
+| N2z | S2-S4 | padre | pendiente: integrar (registro, borrar rutas, regenerar puente), quitar Drizzle, suite completa | — |
 | N3 | S2, S3 | por definir | pendiente: PostgreSQL 18, MinIO, Docker con contenedores separados | — |
 | N4 | S3 | por definir | pendiente: ingreso con Keycloak | — |
 | N5 | S1-S4 | verificador independiente + E2E completo | pendiente | — |
