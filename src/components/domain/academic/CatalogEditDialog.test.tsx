@@ -102,16 +102,30 @@ describe("CatalogEditDialog · logo de la facultad", () => {
     expect(buttonWithText("Editar")).toBeDefined()
   })
 
-  it("con logo muestra la imagen con una X y no la zona de arrastre; al quitarlo aparece la zona", async () => {
+  it("con logo muestra «Reemplazar» dentro de la imagen; al reemplazar aparece la zona y se puede volver al logo actual", async () => {
     await editingDialog()
 
-    expect(document.body.querySelector('img[alt="Logo actual de la facultad"]')).not.toBeNull()
+    const replace = buttonNamed("Reemplazar")!
+    expect(replace.closest('[data-logo-current]')).not.toBeNull()
+    expect(buttonNamed("Quitar logo")).toBeUndefined()
     expect(document.body.textContent).not.toContain("Arrastre su imagen aquí")
 
-    fireEvent.click(buttonNamed("Quitar logo")!)
+    fireEvent.click(replace)
     await flush()
     expect(document.body.querySelector('img[alt="Logo actual de la facultad"]')).toBeNull()
     expect(document.body.textContent).toContain("Arrastre su imagen aquí")
+
+    fireEvent.click(buttonNamed("Mantener el logo actual")!)
+    await flush()
+    expect(document.body.querySelector('img[alt="Logo actual de la facultad"]')).not.toBeNull()
+    expect(document.body.textContent).not.toContain("Arrastre su imagen aquí")
+  })
+
+  it("en solo lectura no ofrece reemplazar el logo", async () => {
+    await mountDialog()
+
+    expect(document.body.querySelector('img[alt="Logo actual de la facultad"]')).not.toBeNull()
+    expect(buttonNamed("Reemplazar")).toBeUndefined()
   })
 
   it("en la ficha, el logo actual se abre en grande", async () => {
@@ -126,7 +140,7 @@ describe("CatalogEditDialog · logo de la facultad", () => {
 
   it("quitar el logo sin subir otro no deja guardar, y cancelar vuelve a mostrar el logo", async () => {
     await editingDialog()
-    fireEvent.click(buttonNamed("Quitar logo")!)
+    fireEvent.click(buttonNamed("Reemplazar")!)
     await flush()
 
     expect(document.body.querySelector<HTMLInputElement>("#edit-faculty-logo-faculty-1")?.required).toBe(true)

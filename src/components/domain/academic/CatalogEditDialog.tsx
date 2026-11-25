@@ -1,6 +1,6 @@
 "use client"
 
-import { Check, Pencil, X } from "lucide-react"
+import { Check, Pencil, RefreshCw } from "lucide-react"
 import { useEffect, useEffectEvent, useState, type FormEvent } from "react"
 import { updateAcademicRecord } from "@/api/academic"
 import type { CatalogLibrary } from "@/api/libraryCatalog"
@@ -11,7 +11,6 @@ import { FacultyLogoPreview } from "@/components/domain/academic/FacultyLogoPrev
 import { DialogActions, type DialogAction } from "@/components/domain/DialogActions"
 import { FormDialogActions, FormDialogFooter } from "@/components/domain/FormDialogActions"
 import { FormModal } from "@/components/domain/FormModal"
-import { IconTooltip } from "@/components/domain/IconTooltip"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
@@ -282,24 +281,45 @@ export function CatalogEditDialog({
                       Logo de la facultad
                     </FieldLabel>
                     {currentLogo ? (
-                      <div className="flex items-center gap-3">
-                        <FacultyLogoPreview url={logoUrl ?? ""} name={recordName} />
-                        <IconTooltip label="Quitar logo">
-                          <Button type="button" variant="outline" size="icon-sm" aria-label="Quitar logo" disabled={processing || readOnly} onClick={() => setRemoveLogo(true)}>
-                            <X aria-hidden="true" />
-                          </Button>
-                        </IconTooltip>
-                      </div>
-                    ) : (
-                      <FacultyLogoField
-                        value={logo}
-                        onValueChange={setLogo}
-                        inputId={`edit-faculty-logo-${recordId}`}
-                        disabled={processing || readOnly}
-                        invalid={Boolean(errors.logo)}
-                        required={logoRequired}
-                        onValidationError={logoValidationError}
+                      <FacultyLogoPreview
+                        url={logoUrl ?? ""}
+                        name={recordName}
+                        action={
+                          !readOnly ? (
+                            <Button type="button" variant="outline" size="sm" className="bg-card/90" disabled={processing} onClick={() => setRemoveLogo(true)}>
+                              <RefreshCw data-icon="inline-start" aria-hidden="true" />
+                              Reemplazar
+                            </Button>
+                          ) : null
+                        }
                       />
+                    ) : (
+                      <>
+                        <FacultyLogoField
+                          value={logo}
+                          onValueChange={setLogo}
+                          inputId={`edit-faculty-logo-${recordId}`}
+                          disabled={processing || readOnly}
+                          invalid={Boolean(errors.logo)}
+                          required={logoRequired}
+                          onValidationError={logoValidationError}
+                        />
+                        {logoUrl && !readOnly ? (
+                          <Button
+                            type="button"
+                            variant="link"
+                            size="sm"
+                            className="h-auto self-start p-0"
+                            disabled={processing}
+                            onClick={() => {
+                              setLogo(null)
+                              setRemoveLogo(false)
+                            }}
+                          >
+                            Mantener el logo actual
+                          </Button>
+                        ) : null}
+                      </>
                     )}
                     {!currentLogo ? <FieldDescription>{LOGO_HINT}</FieldDescription> : null}
                     <FieldError errors={errors.logo} />
