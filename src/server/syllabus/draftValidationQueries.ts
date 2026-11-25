@@ -1,38 +1,41 @@
 import "server-only"
-import { sql } from "drizzle-orm"
+import { eq, inArray } from "drizzle-orm"
 import { db } from "@/db"
-import { uuidList } from "../http/sql"
+import { jsonText } from "@/db/expressions"
+import { camposPlantilla, definicionesCampo, docentesVigentesSilabo, seccionesPlantilla, usuarios, valoresCampo } from "@/db/schema"
 import { phpJsonDecode, phpTrim } from "../configuration/phpValues"
 import type { DraftValidationStore, DraftValidationTx, ValidationField } from "./draftValidation"
 import { draftTx, identificationSource, syllabusFacts } from "./draftFieldStore"
 import { syllabusHasArchivedValues } from "./syllabusDetailQueries"
-import { rowsOf, type Executor } from "./teacherSyllabusQueries"
+import type { Executor } from "./teacherSyllabusQueries"
 
 async function documentFields(executor: Executor, syllabusId: string): Promise<ValidationField[]> {
   const archived = await syllabusHasArchivedValues(executor, syllabusId)
-  const definitions = await rowsOf<{ id: string; block_id: string | null; responsible: string; content: string | null }>(
-    executor,
-    archived
-      ? sql`select definicion_campo_id::text as id, campo_plantilla_id::text as block_id, quien_llena_definicion_campo as responsible,
-          contenido_definicion_campo::text as content from definiciones_campo
-          where definicion_campo_id in (select definicion_campo_id from valores_campo where silabo_id = ${syllabusId}::uuid)`
-      : sql`select definicion_campo_id::text as id, campo_plantilla_id::text as block_id, quien_llena_definicion_campo as responsible,
-          contenido_definicion_campo::text as content from definiciones_campo where vigente_en_plantilla = true`,
-  )
-  const blockIds = [...new Set(definitions.flatMap((row) => (row.block_id === null ? [] : [row.block_id])))]
+  const definitions = await executor
+    .select({
+      id: definicionesCampo.definicionCampoId,
+      blockId: definicionesCampo.campoPlantillaId,
+      responsible: definicionesCampo.quienLlenaDefinicionCampo,
+      content: jsonText(definicionesCampo.contenidoDefinicionCampo),
+    })
+    .from(definicionesCampo)
+    .where(
+      archived
+        ? inArray(definicionesCampo.definicionCampoId, executor.select({ id: valoresCampo.definicionCampoId }).from(valoresCampo).where(eq(valoresCampo.silaboId, syllabusId)))
+        : eq(definicionesCampo.vigenteEnPlantilla, true),
+    )
+  const blockIds = [...new Set(definitions.map((row) => row.blockId))]
   const blocks =
     blockIds.length === 0
       ? []
-      : await rowsOf<{ id: string; key: string; label: string | null; section: string | null }>(
-          executor,
-          sql`select campos_plantilla.campo_plantilla_id::text as id, campos_plantilla.clave_campo_plantilla as key, campos_plantilla.titulo_campo_plantilla as label,
-              secciones_plantilla.titulo_seccion_plantilla as section
-            from campos_plantilla left join secciones_plantilla on secciones_plantilla.seccion_plantilla_id = campos_plantilla.seccion_plantilla_id
-            where campos_plantilla.campo_plantilla_id in (${uuidList(blockIds)})`,
-        )
+      : await executor
+          .select({ id: camposPlantilla.campoPlantillaId, key: camposPlantilla.claveCampoPlantilla, label: camposPlantilla.tituloCampoPlantilla, section: seccionesPlantilla.tituloSeccionPlantilla })
+          .from(camposPlantilla)
+          .leftJoin(seccionesPlantilla, eq(seccionesPlantilla.seccionPlantillaId, camposPlantilla.seccionPlantillaId))
+          .where(inArray(camposPlantilla.campoPlantillaId, blockIds))
   const byId = new Map(blocks.map((block) => [block.id, block]))
   return definitions.map((row) => {
-    const block = row.block_id === null ? undefined : byId.get(row.block_id)
+    const block = byId.get(row.blockId)
     const label = phpTrim(block?.label ?? "")
     return { id: row.id, key: block?.key ?? "", responsible: row.responsible, content: phpJsonDecode(row.content), displayName: label !== "" ? label : phpTrim(block?.section ?? "") }
   })
@@ -47,12 +50,11 @@ function validationTx(executor: Executor): DraftValidationTx {
     values: (id) => draft.values(id),
     identification: (id) => identificationSource(executor, id),
     async teachers(id) {
-      return rowsOf<{ id: string; name: string; formation: string | null }>(
-        executor,
-        sql`select usuarios.usuario_id::text as id, usuarios.nombre_usuario as name, usuarios.formacion_experiencia_usuario as formation
-          from usuarios inner join docentes_vigentes_silabo on usuarios.usuario_id = docentes_vigentes_silabo.usuario_id
-          where docentes_vigentes_silabo.silabo_id = ${id}::uuid`,
-      )
+      return executor
+        .select({ id: usuarios.usuarioId, name: usuarios.nombreUsuario, formation: usuarios.formacionExperienciaUsuario })
+        .from(usuarios)
+        .innerJoin(docentesVigentesSilabo, eq(usuarios.usuarioId, docentesVigentesSilabo.usuarioId))
+        .where(eq(docentesVigentesSilabo.silaboId, id))
     },
   }
 }

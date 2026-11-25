@@ -1,1 +1,1 @@
-DROP TABLE "eventos_auditoria" CASCADE;
+DROP TABLE IF EXISTS "eventos_auditoria" CASCADE;

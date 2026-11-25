@@ -16,7 +16,8 @@ import {
   type SyllabusDetailRow,
 } from "./syllabusSql"
 
-export type Executor = { execute(query: SQL): Promise<{ rows: unknown[] }> }
+export type { Executor } from "@/db"
+import type { Executor } from "@/db"
 
 export async function rowsOf<T>(executor: Executor, query: SQL): Promise<T[]> {
   return (await executor.execute(query)).rows as T[]

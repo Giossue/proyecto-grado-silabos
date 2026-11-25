@@ -1,6 +1,7 @@
 import "server-only"
-import { sql } from "drizzle-orm"
+import { eq, sql } from "drizzle-orm"
 import { db } from "@/db"
+import { convocatoriasUniversidad, periodosAcademicos } from "@/db/schema"
 import { institutionDateSql } from "../http/sql"
 import { rowsOf, type Executor } from "../syllabus/teacherSyllabusQueries"
 import type { TemplateLock, TemplateLockStore } from "./templateBuilder"
@@ -8,13 +9,13 @@ import type { TemplateLock, TemplateLockStore } from "./templateBuilder"
 export function createTemplateLockStore(executor: Executor = db as unknown as Executor): TemplateLockStore {
   return {
     async processLock(): Promise<TemplateLock | null> {
-      const [row] = await rowsOf<{ period: string | null; delivery_on: string | null }>(
-        executor,
-        sql`select periodo.codigo_periodo_academico as period, ${institutionDateSql(sql.raw("proceso.fecha_entrega"))} as delivery_on
-          from (select periodo_academico_id, fecha_entrega from convocatorias_universidad where estado_convocatoria_universidad = 'abierto' limit 1) proceso
-          left join periodos_academicos periodo on periodo.periodo_academico_id = proceso.periodo_academico_id`,
-      )
-      return row === undefined ? null : { period: row.period, deliveryOn: row.delivery_on }
+      const [row] = await executor
+        .select({ period: periodosAcademicos.codigoPeriodoAcademico, deliveryOn: institutionDateSql(sql`${convocatoriasUniversidad.fechaEntrega}`).mapWith(String) })
+        .from(convocatoriasUniversidad)
+        .leftJoin(periodosAcademicos, eq(periodosAcademicos.periodoAcademicoId, convocatoriasUniversidad.periodoAcademicoId))
+        .where(eq(convocatoriasUniversidad.estadoConvocatoriaUniversidad, "abierto"))
+        .limit(1)
+      return row === undefined ? null : { period: row.period, deliveryOn: row.deliveryOn }
     },
     async changedDuringPause(templateId: string): Promise<boolean> {
       const [row] = await rowsOf<{ changed: boolean }>(

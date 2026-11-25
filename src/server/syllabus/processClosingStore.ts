@@ -1,6 +1,7 @@
 import "server-only"
-import { sql } from "drizzle-orm"
+import { and, eq, inArray, sql } from "drizzle-orm"
 import { db } from "@/db"
+import { convocatoriasCarreras, convocatoriasUniversidad } from "@/db/schema"
 import { phpJsonDecode } from "../configuration/phpValues"
 import { canonicalJson } from "../documents/canonicalJson"
 import { buildSyllabusSnapshot } from "../documents/syllabusSnapshot"
@@ -18,8 +19,10 @@ function closingTx(executor: Executor): ClosingTx {
   return {
     lockProcess: (id) => process.lockProcess(id),
     async closeProcess(id, keepPausedAt) {
-      await executor.execute(sql`update convocatorias_universidad set estado_convocatoria_universidad = 'cerrado', finalizada_en = clock_timestamp()
-        ${keepPausedAt ? sql`` : sql`, pausado_en = null`} where convocatoria_universidad_id = ${id}::uuid`)
+      await executor
+        .update(convocatoriasUniversidad)
+        .set({ estadoConvocatoriaUniversidad: "cerrado", finalizadaEn: sql`clock_timestamp()`, ...(keepPausedAt ? {} : { pausadoEn: null }) })
+        .where(eq(convocatoriasUniversidad.convocatoriaUniversidadId, id))
     },
     async lockOpenSyllabi(processId) {
       const rows = await rowsOf<{ id: string; context: string | null }>(
@@ -43,9 +46,16 @@ function closingTx(executor: Executor): ClosingTx {
         where silabo_id = ${syllabusId}::uuid`)
     },
     async closeConvocations(processId) {
-      await executor.execute(sql`update convocatorias_carreras set estado_previo_cierre_convocatoria_carrera = estado_convocatoria_carrera,
-          estado_convocatoria_carrera = 'cerrada'
-        where convocatoria_universidad_id = ${processId}::uuid and estado_convocatoria_carrera in ('abierta', 'pausada') and ${PROCESS_ALIVE}`)
+      await executor
+        .update(convocatoriasCarreras)
+        .set({ estadoPrevioCierreConvocatoriaCarrera: sql`${convocatoriasCarreras.estadoConvocatoriaCarrera}`, estadoConvocatoriaCarrera: "cerrada" })
+        .where(
+          and(
+            eq(convocatoriasCarreras.convocatoriaUniversidadId, processId),
+            inArray(convocatoriasCarreras.estadoConvocatoriaCarrera, ["abierta", "pausada"]),
+            PROCESS_ALIVE,
+          ),
+        )
     },
   }
 }

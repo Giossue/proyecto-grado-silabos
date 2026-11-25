@@ -20,13 +20,15 @@ export async function markBaselineApplied(connectionString: string, migrationsFo
   const client = new Client({ connectionString })
   await client.connect()
   try {
+    const existing = await client.query<{ found: boolean }>("SELECT to_regclass('public.usuarios') IS NOT NULL AS found")
+    if (!existing.rows[0]?.found) throw new Error("The database has no tables; run npm run db:migrate instead")
     await client.query("BEGIN")
     await client.query("CREATE SCHEMA IF NOT EXISTS drizzle")
     await client.query(
       "CREATE TABLE IF NOT EXISTS drizzle.__drizzle_migrations (id SERIAL PRIMARY KEY, hash text NOT NULL, created_at bigint)",
     )
     const inserted = await client.query(
-      "INSERT INTO drizzle.__drizzle_migrations (hash, created_at) SELECT $1::text, $2::bigint WHERE NOT EXISTS (SELECT 1 FROM drizzle.__drizzle_migrations WHERE hash = $1::text)",
+      "INSERT INTO drizzle.__drizzle_migrations (hash, created_at) SELECT $1::text, $2::bigint WHERE NOT EXISTS (SELECT 1 FROM drizzle.__drizzle_migrations WHERE hash = $1::text OR created_at >= $2::bigint)",
       [hash, createdAt],
     )
     await client.query("COMMIT")

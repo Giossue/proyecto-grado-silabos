@@ -1,6 +1,8 @@
 import "server-only"
-import { sql } from "drizzle-orm"
+import { and, eq, sql } from "drizzle-orm"
 import { db } from "@/db"
+import { jsonbValue } from "@/db/expressions"
+import { asignaturas, valoresCampo } from "@/db/schema"
 import { phpJsonEncode } from "../http/phpJson"
 import { uuid7 } from "../http/uuid7"
 import { notificationScope, systemNow, type WriteOptions } from "../notifications/queries"
@@ -24,36 +26,33 @@ export async function careerDataLocked(executor: Executor, careerId: string): Pr
   return row?.locked === true
 }
 
+async function subjectValue(executor: Executor, subjectId: string, fieldId: string) {
+  const [row] = await executor
+    .select({ id: valoresCampo.valorCampoId })
+    .from(valoresCampo)
+    .where(and(eq(valoresCampo.asignaturaId, subjectId), eq(valoresCampo.definicionCampoId, fieldId)))
+    .limit(1)
+  return row
+}
+
 export function subjectProfileTx(executor: Executor, afterCommit: AfterCommit, now: number, options: WriteOptions = {}): SubjectProfileTx {
   const work = new InProgressWork(executor, afterCommit, notificationScope(executor, afterCommit, now, options.mail))
   return {
     store: createTemplateStore(executor),
     async lockSubject(subjectId) {
-      const [row] = await rowsOf<{ career_id: string }>(
-        executor,
-        sql`select carrera_id::text as career_id from asignaturas where asignatura_id = ${subjectId}::uuid limit 1 for update`,
-      )
-      return row ? { careerId: row.career_id } : null
+      const [row] = await executor.select({ careerId: asignaturas.carreraId }).from(asignaturas).where(eq(asignaturas.asignaturaId, subjectId)).limit(1).for("update")
+      return row ? { careerId: row.careerId } : null
     },
     careerLocked: (careerId) => careerDataLocked(executor, careerId),
     async deleteValue(subjectId, fieldId) {
-      const [row] = await rowsOf<{ id: string }>(
-        executor,
-        sql`select valor_campo_id::text as id from valores_campo where asignatura_id = ${subjectId}::uuid and definicion_campo_id = ${fieldId}::uuid limit 1`,
-      )
-      if (row) await executor.execute(sql`delete from valores_campo where valor_campo_id = ${row.id}::uuid`)
+      const row = await subjectValue(executor, subjectId, fieldId)
+      if (row) await executor.delete(valoresCampo).where(eq(valoresCampo.valorCampoId, row.id))
     },
     async saveValue(subjectId, fieldId, document) {
       const encoded = phpJsonEncode(phpShape(document))
-      const [row] = await rowsOf<{ id: string }>(
-        executor,
-        sql`select valor_campo_id::text as id from valores_campo where asignatura_id = ${subjectId}::uuid and definicion_campo_id = ${fieldId}::uuid limit 1`,
-      )
-      if (row) await executor.execute(sql`update valores_campo set valor_campo = ${encoded}::jsonb where valor_campo_id = ${row.id}::uuid`)
-      else {
-        await executor.execute(sql`insert into valores_campo (valor_campo_id, asignatura_id, definicion_campo_id, valor_campo)
-          values (${uuid7()}::uuid, ${subjectId}::uuid, ${fieldId}::uuid, ${encoded}::jsonb)`)
-      }
+      const row = await subjectValue(executor, subjectId, fieldId)
+      if (row) await executor.update(valoresCampo).set({ valorCampo: jsonbValue(encoded) }).where(eq(valoresCampo.valorCampoId, row.id))
+      else await executor.insert(valoresCampo).values({ valorCampoId: uuid7(), asignaturaId: subjectId, definicionCampoId: fieldId, valorCampo: jsonbValue(encoded) })
     },
     keepContent: (confirmed, careerId, subjectIds, change) => keepContent(work, confirmed, careerId, change, subjectIds),
   }

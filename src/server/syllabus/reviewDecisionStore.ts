@@ -1,6 +1,8 @@
 import "server-only"
-import { sql } from "drizzle-orm"
+import { and, desc, eq, isNotNull, sql } from "drizzle-orm"
 import { db } from "@/db"
+import { fromEpoch } from "@/db/expressions"
+import { revisionesSilabo, silabos } from "@/db/schema"
 import { notificationScope, recipientsOn, systemNow, type Mail, type WriteOptions } from "../notifications/queries"
 import { withAfterCommit, type AfterCommit } from "../queue/dispatch"
 import type { ReviewDecisionDeps, ReviewDecisionTx } from "./reviewDecisions"
@@ -50,28 +52,36 @@ export function reviewDecisionTx(executor: Executor, afterCommit: AfterCommit, n
     decisionBlock: (syllabusId) => lockedDecisionBlock(executor, syllabusId, false),
     restartSyllabus: (syllabus) => work.restartSyllabus(syllabus),
     async lockSyllabus(id) {
-      const [row] = await rowsOf<{ id: string; state: string; version: number; convocation_id: string; parallel_id: string }>(
-        executor,
-        sql`select silabo_id::text as id, estado_silabo as state, version_borrador as version, convocatoria_carrera_id::text as convocation_id,
-            paralelo_id::text as parallel_id
-          from silabos where silabo_id = ${id}::uuid and ${SYLLABUS_ALIVE} limit 1 for update of silabos`,
-      )
-      return row ? { id: row.id, state: row.state, version: Number(row.version), convocationId: row.convocation_id, parallelId: row.parallel_id } : null
+      const [row] = await executor
+        .select({
+          id: silabos.silaboId,
+          state: silabos.estadoSilabo,
+          version: silabos.versionBorrador,
+          convocationId: silabos.convocatoriaCarreraId,
+          parallelId: silabos.paraleloId,
+        })
+        .from(silabos)
+        .where(and(eq(silabos.silaboId, id), SYLLABUS_ALIVE))
+        .limit(1)
+        .for("update", { of: silabos })
+      return row ? { id: row.id, state: row.state, version: Number(row.version), convocationId: row.convocationId, parallelId: row.parallelId } : null
     },
     async latestRevisionId(syllabusId) {
-      const [row] = await rowsOf<{ id: string }>(
-        executor,
-        sql`select revision_silabo_id::text as id from revisiones_silabo where silabo_id = ${syllabusId}::uuid and ${REVISION_ALIVE}
-          order by numero_revision desc limit 1`,
-      )
+      const [row] = await executor
+        .select({ id: revisionesSilabo.revisionSilaboId })
+        .from(revisionesSilabo)
+        .where(and(eq(revisionesSilabo.silaboId, syllabusId), REVISION_ALIVE))
+        .orderBy(desc(revisionesSilabo.numeroRevision))
+        .limit(1)
       return row?.id ?? null
     },
     async lockRevision(id) {
-      const [row] = await rowsOf<{ id: string; number: number; requested: boolean }>(
-        executor,
-        sql`select revision_silabo_id::text as id, numero_revision as number, correccion_solicitada_en is not null as requested
-          from revisiones_silabo where revision_silabo_id = ${id}::uuid and ${REVISION_ALIVE} limit 1 for update of revisiones_silabo`,
-      )
+      const [row] = await executor
+        .select({ id: revisionesSilabo.revisionSilaboId, number: revisionesSilabo.numeroRevision, requested: isNotNull(revisionesSilabo.correccionSolicitadaEn).mapWith(Boolean) })
+        .from(revisionesSilabo)
+        .where(and(eq(revisionesSilabo.revisionSilaboId, id), REVISION_ALIVE))
+        .limit(1)
+        .for("update", { of: revisionesSilabo })
       return row ? { id: row.id, number: Number(row.number), correctionRequested: row.requested } : null
     },
     async revisionStage(id) {
@@ -84,12 +94,16 @@ export function reviewDecisionTx(executor: Executor, afterCommit: AfterCommit, n
       return row.verified ? "coordinacion" : "biblioteca"
     },
     async requestCorrection(revisionId, justification, stage, actorId, at) {
-      await executor.execute(sql`update revisiones_silabo set correccion_justificacion = ${justification}, correccion_etapa = ${stage},
-        correccion_solicitada_por = ${actorId}::uuid, correccion_solicitada_en = to_timestamp(${at}) where revision_silabo_id = ${revisionId}::uuid`)
+      await executor
+        .update(revisionesSilabo)
+        .set({ correccionJustificacion: justification, correccionEtapa: stage, correccionSolicitadaPor: actorId, correccionSolicitadaEn: fromEpoch(at) })
+        .where(eq(revisionesSilabo.revisionSilaboId, revisionId))
     },
     async markCorrectionRequested(syllabusId, version, at) {
-      await executor.execute(sql`update silabos set estado_silabo = 'correccion_solicitada', version_borrador = ${version}, guardado_en = to_timestamp(${at})
-        where silabo_id = ${syllabusId}::uuid`)
+      await executor
+        .update(silabos)
+        .set({ estadoSilabo: "correccion_solicitada", versionBorrador: version, guardadoEn: fromEpoch(at) })
+        .where(eq(silabos.silaboId, syllabusId))
     },
   }
 }

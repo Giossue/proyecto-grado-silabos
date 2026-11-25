@@ -28,7 +28,7 @@
         },
         "modificado_en": {
           "name": "modificado_en",
-          "type": "timestamp with time zone",
+          "type": "timestamp(0) with time zone",
           "primaryKey": false,
           "notNull": true,
           "default": "CURRENT_TIMESTAMP"
@@ -42,8 +42,7 @@
               "expression": "modificado_por",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -109,7 +108,7 @@
         },
         "aprobado_en": {
           "name": "aprobado_en",
-          "type": "timestamp with time zone",
+          "type": "timestamp(0) with time zone",
           "primaryKey": false,
           "notNull": true
         },
@@ -128,8 +127,7 @@
               "expression": "aprobacion_anterior_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -144,8 +142,7 @@
               "expression": "aprobado_por",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -269,7 +266,7 @@
         },
         "almacenado_en": {
           "name": "almacenado_en",
-          "type": "timestamp with time zone",
+          "type": "timestamp(0) with time zone",
           "primaryKey": false,
           "notNull": true
         }
@@ -282,15 +279,13 @@
               "expression": "categoria",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "text_ops"
+              "nulls": "last"
             },
             {
               "expression": "almacenado_en",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "timestamptz_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -305,8 +300,7 @@
               "expression": "hash_archivo",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "bpchar_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -321,8 +315,7 @@
               "expression": "subido_por",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -386,7 +379,7 @@
         },
         "asignado_en": {
           "name": "asignado_en",
-          "type": "timestamp with time zone",
+          "type": "timestamp(0) with time zone",
           "primaryKey": false,
           "notNull": true,
           "default": "CURRENT_TIMESTAMP"
@@ -406,15 +399,13 @@
               "expression": "asignacion_rol_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "bool_ops"
+              "nulls": "last"
             },
             {
               "expression": "asignacion_paralelo_activa",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "bool_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -429,8 +420,7 @@
               "expression": "paralelo_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": true,
@@ -505,7 +495,7 @@
         },
         "asignado_en": {
           "name": "asignado_en",
-          "type": "timestamp with time zone",
+          "type": "timestamp(0) with time zone",
           "primaryKey": false,
           "notNull": true,
           "default": "CURRENT_TIMESTAMP"
@@ -523,18 +513,18 @@
           "columns": [
             {
               "expression": "usuario_id",
+              "isExpression": false,
               "asc": true,
-              "isExpression": true,
               "nulls": "last"
             },
             {
               "expression": "rol",
+              "isExpression": false,
               "asc": true,
-              "isExpression": true,
               "nulls": "last"
             },
             {
-              "expression": "COALESCE(carrera_id, '00000000-0000-0000-0000-000000000000'::uu",
+              "expression": "COALESCE(carrera_id, '00000000-0000-0000-0000-000000000000'::uuid)",
               "asc": true,
               "isExpression": true,
               "nulls": "last"
@@ -553,8 +543,7 @@
               "expression": "carrera_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -753,54 +742,6 @@
       },
       "isRLSEnabled": false
     },
-    "public.bloqueos_temporales": {
-      "name": "bloqueos_temporales",
-      "schema": "",
-      "columns": {
-        "key": {
-          "name": "key",
-          "type": "varchar(255)",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "owner": {
-          "name": "owner",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "expiration": {
-          "name": "expiration",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "bloqueos_temporales_expiration_index": {
-          "name": "bloqueos_temporales_expiration_index",
-          "columns": [
-            {
-              "expression": "expiration",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last",
-              "opclass": "int8_ops"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.campos_plantilla": {
       "name": "campos_plantilla",
       "schema": "",
@@ -858,15 +799,13 @@
               "expression": "seccion_plantilla_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "int2_ops"
+              "nulls": "last"
             },
             {
               "expression": "posicion_campo_plantilla",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -881,15 +820,13 @@
               "expression": "plantilla_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "text_ops"
+              "nulls": "last"
             },
             {
               "expression": "clave_campo_plantilla",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "text_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": true,
@@ -1014,8 +951,7 @@
               "expression": "facultad_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -1056,78 +992,6 @@
           "value": "(numero_ciclos >= 1) AND (numero_ciclos <= 30)"
         }
       },
-      "isRLSEnabled": false
-    },
-    "public.cola_trabajos": {
-      "name": "cola_trabajos",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "bigserial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "queue": {
-          "name": "queue",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "payload": {
-          "name": "payload",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "attempts": {
-          "name": "attempts",
-          "type": "smallint",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "reserved_at": {
-          "name": "reserved_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "available_at": {
-          "name": "available_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "cola_trabajos_queue_index": {
-          "name": "cola_trabajos_queue_index",
-          "columns": [
-            {
-              "expression": "queue",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last",
-              "opclass": "text_ops"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
       "isRLSEnabled": false
     },
     "public.convocatorias_carreras": {
@@ -1174,15 +1038,13 @@
               "expression": "carrera_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "text_ops"
+              "nulls": "last"
             },
             {
               "expression": "estado_convocatoria_carrera",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "text_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -1197,15 +1059,13 @@
               "expression": "carrera_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             },
             {
               "expression": "convocatoria_universidad_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": true,
@@ -1220,8 +1080,7 @@
               "expression": "convocatoria_universidad_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -1285,13 +1144,13 @@
         },
         "fecha_inicio": {
           "name": "fecha_inicio",
-          "type": "timestamp with time zone",
+          "type": "timestamp(0) with time zone",
           "primaryKey": false,
           "notNull": true
         },
         "fecha_entrega": {
           "name": "fecha_entrega",
-          "type": "timestamp with time zone",
+          "type": "timestamp(0) with time zone",
           "primaryKey": false,
           "notNull": true
         },
@@ -1352,8 +1211,7 @@
               "expression": "periodo_academico_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": true,
@@ -1398,54 +1256,6 @@
           "value": "(finalizada_en IS NULL) OR ((estado_convocatoria_universidad)::text = 'cerrado'::text)"
         }
       },
-      "isRLSEnabled": false
-    },
-    "public.datos_temporales": {
-      "name": "datos_temporales",
-      "schema": "",
-      "columns": {
-        "key": {
-          "name": "key",
-          "type": "varchar(255)",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "value": {
-          "name": "value",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "expiration": {
-          "name": "expiration",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "datos_temporales_expiration_index": {
-          "name": "datos_temporales_expiration_index",
-          "columns": [
-            {
-              "expression": "expiration",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last",
-              "opclass": "int8_ops"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
       "isRLSEnabled": false
     },
     "public.definiciones_campo": {
@@ -1500,8 +1310,7 @@
               "expression": "plantilla_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -1625,7 +1434,7 @@
         },
         "subido_en": {
           "name": "subido_en",
-          "type": "timestamp with time zone",
+          "type": "timestamp(0) with time zone",
           "primaryKey": false,
           "notNull": true,
           "default": "CURRENT_TIMESTAMP"
@@ -1639,8 +1448,7 @@
               "expression": "archivo_vista_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -1655,15 +1463,13 @@
               "expression": "carrera_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "timestamptz_ops"
+              "nulls": "last"
             },
             {
               "expression": "subido_en",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -1678,8 +1484,7 @@
               "expression": "subido_por",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -1813,8 +1618,7 @@
               "expression": "verificado_por",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -1874,182 +1678,6 @@
       },
       "isRLSEnabled": false
     },
-    "public.eventos_auditoria": {
-      "name": "eventos_auditoria",
-      "schema": "",
-      "columns": {
-        "evento_auditoria_id": {
-          "name": "evento_auditoria_id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "usuario_id": {
-          "name": "usuario_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "asignacion_rol_id": {
-          "name": "asignacion_rol_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "accion": {
-          "name": "accion",
-          "type": "varchar(120)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "tipo_recurso": {
-          "name": "tipo_recurso",
-          "type": "varchar(120)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "recurso_id": {
-          "name": "recurso_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "resultado": {
-          "name": "resultado",
-          "type": "varchar(24)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "detalles": {
-          "name": "detalles",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "ocurrido_en": {
-          "name": "ocurrido_en",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "actor_nombre": {
-          "name": "actor_nombre",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "actor_rol": {
-          "name": "actor_rol",
-          "type": "varchar(120)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "actor_carrera": {
-          "name": "actor_carrera",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "eventos_auditoria_asignacion_rol_id_index": {
-          "name": "eventos_auditoria_asignacion_rol_id_index",
-          "columns": [
-            {
-              "expression": "asignacion_rol_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "eventos_auditoria_ocurrido_en_index": {
-          "name": "eventos_auditoria_ocurrido_en_index",
-          "columns": [
-            {
-              "expression": "ocurrido_en",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last",
-              "opclass": "timestamptz_ops"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "eventos_auditoria_recurso_fecha_idx": {
-          "name": "eventos_auditoria_recurso_fecha_idx",
-          "columns": [
-            {
-              "expression": "tipo_recurso",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last",
-              "opclass": "text_ops"
-            },
-            {
-              "expression": "recurso_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
-            },
-            {
-              "expression": "ocurrido_en",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last",
-              "opclass": "timestamptz_ops"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "eventos_auditoria_usuario_fecha_idx": {
-          "name": "eventos_auditoria_usuario_fecha_idx",
-          "columns": [
-            {
-              "expression": "usuario_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last",
-              "opclass": "timestamptz_ops"
-            },
-            {
-              "expression": "ocurrido_en",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last",
-              "opclass": "timestamptz_ops"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "eventos_auditoria_resultado_check": {
-          "name": "eventos_auditoria_resultado_check",
-          "value": "(resultado)::text = ANY (ARRAY[('exito'::character varying)::text, ('fallido'::character varying)::text])"
-        }
-      },
-      "isRLSEnabled": false
-    },
     "public.exportaciones_silabo": {
       "name": "exportaciones_silabo",
       "schema": "",
@@ -2093,13 +1721,13 @@
         },
         "solicitado_en": {
           "name": "solicitado_en",
-          "type": "timestamp with time zone",
+          "type": "timestamp(0) with time zone",
           "primaryKey": false,
           "notNull": true
         },
         "completado_en": {
           "name": "completado_en",
-          "type": "timestamp with time zone",
+          "type": "timestamp(0) with time zone",
           "primaryKey": false,
           "notNull": false
         }
@@ -2112,22 +1740,19 @@
               "expression": "revision_silabo_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             },
             {
               "expression": "estado_exportacion",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             },
             {
               "expression": "solicitado_en",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -2142,8 +1767,7 @@
               "expression": "solicitado_por",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -2206,8 +1830,8 @@
           "name": "exportaciones_silabo_revision_clave_solicitud_unica",
           "nullsNotDistinct": false,
           "columns": [
-            "clave_solicitud",
-            "revision_silabo_id"
+            "revision_silabo_id",
+            "clave_solicitud"
           ]
         }
       },
@@ -2275,8 +1899,7 @@
               "expression": "logo_archivo_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -2310,7 +1933,7 @@
         },
         "facultades_campus_facultad_check": {
           "name": "facultades_campus_facultad_check",
-          "value": "(campus_facultad)::text = ANY (ARRAY[('Campus Matriz Dr. Gabriel Galarza López'::character varying)::text, ('Campus Laguacoto'::character varying)::text, ('Campus CENI (Centro de Eventos Nacionales e Internacionales)'::character varying)::text, ('Extensión San Miguel'::character varying)::text, ('Sede Chimbo'::character varying)::text])"
+          "value": "(campus_facultad)::text = ANY (ARRAY[('Campus Matriz Dr. Gabriel Galarza L\u00f3pez'::character varying)::text, ('Campus Laguacoto'::character varying)::text, ('Campus CENI (Centro de Eventos Nacionales e Internacionales)'::character varying)::text, ('Extensi\u00f3n San Miguel'::character varying)::text, ('Sede Chimbo'::character varying)::text])"
         }
       },
       "isRLSEnabled": false
@@ -2381,13 +2004,13 @@
         },
         "certificado_valido_hasta": {
           "name": "certificado_valido_hasta",
-          "type": "timestamp with time zone",
+          "type": "timestamp(0) with time zone",
           "primaryKey": false,
           "notNull": true
         },
         "firmado_en": {
           "name": "firmado_en",
-          "type": "timestamp with time zone",
+          "type": "timestamp(0) with time zone",
           "primaryKey": false,
           "notNull": true
         }
@@ -2400,8 +2023,7 @@
               "expression": "revision_silabo_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -2416,8 +2038,7 @@
               "expression": "usuario_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -2473,8 +2094,8 @@
           "name": "firmas_silabo_firmado_como_unico",
           "nullsNotDistinct": false,
           "columns": [
-            "firmado_como",
-            "silabo_id"
+            "silabo_id",
+            "firmado_como"
           ]
         }
       },
@@ -2511,19 +2132,19 @@
         },
         "expira_en": {
           "name": "expira_en",
-          "type": "timestamp with time zone",
+          "type": "timestamp(0) with time zone",
           "primaryKey": false,
           "notNull": true
         },
         "usada_en": {
           "name": "usada_en",
-          "type": "timestamp with time zone",
+          "type": "timestamp(0) with time zone",
           "primaryKey": false,
           "notNull": false
         },
         "invalidada_en": {
           "name": "invalidada_en",
-          "type": "timestamp with time zone",
+          "type": "timestamp(0) with time zone",
           "primaryKey": false,
           "notNull": false
         },
@@ -2535,7 +2156,7 @@
         },
         "creada_en": {
           "name": "creada_en",
-          "type": "timestamp with time zone",
+          "type": "timestamp(0) with time zone",
           "primaryKey": false,
           "notNull": true,
           "default": "CURRENT_TIMESTAMP"
@@ -2549,8 +2170,7 @@
               "expression": "emitida_por_usuario_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -2565,15 +2185,13 @@
               "expression": "usuario_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             },
             {
               "expression": "expira_en",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "timestamptz_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -2672,18 +2290,18 @@
           "columns": [
             {
               "expression": "plantilla_id",
+              "isExpression": false,
               "asc": true,
-              "isExpression": true,
               "nulls": "last"
             },
             {
               "expression": "usuario_id",
+              "isExpression": false,
               "asc": true,
-              "isExpression": true,
               "nulls": "last"
             },
             {
-              "expression": "(((contenido_mensaje -> 'entrada'::text) ->> 'clave_idempotenci",
+              "expression": "((contenido_mensaje -> 'entrada'::text) ->> 'clave_idempotencia'::text)",
               "asc": true,
               "isExpression": true,
               "nulls": "last"
@@ -2702,22 +2320,19 @@
               "expression": "plantilla_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             },
             {
               "expression": "usuario_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "timestamptz_ops"
+              "nulls": "last"
             },
             {
               "expression": "enviado_en",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "timestamptz_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -2732,8 +2347,7 @@
               "expression": "usuario_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -2779,37 +2393,6 @@
           "value": "(jsonb_typeof(contenido_mensaje) = 'object'::text) AND ((contenido_mensaje ->> 'rol'::text) = ANY (ARRAY['usuario'::text, 'asistente'::text])) AND ((contenido_mensaje ->> 'estado'::text) = ANY (ARRAY['pendiente'::text, 'en_ejecucion'::text, 'completado'::text, 'fallido'::text]))"
         }
       },
-      "isRLSEnabled": false
-    },
-    "public.migraciones": {
-      "name": "migraciones",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "migration": {
-          "name": "migration",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "batch": {
-          "name": "batch",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
       "isRLSEnabled": false
     },
     "public.notificaciones": {
@@ -2866,13 +2449,13 @@
         },
         "leido_en": {
           "name": "leido_en",
-          "type": "timestamp with time zone",
+          "type": "timestamp(0) with time zone",
           "primaryKey": false,
           "notNull": false
         },
         "notificado_en": {
           "name": "notificado_en",
-          "type": "timestamp with time zone",
+          "type": "timestamp(0) with time zone",
           "primaryKey": false,
           "notNull": true
         },
@@ -2891,15 +2474,13 @@
               "expression": "usuario_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             },
             {
               "expression": "periodo_academico_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -2914,22 +2495,19 @@
               "expression": "usuario_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             },
             {
               "expression": "leido_en",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             },
             {
               "expression": "notificado_en",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "timestamptz_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -2972,8 +2550,8 @@
           "name": "notificaciones_usuario_id_clave_unica_unique",
           "nullsNotDistinct": false,
           "columns": [
-            "clave_unica",
-            "usuario_id"
+            "usuario_id",
+            "clave_unica"
           ]
         }
       },
@@ -3016,8 +2594,8 @@
           "columns": [
             {
               "expression": "asignatura_id",
+              "isExpression": false,
               "asc": true,
-              "isExpression": true,
               "nulls": "last"
             },
             {
@@ -3039,8 +2617,7 @@
               "expression": "asignatura_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -3276,8 +2853,7 @@
               "expression": "decidida_por",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -3292,15 +2868,13 @@
               "expression": "plantilla_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "text_ops"
+              "nulls": "last"
             },
             {
               "expression": "estado_propuesta",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -3315,8 +2889,7 @@
               "expression": "solicitada_por",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -3444,8 +3017,7 @@
               "expression": "requisito_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -3524,7 +3096,7 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "timestamp with time zone",
+          "type": "timestamp(0) with time zone",
           "primaryKey": false,
           "notNull": false
         }
@@ -3574,8 +3146,7 @@
               "expression": "revisado_por",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -3686,7 +3257,7 @@
         },
         "enviado_en": {
           "name": "enviado_en",
-          "type": "timestamp with time zone",
+          "type": "timestamp(0) with time zone",
           "primaryKey": false,
           "notNull": true
         },
@@ -3723,8 +3294,7 @@
               "expression": "correccion_solicitada_por",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -3739,8 +3309,7 @@
               "expression": "enviado_por",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -3755,8 +3324,7 @@
               "expression": "revision_anterior_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -3771,15 +3339,13 @@
               "expression": "silabo_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             },
             {
               "expression": "enviado_en",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "timestamptz_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -3848,16 +3414,16 @@
           "name": "revisiones_silabo_silabo_id_clave_solicitud_unique",
           "nullsNotDistinct": false,
           "columns": [
-            "clave_solicitud",
-            "silabo_id"
+            "silabo_id",
+            "clave_solicitud"
           ]
         },
         "revisiones_silabo_silabo_id_numero_revision_unique": {
           "name": "revisiones_silabo_silabo_id_numero_revision_unique",
           "nullsNotDistinct": false,
           "columns": [
-            "numero_revision",
-            "silabo_id"
+            "silabo_id",
+            "numero_revision"
           ]
         }
       },
@@ -3931,15 +3497,13 @@
               "expression": "plantilla_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             },
             {
               "expression": "posicion_seccion_plantilla",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "int2_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -3954,15 +3518,13 @@
               "expression": "plantilla_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             },
             {
               "expression": "clave_seccion_plantilla",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "text_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": true,
@@ -3993,8 +3555,8 @@
           "name": "secciones_plantilla_id_plantilla_unica",
           "nullsNotDistinct": false,
           "columns": [
-            "plantilla_id",
-            "seccion_plantilla_id"
+            "seccion_plantilla_id",
+            "plantilla_id"
           ]
         }
       },
@@ -4056,8 +3618,7 @@
               "expression": "last_activity",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "int4_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -4072,8 +3633,7 @@
               "expression": "user_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -4135,13 +3695,13 @@
         },
         "iniciado_en": {
           "name": "iniciado_en",
-          "type": "timestamp with time zone",
+          "type": "timestamp(0) with time zone",
           "primaryKey": false,
           "notNull": false
         },
         "guardado_en": {
           "name": "guardado_en",
-          "type": "timestamp with time zone",
+          "type": "timestamp(0) with time zone",
           "primaryKey": false,
           "notNull": false
         },
@@ -4167,15 +3727,13 @@
               "expression": "convocatoria_carrera_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "text_ops"
+              "nulls": "last"
             },
             {
               "expression": "estado_silabo",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "text_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -4190,8 +3748,7 @@
               "expression": "paralelo_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -4272,7 +3829,7 @@
         },
         "correo_verificado_en": {
           "name": "correo_verificado_en",
-          "type": "timestamp with time zone",
+          "type": "timestamp(0) with time zone",
           "primaryKey": false,
           "notNull": false
         },
@@ -4309,7 +3866,7 @@
         },
         "dos_factores_confirmado_en": {
           "name": "dos_factores_confirmado_en",
-          "type": "timestamp with time zone",
+          "type": "timestamp(0) with time zone",
           "primaryKey": false,
           "notNull": false
         },
@@ -4340,8 +3897,7 @@
               "expression": "usuario_activo",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "bool_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -4408,15 +3964,13 @@
               "expression": "asignatura_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             },
             {
               "expression": "definicion_campo_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": true,
@@ -4432,8 +3986,7 @@
               "expression": "definicion_campo_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -4448,15 +4001,13 @@
               "expression": "silabo_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             },
             {
               "expression": "definicion_campo_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": true,
@@ -4526,9 +4077,9 @@
       "values": [
         "Presencial",
         "Semipresencial",
-        "En línea",
+        "En l\u00ednea",
         "A distancia",
-        "Híbrida"
+        "H\u00edbrida"
       ]
     }
   },
@@ -4542,35 +4093,35 @@
         "silabo_id": {
           "name": "silabo_id",
           "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
+          "primaryKey": true,
+          "notNull": true
         },
         "usuario_id": {
           "name": "usuario_id",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "asignacion_rol_id": {
           "name": "asignacion_rol_id",
           "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
+          "primaryKey": true,
+          "notNull": true
         },
         "asignacion_paralelo_id": {
           "name": "asignacion_paralelo_id",
           "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
+          "primaryKey": true,
+          "notNull": true
         },
         "paralelo_id": {
           "name": "paralelo_id",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         }
       },
-      "definition": "SELECT silabos.silabo_id, asignaciones_rol.usuario_id, asignaciones_rol.asignacion_rol_id, asignaciones_paralelo.asignacion_paralelo_id, silabos.paralelo_id FROM silabos JOIN asignaciones_paralelo ON asignaciones_paralelo.paralelo_id = silabos.paralelo_id AND asignaciones_paralelo.asignacion_paralelo_activa JOIN asignaciones_rol ON asignaciones_rol.asignacion_rol_id = asignaciones_paralelo.asignacion_rol_id AND asignaciones_rol.asignacion_rol_activa AND asignaciones_rol.rol::text = 'docente'::text",
+      "definition": "select \"silabos\".\"silabo_id\", \"asignaciones_rol\".\"usuario_id\", \"asignaciones_rol\".\"asignacion_rol_id\", \"asignaciones_paralelo\".\"asignacion_paralelo_id\", \"silabos\".\"paralelo_id\" from \"silabos\" inner join \"asignaciones_paralelo\" on (\"asignaciones_paralelo\".\"paralelo_id\" = \"silabos\".\"paralelo_id\" and \"asignaciones_paralelo\".\"asignacion_paralelo_activa\") inner join \"asignaciones_rol\" on (\"asignaciones_rol\".\"asignacion_rol_id\" = \"asignaciones_paralelo\".\"asignacion_rol_id\" and \"asignaciones_rol\".\"asignacion_rol_activa\" and \"asignaciones_rol\".\"rol\" = 'docente')",
       "name": "docentes_vigentes_silabo",
       "schema": "public",
       "isExisting": false,

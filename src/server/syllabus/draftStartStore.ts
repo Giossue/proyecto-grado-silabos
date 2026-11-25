@@ -1,8 +1,9 @@
 import "server-only"
-import { sql } from "drizzle-orm"
+import { and, eq, inArray, ne, sql } from "drizzle-orm"
 import { db } from "@/db"
+import { fromEpoch } from "@/db/expressions"
+import { definicionesCampo, silabos, valoresCampo } from "@/db/schema"
 import { phpJsonEncode } from "../http/phpJson"
-import { uuidList } from "../http/sql"
 import { uuid7 } from "../http/uuid7"
 import { phpJsonDecode, phpShape } from "../configuration/phpValues"
 import { createTemplateStore } from "../configuration/templateStore"
@@ -11,6 +12,7 @@ import { draftTx } from "./draftFieldStore"
 import { syllabusDetailStoreOn } from "./syllabusDetailQueries"
 import { SYLLABUS_EXISTS, writtenBySql } from "./syllabusSql"
 import { rowsOf, type Executor } from "./teacherSyllabusQueries"
+import { jsonbValue, jsonText } from "@/db/expressions"
 
 export function draftStartTx(executor: Executor): DraftStartTx {
   const draft = draftTx(executor)
@@ -33,37 +35,40 @@ export function draftStartTx(executor: Executor): DraftStartTx {
       return row?.id ?? null
     },
     async teacherFields(templateId) {
-      const rows = await rowsOf<{ id: string; responsible: string; content: string | null }>(
-        executor,
-        sql`select definicion_campo_id::text as id, quien_llena_definicion_campo as responsible, contenido_definicion_campo::text as content
-          from definiciones_campo where plantilla_id = ${templateId}::uuid and vigente_en_plantilla = true and quien_llena_definicion_campo != 'institucional'`,
-      )
+      const rows = await executor
+        .select({ id: definicionesCampo.definicionCampoId, responsible: definicionesCampo.quienLlenaDefinicionCampo, content: jsonText(definicionesCampo.contenidoDefinicionCampo) })
+        .from(definicionesCampo)
+        .where(
+          and(eq(definicionesCampo.plantillaId, templateId), eq(definicionesCampo.vigenteEnPlantilla, true), ne(definicionesCampo.quienLlenaDefinicionCampo, "institucional")),
+        )
       return rows.map((row) => ({ id: row.id, responsible: row.responsible, content: phpJsonDecode(row.content) }))
     },
     async values(syllabusId, fieldIds) {
       if (fieldIds.length === 0) return []
-      const rows = await rowsOf<{ field_id: string; value: string | null }>(
-        executor,
-        sql`select definicion_campo_id::text as field_id, valor_campo::text as value from valores_campo
-          where silabo_id = ${syllabusId}::uuid and definicion_campo_id in (${uuidList(fieldIds)})`,
-      )
-      return rows.map((row) => ({ fieldId: row.field_id, value: phpJsonDecode(row.value) }))
+      const rows = await executor
+        .select({ fieldId: valoresCampo.definicionCampoId, value: jsonText(valoresCampo.valorCampo) })
+        .from(valoresCampo)
+        .where(and(eq(valoresCampo.silaboId, syllabusId), inArray(valoresCampo.definicionCampoId, fieldIds)))
+      return rows.map((row) => ({ fieldId: row.fieldId, value: phpJsonDecode(row.value) }))
     },
     async deleteValues(syllabusId, fieldIds) {
       if (fieldIds.length === 0) return
-      await executor.execute(sql`delete from valores_campo where silabo_id = ${syllabusId}::uuid and definicion_campo_id in (${uuidList(fieldIds)})`)
+      await executor.delete(valoresCampo).where(and(eq(valoresCampo.silaboId, syllabusId), inArray(valoresCampo.definicionCampoId, fieldIds)))
     },
     async insertValue(syllabusId, fieldId, document) {
-      await executor.execute(sql`insert into valores_campo (silabo_id, definicion_campo_id, valor_campo, valor_campo_id)
-        values (${syllabusId}::uuid, ${fieldId}::uuid, ${phpJsonEncode(phpShape(document))}::jsonb, ${uuid7()}::uuid)`)
+      await executor.insert(valoresCampo).values({ silaboId: syllabusId, definicionCampoId: fieldId, valorCampo: jsonbValue(phpJsonEncode(phpShape(document))), valorCampoId: uuid7() })
     },
     async start(syllabusId, now) {
-      await executor.execute(sql`update silabos set estado_silabo = 'borrador', iniciado_en = to_timestamp(${now}), guardado_en = to_timestamp(${now}),
-        version_borrador = 1 where silabo_id = ${syllabusId}::uuid`)
+      await executor
+        .update(silabos)
+        .set({ estadoSilabo: "borrador", iniciadoEn: fromEpoch(now), guardadoEn: fromEpoch(now), versionBorrador: 1 })
+        .where(eq(silabos.silaboId, syllabusId))
     },
     async copied(syllabusId, version, now) {
-      await executor.execute(sql`update silabos set estado_silabo = 'borrador', iniciado_en = coalesce(iniciado_en, to_timestamp(${now})),
-        guardado_en = to_timestamp(${now}), version_borrador = ${version} where silabo_id = ${syllabusId}::uuid`)
+      await executor
+        .update(silabos)
+        .set({ estadoSilabo: "borrador", iniciadoEn: sql`coalesce(${silabos.iniciadoEn}, ${fromEpoch(now)})`, guardadoEn: fromEpoch(now), versionBorrador: version })
+        .where(eq(silabos.silaboId, syllabusId))
     },
   }
 }

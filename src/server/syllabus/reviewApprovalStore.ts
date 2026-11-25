@@ -1,7 +1,9 @@
 import "server-only"
 import { randomUUID } from "node:crypto"
-import { sql } from "drizzle-orm"
+import { eq } from "drizzle-orm"
 import { db } from "@/db"
+import { fromEpoch } from "@/db/expressions"
+import { aprobaciones, revisionesCoordinacion, silabos } from "@/db/schema"
 import { exportRequestTxOn } from "../documents/syllabusExportStore"
 import { dispatchSyllabusExport } from "../documents/syllabusExportJob"
 import { uuid7 } from "../http/uuid7"
@@ -11,7 +13,7 @@ import { signatureTxOn } from "../signatures/signatureStore"
 import type { ReviewApprovalDeps, ReviewApprovalTx } from "./reviewApproval"
 import { dbTransaction, reviewDecisionTx, type TransactionRunner } from "./reviewDecisionStore"
 import { reviewDetailStoreOn } from "./reviewDetailQueries"
-import { rowsOf, type Executor } from "./teacherSyllabusQueries"
+import type { Executor } from "./teacherSyllabusQueries"
 
 export type ExportDispatch = (artifactId: string) => unknown
 
@@ -25,26 +27,32 @@ export function reviewApprovalTx(executor: Executor, afterCommit: AfterCommit, n
     latestRevisionId: decisions.latestRevisionId,
     revisionStage: decisions.revisionStage,
     async approvalExists(revisionId) {
-      const [row] = await rowsOf<{ found: boolean }>(executor, sql`select exists (select 1 from aprobaciones where revision_silabo_id = ${revisionId}::uuid) as found`)
-      return row?.found === true
+      const [row] = await executor.select({ id: aprobaciones.aprobacionId }).from(aprobaciones).where(eq(aprobaciones.revisionSilaboId, revisionId)).limit(1)
+      return row !== undefined
     },
     async coordinationReviewId(revisionId) {
-      const [row] = await rowsOf<{ id: string }>(
-        executor,
-        sql`select revision_coordinacion_id::text as id from revisiones_coordinacion where revision_silabo_id = ${revisionId}::uuid limit 1`,
-      )
+      const [row] = await executor
+        .select({ id: revisionesCoordinacion.revisionCoordinacionId })
+        .from(revisionesCoordinacion)
+        .where(eq(revisionesCoordinacion.revisionSilaboId, revisionId))
+        .limit(1)
       return row?.id ?? null
     },
     async insertCoordinationReview(row) {
-      await executor.execute(sql`insert into revisiones_coordinacion (revision_coordinacion_id, revision_silabo_id, revisado_por, revisado_en)
-        values (${row.id}::uuid, ${row.revisionId}::uuid, ${row.reviewerId}::uuid, to_timestamp(${row.at}))`)
+      await executor.insert(revisionesCoordinacion).values({ revisionCoordinacionId: row.id, revisionSilaboId: row.revisionId, revisadoPor: row.reviewerId, revisadoEn: fromEpoch(row.at) })
     },
     async insertApproval(row) {
-      await executor.execute(sql`insert into aprobaciones (aprobacion_id, revision_silabo_id, clave_solicitud, hash_contenido, aprobado_por, aprobado_en)
-        values (${row.id}::uuid, ${row.revisionId}::uuid, ${row.key}::uuid, ${row.fingerprint}, ${row.approverId}::uuid, to_timestamp(${row.at}))`)
+      await executor.insert(aprobaciones).values({
+        aprobacionId: row.id,
+        revisionSilaboId: row.revisionId,
+        claveSolicitud: row.key,
+        hashContenido: row.fingerprint,
+        aprobadoPor: row.approverId,
+        aprobadoEn: fromEpoch(row.at),
+      })
     },
     async markApproved(syllabusId, version) {
-      await executor.execute(sql`update silabos set estado_silabo = 'aprobado', version_borrador = ${version} where silabo_id = ${syllabusId}::uuid`)
+      await executor.update(silabos).set({ estadoSilabo: "aprobado", versionBorrador: version }).where(eq(silabos.silaboId, syllabusId))
     },
   }
 }

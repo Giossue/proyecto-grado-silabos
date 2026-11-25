@@ -2,8 +2,14 @@ import "server-only"
 import { sql, type SQL } from "drizzle-orm"
 import { db } from "@/db"
 import { phpJsonEncode } from "../http/phpJson"
+import { randomUUID } from "node:crypto"
+import { uuid7 } from "../http/uuid7"
+import { officialDefinition, officialSections } from "./officialTemplate"
 import { phpShape, type PhpRecord } from "./phpValues"
+import { contentForField, fieldDocument } from "./templateDraft"
 import { defaultProvisionDeps, type ProvisionDeps, type ProvisionStore, type ProvisionTx } from "./templateProvisioner"
+import { normalizeFieldDocument } from "./templateRuntime"
+import type { DocumentSection, StoredField } from "./templateStructure"
 import { structureStoreOn, structureTx } from "./templateStructureStore"
 
 type Executor = { execute(query: SQL): Promise<{ rows: unknown[] }> }
@@ -71,4 +77,25 @@ export function provisionStoreOn(executor: Executor, transaction: <T>(work: (exe
 
 export function createProvisionDeps(): ProvisionDeps {
   return defaultProvisionDeps(provisionStoreOn(db as unknown as Executor, (work) => db.transaction((tx) => work(tx as unknown as Executor))))
+}
+
+export async function provisionOfficialTemplate(tx: ProvisionTx, ids = { template: uuid7, block: randomUUID, field: uuid7 }): Promise<string | null> {
+  if (await tx.anyTemplate()) return null
+  const templateId = ids.template()
+  const definition = officialDefinition()
+  await tx.insertTemplate(templateId, definition)
+  await tx.syncDocument(templateId, [])
+  const sections: DocumentSection[] = []
+  const fields: Omit<StoredField, "id">[] = []
+  officialSections().forEach((section, sectionIndex) => {
+    const blocks = section.fields.map((field, fieldIndex) => {
+      const blockId = ids.block()
+      fields.push({ templateId, blockId, responsible: field.responsible, content: contentForField(field.responsible, normalizeFieldDocument(fieldDocument(field.content), definition)) })
+      return { id: blockId, key: field.key, title: field.label ?? "", position: fieldIndex + 1 }
+    })
+    sections.push({ id: ids.block(), key: section.key, title: section.title, orientation: section.orientation ?? "portrait", position: sectionIndex + 1, blocks })
+  })
+  await tx.syncDocument(templateId, sections)
+  for (const field of fields) await tx.insertField({ id: ids.field(), ...field })
+  return templateId
 }

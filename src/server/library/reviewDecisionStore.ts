@@ -1,12 +1,14 @@
 import "server-only"
-import { sql } from "drizzle-orm"
+import { eq, isNotNull } from "drizzle-orm"
 import { db } from "@/db"
+import { fromEpoch } from "@/db/expressions"
+import { enviosBiblioteca } from "@/db/schema"
 import { recipientsOn, systemNow, type WriteOptions } from "../notifications/queries"
 import { withAfterCommit, type AfterCommit } from "../queue/dispatch"
 import { signatureTxOn } from "../signatures/signatureStore"
 import { dbTransaction, reviewDecisionTx, type TransactionRunner } from "../syllabus/reviewDecisionStore"
 import { reviewDetailStoreOn } from "../syllabus/reviewDetailQueries"
-import { rowsOf, type Executor } from "../syllabus/teacherSyllabusQueries"
+import type { Executor } from "../syllabus/teacherSyllabusQueries"
 import type { LibraryDecisionDeps, LibraryDecisionTx } from "./reviewDecisions"
 
 function libraryDecisionTx(executor: Executor, afterCommit: AfterCommit, now: number, mail?: WriteOptions["mail"]): LibraryDecisionTx {
@@ -17,16 +19,19 @@ function libraryDecisionTx(executor: Executor, afterCommit: AfterCommit, now: nu
     ...signatureTxOn(executor),
     coordinatorsForCareer: (careerId) => recipients.coordinatorsForCareer(careerId),
     async lockSubmission(revisionId) {
-      const [row] = await rowsOf<{ id: string; verified: boolean }>(
-        executor,
-        sql`select envio_biblioteca_id::text as id, verificado_en is not null as verified from envios_biblioteca
-          where revision_silabo_id = ${revisionId}::uuid limit 1 for update`,
-      )
+      const [row] = await executor
+        .select({ id: enviosBiblioteca.envioBibliotecaId, verified: isNotNull(enviosBiblioteca.verificadoEn).mapWith(Boolean) })
+        .from(enviosBiblioteca)
+        .where(eq(enviosBiblioteca.revisionSilaboId, revisionId))
+        .limit(1)
+        .for("update")
       return row ? { id: row.id, verified: row.verified } : null
     },
     async markVerified(submissionId, actorId, at) {
-      await executor.execute(sql`update envios_biblioteca set verificado_por = ${actorId}::uuid, verificado_en = to_timestamp(${at})
-        where envio_biblioteca_id = ${submissionId}::uuid`)
+      await executor
+        .update(enviosBiblioteca)
+        .set({ verificadoPor: actorId, verificadoEn: fromEpoch(at) })
+        .where(eq(enviosBiblioteca.envioBibliotecaId, submissionId))
     },
   }
 }

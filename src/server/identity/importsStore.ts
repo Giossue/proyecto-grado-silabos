@@ -1,26 +1,28 @@
 import "server-only"
-import { sql } from "drizzle-orm"
+import { asc, eq } from "drizzle-orm"
 import { db } from "@/db"
+import { carreras } from "@/db/schema"
 import { careerLabelSql } from "../academic/careerLabel"
-import { rowsOf, type Executor } from "../syllabus/teacherSyllabusQueries"
+import type { Executor } from "../syllabus/teacherSyllabusQueries"
 import type { IdentityImportStore } from "./imports"
+
+const careerLabel = careerLabelSql("carreras").mapWith(String)
 
 export function identityImportStoreOn(executor: Executor): IdentityImportStore {
   return {
     async activeCareers() {
-      const rows = await rowsOf<{ id: string; name: string | null; code: string | null; label: string | null }>(
-        executor,
-        sql`select carrera.carrera_id::text as id, carrera.nombre_carrera as name, carrera.codigo_carrera as code, ${careerLabelSql("carrera")} as label
-          from carreras carrera where carrera.carrera_activa = true`,
-      )
+      const rows = await executor
+        .select({ id: carreras.carreraId, name: carreras.nombreCarrera, code: carreras.codigoCarrera, label: careerLabel })
+        .from(carreras)
+        .where(eq(carreras.carreraActiva, true))
       return rows.map((row) => ({ id: row.id, name: row.name ?? "", code: row.code ?? "", label: row.label ?? "" }))
     },
     async templateCareerLabels() {
-      const rows = await rowsOf<{ label: string | null }>(
-        executor,
-        sql`select ${careerLabelSql("carrera")} as label from carreras carrera where carrera.carrera_activa = true
-          order by carrera.nombre_carrera asc, carrera.codigo_carrera asc`,
-      )
+      const rows = await executor
+        .select({ label: careerLabel })
+        .from(carreras)
+        .where(eq(carreras.carreraActiva, true))
+        .orderBy(asc(carreras.nombreCarrera), asc(carreras.codigoCarrera))
       return rows.map((row) => row.label ?? "")
     },
   }
