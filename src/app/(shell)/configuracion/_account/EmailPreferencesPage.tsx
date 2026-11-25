@@ -1,9 +1,9 @@
 "use client"
 
 import { CalendarClock, Mail, Save } from "lucide-react"
-import { useCallback, useEffect, useState } from "react"
-import { ApiError } from "@/api/client"
-import { getEmailPreferences, updateEmailPreferences, type EmailNoticeOption } from "@/api/emailPreferences"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useState } from "react"
+import { updateEmailPreferences, type EmailNoticeOption } from "@/api/emailPreferences"
 import { EmptyState } from "@/components/domain/EmptyState"
 import { FeedbackAlert } from "@/components/domain/FeedbackAlert"
 import { LoadErrorState } from "@/components/domain/LoadErrorState"
@@ -15,7 +15,9 @@ import { Field, FieldContent, FieldDescription, FieldLabel } from "@/components/
 import { Spinner } from "@/components/ui/spinner"
 import { Switch } from "@/components/ui/switch"
 import { SettingsLayout } from "@/layouts/settings/Layout"
+import { errorMessage, queryErrorMessage } from "@/lib/queryClient"
 import { toast } from "@/lib/toast"
+import { accountKeys, emailPreferencesQuery } from "@/queries/account"
 import { useSession } from "@/state/session"
 
 const ROWS_BY_ROLE: Record<string, number> = { docente: 6, coordinador: 2, bibliotecario: 4 }
@@ -25,37 +27,25 @@ const chosenFrom = (options: EmailNoticeOption[]): Record<string, boolean> => Ob
 export default function EmailPreferencesPage() {
   const role = useSession().session?.active_role?.code ?? ""
   const optionRows = ROWS_BY_ROLE[role] ?? 4
-  const [options, setOptions] = useState<EmailNoticeOption[] | null>(null)
-  const [chosen, setChosen] = useState<Record<string, boolean>>({})
-  const [loadError, setLoadError] = useState<string | null>(null)
-  const [saveError, setSaveError] = useState<string | null>(null)
-  const [saving, setSaving] = useState(false)
+  const queryClient = useQueryClient()
+  const query = useQuery(emailPreferencesQuery())
+  const options = query.data?.options ?? null
+  const [edited, setEdited] = useState<Record<string, boolean> | null>(null)
+  const chosen = edited ?? chosenFrom(options ?? [])
+  const loadError = queryErrorMessage(query, "No se pudieron cargar sus avisos por correo")
   const [openSection, setOpenSection] = useState("resumen")
-
-  const fill = (value: EmailNoticeOption[]): void => {
-    setOptions(value)
-    setChosen(chosenFrom(value))
-  }
-
-  const fetchPreferences = useCallback(
-    (): Promise<void> =>
-      getEmailPreferences().then(
-        (result) => {
-          setOptions(result.options)
-          setChosen(chosenFrom(result.options))
-        },
-        (reason: unknown) => setLoadError(reason instanceof ApiError ? reason.message : "No se pudieron cargar sus avisos por correo"),
-      ),
-    [],
-  )
-
-  useEffect(() => {
-    void fetchPreferences()
-  }, [fetchPreferences])
+  const saving = useMutation({
+    mutationFn: (preferences: Record<string, boolean>) => updateEmailPreferences(preferences),
+    onSuccess: (result) => {
+      queryClient.setQueryData(accountKeys.emailPreferences(), result)
+      setEdited(null)
+      toast.success("Avisos por correo guardados")
+    },
+  })
+  const saveError = saving.isError ? errorMessage(saving.error, "No se pudieron guardar sus avisos por correo") : null
 
   const load = (): void => {
-    setLoadError(null)
-    void fetchPreferences()
+    void query.refetch()
   }
 
   const all = options ?? []
@@ -77,17 +67,8 @@ export default function EmailPreferencesPage() {
   ].filter((group) => group.options.length > 0)
   const dirty = all.some((option) => chosen[option.type] !== option.enabled)
 
-  const save = async (): Promise<void> => {
-    setSaving(true)
-    setSaveError(null)
-    try {
-      fill((await updateEmailPreferences({ ...chosen })).options)
-      toast.success("Avisos por correo guardados")
-    } catch (reason) {
-      setSaveError(reason instanceof ApiError ? reason.message : "No se pudieron guardar sus avisos por correo")
-    } finally {
-      setSaving(false)
-    }
+  const save = (): void => {
+    saving.mutate({ ...chosen })
   }
 
   return (
@@ -110,7 +91,7 @@ export default function EmailPreferencesPage() {
                       <Switch
                         id={`email-notice-${option.type}`}
                         checked={chosen[option.type] ?? false}
-                        onCheckedChange={(checked) => setChosen((current) => ({ ...current, [option.type]: checked }))}
+                        onCheckedChange={(checked) => setEdited({ ...chosen, [option.type]: checked })}
                       />
                       <FieldContent>
                         <FieldLabel htmlFor={`email-notice-${option.type}`}>{option.label}</FieldLabel>
@@ -124,8 +105,8 @@ export default function EmailPreferencesPage() {
           )}
           {options.length ? (
             <div>
-              <Button type="button" disabled={saving || !dirty} onClick={() => void save()}>
-                {saving ? <Spinner data-icon="inline-start" /> : <Save data-icon="inline-start" aria-hidden="true" />}
+              <Button type="button" disabled={saving.isPending || !dirty} onClick={save}>
+                {saving.isPending ? <Spinner data-icon="inline-start" /> : <Save data-icon="inline-start" aria-hidden="true" />}
                 Guardar
               </Button>
             </div>

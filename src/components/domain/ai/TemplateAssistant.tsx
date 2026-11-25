@@ -1,9 +1,10 @@
 "use client"
 
 import { Check, MessageSquarePlus, Send, Trash2 } from "lucide-react"
-import { useEffect, useEffectEvent, useRef, useState, type FormEvent } from "react"
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useState } from "react"
 import { ApiError } from "@/api/client"
-import { clearTemplateAssistant, getTemplateAssistant, sendTemplateAssistantMessage, type TemplateAssistantChat, type TemplateAssistantDraft, type TemplateAssistantMessage, type TemplateProposalStatus } from "@/api/templateAssistant"
+import { clearTemplateAssistant, sendTemplateAssistantMessage, type TemplateAssistantChat, type TemplateAssistantDraft, type TemplateAssistantMessage, type TemplateProposalStatus } from "@/api/templateAssistant"
 import { Conversation, ConversationContent, ConversationScrollButton } from "@/components/ai-elements/conversation"
 import { Message, MessageContent } from "@/components/ai-elements/message"
 import { RobotAvatar } from "@/components/domain/ai/avatar/RobotAvatar"
@@ -21,7 +22,10 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import { Textarea } from "@/components/ui/textarea"
 import { attemptKey } from "@/lib/attemptKey"
+import { useSchemaForm } from "@/lib/forms"
 import { VALIDATION_LIMITS } from "@/lib/validationLimits"
+import { isAssistantPending, templateAssistantKeys, templateAssistantQuery } from "@/queries/templateAssistant"
+import { assistantMessageSchema } from "@/schemas/template"
 
 type TemplateAssistantProps = {
   refresh: number
@@ -40,96 +44,58 @@ const STATUS_LABELS: Record<Exclude<TemplateProposalStatus, "pendiente">, string
   vencida: "Vencida: el borrador cambió",
   reemplazada: "Reemplazada por otra propuesta",
 }
-const POLL_MS = 2500
+
+const messageSchema = assistantMessageSchema(VALIDATION_LIMITS.longText)
 
 const failure = (reason: unknown, fallback: string): string => (reason instanceof ApiError ? (Object.values(reason.errors).flat()[0] ?? reason.message) : fallback)
-const isPending = (chat: TemplateAssistantChat | null): boolean => (chat?.messages ?? []).some((item) => item.status === "pendiente" || item.status === "en_ejecucion")
 
 export function TemplateAssistant({ refresh, draftVersion, snapshot, busy, onApply, onDiscard }: TemplateAssistantProps) {
-  const [chat, setChat] = useState<TemplateAssistantChat | null>(null)
-  const [message, setMessage] = useState("")
-  const [loading, setLoading] = useState(true)
-  const [sending, setSending] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const queryClient = useQueryClient()
+  const query = useQuery({ ...templateAssistantQuery(refresh), placeholderData: keepPreviousData })
+  const chat: TemplateAssistantChat | null = query.data ?? null
+  const form = useSchemaForm(messageSchema, { defaultValues: { message: "" } })
+  const message = String(form.watch("message") ?? "")
+  const loading = query.isFetching
+  const [actionError, setActionError] = useState<string | null>(null)
+  const error = actionError ?? (query.isError ? failure(query.error, "No se pudo cargar la conversación") : null)
   const [engaged, setEngaged] = useState(false)
   const [messageKey] = useState(attemptKey)
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const generation = useRef(0)
+  const refreshChat = (): Promise<unknown> => queryClient.invalidateQueries({ queryKey: templateAssistantKeys.all })
+  const sending = useMutation({
+    mutationFn: (text: string) => sendTemplateAssistantMessage(text, snapshot(), messageKey.use(text)),
+    onSuccess: async () => {
+      messageKey.reset()
+      form.reset({ message: "" })
+      await refreshChat()
+    },
+    onError: (reason) => setActionError(failure(reason, "No se pudo enviar el pedido")),
+  })
 
   const messages = chat?.messages ?? []
-  const waiting = sending || isPending(chat)
+  const waiting = sending.isPending || isAssistantPending(chat)
   const received = messages.filter((item) => item.role === "asistente" && item.status === "completado").length
   const avatar = useAvatarController({ userEngaged: engaged, awaitingModel: waiting, receivedCount: received })
   const trimmed = message.trim()
   const canSend = chat?.available === true && !loading && !waiting && trimmed.length > 0 && trimmed.length <= VALIDATION_LIMITS.longText
   const canRestart = !waiting && messages.length > 0
   const proposalStatus = (proposal: Proposal): TemplateProposalStatus => (proposal.status === "pendiente" && proposal.draft_version !== draftVersion ? "vencida" : proposal.status)
+  const messageField = form.register("message")
 
-  const stop = (): void => {
-    if (timer.current) clearTimeout(timer.current)
-    timer.current = null
-  }
-  const load = async (): Promise<void> => {
-    stop()
-    const request = generation.current
-    setLoading(true)
-    setError(null)
-    try {
-      const result = await getTemplateAssistant()
-      if (request !== generation.current) return
-      setChat(result)
-      if (isPending(result)) timer.current = setTimeout(() => void load(), POLL_MS)
-    } catch (reason) {
-      if (request === generation.current) setError(failure(reason, "No se pudo cargar la conversación"))
-    } finally {
-      if (request === generation.current) setLoading(false)
-    }
-  }
-  const send = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
-    event.preventDefault()
+  const send = form.handleSubmit(({ message: text }) => {
     if (!canSend) return
-    stop()
-    const request = generation.current
-    setSending(true)
-    setError(null)
-    try {
-      await sendTemplateAssistantMessage(trimmed, snapshot(), messageKey.use(trimmed))
-      messageKey.reset()
-      if (request !== generation.current) return
-      setMessage("")
-      await load()
-    } catch (reason) {
-      if (request === generation.current) setError(failure(reason, "No se pudo enviar el pedido"))
-    } finally {
-      if (request === generation.current) setSending(false)
-    }
-  }
+    setActionError(null)
+    sending.mutate((text ?? "").trim())
+  })
   const restart = async (): Promise<void> => {
     if (!canRestart) return
-    setError(null)
+    setActionError(null)
     try {
       await clearTemplateAssistant()
-      await load()
+      await refreshChat()
     } catch (reason) {
-      setError(failure(reason, "No se pudo iniciar un nuevo chat"))
+      setActionError(failure(reason, "No se pudo iniciar un nuevo chat"))
     }
   }
-
-  const reload = useEffectEvent(() => void load())
-
-  useEffect(() => {
-    reload()
-  }, [refresh])
-
-  useEffect(() => {
-    const current = generation
-    const pending = timer
-    return () => {
-      current.current += 1
-      if (pending.current) clearTimeout(pending.current)
-      pending.current = null
-    }
-  }, [])
 
   return (
     <Card className="assistant-panel gap-0 overflow-hidden py-0">
@@ -179,7 +145,7 @@ export function TemplateAssistant({ refresh, draftVersion, snapshot, busy, onApp
               {chat.available ? (
                 <EmptyContent>
                   {chat.suggestions.map((suggestion) => (
-                    <Button key={suggestion} type="button" variant="outline" className="h-auto whitespace-normal text-left" disabled={waiting} onClick={() => setMessage(suggestion)}>
+                    <Button key={suggestion} type="button" variant="outline" className="h-auto whitespace-normal text-left" disabled={waiting} onClick={() => form.setValue("message", suggestion)}>
                       {suggestion}
                     </Button>
                   ))}
@@ -240,21 +206,23 @@ export function TemplateAssistant({ refresh, draftVersion, snapshot, busy, onApp
       </Conversation>
       <Separator />
       <CardContent className="min-w-0 shrink-0 px-4 py-4">
-        <form onSubmit={(event) => void send(event)}>
+        <form onSubmit={(event) => void send(event)} noValidate>
           <Field>
             <FieldLabel htmlFor="template-assistant-message" className="sr-only">Pedido al asistente</FieldLabel>
             <div className="flex items-end gap-2">
               <Textarea
                 id="template-assistant-message"
-                value={message}
+                {...messageField}
                 maxLength={VALIDATION_LIMITS.longText}
                 rows={3}
                 className="min-w-0 flex-1"
                 disabled={!chat?.available || waiting}
                 placeholder="¿Qué cambio quiere en la plantilla?"
-                onChange={(event) => setMessage(event.target.value)}
                 onFocus={() => setEngaged(true)}
-                onBlur={() => setEngaged(false)}
+                onBlur={(event) => {
+                  setEngaged(false)
+                  void messageField.onBlur(event)
+                }}
               />
               <IconTooltip label="Enviar">
                 <Button type="submit" size="icon" aria-label="Enviar" disabled={!canSend}>

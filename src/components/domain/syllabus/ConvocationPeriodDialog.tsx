@@ -3,7 +3,6 @@
 import { ArrowLeft, ArrowRight, CalendarPlus } from "lucide-react"
 import { useState, type FormEvent } from "react"
 import { createAcademicRecord } from "@/api/academic"
-import { ApiError } from "@/api/client"
 import { createProcess } from "@/api/processes"
 import { DatePicker } from "@/components/DatePicker"
 import { ConfirmPhrase } from "@/components/domain/ConfirmPhrase"
@@ -17,6 +16,9 @@ import { useFormSteps } from "@/composables/useFormSteps"
 import { useModelOpen, useOpened } from "@/composables/useModelOpen"
 import { useInstitutionToday } from "@/composables/useInstitutionDate"
 import { matchesPhrase } from "@/lib/confirmPhrase"
+import { applyApiErrors, errorMessages, useSchemaForm } from "@/lib/forms"
+import { periodSchema } from "@/schemas/academic"
+import { processCreationSchema } from "@/schemas/syllabus"
 
 type ConvocationPeriodDialogProps = {
   disabled?: boolean
@@ -28,6 +30,10 @@ type ConvocationPeriodDialogProps = {
 type Form = { starts_on: string; ends_on: string; starts_at: string; due_at: string }
 
 const EMPTY_FORM: Form = { starts_on: "", ends_on: "", starts_at: "", due_at: "" }
+const PERIOD_FIELDS = ["starts_on", "ends_on"] as const
+const schema = periodSchema({ startsOn: null, creating: true })
+  .pick({ starts_on: true, ends_on: true })
+  .extend(processCreationSchema().pick({ starts_at: true, due_at: true }).shape)
 const OPEN_PHRASE = "abrir convocatoria"
 
 const monday = (iso: string): number => {
@@ -40,14 +46,22 @@ export function ConvocationPeriodDialog({ disabled = false, open, onOpenChange, 
   const [processing, setProcessing] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [openingTyped, setOpeningTyped] = useState("")
-  const [errors, setErrors] = useState<Record<string, string[]>>({})
-  const [form, setForm] = useState<Form>(EMPTY_FORM)
+  const schemaForm = useSchemaForm(schema, { defaultValues: EMPTY_FORM })
+  const watched = schemaForm.watch()
+  const form: Form = { starts_on: String(watched.starts_on ?? ""), ends_on: String(watched.ends_on ?? ""), starts_at: String(watched.starts_at ?? ""), due_at: String(watched.due_at ?? "") }
+  const formErrors = schemaForm.formState.errors
+  const errors: Partial<Record<keyof Form | "process", string[]>> = {
+    process: errorMessages((formErrors as Record<string, unknown>).process),
+    starts_on: errorMessages(formErrors.starts_on),
+    ends_on: errorMessages(formErrors.ends_on),
+    starts_at: errorMessages(formErrors.starts_at),
+    due_at: errorMessages(formErrors.due_at),
+  }
   const [createdPeriodId, setCreatedPeriodId] = useState<string | null>(null)
   const { step, goTo, reset: resetStep, stepClassName } = useFormSteps<1 | 2>(1)
   useOpened(confirmOpen, () => setOpeningTyped(""))
   useOpened(isOpen, () => {
-    setForm(EMPTY_FORM)
-    setErrors({})
+    schemaForm.reset(EMPTY_FORM)
     setCreatedPeriodId(null)
     setConfirmOpen(false)
     resetStep()
@@ -62,12 +76,19 @@ export function ConvocationPeriodDialog({ disabled = false, open, onOpenChange, 
   const processComplete = Boolean(form.starts_at && form.due_at)
   const periodCreated = createdPeriodId !== null
 
-  const update = (key: keyof Form, value: string): void =>
-    setForm((current) => {
-      const next = { ...current, [key]: value }
-      if (key === "starts_on" && value && next.ends_on && next.ends_on < value) next.ends_on = ""
-      return next
-    })
+  const update = (key: keyof Form, value: string): void => {
+    schemaForm.setValue(key, value)
+    if (key === "starts_on" && value && form.ends_on && form.ends_on < value) schemaForm.setValue("ends_on", "")
+  }
+
+  const confirmOrReturn = schemaForm.handleSubmit(
+    () => {
+      if (!disabled) setConfirmOpen(true)
+    },
+    (invalid) => {
+      if (PERIOD_FIELDS.some((key) => invalid[key])) goTo(1)
+    },
+  )
 
   const askConfirmation = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault()
@@ -75,14 +96,14 @@ export function ConvocationPeriodDialog({ disabled = false, open, onOpenChange, 
       if (periodComplete) goTo(2)
       return
     }
-    if (!disabled && processComplete) setConfirmOpen(true)
+    if (processComplete) void confirmOrReturn(event)
   }
 
   const submit = async (): Promise<void> => {
     if (disabled) return
     setConfirmOpen(false)
     setProcessing(true)
-    setErrors({})
+    schemaForm.clearErrors()
     try {
       let periodId = createdPeriodId
       let message = "Periodo académico creado"
@@ -99,8 +120,7 @@ export function ConvocationPeriodDialog({ disabled = false, open, onOpenChange, 
       setOpen(false)
       onSaved?.(message)
     } catch (reason) {
-      const next = reason instanceof ApiError ? reason.errors : {}
-      setErrors(next)
+      const next = applyApiErrors(schemaForm.setError, reason, { fallback: "No se pudo abrir la convocatoria" })
       if (next.starts_on || next.ends_on) goTo(1)
     } finally {
       setProcessing(false)
@@ -113,7 +133,7 @@ export function ConvocationPeriodDialog({ disabled = false, open, onOpenChange, 
     <FormModal open={isOpen} onOpenChange={setOpen} disabled={disabled} triggerLabel="Nueva convocatoria" title="Nueva convocatoria" description="Primero el periodo lectivo y después las fechas de los sílabos">
       {({ close }) => (
         <>
-          <form onSubmit={askConfirmation}>
+          <form onSubmit={askConfirmation} noValidate>
             <FieldGroup>
               {errors.process ? (
                 <Field data-invalid>

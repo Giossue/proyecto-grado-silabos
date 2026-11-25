@@ -13,7 +13,9 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { Spinner } from "@/components/ui/spinner"
 import { Switch } from "@/components/ui/switch"
 import { useCurriculumSubjectFieldValues } from "@/composables/useCurriculumSubjectFieldValues"
+import { SERVER_ERROR, errorMap, useSchemaForm } from "@/lib/forms"
 import { INHERITED_MODALITY } from "@/lib/studyModalities"
+import { subjectSchema } from "@/schemas/academic"
 import type { CurriculumBuilderProps, CurriculumBuilderSubject, FixedSubjectField } from "@/types/academic"
 
 type CurriculumVisualSubjectFormProps = {
@@ -29,50 +31,50 @@ type CurriculumVisualSubjectFormProps = {
   onSaved: (message?: string) => void
 }
 
-type Errors = Record<string, string | undefined>
+const schema = subjectSchema().pick({ code: true, nombre: true, organization_unit: true })
 
 const errorKey = (field: FixedSubjectField): string => field.system_key
 
 export function CurriculumVisualSubjectForm({ career, modalityOptions, fixedFields, subject, cycle, position, organizationUnits, onCancel, onSaved }: CurriculumVisualSubjectFormProps) {
   const [modality, setModality] = useState(subject?.modality ?? INHERITED_MODALITY)
-  const [organizationUnit, setOrganizationUnit] = useState(subject?.organization_unit ?? "")
   const [generatesSyllabus, setGeneratesSyllabus] = useState(subject?.generates_syllabus ?? true)
-  const [errors, setErrors] = useState<Errors>({})
-  const [processing, setProcessing] = useState(false)
+  const form = useSchemaForm(schema, { defaultValues: { code: subject?.code ?? "", nombre: subject?.name ?? "", organization_unit: subject?.organization_unit ?? "" } })
+  const { isSubmitting: processing } = form.formState
+  const errorLists = errorMap(form.formState.errors)
+  const errors: Record<string, string | undefined> = Object.fromEntries(Object.entries(errorLists).map(([key, list]) => [key === "root.server" ? "record" : key, list[0]]))
+  const organizationUnit = String(form.watch("organization_unit") ?? "")
   const { updateValue, valueFor } = useCurriculumSubjectFieldValues(subject, fixedFields)
   const idPart = subject?.id ?? cycle
 
-  const clearError = (key: string): void => setErrors((current) => (current[key] === undefined ? current : { ...current, [key]: undefined }))
+  const clearError = (key: string): void => form.clearErrors(key as "code")
 
   const clearInputError = (event: FormEvent<HTMLFormElement>): void => {
     if (event.target instanceof HTMLInputElement && event.target.name) clearError(event.target.name)
   }
 
-  const submit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
-    event.preventDefault()
+  const submit = (event: FormEvent<HTMLFormElement>): Promise<void> => {
     const payload = Object.fromEntries(new FormData(event.currentTarget).entries())
-    setProcessing(true)
-    setErrors({})
-    try {
-      const result = subject ? await updateCareerRecord("asignatura", subject.id, payload) : await createCareerRecord("asignatura", payload)
-      onSaved(result.message)
-    } catch (reason) {
-      if (reason instanceof ApiError) {
-        const next: Errors = Object.fromEntries(Object.entries(reason.errors).map(([key, values]) => [key, values[0]]))
+
+    return form.handleSubmit(async () => {
+      try {
+        const result = subject ? await updateCareerRecord("asignatura", subject.id, payload) : await createCareerRecord("asignatura", payload)
+        onSaved(result.message)
+      } catch (reason) {
+        if (!(reason instanceof ApiError)) {
+          form.setError(SERVER_ERROR, { type: "server", message: "No se pudo guardar la materia" })
+          return
+        }
         const shown = new Set(["code", "nombre", "organization_unit", "modality", "generates_syllabus", ...fixedFields.map(errorKey)])
-        const hidden = Object.entries(next).find(([key]) => !shown.has(key))
-        if (hidden !== undefined || Object.keys(next).length === 0) next.record ??= hidden?.[1] ?? reason.message
-        setErrors(next)
-      } else {
-        setErrors({ record: "No se pudo guardar la materia" })
+        const entries = Object.entries(reason.errors).filter(([, list]) => list.length > 0)
+        for (const [key, list] of entries) if (shown.has(key)) form.setError(key as "code", { type: "server", message: list[0] })
+        const hidden = entries.find(([key]) => !shown.has(key))
+        if (hidden !== undefined || entries.length === 0) form.setError(SERVER_ERROR, { type: "server", message: hidden?.[1][0] ?? reason.message })
       }
-    } finally {
-      setProcessing(false)
-    }
+    })(event)
   }
 
   return (
-    <form onSubmit={(event) => void submit(event)} onInput={clearInputError}>
+    <form onSubmit={(event) => void submit(event)} onInput={clearInputError} noValidate>
       <input type="hidden" name="cycle" value={cycle} />
       <input type="hidden" name="position" value={position} />
       <FieldGroup className="gap-3">
@@ -87,14 +89,14 @@ export function CurriculumVisualSubjectForm({ career, modalityOptions, fixedFiel
             <FieldLabel htmlFor={`visual-subject-code-${idPart}`} required>
               Código
             </FieldLabel>
-            <Input id={`visual-subject-code-${idPart}`} name="code" defaultValue={subject?.code} placeholder="Ej. SW-601" aria-required="true" aria-invalid={Boolean(errors.code)} />
+            <Input id={`visual-subject-code-${idPart}`} {...form.register("code")} placeholder="Ej. SW-601" aria-required="true" aria-invalid={Boolean(errors.code)} />
             <FieldError errors={[errors.code]} />
           </Field>
           <Field data-invalid={Boolean(errors.nombre)}>
             <FieldLabel htmlFor={`visual-subject-name-${idPart}`} required>
               Nombre
             </FieldLabel>
-            <Input id={`visual-subject-name-${idPart}`} name="nombre" defaultValue={subject?.name} placeholder="Ej. Ingeniería de requisitos" aria-required="true" aria-invalid={Boolean(errors.nombre)} />
+            <Input id={`visual-subject-name-${idPart}`} {...form.register("nombre")} placeholder="Ej. Ingeniería de requisitos" aria-required="true" aria-invalid={Boolean(errors.nombre)} />
             <FieldError errors={[errors.nombre]} />
           </Field>
         </div>
@@ -107,7 +109,7 @@ export function CurriculumVisualSubjectForm({ career, modalityOptions, fixedFiel
           <Select
             value={organizationUnit}
             onValueChange={(value) => {
-              setOrganizationUnit(value)
+              form.setValue("organization_unit", value)
               clearError("organization_unit")
             }}
           >

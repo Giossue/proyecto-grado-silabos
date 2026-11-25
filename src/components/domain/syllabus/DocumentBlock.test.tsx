@@ -1,4 +1,4 @@
-import { fireEvent, render } from "@testing-library/react"
+import { fireEvent } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { searchLibraryCatalog } from "@/api/libraryCatalog"
 import { FreeTextContent } from "@/components/domain/syllabus/FreeTextContent"
@@ -8,7 +8,7 @@ import type { TemplateDefinitionPayload } from "@/lib/blocks/types"
 import { nodesOfType, type DocumentNode } from "@/lib/templateDocument"
 import definition from "@/test/fixtures/template-definition.json"
 import { catalogResults } from "@/test/libraryCatalog"
-import { flush } from "@/test/render"
+import { flush, renderWithProviders as render } from "@/test/render"
 
 vi.mock("@/api/libraryCatalog", () => ({ searchLibraryCatalog: vi.fn() }))
 

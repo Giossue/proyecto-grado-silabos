@@ -1,14 +1,16 @@
 "use client"
 
 import { ListFilter } from "lucide-react"
-import { useState, type FormEvent } from "react"
+import { useState } from "react"
 import { MenuTooltip } from "@/components/domain/MenuTooltip"
 import { TemplateConditionPicker } from "@/components/domain/syllabus/TemplateConditionPicker"
 import { Button } from "@/components/ui/button"
 import { FieldError, FieldGroup } from "@/components/ui/field"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { useOpened } from "@/composables/useModelOpen"
+import { fieldMessage, useSchemaForm } from "@/lib/forms"
 import { choiceOf, conditionSourceKey, type ConditionChoice, type ConditionSource, type ResponseCondition } from "@/lib/responseConditions"
+import { conditionChoiceSchema } from "@/schemas/template"
 
 type TemplateFieldConditionToolProps = {
   condition?: ResponseCondition | null
@@ -22,19 +24,23 @@ const LABEL = "Mostrar solo si…"
 
 export function TemplateFieldConditionTool({ condition = null, sources, allowed = false, disabled = false, onApply }: TemplateFieldConditionToolProps) {
   const [open, setOpen] = useState(false)
-  const [choice, setChoice] = useState<ConditionChoice>({ source: "", options: [] })
+  const form = useSchemaForm(conditionChoiceSchema, { defaultValues: { source: "", options: [] }, mode: "onChange", reValidateMode: "onChange" })
+  const choice: ConditionChoice = { source: form.watch("source") ?? "", options: form.watch("options") ?? [] }
   const tooltip = allowed ? LABEL : `${LABEL}: elija un campo`
-  const error = choice.source && choice.options.length === 0 ? "Elija al menos una opción" : ""
+  const error = fieldMessage(form.formState.errors, "options") ?? ""
 
-  useOpened(open, () => setChoice(choiceOf(condition, sources)))
+  useOpened(open, () => form.reset(choiceOf(condition, sources)))
 
-  const apply = (event: FormEvent<HTMLFormElement>): void => {
-    event.preventDefault()
-    if (error) return
-    const source = sources.find((item) => conditionSourceKey(item) === choice.source) ?? null
-    onApply(source, source ? choice.options : [])
-    setOpen(false)
+  const setChoice = (next: ConditionChoice): void => {
+    form.setValue("source", next.source)
+    form.setValue("options", next.options, { shouldValidate: true })
   }
+
+  const apply = form.handleSubmit(({ source: chosen, options }) => {
+    const source = sources.find((item) => conditionSourceKey(item) === chosen) ?? null
+    onApply(source, source ? options : [])
+    setOpen(false)
+  })
   const remove = (): void => {
     onApply(null, [])
     setOpen(false)
@@ -49,7 +55,7 @@ export function TemplateFieldConditionTool({ condition = null, sources, allowed 
           </Button>
         </PopoverTrigger>
         <PopoverContent align="start" className="max-h-(--overlay-max-height) w-80 overflow-y-auto">
-          <form noValidate onSubmit={apply}>
+          <form noValidate onSubmit={(event) => void apply(event)}>
             <FieldGroup>
               <TemplateConditionPicker value={choice} sources={sources} onValueChange={setChoice} />
               {error ? <FieldError data-field-condition-error>{error}</FieldError> : null}

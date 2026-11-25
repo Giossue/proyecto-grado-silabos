@@ -3,7 +3,6 @@
 import { Check, Pencil, X } from "lucide-react"
 import { useEffect, useEffectEvent, useState, type FormEvent } from "react"
 import { updateAcademicRecord } from "@/api/academic"
-import { ApiError } from "@/api/client"
 import type { CatalogLibrary } from "@/api/libraryCatalog"
 import { DatePicker } from "@/components/DatePicker"
 import { FacultyLibraryChecks } from "@/components/domain/academic/FacultyLibraryChecks"
@@ -21,11 +20,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { initialLibraries, librariesToStore, sameLibraries, useCatalogLibraries } from "@/composables/useCatalogLibraries"
 import { useModelOpen, useOpened } from "@/composables/useModelOpen"
 import { requestPurgeConfirmation } from "@/composables/usePurgeConfirmation"
+import { applyApiErrors, errorMap, useSchemaForm } from "@/lib/forms"
+import { careerSchema, facultySchema, periodSchema } from "@/schemas/academic"
 import type { CatalogRecord, GovernanceCatalogEntity } from "@/types/academic"
 
 type Option = { value: string; label: string }
 type EditForm = { nombre: string; code: string; faculty_id: string; campus: string; modality: string; starts_on: string; ends_on: string }
-type Errors = Record<string, string[]>
 
 type CatalogEditDialogProps = {
   entity: GovernanceCatalogEntity
@@ -55,6 +55,9 @@ const NO_ACTIONS: DialogAction[] = []
 const NO_LIBRARIES: string[] = []
 const FIELD_ERRORS = ["nombre", "code", "faculty_id", "campus", "modality", "starts_on", "ends_on", "logo", "catalog_libraries"]
 const ENTITY_LABELS: Record<GovernanceCatalogEntity, string> = { facultad: "facultad", carrera: "carrera", periodo: "periodo académico" }
+const editSchema = (entity: GovernanceCatalogEntity, values: EditForm) =>
+  entity === "facultad" ? facultySchema({ updating: true }) : entity === "carrera" ? careerSchema({ updating: true }) : periodSchema({ startsOn: values.starts_on, creating: false })
+
 const LOGO_HINT = "PNG, JPG o WebP. Se ajusta a 600 × 180 px con fondo transparente"
 
 export function CatalogEditDialog({
@@ -91,11 +94,13 @@ export function CatalogEditDialog({
   })
   const [isOpen, setOpen] = useModelOpen(open, onOpenChange)
   const [processing, setProcessing] = useState(false)
-  const [errors, setErrors] = useState<Errors>({})
+  const editForm = useSchemaForm((values) => editSchema(entity, values as EditForm), { defaultValues: initialForm() })
+  const errors = errorMap(editForm.formState.errors)
   const [logo, setLogo] = useState<File | null>(null)
   const [removeLogo, setRemoveLogo] = useState(false)
   const [viewing, setViewing] = useState(true)
-  const [form, setForm] = useState<EditForm>(initialForm)
+  const watched = editForm.watch()
+  const form: EditForm = { ...initialForm(), ...(watched as Partial<EditForm>) }
   const [tab, setTab] = useState<"datos" | "bibliotecas">("datos")
   const [chosenLibraries, setChosenLibraries] = useState<string[]>(catalogLibraries)
   const [openedLibraries, setOpenedLibraries] = useState<string[]>(catalogLibraries)
@@ -112,10 +117,9 @@ export function CatalogEditDialog({
 
   const reset = (): void => {
     setViewing(true)
-    setForm(initialForm())
+    editForm.reset(initialForm())
     setLogo(null)
     setRemoveLogo(false)
-    setErrors({})
     setTab("datos")
     setChosenLibraries([...catalogLibraries])
     setOpenedLibraries([...catalogLibraries])
@@ -144,22 +148,13 @@ export function CatalogEditDialog({
     (entity !== "facultad" || sameLibraries(chosenLibraries, openedLibraries))
 
   const setField = (key: keyof EditForm, value: string): void => {
-    setForm((current) => ({ ...current, [key]: value }))
-    setErrors((current) => {
-      if (!(key in current)) return current
-      const next = { ...current }
-      delete next[key]
-      return next
-    })
+    editForm.setValue(key, value)
+    editForm.clearErrors(key)
   }
 
   const logoValidationError = (message: string | null): void => {
-    setErrors((current) => {
-      const next = { ...current }
-      if (message) next.logo = [message]
-      else delete next.logo
-      return next
-    })
+    if (message) editForm.setError("logo" as keyof EditForm, { type: "client", message })
+    else editForm.clearErrors("logo" as keyof EditForm)
   }
 
   const librariesToSave = (): string[] | null => {
@@ -169,24 +164,12 @@ export function CatalogEditDialog({
     return sameLibraries(stored, catalogLibraries) ? null : stored
   }
 
-  const submit = async (confirmPurge = false): Promise<void> => {
-    if (readOnly) return
-    setErrors({})
-    if (entity === "facultad" && logoRequired && !logo) {
-      setErrors({ logo: ["Cargue el logo nuevo de la facultad"] })
-      setTab("datos")
-      return
-    }
-    if (entity === "facultad" && noLibraryChosen) {
-      setErrors({ catalog_libraries: ["Marque al menos una biblioteca"] })
-      setTab("bibliotecas")
-      return
-    }
+  const save = async (confirmPurge: boolean): Promise<void> => {
     setProcessing(true)
     const payload = new FormData()
-    for (const [key, value] of Object.entries(form)) {
+    for (const [key, value] of Object.entries(editForm.getValues())) {
       if (key === "code" && entity !== "carrera") continue
-      payload.set(key, String(value))
+      payload.set(key, String(value ?? ""))
     }
     if (logo) payload.set("logo", logo)
     const libraries = entity === "facultad" ? librariesToSave() : null
@@ -197,8 +180,7 @@ export function CatalogEditDialog({
       setOpen(false)
       onSaved?.(result.message)
     } catch (reason) {
-      const received = reason instanceof ApiError ? reason.errors : {}
-      setErrors(received)
+      const received = applyApiErrors(editForm.setError, reason, { fallback: "No se pudo guardar" })
       if (entity === "facultad") setTab(Object.keys(received).some((key) => key.startsWith("catalog_libraries")) ? "bibliotecas" : "datos")
       const purgeMessage = received.purge_required?.[0]
       if (purgeMessage) {
@@ -207,6 +189,27 @@ export function CatalogEditDialog({
     } finally {
       setProcessing(false)
     }
+  }
+
+  const submit = async (confirmPurge = false): Promise<void> => {
+    if (readOnly) return
+    editForm.clearErrors()
+    if (entity === "facultad" && logoRequired && !logo) {
+      editForm.setError("logo" as keyof EditForm, { type: "client", message: "Cargue el logo nuevo de la facultad" })
+      setTab("datos")
+      return
+    }
+    if (entity === "facultad" && noLibraryChosen) {
+      editForm.setError("catalog_libraries" as keyof EditForm, { type: "client", message: "Marque al menos una biblioteca" })
+      setTab("bibliotecas")
+      return
+    }
+    await editForm.handleSubmit(
+      () => save(confirmPurge),
+      () => {
+        if (entity === "facultad") setTab("datos")
+      },
+    )()
   }
 
   const onSubmit = (event: FormEvent<HTMLFormElement>): void => {
@@ -257,7 +260,7 @@ export function CatalogEditDialog({
       showTrigger={showTrigger}
     >
       {({ close }) => (
-        <form onSubmit={onSubmit}>
+        <form onSubmit={onSubmit} noValidate>
           <FieldGroup>
             {generalError ? (
               <Alert variant="destructive">

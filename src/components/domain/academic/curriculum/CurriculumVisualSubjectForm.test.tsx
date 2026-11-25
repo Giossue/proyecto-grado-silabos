@@ -25,11 +25,18 @@ const renderForm = (value: CurriculumBuilderSubject | null) =>
       subject={value}
       cycle={8}
       position={0}
-      organizationUnits={[]}
+      organizationUnits={[{ value: "profesional", label: "Profesional" }]}
       onCancel={vi.fn()}
       onSaved={vi.fn()}
     />,
   )
+
+const fillNew = async (): Promise<void> => {
+  fireEvent.input(document.querySelector('input[name="code"]')!, { target: { value: "SW-801" } })
+  fireEvent.input(document.querySelector('input[name="nombre"]')!, { target: { value: "Prácticas" } })
+  fireEvent.click(document.querySelector('[data-value="profesional"]')!)
+  await flush()
+}
 
 const submit = async (): Promise<void> => {
   fireEvent.submit(document.querySelector("form")!)
@@ -49,6 +56,7 @@ describe("CurriculumVisualSubjectForm", () => {
     expect(document.body.textContent).toContain("Puede generar sílabos")
 
     fireEvent.click(toggle)
+    await fillNew()
     await submit()
 
     expect(createCareerRecord).toHaveBeenCalledWith("asignatura", expect.objectContaining({ generates_syllabus: "0" }))
@@ -66,11 +74,22 @@ describe("CurriculumVisualSubjectForm", () => {
   it("el código repetido se muestra una sola vez y se quita al corregir el código", async () => {
     vi.mocked(createCareerRecord).mockRejectedValue(new ApiError("Ya existe una materia con ese código.", 422, { code: ["Ya existe una materia con ese código."] }))
     renderForm(null)
+    await fillNew()
     await submit()
 
     expect(document.body.textContent!.split("Ya existe una materia con ese código")).toHaveLength(2)
     fireEvent.input(document.querySelector('input[name="code"]')!, { target: { value: "SW-802" } })
     await flush()
     expect(document.body.textContent).not.toContain("Ya existe una materia con ese código")
+  })
+
+  it("una materia nueva sin código, nombre ni unidad muestra los errores y no llama al servidor", async () => {
+    renderForm(null)
+    await submit()
+
+    expect(document.body.textContent).toContain("El campo código es obligatorio")
+    expect(document.body.textContent).toContain("El campo nombre es obligatorio")
+    expect(document.body.textContent).toContain("El campo unidad de organización curricular es obligatorio")
+    expect(createCareerRecord).not.toHaveBeenCalled()
   })
 })

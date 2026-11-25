@@ -3,6 +3,7 @@ import { createRef, type ComponentProps } from "react"
 import { expect, vi } from "vitest"
 import { TemplateVisualBuilder, type TemplateVisualBuilderHandle } from "@/components/domain/configuration/TemplateVisualBuilder"
 import { typeConfirmation } from "@/test/confirmPhrase"
+import { createWrapper } from "@/test/render"
 
 type BuilderProps = Omit<ComponentProps<typeof TemplateVisualBuilder>, "ref">
 
@@ -58,7 +59,7 @@ export const mountBuilder = async (props: BuilderProps, { edit = true }: { edit?
   const handle = createRef<TemplateVisualBuilderHandle>()
   const callbacks = { onChanged: vi.fn(), onDirty: vi.fn(), onEditing: vi.fn() }
   const element = (next: Partial<BuilderProps> = {}) => <TemplateVisualBuilder ref={handle} {...callbacks} {...props} {...next} />
-  const view = render(element())
+  const view = render(element(), { wrapper: createWrapper() })
   await settle()
   if (edit && !props.processLock) await startEditing(handle)
 

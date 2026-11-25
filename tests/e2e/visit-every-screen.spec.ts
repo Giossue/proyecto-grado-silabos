@@ -1,8 +1,9 @@
 import type { Page } from "@playwright/test"
 import { routeTable } from "../../src/lib/routeTable"
 import { accounts, storageStateOf, type AccountKey } from "./support/accounts"
-import { latestSyllabusOf } from "./support/db"
+import { approvedCareerRevisionOf, latestCareerRevisionOf, latestLibraryRevision, latestSyllabusOf, snapshotDatabase, type DatabaseSnapshot } from "./support/db"
 import { expect, test, watchPage } from "./support/fixtures"
+import { submitSampleSyllabus } from "./support/syllabus"
 
 type Visit = { path: string; landsOn?: RegExp }
 
@@ -71,7 +72,26 @@ for (const [area, { key, visits }] of Object.entries(roleScreens)) {
   })
 }
 
+const SAMPLE_SUBJECT = "Cálculo III"
+const NO_SUBMISSION = "no convocation is open for the teacher, so no syllabus can be submitted to review"
+
 test.describe("screens reached from data", () => {
+  let snapshot: DatabaseSnapshot | null = null
+  let submitted = true
+
+  test.beforeAll(async ({ browser }) => {
+    test.setTimeout(240_000)
+    if (await latestLibraryRevision()) return
+    snapshot = snapshotDatabase("before-sample-syllabus")
+    const context = await browser.newContext({ storageState: storageStateOf("teacher") })
+    submitted = await submitSampleSyllabus(await context.newPage(), accounts.teacher, SAMPLE_SUBJECT)
+    await context.close()
+  })
+
+  test.afterAll(() => {
+    snapshot?.restore()
+  })
+
   test.describe("teacher", () => {
     test.use({ storageState: storageStateOf("teacher") })
 
@@ -104,14 +124,23 @@ test.describe("screens reached from data", () => {
       await expect(page.getByRole("heading", { level: 1 })).toContainText("Proyecto de carrera de")
 
       await page.goto("/coordinacion/revisiones?tab=seguimiento")
-      await expect(page.getByRole("table", { name: "Seguimiento de la convocatoria" }).getByRole("row").nth(1)).toBeVisible()
+      await expect(page.getByRole("table", { name: "Seguimiento de la convocatoria" })).toBeVisible()
       await page.waitForLoadState("networkidle")
       const reviewed = page.getByRole("table", { name: "Seguimiento de la convocatoria" }).getByRole("row", { name: /^Abrir revisión de / })
-      test.skip((await reviewed.count()) === 0, "no syllabus has been submitted yet")
-      await reviewed.first().click()
+      if ((await reviewed.count()) > 0) {
+        await reviewed.first().click()
+      } else {
+        test.skip(!submitted, NO_SUBMISSION)
+        const revision = await latestCareerRevisionOf(accounts.coordinator.email)
+        expect(revision).not.toBeNull()
+        await page.goto(`/coordinacion/revisiones/${revision}`)
+      }
       await expect(page).toHaveURL(/\/coordinacion\/revisiones\/[0-9a-f-]{36}$/)
+      await expect(page.getByRole("heading", { level: 1 })).toBeVisible()
       const review = new URL(page.url()).pathname
-      await expectScreen(page, { path: `${review}/documentos` })
+      const approved = await approvedCareerRevisionOf(accounts.coordinator.email)
+      if (approved) await expectScreen(page, { path: `/coordinacion/revisiones/${approved}/documentos` })
+      else test.info().annotations.push({ type: "data", description: "no approved syllabus with a generated PDF yet, the documents screen is covered by the syllabus lifecycle" })
       await page.goto(`${review}/historial`)
       await expect(page.getByRole("complementary", { name: "Historial de versiones" })).toBeVisible()
       issues.expectClean()
@@ -124,11 +153,17 @@ test.describe("screens reached from data", () => {
     test("review detail loads", async ({ page }) => {
       const issues = watchPage(page)
       await page.goto("/biblioteca/revisiones")
-      await expect(page.getByRole("table", { name: "Revisiones de biblioteca" }).getByRole("row").nth(1)).toBeVisible()
+      await expect(page.getByRole("table", { name: "Revisiones de biblioteca" })).toBeVisible()
       await page.waitForLoadState("networkidle")
       const rows = page.getByRole("table", { name: "Revisiones de biblioteca" }).getByRole("row", { name: /^Abrir revisión de / })
-      test.skip((await rows.count()) === 0, "no syllabus has reached the library yet")
-      await rows.first().click()
+      if ((await rows.count()) > 0) {
+        await rows.first().click()
+      } else {
+        test.skip(!submitted, NO_SUBMISSION)
+        const revision = await latestLibraryRevision()
+        expect(revision).not.toBeNull()
+        await page.goto(`/biblioteca/revisiones/${revision}`)
+      }
       await expect(page).toHaveURL(/\/biblioteca\/revisiones\/[0-9a-f-]{36}$/)
       await expect(page.getByRole("article", { name: "Bibliografía" })).toBeVisible()
       issues.expectClean()

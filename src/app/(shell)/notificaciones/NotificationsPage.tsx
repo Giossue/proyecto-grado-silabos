@@ -2,9 +2,10 @@
 
 import { CheckCheck, ExternalLink } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useCallback, useEffect, useState } from "react"
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useEffect, useState } from "react"
 import { ApiError } from "@/api/client"
-import { getNotifications, markAllNotificationsRead, markNotificationRead, type NotificationsResponse } from "@/api/notifications"
+import { markAllNotificationsRead, markNotificationRead } from "@/api/notifications"
 import { EmptyState } from "@/components/domain/EmptyState"
 import { LoadErrorState } from "@/components/domain/LoadErrorState"
 import { LoadingSkeleton } from "@/components/domain/LoadingSkeleton"
@@ -18,58 +19,54 @@ import { Spinner } from "@/components/ui/spinner"
 import { useOpenNotification } from "@/composables/useOpenNotification"
 import { formatDateDisplay } from "@/lib/dateDisplay"
 import { paths } from "@/lib/routes"
+import { failedQuery } from "@/lib/queryClient"
 import { cn, withoutFinalPeriod } from "@/lib/utils"
+import { notificationKeys, notificationPageQuery, type NotificationStatus } from "@/queries/notifications"
 
-type Status = "all" | "unread"
+type Status = NotificationStatus
 
 const formatDate = (value: string): string => formatDateDisplay(value, { dateStyle: "medium", timeStyle: "short" })
 
 export default function NotificationsPage() {
   const router = useRouter()
   const { open, openingId } = useOpenNotification()
-  const [result, setResult] = useState<NotificationsResponse | null>(null)
+  const queryClient = useQueryClient()
   const [status, setStatus] = useState<Status>("unread")
-  const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [page, setPage] = useState(1)
+  const [actionError, setActionError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
-
-  const fetchPage = useCallback(
-    (page: number, filter: Status): Promise<void> =>
-      getNotifications(filter, page)
-        .then(setResult, (reason: unknown) => {
-          if (reason instanceof ApiError && reason.status === 401) {
-            router.replace(paths.login)
-            return
-          }
-          setError("No se pudieron cargar las notificaciones")
-        })
-        .finally(() => setLoading(false)),
-    [router],
-  )
+  const query = useQuery({ ...notificationPageQuery(status, page), placeholderData: keepPreviousData })
+  const result = query.data ?? null
+  const loading = query.isFetching
+  const unauthorized = query.error instanceof ApiError && query.error.status === 401
+  const error = actionError ?? (failedQuery(query) && !unauthorized ? "No se pudieron cargar las notificaciones" : null)
 
   useEffect(() => {
-    void fetchPage(1, "unread")
-  }, [fetchPage])
+    if (unauthorized) router.replace(paths.login)
+  }, [router, unauthorized])
 
-  const load = (page = 1, filter: Status = status): Promise<void> => {
-    setLoading(true)
-    setError(null)
-    return fetchPage(page, filter)
+  const load = (next = 1, filter: Status = status): Promise<void> => {
+    setActionError(null)
+    if (next === page && filter === status) return query.refetch().then(() => undefined)
+    setPage(next)
+    setStatus(filter)
+    return Promise.resolve()
   }
 
   const filterBy = (filter: Status): void => {
-    setStatus(filter)
     void load(1, filter)
   }
 
-  const mutate = async (operation: () => Promise<unknown>, page = 1): Promise<void> => {
+  const mutate = async (operation: () => Promise<unknown>, next = 1): Promise<void> => {
     setPending(true)
-    setError(null)
+    setActionError(null)
     try {
       await operation()
-      await load(page)
+      await queryClient.invalidateQueries({ queryKey: notificationKeys.all, refetchType: "none" })
+      void queryClient.invalidateQueries({ queryKey: notificationKeys.unreadCount() })
+      await load(next)
     } catch (reason) {
-      setError(reason instanceof ApiError ? reason.message : "No se pudo actualizar la notificación")
+      setActionError(reason instanceof ApiError ? reason.message : "No se pudo actualizar la notificación")
     } finally {
       setPending(false)
     }

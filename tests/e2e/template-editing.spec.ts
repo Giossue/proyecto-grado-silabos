@@ -1,7 +1,7 @@
 import fs from "node:fs"
 import type { Locator, Page, Route } from "@playwright/test"
 import { storageStateOf } from "./support/accounts"
-import { query } from "./support/db"
+import { query, snapshotDatabase } from "./support/db"
 import { expect, test } from "./support/fixtures"
 import { toast } from "./support/ui"
 
@@ -365,42 +365,47 @@ test.describe.serial("template editing during a paused convocation", () => {
   })
 
   test("admin finalizes the convocation and opens a new period with its convocation", async ({ page, issues }) => {
-    await page.goto("/admin/convocatorias")
-    await expect(page.getByRole("button", { name: "Nueva convocatoria" })).toBeDisabled()
-    await convocationOption(page, /^Finalizar/)
-    const finalize = page.getByRole("dialog", { name: "Finalizar la convocatoria" })
-    await finalize.getByRole("textbox", { name: /Escriba «finalizar convocatoria»/ }).fill("finalizar convocatoria")
-    await finalize.getByRole("button", { name: "Finalizar", exact: true }).click()
-    await expect(finalize).toBeHidden()
-    await expect(page.getByRole("row", { name: /^Opciones de / }).first()).toContainText(/Finalizad/)
-    expect(await convocationState()).toBeUndefined()
+    const snapshot = snapshotDatabase("before-new-period")
+    try {
+      await page.goto("/admin/convocatorias")
+      await expect(page.getByRole("button", { name: "Nueva convocatoria" })).toBeDisabled()
+      await convocationOption(page, /^Finalizar/)
+      const finalize = page.getByRole("dialog", { name: "Finalizar la convocatoria" })
+      await finalize.getByRole("textbox", { name: /Escriba «finalizar convocatoria»/ }).fill("finalizar convocatoria")
+      await finalize.getByRole("button", { name: "Finalizar", exact: true }).click()
+      await expect(finalize).toBeHidden()
+      await expect(page.getByRole("row", { name: /^Opciones de / }).first()).toContainText(/Finalizad/)
+      expect(await convocationState()).toBeUndefined()
 
-    const periodsBefore = await query<{ code: string }>("select codigo_periodo_academico as code from periodos_academicos")
-    await page.getByRole("button", { name: "Nueva convocatoria" }).click()
-    const dialog = page.getByRole("dialog", { name: "Nueva convocatoria" })
-    await pickDate(page, "convocation-period-starts", new Date(Date.UTC(2027, 3, 5)))
-    await pickDate(page, "convocation-period-ends", new Date(Date.UTC(2027, 7, 27)))
-    await dialog.getByRole("button", { name: "Siguiente" }).click()
-    await pickDate(page, "convocation-starts", new Date(Date.UTC(2027, 2, 22)))
-    await pickDate(page, "convocation-due", new Date(Date.UTC(2027, 3, 12)))
-    await dialog.getByRole("button", { name: "Abrir convocatoria" }).click()
-    const opening = page.getByRole("dialog", { name: "Abrir convocatoria" })
-    await opening.getByRole("textbox", { name: /Escriba «abrir convocatoria»/ }).fill("abrir convocatoria")
-    await opening.getByRole("button", { name: "Abrir convocatoria" }).click()
-    await expect(toast(page, "Convocatoria institucional abierta. Las coordinaciones ya pueden iniciar sus convocatorias")).toBeVisible()
-    await expect(page.getByRole("dialog")).toHaveCount(0)
+      const periodsBefore = await query<{ code: string }>("select codigo_periodo_academico as code from periodos_academicos")
+      await page.getByRole("button", { name: "Nueva convocatoria" }).click()
+      const dialog = page.getByRole("dialog", { name: "Nueva convocatoria" })
+      await pickDate(page, "convocation-period-starts", new Date(Date.UTC(2027, 3, 5)))
+      await pickDate(page, "convocation-period-ends", new Date(Date.UTC(2027, 7, 27)))
+      await dialog.getByRole("button", { name: "Siguiente" }).click()
+      await pickDate(page, "convocation-starts", new Date(Date.UTC(2027, 2, 22)))
+      await pickDate(page, "convocation-due", new Date(Date.UTC(2027, 3, 12)))
+      await dialog.getByRole("button", { name: "Abrir convocatoria" }).click()
+      const opening = page.getByRole("dialog", { name: "Abrir convocatoria" })
+      await opening.getByRole("textbox", { name: /Escriba «abrir convocatoria»/ }).fill("abrir convocatoria")
+      await opening.getByRole("button", { name: "Abrir convocatoria" }).click()
+      await expect(toast(page, "Convocatoria institucional abierta. Las coordinaciones ya pueden iniciar sus convocatorias")).toBeVisible()
+      await expect(page.getByRole("dialog")).toHaveCount(0)
 
-    const periods = await query<{ code: string; starts: string; ends: string; state: string }>(
-      `select p.codigo_periodo_academico as code, p.fecha_inicio_periodo::text as starts, p.fecha_fin_periodo::text as ends, c.estado_convocatoria_universidad as state
-         from periodos_academicos p join convocatorias_universidad c on c.periodo_academico_id = p.periodo_academico_id
-        where p.fecha_inicio_periodo = '2027-04-05'`,
-    )
-    expect(periods).toHaveLength(1)
-    expect(periods[0]).toMatchObject({ starts: "2027-04-05", ends: "2027-08-27", state: "abierto" })
-    expect(periodsBefore.map((period) => period.code)).not.toContain(periods[0]!.code)
-    await expect(page.getByRole("row", { name: `Opciones de ${periods[0]!.code}` })).toBeVisible()
-    expect(await templateState()).toEqual(before)
-    issues.expectClean()
+      const periods = await query<{ code: string; starts: string; ends: string; state: string }>(
+        `select p.codigo_periodo_academico as code, p.fecha_inicio_periodo::text as starts, p.fecha_fin_periodo::text as ends, c.estado_convocatoria_universidad as state
+           from periodos_academicos p join convocatorias_universidad c on c.periodo_academico_id = p.periodo_academico_id
+          where p.fecha_inicio_periodo = '2027-04-05'`,
+      )
+      expect(periods).toHaveLength(1)
+      expect(periods[0]).toMatchObject({ starts: "2027-04-05", ends: "2027-08-27", state: "abierto" })
+      expect(periodsBefore.map((period) => period.code)).not.toContain(periods[0]!.code)
+      await expect(page.getByRole("row", { name: `Opciones de ${periods[0]!.code}` })).toBeVisible()
+      expect(await templateState()).toEqual(before)
+      issues.expectClean()
+    } finally {
+      snapshot.restore()
+    }
   })
 
   test("the template assistant never reached the server", async () => {

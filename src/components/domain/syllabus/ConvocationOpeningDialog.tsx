@@ -1,7 +1,6 @@
 "use client"
 
 import { Play } from "lucide-react"
-import { useState, type FormEvent } from "react"
 import { ApiError } from "@/api/client"
 import { createConvocation } from "@/api/convocations"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -9,6 +8,10 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Spinner } from "@/components/ui/spinner"
 import { useOpened } from "@/composables/useModelOpen"
+import { SERVER_ERROR, serverMessage, useSchemaForm } from "@/lib/forms"
+import { convocationSchema } from "@/schemas/syllabus"
+
+const schema = convocationSchema()
 
 type ConvocationOpeningDialogProps = {
   open: boolean
@@ -19,35 +22,27 @@ type ConvocationOpeningDialogProps = {
 }
 
 export function ConvocationOpeningDialog({ open, processId, onOpenChange, onOpened }: ConvocationOpeningDialogProps) {
-  const [processing, setProcessing] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [warnings, setWarnings] = useState<string[]>([])
-  useOpened(open, () => {
-    setError(null)
-    setWarnings([])
-  })
+  const form = useSchemaForm(schema, { values: { process_id: processId } })
+  const { errors, isSubmitting: processing } = form.formState
+  const error = serverMessage(errors) ?? null
+  const serverTypes = (errors.root as Record<string, { types?: Record<string, unknown> } | undefined> | undefined)?.server?.types ?? {}
+  const warnings = Object.values(serverTypes).map(String)
+  useOpened(open, () => form.clearErrors())
 
-  const submit = async (event?: FormEvent<HTMLFormElement>): Promise<void> => {
-    event?.preventDefault()
-    setProcessing(true)
-    setError(null)
-    setWarnings([])
-    try {
-      const result = await createConvocation(processId)
-      onOpenChange(false)
-      onOpened?.(result.message, result.convocation_id)
-    } catch (reason) {
-      if (reason instanceof ApiError) {
-        const messages = Object.values(reason.errors).flat()
-        setWarnings(messages)
-        setError(messages.length > 1 ? "Todavía no puede abrir la convocatoria:" : (messages[0] ?? reason.message))
-      } else {
-        setError("No se pudo abrir la convocatoria")
+  const submit = form.handleSubmit(
+    async ({ process_id }) => {
+      try {
+        const result = await createConvocation(String(process_id))
+        onOpenChange(false)
+        onOpened?.(result.message, result.convocation_id)
+      } catch (reason) {
+        const messages = reason instanceof ApiError ? Object.values(reason.errors).flat() : []
+        const message = reason instanceof ApiError ? (messages.length > 1 ? "Todavía no puede abrir la convocatoria:" : (messages[0] ?? reason.message)) : "No se pudo abrir la convocatoria"
+        form.setError(SERVER_ERROR, { type: "server", message, types: Object.fromEntries(messages.map((text, index) => [`server${index}`, text])) })
       }
-    } finally {
-      setProcessing(false)
-    }
-  }
+    },
+    (invalid) => form.setError(SERVER_ERROR, { type: "client", message: invalid.process_id?.message ?? "No se pudo abrir la convocatoria" }),
+  )
 
   return (
     <Dialog
@@ -61,7 +56,7 @@ export function ConvocationOpeningDialog({ open, processId, onOpenChange, onOpen
           <DialogTitle>Abrir convocatoria de la carrera</DialogTitle>
           <DialogDescription>Los docentes podrán elaborar sus sílabos hasta la fecha de entrega</DialogDescription>
         </DialogHeader>
-        <form className="flex flex-col gap-4" onSubmit={(event) => void submit(event)}>
+        <form className="flex flex-col gap-4" onSubmit={(event) => void submit(event)} noValidate>
           {error ? (
             <Alert variant="destructive">
               <AlertDescription>

@@ -2,11 +2,11 @@
 
 import { ArrowLeft, Bot, Pencil, RotateCcw, UserPen, X } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { ApiError } from "@/api/client"
-import { getSession } from "@/api/session"
 import type { SyllabusDetail, SyllabusField } from "@/api/syllabi"
-import { createTemplate, getTemplate, getTemplateTeacherPreview, previewTemplateDraft, type TemplatePayload } from "@/api/template"
+import { getTemplate, getTemplateTeacherPreview, previewTemplateDraft } from "@/api/template"
 import { applyTemplateAssistantProposal, discardTemplateAssistantProposal, getTemplateAssistantProposal } from "@/api/templateAssistant"
 import { AppearanceToggle } from "@/components/AppearanceToggle"
 import { IconTooltip } from "@/components/domain/IconTooltip"
@@ -25,6 +25,8 @@ import { useDiscardConfirmation } from "@/composables/useDiscardConfirmation"
 import { paths } from "@/lib/routes"
 import type { DocumentNode } from "@/lib/templateDocument"
 import { toast } from "@/lib/toast"
+import { errorMessage, failedQuery } from "@/lib/queryClient"
+import { adminTemplateQuery, templateKeys } from "@/queries/template"
 
 const SHEET_WIDTH = 794
 
@@ -32,9 +34,11 @@ const apiFailure = (reason: unknown, fallback: string): string => (reason instan
 
 export default function AdminTemplatePage() {
   const router = useRouter()
-  const [payload, setPayload] = useState<TemplatePayload | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState<string | null>(null)
+  const queryClient = useQueryClient()
+  const query = useQuery(adminTemplateQuery())
+  const payload = query.data ?? null
+  const loading = query.data === undefined && !failedQuery(query)
+  const loadError = query.data === undefined && failedQuery(query) ? errorMessage(query.error, "No se pudo cargar la plantilla") : null
   const [actionError, setActionError] = useState<string | null>(null)
   const template = payload?.template ?? null
   const [teacherView, setTeacherView] = useState(false)
@@ -57,49 +61,17 @@ export default function AdminTemplatePage() {
     unsavedRef.current = unsaved
   }, [unsaved])
 
-  const fetchPayload = useCallback(
-    async (silent: boolean): Promise<TemplatePayload | null> => {
-      if (!silent) {
-        const session = await getSession()
-        if (session.active_role?.code !== "administrador") {
-          router.replace(paths.dashboard)
-          return null
-        }
-      }
-      const next = await getTemplate()
-      if (silent || next.template !== null) return next
-      await createTemplate()
-      return getTemplate()
-    },
-    [router],
-  )
-
-  const load = useCallback(
-    ({ silent = false }: { silent?: boolean } = {}): Promise<void> =>
-      fetchPayload(silent)
-        .then((next) => {
-          if (next) setPayload(next)
-        })
-        .catch((reason: unknown) => {
-          const message = reason instanceof ApiError ? reason.message : "No se pudo cargar la plantilla"
-          if (silent) setActionError(message)
-          else setLoadError(message)
-        })
-        .finally(() => {
-          if (!silent) setLoading(false)
-        }),
-    [fetchPayload],
-  )
+  useEffect(() => {
+    if (query.data === null) router.replace(paths.dashboard)
+  }, [query.data, router])
 
   const retry = (): void => {
-    setLoading(true)
-    setLoadError(null)
-    void load()
+    void query.refetch()
   }
 
   const reloadFromMutation = useCallback((): void => {
-    void load({ silent: true })
-  }, [load])
+    queryClient.fetchQuery({ queryKey: templateKeys.current(), queryFn: getTemplate, staleTime: 0 }).catch((reason: unknown) => setActionError(errorMessage(reason, "No se pudo cargar la plantilla")))
+  }, [queryClient])
 
   const changeEditing = useCallback((value: boolean): void => {
     setEditing(value)
@@ -170,10 +142,6 @@ export default function AdminTemplatePage() {
     navigate: (href) => router.push(href),
   })
 
-  const onMount = useEffectEvent(() => {
-    void load()
-  })
-
   useEffect(() => {
     const changed = (): void => reloadFromMutation()
     const warnBeforeUnload = (event: BeforeUnloadEvent): void => {
@@ -183,7 +151,6 @@ export default function AdminTemplatePage() {
     }
     window.addEventListener("silabos:template-changed", changed)
     window.addEventListener("beforeunload", warnBeforeUnload)
-    onMount()
     return () => {
       window.removeEventListener("silabos:template-changed", changed)
       window.removeEventListener("beforeunload", warnBeforeUnload)

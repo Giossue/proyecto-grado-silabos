@@ -1,9 +1,10 @@
 "use client"
 
 import { Trash2, Upload } from "lucide-react"
-import { useEffect, useEffectEvent, useState, type FormEvent, type KeyboardEvent } from "react"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useEffect, useEffectEvent, useState, type KeyboardEvent } from "react"
 import { ApiError } from "@/api/client"
-import { deleteSupportDocument, getCoordinationSupportDocuments, getTeacherSupportDocuments, uploadSupportDocument, type SupportDocument } from "@/api/support-documents"
+import { deleteSupportDocument, uploadSupportDocument, type SupportDocument } from "@/api/support-documents"
 import { openSupportDocument, supportDocumentSize } from "@/components/domain/academic/supportDocumentViewer"
 import { ClientFilterBar } from "@/components/domain/ClientFilterBar"
 import { FeedbackAlert } from "@/components/domain/FeedbackAlert"
@@ -25,7 +26,11 @@ import { useModelOpen, useOpened } from "@/composables/useModelOpen"
 import { formatDateDisplay } from "@/lib/dateDisplay"
 import { useShownWhileClosing } from "@/lib/dialogExit"
 import { activateRow } from "@/lib/rowActivation"
+import { SERVER_ERROR, fieldMessage, serverMessage, useSchemaForm } from "@/lib/forms"
+import { errorMessage, failedQuery } from "@/lib/queryClient"
 import { toast } from "@/lib/toast"
+import { coordinationSupportDocumentsQuery, teacherSupportDocumentsQuery } from "@/queries/supportDocuments"
+import { supportDocumentFormSchema } from "@/schemas/academic"
 
 type SupportDocumentsPanelProps = {
   manages: boolean
@@ -36,85 +41,52 @@ type SupportDocumentsPanelProps = {
 
 const MAX_BYTES = 20 * 1024 * 1024
 const POLL_MS = 4000
+const EMPTY_UPLOAD = { file: null, title: "" }
+const NO_DOCUMENTS: SupportDocument[] = []
 const searchable = (document: SupportDocument) => [document.title]
 
 export function SupportDocumentsPanel({ manages, uploadOpen, onUploadOpenChange, onLoadingChange }: SupportDocumentsPanelProps) {
-  const [documents, setDocuments] = useState<SupportDocument[]>([])
-  const [loaded, setLoaded] = useState(false)
-  const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState<string | null>(null)
+  const queryClient = useQueryClient()
+  const listQuery: { queryKey: readonly string[]; queryFn: () => Promise<{ data: SupportDocument[] }> } = manages ? coordinationSupportDocumentsQuery() : teacherSupportDocumentsQuery()
+  const query = useQuery({
+    ...listQuery,
+    refetchInterval: (current) => ((current.state.data?.data ?? NO_DOCUMENTS).some((document) => document.view === "pendiente") ? POLL_MS : false),
+  })
+  const documents = query.data?.data ?? NO_DOCUMENTS
+  const loaded = query.data !== undefined
+  const loading = !loaded && !failedQuery(query)
+  const loadError = !loaded && failedQuery(query) ? errorMessage(query.error, "No se pudieron cargar los documentos") : null
   const [busyId, setBusyId] = useState<string | null>(null)
   const [isUploadOpen, setUploadOpen] = useModelOpen(uploadOpen, onUploadOpenChange)
-  const [title, setTitle] = useState("")
-  const [file, setFile] = useState<File | null>(null)
-  const [fileError, setFileError] = useState<string | null>(null)
-  const [uploadError, setUploadError] = useState<string | null>(null)
-  const [uploading, setUploading] = useState(false)
+  const uploadForm = useSchemaForm(supportDocumentFormSchema, { defaultValues: EMPTY_UPLOAD })
+  const title = String(uploadForm.watch("title") ?? "")
+  const file = uploadForm.watch("file") ?? null
+  const fileError = fieldMessage(uploadForm.formState.errors, "file") ?? null
+  const uploadError = serverMessage(uploadForm.formState.errors) ?? fieldMessage(uploadForm.formState.errors, "title") ?? null
+  const uploading = uploadForm.formState.isSubmitting
   const [removing, setRemoving] = useState<SupportDocument | null>(null)
   const [removeError, setRemoveError] = useState<string | null>(null)
   const [removeProcessing, setRemoveProcessing] = useState(false)
   const removingShown = useShownWhileClosing(removing)
   const filter = useClientFilter(documents, searchable)
   const pagination = useClientPagination(filter.items, 20, filter.criteria)
-  const initialLoading = loading && !loaded && !loadError
-  const pending = documents.some((document) => document.view === "pendiente")
+  const initialLoading = loading
 
-  useOpened(isUploadOpen, () => {
-    setTitle("")
-    setFile(null)
-    setFileError(null)
-    setUploadError(null)
-  })
+  useOpened(isUploadOpen, () => uploadForm.reset(EMPTY_UPLOAD))
 
-  const requestDocuments = (): Promise<{ data: SupportDocument[] }> => (manages ? getCoordinationSupportDocuments() : getTeacherSupportDocuments())
-
-  const applyDocuments = (data: SupportDocument[]): void => {
-    setDocuments(data)
-    setLoaded(true)
-    setLoading(false)
-  }
-
-  const applyFailure = (reason: unknown, quiet: boolean): void => {
-    if (!quiet) setLoadError(reason instanceof ApiError ? reason.message : "No se pudieron cargar los documentos")
-    setLoading(false)
-  }
-
-  const fetchDocuments = async (quiet: boolean): Promise<void> => {
-    try {
-      applyDocuments((await requestDocuments()).data)
-    } catch (reason) {
-      applyFailure(reason, quiet)
-    }
+  const setDocuments = (update: (current: SupportDocument[]) => SupportDocument[]): void => {
+    queryClient.setQueryData(listQuery.queryKey, (current: { data: SupportDocument[] } | undefined) => ({ ...current, data: update(current?.data ?? NO_DOCUMENTS) }))
   }
 
   const reload = (): void => {
-    setLoading(true)
-    setLoadError(null)
-    void fetchDocuments(false)
+    void query.refetch()
   }
 
-  const firstRequest = useEffectEvent(requestDocuments)
-  const firstLoaded = useEffectEvent(applyDocuments)
-  const firstFailed = useEffectEvent((reason: unknown): void => applyFailure(reason, false))
-  const quietLoad = useEffectEvent((): void => void fetchDocuments(true))
   const announceLoading = useEffectEvent((value: boolean): void => onLoadingChange?.(value))
-
-  useEffect(() => {
-    void firstRequest()
-      .then((response) => firstLoaded(response.data))
-      .catch((reason: unknown) => firstFailed(reason))
-  }, [])
 
   useEffect(() => {
     announceLoading(initialLoading)
   }, [initialLoading])
-
-  useEffect(() => {
-    if (!pending) return
-    const poll = window.setInterval(quietLoad, POLL_MS)
-
-    return () => window.clearInterval(poll)
-  }, [pending])
 
   const view = async (document: SupportDocument): Promise<void> => {
     if (document.view !== "lista" || busyId) return
@@ -133,26 +105,26 @@ export function SupportDocumentsPanel({ manages, uploadOpen, onUploadOpenChange,
   }
 
   const pickFile = (picked: File | null): void => {
-    setFile(picked)
-    setFileError(null)
+    uploadForm.setValue("file", picked)
+    uploadForm.clearErrors("file")
   }
 
-  const upload = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
-    event.preventDefault()
-    if (!file || !title.trim()) return
-    setUploading(true)
-    setUploadError(null)
+  const setFileError = (message: string | null): void => {
+    if (message) uploadForm.setError("file", { type: "client", message })
+    else uploadForm.clearErrors("file")
+  }
+
+  const upload = uploadForm.handleSubmit(async ({ title: name, file: picked }) => {
+    if (!picked) return
     try {
-      const { document } = await uploadSupportDocument(title.trim(), file)
+      const { document } = await uploadSupportDocument(name, picked)
       setDocuments((current) => [document, ...current])
       setUploadOpen(false)
       toast.success("Documento subido")
     } catch (reason) {
-      setUploadError(reason instanceof ApiError ? (Object.values(reason.errors)[0]?.[0] ?? reason.message) : "No se pudo subir el documento")
-    } finally {
-      setUploading(false)
+      uploadForm.setError(SERVER_ERROR, { type: "server", message: reason instanceof ApiError ? (Object.values(reason.errors)[0]?.[0] ?? reason.message) : "No se pudo subir el documento" })
     }
-  }
+  })
 
   const askRemoval = (document: SupportDocument): void => {
     setRemoveError(null)
@@ -181,7 +153,7 @@ export function SupportDocumentsPanel({ manages, uploadOpen, onUploadOpenChange,
     <div className="flex flex-col gap-4">
       {loadError ? (
         <LoadErrorState message={loadError} onRetry={reload} />
-      ) : loading && !loaded ? (
+      ) : loading ? (
         <LoadingSkeleton variant="table" rows={4} columns={manages ? 4 : 3} actions={manages} cellLines={[2, 1, 1]} />
       ) : (
         <div className="flex flex-col gap-4">
@@ -260,7 +232,7 @@ export function SupportDocumentsPanel({ manages, uploadOpen, onUploadOpenChange,
               <DialogTitle>Subir documento</DialogTitle>
               <DialogDescription>PDF, Word o Excel de hasta 20 MB</DialogDescription>
             </DialogHeader>
-            <form className="flex flex-col gap-4" data-testid="support-document-form" onSubmit={(event) => void upload(event)}>
+            <form className="flex flex-col gap-4" data-testid="support-document-form" onSubmit={(event) => void upload(event)} noValidate>
               <Field data-invalid={Boolean(fileError)}>
                 <FieldLabel htmlFor="support-document-file" required>
                   Archivo
@@ -282,7 +254,7 @@ export function SupportDocumentsPanel({ manages, uploadOpen, onUploadOpenChange,
                 <FieldLabel htmlFor="support-document-title" required>
                   Nombre
                 </FieldLabel>
-                <Input id="support-document-title" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={180} autoComplete="off" disabled={uploading} />
+                <Input id="support-document-title" value={title} onChange={(event) => uploadForm.setValue("title", event.target.value)} maxLength={180} autoComplete="off" disabled={uploading} />
               </Field>
               {uploadError ? <FeedbackAlert message={uploadError} /> : null}
               <DialogFooter>

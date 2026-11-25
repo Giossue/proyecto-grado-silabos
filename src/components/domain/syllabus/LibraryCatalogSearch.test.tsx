@@ -1,10 +1,10 @@
-import { act, cleanup, fireEvent, render } from "@testing-library/react"
+import { act, cleanup, fireEvent } from "@testing-library/react"
 import type { ComponentType, ReactNode } from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { searchLibraryCatalog, type CatalogBook } from "@/api/libraryCatalog"
 import { LibraryCatalogSearch } from "@/components/domain/syllabus/LibraryCatalogSearch"
 import { catalogResults } from "@/test/libraryCatalog"
-import { flush } from "@/test/render"
+import { flush, renderWithProviders as render } from "@/test/render"
 
 const fading = vi.hoisted(() => ({ enabled: false, change: null as ((open: boolean) => void) | null }))
 

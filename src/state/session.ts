@@ -1,46 +1,44 @@
 import { ApiError } from "@/api/client"
 import { getSession, type Session } from "@/api/session"
-import { signal, useSignal, type ReadonlySignal } from "@/lib/signal"
+import { queryOptions } from "@tanstack/react-query"
+import { cachedValue, getQueryClient } from "@/lib/queryClient"
+import { useSignal, type ReadonlySignal } from "@/lib/signal"
+import { sessionKeys } from "@/queries/session"
 
-const current = signal<Session | null>(null)
-const loaded = signal(false)
-let pending: Promise<Session | null> | null = null
-
-const load = async (force = false): Promise<Session | null> => {
-  if (loaded.value && !force) return current.value
-  if (pending && !force) return pending
-
-  pending = getSession()
-    .then((session) => {
-      current.value = session
-      loaded.value = true
-      return session
-    })
-    .catch((reason: unknown) => {
-      if (reason instanceof ApiError && reason.status === 401) {
-        current.value = null
-        loaded.value = true
-        return null
-      }
-      throw reason
-    })
-    .finally(() => {
-      pending = null
-    })
-
-  return pending
+const fetchSession = async (): Promise<Session | null> => {
+  try {
+    return await getSession()
+  } catch (reason) {
+    if (reason instanceof ApiError && reason.status === 401) return null
+    throw reason
+  }
 }
 
+export const sessionQuery = queryOptions({ queryKey: sessionKeys.current, queryFn: fetchSession, gcTime: Infinity, retry: false })
+
+getQueryClient().setQueryDefaults(sessionKeys.current, { queryFn: fetchSession, gcTime: Infinity, retry: false })
+
+const current = cachedValue<Session | null>(() => sessionKeys.current, null)
+
+const loaded: ReadonlySignal<boolean> = {
+  get value() {
+    return getQueryClient().getQueryState(sessionKeys.current)?.status === "success"
+  },
+  subscribe: current.subscribe,
+}
+
+const load = (force = false): Promise<Session | null> =>
+  getQueryClient().fetchQuery({ ...sessionQuery, staleTime: force ? 0 : Infinity })
+
 const replace = (session: Session | null): void => {
-  current.value = session
-  loaded.value = true
+  getQueryClient().setQueryData<Session | null>(sessionKeys.current, session)
 }
 
 const clear = (): void => replace(null)
 
 export const sessionState = {
-  current: current as ReadonlySignal<Session | null>,
-  loaded: loaded as ReadonlySignal<boolean>,
+  current,
+  loaded,
   load,
   replace,
   clear,

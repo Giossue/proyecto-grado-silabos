@@ -2,9 +2,10 @@
 
 import { ArrowLeft } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
-import { useCallback, useEffect, useMemo, useState, type KeyboardEvent } from "react"
+import { useQuery } from "@tanstack/react-query"
+import { useEffect, useMemo, type KeyboardEvent } from "react"
 import { ApiError } from "@/api/client"
-import { getTeacherHistoryCareer, type HistorySyllabus } from "@/api/syllabi"
+import { type HistorySyllabus } from "@/api/syllabi"
 import { LoadErrorState } from "@/components/domain/LoadErrorState"
 import { LoadingSkeleton } from "@/components/domain/LoadingSkeleton"
 import { PageFrame } from "@/components/domain/PageFrame"
@@ -18,7 +19,9 @@ import { Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableR
 import { useClientPagination } from "@/composables/useClientPagination"
 import { formatDateDisplay } from "@/lib/dateDisplay"
 import { goBack } from "@/lib/goBack"
+import { failedQuery, queryErrorMessage } from "@/lib/queryClient"
 import { paths } from "@/lib/routes"
+import { teacherHistoryCareerQuery } from "@/queries/teacher"
 import { activateRow } from "@/lib/rowActivation"
 
 const NO_SYLLABI: HistorySyllabus[] = []
@@ -47,9 +50,12 @@ function HistoryHeader() {
 export default function TeacherHistoryCareerPage() {
   const router = useRouter()
   const { career } = useParams<{ career: string }>()
-  const [careerName, setCareerName] = useState<string | null>(null)
-  const [syllabi, setSyllabi] = useState<HistorySyllabus[] | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const query = useQuery(teacherHistoryCareerQuery(String(career)))
+  const careerName = query.data?.career.name ?? null
+  const syllabi = query.data?.syllabi ?? null
+  const failed = failedQuery(query)
+  const status = failed && query.error instanceof ApiError ? query.error.status : null
+  const error = status === 401 || status === 404 ? null : queryErrorMessage(query, "No se pudo cargar el historial de la carrera")
   const loading = syllabi === null && error === null
   const { items: pagedSyllabi, meta, setPage } = useClientPagination(syllabi ?? NO_SYLLABI, 20)
   const groups = useMemo(() => {
@@ -59,36 +65,15 @@ export default function TeacherHistoryCareerPage() {
     return [...byPeriod.entries()].map(([period, items]) => ({ period, items }))
   }, [pagedSyllabi])
 
-  const fetchCareer = useCallback(
-    (): Promise<void> =>
-      getTeacherHistoryCareer(String(career)).then(
-        (result) => {
-          setCareerName(result.career.name)
-          setSyllabi(result.syllabi)
-        },
-        (reason: unknown) => {
-          if (reason instanceof ApiError && reason.status === 401) {
-            router.replace(paths.login)
-            return
-          }
-          if (reason instanceof ApiError && reason.status === 404) {
-            router.replace(paths.teacher.history)
-            return
-          }
-          setError(reason instanceof ApiError ? reason.message : "No se pudo cargar el historial de la carrera")
-        },
-      ),
-    [career, router],
-  )
-
   useEffect(() => {
-    void fetchCareer()
-  }, [fetchCareer])
+    if (status === 401) router.replace(paths.login)
+    else if (status === 404) router.replace(paths.teacher.history)
+  }, [router, status])
 
   const load = (): void => {
-    setError(null)
-    void fetchCareer()
+    void query.refetch()
   }
+
 
   const open = (id: string): void => {
     rememberSyllabusPreview(id, true)

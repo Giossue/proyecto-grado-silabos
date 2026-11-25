@@ -3,9 +3,9 @@
 import { History } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { useCallback, useEffect, useState, type FormEvent, type KeyboardEvent } from "react"
+import { keepPreviousData, useQuery } from "@tanstack/react-query"
+import { useEffect, useState, type FormEvent, type KeyboardEvent } from "react"
 import { ApiError } from "@/api/client"
-import { getTeacherSyllabi, type SyllabiResponse } from "@/api/syllabi"
 import { EmptyState } from "@/components/domain/EmptyState"
 import { FilterToolbar } from "@/components/domain/FilterToolbar"
 import { IconTooltip } from "@/components/domain/IconTooltip"
@@ -19,12 +19,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Field, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useLatestRequest } from "@/lib/latestRequest"
+import { queryErrorMessage, sameKey } from "@/lib/queryClient"
 import { paths } from "@/lib/routes"
 import { useSignal } from "@/lib/signal"
 import { rememberSyllabusPreview } from "@/components/domain/syllabus/syllabusPreview"
 import { SYLLABUS_STATE_OPTIONS } from "@/lib/syllabusStates"
 import { queryOf, queryPage, queryText, syncFilters } from "@/lib/urlFilters"
+import { teacherSyllabiQuery } from "@/queries/teacher"
 import { deadlineState } from "@/state/deadline"
 
 type Filters = { q: string; state: string }
@@ -35,49 +36,37 @@ export default function TeacherSyllabiPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const deadline = useSignal(deadlineState.deadline)
-  const requests = useLatestRequest()
   const [initial] = useState(() => {
     const query = queryOf(searchParams)
     return { filters: { q: queryText(query.q), state: queryText(query.state) || "all" }, page: queryPage(query.page) }
   })
   const [filters, setFilters] = useState<Filters>(initial.filters)
-  const [result, setResult] = useState<SyllabiResponse | null>(null)
+  const [applied, setApplied] = useState(initial)
+  const query = useQuery({ ...teacherSyllabiQuery(applied.page, applied.filters), placeholderData: keepPreviousData })
+  const result = query.data ?? null
   const [period, setPeriod] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const unauthorized = query.error instanceof ApiError && query.error.status === 401
+  const error = unauthorized ? null : queryErrorMessage(query, "No se pudieron cargar sus sílabos")
   const filtersActive = filters.q !== "" || filters.state !== "all"
+  const periods = [...new Set((result?.syllabi.data ?? []).map((syllabus) => syllabus.period))]
+  const singlePeriod = periods.length === 1 ? periods[0]! : null
 
-  const fetchSyllabi = useCallback(
-    (page: number, current: Filters): Promise<void> => {
-      const ticket = requests.begin()
-
-      return getTeacherSyllabi({ q: current.q, state: current.state, page }).then(
-        (response) => {
-          if (!requests.isCurrent(ticket)) return
-          setResult(response)
-          const periods = [...new Set(response.syllabi.data.map((syllabus) => syllabus.period))]
-          if (periods.length === 1) setPeriod(periods[0]!)
-          syncFilters(router, { q: current.q, state: current.state }, page)
-        },
-        (reason: unknown) => {
-          if (!requests.isCurrent(ticket)) return
-          if (reason instanceof ApiError && reason.status === 401) {
-            router.replace(paths.login)
-            return
-          }
-          setError(reason instanceof ApiError ? reason.message : "No se pudieron cargar sus sílabos")
-        },
-      )
-    },
-    [requests, router],
-  )
+  if (singlePeriod !== null && singlePeriod !== period) setPeriod(singlePeriod)
 
   useEffect(() => {
-    void fetchSyllabi(initial.page, initial.filters)
-  }, [fetchSyllabi, initial])
+    if (unauthorized) router.replace(paths.login)
+  }, [router, unauthorized])
+
+  useEffect(() => {
+    if (query.isPlaceholderData || !query.data) return
+    syncFilters(router, { q: applied.filters.q, state: applied.filters.state }, applied.page)
+  }, [applied, query.data, query.isPlaceholderData, router])
 
   const load = (page = 1, current: Filters = filters): Promise<void> => {
-    setError(null)
-    return fetchSyllabi(page, current)
+    const next = { page, filters: current }
+    if (sameKey(next, applied)) return query.refetch().then(() => undefined)
+    setApplied(next)
+    return Promise.resolve()
   }
 
   const submit = (event: FormEvent<HTMLFormElement>): void => {

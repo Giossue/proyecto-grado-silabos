@@ -1,9 +1,10 @@
 "use client"
 
 import { Bell, Bot, Library, PlugZap, Save, Trash2, Undo2 } from "lucide-react"
-import { useCallback, useEffect, useState } from "react"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useState } from "react"
 import { ApiError } from "@/api/client"
-import { getSystemSettings, testSystemConnection, updateSystemSettings, type SettingsSection, type SystemSettings } from "@/api/systemSettings"
+import { testSystemConnection, updateSystemSettings, type SettingsSection, type SystemSettings } from "@/api/systemSettings"
 import { PasswordConfirmDialog } from "@/components/PasswordConfirmDialog"
 import { FeedbackAlert } from "@/components/domain/FeedbackAlert"
 import { IconTooltip } from "@/components/domain/IconTooltip"
@@ -21,6 +22,8 @@ import { SettingsLayout } from "@/layouts/settings/Layout"
 import { useShownWhileClosing } from "@/lib/dialogExit"
 import { toast } from "@/lib/toast"
 import { cn } from "@/lib/utils"
+import { queryErrorMessage } from "@/lib/queryClient"
+import { configurationKeys, systemSettingsQuery } from "@/queries/configuration"
 
 type ConnectionSection = Exclude<SettingsSection, "notificaciones">
 type NotificationsForm = { emails: boolean; digest_time: string }
@@ -63,8 +66,10 @@ const numberModel = (value: string): number | string => {
 const DEFAULT_CONFIRM_DESCRIPTION = "Por seguridad, confirme su contraseña actual para guardar"
 
 export default function AdminSystemSettingsPage() {
+  const queryClient = useQueryClient()
+  const query = useQuery(systemSettingsQuery())
   const [settings, setSettings] = useState<SystemSettings | null>(null)
-  const [loadError, setLoadError] = useState<string | null>(null)
+  const loadError = queryErrorMessage(query, "No se pudo cargar la configuración del sistema")
   const [saving, setSaving] = useState<SettingsSection | null>(null)
   const [testing, setTesting] = useState<ConnectionSection | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -77,30 +82,17 @@ export default function AdminSystemSettingsPage() {
   const [baseline, setBaseline] = useState<Snapshot>(EMPTY_SNAPSHOT)
   const shownConfirmFor = useShownWhileClosing(confirmFor)
 
-  const fill = useCallback((value: SystemSettings): void => {
-    const forms = formsFrom(value)
-    setSettings(value)
+  if (query.data && query.data !== settings) {
+    const forms = formsFrom(query.data)
+    setSettings(query.data)
     setNotifications(forms.notifications)
     setAi(forms.ai)
     setLibrary(forms.library)
     setBaseline(snapshot(forms))
-  }, [])
-
-  const fetchSettings = useCallback(async (): Promise<void> => {
-    try {
-      fill(await getSystemSettings())
-    } catch (reason) {
-      setLoadError(reason instanceof ApiError ? reason.message : "No se pudo cargar la configuración del sistema")
-    }
-  }, [fill])
-
-  useEffect(() => {
-    void fetchSettings()
-  }, [fetchSettings])
+  }
 
   const load = (): void => {
-    setLoadError(null)
-    void fetchSettings()
+    void query.refetch()
   }
 
   const current = snapshot({ notifications, ai, library })
@@ -132,7 +124,7 @@ export default function AdminSystemSettingsPage() {
               ...(ai.clear_api_key ? { clear_api_key: true } : apiKey ? { api_key: apiKey } : {}),
             }
     try {
-      fill(await updateSystemSettings(section, body))
+      queryClient.setQueryData(configurationKeys.systemSettings(), await updateSystemSettings(section, body))
       setConfirmFor(null)
       toast.success("Ajustes guardados")
     } catch (reason) {

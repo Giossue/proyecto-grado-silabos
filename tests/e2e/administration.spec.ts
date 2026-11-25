@@ -1,7 +1,7 @@
 import path from "node:path"
 import type { Page } from "@playwright/test"
 import { storageStateOf } from "./support/accounts"
-import { expireInvitation, query } from "./support/db"
+import { expireInvitation, query, snapshotDatabase } from "./support/db"
 import { appendWorkbookRow, describeWorkbook } from "./support/files"
 import { expect, test } from "./support/fixtures"
 import { chooseOption, lettersOnly, toast, uniqueSuffix } from "./support/ui"
@@ -252,26 +252,29 @@ test.describe.serial("administration: convocations, settings and template", () =
   })
 
   test("admin extends the delivery deadline", async ({ page, issues }) => {
-    const [before] = await query<{ due: Date; extensions: number }>(
-      "select fecha_entrega as due, cantidad_prorrogas as extensions from convocatorias_universidad where finalizada_en is null order by fecha_inicio desc limit 1",
-    )
-    test.skip(before!.extensions >= 2, "the convocation already used its two deadline extensions")
-    await page.goto("/admin/convocatorias")
-    await page.getByRole("row", { name: /^Opciones de / }).first().click()
-    await page.getByRole("dialog", { name: /^Convocatoria / }).getByRole("button", { name: /^Prorrogar plazo/ }).click()
-    const dialog = page.getByRole("dialog", { name: "Prorrogar el plazo de entrega" })
-    await dialog.locator("#extension-due").click()
-    const next = new Date(before!.due.getTime() + 2 * 86_400_000)
-    const month = new Intl.DateTimeFormat("es-EC", { month: "long", timeZone: "America/Guayaquil" }).format(next)
-    const day = new Intl.DateTimeFormat("es-EC", { day: "numeric", timeZone: "America/Guayaquil" }).format(next)
-    const target = page.getByRole("grid").last().getByRole("button", { name: new RegExp(`\\b${day} de ${month}\\b`, "i") })
-    for (let step = 0; step < 4 && !(await target.isVisible()); step += 1) await page.getByRole("button", { name: "Mes siguiente" }).click()
-    await target.click()
-    await dialog.getByRole("button", { name: /^Prorrogar/ }).last().click()
-    await expect(dialog).toBeHidden()
-    const [after] = await query<{ due: Date }>("select fecha_entrega as due from convocatorias_universidad where finalizada_en is null order by fecha_inicio desc limit 1")
-    expect(after!.due.getTime()).toBeGreaterThan(before!.due.getTime())
-    issues.expectClean()
+    const snapshot = snapshotDatabase("before-deadline-extension")
+    try {
+      await query("update convocatorias_universidad set cantidad_prorrogas = 0 where finalizada_en is null")
+      const [before] = await query<{ due: Date }>("select fecha_entrega as due from convocatorias_universidad where finalizada_en is null order by fecha_inicio desc limit 1")
+      await page.goto("/admin/convocatorias")
+      await page.getByRole("row", { name: /^Opciones de / }).first().click()
+      await page.getByRole("dialog", { name: /^Convocatoria / }).getByRole("button", { name: /^Prorrogar plazo/ }).click()
+      const dialog = page.getByRole("dialog", { name: "Prorrogar el plazo de entrega" })
+      await dialog.locator("#extension-due").click()
+      const next = new Date(before!.due.getTime() + 2 * 86_400_000)
+      const month = new Intl.DateTimeFormat("es-EC", { month: "long", timeZone: "America/Guayaquil" }).format(next)
+      const day = new Intl.DateTimeFormat("es-EC", { day: "numeric", timeZone: "America/Guayaquil" }).format(next)
+      const target = page.getByRole("grid").last().getByRole("button", { name: new RegExp(`\\b${day} de ${month}\\b`, "i") })
+      for (let step = 0; step < 4 && !(await target.isVisible()); step += 1) await page.getByRole("button", { name: "Mes siguiente" }).click()
+      await target.click()
+      await dialog.getByRole("button", { name: /^Prorrogar/ }).last().click()
+      await expect(dialog).toBeHidden()
+      const [after] = await query<{ due: Date }>("select fecha_entrega as due from convocatorias_universidad where finalizada_en is null order by fecha_inicio desc limit 1")
+      expect(after!.due.getTime()).toBeGreaterThan(before!.due.getTime())
+      issues.expectClean()
+    } finally {
+      snapshot.restore()
+    }
   })
 
   test("admin saves a system setting and restores it", async ({ page, issues }) => {

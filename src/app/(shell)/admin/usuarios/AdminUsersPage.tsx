@@ -1,10 +1,9 @@
 "use client"
 
 import { useRouter, useSearchParams } from "next/navigation"
-import { useCallback, useEffect, useState, type FormEvent, type KeyboardEvent } from "react"
-import { getManagedUsers, type ManagedUser, type ManagedUsersResponse } from "@/api/admin-users"
-import { ApiError } from "@/api/client"
-import { getSession } from "@/api/session"
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useEffect, useState, type FormEvent, type KeyboardEvent } from "react"
+import { type ManagedUser } from "@/api/admin-users"
 import { FilterToolbar } from "@/components/domain/FilterToolbar"
 import { ImportSpreadsheetDialog } from "@/components/domain/ImportSpreadsheetDialog"
 import { LoadErrorState } from "@/components/domain/LoadErrorState"
@@ -20,15 +19,16 @@ import { Field, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { useLatestRequest } from "@/lib/latestRequest"
 import { managedUserStatus } from "@/lib/managedUserStatus"
+import { queryErrorMessage, sameKey } from "@/lib/queryClient"
 import { paths } from "@/lib/routes"
 import { activateRow } from "@/lib/rowActivation"
 import { toast } from "@/lib/toast"
 import { queryOf, queryPage, queryText, syncFilters } from "@/lib/urlFilters"
 import { cn } from "@/lib/utils"
+import { adminUserKeys, managedUsersQuery, type ManagedUserFilters } from "@/queries/adminUsers"
 
-type UserFilters = { q: string; status: string; role: string; career: string }
+type UserFilters = ManagedUserFilters
 type RoleAssignment = ManagedUser["roles"][number]
 
 const NO_FILTERS: UserFilters = { q: "", status: "all", role: "all", career: "all" }
@@ -47,7 +47,7 @@ const roleLine = (role: RoleAssignment): string => (role.career_name ? `${role.n
 export default function AdminUsersPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const requests = useLatestRequest()
+  const queryClient = useQueryClient()
   const [initial] = useState(() => {
     const query = queryOf(searchParams)
 
@@ -62,51 +62,32 @@ export default function AdminUsersPage() {
     }
   })
   const [filters, setFilters] = useState<UserFilters>(initial.filters)
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
-  const [result, setResult] = useState<ManagedUsersResponse | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [applied, setApplied] = useState(initial)
+  const query = useQuery({ ...managedUsersQuery(applied.page, applied.filters), placeholderData: keepPreviousData })
+  const allowed = query.data?.allowed === true ? query.data : null
+  const currentUserId = allowed?.session.user.id ?? null
+  const result = allowed?.users ?? null
+  const error = queryErrorMessage(query, "No se pudieron cargar los usuarios")
+  const loading = query.isFetching
   const [viewing, setViewing] = useState<ManagedUser | null>(null)
   const [viewOpen, setViewOpen] = useState(false)
   const [dialog, setDialog] = useState<ManagedUserAction | null>(null)
   const filtersActive = filters.q !== "" || filters.status !== "all" || filters.role !== "all" || filters.career !== "all"
 
-  const fetchUsers = useCallback(
-    (page: number, current: UserFilters): Promise<void> => {
-      const ticket = requests.begin()
-      const isCurrent = (): boolean => requests.isCurrent(ticket)
-
-      return getSession()
-        .then(async (session) => {
-          if (!isCurrent()) return
-          if (session.active_role?.code !== "administrador") {
-            router.replace(paths.dashboard)
-            return
-          }
-          setCurrentUserId(session.user.id)
-          const response = await getManagedUsers({ q: current.q, status: current.status, role: current.role, career: current.career, page })
-          if (!isCurrent()) return
-          setResult(response)
-          syncFilters(router, current, page)
-        })
-        .catch((reason: unknown) => {
-          if (isCurrent()) setError(reason instanceof ApiError ? reason.message : "No se pudieron cargar los usuarios")
-        })
-        .finally(() => {
-          if (isCurrent()) setLoading(false)
-        })
-    },
-    [requests, router],
-  )
-
   useEffect(() => {
-    void fetchUsers(initial.page, initial.filters)
-  }, [fetchUsers, initial])
+    if (query.isPlaceholderData || !query.data) return
+    if (!query.data.allowed) {
+      router.replace(paths.dashboard)
+      return
+    }
+    syncFilters(router, applied.filters, applied.page)
+  }, [applied, query.data, query.isPlaceholderData, router])
 
   const load = (page = 1, current: UserFilters = filters): Promise<void> => {
-    setLoading(true)
-    setError(null)
-    return fetchUsers(page, current)
+    const next = { page, filters: current }
+    if (sameKey(next, applied)) return query.refetch().then(() => undefined)
+    setApplied(next)
+    return Promise.resolve()
   }
 
   const setFilter = (key: keyof UserFilters, value: string): void => setFilters((previous) => ({ ...previous, [key]: value }))
@@ -123,6 +104,7 @@ export default function AdminUsersPage() {
 
   const changed = async (notice: string): Promise<void> => {
     toast.success(notice)
+    await queryClient.invalidateQueries({ queryKey: adminUserKeys.all, refetchType: "none" })
     await load()
   }
 

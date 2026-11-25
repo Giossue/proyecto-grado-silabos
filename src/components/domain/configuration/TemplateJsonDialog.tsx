@@ -1,9 +1,10 @@
 "use client"
 
 import { Download, FileUp, Save } from "lucide-react"
+import { useQueryClient } from "@tanstack/react-query"
 import { useEffect, useRef, useState, type ChangeEvent } from "react"
 import { ApiError } from "@/api/client"
-import { getTemplateJson, importTemplateJson } from "@/api/template"
+import { importTemplateJson } from "@/api/template"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -13,6 +14,7 @@ import { Spinner } from "@/components/ui/spinner"
 import { Textarea } from "@/components/ui/textarea"
 import { useOpened } from "@/composables/useModelOpen"
 import { downloadJson } from "@/lib/downloadJson"
+import { templateJsonQuery } from "@/queries/template"
 
 type TemplateJsonDialogProps = {
   templateId: string
@@ -28,6 +30,7 @@ export function TemplateJsonDialog({ templateId, locked, open, onOpenChange, onI
   const [saving, setSaving] = useState(false)
   const [problems, setProblems] = useState<string[]>([])
   const [failure, setFailure] = useState<string | null>(null)
+  const queryClient = useQueryClient()
   const fileInput = useRef<HTMLInputElement | null>(null)
   const canApply = !locked && !loading && !saving && text.trim() !== ""
 
@@ -40,7 +43,8 @@ export function TemplateJsonDialog({ templateId, locked, open, onOpenChange, onI
   useEffect(() => {
     if (!open) return
     let current = true
-    getTemplateJson(templateId)
+    queryClient
+      .fetchQuery(templateJsonQuery(templateId))
       .then((json) => {
         if (current) setText(JSON.stringify(json, null, 2))
       })
@@ -53,7 +57,7 @@ export function TemplateJsonDialog({ templateId, locked, open, onOpenChange, onI
     return () => {
       current = false
     }
-  }, [open, templateId])
+  }, [open, queryClient, templateId])
 
   const apply = async (): Promise<void> => {
     setFailure(null)

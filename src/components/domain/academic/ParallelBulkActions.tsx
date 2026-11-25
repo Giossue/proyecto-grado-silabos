@@ -1,7 +1,7 @@
 "use client"
 
 import { ChevronDown, Plus, X } from "lucide-react"
-import { useState, type FormEvent } from "react"
+import { useState } from "react"
 import {
   createCareerRecord,
   createParallels,
@@ -33,7 +33,9 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { Spinner } from "@/components/ui/spinner"
 import { FINALIZED_NOTICE, requestPurgeConfirmation } from "@/composables/usePurgeConfirmation"
 import { afterDialogExit } from "@/lib/dialogExit"
+import { SERVER_ERROR, serverMessage, useSchemaForm } from "@/lib/forms"
 import { nextParallelCode } from "@/lib/parallelCodes"
+import { NEW_PARALLELS_INCOMPLETE, newParallelsSchema } from "@/schemas/academic"
 import { deadlineState } from "@/state/deadline"
 
 type Row = ScheduledSubjects["scheduledSubjects"][number]
@@ -75,6 +77,8 @@ const ask = (message: string, count: number, mode?: string): Promise<boolean> =>
     )
   })
 
+const addSchema = newParallelsSchema()
+
 const finalized = (): boolean => deadlineState.deadline.value?.state === "closed"
 
 const confirmBatch = async (affected = 0, message: (count: number) => string = shiftMessage): Promise<PurgeHandling | null> => {
@@ -87,9 +91,12 @@ const confirmBatch = async (affected = 0, message: (count: number) => string = s
 export function ParallelBulkActions({ items, parallelIds, shiftOptions, teacherUsers, assignments, onChanged, onFailed, onClear }: ParallelBulkActionsProps) {
   const [busy, setBusy] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
-  const [addShift, setAddShift] = useState("")
-  const [addTeacher, setAddTeacher] = useState("")
-  const [addError, setAddError] = useState<string | null>(null)
+  const addForm = useSchemaForm(addSchema, { defaultValues: { shift: "", user_id: "" } })
+  const addShift = String(addForm.watch("shift") ?? "")
+  const addTeacher = String(addForm.watch("user_id") ?? "")
+  const addError = serverMessage(addForm.formState.errors) ?? null
+  const setAddShift = (value: string): void => addForm.setValue("shift", value)
+  const setAddTeacher = (value: string): void => addForm.setValue("user_id", value)
 
   const subjects = `${items.length} ${items.length === 1 ? "materia" : "materias"}`
   const label =
@@ -127,31 +134,25 @@ export function ParallelBulkActions({ items, parallelIds, shiftOptions, teacherU
   }
 
   const openAdd = (): void => {
-    setAddShift(shiftOptions[0]?.value ?? "")
-    setAddTeacher("")
-    setAddError(null)
+    addForm.reset({ shift: shiftOptions[0]?.value ?? "", user_id: "" })
     setAddOpen(true)
   }
 
-  const addParallel = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
-    event.preventDefault()
-    if (busy) return
-    if (!addShift || !addTeacher) {
-      setAddError("Elija la jornada y el docente de los nuevos paralelos")
-      return
-    }
-    const shift = addShift
-    const userId = addTeacher
-    setAddOpen(false)
-    const purge = await confirmBatch()
-    if (purge === null) return
-    await run(
-      items.map((item) => () => createParallels({ subject_id: item.subject_id, codes: [nextParallelCode(item.parallels)], shift, user_id: userId }, purge)),
-      `Paralelo agregado a ${items.length} ${items.length === 1 ? "materia" : "materias"}`,
-      "No hay materias seleccionadas",
-      afterDialogExit(),
-    )
-  }
+  const addParallel = addForm.handleSubmit(
+    async ({ shift, user_id: userId }) => {
+      if (busy) return
+      setAddOpen(false)
+      const purge = await confirmBatch()
+      if (purge === null) return
+      await run(
+        items.map((item) => () => createParallels({ subject_id: item.subject_id, codes: [nextParallelCode(item.parallels)], shift: String(shift), user_id: String(userId) }, purge)),
+        `Paralelo agregado a ${items.length} ${items.length === 1 ? "materia" : "materias"}`,
+        "No hay materias seleccionadas",
+        afterDialogExit(),
+      )
+    },
+    () => addForm.setError(SERVER_ERROR, { type: "client", message: NEW_PARALLELS_INCOMPLETE }),
+  )
 
   const setShift = async (shift: string): Promise<void> => {
     const targets = items.flatMap((item) => chosen(item).filter((parallel) => parallel.editable !== false && parallel.shift !== shift))
@@ -245,7 +246,7 @@ export function ParallelBulkActions({ items, parallelIds, shiftOptions, teacherU
             <DialogTitle>Agregar un paralelo a las materias seleccionadas</DialogTitle>
             <DialogDescription>Se crea el mismo paralelo en cada materia</DialogDescription>
           </DialogHeader>
-          <form className="contents" onSubmit={(event) => void addParallel(event)}>
+          <form className="contents" onSubmit={(event) => void addParallel(event)} noValidate>
             {addError ? (
               <Alert variant="destructive">
                 <AlertDescription>{addError}</AlertDescription>

@@ -3,11 +3,8 @@
 import { ChartNoAxesColumn, History, Inbox } from "lucide-react"
 import Link from "next/link"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { useCallback, useEffect, useState, type FormEvent, type KeyboardEvent } from "react"
-import { ApiError } from "@/api/client"
-import { getDashboard, type Dashboard } from "@/api/dashboard"
-import { getReviews, type ReviewsPage } from "@/api/reviews"
-import { getSession } from "@/api/session"
+import { keepPreviousData, useQuery } from "@tanstack/react-query"
+import { useEffect, useState, type FormEvent, type KeyboardEvent } from "react"
 import { FilterToolbar } from "@/components/domain/FilterToolbar"
 import { IconTooltip } from "@/components/domain/IconTooltip"
 import { LoadErrorState } from "@/components/domain/LoadErrorState"
@@ -23,11 +20,13 @@ import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { formatDateDisplay } from "@/lib/dateDisplay"
-import { useLatestRequest } from "@/lib/latestRequest"
+import { queryErrorMessage, sameKey } from "@/lib/queryClient"
 import { paths, reviewAreaPaths } from "@/lib/routes"
 import { activateRow } from "@/lib/rowActivation"
 import { toast } from "@/lib/toast"
 import { queryOf, queryPage, queryText, syncFilters } from "@/lib/urlFilters"
+import { dashboardSummaryQuery } from "@/queries/dashboard"
+import { coordinationQueueQuery } from "@/queries/reviews"
 import { deadlineState } from "@/state/deadline"
 import { setupChecklistState } from "@/state/setupChecklist"
 
@@ -39,16 +38,18 @@ export default function CoordinationReviewsPage() {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const requests = useLatestRequest()
   const [initial] = useState(() => {
     const query = queryOf(searchParams)
 
     return { page: queryPage(query.page), search: queryText(query.search), tab: (queryText(query.tab) === "seguimiento" ? "seguimiento" : "cola") as Tab }
   })
-  const [data, setData] = useState<ReviewsPage | null>(null)
-  const [summary, setSummary] = useState<Dashboard | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [applied, setApplied] = useState({ page: initial.page, search: initial.search })
+  const reviews = useQuery({ ...coordinationQueueQuery(applied.page, applied.search), placeholderData: keepPreviousData })
+  const summaryQuery = useQuery(dashboardSummaryQuery())
+  const data = reviews.data ?? null
+  const summary = summaryQuery.data ?? null
+  const loading = reviews.isFetching
+  const error = queryErrorMessage(reviews, "No se pudo cargar la cola de revisión")
   const [tab, setTab] = useState<Tab>(initial.tab)
   const [search, setSearch] = useState(initial.search)
   const filtersActive = search !== ""
@@ -56,46 +57,25 @@ export default function CoordinationReviewsPage() {
   const convocationId = summary?.coordination_convocation?.convocation_id ?? null
   const openHint = summary?.setup?.steps.find((step) => step.key === "convocation")?.hint ?? ""
 
-  const applySummary = useCallback((dashboard: Dashboard | null): void => {
-    setSummary(dashboard)
-    if (dashboard?.setup !== undefined) setupChecklistState.update(dashboard.setup)
-  }, [])
-
-  const fetchReviews = useCallback(
-    (page: number, withSummary: boolean, currentSearch: string, currentTab: Tab, currentSummary: Dashboard | null): Promise<void> => {
-      const ticket = requests.begin()
-
-      return getSession()
-        .then(async (session) => {
-          if (!requests.isCurrent(ticket)) return
-          if (session.active_role?.code !== "coordinador") {
-            router.replace(paths.dashboard)
-            return
-          }
-          const [reviews, dashboard] = await Promise.all([getReviews({ search: currentSearch, page }), withSummary ? getDashboard().catch(() => null) : currentSummary])
-          if (!requests.isCurrent(ticket)) return
-          setData(reviews)
-          applySummary(dashboard)
-          syncFilters(router, { search: currentSearch, tab: currentTab === "seguimiento" ? "seguimiento" : "" }, page)
-        })
-        .catch((reason: unknown) => {
-          if (requests.isCurrent(ticket)) setError(reason instanceof ApiError ? reason.message : "No se pudo cargar la cola de revisión")
-        })
-        .finally(() => {
-          if (requests.isCurrent(ticket)) setLoading(false)
-        })
-    },
-    [applySummary, requests, router],
-  )
+  useEffect(() => {
+    if (summary?.setup !== undefined) setupChecklistState.update(summary.setup)
+  }, [summary])
 
   useEffect(() => {
-    void fetchReviews(initial.page, true, initial.search, initial.tab, null)
-  }, [fetchReviews, initial])
+    if (reviews.isPlaceholderData || reviews.data === undefined) return
+    if (reviews.data === null) {
+      router.replace(paths.dashboard)
+      return
+    }
+    syncFilters(router, { search: applied.search, tab: tab === "seguimiento" ? "seguimiento" : "" }, applied.page)
+  }, [applied, reviews.data, reviews.isPlaceholderData, router, tab])
 
   const load = (page = 1, withSummary = false, currentSearch = search): Promise<void> => {
-    setLoading(true)
-    setError(null)
-    return fetchReviews(page, withSummary, currentSearch, tab, summary)
+    if (withSummary) void summaryQuery.refetch()
+    const next = { page, search: currentSearch }
+    if (sameKey(next, applied)) return reviews.refetch().then(() => undefined)
+    setApplied(next)
+    return Promise.resolve()
   }
 
   const submit = (event: FormEvent<HTMLFormElement>): void => {
@@ -110,8 +90,7 @@ export default function CoordinationReviewsPage() {
 
   const changed = async (message: string): Promise<void> => {
     toast.success(message)
-    const [dashboard] = await Promise.all([getDashboard().catch(() => summary), deadlineState.load()])
-    applySummary(dashboard)
+    await Promise.all([summaryQuery.refetch(), deadlineState.load()])
   }
 
   const changeTab = (value: string): void => {

@@ -1,16 +1,16 @@
 import { getDeadline, type DashboardDeadline } from '@/api/dashboard';
 import type { Session } from '@/api/session';
-import { signal, useSignal, type ReadonlySignal } from '@/lib/signal';
+import { cachedValue, getQueryClient } from '@/lib/queryClient';
+import { useSignal, type ReadonlySignal } from '@/lib/signal';
+import { dashboardKeys } from '@/queries/dashboard';
 import { sessionState, useSession } from '@/state/session';
 import { watchSessionKey } from '@/state/sessionKey';
+import '@/queries/mutationRefresh';
 
 const FRESH_FOR_MS = 60_000;
 const ROLES_WITH_DEADLINE = ['docente', 'coordinador', 'bibliotecario', 'administrador'] as const;
 
 export type DeadlineAudience = (typeof ROLES_WITH_DEADLINE)[number];
-
-const deadline = signal<DashboardDeadline | null>(null);
-let loadedAt = 0;
 
 const audienceOf = (session: Session | null): DeadlineAudience | null => {
     const code = session?.active_role?.code;
@@ -23,35 +23,36 @@ const keyOf = (session: Session | null): string | null =>
 
 const sessionKey = (): string | null => keyOf(sessionState.current.value);
 
-const load = async (): Promise<void> => {
+const queryKeyOf = (key: string | null) => (key ? dashboardKeys.deadline(key) : null);
+
+const deadline = cachedValue<DashboardDeadline | null>(() => queryKeyOf(sessionKey()), null);
+
+const fetchDeadline = async (): Promise<DashboardDeadline | null> => (await getDeadline()).deadline;
+
+getQueryClient().setQueryDefaults(dashboardKeys.deadlines(), { queryFn: fetchDeadline, gcTime: Infinity, retry: false });
+
+const fetchFor = async (staleTime: number): Promise<void> => {
     const key = sessionKey();
     if (!key) return;
     try {
-        const result = await getDeadline();
-        if (key !== sessionKey()) return;
-        deadline.value = result.deadline;
-        loadedAt = Date.now();
+        await getQueryClient().fetchQuery({ queryKey: dashboardKeys.deadline(key), staleTime });
     } catch {
         return;
     }
 };
 
-const refresh = async (): Promise<void> => {
-    if (Date.now() - loadedAt >= FRESH_FOR_MS) await load();
+const load = (): Promise<void> => fetchFor(0);
+
+const refresh = (): Promise<void> => fetchFor(FRESH_FOR_MS);
+
+const update = (value: DashboardDeadline | null): void => {
+    const key = sessionKey();
+    if (!key) return;
+    getQueryClient().setQueryData(dashboardKeys.deadline(key), value);
 };
 
-let mutationTimer: ReturnType<typeof setTimeout> | undefined;
-if (typeof window !== 'undefined') {
-    window.addEventListener('silabos:mutated', () => {
-        if (!sessionKey()) return;
-        clearTimeout(mutationTimer);
-        mutationTimer = setTimeout(() => { void load(); }, 400);
-    });
-}
-
-watchSessionKey(keyOf, (key) => {
-    deadline.value = null;
-    loadedAt = 0;
+watchSessionKey(keyOf, (key, previous) => {
+    if (previous) getQueryClient().removeQueries({ queryKey: dashboardKeys.deadline(previous) });
     if (key) void load();
 });
 
@@ -60,6 +61,7 @@ export const deadlineState = {
     audience: (): DeadlineAudience | null => audienceOf(sessionState.current.value),
     load,
     refresh,
+    update,
 };
 
 export const useDeadline = () => {

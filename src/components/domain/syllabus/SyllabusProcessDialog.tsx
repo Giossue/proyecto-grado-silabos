@@ -1,8 +1,7 @@
 "use client"
 
 import { CalendarPlus } from "lucide-react"
-import { useState, type FormEvent } from "react"
-import { ApiError } from "@/api/client"
+import { useState } from "react"
 import { createProcess } from "@/api/processes"
 import { DatePicker } from "@/components/DatePicker"
 import { ConfirmPhrase } from "@/components/domain/ConfirmPhrase"
@@ -16,6 +15,8 @@ import { Spinner } from "@/components/ui/spinner"
 import { useModelOpen, useOpened } from "@/composables/useModelOpen"
 import { useInstitutionToday } from "@/composables/useInstitutionDate"
 import { matchesPhrase } from "@/lib/confirmPhrase"
+import { applyApiErrors, errorMessages, useSchemaForm } from "@/lib/forms"
+import { processCreationSchema } from "@/schemas/syllabus"
 
 type AcademicPeriod = { id: string; codigo: string; starts_on?: string; ends_on?: string }
 
@@ -32,6 +33,7 @@ type SyllabusProcessDialogProps = {
 }
 
 const OPEN_PHRASE = "abrir convocatoria"
+const schema = processCreationSchema()
 
 export function SyllabusProcessDialog({
   periods,
@@ -45,37 +47,39 @@ export function SyllabusProcessDialog({
 }: SyllabusProcessDialogProps) {
   const [isOpen, setOpen] = useModelOpen(open, onOpenChange)
   const [processing, setProcessing] = useState(false)
-  const [errors, setErrors] = useState<Record<string, string[]>>({})
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [openingTyped, setOpeningTyped] = useState("")
-  const [form, setForm] = useState(() => ({ period_id: period?.id ?? "", starts_at: "", due_at: "" }))
+  const blank = () => ({ period_id: period?.id ?? "", starts_at: "", due_at: "" })
+  const form = useSchemaForm(schema, { defaultValues: blank() })
+  const { errors } = form.formState
+  const values = { period_id: String(form.watch("period_id") ?? ""), starts_at: String(form.watch("starts_at") ?? ""), due_at: String(form.watch("due_at") ?? "") }
+  const processErrors = errorMessages((errors as Record<string, unknown>).process)
+  const periodErrors = errorMessages(errors.period_id)
+  const startsErrors = errorMessages(errors.starts_at)
+  const dueErrors = errorMessages(errors.due_at)
   useOpened(confirmOpen, () => setOpeningTyped(""))
-  useOpened(isOpen, () => {
-    setForm({ period_id: period?.id ?? "", starts_at: "", due_at: "" })
-    setErrors({})
-  })
+  useOpened(isOpen, () => form.reset(blank()))
 
   const todayIso = useInstitutionToday()
   const periodEnd = period?.ends_on?.slice(0, 10)
-  const dueMinimum = form.starts_at > todayIso ? form.starts_at : todayIso
-  const update = (key: keyof typeof form, value: string): void => setForm((current) => ({ ...current, [key]: value }))
+  const dueMinimum = values.starts_at > todayIso ? values.starts_at : todayIso
+  const update = (key: "period_id" | "starts_at" | "due_at", value: string): void => form.setValue(key, value)
 
-  const askConfirmation = (event: FormEvent<HTMLFormElement>): void => {
-    event.preventDefault()
+  const askConfirmation = form.handleSubmit(() => {
     if (!disabled) setConfirmOpen(true)
-  }
+  })
 
   const submit = async (): Promise<void> => {
     if (disabled) return
     setConfirmOpen(false)
     setProcessing(true)
-    setErrors({})
+    form.clearErrors()
     try {
-      const result = await createProcess(form)
+      const result = await createProcess(form.getValues() as { period_id: string; starts_at: string; due_at: string })
       setOpen(false)
       onSaved?.(result.message)
     } catch (reason) {
-      setErrors(reason instanceof ApiError ? reason.errors : {})
+      applyApiErrors(form.setError, reason, { fallback: "No se pudo abrir la convocatoria" })
     } finally {
       setProcessing(false)
     }
@@ -93,25 +97,26 @@ export function SyllabusProcessDialog({
     >
       {({ close }) => (
         <>
-          <form onSubmit={askConfirmation}>
+          <form onSubmit={(event) => void askConfirmation(event)} noValidate>
             <FieldGroup>
-              {errors.process ? (
+              {processErrors ? (
                 <Field data-invalid>
-                  <FieldError errors={errors.process} />
+                  <FieldError errors={processErrors} />
                 </Field>
               ) : null}
               {period ? (
-                <Field>
+                <Field data-invalid={Boolean(periodErrors)}>
                   <FieldLabel>Periodo académico</FieldLabel>
                   <div className="rounded-md bg-muted/30 px-3 py-2 text-sm ring-1 ring-surface-ring">{period.codigo}</div>
                   <p className="text-sm text-muted-foreground">Se fija desde el período seleccionado y no se vuelve a elegir aquí</p>
+                  <FieldError errors={periodErrors} />
                 </Field>
               ) : (
-                <Field data-invalid={Boolean(errors.period_id)}>
+                <Field data-invalid={Boolean(periodErrors)}>
                   <FieldLabel htmlFor="process-period" required>
                     Periodo académico
                   </FieldLabel>
-                  <Select value={form.period_id} onValueChange={(value) => update("period_id", value)} required>
+                  <Select value={values.period_id} onValueChange={(value) => update("period_id", value)} required>
                     <SelectTrigger id="process-period" aria-required="true">
                       <SelectValue placeholder="Seleccione un periodo" />
                     </SelectTrigger>
@@ -125,24 +130,24 @@ export function SyllabusProcessDialog({
                       </SelectGroup>
                     </SelectContent>
                   </Select>
-                  <FieldError errors={errors.period_id} />
+                  <FieldError errors={periodErrors} />
                 </Field>
               )}
-              <Field data-invalid={Boolean(errors.starts_at)}>
+              <Field data-invalid={Boolean(startsErrors)}>
                 <FieldLabel htmlFor="process-starts" required>
                   Inicio de la elaboración
                 </FieldLabel>
-                <DatePicker id="process-starts" value={form.starts_at} onValueChange={(value) => update("starts_at", value)} minValue={todayIso} maxValue={periodEnd} required ariaInvalid={Boolean(errors.starts_at)} />
+                <DatePicker id="process-starts" value={values.starts_at} onValueChange={(value) => update("starts_at", value)} minValue={todayIso} maxValue={periodEnd} required ariaInvalid={Boolean(startsErrors)} />
                 <p className="text-sm text-muted-foreground">Elija cuándo comienza la elaboración; no se copia el inicio de clases</p>
-                <FieldError errors={errors.starts_at} />
+                <FieldError errors={startsErrors} />
               </Field>
-              <Field data-invalid={Boolean(errors.due_at)}>
+              <Field data-invalid={Boolean(dueErrors)}>
                 <FieldLabel htmlFor="process-due" required>
                   Fecha límite de entrega
                 </FieldLabel>
-                <DatePicker id="process-due" value={form.due_at} onValueChange={(value) => update("due_at", value)} minValue={dueMinimum} maxValue={periodEnd} required ariaInvalid={Boolean(errors.due_at)} />
+                <DatePicker id="process-due" value={values.due_at} onValueChange={(value) => update("due_at", value)} minValue={dueMinimum} maxValue={periodEnd} required ariaInvalid={Boolean(dueErrors)} />
                 <p className="text-sm text-muted-foreground">Esta fecha se heredará en la convocatoria de cada carrera</p>
-                <FieldError errors={errors.due_at} />
+                <FieldError errors={dueErrors} />
               </Field>
               <FormDialogActions close={close} processing={processing} icon={CalendarPlus} label="Abrir convocatoria" />
             </FieldGroup>

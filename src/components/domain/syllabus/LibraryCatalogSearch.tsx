@@ -1,8 +1,9 @@
 "use client"
 
 import { Search } from "lucide-react"
-import { useState, type FormEvent } from "react"
-import { searchLibraryCatalog, type CatalogBook, type CatalogSearchField } from "@/api/libraryCatalog"
+import { keepPreviousData, useQuery } from "@tanstack/react-query"
+import { useState } from "react"
+import { type CatalogBook, type CatalogSearchField } from "@/api/libraryCatalog"
 import { FeedbackAlert } from "@/components/domain/FeedbackAlert"
 import { TablePagination } from "@/components/domain/TablePagination"
 import { Badge } from "@/components/ui/badge"
@@ -15,54 +16,54 @@ import { Spinner } from "@/components/ui/spinner"
 import { Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useOpened } from "@/composables/useModelOpen"
 import { catalogErrorMessage } from "@/lib/blocks/catalog"
+import { useSchemaForm } from "@/lib/forms"
+import { failedQuery, sameKey } from "@/lib/queryClient"
+import { catalogSearchQuery } from "@/queries/libraryCatalog"
+import { catalogSearchSchema } from "@/schemas/library"
 import type { PaginationMeta } from "@/types/pagination"
 
 type Query = { field: CatalogSearchField; text: string }
+
+const SEARCH_FIELDS: CatalogSearchField[] = ["any", "title", "author", "isbn"]
+const TERM_CHARACTERS = 120
+const searchSchema = catalogSearchSchema(SEARCH_FIELDS, TERM_CHARACTERS).pick({ field: true, q: true })
+const EMPTY_SEARCH = { field: "any", q: "" }
 
 const EMPTY_META: PaginationMeta = { current_page: 1, last_page: 1, per_page: 20, from: null, to: null, total: 0 }
 
 export function LibraryCatalogSearch({ disabled = false, onPick }: { disabled?: boolean; onPick: (book: CatalogBook) => void }) {
   const [open, setOpen] = useState(false)
-  const [field, setField] = useState<CatalogSearchField>("any")
-  const [text, setText] = useState("")
-  const [results, setResults] = useState<CatalogBook[] | null>(null)
-  const [meta, setMeta] = useState<PaginationMeta | null>(null)
+  const form = useSchemaForm(searchSchema, { defaultValues: EMPTY_SEARCH })
+  const field = (form.watch("field") ?? "any") as CatalogSearchField
+  const text = String(form.watch("q") ?? "")
   const [searched, setSearched] = useState<Query | null>(null)
+  const [page, setPage] = useState(1)
   const [added, setAdded] = useState<Set<string>>(() => new Set())
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const query = useQuery({ ...catalogSearchQuery(searched?.field ?? "any", searched?.text ?? "", page), enabled: searched !== null, placeholderData: keepPreviousData })
+  const busy = query.isFetching
+  const error = searched && failedQuery(query) ? catalogErrorMessage(query.error) : null
+  const results: CatalogBook[] | null = searched && !error ? (query.data?.data ?? null) : null
+  const meta: PaginationMeta | null = searched && !error ? (query.data?.meta ?? null) : null
   useOpened(open, () => {
-    setText("")
-    setResults(null)
-    setMeta(null)
+    form.reset(EMPTY_SEARCH)
     setSearched(null)
+    setPage(1)
     setAdded(new Set())
-    setError(null)
   })
 
-  const load = async (query: Query, page: number): Promise<void> => {
-    setBusy(true)
-    setError(null)
-    try {
-      const found = await searchLibraryCatalog(query.field, query.text, page)
-      setResults(found.data)
-      setMeta(found.meta)
-      setSearched(query)
-    } catch (reason) {
-      setResults(null)
-      setMeta(null)
-      setError(catalogErrorMessage(reason))
-    } finally {
-      setBusy(false)
+  const search = form.handleSubmit(({ field: chosen, q }) => {
+    const trimmed = String(q ?? "").trim()
+    if (trimmed.length < 2 || busy) return
+    const next = { field: chosen as CatalogSearchField, text: trimmed }
+    if (sameKey(next, searched) && page === 1) {
+      void query.refetch()
+      return
     }
-  }
-  const search = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
-    event.preventDefault()
-    if (text.trim().length < 2 || busy) return
-    await load({ field, text: text.trim() }, 1)
-  }
-  const goTo = (page: number): void => {
-    if (searched && !busy) void load(searched, page)
+    setSearched(next)
+    setPage(1)
+  })
+  const goTo = (next: number): void => {
+    if (searched && !busy) setPage(next)
   }
   const pick = (book: CatalogBook): void => {
     onPick(book)
@@ -82,14 +83,14 @@ export function LibraryCatalogSearch({ disabled = false, onPick }: { disabled?: 
           <DialogTitle>Buscar en la biblioteca</DialogTitle>
           <DialogDescription>Elija un libro para agregarlo a la tabla</DialogDescription>
         </DialogHeader>
-        <form className="flex flex-wrap gap-2" onSubmit={(event) => void search(event)}>
-          <NativeSelect value={field} aria-label="Buscar por" onChange={(event) => setField(event.target.value as CatalogSearchField)}>
+        <form className="flex flex-wrap gap-2" onSubmit={(event) => void search(event)} noValidate>
+          <NativeSelect value={field} aria-label="Buscar por" onChange={(event) => form.setValue("field", event.target.value)}>
             <NativeSelectOption value="any">Todo</NativeSelectOption>
             <NativeSelectOption value="title">Título</NativeSelectOption>
             <NativeSelectOption value="author">Autor</NativeSelectOption>
             <NativeSelectOption value="isbn">ISBN</NativeSelectOption>
           </NativeSelect>
-          <Input value={text} className="min-w-40 flex-1" maxLength={120} placeholder="Texto a buscar" aria-label="Texto a buscar" onChange={(event) => setText(event.target.value)} />
+          <Input value={text} className="min-w-40 flex-1" maxLength={120} placeholder="Texto a buscar" aria-label="Texto a buscar" onChange={(event) => form.setValue("q", event.target.value)} />
           <Button type="submit" disabled={busy || text.trim().length < 2}>
             {busy ? <Spinner data-icon="inline-start" /> : null}
             Buscar

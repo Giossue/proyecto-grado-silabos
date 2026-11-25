@@ -1,7 +1,6 @@
 "use client"
 
 import { FileSignature, ShieldCheck } from "lucide-react"
-import { useState, type FormEvent } from "react"
 import { ApiError } from "@/api/client"
 import type { SignaturePayload } from "@/api/signatures"
 import { PasswordInput } from "@/components/PasswordInput"
@@ -12,6 +11,8 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, Di
 import { Field, FieldError, FieldLabel } from "@/components/ui/field"
 import { Spinner } from "@/components/ui/spinner"
 import { useModelOpen, useOpened } from "@/composables/useModelOpen"
+import { SERVER_ERROR, fieldMessage, serverMessage, useSchemaForm } from "@/lib/forms"
+import { signingFormSchema } from "@/schemas/signature"
 
 export type StatementSigner = (statement: string) => SignaturePayload
 
@@ -23,70 +24,47 @@ type SignatureDialogProps = {
   onOpenChange?: (open: boolean) => void
 }
 
-type Errors = { certificate?: string; password?: string; general?: string }
-
 const CERTIFICATE_CODES = ["invalid_file", "no_key", "expired", "not_yet_valid"]
 
 export function SignatureDialog({ title, confirmLabel, run, open, onOpenChange }: SignatureDialogProps) {
   const [isOpen, setOpen] = useModelOpen(open, onOpenChange)
-  const [certificate, setCertificate] = useState<File | null>(null)
-  const [password, setPassword] = useState("")
-  const [working, setWorking] = useState(false)
-  const [errors, setErrors] = useState<Errors>({})
-  useOpened(isOpen, () => {
-    setCertificate(null)
-    setPassword("")
-    setErrors({})
-  })
+  const form = useSchemaForm(signingFormSchema, { defaultValues: { certificate: null, password: "" } })
+  const { errors: formErrors, isSubmitting: working } = form.formState
+  const certificate = form.watch("certificate") ?? null
+  const password = form.watch("password") ?? ""
+  const errors = { certificate: fieldMessage(formErrors, "certificate"), password: fieldMessage(formErrors, "password"), general: serverMessage(formErrors) }
+  useOpened(isOpen, () => form.reset({ certificate: null, password: "" }))
 
   const pickCertificate = (file: File | null): void => {
-    setCertificate(file)
-    setErrors((current) => ({ ...current, certificate: undefined }))
+    form.setValue("certificate", file)
+    form.clearErrors("certificate")
   }
 
   const invalidCertificate = (message: string | null): void => {
-    if (message) setErrors((current) => ({ ...current, certificate: message }))
+    if (message) form.setError("certificate", { type: "client", message })
   }
 
-  const submit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
-    event.preventDefault()
-    setErrors({})
-    if (!certificate) {
-      setErrors({ certificate: "Elija su archivo .p12 o .pfx" })
-      return
-    }
-    if (!password) {
-      setErrors({ password: "Escriba la clave de su firma" })
-      return
-    }
-    setWorking(true)
+  const submit = form.handleSubmit(async ({ certificate: file, password: key }) => {
+    if (!file) return
+    const [{ signStatement }, { readCertificate, SignatureError }] = await Promise.all([import("@/lib/signature/signStatement"), import("@/lib/signature/certificate")])
+    const p12 = new Uint8Array(await file.arrayBuffer())
     try {
-      const [{ signStatement }, { readCertificate, SignatureError }] = await Promise.all([
-        import("@/lib/signature/signStatement"),
-        import("@/lib/signature/certificate"),
-      ])
-      const p12 = new Uint8Array(await certificate.arrayBuffer())
-      const key = password
-      try {
-        readCertificate(p12, key)
-        await run((statement) => signStatement({ statement, p12, password: key }).signature)
-        setOpen(false)
-      } catch (reason) {
-        if (reason instanceof SignatureError) {
-          if (reason.code === "wrong_password") setErrors({ password: reason.message })
-          else if (CERTIFICATE_CODES.includes(reason.code)) setErrors({ certificate: reason.message })
-          else setErrors({ general: reason.message })
-        } else if (reason instanceof ApiError) {
-          const signatureError = Object.entries(reason.errors).find(([name]) => name === "signature" || name.startsWith("signature"))?.[1][0]
-          setErrors({ general: signatureError ?? reason.message })
-        } else {
-          setErrors({ general: "No se pudo firmar. Intente de nuevo" })
-        }
+      readCertificate(p12, key)
+      await run((statement) => signStatement({ statement, p12, password: key }).signature)
+      setOpen(false)
+    } catch (reason) {
+      if (reason instanceof SignatureError) {
+        if (reason.code === "wrong_password") form.setError("password", { type: "server", message: reason.message })
+        else if (CERTIFICATE_CODES.includes(reason.code)) form.setError("certificate", { type: "server", message: reason.message })
+        else form.setError(SERVER_ERROR, { type: "server", message: reason.message })
+      } else if (reason instanceof ApiError) {
+        const signatureError = Object.entries(reason.errors).find(([name]) => name === "signature" || name.startsWith("signature"))?.[1][0]
+        form.setError(SERVER_ERROR, { type: "server", message: signatureError ?? reason.message })
+      } else {
+        form.setError(SERVER_ERROR, { type: "server", message: "No se pudo firmar. Intente de nuevo" })
       }
-    } finally {
-      setWorking(false)
     }
-  }
+  })
 
   return (
     <Dialog open={isOpen} onOpenChange={setOpen}>
@@ -98,7 +76,7 @@ export function SignatureDialog({ title, confirmLabel, run, open, onOpenChange }
             Su firma está protegida: nada sale de su equipo
           </DialogDescription>
         </DialogHeader>
-        <form className="flex flex-col gap-4" data-testid="signature-form" onSubmit={(event) => void submit(event)}>
+        <form className="flex flex-col gap-4" data-testid="signature-form" onSubmit={(event) => void submit(event)} noValidate>
           <Field data-invalid={Boolean(errors.certificate)}>
             <FieldLabel htmlFor="signature-certificate" required>
               Archivo de firma (.p12 o .pfx)
@@ -119,7 +97,7 @@ export function SignatureDialog({ title, confirmLabel, run, open, onOpenChange }
             <FieldLabel htmlFor="signature-password" required>
               Clave de la firma
             </FieldLabel>
-            <PasswordInput id="signature-password" value={password} onValueChange={setPassword} autoComplete="off" aria-invalid={Boolean(errors.password)} />
+            <PasswordInput id="signature-password" value={password} onValueChange={(value) => form.setValue("password", value)} autoComplete="off" aria-invalid={Boolean(errors.password)} />
             {errors.password ? <FieldError errors={[errors.password]} /> : null}
           </Field>
           {errors.general ? (

@@ -1,8 +1,11 @@
+import { useQueryClient } from "@tanstack/react-query"
 import { useCallback, useState } from "react"
-import { ApiError } from "@/api/client"
-import { getCatalogLibraries, type CatalogLibrary } from "@/api/libraryCatalog"
+import { type CatalogLibrary } from "@/api/libraryCatalog"
+import { errorMessage } from "@/lib/queryClient"
+import { catalogLibrariesQuery } from "@/queries/libraryCatalog"
 
 export const useCatalogLibraries = () => {
+  const queryClient = useQueryClient()
   const [libraries, setLibraries] = useState<CatalogLibrary[] | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -10,16 +13,16 @@ export const useCatalogLibraries = () => {
     setLibraries(null)
     setError(null)
     try {
-      const found = await getCatalogLibraries()
+      const found = await queryClient.fetchQuery(catalogLibrariesQuery())
       setLibraries(found)
 
       return found
     } catch (reason) {
-      setError(reason instanceof ApiError ? reason.message : "No se pudo consultar la lista de bibliotecas")
+      setError(errorMessage(reason, "No se pudo consultar la lista de bibliotecas"))
 
       return null
     }
-  }, [])
+  }, [queryClient])
 
   return { libraries, error, load }
 }

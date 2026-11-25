@@ -3,9 +3,10 @@
 import { ArrowLeft, CheckCheck, FileSignature, FileText, GitCompareArrows, Highlighter, History, MoreHorizontal, RotateCcw, Undo2 } from "lucide-react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
-import { useEffect, useMemo, useState } from "react"
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMemo, useState } from "react"
 import { ApiError } from "@/api/client"
-import { approveReview, compareReviews, getReview, requestCorrection, reviewStageLabel, type ReviewDetail } from "@/api/reviews"
+import { approveReview, requestCorrection, reviewStageLabel, type ReviewDetail } from "@/api/reviews"
 import { IconTooltip } from "@/components/domain/IconTooltip"
 import { LoadErrorState } from "@/components/domain/LoadErrorState"
 import { LoadingSkeleton } from "@/components/domain/LoadingSkeleton"
@@ -33,6 +34,8 @@ import { toast } from "@/lib/toast"
 import { errorMessages, useSchemaForm } from "@/lib/forms"
 import { changeRequestSchema } from "@/schemas/syllabus"
 import { useDeadline } from "@/state/deadline"
+import { queryErrorMessage } from "@/lib/queryClient"
+import { reviewComparisonQuery, reviewQuery } from "@/queries/reviews"
 
 const NO_CHANGES: ReadonlySet<string> = new Set()
 const DEFAULT_SHEET_WIDTH = sheetPixels(null).portrait
@@ -57,9 +60,11 @@ export default function CoordinationReviewDetailPage() {
   const revisionId = String(useParams<{ revision: string }>().revision)
   const area = reviewAreaPaths()
   const { deadline } = useDeadline()
-  const [data, setData] = useState<ReviewDetail | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState("")
+  const queryClient = useQueryClient()
+  const query = useQuery({ ...reviewQuery(revisionId), placeholderData: keepPreviousData })
+  const data = query.data ?? null
+  const loading = query.isFetching
+  const loadError = queryErrorMessage(query, "No se pudo cargar la revisión") ?? ""
   const [correctionOpen, setCorrectionOpen] = useState(false)
   const [signOpen, setSignOpen] = useState(false)
   const [restartOpen, setRestartOpen] = useState(false)
@@ -75,28 +80,16 @@ export default function CoordinationReviewDetailPage() {
   const [openingPdf, setOpeningPdf] = useState(false)
   const [approving, setApproving] = useState(false)
   const [shownRevision, setShownRevision] = useState(revisionId)
-  const [attempt, setAttempt] = useState(0)
 
   if (shownRevision !== revisionId) {
     setShownRevision(revisionId)
     setComparing(false)
-    setLoading(true)
-    setLoadError("")
   }
 
   const fromHistory = cameFrom(area.periodHistory)
 
-  useEffect(() => {
-    void getReview(revisionId)
-      .then((detail) => setData(detail))
-      .catch((failure: unknown) => setLoadError(failure instanceof ApiError ? failure.message : "No se pudo cargar la revisión"))
-      .finally(() => setLoading(false))
-  }, [revisionId, attempt])
-
   const load = (): void => {
-    setLoading(true)
-    setLoadError("")
-    setAttempt((value) => value + 1)
+    void query.refetch()
   }
 
   const canReviewCurrent = Boolean(data?.can_decide && data.revision.is_current && data.syllabus.state === "en_revision")
@@ -130,7 +123,7 @@ export default function CoordinationReviewDetailPage() {
     }
     if (!data || !previousRevision || !showChanges) return
     try {
-      const [before, result] = await Promise.all([getReview(previousRevision.id), compareReviews(previousRevision.id, data.revision.id)])
+      const [before, result] = await Promise.all([queryClient.fetchQuery(reviewQuery(previousRevision.id)), queryClient.fetchQuery(reviewComparisonQuery(previousRevision.id, data.revision.id))])
       setPreviousDetail(before)
       setChangedFields(new Set(result.comparison.changes.map((change) => `${change.section_key}.${change.field_key}`)))
       setHighlight(true)

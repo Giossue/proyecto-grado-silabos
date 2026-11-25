@@ -1,7 +1,7 @@
 import { act, fireEvent, render } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { clearTemplateAssistant, getTemplateAssistant, sendTemplateAssistantMessage, type TemplateAssistantChat, type TemplateAssistantMessage } from "@/api/templateAssistant"
-import { TooltipProvider } from "@/components/ui/tooltip"
+import { createWrapper } from "@/test/render"
 import { TemplateAssistant } from "./TemplateAssistant"
 
 vi.mock("@/api/templateAssistant", () => ({ getTemplateAssistant: vi.fn(), sendTemplateAssistantMessage: vi.fn(), clearTemplateAssistant: vi.fn() }))
@@ -17,13 +17,9 @@ type Props = { refresh?: number; draftVersion?: string; busy?: string | null }
 const mount = (props: Props = {}) => {
   const onApply = vi.fn()
   const onDiscard = vi.fn()
-  const element = (next: Props) => (
-    <TooltipProvider>
-      <TemplateAssistant refresh={0} draftVersion="sesion:3" snapshot={() => draft} busy={null} onApply={onApply} onDiscard={onDiscard} {...next} />
-    </TooltipProvider>
-  )
+  const element = (next: Props) => <TemplateAssistant refresh={0} draftVersion="sesion:3" snapshot={() => draft} busy={null} onApply={onApply} onDiscard={onDiscard} {...next} />
   let current = props
-  const view = render(element(current))
+  const view = render(element(current), { wrapper: createWrapper() })
   return {
     container: view.container,
     onApply,

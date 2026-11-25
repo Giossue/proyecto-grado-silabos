@@ -1,5 +1,6 @@
 import fs from "node:fs"
 import { accounts, mailLogPaths, password, storageStateOf, type AccountKey } from "./support/accounts"
+import { query } from "./support/db"
 import { expect, test, watchPage } from "./support/fixtures"
 import { chooseScope, fillLogin, loginAs, logout } from "./support/session"
 import { freshCode, secretFromQr, typeCode } from "./support/totp"
@@ -135,8 +136,9 @@ test.describe.serial("account security", () => {
   })
 
   test("password recovery sends a reset link by mail", async ({ page }) => {
+    await query("delete from restablecimientos_contrasena where email = $1", [disposable.email])
     const sizes = new Map(mailLogPaths.map((file) => [file, fs.existsSync(file) ? fs.statSync(file).size : 0]))
-    const newMail = () => mailLogPaths.map((file) => (fs.existsSync(file) ? fs.readFileSync(file, "utf8").slice(sizes.get(file) ?? 0) : "")).join("\n")
+    const newMail = () => mailLogPaths.map((file) => (fs.existsSync(file) ? fs.readFileSync(file).subarray(sizes.get(file) ?? 0).toString("utf8") : "")).join("\n")
     await page.goto("/recuperar-contrasena")
     await page.locator("#recovery-email").fill(disposable.email)
     await page.getByRole("button").filter({ hasText: /enlace|Enviar/ }).click()

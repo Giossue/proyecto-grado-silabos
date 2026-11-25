@@ -1,4 +1,5 @@
 import { act, fireEvent, render } from "@testing-library/react"
+import { createWrapper } from "@/test/render"
 import { createRef } from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import * as templateApi from "@/api/template"
@@ -377,7 +378,7 @@ describe("TemplateVisualBuilder", () => {
   it("la frase para editar se borra al volver a abrir el aviso, no mientras se cierra", async () => {
     keepClosingDialogs()
     const handle = createRef<TemplateVisualBuilderHandle>()
-    render(<TemplateVisualBuilder ref={handle} template={template} presets={presets} />)
+    render(<TemplateVisualBuilder ref={handle} template={template} presets={presets} />, { wrapper: createWrapper() })
     await settle()
     act(() => handle.current!.askEdit())
     await settle()

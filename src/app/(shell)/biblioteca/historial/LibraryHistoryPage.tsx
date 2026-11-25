@@ -2,9 +2,9 @@
 
 import { ArrowLeft } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { useCallback, useEffect, useState, type FormEvent, type KeyboardEvent } from "react"
+import { keepPreviousData, useQuery } from "@tanstack/react-query"
+import { useEffect, useState, type FormEvent, type KeyboardEvent } from "react"
 import { ApiError } from "@/api/client"
-import { getLibraryHistory, type LibraryHistoryPage as HistoryPayload } from "@/api/library"
 import { FilterToolbar } from "@/components/domain/FilterToolbar"
 import { LoadErrorState } from "@/components/domain/LoadErrorState"
 import { LoadingSkeleton } from "@/components/domain/LoadingSkeleton"
@@ -17,7 +17,8 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { goBack } from "@/lib/goBack"
-import { useLatestRequest } from "@/lib/latestRequest"
+import { queryErrorMessage, sameKey } from "@/lib/queryClient"
+import { libraryHistoryQuery } from "@/queries/library"
 import { rememberLibraryFaculty, savedLibraryFaculty } from "@/lib/libraryFaculty"
 import { paths } from "@/lib/routes"
 import { activateRow } from "@/lib/rowActivation"
@@ -36,7 +37,6 @@ const activateWithKey = (event: KeyboardEvent<HTMLTableRowElement>, action: () =
 export default function LibraryHistoryPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const requests = useLatestRequest()
   const [initial] = useState(() => {
     const query = queryOf(searchParams)
     return {
@@ -50,49 +50,32 @@ export default function LibraryHistoryPage() {
     }
   })
   const [filters, setFilters] = useState<Filters>(initial.filters)
-  const [data, setData] = useState<HistoryPayload | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [applied, setApplied] = useState(initial)
+  const query = useQuery({ ...libraryHistoryQuery(applied.page, applied.filters), placeholderData: keepPreviousData })
+  const data = query.data ?? null
+  const loading = query.isFetching
+  const filterRejected = query.error instanceof ApiError && query.error.status === 422 && (applied.filters.faculty !== "all" || applied.filters.period !== "all")
+  const error = filterRejected ? null : queryErrorMessage(query, "No se pudo cargar el historial de biblioteca")
   const filtersActive = filters.q !== "" || filters.faculty !== "all" || filters.period !== "all" || filters.who !== "all"
 
-  const fetchHistory = useCallback(
-    (page: number, start: Filters): Promise<void> => {
-      const run = async (current: Filters): Promise<void> => {
-        const ticket = requests.begin()
-        try {
-          const response = await getLibraryHistory({ q: current.q, faculty: current.faculty, period: current.period, mine: current.who === "mine", page })
-          if (!requests.isCurrent(ticket)) return
-          setData(response)
-          rememberLibraryFaculty(current.faculty)
-          syncFilters(router, { q: current.q, faculty: current.faculty, period: current.period, mine: current.who === "mine" ? "1" : "" }, page)
-        } catch (reason) {
-          if (!requests.isCurrent(ticket)) return
-          if (reason instanceof ApiError && reason.status === 422 && (current.faculty !== "all" || current.period !== "all")) {
-            const reset = { ...current, faculty: "all", period: "all" }
-            setFilters(reset)
-            rememberLibraryFaculty(reset.faculty)
-            await run(reset)
-            return
-          }
-          setError(reason instanceof ApiError ? reason.message : "No se pudo cargar el historial de biblioteca")
-        } finally {
-          if (requests.isCurrent(ticket)) setLoading(false)
-        }
-      }
-
-      return run(start)
-    },
-    [requests, router],
-  )
+  if (filterRejected) {
+    const reset = { ...applied.filters, faculty: "all", period: "all" }
+    setFilters(reset)
+    setApplied({ page: applied.page, filters: reset })
+  }
 
   useEffect(() => {
-    void fetchHistory(initial.page, initial.filters)
-  }, [fetchHistory, initial])
+    if (query.isPlaceholderData || !query.data) return
+    const current = applied.filters
+    rememberLibraryFaculty(current.faculty)
+    syncFilters(router, { q: current.q, faculty: current.faculty, period: current.period, mine: current.who === "mine" ? "1" : "" }, applied.page)
+  }, [applied, query.data, query.isPlaceholderData, router])
 
   const load = (page = 1, current: Filters = filters): Promise<void> => {
-    setLoading(true)
-    setError(null)
-    return fetchHistory(page, current)
+    const next = { page, filters: current }
+    if (sameKey(next, applied)) return query.refetch().then(() => undefined)
+    setApplied(next)
+    return Promise.resolve()
   }
 
   const submit = (event: FormEvent<HTMLFormElement>): void => {

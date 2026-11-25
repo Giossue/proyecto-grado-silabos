@@ -2,9 +2,10 @@
 
 import { ArrowLeft, FileText } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { useCallback, useEffect, useMemo, useState, type FormEvent, type KeyboardEvent } from "react"
+import { keepPreviousData, useQuery } from "@tanstack/react-query"
+import { useEffect, useMemo, useState, type FormEvent, type KeyboardEvent } from "react"
 import { ApiError } from "@/api/client"
-import { getCoordinationHistory, type CoordinationHistoryItem, type CoordinationHistoryPage as HistoryPayload } from "@/api/reviews"
+import { type CoordinationHistoryItem } from "@/api/reviews"
 import { FilterToolbar } from "@/components/domain/FilterToolbar"
 import { IconTooltip } from "@/components/domain/IconTooltip"
 import { LoadErrorState } from "@/components/domain/LoadErrorState"
@@ -20,12 +21,13 @@ import { Spinner } from "@/components/ui/spinner"
 import { Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { formatDateDisplay } from "@/lib/dateDisplay"
 import { goBack } from "@/lib/goBack"
-import { useLatestRequest } from "@/lib/latestRequest"
 import { openRevisionPdf } from "@/lib/openPdf"
+import { queryErrorMessage, sameKey } from "@/lib/queryClient"
 import { paths } from "@/lib/routes"
 import { activateRow } from "@/lib/rowActivation"
 import { toast } from "@/lib/toast"
 import { queryOf, queryPage, queryText, syncFilters } from "@/lib/urlFilters"
+import { coordinationHistoryQuery } from "@/queries/reviews"
 
 type Filters = { q: string; period: string }
 
@@ -42,15 +44,17 @@ const activateWithKey = (event: KeyboardEvent<HTMLTableRowElement>, action: () =
 export default function CoordinationHistoryPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const requests = useLatestRequest()
   const [initial] = useState(() => {
     const query = queryOf(searchParams)
     return { filters: { q: queryText(query.q), period: queryText(query.period) || "all" }, page: queryPage(query.page) }
   })
   const [filters, setFilters] = useState<Filters>(initial.filters)
-  const [data, setData] = useState<HistoryPayload | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [applied, setApplied] = useState(initial)
+  const query = useQuery({ ...coordinationHistoryQuery(applied.page, applied.filters), placeholderData: keepPreviousData })
+  const data = query.data ?? null
+  const loading = query.isFetching
+  const periodRejected = query.error instanceof ApiError && query.error.status === 422 && applied.filters.period !== "all"
+  const error = periodRejected ? null : queryErrorMessage(query, "No se pudo cargar el historial")
   const [openingPdf, setOpeningPdf] = useState<string | null>(null)
   const filtersActive = filters.q !== "" || filters.period !== "all"
   const groups = useMemo(() => {
@@ -60,42 +64,22 @@ export default function CoordinationHistoryPage() {
     return [...byPeriod.entries()].map(([period, items]) => ({ period, items }))
   }, [data])
 
-  const fetchHistory = useCallback(
-    (page: number, start: Filters): Promise<void> => {
-      const run = async (current: Filters): Promise<void> => {
-        const ticket = requests.begin()
-        try {
-          const response = await getCoordinationHistory({ q: current.q, period: current.period, page })
-          if (!requests.isCurrent(ticket)) return
-          setData(response)
-          syncFilters(router, { q: current.q, period: current.period }, page)
-        } catch (reason) {
-          if (!requests.isCurrent(ticket)) return
-          if (reason instanceof ApiError && reason.status === 422 && current.period !== "all") {
-            const reset = { ...current, period: "all" }
-            setFilters(reset)
-            await run(reset)
-            return
-          }
-          setError(reason instanceof ApiError ? reason.message : "No se pudo cargar el historial")
-        } finally {
-          if (requests.isCurrent(ticket)) setLoading(false)
-        }
-      }
-
-      return run(start)
-    },
-    [requests, router],
-  )
+  if (periodRejected) {
+    const reset = { ...applied.filters, period: "all" }
+    setFilters(reset)
+    setApplied({ page: applied.page, filters: reset })
+  }
 
   useEffect(() => {
-    void fetchHistory(initial.page, initial.filters)
-  }, [fetchHistory, initial])
+    if (query.isPlaceholderData || !query.data) return
+    syncFilters(router, { q: applied.filters.q, period: applied.filters.period }, applied.page)
+  }, [applied, query.data, query.isPlaceholderData, router])
 
   const load = (page = 1, current: Filters = filters): Promise<void> => {
-    setLoading(true)
-    setError(null)
-    return fetchHistory(page, current)
+    const next = { page, filters: current }
+    if (sameKey(next, applied)) return query.refetch().then(() => undefined)
+    setApplied(next)
+    return Promise.resolve()
   }
 
   const submit = (event: FormEvent<HTMLFormElement>): void => {

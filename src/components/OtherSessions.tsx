@@ -1,10 +1,10 @@
 "use client"
 
 import { LogOut, Monitor } from "lucide-react"
-import { useCallback, useEffect, useState } from "react"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useState } from "react"
 import { Controller } from "react-hook-form"
-import { ApiError } from "@/api/client"
-import { closeOtherDeviceSessions, getDeviceSessions, type DeviceSession } from "@/api/session"
+import { closeOtherDeviceSessions } from "@/api/session"
 import { FeedbackAlert } from "@/components/domain/FeedbackAlert"
 import { InputError } from "@/components/InputError"
 import { PasswordInput } from "@/components/PasswordInput"
@@ -17,33 +17,24 @@ import { Spinner } from "@/components/ui/spinner"
 import { formatDateDisplay } from "@/lib/dateDisplay"
 import { afterDialogExit } from "@/lib/dialogExit"
 import { applyApiErrors, fieldMessage, serverMessage, useSchemaForm } from "@/lib/forms"
+import { queryErrorMessage } from "@/lib/queryClient"
 import { toast } from "@/lib/toast"
+import { accountKeys, deviceSessionsQuery } from "@/queries/account"
 import { passwordConfirmationSchema, type PasswordConfirmationValues } from "@/schemas/twoFactor"
 
 const schema = passwordConfirmationSchema()
 
 export function OtherSessions() {
-  const [sessions, setSessions] = useState<DeviceSession[] | null>(null)
-  const [loadError, setLoadError] = useState<string | null>(null)
+  const queryClient = useQueryClient()
+  const query = useQuery(deviceSessionsQuery())
+  const sessions = query.data?.sessions ?? null
+  const loadError = queryErrorMessage(query, "No se pudieron cargar sus sesiones")
   const [open, setOpen] = useState(false)
   const form = useSchemaForm(schema, { defaultValues: { current_password: "" } })
   const { errors, isSubmitting: processing } = form.formState
   const password = form.watch("current_password")
   const error = serverMessage(errors)
   const others = (sessions ?? []).filter((session) => !session.current).length
-
-  const load = useCallback(async (): Promise<void> => {
-    setLoadError(null)
-    try {
-      setSessions((await getDeviceSessions()).sessions)
-    } catch (reason) {
-      setLoadError(reason instanceof ApiError ? reason.message : "No se pudieron cargar sus sesiones")
-    }
-  }, [])
-
-  useEffect(() => {
-    void Promise.resolve().then(load)
-  }, [load])
 
   const openDialog = (): void => {
     form.reset()
@@ -56,7 +47,7 @@ export function OtherSessions() {
       setOpen(false)
       toast.success(result.message)
       await afterDialogExit()
-      await load()
+      await queryClient.invalidateQueries({ queryKey: accountKeys.deviceSessions() })
     } catch (reason) {
       applyApiErrors(form.setError, reason, { fallback: "No se pudieron cerrar las otras sesiones" })
     }

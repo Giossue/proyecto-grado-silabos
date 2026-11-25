@@ -279,3 +279,20 @@ export async function regenerateCareerSyllabi(page: Page): Promise<void> {
   }
   await expect(page.getByRole("button", { name: "Pausar convocatoria" })).toBeVisible()
 }
+
+export async function submitSampleSyllabus(page: Page, account: Account, subject: string): Promise<boolean> {
+  trackAutosave(page)
+  await page.goto("/docente/mis-silabos")
+  const item = teacherListItem(page, subject)
+  await expect(item.or(page.getByText("Todavía no hay una convocatoria abierta"))).toBeVisible()
+  if (!(await item.isVisible()) || !/Sin iniciar|Borrador/.test(await item.innerText())) return false
+  await openTeacherSyllabus(page, subject)
+  const stamp = String(Date.now())
+  await fillIdentification(page, `Se adaptan materiales con letra ampliada (${stamp})`)
+  await fillPlanning(page)
+  await fillRichText(page)
+  await fillOutcomes(page)
+  await fillBibliography(page, stamp)
+  await submitSyllabus(page, account)
+  return true
+}

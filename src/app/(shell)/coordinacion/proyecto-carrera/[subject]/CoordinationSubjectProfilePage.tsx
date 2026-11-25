@@ -2,6 +2,7 @@
 
 import { ArrowLeft, ChevronLeft, ChevronRight, Eye } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
+import { useQueryClient } from "@tanstack/react-query"
 import { useCallback, useEffect, useEffectEvent, useState } from "react"
 import { ApiError } from "@/api/client"
 import { getScheduledSubjects, getSubjectProfile, getSubjectProfilePreview, saveSubjectProfile, type ScheduledSubjects, type SubjectProfileField, type SubjectProfilePreview } from "@/api/career-academics"
@@ -29,6 +30,7 @@ import { nodesOfType, type DocumentNode } from "@/lib/templateDocument"
 import { toast } from "@/lib/toast"
 import { cn } from "@/lib/utils"
 import { curriculumEditorState } from "@/state/curriculumEditor"
+import { careerAcademicKeys } from "@/queries/careerAcademics"
 
 type Subject = ScheduledSubjects["options"]["activeSubjects"][number]
 type Values = Record<string, DocumentNode | null>
@@ -59,6 +61,7 @@ const loadProfile = async (subjectId: string): Promise<Loaded> => {
 
 function SubjectProfile({ subjectId }: { subjectId: string }) {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const [data, setData] = useState<Loaded | null>(null)
   const [values, setValues] = useState<Values>({})
   const [loaded, setLoaded] = useState("")
@@ -94,7 +97,7 @@ function SubjectProfile({ subjectId }: { subjectId: string }) {
 
   const fetchProfile = useCallback(async (): Promise<void> => {
     try {
-      const next = await loadProfile(subjectId)
+      const next = await queryClient.fetchQuery({ queryKey: careerAcademicKeys.subjectProfile(subjectId), queryFn: () => loadProfile(subjectId), staleTime: 0 })
       setData(next)
       setValues(next.values)
       setLoaded(JSON.stringify(next.values))
@@ -103,7 +106,7 @@ function SubjectProfile({ subjectId }: { subjectId: string }) {
     } finally {
       setLoading(false)
     }
-  }, [subjectId])
+  }, [queryClient, subjectId])
 
   const warnBeforeUnload = useEffectEvent((event: BeforeUnloadEvent): void => {
     if (!changed) return
@@ -147,7 +150,7 @@ function SubjectProfile({ subjectId }: { subjectId: string }) {
     setPreviewLoading(true)
     setPreviewError(null)
     try {
-      setPreview(await getSubjectProfilePreview(subjectId))
+      setPreview(await queryClient.fetchQuery({ queryKey: careerAcademicKeys.subjectProfilePreview(subjectId), queryFn: () => getSubjectProfilePreview(subjectId), staleTime: 0 }))
     } catch (reason) {
       setPreviewError(reason instanceof ApiError ? reason.message : "No se pudo armar la vista previa")
     } finally {

@@ -81,3 +81,23 @@ export function fieldMessage<T extends FieldValues>(errors: FieldErrors<T>, name
   const found = name.split(".").reduce<unknown>((node, key) => (typeof node === "object" && node !== null ? (node as Record<string, unknown>)[key] : undefined), errors)
   return isFieldError(found) ? found.message : undefined
 }
+
+const FIELD_ERROR_KEYS = new Set(["type", "message", "types", "ref", "root"])
+
+export function errorMap<T extends FieldValues>(errors: FieldErrors<T>): Record<string, string[]> {
+  const found: Record<string, string[]> = {}
+  const visit = (node: unknown, path: string): void => {
+    if (typeof node !== "object" || node === null) return
+    if (isFieldError(node)) {
+      const list = errorMessages(node)
+      if (list && path) found[path] = list
+    }
+    for (const [key, value] of Object.entries(node)) {
+      if (isFieldError(node) && FIELD_ERROR_KEYS.has(key)) continue
+      visit(value, path ? `${path}.${key}` : key)
+    }
+  }
+  visit(errors, "")
+
+  return found
+}

@@ -1,6 +1,10 @@
 import "@testing-library/jest-dom/vitest"
+import { notifyManager } from "@tanstack/react-query"
 import { cleanup } from "@testing-library/react"
 import { afterEach } from "vitest"
+import { getQueryClient } from "@/lib/queryClient"
+
+notifyManager.setScheduler((callback) => callback());
 
 class TestResizeObserver implements ResizeObserver {
   observe(): void {}
@@ -32,5 +36,6 @@ if (typeof window !== 'undefined') {
 
   afterEach(() => {
     cleanup();
+    getQueryClient().clear();
   });
 }

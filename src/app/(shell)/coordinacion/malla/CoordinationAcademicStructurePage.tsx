@@ -2,10 +2,9 @@
 
 import { ArrowLeft, Pencil, UserPlus } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useCallback, useEffect, useState } from "react"
-import { ApiError } from "@/api/client"
-import { getCurriculum, getScheduledSubjects, getTeacherAssignments, type Curriculum, type ScheduledSubjects, type TeacherAssignments } from "@/api/career-academics"
-import { getSession } from "@/api/session"
+import { useQuery } from "@tanstack/react-query"
+import { useEffect, useState } from "react"
+import { type Curriculum } from "@/api/career-academics"
 import { CurriculumActions } from "@/components/domain/academic/CurriculumActions"
 import { CurriculumCanvas } from "@/components/domain/academic/curriculum/CurriculumCanvas"
 import { CurriculumConfigurationDialog } from "@/components/domain/academic/curriculum/CurriculumConfigurationDialog"
@@ -23,6 +22,8 @@ import { Spinner } from "@/components/ui/spinner"
 import { paths } from "@/lib/routes"
 import { toast } from "@/lib/toast"
 import { curriculumEditorState } from "@/state/curriculumEditor"
+import { errorMessage, failedQuery } from "@/lib/queryClient"
+import { coordinatorCareerQuery, curriculumQuery, scheduledSubjectsQuery, teacherAssignmentsQuery } from "@/queries/careerAcademics"
 
 export type AcademicStructureMode = "curriculum" | "schedule" | "teachers"
 
@@ -56,11 +57,18 @@ const removeLegacyBreakdownMode = (): void => {
 
 export function CoordinationAcademicStructurePage({ mode }: { mode: AcademicStructureMode }) {
   const router = useRouter()
-  const [curriculum, setCurriculum] = useState<Curriculum | null>(null)
-  const [schedule, setSchedule] = useState<ScheduledSubjects | null>(null)
-  const [assignments, setAssignments] = useState<TeacherAssignments | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState<string | null>(null)
+  const scope = useQuery(coordinatorCareerQuery())
+  const careerId = typeof scope.data === "string" ? scope.data : null
+  const curriculumState = useQuery({ ...curriculumQuery(careerId ?? ""), enabled: careerId !== null })
+  const scheduleState = useQuery({ ...scheduledSubjectsQuery(), enabled: careerId !== null })
+  const assignmentsState = useQuery({ ...teacherAssignmentsQuery(), enabled: careerId !== null })
+  const curriculum = curriculumState.data ?? null
+  const schedule = scheduleState.data ?? null
+  const assignments = assignmentsState.data ?? null
+  const initialStates = [scope, curriculumState, scheduleState, assignmentsState]
+  const failedInitial = initialStates.find((state) => failedQuery(state) && state.data === undefined)
+  const loadError = failedInitial ? errorMessage(failedInitial.error, "No se pudo cargar la estructura académica") : null
+  const loading = initialStates.some((state) => state.data === undefined && (state.isPending || state.isFetching))
   const [actionError, setActionError] = useState<string | null>(null)
   const [teacherOpen, setTeacherOpen] = useState(false)
   const [configurationOpen, setConfigurationOpen] = useState(false)
@@ -82,62 +90,31 @@ export function CoordinationAcademicStructurePage({ mode }: { mode: AcademicStru
 
   useEffect(() => () => curriculumEditorState.setOpen(false), [])
 
-  const fetchAll = useCallback(async (): Promise<void> => {
-    try {
-      const session = await getSession()
-      if (session.active_role?.code !== "coordinador" || !session.active_role.career_id) {
-        router.replace(paths.dashboard)
-        return
-      }
-      const [nextCurriculum, nextSchedule, nextAssignments] = await Promise.all([getCurriculum(session.active_role.career_id), getScheduledSubjects(), getTeacherAssignments()])
-      setCurriculum(nextCurriculum)
-      setSchedule(nextSchedule)
-      setAssignments(nextAssignments)
-    } catch (reason) {
-      setLoadError(reason instanceof ApiError ? reason.message : "No se pudo cargar la estructura académica")
-    } finally {
-      setLoading(false)
-    }
-  }, [router])
+  useEffect(() => {
+    if (scope.data === null) router.replace(paths.dashboard)
+  }, [router, scope.data])
 
   useEffect(() => {
     if (mode === "curriculum") removeLegacyBreakdownMode()
-    void Promise.resolve().then(fetchAll)
-  }, [fetchAll, mode])
+  }, [mode])
 
   const load = (): void => {
-    setLoading(true)
-    setLoadError(null)
-    void fetchAll()
+    void Promise.all(initialStates.filter((state) => state.data === undefined).map((state) => state.refetch()))
   }
 
-  const reloadSchedule = async (): Promise<void> => {
-    try {
-      setActionError(null)
-      setSchedule(await getScheduledSubjects())
-    } catch (reason) {
-      setActionError(reason instanceof ApiError ? reason.message : "No se pudo actualizar la programación académica")
-    }
+  const reload = async (state: { refetch: () => Promise<{ isError: boolean; error: unknown }> }, fallback: string): Promise<void> => {
+    setActionError(null)
+    const result = await state.refetch()
+    if (result.isError) setActionError(errorMessage(result.error, fallback))
   }
 
-  const reloadAssignments = async (): Promise<void> => {
-    try {
-      setActionError(null)
-      setAssignments(await getTeacherAssignments())
-    } catch (reason) {
-      setActionError(reason instanceof ApiError ? reason.message : "No se pudieron actualizar las asignaciones docentes")
-    }
-  }
+  const reloadSchedule = (): Promise<void> => reload(scheduleState, "No se pudo actualizar la programación académica")
+
+  const reloadAssignments = (): Promise<void> => reload(assignmentsState, "No se pudieron actualizar las asignaciones docentes")
 
   const reloadCurriculum = async (): Promise<void> => {
-    try {
-      const careerId = curriculum?.career.id
-      if (!careerId) return
-      setActionError(null)
-      setCurriculum(await getCurriculum(careerId))
-    } catch (reason) {
-      setActionError(reason instanceof ApiError ? reason.message : "No se pudo actualizar la malla")
-    }
+    if (!curriculum?.career.id) return
+    await reload(curriculumState, "No se pudo actualizar la malla")
   }
 
   const handleScheduleChanged = async (notice: string): Promise<void> => {
@@ -160,15 +137,11 @@ export function CoordinationAcademicStructurePage({ mode }: { mode: AcademicStru
     if (!careerId || openingEditor) return
     setOpeningEditor(true)
     setActionError(null)
-    try {
-      const current = await getCurriculum(careerId)
-      setCurriculum(current)
-      setEditingCurriculum(current.curriculum.editable && !current.curriculum.lock_reason)
-    } catch (reason) {
-      setActionError(reason instanceof ApiError ? reason.message : "No se pudo comprobar si la malla puede editarse")
-    } finally {
-      setOpeningEditor(false)
-    }
+    const result = await curriculumState.refetch()
+    const current = result.data
+    if (result.isError || !current) setActionError(errorMessage(result.error, "No se pudo comprobar si la malla puede editarse"))
+    else setEditingCurriculum(current.curriculum.editable && !current.curriculum.lock_reason)
+    setOpeningEditor(false)
   }
 
   const closeCurriculumEditor = (): void => {

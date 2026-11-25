@@ -3,8 +3,9 @@
 import { Bell, CalendarClock, CheckCheck, ClipboardCheck, FileText, Library, X, type LucideIcon } from "lucide-react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useEffect, useRef, useState } from "react"
-import { getNotifications, markAllNotificationsRead, markNotificationRead, type Notification } from "@/api/notifications"
+import { markAllNotificationsRead, markNotificationRead, type Notification } from "@/api/notifications"
 import { ChoiceGroup } from "@/components/domain/ChoiceGroup"
 import { EmptyState } from "@/components/domain/EmptyState"
 import { FeedbackAlert } from "@/components/domain/FeedbackAlert"
@@ -20,9 +21,10 @@ import { useMediaQuery } from "@/hooks/useMediaQuery"
 import { relativeTime } from "@/lib/relativeTime"
 import { paths, roleNotifications } from "@/lib/routes"
 import { withoutFinalPeriod } from "@/lib/utils"
+import { notificationKeys, notificationPreviewQuery, unreadCountQuery, type NotificationStatus } from "@/queries/notifications"
 import { sessionState, useSession } from "@/state/session"
 
-type Status = "all" | "unread"
+type Status = NotificationStatus
 
 const PREVIEW_LIMIT = 10
 const statusOptions = [{ value: "all", label: "Todas" }, { value: "unread", label: "No leídas" }]
@@ -47,52 +49,33 @@ export function NotificationsSheet() {
   const { session } = useSession()
   const [open, setOpen] = useState(false)
   const [status, setStatus] = useState<Status>("unread")
-  const [items, setItems] = useState<Notification[]>([])
-  const [unreadCount, setUnreadCount] = useState(0)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
+  const queryClient = useQueryClient()
+  const countQuery = useQuery(unreadCountQuery())
+  const preview = useQuery({ ...notificationPreviewQuery(queryClient, status), enabled: open })
+  const unreadCount = countQuery.data ?? 0
+  const items = (preview.data?.notifications.data ?? []).slice(0, PREVIEW_LIMIT)
+  const loading = preview.isFetching
+  const error = actionError ?? (preview.isError ? "No se pudieron cargar las notificaciones" : null)
   const hasActiveRole = session?.active_role != null
   const isNotificationsPage = isNotificationsPath(pathname)
   const wasNotificationsPage = useRef(isNotificationsPage)
 
-  const load = async (filter: Status): Promise<void> => {
-    setLoading(true)
-    setError(null)
-    try {
-      const result = await getNotifications(filter)
-      setItems(result.notifications.data.slice(0, PREVIEW_LIMIT))
-      setUnreadCount(result.unread_count)
-    } catch {
-      setError("No se pudieron cargar las notificaciones")
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const refreshCount = (): Promise<void> =>
-    getNotifications("unread").then(
-      (result) => setUnreadCount(result.unread_count),
-      () => setUnreadCount(0),
-    )
-
-  useEffect(() => {
-    void getNotifications("unread").then(
-      (result) => setUnreadCount(result.unread_count),
-      () => setUnreadCount(0),
-    )
-  }, [])
-
   useEffect(() => {
     const previous = wasNotificationsPage.current
     wasNotificationsPage.current = isNotificationsPage
-    if (previous && !isNotificationsPage) void refreshCount()
-  }, [isNotificationsPage])
+    if (previous && !isNotificationsPage) void queryClient.invalidateQueries({ queryKey: notificationKeys.unreadCount() })
+  }, [isNotificationsPage, queryClient])
+
+  const startPreview = (): void => {
+    setActionError(null)
+    queryClient.removeQueries({ queryKey: notificationKeys.previews() })
+  }
 
   const openSheet = (): void => {
-    setOpen(true)
-    setItems([])
+    startPreview()
     setStatus("unread")
-    void load("unread")
+    setOpen(true)
   }
 
   const openNotifications = (): void => {
@@ -103,10 +86,8 @@ export function NotificationsSheet() {
 
   const updateStatus = (value: string): void => {
     if (value !== "all" && value !== "unread") return
+    if (open) startPreview()
     setStatus(value)
-    if (!open) return
-    setItems([])
-    void load(value)
   }
 
   const select = async (notification: Notification): Promise<void> => {
@@ -116,20 +97,23 @@ export function NotificationsSheet() {
       await openDestination(notification)
     } else if (unread) {
       const readAt = new Date().toISOString()
-      setItems((current) => current.map((item) => (item.id === notification.id ? { ...item, leido_en: readAt } : item)))
+      queryClient.setQueryData(notificationKeys.preview(status), (current: typeof preview.data) =>
+        current ? { ...current, notifications: { ...current.notifications, data: current.notifications.data.map((item) => (item.id === notification.id ? { ...item, leido_en: readAt } : item)) } } : current,
+      )
       void markNotificationRead(notification.id).catch(() => undefined)
     }
-    if (unread) setUnreadCount((count) => Math.max(0, count - 1))
+    if (unread) queryClient.setQueryData<number>(notificationKeys.unreadCount(), (count = 0) => Math.max(0, count - 1))
   }
 
   const readAll = async (): Promise<void> => {
+    setActionError(null)
     try {
       await markAllNotificationsRead()
     } catch {
-      setError("No se pudieron marcar las notificaciones como leídas")
+      setActionError("No se pudieron marcar las notificaciones como leídas")
       return
     }
-    await load(status)
+    await queryClient.invalidateQueries({ queryKey: notificationKeys.all })
   }
 
   return (

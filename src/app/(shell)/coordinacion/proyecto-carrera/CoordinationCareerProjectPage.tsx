@@ -2,10 +2,9 @@
 
 import { BookOpen, ChevronDown, FileText, Plus } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { useCallback, useEffect, useMemo, useState, type KeyboardEvent } from "react"
-import { ApiError } from "@/api/client"
-import { getScheduledSubjects, type ScheduledSubjects } from "@/api/career-academics"
-import { getSession } from "@/api/session"
+import { useQuery } from "@tanstack/react-query"
+import { useEffect, useMemo, useState, type KeyboardEvent } from "react"
+import { type ScheduledSubjects } from "@/api/career-academics"
 import { FichaImportDialog } from "@/components/domain/academic/FichaImportDialog"
 import { SupportDocumentsPanel } from "@/components/domain/academic/SupportDocumentsPanel"
 import { ClientFilterBar } from "@/components/domain/ClientFilterBar"
@@ -27,6 +26,8 @@ import { useClientFilter, type ClientFilterDefinition } from "@/composables/useC
 import { paths } from "@/lib/routes"
 import { toast } from "@/lib/toast"
 import { cn } from "@/lib/utils"
+import { queryErrorMessage } from "@/lib/queryClient"
+import { coordinatorCareerQuery, scheduledSubjectsQuery } from "@/queries/careerAcademics"
 
 type Subject = ScheduledSubjects["options"]["activeSubjects"][number]
 
@@ -46,9 +47,11 @@ export default function CoordinationCareerProjectPage() {
   const searchParams = useSearchParams()
   const [tab, setTab] = useState(() => (searchParams.get("tab") === "documentos" ? "documentos" : "materias"))
   const [uploadOpen, setUploadOpen] = useState(false)
-  const [data, setData] = useState<ScheduledSubjects | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState<string | null>(null)
+  const scope = useQuery(coordinatorCareerQuery())
+  const query = useQuery({ ...scheduledSubjectsQuery(), enabled: typeof scope.data === "string" })
+  const data = query.data ?? null
+  const loading = scope.isFetching || query.isFetching
+  const loadError = queryErrorMessage(scope, "No se pudo cargar el proyecto de carrera") ?? queryErrorMessage(query, "No se pudo cargar el proyecto de carrera")
 
   const subjects = useMemo(() => (data?.options.activeSubjects ?? []).filter((subject) => subject.generates_syllabus !== false), [data])
   const filter = useClientFilter(subjects, searchable, subjectFilters)
@@ -57,30 +60,11 @@ export default function CoordinationCareerProjectPage() {
   for (const subject of filter.items) byCycle.set(cycleLabel(subject), [...(byCycle.get(cycleLabel(subject)) ?? []), subject])
   const groups = [...byCycle].sort(([left], [right]) => compareCycles(left, right)).map(([cycle, list]) => ({ cycle, list }))
 
-  const fetchData = useCallback(async (): Promise<void> => {
-    try {
-      const session = await getSession()
-      if (session.active_role?.code !== "coordinador" || !session.active_role.career_id) {
-        router.replace(paths.dashboard)
-        return
-      }
-      setData(await getScheduledSubjects())
-    } catch (reason) {
-      setLoadError(reason instanceof ApiError ? reason.message : "No se pudo cargar el proyecto de carrera")
-    } finally {
-      setLoading(false)
-    }
-  }, [router])
-
   useEffect(() => {
-    void Promise.resolve().then(fetchData)
-  }, [fetchData])
+    if (scope.data === null) router.replace(paths.dashboard)
+  }, [scope.data, router])
 
-  const load = (): Promise<void> => {
-    setLoading(true)
-    setLoadError(null)
-    return fetchData()
-  }
+  const load = (): Promise<void> => Promise.all([scope.refetch(), query.refetch()]).then(() => undefined)
 
   const changeTab = (value: string): void => {
     setTab(value)

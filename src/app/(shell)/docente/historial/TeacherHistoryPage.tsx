@@ -2,9 +2,10 @@
 
 import { ArrowLeft } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useCallback, useEffect, useState, type KeyboardEvent } from "react"
+import { useQuery } from "@tanstack/react-query"
+import { useEffect, type KeyboardEvent } from "react"
 import { ApiError } from "@/api/client"
-import { getTeacherHistory, type HistoryCareer } from "@/api/syllabi"
+import { type HistoryCareer } from "@/api/syllabi"
 import { LoadErrorState } from "@/components/domain/LoadErrorState"
 import { LoadingSkeleton } from "@/components/domain/LoadingSkeleton"
 import { PageFrame } from "@/components/domain/PageFrame"
@@ -13,7 +14,9 @@ import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useClientPagination } from "@/composables/useClientPagination"
 import { goBack } from "@/lib/goBack"
+import { failedQuery, queryErrorMessage } from "@/lib/queryClient"
 import { paths } from "@/lib/routes"
+import { teacherHistoryQuery } from "@/queries/teacher"
 import { activateRow } from "@/lib/rowActivation"
 
 const NO_CAREERS: HistoryCareer[] = []
@@ -26,33 +29,20 @@ const activateWithKey = (event: KeyboardEvent<HTMLTableRowElement>, action: () =
 
 export default function TeacherHistoryPage() {
   const router = useRouter()
-  const [careers, setCareers] = useState<HistoryCareer[] | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const query = useQuery(teacherHistoryQuery())
+  const careers = query.data?.careers ?? null
+  const failed = failedQuery(query)
+  const status = failed && query.error instanceof ApiError ? query.error.status : null
+  const error = status === 401 ? null : queryErrorMessage(query, "No se pudo cargar su historial")
   const loading = careers === null && error === null
   const { items: pagedCareers, meta, setPage } = useClientPagination(careers ?? NO_CAREERS, 20)
 
-  const fetchHistory = useCallback(
-    (): Promise<void> =>
-      getTeacherHistory().then(
-        (result) => setCareers(result.careers),
-        (reason: unknown) => {
-          if (reason instanceof ApiError && reason.status === 401) {
-            router.replace(paths.login)
-            return
-          }
-          setError(reason instanceof ApiError ? reason.message : "No se pudo cargar su historial")
-        },
-      ),
-    [router],
-  )
-
   useEffect(() => {
-    void fetchHistory()
-  }, [fetchHistory])
+    if (status === 401) router.replace(paths.login)
+  }, [router, status])
 
   const load = (): void => {
-    setError(null)
-    void fetchHistory()
+    void query.refetch()
   }
 
   const open = (career: HistoryCareer): void => router.push(paths.teacher.historyCareer(career.id))

@@ -15,7 +15,10 @@ test.describe.serial("syllabus lifecycle", () => {
     const item = teacherListItem(teacher, subject)
     await expect(item).toBeVisible()
     const state = (await item.innerText()).trim()
-    test.skip(/Sin iniciar|Borrador/.test(state), `the syllabus is already editable (${state})`)
+    if (/Sin iniciar|Borrador/.test(state)) {
+      test.info().annotations.push({ type: "precondition", description: `the syllabus is already editable (${state}), nothing to restart` })
+      return
+    }
     const coordinator = await actor("coordinator")
     await openTrackedReview(coordinator, subject)
     await restartFromReview(coordinator, subject, "Reinicio para repetir la prueba de punta a punta")

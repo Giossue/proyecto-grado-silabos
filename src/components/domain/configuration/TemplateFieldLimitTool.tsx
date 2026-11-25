@@ -1,7 +1,7 @@
 "use client"
 
 import { TextCursorInput } from "lucide-react"
-import { useId, useState, type FormEvent } from "react"
+import { useId, useState } from "react"
 import { MenuTooltip } from "@/components/domain/MenuTooltip"
 import { Button } from "@/components/ui/button"
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { useOpened } from "@/composables/useModelOpen"
 import { FIELD_LIMIT_MAX, FIELD_LIMIT_MIN, formatCharacters } from "@/lib/fieldLimits"
+import { fieldMessage, useSchemaForm } from "@/lib/forms"
+import { fieldLimitFormSchema } from "@/schemas/template"
 
 type TemplateFieldLimitToolProps = {
   limit?: number | null
@@ -19,28 +21,22 @@ type TemplateFieldLimitToolProps = {
 }
 
 const LABEL = "Límite de caracteres"
+const limitSchema = fieldLimitFormSchema(`Escriba un número entre ${FIELD_LIMIT_MIN} y ${formatCharacters(FIELD_LIMIT_MAX)}`)
 
 export function TemplateFieldLimitTool({ limit = null, selected = false, editable = false, disabled = false, onApply }: TemplateFieldLimitToolProps) {
   const id = useId()
   const [open, setOpen] = useState(false)
-  const [draft, setDraft] = useState("")
-  const [tried, setTried] = useState(false)
+  const form = useSchemaForm(limitSchema, { defaultValues: { limit: "" }, reValidateMode: "onChange" })
+  const error = fieldMessage(form.formState.errors, "limit") ?? ""
+  const tried = form.formState.isSubmitted
   const tooltip = !selected ? `${LABEL}: elija un campo` : editable ? LABEL : `${LABEL}: solo en campos editables`
-  const value = /^\d+$/.test(draft.trim()) ? Number(draft.trim()) : null
-  const error = value === null || value < FIELD_LIMIT_MIN || value > FIELD_LIMIT_MAX ? `Escriba un número entre ${FIELD_LIMIT_MIN} y ${formatCharacters(FIELD_LIMIT_MAX)}` : ""
 
-  useOpened(open, () => {
-    setDraft(limit ? String(limit) : "")
-    setTried(false)
-  })
+  useOpened(open, () => form.reset({ limit: limit ? String(limit) : "" }))
 
-  const apply = (event: FormEvent<HTMLFormElement>): void => {
-    event.preventDefault()
-    setTried(true)
-    if (error) return
-    onApply(value)
+  const apply = form.handleSubmit(({ limit: chosen }) => {
+    onApply(Number(chosen))
     setOpen(false)
-  }
+  })
   const remove = (): void => {
     onApply(null)
     setOpen(false)
@@ -55,11 +51,11 @@ export function TemplateFieldLimitTool({ limit = null, selected = false, editabl
           </Button>
         </PopoverTrigger>
         <PopoverContent align="start" className="w-72">
-          <form noValidate onSubmit={apply}>
+          <form noValidate onSubmit={(event) => void apply(event)}>
             <FieldGroup>
               <Field data-invalid={tried && error ? true : undefined}>
                 <FieldLabel htmlFor={`${id}-limit`}>{LABEL}</FieldLabel>
-                <Input id={`${id}-limit`} value={draft} inputMode="numeric" autoComplete="off" placeholder="500" data-field-limit-input onChange={(event) => setDraft(event.target.value)} />
+                <Input id={`${id}-limit`} {...form.register("limit")} inputMode="numeric" autoComplete="off" placeholder="500" data-field-limit-input />
                 <FieldDescription>Cuenta lo que escribe el docente en el campo: su texto y sus respuestas de texto.</FieldDescription>
                 {tried && error ? <FieldError data-field-limit-error>{error}</FieldError> : null}
               </Field>

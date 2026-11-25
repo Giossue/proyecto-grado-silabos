@@ -3,7 +3,6 @@
 import { ArrowLeft, ArrowRight, Plus } from "lucide-react"
 import { useEffect, useEffectEvent, useState, type FormEvent } from "react"
 import { createAcademicRecord } from "@/api/academic"
-import { ApiError } from "@/api/client"
 import type { CatalogLibrary } from "@/api/libraryCatalog"
 import { DatePicker } from "@/components/DatePicker"
 import { FacultyLibraryChecks } from "@/components/domain/academic/FacultyLibraryChecks"
@@ -19,11 +18,12 @@ import { initialLibraries, librariesToStore, useCatalogLibraries } from "@/compo
 import { useInstitutionToday } from "@/composables/useInstitutionDate"
 import { useFormSteps } from "@/composables/useFormSteps"
 import { useModelOpen, useOpened } from "@/composables/useModelOpen"
+import { applyApiErrors, errorMap, useSchemaForm } from "@/lib/forms"
 import { VALIDATION_LIMITS } from "@/lib/validationLimits"
+import { careerSchema, facultySchema, periodSchema } from "@/schemas/academic"
 import type { AcademicStructureProps, GovernanceCatalogEntity } from "@/types/academic"
 
 type RecordForm = { nombre: string; code: string; faculty_id: string; campus: string; modality: string; cycle_count: string; starts_on: string; ends_on: string }
-type Errors = Record<string, string[]>
 
 type CatalogRecordDialogProps = Pick<AcademicStructureProps, "options"> & {
   entity: GovernanceCatalogEntity
@@ -42,13 +42,18 @@ const LABELS: Record<GovernanceCatalogEntity, { trigger: string; title: string; 
   periodo: { trigger: "Nuevo periodo académico", title: "Nuevo periodo académico", description: "Complete los datos del periodo académico", submit: "Crear periodo" },
 }
 
+const recordSchema = (entity: GovernanceCatalogEntity, values: RecordForm) =>
+  entity === "facultad" ? facultySchema({ updating: false }) : entity === "carrera" ? careerSchema({ updating: false }) : periodSchema({ startsOn: values.starts_on, creating: true })
+
 const filled = (...values: string[]): boolean => values.every((value) => String(value).trim() !== "")
 
 export function CatalogRecordDialog({ options, entity, disabled = false, showTrigger = true, open, onOpenChange, onSaved }: CatalogRecordDialogProps) {
   const [isOpen, setOpen] = useModelOpen(open, onOpenChange)
   const [processing, setProcessing] = useState(false)
-  const [errors, setErrors] = useState<Errors>({})
-  const [form, setForm] = useState<RecordForm>(EMPTY_FORM)
+  const recordForm = useSchemaForm((values) => recordSchema(entity, values as RecordForm), { defaultValues: EMPTY_FORM })
+  const watched = recordForm.watch()
+  const form: RecordForm = { ...EMPTY_FORM, ...(watched as Partial<RecordForm>) }
+  const errors = errorMap(recordForm.formState.errors)
   const [logo, setLogo] = useState<File | null>(null)
   const { step, goTo, reset: resetStep, stepClassName } = useFormSteps<1 | 2>(1)
   const [chosenLibraries, setChosenLibraries] = useState<string[]>([])
@@ -58,9 +63,8 @@ export function CatalogRecordDialog({ options, entity, disabled = false, showTri
   const labels = LABELS[entity]
 
   useOpened(isOpen, () => {
-    setForm(EMPTY_FORM)
+    recordForm.reset(EMPTY_FORM)
     setLogo(null)
-    setErrors({})
     resetStep()
     setChosenLibraries([])
   })
@@ -81,64 +85,63 @@ export function CatalogRecordDialog({ options, entity, disabled = false, showTri
   }[entity]
 
   const setField = (key: keyof RecordForm, value: string): void => {
-    const changed: (keyof RecordForm)[] = [key]
-    const next = { ...form, [key]: value }
-    if (key === "starts_on" && value && next.ends_on && next.ends_on < value) {
-      next.ends_on = ""
-      changed.push("ends_on")
+    recordForm.setValue(key, value)
+    recordForm.clearErrors(key)
+    if (key === "starts_on" && value && form.ends_on && form.ends_on < value) {
+      recordForm.setValue("ends_on", "")
+      recordForm.clearErrors("ends_on")
     }
-    setForm(next)
-    setErrors((current) => {
-      if (!changed.some((name) => name in current)) return current
-      return Object.fromEntries(Object.entries(current).filter(([name]) => !changed.includes(name as keyof RecordForm)))
-    })
   }
 
   const logoValidationError = (message: string | null): void => {
-    setErrors((current) => {
-      const next = { ...current }
-      if (message) next.logo = [message]
-      else delete next.logo
-      return next
-    })
+    if (message) recordForm.setError("logo" as keyof RecordForm, { type: "client", message })
+    else recordForm.clearErrors("logo" as keyof RecordForm)
   }
+
+  const save = recordForm.handleSubmit(
+    async () => {
+      if (entity === "facultad" && koha !== null && chosenLibraries.length === 0) {
+        recordForm.setError("catalog_libraries" as keyof RecordForm, { type: "client", message: "Marque al menos una biblioteca" })
+        return
+      }
+      setProcessing(true)
+      const payload = new FormData()
+      for (const [key, value] of Object.entries(recordForm.getValues())) {
+        if (key === "code" && entity !== "carrera") continue
+        payload.set(key, String(value ?? ""))
+      }
+      if (logo) payload.set("logo", logo)
+      const libraries = entity === "facultad" && koha !== null ? librariesToStore(chosenLibraries, koha) : []
+      if (libraries.length > 0) payload.set("catalog_libraries", JSON.stringify(libraries))
+      try {
+        const result = await createAcademicRecord(entity, payload)
+        setOpen(false)
+        onSaved?.(result.message)
+      } catch (reason) {
+        const received = applyApiErrors(recordForm.setError, reason, { fallback: "No se pudo guardar" })
+        if (entity === "facultad") goTo(Object.keys(received).some((key) => key.startsWith("catalog_libraries")) ? 2 : 1)
+      } finally {
+        setProcessing(false)
+      }
+    },
+    () => {
+      if (entity === "facultad") goTo(1)
+    },
+  )
 
   const submit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault()
     if (disabled) return
-    setErrors({})
+    recordForm.clearErrors()
     if (entity === "facultad" && !logo) {
-      setErrors({ logo: ["Cargue el logo de la facultad"] })
+      recordForm.setError("logo" as keyof RecordForm, { type: "client", message: "Cargue el logo de la facultad" })
       return
     }
     if (entity === "facultad" && step === 1) {
       goTo(2)
       return
     }
-    if (entity === "facultad" && koha !== null && chosenLibraries.length === 0) {
-      setErrors({ catalog_libraries: ["Marque al menos una biblioteca"] })
-      return
-    }
-    setProcessing(true)
-    const payload = new FormData()
-    for (const [key, value] of Object.entries(form)) {
-      if (key === "code" && entity !== "carrera") continue
-      payload.set(key, String(value))
-    }
-    if (logo) payload.set("logo", logo)
-    const libraries = entity === "facultad" && koha !== null ? librariesToStore(chosenLibraries, koha) : []
-    if (libraries.length > 0) payload.set("catalog_libraries", JSON.stringify(libraries))
-    try {
-      const result = await createAcademicRecord(entity, payload)
-      setOpen(false)
-      onSaved?.(result.message)
-    } catch (reason) {
-      const received = reason instanceof ApiError ? reason.errors : {}
-      setErrors(received)
-      if (entity === "facultad") goTo(Object.keys(received).some((key) => key.startsWith("catalog_libraries")) ? 2 : 1)
-    } finally {
-      setProcessing(false)
-    }
+    await save(event)
   }
 
   const selectField = (key: keyof RecordForm, id: string, label: string, placeholder: string, items: { value: string; label: string }[]) => (
@@ -185,7 +188,7 @@ export function CatalogRecordDialog({ options, entity, disabled = false, showTri
       description={labels.description}
     >
       {({ close }) => (
-        <form onSubmit={(event) => void submit(event)}>
+        <form onSubmit={(event) => void submit(event)} noValidate>
           <FieldGroup>
             {entity === "facultad" && step === 1 ? (
               <FieldGroup key="datos" className={stepClassName}>

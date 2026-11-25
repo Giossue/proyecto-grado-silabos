@@ -2,9 +2,10 @@
 
 import { ArrowRight, CheckCircle2 } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useCallback, useEffect, useState } from "react"
+import { useQuery } from "@tanstack/react-query"
+import { useEffect, useRef, useState } from "react"
 import { ApiError } from "@/api/client"
-import { getSession, selectActiveRole, type ActiveRole, type Session } from "@/api/session"
+import { selectActiveRole, type ActiveRole } from "@/api/session"
 import { FeedbackAlert } from "@/components/domain/FeedbackAlert"
 import { LoadErrorState } from "@/components/domain/LoadErrorState"
 import { LoadingSkeleton } from "@/components/domain/LoadingSkeleton"
@@ -17,7 +18,7 @@ import { Spinner } from "@/components/ui/spinner"
 import { consumeIntendedRoute } from "@/lib/intended-route"
 import { roleLabel, scopeTitle } from "@/lib/roles"
 import { paths, roleEntry } from "@/lib/routes"
-import { sessionState } from "@/state/session"
+import { sessionQuery, sessionState } from "@/state/session"
 
 const selectionDescription = "Seleccione la carrera con la que trabajará en esta sesión"
 
@@ -31,9 +32,11 @@ const roleDescription = (role: ActiveRole): string => {
 
 export default function WorkspacePage() {
   const router = useRouter()
-  const [session, setSession] = useState<Session | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState<string | null>(null)
+  const query = useQuery({ ...sessionQuery, staleTime: 0, refetchOnMount: "always" })
+  const fresh = query.isFetchedAfterMount && !query.isError
+  const session = fresh ? (query.data ?? null) : null
+  const loadError = query.isError ? "No se pudo cargar su sesión" : null
+  const routed = useRef(false)
   const [actionError, setActionError] = useState<string | null>(null)
   const [selectingRoleId, setSelectingRoleId] = useState<string | null>(null)
   const [workspaceCount] = useState(() => sessionState.current.value?.available_roles.length ?? 3)
@@ -46,39 +49,23 @@ export default function WorkspacePage() {
     return `Entrar como ${roleLabel(role.code)}`
   }
 
-  const fetchSession = useCallback(
-    (): Promise<void> =>
-      getSession()
-        .then((current) => {
-          setSession(current)
-          sessionState.replace(current)
-          if (!current.user.email_verified) {
-            router.replace(paths.emailVerificationRequired)
-            return
-          }
-          if (current.active_role) {
-            router.replace(consumeIntendedRoute() ?? roleEntry(current.active_role.code))
-          }
-        })
-        .catch((reason: unknown) => {
-          if (reason instanceof ApiError && reason.status === 401) {
-            router.replace(paths.login)
-            return
-          }
-          setLoadError("No se pudo cargar su sesión")
-        })
-        .finally(() => setLoading(false)),
-    [router],
-  )
-
   useEffect(() => {
-    void fetchSession()
-  }, [fetchSession])
+    if (!query.isFetchedAfterMount || query.isFetching || query.isError || routed.current) return
+    routed.current = true
+    const current = query.data ?? null
+    if (!current) {
+      router.replace(paths.login)
+      return
+    }
+    if (!current.user.email_verified) {
+      router.replace(paths.emailVerificationRequired)
+      return
+    }
+    if (current.active_role) router.replace(consumeIntendedRoute() ?? roleEntry(current.active_role.code))
+  }, [query.data, query.isError, query.isFetchedAfterMount, query.isFetching, router])
 
   const load = (): void => {
-    setLoading(true)
-    setLoadError(null)
-    void fetchSession()
+    void query.refetch()
   }
 
   const selectRole = async (roleAssignmentId: string): Promise<void> => {
@@ -86,7 +73,7 @@ export default function WorkspacePage() {
     setSelectingRoleId(roleAssignmentId)
     try {
       const selected = await selectActiveRole(roleAssignmentId)
-      setSession(selected)
+      routed.current = true
       sessionState.replace(selected)
       router.replace(consumeIntendedRoute() ?? roleEntry(selected.active_role?.code))
     } catch (reason) {
@@ -139,6 +126,6 @@ export default function WorkspacePage() {
   }
 
   if (loadError) return <LoadErrorState message={loadError} onRetry={load} />
-  if (loading) return <LoadingSkeleton variant="workspace" workspaceCount={workspaceCount} />
+  if (!fresh || query.isFetching) return <LoadingSkeleton variant="workspace" workspaceCount={workspaceCount} />
   return null
 }

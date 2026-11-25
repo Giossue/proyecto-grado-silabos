@@ -1,12 +1,8 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react"
-import { getAcademicGovernance, type AcademicGovernance } from "@/api/academic"
-import { ApiError } from "@/api/client"
-import { getDashboard, type Dashboard } from "@/api/dashboard"
-import { getProcesses, type Processes } from "@/api/processes"
-import { getSession } from "@/api/session"
+import { useQuery } from "@tanstack/react-query"
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react"
 import { ClientFilterBar } from "@/components/domain/ClientFilterBar"
 import { LoadErrorState } from "@/components/domain/LoadErrorState"
 import { LoadingSkeleton } from "@/components/domain/LoadingSkeleton"
@@ -31,6 +27,9 @@ import { paths } from "@/lib/routes"
 import { activateRow } from "@/lib/rowActivation"
 import { toast } from "@/lib/toast"
 import { setupChecklistState } from "@/state/setupChecklist"
+import { queryErrorMessage } from "@/lib/queryClient"
+import { dashboardSummaryQuery } from "@/queries/dashboard"
+import { processOverviewQuery } from "@/queries/processes"
 
 const STATE_LABELS = { abierto: "Abierto", pausado: "Pausado", cerrado: "Finalizado" } as const
 const STATE_TONES = { abierto: "success", pausado: "warning", cerrado: "info" } as const
@@ -47,11 +46,13 @@ const FILTERS: Record<string, ClientFilterDefinition<ConvocationRow>> = {
 
 export default function AdminProcessesPage() {
   const router = useRouter()
-  const [governance, setGovernance] = useState<AcademicGovernance | null>(null)
-  const [processData, setProcessData] = useState<Processes | null>(null)
-  const [summary, setSummary] = useState<Dashboard | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const query = useQuery(processOverviewQuery())
+  const summaryQuery = useQuery(dashboardSummaryQuery())
+  const governance = query.data?.governance ?? null
+  const processData = query.data?.processes ?? null
+  const summary = summaryQuery.data ?? null
+  const loading = query.isFetching
+  const error = queryErrorMessage(query, "No se pudieron cargar las convocatorias")
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
   const rowActions = useRef<ConvocationRowActionsHandle>(null)
@@ -70,36 +71,15 @@ export default function AdminProcessesPage() {
   const inProgress = rows.some((row) => row.process?.state === "abierto" || row.process?.state === "pausado")
   const current = rows.find((row) => row.id === selectedId) ?? null
 
-  const fetchAll = useCallback(
-    (previous: Dashboard | null): Promise<void> =>
-      getSession()
-        .then(async (session) => {
-          if (session.active_role?.code !== "administrador") {
-            router.replace(paths.dashboard)
-            return
-          }
-          const [nextGovernance, nextProcesses, nextSummary] = await Promise.all([getAcademicGovernance(), getProcesses(), getDashboard().catch(() => previous)])
-          setGovernance(nextGovernance)
-          setProcessData(nextProcesses)
-          setSummary(nextSummary)
-          if (nextSummary?.setup !== undefined) setupChecklistState.update(nextSummary.setup)
-        })
-        .catch((reason: unknown) => {
-          setError(reason instanceof ApiError ? reason.message : "No se pudieron cargar las convocatorias")
-        })
-        .finally(() => setLoading(false)),
-    [router],
-  )
+  useEffect(() => {
+    if (query.data === null) router.replace(paths.dashboard)
+  }, [query.data, router])
 
   useEffect(() => {
-    void fetchAll(null)
-  }, [fetchAll])
+    if (summary?.setup !== undefined) setupChecklistState.update(summary.setup)
+  }, [summary])
 
-  const load = (): Promise<void> => {
-    setLoading(true)
-    setError(null)
-    return fetchAll(summary)
-  }
+  const load = (): Promise<void> => Promise.all([query.refetch(), summaryQuery.refetch()]).then(() => undefined)
 
   const changed = async (notice: string): Promise<void> => {
     toast.success(notice)

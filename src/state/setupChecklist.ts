@@ -1,15 +1,15 @@
 import { getDashboard, type SetupChecklist, type SetupStep } from '@/api/dashboard';
 import type { Session } from '@/api/session';
+import { cachedValue, getQueryClient } from '@/lib/queryClient';
 import { signal, useSignal, type ReadonlySignal } from '@/lib/signal';
+import { dashboardKeys } from '@/queries/dashboard';
 import { sessionState, useSession } from '@/state/session';
 import { watchSessionKey } from '@/state/sessionKey';
+import '@/queries/mutationRefresh';
 
 const FRESH_FOR_MS = 10_000;
-const AFTER_MUTATION_MS = 400;
 const START_KEYS: Record<string, string> = { administrador: 'process', coordinador: 'convocation' };
 
-const setup = signal<SetupChecklist | null>(null);
-let loadedAt = 0;
 const openRequests = signal(0);
 const requestOpen = (): void => { openRequests.value += 1; };
 
@@ -21,6 +21,10 @@ const keyOf = (session: Session | null): string | null => {
 
 const sessionKey = (): string | null => keyOf(sessionState.current.value);
 
+const queryKeyOf = (key: string | null) => (key ? dashboardKeys.setup(key) : null);
+
+const setup = cachedValue<SetupChecklist | null>(() => queryKeyOf(sessionKey()), null);
+
 const startKeyOf = (session: Session | null): string | null => START_KEYS[session?.active_role?.code ?? ''] ?? null;
 
 const stepsOf = (checklist: SetupChecklist | null, startKey: string | null): SetupStep[] =>
@@ -30,37 +34,31 @@ const startOf = (checklist: SetupChecklist | null, startKey: string | null): Set
     checklist?.steps.find((step) => step.key === startKey) ?? null;
 
 const update = (checklist: SetupChecklist | null): void => {
-    setup.value = checklist;
-    loadedAt = Date.now();
+    const key = sessionKey();
+    if (!key) return;
+    getQueryClient().setQueryData(dashboardKeys.setup(key), checklist);
 };
 
-const load = async (): Promise<void> => {
+const fetchSetup = async (): Promise<SetupChecklist | null> => (await getDashboard()).setup;
+
+getQueryClient().setQueryDefaults(dashboardKeys.setups(), { queryFn: fetchSetup, gcTime: Infinity, retry: false });
+
+const fetchFor = async (staleTime: number): Promise<void> => {
     const key = sessionKey();
     if (!key) return;
     try {
-        const dashboard = await getDashboard();
-        if (key === sessionKey()) update(dashboard.setup);
+        await getQueryClient().fetchQuery({ queryKey: dashboardKeys.setup(key), staleTime });
     } catch {
         return;
     }
 };
 
-const refresh = async (): Promise<void> => {
-    if (Date.now() - loadedAt >= FRESH_FOR_MS) await load();
-};
+const load = (): Promise<void> => fetchFor(0);
 
-let mutationTimer: ReturnType<typeof setTimeout> | undefined;
-if (typeof window !== 'undefined') {
-    window.addEventListener('silabos:mutated', () => {
-        if (!sessionKey()) return;
-        clearTimeout(mutationTimer);
-        mutationTimer = setTimeout(() => { void load(); }, AFTER_MUTATION_MS);
-    });
-}
+const refresh = (): Promise<void> => fetchFor(FRESH_FOR_MS);
 
-watchSessionKey(keyOf, (key) => {
-    setup.value = null;
-    loadedAt = 0;
+watchSessionKey(keyOf, (key, previous) => {
+    if (previous) getQueryClient().removeQueries({ queryKey: dashboardKeys.setup(previous) });
     if (key) void load();
 });
 

@@ -2,9 +2,10 @@
 
 import { ArrowLeft, FileSignature, FileText, MessageSquareText, Send, UserCheck } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
-import { useCallback, useEffect, useState } from "react"
+import { keepPreviousData, useQuery } from "@tanstack/react-query"
+import { useState } from "react"
 import { ApiError } from "@/api/client"
-import { commentLibraryReview, getLibraryReview, verifyLibraryReview, type LibraryReviewDetail } from "@/api/library"
+import { commentLibraryReview, verifyLibraryReview } from "@/api/library"
 import { EmptyState } from "@/components/domain/EmptyState"
 import { IconTooltip } from "@/components/domain/IconTooltip"
 import { LoadErrorState } from "@/components/domain/LoadErrorState"
@@ -28,6 +29,8 @@ import { openRevisionPdf } from "@/lib/openPdf"
 import { paths } from "@/lib/routes"
 import { toast } from "@/lib/toast"
 import { libraryCommentFormSchema, OTHER_REASON, OTHER_REASON_MIN, type LibraryCommentValues } from "@/schemas/library"
+import { queryErrorMessage } from "@/lib/queryClient"
+import { libraryReviewQuery } from "@/queries/library"
 
 type LibraryAction = "return" | "sign" | "send"
 
@@ -43,9 +46,10 @@ const cameFrom = (listPath: string): boolean => {
 export default function LibraryReviewDetailPage() {
   const router = useRouter()
   const revisionId = String(useParams<{ revision: string }>().revision)
-  const [review, setReview] = useState<LibraryReviewDetail | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState("")
+  const query = useQuery({ ...libraryReviewQuery(revisionId), placeholderData: keepPreviousData })
+  const review = query.data?.review ?? null
+  const loading = query.isFetching
+  const loadError = queryErrorMessage(query, "No se pudo cargar la bibliografía") ?? ""
   const [returnOpen, setReturnOpen] = useState(false)
   const [signOpen, setSignOpen] = useState(false)
   const commentForm = useSchemaForm(libraryCommentFormSchema, { defaultValues: EMPTY_COMMENT })
@@ -58,14 +62,6 @@ export default function LibraryReviewDetailPage() {
   const [sendingOn, setSendingOn] = useState(false)
   const [openingPdf, setOpeningPdf] = useState(false)
   const [takeoverFor, setTakeoverFor] = useState<LibraryAction | null>(null)
-  const [shownRevision, setShownRevision] = useState(revisionId)
-
-  if (shownRevision !== revisionId) {
-    setShownRevision(revisionId)
-    setLoading(true)
-    setLoadError("")
-  }
-
   const fromHistory = cameFrom(paths.library.history)
   const otherSelected = selectedReasons.includes(OTHER_REASON)
   const canSign = Boolean(review?.can_verify && review.signing_statement)
@@ -75,23 +71,8 @@ export default function LibraryReviewDetailPage() {
   const outcomeBadge: { label: string; tone: StatusTone } | null =
     review === null || review.outcome === null ? null : { label: libraryStatusLabel(libraryStatus(review)), tone: libraryStatusTone(libraryStatus(review)) }
 
-  const fetchReview = useCallback(
-    (id: string): Promise<void> =>
-      getLibraryReview(id)
-        .then((result) => setReview(result.review))
-        .catch((failure: unknown) => setLoadError(failure instanceof ApiError ? failure.message : "No se pudo cargar la bibliografía"))
-        .finally(() => setLoading(false)),
-    [],
-  )
-
-  useEffect(() => {
-    void fetchReview(revisionId)
-  }, [fetchReview, revisionId])
-
   const load = (): void => {
-    setLoading(true)
-    setLoadError("")
-    void fetchReview(revisionId)
+    void query.refetch()
   }
 
   const openPdf = async (): Promise<void> => {

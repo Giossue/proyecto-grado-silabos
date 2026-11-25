@@ -1,8 +1,9 @@
-import { act, renderHook } from "@testing-library/react"
+import { act } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { ApiError } from "@/api/client"
 import { getCatalogLibraries } from "@/api/libraryCatalog"
 import { initialLibraries, librariesToStore, sameLibraries, useCatalogLibraries } from "@/composables/useCatalogLibraries"
+import { renderHookWithProviders } from "@/test/render"
 
 vi.mock("@/api/libraryCatalog", () => ({ getCatalogLibraries: vi.fn() }))
 
@@ -18,7 +19,7 @@ describe("useCatalogLibraries", () => {
 
   it("carga las bibliotecas de Koha y devuelve la lista", async () => {
     vi.mocked(getCatalogLibraries).mockResolvedValue(known)
-    const { result } = renderHook(() => useCatalogLibraries())
+    const { result } = renderHookWithProviders(() => useCatalogLibraries())
     let loaded: unknown = null
     await act(async () => {
       loaded = await result.current.load()
@@ -31,7 +32,7 @@ describe("useCatalogLibraries", () => {
 
   it("si Koha no responde muestra el error y no hay lista", async () => {
     vi.mocked(getCatalogLibraries).mockRejectedValueOnce(new ApiError("Koha caído", 503))
-    const { result } = renderHook(() => useCatalogLibraries())
+    const { result } = renderHookWithProviders(() => useCatalogLibraries())
     await act(async () => {
       await result.current.load()
     })

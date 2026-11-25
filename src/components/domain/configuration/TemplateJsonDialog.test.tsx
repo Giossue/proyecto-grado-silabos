@@ -1,9 +1,9 @@
-import { fireEvent, render } from "@testing-library/react"
+import { fireEvent } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { ApiError } from "@/api/client"
 import * as templateApi from "@/api/template"
 import { TemplateJsonDialog } from "@/components/domain/configuration/TemplateJsonDialog"
-import { flush } from "@/test/render"
+import { flush, renderWithProviders } from "@/test/render"
 
 vi.mock("@/api/template", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/api/template")>()),
@@ -15,7 +15,7 @@ const sample = { version: 1, sections: [{ key: "uno", title: "Uno", fields: [] }
 const mountDialog = async (locked = false) => {
   const onOpenChange = vi.fn()
   const onImported = vi.fn()
-  render(<TemplateJsonDialog templateId="t1" locked={locked} open onOpenChange={onOpenChange} onImported={onImported} />)
+  renderWithProviders(<TemplateJsonDialog templateId="t1" locked={locked} open onOpenChange={onOpenChange} onImported={onImported} />)
   await flush()
   return { onOpenChange, onImported }
 }

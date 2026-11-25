@@ -77,3 +77,7 @@ export function processCreationSchema(periodExists?: Exists) {
     due_at: requiredField("fecha límite", [is.date()]),
   })
 }
+
+export const CONVOCATION_TRANSITIONS = ["pausar", "reanudar"] as const
+
+export const convocationTransitionSchema = z.object({ transition: requiredField<string>("acción", [is.oneOf([...CONVOCATION_TRANSITIONS])]) })

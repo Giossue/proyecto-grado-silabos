@@ -8,6 +8,7 @@ import { initializeDocumentPalette } from "@/lib/documentPalette"
 import { installNativeValidation } from "@/lib/nativeValidation"
 import { handleRoleRequired, handleUnauthorized } from "@/lib/unauthorized"
 import { initializeInstallApp } from "@/state/installApp"
+import "@/queries/sessionScope"
 import "@/state/screenHelp"
 
 export default function AppEvents() {

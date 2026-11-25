@@ -3,10 +3,9 @@
 import { History } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { useCallback, useEffect, useState, type FormEvent, type KeyboardEvent } from "react"
+import { keepPreviousData, useQuery } from "@tanstack/react-query"
+import { useEffect, useState, type FormEvent, type KeyboardEvent } from "react"
 import { ApiError } from "@/api/client"
-import { getDashboard, type Dashboard } from "@/api/dashboard"
-import { getLibraryReviews, type LibraryReviewsPage as ReviewsPayload } from "@/api/library"
 import { FilterToolbar } from "@/components/domain/FilterToolbar"
 import { IconTooltip } from "@/components/domain/IconTooltip"
 import { LoadErrorState } from "@/components/domain/LoadErrorState"
@@ -21,13 +20,15 @@ import { Field, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { useLatestRequest } from "@/lib/latestRequest"
 import { rememberLibraryFaculty, savedLibraryFaculty } from "@/lib/libraryFaculty"
 import { LIBRARY_STATE_FILTERS, libraryStatus, libraryStatusLabel, libraryStatusTone } from "@/lib/libraryStates"
+import { queryErrorMessage, sameKey } from "@/lib/queryClient"
 import { paths } from "@/lib/routes"
 import { activateRow } from "@/lib/rowActivation"
 import { cn } from "@/lib/utils"
 import { queryOf, queryPage, queryText, syncFilters } from "@/lib/urlFilters"
+import { dashboardSummaryQuery } from "@/queries/dashboard"
+import { libraryReviewsQuery } from "@/queries/library"
 
 type Filters = { q: string; state: string; faculty: string }
 
@@ -44,7 +45,6 @@ const activateWithKey = (event: KeyboardEvent<HTMLTableRowElement>, action: () =
 export default function LibraryReviewsPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const requests = useLatestRequest()
   const [initial] = useState(() => {
     const query = queryOf(searchParams)
     return {
@@ -53,56 +53,36 @@ export default function LibraryReviewsPage() {
     }
   })
   const [filters, setFilters] = useState<Filters>(initial.filters)
-  const [data, setData] = useState<ReviewsPayload | null>(null)
-  const [summary, setSummary] = useState<Dashboard | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [applied, setApplied] = useState(initial)
+  const query = useQuery({ ...libraryReviewsQuery(applied.page, applied.filters), placeholderData: keepPreviousData })
+  const summaryQuery = useQuery(dashboardSummaryQuery())
+  const data = query.data ?? null
+  const summary = summaryQuery.data ?? null
+  const loading = query.isFetching
+  const facultyRejected = query.error instanceof ApiError && query.error.status === 422 && applied.filters.faculty !== "all"
+  const error = facultyRejected ? null : queryErrorMessage(query, "No se pudieron cargar las revisiones de biblioteca")
   const filtersActive = filters.q !== "" || filters.state !== "all" || filters.faculty !== "all"
   const periods = [...new Set((data?.reviews.data ?? []).map((item) => item.period))]
   const title = periods.length === 1 ? `Revisiones de biblioteca - Período ${periods[0]}` : "Revisiones de biblioteca"
 
-  const fetchReviews = useCallback(
-    (page: number, start: Filters, withSummary: boolean): Promise<void> => {
-      const run = async (current: Filters): Promise<void> => {
-        const ticket = requests.begin()
-        try {
-          const [reviews, dashboard] = await Promise.all([
-            getLibraryReviews({ q: current.q, state: current.state, faculty: current.faculty, page }),
-            withSummary ? getDashboard().catch(() => null) : undefined,
-          ])
-          if (!requests.isCurrent(ticket)) return
-          setData(reviews)
-          if (withSummary) setSummary(dashboard ?? null)
-          rememberLibraryFaculty(current.faculty)
-          syncFilters(router, { q: current.q, state: current.state, faculty: current.faculty }, page)
-        } catch (reason) {
-          if (!requests.isCurrent(ticket)) return
-          if (reason instanceof ApiError && reason.status === 422 && current.faculty !== "all") {
-            const reset = { ...current, faculty: "all" }
-            setFilters(reset)
-            rememberLibraryFaculty(reset.faculty)
-            await run(reset)
-            return
-          }
-          setError(reason instanceof ApiError ? reason.message : "No se pudieron cargar las revisiones de biblioteca")
-        } finally {
-          if (requests.isCurrent(ticket)) setLoading(false)
-        }
-      }
-
-      return run(start)
-    },
-    [requests, router],
-  )
+  if (facultyRejected) {
+    const reset = { ...applied.filters, faculty: "all" }
+    setFilters(reset)
+    setApplied({ page: applied.page, filters: reset })
+  }
 
   useEffect(() => {
-    void fetchReviews(initial.page, initial.filters, true)
-  }, [fetchReviews, initial])
+    if (query.isPlaceholderData || !query.data) return
+    rememberLibraryFaculty(applied.filters.faculty)
+    syncFilters(router, { q: applied.filters.q, state: applied.filters.state, faculty: applied.filters.faculty }, applied.page)
+  }, [applied, query.data, query.isPlaceholderData, router])
 
   const load = (page = 1, current: Filters = filters, withSummary = false): Promise<void> => {
-    setLoading(true)
-    setError(null)
-    return fetchReviews(page, current, withSummary)
+    if (withSummary) void summaryQuery.refetch()
+    const next = { page, filters: current }
+    if (sameKey(next, applied)) return query.refetch().then(() => undefined)
+    setApplied(next)
+    return Promise.resolve()
   }
 
   const submit = (event: FormEvent<HTMLFormElement>): void => {

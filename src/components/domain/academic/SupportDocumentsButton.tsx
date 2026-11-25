@@ -1,44 +1,26 @@
 "use client"
 
 import { FileText, FolderOpen } from "lucide-react"
-import { useEffect, useEffectEvent, useRef, useState } from "react"
-import { getTeacherSupportDocuments, type SupportDocument } from "@/api/support-documents"
+import { useQuery } from "@tanstack/react-query"
+import { useState } from "react"
+import { type SupportDocument } from "@/api/support-documents"
 import { openSupportDocument, supportDocumentSize } from "@/components/domain/academic/supportDocumentViewer"
 import { IconTooltip } from "@/components/domain/IconTooltip"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Spinner } from "@/components/ui/spinner"
 import { formatDateDisplay } from "@/lib/dateDisplay"
+import { teacherSupportDocumentsQuery } from "@/queries/supportDocuments"
 
 export function SupportDocumentsButton() {
-  const [documents, setDocuments] = useState<SupportDocument[]>([])
+  const query = useQuery(teacherSupportDocumentsQuery())
+  const documents: SupportDocument[] = query.data?.data ?? []
   const [open, setOpen] = useState(false)
   const [busyId, setBusyId] = useState<string | null>(null)
-  const listOpen = useRef(false)
-
-  const load = async (): Promise<void> => {
-    try {
-      setDocuments((await getTeacherSupportDocuments()).data)
-    } catch {
-      if (!listOpen.current) setDocuments([])
-    }
-  }
-
-  const received = useEffectEvent((next: SupportDocument[]): void => setDocuments(next))
-  const failed = useEffectEvent((): void => {
-    if (!listOpen.current) setDocuments([])
-  })
-
-  useEffect(() => {
-    void getTeacherSupportDocuments()
-      .then((response) => received(response.data))
-      .catch(() => failed())
-  }, [])
 
   const changeOpen = (value: boolean): void => {
-    listOpen.current = value
     setOpen(value)
-    if (value) void load()
+    if (value) void query.refetch()
   }
 
   const view = async (document: SupportDocument): Promise<void> => {

@@ -3,10 +3,10 @@
 import { ArrowLeft, Download } from "lucide-react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useQuery } from "@tanstack/react-query"
+import { useEffect, useState } from "react"
 import { ApiError } from "@/api/client"
-import { downloadDocument, getDocuments, requestDocuments, type DocumentsPayload } from "@/api/documents"
-import { getSession, type Session } from "@/api/session"
+import { downloadDocument, requestDocuments, type DocumentsPayload } from "@/api/documents"
 import { EmptyState } from "@/components/domain/EmptyState"
 import { LoadErrorState } from "@/components/domain/LoadErrorState"
 import { LoadingSkeleton } from "@/components/domain/LoadingSkeleton"
@@ -17,66 +17,44 @@ import { Spinner } from "@/components/ui/spinner"
 import { attemptKey } from "@/lib/attemptKey"
 import { formatDateDisplay } from "@/lib/dateDisplay"
 import { openPdfWindow, showInPdfWindow } from "@/lib/openPdf"
+import { failedQuery, queryErrorMessage } from "@/lib/queryClient"
 import { paths } from "@/lib/routes"
+import { revisionDocumentsQuery } from "@/queries/documents"
 
 const PENDING = ["pendiente", "en_ejecucion", "procesando"]
+const POLL_MS = 4000
+
+const latestOf = (data: DocumentsPayload | null | undefined) =>
+  [...(data?.artifacts ?? [])].sort((left, right) => new Date(right.requested_at).getTime() - new Date(left.requested_at).getTime())[0] ?? null
 
 export default function DocumentsPage() {
   const router = useRouter()
   const revisionId = String(useParams<{ revision: string }>().revision)
-  const [data, setData] = useState<DocumentsPayload | null>(null)
-  const [session, setSession] = useState<Session | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState<string | null>(null)
+  const query = useQuery({
+    ...revisionDocumentsQuery(revisionId),
+    refetchInterval: (current) => (PENDING.includes(latestOf(current.state.data?.payload)?.estado ?? "") ? POLL_MS : false),
+  })
+  const data = query.data?.payload ?? null
+  const session = query.data?.session ?? null
+  const loading = query.isFetching
+  const unauthorized = failedQuery(query) && query.error instanceof ApiError && query.error.status === 401
+  const loadError = unauthorized ? null : queryErrorMessage(query, "No se pudo cargar el PDF")
   const [actionError, setActionError] = useState<string | null>(null)
   const [working, setWorking] = useState(false)
   const [retryKey] = useState(attemptKey)
 
-  const latest = [...(data?.artifacts ?? [])].sort((left, right) => new Date(right.requested_at).getTime() - new Date(left.requested_at).getTime())[0] ?? null
+  const latest = latestOf(data)
   const ready = latest?.estado === "completado" && latest.files !== null
   const pending = PENDING.includes(latest?.estado ?? "")
   const failed = latest?.estado === "fallido"
   const backHref = session?.active_role?.code === "coordinador" ? paths.coordination.review(revisionId) : paths.teacher.syllabus(data?.syllabus.id ?? "")
   const fileName = `silabo-${data?.syllabus.code ?? "asignatura"}.pdf`
 
-  const fetchData = useCallback(
-    (): Promise<void> =>
-      getSession()
-        .then(async (current) => {
-          const payload = await getDocuments(revisionId)
-          setSession(current)
-          setData(payload)
-        })
-        .catch((reason: unknown) => {
-          if (reason instanceof ApiError && reason.status === 401) {
-            router.replace(paths.login)
-            return
-          }
-          setLoadError(reason instanceof ApiError ? reason.message : "No se pudo cargar el PDF")
-        })
-        .finally(() => setLoading(false)),
-    [revisionId, router],
-  )
-
-  const load = useCallback((): Promise<void> => {
-    setLoading(true)
-    setLoadError(null)
-    return fetchData()
-  }, [fetchData])
-
-  const pendingRef = useRef(pending)
   useEffect(() => {
-    pendingRef.current = pending
-  })
+    if (unauthorized) router.replace(paths.login)
+  }, [router, unauthorized])
 
-  useEffect(() => {
-    void fetchData()
-    const timer = window.setInterval(() => {
-      if (pendingRef.current) void load()
-    }, 4000)
-
-    return () => clearInterval(timer)
-  }, [fetchData, load])
+  const load = (): Promise<void> => query.refetch().then(() => undefined)
 
   const fetchPdf = async (): Promise<string | null> => {
     if (!latest) return null

@@ -73,6 +73,7 @@ afterEach(() => {
   stubs.pickers.clear()
 })
 
+const PERIOD_ID = "01a1c5ba-2222-7000-8000-999999999999"
 const period = { id: "period-1", codigo: "Septiembre-Enero 2026-2027", starts_on: "2026-09-22", ends_on: "2027-01-02" }
 
 describe("syllabus process dates", () => {
@@ -108,9 +109,28 @@ describe("syllabus process dates", () => {
     unmount()
   })
 
-  it("confirma la apertura solo después de escribir la frase", async () => {
-    api.createProcess.mockResolvedValue({ message: "Convocatoria abierta." })
+  it("valida el formulario vacío en el navegador y no abre la confirmación ni llama al servidor", async () => {
+    api.createProcess.mockReset()
     const { unmount } = render(<SyllabusProcessDialog open onOpenChange={vi.fn()} template={null} periods={[]} period={{ id: "period-1", codigo: "2026-2027", starts_on: "2026-09-22", ends_on: "2027-01-02" }} />)
+    await flush()
+    fireEvent.submit(document.querySelector("form")!)
+    await flush()
+
+    expect(document.body.textContent).toContain("El campo fecha de inicio es obligatorio")
+    expect(document.body.textContent).toContain("El campo fecha límite es obligatorio")
+    expect(document.body.textContent).toContain("El campo periodo académico debe ser un UUID válido")
+    expect(document.body.textContent).not.toContain("los sílabos parten del proyecto de carrera de cada materia")
+    expect(api.createProcess).not.toHaveBeenCalled()
+
+    unmount()
+  })
+
+  it("confirma la apertura solo después de escribir la frase", async () => {
+    api.createProcess.mockReset().mockResolvedValue({ message: "Convocatoria abierta." })
+    const { unmount } = render(<SyllabusProcessDialog open onOpenChange={vi.fn()} template={null} periods={[]} period={{ id: PERIOD_ID, codigo: "2026-2027", starts_on: "2026-09-22", ends_on: "2027-01-02" }} />)
+    await flush()
+    act(() => stubs.pickers.get("process-starts")!.onValueChange!("2026-10-01"))
+    act(() => stubs.pickers.get("process-due")!.onValueChange!("2026-10-20"))
     await flush()
     fireEvent.submit(document.querySelector("form")!)
     await flush()
@@ -126,7 +146,7 @@ describe("syllabus process dates", () => {
     expect(confirm().disabled).toBe(false)
     fireEvent.click(confirm())
     await flush()
-    expect(api.createProcess).toHaveBeenCalledOnce()
+    expect(api.createProcess).toHaveBeenCalledExactlyOnceWith({ period_id: PERIOD_ID, starts_at: "2026-10-01", due_at: "2026-10-20" })
 
     unmount()
   })

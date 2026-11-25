@@ -2,7 +2,6 @@
 
 import { Pause, Play } from "lucide-react"
 import { useState } from "react"
-import { ApiError } from "@/api/client"
 import { transitionConvocation } from "@/api/convocations"
 import type { CoordinationConvocation } from "@/api/dashboard"
 import { FeedbackAlert } from "@/components/domain/FeedbackAlert"
@@ -12,7 +11,10 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, Di
 import { Spinner } from "@/components/ui/spinner"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { afterDialogExit, useShownWhileClosing } from "@/lib/dialogExit"
+import { SERVER_ERROR, serverMessage, useSchemaForm } from "@/lib/forms"
+import { errorMessage } from "@/lib/queryClient"
 import { withoutFinalPeriod } from "@/lib/utils"
+import { convocationTransitionSchema } from "@/schemas/syllabus"
 
 type Transition = "pausar" | "reanudar"
 
@@ -39,30 +41,26 @@ type ConvocationActionsProps = {
 export function ConvocationActions({ convocation, blockedReason, onChanged }: ConvocationActionsProps) {
   const [pending, setPending] = useState<Transition | null>(null)
   const shownPending = useShownWhileClosing(pending)
-  const [processing, setProcessing] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [openingOpen, setOpeningOpen] = useState(false)
+  const form = useSchemaForm(convocationTransitionSchema, { values: { transition: pending ?? "" } })
+  const { errors, isSubmitting: processing } = form.formState
+  const error = serverMessage(errors) ?? null
 
   const select = (value: Transition): void => {
+    form.clearErrors()
     setPending(value)
-    setError(null)
   }
 
-  const submit = async (): Promise<void> => {
-    if (!pending) return
-    setProcessing(true)
-    setError(null)
+  const submit = form.handleSubmit(async ({ transition }) => {
+    if (!convocation.convocation_id) return
     try {
-      if (!convocation.convocation_id) return
-      const result = await transitionConvocation(convocation.convocation_id, pending)
+      const result = await transitionConvocation(convocation.convocation_id, transition as Transition)
       setPending(null)
       onChanged?.(result.message)
     } catch (failure) {
-      setError(failure instanceof ApiError ? failure.message : "No se pudo cambiar la convocatoria")
-    } finally {
-      setProcessing(false)
+      form.setError(SERVER_ERROR, { type: "server", message: errorMessage(failure, "No se pudo cambiar la convocatoria") })
     }
-  }
+  })
 
   const opened = async (message: string): Promise<void> => {
     await afterDialogExit()
@@ -126,13 +124,7 @@ export function ConvocationActions({ convocation, blockedReason, onChanged }: Co
                 <DialogTitle>{DIALOGS[shownPending].title}</DialogTitle>
                 <DialogDescription>{DIALOGS[shownPending].description}</DialogDescription>
               </DialogHeader>
-              <form
-                className="flex flex-col gap-4"
-                onSubmit={(event) => {
-                  event.preventDefault()
-                  void submit()
-                }}
-              >
+              <form className="flex flex-col gap-4" onSubmit={(event) => void submit(event)} noValidate>
                 {error ? <FeedbackAlert message={error} /> : null}
                 <DialogFooter>
                   <DialogClose asChild>

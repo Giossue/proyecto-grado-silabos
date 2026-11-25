@@ -152,3 +152,20 @@ export const parallelTeacherSchema = z.object({
   user_id: requiredField("docente", [is.uuid()]),
   confirm_purge: purge(),
 })
+
+export const NEW_PARALLELS_INCOMPLETE = "Elija la jornada y el docente de los nuevos paralelos"
+
+export function newParallelsSchema() {
+  const { shape } = parallelsSchema()
+
+  return z.object({ shift: shape.shift, user_id: shape.user_id })
+}
+
+export const SUPPORT_DOCUMENT_TITLE_MAX = 180
+
+const isFile = (value: unknown): value is File => typeof File !== "undefined" && value instanceof File
+
+export const supportDocumentFormSchema = z.object({
+  file: z.custom<File | null>(isFile, "Elija el archivo."),
+  title: z.string().trim().min(1, "Escriba el nombre del documento.").max(SUPPORT_DOCUMENT_TITLE_MAX, "El nombre no puede pasar de 180 caracteres."),
+})

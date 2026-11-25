@@ -290,3 +290,22 @@ export function assistantRequestSchema({ messageCharacters, readable, unreadable
       await checkItems(context, nestedItems(fields, "max_length"), "límite de caracteres", [is.integer(), is.min(FIELD_LIMIT_MIN), is.max(FIELD_LIMIT_MAX)], { sometimes: true, nullable: true })
     })
 }
+
+export const assistantMessageSchema = (messageCharacters: number) =>
+  z.object({ message: requiredField<string>("pedido", [is.string(), is.max(messageCharacters)]) })
+
+export const fieldLimitFormSchema = (message: string) =>
+  z.object({
+    limit: z
+      .string()
+      .trim()
+      .refine((value) => /^\d+$/.test(value) && Number(value) >= FIELD_LIMIT_MIN && Number(value) <= FIELD_LIMIT_MAX, message),
+  })
+
+export const CONDITION_OPTIONS_REQUIRED = "Elija al menos una opción"
+
+export const conditionChoiceSchema = z
+  .object({ source: z.string(), options: z.array(z.string()) })
+  .superRefine((choice, context) => {
+    if (choice.source && choice.options.length === 0) context.addIssue({ code: "custom", path: ["options"], message: CONDITION_OPTIONS_REQUIRED })
+  })

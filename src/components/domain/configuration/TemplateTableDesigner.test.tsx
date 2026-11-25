@@ -1,4 +1,5 @@
 import { fireEvent, render } from "@testing-library/react"
+import { createWrapper } from "@/test/render"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import * as templateApi from "@/api/template"
 import { ApiError } from "@/api/client"
@@ -31,7 +32,7 @@ const input = async (selector: string, value: string, index = 0) => {
 const mountDesigner = async (props: Partial<Parameters<typeof TemplateTableDesigner>[0]> = {}) => {
   const onApplied = vi.fn()
   const onOpenChange = vi.fn()
-  render(<TemplateTableDesigner open templateId="t1" design={null} takenKinds={["bibliografia"]} onApplied={onApplied} onOpenChange={onOpenChange} {...props} />)
+  render(<TemplateTableDesigner open templateId="t1" design={null} takenKinds={["bibliografia"]} onApplied={onApplied} onOpenChange={onOpenChange} {...props} />, { wrapper: createWrapper() })
   await settle()
   return { onApplied, onOpenChange }
 }

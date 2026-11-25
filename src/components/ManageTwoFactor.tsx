@@ -1,10 +1,11 @@
 "use client"
 
 import { ShieldCheck, ShieldOff } from "lucide-react"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useEffect, useRef, useState } from "react"
 import { Controller } from "react-hook-form"
 import { ApiError } from "@/api/client"
-import { confirmTwoFactor, disableTwoFactor, enableTwoFactor, getTwoFactorStatus, regenerateRecoveryCodes } from "@/api/session"
+import { confirmTwoFactor, disableTwoFactor, enableTwoFactor, regenerateRecoveryCodes, type TwoFactorStatus } from "@/api/session"
 import { FeedbackAlert } from "@/components/domain/FeedbackAlert"
 import { InputError } from "@/components/InputError"
 import { PasswordConfirmDialog } from "@/components/PasswordConfirmDialog"
@@ -18,6 +19,7 @@ import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import { applyApiErrors, fieldMessage, serverMessage, useSchemaForm } from "@/lib/forms"
+import { accountKeys, twoFactorQuery } from "@/queries/account"
 import { twoFactorDisableSchema, type TwoFactorDisableValues } from "@/schemas/twoFactor"
 
 const disableSchema = twoFactorDisableSchema({ requireCode: true })
@@ -25,13 +27,16 @@ const disableSchema = twoFactorDisableSchema({ requireCode: true })
 const messageOf = (reason: unknown, fallback: string): string => (reason instanceof ApiError ? reason.message : fallback)
 
 export function ManageTwoFactor({ onLoadingChange }: { onLoadingChange?: (loading: boolean) => void }) {
-  const [enabled, setEnabled] = useState<boolean | null>(null)
-  const [loading, setLoading] = useState(true)
+  const queryClient = useQueryClient()
+  const status = useQuery(twoFactorQuery())
+  const enabled = status.data?.enabled ?? null
+  const loading = status.isPending
   const [qrCodeSvg, setQrCodeSvg] = useState<string | null>(null)
   const [recoveryCodes, setRecoveryCodes] = useState<string[]>([])
   const [showSetupModal, setShowSetupModal] = useState(false)
   const [processing, setProcessing] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [actionError, setError] = useState<string | null>(null)
+  const error = actionError ?? (status.isError ? messageOf(status.error, "No se pudo consultar el segundo factor") : null)
   const [pendingEnable, setPendingEnable] = useState(false)
   const [disableOpen, setDisableOpen] = useState(false)
   const [useRecoveryCode, setUseRecoveryCode] = useState(false)
@@ -47,25 +52,12 @@ export function ManageTwoFactor({ onLoadingChange }: { onLoadingChange?: (loadin
   }, [onLoadingChange])
 
   useEffect(() => {
-    let active = true
-    loadingListener.current?.(true)
-    getTwoFactorStatus()
-      .then((status) => {
-        if (active) setEnabled(status.enabled)
-      })
-      .catch((reason: unknown) => {
-        if (active) setError(messageOf(reason, "No se pudo consultar el segundo factor"))
-      })
-      .finally(() => {
-        if (!active) return
-        setLoading(false)
-        loadingListener.current?.(false)
-      })
+    loadingListener.current?.(loading)
+  }, [loading])
 
-    return () => {
-      active = false
-    }
-  }, [])
+  const setEnabled = (value: boolean): void => {
+    queryClient.setQueryData<TwoFactorStatus>(accountKeys.twoFactor(), (current) => ({ confirmation_required: false, ...current, enabled: value }))
+  }
 
   const enable = async (password: string): Promise<void> => {
     setProcessing(true)

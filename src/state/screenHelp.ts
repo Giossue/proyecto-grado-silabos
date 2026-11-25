@@ -1,6 +1,8 @@
 import { listAvailableScreenHelp, type ScreenHelp } from '@/api/screen-help';
 import type { Session } from '@/api/session';
-import { signal, useSignal } from '@/lib/signal';
+import { cachedValue, getQueryClient } from '@/lib/queryClient';
+import { useSignal } from '@/lib/signal';
+import { screenHelpKeys } from '@/queries/screenHelp';
 import { sessionState, useSession } from '@/state/session';
 import { watchSessionKey } from '@/state/sessionKey';
 
@@ -18,22 +20,28 @@ const readCache = (): Cache | null => {
     }
 };
 
-const cache = signal<Cache | null>(readCache());
-
 const keyOf = (session: Session | null): string | null =>
     session?.active_role ? `${session.user.id}:${session.active_role.code}` : null;
 
-const itemsOf = (value: Cache | null, key: string | null): ScreenHelp[] =>
-    value && value.key === key ? value.items : [];
+const fetchHelp = async (): Promise<ScreenHelp[]> => (await listAvailableScreenHelp()).help;
+
+getQueryClient().setQueryDefaults(screenHelpKeys.all, { queryFn: fetchHelp, gcTime: Infinity, retry: false });
+
+const saved = typeof window === 'undefined' ? null : readCache();
+if (saved) getQueryClient().setQueryData(screenHelpKeys.available(saved.key), saved.items);
+
+const items = cachedValue<ScreenHelp[]>(() => {
+    const key = keyOf(sessionState.current.value);
+
+    return key ? screenHelpKeys.available(key) : null;
+}, []);
 
 const load = async (): Promise<void> => {
     const key = keyOf(sessionState.current.value);
     if (!key) return;
     try {
-        const result = await listAvailableScreenHelp();
-        if (key !== keyOf(sessionState.current.value)) return;
-        cache.value = { key, items: result.help };
-        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(cache.value)); } catch { return; }
+        const help = await getQueryClient().fetchQuery<ScreenHelp[]>({ queryKey: screenHelpKeys.available(key), staleTime: 0 });
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ key, items: help })); } catch { return; }
     } catch {
         return;
     }
@@ -43,21 +51,21 @@ watchSessionKey(keyOf, (key, previous) => {
     if (key) {
         void load();
     } else if (previous) {
-        cache.value = null;
+        getQueryClient().removeQueries({ queryKey: screenHelpKeys.all });
         try { localStorage.removeItem(STORAGE_KEY); } catch { return; }
     }
 });
 
+const find = (list: ScreenHelp[], screen: string): ScreenHelp | null => list.find((help) => help.screen === screen) ?? null;
+
 export const screenHelpState = {
-    items: (): ScreenHelp[] => itemsOf(cache.value, keyOf(sessionState.current.value)),
-    forScreen: (screen: string): ScreenHelp | null =>
-        itemsOf(cache.value, keyOf(sessionState.current.value)).find((help) => help.screen === screen) ?? null,
+    items: (): ScreenHelp[] => items.value,
+    forScreen: (screen: string): ScreenHelp | null => find(items.value, screen),
     load,
 };
 
 export const useScreenHelp = (screen: string): ScreenHelp | null => {
-    const { session } = useSession();
-    const value = useSignal(cache);
+    useSession();
 
-    return itemsOf(value, keyOf(session)).find((help) => help.screen === screen) ?? null;
+    return find(useSignal(items), screen);
 };

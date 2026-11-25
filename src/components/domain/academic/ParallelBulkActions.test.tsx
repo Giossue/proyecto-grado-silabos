@@ -7,6 +7,8 @@ import { buttonWithText } from "@/components/domain/academic/academicTestUtils"
 import { DIALOG_EXIT_MS } from "@/lib/dialogExit"
 import { flush, renderWithProviders } from "@/test/render"
 
+const TEACHER_ID = "01a1c5ba-2222-7000-8000-999999999999"
+
 const api = vi.hoisted(() => ({
   createParallels: vi.fn(),
   updateParallel: vi.fn(),
@@ -60,7 +62,7 @@ const base: BarProps = {
     { value: "matutina", label: "Matutina" },
     { value: "vespertina", label: "Vespertina" },
   ],
-  teacherUsers: [{ id: "t1", name: "Docente Uno", email: "a@b.c" }],
+  teacherUsers: [{ id: TEACHER_ID, name: "Docente Uno", email: "a@b.c" }],
   assignments: [{ id: "as1", user_id: "t9", parallel_id: "p1", user_name: "Otro", user_email: "o@b.c", parallel_code: "A", subject_name: "s1", active: true, editable: true }],
   onChanged: changed,
   onFailed: failed,
@@ -83,6 +85,7 @@ const openAdd = async (actor: ReturnType<typeof userEvent.setup>) => {
   await flush()
 }
 
+
 describe("ParallelBulkActions", () => {
   it("muestra cuántas materias hay seleccionadas", () => {
     mountBar()
@@ -104,8 +107,8 @@ describe("ParallelBulkActions", () => {
       await vi.advanceTimersByTimeAsync(0)
     })
 
-    expect(api.createParallels).toHaveBeenCalledWith({ subject_id: "s1", codes: ["B"], shift: "matutina", user_id: "t1" }, "unconfirmed")
-    expect(api.createParallels).toHaveBeenCalledWith({ subject_id: "s2", codes: ["A"], shift: "matutina", user_id: "t1" }, "unconfirmed")
+    expect(api.createParallels).toHaveBeenCalledWith({ subject_id: "s1", codes: ["B"], shift: "matutina", user_id: TEACHER_ID }, "unconfirmed")
+    expect(api.createParallels).toHaveBeenCalledWith({ subject_id: "s2", codes: ["A"], shift: "matutina", user_id: TEACHER_ID }, "unconfirmed")
     expect(changed.mock.calls[0]).toEqual(["Paralelo agregado a 2 materias"])
     expect(clear).not.toHaveBeenCalled()
     await act(async () => {
@@ -133,7 +136,7 @@ describe("ParallelBulkActions", () => {
     mountBar()
     await chooseFromSubmenu(actor, "Asignar docente", "Docente Uno")
 
-    expect(api.replaceParallelTeacher).toHaveBeenCalledWith("p1", "t1", "unconfirmed")
+    expect(api.replaceParallelTeacher).toHaveBeenCalledWith("p1", TEACHER_ID, "unconfirmed")
     expect(api.deleteCareerRecord).not.toHaveBeenCalled()
     expect(failed.mock.calls[0]?.[0]).toContain("0 de 1 cambios aplicados")
     expect(changed.mock.calls[0]).toEqual(["Se aplicaron los cambios posibles"])
@@ -190,7 +193,7 @@ describe("ParallelBulkActions", () => {
     api.replaceParallelTeacher.mockResolvedValue({ message: "ok" })
     purge.requestPurgeConfirmation.mockImplementationOnce((_message: string, _count: number, confirmed: () => void) => confirmed())
     await chooseFromSubmenu(actor, "Asignar docente", "Docente Uno")
-    expect(api.replaceParallelTeacher).toHaveBeenCalledWith("p1", "t1", "confirmed")
+    expect(api.replaceParallelTeacher).toHaveBeenCalledWith("p1", TEACHER_ID, "confirmed")
     expect(purge.requestPurgeConfirmation).toHaveBeenCalledTimes(2)
   })
 
@@ -205,7 +208,7 @@ describe("ParallelBulkActions", () => {
         ]),
       ],
       shiftOptions: [],
-      teacherUsers: [{ id: "t1", name: "Docente Uno", email: "a@b.c" }],
+      teacherUsers: [{ id: TEACHER_ID, name: "Docente Uno", email: "a@b.c" }],
       assignments: [],
     })
 
@@ -221,8 +224,8 @@ describe("ParallelBulkActions", () => {
     purge.requestPurgeConfirmation.mockImplementationOnce((_message: string, _count: number, confirmed: () => void) => confirmed())
     await chooseFromSubmenu(actor, "Asignar docente", "Docente Uno")
     expect(api.createCareerRecord.mock.calls).toEqual([
-      ["asignacion_docente", { user_id: "t1", parallel_id: "p1" }, "confirmed"],
-      ["asignacion_docente", { user_id: "t1", parallel_id: "p2" }, "unconfirmed"],
+      ["asignacion_docente", { user_id: TEACHER_ID, parallel_id: "p1" }, "confirmed"],
+      ["asignacion_docente", { user_id: TEACHER_ID, parallel_id: "p2" }, "unconfirmed"],
     ])
   })
 

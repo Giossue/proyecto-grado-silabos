@@ -3,9 +3,9 @@
 import { ArrowLeft, Highlighter } from "lucide-react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { ApiError } from "@/api/client"
-import { compareReviews, getReview, type ReviewDetail, type ReviewTimelineEvent } from "@/api/reviews"
+import { keepPreviousData, useQuery } from "@tanstack/react-query"
+import { useEffect, useMemo, useRef, useState } from "react"
+import { type ReviewDetail, type ReviewTimelineEvent } from "@/api/reviews"
 import { AppearanceToggle } from "@/components/AppearanceToggle"
 import { IconTooltip } from "@/components/domain/IconTooltip"
 import { LoadErrorState } from "@/components/domain/LoadErrorState"
@@ -21,6 +21,8 @@ import { libraryCommentLines } from "@/lib/reviewComment"
 import { reviewAreaPaths } from "@/lib/routes"
 import { toast } from "@/lib/toast"
 import { cn } from "@/lib/utils"
+import { errorMessage, queryErrorMessage } from "@/lib/queryClient"
+import { reviewComparisonQuery, reviewQuery } from "@/queries/reviews"
 
 type Version = { id: string; number: number; at: string; by: string | null; current: boolean; events: ReviewTimelineEvent[] }
 type Mark = { top: number; element: HTMLElement }
@@ -76,53 +78,32 @@ export default function CoordinationReviewHistoryPage() {
   const router = useRouter()
   const revisionId = String(useParams<{ revision: string }>().revision)
   const area = reviewAreaPaths()
-  const [data, setData] = useState<ReviewDetail | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState("")
-  const [changedFields, setChangedFields] = useState<ReadonlySet<string>>(NO_CHANGES)
+  const query = useQuery({ ...reviewQuery(revisionId), placeholderData: keepPreviousData })
+  const data = query.data ?? null
+  const loading = query.isFetching
+  const loadError = queryErrorMessage(query, "No se pudo cargar el historial") ?? ""
+  const loaded = query.isPlaceholderData ? null : data
+  const previousId = useMemo(() => {
+    const versions = versionsOf(loaded)
+
+    return loaded ? (previousOf(versions, selectedOf(versions, loaded))?.id ?? null) : null
+  }, [loaded])
+  const comparison = useQuery({ ...reviewComparisonQuery(previousId ?? "", loaded?.revision.id ?? ""), enabled: previousId !== null && loaded !== null })
+  const comparedChanges = previousId ? comparison.data?.comparison.changes : undefined
+  const changedFields = useMemo<ReadonlySet<string>>(
+    () => (comparedChanges ? new Set(comparedChanges.map((change) => `${change.section_key}.${change.field_key}`)) : NO_CHANGES),
+    [comparedChanges],
+  )
   const [highlight, setHighlight] = useState(true)
   const [marks, setMarks] = useState<Mark[]>([])
-  const [shownRevision, setShownRevision] = useState(revisionId)
   const page = useRef<HTMLElement | null>(null)
 
-  if (shownRevision !== revisionId) {
-    setShownRevision(revisionId)
-    setLoading(true)
-    setLoadError("")
-    setChangedFields(NO_CHANGES)
-  }
-
-  const fetchReview = useCallback(
-    (id: string): Promise<void> =>
-      getReview(id)
-        .then(async (detail) => {
-          setData(detail)
-          const versions = versionsOf(detail)
-          const previous = previousOf(versions, selectedOf(versions, detail))
-          if (!previous) return
-          try {
-            const result = await compareReviews(previous.id, detail.revision.id)
-            setChangedFields(new Set(result.comparison.changes.map((change) => `${change.section_key}.${change.field_key}`)))
-          } catch (reason) {
-            toast.error(reason instanceof ApiError ? reason.message : "No se pudieron destacar los cambios")
-          }
-        })
-        .catch((failure: unknown) => {
-          setLoadError(failure instanceof ApiError ? failure.message : "No se pudo cargar el historial")
-        })
-        .finally(() => setLoading(false)),
-    [],
-  )
-
   useEffect(() => {
-    void fetchReview(revisionId)
-  }, [fetchReview, revisionId])
+    if (comparison.isError) toast.error(errorMessage(comparison.error, "No se pudieron destacar los cambios"))
+  }, [comparison.error, comparison.isError])
 
   const load = (): void => {
-    setLoading(true)
-    setLoadError("")
-    setChangedFields(NO_CHANGES)
-    void fetchReview(revisionId)
+    void query.refetch()
   }
 
   useEffect(() => {

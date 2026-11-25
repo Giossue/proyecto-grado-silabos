@@ -23,7 +23,7 @@ vi.mock("@/components/DatePicker", () => ({
 type RecordOptions = ComponentProps<typeof CatalogRecordDialog>["options"]
 
 const options = {
-  faculties: [{ id: "faculty-1", nombre: "Ciencias" }],
+  faculties: [{ id: "01a1c5ba-2222-7000-8000-999999999999", nombre: "Ciencias" }],
   careers: [],
   periods: [],
   modalityOptions: [{ value: "Presencial", label: "Presencial" }],
@@ -167,6 +167,19 @@ describe("academic catalog code fields", () => {
   })
 })
 
+const chooseNative = (index: number, value: string): void => {
+  fireEvent.change(document.body.querySelectorAll<HTMLSelectElement>("form select")[index]!, { target: { value } })
+}
+
+const fillCareer = async (): Promise<void> => {
+  fireEvent.change(document.body.querySelector("#catalog-name")!, { target: { value: "Software" } })
+  fireEvent.change(document.body.querySelector("#catalog-code")!, { target: { value: "SW" } })
+  fireEvent.change(document.body.querySelector("#catalog-cycle-count")!, { target: { value: "8" } })
+  chooseNative(0, "01a1c5ba-2222-7000-8000-999999999999")
+  chooseNative(1, "Presencial")
+  await flush()
+}
+
 describe("salida del formulario de creación", () => {
   it("al crear, el formulario se cierra con lo escrito y se limpia al volver a abrirlo", async () => {
     keepClosingDialogs()
@@ -175,8 +188,7 @@ describe("salida del formulario de creación", () => {
     renderWithProviders(<Harness entity="carrera" onSaved={onSaved} />)
     await flush()
     const name = (): HTMLInputElement => document.body.querySelector<HTMLInputElement>("#catalog-name")!
-    fireEvent.change(name(), { target: { value: "Software" } })
-    await flush()
+    await fillCareer()
     fireEvent.submit(name().closest("form")!)
     await flush()
 
@@ -217,6 +229,7 @@ describe("botón de crear y errores de campo", () => {
     vi.mocked(createAcademicRecord).mockRejectedValue(new ApiError("Datos no válidos", 422, { code: ["Ya existe una carrera con ese código."], nombre: ["Revise el nombre."] }))
     renderWithProviders(<Harness entity="carrera" />)
     await flush()
+    await fillCareer()
     fireEvent.submit(document.body.querySelector("form")!)
     await flush()
     expect(document.body.textContent).toContain("Ya existe una carrera con ese código")

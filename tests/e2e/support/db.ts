@@ -1,6 +1,8 @@
+import { execFileSync } from "node:child_process"
 import fs from "node:fs"
 import path from "node:path"
 import { Client } from "pg"
+import { scratchDir } from "./accounts"
 
 const databaseUrl = (): string => {
   if (process.env.DATABASE_URL) return process.env.DATABASE_URL
@@ -59,4 +61,66 @@ export async function latestSyllabusOf(email: string): Promise<string> {
     [email],
   )
   return row.id
+}
+
+export type DatabaseSnapshot = { restore(): void }
+
+export function snapshotDatabase(name: string): DatabaseSnapshot {
+  fs.mkdirSync(scratchDir, { recursive: true })
+  const directory = fs.mkdtempSync(path.join(scratchDir, "db-"))
+  const file = path.join(directory, `${name}.dump`)
+  execFileSync("pg_dump", ["-Fc", "--no-owner", "-f", file, databaseUrl()], { stdio: "inherit" })
+  return {
+    restore() {
+      execFileSync("pg_restore", ["--clean", "--if-exists", "--no-owner", "--single-transaction", "-d", databaseUrl(), file], { stdio: "inherit" })
+      fs.rmSync(directory, { recursive: true, force: true })
+    },
+  }
+}
+
+export async function latestCareerRevisionOf(coordinatorEmail: string): Promise<string | null> {
+  const [row] = await query<{ id: string }>(
+    `select r.revision_silabo_id::text as id
+       from revisiones_silabo r
+       join silabos s on s.silabo_id = r.silabo_id
+       join paralelos p on p.paralelo_id = s.paralelo_id
+       join asignaturas a on a.asignatura_id = p.asignatura_id
+       join asignaciones_rol ar on ar.carrera_id = a.carrera_id and ar.asignacion_rol_activa and ar.rol = 'coordinador'
+       join usuarios u on u.usuario_id = ar.usuario_id
+      where u.correo_electronico = $1
+      order by r.enviado_en desc
+      limit 1`,
+    [coordinatorEmail],
+  )
+  return row?.id ?? null
+}
+
+export async function latestLibraryRevision(): Promise<string | null> {
+  const [row] = await query<{ id: string }>(
+    `select r.revision_silabo_id::text as id
+       from envios_biblioteca e
+       join revisiones_silabo r on r.revision_silabo_id = e.revision_silabo_id
+      order by r.enviado_en desc
+      limit 1`,
+  )
+  return row?.id ?? null
+}
+
+export async function approvedCareerRevisionOf(coordinatorEmail: string): Promise<string | null> {
+  const [row] = await query<{ id: string }>(
+    `select r.revision_silabo_id::text as id
+       from revisiones_silabo r
+       join aprobaciones ap on ap.revision_silabo_id = r.revision_silabo_id
+       join exportaciones_silabo ex on ex.revision_silabo_id = r.revision_silabo_id
+       join silabos s on s.silabo_id = r.silabo_id
+       join paralelos p on p.paralelo_id = s.paralelo_id
+       join asignaturas a on a.asignatura_id = p.asignatura_id
+       join asignaciones_rol ar on ar.carrera_id = a.carrera_id and ar.asignacion_rol_activa and ar.rol = 'coordinador'
+       join usuarios u on u.usuario_id = ar.usuario_id
+      where u.correo_electronico = $1
+      order by ap.aprobado_en desc
+      limit 1`,
+    [coordinatorEmail],
+  )
+  return row?.id ?? null
 }

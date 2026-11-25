@@ -1,9 +1,9 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { useEffect, useMemo, useState, type KeyboardEvent } from "react"
-import { ApiError } from "@/api/client"
-import { getConvocation, type ConvocationDetail } from "@/api/convocations"
+import { useQuery } from "@tanstack/react-query"
+import { useMemo, type KeyboardEvent } from "react"
+import { type ConvocationDetail } from "@/api/convocations"
 import { reviewStageLabel } from "@/api/reviews"
 import { ClientFilterBar } from "@/components/domain/ClientFilterBar"
 import { LoadErrorState } from "@/components/domain/LoadErrorState"
@@ -18,6 +18,8 @@ import { useClientPagination } from "@/composables/useClientPagination"
 import { reviewAreaPaths } from "@/lib/routes"
 import { activateRow } from "@/lib/rowActivation"
 import { SYLLABUS_STATE_OPTIONS, syllabusStateLabel } from "@/lib/syllabusStates"
+import { queryErrorMessage } from "@/lib/queryClient"
+import { convocationQuery } from "@/queries/convocations"
 
 type TrackedSyllabus = ConvocationDetail["convocation"]["syllabi"][number]
 
@@ -31,36 +33,19 @@ const NO_SYLLABI: TrackedSyllabus[] = []
 
 export function ConvocationTrackingTable({ convocationId }: { convocationId: string | null }) {
   const router = useRouter()
-  const [attempt, setAttempt] = useState(0)
-  const [result, setResult] = useState<{ id: string; attempt: number; data: ConvocationDetail | null; error: string | null } | null>(null)
-  const current = convocationId !== null && result?.id === convocationId && result.attempt === attempt ? result : null
-  const data = current?.data ?? null
-  const error = current?.error ?? null
-  const loading = convocationId !== null && current === null
+  const query = useQuery({ ...convocationQuery(convocationId ?? ""), enabled: convocationId !== null })
+  const data = convocationId !== null ? (query.data ?? null) : null
+  const error = convocationId !== null ? queryErrorMessage(query, "No se pudo cargar el seguimiento de la convocatoria") : null
+  const loading = convocationId !== null && data === null && error === null
   const scope = convocationId ?? "none"
 
   const source = useMemo(() => data?.convocation.syllabi ?? NO_SYLLABI, [data])
   const filter = useClientFilter(source, searchable, FILTERS)
   const { items: page, meta, setPage } = useClientPagination(filter.items, 20, filter.criteria)
 
-  useEffect(() => {
-    if (convocationId === null) return
-    let cancelled = false
-    getConvocation(convocationId).then(
-      (detail) => {
-        if (!cancelled) setResult({ id: convocationId, attempt, data: detail, error: null })
-      },
-      (reason: unknown) => {
-        if (!cancelled) setResult({ id: convocationId, attempt, data: null, error: reason instanceof ApiError ? reason.message : "No se pudo cargar el seguimiento de la convocatoria" })
-      },
-    )
-
-    return () => {
-      cancelled = true
-    }
-  }, [convocationId, attempt])
-
-  const retry = (): void => setAttempt((value) => value + 1)
+  const retry = (): void => {
+    void query.refetch()
+  }
   const open = (revisionId: string): void => router.push(reviewAreaPaths().review(revisionId))
   const openFromKeyboard = (event: KeyboardEvent<HTMLTableRowElement>, revisionId: string | null | undefined): void => {
     if (event.target !== event.currentTarget || (event.key !== "Enter" && event.key !== " ")) return

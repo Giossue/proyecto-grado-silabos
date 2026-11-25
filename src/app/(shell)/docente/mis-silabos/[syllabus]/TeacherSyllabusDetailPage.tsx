@@ -3,13 +3,13 @@
 import { SupportDocumentsButton } from "@/components/domain/academic/SupportDocumentsButton"
 import { ArrowLeft, Copy, Eye, FileSignature, FileText, Send } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
+import { useQueryClient } from "@tanstack/react-query"
 import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from "react"
 import { flushSync } from "react-dom"
 import { ApiError } from "@/api/client"
 import {
   copyTeacherSyllabus,
   getTeacherSigningStatement,
-  getTeacherSyllabus,
   saveTeacherField,
   startTeacherSyllabus,
   submitTeacherSyllabus,
@@ -52,6 +52,7 @@ import { nodesOfType, type DocumentNode } from "@/lib/templateDocument"
 import { toast } from "@/lib/toast"
 import { handleUnauthorized } from "@/lib/unauthorized"
 import { withoutFinalPeriod } from "@/lib/utils"
+import { teacherSyllabusQuery } from "@/queries/teacher"
 import { sessionState } from "@/state/session"
 
 type ValidationResult = { field_id: string | null; code: string; severity: string; message: string }
@@ -125,6 +126,7 @@ const isSignatureFailure = (reason: unknown): boolean =>
 
 export default function TeacherSyllabusDetailPage() {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const syllabusId = String(useParams<{ syllabus: string }>().syllabus)
   const { open: discardOpen, ask: askToDiscard, decide: decideDiscard } = useDiscardConfirmation()
   const session = useSignal(sessionState.current)
@@ -252,7 +254,7 @@ export default function TeacherSyllabusDetailPage() {
   }
 
   const load = (): Promise<void> =>
-    getTeacherSyllabus(syllabusId)
+    queryClient.fetchQuery({ ...teacherSyllabusQuery(syllabusId), staleTime: 0 })
       .then((response) => applyLoaded(response.syllabus))
       .catch(loadFailed)
 
@@ -502,7 +504,7 @@ export default function TeacherSyllabusDetailPage() {
     const timers = saveTimers.current
     const onBeforeUnload = (event: BeforeUnloadEvent): void => warnBeforeUnload(event)
     window.addEventListener("beforeunload", onBeforeUnload)
-    void getTeacherSyllabus(syllabusId)
+    void queryClient.fetchQuery({ ...teacherSyllabusQuery(syllabusId), staleTime: 0 })
       .then((response) => loaded(response.syllabus))
       .catch((reason: unknown) => notLoaded(reason))
 
@@ -510,7 +512,7 @@ export default function TeacherSyllabusDetailPage() {
       window.removeEventListener("beforeunload", onBeforeUnload)
       timers.forEach((timer) => clearTimeout(timer))
     }
-  }, [syllabusId])
+  }, [queryClient, syllabusId])
 
   return (
     <>
