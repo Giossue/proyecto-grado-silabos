@@ -275,27 +275,6 @@ export const silabos = pgTable("silabos", {
 	check("silabos_estado_check", sql`(estado_silabo)::text = ANY (ARRAY[('sin_iniciar'::character varying)::text, ('borrador'::character varying)::text, ('en_revision'::character varying)::text, ('correccion_solicitada'::character varying)::text, ('aprobado'::character varying)::text])`),
 ]);
 
-export const eventosAuditoria = pgTable("eventos_auditoria", {
-	eventoAuditoriaId: uuid("evento_auditoria_id").primaryKey().notNull(),
-	usuarioId: uuid("usuario_id"),
-	asignacionRolId: uuid("asignacion_rol_id"),
-	accion: varchar({ length: 120 }).notNull(),
-	tipoRecurso: varchar("tipo_recurso", { length: 120 }).notNull(),
-	recursoId: uuid("recurso_id"),
-	resultado: varchar({ length: 24 }).notNull(),
-	detalles: jsonb(),
-	ocurridoEn: timestamp("ocurrido_en", { withTimezone: true, mode: 'string' }).notNull(),
-	actorNombre: varchar("actor_nombre", { length: 255 }),
-	actorRol: varchar("actor_rol", { length: 120 }),
-	actorCarrera: varchar("actor_carrera", { length: 255 }),
-}, (table) => [
-	index().using("btree", table.asignacionRolId.asc().nullsLast().op("uuid_ops")),
-	index().using("btree", table.ocurridoEn.asc().nullsLast().op("timestamptz_ops")),
-	index("eventos_auditoria_recurso_fecha_idx").using("btree", table.tipoRecurso.asc().nullsLast().op("text_ops"), table.recursoId.asc().nullsLast().op("uuid_ops"), table.ocurridoEn.asc().nullsLast().op("timestamptz_ops")),
-	index("eventos_auditoria_usuario_fecha_idx").using("btree", table.usuarioId.asc().nullsLast().op("timestamptz_ops"), table.ocurridoEn.asc().nullsLast().op("timestamptz_ops")),
-	check("eventos_auditoria_resultado_check", sql`(resultado)::text = ANY (ARRAY[('exito'::character varying)::text, ('fallido'::character varying)::text])`),
-]);
-
 export const ajustesSistema = pgTable("ajustes_sistema", {
 	claveAjuste: varchar("clave_ajuste", { length: 60 }).primaryKey().notNull(),
 	valorAjuste: jsonb("valor_ajuste").notNull(),
